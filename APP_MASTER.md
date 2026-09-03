@@ -8,7 +8,19 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **03/9/2026 (Đợt 289 — Showdown: hai tên không bao giờ hiện giống hệt nhau; Đợt 288 — template thứ 18 GROUP SORT)**.
+> Cập nhật lần cuối: **03/9/2026 (Đợt 290 — man READY vẫn trùng "T.LÂM" giữa 2 cột, nối tiếp Đợt 289)**.
+>
+> **Đợt 290** (03/9/2026, thầy) — ⭐⭐⭐ **NỐI TIẾP ĐỢT 289: MÀN READY VẪN TRÙNG "T.LÂM" GIỮA HAI CỘT.**
+> Thầy gửi ảnh chụp NGAY SAU Đợt 289: hai cột myActivity (Team 2/Team 3) vẫn cùng hiện "T.LÂM". Gốc
+> khác Đợt 289 tưởng: mỗi cột chỉ gọi `shortenTeamNames()` (`core/engine.js`) với ĐÚNG đội của chính
+> nó — hai em ở hai đội KHÔNG BAO GIỜ cùng có mặt trong một lần gọi, nên cơ chế chống-trùng-trong-nhóm
+> của Đợt 289 không thấy được. Sửa gốc: tên 2 tiếng (VD "Tuệ Lâm") KHÔNG còn viết tắt xuống 1 chữ cái
+> theo mặc định nữa — luôn hiện đủ ở MỌI cột, độc lập, không cần phối hợp gì (bài toán biến mất thay
+> vì bị vá). Tên 3+ tiếng vẫn viết tắt như cũ. ⬜ còn hở: tên 3+ tiếng trùng giữa 2 đội khác nhau (hiếm
+> hơn nhiều). `node --check` sạch; test 2 lần gọi riêng biệt mô phỏng đúng 2 cột — hết trùng. Code
+> `0d4bb09` ĐÃ PUSH + LIVE kiểm chứng SHA-256. Chi tiết `GHI CHU DU AN.md` Đợt 290.
+>
+> ---
 >
 > **Đợt 289** (03/9/2026, thầy) — ⭐⭐⭐ **SHOWDOWN: HAI TÊN KHÔNG BAO GIỜ ĐƯỢC HIỆN GIỐNG HỆT NHAU.**
 > Thầy: *"cùng một đội có TUỆ LÂM và TÙNG LÂM, màn trước khi vào game đều rút gọn thành T.LÂM nên
@@ -18,11 +30,10 @@
 > (danh sách lớp) + màn B (chia đội, `core/showdown-setup.js`). Màn READY dùng hàm riêng
 > `shortenTeamNames()` (`core/engine.js`, không import được `core/showdown.js`) — viết lại để mở theo
 > TỪNG TIẾNG thay vì từng chữ cái (dễ đọc hơn ở cột chữ to), thay cho giả định sai của [[Đợt 283]]
-> ("giữ đủ chữ cái đầu là tự phân biệt" — sai với tên 2 tiếng chung chữ cái đầu). Bảng kết quả sau
-> game (`fitPodiumNames`) CHƯA đụng — không phải nơi thầy báo. `node --input-type=module --check`
-> sạch cả 3 file; test độc lập bằng Node với tên mẫu có dấu — đúng kỳ vọng. Code `da77001` ĐÃ PUSH.
-> Chi tiết `GHI CHU DU AN.md` Đợt 289. ⬜ chờ thầy bấm tay: lớp có 2 em tên trùng chữ cái đầu, đi qua
-> đủ màn A → B → READY.
+> ("giữ đủ chữ cái đầu là tự phân biệt" — sai với tên 2 tiếng chung chữ cái đầu). Chỉ chống trùng
+> TRONG một đội — chưa đủ cho ca 2 cột khác đội, vá tiếp ở [[Đợt 290]] ngay trên. Bảng kết quả sau
+> game (`fitPodiumNames`) CHƯA đụng — không phải nơi thầy báo. Code `da77001` ĐÃ PUSH.
+> Chi tiết `GHI CHU DU AN.md` Đợt 289.
 >
 > ---
 >
@@ -4767,18 +4778,28 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **03/9/2026 sau Đợt 289** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **03/9/2026 sau Đợt 290** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (03/9/2026 — sau **Đợt 289**)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (03/9/2026 — sau **Đợt 290**)
 >
 > | | |
 > |---|---|
-> | Commit mới nhất | **`da77001`** (Đợt 289 — Showdown: hai tên không bao giờ hiện giống hệt nhau) — `core/showdown.js` · `core/showdown-setup.js` · `core/engine.js` — ĐÃ PUSH. Kiểm SHA-256 live: xem dòng "Kiểm live 289" ngay dưới. |
-> | Vì sao | Thầy: "cùng đội có TUỆ LÂM và TÙNG LÂM, màn trước khi vào game đều rút gọn thành T.LÂM, không biết ô nào là em nào" — `T` là chữ cái đầu chung của cả "Tuệ" lẫn "Tùng". |
-> | Đã sửa | `assignShortLabels()` mới (`core/showdown.js`) — viết tắt theo NHÓM thay vì từng tên độc lập, cặp trùng nhãn mở dần từng chữ cái tới khi phân biệt được, trùng tên thật thì đánh số (2)/(3); dùng ở màn A (danh sách lớp, `shrinkRosterNames`) + màn B (chia đội, `shrinkOverflowingNames`) trong `core/showdown-setup.js`. Màn READY dùng hàm riêng `shortenTeamNames()` (`core/engine.js`, không import được `core/showdown.js`) — viết lại mở theo TỪNG TIẾNG thay vì chữ cái, thay giả định sai của Đợt 283. |
-> | Kiểm live 289 | `node --input-type=module --check` sạch cả 3 file; test độc lập bằng Node (logic copy ra ngoài DOM) với tên mẫu có dấu tiếng Việt — đúng kỳ vọng ở cả 2 hàm. **✅ SHA-256 live khớp tuyệt đối** — fetch trực tiếp `aword.andrewclasses.com/core/{showdown.js, showdown-setup.js, engine.js}` khớp từng byte với `git show da77001:<file>` (`e56be3c6…`/`089e1e7c…`/`c237f532…`), đo ngay sau push nên Pages đã build xong. |
-> | Chưa đụng | Bảng kết quả sau game (`fitPodiumNames` trong `showdown-review.js`/`showdown-export.js`) vẫn viết tắt-từng-tên-độc-lập kiểu cũ, chưa có chống trùng — nếu thầy thấy trùng tên ở Recent results/Analyse thì báo, nối `assignShortLabels` vào đó ở đợt sau. |
-> | ⬜ Chờ tay thầy | Lớp có 2 em tên hai tiếng trùng chữ cái đầu, đi qua đủ màn A (danh sách lớp) → B (chia đội, cả khu chờ lẫn cột đội) → READY — xác nhận tên luôn phân biệt được, không ô nào tràn dòng. |
+> | Commit mới nhất | **`0d4bb09`** (Đợt 290 — man READY vẫn trùng "T.LÂM" giữa 2 cột sau Đợt 289) — `core/engine.js` — ĐÃ PUSH + LIVE kiểm chứng (SHA-256 `dedf5a0e…` khớp `git show 0d4bb09`). |
+> | Vì sao | Thầy gửi ảnh chụp màn READY thật NGAY SAU Đợt 289: Team 2 và Team 3 (hai cột myActivity khác nhau) vẫn cùng hiện "T.LÂM". Gốc khác Đợt 289 tưởng: mỗi cột chỉ gọi `shortenTeamNames()` với ĐÚNG đội của chính nó (`readPick()` snapshot, xem "Only THIS screen's team") — hai em ở hai đội không BAO GIỜ cùng có mặt trong một lần gọi, nên cơ chế chống-trùng-trong-nhóm của Đợt 289 không thấy được. |
+> | Đã sửa | `shortenTeamNames()` (`core/engine.js`) — tên 2 tiếng (VD "Tuệ Lâm") KHÔNG còn viết tắt xuống 1 chữ cái theo mặc định nữa (`keep` mặc định đổi từ 1 → `p.length` khi tên chỉ 2 tiếng), luôn hiện đủ ở MỌI cột, độc lập, không cần phối hợp gì — bài toán biến mất thay vì bị vá. Tên 3+ tiếng vẫn viết tắt như cũ ("N.B.Anh"), vòng chống-trùng-trong-đội của Đợt 289 vẫn còn cho ca đó. |
+> | Kiểm | `node --check` sạch; test 2 lần gọi RIÊNG BIỆT (mô phỏng đúng 2 cột không biết về nhau) với "Tuệ Lâm"/"Tùng Lâm" — không còn trùng. SHA-256 live khớp tuyệt đối `git show 0d4bb09:core/engine.js`. |
+> | ⬜ Còn hở | Tên **3+ tiếng** trùng nhãn giữa **hai đội khác nhau** (VD hai "Nguyễn Bảo Anh" ở 2 đội) vẫn có thể trùng — cùng giới hạn kiến trúc (mỗi cột không thấy đội khác), hiếm hơn ca 2 tiếng nhiều. Bảng kết quả sau game (`fitPodiumNames`) cũng chưa đụng — xem Đợt 289. |
+> | ⬜ Chờ tay thầy | Lớp có 2 em tên hai tiếng trùng chữ cái đầu, Ở HAI ĐỘI KHÁC NHAU, mở 2 cột myActivity cạnh nhau tới màn READY — xác nhận hết trùng. |
+> | Chi tiết | `GHI CHU DU AN.md` Đợt 290 (nối tiếp Đợt 289). |
+>
+> ---
+>
+> ### 🕘 TRẠNG THÁI CŨ HƠN (03/9/2026 — sau **Đợt 289**)
+>
+> | | |
+> |---|---|
+> | Commit mới nhất | **`da77001`** (Đợt 289 — Showdown: hai tên không bao giờ hiện giống hệt nhau) — `core/showdown.js` · `core/showdown-setup.js` · `core/engine.js` — ĐÃ PUSH + LIVE kiểm chứng (SHA-256 khớp `git show da77001`). |
+> | Đã sửa | `assignShortLabels()` mới (`core/showdown.js`) — viết tắt theo NHÓM thay vì từng tên độc lập, dùng ở màn A (danh sách lớp) + màn B (chia đội) trong `core/showdown-setup.js`. Màn READY (`shortenTeamNames()`, `core/engine.js`) viết lại mở theo TỪNG TIẾNG — nhưng chỉ chống trùng TRONG một đội, chưa đủ cho ca 2 cột khác đội (xem Đợt 290 ở trên). |
 > | Chi tiết | `GHI CHU DU AN.md` Đợt 289. |
 >
 > ---

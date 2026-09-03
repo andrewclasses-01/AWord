@@ -12,7 +12,12 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 289** (03/9/2026, thầy — SHOWDOWN: hai tên KHÔNG BAO GIỜ được hiện giống hệt nhau
+> Mới nhất: **Đợt 290** (03/9/2026, thầy báo lại sau Đợt 289 — màn READY vẫn trùng "T.LÂM" giữa HAI
+> CỘT myActivity khác nhau (mỗi cột chỉ biết đội của chính nó, cơ chế chống trùng trong-nhóm của Đợt
+> 289 không thấy được qua cột khác). Sửa gốc: tên 2 tiếng KHÔNG còn viết tắt xuống 1 chữ cái theo mặc
+> định nữa (`shortenTeamNames()`, `core/engine.js`) — hai cột độc lập tự ra cùng kết quả không cần
+> phối hợp, bài toán biến mất thay vì bị vá; ✅ push + live `0d4bb09`; ⬜ còn hở ca tên 3+ tiếng trùng
+> giữa 2 đội khác nhau, xem VIỆC ĐANG CHỜ). Trước đó: **Đợt 289** (03/9/2026, thầy — SHOWDOWN: hai tên KHÔNG BAO GIỜ được hiện giống hệt nhau
 > (VD "TUỆ LÂM"/"TÙNG LÂM" đều ra "T.LÂM"); sửa cả 3 nơi viết tắt tên ở màn TRƯỚC KHI VÀO GAME —
 > `assignShortLabels()` mới trong `core/showdown.js` (dùng chung cho màn A danh sách lớp + màn B chia
 > đội), và `shortenTeamNames()` viết lại trong `core/engine.js` (màn READY); ✅ push + live `da77001`;
@@ -138,6 +143,59 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 290 (03/9/2026, thầy) — ⭐⭐⭐ **NỐI TIẾP ĐỢT 289: MÀN READY VẪN TRÙNG "T.LÂM" GIỮA HAI CỘT**
+
+### Vì sao
+Thầy gửi ảnh chụp màn READY thật ngay sau Đợt 289: Team 2 và Team 3 mỗi cột **myActivity** riêng (2
+cột cạnh nhau, ví dụ ảnh chụp) đều hiện một em **"T.LÂM"** — vẫn trùng y hệt dù Đợt 289 đã sửa.
+
+Gốc khác hẳn Đợt 289 tưởng: màn READY của Showdown không phải MỘT danh sách nhìn thấy tất cả pupils
+cùng lúc như màn A/B — mỗi cột myActivity là MỘT TAB/INSTANCE AWord riêng, `shortenTeamNames()`
+(`core/engine.js`) chỉ được gọi với ĐÚNG roster của đội đang chạy TRÊN CỘT ĐÓ (`readPick().members` —
+snapshot lưu trong `sessionStorage`, xem comment "Only THIS screen's team" ngay trên chỗ gọi hàm, dòng
+~2198). "TUỆ LÂM" (Team 2) và "TÙNG LÂM" (Team 3) không BAO GIỜ cùng có mặt trong một lần gọi
+`shortenTeamNames()` — cơ chế chống-trùng-trong-nhóm của Đợt 289 chỉ dò trùng NGAY TRONG một lần gọi,
+nên không thể nào bắt được cặp này. Không có đường rẻ để hai cột "biết" về nhau mà không đọc thêm
+Firestore của các đội khác — điều màn này cố tình không làm (hiệu năng, xem comment gốc).
+
+### Đã sửa (`core/engine.js`, hàm `shortenTeamNames()`)
+Thay vì cố phối hợp giữa các cột (không khả thi rẻ), triệt tiêu khả năng trùng NGAY TỪ GỐC cho ca phổ
+biến nhất: **tên 2 tiếng không còn viết tắt xuống 1 chữ cái theo mặc định nữa** — `keep` mặc định đổi
+từ `1` (mọi tên) thành `p.length <= 2 ? p.length : 1` (2 tiếng → giữ đủ; 3 tiếng trở lên → như cũ, viết
+tắt hết trừ tiếng cuối, ví dụ vẫn ra "N.B.Anh"). "Tuệ Lâm" abbreviate xuống "T.Lâm" chỉ tiết kiệm đúng
+2 ký tự mà xoá mất đúng chữ cái phân biệt hai tên chung âm đầu — không đáng. Vì tên 2 tiếng giờ LUÔN
+hiện đủ, **hai cột độc lập tự tính ra cùng một kết quả không cần biết gì về nhau** — không còn gì để
+phối hợp nữa, bài toán biến mất thay vì bị vá.
+⚠️ Vòng lặp chống-trùng-trong-team của Đợt 289 vẫn giữ nguyên cho tên 3+ tiếng (VD hai em "Nguyễn Bảo
+Anh"/"Ngô Bảo Anh" CÙNG một đội vẫn tự mở thêm chữ nếu trùng) — chỉ đổi giá trị khởi đầu của `keep`.
+
+### Kiểm
+`node --input-type=module --check` sạch. Test độc lập bằng Node, gọi hàm HAI LẦN RIÊNG BIỆT (mô phỏng
+đúng 2 cột độc lập không biết về nhau):
+```
+shortenTeamNames(['Bảo An','Minh Ngọc','Tuệ Lâm','Công','Phúc','Phước'])
+  → ['Bảo An','Minh Ngọc','Tuệ Lâm','Công','Phúc','Phước']
+shortenTeamNames(['Bảo Anh','Huyền Vy','Thanh Nhi','Tuấn Kiên','Ben','Tùng Lâm'])
+  → ['Bảo Anh','Huyền Vy','Thanh Nhi','Tuấn Kiên','Ben','Tùng Lâm']
+```
+"Tuệ Lâm"/"Tùng Lâm" không còn trùng — không cần cột nào biết về cột kia. Ca 3 tiếng trùng trong cùng
+một đội vẫn tự mở chữ như Đợt 289 (`['Nguyễn Bảo Anh','Ngô Bảo Anh','Trần Cẩm Tú']` →
+`['Nguyễn Bảo Anh','Ngô Bảo Anh','T.C.Tú']`).
+
+✅ **ĐÃ PUSH + LIVE KIỂM CHỨNG** — code `0d4bb09`. Fetch trực tiếp `aword.andrewclasses.com/core/engine.js`
+— **mã băm SHA-256 khớp tuyệt đối** với `git show 0d4bb09:core/engine.js` (`dedf5a0e…`).
+
+### VIỆC ĐANG CHỜ (Đợt 290)
+⬜ Thầy bấm tay thật: lớp có 2 em tên hai tiếng chung chữ cái đầu, ở HAI ĐỘI KHÁC NHAU, mở cả hai cột
+   myActivity cạnh nhau tới màn READY — xác nhận không còn trùng.
+⬜ **Chưa xử lý hết**: hai em TÊN 3+ TIẾNG (VD "Nguyễn Bảo Anh") ở HAI ĐỘI KHÁC NHAU vẫn có thể trùng
+   nhãn viết tắt giữa hai cột, vì cơ chế chống trùng chỉ thấy được TRONG một đội — cùng giới hạn kiến
+   trúc như trên, chưa có cách rẻ để sửa hết (cần hai cột đọc roster của nhau qua Firestore). Ít gặp
+   hơn nhiều so với ca 2 tiếng (đã hết hẳn), báo tiếp nếu thầy gặp thật.
+⬜ Bảng kết quả sau game (`fitPodiumNames`) vẫn như Đợt 289 note — chưa đụng.
 
 ---
 
