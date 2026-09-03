@@ -669,7 +669,11 @@ async function assignmentsForView() {
     const q = state.query.trim().toLowerCase();
     return assignmentCache.filter(a => !a.trashed && inTree(a) && String(a.title || "").toLowerCase().includes(q)).sort(byName);
   }
-  return assignmentCache.filter(a => !a.trashed && (a.folderId ?? null) === (state.folderId ?? null)).sort(byName);
+  // ⭐ Đợt 287b — `inTree` HERE TOO (thầy bắt 03/9: gốc Courses hiện cả đống bài
+  // giao). The top of Courses and the top of Results are both "folderId null",
+  // so without the tree check every top-level Results assignment showed up in
+  // Courses. (Inside a real folder the id alone already separates the trees.)
+  return assignmentCache.filter(a => !a.trashed && inTree(a) && (a.folderId ?? null) === (state.folderId ?? null)).sort(byName);
 }
 
 // How many assignments sit anywhere inside this Results folder (for the badge).
