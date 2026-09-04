@@ -40,6 +40,12 @@ import {
   variantsOf, voiceVariantsOf, variantLabel, activeVariant,
   contentSetsOf, setLabel, activeContentSet
 } from "./content-view.js";
+// Vấn đề 4 (thầy chốt) — the REAL "does this content have a spoken clip at
+// all" test, so the Text/Voice row can hide the Voice button entirely for an
+// act with no voice (quiz's clue sets are text only). Same function the game
+// engine already uses (core/engine.js's makeContentSwitch); see the note where
+// `hasVoice` is added to `contentSwitch` below.
+import { hasAnyVoice } from "./voice-playback.js";
 
 const KEY = "aword-settings";
 
@@ -152,14 +158,21 @@ export function buildOptionsControls(tpl, options, { kind = "activity", act = nu
   const sets = content ? contentSetsOf(content) : null;
 
   // `fight: null` — a match only exists mid-game, so its options are not
-  // defaultable. `contentSwitch` is shown ALWAYS here, unlike in a game: in a
-  // game it depends on whether THAT act carries spoken clips, but a default has
-  // no act yet, so the teacher must be able to say which way new ones start.
+  // defaultable. `contentSwitch` is shown ALWAYS here when there is no act
+  // (Settings' own "Default activity options" screen, `act === null`): there
+  // is nothing yet to judge voice-eligibility from, so the teacher must be
+  // able to say which way new ones start.
+  // ⭐ Vấn đề 4 (thầy chốt, ~5/9/2026) — when an act IS bound (both assignment
+  // forms), the Voice button is no longer a given: a quiz's clue sets are
+  // text only, yet the switch always drew BOTH Text and Voice, so tapping
+  // Voice on a quiz landed on a dead half with nothing to play. `hasVoice`
+  // carries the real answer — omitted only when there is no act to ask.
   buildOptionsBody(wrap, {
     tpl,
     draft: options,
     contentSwitch: {
       shown: options.contentMode === "voice" ? "voice" : "text",
+      ...(content ? { hasVoice: hasAnyVoice(content) } : {}),
       // Spread, not four `undefined`s: buildContentSwitchRow reads `variants`
       // as its "does this act have clue sets at all" test, and an explicit
       // `variants: null` from Settings must stay indistinguishable from the

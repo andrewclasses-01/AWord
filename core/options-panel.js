@@ -1189,7 +1189,13 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
   const variants = contentSwitch.variants || null;
   const voiceVariants = contentSwitch.voiceVariants || variants;
   const labelOf = contentSwitch.labelOf || (k => String(k || "").toUpperCase());
-  let mode = shown;
+  // ⭐ Vấn đề 4 (thầy chốt) — `hasVoice === false` is the caller SAYING this
+  // bound act has no spoken clip at all (a quiz's clue sets, say): drop the
+  // Voice button rather than draw one that always lands on an empty half.
+  // Omitted key (no act to ask — Settings' own defaults screen) keeps both
+  // buttons, exactly as before this đợt.
+  const coVoiceBtn = contentSwitch.hasVoice !== false;
+  let mode = coVoiceBtn ? shown : "text";
   const firstText = variants && variants.length ? variants[0] : null;
   let pickedText = contentSwitch.variant || firstText;
   let pickedVoice = contentSwitch.voiceVariant || (voiceVariants ? voiceVariants[0] : null);
@@ -1216,7 +1222,7 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
     + (hasTpl ? " has-tpl" : ""));
   const switchEl = el("div", "aw-opt-switch");
   switchEl.append(el("div", "aw-opt-switch-thumb"));
-  const MODES = [["text", "Text"], ["voice", "Voice"]];
+  const MODES = coVoiceBtn ? [["text", "Text"], ["voice", "Voice"]] : [["text", "Text"]];
   const modeBtns = new Map();
   MODES.forEach(([key, label]) => {
     const b = el("button", "aw-opt-switch-btn" + (mode === key ? " is-active" : ""), label);

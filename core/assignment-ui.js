@@ -38,7 +38,7 @@ import { getDefaultOptions, buildOptionsControls } from "./settings.js";
 // ⭐ Đợt 252 — `activeVariant`/`variantLabel`: WHICH CLUE SET the class is being
 // handed (ENG1 · VI1 …). myLesson prints it beside the template on the teacher's
 // own row, so `onCreated` has to report it — see the note on that callback.
-import { splitViewOptions, activeVariant, variantLabel } from "./content-view.js";
+import { splitViewOptions, activeVariant, variantLabel, contentSetsOf } from "./content-view.js";
 // Đợt 245 — the Edit form converts an old assignment's penalties onto today's
 // scale before showing them, and stamps the result. See openAssignmentEdit.
 import { migrateActivityOptions, OPT_VER } from "./options-migrate.js";
@@ -442,9 +442,19 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
     // four keys taken from the act are SELECTORS: not settings, but the NAME of
     // the content being handed out.
     // ⭐ Đợt 245 — and the panel SHOWS those four selectors as real controls.
+    // ⭐ Vấn đề 5 (thầy chốt, ~5/9/2026) — a NEW assignment for an act with both
+    // PRACTICE and HOMEWORK halves (a quiz's two question sets) starts on
+    // HOMEWORK, not PRACTICE. Scoped to THIS form only (creating an assignment):
+    // `contentSetsOf` reads straight off the act's own content, which never
+    // changes across a template swap, so it is worked out once, here.
+    // ⛔ Does not touch: the editor's own tab default, "Edit assignment" (an
+    // EXISTING assignment keeps whichever half it was actually created with),
+    // or the in-game Options panel (not creating an assignment at all).
+    const coNuaHomework = (contentSetsOf(act.content) || []).includes("homework");
     let playType = act.type;                    // which GAME the class will play
     let hwDraft = { ...getDefaultOptions(act.type, "homework"),
                     ...splitViewOptions(act.options).selectors };
+    if (coNuaHomework) hwDraft.contentSet = "homework";
 
     const optBlock = block("Options");
     const optsHost = el("div", "aw-as-optshost");
@@ -466,6 +476,9 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
         // mới"). A number named the same in two games is not the same number.
         hwDraft = { ...getDefaultOptions(playType, "homework"),
                     ...splitViewOptions(hwDraft).selectors };
+        // Vấn đề 5 — a template swap rebuilds the draft from scratch, so the
+        // HOMEWORK default has to be re-applied here too (same act, same sets).
+        if (coNuaHomework) hwDraft.contentSet = "homework";
         // ⭐ Đợt 255 — đuôi template trong tiêu đề đổi theo (tôn trọng bản thầy
         // đã sửa tay: mất đuôi cũ thì thôi, không đắp).
         const duoiMoi = tplShortName(playType);

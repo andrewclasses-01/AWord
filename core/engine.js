@@ -4140,9 +4140,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     if (playMode) return null;
     const src = subActSource();
     const variants = variantsOf(src.content);
-    if (!variants && !hasAnyVoice(src.content || {})) return null;
+    const coVoice = hasAnyVoice(src.content || {});
+    if (!variants && !coVoice) return null;
     return {
       shown: selState.contentMode || (hasHiddenText(src.content) ? "voice" : "text"),
+      // ⭐ Vấn đề 4 (thầy chốt) — the real "does this act have a spoken clip at
+      // all" answer, so buildContentSwitchRow can hide the Voice button for an
+      // act with text clue sets but no voice (a quiz's PRACTICE/HOMEWORK
+      // halves, say) instead of drawing a button that lands on a dead half.
+      hasVoice: coVoice,
       variants,
       voiceVariants: voiceVariantsOf(src.content),
       labelOf: key => variantLabel(src.content, key),
