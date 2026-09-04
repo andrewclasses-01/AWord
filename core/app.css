@@ -7515,7 +7515,17 @@ body.aw-khung-mode .aw-as-dim:not(.aw-as-goc) .aw-as-modal{
 /* ⭐ Đợt 255 — nền TRANG trắng trong khung mode: form ngắn hơn webview thì phần
    thân trang ló ra dưới chân form phải trắng như thẻ, không được xám (myLesson
    còn tự co webview theo chiều cao form — đây là lưới đỡ cho nhịp co). */
-body.aw-khung-mode{background:#fff}
+/* ⛔⛔ Đợt 292 (myLesson phát hiện) — VÒNG LẶP TỰ THAM CHIẾU khiến màn NGẮN
+   (QR sau START) không bao giờ co lại: `body{min-height:100vh}` ở đầu file là
+   luật NỀN, áp cho MỌI trang — `vh` ở đây tính theo chiều cao HIỆN TẠI của
+   chính webview mà myLesson đang co giãn, nên `document.body.scrollHeight`
+   luôn BẰNG ÍT NHẤT khung hiện tại, bất kể nội dung thật ngắn tới đâu. Form
+   Set assignment "đo đúng" chỉ vì nội dung thật của nó cao hơn cái sàn 100vh
+   đó; màn QR thì không, nên bị kẹt ở đúng chiều cao form để lại — thừa cả
+   mảng trắng. Khung mode không cần cái sàn 100vh này (trang chỉ có đúng MỘT
+   thẻ, không phải trang đầy đủ của AWord) — bỏ sàn để `scrollHeight` phản
+   ánh đúng nội dung thật, myLesson co khít được cả hai màn. */
+body.aw-khung-mode{background:#fff; min-height:0}
 
 /* ⛔ Đợt 254b — nền "lỡ đóng form" GIẤU HẲN trong khung mode: nó cao 100vh và
    đứng TRƯỚC form trong luồng trang, để lại là form bị đẩy xuống dưới một mảng

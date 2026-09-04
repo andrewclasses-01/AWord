@@ -523,34 +523,17 @@ export function buildOptionsBody(host, {
   // screen — they live in `swHost`, which is built once and never torn down
   // (Đợt 149). So the question is "does this panel HAVE these rows", never "is
   // this pass the one that built them".
-  let topGroup = !!contentSwitch || !!(contentSetSwitch && (contentSetSwitch.sets || []).length > 1);
-  if (renderSwitches && contentSetSwitch && (contentSetSwitch.sets || []).length > 1) {
-    const sets = contentSetSwitch.sets;
-    const labelOf = contentSetSwitch.labelOf || (k => String(k || "").toUpperCase());
-    const startIdx = Math.max(0, sets.indexOf(contentSetSwitch.current));
+  const capSet = contentSetSwitch && (contentSetSwitch.sets || []).length > 1;
+  // ⭐ Vấn đề 2 (thầy chốt, ~5/9/2026) — dạng KHÔNG có voice (Vấn đề 4 đã ẩn nút
+  // VOICE) thì PRACTICE/HOMEWORK không còn đứng riêng MỘT HÀNG phía trên nữa —
+  // hàng đó gộp thẳng vào hàng Text/Template bên dưới, đứng vào đúng chỗ nút
+  // TEXT trơ trọi (giờ không còn ý nghĩa lựa chọn gì khi chỉ còn một chế độ).
+  // Còn voice thật (Anagram…) thì giữ nguyên hai hàng như cũ.
+  const gopSetVaoHang = capSet && contentSwitch && contentSwitch.hasVoice === false;
+  let topGroup = !!contentSwitch || !!(capSet && !gopSetVaoHang);
+  if (renderSwitches && capSet && !gopSetVaoHang) {
     const sw = el("div", "aw-opt-setswitch");
-    sw.style.setProperty("--n", String(sets.length));
-    sw.style.setProperty("--i", String(startIdx));
-    sw.append(el("div", "aw-opt-switch-thumb"));
-    const btns = sets.map((key, i) => {
-      const b = el("button", "aw-opt-switch-btn" + (i === startIdx ? " is-active" : ""), labelOf(key));
-      b.type = "button";
-      b.onclick = () => {
-        if (b.classList.contains("is-active")) return;
-        btns.forEach(x => x.classList.remove("is-active"));
-        b.classList.add("is-active");
-        sw.style.setProperty("--i", String(i));
-        sel.contentSet = key;
-        sound.click();
-        // Đợt 147 — each view keeps its OWN options, so the caller reloads the
-        // rest of the panel with this half's settings. Called LAST, after the
-        // selector is written, because the caller works out the new view key
-        // from the draft.
-        onViewChange?.();
-      };
-      return b;
-    });
-    sw.append(...btns);
+    buildSetSwitchButtons(sw, contentSetSwitch, sel, onViewChange);
     swHost.append(sw);
   }
 
@@ -558,7 +541,12 @@ export function buildOptionsBody(host, {
   // (Split out in Đợt 155 so the Showdown table could show the same control;
   // Đợt 156 took it back out of Showdown at the teacher's request, so this is
   // once again the only caller. Left split: ~90 lines of one self-contained idea.)
-  if (renderSwitches && contentSwitch) buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange, templatePicker });
+  if (renderSwitches && contentSwitch) {
+    buildContentSwitchRow(swHost, {
+      contentSwitch, sel, onViewChange, templatePicker,
+      mergedSetSwitch: gopSetVaoHang ? contentSetSwitch : null,
+    });
+  }
 
   host.append(grid);
 
@@ -1184,7 +1172,41 @@ function seatCellsByColumn(grid) {
  * `contentMode` keeps its per-item AUTO behaviour byte-for-byte — the row only
  * says which button to LIGHT UP.
  */
-export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange = null, templatePicker = null }) {
+// ⭐ Vấn đề 2 (thầy chốt, ~5/9/2026) — tách phần "vẽ nút PRACTICE/HOMEWORK" ra
+// khỏi phần "tạo hộp đứng riêng" (`buildOptionsBody`), để dùng lại được cho cả
+// hàng GỘP CHUNG trong `buildContentSwitchRow` bên dưới (dạng không có voice:
+// PRACTICE/HOMEWORK đứng vào đúng chỗ ô công tắc TEXT/VOICE, Template đứng
+// cạnh — một hàng thay vì hai). `sw` là hộp có sẵn (caller quyết định lớp
+// ngoài — `.aw-opt-setswitch` khi đứng riêng, `.aw-opt-switch` khi gộp chung,
+// để ăn đúng luật CSS của chỗ nó đứng).
+function buildSetSwitchButtons(sw, contentSetSwitch, sel, onViewChange) {
+  const sets = contentSetSwitch.sets;
+  const labelOf = contentSetSwitch.labelOf || (k => String(k || "").toUpperCase());
+  const startIdx = Math.max(0, sets.indexOf(contentSetSwitch.current));
+  sw.style.setProperty("--n", String(sets.length));
+  sw.style.setProperty("--i", String(startIdx));
+  sw.append(el("div", "aw-opt-switch-thumb"));
+  const btns = sets.map((key, i) => {
+    const b = el("button", "aw-opt-switch-btn" + (i === startIdx ? " is-active" : ""), labelOf(key));
+    b.type = "button";
+    b.onclick = () => {
+      if (b.classList.contains("is-active")) return;
+      btns.forEach(x => x.classList.remove("is-active"));
+      b.classList.add("is-active");
+      sw.style.setProperty("--i", String(i));
+      sel.contentSet = key;
+      sound.click();
+      // Đợt 147 — each view keeps its OWN options, so the caller reloads the
+      // rest of the panel with this half's settings. Called LAST, after the
+      // selector is written, because the caller works out the new view key
+      // from the draft.
+      onViewChange?.();
+    };
+    return b;
+  });
+  sw.append(...btns);
+}
+export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange = null, templatePicker = null, mergedSetSwitch = null }) {
   const shown = contentSwitch.shown === "voice" ? "voice" : "text";
   const variants = contentSwitch.variants || null;
   const voiceVariants = contentSwitch.voiceVariants || variants;
@@ -1221,15 +1243,24 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
     + (variants || hasTpl ? " has-variants" : "")
     + (hasTpl ? " has-tpl" : ""));
   const switchEl = el("div", "aw-opt-switch");
-  switchEl.append(el("div", "aw-opt-switch-thumb"));
   const MODES = coVoiceBtn ? [["text", "Text"], ["voice", "Voice"]] : [["text", "Text"]];
   const modeBtns = new Map();
-  MODES.forEach(([key, label]) => {
-    const b = el("button", "aw-opt-switch-btn" + (mode === key ? " is-active" : ""), label);
-    b.type = "button";
-    modeBtns.set(key, b);
-    switchEl.append(b);
-  });
+  // ⭐ Vấn đề 2 (thầy chốt) — dạng không có voice thì Ô CÔNG TẮC này không còn
+  // vẽ TEXT/VOICE nữa — nó trở thành ô PRACTICE/HOMEWORK (chỗ đứng của
+  // `mergedSetSwitch`, do `buildOptionsBody` truyền xuống khi đã tự quyết định
+  // KHÔNG vẽ hàng PRACTICE/HOMEWORK riêng ở trên). Template vẫn đứng cạnh
+  // (`tplCell`/`half` bên dưới, không đổi gì).
+  if (mergedSetSwitch) {
+    buildSetSwitchButtons(switchEl, mergedSetSwitch, sel, onViewChange);
+  } else {
+    switchEl.append(el("div", "aw-opt-switch-thumb"));
+    MODES.forEach(([key, label]) => {
+      const b = el("button", "aw-opt-switch-btn" + (mode === key ? " is-active" : ""), label);
+      b.type = "button";
+      modeBtns.set(key, b);
+      switchEl.append(b);
+    });
+  }
 
   const half = el("div", "aw-opt-variants");
   // The two-floor cell (Đợt 250). Built HERE rather than further down because
@@ -1286,6 +1317,9 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
   // rule in app.css. Kept now that the row is back to two buttons — one less
   // hard-coded count is one less thing to remember.
   const paintSwitch = () => {
+    // Vấn đề 2 — hộp gộp chung tự lo trạng thái của chính nó (buildSetSwitchButtons),
+    // không có `mode`/MODES nào ở đây để tô.
+    if (mergedSetSwitch) return;
     switchEl.style.setProperty("--n", String(MODES.length));
     switchEl.style.setProperty("--i", String(Math.max(0, MODES.findIndex(([k]) => k === mode))));
     modeBtns.forEach((b, k) => b.classList.toggle("is-active", k === mode));
