@@ -12,7 +12,12 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 291** (03/9/2026, thầy — "mọi bảng khác nhau đều cần khác nhau, với mọi kiểu tên",
+> Mới nhất: **Đợt 292** (05/9/2026 — myLesson phát hiện lúc soạn lesson thật: nút VOICE hiện cả khi
+> dạng bài không có giọng đọc + Set assignment mặc định PRACTICE thay vì HOMEWORK. `hasVoice` mới
+> trong `contentSwitch` (`core/engine.js`/`core/settings.js`) cho `buildContentSwitchRow`
+> (`core/options-panel.js`) biết mà ẩn hẳn nút VOICE; `openAssignmentSetup` (`core/assignment-ui.js`)
+> ép mặc định `contentSet:"homework"` khi act có nửa đó, CHỈ lúc tạo mới. Code `806715d` ĐÃ PUSH,
+> ⬜ chờ thầy bấm tay act QUIZ thật.) Trước đó: **Đợt 291** (03/9/2026, thầy — "mọi bảng khác nhau đều cần khác nhau, với mọi kiểu tên",
 > không chỉ ca 2 tiếng của Đợt 290. Thầy tự chỉ cách giải quyết tận gốc: quyết định nhãn NGAY LÚC BẤM
 > READY — nơi vẫn còn thấy CẢ TRẬN (mọi đội gộp lại) cùng lúc — rồi mang nhãn đó theo `pick` sang từng
 > cột, thay vì để mỗi cột tự tính lấy sau khi đã bị tách rời. `assignFullLabels()` mới
@@ -152,6 +157,46 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 292 (05/9/2026) — ⭐⭐⭐ **ẨN NÚT VOICE KHI KHÔNG CÓ GIỌNG ĐỌC + SET ASSIGNMENT MẶC ĐỊNH HOMEWORK**
+
+### Vì sao
+Phát hiện bên phiên myLesson (thầy tạo 1 lesson thật, soạn dạng DICTS): pop-up Set assignment cho
+act QUIZ (bộ câu hỏi đọc hiểu, không có giọng đọc) vẫn hiện cặp nút TEXT/VOICE như mọi act khác —
+bấm VOICE là một nửa trống trơn, không có gì để chọn. Cùng lúc, act có cả hai nửa PRACTICE/HOMEWORK
+thì Set assignment luôn mặc định đứng ở PRACTICE, trong khi hầu hết bài giao thực tế là bài về nhà —
+thầy phải tự tay đổi sang HOMEWORK mỗi lần.
+
+### Đã làm
+**1. Ẩn nút VOICE.** `core/voice-playback.js` đã có sẵn `hasAnyVoice(content)` — quét đệ quy tìm bất
+kỳ mục nào có trường `voice` thật. `core/engine.js` `makeContentSwitch()` (dùng cho Options panel
+trong game thật) và `core/settings.js` `buildOptionsControls()` (dùng cho cả Set assignment lẫn màn
+Settings mặc định) nay đều gắn thêm khoá `hasVoice` vào `contentSwitch` — CHỈ khi có act/content thật
+để hỏi (`hasVoice` bỏ trống khi không có act, tức màn Settings mặc định, để giữ nguyên hành vi cũ
+"chưa có content thì cho chọn cả hai"). `core/options-panel.js` `buildContentSwitchRow()` đọc khoá
+đó: `hasVoice === false` thì `MODES` chỉ còn `["text","Text"]`, không vẽ nút VOICE nữa; `mode` cũng
+kẹp về `"text"` để tránh trạng thái lửng lơ (không nút nào sáng) nếu draft cũ từng lưu `contentMode:
+"voice"`.
+
+**2. Set assignment mặc định HOMEWORK.** `core/content-view.js` `activeContentSet()` (không đổi) vẫn
+lấy `sets[0]` ("practice") làm mặc định khi chưa chọn gì — đây là quy tắc CHUNG, dùng cả cho việc
+lưu trữ (`foldEditedSet`) lẫn trình soạn câu hỏi, KHÔNG ĐƯỢC đụng vào diện rộng. Thay vào đó,
+`core/assignment-ui.js` `openAssignmentSetup()` (form TẠO MỚI một bài giao — khác hẳn
+`openAssignmentEdit()` dùng cho bài giao ĐÃ CÓ, không đụng tới) tính sẵn `coNuaHomework =
+contentSetsOf(act.content).includes("homework")` một lần, rồi ép `hwDraft.contentSet = "homework"`
+ngay sau khi dựng `hwDraft` — cả lúc mở form lẫn mỗi lần đổi template trong form (hai chỗ, vì đổi
+template dựng lại `hwDraft` từ đầu).
+
+### Đã kiểm
+`node --check` (ESM) sạch cả 4 file (`core/engine.js`, `core/settings.js`,
+`core/options-panel.js`, `core/assignment-ui.js`). Code `806715d` ĐÃ PUSH.
+
+### ⬜ VIỆC ĐANG CHỜ
+Bấm tay thật: mở Set assignment cho một act QUIZ — kỳ vọng chỉ còn nút TEXT (không có VOICE) và
+mặc định đứng ở HOMEWORK; mở một act có voice bình thường (Anagram…) — kỳ vọng KHÔNG đổi gì, vẫn
+đủ cả TEXT/VOICE như trước. Chưa test được trong phiên này vì cần đăng nhập Google + act thật.
 
 ---
 

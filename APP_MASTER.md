@@ -8,7 +8,27 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **03/9/2026 (Đợt 291 — nhãn hiển thị quyết định một lần cho cả trận, mọi độ dài tên, nối tiếp 289+290)**.
+> Cập nhật lần cuối: **05/9/2026 (Đợt 292 — ẩn nút VOICE khi không có giọng đọc, Set assignment mặc định HOMEWORK)**.
+>
+> **Đợt 292** (05/9/2026, myLesson phát hiện lúc soạn lesson thật) — ⭐⭐⭐ **ẨN NÚT VOICE KHI KHÔNG
+> CÓ GIỌNG ĐỌC + SET ASSIGNMENT MẶC ĐỊNH HOMEWORK.** Hai lỗi thầy thấy khi soạn bài DICTS thật bên
+> myLesson (phiên đó đọc code + hỏi từng việc một trước khi build, xem `mylesson-project` bên kho
+> myLesson để biết bối cảnh đầy đủ — 3 việc còn lại thuộc riêng myLesson, đã push kho đó).
+> (1) Nút TEXT/VOICE ở form Set assignment/Options **luôn vẽ cả hai nút** bất kể dạng bài có giọng
+> đọc hay không — dạng QUIZ (chỉ có clue set chữ, không TTS) vẫn có nút VOICE, bấm vào là một nửa
+> trống trơn. `core/engine.js` `makeContentSwitch()` và `core/settings.js` `buildOptionsControls()`
+> nay mang thêm `hasVoice` (= `hasAnyVoice(content)`, hàm CÓ SẴN — chỉ tính khi có act/content thật;
+> màn Settings mặc định (không act) vẫn giữ nguyên cả hai nút như trước). `core/options-panel.js`
+> `buildContentSwitchRow()` chỉ vẽ nút VOICE khi `hasVoice !== false`.
+> (2) Set assignment cho act có cả hai nửa PRACTICE/HOMEWORK (quiz đọc hiểu) luôn mặc định PRACTICE
+> — thầy muốn **HOMEWORK** làm mặc định vì hầu hết bài giao là bài về nhà. `core/assignment-ui.js`
+> `openAssignmentSetup()` (form TẠO MỚI, không đụng `openAssignmentEdit`) ép `hwDraft.contentSet =
+> "homework"` khi act có nửa đó — áp lại cả sau khi đổi template trong form.
+> `node --check` sạch cả 4 file. ⬜ **CHỜ THẦY BẤM TAY THẬT**: mở Set assignment cho một act QUIZ —
+> chỉ còn nút TEXT (không còn VOICE), và mặc định đứng ở HOMEWORK. Code `806715d` ĐÃ PUSH.
+> Chi tiết `GHI CHU DU AN.md` Đợt 292.
+>
+> ---
 >
 > **Đợt 291** (03/9/2026, thầy) — ⭐⭐⭐⭐ **NHÃN QUYẾT ĐỊNH MỘT LẦN CHO CẢ TRẬN — MỌI ĐỘ DÀI TÊN.**
 > Thầy, sau Đợt 290: *"không chỉ cùng 1 bảng, tôi cần mọi bảng khác nhau đều cần khác nhau, với mọi
