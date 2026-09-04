@@ -8,7 +8,34 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **05/9/2026 (Đợt 292 — ẩn nút VOICE khi không có giọng đọc, Set assignment mặc định HOMEWORK)**.
+> Cập nhật lần cuối: **05/9/2026 (Đợt 293 — gộp PRACTICE/HOMEWORK vào hàng Template khi không có voice, sửa màn QR sau START không co lại được)**.
+>
+> **Đợt 293** (05/9/2026, thầy bấm thử Đợt 292 trên app thật) — ⭐⭐⭐ **GỘP PRACTICE/HOMEWORK VÀO
+> HÀNG TEMPLATE + SỬA MÀN QR KHÔNG CO LẠI ĐƯỢC.** Hai việc thầy thấy khi bấm thử Đợt 292: (1) dạng
+> QUIZ mất nút VOICE rồi thì nút TEXT còn lại đứng một mình, không còn ý nghĩa lựa chọn gì, mà
+> PRACTICE/HOMEWORK vẫn đứng riêng MỘT HÀNG phía trên — thầy muốn PRACTICE/HOMEWORK dọn xuống đứng
+> vào đúng chỗ nút TEXT trơ trọi đó, Template đứng cạnh, một hàng cân đối thay vì hai. (2) Sau khi
+> bấm START, màn "Assignment created" (QR) hiện quá to, thừa cả mảng trắng phía dưới.
+>
+> (1) `core/options-panel.js`: tách phần vẽ nút PRACTICE/HOMEWORK ra hàm dùng chung
+> `buildSetSwitchButtons()`; `buildOptionsBody()` tự quyết định — dạng CÓ voice thì vẽ hàng
+> PRACTICE/HOMEWORK riêng như cũ, dạng KHÔNG voice (`contentSwitch.hasVoice === false`, cờ Đợt
+> 292) thì bỏ hàng riêng, truyền `contentSetSwitch` xuống `buildContentSwitchRow()` qua tham số
+> mới `mergedSetSwitch` — hàm này dựng PRACTICE/HOMEWORK NGAY TRONG ô công tắc (lớp ngoài vẫn
+> `.aw-opt-switch`, ăn nguyên luật CSS căn hàng/chiều cao có sẵn của Template bên cạnh, không cần
+> thêm CSS mới).
+>
+> (2) `core/app.css`: bắt được vòng lặp tự tham chiếu — `body{min-height:100vh}` là luật NỀN áp
+> cho MỌI trang, mà `vh` tính theo chiều cao HIỆN TẠI của chính webview myLesson đang co giãn, nên
+> `document.body.scrollHeight` (thứ myLesson đo để quyết định co bao nhiêu) không bao giờ nhỏ hơn
+> khung hiện tại — form Set assignment "đo đúng" chỉ vì nội dung thật của nó cao hơn cái sàn đó,
+> màn QR ngắn hơn thì bị kẹt nguyên chiều cao form để lại. `body.aw-khung-mode` (chế độ nhúng cho
+> myLesson) nay thêm `min-height:0`, bỏ hẳn cái sàn tự tham chiếu đó.
+>
+> `node --check` sạch `core/options-panel.js`. Code `4e5da73` ĐÃ PUSH, **CHƯA BẤM TAY THẬT** (cả
+> hai việc cần đăng nhập Google + act QUIZ thật để thấy). Chi tiết `GHI CHU DU AN.md` Đợt 293.
+>
+> ---
 >
 > **Đợt 292** (05/9/2026, myLesson phát hiện lúc soạn lesson thật) — ⭐⭐⭐ **ẨN NÚT VOICE KHI KHÔNG
 > CÓ GIỌNG ĐỌC + SET ASSIGNMENT MẶC ĐỊNH HOMEWORK.** Hai lỗi thầy thấy khi soạn bài DICTS thật bên

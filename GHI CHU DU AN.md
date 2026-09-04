@@ -12,7 +12,14 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 292** (05/9/2026 — myLesson phát hiện lúc soạn lesson thật: nút VOICE hiện cả khi
+> Mới nhất: **Đợt 293** (05/9/2026 — thầy bấm thử Đợt 292 trên app thật, báo lại 2 việc: PRACTICE/
+> HOMEWORK cần gộp vào hàng Template thay vì đứng riêng để lại nút TEXT trơ trọi; màn QR sau START
+> hiện quá to. `core/options-panel.js` tách `buildSetSwitchButtons()` dùng chung, dạng không voice
+> thì gộp PRACTICE/HOMEWORK vào đúng chỗ ô công tắc TEXT/VOICE qua tham số mới `mergedSetSwitch`.
+> `core/app.css`: bắt được vòng lặp tự tham chiếu ở `body{min-height:100vh}` — `vh` tính theo
+> chính chiều cao webview myLesson đang co giãn, nên phép đo không bao giờ nhỏ hơn khung hiện tại;
+> `body.aw-khung-mode` thêm `min-height:0`. Code `4e5da73` ĐÃ PUSH, ⬜ chờ thầy bấm tay thật.)
+> Trước đó: **Đợt 292** (05/9/2026 — myLesson phát hiện lúc soạn lesson thật: nút VOICE hiện cả khi
 > dạng bài không có giọng đọc + Set assignment mặc định PRACTICE thay vì HOMEWORK. `hasVoice` mới
 > trong `contentSwitch` (`core/engine.js`/`core/settings.js`) cho `buildContentSwitchRow`
 > (`core/options-panel.js`) biết mà ẩn hẳn nút VOICE; `openAssignmentSetup` (`core/assignment-ui.js`)
@@ -157,6 +164,58 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 293 (05/9/2026) — ⭐⭐⭐ **GỘP PRACTICE/HOMEWORK VÀO HÀNG TEMPLATE + SỬA MÀN QR KHÔNG CO LẠI ĐƯỢC**
+
+### Vì sao
+Thầy bấm thử Đợt 292 trên app thật (myLesson, dạng DICTS), chụp ảnh báo lại 2 việc:
+1. Dạng QUIZ đã mất nút VOICE (Đợt 292) — nút TEXT còn lại đứng MỘT MÌNH, không còn ý nghĩa lựa
+   chọn gì, trong khi PRACTICE/HOMEWORK vẫn đứng riêng một hàng phía trên. Thầy muốn PRACTICE/
+   HOMEWORK dọn xuống đứng vào đúng chỗ nút TEXT trơ trọi đó, Template đứng cạnh bên phải — một
+   hàng cân đối thay vì hai hàng.
+2. Sau khi bấm START, màn "Assignment created" (link + QR) hiện quá to, thừa cả mảng trắng lớn
+   phía dưới nút DONE — mất thẩm mỹ.
+
+### Đã làm
+**1. Gộp hàng.** `core/options-panel.js`: tách phần "vẽ nút PRACTICE/HOMEWORK" ra hàm dùng chung
+`buildSetSwitchButtons(sw, contentSetSwitch, sel, onViewChange)` — nhận một hộp CÓ SẴN (`sw`) và
+chỉ lo đổ nút/gắn sự kiện vào đó, để cả nơi đứng riêng lẫn nơi gộp chung đều gọi được.
+`buildOptionsBody()` tính `gopSetVaoHang = capSet && contentSwitch.hasVoice === false` — dạng
+KHÔNG voice thì KHÔNG vẽ hàng PRACTICE/HOMEWORK riêng nữa, mà truyền `contentSetSwitch` xuống
+`buildContentSwitchRow()` qua tham số mới `mergedSetSwitch`. Bên trong hàm đó, nếu có
+`mergedSetSwitch`, ô công tắc (`switchEl`, vẫn giữ nguyên lớp `.aw-opt-switch`) được đổ nút
+PRACTICE/HOMEWORK thay vì TEXT/VOICE — nhờ giữ nguyên lớp CSS của chỗ nó đứng (không đổi sang
+`.aw-opt-setswitch` của hàng riêng), nó ăn đúng luật chiều cao/căn hàng có sẵn cho vị trí này
+(`'.aw-opt-content.has-tpl .aw-opt-switch{height:60px}'`), khớp với Template bên cạnh mà không
+cần thêm một dòng CSS nào. `paintSwitch()`/`modeBtns` (toàn bộ máy TEXT/VOICE) tự bỏ qua khi
+`mergedSetSwitch` có mặt — `buildSetSwitchButtons()` tự lo trạng thái của chính nó.
+Dạng CÓ voice thật (Anagram…) không đổi gì — vẫn hai hàng như cũ.
+
+**2. Màn QR co đúng.** Đọc kỹ cơ chế co chiều cao bên myLesson (`canhCaoAwGiao`, đo
+`document.body.scrollHeight` mỗi 0,4s) và cơ chế "khung nhúng" bên này (`body.aw-khung-mode` +
+`.aw-as-goc`, Đợt 254) — cả hai đều thiết kế đúng, KHÔNG có lỗi ở chỗ tưởng (modal stack, backdrop
+đè lên nhau). Thủ phạm nằm ở MỘT LUẬT NỀN áp cho TOÀN BỘ trang, không riêng gì khung mode:
+`body{min-height:100vh}` (đầu file `app.css`, có từ trước bất kỳ đợt nào liên quan tới myLesson).
+`vh` ở đây KHÔNG phải chiều cao màn hình thật — nó là chiều cao HIỆN TẠI của chính webview mà
+myLesson đang co giãn (webview đóng vai "viewport" cho trang bên trong). Kết quả là một VÒNG LẶP
+TỰ THAM CHIẾU: `document.body.scrollHeight` luôn ÍT NHẤT BẰNG khung hiện tại, bất kể nội dung
+thật ngắn tới đâu — form Set assignment "đo đúng" thuần vì nội dung thật của nó CAO HƠN cái sàn
+100vh đó (content-driven, thoát được sàn); màn QR ngắn hơn nhiều thì KHÔNG thoát được, bị kẹt
+nguyên chiều cao form để lại, để lộ ra đúng mảng trắng thầy thấy.
+👉 Vá: `body.aw-khung-mode{background:#fff}` → thêm `min-height:0`, bỏ hẳn cái sàn tự tham chiếu
+CHỈ trong chế độ khung nhúng (chế độ thường của AWord — mở trực tiếp trên web — không đụng gì,
+vẫn giữ `min-height:100vh` như cũ, vì đó là trang ĐẦY ĐỦ chứ không phải một thẻ nhúng).
+
+### Đã kiểm
+`node --check` (ESM) sạch `core/options-panel.js`. CSS cân bằng ngoặc (đếm `{`/`}` khớp). Code
+`4e5da73` ĐÃ PUSH.
+
+### ⬜ VIỆC ĐANG CHỜ
+Chưa bấm tay thật — cả hai việc cần đăng nhập Google + một act QUIZ thật để thấy: (1) mở Set
+assignment cho act QUIZ, kỳ vọng PRACTICE/HOMEWORK đứng chung hàng với QUIZ (Template), cân đối
+hai bên; (2) bấm START, kỳ vọng màn "Assignment created" co khít nội dung, hết mảng trắng thừa.
 
 ---
 
