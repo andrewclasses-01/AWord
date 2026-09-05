@@ -239,6 +239,21 @@ khỏi trang** thì gọi `cleanupAll()` — và `cleanupAll()` gỡ luôn lư�
 | Chơi bình thường 15 giây (mở màn + hiện câu + bấm 1 đáp án) | khung game còn nguyên (`.aw-page`), 4 ô đáp án, game chạy tiếp ⇒ **lưới KHÔNG bắn nhầm** dù game đổi DOM liên tục |
 | `node --input-type=module --check` | sạch |
 
+### 5. ✅ ĐÃ LÊN LIVE — và một bài học về CÁCH ĐO bản live
+
+Commit `ca6c22f` → Pages build **built** (08:48Z) → đo lại **trên chính**
+`https://aword.andrewclasses.com/templates/gameshow/test.html`: trước khi xoá DOM `music.mp3`
+`loop=true` đang chạy (4,9s), sau khi xoá DOM **0 tiếng nào còn chạy**. ✅
+
+⚠️ **Bẫy đo (suýt kết luận "chưa live"):** so mã băm bản live với **file trong thư mục làm việc**
+là SAI VĨNH VIỄN với repo này — git cất `core/engine.js` bằng **LF** còn bản trên đĩa là **CRLF**
+(424.276 byte vs 417.506 byte), nên hai mã băm không đời nào bằng nhau dù đã live đúng.
+**Phải so với BLOB GIT:** `git show HEAD:core/engine.js` — so kiểu đó ra khớp tuyệt đối
+(`e00ff76a446f5362`). Kèm theo: tra `gh api repos/andrewclasses-01/AWord/pages/builds` để biết
+build **status = built** chứ không phải đoán.
+
+---
+
 ### VIỆC ĐANG CHỜ (Đợt 295)
 
 - ⬜ Thầy bấm thử đúng cảnh đã báo: nhiều đội + Showdown → bảng 1 bấm ◀ → đổi sang game khác → nhạc

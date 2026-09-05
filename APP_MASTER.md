@@ -37,6 +37,11 @@
 > ✅ **Đo lại sau khi vá:** đang chơi thì `music.mp3` vẫn chạy (phép đo không tự nói dối), sau khi xoá
 > DOM **0 tiếng nào còn chạy**; chơi bình thường 15 giây (mở màn → hiện câu → bấm đáp án) game vẫn
 > nguyên ⇒ lưới không bắn nhầm. `node --input-type=module --check` sạch.
+> ✅ **ĐÃ LIVE** (`ca6c22f`, Pages build *built*): đo lại trên chính bản live
+> `aword.andrewclasses.com/templates/gameshow/test.html` — trước khi xoá DOM nhạc đang chạy, sau khi
+> xoá **0 tiếng nào còn chạy**. ⚠️ So mã băm bản live phải so với **BLOB GIT**
+> (`git show HEAD:core/engine.js`), KHÔNG so với file trên đĩa: git cất LF còn đĩa là CRLF nên hai
+> mã băm không bao giờ bằng nhau, dễ kết luận nhầm là "chưa live".
 > ⬜ Chờ thầy bấm thử đúng cảnh đã báo; chưa thử tay đường ◀ giữa một trận FIGHT.
 > Chi tiết `GHI CHU DU AN.md` Đợt 295.
 >
