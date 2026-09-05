@@ -12,7 +12,13 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 293** (05/9/2026 — thầy bấm thử Đợt 292 trên app thật, báo lại 2 việc: PRACTICE/
+> Mới nhất: **Đợt 294** (05/9/2026 — thầy báo từ trang myLesson: em làm đúng cả 30 câu vẫn bị chấm
+> "chưa đủ điểm". Gốc ở Đợt 265b: 4 template cho mở lại câu đã sai nộp `total` = SỐ LƯỢT chứ không
+> phải số câu. Vá bằng trường mới `items` truyền SONG SONG với `total`; `core/engine.js` nộp
+> `total: result.items ?? result.total`, **màn tổng kết trong game giữ nguyên số lượt**. Bàn thử
+> `scratch/dot294-nopdiem.html` với `session` giả — không ghi gì vào kho thật: tổng kết in 3/13,
+> nộp lên 3/9. ⬜ chưa qua một bài giao thật.)
+> Trước đó: **Đợt 293** (05/9/2026 — thầy bấm thử Đợt 292 trên app thật, báo lại 2 việc: PRACTICE/
 > HOMEWORK cần gộp vào hàng Template thay vì đứng riêng để lại nút TEXT trơ trọi; màn QR sau START
 > hiện quá to. `core/options-panel.js` tách `buildSetSwitchButtons()` dùng chung, dạng không voice
 > thì gộp PRACTICE/HOMEWORK vào đúng chỗ ô công tắc TEXT/VOICE qua tham số mới `mergedSetSwitch`.
@@ -164,6 +170,67 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 294 (05/9/2026) — ⭐⭐⭐ **MẪU SỐ NỘP LÊN BÀI GIAO LÀ SỐ CÂU, KHÔNG PHẢI SỐ LƯỢT**
+
+### Vì sao
+
+Thầy mở trang bài của học sinh (myLesson) và hỏi: **vì sao mấy em được đủ 30/30 rồi mà tên vẫn đen
+và đỏ**, bảng tổng quan báo "chưa hoàn thành", thẻ lớp báo **QUIZ 13/18** trong khi 17 em đã nộp.
+
+Đo thật kho điểm — act `4mmufy` (OPEN THE BOX, lớp NNTNG4 · 3 FOOD AND DRINK, 175 lượt):
+
+| Em | Lượt tốt nhất | % | |
+|---|---|---|---|
+| XUÂN ĐỨC · BÙI BẢO AN · MINH QUANG | 30 / **31** | 97 % | chưa đủ |
+| NGỌC KHÁNH | 30 / **33** | 91 % | chưa đủ |
+| MINH HIẾU | 30 / 30 | 100 % | đủ (mãi 9:52 sáng 05/9 mới có một lượt sạch) |
+
+⇒ 18 − 4 (chưa đủ) − 1 (chưa làm) = **13**, khớp đúng con số thầy thấy.
+
+### ⛔ Gốc rễ: Đợt 265b
+
+Bốn template **cho mở lại câu đã sai** — `open-the-box` · `true-false` · `crossword` ·
+`find-the-match` — từ Đợt 265b nộp `total = rowTotal = review.length` = **số LƯỢT ĐÃ TIÊU**: mở lại
+một ô là thêm một hàng. Với **màn tổng kết trong game** đó là con số ĐÚNG và thầy đã chốt ở chính
+đợt đó (*"đội ấy đã tiêu thêm một lượt cho câu đó"*) — **không đụng vào**.
+
+Nhưng con số ấy cũng đi thẳng vào `session.submit()`. Mà cả `core/assignment-ui.js` (bảng bài giao
+của chính AWord: in `score/total`, gắn dấu *perfect* khi `score === total`) lẫn trang myLesson đều
+đọc nó để hỏi **"em ấy đã đạt điểm tối đa chưa?"** — nên em chơi sạch cả đề mà lỡ sai một nhát giữa
+chừng bị in **30/31** và mất dấu perfect. Hai câu hỏi khác nhau, một con số: đó là chỗ vỡ.
+
+### Cách vá — TÁCH HẲN HAI CON SỐ
+
+1. Bốn template truyền thêm `items` = **số câu của đề**, đứng **CẠNH** `total` chứ không thay nó:
+   `items.length` (open-the-box) · `order.length` (true-false, find-the-match) · tổng
+   `ps.clues.length` mọi trang (crossword).
+2. `core/scoring.js` mang `items` sang `result` (`raw.items ?? null`) — template cũ không truyền thì
+   `null`, mọi thứ y hệt nết cũ.
+3. `core/engine.js` chỗ nộp bài giao: `total: result.items ?? result.total`. **Chỉ đổi con số NỘP
+   LÊN.**
+4. Nhánh cắt Showdown "free" (Đợt 220) tự đặt `raw.items = null` — trả lại số câu của cả đề ở đó là
+   xoá đúng phép cắt về vòng trọn vẹn cuối mà thầy đã chọn.
+
+### Đã kiểm
+
+- Bàn thử **`scratch/dot294-nopdiem.html`** — chạy engine + template THẬT với một `session` GIẢ chỉ
+  ghi lại đối số, **không ghi một chữ nào vào kho thật** (lớp `ZTEST`). Chơi OPEN THE BOX 9 ô, có ô
+  bị mở lại: **màn tổng kết in `3/13`** (13 = số lượt, đúng nếp Đợt 265b) còn **con số nộp lên là
+  `score 3 · total 9`** (9 = số câu). Đúng hệt ý đồ.
+- Thử riêng `computeResult` bằng Node (4 ca, mã thoát 0): có `items` thì mẫu số nộp là `items`,
+  không có thì rơi về `total` — tương thích ngược tuyệt đối.
+- `node --check` sạch cả 6 file.
+- ⬜ **Chưa chạy qua một bài giao thật của học sinh** — cần một lượt nộp thật mới thấy hết đường.
+
+### ⚠️ Các lượt ĐÃ ghi vào kho thì đợt này không sửa được
+
+Phía myLesson vá riêng (web **v1.63.0**): tính % theo **mẫu số NHỎ NHẤT act từng ghi** thay vì mẫu
+số của riêng lượt đó — mẫu số chỉ phồng lên chứ không tụt xuống dưới số câu thật, nên nhỏ nhất chính
+là số câu. Nhờ vậy bốn em kia xanh ngay, không phải chơi lại. Xem `myLesson/app/BAN GIAO.md` mục
+`0📊`.
 
 ---
 

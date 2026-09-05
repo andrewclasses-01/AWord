@@ -1568,7 +1568,11 @@ function mountQuestions(root, activity, ui) {
     // the final score. With pointsOff===0 this equals correctCount, i.e. the
     // engine's own default, so nothing changes; with a penalty it can go below
     // correctCount (and negative).
-    ui.finish({ score, correct: correctCount, incorrect: rowTotal - correctCount, total: rowTotal, perQuestion, review, answered: answeredCount, title });
+    // ⭐⭐ Đợt 294 — `items` = SỐ CÂU CỦA ĐỀ, đứng cạnh `total` (= số LƯỢT) chứ không thay
+    // nó. Màn tổng kết vẫn đọc `total` như Đợt 265b; chỉ CON SỐ NỘP LÊN BÀI GIAO mới lấy
+    // `items` (xem ghi chú dài ở core/scoring.js). Mở lại một ô đã sai là thêm một hàng,
+    // nên không có dòng này thì em làm đúng cả 30 câu bị ghi 30/31.
+    ui.finish({ score, correct: correctCount, incorrect: rowTotal - correctCount, total: rowTotal, items: items.length, perQuestion, review, answered: answeredCount, title });
   }
 
   return function cleanup() {

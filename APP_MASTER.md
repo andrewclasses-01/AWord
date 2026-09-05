@@ -8,7 +8,39 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **05/9/2026 (Đợt 293 — gộp PRACTICE/HOMEWORK vào hàng Template khi không có voice, sửa màn QR sau START không co lại được)**.
+> Cập nhật lần cuối: **05/9/2026 (Đợt 294 — mẫu số NỘP LÊN bài giao là SỐ CÂU, không phải số lượt)**.
+>
+> **Đợt 294** (05/9/2026, thầy báo từ trang myLesson) — ⭐⭐⭐ **MẪU SỐ NỘP LÊN BÀI GIAO LÀ SỐ CÂU
+> CỦA ĐỀ, KHÔNG PHẢI SỐ LƯỢT ĐÃ TIÊU.** Thầy thấy trên trang bài của học sinh: em làm **đúng cả 30
+> câu** mà tên vẫn đỏ/đen "chưa đủ điểm", thẻ lớp báo QUIZ 13/18 trong khi 17 em đã nộp. Đo thật kho
+> điểm act `4mmufy` (OPEN THE BOX, lớp NNTNG4, 175 lượt): bốn em bị ghi **30/31 · 30/33** ⇒ 97%, 91%.
+>
+> ⛔ **Gốc rễ nằm ở ĐỢT 265b.** Bốn template CHO MỞ LẠI CÂU ĐÃ SAI — `open-the-box` · `true-false` ·
+> `crossword` · `find-the-match` — từ đợt đó nộp `total = rowTotal = review.length` = **số LƯỢT**:
+> mở lại một ô là thêm một hàng. Với **màn tổng kết trong game** đó là con số ĐÚNG và thầy đã chốt
+> ("đội ấy đã tiêu thêm một lượt cho câu đó") — **giữ nguyên**. Nhưng con số ấy cũng đi thẳng vào
+> `session.submit()`, mà bảng bài giao của chính AWord (`assignment-ui.js`) và trang myLesson đều
+> đọc `score/total` để hỏi "em ấy đã đạt điểm tối đa chưa?" — nên em chơi sạch cả đề mà lỡ sai một
+> nhát giữa chừng bị in "30/31", mất luôn dấu *perfect*.
+>
+> **Cách vá — tách hẳn hai con số, không đụng con số cũ:**
+> - Bốn template truyền thêm `items` = số câu của đề (`items.length` · `order.length` · tổng
+>   `ps.clues.length` mọi trang) vào `ui.finish`, **đứng CẠNH `total`** chứ không thay nó.
+> - `core/scoring.js` mang `items` sang `result` (`raw.items ?? null` — template cũ không truyền thì
+>   `null`, mọi thứ y hệt nết cũ).
+> - `core/engine.js` chỗ nộp bài giao: `total: result.items ?? result.total`. **Chỉ đổi con số NỘP
+>   LÊN.** Nhánh cắt Showdown "free" (Đợt 220) tự đặt `raw.items = null` để phép cắt về vòng trọn
+>   vẹn cuối vẫn thắng.
+>
+> ⚠️ **Không sửa được các lượt ĐÃ ghi vào kho** — phía myLesson đã vá riêng (web `v1.63.0`: mẫu số
+> chuẩn = mẫu số NHỎ NHẤT act từng ghi), nên bốn em kia xanh ngay mà không phải chơi lại.
+>
+> ✅ Đã kiểm THẬT (bàn thử `scratch/dot294-nopdiem.html`, `session` giả — **không ghi một chữ nào vào
+> kho thật**): chơi OPEN THE BOX 9 ô có mở lại ⇒ màn tổng kết in **3/13** (13 = số lượt, đúng như
+> Đợt 265b) còn con số nộp lên là **score 3 · total 9** (9 = số câu). `node --check` sạch cả 6 file.
+> ⬜ Chưa chạy qua một bài giao thật của học sinh. Chi tiết `GHI CHU DU AN.md` Đợt 294.
+>
+> ---
 >
 > **Đợt 293** (05/9/2026, thầy bấm thử Đợt 292 trên app thật) — ⭐⭐⭐ **GỘP PRACTICE/HOMEWORK VÀO
 > HÀNG TEMPLATE + SỬA MÀN QR KHÔNG CO LẠI ĐƯỢC.** Hai việc thầy thấy khi bấm thử Đợt 292: (1) dạng

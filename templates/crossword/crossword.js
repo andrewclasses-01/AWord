@@ -1581,7 +1581,12 @@ const crosswordTemplate = {
       // `perQuestion` luôn dài bằng nhau và bằng `total` (engine cắt chúng theo cặp ở chế
       // độ Free). Không có ô chữ nào bị bỏ dở thì con số này y hệt `total` cũ.
       const rowTotal = review.length;
-      ui.finish({ correct, incorrect: rowTotal - correct, total: rowTotal, perQuestion, review, answered, score });
+      // ⭐⭐ Đợt 294 — `items` = SỐ Ô CHỮ CỦA ĐỀ (đếm qua mọi trang), đứng CẠNH `total`
+      // (= số lượt: một ô chữ bỏ dở rồi mở lại có HAI hàng) chứ không thay nó. Màn tổng
+      // kết vẫn đọc `total` như Đợt 265b; chỉ con số NỘP LÊN BÀI GIAO mới lấy `items` —
+      // xem ghi chú dài ở core/scoring.js.
+      const itemTotal = pageState.reduce((n, ps) => n + ps.clues.length, 0);
+      ui.finish({ correct, incorrect: rowTotal - correct, total: rowTotal, items: itemTotal, perQuestion, review, answered, score });
     }
 
     return function cleanup() {

@@ -23,6 +23,18 @@ export function computeResult(raw, timeSeconds) {
     // (Tuỳ chọn) chuỗi điểm đã định dạng sẵn (vd "1250") — khi có, bảng tổng kết &
     // leaderboard hiện NGUYÊN chuỗi này thay cho dạng "đúng/tổng".
     scoreText: raw.scoreText ?? null,
+    // ⭐⭐ Đợt 294 (05/09/2026) — SỐ CÂU THẬT CỦA ĐỀ, tách hẳn khỏi `total`.
+    // Từ Đợt 265b, bốn template cho mở lại câu đã sai (open-the-box · true-false ·
+    // crossword · find-the-match) nộp `total` = SỐ LƯỢT ĐÃ TIÊU: mở lại một câu là
+    // thêm một hàng. Con số đó ĐÚNG cho màn tổng kết trong game (thầy chốt Đợt 265b)
+    // nhưng SAI khi ghi vào bài giao — bên myLesson đọc `score/total` để biết em ấy có
+    // đạt điểm tối đa chưa, nên em làm đúng cả 30 câu mà lỡ sai một nhát giữa chừng bị
+    // ghi 30/31 = 97% và bị chấm "chưa hoàn thành" (đo thật 04-05/09/2026, act
+    // `4mmufy` lớp NNTNG4: 4 em dính).
+    // ⇒ Template nào có thể hỏi lại một câu thì truyền thêm `items` = số câu của đề.
+    // engine.js dùng nó LÀM MẪU SỐ KHI NỘP BÀI GIAO; màn tổng kết vẫn hiện `total`.
+    // Template không truyền thì `null` ⇒ mọi thứ y hệt nết cũ.
+    items: raw.items ?? null,
     timeSeconds,
     perQuestion,
     submittedAt: Date.now()

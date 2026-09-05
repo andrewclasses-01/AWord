@@ -1146,7 +1146,11 @@ const tfTemplate = {
       const rowTotal = review.length;
       // Ranking score = correct count minus wrong-answer penalty. When pointsOff===0
       // penalty is 0, so score === correct, which equals the engine's default.
-      ui.finish({ score: correct - penalty, correct, incorrect: rowTotal - correct, total: rowTotal, perQuestion, review, answered: review.filter(r => r.answered).length });
+      // ⭐⭐ Đợt 294 — `items` = SỐ CÂU CỦA ĐỀ (`order`), đứng CẠNH `total` (= số LƯỢT, đã
+      // cộng cả các câu bị "Repeat" hỏi lại) chứ không thay nó. Màn tổng kết vẫn đọc
+      // `total` như Đợt 265b; chỉ con số NỘP LÊN BÀI GIAO mới lấy `items` — xem ghi chú
+      // dài ở core/scoring.js.
+      ui.finish({ score: correct - penalty, correct, incorrect: rowTotal - correct, total: rowTotal, items: order.length, perQuestion, review, answered: review.filter(r => r.answered).length });
     }
 
     return function cleanup() {

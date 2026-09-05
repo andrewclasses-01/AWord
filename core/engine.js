@@ -5638,6 +5638,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
           raw.correct = raw.review.filter(r => r.answered && r.yourCorrect).length;
           raw.incorrect = raw.total - raw.correct;
           if (raw.score != null) raw.score = raw.correct;   // điểm mặc định = số câu đúng
+          // ⭐ Đợt 294 — CẮT RỒI THÌ BỎ LUÔN `items`. Mẫu số ở đây đã cố ý cắt về vòng
+          // trọn vẹn cuối (lựa chọn của thầy ở Đợt 220); trả lại số câu của cả đề là
+          // xoá đúng phép cắt đó. Không truyền thì mọi đường sau đọc `total` như cũ.
+          raw.items = null;
         }
       }
       const result = computeResult(raw, timeMs / 1000);
@@ -5677,8 +5681,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         //             in the outbox (core/assignments.js) until confirmed.
         if (hwMode === "submit") {
           hwFinishedAt = Date.now();
+          // ⭐⭐ Đợt 294 — MẪU SỐ NỘP LÊN LÀ SỐ CÂU CỦA ĐỀ (`result.items`), KHÔNG PHẢI
+          // SỐ LƯỢT (`result.total`). Xem ghi chú dài ở `items` trong core/scoring.js:
+          // bốn template cho mở lại câu đã sai nộp `total` = số lượt đã tiêu, nên em làm
+          // đúng cả đề mà lỡ sai giữa chừng bị ghi 30/31 — bảng bài giao của chính AWord
+          // in "30/31" và không gắn dấu perfect, còn myLesson chấm là chưa hoàn thành.
+          // ⛔ Chỉ đổi CON SỐ NỘP LÊN. Màn tổng kết trong game vẫn hiện `total` theo lượt
+          // đúng như thầy chốt ở Đợt 265b ("đội ấy đã tiêu thêm một lượt cho câu đó").
           submission = session.submit({
-            score: result.score, total: result.total, timeMs, review: reviewData
+            score: result.score, total: result.items ?? result.total, timeMs, review: reviewData
           }).then(r => (hwSendState = r || { ok: false }))
             .catch(e => { console.warn("AWord: submit failed", e); return (hwSendState = { ok: false }); });
         }

@@ -1333,7 +1333,10 @@ const ftmTemplate = {
       // Report the SAME live value shown top-right (matched minus points off).
       // With the feature off, penalty is 0 so this equals `correct` — the exact
       // number ui.finish would default to anyway (byte-identical).
-      ui.finish({ correct, incorrect: rowTotal - correct, total: rowTotal, perQuestion, review, answered: correct,
+      // ⭐⭐ Đợt 294 — `items` = SỐ CẶP CỦA ĐỀ (`order`), đứng CẠNH `total` (= số LƯỢT, đã
+      // cộng cả các cặp bị hỏi lại) chứ không thay nó. Màn tổng kết vẫn đọc `total` như
+      // Đợt 265b; chỉ con số NỘP LÊN BÀI GIAO mới lấy `items` — xem core/scoring.js.
+      ui.finish({ correct, incorrect: rowTotal - correct, total: rowTotal, items: order.length, perQuestion, review, answered: correct,
         score: scoreNow(),
         title: reason === "gameover" ? "Game over" : undefined });
     }
