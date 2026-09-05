@@ -2103,6 +2103,43 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
 
   root.append(page);
 
+  // ⭐⭐ Đợt 295 (05/9/2026) — LƯỚI AN TOÀN: VÁN BỊ GỠ KHỎI TRANG MÀ KHÔNG AI GỌI TEARDOWN.
+  //
+  // Ván chỉ tự dọn khi thầy đi ra bằng ĐƯỜNG TRONG GAME (Home / Start again /
+  // Change template) — những đường đó gọi cleanupAll(). Nhưng trang còn có đường
+  // RA KHÁC mà engine không hề hay biết: nút ◀ của trình duyệt (và của myActivity)
+  // đi popstate -> routeFromLocation() -> goTop() -> render() -> `app.innerHTML = ""`,
+  // hoặc một link ?a=<act khác> nạp thẳng ván mới vào đúng chỗ đó. Lúc ấy DOM của
+  // ván biến mất nhưng closure này vẫn sống nguyên.
+  //
+  // ⛔ Xoá DOM KHÔNG dừng được nhạc nền: nhạc nền Gameshow là một `new Audio()`
+  // KHÔNG NẰM TRONG DOM (templates/gameshow/gs-sound.js, `musicEl`), nên nó cứ lặp
+  // mãi đè lên game kế tiếp. Đo thật 05/9/2026 trên `templates/gameshow/test.html`:
+  // xoá `#app` xong, `music.mp3` vẫn chạy tiếp 4,9s -> 13,7s. Thầy gặp đúng cảnh này
+  // khi bấm ◀ ở bảng 1 rồi đổi game (Showdown nhiều đội, 05/9/2026).
+  // Cùng họ với đồng hồ ma Đợt 131 và listener Firestore Đợt 196: thứ sống sót sau
+  // màn hình chết thì vô hình, và không bao giờ tự tắt.
+  //
+  // Cùng khuôn `watchForClose()` của core/showdown-home.js: quan sát body, hễ `page`
+  // rời khỏi trang là dọn ván. KHÔNG thay thế các đường gọi cleanupAll() sẵn có —
+  // chúng vẫn chạy trước và gọn hơn; đây là lưới hứng phía dưới. Cũng KHÔNG gọi
+  // `onExit` (ván bị vứt, không phải thầy bấm Home), nên không đường nào bị đổi nết.
+  // ⚠ `page` được gắn ĐÚNG MỘT LẦN ở dòng trên và không bao giờ bị tháo ra gắn lại
+  // (fight cũng gắn `wrap` vào trang TRƯỚC khi gọi startGame cho 2 bảng) — nếu sau
+  // này có ai cho `page` rời trang tạm thời thì lưới này sẽ giết ván đang sống.
+  let watcherRoiTrang = null;
+  function watchVanRoiTrang() {
+    if (watcherRoiTrang) return;
+    watcherRoiTrang = new MutationObserver(() => { if (!page.isConnected) cleanupAll(); });
+    watcherRoiTrang.observe(document.body, { childList: true, subtree: true });
+  }
+  function stopWatchVanRoiTrang() {
+    if (!watcherRoiTrang) return;
+    watcherRoiTrang.disconnect();
+    watcherRoiTrang = null;
+  }
+  watchVanRoiTrang();
+
   // Kill the browser's right-click menu inside the game frame — the teacher
   // plays on a touch panel and a stray long-press / right-click popping up
   // "Reload / Save image / Inspect" over the board is only ever in the way.
@@ -5263,6 +5300,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   function cleanupAll() {
     if (torndown) return;
     torndown = true;
+    stopWatchVanRoiTrang();        // ⭐ Đợt 295 — ván tự dọn rồi thì gỡ luôn lưới an toàn
     stopShowdownReview();          // ⭐ Đợt 196 — never leave the live listener behind
     stopSdClaimWatch();            // ⭐ Đợt 217 — và bộ nghe "đội có bị giành không"
     stopLobby();                   // ⭐ Đợt 261 — và rút mình khỏi lượt nếu đang chờ

@@ -173,6 +173,81 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 295 (05/9/2026, thầy báo) — ⭐⭐⭐ **NHẠC NỀN GAME CŨ VẪN CHẠY SAU KHI BẤM ◀ ĐỔI SANG GAME KHÁC**
+
+**Thầy báo:** *"Khi tôi chạy game trên AWord trong mode nhiều đội + showdown, khi tôi bấm back cho
+bảng 1 và đổi game thì các bảng còn lại cũng đồng bộ theo, nhưng âm thanh nền của game trước đó đang
+chơi vẫn còn. Có vẻ nó vẫn chạy ngầm."*
+
+### 1. GỐC RỄ — ván chỉ tự dọn khi đi ra bằng ĐƯỜNG TRONG GAME
+
+`startGame()` dọn ván bằng `cleanupAll()`, và `cleanupAll()` **chỉ được gọi từ ba đường trong game**:
+Home · Start again · Change template (rà lại toàn bộ `startGame(`/`startFight(` trong `core/engine.js`:
+mọi chỗ thay ván đều có `cleanupAll()` đứng trước — nên chỗ hổng KHÔNG nằm ở đó).
+
+Chỗ hổng là **đường ra mà engine không hề hay biết**: nút **◀** (của trình duyệt, của thanh công cụ
+myActivity, của thanh điều hướng từng cột v2.15.3) đi
+`popstate → routeFromLocation() → goTop() → render() → app.innerHTML = ""`.
+DOM của ván biến mất, nhưng **closure của ván vẫn sống nguyên** — không ai gọi `cleanupAll()`.
+
+⛔ **Và xoá DOM KHÔNG dừng được nhạc nền:** nhạc nền Gameshow là một `new Audio()` **KHÔNG NẰM TRONG
+DOM** (`templates/gameshow/gs-sound.js`, biến `musicEl` ở tầng module, `loop = true`). Xoá cả cây DOM
+cũng không đụng được tới nó ⇒ nó lặp mãi, đè lên game kế tiếp. Gameshow là template DUY NHẤT có nhạc
+nền lặp (`grep "loop = true"` toàn dự án ra đúng một chỗ), khớp với mô tả "âm thanh nền".
+
+**Vì sao chỉ bảng 1 kêu:** các cột khác nhận act mới bằng `loadURL` (myActivity `mirrorRest`) — nạp
+trang mới là cả tài liệu cũ bị huỷ, tiếng chết theo. Cột thầy bấm ◀ thì **vẫn là một trang** từ đầu
+tới cuối, nên nó là cột duy nhất còn giữ được cái xác ván cũ.
+
+Cùng họ với **đồng hồ ma Đợt 131** và **listener Firestore Đợt 196**: thứ sống sót sau màn hình chết
+thì vô hình, và không bao giờ tự tắt.
+
+### 2. ĐO THẬT TRƯỚC KHI SỬA (`templates/gameshow/test.html`, không cần đăng nhập)
+
+Bẫy `window.Audio` sau khi trang tải xong (nhạc nền sinh ra lúc bấm PLAY nên vẫn tóm được), bấm PLAY
+bằng cú chạm THẬT (autoplay của Chrome đòi cử chỉ người dùng), rồi làm đúng việc `render()` làm:
+
+| Nhịp | Kết quả **TRƯỚC** khi vá |
+|---|---|
+| Sau khi bấm PLAY 5 giây | `music.mp3` · `loop=true` · `currentTime 4.9` |
+| Sau `app.innerHTML = ""` + chờ 1,5s | `music.mp3` **VẪN CHẠY**, `currentTime 13.7` |
+
+Đồng hồ của bản nhạc **vẫn tiến** sau khi màn hình đã trắng — đúng thứ thầy nghe thấy.
+
+### 3. ĐÃ VÁ — lưới an toàn trong `core/engine.js` (một file, ~38 dòng)
+
+Cùng khuôn `watchForClose()` mà `core/showdown-home.js` đã dùng: một `MutationObserver` quan sát
+`document.body`, hễ `page` (thẻ gốc của ván, gắn vào trang đúng một lần ở `root.append(page)`) **rời
+khỏi trang** thì gọi `cleanupAll()` — và `cleanupAll()` gỡ luôn lưới.
+
+- **KHÔNG thay thế** các đường gọi `cleanupAll()` sẵn có — chúng vẫn chạy trước và gọn hơn; đây là
+  lưới hứng phía dưới cho mọi đường ra hiện tại LẪN đường ra ai đó thêm sau này.
+- **KHÔNG gọi `onExit`** — ván bị vứt chứ không phải thầy bấm Home, nên không đường đi nào đổi nết.
+- Dọn luôn (không riêng nhạc): đồng hồ, timeout đang treo, `voicePlayer`, listener Firestore của
+  Showdown, các thẻ "-N" bay trên `document.body`… — mọi thứ `cleanupAll()` vốn dọn.
+- ⚠ **Điều kiện để lưới này an toàn:** `page` được gắn ĐÚNG MỘT LẦN và không bao giờ bị tháo ra gắn
+  lại (đã kiểm: engine không có `page.remove()`; chế độ FIGHT cũng gắn `wrap` vào trang **trước** khi
+  gọi `startGame` cho 2 bảng). Nếu sau này ai cho `page` rời trang tạm thời thì lưới sẽ giết ván đang
+  sống — ghi ở ngay chú thích trong code.
+
+### 4. Đo lại SAU khi vá — cùng bàn thử, cùng phép đo
+
+| Phép thử | Kết quả |
+|---|---|
+| Đang chơi, ngay TRƯỚC khi xoá DOM | `music.mp3` **đang chạy** (phép đo không tự nói dối: ván còn sống thật) |
+| Sau `app.innerHTML = ""` + chờ 1,5s | **0 tiếng nào còn chạy** ✅ |
+| Chơi bình thường 15 giây (mở màn + hiện câu + bấm 1 đáp án) | khung game còn nguyên (`.aw-page`), 4 ô đáp án, game chạy tiếp ⇒ **lưới KHÔNG bắn nhầm** dù game đổi DOM liên tục |
+| `node --input-type=module --check` | sạch |
+
+### VIỆC ĐANG CHỜ (Đợt 295)
+
+- ⬜ Thầy bấm thử đúng cảnh đã báo: nhiều đội + Showdown → bảng 1 bấm ◀ → đổi sang game khác → nhạc
+  nền game cũ phải **im ngay**.
+- ⬜ Chưa thử tay đường ◀ **giữa một trận FIGHT** (2 bảng trong một trang) — theo code thì mỗi bảng có
+  lưới riêng và `cleanupAll()` là hàm chạy-một-lần nên an toàn, nhưng chưa đo tay.
+
+---
+
 ## Đợt 294 (05/9/2026) — ⭐⭐⭐ **MẪU SỐ NỘP LÊN BÀI GIAO LÀ SỐ CÂU, KHÔNG PHẢI SỐ LƯỢT**
 
 ### Vì sao

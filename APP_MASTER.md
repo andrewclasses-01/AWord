@@ -8,7 +8,39 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **05/9/2026 (Đợt 294 — mẫu số NỘP LÊN bài giao là SỐ CÂU, không phải số lượt)**.
+> Cập nhật lần cuối: **05/9/2026 (Đợt 295 — nhạc nền game cũ vẫn chạy sau khi bấm ◀ đổi game)**.
+>
+> **Đợt 295** (05/9/2026, thầy báo) — ⭐⭐⭐ **NHẠC NỀN GAME CŨ VẪN CHẠY SAU KHI BẤM ◀ ĐỔI SANG
+> GAME KHÁC.** Thầy chơi Showdown nhiều đội trên myActivity: bấm ◀ ở bảng 1 rồi đổi game, các bảng
+> khác đồng bộ theo đúng như mong đợi, nhưng **nhạc nền của game trước vẫn chạy ngầm**.
+>
+> ⛔ **Gốc rễ:** `cleanupAll()` của một ván CHỈ được gọi từ ba đường TRONG game (Home · Start again
+> · Change template). Nút **◀** đi đường khác hẳn — `popstate → routeFromLocation() → goTop() →
+> render() → app.innerHTML = ""` — DOM của ván biến mất nhưng **closure vẫn sống**. Mà nhạc nền
+> Gameshow là một `new Audio()` **KHÔNG NẰM TRONG DOM** (`templates/gameshow/gs-sound.js`, `musicEl`,
+> `loop = true`), nên xoá DOM không đụng được tới nó. Gameshow là template DUY NHẤT có nhạc nền lặp.
+> Chỉ cột thầy bấm ◀ mới kêu: các cột khác nhận act mới bằng `loadURL` nên cả tài liệu bị huỷ, tiếng
+> chết theo. Cùng họ đồng hồ ma Đợt 131 / listener Firestore Đợt 196.
+>
+> **Đo thật trước khi sửa** (`templates/gameshow/test.html`, bẫy `window.Audio`, bấm PLAY bằng cú
+> chạm thật): sau `app.innerHTML = ""` 1,5 giây, `music.mp3` **vẫn chạy** và đồng hồ của nó vẫn tiến
+> (4,9s → 13,7s).
+>
+> **Cách vá — lưới an toàn trong `core/engine.js`, đúng khuôn `watchForClose()` của
+> `core/showdown-home.js`:** một `MutationObserver` trên `document.body`; hễ `page` (thẻ gốc của ván)
+> rời khỏi trang là gọi `cleanupAll()`, và `cleanupAll()` gỡ luôn lưới. KHÔNG thay thế các đường gọi
+> `cleanupAll()` sẵn có (đã rà: mọi `startGame(`/`startFight(` đều có `cleanupAll()` đứng trước) —
+> đây là lưới hứng phía dưới, và nó dọn luôn đồng hồ/timeout/voice/listener chứ không riêng nhạc.
+> ⚠ An toàn được là nhờ `page` gắn vào trang ĐÚNG MỘT LẦN, không bao giờ tháo ra gắn lại (FIGHT cũng
+> gắn `wrap` trước rồi mới `startGame` 2 bảng).
+>
+> ✅ **Đo lại sau khi vá:** đang chơi thì `music.mp3` vẫn chạy (phép đo không tự nói dối), sau khi xoá
+> DOM **0 tiếng nào còn chạy**; chơi bình thường 15 giây (mở màn → hiện câu → bấm đáp án) game vẫn
+> nguyên ⇒ lưới không bắn nhầm. `node --input-type=module --check` sạch.
+> ⬜ Chờ thầy bấm thử đúng cảnh đã báo; chưa thử tay đường ◀ giữa một trận FIGHT.
+> Chi tiết `GHI CHU DU AN.md` Đợt 295.
+>
+> ---
 >
 > **Đợt 294** (05/9/2026, thầy báo từ trang myLesson) — ⭐⭐⭐ **MẪU SỐ NỘP LÊN BÀI GIAO LÀ SỐ CÂU
 > CỦA ĐỀ, KHÔNG PHẢI SỐ LƯỢT ĐÃ TIÊU.** Thầy thấy trên trang bài của học sinh: em làm **đúng cả 30
