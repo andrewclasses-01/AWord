@@ -3285,7 +3285,7 @@ registerTemplate({
 | `ui.onSubmit(fn)` | Đăng ký hàm chạy khi người dùng bấm "Submit answers" trong menu |
 | `ui.sound.correct()` / `.wrong()` / `.fanfare()` | Phát âm thanh (tự tôn trọng nút tắt tiếng) |
 | `ui.toast(msg)` | Hiện thông báo nhỏ nổi ở đáy khung, tự biến mất |
-| `ui.finish({correct, incorrect, total, perQuestion})` | **Báo game đã xong.** Engine tự lo: dừng đồng hồ, tính điểm, lưu leaderboard, chạy hiệu ứng "Game complete", hiện bảng tổng kết. `perQuestion` = mảng `{q: index, correct: true/false}` (dùng để chấm điểm và — nếu cần — chi tiết từng câu) |
+| `ui.finish({correct, incorrect, total, perQuestion})` | **Báo game đã xong.** Engine tự lo: dừng đồng hồ, tính điểm, lưu leaderboard, chạy hiệu ứng "Game complete", hiện bảng tổng kết. `perQuestion` = mảng `{q: index, correct: true/false}` (dùng để chấm điểm và — nếu cần — chi tiết từng câu). ⭐ Template CÓ THỂ HỎI LẠI MỘT CÂU thì phải truyền thêm `items` = số câu của đề — xem mục *"SỐ CÂU THẬT — `ui.finish({items})`"* (Đợt 294) |
 
 Engine tự động lo (KHÔNG cần template làm): nút PLAY khổng lồ che game lúc đầu, đồng hồ, nút loa,
 nút phóng to, menu (☰), pháo giấy khi hoàn thành, bảng tổng kết, bảng xếp hạng, khung 16:9, tên
@@ -3534,6 +3534,36 @@ thêm trong `ui.finish`:
 Không truyền 2 trường này → hành vi y hệt cũ (score = số câu đúng). Cài đặt ở `core/scoring.js`
 (`computeResult`/`rankCompare`), `core/leaderboard.js` (`addEntry` lưu `scoreText`), `core/engine.js`
 (hiển thị). **Tương thích ngược tuyệt đối** — mọi game cũ không đổi.
+
+### ⭐⭐ SỐ CÂU THẬT — `ui.finish({items})` (Đợt 294, 5/9/2026)
+
+**`total` KHÔNG phải lúc nào cũng là số câu của đề.** Từ Đợt 265b, bốn template cho **mở lại câu đã
+sai** — `open_the_box` · `true_false` · `crossword` · `find_the_match` — truyền `total = rowTotal =
+review.length` = **số LƯỢT ĐÃ TIÊU**: hỏi lại một câu là thêm một hàng. Với bảng tổng kết trong game
+đó là con số ĐÚNG và thầy đã chốt ở chính đợt đó — **giữ nguyên**.
+
+⛔ Nhưng `ui.finish()` là đường **duy nhất** tới `session.submit()`, mà bảng bài giao
+(`assignment-ui.js`: in `score/total`, gắn dấu *perfect* khi `score === total`) và trang myLesson
+đều đọc `score/total` để hỏi **"em ấy đã đạt điểm tối đa chưa?"**. Hai câu hỏi khác nhau, một con
+số ⇒ em chơi sạch cả đề mà lỡ sai một nhát bị in **30/31**, mất dấu perfect, và myLesson chấm là
+"chưa hoàn thành" (thầy bắt được 5/9/2026, act `4mmufy` lớp NNTNG4, 4 em dính).
+
+⇒ **Template nào có thể hỏi lại một câu thì truyền thêm `items` = SỐ CÂU CỦA ĐỀ**, đứng **CẠNH**
+`total` chứ không thay nó:
+
+```js
+ui.finish({ score, correct, incorrect, total: rowTotal, items: items.length, ... });
+```
+
+- `core/scoring.js` mang nó sang `result.items` (`raw.items ?? null`).
+- `core/engine.js` chỗ nộp bài giao dùng `total: result.items ?? result.total` — **chỉ con số NỘP
+  LÊN**. Bảng tổng kết vẫn in `result.total` (số lượt).
+- Không truyền `items` → `null` → mọi thứ y hệt nết cũ. **Tương thích ngược tuyệt đối.**
+- ⚠️ Nhánh cắt Showdown "free" (Đợt 220) tự đặt `raw.items = null`: ở đó mẫu số đã CỐ Ý cắt về vòng
+  trọn vẹn cuối, trả lại số câu của cả đề là xoá đúng phép cắt ấy.
+
+⚠️ Các lượt **ĐÃ ghi vào kho** thì đợt này không sửa được — myLesson vá riêng ở web `v1.63.0` (lấy
+mẫu số NHỎ NHẤT act từng ghi làm số câu thật).
 
 ### BẢNG TỔNG KẾT — Score / Total / Time hiện cái gì (Đợt 83, 7/8/2026)
 
