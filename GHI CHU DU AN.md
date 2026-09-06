@@ -173,6 +173,40 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 296 (06/9/2026, rà soát toàn hệ) — ⭐⭐ **MÀN REPORT ĐỌC KẾT QUẢ NHẸ — BÀI LÀM CHI TIẾT TẢI KHI BẤM XEM**
+
+**Bối cảnh:** rà soát toàn hệ đêm 05→06/9 (`DU LIEU TONG HOP\RA SOAT TOAN HE — DEM 06-09-2026.md`, mục K). Đo trên bản
+sao lưu Firestore 05/9: kho `results` **618 tài liệu = 8 MB, trung bình 13 KB, lớn nhất 37 KB** — gần hết là trường `review`
+(bài làm từng câu). Màn Report (`assignment-ui.js::loadReport`) gọi `listResults()` = `getDocs(where assignmentId ==)` kéo
+TRỌN mọi tài liệu ⇒ một act 175 lượt = ~2,3 MB trước khi bảng hiện, trong khi bảng chỉ cần tên/điểm/tổng/giờ/mốc nộp.
+
+**Thầy chốt (AskUserQuestion, 06/9):** *"Đọc danh sách KHÔNG kèm chi tiết, tải chi tiết khi bấm xem"* — thay cho phương án
+tách `review` sang tài liệu con (đòi +1 lượt ghi mỗi lần chơi + dán luật mới).
+
+### Cách làm — KHÔNG đổi kho, KHÔNG đổi luật, không thêm lượt ghi
+1. **`core/assignments.js::listResultsLight(code)`** — SDK client không chọn được trường, nên đi REST `documents:runQuery` với
+   `select` 6 trường (`assignmentId studentName score total timeMs createdAt`), `where assignmentId == code`, `limit 3000`,
+   header `Authorization: Bearer <ID token của thầy>` (lấy từ `auth().currentUser.getIdToken()`). Luật `results` giữ nguyên
+   teacher-only — token mang email của thầy nên `isTeacher()` vẫn đúng. **Số lượt đọc y cũ** (Firestore tính theo tài liệu),
+   chỉ byte giảm ~60×. Không có token / REST không 200 / payload không phải mảng ⇒ **rơi về `listResults()` đầy đủ**.
+   Hàng trả về KHÔNG có khoá `review` (= chưa tải), khác với `null` (= không lưu).
+2. **`readResultReview(id)`** — `getDoc(results/{id})` trả `review` (mảng) hoặc `null`. 1 lượt đọc khi thầy mở một dòng.
+3. **`core/assignment-ui.js`**: `loadReport()` dùng bản nhẹ, giữ `id`; `review` ba trạng thái (mảng · `null` · `undefined`).
+   `detailBlock()`: hàng chưa tải thì lúc mở dòng chèn "Loading answers…", tải xong thay bằng `answersTable(r)` và cập nhật
+   `maxHeight` để hoạt ảnh mở không cụt; tải hỏng ⇒ chữ báo, mở lại là thử lại (`loadingAnswers` chống bấm chồng). Hàng chỉ có ở
+   `scores` (`review: null`) vẫn hiện "No answer detail was saved…" y cũ.
+
+### Đã kiểm
+`node --input-type=module --check` sạch `assignments.js` + `assignment-ui.js` · `sinh-preload.py --check` KHỚP (không thêm
+import tĩnh) · `listResults` gốc vẫn còn (dùng làm đường lùi + `trashAssignment` xoá). ⛔ Không thử được đường có ID token
+trên máy (cần đăng nhập Google của thầy) — đường lùi bảo đảm không tệ hơn trước.
+
+### VIỆC ĐANG CHỜ (Đợt 296)
+⬜ Thầy đăng nhập → Results → mở bài giao nhiều lượt (vd act `4mmufy`, 192 lượt): bảng hiện nhanh hơn rõ; bấm một em ⇒ thấy
+"Loading answers…" ~0,3 s rồi bảng đáp án; hàng "No answer detail…" vẫn đúng với lượt chỉ có điểm công khai.
+
+---
+
 ## Đợt 295 (05/9/2026, thầy báo) — ⭐⭐⭐ **NHẠC NỀN GAME CŨ VẪN CHẠY SAU KHI BẤM ◀ ĐỔI SANG GAME KHÁC**
 
 **Thầy báo:** *"Khi tôi chạy game trên AWord trong mode nhiều đội + showdown, khi tôi bấm back cho

@@ -15,7 +15,7 @@ import { el, copyText } from "./utils.js";
 import { icons } from "./icons.js";
 import { qrSvg, copyQrImage, downloadQrPng } from "./qr.js";
 import {
-  createAssignment, updateAssignment, trashAssignment, listResults, listScores,
+  createAssignment, updateAssignment, trashAssignment, listResultsLight, readResultReview, listScores,
   listAllAssignments, assignmentLink, classFolderFor, assignmentNameTaken,
   courseResultsFor, COURSE_RESULTS_NAME,
   assignmentsToArchive, hasNewResults, markAssignmentSeen,
@@ -1154,8 +1154,9 @@ function scoreIsPenalised(assignment) {
 // whose detailed copy did not make it (both are written with the same
 // `createdAt`, which makes a reliable de-duplication key).
 async function loadReport(assignment) {
+  // Đợt 296: light rows (no `review`) — answers load per row on click, see detailBlock().
   const [r1, r2] = await Promise.allSettled([
-    listResults(assignment.code),
+    listResultsLight(assignment.code),
     listScores(assignment.code)
   ]);
   // If BOTH reads failed, say so loudly instead of reporting an empty class.
@@ -1171,6 +1172,7 @@ async function loadReport(assignment) {
                  createdAt: s.createdAt, review: null }));
 
   return [...results, ...extra].map(r => ({
+    id: r.id || null,                       // Đợt 296: results doc id, for the lazy `review` read
     name: r.studentName || "Player",
     key: nameKey(r.studentName),
     score: r.score || 0,
@@ -1179,7 +1181,9 @@ async function loadReport(assignment) {
     timeMs: r.timeMs || 0,
     createdAt: r.createdAt || 0,
     late: !!(assignment.deadline && r.createdAt > assignment.deadline),
-    review: Array.isArray(r.review) ? r.review : null
+    // Three states (Đợt 296): array = answers in hand · null = none saved (public score row
+    // only, or the doc has no review) · undefined = NOT LOADED YET (light row; read on click).
+    review: Array.isArray(r.review) ? r.review : (("review" in r) ? null : undefined)
   })).sort((a, b) => b.createdAt - a.createdAt);
 }
 
@@ -1338,8 +1342,31 @@ function detailBlock(assignment, rows) {
       // Collapsed by default; opening animates height+opacity smoothly instead
       // of an instant display:none/block jump cut.
       const detail = el("div", "aw-as-answers");
-      detail.append(answersTable(r));
+      // Đợt 296: light rows arrive WITHOUT answers (`review === undefined`); they are read the
+      // first time the teacher opens the row (1 doc read), then kept on `r`. Rows that already
+      // carry answers (fallback full read) or have none (`null`) render straight away as before.
+      if (r.review !== undefined || !r.id) detail.append(answersTable(r));
       table.append(detail);
+      let loadingAnswers = false;
+      const ensureAnswers = async () => {
+        if (r.review !== undefined || !r.id || loadingAnswers) return;
+        loadingAnswers = true;
+        const note = el("div", "aw-as-note", "Loading answers…");
+        detail.append(note);
+        detail.style.maxHeight = detail.scrollHeight + "px";
+        try {
+          r.review = await readResultReview(r.id);   // array, or null = nothing saved
+        } catch (_) {
+          loadingAnswers = false;
+          note.textContent = "Could not load the answers — check your internet, then open this row again.";
+          detail.style.maxHeight = detail.scrollHeight + "px";
+          return;
+        }
+        loadingAnswers = false;
+        detail.innerHTML = "";
+        detail.append(answersTable(r));
+        if (detail.classList.contains("is-open")) detail.style.maxHeight = detail.scrollHeight + "px";
+      };
 
       // Opening one student puts the popup in FOCUS MODE: that row and the
       // answers below it stay bright, everything else dims away so the teacher
@@ -1353,6 +1380,7 @@ function detailBlock(assignment, rows) {
           detail.style.maxHeight = detail.scrollHeight + "px";
           detail.classList.add("is-open");
           setFocusMode(true, [tr, detail]);
+          ensureAnswers();
         }
       };
     });

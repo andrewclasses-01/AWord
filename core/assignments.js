@@ -19,7 +19,7 @@
 // a key here without updating the published rules makes every submission fail.
 // =============================================================
 
-import { db, fs, currentUser } from "./firebase.js";
+import { db, fs, auth, currentUser, firebaseConfig } from "./firebase.js";
 // Đợt 211 — the migration stamp travels WITH the snapshot; see snapshotOf().
 // A leaf module of its own, so this costs the student page nothing and cannot
 // reach the teacher's library — the ⛔ import boundary at the top of
@@ -296,6 +296,71 @@ export async function listResults(code) {
   const [d, { collection, query, where, getDocs }] = await Promise.all([db(), fs()]);
   const snap = await getDocs(query(collection(d, "results"), where("assignmentId", "==", code)));
   return snap.docs.map(s => ({ id: s.id, ...s.data() }));
+}
+
+// Đợt 296 (06/9/2026, rà soát toàn hệ) — the SAME rows WITHOUT the heavy `review` field.
+// Measured on the 05/9 backup: 618 result docs = 8 MB, 13 KB each on average, 37 KB max —
+// almost all of it `review`. The Report popup only needs name/score/total/time/createdAt to
+// draw its table, yet `listResults()` pulled every answer of every play (one act with 175
+// plays ≈ 2.3 MB on TOMKO before anything shows). The client SDK cannot project fields, so
+// this goes over REST `runQuery` with `select`, authenticated with the teacher's ID token —
+// the rules are UNCHANGED (`results` stays teacher-read-only; the token carries her email).
+// Read COUNT is the same (Firestore bills per document), only the bytes shrink ~60×.
+// `review` is fetched per student when the row is opened — see `readResultReview()`.
+// Anything goes wrong (no token, REST refused, odd payload) → fall back to the full read, so
+// the popup never shows less than before.
+const RESULT_LIGHT_FIELDS = ["assignmentId", "studentName", "score", "total", "timeMs", "createdAt"];
+function fieldValue(v) {
+  if (!v) return undefined;
+  if ("stringValue" in v) return v.stringValue;
+  if ("integerValue" in v) return parseInt(v.integerValue, 10);
+  if ("doubleValue" in v) return Number(v.doubleValue);
+  if ("booleanValue" in v) return v.booleanValue;
+  if ("nullValue" in v) return null;
+  return undefined;
+}
+export async function listResultsLight(code) {
+  let token = null;
+  try {
+    const a = await auth();
+    token = a.currentUser ? await a.currentUser.getIdToken() : null;
+  } catch (_) { token = null; }
+  if (!token) return listResults(code);
+  try {
+    const url = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents:runQuery`;
+    const body = {
+      structuredQuery: {
+        from: [{ collectionId: "results" }],
+        where: { fieldFilter: { field: { fieldPath: "assignmentId" }, op: "EQUAL", value: { stringValue: String(code) } } },
+        select: { fields: RESULT_LIGHT_FIELDS.map(f => ({ fieldPath: f })) },
+        limit: 3000,
+      },
+    };
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const rows = await res.json();
+    if (!Array.isArray(rows)) throw new Error("unexpected payload");
+    return rows.filter(r => r && r.document && r.document.name).map(r => {
+      const f = r.document.fields || {};
+      const o = { id: String(r.document.name).split("/").pop() };
+      RESULT_LIGHT_FIELDS.forEach(k => { const v = fieldValue(f[k]); if (v !== undefined) o[k] = v; });
+      return o;   // NOTE: no `review` key at all = "not loaded yet" (null would mean "none saved")
+    });
+  } catch (_) {
+    return listResults(code);
+  }
+}
+
+// Đợt 296 — the answers of ONE play, read when the teacher opens that row (1 read).
+export async function readResultReview(id) {
+  const [d, { doc, getDoc }] = await Promise.all([db(), fs()]);
+  const snap = await getDoc(doc(d, "results", String(id)));
+  const data = snap.exists() ? snap.data() : null;
+  return data && Array.isArray(data.review) ? data.review : null;
 }
 
 // ---- student side (NO sign-in) ---------------------------------------------

@@ -8,7 +8,24 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **05/9/2026 (Đợt 295 — nhạc nền game cũ vẫn chạy sau khi bấm ◀ đổi game)**.
+> Cập nhật lần cuối: **06/9/2026 (Đợt 296 — màn Report đọc kết quả NHẸ, bài làm chi tiết tải khi bấm xem)**.
+>
+> **Đợt 296** (06/9/2026, rà soát toàn hệ mục K) — ⭐⭐ **MÀN REPORT ĐỌC KẾT QUẢ KHÔNG KÈM BÀI LÀM CHI TIẾT.** Đo trên
+> bản sao lưu 05/9: `results` 618 tài liệu = 8 MB, **13 KB/tài liệu trung bình, 37 KB lớn nhất** — gần hết là trường
+> `review`; một act 175 lượt = tải ~2,3 MB trước khi bảng hiện. Thầy chốt (AskUserQuestion): *"Đọc danh sách KHÔNG kèm chi
+> tiết, tải chi tiết khi bấm xem"* — KHÔNG đổi kho, KHÔNG đổi luật, không thêm lượt ghi.
+> - `core/assignments.js` **`listResultsLight(code)`**: REST `runQuery` có `select` 6 trường (bỏ `review`), xác thực bằng ID token
+>   của thầy (luật `results` vẫn teacher-only, token mang email); số lượt đọc y cũ (tính theo tài liệu), byte giảm ~60×. Không
+>   có token / REST hỏng / payload lạ ⇒ **rơi về `listResults()` đầy đủ** — không bao giờ hiện ít hơn trước.
+>   **`readResultReview(id)`**: đọc `review` của MỘT lượt (1 lượt đọc) khi thầy mở dòng.
+> - `core/assignment-ui.js`: `loadReport()` dùng bản nhẹ; hàng có ba trạng thái `review`: mảng = đã có · `null` = không lưu ·
+>   **`undefined` = chưa tải**; `detailBlock()` mở dòng ⇒ "Loading answers…" ⇒ `answersTable()`; tải hỏng ⇒ chữ báo, mở lại
+>   là thử lại. Hàng "chỉ có ở scores" (`review: null`) hiện đúng chữ "No answer detail…" như cũ.
+> `node --input-type=module --check` sạch 2 file; `sinh-preload.py --check` KHỚP (không thêm import tĩnh). ⬜ **CHỜ THẦY BẤM
+> TAY**: đăng nhập → Results → mở một bài giao nhiều lượt → bảng hiện nhanh hơn, bấm một em thấy "Loading answers…" rồi ra bảng
+> đáp án. Chi tiết `GHI CHU DU AN.md` Đợt 296.
+>
+> ---
 >
 > **Đợt 295** (05/9/2026, thầy báo) — ⭐⭐⭐ **NHẠC NỀN GAME CŨ VẪN CHẠY SAU KHI BẤM ◀ ĐỔI SANG
 > GAME KHÁC.** Thầy chơi Showdown nhiều đội trên myActivity: bấm ◀ ở bảng 1 rồi đổi game, các bảng
