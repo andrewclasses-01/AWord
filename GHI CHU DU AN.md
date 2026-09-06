@@ -12,7 +12,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 294** (05/9/2026 — thầy báo từ trang myLesson: em làm đúng cả 30 câu vẫn bị chấm
+> Mới nhất: **Đợt 298** (06/9/2026 khuya — NHẬP NỘI DUNG, **không sửa code**: cả khóa NỀN TẢNG TIẾNG
+> ANH từ Wordwall đã vào `Courses / NEN TANG TIENG ANH` — **163 act mới / 55 thư mục / 7.110 câu**,
+> kiểm bằng mã băm SHA-256 hai lần + chơi thử 4 template trên live. ⬜ 1 act chỉ có TIẾNG không nhập
+> được; 2 act LESSON 16 cố ý giữ bản cũ vì nó ĐÚNG HƠN Wordwall. Xem mục Đợt 298 ngay dưới.)
+> Trước đó: **Đợt 294** (05/9/2026 — thầy báo từ trang myLesson: em làm đúng cả 30 câu vẫn bị chấm
 > "chưa đủ điểm". Gốc ở Đợt 265b: 4 template cho mở lại câu đã sai nộp `total` = SỐ LƯỢT chứ không
 > phải số câu. Vá bằng trường mới `items` truyền SONG SONG với `total`; `core/engine.js` nộp
 > `total: result.items ?? result.total`, **màn tổng kết trong game giữ nguyên số lượt**. Bàn thử
@@ -170,6 +174,92 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 298 (06/9/2026 khuya, thầy giao "nhập toàn bộ sang AWord, tự làm không cần hỏi") — ⭐⭐⭐ **CẢ KHÓA NỀN TẢNG TIẾNG ANH TỪ WORDWALL ĐÃ VÀO COURSES: 163 ACT MỚI, 55 THƯ MỤC**
+
+### ⛔ KHÔNG SỬA MỘT DÒNG CODE NÀO
+Đợt này chỉ NHẬP NỘI DUNG. Không đụng `core/`, `templates/`, `main.js`. Chỉ thêm mục này vào hồ sơ.
+
+### Kết quả
+`Courses / NEN TANG TIENG ANH` nay có **167 act trong 55 thư mục** (4 act có từ 03/9 + **163 act nhập
+đêm nay**), tổng **7.110 câu/mục**. Cây thư mục dựng đúng như bên Wordwall, kể cả 2 tầng con
+(`LESSON 3. HOC TU VUNG / LESSON 3.1 BODY PARTS…`, `ON TAP CA KHOA / 1. 12 BO TU VUNG / LESSON 3.0 ALL WORDS`).
+
+| Template AWord | Số act |
+|---|---|
+| type_the_answer | 52 |
+| quiz | 51 |
+| anagram | 46 |
+| unjumble | 9 |
+| group_sort | 7 |
+| open_the_box | 2 |
+
+### Cách làm (mọi file làm việc ở `E:\LAP TRINH APP\DU LIEU TONG HOP\NEN TANG NHAP 06-09-2026\`)
+1. **Quét cây** thư mục Wordwall bằng iframe ẩn ngay trong trang `myactivities` đã đăng nhập —
+   ⛔ `fetch` trang thư mục KHÔNG có danh sách act (trang dựng bằng JS).
+2. **Đọc nội dung từng act**: `fetch('/resource/<id>')` rồi bóc `"Guid":"<32 hex>"` trong HTML máy
+   chủ → mở `/create/editcontent?guid=…` trong iframe ẩn → bóc DOM.
+   ⭐ Cấu trúc editor Wordwall GIỐNG NHAU cho mọi template: danh sách gốc là
+   `.item-collection > .js-editor-child-items`, mỗi hàng là `.item.js-item`; chữ của một mục là
+   `.js-item-input` mà tổ tiên `.js-item` GẦN NHẤT chính là nó; đáp án đúng = `.js-question-check`
+   có `.checked`; mục con lồng nhau cũng theo đúng luật đó. Vì vậy MỘT hàm đệ quy bóc được cả 8
+   template — xem `chuyen-doi.py`.
+3. **Chuyển sang bộ nhập AWord** bằng `chuyen-doi.py` → `bo-nhap-toan-khoa.json`
+   (`folderPath: []` + mỗi act một `subfolder` là đường dẫn đầy đủ dưới thư mục khóa).
+4. **Nhập** bằng chính hộp thoại Import của AWord (đứng TRONG `Courses / NEN TANG TIENG ANH`,
+   `?f=120`), tải file lên ô `input[type=file]`. 163 act mất **60 giây**, **1 lượt đọc Firestore**
+   (`readAll()` có bộ đệm trong bộ nhớ) + ~218 lượt ghi.
+
+### Quy tắc chuyển đổi đã chọn (ghi lại để lần sau nhân ra khóa khác)
+- Quiz · Open the box → `questions|items` + `answers[{text,correct}]`. **`shuffleAnswers` tự bật/tắt**:
+  nếu MỌI câu trong act dùng chung một bộ đáp án (kiểu phân loại A/B) thì TẮT, còn lại BẬT.
+- Type the answer → `{mode:"qa", items:[{prompt, acceptedAnswers[]}]}`; hàng Wordwall không có ô
+  trên, `con[0]` là câu hỏi, `con[1..]` là đáp án chấp nhận.
+- Anagram `{word, clue}` · Unjumble `{sentence, clue}`; `withClues` bật nếu có ít nhất một gợi ý.
+- Speed sorting → `group_sort` **mode `tap`** · Group sort → **mode `drag`**.
+- ⭐⭐ **Wordwall "True or false" KHÔNG đổi sang `true_false` của AWord** khi hai nhóm mang tên riêng
+  của thầy. Act `BT2. XAC DINH CAU CO DONG TU HAY KHONG` có hai nhóm "CÓ ĐỘNG TỪ"/"KHÔNG CÓ ĐỘNG TỪ";
+  `true_false` chỉ lưu `answer: true|false` nên sẽ **mất hẳn tên hai nhóm**. Đã chuyển sang
+  `group_sort` 2 nhóm mode tap — chơi thử live giống hệt bản Wordwall. Luật trong `chuyen-doi.py`:
+  chỉ dùng `true_false` khi CẢ HAI tên nhóm đúng là Đúng/Sai (`la_dungsai()`).
+
+### Đã kiểm thế nào (bản LIVE, dữ liệu thật)
+- **Mã băm SHA-256 khớp tuyệt đối** giữa bộ nhập và thư viện sau khi nhập, trên danh sách 167 dòng
+  `đường dẫn ⇥ tên act` → không sót, không lệch thư mục, không thừa.
+- Băm lần hai trên **NỘI DUNG** (type · số mục · tên nhóm · từng câu + đáp án): 165/167 khớp.
+  2 act lệch đều thuộc `LESSON 16`, là bản nhập 03/9 từ file khảo sát — xem mục dưới.
+- **Chơi thật trên live**: `type_the_answer` (gõ CLOSING → 1/30 ✅) · `group_sort` 2 nhóm
+  (bấm nhóm đúng → 1, sang câu 2/50 ✅) · `unjumble` (câu xáo ra từng chữ ✅) · `open_the_box`
+  (60 hộp ✅). 0 lỗi console.
+
+### ⚠️ Ba việc thầy cần biết
+1. ⬜ **1 act KHÔNG nhập được**: `LESSON 0 / BT1. NGUYEN AM - PHU AM` (Quiz 100 câu). Câu hỏi của nó
+   **chỉ có TIẾNG, không có chữ** (đề bài là nghe chữ cái rồi chọn Nguyên âm/Phụ âm) — bóc ra rỗng.
+   AWord cần chữ cho ô câu hỏi, nên act này phải làm tay hoặc bỏ.
+2. ⭐ **Hai act LESSON 16 giữ nguyên bản cũ, KHÔNG ghi đè** (`aw/duplicate-name` bỏ qua). Khác biệt
+   đã dò đến từng dòng: bản Wordwall có tiền tố "Câu N." + dấu chấm cuối + nháy cong `“ ”`, còn
+   **Wordwall gõ sai "chơi ĐÃ bóng"** mà bản trong AWord đã đúng "chơi ĐÁ bóng". ⇒ Bản đang có TỐT
+   HƠN, cố ý giữ.
+3. ⬜ Thầy xem lại vài lesson bất kỳ rồi mới giao bài cho lớp.
+
+### ⛔ Bẫy đã trả giá trong đợt này (dùng lại khi nhập khóa khác)
+- **Cầu nối localhost một luồng BỊ KẸT CỨNG** khi một `fetch` của trình duyệt bị huỷ giữa chừng
+  (`AbortController`): socket còn dở, `HTTPServer` đứng ở `rfile.read()` chờ mãi. Lúc đó vòng thu
+  hoạch VẪN CHẠY nhưng KHÔNG ghi được file nào — **mất 13 act trong im lặng**. Phải dùng
+  `ThreadingHTTPServer` **và** để hàm gửi trả về true/false rồi **DỪNG HẲN khi ghi hụt**.
+- **Trang `aword.andrewclasses.com` KHÔNG gọi được `http://127.0.0.1`** (Chrome mở được socket rồi
+  không gửi byte nào — chặn ở tầng Private Network Access), trong khi `wordwall.net` thì gọi được.
+  ⇒ Đường đưa dữ liệu VÀO AWord là **tải file lên hộp thoại Import**, đừng phí thời gian dựng cầu.
+- **Ghi file bằng `.tmp` + `os.replace` trên ổ D làm công cụ tải file từ chối** ("multiple hard
+  links"). Phải **ghi thẳng** ra file đích rồi mới tải lên.
+- `PYTHONIOENCODING=utf-8` khi in tiếng Việt; script nhiều chuỗi tiếng Việt thì ghi bằng công cụ
+  ghi file, đừng nhét qua heredoc của bash.
+
+### VIỆC ĐANG CHỜ (Đợt 298)
+⬜ Thầy xem/duyệt nội dung vài lesson. ⬜ Act `BT1. NGUYEN AM - PHU AM` (act tiếng) làm tay.
+⬜ Tạo `results/<lớp>` khi giao bài đầu tiên (form tự hỏi tạo — Đợt 287).
 
 ---
 
