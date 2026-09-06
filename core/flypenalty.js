@@ -92,16 +92,34 @@ function centerOf(node) {
  *                           cánh xong từ lâu trước lúc `endMatch()` đọc bảng điểm.
  */
 export function flyPenalty({ fromEl, toEl, points, apply, paint, alive, nodes, pending }) {
+  return flyNumber({ fromEl, toEl, points, apply, paint, alive, nodes, pending, sign: "−", cls: "aw-penalty-fly", hitCls: "is-penalty-hit" });
+}
+
+// ⭐⭐⭐ FLY BONUS — "+N" BAY TỪ KHUNG ĐỘI THẮNG VÀO Ô ĐIỂM (Đợt 297, 6/9/2026,
+// thầy). SPEED BONUS trong Fight trước đợt này chỉ cộng thẳng vào tổng rồi vẽ
+// một chip nhỏ nhấp nháy tại chỗ (`flashTeam()`, core/fight.js) — không hề bay,
+// khác hẳn cách mọi điểm TRỪ đã bay từ Đợt 256. Cùng cỗ máy bay ở trên
+// (`flyNumber`), chỉ khác dấu/màu — xem `flyPenalty` ngay trên cho ý nghĩa từng
+// tham số (giống hệt, chỉ đổi "trừ" thành "cộng"). Không có bản SINGLE MODE nào
+// gọi hàm này: Speed bonus chỉ tồn tại trong Fight (`core/fight.js`'s
+// `finalizeSingleWinner`/`finalizeTie`), nên không cần luật "hai chỗ bay ra"
+// của flyPenalty — chỗ bay ra LUÔN LÀ khung của đội vừa thắng (`boardEls[side]`,
+// cùng một khung mà flyPenalty ép về khi ở trong trận), không có chỗ nào khác.
+export function flyBonus({ fromEl, toEl, points, apply, paint, alive, nodes, pending }) {
+  return flyNumber({ fromEl, toEl, points, apply, paint, alive, nodes, pending, sign: "+", cls: "aw-bonus-fly", hitCls: "is-bonus-hit" });
+}
+
+function flyNumber({ fromEl, toEl, points, apply, paint, alive, nodes, pending, sign, cls, hitCls }) {
   if (!alive || !alive()) return;
   const n = Math.round(Number(points) || 0);
-  // Cửa vào duy nhất, nên phải tự chặn "trừ 0 điểm": gọi apply() ở đây là ghi
-  // một lần trừ rỗng vào sổ của template.
+  // Cửa vào duy nhất, nên phải tự chặn "trừ/cộng 0 điểm": gọi apply() ở đây là
+  // ghi một lần rỗng vào sổ của template.
   if (n <= 0) return;
 
-  // ⚠️⚠️ ĐIỂM VẪN PHẢI TRỪ KỂ CẢ KHI KHÔNG BAY ĐƯỢC. Phép trừ là TÍNH NĂNG, cú
-  // bay chỉ là lời giải thích cho nó. Ô sai đã bị gỡ khỏi DOM (template vẽ lại
-  // ngay), ô điểm đang ẩn, khung rộng 0 — bất cứ ca nào cũng phải rơi về đây,
-  // không được im lặng nuốt mất điểm.
+  // ⚠️⚠️ ĐIỂM VẪN PHẢI ĐỔI KỂ CẢ KHI KHÔNG BAY ĐƯỢC. Phép cộng/trừ là TÍNH
+  // NĂNG, cú bay chỉ là lời giải thích cho nó. Ô sai đã bị gỡ khỏi DOM (template
+  // vẽ lại ngay), ô điểm đang ẩn, khung rộng 0 — bất cứ ca nào cũng phải rơi về
+  // đây, không được im lặng nuốt mất điểm.
   const landNow = () => { const v = apply(); if (paint) paint(v); };
   if (!fromEl || !toEl) { landNow(); return; }
   const a = centerOf(fromEl), b = centerOf(toEl);
@@ -110,7 +128,7 @@ export function flyPenalty({ fromEl, toEl, points, apply, paint, alive, nodes, p
   // Cỡ chữ đo từ CHÍNH chỗ bay ra (fight: cả khung, nên phải có trần) — bảng
   // 86" và cửa sổ soạn bài cách nhau vài lần, số cố định sẽ sai ở một trong hai.
   const size = Math.max(MIN_SIZE_PX, Math.min(a.w * 0.42, 96));
-  const node = el("div", "aw-penalty-fly", "−" + n);   // U+2212 dấu trừ thật, không phải gạch nối
+  const node = el("div", cls, sign + n);   // sign: "−" (U+2212, dấu trừ thật) hoặc "+"
   node.style.left = a.x + "px";
   node.style.top = a.y + "px";
   node.style.fontSize = size + "px";
@@ -142,11 +160,11 @@ export function flyPenalty({ fromEl, toEl, points, apply, paint, alive, nodes, p
     pending?.delete(land);
     if (!alive()) return;      // ván đã bị vứt giữa đường — đừng ghi điểm cho một cái xác
     landNow();
-    // Một nhịp nảy đỏ trên ô điểm: nó vừa bị lấy mất N điểm, và ở cuối lớp thì
-    // một con số đổi giá trị KHÔNG phải là một chuyển động.
+    // Một nhịp nảy trên ô điểm: nó vừa đổi N điểm, và ở cuối lớp thì một con số
+    // đổi giá trị KHÔNG phải là một chuyển động.
     try {
-      toEl.classList.add("is-penalty-hit");
-      setTimeout(() => toEl.classList.remove("is-penalty-hit"), 420);
+      toEl.classList.add(hitCls);
+      setTimeout(() => toEl.classList.remove(hitCls), 420);
     } catch { /* ô điểm đã đi mất */ }
   };
   anim.onfinish = land;

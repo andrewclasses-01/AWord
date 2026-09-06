@@ -10,12 +10,15 @@
 //     ┌───────────┐   ┌───────────┐
 //     │  TEAM 1   │   │  TEAM 2   │                <- two REAL plays, side by side
 //     └───────────┘   └───────────┘
-//        [hand pts]      [hand pts]                <- one below EACH board, dead centre under it
 //        Options · Template · Style · MODE · ⛶     <- the ONE toolbar, shared
 //
 //   Both teams solve the SAME word at the same time on a touch screen; whoever
 //   finishes first scores. Points follow the template's own scoring rules
-//   (teacher's call) and the teacher can nudge either score by hand.
+//   (teacher's call).
+//   ⛔ Đợt 297 (thầy, 6/9/2026) — the teacher's own hand-adjustable points box
+//   that used to sit below each board is GONE ("bỏ ô số bên dưới khung game
+//   của 2 đội"). `makeHand()`/`handPoints`/`handAwake` and every function that
+//   only existed to serve them are deleted outright, not left dormant.
 //
 // HOW IT RUNS TWO GAMES AT ONCE
 //   `startGame()` keeps every scrap of its state inside its own closure, so
@@ -65,6 +68,7 @@ import { icons } from "./icons.js";
 import { sound } from "./sound.js";
 import { getTemplate } from "./registry.js";
 import { resolveActivity, variantsOf, contentSetsOf } from "./content-view.js";
+import { flyBonus } from "./flypenalty.js";
 
 // Đợt 223 — same two-line escaper core/engine.js keeps locally for its own
 // review list; `el()`'s third argument is innerHTML, so question/answer text
@@ -117,16 +121,6 @@ const WAIT_BAR_MIN_MS = 200;
 // at all (turning the bonus off is what dragging TIME DELAY back to 0.1s does),
 // so an act carrying the old 0 has no legal value to show and is repaired to this.
 const DEFAULT_SPEED_BONUS = 5;
-
-// The teacher's hand-given points, per side. MODULE level on purpose: the
-// teacher asked for a number that survives "Start again" and a template change
-// but starts fresh when the browser page is reloaded — which is exactly the
-// lifetime of a module variable. (Every other score belongs to a match and is
-// rebuilt with it.)
-const handPoints = [0, 0];
-// "Woken" state for the "asleep at zero" gate (Đợt 124, third pass) — same
-// module-level lifetime as handPoints, see interact()/paintHand() below.
-const handAwake = [false, false];
 
 export const FIGHT_DEFAULTS = {
   // Đợt 133 (teacher): "same" ("same word, same letters") is GONE as a
@@ -333,29 +327,20 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   const wrap = el("div", "aw-fight");
   const top = el("div", "aw-fight-top");
   const boardsRow = el("div", "aw-fight-boards");
-  // ONE row under the boards holds BOTH the teacher's hand-point boxes and the
-  // shared toolbar, on the same line (teacher, 12/8/2026 fourth pass) — the
-  // hands stay dead centre under their own board while the toolbar floats
-  // centred over the join between them.
+  // ONE row under the boards holds the shared toolbar, centred over the join
+  // between the two boards (teacher, 12/8/2026 fourth pass). It used to also
+  // carry the teacher's hand-point boxes either side of it — gone since Đợt
+  // 297 (see the file header) — but the row itself stays: it is what gives
+  // the toolbar its floor to be absolutely centred over (see `.aw-fight-controls`
+  // in core/app.css, which now reserves the row's height on its own instead of
+  // getting it from the hand boxes that used to sit in it).
   const controlsRow = el("div", "aw-fight-controls");
   const bottom = el("div", "aw-fight-bottom");
 
   // ----- the strip above the boards -----
   // Two halves that line up with the two boards (each team's number sits dead
   // centre over ITS OWN board — teacher, 12/8/2026), plus the clock floating
-  // over the join. The teacher's own hand points used to live in this strip
-  // too (either side of the clock) but moved DOWN below each board, dead
-  // centre under it, at the teacher's request (12/8/2026, third pass) — see
-  // `handsRow` below.
-  // ⚠️ Đợt 136 REVERSES Đợt 134's 7-segment hand-points display (teacher, same
-  // day: "số dạng thanh 7 nút… quá khó nhìn do mảnh quá => hãy đổi sang font số
-  // bình thường của AWord và tăng size"). The segment bars were only ~11% of a
-  // digit's height, which reads as thin hairlines from the back of a room —
-  // exactly the opposite of the "bigger" the request was aiming at. The digits
-  // are plain text again in the app's own Baloo 2, bumped ~30% and bolded (see
-  // .aw-fight-handnum in core/app.css). Đợt 134's SEVEN_SEG map, sevenSegHtml()
-  // and the .aw-seg-* CSS block are all DELETED rather than left dormant — a
-  // half-removed mechanism is what makes a later reader think it's still live.
+  // over the join.
   const teams = [makeTeam(0), makeTeam(1)];
   const half0 = el("div", "aw-fight-half");
   const half1 = el("div", "aw-fight-half");
@@ -391,17 +376,11 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   middle.append(clockBox);
   top.append(half0, half1, middle);
 
-  // ----- the row under the boards: hand points · toolbar · hand points -----
-  // Same two-halves grid as `top` (matches boardsRow's columns/gap) so each box
-  // sits dead centre under ITS OWN board, same reasoning as the team score
-  // above it. `bottom` (the shared toolbar) is absolutely centred over the
-  // whole row by CSS, so all three sit on one line.
-  const hands = [makeHand(0), makeHand(1)];
-  const handHalf0 = el("div", "aw-fight-handhalf");
-  const handHalf1 = el("div", "aw-fight-handhalf");
-  handHalf0.append(hands[0].el);
-  handHalf1.append(hands[1].el);
-  controlsRow.append(handHalf0, handHalf1, bottom);
+  // ----- the row under the boards: just the shared toolbar (Đợt 297) -----
+  // `bottom` is absolutely centred over the whole row by CSS; the row's own
+  // height now comes straight from `.aw-fight-controls`'s CSS (it used to come
+  // from the hand-point boxes that lived here — see the file header).
+  controlsRow.append(bottom);
 
   const boardEls = [el("div", "aw-fight-board"), el("div", "aw-fight-board")];
   boardsRow.append(boardEls[0], boardEls[1]);
@@ -412,9 +391,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     const box = el("div", `aw-fight-team side-${side}`);
     // No name label any more (teacher, 12/8/2026 second pass) — "TEAM 1"/
     // "TEAM 2" was clutter once the layout itself already says which number
-    // belongs to which board (it sits dead centre above it). No +/- buttons
-    // here either: the teacher's own points are a SEPARATE number beside the
-    // clock (makeHand below), so this one stays purely what the game scored.
+    // belongs to which board (it sits dead centre above it).
     const value = el("div", "aw-fight-score", "0");
     box.append(value);
     return { el: box, value };
@@ -446,132 +423,10 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     return { el: bar, fill };
   }
 
-  // ----- the teacher's own points (Đợt 124, second + third pass) -----
-  // One box below EACH board, entirely by hand: TAP or swipe UP adds a point,
-  // swipe DOWN takes one off. Kept apart from the game's score on purpose — it
-  // survives Start again and a template change (module-level, see handPoints)
-  // and only a page reload clears it, which is exactly how the scoreboards on
-  // the classroom whiteboard behave.
-  //
-  // "Asleep at zero" (12/8/2026, third pass): a box reading 0 is dimmed, and
-  // the FIRST tap/swipe on a dimmed box only wakes it (brightens, no change) —
-  // the SECOND is what actually bumps the number. A touchscreen box that sits
-  // at the bottom of the frame gets brushed by accident; this costs the
-  // teacher nothing when the box is already away from zero (never dims, every
-  // touch counts immediately), only guards the box's resting state.
-  function makeHand(side) {
-    const box = el("div", `aw-fight-hand side-${side}`);
-    box.tabIndex = 0;
-    box.title = "Teacher points — tap or swipe up to add, swipe down to take off";
-    const numWrap = el("div", "aw-fight-handnum");
-    const value = el("div", "aw-fight-handvalue", "0");
-    numWrap.append(value);
-    box.append(numWrap);
-
-    const SWIPE = 14;                       // px before a drag counts as a swipe
-    let startY = null, acted = false;
-    box.style.touchAction = "none";
-    box.addEventListener("pointerdown", e => {
-      startY = e.clientY; acted = false;
-      try { box.setPointerCapture(e.pointerId); } catch { /* synthetic pointers */ }
-    });
-    box.addEventListener("pointermove", e => {
-      if (startY === null || acted) return;
-      const dy = e.clientY - startY;
-      if (Math.abs(dy) < SWIPE) return;
-      acted = true;                          // one step per swipe, not one per pixel
-      interact(side, dy < 0 ? +1 : -1);
-    });
-    const end = () => {
-      if (startY === null) return;
-      if (!acted) interact(side, +1);        // a plain tap adds a point
-      startY = null; acted = false;
-    };
-    box.addEventListener("pointerup", end);
-    box.addEventListener("pointercancel", end);
-    return { el: box, value, numWrap };
-  }
-
-  // The gate described above: a dimmed (0, not-yet-woken) box just wakes on
-  // this touch: `handAwake` flips true and the box repaints brighter, but
-  // `handPoints` doesn't move — the very next touch is what calls bump().
-  function interact(side, delta) {
-    if (handPoints[side] === 0 && !handAwake[side]) {
-      handAwake[side] = true;
-      sound.click();
-      paintHand(side, 0);
-      return;
-    }
-    bump(side, delta);
-  }
-
-  function bump(side, delta) {
-    handPoints[side] += delta;
-    // Landing back on exactly 0 re-arms the "wake first" gate — the box is at
-    // rest again, so the next touch should ask before it moves once more.
-    if (handPoints[side] === 0) handAwake[side] = false;
-    sound.click();
-    paintHand(side, delta);
-  }
-
-  const HAND_SLIDE_MS = 200;
-  // `dir` is the numeric change just applied (+1/-1), or 0/undefined for a
-  // repaint with no value change (waking a dimmed box, or the initial/carried-
-  // over paint at match start) — only a real change gets the slide animation.
-  function paintHand(side, dir) {
-    const h = hands[side];
-    const v = handPoints[side];
-    const text = String(Math.abs(v));
-    const isNeg = v < 0;
-    // "Asleep at zero": dim while resting on 0 and not yet woken by a touch —
-    // still legible, not fully invisible (teacher's ask: "vẫn dim một chút đủ
-    // nhìn"). Away from zero the box is ALWAYS bright; only 0 can dim.
-    h.el.classList.toggle("is-dim", v === 0 && !handAwake[side]);
-    if (dir) { animateHandSlide(side, text, isNeg, dir); return; }
-    h.value.textContent = text;
-    h.value.classList.toggle("is-neg", isNeg);
-  }
-
-  // The "odometer" swap (teacher's ask, 12/8/2026 third pass): the OLD number
-  // slides out one way while the NEW one slides in from the other, instead of
-  // just replacing the text. Increasing (+1) reads as the number climbing —
-  // new value rises in from below, old one exits upward; decreasing is the
-  // mirror. `.aw-fight-handnum` is the fixed-height clipping window (CSS) that
-  // makes the two overlapping numbers look like one sliding strip.
-  function animateHandSlide(side, text, isNeg, dir) {
-    const h = hands[side];
-    const oldEl = h.value;
-    const newEl = el("div", "aw-fight-handvalue" + (isNeg ? " is-neg" : ""), text);
-    newEl.style.transform = `translateY(${dir > 0 ? "100%" : "-100%"})`;
-    h.numWrap.append(newEl);
-    const outAnim = oldEl.animate(
-      [{ transform: "translateY(0)" }, { transform: `translateY(${dir > 0 ? "-100%" : "100%"})` }],
-      { duration: HAND_SLIDE_MS, easing: "ease", fill: "forwards" });
-    const inAnim = newEl.animate(
-      [{ transform: `translateY(${dir > 0 ? "100%" : "-100%"})` }, { transform: "translateY(0)" }],
-      { duration: HAND_SLIDE_MS, easing: "ease", fill: "forwards" });
-    let done = false;
-    const settle = () => {
-      if (done) return;
-      done = true;
-      // `fill:"forwards"` holds the last keyframe after the animation ends —
-      // cancel() releases that hold before the inline style reset below, or
-      // the reset is a no-op and the element stays visually stuck mid-flight
-      // (same trap documented in templates/anagram/anagram.js).
-      try { outAnim.cancel(); inAnim.cancel(); } catch { /* already gone */ }
-      oldEl.remove();
-      newEl.style.transform = "";
-      h.value = newEl;
-    };
-    inAnim.onfinish = settle;
-    setTimeout(settle, HAND_SLIDE_MS + 120);   // fallback: a hidden/backgrounded tab can stall animation events
-  }
-
   // ----- per-side running totals -----
-  // `game` is whatever the template's own scoring says right now; `bonus` is the
-  // speed bonuses this match's rules awarded. The teacher's own points are NOT
-  // in here — they live in `handPoints` at module level and are shown in their
-  // own box, so they outlive the match.
+  // `game` is whatever the template's own scoring says right now; `bonus` is
+  // the speed bonuses this match's rules awarded (Đợt 297 — flown in, see
+  // `flyBonusTo` near `flyPenalty`'s fight-side use, further down).
   const game = [0, 0], bonus = [0, 0];
   // TIME COST (Đợt 139) — what each board's IDLE clock has taken off this team,
   // as a running total sent by that board's engine (absolute, not a delta, so a
@@ -797,6 +652,33 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     pb.el.classList.toggle("is-orange", pct <= 50 && pct > 20);
     pb.el.classList.toggle("is-red", pct <= 20);
   }
+
+  // ⭐⭐⭐ Đợt 297 (thầy, 6/9/2026) — TIẾNG TÍCH ĐẾM CHO MISS WAIT. Thanh màu ở
+  // trên chỉ nói được cho ai đang NHÌN; lớp học không nhìn liên tục vào đúng
+  // nửa màn hình đó, nên thêm một tiếng "tích" đều đặn — và DỒN DẬP hẳn lên ở
+  // 5 giây cuối, đúng lời thầy. Cùng khuôn schedule*/clear* với
+  // scheduleMissBands ngay trên (đặt lại từ THỜI ĐIỂM HIỆN TẠI, không phải từ
+  // đầu, nên một lần tạm dừng — Menu ☰ — không làm tiếng tích dồn cục khi chạy
+  // lại) nhưng đây là MỘT TẬP setTimeout RIÊNG: đổi màu và tiếng tích là hai
+  // việc độc lập, gộp chung một mảng sẽ không huỷ/đặt lại đúng nhịp của nhau.
+  const MISS_TICK_LAST_MS = 5000;   // "5s cuối" — thầy chốt đúng mốc này
+  const MISS_TICK_SLOW_MS = 1000;   // trước đó: đều mỗi giây
+  const MISS_TICK_FAST_MS = 200;    // trong 5s cuối: dồn dập, 5 tiếng/giây
+  let missTickTimers = [];
+  function clearMissTickTimers() { missTickTimers.forEach(t => clearTimeout(t)); missTickTimers = []; }
+  function scheduleMissTicks(msLeft) {
+    clearMissTickTimers();
+    if (!Number.isFinite(msLeft) || !(msLeft > 0)) return;
+    const fire = () => { if (!torndown) sound.tick(); };
+    // Đều mỗi giây, CHỈ CHỪNG NÀO còn hơn 5 giây sau cú tích đó.
+    for (let remain = msLeft - MISS_TICK_SLOW_MS; remain > MISS_TICK_LAST_MS; remain -= MISS_TICK_SLOW_MS) {
+      missTickTimers.push(setTimeout(fire, msLeft - remain));
+    }
+    // Dồn dập trong 5 giây cuối (hoặc suốt cửa sổ, nếu cả cửa sổ đã ngắn hơn 5s).
+    for (let remain = Math.min(msLeft, MISS_TICK_LAST_MS) - MISS_TICK_FAST_MS; remain > 0; remain -= MISS_TICK_FAST_MS) {
+      missTickTimers.push(setTimeout(fire, msLeft - remain));
+    }
+  }
   // Đặt lại từ THỜI ĐIỂM HIỆN TẠI (msLeft), không phải từ đầu — gọi cả lúc bật
   // thanh LẪN lúc "go" sau một lượt tạm dừng, nên một lần tạm dừng giữa chừng
   // không làm thanh nhảy lùi về xanh rồi phải đợi lại đúng mốc cũ.
@@ -821,6 +703,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
         pb.fill.style.width = getComputedStyle(pb.fill).width;
         pb.fill.style.transition = "none";
         clearMissBandTimers();   // màu đứng nguyên ở mức vừa đọc được — không đổi giữa lúc dừng
+        clearMissTickTimers();   // Đợt 297 — tiếng tích cũng phải im trong lúc tạm dừng
         return;
       }
       if (!Number.isFinite(ms) || !(ms > 0)) return;
@@ -831,6 +714,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       pb.fill.style.transition = "width " + ms + "ms linear, background .25s ease";
       pb.fill.style.width = "0%";
       scheduleMissBands(pb, ms);
+      scheduleMissTicks(ms);   // Đợt 297 — chạy lại tiếng tích từ đúng chỗ vừa dừng
       return;
     }
     if (!(ms > 0) || torndown) {
@@ -838,6 +722,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       pb.fill.style.transition = "none";
       pb.fill.style.width = "100%";
       clearMissBandTimers();
+      clearMissTickTimers();   // Đợt 297
       return;
     }
     pb.el.classList.add("is-on");
@@ -848,6 +733,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     pb.fill.style.transition = "width " + ms + "ms linear, background .25s ease";
     pb.fill.style.width = "0%";
     scheduleMissBands(pb, ms);
+    scheduleMissTicks(ms);   // Đợt 297 — mở thanh mới thì tiếng tích cũng bắt đầu lại từ đầu
   }
   /** Mở thanh MISS WAIT trên bàn `side` (bàn CÒN ĐƯỢC CHƠI TIẾP), đếm `ms`. */
   function startMissBar(side, ms) {
@@ -1000,6 +886,34 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     teams[side].value.classList.toggle("is-neg", v < 0);
   }
 
+  // ⭐⭐⭐ Đợt 297 (thầy, 6/9/2026) — SPEED BONUS BAY, CÙNG CƠ CHẾ VỚI ĐIỂM TRỪ.
+  // Trước đợt này bonus chỉ cộng thẳng vào `bonus[side]` rồi vẽ một chip nhỏ
+  // đứng yên (`flashTeam()`, đã xoá) — không giống cách MỌI điểm trừ trong app
+  // đã bay từ Đợt 256. Dùng lại chính `flyBonus()` (core/flypenalty.js — cùng
+  // cỗ máy `flyPenalty()`, chỉ đổi dấu/màu): bay từ GIỮA KHUNG của bàn vừa
+  // thắng (`boardEls[side]`, đúng chỗ mọi điểm trừ trong trận cũng bị ép về —
+  // xem core/engine.js's `ui.flyPenalty`) lên số của đội đó trên dải trên.
+  // `apply()` chỉ cộng vào `bonus[side]` lúc con số HẠ CÁNH, không phải lúc gọi
+  // — tổng điểm hiển thị mới đúng nghĩa "bay vào rồi mới cộng".
+  const bonusFlyNodes = new Set();
+  const bonusFlyPending = new Set();
+  function flyBonusTo(side, points) {
+    flyBonus({
+      fromEl: boardEls[side],
+      toEl: teams[side].value,
+      points,
+      apply: () => { bonus[side] += points; return totalOf(side); },
+      paint: () => paintScore(side),
+      alive: () => !torndown,
+      nodes: bonusFlyNodes,
+      pending: bonusFlyPending
+    });
+  }
+  // Hạ cánh ngay mọi bonus còn đang bay — gọi trước khi đọc bảng điểm cuối trận
+  // (endMatch/showResult), cùng lý do `ui.flushPenalties()` phải gọi trước
+  // finish() của template: đọc điểm trước lúc nó hạ cánh là thiếu mất bonus.
+  function flushBonusFlights() { Array.from(bonusFlyPending).forEach(fn => { try { fn(); } catch { /* nút đã đi */ } }); }
+
   // ⭐⭐⭐ Đợt 219 (thầy, 21/8/2026) — HAI ĐỒNG HỒ CỦA TRỌNG TÀI NAY DỪNG ĐƯỢC.
   // Thầy: *"game đã dừng nhưng time cost vẫn chạy, cần dừng lại tất cả mọi thứ."*
   // Time cost và đồng hồ câu nằm ở core/engine.js; hai cái CÒN LẠI nằm đây, và
@@ -1134,11 +1048,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     roundWinner = side;
     paintWaitBar(0);                 // the window is closed — the bar must not run on
     const other = side === 0 ? 1 : 0;
-    if (speedBonus > 0) {
-      bonus[side] += speedBonus;
-      paintScore(side);
-      flashTeam(side, `+${speedBonus}`);
-    }
+    if (speedBonus > 0) flyBonusTo(side, speedBonus);
     teams[side].el.classList.add("is-won");
     // Lock the other side out only if it is still IN the round; one that
     // already answered wrong is locked already, and re-locking it would
@@ -1183,11 +1093,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // that half of Đợt 133 is untouched.
   function finalizeTie(sideA, sideB) {
     paintWaitBar(0);
-    if (speedBonus > 0) {
-      bonus[sideA] += speedBonus;
-      paintScore(sideA);
-      flashTeam(sideA, `+${speedBonus}`);
-    }
+    if (speedBonus > 0) flyBonusTo(sideA, speedBonus);
     [sideA, sideB].forEach(side => teams[side].el.classList.add("is-won"));
     revealBoards();
     later(advanceRound, ROUND_HOLD_MS);
@@ -1404,6 +1310,10 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   function endMatch() {
     if (matchOver) return;
     matchOver = true;
+    // ⭐ Đợt 297 — CHỐT SỔ BONUS TRƯỚC KHI ĐỌC BẢNG ĐIỂM: showResult() dưới đây
+    // đọc thẳng totalOf(), và một con số "+N" còn đang bay là một phép cộng
+    // CHƯA áp — cùng lý do finish() của template phải gọi ui.flushPenalties().
+    flushBonusFlights();
     paintWaitBar(0);
     stopMissBar();   // Đợt 281 — hết trận thì không còn gì để đếm nữa
     // ⭐ Đợt 259 — hết trận thì không còn lượt nào để chọn: tắt đồng hồ VÀ cả hai
@@ -1977,12 +1887,6 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     exitToLibrary() { teardown(); onExit?.(); }
   };
 
-  function flashTeam(side, text) {
-    const chip = el("div", "aw-fight-flash", text);
-    teams[side].el.append(chip);
-    setTimeout(() => chip.remove(), 1200);
-  }
-
   // ----- result -----
   function showResult() {
     const a = totalOf(0), b = totalOf(1);
@@ -2381,7 +2285,6 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   boardEls.forEach(b => b.querySelectorAll(".aw-as-bars").forEach(x => x.remove()));
 
   paintScore(0); paintScore(1);
-  paintHand(0); paintHand(1);   // carried over from the previous match, by design
 
   // ----- FULLSCREEN (teacher, 12/8/2026 fourth pass) -----
   // A match must go full-screen as ONE picture: both boards + the score/clock
@@ -2432,6 +2335,11 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     paintWaitBar(0);
     clearMissBandTimers();   // Đợt 281 — 2 setTimeout riêng của thanh MISS WAIT, `later()`/
                               // cancelRound() bên dưới không biết tới chúng
+    clearMissTickTimers();   // Đợt 297 — cùng lý do: tiếng tích đếm riêng, không qua later()
+    // ⭐ Đợt 297 — dọn nốt bonus đang bay giữa chừng, cùng luật penaltyNodes của
+    // core/engine.js: QUÊN chứ không GỌI (torndown đã bật, alive() tự chặn).
+    bonusFlyNodes.forEach(n => n.remove()); bonusFlyNodes.clear();
+    bonusFlyPending.clear();
     cancelRound();
     cancelPending();   // Đợt 133 — same reasoning as roundTimer
     cancelPick();      // Đợt 259 — same reasoning again: a pick clock that outlives

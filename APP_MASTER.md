@@ -8,7 +8,50 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **06/9/2026 (Đợt 296 — màn Report đọc kết quả NHẸ, bài làm chi tiết tải khi bấm xem)**.
+> Cập nhật lần cuối: **06/9/2026 (Đợt 297 — 4 việc ở Fight: bỏ hand points · tiếng tích Miss wait ·
+> Speed bonus bay · Crossword tự sang trang)**.
+>
+> **Đợt 297** (06/9/2026, thầy giao) — ⭐⭐⭐ **4 VIỆC Ở FIGHT: BỎ HAND POINTS · TIẾNG TÍCH MISS
+> WAIT · SPEED BONUS BAY · CROSSWORD TỰ SANG TRANG.** Thầy giao 4 việc cùng lúc, tất cả ở chế độ
+> FIGHT: (1) bỏ ô hand points dưới khung mỗi đội; (2) Miss wait có tiếng tích đếm, dồn dập 5 giây
+> cuối; (3) Speed bonus bay số to như điểm trừ, từ giữa khung đội thắng lên ô điểm; (4) Crossword
+> chơi hết trang 1 là dừng — cần tự chuyển sang trang 2, 3… tới hết.
+> ⚠️ Số thứ tự đợt trùng với `dot296-*` trong tên 3 file bàn thử bên dưới là NGẪU NHIÊN — một phiên
+> Claude khác cùng lúc đã đẩy lên GitHub một "Đợt 296" khác hẳn (màn Report đọc kết quả nhẹ hơn,
+> commit `2325ebd`) trước khi phiên này kịp fetch; hai phiên không hề đụng file code của nhau (chỉ
+> hai file changelog này), xem đúng tiền lệ ở ghi chú đầu mục Đợt 277.
+>
+> (1) `core/fight.js` xoá hẳn `handPoints`/`handAwake`/`makeHand()`/`interact()`/`bump()`/
+> `paintHand()`/`animateHandSlide()` — không để lại nửa vời. `core/app.css` xoá khối `.aw-fight-hand*`,
+> `.aw-fight-controls` tự khai `min-height` bằng đúng cỡ ô cũ để toolbar không đổi chỗ.
+>
+> (2) `core/fight.js` thêm `scheduleMissTicks()` cạnh `scheduleMissBands()` (Đợt 281) — cùng 4 chỗ
+> gọi, đều 1 tiếng/giây rồi dồn 5 tiếng/giây trong 5 giây cuối, dùng lại `sound.tick()` có sẵn.
+>
+> (3) `core/flypenalty.js` tách `flyNumber()` dùng chung, `flyPenalty()` cũ chỉ còn là vỏ mỏng (hành
+> vi không đổi), thêm `flyBonus()`. `core/fight.js`'s `finalizeSingleWinner`/`finalizeTie` gọi
+> `flyBonusTo()` thay `flashTeam()` (xoá hẳn cùng CSS `.aw-fight-flash`) — bay từ `boardEls[side]`
+> (đúng chỗ mọi flyPenalty trong trận bị ép về) lên `.aw-fight-score`, cộng điểm lúc hạ cánh.
+> `endMatch()` gọi `flushBonusFlights()` trước khi đọc bảng điểm, cùng lý do `ui.flushPenalties()`.
+>
+> (4) `templates/crossword/crossword.js`: `fightCtl.attach` báo `total` (biến TỔNG mọi trang có sẵn)
+> thay vì `clues.length` (chỉ trang 1) — gốc rễ khiến trọng tài tưởng hết trận ngay khi hết trang 1;
+> `fightBackToBoard()` thêm nhánh tự `loadPage(curPageIdx+1)` khi trang hiện tại xong hết mà chưa
+> phải trang cuối.
+>
+> Bàn thử: `scratch/dot296-fight-tweaks.html` (trận Fight thật, spy `sound.tick()` + MutationObserver
+> theo dõi `.aw-bonus-fly` — ĐẠT khi giữ pane hiện hình bằng chụp ảnh liên tục; pane chạy nền/ẩn dài
+> làm mọi `setTimeout` của trận trễ hơn hẳn lý thuyết, cùng họ bẫy `electron-test-throttle`, không
+> phải lỗi code) · `scratch/dot296-misstick-math.mjs` (chạy `node`, copy verbatim hàm lịch tiếng
+> tích, 11/11 ĐẠT) · `scratch/dot296-crossword-fight-pages.html` (copy verbatim `fightBackToBoard()`
+> mới + so chuỗi trên file thật, 15/15 ĐẠT) · `scratch/cw-fight-test.html` (bàn thử CŨ Đợt 185, chạy
+> lại xác nhận không hồi quy trên phần chấm điểm/khoá/lộ đáp án — 3 phép hỏi trượt là bẫy is-fightwait
+> đã bị Đợt 259 bỏ từ trước, không liên quan đợt này). `node --input-type=module --check` sạch cả 3
+> file JS đụng tới. Chi tiết `GHI CHU DU AN.md` Đợt 297.
+> ⬜ **CHỜ THẦY BẤM TAY THẬT** cả 4 việc trên một trận Fight thật (Crossword cần act ≥31 từ để có
+> 2 trang).
+>
+> ---
 >
 > **Đợt 296** (06/9/2026, rà soát toàn hệ mục K) — ⭐⭐ **MÀN REPORT ĐỌC KẾT QUẢ KHÔNG KÈM BÀI LÀM CHI TIẾT.** Đo trên
 > bản sao lưu 05/9: `results` 618 tài liệu = 8 MB, **13 KB/tài liệu trung bình, 37 KB lớn nhất** — gần hết là trường

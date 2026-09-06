@@ -1083,10 +1083,23 @@ const crosswordTemplate = {
     }
 
     // Back to the board, ready for the next choice.
+    // ⭐⭐⭐ Đợt 297 (thầy, 6/9/2026) — TỰ SANG TRANG TRONG TRẬN FIGHT. Ngoài trận,
+    // `endWord()` tự lo việc này (`loadPage(curPageIdx+1)` khi hết clue một
+    // trang). Trong trận, `gradeWord()`'s fightCtl branch RETURN SỚM và không
+    // bao giờ đi qua `endWord()` — nên trước đợt này, hết clue của TRANG 1 là
+    // dừng thẳng, không hề biết còn trang 2, 3… (referee cũng chỉ được báo
+    // `total: clues.length` = số câu trang 1, xem fightCtl.attach ở trên — vá
+    // cùng đợt). `fightBackToBoard()` là chỗ referee gọi MỖI LẦN xong một vòng
+    // pick (`endPickRound()`, core/fight.js) để đưa lớp về lại lưới chọn ô —
+    // đúng chỗ để chen bước "còn trang sau thì tải nó lên trước khi cho chọn
+    // tiếp". Nếu ĐÃ là trang cuối, cứ `returnToBoard()` như cũ — referee tự
+    // biết khi nào hết trận nhờ `total` đã đúng (không cần gọi `finish()` ở
+    // đây, hàm đó không tồn tại trong một trận Fight).
     function fightBackToBoard() {
       if (!fightCtl || finished) return;
       fightHeld = null;
       fightBoardLock = false;
+      if (curPageIdx < PAGE_COUNT - 1 && wordState.every(s => s.done)) { loadPage(curPageIdx + 1); return; }
       returnToBoard();
     }
 
@@ -1109,7 +1122,14 @@ const crosswordTemplate = {
 
     if (fightCtl) {
       fightCtl.attach(fightSide, {
-        total: clues.length,
+        // ⭐⭐⭐ Đợt 297 (thầy, 6/9/2026) — PHẢI LÀ TỔNG CẢ MỌI TRANG, KHÔNG PHẢI
+        // `clues.length` (chỉ trang 1, cố định ngay lúc mount). Trọng tài
+        // (core/fight.js) so `playedRounds`/`roundIndex` với đúng con số này để
+        // biết khi nào hết trận (`endPickRound`/`advanceRound`) — báo thiếu thì
+        // nó tưởng hết trận ngay khi trang 1 xong, không hề biết còn trang 2, 3…
+        // `total` ở đây là biến TỔNG đã có sẵn từ đầu file (dòng khai `PAGE_COUNT`),
+        // cùng con số `itemTotal` dùng ở finish() bên dưới.
+        total,
         goToIndex: fightGoTo,
         lock(on) { fightBoardLock = !!on; syncFightLock(); },
         reveal: revealFightWord,

@@ -173,6 +173,87 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 297 (06/9/2026, thầy giao — 4 việc ở FIGHT) — ⭐⭐⭐ **BỎ Ô HAND POINTS · TIẾNG TÍCH MISS WAIT · SPEED BONUS BAY · CROSSWORD TỰ SANG TRANG TRONG TRẬN**
+
+⚠️ Số đợt trùng với `dot296-*` trong tên 3 file bàn thử ở mục cuối là NGẪU NHIÊN — một phiên Claude
+khác đã đẩy lên GitHub một "Đợt 296" khác hẳn (`2325ebd`, màn Report đọc kết quả nhẹ hơn) trước khi
+phiên này kịp `git fetch`; hai phiên không đụng cùng file code nào, chỉ trùng số ở 2 file changelog —
+cùng tiền lệ đã ghi ở đầu mục Đợt 277 (trùng Đợt 276).
+
+**Thầy giao 4 việc, tất cả đều ở chế độ FIGHT:**
+1. Bỏ ô số (hand points) bên dưới khung game của 2 đội.
+2. MISS WAIT có âm thanh tích để đếm, dồn dập ở 5 giây cuối.
+3. SPEED BONUS: số to như điểm trừ, bay ra từ vị trí câu trả lời lên ô điểm (như flyPenalty).
+4. Crossword trong Fight chỉ chơi hết page 1 là dừng game — cần chơi tiếp page 2, 3… tới hết.
+
+### 1. Bỏ hand points
+`core/fight.js` — xoá hẳn (không để lại nửa vời): `handPoints`/`handAwake` (module-level), `makeHand()`,
+`interact()`/`bump()`/`paintHand()`/`animateHandSlide()`, `HAND_SLIDE_MS`, và hai ô `handHalf0/1` khỏi
+`controlsRow` — hàng dưới khung nay chỉ còn mỗi toolbar dùng chung. `core/app.css`: xoá toàn bộ khối
+`.aw-fight-hand*`; `.aw-fight-controls` đổi từ "lấy chiều cao nhờ ô hand" sang tự khai
+`min-height: clamp(30px,5.5vw,44px)` (đúng bằng cỡ ô cũ) để toolbar không tụt xuống hay đổi vị trí.
+
+### 2. Tiếng tích MISS WAIT
+`core/fight.js` — thêm `scheduleMissTicks()`/`clearMissTickTimers()` cạnh `scheduleMissBands()` sẵn có
+(Đợt 281), gọi ở đúng 4 chỗ `scheduleMissBands` được gọi trong `paintMissBar()` (mở mới/resume sau
+`hold`/dừng lúc `hold`/tắt thanh). Đều mỗi giây (`sound.tick()`) khi còn hơn 5 giây, dồn dập 200ms/tiếng
+(5 tiếng/giây) trong 5 giây cuối — dùng lại `sound.tick()` có sẵn (không thêm âm mới).
+
+### 3. Speed bonus bay
+`core/flypenalty.js` — tách phần thân dùng chung thành `flyNumber()`, `flyPenalty()` (cũ, hành vi
+KHÔNG đổi) chỉ còn là lớp vỏ mỏng gọi `flyNumber(..., sign:"−", cls:"aw-penalty-fly")`; thêm
+`flyBonus()` = `flyNumber(..., sign:"+", cls:"aw-bonus-fly")`. `core/fight.js`: `finalizeSingleWinner`/
+`finalizeTie` gọi `flyBonusTo(side, speedBonus)` thay cho `bonus[side]+=…; paintScore(); flashTeam()`
+cũ — bay từ `boardEls[side]` (giữa khung đội thắng, ĐÚNG chỗ mọi flyPenalty trong trận cũng bị ép về,
+xem luật "GIẤU ĐÁP ÁN KHI VÒNG CÒN MỞ") lên `.aw-fight-score` của đội đó, cộng điểm lúc HẠ CÁNH chứ
+không phải lúc gọi. `flashTeam()`/`.aw-fight-flash`/@keyframes cũ XOÁ hẳn. `endMatch()` gọi
+`flushBonusFlights()` trước khi đọc bảng điểm (`showResult()`), cùng lý do `ui.flushPenalties()` — số
+"+N" còn bay là một phép cộng CHƯA áp. `teardown()` dọn nốt node/pending còn treo giữa chừng.
+
+### 4. Crossword: tự sang trang trong Fight
+Gốc: `gradeWord()`'s nhánh `fightCtl` return sớm, KHÔNG BAO GIỜ đi qua `endWord()` (nơi single-mode
+tự `loadPage()`); đồng thời `fightCtl.attach()` báo `total: clues.length` = số câu CHỈ CỦA TRANG 1
+(cố định lúc mount) — trọng tài (`core/fight.js`) dùng đúng số đó để quyết định hết trận
+(`playedRounds/roundIndex >= total`), nên hễ hết clue trang 1 là tưởng hết trận.
+Vá — CHỈ 2 chỗ trong `templates/crossword/crossword.js`:
+- `fightCtl.attach(fightSide, { total, ... })` — dùng lại biến `total` đã có sẵn từ đầu file (TỔNG số
+  câu MỌI trang, cùng công thức `itemTotal` ở `finish()`), thay vì `clues.length`.
+- `fightBackToBoard()` (referee gọi mỗi khi xong một vòng pick, đưa lớp về lại lưới chọn ô) — thêm
+  `if (curPageIdx < PAGE_COUNT - 1 && wordState.every(s => s.done)) { loadPage(curPageIdx + 1); return; }`
+  trước `returnToBoard()` cũ. Trang cuối thì rơi về `returnToBoard()` như trước — referee tự kết trận
+  đúng lúc nhờ `total` đã sửa, không cần gọi gì thêm ở đây.
+
+### Bàn thử
+- `scratch/dot296-fight-tweaks.html` — trận Fight THẬT (`startFight` + True/false), spy `sound.tick()`,
+  MutationObserver theo dõi `.aw-bonus-fly`: xác nhận (a) hết mọi `.aw-fight-hand`/`.aw-fight-handhalf`,
+  toolbar vẫn còn chỗ đứng; (b) `.aw-bonus-fly` xuất hiện đúng lúc, ghi đúng "+5", điểm CHƯA cộng lúc
+  đang bay, cộng đúng lúc hạ cánh, dọn sạch sau đó — **ĐẠT khi pane được giữ hiện (chụp ảnh liên tục
+  giữ layout thật)**; ⚠️ nếu để pane chạy nền/ẩn dài, mọi `setTimeout` của trận (kể cả `later()` có
+  sẵn từ trước, không phải do đợt này) chạy trễ hơn hẳn lý thuyết — cùng họ bẫy
+  `[[electron-test-throttle]]`, không phải lỗi của code.
+- `scratch/dot296-misstick-math.mjs` (chạy bằng `node`, không cần trình duyệt) — copy verbatim
+  `scheduleMissTicks()`, kiểm với cửa sổ 6s/20s/3s/0.1s: đều 1 tiếng/giây khi còn >5s, đúng 24 tiếng
+  cách nhau 200ms trong 5s cuối, tỉ lệ dồn dập ~5 lần/giây so với trước đó — **11/11 ĐẠT**.
+- `scratch/dot296-crossword-fight-pages.html` — copy verbatim thân hàm `fightBackToBoard()` mới, tự
+  dựng `pageState` giả, lái qua 5 tình huống (trang giữa xong→sang trang kế; trang cuối xong→
+  returnToBoard; trang giữa chưa xong→ở lại; chỉ 1 trang→y hệt hành vi cũ; ngoài trận/đã kết thúc→
+  không làm gì) + so chuỗi trực tiếp trên file thật (`total` không còn là `clues.length`, có báo
+  `total`, điều kiện sang trang đúng) — **15/15 ĐẠT**.
+- `scratch/cw-fight-test.html` (bàn thử CŨ, Đợt 185, không sửa) chạy lại xác nhận KHÔNG hồi quy: 8/11
+  ĐẠT — 3 trượt là bẫy cũ CÓ TỪ TRƯỚC (thanh mờ 50%/is-fightwait bị Đợt 259 bỏ hẳn nhưng bàn thử này
+  chưa cập nhật lại, không liên quan gì tới đợt 297), còn nguyên các phép hỏi về chấm điểm/khoá/lộ
+  đáp án của MỘT trang thì vẫn ĐẠT đủ.
+
+`node --input-type=module --check` sạch cả 4 file đụng tới (`core/fight.js`, `core/flypenalty.js`,
+`core/app.css` không cần check JS, `templates/crossword/crossword.js`).
+
+⬜ **CHỜ THẦY BẤM TAY THẬT**: mở một trận Fight bất kỳ, xem hàng dưới khung chỉ còn
+toolbar; bật Miss wait + nghe tiếng tích dồn dập cuối cửa sổ; bật Speed bonus xem số bay từ giữa khung
+lên ô điểm; mở một Crossword ≥31 từ (2 trang) trong Fight, chơi hết trang 1 xem có tự chuyển sang
+trang 2 hay không, và trận chỉ kết thúc sau khi xong CẢ hai trang.
+
+---
+
 ## Đợt 296 (06/9/2026, rà soát toàn hệ) — ⭐⭐ **MÀN REPORT ĐỌC KẾT QUẢ NHẸ — BÀI LÀM CHI TIẾT TẢI KHI BẤM XEM**
 
 **Bối cảnh:** rà soát toàn hệ đêm 05→06/9 (`DU LIEU TONG HOP\RA SOAT TOAN HE — DEM 06-09-2026.md`, mục K). Đo trên bản

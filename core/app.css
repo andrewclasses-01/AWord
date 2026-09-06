@@ -1780,6 +1780,25 @@ html.aw-nhung .aw-below { display: none; }
   100% { transform: scale(1); }
 }
 
+/* ⭐⭐⭐ FLY BONUS — SPEED BONUS "+N" bay từ khung đội thắng vào ô điểm (Đợt
+   297, core/flypenalty.js's flyBonus()). Cùng khuôn .aw-penalty-fly ở trên,
+   chỉ đổi màu vàng-lục (mừng) thay vì đỏ (mất điểm) và không viền tối. */
+.aw-bonus-fly {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  font-weight: 800; color: #2fb872;
+  -webkit-text-stroke: 0.06em #0d4a2a; paint-order: stroke fill;
+  pointer-events: none; z-index: 60; white-space: nowrap;
+  line-height: 1;
+  filter: drop-shadow(0 0.15em 0.3em rgba(0,0,0,.3));
+}
+.is-bonus-hit { animation: aw-bonus-hit .42s cubic-bezier(.3,.9,.4,1.2); }
+@keyframes aw-bonus-hit {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.22); filter: drop-shadow(0 0 .35em rgba(47,184,114,.85)); }
+  100% { transform: scale(1); }
+}
+
 /* =====================================================================
    OPTIONS PANEL v2 — ONE grid, ONE row shape (Đợt 140, 13/8/2026)
    ---------------------------------------------------------------------
@@ -4414,10 +4433,7 @@ html.aw-nhung .aw-below { display: none; }
    Absolutely centred over the WHOLE strip (not the .aw-fight-half cells
    either side of it, whose width can differ from the true seam once a score
    grows) so it always sits on the boards' actual join, regardless of team
-   score width. The teacher's own hand points used to share this cluster
-   (either side of the clock) — moved below the boards instead (Đợt 124,
-   third pass, see .aw-fight-hands below), so centring the clock alone here
-   is now trivial: nothing else in this box to stay symmetric around. */
+   score width. Nothing else in this box to stay symmetric around. */
 .aw-fight-middle {
   position: absolute;
   left: 50%;
@@ -4438,120 +4454,26 @@ html.aw-nhung .aw-below { display: none; }
   color: #55606d;
 }
 
-/* --- ONE row under the boards: hand points · toolbar · hand points ---
-   (teacher, 12/8/2026 fourth pass: the toolbar came UP and the hand boxes went
-   DOWN until they met on a single line.) Same two-column grid as the boards so
-   each hand box stays dead centre under ITS OWN board; the toolbar is centred
-   over the join by .aw-fight-bottom below. */
+/* --- ONE row under the boards: just the shared toolbar (Đợt 297) ---
+   Used to also carry the teacher's hand-point boxes either side of the
+   toolbar (removed, thầy: "bỏ ô số bên dưới khung game của 2 đội") — the row
+   is kept only as the floor `.aw-fight-bottom` (below) is absolutely centred
+   over, so its height is now set directly here instead of coming from the
+   hand boxes that used to live in it (same clamp() they used, so the toolbar
+   sits exactly where it always has). */
 .aw-fight-controls {
   position: relative;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: clamp(6px, 1.2vw, 18px);      /* same gap as .aw-fight-boards, so each half matches its board */
-  align-items: center;
+  min-height: clamp(30px, 5.5vw, 44px);
   margin-top: 6px;                   /* a little air under the boards */
 }
-.aw-fight-handhalf { display: flex; justify-content: center; }
-
-/* The BOX is EXACTLY a toolbar button (.aw-toolbtn: clamp(30px,5.5vw,44px),
-   radius 13 — same clamp() formula copied here on purpose, Đợt 132, so the
-   two stay the same size at every window width, not just at the old fixed
-   44px) so the two hand boxes and the row of tool buttons read as one family
-   across the whole row (teacher, 12/8/2026 fourth pass). Blue when positive,
-   red when negative — and a negative shows the bare number with NO minus sign. */
-.aw-fight-hand {
-  width: clamp(30px, 5.5vw, 44px);
-  height: clamp(30px, 5.5vw, 44px);
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 13px;
-  border: 1.5px solid #e2e9f2;
-  background: #fff;
-  box-shadow: 0 2px 6px rgba(31, 42, 68, .07);   /* same lift as .aw-toolbtn */
-  cursor: ns-resize;
-  user-select: none;
-  touch-action: none;
-  text-align: center;
-  transition: border-color .15s ease, background .15s ease, opacity .18s ease;
-}
-.aw-fight-hand:hover { border-color: #b9c6d4; background: #fff; }
-.aw-fight-hand:active { background: #f1f5fa; }
-/* "Asleep at zero" (teacher's ask, 12/8/2026 third pass): dimmed while resting
-   on 0 and not yet woken by a touch — still legible ("vẫn dim một chút đủ
-   nhìn"), not invisible. The FIRST touch on a dimmed box only wakes it
-   (core/fight.js's interact()); the box never dims once away from 0. */
-.aw-fight-hand.is-dim { opacity: .42; }
-
-/* Fixed-height clipping window for the odometer-style slide (core/fight.js's
-   animateHandSlide()) — carries the font-size so .aw-fight-handvalue can just
-   `font: inherit` and the two overlapping numbers (old sliding out, new
-   sliding in) always share the exact same metrics. Sized to fill the box
-   generously (teacher: the number reads bigger than a strict scale-down of the
-   box would give) while the box itself stays button-sized. `clamp()` here is
-   the SAME box-size clamp scaled by the original 24/44 ratio (Đợt 132) — the
-   box shrinks responsively now (see .aw-fight-hand above), so a fixed 24px
-   would overflow it at narrow widths. */
-.aw-fight-handnum {
-  position: relative;
-  overflow: hidden;
-  width: 100%;
-  /* Đợt 134 (teacher: "tăng size cho số") — was clamp(16px,3vw,24px); the box
-     itself (.aw-fight-hand above) stays toolbar-button-sized on purpose, so
-     only the digits themselves grew, not their footprint.
-     Đợt 136 (teacher: plain AWord digits instead of 7-segment bars, "tăng size
-     số bên trong lên để dễ nhìn hơn"): another ~30% on top, and weight 800 +
-     tabular-nums so these read like the team scores on the strip above.
-     ⚠️ line-height dropped 1.2 → 1.1 in the SAME change, and it has to be: the
-     box is 44px tall with 1.5px borders = 41px of room, and 35px × 1.2 = 42px
-     would be clipped by .aw-fight-handnum's own overflow:hidden. At 1.1 it is
-     38.5px — measured, fits with room to spare at every clamp step. */
-  font-size: clamp(23px, 4.4vw, 35px);
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-  height: 1.1em;
-}
-.aw-fight-handvalue {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font: inherit;
-  color: #2b7fd4;
-  will-change: transform;
-}
-.aw-fight-handvalue.is-neg { color: #e03131; }
-
-/* ⚠️ Đợt 136: the 7-segment digit block (.aw-seg-*, Đợt 134) is DELETED, not
-   disabled — the teacher found the bars too thin to read ("quá khó nhìn do
-   mảnh quá"), so the digits went back to plain Baloo 2 text (see
-   .aw-fight-handnum above) and fight.js's sevenSegHtml() is gone with it. */
 
 /* the winning team's box pulses once when it takes a word */
 .aw-fight-team.is-won .aw-fight-score { animation: aw-fight-pop .5s ease; }
 @keyframes aw-fight-pop { 0% { transform: scale(1); } 40% { transform: scale(1.22); } 100% { transform: scale(1); } }
-/* "+5" speed bonus. Positioned with a transform, so its keyframes BAKE that
-   transform into every step — see the "popup jumps into place" rule near the
-   top of this file. */
-.aw-fight-flash {
-  position: absolute;
-  left: 50%;
-  top: -6px;
-  transform: translateX(-50%);
-  font-size: clamp(14px, 1.8vw, 22px);
-  font-weight: 800;
-  color: #ffd166;
-  pointer-events: none;
-  animation: aw-fight-flash 1.2s ease forwards;
-}
-@keyframes aw-fight-flash {
-  0% { opacity: 0; transform: translate(-50%, 6px); }
-  22% { opacity: 1; transform: translate(-50%, -6px); }
-  100% { opacity: 0; transform: translate(-50%, -26px); }
-}
+/* ⛔ Đợt 297 — "+5" speed bonus no longer sits still and flashes: it flies from
+   the winning board into the score, same as a penalty (.aw-bonus-fly, near
+   .aw-penalty-fly above). The old `.aw-fight-flash`/@keyframes aw-fight-flash
+   are DELETED with `flashTeam()` (core/fight.js), not left dormant. */
 
 /* --- the two boards --- */
 .aw-fight-boards {
