@@ -8,9 +8,50 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **07/9/2026 (Đợt 300 — gộp options của các act con cùng loại: ENG1 · ENG2 ·
-> VI1 · VI2 chung một bộ options, VOICE chung một bộ khác, HOMEWORK giữ nguyên)**.
+> Cập nhật lần cuối: **07/9/2026 (Đợt 301 — vá hồi quy của Đợt 300: đổi act con xong bấm Apply
+> mà ván vẫn chơi act con cũ, phải reload trang mới được)**.
 >
+>
+> **Đợt 301** (07/9/2026, thầy báo ngay trong ngày) — ⭐⭐⭐ **ĐỔI ACT CON XONG BẤM APPLY MÀ VẪN CHƠI
+> ACT CON CŨ — HỒI QUY CỦA ĐỢT 300, CÙNG NGÀY.** Thầy: *"mở AWord bằng chế độ nhiều đội trong
+> myActivity, cả chế độ đơn và showdown… chơi thử VI2, xong chọn ENG1 và apply. START thì lại chơi
+> VI2. Chỉnh lại apply… vẫn là VI2. Phải reload lại trang thì mới được."*
+>
+> ⛔ **MỘT HÀM, HAI CÂU HỎI KHÁC NHAU.** `viewKeyOf()` sinh ra cho câu hỏi của Đợt 147 — *"đang dùng
+> BỘ OPTIONS nào"*. Nhưng `core/engine.js` `applySubActSelection()` mượn đúng hàm đó để hỏi *"act con
+> có đổi không, có phải NƯỚNG LẠI nội dung không"*. Hai câu hỏi ấy **tình cờ chung một đáp án** suốt
+> 24 ngày nên chỗ mượn nhầm sống yên. Đợt 300 (cùng ngày, `063b4b5`) bỏ TÊN BỘ GỢI Ý khỏi `viewKeyOf`
+> — đúng cho việc của nó — và lập tức làm phép so mù: VI2 → ENG1 ra `"text" === "text"` ⇒
+> `return false` ⇒ **không bao giờ re-convert nữa**.
+>
+> ⛔ Chỉ hỏng trên act **ĐÃ ĐỔI TEMPLATE**: `convert.js` nướng SẴN một bộ gợi ý vào act tạm, nên ghi
+> `contentVariant` lên nó chỉ làm **nhãn màn READY nhúc nhích còn ván thì không**; cú re-convert từ
+> act GỐC là cửa duy nhất, và cửa đó vừa bị khoá. Act chơi đúng template gốc **vẫn đúng** (đối chứng
+> ngược của bàn thử). RELOAD chữa được vì Apply vẫn kịp cất `contentVariant` vào
+> `originAct.templateOptions[type]`, lần tải sau `convertActivity()` đọc lại đúng ô nhớ đó — nên lỗi
+> trông như "app cần refresh" chứ không như lỗi logic.
+> ⛔ Cửa myActivity còn tệ hơn: `__awordBridge.applyOptions()` trả **`true`** (cột nhận vẽ dấu ✓ xanh)
+> trong khi vẫn chơi bộ gợi ý cũ — cùng họ "báo động giả" của `bridge-singleton-chep-tay`.
+>
+> **Vá:** `core/content-view.js` thêm `subActKeyOf()` giữ nguyên hình dạng khoá TRƯỚC Đợt 300
+> (`"practice|text:vi2"` — nửa bài · chế độ · **tên bộ gợi ý**, đúng ba thứ quyết định `convert.js`
+> nướng ra nội dung nào); `core/engine.js` `applySubActSelection()` đổi sang dùng nó. `viewKeyOf()`
+> **không đụng một chữ** ⇒ nếp gộp options của Đợt 300 giữ nguyên 100%; hai chỗ còn lại (`curKey` /
+> `nextKey` trong panel Options) đúng là câu hỏi "bộ options nào" nên vẫn dùng `viewKeyOf`.
+> ⚠️ CẤM dùng `subActKeyOf` làm khoá `act.viewOptions` — bước v4 của `options-migrate.js` vừa cố ý
+> xoá sạch khoá hình dạng đó khỏi kho. Một chỗ sửa ⇒ Single · Fight · Showdown · cầu myActivity ăn theo.
+>
+> Bàn thử `scratch/dot301-subact.html` (trận thật trong trình duyệt; mỗi bộ gợi ý mang CHÍNH TÊN BỘ
+> nên phép đo **đọc chữ trên màn hình chơi**, không đọc `activity.options` — cờ đó đổi cả khi ván
+> không đổi, và nhãn màn READY cũng thế). A/B thật bằng cách stash bản vá: **3/11 TRƯỢT trước →
+> 11/11 ĐẠT sau**, 3 phép trượt rơi đúng vào ca converted + ca cầu bridge.
+> `node --input-type=module --check` sạch cả 2 file. Chi tiết `GHI CHU DU AN.md` Đợt 301.
+> ⚠️ `tools/sinh-preload.py --check` báo LỆCH cả 3 mục — **đã LỆCH sẵn trên `b6e0403`**, không phải
+> do đợt này (đo bằng stash rồi chạy lại: ra chữ y hệt), và chỉ ảnh hưởng tốc độ tải lần đầu.
+> ⬜ **CHỜ THẦY BẤM TAY THẬT**: myActivity nhiều đội → chọn game khác template gốc → chơi VI2 →
+> Options chọn ENG1 → Apply → START phải ra ENG1 mà **không cần reload**; làm cả Single và Showdown.
+>
+> ---
 >
 > **Đợt 300** (07/9/2026, thầy giao) — ⭐⭐⭐ **GỘP OPTIONS CỦA CÁC ACT CON CÙNG LOẠI.**
 > Thầy: *"Trong options của các act (trừ chế độ HOMEWORK trong options, còn dạng PRACTICE thì vẫn

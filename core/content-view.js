@@ -330,6 +330,36 @@ export function viewKeyOf(activity) {
   return parts.length ? parts.join("|") : null;
 }
 
+// ⭐⭐⭐ Đợt 301 (07/9/2026) — "ĐANG CHƠI ACT CON NÀO", MỘT CÂU HỎI KHÁC HẲN
+// "ĐANG DÙNG BỘ OPTIONS NÀO".
+//
+// ⛔ THẦY BÁO 07/9/2026: mở AWord trong myActivity (nhiều đội), chơi thử VI2 xong, chọn
+// ENG1 rồi Apply — bấm START vẫn ra VI2; Apply lại vẫn VI2; phải RELOAD trang mới được.
+// Gốc rễ: `viewKeyOf()` ở trên phục vụ Đợt 147 ("mỗi view một bộ options"), và Đợt 300
+// vừa BỎ TÊN BỘ ra khỏi nó cho đúng ý thầy (ENG1 · ENG2 · VI1 · VI2 dùng CHUNG một bộ
+// options). Nhưng core/engine.js `applySubActSelection()` lại mượn chính hàm đó để hỏi
+// một câu khác hẳn — "act con có đổi không, có phải NƯỚNG LẠI nội dung không" — nên từ
+// Đợt 300 nó nhận về "text" === "text" và trả lời KHÔNG, mãi mãi. Trên một act ĐÃ ĐỔI
+// TEMPLATE (converted) thì đó là cửa DUY NHẤT dẫn tới cú re-convert, nên bộ gợi ý cũ nằm
+// lì trong nội dung convert.js đã nướng, cho tới khi tải lại trang.
+//
+// ⇒ HAI CÂU HỎI THÌ PHẢI LÀ HAI HÀM. Hàm này giữ nguyên hình dạng khoá TRƯỚC Đợt 300
+// ("practice|text:vi2") vì đó đúng là ba thứ quyết định convert.js nướng ra nội dung
+// nào: nửa bài (contentSet) · chế độ (text/voice) · và TÊN BỘ GỢI Ý.
+// ⚠️ KHÔNG BAO GIỜ được dùng nó làm khoá của `act.viewOptions` — bước v4 của
+// core/options-migrate.js vừa xoá sạch những khoá hình dạng này khỏi kho, có chủ ý.
+export function subActKeyOf(activity) {
+  const parts = [];
+  const set = activeContentSet(activity);
+  if (set) parts.push(set);
+  const variant = activeVariant(activity);
+  if (variant) {
+    const mode = (activity.options || {}).contentMode === "voice" ? "voice" : "text";
+    parts.push(`${mode}:${variant}`);
+  }
+  return parts.length ? parts.join("|") : null;
+}
+
 // Split an options object into the part that names the view and the part that
 // IS the view's settings.
 export function splitViewOptions(options) {

@@ -26,7 +26,7 @@ import { hasAnyVoice, hasHiddenText } from "./voice-playback.js";
 import {
   resolveActivity, variantsOf, voiceVariantsOf, variantLabel, activeVariant,
   contentSetsOf, activeContentSet, setLabel,
-  viewKeyOf, splitViewOptions, optionsForView, storeViewOptions, VIEW_SELECTOR_KEYS
+  viewKeyOf, subActKeyOf, splitViewOptions, optionsForView, storeViewOptions, VIEW_SELECTOR_KEYS
 } from "./content-view.js";
 import { switchTargets, convertActivity, toRecords } from "./convert.js";
 import { computeResult } from "./scoring.js";
@@ -4205,11 +4205,20 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // the choice is written onto the ORIGIN (the act convert.js reads) and the
   // conversion is rebuilt from there.
   //
-  // Comparing VIEW KEYS rather than raw keys means an Apply that didn't touch
+  // Comparing SUB-ACT KEYS rather than raw keys means an Apply that didn't touch
   // the sub-act never pays for a rebuild, and a first-ever Apply (nothing stored
   // yet, so the act is on its default set) doesn't count as a change.
-  // `viewKeyOf` is null for an act with neither clue sets nor halves — i.e. the
+  // `subActKeyOf` is null for an act with neither clue sets nor halves — i.e. the
   // entire pre-Đợt-145 library — so both sides are null and this never fires.
+  //
+  // ⭐⭐⭐ Đợt 301 (07/9/2026) — `subActKeyOf`, KHÔNG PHẢI `viewKeyOf`. Hai hàm này
+  // giống hệt nhau từ Đợt 147 tới Đợt 300, và chỗ NÀY đã mượn nhầm hàm suốt thời gian
+  // đó mà không ai thấy. Đợt 300 (cùng ngày) bỏ TÊN BỘ GỢI Ý ra khỏi `viewKeyOf` — hoàn
+  // toàn đúng cho việc của NÓ (ENG1/ENG2/VI1/VI2 nay dùng chung một bộ options) — và
+  // ngay lập tức làm phép so ở đây MÙ: đổi VI2 → ENG1 cho ra "text" === "text" ⇒ hàm
+  // này trả về false ⇒ KHÔNG re-convert ⇒ act đã đổi template cứ chơi mãi bộ gợi ý cũ
+  // (thầy báo trong ngày: "reload lại trang thì mới được"). Xem ghi chú dài ở
+  // `subActKeyOf` trong core/content-view.js.
   //
   // @returns {Promise|false} A PROMISE when it has TAKEN OVER the restart — the
   //          caller must then do nothing else, because a second restart on top
@@ -4225,8 +4234,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // this inequality IS the converted case.
     const convSrc = subActSource();
     if (convSrc === subActOwner()) return false;
-    const beforeKey = viewKeyOf(convSrc);
-    const afterKey = viewKeyOf({ ...convSrc, options: { ...(convSrc.options || {}), ...selState } });
+    const beforeKey = subActKeyOf(convSrc);
+    const afterKey = subActKeyOf({ ...convSrc, options: { ...(convSrc.options || {}), ...selState } });
     if (beforeKey === afterKey) return false;
     if (!convSrc.options) convSrc.options = {};
     VIEW_SELECTOR_KEYS.forEach(k => { if (selState[k] !== undefined) convSrc.options[k] = selState[k]; });

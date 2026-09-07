@@ -12,7 +12,15 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 300** (07/9/2026 — GỘP OPTIONS CỦA CÁC ACT CON CÙNG LOẠI: ENG1 · ENG2 · VI1 · VI2
+> Mới nhất: **Đợt 301** (07/9/2026 — HỒI QUY CỦA ĐỢT 300, CÙNG NGÀY: đổi act con (VI2 → ENG1) rồi
+> Apply mà **ván vẫn chơi act con cũ**, phải reload trang mới được. Đợt 300 bỏ tên bộ gợi ý khỏi
+> `viewKeyOf()` — đúng cho việc của nó — nhưng `applySubActSelection()` lại mượn chính hàm đó để hỏi
+> *"có phải nướng lại nội dung không"* nên phép so mù hẳn, act ĐÃ ĐỔI TEMPLATE không bao giờ
+> re-convert nữa; cửa bridge myActivity còn **báo ✓ thành công** mà không làm gì. Tách ra hàm riêng
+> `subActKeyOf()`, `viewKeyOf()` không đụng một chữ nên nếp gộp options của Đợt 300 giữ nguyên.
+> Bàn thử `scratch/dot301-subact.html` A/B thật: **3/11 TRƯỢT trước → 11/11 ĐẠT sau**. Xem mục Đợt 301
+> ngay dưới.)
+> Trước đó: **Đợt 300** (07/9/2026 — GỘP OPTIONS CỦA CÁC ACT CON CÙNG LOẠI: ENG1 · ENG2 · VI1 · VI2
 > chung MỘT bộ options, hai bộ VOICE chung một bộ khác, PRACTICE/HOMEWORK giữ nguyên tách rời. Lật
 > ngược Đợt 147 có chủ ý — thầy đã được hỏi lại đúng lý lẽ cũ trước khi build. Sửa đúng một hàm
 > `viewKeyOf()` nên cả Single · Fight · Showdown ăn theo; `OPT_VER = 4` dọn ô nhớ cũ mang tên bộ.
@@ -180,6 +188,94 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 301 (07/9/2026, thầy báo ngay trong ngày) — ⭐⭐⭐ **ĐỔI ACT CON XONG BẤM APPLY MÀ VẪN CHƠI ACT CON CŨ (hồi quy của Đợt 300, cùng ngày)**
+
+### Thầy báo gì
+
+> *"Tôi mở AWord bằng chế độ nhiều đội trong myActivity, cả chế độ đơn và showdown, tôi chọn act
+> con trước và chơi thử (VI2), sau khi xong tôi chọn act con khác (ENG1) và apply. Sau đó bắt đầu
+> START thì lại chơi VI2. Chỉnh lại apply đóng options chơi thì vẫn là VI2. Phải reload lại trang
+> thì mới được."*
+
+### Gốc rễ — MỘT HÀM, HAI CÂU HỎI KHÁC NHAU
+
+`core/content-view.js` `viewKeyOf()` sinh ra để trả lời câu hỏi của **Đợt 147**: *"đang dùng BỘ
+OPTIONS nào"* (khoá của `act.viewOptions`). Nhưng `core/engine.js` `applySubActSelection()` lại
+mượn đúng hàm đó để hỏi một câu **khác hẳn**: *"act con có đổi không, có phải NƯỚNG LẠI nội dung
+không"*:
+
+```js
+const beforeKey = viewKeyOf(convSrc);
+const afterKey  = viewKeyOf({ ...convSrc, options: { ...convSrc.options, ...selState } });
+if (beforeKey === afterKey) return false;      // không re-convert
+```
+
+Từ Đợt 147 tới Đợt 300 hai câu hỏi ấy **tình cờ có chung một đáp án**, nên chỗ mượn nhầm này sống
+yên suốt 24 ngày. **Đợt 300 (cùng ngày, `063b4b5`)** bỏ TÊN BỘ GỢI Ý ra khỏi `viewKeyOf` — hoàn
+toàn đúng cho việc của nó (ENG1 · ENG2 · VI1 · VI2 nay dùng chung một bộ options) — và ngay lập
+tức làm phép so trên **mù hẳn**: đổi VI2 → ENG1 cho ra `"text" === "text"` ⇒ trả về `false` ⇒
+**không bao giờ re-convert nữa**.
+
+⛔ **Vì sao chỉ hỏng trên act ĐÃ ĐỔI TEMPLATE (converted):** `convert.js` **nướng SẴN một bộ gợi ý**
+vào nội dung act tạm lúc chuyển đổi. Ghi `contentVariant: "eng1"` lên một act mà nội dung đã là VI2
+thì **chỉ dòng chữ trên màn READY nhúc nhích, còn ván thì không**. Cú re-convert từ act GỐC là cửa
+DUY NHẤT sửa được, và cửa đó vừa bị khoá. Act chơi đúng template gốc của nó không đi qua đây nên
+**vẫn đúng** — đó cũng là đối chứng ngược của bàn thử.
+
+⛔ **Vì sao RELOAD lại chữa được:** cú Apply vẫn kịp cất bộ options (kèm `contentVariant`) vào
+`originAct.templateOptions[type]` và lưu xuống kho. Lần tải trang sau, `convertActivity()` đọc lại
+đúng ô nhớ đó ⇒ nướng ENG1. Nên lỗi trông như "app cần refresh" chứ không như một lỗi logic.
+
+⛔ **Cửa myActivity còn tệ hơn — BÁO THÀNH CÔNG mà không làm gì:** `__awordBridge.applyOptions()`
+cũng gọi `applySubActSelection()`; khi nó trả `false` thì bridge đi tiếp `replayCurrent()` rồi
+`return true`. Đo được: cột nhận lệnh **vẽ dấu ✓ xanh** trong khi vẫn chơi bộ gợi ý cũ (cùng họ
+"báo động giả" của ghi chú `bridge-singleton-chep-tay`).
+
+### Đã sửa gì
+
+- **`core/content-view.js`** — thêm `subActKeyOf(activity)`: giữ NGUYÊN hình dạng khoá **trước**
+  Đợt 300 (`"practice|text:vi2"`), vì đó đúng là ba thứ quyết định `convert.js` nướng ra nội dung
+  nào — nửa bài · chế độ text/voice · **và tên bộ gợi ý**. `viewKeyOf()` **không đụng một chữ**,
+  nếp gộp options của Đợt 300 giữ nguyên 100%.
+  ⚠️ Có ghi rõ tại chỗ: **cấm** dùng `subActKeyOf` làm khoá của `act.viewOptions` — bước v4 của
+  `core/options-migrate.js` vừa cố ý xoá sạch những khoá hình dạng đó khỏi kho.
+- **`core/engine.js`** — `applySubActSelection()` đổi sang `subActKeyOf()` (2 dòng + khối chú
+  thích dài kể lại vì sao). Đây là chỗ DUY NHẤT dùng nhầm; hai chỗ còn lại (`curKey`, `nextKey`
+  trong panel Options) đúng là câu hỏi "bộ options nào" nên **giữ nguyên `viewKeyOf`**.
+
+Một chỗ sửa nên **Single · Fight · Showdown ăn theo cùng lúc** — cả ba đi qua đúng panel Options
+này, và cả cửa bridge myActivity cũng vậy.
+
+### Bàn thử
+
+`scratch/dot301-subact.html` — trận thật trong trình duyệt, act WORDS 4 bộ gợi ý, mỗi gợi ý mang
+CHÍNH TÊN BỘ nên **phép đo đọc chữ trên màn hình chơi**, không đọc cờ trong bộ nhớ (`activity.options`
+ĐỔI cả khi ván không đổi — chính là cái bẫy này; màn READY cũng vậy: nhãn `subActLabel()` đọc từ act
+GỐC nên nó đổi ngay cả lúc ván đứng yên).
+
+| | act GỐC (đối chứng ngược) | act ĐÃ ĐỔI TEMPLATE | cửa bridge myActivity |
+|---|---|---|---|
+| **bản CHƯA vá (`b6e0403`)** | ĐẠT — ăn ngay | **TRƯỢT — vẫn VI2** | **TRƯỢT — báo `true` mà vẫn VI2** |
+| **bản ĐÃ vá** | ĐẠT | ĐẠT — ra ENG1 | ĐẠT — ra VI1 |
+
+Chạy A/B thật (stash bản vá rồi chạy lại đúng bàn thử đó): **3/11 TRƯỢT trước → 11/11 ĐẠT sau**, và
+3 phép trượt rơi đúng vào 3 ô đen ở trên. `node --input-type=module --check` sạch cả 2 file.
+
+⚠️ `python tools/sinh-preload.py --check` báo LỆCH cả 3 mục — **đã LỆCH sẵn trên `b6e0403`, không
+phải do đợt này** (đo bằng cách stash bản vá rồi chạy lại: ra chữ y hệt). Đợt này không thêm import
+tĩnh nào. Để nguyên, không tự chạy `--write` vì nó ghi vào `index.html`/`play.html` — đúng loại file
+hai phiên hay giẫm chân nhau.
+
+### VIỆC ĐANG CHỜ
+
+- ⬜ **Thầy bấm tay thật** đúng kịch bản đã báo: myActivity nhiều đội → chọn game khác template gốc
+  → chơi VI2 → Options chọn ENG1 → Apply → START phải ra ENG1, **không cần reload**. Làm cả ở chế độ
+  đơn và Showdown.
+- ⬜ Ai đó rảnh chạy `python tools/sinh-preload.py --write` cho hết LỆCH (chỉ ảnh hưởng tốc độ tải
+  lần đầu, không hỏng gì).
 
 ---
 
