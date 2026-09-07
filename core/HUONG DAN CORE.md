@@ -4119,6 +4119,31 @@ câu** — tiếng vọng thật). **Đã vá cùng Đợt 266**: cả ba nay đ
 ở cú tự phát, kèm nửa PULL `voiceState()` cho nút vừa dựng lại giữa clip. Đo lại: **1 lượt phát**,
 nút loa sáng **13/36 ở CẢ HAI bàn**.
 
+⭐⭐⭐ **ĐỢT 302 (07/9/2026) — QUIZ VÀ TRUE/FALSE LÀ HAI GAME CUỐI CÙNG CÒN THIẾU KHUÔN, NAY ĐÃ ĐỦ.**
+Thầy báo: *"2 nút loa của 2 bên không đồng bộ với nhau … đôi khi phát âm 2 bên lệch nhau một chút,
+đặc biệt là khi có 1 bên bấm."* Hai game này có **mỗi cái rào `speaks` ở cú tự phát** — tức là đúng
+MỘT trong bốn mảnh — nên (a) nút loa bàn kia không bao giờ sáng, và (b) **cú chạm vào nút loa không
+có rào nào cả**: chạm ở bàn không-sở-hữu-tiếng làm bàn đó tự phát bản thứ hai **chồng lên** bản bàn
+0 đang chạy. Nợ này đã được ghi ngay trong đợt 266 (*"⬜ Quiz + True/false vẫn còn thiếu GƯƠNG"*,
+đo live 7/28 bên trái · **0/28** bên phải) và nằm đó 12 ngày cho tới khi thầy gặp thật.
+⛔ **BÀI HỌC: cái rào `speaks` KHÔNG PHẢI là khuôn.** Nó chỉ chặn cú TỰ PHÁT. Một game có rào mà
+thiếu ba mảnh kia thì vẫn vọng tiếng — chỉ là vọng ở **đường CHẠM** thay vì đường tự phát, nên
+không lộ ra cho tới khi có người bấm. Game nào có giọng đọc + `fightMode` thì phải soi **đủ bốn
+mảnh**, và soi bằng **giá trị trả về**, đừng đếm xem file có gọi hàm nào.
+⛔⛔ **BẪY KHI VIẾT BÀN THỬ TIẾNG — Đợt 302 cắn bốn lần liền, bảng nào cũng "có kết quả":**
+(1) nút loa nằm trong `.aw-fight-board`, **không phải** `.aw-fight-half`; (2) `core/sfx.js` cũng
+phát bằng `<audio>` ⇒ đếm mọi `<audio>` là đếm cả tiếng động (ra "đỉnh 6 bản cùng kêu" ở True/false,
+một con số thật của câu hỏi khác) — phải lọc theo đúng data: URL của clip; (3) ⛔ **ép `muted = true`
+để qua cửa autoplay là hỏng cả bảng**: Chrome coi media đang tắt tiếng ở **tab nền** là *"video-only
+background media"* và **tự tạm dừng**, `play()` trả `AbortError`, `createVoicePlayer.start()` rơi vào
+`.catch` và **tắt hào quang** ⇒ đo ra "không nút nào sáng" ở cả hai game. Dùng **`volume = 0`** và
+trả giá bằng **một cú bấm THẬT** của người (user activation); (4) `core/press.js` chạy ở
+`pointerdown` **và** vẫn chạy với `el.click()` ⇒ bắn cả hai là **hai lượt toggle**, phép đo tiếng
+vọng ra "1" một cách giả. ⭐ Và luôn cần **mỏ neo DƯƠNG** (khẳng định nút bàn trái ĐANG sáng): thiếu
+nó thì phép so "hai nút cùng trạng thái" ĐẠT một cách RỖNG (`false === false`).
+Bàn thử: `scratch/dot302-fight-voice.html` (A/B thật: 4/27 TRƯỢT trước → 27/27 ĐẠT sau) ·
+`scratch/dot302-sweep.html`.
+
 ⭐ **Crossword · Open the box nay CŨNG có vế "clip đang đọc"** (trước Đợt 266 hoàn toàn không có ⇒ lúc
 clue đang đọc thì cả hai bàn cùng bị trừ). Đối chứng ngược cắt dây `setVoiceGuard`, mở một ô rồi ngồi
 im 6 giây: Crossword **40 → 60**, Open the box **50 → 60**.

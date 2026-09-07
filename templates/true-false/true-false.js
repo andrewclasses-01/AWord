@@ -272,7 +272,32 @@ const tfTemplate = {
     // through Change Template from an Anagram source (core/convert.js).
     // `statements[i]` IS the raw content object (line 154 is a shallow
     // array copy only), so `.voice`/`.hideText` read straight off it.
-    const voicePlayer = createVoicePlayer();
+    // ⭐⭐⭐ Đợt 302 (thầy, 07/9/2026) — NỬA ĐẨY CỦA HỢP ĐỒNG "MỘT GIỌNG MỘT TRẬN".
+    // Thầy báo: *"2 nút loa của 2 bên không đồng bộ với nhau … đôi khi phát âm 2 bên
+    // lệch nhau một chút, đặc biệt là khi có 1 bên bấm."* Game này có mỗi cái rào
+    // `ctl.speaks` ở autoPlay, còn cả bốn mảnh của khuôn Crossword (Đợt 259) thì
+    // không có mảnh nào — nên nút loa bàn kia KHÔNG BAO GIỜ sáng, và một cú chạm ở
+    // bàn không-sở-hữu-tiếng tự phát bản thứ hai chồng lên bản đang chạy.
+    // Mỗi lần player này bật/tắt hào quang của chính nó thì báo cho trọng tài, trọng
+    // tài rọi sang nút của bàn kia. Có rào `speaks()` để lời báo không dội ngược từ
+    // phía chỉ-nhại-lại. Ngoài trận `fightCtl` là null nên chỗ này không bao giờ chạy.
+    const voicePlayer = createVoicePlayer({
+      onGlow: on => {
+        if (fightCtl && fightCtl.speaks(fightSide)) fightCtl.reportVoiceState(fightSide, { playing: on });
+      }
+    });
+    // Nút loa của câu ĐANG hiện — đầu NHẬN (syncVoice/toggleVoiceRemote) phải trỏ đúng
+    // vào nó. Giữ bằng BIẾN chứ không querySelector: `.aw-tf-prompt` bị dựng lại và
+    // trượt ra/vào, nên một câu truy vấn có thể tóm nhầm phần tử của câu đang đi ra.
+    let curVoiceBtn = null;
+
+    // ⭐ Đợt 302 — một cú chạm vào nút loa. Ngoài trận chỉ là toggle như cũ. Trong
+    // trận, cú chạm ở bàn KHÔNG sở hữu tiếng được chuyển cho trọng tài để nó nhờ
+    // bàn 0 phát — nhờ vậy chạm ở đâu cũng CHỈ MỘT clip kêu.
+    function handleListenTap(clipId, btn) {
+      if (fightCtl && !fightCtl.speaks(fightSide)) { fightCtl.requestVoiceToggle(clipId); return; }
+      voicePlayer.toggle(clipId, btn);
+    }
     let firstStatementSpoken = false;
 
     ui.onSubmit(() => finish("timesup"));
@@ -478,17 +503,25 @@ const tfTemplate = {
       } else {
         promptEl.textContent = st.text;
       }
+      curVoiceBtn = null;   // Đợt 302 — câu không có giọng đọc thì gương không trỏ vào đâu cả
       if (hasVoice) {
         const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
         vBtn.type = "button";
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
-        press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(st.voice, vBtn); });
+        press(vBtn, e => { e.stopPropagation(); handleListenTap(st.voice, vBtn); });
         promptEl.append(vBtn);
+        curVoiceBtn = vBtn;
         // FIGHT MODE: both boards show the same statement, so only board 0 reads
         // it out — two copies of one clip a few ms apart is an echo, not a
         // reading (`ctl.speaks`, same guard quiz.js uses).
         if (vv.autoPlay && (!fightCtl || fightCtl.speaks(fightSide))) {
           voicePlayer.playDelayed(st.voice, vBtn, firstStatementSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+        }
+        // ⭐ Đợt 302 — nửa PULL: nút vừa dựng lại ở bàn NHẠI phải bắt kịp một clip
+        // ĐANG kêu (hào quang đã được báo từ trước khi cái nút này tồn tại).
+        else if (fightCtl) {
+          const st = fightCtl.voiceState && fightCtl.voiceState();
+          if (st && st.playing) vBtn.classList.add("is-playing");
         }
       }
       firstStatementSpoken = true;
@@ -1058,7 +1091,21 @@ const tfTemplate = {
         // Đợt 223 — "Show answers" ở bảng cuối trận Fight đọc bàn này qua đây,
         // bất cứ lúc nào (không cần đợi `finished`) — cùng mảng `buildReview()`
         // dựng cho single mode, chỉ gọi sớm hơn.
-        review: buildReview
+        review: buildReview,
+        // ⭐⭐⭐ Đợt 302 — ĐẦU NHẬN của hợp đồng giọng đọc, thứ game này chưa bao giờ
+        // nối dây. Chỉ bàn 0 sở hữu <audio> thật (`ctl.speaks`); cú chạm ở bàn kia
+        // được chuyển về đây, còn hào quang thì đi ngược lại qua `syncVoice`.
+        // ⚠️ Có rào `speaks()`: đây là đầu NHẬN, chỉ bàn được phép kêu mới được chạy.
+        toggleVoiceRemote(clipId) {
+          if (!fightCtl || !fightCtl.speaks(fightSide)) return;
+          voicePlayer.toggle(clipId, curVoiceBtn);
+        },
+        // Tấm gương: bàn kia báo sao thì vẽ y vậy lên nút của BÀN NÀY. Bên này
+        // không có <audio> nào cả.
+        syncVoice(state) {
+          if (!state || state.playing === undefined) return;
+          curVoiceBtn?.classList.toggle("is-playing", !!state.playing);
+        }
       });
     }
 

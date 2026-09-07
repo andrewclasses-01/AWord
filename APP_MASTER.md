@@ -8,9 +8,50 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **07/9/2026 (Đợt 301 — vá hồi quy của Đợt 300: đổi act con xong bấm Apply
-> mà ván vẫn chơi act con cũ, phải reload trang mới được)**.
+> Cập nhật lần cuối: **07/9/2026 (Đợt 302 — Fight + voice: hai nút loa không đồng bộ, và một bên
+> bấm thì đẻ ra bản thứ hai chồng lên)**.
 >
+>
+> **Đợt 302** (07/9/2026, thầy báo) — ⭐⭐⭐ **FIGHT + VOICE: HAI NÚT LOA KHÔNG ĐỒNG BỘ, VÀ MỘT
+> BÊN BẤM THÌ ĐẺ RA BẢN THỨ HAI CHỒNG LÊN.** Thầy: *"2 nút loa của 2 bên không đồng bộ với nhau
+> (cái xanh lá, cái xanh dương) — đôi khi phát âm 2 bên lệch nhau một chút, đặc biệt là khi có 1
+> bên bấm. Cần đảm bảo chúng luôn chỉ là 1 ở chế độ fight."*
+>
+> ⛔ **THIẾU 4/4 MẢNH CỦA KHUÔN, CHỈ CÒN ĐÚNG CÁI RÀO.** Hợp đồng giọng đọc trong Fight: chỉ bàn 0
+> sở hữu `<audio>` thật (`ctl.speaks`), bàn 1 chỉ nhại lại ánh sáng. Khuôn đủ (Đợt 259) có bốn
+> mảnh — (A) `createVoicePlayer({onGlow})`→`reportVoiceState` · (B) `handleListenTap`→
+> `requestVoiceToggle` · (C) `toggleVoiceRemote`+`syncVoice` trong `ctl.attach` · (D) nửa PULL
+> `voiceState()`. `quiz` và `true-false` có **mỗi cái rào `speaks` ở autoPlay** và **không mảnh
+> nào** trong bốn mảnh đó ⇒ (1) nút loa bàn kia không bao giờ sáng; (2) cú chạm ở nút loa
+> **không có rào nào** nên bàn không-sở-hữu-tiếng tự phát bản thứ hai chồng lên — đúng lúc "có 1
+> bên bấm". Đây là **nợ đã ghi từ Đợt 266** ("⬜ Quiz + True/false vẫn còn thiếu GƯƠNG… chờ thầy
+> gật"); nay thầy gặp thật thì làm nốt, và làm **đủ bốn mảnh**.
+>
+> **Vá:** hai file `templates/quiz/quiz.js` · `templates/true-false/true-false.js`, cùng một bản
+> vá chép đúng khuôn Crossword (+50/−3 mỗi file), thêm `handleListenTap()` và `let curVoiceBtn`
+> (giữ bằng BIẾN, không `querySelector`: `.aw-tf-prompt` bị dựng lại và trượt ra/vào).
+>
+> ⚠️⚠️ **BÀN THỬ NÓI DỐI BỐN LẦN trước khi ra được số tin được** — đọc mục Đợt 302 trong
+> `GHI CHU DU AN.md`, cả bốn sẽ cắn lại: (1) tìm nút loa bằng `.aw-fight-half` trong khi nó nằm
+> ở `.aw-fight-board`; (2) đếm mọi `<audio>` nên đếm cả tiếng động của `core/sfx.js`; (3) ⛔⛔ ép
+> **`muted = true`** để qua cửa autoplay — Chrome coi media đang tắt tiếng ở **tab nền** là
+> "video-only background media" và **tự tạm dừng**, `play()` trả `AbortError`, hào quang tắt oan
+> ⇒ phải dùng **`volume = 0`** cộng **một cú bấm THẬT** của người; (4) bắn cả `pointerdown` lẫn
+> `click` trong khi `core/press.js` ăn cả hai ⇒ mỗi "cú chạm" thành hai lượt toggle.
+> ⭐ Và phải có **mỏ neo DƯƠNG** (khẳng định nút bàn trái ĐANG sáng) — không thì phép so "hai nút
+> cùng trạng thái" ĐẠT một cách RỖNG (`false === false`).
+>
+> Bàn thử `scratch/dot302-fight-voice.html` + `scratch/dot302-sweep.html`. A/B thật (stash bản vá
+> rồi chạy lại): **4/27 TRƯỢT trước → 27/27 ĐẠT sau**, 4 phép trượt rơi đúng 2 triệu chứng × 2
+> game; chế độ **một bàn** ĐẠT sạch ở cả hai lượt ⇒ nếp ngoài trận không xê dịch.
+> `node --input-type=module --check` sạch cả 2 file.
+> Quét 7 game: `quiz` ✅ (sau vá) · `find_the_match` ✅ (vốn đúng) · 5 game còn lại **KHÔNG ĐO
+> ĐƯỢC** (nút loa không có mặt ngay lúc mount) — khai đúng thế, **không khai ĐẠT**.
+> ⬜ **CHỜ THẦY BẤM TAY** một trận Fight act VOICE ở Quiz và True/false; và ⬜ **cho biết hôm nay
+> thầy chơi game nào** — nếu là Anagram/Type the answer/Open the box/Crossword thì phải đo tiếp,
+> 4 game đó đủ 4 mảnh trên giấy nhưng chưa đo được hành vi thật.
+>
+> ---
 >
 > **Đợt 301** (07/9/2026, thầy báo ngay trong ngày) — ⭐⭐⭐ **ĐỔI ACT CON XONG BẤM APPLY MÀ VẪN CHƠI
 > ACT CON CŨ — HỒI QUY CỦA ĐỢT 300, CÙNG NGÀY.** Thầy: *"mở AWord bằng chế độ nhiều đội trong
@@ -5061,9 +5102,27 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **07/9/2026 sau Đợt 301** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **07/9/2026 sau Đợt 302** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (07/9/2026 — sau **Đợt 301**)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (07/9/2026 — sau **Đợt 302**)
+>
+> | | |
+> |---|---|
+> | Commit mới nhất | **Đợt 302** — `templates/quiz/quiz.js` · `templates/true-false/true-false.js` (+50/−3 mỗi file). |
+> | Thầy báo gì | *"Ở chế độ Fight và chơi với voice: 2 nút loa của 2 bên không đồng bộ với nhau (cái xanh lá, cái xanh dương) — đôi khi phát âm 2 bên lệch nhau một chút, đặc biệt là khi có 1 bên bấm. Cần đảm bảo chúng luôn chỉ là 1 ở chế độ fight."* |
+> | Gốc rễ | **Thiếu 4/4 mảnh của khuôn, chỉ còn đúng cái rào.** Hợp đồng giọng đọc Fight: chỉ bàn 0 sở hữu `<audio>` thật (`ctl.speaks`), bàn 1 nhại lại ánh sáng. Khuôn đủ (Đợt 259, mẫu ở `templates/crossword/crossword.js`) gồm **A** `createVoicePlayer({onGlow})`→`reportVoiceState` · **B** `handleListenTap`→`requestVoiceToggle` · **C** `toggleVoiceRemote`+`syncVoice` trong `ctl.attach` · **D** nửa PULL `voiceState()`. `quiz` và `true-false` có **mỗi cái rào `speaks` ở autoPlay** và **không mảnh nào** trong bốn mảnh ⇒ (1) nút loa bàn kia không bao giờ sáng; (2) cú chạm ở nút loa **không có rào nào** nên bàn không-sở-hữu-tiếng tự phát bản thứ hai chồng lên bản đang chạy. |
+> | Nợ có sẵn | Ghi chú Đợt 266 (26/8/2026) đã ghi *"⬜ Quiz + True/false vẫn còn thiếu GƯƠNG (đo live: nút loa sáng 7/28 bên trái, **0/28** bên phải) — nợ có sẵn, chờ thầy gật."* Đợt này làm nốt, và làm **đủ bốn mảnh** chứ không chỉ cái gương. |
+> | Đã sửa | Hai file, **cùng một bản vá chép đúng khuôn Crossword**: `onGlow`→`reportVoiceState` (có rào `speaks()` để không dội ngược) · `handleListenTap()` mới · `toggleVoiceRemote`(có rào `speaks()`)+`syncVoice` trong `ctl.attach` · nửa PULL ở nhánh `else if (fightCtl)` của autoPlay · `let curVoiceBtn` giữ nút loa của câu đang hiện. ⚠️ Giữ bằng **BIẾN**, không `querySelector`: `.aw-tf-prompt` bị dựng lại và trượt ra/vào nên truy vấn có thể tóm nhầm phần tử của câu đang đi ra. |
+> | Bàn thử | `scratch/dot302-fight-voice.html` (2 game × 2 chế độ) · `scratch/dot302-sweep.html` (quét 7 game, đổi template bằng chính `convert.js`). **A/B thật** (stash bản vá rồi chạy lại): **4/27 TRƯỢT trước → 27/27 ĐẠT sau**, 4 phép trượt rơi đúng 2 triệu chứng × 2 game. Chế độ **một bàn** ĐẠT sạch ở **cả hai** lượt ⇒ nếp ngoài trận không xê dịch một ly. `node --input-type=module --check` sạch cả 2 file. |
+> | ⚠️⚠️ BÀN THỬ NÓI DỐI 4 LẦN | Đọc kỹ trước khi viết bàn thử tiếng: (1) nút loa nằm ở `.aw-fight-board`, **không phải** `.aw-fight-half`; (2) đếm mọi `<audio>` là đếm cả tiếng động của `core/sfx.js` — phải lọc theo data: URL của clip; (3) ⛔⛔ ép **`muted = true`** để qua cửa autoplay thì Chrome coi media đang tắt tiếng ở **tab nền** là *"video-only background media"* và **tự tạm dừng**, `play()` trả `AbortError`, `createVoicePlayer.start()` rơi vào `.catch` và **tắt hào quang** ⇒ bảng đo ra "không nút nào sáng" ở cả hai game, một kết luận của bàn thử hỏng. Dùng **`volume = 0`** + **một cú bấm THẬT** của người; (4) bắn cả `pointerdown` lẫn `click` thì `core/press.js` ăn **cả hai** ⇒ mỗi "cú chạm" thành hai lượt toggle. ⭐ Và phải có **mỏ neo DƯƠNG** (khẳng định nút bàn trái ĐANG sáng), không thì phép so "hai nút cùng trạng thái" ĐẠT một cách RỖNG. |
+> | Quét 7 game | `quiz` ✅ (sau vá) · `find_the_match` ✅ (vốn đã đúng) · **5 game KHÔNG ĐO ĐƯỢC** — `anagram` · `true_false` bản chuyển đổi · `type_the_answer` · `open_the_box` · `crossword`: nút loa của chúng không có mặt ngay lúc mount (Crossword phải chạm ô số, Open the box phải mở hộp…). Khai đúng "không đo được", **không khai ĐẠT**. |
+> | ⬜ Chờ tay thầy | (a) Một trận Fight act VOICE ở **Quiz** rồi **True/false**: hai nút loa phải sáng/tắt **cùng lúc**, chạm bên nào cũng chỉ **một** giọng đọc. (b) **Cho biết hôm nay thầy chơi game nào** — nếu là Anagram · Type the answer · Open the box · Crossword thì phải đo tiếp, 4 game đó đủ 4 mảnh trên giấy nhưng **chưa đo được hành vi thật**. |
+> | Không đụng | 5 template còn lại · `core/fight.js` · `core/voice-playback.js` · engine · kho. Không thêm module mới. |
+> | Chi tiết | `GHI CHU DU AN.md` Đợt 302. |
+>
+> ---
+>
+> ### 🕘 TRẠNG THÁI CŨ HƠN (07/9/2026 — sau **Đợt 301**)
 >
 > | | |
 > |---|---|
@@ -6515,7 +6574,29 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 301, 07/9/2026) — code `3d2a7cd`, ĐÃ PUSH + LIVE kiểm chứng
+> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 302, 07/9/2026) — KHÔNG CÒN VIỆC CODE DANG DỞ.**
+> Vùng: **Fight + act VOICE — hai nút loa không đồng bộ, một bên bấm thì đẻ ra bản thứ hai
+> chồng lên.** `quiz` + `true-false` thiếu cả 4 mảnh khuôn giọng đọc. Bản đồ ở mục
+> **0a ▸ TRẠNG THÁI NGAY LÚC NÀY**.
+>
+> 1. ⬜ Mở một act **VOICE** ở chế độ **Fight**, chơi **Quiz**: hai nút loa phải sáng và tắt
+>    **CÙNG LÚC**; chạm nút loa **bên nào cũng được** — luôn chỉ có **MỘT** giọng đọc, không
+>    còn tiếng lệch nhau.
+> 2. ⬜ Lặp lại y vậy với **True/false**.
+> 3. ⬜⭐ **Thầy cho biết hôm nay chơi game nào.** Nếu là Quiz hoặc True/false thì đợt này đúng
+>    bệnh. Nếu là **Anagram · Type the answer · Open the box · Crossword** thì phải đo tiếp:
+>    4 game đó có đủ 4 mảnh **trên giấy** nhưng bàn thử Đợt 302 **chưa đo được hành vi thật**
+>    của chúng (nút loa của chúng không có mặt ngay lúc mount).
+> 4. ⬜ Test chạm **TOMKO**.
+>
+> **Việc lặt vặt còn treo (không hỏng gì, ai rảnh thì làm):**
+> - ⬜ `python tools/sinh-preload.py --check` báo **LỆCH cả 3 mục** — đã lệch sẵn từ trước
+>   Đợt 301 (Đợt 299/300 quên chạy). Chạy `--write` rồi commit cả `core/tpl-files.js` +
+>   `index.html` + `play.html`. Hậu quả duy nhất của việc để nguyên: lần tải đầu chậm hơn.
+>
+> ---
+>
+> ⭐⭐⭐ **Đợt 301 (07/9/2026) — code `3d2a7cd`, ĐÃ PUSH + LIVE kiểm chứng
 > (SHA-256 khớp tuyệt đối blob git cả 2 file). KHÔNG CÒN VIỆC CODE DANG DỞ.**
 > Vùng: **đổi act con (VI2 → ENG1) xong bấm Apply mà ván vẫn chơi act con CŨ** — hồi quy do
 > chính Đợt 300 cùng ngày. Bản đồ đầy đủ ở mục **0a ▸ TRẠNG THÁI NGAY LÚC NÀY**.
