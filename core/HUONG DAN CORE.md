@@ -2048,9 +2048,28 @@ chỉ vì act `WORDS` **vốn là act anagram** nên chơi Anagram là chơi ch�
   `activity.options` là đủ. Act con thì **nội dung (chữ VÀ clip giọng) đã nướng cứng lúc chuyển đổi**
   ⇒ phải ghi lựa chọn lên **act gốc** (thứ `convert.js` đọc) rồi **`doSwitchTemplate(activity.type)`**
   để dựng lại. Lưu suông = **hàng nút nhúc nhích mà game không đổi**, tệ hơn không cho chọn.
-- **So bằng `viewKeyOf`, đừng so từng khoá**: Apply không đụng act con thì không phải dựng lại, và
+- **So bằng `subActKeyOf`, đừng so từng khoá**: Apply không đụng act con thì không phải dựng lại, và
   lần Apply đầu (chưa có khoá nào, act đang ở bộ mặc định) không bị tính là đổi. Act thường ⇒
-  `viewKeyOf` null cả hai vế ⇒ nhánh này **không bao giờ chạy** (zero-diff cho toàn thư viện cũ).
+  `subActKeyOf` null cả hai vế ⇒ nhánh này **không bao giờ chạy** (zero-diff cho toàn thư viện cũ).
+- ⛔⛔ **`subActKeyOf` CHỨ KHÔNG PHẢI `viewKeyOf` — HAI HÀM, HAI CÂU HỎI (Đợt 301, 07/9/2026, cắn thật).**
+  Dòng trên đây từng ghi `viewKeyOf` và **ĐÃ SAI**; nếu bạn đang định "dọn cho gọn" bằng cách gộp lại
+  hai hàm trông y hệt nhau này thì **dừng ngay**, đọc hết mục này trước.
+  - `viewKeyOf()` trả lời *"đang dùng **BỘ OPTIONS** nào"* — khoá của `act.viewOptions` (Đợt 147).
+  - `subActKeyOf()` trả lời *"đang chơi **ACT CON** nào, có phải **nướng lại nội dung** không"* —
+    nửa bài · chế độ text/voice · **và TÊN BỘ GỢI Ý**.
+  Từ Đợt 147 tới Đợt 300 hai câu hỏi ấy **tình cờ chung một đáp án**, nên chỗ này mượn nhầm hàm suốt
+  24 ngày mà không ai thấy. **Đợt 300** bỏ tên bộ gợi ý khỏi `viewKeyOf` (đúng theo ý thầy: ENG1 ·
+  ENG2 · VI1 · VI2 nay dùng CHUNG một bộ options) và ngay hôm đó làm phép so ở đây **mù hẳn**:
+  VI2 → ENG1 ra `"text" === "text"` ⇒ không re-convert ⇒ **act đã đổi template chơi mãi bộ gợi ý cũ,
+  phải reload trang mới được**. Thầy báo trong ngày.
+  - ⛔ Hỏng **im lặng và trông như đã chạy**: `activity.options` đổi đúng, nhãn act con trên màn READY
+    (`subActLabel`) cũng đổi đúng, panel Options nhìn không sai một chỗ nào — **chỉ ván là cũ**. Cửa
+    myActivity còn trả `true` nên cột nhận vẽ dấu ✓ xanh. Muốn kiểm thì phải **đọc gợi ý trên màn
+    hình đang chơi**, đừng soi cờ hay soi tiêu đề (`scratch/dot301-subact.html` làm đúng vậy).
+  - ⛔ **CẤM** dùng `subActKeyOf` làm khoá `act.viewOptions`: bước v4 của `core/options-migrate.js`
+    đã cố ý xoá sạch mọi khoá có dấu `:` khỏi kho.
+  - 📌 Luật rộng hơn: **hàm có tên theo câu hỏi A thì hợp đồng của nó không bảo vệ câu hỏi B.** Cần
+    một đáp án cho câu hỏi khác thì **tách hàm mới**, dù hôm nay hai thân hàm giống hệt nhau.
 - **Nhãn act con trên màn START** (`subActLabel`) ghép **nửa** rồi **bộ gợi ý**, đúng thứ tự hai hàng
   trong Options. ⚠️ Phải **dựng lại được** (`refreshReadyTitle`) vì **Apply ở màn READY cố ý không
   restart** — act con đổi ngay khi chữ đó đang trên màn hình (cùng họ bẫy Đợt 145).
