@@ -47,6 +47,12 @@
 > (`_backup/dot300/`) ⇒ **19 phép TRƯỢT** — bàn thử này đo thật, không phải "hasattr".
 > `node --input-type=module --check` sạch cả 2 file. Chi tiết `GHI CHU DU AN.md` Đợt 300.
 >
+> ✅ **ĐÃ PUSH + LIVE KIỂM CHỨNG** (`063b4b5`, Pages lên sau ~30 giây): tải thẳng
+> `aword.andrewclasses.com/core/content-view.js` và `/core/options-migrate.js` — **mã băm SHA-256
+> khớp tuyệt đối** với `git show HEAD:<file>` cả hai (`39a402c9…6b71ed22` / `93caeb45…9664d19b`).
+> ⚠️ Phải so với **BLOB GIT**, không so với file trên đĩa: `core/content-view.js` trên đĩa là LF còn
+> `core/options-migrate.js` là CRLF — kho này TRỘN hai kiểu xuống dòng.
+>
 > ⚠️ **Số đợt**: cùng lúc này một phiên Claude khác cũng đang làm AWord và đã đặt tên "Đợt 299" cho
 > việc của họ (dấu ✓ báo bộ nghĩa nào đã giao bài — `main.js` · `core/assignment-ui.js` ·
 > `core/options-panel.js` · `core/settings.js` · `core/app.css`). Hai phiên **không đụng file code

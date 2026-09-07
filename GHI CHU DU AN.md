@@ -289,7 +289,9 @@ nhau**; phiên này nhường số và lấy **300**, commit chỉ stage đúng 
   minus* ở ENG1 → bấm sang ENG2 / VI1 / VI2: mọi ô phải **y nguyên** → bấm VOICE: phải là bộ options
   **riêng** → Apply. Làm lại đúng vậy trong một trận **Fight** và một ván **Showdown**.
 - ⬜ Với act **QUIZ**: PRACTICE và HOMEWORK vẫn phải khác nhau như cũ.
-- ⬜ Chưa đo trên bản LIVE (chưa push lúc viết dòng này).
+- ✅ **ĐÃ PUSH + LIVE KIỂM CHỨNG** (`063b4b5`, Pages lên sau ~30 giây): mã băm SHA-256 của cả hai
+  file trên `aword.andrewclasses.com` khớp tuyệt đối với `git show HEAD:<file>`
+  (`39a402c9…6b71ed22` / `93caeb45…9664d19b`).
 
 ---
 
