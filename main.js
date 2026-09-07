@@ -152,6 +152,31 @@ window.__awordLib = {
         .map(n => ({ id: n.id, num: n.num ?? null, ten: n.title || "", type: n.type })) };
     } catch (e) { return { ok: false, loi: e.message || "loi" }; }
   },
+  // ⭐ Đợt 299 (07/9/2026) — myLesson cần biết act nào ĐÃ CÓ BÀI GIAO để đánh
+  // dấu xanh lá + tích ✓ trong danh sách chọn act (thầy chốt 07/9). Bài giao
+  // KHÔNG nằm trong `users/{uid}/items` mà ở collection gốc `assignments`, nên
+  // `lietKeAct` không thể biết — phải có cửa riêng này.
+  // ⛔ Vẫn là hàm CHỈ ĐỌC, đúng luật của khối này.
+  // Trả về mỗi bài giao đúng những gì myLesson cần đếm: act nào · template nào ·
+  // BỘ NGHĨA nào (đọc từ `activity.options` — không có trường phẳng nào tên `bo`).
+  async lietKeBaiGiao() {
+    if (!state.user) return { ok: false, loi: "chua-dang-nhap" };
+    try {
+      const ds = await listAllAssignments();
+      return { ok: true, ds: ds.map(a => {
+        const o = (a.activity && a.activity.options) || {};
+        const bo = o.contentMode === "voice"
+          ? (o.voiceVariant || o.contentVariant || "")
+          : (o.contentVariant || "");
+        return {
+          ma: a.code, tieuDe: a.title || "",
+          actId: a.activityId || "", actNum: a.activityNum ?? null,
+          mau: a.activityType || "", bo: String(bo || ""),
+          che: o.contentMode === "voice" ? "voice" : "text",
+        };
+      }) };
+    } catch (e) { return { ok: false, loi: e.message || "loi" }; }
+  },
 };
 
 init();
@@ -227,6 +252,45 @@ async function routeFromLocation() {
     if (a && !a.trashed) {
       goTop(opts);
       openAssignmentDetail(a, { onChanged: () => {} });
+      return;
+    }
+  }
+
+  // ⭐⭐ Đợt 299 (07/9/2026) — ?sua=<mã bài giao>&khung=1: mở THẲNG màn EDIT
+  // ASSIGNMENT của bài giao đó trên nền trống. Cửa cho myLesson v2.33.0: thầy
+  // đúp ô template (QUIZ…) của một ô act đã giao ⇒ sửa thẳng TITLE + OPTIONS
+  // của chính bài giao ấy, không phải tạo lại và không phải đẩy web lại.
+  // ⛔ Sửa xong áp cho LƯỢT MỞ LINK KẾ TIẾP (assignment là bản SAO snapshot,
+  // `play.js` đọc một lần lúc vào) — em đang chơi dở vẫn giữ options cũ. Cùng
+  // mã, cùng link, không sinh link mới.
+  // ⛔ KHÔNG có ô đổi template ở màn này — cố ý (Đợt 250): link đã phát ra rồi,
+  // đổi game dưới chân học sinh là một bảng xếp hạng hai thang điểm.
+  if (p.get("sua")) {
+    const a = await getAssignment(p.get("sua")).catch(() => null);
+    if (a && !a.trashed) {
+      document.body.classList.add("aw-giao-mode");
+      // Cùng cơ chế nhúng của ?giao= — nhờ `aw-khung-mode` mà lúc đóng modal
+      // gốc, `openModal` bắn MYACT:AW:GIAO:DONG để myLesson đóng pop-up bên đó.
+      if (p.get("khung")) document.body.classList.add("aw-khung-mode");
+      const moSua = () => openAssignmentEdit(a, {
+        onSaved: (x) => {
+          // Marker RIÊNG cho đường sửa — đừng gộp vào MYACT:AW:ASSIGN (bên
+          // myLesson dùng marker đó để GẮN MÃ MỚI vào ô act đang trống).
+          try {
+            console.log("MYACT:AW:SUA:" + JSON.stringify({
+              code: x.code, title: x.title,
+            }));
+          } catch (_) {}
+        },
+      });
+      app.innerHTML = "";
+      const nen = el("div", "aw-giao-nen");
+      const nut = el("button", "aw-giao-reopen", "EDIT ASSIGNMENT");
+      nut.type = "button";
+      nut.onclick = moSua;
+      nen.append(nut);
+      app.append(nen);
+      moSua();
       return;
     }
   }

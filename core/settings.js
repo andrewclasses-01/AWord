@@ -112,7 +112,7 @@ export function saveDefaultOptions(type, options, kind = "activity") {
  *        WHICH content is being handed out. See the Đợt 245 note below.
  * @returns {Element}
  */
-export function buildOptionsControls(tpl, options, { kind = "activity", act = null, templatePicker = null } = {}) {
+export function buildOptionsControls(tpl, options, { kind = "activity", act = null, templatePicker = null, daGiao = null } = {}) {
   const wrap = el("div", "aw-set-opts");
   if (!tpl) {
     // A template that failed to load would otherwise throw here and take the
@@ -177,6 +177,9 @@ export function buildOptionsControls(tpl, options, { kind = "activity", act = nu
       // as its "does this act have clue sets at all" test, and an explicit
       // `variants: null` from Settings must stay indistinguishable from the
       // pre-Đợt-245 call that never mentioned the key.
+      // ⭐ Đợt 299 — bảng "bộ nghĩa nào đã giao bài" do form Set assignment tính
+      // (chỉ nó mới đọc `listAllAssignments`); panel chỉ việc đeo dấu ✓.
+      ...(daGiao ? { daGiao } : {}),
       ...(variants ? {
         variants,
         voiceVariants: voiceVariantsOf(content),

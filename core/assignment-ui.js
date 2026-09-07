@@ -488,6 +488,44 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
         renderOptions();
       })
     };
+    // ⭐⭐ Đợt 299 (thầy chốt 07/9/2026) — "ACT CON NÀO ĐÃ GIAO BÀI".
+    // Act con = một BỘ NGHĨA của act (ENG1 text · ENG2 voice · VI1…). Thầy muốn
+    // thấy ngay trong Options bộ nào đã phát ra bài rồi, và KHÔNG cho tạo lại
+    // đúng cặp (bộ nghĩa + template) đã có — hai bài giao y hệt nhau chỉ tổ
+    // chia đôi bảng điểm của cùng một việc.
+    // ⛔ Không có trường phẳng nào tên `bo` trong document bài giao: bộ nghĩa
+    // nằm trong `activity.options` (`contentVariant` khi mode text,
+    // `voiceVariant` khi mode voice). Đọc đúng chỗ đó, đừng đoán từ tiêu đề.
+    const boCuaBaiGiao = (a) => {
+      const o = (a && a.activity && a.activity.options) || {};
+      return o.contentMode === "voice"
+        ? (o.voiceVariant || o.contentVariant || "")
+        : (o.contentVariant || "");
+    };
+    // Khớp act bằng `activityId` — nó luôn là act GỐC kể cả khi bài giao được
+    // tạo bằng cách đổi template (`sourceAct`), nên một act đổi sang QUIZ vẫn
+    // đếm về đúng act con của nó.
+    const baiGiaoCuaAct = () => (allAssignments || [])
+      .filter(a => a && !a.trashed && a.activityId === act.id);
+    const bangDaGiao = () => {
+      const m = new Map();
+      baiGiaoCuaAct().forEach(a => {
+        const k = boCuaBaiGiao(a);
+        if (!k) return;
+        const ten = templateLabel(a.activityType) || a.activityType || "?";
+        const cu = m.get(k) || [];
+        if (!cu.includes(ten)) cu.push(ten);
+        m.set(k, cu);
+      });
+      return m;
+    };
+    // Bộ nghĩa form ĐANG chọn — đọc y hệt cách `doStart` đọc (act GỐC đeo bộ
+    // chọn của form), không thì hai nơi trả hai kết quả khác nhau.
+    const boDangChon = () => activeVariant({
+      ...act,
+      options: { ...(act.options || {}), ...splitViewOptions(hwDraft).selectors },
+    });
+
     function renderOptions() {
       const seq = ++optsSeq;
       optsHost.innerHTML = "";
@@ -498,7 +536,8 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
         // ⚠️ `act`, always the ORIGINAL — it is what NAMES the clue sets. The
         // converted act has none (see the header note), so handing the played
         // type's act here would empty the very row the teacher chooses from.
-        optsHost.append(buildOptionsControls(tpl, hwDraft, { kind: "homework", act, templatePicker }));
+        optsHost.append(buildOptionsControls(tpl, hwDraft,
+          { kind: "homework", act, templatePicker, daGiao: bangDaGiao() }));
       }).catch(() => {
         if (!optsHost.isConnected || seq !== optsSeq) return;
         optsHost.innerHTML = "";
@@ -516,7 +555,13 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
     const inCourses = act.root === "courses";
     let folders = [], allAssignments = [];
     Promise.all([listFolders(inCourses ? "courses" : "results"), listAllAssignments()])
-      .then(([f, a]) => { folders = f; allAssignments = a; })
+      .then(([f, a]) => {
+        folders = f; allAssignments = a;
+        // ⭐ Đợt 299 — danh sách bài giao về SAU cú vẽ Options đầu tiên, nên phải
+        // vẽ lại mới thấy dấu ✓ trên các bộ nghĩa đã giao. `optsSeq` trong
+        // `renderOptions` lo chuyện hai lượt vẽ đua nhau.
+        renderOptions();
+      })
       .catch(() => { /* offline: it just files at the top of Results */ });
     // Best-effort guess for the Class field: the name of the folder this act
     // already sits in (Activities), when the teacher hasn't typed one yet.
@@ -590,10 +635,37 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
       err.append(mk);
     }
 
+    // ⭐ Đợt 299 — thầy đã đọc cảnh báo "bộ này giao rồi" và vẫn muốn tạo tiếp
+    // (bằng TEMPLATE KHÁC) thì bấm START lần nữa. Cờ đặt lại mỗi khi bộ nghĩa
+    // hoặc template đổi, vì lúc đó cảnh báo nói về một cặp khác hẳn.
+    let boDaCanhBao = "";
     async function doStart(folderId) {
       if (assignmentNameTaken(allAssignments, { folderId, title: titleInput.value })) {
         err.textContent = "An assignment with this name is already filed there. Please change the name.";
         return;
+      }
+      // ⭐⭐ Đợt 299 (thầy chốt 07/9) — KHÔNG CHO TẠO TRÙNG: cùng act con (bộ
+      // nghĩa) + cùng template thì chặn hẳn, không có nút "vẫn tạo". Cùng bộ
+      // nghĩa nhưng template khác thì CHO, nhưng phải xin xác nhận một lượt.
+      const boNay = boDangChon();
+      if (boNay) {
+        const cungBo = baiGiaoCuaAct().filter(a => boCuaBaiGiao(a) === boNay);
+        const cungCa = cungBo.filter(a => (a.activityType || "") === playType);
+        if (cungCa.length) {
+          err.textContent = `“${escapeText(variantLabel(act.content, boNay) || boNay)}” `
+            + `already has a ${templateLabel(playType) || playType} assignment `
+            + `(“${escapeText(cungCa[0].title || cungCa[0].code)}”). `
+            + `Pick another clue set or another template — the same pair twice would split one leaderboard in two.`;
+          return;
+        }
+        const khoa = boNay + "|" + playType;
+        if (cungBo.length && boDaCanhBao !== khoa) {
+          boDaCanhBao = khoa;
+          err.textContent = `“${escapeText(variantLabel(act.content, boNay) || boNay)}” has already been `
+            + `handed out as ${cungBo.map(a => templateLabel(a.activityType) || a.activityType).join(" · ")}. `
+            + `Press START again to hand it out as ${templateLabel(playType) || playType} too.`;
+          return;
+        }
       }
       start.disabled = back.disabled = true;
       start.textContent = "Creating...";

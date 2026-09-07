@@ -295,6 +295,60 @@ nhau**; phiên này nhường số và lấy **300**, commit chỉ stage đúng 
 
 ---
 
+## Đợt 299 (07/9/2026, đi cùng myLesson app v2.33.0) — ⭐ **CỬA SỬA BÀI GIAO CHO myLesson + DẤU ✓ "BỘ NGHĨA ĐÃ GIAO" + CHẶN TẠO TRÙNG**
+
+Thầy chạy thử dạng STAGE bên myLesson rồi giao 8 việc; ba việc trong số đó cần AWord mở cửa.
+⛔ Hai kho đi chung một đợt — **đừng revert lẻ một bên**.
+
+**1. Route mới `?sua=<mã bài giao>&khung=1`** (`main.js`, đặt ngay trên nhánh `?giao=`).
+Mở THẲNG màn *Edit assignment* THẬT của bài giao đó trên nền trống, trong đúng chế độ nhúng của
+pop-up myLesson (`aw-khung-mode` ⇒ pop-up gốc vẽ phẳng tràn mép + đóng thì bắn
+`MYACT:AW:GIAO:DONG`). Thầy lỡ đóng thì nền có một nút `EDIT ASSIGNMENT` mở lại — y hệt nếp `?giao=`.
+Marker RIÊNG khi lưu: **`MYACT:AW:SUA:{code,title}`**.
+⛔ Đừng gộp vào `MYACT:AW:ASSIGN` — marker đó bên myLesson là lệnh GẮN MÃ MỚI vào ô đang trống,
+còn ở đây mã cũ giữ nguyên.
+⛔ Màn này KHÔNG có ô đổi template — cố ý từ Đợt 250 (link đã phát ra rồi, đổi game dưới chân học
+sinh là một bảng xếp hạng hai thang điểm).
+
+**2. `__awordLib.lietKeBaiGiao()`** — hàm CHỈ ĐỌC thứ tư của cầu nối.
+Bài giao **KHÔNG** nằm trong `users/{uid}/items` mà ở collection gốc `assignments`, nên `lietKeAct`
+không thể biết act nào đã giao. Trả về mỗi bài: `{ma, tieuDe, actId, actNum, mau, bo, che}`.
+`bo` đọc từ `activity.options` (`contentVariant` khi mode text · `voiceVariant` khi voice) — **không
+có trường phẳng nào tên `bo`** ở cấp document, đừng đoán từ tiêu đề.
+myLesson dùng nó để tô **xanh lá + dấu tích** cho act đã giao trong danh sách chọn act.
+
+**3. Dấu ✓ cạnh BỘ NGHĨA đã giao, trong Options của form Set assignment.**
+`buildOptionsControls(..., { daGiao })` → `contentSwitch.daGiao` → `buildContentSwitchRow` vẽ ✓ lên
+nút bộ nghĩa (`.aw-seg-daGiao` + `.aw-seg-tick`), title liệt kê các template đã dùng với bộ đó.
+Bảng do chính form tính (chỉ nó đọc `listAllAssignments`); Settings không có act nên không bao giờ
+truyền — hàng nút vẽ y như trước.
+⚠️ `allAssignments` về SAU cú vẽ Options đầu tiên ⇒ phải gọi lại `renderOptions()` trong `.then`,
+`optsSeq` lo chuyện hai lượt vẽ đua nhau.
+
+**4. CHẶN TẠO TRÙNG (trong `doStart`).**
+- Cùng **bộ nghĩa + cùng template** ⇒ **chặn hẳn**, không có nút "vẫn tạo": hai bài giao y hệt nhau
+  chỉ tổ chia đôi bảng điểm của cùng một việc.
+- Cùng bộ nghĩa, **template khác** ⇒ cho, nhưng xin xác nhận một lượt (bấm START lần nữa).
+- Khớp act bằng `activityId` — nó luôn là act GỐC kể cả khi bài giao tạo bằng đổi template
+  (`sourceAct`), nên một act đổi sang QUIZ vẫn đếm về đúng act con của nó.
+
+### ⚠️ Hai phiên Claude cùng lúc
+
+Đợt này chạy song song với **Đợt 300** (phiên Claude khác — gộp options act con cùng loại,
+`core/content-view.js` + `core/options-migrate.js`). Hai bên **không đụng file của nhau**;
+họ nhường số 299 cho đợt này và lấy 300. Commit chỉ stage đúng đường dẫn của mình —
+⛔ **không `git add -A`**.
+⭐ Đợt 300 sửa `viewKeyOf()` = ô nhớ options của act con **trong thư viện**; bảng Options lúc
+**giao bài** (`hwDraft`) là hộp khác hẳn, chưa từng đọc `viewOptions` — nên hai đợt không chồng
+lên nhau ở chỗ nào cả.
+
+**Test:** `node --input-type=module --check` sạch cả 4 file đụng tới (`main.js` ·
+`core/assignment-ui.js` · `core/settings.js` · `core/options-panel.js`).
+⬜ Chờ thầy bấm tay trong phiên đã đăng nhập: mở màn *Chỉnh assignment* từ myLesson, xem dấu ✓ trên
+bộ nghĩa, thử tạo trùng để gặp câu chặn.
+
+---
+
 ## Đợt 298 (06/9/2026 khuya, thầy giao "nhập toàn bộ sang AWord, tự làm không cần hỏi") — ⭐⭐⭐ **CẢ KHÓA NỀN TẢNG TIẾNG ANH TỪ WORDWALL ĐÃ VÀO COURSES: 163 ACT MỚI, 55 THƯ MỤC**
 
 ### ⛔ KHÔNG SỬA MỘT DÒNG CODE NÀO

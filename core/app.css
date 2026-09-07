@@ -7564,3 +7564,13 @@ body.aw-khung-mode .aw-giao-nen{display:none}
 }
 .aw-zoomed .aw-below,
 .aw-zoomed .aw-as-bars { display: none; }
+
+/* ⭐ Đợt 299 (07/9/2026) — dấu ✓ trên nút BỘ NGHĨA đã có bài giao (Options của
+   form Set assignment). Nhỏ, nằm sát tên bộ, màu xanh lá — không đổi bề rộng
+   nút đủ để làm vỡ hoạt cảnh gom/dãn của `.aw-seg-anim`. */
+.aw-seg-btn.aw-seg-daGiao { position: relative; }
+.aw-seg-tick {
+  margin-left: 3px; font-size: .85em; line-height: 1; font-weight: 700;
+  color: #2fae5a; vertical-align: baseline;
+}
+.aw-seg-btn.is-on .aw-seg-tick { color: inherit; opacity: .85; }

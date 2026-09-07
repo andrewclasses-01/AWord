@@ -1208,6 +1208,11 @@ function buildSetSwitchButtons(sw, contentSetSwitch, sel, onViewChange) {
 }
 export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange = null, templatePicker = null, mergedSetSwitch = null }) {
   const shown = contentSwitch.shown === "voice" ? "voice" : "text";
+  // ⭐ Đợt 299 (thầy chốt 07/9) — BỘ NGHĨA NÀO ĐÃ GIAO BÀI thì đeo dấu ✓ ngay
+  // cạnh tên nó (ENG1 · VI2…), bất kể giao bằng template nào. `daGiao` là một
+  // Map "khoá bộ nghĩa -> mảng template đã dùng"; không truyền thì hàng nút vẽ
+  // y như trước (Settings không có act nên không bao giờ truyền).
+  const daGiao = contentSwitch.daGiao instanceof Map ? contentSwitch.daGiao : null;
   const variants = contentSwitch.variants || null;
   const voiceVariants = contentSwitch.voiceVariants || variants;
   const labelOf = contentSwitch.labelOf || (k => String(k || "").toUpperCase());
@@ -1299,6 +1304,14 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
     union.forEach(k => {
       const b = el("button", "aw-seg-btn", labelOf(k));
       b.type = "button";
+      const dg = daGiao && daGiao.get(k);
+      if (dg && dg.length) {
+        b.classList.add("aw-seg-daGiao");
+        const tick = el("span", "aw-seg-tick", "✓");
+        tick.setAttribute("aria-hidden", "true");
+        b.append(tick);
+        b.title = "Đã giao bài với bộ này: " + dg.join(" · ");
+      }
       b.onclick = () => {
         if (b.classList.contains("is-gone") || b.classList.contains("is-on")) return;
         if (mode === "voice") { pickedVoice = k; sel.voiceVariant = k; }
