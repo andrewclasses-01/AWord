@@ -8,9 +8,56 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **06/9/2026 (Đợt 297 — 4 việc ở Fight: bỏ hand points · tiếng tích Miss wait ·
-> Speed bonus bay · Crossword tự sang trang)**.
+> Cập nhật lần cuối: **07/9/2026 (Đợt 300 — gộp options của các act con cùng loại: ENG1 · ENG2 ·
+> VI1 · VI2 chung một bộ options, VOICE chung một bộ khác, HOMEWORK giữ nguyên)**.
 >
+>
+> **Đợt 300** (07/9/2026, thầy giao) — ⭐⭐⭐ **GỘP OPTIONS CỦA CÁC ACT CON CÙNG LOẠI.**
+> Thầy: *"Trong options của các act (trừ chế độ HOMEWORK trong options, còn dạng PRACTICE thì vẫn
+> theo thay đổi sắp tới), khi thay đổi các act con cùng loại TEXT (VD ENG1 sang ENG2) mà vẫn cùng 1
+> template thì giữ nguyên options giống hệt nhau … Các act con cùng loại text sẽ đồng bộ options
+> cùng nhau và ko liên quan tới voice. Các act con cùng loại voice cũng sẽ đồng bộ options cùng nhau
+> tương tự. Áp dụng như vậy với mọi loại (Single, fight, showdown)."*
+>
+> ⚠️ **Đây là việc LẬT NGƯỢC ĐỢT 147 có chủ ý** (14/8/2026 thầy từng chốt ngược lại: "TEXT ENG1 khác
+> TEXT ENG2 khác TEXT VI1…", lý lẽ khi đó là *đọc nghĩa tiếng Việt cần đồng hồ dài hơn nghe tiếng
+> Anh*). Đã nêu đúng lý lẽ đó ra hỏi lại trước khi build; thầy chốt **gộp cả 4 bộ TEXT**. Đừng
+> "sửa lại" như thể là lỗi — ghi chú trong `core/content-view.js` nói rõ điều này.
+>
+> **Gốc rễ chỉ nằm ở MỘT hàm** — `viewKeyOf()` (`core/content-view.js`) sinh ra cái khoá đặt tên cho
+> một "act con": trước là `text:eng1` · `text:vi1` · `voice:eng2` …, nay chỉ còn **`text`** và
+> **`voice`**. Vì cả ba chế độ **Single · Fight · Showdown** đều đi qua đúng một panel Options này
+> (`core/engine.js` chỉ đổi *act chủ* theo chế độ — `libAct` hay `fight.ctl.matchAct()`), sửa một
+> chỗ là cả ba ăn theo, không có nhánh riêng nào phải đụng.
+>
+> **Phần thầy loại trừ tự nó đúng, không phải làm gì thêm:** trục PRACTICE/HOMEWORK vẫn nằm nguyên
+> trong khoá (`practice` / `homework` / `practice|text`), còn bảng Options lúc **giao bài cho lớp**
+> là một hộp hoàn toàn khác (`hwDraft` trong `core/assignment-ui.js`) — nó chưa từng đọc `viewOptions`
+> một chữ nào.
+>
+> **Ô nhớ CŨ được dọn một lần** — `core/options-migrate.js` lên **`OPT_VER = 4`**, bước mới
+> `dropPerVariantViews()` xoá mọi khoá **có dấu `:`** trong `act.viewOptions`. Dấu `:` chỉ xuất hiện
+> ở phần TÊN BỘ, nên act QUIZ (`practice`/`homework` trơn) giữ nguyên cả hai nửa. ⭐ `act.options` —
+> bộ **đang chơi** — không bị đụng một chữ: mở act lên vẫn y như thầy để lại, chỉ mất trí nhớ của
+> *các bộ khác*; bộ nào chưa có ô nhớ thì panel gieo từ Settings ▸ Default activity options (nếp có
+> sẵn của Đợt 147). Thầy chốt qua AskUserQuestion: *"Bỏ hết, quay về mặc định Settings"*.
+>
+> Bàn thử `scratch/dot300-viewkey.mjs` (chạy `node`, **gọi hàm thật** trong `core/`, không chạm kho
+> thật): **33/33 ĐẠT**. Gỡ vá thử để bàn thử phải đỏ: chạy chính bàn thử đó trên bản trước khi sửa
+> (`_backup/dot300/`) ⇒ **19 phép TRƯỢT** — bàn thử này đo thật, không phải "hasattr".
+> `node --input-type=module --check` sạch cả 2 file. Chi tiết `GHI CHU DU AN.md` Đợt 300.
+>
+> ⚠️ **Số đợt**: cùng lúc này một phiên Claude khác cũng đang làm AWord và đã đặt tên "Đợt 299" cho
+> việc của họ (dấu ✓ báo bộ nghĩa nào đã giao bài — `main.js` · `core/assignment-ui.js` ·
+> `core/options-panel.js` · `core/settings.js` · `core/app.css`). Hai phiên **không đụng file code
+> của nhau**; phiên này nhường số và lấy **300**. Cùng tiền lệ đã ghi ở đầu mục Đợt 297.
+>
+> ⬜ **CHỜ THẦY BẤM TAY THẬT**: mở một act WORDS có đủ 4 bộ → Options → đặt countdown 1 phút + bật
+> Bonus and minus ở ENG1 → bấm sang ENG2/VI1: mọi ô phải **y nguyên** (và panel không vẽ lại nữa nên
+> hết giật) → bấm VOICE: phải là bộ options RIÊNG → Apply. Thử lại đúng vậy trong một trận **Fight**
+> và một ván **Showdown**. Với act QUIZ: PRACTICE và HOMEWORK vẫn phải khác nhau như cũ.
+>
+> ---
 > **Đợt 297** (06/9/2026, thầy giao) — ⭐⭐⭐ **4 VIỆC Ở FIGHT: BỎ HAND POINTS · TIẾNG TÍCH MISS
 > WAIT · SPEED BONUS BAY · CROSSWORD TỰ SANG TRANG.** Thầy giao 4 việc cùng lúc, tất cả ở chế độ
 > FIGHT: (1) bỏ ô hand points dưới khung mỗi đội; (2) Miss wait có tiếng tích đếm, dồn dập 5 giây

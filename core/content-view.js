@@ -269,17 +269,25 @@ export function variantFullyVoiced(content, key) {
 }
 
 // ---------------------------------------------------------------
-// ONE SET OF OPTIONS PER VIEW (Đợt 147, 14/8/2026)
+// ONE SET OF OPTIONS PER VIEW (Đợt 147, 14/8/2026 — THU HẸP LẠI Ở ĐỢT 300, 07/9/2026)
 //
-// Teacher: "Options của mỗi act đều độc lập với nhau — TEXT ENG1 khác TEXT ENG2
-// khác TEXT VI1 khác TEXT VI2, VOICE ENG1 khác VOICE ENG2. Chọn cái nào thì
-// options nhảy theo cái đó và lưu độc lập." Confirmed to cover BOTH axes, so a
-// WORDS act has six independent option sets and a QUIZ act has two.
+// Đợt 147, thầy: "Options của mỗi act đều độc lập với nhau — TEXT ENG1 khác TEXT
+// ENG2 khác TEXT VI1 khác TEXT VI2, VOICE ENG1 khác VOICE ENG2. Chọn cái nào thì
+// options nhảy theo cái đó và lưu độc lập."
 //
-// It is the same idea as the content itself: picking a view picks everything
-// about it. Reading the Vietnamese clues is a different exercise from
-// listening to the English ones, and wants a different clock, different lives,
-// a different penalty.
+// ⭐⭐⭐ ĐỢT 300 (07/9/2026) — THẦY ĐỔI Ý VỀ NỬA SAU CỦA CÂU ĐÓ, CÓ CHỦ Ý:
+//   "khi thay đổi các act con cùng loại TEXT (VD ENG1 sang ENG2) mà vẫn cùng 1
+//    template thì giữ nguyên options giống hệt nhau … Các act con cùng loại text
+//    sẽ đồng bộ options cùng nhau và ko liên quan tới voice. Các act con cùng
+//    loại voice cũng sẽ đồng bộ options cùng nhau tương tự."
+// Cái còn CHIA options từ nay là TRỤC CHẾ ĐỘ (Text vs Voice) và TRỤC NỬA BÀI
+// (PRACTICE vs HOMEWORK — thầy chốt giữ nguyên, "trừ chế độ HOMEWORK trong
+// options"), KHÔNG BAO GIỜ là tên bộ gợi ý nữa. Một act WORDS nay có HAI bộ
+// options (text · voice) thay vì sáu; act QUIZ vẫn có hai nửa của nó.
+//
+// ⚠️ Lý lẽ của Đợt 147 ("đọc nghĩa tiếng Việt là bài tập khác với nghe tiếng Anh,
+// nên cần đồng hồ khác") CHÍNH LÀ cái thầy đã cân nhắc rồi gạt sang một bên —
+// đừng "sửa lại" nó như thể đó là một lỗi.
 //
 //   act.options            the EFFECTIVE options — what is playing right now.
 //                          Nothing outside this file changes: engine, every
@@ -287,10 +295,13 @@ export function variantFullyVoiced(content, key) {
 //                          snapshot all keep reading exactly this.
 //   act.viewOptions[key]   the stored set for each view, WITHOUT the selectors.
 //
-// `key` is what identifies a view: "practice", "text:eng1", "voice:eng2", or
-// both joined ("practice|text:eng1") for an act that carries both axes. Null
-// for an act with neither — i.e. the whole library before Đợt 145, which
-// therefore keeps a single set of options exactly as it always had.
+// `key` is what identifies a view: "practice", "text", "voice", or both joined
+// ("practice|text") for an act that carries both axes. Null for an act with
+// neither — i.e. the whole library before Đợt 145, which therefore keeps a
+// single set of options exactly as it always had.
+// ⚠️ Khoá CŨ mang cả tên bộ ("text:eng1", "practice|text:vi2"). Từ Đợt 300 không
+// đường nào đọc tới chúng nữa, nên bước v4 trong core/options-migrate.js xoá hẳn
+// một lần cho mỗi act — một ô nhớ không ai với tới được chỉ là rác trong Firestore.
 // ---------------------------------------------------------------
 
 // The options that CHOOSE a view. They identify the view itself, so they
@@ -306,10 +317,15 @@ export function viewKeyOf(activity) {
   const parts = [];
   const set = activeContentSet(activity);
   if (set) parts.push(set);
-  const variant = activeVariant(activity);
-  if (variant) {
+  // ⭐⭐ Đợt 300 (07/9/2026) — THE CLUE SET'S NAME IS NO LONGER PART OF THE KEY.
+  // The MODE alone ("text" / "voice") names the view, so ENG1 · ENG2 · VI1 · VI2
+  // all land on ONE stored set of options and switching between them changes
+  // nothing but the clues. `activeVariant` is still what ASKS "does this act
+  // carry clue sets at all" — it is null for every act that does not, and then
+  // this whole branch is inert exactly as it always was.
+  if (activeVariant(activity)) {
     const mode = (activity.options || {}).contentMode === "voice" ? "voice" : "text";
-    parts.push(`${mode}:${variant}`);
+    parts.push(mode);
   }
   return parts.length ? parts.join("|") : null;
 }

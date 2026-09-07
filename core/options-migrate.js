@@ -46,7 +46,8 @@
 // Bump this ONLY when a new conversion step is added below, and add that step
 // guarded by the version it upgrades FROM.
 // v3 (Đợt 220, 21/8/2026) — allowSkip của Anagram/Unjumble lật true → false, xem allowSkipOff().
-export const OPT_VER = 3;
+// v4 (Đợt 300, 07/9/2026) — bỏ các ô nhớ options riêng từng bộ gợi ý, xem dropPerVariantViews().
+export const OPT_VER = 4;
 
 // How much an old `pointsOff` must be multiplied by to mean the same thing on
 // the 0..100 scale, per act type. Anything not listed used the shared 0..5
@@ -77,6 +78,28 @@ function allowSkipOff(options, type) {
   if (type === "anagram" || type === "unjumble") {
     if (options.allowSkip === true) options.allowSkip = false;
   }
+}
+
+// ⭐⭐ v3 → v4 (Đợt 300, thầy 07/9/2026) — GỘP OPTIONS CỦA CÁC ACT CON CÙNG LOẠI.
+// Từ đợt này `viewKeyOf()` (core/content-view.js) không bỏ TÊN BỘ GỢI Ý vào khoá
+// nữa: ENG1 · ENG2 · VI1 · VI2 chung một ô nhớ "text", hai bộ voice chung một ô
+// "voice". Mọi ô nhớ CŨ mang tên bộ ("text:eng1", "practice|text:vi2") từ nay
+// KHÔNG CÓ ĐƯỜNG NÀO đọc tới — giữ lại chỉ là rác nằm trong Firestore. Thầy chốt
+// (AskUserQuestion 07/9): "Bỏ hết, quay về mặc định Settings".
+//
+// ⛔ CHỈ XOÁ KHOÁ CÓ DẤU ":" — và ranh giới này là cả nội dung của bước:
+//   · Dấu ":" chỉ có ở phần TÊN BỘ ("text:eng1"). Khoá của trục PRACTICE/HOMEWORK
+//     là "practice" / "homework" trơn, KHÔNG có dấu ":", nên một act QUIZ giữ
+//     nguyên cả hai nửa — đúng phần thầy loại trừ ("trừ chế độ HOMEWORK").
+//   · `act.options` — bộ ĐANG CHƠI — không bị đụng một chữ: mở act lên vẫn y như
+//     thầy để lại, chỉ mất trí nhớ của CÁC BỘ KHÁC. Bộ nào chưa có ô nhớ thì panel
+//     tự gieo từ Settings ▸ Default activity options, đúng nếp có sẵn của Đợt 147.
+// Chạy lại vô hại (xoá cái đã xoá), nhưng vẫn đi qua chốt `optVer` cho cùng khuôn.
+function dropPerVariantViews(act) {
+  const per = act.viewOptions;
+  if (!per || typeof per !== "object") return;
+  Object.keys(per).forEach(k => { if (k.includes(":")) delete per[k]; });
+  if (!Object.keys(per).length) delete act.viewOptions;
 }
 
 // Convert ONE options object, given the act type it belongs to.
@@ -111,6 +134,7 @@ export function migrateActivityOptions(act) {
   // vẫn đi qua chốt cho cùng một khuôn — bước v4 sau này chỉ việc chép theo.
   if (from < 2) upgradeOptions(act.options, act.type);
   if (from < 3) allowSkipOff(act.options, act.type);
+  if (from < 4) dropPerVariantViews(act);
 
   // `templateOptions` (v0.9.27) remembers the options the teacher set for this
   // act under a DIFFERENT template — "change template, tweak, come back later

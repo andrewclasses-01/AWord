@@ -12,7 +12,13 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 298** (06/9/2026 khuya — NHẬP NỘI DUNG, **không sửa code**: cả khóa NỀN TẢNG TIẾNG
+> Mới nhất: **Đợt 300** (07/9/2026 — GỘP OPTIONS CỦA CÁC ACT CON CÙNG LOẠI: ENG1 · ENG2 · VI1 · VI2
+> chung MỘT bộ options, hai bộ VOICE chung một bộ khác, PRACTICE/HOMEWORK giữ nguyên tách rời. Lật
+> ngược Đợt 147 có chủ ý — thầy đã được hỏi lại đúng lý lẽ cũ trước khi build. Sửa đúng một hàm
+> `viewKeyOf()` nên cả Single · Fight · Showdown ăn theo; `OPT_VER = 4` dọn ô nhớ cũ mang tên bộ.
+> Bàn thử `scratch/dot300-viewkey.mjs` 33/33 ĐẠT, chạy trên bản cũ thì 19 phép TRƯỢT. Xem mục Đợt 300
+> ngay dưới.)
+> Trước đó: **Đợt 298** (06/9/2026 khuya — NHẬP NỘI DUNG, **không sửa code**: cả khóa NỀN TẢNG TIẾNG
 > ANH từ Wordwall đã vào `Courses / NEN TANG TIENG ANH` — **163 act mới / 55 thư mục / 7.110 câu**,
 > kiểm bằng mã băm SHA-256 hai lần + chơi thử 4 template trên live. ⬜ 1 act chỉ có TIẾNG không nhập
 > được; 2 act LESSON 16 cố ý giữ bản cũ vì nó ĐÚNG HƠN Wordwall. Xem mục Đợt 298 ngay dưới.)
@@ -174,6 +180,116 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 300 (07/9/2026, thầy giao) — ⭐⭐⭐ **GỘP OPTIONS CỦA CÁC ACT CON CÙNG LOẠI (TEXT chung một bộ · VOICE chung một bộ)**
+
+### Thầy giao gì
+
+> *"Trong options của các act (trừ chế độ HOMEWORK trong options, còn dạng PRACTICE thì vẫn theo
+> thay đổi sắp tới), khi thay đổi các act con cùng loại TEXT (VD ENG1 sang ENG2) mà vẫn cùng 1
+> template thì giữ nguyên options giống hệt nhau. Ví dụ ENG1 set countdown là 1 phút, chọn Bonus and
+> minus thì chọn sang ENG2 vẫn giữ như vậy. Các act con cùng loại text sẽ đồng bộ options cùng nhau
+> và ko liên quan tới voice. Các act con cùng loại voice cũng sẽ đồng bộ options cùng nhau tương tự.
+> Áp dụng như vậy với mọi loại (Single, fight, showdown)."*
+
+### ⚠️ ĐÂY LÀ VIỆC LẬT NGƯỢC ĐỢT 147 — CÓ CHỦ Ý, ĐÃ HỎI LẠI TRƯỚC KHI BUILD
+
+Đợt 147 (14/8/2026) chính thầy chốt điều NGƯỢC LẠI: *"Options của mỗi act đều độc lập với nhau —
+TEXT ENG1 khác TEXT ENG2 khác TEXT VI1 khác TEXT VI2, VOICE ENG1 khác VOICE ENG2."* Lý lẽ ghi
+trong code khi đó rất cụ thể: **đọc nghĩa tiếng Việt (VI1/VI2) là bài tập khác với nghe tiếng Anh,
+nên cần đồng hồ dài hơn.** Gộp cả 4 bộ TEXT nghĩa là ENG1 và VI1 từ nay dùng chung một countdown.
+
+Đã nêu đúng lý lẽ đó ra hỏi lại (AskUserQuestion), kèm phương án hẹp hơn "ENG chung nhau · VI chung
+nhau (2 bộ)". **Thầy chốt: gộp cả 4 bộ TEXT chung một options.** Ghi chú dài trong
+`core/content-view.js` nói rõ chuyện này để phiên sau không "sửa lại" như thể là lỗi.
+
+### Gốc rễ chỉ nằm ở MỘT hàm
+
+`viewKeyOf()` trong `core/content-view.js` sinh ra cái khoá đặt tên cho một "act con", và
+`act.viewOptions[khoá]` là ô nhớ options của act con đó:
+
+| Đang đứng ở | Khoá CŨ | Khoá MỚI |
+|---|---|---|
+| TEXT ▸ ENG1 | `text:eng1` | `text` |
+| TEXT ▸ ENG2 | `text:eng2` | `text` |
+| TEXT ▸ VI1 / VI2 | `text:vi1` / `text:vi2` | `text` |
+| VOICE ▸ ENG1 / ENG2 | `voice:eng1` / `voice:eng2` | `voice` |
+| HOMEWORK ▸ TEXT ▸ ENG1 | `practice\|text:eng1` | `practice\|text` |
+
+Sửa đúng một dòng `parts.push(`${mode}:${variant}`)` → `parts.push(mode)`, và giữ
+`if (activeVariant(activity))` làm phép hỏi *"act này có bộ gợi ý nào không"* — nó vẫn `null` cho
+toàn bộ thư viện trước Đợt 145, nên với những act đó cả nhánh này vẫn nằm im như cũ.
+
+⭐ **Vì sao KHÔNG phải sửa gì thêm cho Fight / Showdown:** cả ba chế độ đều đi qua đúng một panel
+Options trong `core/engine.js`; thứ duy nhất đổi theo chế độ là *act chủ* (`viewAct = subActOwner()`
+→ `libAct` ở Single, `fight.ctl.matchAct()` trong trận). Đường so khoá — `onViewChange()`:
+`if (!nextKey || nextKey === curKey) return;` — dùng chung cho cả ba. Khoá bằng nhau ⇒ panel không
+nạp lại options, cũng **không vẽ lại thân panel** (hết luôn cú giật khi bấm ENG1→ENG2).
+
+⚠️ Nút **Apply vẫn sáng lên** khi đổi bộ, dù `onViewChange()` thoát sớm: hàng nút bộ gợi ý ghi vào
+`selStateLive` — một `Proxy` có `markDirty()` ở mỗi lượt ghi (Đợt 149) — chứ không ghi vào `draft`.
+Đã dò lại đúng đường này trước khi sửa, vì nếu sai thì lỗi sẽ là "đổi bộ xong không Apply được",
+câm lặng và rất khó đoán.
+
+### Phần thầy loại trừ (HOMEWORK) tự nó đã đúng
+
+- Trục **PRACTICE / HOMEWORK** vẫn nằm nguyên trong khoá (`practice`, `homework`, `practice|text`) —
+  hai nửa của một act QUIZ vẫn giữ options riêng như cũ.
+- Bảng Options lúc **giao bài cho lớp** là một hộp hoàn toàn khác (`hwDraft` trong
+  `core/assignment-ui.js`, khởi từ `getDefaultOptions(type, "homework")`) — nó **chưa từng** đọc
+  `viewOptions` một chữ nào, nên đợt này không chạm tới.
+
+### Dọn ô nhớ cũ — `OPT_VER` 3 → 4
+
+`core/options-migrate.js` thêm bước `dropPerVariantViews()`, xoá mọi khoá **có dấu `:`** trong
+`act.viewOptions`. Thầy chốt qua AskUserQuestion: *"Bỏ hết, quay về mặc định Settings"*.
+
+- ⛔ **Ranh giới "có dấu `:`" chính là cả nội dung của bước.** Dấu `:` chỉ xuất hiện ở phần TÊN BỘ;
+  khoá của trục nửa bài là `practice` / `homework` trơn ⇒ act QUIZ giữ nguyên cả hai nửa.
+- ⭐ `act.options` — bộ **đang chơi** — không bị đụng một chữ. Mở act lên vẫn y như thầy để lại; chỉ
+  mất trí nhớ của *các bộ khác*. Bộ nào chưa có ô nhớ thì panel gieo từ Settings ▸ Default activity
+  options, đúng nếp có sẵn từ Đợt 147.
+- Chạy lại vô hại (xoá cái đã xoá), nhưng vẫn đi qua chốt `optVer` cho cùng một khuôn với v2/v3 —
+  đây là cái chốt chống bẫy "−5 → −100 → −2000" ghi ở đầu file đó.
+
+### Kiểm
+
+`scratch/dot300-viewkey.mjs` — chạy `node scratch/dot300-viewkey.mjs`, **gọi hàm thật** trong `core/`
+(không chép lại một dòng logic nào), **không chạm kho thật** (không import firebase/store.js):
+**33/33 ĐẠT**. Ba nhóm: (A) 15 phép trên `viewKeyOf()` — gồm A2 "TEXT+ENG2 bằng TEXT+ENG1" là cả
+yêu cầu của thầy, A10 "HOMEWORK vẫn tách riêng", A13 "practice|text khác homework|text";
+(B) 13 phép trên `migrateActivityOptions()` — act QUIZ giữ nguyên hai nửa, `act.options` không đổi
+một chữ, chạy lại 3 lần vẫn y hệt, act đời v0 vẫn chạy đủ cả v2 (nhân thang điểm 3→30) và v3
+(allowSkip lật false); (C) 5 phép mô phỏng đúng phép so khoá của `onViewChange()`.
+
+⭐ **Gỡ vá thử cho bàn thử phải đỏ** (luật của bẫy `hasattr`): chạy chính bàn thử đó trên bản code
+TRƯỚC khi sửa (`_backup/dot300/`) ⇒ **19 phép TRƯỢT** (C1–C3 đúng ba phép "giữ nguyên options",
+B10/B12 …). Bàn thử này đo thật.
+
+`node --input-type=module --check` sạch cả `core/content-view.js` và `core/options-migrate.js`.
+Không thêm module mới ⇒ **không phải chạy** `tools/sinh-preload.py`.
+
+⚠️ Kho AWord **trộn kiểu xuống dòng**: `core/content-view.js` là **LF**, `core/options-migrate.js`
+là **CRLF**. Script vá đọc/ghi `newline=""` và tự đổi khối cần tìm sang đúng kiểu của từng file —
+áp một kiểu cho cả hai là biến nguyên file thành một dòng diff.
+
+### ⚠️ Số đợt — hai phiên Claude cùng lúc
+
+Đúng lúc phiên này làm, một phiên Claude khác cũng đang sửa AWord và đã đặt tên **"Đợt 299"** cho
+việc của họ (dấu ✓ báo bộ nghĩa nào đã giao bài — `main.js` · `core/assignment-ui.js` ·
+`core/options-panel.js` · `core/settings.js` · `core/app.css`). Hai phiên **không đụng file code của
+nhau**; phiên này nhường số và lấy **300**, commit chỉ stage đúng đường dẫn của mình (⛔ không
+`git add -A`). Cùng tiền lệ đã ghi ở đầu mục Đợt 297 và Đợt 277.
+
+### ⬜ VIỆC ĐANG CHỜ
+
+- ⬜ **Thầy bấm tay thật**: act WORDS đủ 4 bộ → Options → đặt countdown 1 phút + bật *Bonus and
+  minus* ở ENG1 → bấm sang ENG2 / VI1 / VI2: mọi ô phải **y nguyên** → bấm VOICE: phải là bộ options
+  **riêng** → Apply. Làm lại đúng vậy trong một trận **Fight** và một ván **Showdown**.
+- ⬜ Với act **QUIZ**: PRACTICE và HOMEWORK vẫn phải khác nhau như cũ.
+- ⬜ Chưa đo trên bản LIVE (chưa push lúc viết dòng này).
 
 ---
 
