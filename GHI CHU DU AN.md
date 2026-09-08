@@ -214,6 +214,22 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 307 (08/9/2026, thầy giao) — **TYPE THE ANSWER: THÊM Ô TÍCH "AUTO NEXT QUESTION", MẶC ĐỊNH TẮT**
+
+Thầy: *"options của type the answer cần có thêm tích «Auto next question» nữa. Mặc định là tắt."*
+
+⚠️ **Lật lại quyết định 3/8/2026 (Đợt 55)** — hồi đó thầy chốt game này LUÔN tự chuyển câu và ô tích bị
+gỡ hẳn. Đã báo hậu quả trước khi build và thầy chốt *"Đúng vậy — tắt hết, ok build"*: **mọi act cũ, gồm
+52 bài của khoá NỀN TẢNG, từ nay không tự chuyển câu nữa.**
+
+Core **đã có sẵn** ô tích đúng tên này (mặc định tắt, opt-in bằng `tpl.usesAutoSwitch` từ Đợt 143), nên
+chỉ khai thêm một dòng + rào hai chỗ tự chuyển câu (`submitAnswer`, `roundTimeUp`). ⚠️ **Không rào hai
+nhánh KẾT THÚC** — game này cố ý không có nút "xong" ở câu cuối, rào nốt là em làm hết bài rồi kẹt.
+Fight mode không đổi (nhánh fight `return` trước khối này). Chi tiết + bảng đo:
+`templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md` Đợt 307.
+
+---
+
 ## Đợt 306 (08/9/2026, thầy giao) — ⭐⭐⭐ **RÀ SOÁT CẢ KHOÁ NỀN TẢNG TRÊN AWORD ĐỐI CHIẾU FILE GỐC** (sửa dữ liệu, KHÔNG sửa code)
 
 Thầy: *"Đọc các thư mục lesson trong AWord `?f=120` … dữ liệu gốc ở `D:\11. KHOA NEN TANG TIENG ANH\

@@ -8,10 +8,21 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **08/9/2026 (Đợt 306 — rà soát cả khoá NỀN TẢNG trên AWord đối chiếu
+> Cập nhật lần cuối: **08/9/2026 (Đợt 307 — Type the answer: thêm ô tích "Auto next question",
+> mặc định tắt)**. Trước đó: **(Đợt 306 — rà soát cả khoá NỀN TẢNG trên AWord đối chiếu
 > file gốc RECOVERY WORDWALL: 7 act lệch, đã sửa)**. Trước đó: **(Đợt 305 — Type the answer: tô 2 màu từng từ
 > khi sai + dòng gợi ý chạy offline)**.
 >
+>
+> **Đợt 307** (08/9/2026, thầy giao) — **TYPE THE ANSWER: THÊM Ô TÍCH "AUTO NEXT QUESTION", MẶC ĐỊNH
+> TẮT.** ⚠️ Lật lại quyết định 3/8/2026 (Đợt 55) — đã báo hậu quả và thầy chốt *"tắt hết, ok build"*:
+> **mọi act cũ, gồm 52 bài khoá NỀN TẢNG, từ nay không tự chuyển câu**. Core đã có sẵn ô tích đúng tên
+> (opt-in `tpl.usesAutoSwitch`), chỉ khai một dòng + rào 2 chỗ tự chuyển câu; ⚠️ **không rào 2 nhánh
+> KẾT THÚC** vì game cố ý không có nút "xong" ở câu cuối. Bàn thử `scratch/dot307-autonext.html`:
+> tắt → vẫn ở câu 1 sau 3 giây, Next bấm được; bật → sang câu 2; tắt mà làm hết bài vẫn ra GAME
+> COMPLETE. Chi tiết: `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md` Đợt 307.
+>
+> ---
 >
 > **Đợt 306** (08/9/2026, thầy giao) — ⭐⭐⭐ **RÀ SOÁT CẢ KHOÁ NỀN TẢNG TRÊN AWORD ĐỐI CHIẾU FILE GỐC**
 > (sửa DỮ LIỆU, không sửa code). Đối chiếu 141 sheet `RECOVERY WORDWALL` ↔ 167 act `?f=120`: bản trên

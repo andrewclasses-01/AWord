@@ -1,5 +1,48 @@
 # GHI CHÚ — TEMPLATE TYPE THE ANSWER
 
+## Đợt 307 (08/9/2026, thầy giao) — **THÊM Ô TÍCH "AUTO NEXT QUESTION", MẶC ĐỊNH TẮT** (lật lại quyết định 3/8/2026)
+
+Thầy: *"options của type the answer cần có thêm tích «Auto next question» nữa. Mặc định là tắt."*
+
+### ⚠️ Đây là LẬT LẠI một quyết định cũ — đã hỏi thầy trước khi build
+
+Ngày **3/8/2026 (Đợt 55)** chính thầy chốt cho riêng game này: *auto-advance LUÔN chạy sau khi chấm
+xong 1 câu, KHÔNG phụ thuộc ô tích nữa* — nên ô tích đã bị gỡ hẳn khỏi game này. Nay thầy chốt ngược.
+Trước khi code em đã báo hậu quả và thầy chọn **"Đúng vậy — tắt hết, ok build"**:
+**mọi act cũ, gồm 52 bài Type the answer của khoá NỀN TẢNG, từ nay KHÔNG tự chuyển câu nữa** cho tới
+khi thầy tự bật từng bài. ⛔ Phiên sau đừng "sửa lại cho khớp ghi chú Đợt 55".
+
+### Đã làm — chỉ `type-the-answer.js`, KHÔNG đụng core
+
+- Khai `usesAutoSwitch: true`. Core **đã có sẵn** đúng ô tích này (`core/options-panel.js`, nhãn
+  **"Auto next question"**, trường `options.autoSwitch`, **mặc định TẮT**, mã `autoNext`) — bật cho
+  game nào khai dùng nó (Quiz · Anagram · Unjumble · Crossword đang dùng). Không phải viết ô tích mới.
+- `autoNext()` đọc `opt.autoSwitch` **bằng HÀM, không phải hằng số chụp lúc mount**: panel Options sửa
+  thẳng `activity.options` của ván đang chơi, chụp một lần thì thầy bật/tắt giữa ván sẽ không ăn.
+- Rào **hai** chỗ tự chuyển câu: `submitAnswer()` và `roundTimeUp()` (hết giờ một câu). Câu hết giờ vẫn
+  bị chấm SAI và khoá lại như cũ, chỉ khác là nằm yên chờ bấm Next.
+- ⚠️ **KHÔNG rào hai nhánh KẾT THÚC** (`finish("complete")` khi mọi câu đã trả lời, và
+  `finish("gameover")` khi hết tim). Game này CỐ Ý không có nút "xong/✓" ở câu cuối; rào nốt thì em
+  làm hết bài xong ngồi đó, không có đường kết thúc ngoài Menu ▸ Submit answers.
+- Fight mode không đổi một ly: nhánh `if (fightCtl) … return;` nằm TRƯỚC khối tự chuyển câu — trong
+  trận vẫn do trọng tài đẩy cả hai bàn cùng lúc.
+- Ô tích **không có trong `checkOrder`** nên tự xuống cuối khối công tắc (đúng luật Đợt 213b).
+
+### Đo thật — `scratch/dot307-autonext.html` (3 câu, bàn thử mở game thật qua engine)
+
+| Phép đo | Kết quả |
+|---|---|
+| Bảng Options | 5 ô tích: Shuffle questions · Show corrects · Show answers at end · **Auto next question (BỎ TRỐNG)** · Allow skip |
+| Tắt (mặc định): trả lời câu 1, chờ 3 giây | **VẪN Ở CÂU 1**, ô nhập đã khoá, nút Next bấm được |
+| Bật (`?auto=1`): trả lời câu 1, chờ 2 giây | tự sang **câu 2**, ô nhập mở lại — đúng nếp cũ |
+| Tắt: làm hết 3 câu bằng tay | vẫn ra **"GAME COMPLETE"**, không bị kẹt |
+| Lỗi | `window.__errs` rỗng cả 3 lượt · `node --input-type=module --check` sạch |
+
+### VIỆC ĐANG CHỜ
+- ⬜ Thầy mở một act Type the answer trên live: ô tích mới nằm ở bảng Options, mặc định tắt.
+- ⬜ Nếu thầy muốn 52 bài của khoá nền tảng tự chuyển câu trở lại thì bật ô tích cho từng bài — hoặc
+  bảo em ghi một lượt vào dữ liệu như đợt rà soát 306.
+
 ## Đợt 305 (08/9/2026, thầy giao) — ⭐⭐⭐ MÀN CHƠI: TÔ 2 MÀU TỪNG TỪ KHI TRẢ LỜI SAI + DÒNG GỢI Ý CHẠY OFFLINE — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
 
 Thầy: *"khi chơi và submit 1 đáp án, nếu câu trả lời dài hơn 1 từ thì hiện màu xanh các từ đúng, hiện

@@ -18,12 +18,14 @@
 //  • Lives (Options, 0..10, 0 = Unlimited): a wrong answer also costs a heart
 //    (ui.livesSlot, top bar) when lives are on; hitting 0 ends the game right
 //    away ("gameover"), same pattern as True/false.
-//  • Every graded question auto-advances to the next one shortly after (Allow
-//    skip only controls whether Next is manually clickable BEFORE answering —
-//    once answered, the game moves on either way); Back always stays available
-//    to review a previous question. No "finish/✓" button on the last question —
-//    the game completes automatically once every question has an answer (or via
-//    Menu -> Submit answers).
+//  • "Auto next question" (Options, OFF by default — Đợt 307, teacher 08/9/2026)
+//    decides whether a graded question moves on by itself. OFF: the answer is
+//    marked, the box locks, and the pupil presses Next when they are ready.
+//    ⚠️ Allow skip is a DIFFERENT thing: it only says whether Next works BEFORE
+//    answering. Back always stays available to review a previous question.
+//    ⚠️ Ending the game is NOT gated by that tick: there is deliberately no
+//    "finish/✓" button on the last question, so the game still completes by
+//    itself once every question has an answer (or via Menu -> Submit answers).
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
@@ -419,6 +421,13 @@ const ttaTemplate = {
   scorable: true,
   // TIME COST (Đợt 143) — opt in to the shared "-N per idle second" option.
   timeCost: true,
+  // ⭐⭐ AUTO NEXT QUESTION (Đợt 307, thầy 08/9/2026) — bật ô tích dùng chung của
+  // core (`options.autoSwitch`, mặc định TẮT). Đây là **lật lại quyết định ngày
+  // 3/8/2026** (Đợt 55): hồi đó thầy chốt game này LUÔN tự chuyển câu và ô tích bị
+  // gỡ hẳn. Nay thầy chốt ngược, và đã được hỏi rõ hậu quả trước khi build: **mọi
+  // act cũ — gồm 52 bài Type the answer của khoá NỀN TẢNG — sẽ ngừng tự chuyển câu**
+  // cho tới khi thầy tự bật từng bài. ⛔ Đừng "sửa lại cho giống ghi chú Đợt 55".
+  usesAutoSwitch: true,
   // "Start with mistakes" (Đợt 84): which array in activity.content holds the
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
@@ -516,6 +525,10 @@ const ttaTemplate = {
   mount(root, activity, ui) {
     const opt = activity.options || {};
     const allowSkip = opt.allowSkip === true;   // move on without answering (default off)
+    // ⭐ "Auto next question" (Đợt 307) — ô tích dùng chung của core, MẶC ĐỊNH TẮT.
+    // Đọc bằng hàm chứ không phải hằng: panel Options sửa thẳng `activity.options`
+    // đang chơi, nên chụp một lần lúc mount là thầy bật/tắt giữa ván không ăn.
+    const autoNext = () => opt.autoSwitch === true;
 
     // ----- FIGHT MODE (Đợt 170) — this play may be one of two boards racing.
     // `_fight` is put here by core/fight.js; everything below falls back to
@@ -1056,9 +1069,10 @@ const ttaTemplate = {
         return;
       }
 
-      // Every graded question moves the game on shortly after, regardless of
-      // Allow skip (that option only gates the MANUAL Next before answering) —
-      // teacher's spec, 3/8/2026. Any timer left over from a PREVIOUS question is
+      // ⚠️ Đợt 307 — chỉ TỰ chuyển câu khi ô tích "Auto next question" BẬT (mặc
+      // định tắt). Từ 3/8/2026 tới trước đợt này thì game LUÔN tự chuyển; thầy
+      // chốt lại 08/9/2026. Allow skip vẫn là chuyện khác: nó chỉ nói nút Next có
+      // bấm được TRƯỚC khi trả lời hay không. Any timer left over from a PREVIOUS question is
       // cleared first: two stacked timers used to be able to fire out of order
       // (a stale one calling finish()/goNext() after the student had already
       // navigated elsewhere) — that was the source of the nav bar sometimes going
@@ -1075,8 +1089,11 @@ const ttaTemplate = {
       if (outOfLives) {
         autoTimer = setTimeout(() => finish("gameover"), delay);
       } else if (state.every(s => s.graded)) {
+        // ⚠️ HAI NHÁNH KẾT THÚC Ở TRÊN KHÔNG DÍNH Ô TÍCH. Game này CỐ Ý không có nút
+        // "xong/✓" ở câu cuối; tắt luôn cả chỗ này thì em trả lời hết bài rồi ngồi
+        // đó, không có đường nào kết thúc ngoài Menu ▸ Submit answers.
         autoTimer = setTimeout(() => finish("complete"), delay);
-      } else if (index < total - 1) {
+      } else if (autoNext() && index < total - 1) {
         autoTimer = setTimeout(() => { if (!finished) goNext(); }, delay);
       }
     }
@@ -1202,11 +1219,10 @@ const ttaTemplate = {
      *     submitAnswer's `!st.correct` half of the test — a timed-out question
      *     is never correct, and the class still needs to see the answer.
      *
-     * ⚠️ NO "wait for the teacher to press ▷" here, unlike Quiz. This game has
-     * always moved on by itself the moment a question is graded (teacher's spec,
-     * 3/8/2026 — it has no "Auto next question" option at all), and a timeout is
-     * a grade. Making this one case sit still would be the inconsistency, not
-     * the rule.
+     * ⚠️ Hết giờ cũng chỉ tự sang câu khác khi ô tích "Auto next question" BẬT
+     * (Đợt 307) — trước đợt này game luôn tự đi, vì hồi 3/8/2026 nó chưa có ô tích
+     * nào cả. Câu hết giờ vẫn bị CHẤM SAI và khoá lại dù ô tích tắt; chỉ khác là
+     * nó nằm yên chờ em bấm Next.
      *
      * ⚠️ FIGHT MODE NEVER CALLS THIS. Đợt 222 briefly routed the referee's
      * "Time delay window shut" signal through here (a `timeUp()` in
@@ -1245,7 +1261,11 @@ const ttaTemplate = {
         autoTimer = setTimeout(() => finish("gameover"), delay);
       } else if (state.every(s => s.graded)) {
         autoTimer = setTimeout(() => finish("complete"), delay);
-      } else if (index < total - 1) {
+      } else if (autoNext() && index < total - 1) {
+        // ⚠️ Hết giờ một câu cũng chỉ TỰ SANG CÂU KHÁC khi ô tích bật — "Auto next
+        // question" là tự chuyển câu, bất kể vì em nộp bài hay vì đồng hồ hết giờ.
+        // Tắt ô tích thì câu hết giờ vẫn bị chấm sai và khoá lại, chỉ là nằm yên
+        // chờ em bấm Next (nút Next mở sẵn vì câu đã chấm — xem canAdvance).
         autoTimer = setTimeout(() => { if (!finished) goNext(); }, delay);
       }
     }
