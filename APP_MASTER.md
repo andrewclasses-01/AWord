@@ -8,9 +8,20 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **07/9/2026 (Đợt 302 — Fight + voice: hai nút loa không đồng bộ, và một bên
-> bấm thì đẻ ra bản thứ hai chồng lên)**.
+> Cập nhật lần cuối: **08/9/2026 (Đợt 303 — đổi tên hiện ra của 4 gốc sang số ít: Activity ·
+> Result · Course · Game)**.
 >
+>
+> **Đợt 303** (08/9/2026, thầy giao) — **ĐỔI TÊN HIỆN RA CỦA 4 GỐC SANG SỐ ÍT: Activity · Result ·
+> Course · Game.** Thầy: *"đổi tên 4 thư mục gốc … cho dễ gọi đã"*. **Đổi CHỮ, không đổi mã**: tên
+> gốc nằm gọn trong bảng `ROOT_LABEL` ở đầu `main.js` (4 thẻ trang chủ · mẩu đường dẫn · thanh điều
+> hướng · cây "Move to" · 2 câu hộp thoại tạo mới đều đọc bảng đó), cộng 2 câu chữ trong
+> `core/assignment-ui.js`. ⛔ `ROOTS` ở `core/store.js` và tiền tố `"Courses / "` gửi sang myLesson
+> **GIỮ NGUYÊN** — đó là mã định danh trong Firestore + link `?r=…`, và là khoá lọc `/^Courses \//`
+> của myLesson (`app.js` ~9186, ~9883). `node --check` sạch 2 file; ⬜ thầy mở live xác nhận bằng mắt.
+> Chi tiết: `GHI CHU DU AN.md` Đợt 303.
+>
+> ---
 >
 > **Đợt 302** (07/9/2026, thầy báo) — ⭐⭐⭐ **FIGHT + VOICE: HAI NÚT LOA KHÔNG ĐỒNG BỘ, VÀ MỘT
 > BÊN BẤM THÌ ĐẺ RA BẢN THỨ HAI CHỒNG LÊN.** Thầy: *"2 nút loa của 2 bên không đồng bộ với nhau
@@ -5102,9 +5113,23 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **07/9/2026 sau Đợt 302** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **08/9/2026 sau Đợt 303** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (07/9/2026 — sau **Đợt 302**)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (08/9/2026 — sau **Đợt 303**)
+>
+> | | |
+> |---|---|
+> | Commit mới nhất | **Đợt 303** — `main.js` · `core/assignment-ui.js` (chỉ chữ hiện ra, không đổi hành vi). |
+> | Thầy giao gì | *"Trước tiên tôi muốn đổi tên 4 thư mục gốc thành: Activity - Result - Course - Game cho dễ gọi đã. Đổi luôn, commit + push luôn."* |
+> | Đã làm | `ROOT_LABEL` (đầu `main.js`) đổi 4 nhãn sang SỐ ÍT + nhãn dự phòng của cây "Move to"; `core/assignment-ui.js` sửa 2 câu chữ (*"Move it into **Course** / <course> / <lesson> first."* · *"moves to the **Result** recycle bin"*). Một bảng tra ⇒ ăn cả 5 chỗ vẽ tên gốc. |
+> | ⛔ Không đụng | `ROOTS` trong `core/store.js` (`activities`/`results`/`courses`/`games`) — MÃ ĐỊNH DANH nằm trong trường `root` của mọi mục Firestore + link `?r=activities`. Và tiền tố `"Courses / "` của cầu nối myLesson: **myLesson lọc khóa học bằng chính chuỗi đó** (`/^Courses \//`, `app/src/renderer/js/app.js` ~9186 và ~9883) — đổi thì phải sửa hai app cùng lúc. |
+> | Kiểm | `node --input-type=module --check` sạch cả 2 file. Rà MỌI chuỗi còn chữ Activities/Results/Courses/Games trong `core/`+`main.js`+`play.js`: số còn lại không phải tên gốc ("Game complete", "Gameshow", "Recent Results", "Activity deleted…"). |
+> | ⬜ Chờ mắt thầy | Mở live: 4 thẻ trang chủ · mẩu đường dẫn · thanh điều hướng phải là **Activity · Result · Course · Game**. Trang chủ bắt đăng nhập Google nên phiên tự động không tự xem được. |
+> | Chi tiết | `GHI CHU DU AN.md` Đợt 303. |
+>
+> ---
+>
+> ### 🕘 TRẠNG THÁI CŨ HƠN (07/9/2026 — sau **Đợt 302**)
 >
 > | | |
 > |---|---|

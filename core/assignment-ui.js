@@ -597,7 +597,7 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
         const cls = classInput.value.trim();
         const r = courseResultsFor(act.parentId, folders, cls);
         if (!r.lessonId) {
-          err.textContent = "This activity is not inside a lesson folder. Move it into Courses / <course> / <lesson> first.";
+          err.textContent = "This activity is not inside a lesson folder. Move it into Course / <course> / <lesson> first.";
           return;
         }
         if (!r.classFolder) { offerCreate(r, cls); return; }
@@ -1035,7 +1035,7 @@ export function confirmTrashAssignment(assignment, { onDone } = {}) {
     modal.append(headRow("Delete assignment", close));
     const body = el("div", "aw-as-body");
     body.append(el("div", "aw-as-note",
-      `“${escapeText(assignment.title || assignment.code)}” moves to the Results recycle bin. ` +
+      `“${escapeText(assignment.title || assignment.code)}” moves to the Result recycle bin. ` +
       `The student link stops working, but every score is kept — you can restore it at any time.`));
     const err = el("div", "aw-as-err", "");
     body.append(err);

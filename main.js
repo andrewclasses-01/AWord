@@ -73,7 +73,13 @@ import {
 
 const app = document.getElementById("app");
 
-const ROOT_LABEL = { activities: "Activities", results: "Results", courses: "Courses", games: "Games" };
+// ⭐ Đợt 303 (thầy, 08/9/2026) — TÊN HIỆN RA của 4 gốc đổi sang SỐ ÍT cho dễ gọi:
+// Activity · Result · Course · Game. ⛔ CHỈ đổi CHỮ HIỆN RA. Mã định danh của gốc
+// (`ROOTS` trong core/store.js: "activities"/"results"/"courses"/"games") KHÔNG đổi
+// một chữ — nó nằm trong trường `root` của từng mục trên Firestore, trong link
+// `?r=activities`, và trong tiền tố `"Courses / "` của cầu nối myLesson (hàm
+// timThuMuc bên dưới — myLesson lọc bằng chính chuỗi đó, xem app.js ~9186).
+const ROOT_LABEL = { activities: "Activity", results: "Result", courses: "Course", games: "Game" };
 // ⭐ Đợt 287c (thầy 03/9) — the TOP of Courses is a list of COURSES, nothing else:
 // no New activity / New folder / Import / file drop there, only "+ New course"
 // (a plain folder at the top of the tree) and the recycle bin. One level down,
@@ -1478,7 +1484,7 @@ async function moveAssignmentFlow(a) {
   openModal("Move to", (body, close) => {
     const tree = el("div", "aw-move-tree");
     let chosen = null;                       // null = top level of the tree
-    tree.append(pickRow(ROOT_LABEL[state.root] || "Results", 0, null));
+    tree.append(pickRow(ROOT_LABEL[state.root] || "Result", 0, null));
     renderChildren(null, 1);
     body.append(tree);
 

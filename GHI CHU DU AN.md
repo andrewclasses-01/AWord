@@ -12,7 +12,10 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 302** (07/9/2026 — FIGHT + VOICE: hai nút loa không đồng bộ, và một bên bấm thì
+> Mới nhất: **Đợt 303** (08/9/2026 — ĐỔI TÊN HIỆN RA CỦA 4 GỐC SANG SỐ ÍT: **Activity · Result ·
+> Course · Game**. Đổi CHỮ, không đổi mã — `ROOTS` trong `core/store.js` và tiền tố `"Courses / "`
+> gửi sang myLesson giữ nguyên. Xem mục Đợt 303 ngay dưới.)
+> Trước đó: **Đợt 302** (07/9/2026 — FIGHT + VOICE: hai nút loa không đồng bộ, và một bên bấm thì
 > ĐẺ RA BẢN THỨ HAI chồng lên bản đang chạy. `quiz` + `true-false` có mỗi cái rào `speaks` ở autoPlay,
 > thiếu cả 4 mảnh của khuôn Crossword (Đợt 259) — nợ đã ghi từ Đợt 266, nay thầy gặp thật nên làm nốt.
 > Bàn thử `scratch/dot302-fight-voice.html` A/B thật: **4/27 TRƯỢT trước → 27/27 ĐẠT sau**; ⚠️ đọc kỹ
@@ -194,6 +197,42 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 303 (08/9/2026, thầy giao) — **ĐỔI TÊN HIỆN RA CỦA 4 GỐC SANG SỐ ÍT: Activity · Result · Course · Game**
+
+Thầy: *"Trước tiên tôi muốn đổi tên 4 thư mục gốc thành: Activity - Result - Course - Game cho dễ gọi
+đã. Đổi luôn, commit + push luôn."*
+
+**ĐỔI CHỮ, KHÔNG ĐỔI MÃ.** Tên hiện ra của 4 gốc nằm gọn trong MỘT bảng tra `ROOT_LABEL` ở đầu
+`main.js`; mọi chỗ vẽ tên gốc đều đọc bảng đó nên sửa một dòng là ăn hết **5 chỗ**: 4 thẻ trang chủ
+(`renderTop`) · mẩu đường dẫn `.aw-crumb` · thanh điều hướng trên cùng · cây "Move to" · 2 câu trong
+hộp thoại tạo mới ("Creating in …").
+
+⛔ **`ROOTS` trong `core/store.js` (`"activities"`/`"results"`/`"courses"`/`"games"`) KHÔNG đụng một
+chữ** — đó là MÃ ĐỊNH DANH, nằm trong trường `root` của từng mục trên Firestore và trong link
+`?r=activities`. ⛔ Tiền tố `"Courses / "` mà cầu nối `__awordLib.timThuMuc` (`main.js`) gửi sang
+myLesson cũng **giữ nguyên**: myLesson lọc thư mục khóa học bằng CHÍNH chuỗi đó
+(`/^Courses \//` ở `app/src/renderer/js/app.js` ~9186 và ~9883). Đổi mã = act cũ mất gốc; đổi tiền tố
+= phải sửa myLesson cùng lúc, mà luật là **một phiên chỉ sửa một app**.
+
+**File đổi (2 file, 4 chỗ):**
+- `main.js` — `ROOT_LABEL` (4 nhãn) + nhãn dự phòng của cây "Move to" (`"Results"` → `"Result"`).
+- `core/assignment-ui.js` — 2 câu chữ thầy đọc được: lỗi *"Move it into **Course** / <course> /
+  <lesson> first."* và ghi chú xoá bài giao *"moves to the **Result** recycle bin"*.
+
+**Kiểm:** `node --input-type=module --check` sạch cả 2 file; rà lại MỌI chuỗi còn chữ
+Activities/Results/Courses/Games trong `core/` + `main.js` + `play.js` — số còn lại đều KHÔNG phải tên
+gốc ("Game complete", "Gameshow", "Recent Results", "Activity deleted…"), cố ý giữ nguyên.
+⛔ **Phiên này không tự xem được 4 thẻ trang chủ**: trang chủ bắt đăng nhập Google và Google chặn tự
+động hoá — thầy mở live xác nhận bằng mắt.
+
+### VIỆC ĐANG CHỜ (Đợt 303)
+- ⬜ Thầy mở live: 4 thẻ trang chủ · mẩu đường dẫn · thanh điều hướng phải là **Activity · Result ·
+  Course · Game**.
+- ⬜ myLesson vẫn hiện đường dẫn cũ **"Courses / …"** — CỐ Ý, vì chuỗi đó là khoá lọc của myLesson.
+  Muốn đổi cả bên đó thì làm ở PHIÊN myLesson, sửa hai chỗ regex + tiền tố bên AWord CÙNG LÚC.
 
 ---
 
