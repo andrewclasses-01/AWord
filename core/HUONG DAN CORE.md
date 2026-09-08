@@ -1000,6 +1000,52 @@ lúc hạ cánh là hai tiếng cho một lỗi.
 
 ---
 
+## ⭐⭐⭐ CỬA SỔ NỘP — TRẠNG THÁI GHI SAU HOẠT ẢNH LÀ MỘT CÁI CỬA, `finish()` PHẢI TỰ ĐÓNG (Đợt 311, thầy báo 08/9/2026)
+
+**Ca thật:** em T.NHI làm đúng cả **30** câu Anagram (`LSB1-S3.T2.P1 · VI2`), bảng GAME COMPLETE ghi
+**29/30**, leaderboard 29, myLesson web 29 — nhưng chip góc phải khung game lại "✓ 30". Cùng một ván,
+hai con số.
+
+**Vì sao:** nhiều template ghi kết quả vào state MUỘN, đúng lúc hoạt ảnh hạ cánh — Anagram "On submit"
+ghi `st.graded = true` ngay lúc bấm Submit nhưng `st.correct = allCorrect` chỉ ghi trong
+`setTimeout(n×260+300 ms)` sau chuỗi lộ ô; chế độ bonus ghi `st.points` khi "+N" bay tới nơi; Unjumble
+ghi khi chùm sao / chip BONUS tới nơi. Trong khoảng 1,6–4 giây đó, ván có thể bị kết thúc từ **NGOÀI
+template**:
+- ☰ Menu → **Submit answers** — bộ đếm `answeredCounter` đếm theo `graded` nên đã cho bấm;
+- **đồng hồ đếm ngược chạm 0** — engine gọi thẳng `submitHandler()` (chính là `finish` template đăng ký);
+- (Fight/Showdown: trọng tài gọi kết thúc theo đường riêng, cũng từ ngoài.)
+`finish()` đọc state lúc ấy ⇒ từ cuối đúng bị đếm SAI; từ cuối SAI có Points off thì **không bị trừ**
+(điểm cao hơn thật); bonus từ cuối **mất trắng**. Rồi timer muộn vẫn chạy `pulseScoreTo()` ⇒ chip nhảy lên
+số đúng, lệch với bảng đã nộp. Đây là anh em của mục **ĐIỂM PHẠT PHẢI BAY** ngay trên: hoạt ảnh mở ra cái
+cửa thì hoạt ảnh phải tự đóng lại.
+
+**LUẬT (bắt buộc cho MỌI template hoãn ghi `st.correct` / `st.points` / `penalty` tới lúc hạ cánh):**
+1. Ngay lúc **kết quả đã biết** (bấm Submit, chữ cuối được xác nhận đúng, câu xếp xong) — ghi MỘT closure
+   "chốt ngay" vào biến `pendingSettle`, ghi đúng giá trị cuối cùng (`st.correct`, `st.points`, cộng
+   `penalty`). Hoạt ảnh chỉ là lộ dần cái đã biết.
+2. Cú hạ cánh **CUỐI CÙNG** của lượt đó xoá closure — với rào `if (pendingSettle === mine)` để cú hạ cánh
+   MUỘN của từ trước không xoá closure của từ KẾ (HS bấm Next và giải tiếp trong lúc điểm còn bay).
+3. `finish()`: gọi `ui.flushPenalties()` → `if (pendingSettle) { pendingSettle(); ui.setScore(scoreNow()); }`
+   → rồi mới đọc điểm. Chip và bảng kết quả phải là **một** con số.
+4. Khối timer muộn thêm `if (finished) return;` — đừng bay "+1"/"−N" lên trên màn kết quả.
+5. **Fight mode giữ nguyên** (`!fightCtl`): ai được điểm là do trọng tài quyết, `landOrReject` có thể
+   TỪ CHỐI cú hạ cánh — template không được tự chốt thay.
+
+**Bàn thử bắt buộc khi đụng vùng này** (mẫu: `scratch/anagram311-test.html`, `scratch/unjumble311-test.html`
+— `scratch/` bị .gitignore, chỉ có ở máy đã build; dựng lại theo mô tả nếu máy khác):
+- bấm y như HS: nộp từ CUỐI → ☰ Submit answers sau ~120 ms → đọc object `ui.finish()` nhận (bọc
+  `tpl.mount` để bắt `ui.finish`/`ui.onSubmit`), so với đối chứng "để ván tự kết thúc" — phải cùng số;
+- **đối chứng ngược**: chạy trên mã chưa vá phải FAIL (Anagram 6, Unjumble 4), không thì phép đo đang nói về
+  thứ khác;
+- đo cả 3 mặt: đúng-mất-điểm · sai-không-bị-trừ · bonus-mất-trắng; template kéo-thả thì bắn `PointerEvent`
+  thật (pointerdown → pointermove → pointerup).
+Bẫy đo: `pointsOff: 1` trong act bị `core/options-migrate.js` nhân 10 (thang cũ 0..10 → 0..100) — phạt 10
+là ĐÚNG. Điểm đã nộp sai nằm trong Firestore `assignments/…/scores`, code không tự sửa dữ liệu cũ.
+
+**Đã vá:** Anagram + Unjumble (Đợt 311). **Đã rà không dính:** quiz, true-false, crossword, group-sort,
+type-the-answer, maze-chase, gameshow, speaking — ghi `st.correct` đồng bộ lúc trả lời. Template MỚI nào
+muốn có hiệu ứng "điểm bay tới nơi mới tính" thì làm theo 5 luật trên ngay từ đầu.
+
 ## ⭐⭐⭐ PHÒNG CHỜ SHOWDOWN — CẢ LỚP CÙNG BẮT ĐẦU MỘT LƯỢT (Đợt 261, 25/8/2026)
 
 Trong Showdown, **START không vào ván ngay**: nó vào phòng chờ, và ván chỉ khởi động khi

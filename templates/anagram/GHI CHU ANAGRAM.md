@@ -1,5 +1,23 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## Đợt 311 (08/9/2026, thầy báo kèm ảnh) — ⭐⭐⭐ "CỬA SỔ NỘP": HS LÀM ĐÚNG 30 CÂU, MÁY GHI 29/30
+
+✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE (08/9/2026).** Gốc rễ + cách vá đầy đủ: `../../GHI CHU DU AN.md` Đợt 311;
+luật phòng ngừa: `../../core/HUONG DAN CORE.md` mục "CỬA SỔ NỘP".
+Tóm tắt phần chạm vào Anagram:
+- `doSubmit()` ghi `st.graded` ngay nhưng `st.correct = allCorrect` chỉ ghi trong timer `n×260+300 ms`
+  (sau chuỗi lộ ô). ☰ Submit answers / đồng hồ đếm ngược chạm 0 gọi `finish()` ngay trong khoảng đó ⇒ từ
+  cuối đúng bị đếm SAI (29/30), điểm phạt từ sai cuối KHÔNG bị trừ; timer muộn vẫn `flyScoreGain` ⇒ chip
+  "✓ 30" lệch bảng 29 — đúng bức ảnh thầy gửi.
+- Chế độ bonus: `finalizeBonusWord()` chỉ chạy sau khi ô chữ cuối bay xong (~340 ms) rồi "+N" bay thêm
+  ~1–1,5 s ⇒ từ cuối mất trắng điểm nếu ván bị kết thúc trong lúc đó.
+- Vá: biến `pendingSettle` (khai cạnh `penalty`) — mỗi lượt nộp/giải ghi một closure "chốt ngay"; cú hạ cánh
+  cuối xoá nó (rào `pendingSettle === mine`); `finish()` gọi nó sau `ui.flushPenalties()` rồi
+  `ui.setScore(scoreNow())`. `bonusPick()` chốt sớm ngay khi chữ cuối được xác nhận đúng; công thức điểm
+  gom về `bonusEarned(st, it)` dùng chung với `finalizeBonusWord()`. Khối timer muộn của submit và
+  `finalizeBonusWord()` thêm `if (finished) return` (ván đơn). **Fight giữ nguyên** (`!fightCtl`).
+- Bàn thử: `scratch/anagram311-test.html` — 19/19; trên mã chưa vá 6 FAIL (đối chứng ngược đạt).
+
 ## Đợt 175 (17/8/2026) — ⭐⭐ Ô CHỮ KÍCH HOẠT NGAY LÚC CHẠM (`core/press.js`) — BỎ KÉO-THẢ
 
 ⬜ **CHỜ THẦY DUYỆT — CHƯA COMMIT.** Chi tiết đầy đủ + gốc rễ: `../../GHI CHU DU AN.md` Đợt 175.

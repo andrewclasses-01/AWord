@@ -4,6 +4,20 @@
 tồn kho một lượt, rồi tự test và xác nhận). Đã `built:true` trong `core/catalog.js`, commit + push,
 GitHub Pages đã deploy. Chơi thử riêng vẫn được: `templates/unjumble/test.html`.
 
+## ⭐ Đợt 311 (08/9/2026) — "CỬA SỔ NỘP" cùng bệnh với Anagram · ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE · KHÔNG SỬA CODE CORE
+
+Thầy báo lỗi trên Anagram (HS làm đúng 30 câu, máy ghi 29/30); rà thấy Unjumble có y hệt 3 mặt:
+- **On submit:** `st.correct`/`st.points` chỉ ghi trong timer `n×240+300 ms` rồi chùm sao bay thêm 1,1 s mới
+  đặt `st.points = 1` (hoặc `−pointsOff` qua `ui.flyPenalty`). ☰ Submit answers / đồng hồ chạm 0 gọi
+  `finish()` trong khoảng đó ⇒ câu cuối đúng = 0 điểm, câu cuối sai KHÔNG bị trừ.
+- **Bonus:** `finalizeLiveWord()` đặt `st.points = 0` rồi ✓ (+1) và BONUS (+1, sau 420 ms) bay ~1 s mới ghi ⇒
+  câu cuối mất 1–2 điểm.
+- Vá: `pendingSettle` (khai cạnh `busy`) — closure "chốt ngay" ghi đúng giá trị cuối (`1`/`2`/`−pointsOff`);
+  cú hạ cánh CUỐI của lượt xoá nó (rào `=== mine`); `finish()` gọi nó ngay sau `finished = true` rồi
+  `ui.setScore(scoreNow())`; timer muộn thêm `if (finished) return`.
+- Bàn thử: `scratch/unjumble311-test.html` — kéo-thả THẬT bằng pointer events — 15/15; mã chưa vá 4 FAIL.
+Chi tiết: `../../GHI CHU DU AN.md` Đợt 311.
+
 ## ⭐ Đợt 42 (2/8/2026, v0.9.16) — 6 chỉnh theo yêu cầu thầy · 🟢 CHỜ THẦY DUYỆT, CHƯA COMMIT · KHÔNG SỬA CORE
 Thầy yêu cầu tiếp (đã build + tự test trình duyệt thật, đo DOM, console sạch):
 1. **Clue: màu xanh nước biển hiện đại + Regular Italic** (bỏ Bold): `.aw-unj-clue` color `#1799c9`,

@@ -568,6 +568,19 @@ const anagramTemplate = {
     // its last score pulse (Đợt 114).
     let dead = false;
     let penalty = 0;           // total points-off across words answered wrong (stays 0 when the option is off)
+    // ⭐⭐⭐ Đợt 311 (08/9/2026, thầy báo: "HS làm đúng 30 câu, máy ghi 29") — CỬA SỔ
+    // NỘP. Kết quả của từ vừa nộp/vừa giải chỉ được GHI VÀO STATE khi hoạt ảnh
+    // (lộ đáp án lần lượt ~n×260ms+300ms ở submit mode; "+N" bay ~1–1.5s ở bonus)
+    // chạy xong. Trong khoảng đó, finish() có thể tới từ NGOÀI template — menu
+    // "Submit answers" hoặc đồng hồ đếm ngược chạm 0 (core/engine.js gọi thẳng
+    // submitHandler) — và đọc state CHƯA CHỐT: từ cuối làm đúng bị đếm là sai
+    // (29/30), điểm phạt của từ sai cuối không bị trừ, điểm bonus của từ cuối
+    // mất trắng. Rồi cú hạ cánh MUỘN vẫn chạy pulseScoreTo() ⇒ chip "✓ 30" lệch
+    // với bảng kết quả 29 — đúng bức ảnh thầy gửi. Cùng họ với ui.flushPenalties()
+    // (Đợt 256): hoạt ảnh mở ra cái cửa thì hoạt ảnh phải tự đóng lại — mỗi lượt
+    // nộp/giải ghi ở đây MỘT closure "chốt ngay", cú hạ cánh bình thường xoá nó,
+    // còn finish() tới trước thì gọi nó rồi mới đọc điểm.
+    let pendingSettle = null;
     let livesLeft = startLives;   // null = unlimited (can't lose)
     let busy = false;          // true while a fly/reveal animation must not be interrupted
     let fitter = null;
@@ -1131,6 +1144,14 @@ const anagramTemplate = {
       st.nextPos++;
       tileEl.disabled = true;
       const wordDone = st.nextPos === it.letters.length;
+      // Đợt 311 — chữ cuối vừa được xác nhận đúng là từ ĐÃ GIẢI XONG về mặt dữ liệu
+      // (hadMistake không đổi được nữa); finalizeBonusWord() chỉ chạy sau khi ô chữ
+      // bay xong (~340ms) — finish() tới trong khoảng đó thì từ này mất trắng điểm.
+      if (wordDone && !fightCtl) {
+        const earnedNow = bonusEarned(st, it);
+        const mine = () => { if (pendingSettle === mine) pendingSettle = null; st.correct = true; st.points = earnedNow; };
+        pendingSettle = mine;
+      }
       const destEl = root.querySelector(`.aw-anagram-rtile[data-pos="${destPos}"]`);
       const shownChar = displayChar(picked, allCaps);
       flyLetter(tileEl, destEl, shownChar, RESULT_BG, () => {
@@ -1145,14 +1166,22 @@ const anagramTemplate = {
       return true;
     }
 
+    // Đợt 311 — MỘT công thức cho cả finalizeBonusWord() lẫn cú chốt sớm ở bonusPick().
+    function bonusEarned(st, it) {
+      const mult = mode === "bonusMinus" ? bonusMult : 2;   // "bonus" keeps the old fixed x2
+      return it.letters.length * (!st.hadMistake ? mult : 1);
+    }
+
     function finalizeBonusWord() {
       // Đợt 114 — reached from flyLetter's untracked 150ms-past-the-animation
       // fallback, and it arms `autoTimer` -> finish(). Placing the last letter of
       // the last word and leaving within ~0.5s used to hand in the dead play.
       if (dead) return;
+      // Đợt 311 — ván đơn đã chốt sổ trong lúc chữ cuối còn bay (pendingSettle đã
+      // ghi điểm): đừng bay "+N" lên màn kết quả nữa. Trận (fightCtl) giữ nguyên.
+      if (finished && !fightCtl) return;
       const st = state[index];
       const it = items[index];
-      const n = it.letters.length;
       const perfect = !st.hadMistake;
       // No word-level points-off here (any longer): plain "bonus" never had
       // one to begin with in the new design, and "bonusMinus" already
@@ -1160,8 +1189,8 @@ const anagramTemplate = {
       // flyLetterPenalty() — double-charging the same mistakes at word-end
       // too would be wrong (teacher, 10/8/2026).
       const outOfLives = !perfect && loseLife();   // a life is lost on a word solved WITH a mistake (both modes)
-      const mult = mode === "bonusMinus" ? bonusMult : 2;   // "bonus" keeps the old fixed x2
-      const earned = n * (perfect ? mult : 1);
+      const mult = mode === "bonusMinus" ? bonusMult : 2;   // "bonus" keeps the old fixed x2 (label "Nx PERFECT")
+      const earned = bonusEarned(st, it);
       st.correct = true;               // word is DONE — points deferred, see below
       ui.roundDone?.();                // TIME EACH ROUND (Đợt 174) — the pupil's turn ends the instant the word is solved
       // No render() here: every origin tile is already .is-used and every
@@ -1171,7 +1200,13 @@ const anagramTemplate = {
       // the flash bug). Only updateNav() is a real change at this instant.
       updateNav();
       anagramSound.wordCompleteBonus();
-      const applyAndGetNewTotal = () => { st.points = earned; return scoreNow(); };
+      // Đợt 311 — chỉ ván ĐƠN: trong trận, ai được điểm là do trọng tài quyết
+      // (landOrReject có thể TỪ CHỐI cú hạ cánh), nên không được tự chốt thay.
+      // Rào `pendingSettle === mine`: cú hạ cánh MUỘN của từ này không được xoá
+      // closure của từ KẾ (HS bấm Next và giải tiếp trong lúc "+N" còn bay).
+      const mine = () => { if (pendingSettle === mine) pendingSettle = null; st.points = earned; };
+      if (!fightCtl) pendingSettle = mine;
+      const applyAndGetNewTotal = () => { if (pendingSettle === mine) pendingSettle = null; st.points = earned; return scoreNow(); };
       let finishDelay;
       if (perfect) {
         // PERFECT pops in place; the point value follows it a beat later and
@@ -1662,6 +1697,15 @@ const anagramTemplate = {
         return;
       }
 
+      // Đợt 311 — kết quả đã biết NGAY LÚC NÀY; chỉ hình ảnh là lộ dần bên dưới.
+      // Nếu finish() tới trước cú hạ cánh ở cuối chuỗi reveal, nó gọi closure này.
+      const mine = () => {
+        if (pendingSettle === mine) pendingSettle = null;
+        st.correct = allCorrect;
+        if (!allCorrect && pointsOff) penalty += pointsOff;   // "−N" chưa kịp bay thì trừ thẳng
+      };
+      pendingSettle = mine;
+
       for (let pos = 0; pos < n; pos++) {
         const isRight = rights[pos];
         setTimeout(() => {
@@ -1685,6 +1729,10 @@ const anagramTemplate = {
         // (below) that finished it into the leaderboard. Widest window of any
         // leak found in the audit.
         if (dead) return;
+        // Đợt 311 — ván đã chốt sổ (finish() đã gọi pendingSettle): đừng bay "+1"
+        // hay "−N" lên trên màn kết quả rồi đẩy chip điểm lệch khỏi bảng.
+        if (finished) return;
+        if (pendingSettle === mine) pendingSettle = null;
         st.correct = allCorrect;
         // ⭐⭐⭐ Đợt 256 — "−N" bay ra từ CẢ Ô TỪ vừa nộp sai (chơi đơn thì không có ai
         // để giấu bài) vào ô điểm, tới nơi mới trừ.
@@ -2393,6 +2441,9 @@ const anagramTemplate = {
       // ⚠️⚠️ Đợt 256 — CHỐT SỔ TRƯỚC KHI ĐỌC ĐIỂM. Một con số "−N" còn đang bay là
       // một phép trừ CHƯA áp vào `penalty`, mà `score` dưới đây đọc thẳng ra từ đó.
       ui.flushPenalties?.();
+      // ⭐ Đợt 311 — từ CUỐI còn đang lộ đáp án / điểm còn đang bay: chốt ngay rồi
+      // vẽ lại chip cho khớp bảng kết quả (xem chú thích ở `pendingSettle`).
+      if (pendingSettle) { pendingSettle(); ui.setScore(scoreNow()); }
       const perQuestion = state.map((s, i) => ({ q: i, correct: s.correct === true }));
       const correctWords = perQuestion.filter(p => p.correct).length;
       // Bonus-family modes score per LETTER (+ the perfect-word multiplier),

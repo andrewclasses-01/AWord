@@ -273,6 +273,14 @@ const unjumbleTemplate = {
     // its closing score pulse (Đợt 114).
     let dead = false;
     let busy = false;
+    // ⭐⭐⭐ Đợt 311 (08/9/2026) — CỬA SỔ NỘP, cùng bệnh với Anagram (thầy báo: "HS làm
+    // đúng 30 câu, máy ghi 29"). Điểm của câu vừa nộp/vừa xếp xong chỉ được ghi vào
+    // `st.points`/`st.correct` khi hoạt ảnh (lộ từng ô ~n×240ms+300ms, rồi chùm sao
+    // ~1.1s; ở chế độ bonus là ✓/BONUS bay ~1s) chạy xong. finish() tới từ NGOÀI
+    // (menu "Submit answers" hoặc đồng hồ đếm ngược chạm 0) trong khoảng đó thì câu
+    // cuối mất điểm / không bị trừ. Mỗi lượt ghi ở đây MỘT closure "chốt ngay"; cú hạ
+    // cánh cuối của lượt đó xoá nó; finish() tới trước thì gọi nó rồi mới đọc điểm.
+    let pendingSettle = null;
     let fitter = null;
     let autoTimer = null;
     let boardEl = null;
@@ -733,6 +741,9 @@ const unjumbleTemplate = {
       st.correct = true;
       st.graded = true;
       st.points = 0;       // banked by the flights below (1 for the sentence, +1 for a bonus)
+      // Đợt 311 — điểm câu này ĐÃ BIẾT (1, hay 2 nếu PERFECT); chỉ cú bay là chưa tới.
+      const mine = () => { if (pendingSettle === mine) pendingSettle = null; st.points = perfect ? 2 : 1; };
+      pendingSettle = mine;
       // ⭐⭐ Đợt 265 — TIME EACH ROUND: this pupil's turn ends the instant the sentence is
       // solved, so their clock stops here (Quiz/Anagram/Type the answer have done this
       // since Đợt 174). The next round opens when render() reports the new sentence.
@@ -742,12 +753,12 @@ const unjumbleTemplate = {
       updateNav();
       celebrateBounce();   // all words do a little wave-bounce (teacher, Đợt 36)
       // The ✓ for a correct sentence flies into the score (+1) (teacher, Đợt 39).
-      flyToScore(boardEl, icons.markCheck, 1, () => { st.points = 1; return scoreNow(); });
+      flyToScore(boardEl, icons.markCheck, 1, () => { st.points = 1; if (!perfect && pendingSettle === mine) pendingSettle = null; return scoreNow(); });
       if (perfect) {
         unjumbleSound.perfect();
         // the "moves for bonus" spot launches a "BONUS" chip into the score (+1 more).
         setTimeout(() => flyToScore(movesRect || boardEl, "BONUS", 1,
-          () => { st.points = 2; return scoreNow(); }), 420);
+          () => { st.points = 2; if (pendingSettle === mine) pendingSettle = null; return scoreNow(); }), 420);
       }
       const doneDelay = perfect ? FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 700 : FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 300;
       if (state.every(doneCheck)) autoTimer = setTimeout(finish, doneDelay);
@@ -780,12 +791,20 @@ const unjumbleTemplate = {
           (isRight ? unjumbleSound.fastCorrect : unjumbleSound.fastWrong)();
         }, slot * STAGGER_MS);
       }
+      // Đợt 311 — kết quả đã biết NGAY LÚC NỘP; hình ảnh + cú bay chỉ là lộ dần.
+      const mine = () => {
+        if (pendingSettle === mine) pendingSettle = null;
+        st.correct = allCorrect;
+        st.points = allCorrect ? 1 : (pointsOff ? -pointsOff : 0);
+      };
+      pendingSettle = mine;
       setTimeout(() => {
         // Đợt 114 — up to ~2.2s out and untracked, and it ARMS `autoTimer` below.
         // cleanup() clearing autoTimer could never help: this timer simply made a
         // new one on the dead play, which then finished it (fanfare over the next
         // game + a phantom leaderboard row).
         if (dead) return;
+        if (finished) return;   // Đợt 311 — ván đã chốt sổ (finish() đã gọi pendingSettle): đừng bay gì lên màn kết quả
         st.correct = allCorrect;
         st.points = 0;   // banked by the effect below
         busy = false;
@@ -799,7 +818,7 @@ const unjumbleTemplate = {
         let outOfLives = false;
         if (allCorrect) {
           celebrateBounce();
-          flyStarsToScore(boardEl, () => { st.points = 1; return scoreNow(); });
+          flyStarsToScore(boardEl, () => { st.points = 1; if (pendingSettle === mine) pendingSettle = null; return scoreNow(); });
         } else {
           outOfLives = loseLife();
           // ⭐⭐⭐ Đợt 256 (thầy, 24/8/2026) — CON SỐ, KHÔNG CHỈ NGÔI SAO.
@@ -813,7 +832,7 @@ const unjumbleTemplate = {
           // khác thì là trừ hai lần, nên luật viết ra ở đây là: một cú bay, một chủ nợ.
           // ⭐ Con số bay 920ms, chùm sao 1100ms ⇒ số tới TRƯỚC, điểm tụt lúc nó cắm
           // vào, rồi sao mới tới và chỉ vẽ lại đúng con số ấy. Không có nhịp nảy ngược.
-          ui.flyPenalty?.(boardEl, pointsOff, () => { st.points = -pointsOff; return scoreNow(); });
+          ui.flyPenalty?.(boardEl, pointsOff, () => { st.points = -pointsOff; if (pendingSettle === mine) pendingSettle = null; return scoreNow(); });
           flyStarsToScore(boardEl, () => scoreNow(), true);
         }
         if (outOfLives) autoTimer = setTimeout(() => finish("gameover"), FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 400);
@@ -1042,6 +1061,9 @@ const unjumbleTemplate = {
       ui.flushPenalties?.();
       if (finished) return;
       finished = true;
+      // ⭐ Đợt 311 — câu CUỐI còn đang lộ đáp án / điểm còn đang bay: chốt ngay rồi
+      // vẽ lại chip cho khớp bảng kết quả (xem chú thích ở `pendingSettle`).
+      if (pendingSettle) { pendingSettle(); ui.setScore(scoreNow()); }
       const totalPoints = state.reduce((s, st) => s + (st.points || 0), 0);
       const perQuestion = state.map((st, i) => ({ q: i, correct: st.correct === true }));
       const review = items.map((it, i) => {

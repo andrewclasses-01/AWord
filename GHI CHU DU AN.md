@@ -12,7 +12,12 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 306** (08/9/2026 — RÀ SOÁT CẢ KHOÁ NỀN TẢNG trên AWord đối chiếu file gốc
+> Mới nhất: **Đợt 311** (08/9/2026 — thầy báo kèm ảnh: HS làm đúng **30** câu Anagram mà máy ghi **29/30**
+> (chip "✓ 30" lệch bảng). Gốc rễ: "CỬA SỔ NỘP" — kết quả từ cuối chỉ ghi vào state SAU hoạt ảnh, mà
+> ☰ Submit answers / đồng hồ chạm 0 kết thúc ván ngay trong lúc đó. Vá Anagram + Unjumble (cùng khuôn),
+> 2 bàn thử 19/19 + 15/15 có đối chứng ngược. ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE. Luật phòng ngừa
+> ghi thành mục "CỬA SỔ NỘP" trong `core/HUONG DAN CORE.md`. Xem mục Đợt 311 ngay dưới.)
+> Trước đó: **Đợt 306** (08/9/2026 — RÀ SOÁT CẢ KHOÁ NỀN TẢNG trên AWord đối chiếu file gốc
 > `RECOVERY WORDWALL`: **167 act / 7.110 câu**. Kết quả: bản trên AWord **đúng gần như trọn vẹn** —
 > chỉ **7 act** lệch thật, đã sửa. ⛔⛔ Đợt này VÁ SAI MỘT LẦN rồi phải khôi phục: file nguồn dùng
 > **dòng bỏ trống ô câu hỏi = đáp án phụ của câu trên**, đọc thiếu quy ước đó thì tưởng AWord "thừa
@@ -211,6 +216,63 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 311 (08/9/2026, thầy báo kèm ảnh) — ⭐⭐⭐ **ANAGRAM + UNJUMBLE: HS LÀM ĐÚNG 30 CÂU, MÁY GHI 29 — "CỬA SỔ NỘP"** · ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE (08/9/2026) · KHÔNG SỬA CODE CORE (chỉ thêm mục luật vào `core/HUONG DAN CORE.md`)
+
+**Hiện tượng (ảnh thầy gửi):** act Anagram `LSB1-S3.T2.P1 · VI2`, em T.NHI (A2-A): chip góc phải khung game
+"✓ 30" nhưng bảng GAME COMPLETE ghi **29/30**, leaderboard 29/30, myLesson web cũng 29 — em làm đúng cả 30.
+
+**Gốc rễ (đọc code + tái hiện 100% trên bàn thử):** ở chế độ "On submit", `doSubmit()` ghi `st.graded = true`
+NGAY nhưng `st.correct = allCorrect` chỉ được ghi trong `setTimeout(n × 260 + 300 ms)` — sau khi từng ô lộ
+xanh/đỏ xong. Trong khoảng đó ván có thể bị kết thúc từ NGOÀI template: **menu ☰ → "Submit answers"**
+(bộ đếm `answered` đếm theo `graded` nên cho bấm) hoặc **đồng hồ đếm ngược chạm 0** (`core/engine.js` gọi
+thẳng `submitHandler`). `finish()` đọc state lúc ấy ⇒ từ cuối đúng bị đếm SAI ⇒ 29/30 nộp lên Firestore.
+Rồi timer muộn vẫn chạy `flyScoreGain(1)` → `pulseScoreTo(30)` ⇒ chip "✓ 30" lệch bảng — đúng bức ảnh.
+Cùng họ với `ui.flushPenalties()` Đợt 256 (con số "−N" đang bay): **hoạt ảnh mở ra cái cửa thì hoạt ảnh
+phải tự đóng lại.** Ba mặt của cùng một bệnh, đo được cả ba:
+1. từ cuối ĐÚNG mất điểm (29/30);
+2. từ cuối SAI có Points off thì KHÔNG bị trừ — điểm CAO hơn thật;
+3. chế độ bonus: chữ cuối chạm đúng thì `finalizeBonusWord()` chỉ chạy sau khi ô bay xong (~340 ms), rồi "+N"
+   bay thêm ~1–1,5 s — từ cuối mất trắng điểm (6 thay vì 12 trên bàn thử).
+
+**Unjumble** (anh em cùng khuôn) có y hệt 3 mặt: lộ ô `n × 240 + 300 ms`, chùm sao 1,1 s; bonus ✓ + BONUS
+bay ~1 s. Các template khác rà nhanh (quiz, true-false, crossword, group-sort, type-the-answer, maze…):
+`st.correct` ghi ĐỒNG BỘ ngay lúc trả lời — không cùng bệnh.
+
+**Vì sao HS gặp thật:** nộp từ cuối rồi bấm ngay ☰ Submit answers (thói quen "nộp bài"), hoặc act có Timer
+count down hết giờ đúng lúc nộp từ cuối. Cửa sổ chỉ 1,6–4 giây nhưng đó chính là lúc HS hay bấm nhất.
+
+**Cách vá (2 template, không đụng core):** biến `pendingSettle` — mỗi lượt nộp/giải ghi MỘT closure "chốt
+ngay" (ghi `st.correct`, `st.points`, cộng `penalty`); cú hạ cánh CUỐI của hoạt ảnh xoá nó (rào
+`pendingSettle === mine` để cú hạ cánh MUỘN của từ trước không xoá closure của từ kế); `finish()` sau
+`ui.flushPenalties()` gọi nó nếu còn rồi `ui.setScore(scoreNow())` cho chip khớp bảng; khối timer muộn thêm
+`if (finished) return` để không bay "+1"/"−N" lên màn kết quả. Anagram bonus: chốt sớm ngay khi chữ cuối
+được xác nhận đúng trong `bonusPick()` (không đợi ô bay); công thức điểm gom về `bonusEarned()` dùng chung
+với `finalizeBonusWord()`. **Fight mode giữ nguyên** (`!fightCtl`): ai được điểm là do trọng tài quyết
+(`landOrReject` có thể từ chối), không được tự chốt thay.
+
+**Bàn thử (trong `scratch/` — thư mục này bị `.gitignore`, nên CHỈ có ở máy đã build; máy khác muốn chạy lại thì chép 2 file từ máy này hoặc dựng lại theo mô tả):** `anagram311-test.html` **19/19**, `unjumble311-test.html` **15/15**
+— bấm y như HS (ô chữ / kéo-thả THẬT bằng pointer events → Submit → ☰ Submit answers sau 120 ms), có
+đối chứng "để ván tự kết thúc" ra cùng số. **Đối chứng ngược** trên mã CHƯA vá: Anagram **6 FAIL** (1/2 ·
+phạt không trừ · bonus 6 thay vì 12), Unjumble **4 FAIL** — phép đo bắt đúng bệnh. 0 lỗi console.
+⚠️ Bẫy nhỏ trong lúc đo: `pointsOff: 1` trong act bị `core/options-migrate.js` nhân 10 (thang cũ 0..10 →
+0..100) nên phạt là 10 chứ không phải 1 — bàn thử đã tính theo thang mới, không phải lỗi.
+
+**myLesson web:** KHÔNG có lỗi riêng — chỉ hiển thị `score/total` đọc từ Firestore (`js/chung.js` ~642).
+Điểm 29/30 của em T.NHI đã nằm trong kho `assignments/…/scores`; muốn sửa phải sửa tay trên Firestore.
+
+**File đổi (vào git):** `templates/anagram/anagram.js`, `templates/unjumble/unjumble.js` + 4 hồ sơ. Bàn thử scratch KHÔNG vào git.
+Cách chạy bàn thử: `python devserver.py 5511` rồi mở `/scratch/anagram311-test.html` và
+`/scratch/unjumble311-test.html`, đọc dòng TỔNG (tiêu đề tab cũng báo OK/FAIL).
+
+**Hồ sơ phòng ngừa (thầy yêu cầu "ghi để tránh lỗi tương tự"):** mục mới **"CỬA SỔ NỘP"** trong
+`core/HUONG DAN CORE.md` (5 luật + bàn thử bắt buộc, đặt ngay dưới ĐIỂM PHẠT PHẢI BAY) + bẫy số 6 ở
+`APP_MASTER.md` mục 8 + trí nhớ dài hạn.
+
+**VIỆC ĐANG CHỜ:** ✅ đã commit + push 08/9/2026 (kiểm mã băm live ghi ở dưới). Thầy chơi tay 1 act Anagram "On submit": nộp từ cuối rồi bấm ☰ Submit answers
+NGAY → bảng phải ghi đủ; thử thêm act có Timer count down.
 
 ---
 

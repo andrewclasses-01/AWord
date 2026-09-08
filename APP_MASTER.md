@@ -8,14 +8,26 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **08/9/2026 (Đợt 310 — nạp bảng tra THẬT cho Lesson 15 từ câu sai
-> của HS 3 khoá NTK6/7/8)**. Trước đó: **(Đợt 309 — bảng tra gộp về một nút +
+> Cập nhật lần cuối: **08/9/2026 (Đợt 311 — ANAGRAM + UNJUMBLE: HS làm đúng 30 câu mà máy ghi
+> 29 — "cửa sổ nộp"; ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE)**. Trước đó: **(Đợt 310 — nạp bảng tra THẬT cho
+> Lesson 15 từ câu sai của HS 3 khoá NTK6/7/8)**. Trước đó: **(Đợt 309 — bảng tra gộp về một nút +
 > pop-up 4 cột)**. Trước đó: **(Đợt 308 — gỡ hẳn gợi ý tự động, thay bằng
 > BẢNG TRA của thầy)**. Trước đó: **(Đợt 307 — thêm ô tích "Auto next question",
 > mặc định tắt)**. Trước đó: **(Đợt 306 — rà soát cả khoá NỀN TẢNG trên AWord đối chiếu
 > file gốc RECOVERY WORDWALL: 7 act lệch, đã sửa)**. Trước đó: **(Đợt 305 — Type the answer: tô 2 màu từng từ
 > khi sai + dòng gợi ý chạy offline)**.
 >
+>
+> **Đợt 311** (08/9/2026, thầy báo kèm ảnh) — ⭐⭐⭐ **ANAGRAM + UNJUMBLE: HS LÀM ĐÚNG 30 CÂU, MÁY GHI
+> 29 — "CỬA SỔ NỘP".** ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE (08/9/2026). Ở "On submit", `st.correct` của từ vừa nộp chỉ được
+> ghi SAU chuỗi lộ đáp án (`n×260+300 ms`); ☰ Submit answers hoặc đồng hồ đếm ngược chạm 0 gọi `finish()`
+> ngay trong khoảng đó ⇒ từ cuối đúng bị đếm sai (29/30), điểm phạt từ sai cuối không bị trừ, bonus từ cuối
+> mất trắng; timer muộn vẫn đẩy chip lên "✓ 30" ⇒ lệch bảng — đúng bức ảnh. Vá bằng `pendingSettle` (closure
+> "chốt ngay", cú hạ cánh cuối xoá, `finish()` gọi nếu còn), Fight giữ nguyên. Bàn thử
+> `scratch/anagram311-test.html` 19/19 + `scratch/unjumble311-test.html` 15/15, đối chứng ngược trên mã
+> chưa vá 6 + 4 FAIL. myLesson web không có lỗi riêng. Chi tiết: `GHI CHU DU AN.md` Đợt 311.
+>
+> ---
 >
 > **Đợt 310** (08/9/2026, thầy giao) — ⭐⭐⭐ **NẠP BẢNG TRA THẬT CHO LESSON 15 TỪ CÂU SAI CỦA HỌC
 > SINH 3 KHOÁ.** Thầy đưa 3 link kết quả Wordwall (NTK6/7/8). Bóc 6 trang, lọc rác (giữ dòng có từ
@@ -5203,9 +5215,24 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **08/9/2026 sau Đợt 310** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **08/9/2026 sau Đợt 311** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (08/9/2026 — sau **Đợt 310**, gộp cả chuỗi Đợt 307→310)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (08/9/2026 — sau **Đợt 311**: ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE)
+>
+> **Đợt 311 — ANAGRAM + UNJUMBLE "cửa sổ nộp"** (thầy báo kèm ảnh: em làm đúng 30 câu, máy ghi 29/30,
+> chip "✓ 30"). Thầy duyệt ngay trong ngày → đã commit + push. Hai file code:
+> `templates/anagram/anagram.js` + `templates/unjumble/unjumble.js`, kèm 2 bàn thử mới
+> `scratch/anagram311-test.html` (19/19) + `scratch/unjumble311-test.html` (15/15). Gốc rễ + cách vá:
+> `GHI CHU DU AN.md` Đợt 311. **Luật rút ra:** trạng thái ghi SAU hoạt ảnh là một cái cửa; mọi đường kết
+> thúc ván từ NGOÀI template (☰ Submit answers, đồng hồ chạm 0) đều lọt qua đó ⇒ template nào hoãn ghi
+> `st.correct`/`st.points` tới lúc hạ cánh thì `finish()` phải có đường "chốt ngay" (như `ui.flushPenalties`).
+> Luật đã ghi thành mục riêng **"CỬA SỔ NỘP"** trong `core/HUONG DAN CORE.md` (ngay dưới ĐIỂM PHẠT PHẢI BAY)
+> + bẫy số 6 ở mục 8 dưới đây — template mới hoãn ghi điểm thì làm theo 5 luật ở đó ngay từ đầu.
+> ⬜ Còn chờ: thầy chơi tay trên live (mục 4).
+>
+> ---
+>
+> ### 🟢 TRẠNG THÁI CŨ HƠN (08/9/2026 — sau **Đợt 310**, gộp cả chuỗi Đợt 307→310)
 >
 > **Bốn đợt liền một buổi, cùng một vùng — TYPE THE ANSWER: gợi ý khi trả lời sai.** Đọc theo
 > đúng thứ tự xảy ra, vì mỗi đợt sau LẬT LẠI một phần đợt trước:
@@ -6776,7 +6803,21 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 307→310, 08/9/2026) — KHÔNG CÒN VIỆC CODE DANG DỞ, chỉ còn việc DỮ LIỆU.**
+> ⭐⭐⭐⭐⭐ **MỚI NHẤT (Đợt 311, 08/9/2026) — ✅ ĐÃ COMMIT + PUSH, chỉ còn tay thầy.**
+> Vùng: **Anagram + Unjumble — "cửa sổ nộp"** (HS làm đúng 30 câu, máy ghi 29). Vá xong, 2 bàn thử xanh
+> (19/19 + 15/15) có đối chứng ngược. Bản đồ ở mục **0a ▸ TRẠNG THÁI NGAY LÚC NÀY**; luật phòng ngừa ở
+> `core/HUONG DAN CORE.md` mục **CỬA SỔ NỘP**.
+>
+> 1. ✅ Thầy duyệt → commit + push (08/9/2026). Máy 2/3 nhớ `git pull` trước khi sửa tiếp.
+> 2. ⬜ Thầy chơi tay 1 act Anagram "On submit" trên live: nộp từ CUỐI rồi bấm ☰ **Submit answers** NGAY
+>    (trong lúc ô còn đang lộ màu) → bảng GAME COMPLETE phải ghi đủ, chip ✓ khớp bảng. Thử thêm 1 act
+>    có Timer count down hết giờ đúng lúc nộp.
+> 3. ⬜ (tuỳ thầy) sửa tay điểm 29/30 → 30/30 của em T.NHI trong Firestore `assignments/<mã>/scores`
+>    (act `LSB1-S3.T2.P1 · VI2`) — code không tự sửa dữ liệu cũ.
+>
+> ---
+>
+> ⭐⭐⭐⭐ **Đợt 307→310 (08/9/2026) — KHÔNG CÒN VIỆC CODE DANG DỞ, chỉ còn việc DỮ LIỆU.**
 > Vùng: **Type the answer — gợi ý khi trả lời sai.** Bốn đợt liền một buổi: thêm ô tích "Auto next
 > question" (mặc định tắt, LẬT LẠI quyết định cũ) → gỡ hẳn bộ đoán-lỗi-tự-động (nói bậy có hệ thống) →
 > gộp bảng tra về 1 nút + pop-up 4 cột → nạp dữ liệu THẬT cho Lesson 15 từ câu sai của HS 3 khoá. Bản
@@ -7344,6 +7385,10 @@ hoạch A–D nữa — phiên tiếp theo hỏi thầy muốn làm gì mới.
 4. **CSS của template KHÔNG BAO GIỜ bị gỡ khỏi trang** → cấm selector trần nhắm class lõi.
 5. **Hoạt cảnh điểm của template TỚI MUỘN** (Anagram: 1.760ms) — mọi thứ tính điểm ở ngoài phải chờ,
    đừng đọc "điểm hiện tại" ngay lúc game báo xong.
+6. **"CỬA SỔ NỘP" (Đợt 311)** — template ghi `st.correct`/`st.points` lúc hoạt ảnh hạ cánh, còn ☰ Submit
+   answers / đồng hồ chạm 0 gọi `finish()` từ NGOÀI ngay trong khoảng đó ⇒ HS làm đúng 30 máy ghi 29, phạt
+   không trừ, bonus mất trắng. Mọi template hoãn ghi điểm phải có closure `pendingSettle` mà `finish()` gọi
+   trước khi đọc điểm (mục **CỬA SỔ NỘP** trong `core/HUONG DAN CORE.md`).
 
 ### 9. ⚠️ Hai thói quen cũ NAY ĐÃ SAI — đọc kỹ kẻo làm hỏng
 1. **Gộp template = sửa ĐÚNG 1 FILE `core/catalog.js`.** Từ v0.9.7 (Đợt 33) `index.html`, `play.html`,
