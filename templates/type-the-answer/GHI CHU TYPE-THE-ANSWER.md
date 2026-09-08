@@ -1,5 +1,88 @@
 # GHI CHÚ — TEMPLATE TYPE THE ANSWER
 
+## Đợt 308 (08/9/2026, thầy giao) — ⭐⭐⭐ **GỠ HẲN GỢI Ý TỰ ĐỘNG, THAY BẰNG BẢNG TRA CỦA THẦY (nút ⚙ trong Edit)**
+
+### Vì sao gỡ — thầy bắt tại trận
+
+Thầy chơi `BT1. XAC DINH CUM DONG TU KET HOP` (Lesson 15) và chụp 4 màn hình: bài này **đề là cả câu
+tiếng Việt nhưng đáp án chỉ là CỤM ĐỘNG TỪ** ("Chúng tôi cố gắng nấu ăn" → `try to cook`). Em viết cả
+câu `we are trying to cook`, máy đi bình luận **đuôi -ing của chữ "trying"** — tức là ngầm xác nhận
+phần còn lại đúng, trong khi cái sai thật là **viết sai phạm vi**.
+
+Chạy lại 4 ca đó trên chính hàm đang chạy:
+
+| Em gõ | Đáp án | Máy đếm | Máy nói |
+|---|---|---|---|
+| we are **trying** to cook | try to cook | thừa 2, sai dạng 1 | *"trying sai sai nha, xem lại đang dùng thì gì"* |
+| he **asks** to eat my pizza | ask to eat | thừa 3, sai dạng 1 | *"asks đang thừa cái gì đó ở cuối"* |
+| she **wants** to bring my bag | want to bring | thừa 3, sai dạng 1 | *"wants đang thừa cái gì đó ở cuối"* |
+
+**Gốc rễ**: luật cấp-từ (sai dạng · thêm/bớt s · chính tả · giới từ · bộ sáu) xét TRƯỚC và không hề
+kiểm xem cả câu có lệch khung không; còn luật "thừa/thiếu từ" thì chỉ chạy khi KHÔNG có chữ nào sai
+dạng — đúng lúc cần nhất thì nó im. ⚠️ Đo cả khoá: **19/52 bài là dạng "trích một phần"**
+(TÌM/XÁC ĐỊNH trạng từ · động từ · cụm động từ · tính từ sở hữu…), nên đây là lỗi hệ thống.
+
+### Thầy chốt hướng đi
+
+Thầy: *"Tôi muốn thêm một nút cài đặt đặc biệt trong edit của từng act type the answer, trong đây ta
+có thể chỉnh được với mỗi câu sai như thế nào thì câu hướng dẫn sẽ là gì … trường hợp nào lệch ra
+ngoài phạm vi thì chỉ việc báo sai, tô đỏ (không kèm hướng dẫn) vẫn sẽ chấp nhận được."*
+
+Em đã báo con số trước khi làm: trong 8 lỗi THẬT của khoá cũ thì 5 lỗi luật tự động nói đúng, nên bỏ
+hẳn là mất lưới đỡ khi bảng tra còn trống. Hỏi lại, thầy chốt **"Bỏ hẳn — chỉ bảng tra của tôi"**.
+⛔ **PHIÊN SAU ĐỪNG THÔNG MINH HOÁ LẠI.** Không có bảng tra thì im lặng, đúng ý thầy.
+
+### Đã làm
+
+**`type-the-answer.js`** — xoá `HINTS` (18 nhóm/50 câu của Đợt 305–306) và toàn bộ `hintFor` +
+`sayHint` + `stemOf`/`isSOf`/`isIngOf`/`isEdOf`/`charDistance` + các bảng từ (ARTICLES, BE_FORMS,
+AUX_FORMS, bộ sáu, FREQ_ADVERBS, PREPOSITIONS). **GIỮ NGUYÊN** phần tô 2 màu + vạch đỏ chỗ thiếu
+(`bestMatch`/`alignWords`) — thầy chỉ bỏ phần ĐOÁN, không bỏ phần tô màu.
+Thay bằng `goiYTheoBang(it, typed)`: dò `items[i].goiY` theo thứ tự, khớp trước thì dùng.
+
+**Hình dạng dữ liệu** (nằm ngay trong từng câu của act):
+```js
+items[i].goiY = [ { go: "want to play foolball", kieu: "yhet" | "chua", noi: "…" }, … ]
+```
+⚠️ So bằng **chính `normalize()` của phép chấm điểm** (bỏ hoa-thường, bỏ dấu, gom khoảng trắng) — một
+dòng bắt được cả `Want To Play Foolball` lẫn `want  to play foolball`, thầy khỏi gõ lại từng dấu cách.
+
+**`type-the-answer-editor.js`** — nút **⚙ Hướng dẫn khi sai** dưới mỗi câu; nút xanh lá + đếm số dòng
+nếu câu đó đã có bảng, nên nhìn là biết câu nào đã soạn. Mỗi dòng: `[gõ ĐÚNG Y HỆT / gõ có CHỨA]` +
+chuỗi + câu hướng dẫn + nút ×. Kèm nút **⤓ Lấy câu sai thật của học sinh**: đọc mọi bài đã giao của
+act (`listAssignmentsForAct` → `listResults`), gom những câu HS gõ SAI đúng ở câu này, xếp theo số lượt
+và nạp sẵn vào bảng để thầy chỉ việc viết lời hướng dẫn.
+
+⛔⛔ **BẪY SUÝT MẤT DỮ LIỆU**: `normalize()` của editor dựng lại từng câu từ số 0 (`{prompt,
+acceptedAnswers}`), nên trường mới **phải được chép tay sang đó** — quên là `goiY` bay sạch ngay lần
+Save đầu tiên, không báo gì cả. Đã chép + lọc rác lúc Save (bỏ dòng thiếu chuỗi hoặc thiếu lời).
+
+### Nguyên liệu có sẵn — đã đo kho Wordwall khoá cũ
+
+Thầy đưa link kết quả NTK6 Lesson 15. Bóc được thật (kỹ thuật lấy `tr.details-toggle` +
+`.js-detail-row-<hs>-<câu>` như skill `checkkhoanentang`), nhưng **mỏng**: BT1 **47 lượt làm → 8 câu
+sai**; BT2 **16 lượt → 1 câu sai**. Lý do: chính yêu cầu "đúng 100% mới nộp" khiến Wordwall chỉ giữ
+lượt gần như hoàn hảo. 8 câu sai đó vẫn đáng giá (foolball · finh · like to song · want carry
+backpack…) và ⭐ **không có ca nào là "viết cả câu"** — kiểu sai thầy gặp trên AWord là thói quen của
+lứa mới. AWord thì lưu MỌI lượt nên kho sẽ dày nhanh hơn Wordwall.
+
+### Đo thật — `scratch/dot308-bangtra.html` (dùng chính câu + chính lỗi thật của HS khoá NTK6)
+
+| Phép đo | Kết quả |
+|---|---|
+| 8 phép thử hàm dò bảng | **8/8 ĐẠT**: khớp y hệt · khớp bất kể HOA/thường và dấu cách thừa · khớp CHỨA · dòng trên thắng dòng dưới · ngoài bảng thì IM LẶNG · câu không có bảng thì im · gõ rỗng thì im |
+| Ván thật, gõ `want to play foolball` | hiện đúng câu của thầy + tô màu `want/to/play` xanh, `foolball` đỏ |
+| Ván thật, câu KHÔNG có bảng, gõ `hunny` | **không một chữ hướng dẫn**, chỉ viền đỏ + hiện đáp án đúng |
+| Editor | nút hiện "⚙ Hướng dẫn khi sai — 2 dòng / 1 dòng / (trống)"; thêm dòng → Save → dữ liệu lưu đủ 3 dòng đúng kiểu; câu không có bảng thì **không đẻ khoá `goiY` rỗng** |
+| Lỗi | `window.__errs` rỗng · `node --input-type=module --check` sạch cả 2 file |
+
+### VIỆC ĐANG CHỜ
+- ⬜ Thầy mở Edit một act Type the answer trên live, thử nút ⚙ và soạn vài dòng.
+- ⬜ Nút **⤓ Lấy câu sai thật** hiện chưa có gì để lấy: **chưa act Type the answer nào từng được giao
+  bài** (đã quét: 30 bài giao, 0 bài TTA). Giao vài buổi là có nguyên liệu.
+- ⬜ 8 câu sai thật của khoá NTK6 (Lesson 15 BT1) đang nằm trong ghi chú này — thầy muốn thì em nhập
+  thẳng vào bảng tra của act đó.
+
 ## Đợt 307 (08/9/2026, thầy giao) — **THÊM Ô TÍCH "AUTO NEXT QUESTION", MẶC ĐỊNH TẮT** (lật lại quyết định 3/8/2026)
 
 Thầy: *"options của type the answer cần có thêm tích «Auto next question» nữa. Mặc định là tắt."*

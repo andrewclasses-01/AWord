@@ -8,11 +8,24 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **08/9/2026 (Đợt 307 — Type the answer: thêm ô tích "Auto next question",
+> Cập nhật lần cuối: **08/9/2026 (Đợt 308 — Type the answer: gỡ hẳn gợi ý tự động, thay bằng
+> BẢNG TRA của thầy)**. Trước đó: **(Đợt 307 — thêm ô tích "Auto next question",
 > mặc định tắt)**. Trước đó: **(Đợt 306 — rà soát cả khoá NỀN TẢNG trên AWord đối chiếu
 > file gốc RECOVERY WORDWALL: 7 act lệch, đã sửa)**. Trước đó: **(Đợt 305 — Type the answer: tô 2 màu từng từ
 > khi sai + dòng gợi ý chạy offline)**.
 >
+>
+> **Đợt 308** (08/9/2026, thầy giao) — ⭐⭐⭐ **GỠ HẲN GỢI Ý TỰ ĐỘNG CỦA TYPE THE ANSWER, THAY BẰNG
+> BẢNG TRA CỦA THẦY.** Thầy bắt tại trận ở Lesson 15 BT1: bài "trích một phần" (đề cả câu, đáp án chỉ
+> là cụm động từ) mà máy đi bình luận đuôi -ing của một chữ. Đo cả khoá: **19/52 bài cùng dạng đó**.
+> Thầy chốt **"Bỏ hẳn — chỉ bảng tra của tôi"**; ⛔ phiên sau ĐỪNG thông minh hoá lại — không có bảng
+> tra thì IM LẶNG. Xoá `HINTS`+`hintFor` (GIỮ tô 2 màu + vạch đỏ), thay bằng `goiYTheoBang()` dò
+> `items[i].goiY = [{go, kieu:"yhet"|"chua", noi}]`; editor có nút **⚙ Hướng dẫn khi sai** + nút **⤓
+> Lấy câu sai thật của học sinh**. ⛔⛔ Bẫy: `normalize()` của editor dựng lại câu từ số 0 — trường mới
+> không chép sang là mất sạch lúc Save. Bàn thử `scratch/dot308-bangtra.html` 8/8 + ván thật + editor.
+> Chi tiết: `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md` Đợt 308.
+>
+> ---
 >
 > **Đợt 307** (08/9/2026, thầy giao) — **TYPE THE ANSWER: THÊM Ô TÍCH "AUTO NEXT QUESTION", MẶC ĐỊNH
 > TẮT.** ⚠️ Lật lại quyết định 3/8/2026 (Đợt 55) — đã báo hậu quả và thầy chốt *"tắt hết, ok build"*:

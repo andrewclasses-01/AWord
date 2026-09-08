@@ -214,6 +214,29 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 308 (08/9/2026, thầy giao) — ⭐⭐⭐ **GỠ HẲN GỢI Ý TỰ ĐỘNG CỦA TYPE THE ANSWER, THAY BẰNG BẢNG TRA CỦA THẦY**
+
+Thầy bắt tại trận ở `BT1. XAC DINH CUM DONG TU KET HOP` (Lesson 15): bài đó **đề là cả câu nhưng đáp
+án chỉ là cụm động từ**, em viết cả câu thì máy đi bình luận đuôi -ing của một chữ — nhặt cái vụn, bỏ
+qua cái sai to. Đo cả khoá: **19/52 bài là dạng "trích một phần"** nên đây là lỗi hệ thống.
+
+Thầy chốt (và giữ nguyên khi em báo rằng 5/8 lỗi thật của khoá cũ vốn được luật tự động nói đúng):
+**"Bỏ hẳn — chỉ bảng tra của tôi"**. ⛔ Phiên sau đừng thông minh hoá lại.
+
+**Đã làm**: xoá `HINTS` + `hintFor` + toàn bộ hàm phụ trợ khỏi `type-the-answer.js` (GIỮ phần tô 2 màu
++ vạch đỏ), thay bằng `goiYTheoBang()` dò `items[i].goiY`; thêm nút **⚙ Hướng dẫn khi sai** trong
+editor (mỗi dòng: *gõ Y HỆT / gõ có CHỨA* + chuỗi + lời hướng dẫn) kèm nút **⤓ Lấy câu sai thật của
+học sinh** đọc từ các bài đã giao. ⛔⛔ Bẫy suýt mất dữ liệu: `normalize()` của editor dựng lại câu từ
+số 0 nên trường mới phải chép tay sang, quên là mất sạch lúc Save.
+
+**Kho Wordwall khoá cũ** (thầy đưa link NTK6 Lesson 15): bóc được thật nhưng MỎNG — BT1 47 lượt/8 câu
+sai, BT2 16 lượt/1 câu sai, vì "đúng 100% mới nộp" nên chỉ đọng lại lượt gần hoàn hảo.
+
+Bàn thử `scratch/dot308-bangtra.html`: 8/8 phép thử hàm dò + ván thật + editor. Chi tiết:
+`templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md` Đợt 308.
+
+---
+
 ## Đợt 307 (08/9/2026, thầy giao) — **TYPE THE ANSWER: THÊM Ô TÍCH "AUTO NEXT QUESTION", MẶC ĐỊNH TẮT**
 
 Thầy: *"options của type the answer cần có thêm tích «Auto next question» nữa. Mặc định là tắt."*

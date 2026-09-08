@@ -246,7 +246,111 @@ export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel,
     blockEl.append(acol);
 
     card.append(blockEl);
+    card.append(bangHuongDan(it, qi));
     return card;
+  }
+
+  // ===== ⚙ BẢNG TRA HƯỚNG DẪN KHI SAI (Đợt 308, thầy chốt 08/9/2026) =====
+  // Thầy: *"trong đây ta có thể chỉnh được với mỗi câu sai như thế nào thì câu hướng dẫn
+  // sẽ là gì … trường hợp nào lệch ra ngoài phạm vi thì chỉ việc báo sai, tô đỏ."*
+  // Lúc chơi, `goiYTheoBang()` trong `type-the-answer.js` dò danh sách này theo THỨ TỰ,
+  // dòng nào khớp trước thì dùng — nên xếp dòng hẹp lên trên.
+  function bangHuongDan(it, qi) {
+    if (!Array.isArray(it.goiY)) it.goiY = [];
+    const boc = el("div", "aw-tta-ed-hwrap");
+    const nut = el("button", "aw-tta-ed-hbtn");
+    nut.type = "button";
+    const bang = el("div", "aw-tta-ed-hpanel");
+    bang.hidden = true;
+    const veNhan = () => {
+      const n = it.goiY.filter(r => (r.go || "").trim()).length;
+      nut.textContent = n ? `⚙ Hướng dẫn khi sai — ${n} dòng` : "⚙ Hướng dẫn khi sai";
+      nut.classList.toggle("co-dong", n > 0);
+    };
+    nut.onclick = () => { bang.hidden = !bang.hidden; if (!bang.hidden) veBang(); };
+
+    function veBang() {
+      bang.innerHTML = "";
+      bang.append(el("div", "aw-tta-ed-hnote",
+        "Em gõ đúng chuỗi bên trái thì hiện câu bên phải. Không dòng nào khớp thì chỉ tô đỏ, không hiện chữ nào."));
+      it.goiY.forEach((r, ri) => bang.append(dongHuongDan(r, ri)));
+      const them = el("button", "aw-ed-adda", "+ Thêm dòng");
+      them.type = "button";
+      them.onclick = () => { it.goiY.push({ go: "", kieu: "yhet", noi: "" }); veBang(); veNhan(); };
+      const lay = el("button", "aw-ed-adda aw-tta-ed-hlay", "⤓ Lấy câu sai thật của học sinh");
+      lay.type = "button";
+      lay.onclick = () => layCauSaiThat(it, lay, veBang, veNhan);
+      const hang = el("div", "aw-tta-ed-hfoot");
+      hang.append(them, lay);
+      bang.append(hang);
+    }
+
+    function dongHuongDan(r, ri) {
+      const d = el("div", "aw-tta-ed-hrow");
+      const kieu = el("select", "aw-ed-input aw-ed-select aw-tta-ed-hkieu");
+      [["yhet", "gõ ĐÚNG Y HỆT"], ["chua", "gõ có CHỨA"]].forEach(([v, t]) => {
+        const o = el("option", "", t); o.value = v; if ((r.kieu || "yhet") === v) o.selected = true; kieu.append(o);
+      });
+      kieu.onchange = () => { r.kieu = kieu.value; };
+      const go = el("input", "aw-ed-input aw-tta-ed-hgo");
+      go.value = r.go || "";
+      go.placeholder = "chữ học sinh gõ, ví dụ: want to play foolball";
+      go.oninput = () => { r.go = go.value; veNhan(); clearError(); };
+      const noi = el("input", "aw-ed-input aw-tta-ed-hnoi");
+      noi.value = r.noi || "";
+      noi.placeholder = "câu hướng dẫn hiện cho em";
+      noi.oninput = () => { r.noi = noi.value; clearError(); };
+      const xoa = el("button", "aw-ed-del aw-ed-del-a", "×");
+      xoa.type = "button"; xoa.title = "Xoá dòng này";
+      xoa.onclick = () => { it.goiY.splice(ri, 1); veBang(); veNhan(); };
+      d.append(kieu, go, noi, xoa);
+      return d;
+    }
+
+    veNhan();
+    boc.append(nut, bang);
+    return boc;
+  }
+
+  /**
+   * ⤓ Nạp những câu HỌC SINH ĐÃ GÕ SAI THẬT cho chính câu hỏi này, từ các bài đã giao
+   * của act. Thầy chỉ việc viết câu hướng dẫn, khỏi ngồi đoán em sẽ sai kiểu gì.
+   * ⚠️ Act chưa lưu (chưa có `id`) hoặc chưa giao bài lần nào thì báo rõ, đừng im lặng.
+   */
+  async function layCauSaiThat(it, nut, veBang, veNhan) {
+    const nhan = nut.textContent;
+    nut.disabled = true; nut.textContent = "đang đọc bài học sinh…";
+    try {
+      if (!activity || !activity.id) { showInfo("Act chưa lưu lần nào nên chưa có bài học sinh để đọc."); return; }
+      const asMod = await import("../../core/assignments.js");
+      const ds = await asMod.listAssignmentsForAct(activity.id, { includeTrashed: true });
+      if (!ds.length) { showInfo("Act này chưa giao bài lần nào, nên chưa có câu sai nào để lấy."); return; }
+      const dem = new Map();
+      for (const bg of ds) {
+        const rows = await asMod.listResults(bg.code);
+        for (const r of rows) {
+          for (const q of (r.review || [])) {
+            if (q.yourCorrect || !q.yourText) continue;
+            if (String(q.question || "").trim() !== String(it.prompt || "").trim()) continue;
+            const k = String(q.yourText).trim();
+            if (k) dem.set(k, (dem.get(k) || 0) + 1);
+          }
+        }
+      }
+      if (!dem.size) { showInfo("Chưa có em nào gõ sai ở câu này."); return; }
+      const daCo = new Set(it.goiY.map(r => String(r.go || "").trim().toLowerCase()));
+      const them = [...dem.entries()].sort((a, b) => b[1] - a[1])
+        .filter(([go]) => !daCo.has(go.toLowerCase()));
+      them.forEach(([go]) => it.goiY.push({ go, kieu: "yhet", noi: "" }));
+      veBang(); veNhan();
+      showInfo(them.length
+        ? `Đã nạp ${them.length} câu sai thật của học sinh — thầy viết câu hướng dẫn cho từng dòng.`
+        : "Mọi câu sai của học sinh đều đã có trong bảng rồi.");
+    } catch (e) {
+      showError("Không đọc được bài học sinh: " + (e.message || e));
+    } finally {
+      nut.disabled = false; nut.textContent = nhan;
+    }
   }
 
   function answerRow(it, ai, qi) {
@@ -282,6 +386,12 @@ export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel,
     clean.content.items.forEach(it => {
       it.prompt = it.prompt.trim();
       it.acceptedAnswers = it.acceptedAnswers.map(a => a.trim()).filter(a => a !== "");
+      // ⭐ Đợt 308 — dọn bảng tra: bỏ dòng chưa gõ gì, và bỏ dòng có chuỗi mà CHƯA CÓ
+      // CÂU HƯỚNG DẪN (giữ lại chỉ tổ làm thầy tưởng đã soạn xong).
+      it.goiY = (Array.isArray(it.goiY) ? it.goiY : [])
+        .map(r => ({ go: String(r.go || "").trim(), kieu: r.kieu === "chua" ? "chua" : "yhet", noi: String(r.noi || "").trim() }))
+        .filter(r => r.go && r.noi);
+      if (!it.goiY.length) delete it.goiY;
     });
     // Drop rows that were added but left completely empty.
     clean.content.items = clean.content.items.filter(it => !(it.prompt === "" && it.acceptedAnswers.length === 0));
@@ -356,7 +466,12 @@ function normalize(activity) {
   a.content.items = items.map(it => {
     let acceptedAnswers = Array.isArray(it.acceptedAnswers) && it.acceptedAnswers.length ? it.acceptedAnswers : [""];
     acceptedAnswers = acceptedAnswers.slice(0, 1 + MAX_ALTERNATES).map(x => x || "");
-    return { prompt: it.prompt || "", acceptedAnswers };
+    // ⛔ Đợt 308 — PHẢI CHÉP `goiY` SANG. Hàm này dựng lại từng câu từ số 0, nên trường
+    // nào quên ở đây là **mất trắng ngay lần thầy bấm Save đầu tiên**, không báo gì cả.
+    const goiY = (Array.isArray(it.goiY) ? it.goiY : [])
+      .map(r => ({ go: String(r && r.go || ""), kieu: r && r.kieu === "chua" ? "chua" : "yhet", noi: String(r && r.noi || "") }))
+      .filter(r => r.go || r.noi);
+    return { prompt: it.prompt || "", acceptedAnswers, goiY };
   });
   return a;
 }
