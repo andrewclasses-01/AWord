@@ -8,9 +8,25 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **08/9/2026 (Đợt 305 — Type the answer: tô 2 màu từng từ
+> Cập nhật lần cuối: **08/9/2026 (Đợt 306 — rà soát cả khoá NỀN TẢNG trên AWord đối chiếu
+> file gốc RECOVERY WORDWALL: 7 act lệch, đã sửa)**. Trước đó: **(Đợt 305 — Type the answer: tô 2 màu từng từ
 > khi sai + dòng gợi ý chạy offline)**.
 >
+>
+> **Đợt 306** (08/9/2026, thầy giao) — ⭐⭐⭐ **RÀ SOÁT CẢ KHOÁ NỀN TẢNG TRÊN AWORD ĐỐI CHIẾU FILE GỐC**
+> (sửa DỮ LIỆU, không sửa code). Đối chiếu 141 sheet `RECOVERY WORDWALL` ↔ 167 act `?f=120`: bản trên
+> AWord **đúng gần như trọn vẹn**, chỉ **7 act** lệch thật và đã sửa (TNBG16 mất tiền tố "Câu N." ở 55
+> câu · TNBG25 một đáp án sai thiếu chữ · 2 act có đáp án lặp · 2 bản act quá khứ đơn nhận 4 đáp án
+> ngoài nguồn · act THIS/THAT nhận "the motorbikes" sai hẳn). Cố ý GIỮ bản AWord ở act nguồn gõ sai
+> "chơi ĐÃ bóng".
+> ⛔⛔ **VÁ SAI MỘT LẦN RỒI KHÔI PHỤC**: file nguồn dùng **dòng bỏ trống ô câu hỏi = đáp án phụ của câu
+> trên**; đọc thiếu quy ước đó thì tưởng AWord tự chế thêm 746 đáp án, vá đè là **xoá sạch đáp án phụ
+> thật**. Đã khôi phục bằng ảnh chụp trước khi vá, **SHA-256 từng act 167/167 khớp**. Hai bẫy nhỏ hơn:
+> **hạ chữ HOA khi so sánh** làm một act bị báo oan "sai 14 câu", và **chữ Việt hai cách mã hoá NFC/NFD**.
+> Đường ghi dữ liệu (Chrome thật của thầy + `core/store.js`; lấy ra bằng form POST vì `fetch` sang
+> localhost bị chặn; đưa vào bằng file tạm trên chính kho rồi xoá) ghi đủ ở `GHI CHU DU AN.md` Đợt 306.
+>
+> ---
 >
 > **Đợt 305** (08/9/2026, thầy giao) — ⭐⭐⭐ **TYPE THE ANSWER: TÔ 2 MÀU TỪNG TỪ KHI SAI + DÒNG GỢI Ý
 > CHẠY OFFLINE** — ✅ **THẦY DUYỆT → COMMIT + PUSH.** Thầy chốt 2 màu (xanh đúng/đỏ sai) và gợi ý chạy
@@ -5137,9 +5153,23 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **08/9/2026 sau Đợt 304** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **08/9/2026 sau Đợt 306** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (08/9/2026 — sau **Đợt 305**)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (08/9/2026 — sau **Đợt 306**)
+>
+> | | |
+> |---|---|
+> | Việc | **Rà soát cả khoá NỀN TẢNG TIẾNG ANH trên AWord** (`?f=120`, 167 act / 7.110 câu) đối chiếu file gốc `D:\11. KHOA NEN TANG TIENG ANH\RECOVERY WORDWALL`. **Sửa DỮ LIỆU trên Firestore, KHÔNG sửa code** — kho git không đổi file nào. |
+> | Kết quả | Bản trên AWord **đúng gần như trọn vẹn**: chỉ **7 act** lệch thật, đã sửa. Kiểm lại: 0 act còn khác nguồn; đối chiếu với ảnh chụp đầu buổi thì **đúng 7 act đổi, 160 act không đụng**. |
+> | ⛔⛔ Bẫy lớn nhất | File nguồn dùng **dòng bỏ trống ô câu hỏi = ĐÁP ÁN PHỤ của câu trên**. Bản đọc đầu bỏ qua quy ước đó ⇒ tưởng AWord tự chế thêm **746 đáp án** ⇒ **đã vá đè 45 act và xoá sạch đáp án phụ THẬT**. Khôi phục bằng ảnh chụp trước khi vá, **SHA-256 nội dung từng act 167/167 khớp**. |
+> | ⚠️ Hai bẫy nhỏ | (1) **Hạ chữ HOA khi so sánh** — act `BT1. XAC DINH BEN TAC DONG` hỏi về CỤM VIẾT HOA nên hai câu chỉ khác chỗ viết hoa; hạ chữ hoa là nhập làm một và báo oan "sai 14 câu". (2) **Chữ Việt có NFC/NFD** — nhìn giống hệt mà máy báo khác. |
+> | Đường ghi dữ liệu | Chrome THẬT của thầy (đã đăng nhập) → `await import('/core/store.js')` → `saveActivity`. ⛔ Lấy dữ liệu ra: `fetch` HTTPS→`http://localhost` bị Chrome chặn, phải dùng **`<form method=POST enctype=text/plain>`**; máy chủ nhận phải `ThreadingHTTPServer`. ⛔ Đưa vào: đẩy file tạm lên **chính kho AWord** rồi trang `fetch` cùng nguồn gốc — **đã xoá file tạm** (`38bd5ef`). |
+> | ⬜ Chờ mắt thầy | Mở vài bài đã sửa, nhất là `TRAC NGHIEM BAI GIANG 16` (nay có tiền tố "Câu N." như các TNBG khác). |
+> | Chi tiết | `GHI CHU DU AN.md` Đợt 306. |
+>
+> ---
+>
+> ### 🟢 TRẠNG THÁI CŨ HƠN (08/9/2026 — sau **Đợt 305**)
 >
 > | | |
 > |---|---|

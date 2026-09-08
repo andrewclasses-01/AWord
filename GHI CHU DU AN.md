@@ -12,7 +12,12 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 305** (08/9/2026 — TYPE THE ANSWER tô **2 màu từng
+> Mới nhất: **Đợt 306** (08/9/2026 — RÀ SOÁT CẢ KHOÁ NỀN TẢNG trên AWord đối chiếu file gốc
+> `RECOVERY WORDWALL`: **167 act / 7.110 câu**. Kết quả: bản trên AWord **đúng gần như trọn vẹn** —
+> chỉ **7 act** lệch thật, đã sửa. ⛔⛔ Đợt này VÁ SAI MỘT LẦN rồi phải khôi phục: file nguồn dùng
+> **dòng bỏ trống ô câu hỏi = đáp án phụ của câu trên**, đọc thiếu quy ước đó thì tưởng AWord "thừa
+> 746 đáp án tự chế" trong khi đó là đáp án THẬT của thầy. Xem mục Đợt 306 ngay dưới.)
+> Trước đó: **Đợt 305** (08/9/2026 — TYPE THE ANSWER tô **2 màu từng
 > từ** khi trả lời sai (xanh đúng / đỏ sai) + **dòng gợi ý chạy offline**, không AI online. Bàn thử bắt
 > 3 thứ: bẫy TDZ cắn thật · thứ tự luật gợi ý sai · điện thoại HẾT CHỖ nên gợi ý phải tự bỏ khi không
 > vừa. Xem mục Đợt 305 ngay dưới.)
@@ -206,6 +211,69 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 306 (08/9/2026, thầy giao) — ⭐⭐⭐ **RÀ SOÁT CẢ KHOÁ NỀN TẢNG TRÊN AWORD ĐỐI CHIẾU FILE GỐC** (sửa dữ liệu, KHÔNG sửa code)
+
+Thầy: *"Đọc các thư mục lesson trong AWord `?f=120` … dữ liệu gốc ở `D:\11. KHOA NEN TANG TIENG ANH\
+RECOVERY WORDWALL`. Các bài trong AWord có nhiều bài bị sai, nặng nhất là các bài type the answer.
+Hãy đọc lại toàn bộ và sửa lại trên AWord. Tôi cho phép tự động, không hỏi lại."*
+
+### Kết quả: bản trên AWord ĐÚNG gần như trọn vẹn — chỉ 7 act lệch
+
+Đối chiếu **141 sheet nguồn ↔ 167 act** (ghép được 137 cặp theo tên): sau khi đọc nguồn ĐÚNG quy ước,
+chỉ còn **7 act** khác nguồn, đã sửa hết:
+
+| Act | Lệch gì |
+|---|---|
+| `TRAC NGHIEM BAI GIANG 16` (55 câu) | Bản trên AWord (nhập 03/9 từ file khảo sát) **mất tiền tố "Câu N."** ở cả 55 câu. Bỏ tiền tố ra thì **55/55 câu + đáp án trùng khít** — cùng một bài, chỉ khác cách đánh số. Nay theo nguồn cho đồng bộ với 30 bài TNBG khác. |
+| `TRAC NGHIEM BAI GIANG 25` | Một đáp án SAI ghi thiếu chữ: "Giới từ chỉ số lượng" → "Giới từ chỉ số lượng nhiều ít". |
+| `BT2. TAO CAU CO NHIEU DONG TU KET HOP` | Một câu có đáp án **lặp lại hai lần**. |
+| `BT3. TIM TRANG TU THOI GIAN TRONG CAU` | Một câu có đáp án **lặp lại hai lần** ("last night"). |
+| `BT2. TAO CAU QUA KHU DON ALL` (2 bản) | Một câu nhận **4 đáp án không có trong nguồn** ("very big", "so big"…). |
+| `BT3. PHAN BIET THIS THAT THESE THOSE` | Nhận **"the motorbikes"** cho câu "NHỮNG CHIẾC XE NÀY" — sai hẳn (phải là these…); và một biến thể "this t shirt". |
+
+**⭐ Cố ý KHÔNG sửa 1 chỗ:** `BT2. PHAN BIET LOAI CAU HOI XIN THONG TIN` — nguồn gõ *"chơi ĐÃ bóng"*,
+bản trên AWord đã đúng *"chơi ĐÁ bóng"* (đúng ca thầy đã chốt giữ từ 06/9).
+
+### ⛔⛔⛔ ĐÃ VÁ SAI MỘT LẦN — 45 ACT — RỒI KHÔI PHỤC. ĐỌC KỸ ĐỂ ĐỪNG LẶP LẠI
+
+**Quy ước của file nguồn**: trong sheet 2 cột `Question | Answer`, **dòng nào BỎ TRỐNG ô câu hỏi là
+ĐÁP ÁN PHỤ của câu ngay trên**. Ví dụ "Tôi mệt quá" chiếm 8 dòng: *I am tired · I am very tired · I am
+exhausted · …*. (Chính trình soạn của template cũng đọc kiểu này — `onQuestionPaste` trong
+`type-the-answer-editor.js`.)
+
+Bản đọc đầu tiên **bỏ qua các dòng trống đó** ⇒ mỗi câu chỉ còn 1 đáp án ⇒ máy kết luận AWord "tự chế
+thêm **746 đáp án**" và vá đè cho "khớp nguồn" — tức là **XOÁ SẠCH đáp án phụ THẬT của thầy** ở 44 act.
+Bản vá đã chạy xong 45/45 act trước khi phát hiện. **Khôi phục** bằng ảnh chụp Firestore lấy TRƯỚC khi
+vá, rồi **đối chiếu SHA-256 nội dung từng act: 167/167 giống hệt bản gốc, không mất gì.**
+
+⚠️ Hai bẫy nhỏ hơn cũng đã cắn trong đợt này:
+1. **Hạ chữ HOA khi so sánh** ⇒ bài `BT1. XAC DINH BEN TAC DONG` bị báo "sai 14 câu chấm ngược" — thật
+   ra ĐÚNG HẾT. Bài đó hỏi về **cụm VIẾT HOA trong câu**, nên hai câu chỉ khác nhau ở CHỖ NÀO ĐƯỢC VIẾT
+   HOA; hạ chữ hoa là nhập hai câu đó làm một. Nay phép so **giữ nguyên hoa/thường**.
+2. **Chữ Việt có hai cách mã hoá** (NFC gộp dấu / NFD tách dấu) — nhìn giống hệt nhau trên màn hình mà
+   máy báo khác. Phải `unicodedata.normalize("NFC")` trước khi so.
+
+### Đường ghi dữ liệu (đợt sau dùng lại)
+
+Thư viện AWord bắt đăng nhập Google nên phiên tự động không tự vào được. Cách đã chạy được:
+1. Dùng **Chrome thật của thầy** (đã đăng nhập sẵn) qua công cụ trình duyệt.
+2. Trong trang, `await import('/core/store.js')` rồi gọi thẳng `listFolders`/`listChildren`/
+   `getActivity`/`saveActivity` — **dùng đúng API của app**, không đụng thẳng Firestore.
+3. ⛔ **Lấy dữ liệu RA**: `fetch` từ trang HTTPS về `http://localhost` **bị Chrome chặn** (thử cả header
+   `Access-Control-Allow-Private-Network` vẫn treo), tải file xuống cũng không nổ. Cách đi được:
+   **gửi bằng `<form method=POST enctype="text/plain">` sang `http://localhost`** — điều hướng cả trang
+   không bị luật mixed-content chặn. Máy chủ nhận phải là `ThreadingHTTPServer`.
+4. ⛔ **Đưa dữ liệu VÀO**: đẩy file JSON lên **chính kho AWord** (`tools/…json`), chờ Pages lên live rồi
+   trang tự `fetch` **cùng nguồn gốc** — không vướng gì. Vá xong **xoá file đó khỏi kho** (đã xoá).
+
+### VIỆC ĐANG CHỜ (Đợt 306)
+- ⬜ Thầy mở vài bài đã sửa xem có đúng ý không — nhất là `TRAC NGHIEM BAI GIANG 16` (nay có "Câu N.").
+- ⬜ 4 sheet nguồn chưa ghép được act: `BT1. NGUYEN AM - PHU AM` (bài chỉ có tiếng, chưa nhập được từ
+  06/9) và 3 sheet tên khác act (`BT2 ANAGRAM - ING FORMS`, `ANIMALS - CUNG CO`, `ANIMALS - SUY LUAN`)
+  — act vẫn có trên AWord, chỉ khác tên nên máy không tự ghép.
 
 ---
 
