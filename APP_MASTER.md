@@ -5215,9 +5215,34 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **08/9/2026 sau Đợt 311** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **09/9/2026 sau Đợt 312** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (08/9/2026 — sau **Đợt 311**: ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (09/9/2026 — sau **Đợt 312**: ✅ THẦY CHỐT ĐẨY LIVE, ⬜ chưa bấm thử tay)
+>
+> **Đợt 312 — ENG1 TEXT chặn nhầm ENG1 VOICE** (bug của Đợt 299, thầy báo trong phiên myLesson).
+> Ba file: `core/assignment-ui.js` · `core/options-panel.js` · `core/app.css`.
+> Gốc rễ: khoá act con chỉ mang TÊN bộ nghĩa, đánh rơi phần TEXT/VOICE — mà `voiceVariants` mặc
+> định **dùng chung danh sách khoá với `variants`** nên ENG1 TEXT và ENG1 VOICE ra cùng khoá
+> `"eng1"`. Nay khoá là `text|eng1` / `voice|eng1`; **bỏ hẳn tầng cảnh báo mềm** (cùng bộ nghĩa +
+> template khác thì tạo thẳng, không phải bấm START hai lần); dấu ✓ chuyển sang `paintHalf()`.
+> Đối chứng bản cũ / bản mới trên cùng dữ liệu: **cũ sai 1/5** (đúng ca thầy báo), **mới đúng 5/5**.
+> Chi tiết: `GHI CHU DU AN.md` Đợt 312.
+>
+> **⛔ BA LUẬT RÚT RA — đọc trước khi động vào vùng chặn trùng / hàng nút bộ nghĩa:**
+> 1. **Act con = BỘ NGHĨA + CHẾ ĐỘ**, không phải chỉ bộ nghĩa. `voiceVariants` mặc định là chính
+>    `variants`, nên mọi phép so chỉ dùng tên bộ nghĩa đều gộp nhầm TEXT với VOICE.
+> 2. **Đừng sửa `activeVariant()`** (`core/content-view.js`) để giải quyết việc này — nó dùng ở rất
+>    nhiều nơi khác chỉ cần TÊN bộ nghĩa. Ghép thêm thông tin **ở nơi duy nhất cần**.
+> 3. **Hàng nút bộ nghĩa CỐ Ý không dựng lại khi lật TEXT↔VOICE** (Đợt 150 — để có hoạt cảnh gom
+>    vào dãn ra). Mọi thứ phải đổi theo nửa đang đứng thì **đặt trong `paintHalf()`**, đừng gắn
+>    cứng lúc dựng nút; gắn cứng là nó đứng ì một chỗ, sai mà không hỏng ra mặt.
+>
+> ⬜ Còn chờ: **thầy bấm thử tay 3 bước** (xem `GHI CHU DU AN.md` Đợt 312 mục VIỆC ĐANG CHỜ) và
+> ⚠️ **`Ctrl+Shift+R`** sau khi push — app không có cache-busting, xem mục `0-BIS`.
+>
+> ---
+>
+> ### 🟢 TRẠNG THÁI CŨ HƠN (08/9/2026 — sau **Đợt 311**: ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE)
 >
 > **Đợt 311 — ANAGRAM + UNJUMBLE "cửa sổ nộp"** (thầy báo kèm ảnh: em làm đúng 30 câu, máy ghi 29/30,
 > chip "✓ 30"). Thầy duyệt ngay trong ngày → đã commit + push. Hai file code:

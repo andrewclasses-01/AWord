@@ -7574,3 +7574,9 @@ body.aw-khung-mode .aw-giao-nen{display:none}
   color: #2fae5a; vertical-align: baseline;
 }
 .aw-seg-btn.is-on .aw-seg-tick { color: inherit; opacity: .85; }
+/* ⭐ Đợt 312 — dấu ✓ nay BẬT/TẮT theo nửa TEXT hay VOICE đang đứng (xem
+   `paintHalf` trong options-panel.js), nên phải ẩn được bằng thuộc tính `hidden`.
+   ⛔ Viết luật ẩn TƯỜNG MINH, đừng trông vào luật mặc định của trình duyệt: chỉ
+   cần một ngày ai đó thêm `display:` cho `.aw-seg-tick` là `hidden` hết ăn, dấu
+   ✓ hiện sai ở nửa kia — sai CÂM, không lỗi nào hiện ra. */
+.aw-seg-tick[hidden] { display: none; }

@@ -12,7 +12,13 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 311** (08/9/2026 — thầy báo kèm ảnh: HS làm đúng **30** câu Anagram mà máy ghi **29/30**
+> Mới nhất: **Đợt 312** (09/9/2026 — thầy báo: tạo **ENG1 TEXT + QUIZ** rồi thì app **không cho tạo
+> ENG1 VOICE** nữa. Gốc rễ bug của Đợt 299: khoá act con chỉ mang TÊN bộ nghĩa, đánh rơi phần
+> TEXT/VOICE — mà `voiceVariants` mặc định dùng chung danh sách khoá với `variants` nên hai thứ đó ra
+> cùng một khoá `"eng1"`. Nay khoá là `text|eng1` / `voice|eng1`; **bỏ hẳn tầng cảnh báo mềm**; dấu ✓
+> chuyển sang `paintHalf()` để đổi theo nửa đang đứng. Đối chứng cũ/mới: **cũ sai 1/5, mới đúng 5/5**.
+> ✅ Thầy chốt ĐẨY LIVE trước, bấm thử sau. Xem mục Đợt 312 ngay dưới.)
+> Trước đó: **Đợt 311** (08/9/2026 — thầy báo kèm ảnh: HS làm đúng **30** câu Anagram mà máy ghi **29/30**
 > (chip "✓ 30" lệch bảng). Gốc rễ: "CỬA SỔ NỘP" — kết quả từ cuối chỉ ghi vào state SAU hoạt ảnh, mà
 > ☰ Submit answers / đồng hồ chạm 0 kết thúc ván ngay trong lúc đó. Vá Anagram + Unjumble (cùng khuôn),
 > 2 bàn thử 19/19 + 15/15 có đối chứng ngược. ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE. Luật phòng ngừa
@@ -216,6 +222,86 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 312 (09/9/2026, thầy báo) — ⭐⭐⭐ **ENG1 TEXT CHẶN NHẦM ENG1 VOICE** (bug của Đợt 299) · BỎ HẲN TẦNG CẢNH BÁO MỀM · ✅ THẦY CHỐT ĐẨY LIVE
+
+Thầy báo (trong phiên myLesson): *"Khi set assignment, tôi từng có thiết lập là VD ENG1 TEXT tạo
+assignment với QUIZ rồi thì chính ENG1 TEXT không được tạo assignment với QUIZ nữa. Tuy nhiên trong
+app hiện tại bị khác ý tôi, tôi đã tạo ENG1 TEXT với QUIZ, sau đó app không cho tạo ENG1 VOICE luôn,
+không cho ENG1 với các template khác nữa luôn."*
+
+### Gốc rễ — khoá act con ĐÁNH RƠI phần TEXT/VOICE
+
+Luật chặn trùng do Đợt 299 dựng, nằm ở `core/assignment-ui.js`. Hai hàm sinh khoá:
+
+```js
+// BAN CU (Dot 299) — chi tra TEN BO NGHIA
+const boCuaBaiGiao = (a) => {
+  const o = (a && a.activity && a.activity.options) || {};
+  return o.contentMode === "voice" ? (o.voiceVariant || o.contentVariant || "")
+                                   : (o.contentVariant || "");
+};
+```
+
+Mà `voiceVariants` **mặc định dùng chung danh sách khoá với `variants`**
+(`buildContentSwitchRow` trong `core/options-panel.js`: `voiceVariants = contentSwitch.voiceVariants
+|| variants`) ⇒ **ENG1 TEXT và ENG1 VOICE cùng ra khoá `"eng1"`** ⇒ tạo ENG1 TEXT + QUIZ xong là
+ENG1 VOICE + QUIZ bị **chặn cứng**. Chúng là HAI ACT CON khác hẳn: một bên học sinh ĐỌC chữ, một
+bên NGHE tiếng.
+
+Còn *"không cho ENG1 với các template khác nữa luôn"* là **tầng cảnh báo mềm** của Đợt 299 — bấm
+START lần nữa là qua, nhưng lần đầu chỉ thấy một dòng đỏ và không có gì xảy ra nên rất dễ hiểu là
+bị chặn. Thầy chốt **bỏ hẳn tầng này**.
+
+### Đã sửa
+
+1. **Khoá mang cả chế độ**: `"text|eng1"` / `"voice|eng1"` — thêm `cheDoCua()`, sửa `boCuaBaiGiao()`
+   và tách `boDangChon()` thành `boDangChonThuan()` + `cheDoDangChon()` + `boDangChon()`.
+   ⛔ **KHÔNG đụng `activeVariant()`** (`core/content-view.js`): hàm đó dùng ở rất nhiều nơi khác chỉ
+   cần TÊN bộ nghĩa. Ghép chế độ vào **ở nơi duy nhất cần** — đúng luật "đừng đổi nghĩa một hàm
+   dùng chung".
+   ✔ Đã kiểm `contentMode` nằm trong `VIEW_SELECTOR_KEYS` (`core/content-view.js:309`) nên
+   `splitViewOptions(hwDraft).selectors` có nó. Nếu không thì `cheDoDangChon()` luôn trả `"text"`,
+   VOICE không bao giờ nhận ra được — và lỗi sẽ **CÂM**.
+2. **Bỏ hẳn tầng cảnh báo mềm**: gỡ biến `boDaCanhBao` + nhánh `cungBo`. Cùng bộ nghĩa mà template
+   khác thì tạo thẳng. Giữ **chặn cứng** đúng cặp (bộ nghĩa + template) — đó mới là ý thầy ban đầu.
+   Câu báo lỗi nay nói rõ chế độ: `“ENG1” (text) already has a Quiz assignment (…)`.
+3. **Dấu ✓ cạnh tên bộ nghĩa** chuyển sang tra theo khoá mới **trong `paintHalf()`**
+   (`core/options-panel.js`) — chỗ DUY NHẤT chạy lại khi thầy lật TEXT↔VOICE.
+   ⛔ Hàng nút bộ nghĩa **cố ý không dựng lại** khi lật nửa (Đợt 150, để có hoạt cảnh gom vào dãn
+   ra), nên gắn cứng ✓ lúc dựng là lật sang nửa kia dấu ✓ **đứng ì một chỗ** — sai mà không hỏng ra
+   mặt. Nay dựng chỗ chứa `hidden` sẵn, `paintHalf()` bật/tắt theo `mode`.
+4. `core/app.css`: thêm luật **tường minh** `.aw-seg-tick[hidden] { display: none; }` — đừng trông
+   vào luật mặc định của trình duyệt, chỉ cần một ngày ai đó thêm `display:` cho `.aw-seg-tick` là
+   `hidden` hết ăn và dấu ✓ hiện sai ở nửa kia.
+
+### Bàn thử
+
+Rút ĐÚNG đoạn logic khoá ra chạy thật, **bản CŨ và bản MỚI cạnh nhau trên cùng bộ dữ liệu**
+(đã có sẵn một bài giao ENG1 TEXT + QUIZ):
+
+| Định tạo | Bản CŨ | Bản MỚI | Mong đợi |
+|---|---|---|---|
+| ENG1 **TEXT** + QUIZ (trùng thật) | CHẶN | CHẶN | CHẶN |
+| ENG1 **VOICE** + QUIZ | ⛔ **CHẶN (sai)** | cho | cho |
+| ENG1 TEXT + ANAGRAM | cho | cho | cho |
+| ENG2 TEXT + QUIZ | cho | cho | cho |
+| ENG1 VOICE + ANAGRAM | cho | cho | cho |
+
+⇒ bản cũ sai **1/5**, đúng ca thầy báo; bản mới đúng **5/5** (mã thoát 0).
+Cú pháp: `node --check` sạch cả `assignment-ui.js` · `options-panel.js` · `content-view.js`.
+
+### ⬜ VIỆC ĐANG CHỜ
+
+- ⬜⬜ **THẦY CHƯA BẤM THỬ TAY.** Thầy chốt đẩy live trước, thử sau. Ba bước thử:
+  1. mở một act có bộ nghĩa, tạo **ENG1 TEXT + QUIZ** → phải tạo được;
+  2. tạo tiếp **ENG1 VOICE + QUIZ** → **phải CHO** (trước đây chặn);
+  3. tạo lại **ENG1 TEXT + QUIZ** → **phải CHẶN**, câu báo có chữ `(text)`.
+  Kèm: lật qua lại TEXT↔VOICE xem **dấu ✓** có đổi theo nửa đang đứng không.
+- ⚠️ **App KHÔNG có cache-busting** (mục `0-BIS`): sau push thầy phải **`Ctrl+Shift+R`**. Tab AWord
+  mở sẵn từ TRƯỚC lúc push thì bấm nút chỉ chạy JS đã nằm trong bộ nhớ — bao lâu cũng vẫn bản cũ.
 
 ---
 

@@ -1304,14 +1304,18 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
     union.forEach(k => {
       const b = el("button", "aw-seg-btn", labelOf(k));
       b.type = "button";
-      const dg = daGiao && daGiao.get(k);
-      if (dg && dg.length) {
-        b.classList.add("aw-seg-daGiao");
-        const tick = el("span", "aw-seg-tick", "✓");
-        tick.setAttribute("aria-hidden", "true");
-        b.append(tick);
-        b.title = "Đã giao bài với bộ này: " + dg.join(" · ");
-      }
+      // ⭐⭐ Đợt 312 (thầy báo 09/9/2026) — dấu ✓ tra theo khoá "<chế độ>|<bộ>".
+      // ⛔ Đợt 299 tra theo MỖI tên bộ nghĩa, nên ENG1 đeo ✓ ngay cả khi thầy mới
+      // chỉ giao ENG1 VOICE mà đang đứng ở nửa TEXT — nói sai tình hình. Hai thứ
+      // đó là hai act con khác nhau (xem `boCuaBaiGiao` bên assignment-ui.js).
+      // ⛔ Ở ĐÂY CHỈ DỰNG CHỖ CHỨA; chữ + class do `paintHalf()` đổ vào. Hàng nút
+      // này KHÔNG được dựng lại khi thầy lật TEXT↔VOICE (Đợt 150 cố ý giữ nguyên
+      // để có hiệu ứng gom vào dãn ra), nên gắn cứng ✓ tại đây là lật sang nửa
+      // kia dấu ✓ đứng ì một chỗ — sai mà không hỏng ra mặt, đúng kiểu câm.
+      const tick = el("span", "aw-seg-tick", "✓");
+      tick.setAttribute("aria-hidden", "true");
+      tick.hidden = true;
+      b.append(tick);
       b.onclick = () => {
         if (b.classList.contains("is-gone") || b.classList.contains("is-on")) return;
         if (mode === "voice") { pickedVoice = k; sel.voiceVariant = k; }
@@ -1365,6 +1369,16 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
     segBtns.forEach((b, k) => {
       b.classList.toggle("is-gone", !list.includes(k));
       b.classList.toggle("is-on", k === current);
+      // ⭐⭐ Đợt 312 — dấu ✓ đổi theo NỬA ĐANG ĐỨNG. `mode` ở đây luôn là nửa
+      // vừa chọn, nên lật TEXT↔VOICE là ✓ tự đúng lại ngay trong cùng khung hình.
+      const dg = daGiao && daGiao.get(mode + "|" + k);
+      const co = !!(dg && dg.length);
+      b.classList.toggle("aw-seg-daGiao", co);
+      const tick = b.querySelector(".aw-seg-tick");
+      if (tick) tick.hidden = !co;
+      b.title = co
+        ? "Đã giao bài với bộ này (" + mode + "): " + dg.join(" · ")
+        : "";
     });
   };
 

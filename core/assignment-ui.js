@@ -496,11 +496,24 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
     // ⛔ Không có trường phẳng nào tên `bo` trong document bài giao: bộ nghĩa
     // nằm trong `activity.options` (`contentVariant` khi mode text,
     // `voiceVariant` khi mode voice). Đọc đúng chỗ đó, đừng đoán từ tiêu đề.
+    // ⭐⭐ Đợt 312 (thầy báo 09/9/2026) — KHOÁ PHẢI MANG CẢ CHẾ ĐỘ TEXT/VOICE.
+    //
+    // ⛔ BUG ĐỢT 299 ĐÃ VÁ Ở ĐÂY. Thầy: "tôi đã tạo ENG1 TEXT với QUIZ, sau đó
+    // app không cho tạo ENG1 VOICE luôn". Gốc: hàm này (và `boDangChon` bên
+    // dưới) chỉ trả về TÊN BỘ NGHĨA, đánh rơi phần text/voice. Mà `voiceVariants`
+    // mặc định DÙNG CHUNG danh sách khoá với `variants` (xem `contentSwitch`
+    // trong options-panel.js) ⇒ ENG1 TEXT và ENG1 VOICE cùng ra khoá "eng1" ⇒
+    // chặn trùng bắn nhầm vào nhau. Chúng là HAI ACT CON KHÁC HẲN: một bên học
+    // sinh ĐỌC chữ, một bên NGHE tiếng.
+    // ⛔ Bài giao cũ (tạo trước Đợt 312) vẫn đọc đúng: khoá suy ra từ chính
+    // `contentMode` đã lưu trong document, không phải từ một trường mới nào.
+    const cheDoCua = (o) => ((o && o.contentMode) === "voice" ? "voice" : "text");
     const boCuaBaiGiao = (a) => {
       const o = (a && a.activity && a.activity.options) || {};
-      return o.contentMode === "voice"
+      const bo = cheDoCua(o) === "voice"
         ? (o.voiceVariant || o.contentVariant || "")
         : (o.contentVariant || "");
+      return bo ? cheDoCua(o) + "|" + bo : "";
     };
     // Khớp act bằng `activityId` — nó luôn là act GỐC kể cả khi bài giao được
     // tạo bằng cách đổi template (`sourceAct`), nên một act đổi sang QUIZ vẫn
@@ -521,10 +534,19 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
     };
     // Bộ nghĩa form ĐANG chọn — đọc y hệt cách `doStart` đọc (act GỐC đeo bộ
     // chọn của form), không thì hai nơi trả hai kết quả khác nhau.
-    const boDangChon = () => activeVariant({
+    // ⭐ Đợt 312 — đeo thêm chế độ, để so được với `boCuaBaiGiao` ở trên.
+    // ⛔ KHÔNG sửa `activeVariant()` (content-view.js): hàm đó dùng ở rất nhiều
+    // nơi khác chỉ cần TÊN bộ nghĩa; đổi nghĩa nó là đúng bẫy "đổi nghĩa một
+    // trường ⇒ chỗ khác chết câm". Ghép chế độ vào Ở ĐÂY, nơi duy nhất cần.
+    const boDangChonThuan = () => activeVariant({
       ...act,
       options: { ...(act.options || {}), ...splitViewOptions(hwDraft).selectors },
     });
+    const cheDoDangChon = () => cheDoCua(splitViewOptions(hwDraft).selectors);
+    const boDangChon = () => {
+      const bo = boDangChonThuan();
+      return bo ? cheDoDangChon() + "|" + bo : "";
+    };
 
     function renderOptions() {
       const seq = ++optsSeq;
@@ -635,35 +657,30 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
       err.append(mk);
     }
 
-    // ⭐ Đợt 299 — thầy đã đọc cảnh báo "bộ này giao rồi" và vẫn muốn tạo tiếp
-    // (bằng TEMPLATE KHÁC) thì bấm START lần nữa. Cờ đặt lại mỗi khi bộ nghĩa
-    // hoặc template đổi, vì lúc đó cảnh báo nói về một cặp khác hẳn.
-    let boDaCanhBao = "";
     async function doStart(folderId) {
       if (assignmentNameTaken(allAssignments, { folderId, title: titleInput.value })) {
         err.textContent = "An assignment with this name is already filed there. Please change the name.";
         return;
       }
-      // ⭐⭐ Đợt 299 (thầy chốt 07/9) — KHÔNG CHO TẠO TRÙNG: cùng act con (bộ
-      // nghĩa) + cùng template thì chặn hẳn, không có nút "vẫn tạo". Cùng bộ
-      // nghĩa nhưng template khác thì CHO, nhưng phải xin xác nhận một lượt.
+      // ⭐⭐ Đợt 299 (thầy chốt 07/9) — KHÔNG CHO TẠO TRÙNG: cùng act con + cùng
+      // template thì chặn hẳn, không có nút "vẫn tạo".
+      // ⭐⭐ Đợt 312 (thầy chốt 09/9) — ĐÃ BỎ HẲN TẦNG CẢNH BÁO MỀM. Trước đây
+      // giao lại CÙNG bộ nghĩa bằng TEMPLATE KHÁC thì phải bấm START hai lần.
+      // Thầy chốt: đó là việc thường, không cần chặn — dấu ✓ xanh cạnh tên bộ
+      // nghĩa đã đủ để liếc là biết bộ nào đã giao bằng template nào.
+      // ⛔ `boNay` nay là "text|eng1" / "voice|eng1" (xem `boDangChon`), nên
+      // ENG1 TEXT và ENG1 VOICE KHÔNG còn chặn nhầm nhau nữa.
       const boNay = boDangChon();
       if (boNay) {
-        const cungBo = baiGiaoCuaAct().filter(a => boCuaBaiGiao(a) === boNay);
-        const cungCa = cungBo.filter(a => (a.activityType || "") === playType);
+        const cungCa = baiGiaoCuaAct()
+          .filter(a => boCuaBaiGiao(a) === boNay && (a.activityType || "") === playType);
         if (cungCa.length) {
-          err.textContent = `“${escapeText(variantLabel(act.content, boNay) || boNay)}” `
+          const tenBo = variantLabel(act.content, boDangChonThuan()) || boDangChonThuan();
+          const cheDo = cheDoDangChon() === "voice" ? "voice" : "text";
+          err.textContent = `“${escapeText(tenBo)}” (${cheDo}) `
             + `already has a ${templateLabel(playType) || playType} assignment `
             + `(“${escapeText(cungCa[0].title || cungCa[0].code)}”). `
             + `Pick another clue set or another template — the same pair twice would split one leaderboard in two.`;
-          return;
-        }
-        const khoa = boNay + "|" + playType;
-        if (cungBo.length && boDaCanhBao !== khoa) {
-          boDaCanhBao = khoa;
-          err.textContent = `“${escapeText(variantLabel(act.content, boNay) || boNay)}” has already been `
-            + `handed out as ${cungBo.map(a => templateLabel(a.activityType) || a.activityType).join(" · ")}. `
-            + `Press START again to hand it out as ${templateLabel(playType) || playType} too.`;
           return;
         }
       }
