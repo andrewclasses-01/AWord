@@ -5215,9 +5215,29 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **09/9/2026 sau Đợt 312** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **09/9/2026 sau Đợt 312b** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (09/9/2026 — sau **Đợt 312**: ✅ THẦY CHỐT ĐẨY LIVE, ⬜ chưa bấm thử tay)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (09/9/2026 — sau **Đợt 312b**: ✅ ĐẨY LIVE)
+>
+> **Đợt 312b — chặn trùng không nổ vì HAI BÊN NẮN BỘ NGHĨA THEO HAI LUẬT.** Thầy tạo được HAI
+> bài giao ENG1 TEXT + ANAGRAM y hệt nhau (`h65rdw` + `c9ns8n`). Đo trên kho: cả hai lưu
+> `contentVariant: "pron"` — mà `pron` nằm trong `RETIRED_VARIANTS` nên `activeVariant()` nắn về
+> `eng1`. Phía bài giao đọc THÔ ra `text|pron`, phía form ra `text|eng1` ⇒ không khớp ⇒ không
+> chặn. Nay cả hai bên đi qua chung `khoaTu()`/`boThuanTu()`.
+> Bàn thử `scratch/thu-chantrung312b.mjs` (import THẬT từ `core/content-view.js`): cũ sai 3/7,
+> mới đúng 7/7. Chi tiết: `GHI CHU DU AN.md` Đợt 312b.
+>
+> **⛔ LUẬT QUAN TRỌNG NHẤT của hai đợt 312/312b:** khi đã có một hàm NẮN giá trị
+> (`activeVariant` nắn bộ nghĩa nghỉ hưu / không hợp lệ về bộ đầu tiên), thì **KHÔNG BÊN NÀO
+> ĐƯỢC ĐỌC THÔ**. Một bên nắn một bên không là hai bên nói hai thứ tiếng, và cái chặn im lặng
+> thôi hoạt động — **hỏng CÂM, không lỗi nào hiện ra**.
+>
+> ⬜ Còn chờ: thầy thử lại 2 ca (xem Đợt 312b) · ⚠️ `Ctrl+Shift+R` · ⬜⬜ **hai bài giao trùng
+> `h65rdw` + `c9ns8n` vẫn trong kho, bản vá không tự dọn — thầy xoá một cái bên Results.**
+>
+> ---
+>
+> ### 🟢 TRẠNG THÁI CŨ HƠN (09/9/2026 — sau **Đợt 312**: ✅ THẦY CHỐT ĐẨY LIVE, ⬜ chưa bấm thử tay)
 >
 > **Đợt 312 — ENG1 TEXT chặn nhầm ENG1 VOICE** (bug của Đợt 299, thầy báo trong phiên myLesson).
 > Ba file: `core/assignment-ui.js` · `core/options-panel.js` · `core/app.css`.

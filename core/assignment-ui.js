@@ -507,14 +507,36 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
     // sinh ĐỌC chữ, một bên NGHE tiếng.
     // ⛔ Bài giao cũ (tạo trước Đợt 312) vẫn đọc đúng: khoá suy ra từ chính
     // `contentMode` đã lưu trong document, không phải từ một trường mới nào.
+    // ⭐⭐⭐ Đợt 312b (thầy báo 09/9/2026, ngay sau khi đẩy 312) — HAI BÊN PHẢI ĐI
+    // QUA ĐÚNG MỘT HÀM, KHÔNG BÊN NÀO ĐƯỢC ĐỌC THÔ.
+    //
+    // ⛔⛔ BUG THẬT, ĐO ĐƯỢC TRÊN KHO: thầy tạo được HAI bài giao ENG1 TEXT +
+    // ANAGRAM y hệt nhau mà không bị chặn gì (`h65rdw` và `c9ns8n`, cùng
+    // `activityId` act_msyn4py6_5). Đọc kho ra mới thấy cả hai lưu
+    // `contentVariant: "pron"` — trong khi thẻ myLesson ghi **ENG1**.
+    //
+    // Vì sao lệch: `pron` nằm trong `RETIRED_VARIANTS` (`core/content-view.js`),
+    // nên `activeVariant()` **âm thầm nắn** nó về bộ đầu tiên còn dùng (`eng1`) —
+    // và chú thích ở đó ghi rõ *"That fallback is the point, not a side effect"*.
+    // Bản Đợt 299/312 lại đọc **THÔ** `o.contentVariant` ⇒ bên bài giao ra
+    // `text|pron`, bên form ra `text|eng1` ⇒ **khoá không bao giờ gặp nhau ⇒
+    // không chặn**. Áp cho MỌI dạng bài, không riêng ANAGRAM.
+    //
+    // 👉 Nay `boCuaBaiGiao()` dựng lại act GỐC đeo bộ chọn ĐÃ LƯU của bài giao rồi
+    // hỏi CHÍNH `activeVariant()` — đúng y cách `boDangChonThuan()` hỏi. Một hàm,
+    // một luật. ⛔ ĐỪNG bao giờ để một bên đọc thô: mọi phép nắn/nghỉ hưu/đổi tên
+    // bộ nghĩa về sau sẽ lại đẻ ra đúng cảnh lệch này, mà nó **hỏng CÂM**.
     const cheDoCua = (o) => ((o && o.contentMode) === "voice" ? "voice" : "text");
-    const boCuaBaiGiao = (a) => {
-      const o = (a && a.activity && a.activity.options) || {};
-      const bo = cheDoCua(o) === "voice"
-        ? (o.voiceVariant || o.contentVariant || "")
-        : (o.contentVariant || "");
-      return bo ? cheDoCua(o) + "|" + bo : "";
+    // Bộ nghĩa ĐANG CÓ HIỆU LỰC của một bộ chọn bất kỳ, đọc trên act GỐC.
+    const boThuanTu = (chon) => activeVariant({
+      ...act,
+      options: { ...(act.options || {}), ...splitViewOptions(chon || {}).selectors },
+    });
+    const khoaTu = (chon) => {
+      const bo = boThuanTu(chon);
+      return bo ? cheDoCua(chon) + "|" + bo : "";
     };
+    const boCuaBaiGiao = (a) => khoaTu((a && a.activity && a.activity.options) || {});
     // Khớp act bằng `activityId` — nó luôn là act GỐC kể cả khi bài giao được
     // tạo bằng cách đổi template (`sourceAct`), nên một act đổi sang QUIZ vẫn
     // đếm về đúng act con của nó.
@@ -532,16 +554,14 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
       });
       return m;
     };
-    // Bộ nghĩa form ĐANG chọn — đọc y hệt cách `doStart` đọc (act GỐC đeo bộ
-    // chọn của form), không thì hai nơi trả hai kết quả khác nhau.
-    // ⭐ Đợt 312 — đeo thêm chế độ, để so được với `boCuaBaiGiao` ở trên.
+    // Bộ nghĩa form ĐANG chọn — ĐI QUA ĐÚNG `khoaTu()` như bên bài giao đã lưu.
+    // ⭐ Đợt 312 — khoá đeo thêm chế độ text/voice.
+    // ⭐ Đợt 312b — và cả hai bên nay dùng CHUNG `khoaTu()`/`boThuanTu()`, nên
+    // không còn cách nào để hai bên nắn khác nhau nữa (xem chú thích dài ở trên).
     // ⛔ KHÔNG sửa `activeVariant()` (content-view.js): hàm đó dùng ở rất nhiều
     // nơi khác chỉ cần TÊN bộ nghĩa; đổi nghĩa nó là đúng bẫy "đổi nghĩa một
     // trường ⇒ chỗ khác chết câm". Ghép chế độ vào Ở ĐÂY, nơi duy nhất cần.
-    const boDangChonThuan = () => activeVariant({
-      ...act,
-      options: { ...(act.options || {}), ...splitViewOptions(hwDraft).selectors },
-    });
+    const boDangChonThuan = () => boThuanTu(hwDraft);
     const cheDoDangChon = () => cheDoCua(splitViewOptions(hwDraft).selectors);
     const boDangChon = () => {
       const bo = boDangChonThuan();

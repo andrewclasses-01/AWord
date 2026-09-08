@@ -12,7 +12,12 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 312** (09/9/2026 — thầy báo: tạo **ENG1 TEXT + QUIZ** rồi thì app **không cho tạo
+> Mới nhất: **Đợt 312b** (09/9/2026 — thầy báo NGAY sau khi đẩy 312: tạo được **HAI** bài giao
+> ENG1 TEXT + ANAGRAM y hệt nhau mà không bị chặn gì. Gốc: phía bài giao đã lưu **đọc THÔ**
+> `contentVariant` (ra `text|pron` — `pron` đã nghỉ hưu), phía form đi qua `activeVariant()` (ra
+> `text|eng1`) ⇒ hai khoá không bao giờ gặp nhau. Nay **cả hai bên dùng chung `khoaTu()`**. Bàn thử
+> `scratch/thu-chantrung312b.mjs`: cũ sai 3/7, mới đúng 7/7. Xem mục Đợt 312b ngay dưới.)
+> Trước đó: **Đợt 312** (09/9/2026 — thầy báo: tạo **ENG1 TEXT + QUIZ** rồi thì app **không cho tạo
 > ENG1 VOICE** nữa. Gốc rễ bug của Đợt 299: khoá act con chỉ mang TÊN bộ nghĩa, đánh rơi phần
 > TEXT/VOICE — mà `voiceVariants` mặc định dùng chung danh sách khoá với `variants` nên hai thứ đó ra
 > cùng một khoá `"eng1"`. Nay khoá là `text|eng1` / `voice|eng1`; **bỏ hẳn tầng cảnh báo mềm**; dấu ✓
@@ -222,6 +227,85 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 312b (09/9/2026, thầy báo NGAY SAU khi đẩy 312) — ⛔⛔ **CHẶN TRÙNG KHÔNG NỔ: HAI BÊN NẮN BỘ NGHĨA THEO HAI LUẬT** · ✅ ĐẨY LIVE
+
+Thầy báo kèm ảnh: *"Tôi tạo 2 assignment text eng 1 - anagram đều được mà vẫn tạo được, ko hiện
+gì cả. Cần check ngay với mọi dạng bài (mọi dạng đều tương tự)."*
+
+### Gốc rễ — đo được trên kho, không đoán
+
+Đọc kho `assignments` ra hai bài giao thầy vừa tạo (`h65rdw` + `c9ns8n`, cùng
+`activityId: act_msyn4py6_5`, cùng `activityType: anagram`). Cả hai lưu:
+
+```
+contentMode: "text"  ·  contentVariant: "pron"  ·  voiceVariant: "eng1"
+```
+
+⇒ `contentVariant` là **`"pron"`**, trong khi thẻ myLesson ghi **ENG1**. Vì sao lệch:
+`pron` nằm trong **`RETIRED_VARIANTS`** (`core/content-view.js:188`), nên `variantsOf()` loại nó
+ra và `activeVariant()` **âm thầm nắn** về bộ đầu tiên còn dùng (`eng1`). Chú thích ngay tại đó
+đã ghi rõ: *"An act saved with `contentVariant: "pron"` therefore falls back to its first written
+set… That fallback is the point, not a side effect."*
+
+Nhưng bản Đợt 299/312 lại **đọc THÔ** `o.contentVariant` ở phía bài giao đã lưu, còn phía form thì
+đi qua `activeVariant()`:
+
+| | khoá sinh ra |
+|---|---|
+| từ bài giao đã lưu (đọc thô) | `text|pron` |
+| từ form (qua `activeVariant`) | `text|eng1` |
+
+⇒ **hai khoá không bao giờ gặp nhau ⇒ không chặn gì cả.** Đúng như thầy nói, việc này áp cho
+**MỌI dạng bài**, không riêng ANAGRAM — hễ bộ chọn đã lưu mang một giá trị mà `activeVariant()`
+phải nắn (nghỉ hưu, đổi tên, hoặc rỗng) là chặn trùng chết câm.
+
+### Đã sửa — MỘT HÀM, MỘT LUẬT
+
+Trong `core/assignment-ui.js`, cả hai phía nay đi qua đúng `khoaTu()` / `boThuanTu()`:
+
+```js
+const boThuanTu = (chon) => activeVariant({
+  ...act,
+  options: { ...(act.options || {}), ...splitViewOptions(chon || {}).selectors },
+});
+const khoaTu = (chon) => { const bo = boThuanTu(chon); return bo ? cheDoCua(chon) + "|" + bo : ""; };
+const boCuaBaiGiao = (a) => khoaTu((a && a.activity && a.activity.options) || {});
+const boDangChonThuan = () => boThuanTu(hwDraft);
+```
+
+⛔ **LUẬT RÚT RA:** đã có một hàm nắn (`activeVariant`) thì **KHÔNG BÊN NÀO được đọc thô**. Mọi
+phép nghỉ hưu / đổi tên / thêm bộ nghĩa về sau sẽ lại đẻ ra đúng cảnh lệch này, và nó **hỏng CÂM**
+— không lỗi nào hiện, chỉ là cái chặn im lặng thôi hoạt động.
+
+### Bàn thử
+
+`scratch/thu-chantrung312b.mjs` — **import THẬT** `activeVariant`/`splitViewOptions`/`variantsOf`
+từ `core/content-view.js` (không viết lại logic), chạy bản CŨ và bản MỚI cạnh nhau trên đúng
+dữ liệu bài giao thật:
+
+| Định tạo | bản CŨ | bản MỚI | mong đợi |
+|---|---|---|---|
+| ENG1 TEXT + ANAGRAM lần hai (nháp cũ mang `pron`) | ⛔ cho | CHẶN | CHẶN |
+| ENG1 TEXT + ANAGRAM lần hai (nháp sạch) | ⛔ cho | CHẶN | CHẶN |
+| ENG1 TEXT + ANAGRAM (gõ thẳng `eng1`) | ⛔ cho | CHẶN | CHẶN |
+| ENG1 VOICE + ANAGRAM | cho | cho | cho |
+| ENG1 TEXT + QUIZ | cho | cho | cho |
+| ENG2 TEXT + ANAGRAM | cho | cho | cho |
+| VI1 TEXT + ANAGRAM | cho | cho | cho |
+
+⇒ bản cũ sai **3/7**, bản mới đúng **7/7** (mã thoát 0). Bàn thử tự kiểm cả giả định nền
+(`"pron"` phải bị `variantsOf` loại) — giả định sai là nó dừng ngay chứ không báo xanh oan.
+
+### ⬜ VIỆC ĐANG CHỜ
+
+- ⬜ Thầy thử lại: tạo ENG1 TEXT + ANAGRAM lần hai trên **cùng act** → phải bị chặn, câu báo có
+  chữ `(text)`. Rồi thử ENG1 **VOICE** + ANAGRAM → phải CHO.
+- ⚠️ **`Ctrl+Shift+R`** (mục `0-BIS`) — app không có cache-busting.
+- ⬜⬜ **Hai bài giao trùng `h65rdw` + `c9ns8n` vẫn còn trong kho** — bản vá chỉ chặn từ nay,
+  không tự dọn cái đã tạo. Thầy xoá một trong hai bên Results (bảng điểm đang bị chia đôi).
 
 ---
 
