@@ -448,30 +448,47 @@
 .aw-fight-board.is-concealed .aw-tta-w-gap { border-bottom-color: transparent; }
 
 /* =============================================================
-   ⚙ BẢNG TRA HƯỚNG DẪN KHI SAI (Đợt 308) — nằm trong màn Edit của từng act.
-   Thầy tự viết "em gõ ~ thì nói ~"; không dòng nào khớp thì lúc chơi chỉ tô đỏ,
-   không hiện chữ nào. Editor nằm NGOÀI khung container-query nên dùng px/rem.
+   ⚙ BẢNG TRA HƯỚNG DẪN KHI SAI — MỘT BẢNG CHO CẢ ACT (Đợt 309)
+   Thầy chốt gộp về một nút + pop-up lớn 4 cột. Editor nằm NGOÀI khung
+   container-query nên dùng px/rem. Nền pop-up mượn `.aw-modal*` của core.
    ============================================================= */
-.aw-tta-ed-hwrap { margin-top: 12px; border-top: 1px dashed #e2e9f2; padding-top: 10px; }
 .aw-tta-ed-hbtn {
-  border: 1.5px dashed #b9cbe4; background: #fff; color: #2f7bff;
-  font-family: inherit; font-size: .88rem; font-weight: 700;
-  padding: .4rem .85rem; border-radius: 10px; cursor: pointer;
+  border: 1.5px dashed #b9cbe4 !important; background: #fff !important; color: #2f7bff !important;
+  font-weight: 700;
 }
-.aw-tta-ed-hbtn:hover { background: #eaf1ff; }
-/* Câu nào ĐÃ có bảng tra thì nhìn là thấy ngay, khỏi phải mở từng câu ra dò. */
-.aw-tta-ed-hbtn.co-dong { border-style: solid; border-color: #17a34a; color: #147a37; background: #f2fbf5; }
+.aw-tta-ed-hbtn:hover { background: #eaf1ff !important; }
+/* Act nào ĐÃ có bảng thì nhìn thanh trên là biết ngay, khỏi mở ra dò. */
+.aw-tta-ed-hbtn.co-dong {
+  border-style: solid !important; border-color: #17a34a !important;
+  color: #147a37 !important; background: #f2fbf5 !important;
+}
 
-.aw-tta-ed-hpanel { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
-.aw-tta-ed-hnote { font-size: .8rem; color: #8a97a8; }
-.aw-tta-ed-hrow { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.aw-tta-ed-hkieu { flex: 0 0 150px; }
-.aw-tta-ed-hgo   { flex: 1 1 40%; min-width: 0; }
-.aw-tta-ed-hnoi  { flex: 1 1 60%; min-width: 0; }
-.aw-tta-ed-hfoot { display: flex; gap: 8px; flex-wrap: wrap; }
+/* Pop-up rộng hơn hộp thoại thường: có tới 4 cột chữ. */
+.aw-modal.aw-tta-ed-hmodal { width: min(1080px, 100%); max-height: 86vh; }
+.aw-tta-ed-hnote { font-size: .85rem; color: #8a97a8; line-height: 1.5; }
+.aw-tta-ed-hempty {
+  font-size: .9rem; color: #8a97a8; text-align: center;
+  padding: 14px; border: 1.5px dashed #e2e9f2; border-radius: 12px;
+}
+.aw-tta-ed-htable { display: flex; flex-direction: column; gap: 8px; }
+/* 4 cột + ô nút xoá. `minmax(0,…)` để ô dài không đội cả hàng ra ngoài. */
+.aw-tta-ed-hrow {
+  display: grid;
+  grid-template-columns: minmax(0,1.5fr) minmax(0,1fr) minmax(0,2fr) minmax(0,2.6fr) 34px;
+  gap: 8px; align-items: start;
+}
+.aw-tta-ed-hrow.is-head {
+  font-size: .78rem; font-weight: 800; color: #8a97a8; text-transform: uppercase;
+  letter-spacing: .4px; padding: 0 2px;
+}
+.aw-tta-ed-hcell { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.aw-tta-ed-hcell > input, .aw-tta-ed-hcell > select { width: 100%; }
+/* Đèn cảnh báo: dòng này khớp trúng cả ĐÁP ÁN ĐÚNG của câu nào đó. */
+.aw-tta-ed-hwarn { font-size: .74rem; font-weight: 700; color: #b45309; line-height: 1.35; }
+.aw-tta-ed-hfoot { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .aw-tta-ed-hfoot .aw-ed-adda { margin-top: 0; }
-.aw-tta-ed-hlay { border-style: solid; }
-@media (max-width: 760px) {
-  .aw-tta-ed-hrow { flex-wrap: wrap; }
-  .aw-tta-ed-hkieu { flex: 1 1 100%; }
+.aw-tta-ed-hfoot .aw-btn-primary { margin-left: auto; }
+@media (max-width: 860px) {
+  .aw-tta-ed-hrow { grid-template-columns: minmax(0,1fr) 34px; }
+  .aw-tta-ed-hrow.is-head { display: none; }
 }

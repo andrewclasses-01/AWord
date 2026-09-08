@@ -8,12 +8,25 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **08/9/2026 (Đợt 308 — Type the answer: gỡ hẳn gợi ý tự động, thay bằng
+> Cập nhật lần cuối: **08/9/2026 (Đợt 309 — Type the answer: bảng tra gộp về một nút +
+> pop-up 4 cột)**. Trước đó: **(Đợt 308 — gỡ hẳn gợi ý tự động, thay bằng
 > BẢNG TRA của thầy)**. Trước đó: **(Đợt 307 — thêm ô tích "Auto next question",
 > mặc định tắt)**. Trước đó: **(Đợt 306 — rà soát cả khoá NỀN TẢNG trên AWord đối chiếu
 > file gốc RECOVERY WORDWALL: 7 act lệch, đã sửa)**. Trước đó: **(Đợt 305 — Type the answer: tô 2 màu từng từ
 > khi sai + dòng gợi ý chạy offline)**.
 >
+>
+> **Đợt 309** (08/9/2026, thầy giao) — ⭐⭐ **BẢNG TRA GỘP VỀ MỘT NÚT + POP-UP 4 CỘT CHO CẢ ACT.**
+> Thay cho "mỗi câu một nút" của Đợt 308. Cột thứ tư **Áp dụng cho** (mặc định "Mọi câu") là bắt buộc:
+> dòng chung có thể khớp nhầm câu — câu 1 đáp án *want* to play, câu 11 *need* to use. Kèm **đèn cảnh
+> báo** khi một dòng khớp trúng ĐÁP ÁN ĐÚNG của câu nào đó. Dòng khoá câu **neo bằng ĐỀ BÀI**, không
+> phải số thứ tự. Act kiểu Đợt 308 tự di trú lúc mở Edit. ⛔⛔ Hai thứ đã cắn: **bẫy TDZ lần hai** và
+> **thay khối theo mốc đầu–cuối nuốt mất hàm `answerRow()`** ⇒ luật mới: so danh sách hàm với bản trong
+> kho sau mỗi lần thay khối lớn. ⚠️ Ảnh chụp pop-up "trong suốt" là pane không vẽ lớp phủ `fixed` —
+> đo `opacity`/`elementFromPoint` mới đúng. Bàn thử 8/8. Chi tiết:
+> `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md` Đợt 309.
+>
+> ---
 >
 > **Đợt 308** (08/9/2026, thầy giao) — ⭐⭐⭐ **GỠ HẲN GỢI Ý TỰ ĐỘNG CỦA TYPE THE ANSWER, THAY BẰNG
 > BẢNG TRA CỦA THẦY.** Thầy bắt tại trận ở Lesson 15 BT1: bài "trích một phần" (đề cả câu, đáp án chỉ

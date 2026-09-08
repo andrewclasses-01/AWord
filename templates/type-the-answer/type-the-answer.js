@@ -160,13 +160,23 @@ function bestMatch(typed, acceptedAnswers) {
  * trắng) — để thầy khỏi phải gõ lại y hệt từng dấu cách, và để một dòng bắt được cả
  * "Want To Play Foolball" lẫn "want  to play foolball".
  */
-function goiYTheoBang(it, typed) {
-  const ds = Array.isArray(it && it.goiY) ? it.goiY : [];
-  if (!ds.length) return "";
+function goiYTheoBang(activity, it, typed) {
   const t = normalize(typed);
   if (!t) return "";
+  // ⭐ Đợt 309 — MỘT BẢNG CHO CẢ ACT (thầy 08/9): lỗi của học sinh phần lớn lặp lại qua
+  // nhiều câu (foolball · lisiten · thiếu "to"…), soạn lẻ từng câu là gõ lại 30 lần.
+  // ⚠️ Vẫn đọc `it.goiY` TRƯỚC — đó là bảng lẻ theo từng câu của Đợt 308; act nào lỡ lưu
+  // theo kiểu cũ vẫn chạy đúng, không phải di trú kho.
+  const ds = (Array.isArray(it && it.goiY) ? it.goiY : [])
+    .concat(Array.isArray(activity && activity.content && activity.content.goiY) ? activity.content.goiY : []);
+  if (!ds.length) return "";
+  const deNay = normalize(it && it.prompt);
   for (const r of ds) {
-    const k = normalize(r && r.go);
+    if (!r) continue;
+    // Dòng khoá vào MỘT câu: `de` giữ nguyên văn ĐỀ của câu đó. Neo bằng đề chứ không
+    // bằng số thứ tự — thầy xoá/chèn/đảo câu thì số thứ tự lệch hết, đề thì không.
+    if (r.de && normalize(r.de) !== deNay) continue;
+    const k = normalize(r.go);
     if (!k) continue;
     const trung = (r.kieu === "chua") ? t.includes(k) : t === k;
     if (trung) return String(r.noi || "").trim();
@@ -916,7 +926,7 @@ const ttaTemplate = {
         lastDiffShown = true;
         fitDiffHeight();
       }
-      return goiYTheoBang(it, typed);   // ⭐ Đợt 308 — chỉ bảng tra của thầy, hết đoán
+      return goiYTheoBang(activity, it, typed);   // ⭐ Đợt 308/309 — chỉ bảng tra của thầy, hết đoán
     }
     function clearDiff() {
       diffEl.innerHTML = "";

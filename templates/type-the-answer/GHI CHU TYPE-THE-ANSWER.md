@@ -1,5 +1,79 @@
 # GHI CHÚ — TEMPLATE TYPE THE ANSWER
 
+## Đợt 309 (08/9/2026, thầy giao) — ⭐⭐ **BẢNG TRA GỘP VỀ MỘT NÚT + POP-UP 4 CỘT CHO CẢ ACT**
+
+Thầy: *"Hiện tôi đang thấy mỗi câu có 1 nút Hướng dẫn khi sai riêng. Liệu có thể gom hết vào 1 nút duy
+nhất, bấm vào đó thì mở 1 pop-up lớn có 3 cột … Khi học sinh làm thì sẽ tự động scan khớp câu … có
+được không và có nên không?"*
+
+**Trả lời: nên.** Lỗi của học sinh phần lớn **lặp lại qua nhiều câu** — nhìn 8 lỗi thật của khoá NTK6
+thì `foolball`, `finh`, `lisiten` gặp ở câu nào cũng được. Soạn lẻ từng câu là gõ lại một nội dung 30
+lần.
+
+### ⚠️ NHƯNG PHẢI CÓ CỘT THỨ TƯ — ĐỪNG BỎ
+
+Một dòng dùng chung có thể **khớp nhầm câu**. Ca thật ngay trong Lesson 15: câu 1 đáp án là **want** to
+play, câu 11 là **need** to use — dòng chung *"chứa `want` → đề hỏi CẦN"* đúng cho câu 11 nhưng **bậy
+cho câu 1**. Nên bảng có **4 cột**: `Áp dụng cho` · `Kiểu khớp` · `Chữ học sinh gõ` · `Câu hướng dẫn`.
+Mặc định `Áp dụng cho` = **Mọi câu** (đúng ý thầy), khoá vào một câu chỉ khi cần.
+
+⭐ Một thứ che bớt rủi ro sẵn có: **hướng dẫn chỉ chạy khi câu ĐÃ bị chấm sai**, nên dòng "chứa want"
+không bao giờ nhảy ra lúc em viết đúng `want to play`.
+
+⭐⭐ **ĐÈN CẢNH BÁO** — thứ chặn đúng rủi ro còn lại: nếu một dòng khớp trúng **ĐÁP ÁN ĐÚNG** của câu
+nào đó, ô đó hiện ngay *"⚠ khớp cả ĐÁP ÁN ĐÚNG của câu 1"*. Thầy sửa tại chỗ, không phải đợi học sinh
+phát hiện.
+
+### Đã làm
+
+- **`type-the-answer.js`**: `goiYTheoBang(activity, it, typed)` — đọc `activity.content.goiY` (bảng của
+  cả act). ⚠️ **Vẫn đọc `it.goiY` TRƯỚC** (bảng lẻ của Đợt 308) nên act nào lỡ lưu kiểu cũ vẫn chạy
+  đúng, không phải di trú kho.
+- Dòng khoá câu **neo bằng ĐỀ BÀI** (`de`), không phải số thứ tự — thầy xoá/chèn/đảo câu thì số thứ tự
+  lệch hết, đề thì không. Đề bị sửa thì ô chọn giữ nguyên và hiện *"⚠ câu đã đổi đề"*, không âm thầm
+  tụt về "Mọi câu".
+- **`type-the-answer-editor.js`**: bỏ nút lẻ từng câu, thay bằng **một nút ở thanh trên cùng** (đếm số
+  dòng, xanh lá khi đã soạn) mở **pop-up 4 cột** (dùng nền `.aw-modal*` sẵn có của core). Nút **⤓ Lấy
+  câu sai thật của học sinh** nay **khoá sẵn dòng vào đúng câu em sai** — máy biết em sai ở câu nào.
+- **Di trú tự động**: mở act kiểu Đợt 308 thì bảng lẻ được gom vào bảng chung kèm khoá câu, và khoá
+  `goiY` trong từng câu bị xoá lúc Save. Đo thật: 1 dòng lẻ → 1 dòng chung có `de` đúng, `items` sạch.
+
+### ⛔⛔ HAI THỨ ĐÃ CẮN TRONG ĐỢT NÀY
+
+1. **BẪY TDZ, LẦN THỨ HAI** (lần đầu ở Đợt 305). `let nutBangTra` khai ở giữa file, mà
+   `buildBulkBar()` chạy ĐỒNG BỘ lúc dựng trang lại gán vào nó ⇒ `ReferenceError: Cannot access
+   'nutBangTra' before initialization`, ném ra từ giữa lúc dựng nên **nửa sau của màn soạn im lặng
+   không hiện ra**. ⇒ Luật: biến mà hàm-chạy-lúc-dựng có đụng tới thì khai NGAY ĐẦU, trên mọi lời gọi.
+2. **THAY MỘT KHỐI THEO MỐC ĐẦU–CUỐI ĐÃ NUỐT MẤT MỘT HÀM**. Đợt 308 chèn khối ⚙ vào giữa
+   `questionCard()` và `answerRow()`; đợt này thay "từ khối ⚙ tới mục save" nên **xoá luôn
+   `answerRow()`** — màn soạn chết ngay khi dựng câu đầu tiên (`answerRow is not defined`).
+   ⇒ **Phép kiểm rẻ mà chắc, nên làm mỗi lần thay khối lớn**:
+   `for f in $(git show HEAD:<file> | grep -o "^  function [a-zA-Z]*"); do grep -q ... || echo MAT; done`
+   — so danh sách hàm của bản mới với bản trong kho, hàm nào biến mất mà không cố ý thì hiện ra ngay.
+
+### ⚠️ Và một lần nữa: ẢNH CHỤP BÀN THỬ NÓI DỐI
+
+Ảnh chụp pop-up trông **trong suốt**, chữ trang phía sau xuyên qua. Đo thật thì: overlay
+`position:fixed; inset:0; z-index:300`, nền modal `rgb(255,255,255)`, `opacity:1`, và
+`document.elementFromPoint()` ở giữa modal trả về **phần tử BÊN TRONG modal**. Tức là pop-up đục và
+nằm trên thật — pane của phiên tự động không vẽ lớp phủ `position:fixed`, đúng cái bẫy đã ghi.
+⛔ Đừng "sửa" CSS theo ảnh chụp.
+
+### Đo thật — `scratch/dot308-bangtra.html` (đã cập nhật cho bảng gộp)
+
+| Phép đo | Kết quả |
+|---|---|
+| 8 phép thử hàm dò | **8/8 ĐẠT**: dòng "Mọi câu" ăn ở câu 1 **và** ở câu khác · bỏ hoa-thường + dấu cách thừa · khớp Y HỆT · **dòng khoá câu chỉ ăn đúng câu đó và KHÔNG ăn ở câu khác** · ngoài bảng thì im · gõ rỗng thì im |
+| Nút + pop-up | nhãn "⚙ Hướng dẫn khi sai — 3 dòng"; **0 nút lẻ còn sót** trong các thẻ câu; pop-up hiện đúng 3 dòng, cột Áp dụng cho đọc ra "Mọi câu" / "Câu 3 — Tôi cần dùng cái…" |
+| Đèn cảnh báo | thêm dòng *chứa `want to play`* → hiện ngay **"⚠ khớp cả ĐÁP ÁN ĐÚNG của câu 1"** |
+| Đóng + Save | nhãn nút cập nhật thành "4 dòng"; dữ liệu lưu đủ 4 dòng đúng `de`/`kieu`/`go`/`noi`; **không câu nào còn khoá `goiY` lẻ** |
+| Di trú act kiểu cũ | 1 dòng lẻ → gom vào bảng chung, `de` = đề của chính câu đó |
+| Lỗi | `window.__errs` rỗng ở lượt cuối · `node --input-type=module --check` sạch cả 2 file |
+
+### VIỆC ĐANG CHỜ
+- ⬜ Thầy mở Edit một act Type the answer trên live, bấm nút ⚙ và soạn thử vài dòng.
+- ⬜ Nút **⤓ Lấy câu sai thật** vẫn chưa có nguyên liệu: chưa act Type the answer nào từng được giao bài.
+
 ## Đợt 308 (08/9/2026, thầy giao) — ⭐⭐⭐ **GỠ HẲN GỢI Ý TỰ ĐỘNG, THAY BẰNG BẢNG TRA CỦA THẦY (nút ⚙ trong Edit)**
 
 ### Vì sao gỡ — thầy bắt tại trận

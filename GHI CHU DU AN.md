@@ -214,6 +214,30 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 309 (08/9/2026, thầy giao) — ⭐⭐ **BẢNG TRA GỘP VỀ MỘT NÚT + POP-UP 4 CỘT CHO CẢ ACT**
+
+Thầy hỏi có nên gom bảng tra của từng câu về một nút + pop-up lớn không. **Nên** — lỗi học sinh phần
+lớn lặp lại qua nhiều câu (`foolball`, `lisiten`…), soạn lẻ là gõ lại 30 lần. ⚠️ Nhưng phải thêm **cột
+thứ tư "Áp dụng cho"**: dòng chung có thể khớp nhầm câu (câu 1 đáp án *want* to play, câu 11 *need* to
+use — dòng "chứa want" đúng cho câu 11, bậy cho câu 1). Mặc định "Mọi câu", khoá câu khi cần, và có
+**đèn cảnh báo** khi một dòng khớp trúng ĐÁP ÁN ĐÚNG của câu nào đó.
+
+**Đã làm**: `goiYTheoBang(activity, it, typed)` đọc `activity.content.goiY` (vẫn đọc `it.goiY` kiểu Đợt
+308 trước, khỏi di trú kho); dòng khoá câu neo bằng ĐỀ BÀI chứ không phải số thứ tự; editor bỏ nút lẻ,
+còn một nút ở thanh trên + pop-up 4 cột; nút ⤓ lấy câu sai thật nay khoá sẵn dòng vào đúng câu.
+
+⛔⛔ **Hai thứ đã cắn**: (1) **bẫy TDZ lần hai** — `let nutBangTra` khai sau chỗ `buildBulkBar()` gán
+vào nó, ném ReferenceError giữa lúc dựng nên nửa màn soạn im lặng biến mất; (2) **thay khối theo mốc
+đầu–cuối đã nuốt mất hàm `answerRow()`** ⇒ luật mới: sau mỗi lần thay khối lớn, **so danh sách hàm của
+bản mới với bản trong kho** (`git show HEAD:<file> | grep "^  function"`) xem có hàm nào biến mất.
+⚠️ Và một lần nữa **ảnh chụp bàn thử nói dối**: pop-up trông trong suốt, đo ra `opacity:1`, nền trắng,
+`elementFromPoint` trúng phần tử trong modal — pane không vẽ lớp phủ `position:fixed`.
+
+Bàn thử `scratch/dot308-bangtra.html`: 8/8 phép thử + nút/pop-up + đèn cảnh báo + Save + di trú.
+Chi tiết: `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md` Đợt 309.
+
+---
+
 ## Đợt 308 (08/9/2026, thầy giao) — ⭐⭐⭐ **GỠ HẲN GỢI Ý TỰ ĐỘNG CỦA TYPE THE ANSWER, THAY BẰNG BẢNG TRA CỦA THẦY**
 
 Thầy bắt tại trận ở `BT1. XAC DINH CUM DONG TU KET HOP` (Lesson 15): bài đó **đề là cả câu nhưng đáp

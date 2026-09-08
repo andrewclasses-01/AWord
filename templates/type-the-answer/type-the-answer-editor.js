@@ -61,6 +61,12 @@ function noEnter(ta) {
 export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel, header, footer } = {}) {
   const isNew = !(activity && activity.id);
   const data = normalize(activity);
+  // ⛔⛔ BẪY TDZ — ĐÃ CẮN THẬT 08/9/2026 (cùng loại với Đợt 305). Biến này PHẢI khai ở
+  // đây, TRÊN mọi lời gọi hàm: `buildBulkBar()` chạy ĐỒNG BỘ ngay lúc dựng trang và nó
+  // gán vào `nutBangTra`. Khai `let` xuống dưới thì ném `ReferenceError: Cannot access
+  // 'nutBangTra' before initialization` — mà ném từ giữa lúc dựng nên **nửa sau của
+  // trang soạn im lặng không hiện ra**, không báo gì cả.
+  let nutBangTra = null;   // nút ⚙ ở thanh trên cùng; nhãn đếm số dòng đã soạn
 
   container.innerHTML = "";
   const page = el("div", "aw-ed");
@@ -128,6 +134,13 @@ export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel,
   // Cao lại TẤT CẢ ô của bảng soạn. Rẻ (mỗi ô 2 phép gán style) nên cứ gọi thoải mái.
   function growAll() {
     page.querySelectorAll(".aw-tta-ed-qtext, .aw-tta-ed-atext").forEach(autoGrow);
+  }
+
+  function veNhanNut() {
+    if (!nutBangTra) return;
+    const n = (data.content.goiY || []).filter(r => String(r.go || "").trim()).length;
+    nutBangTra.textContent = n ? `⚙ Hướng dẫn khi sai — ${n} dòng` : "⚙ Hướng dẫn khi sai";
+    nutBangTra.classList.toggle("co-dong", n > 0);
   }
 
   // ---------- questions rendering ----------
@@ -246,111 +259,7 @@ export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel,
     blockEl.append(acol);
 
     card.append(blockEl);
-    card.append(bangHuongDan(it, qi));
     return card;
-  }
-
-  // ===== ⚙ BẢNG TRA HƯỚNG DẪN KHI SAI (Đợt 308, thầy chốt 08/9/2026) =====
-  // Thầy: *"trong đây ta có thể chỉnh được với mỗi câu sai như thế nào thì câu hướng dẫn
-  // sẽ là gì … trường hợp nào lệch ra ngoài phạm vi thì chỉ việc báo sai, tô đỏ."*
-  // Lúc chơi, `goiYTheoBang()` trong `type-the-answer.js` dò danh sách này theo THỨ TỰ,
-  // dòng nào khớp trước thì dùng — nên xếp dòng hẹp lên trên.
-  function bangHuongDan(it, qi) {
-    if (!Array.isArray(it.goiY)) it.goiY = [];
-    const boc = el("div", "aw-tta-ed-hwrap");
-    const nut = el("button", "aw-tta-ed-hbtn");
-    nut.type = "button";
-    const bang = el("div", "aw-tta-ed-hpanel");
-    bang.hidden = true;
-    const veNhan = () => {
-      const n = it.goiY.filter(r => (r.go || "").trim()).length;
-      nut.textContent = n ? `⚙ Hướng dẫn khi sai — ${n} dòng` : "⚙ Hướng dẫn khi sai";
-      nut.classList.toggle("co-dong", n > 0);
-    };
-    nut.onclick = () => { bang.hidden = !bang.hidden; if (!bang.hidden) veBang(); };
-
-    function veBang() {
-      bang.innerHTML = "";
-      bang.append(el("div", "aw-tta-ed-hnote",
-        "Em gõ đúng chuỗi bên trái thì hiện câu bên phải. Không dòng nào khớp thì chỉ tô đỏ, không hiện chữ nào."));
-      it.goiY.forEach((r, ri) => bang.append(dongHuongDan(r, ri)));
-      const them = el("button", "aw-ed-adda", "+ Thêm dòng");
-      them.type = "button";
-      them.onclick = () => { it.goiY.push({ go: "", kieu: "yhet", noi: "" }); veBang(); veNhan(); };
-      const lay = el("button", "aw-ed-adda aw-tta-ed-hlay", "⤓ Lấy câu sai thật của học sinh");
-      lay.type = "button";
-      lay.onclick = () => layCauSaiThat(it, lay, veBang, veNhan);
-      const hang = el("div", "aw-tta-ed-hfoot");
-      hang.append(them, lay);
-      bang.append(hang);
-    }
-
-    function dongHuongDan(r, ri) {
-      const d = el("div", "aw-tta-ed-hrow");
-      const kieu = el("select", "aw-ed-input aw-ed-select aw-tta-ed-hkieu");
-      [["yhet", "gõ ĐÚNG Y HỆT"], ["chua", "gõ có CHỨA"]].forEach(([v, t]) => {
-        const o = el("option", "", t); o.value = v; if ((r.kieu || "yhet") === v) o.selected = true; kieu.append(o);
-      });
-      kieu.onchange = () => { r.kieu = kieu.value; };
-      const go = el("input", "aw-ed-input aw-tta-ed-hgo");
-      go.value = r.go || "";
-      go.placeholder = "chữ học sinh gõ, ví dụ: want to play foolball";
-      go.oninput = () => { r.go = go.value; veNhan(); clearError(); };
-      const noi = el("input", "aw-ed-input aw-tta-ed-hnoi");
-      noi.value = r.noi || "";
-      noi.placeholder = "câu hướng dẫn hiện cho em";
-      noi.oninput = () => { r.noi = noi.value; clearError(); };
-      const xoa = el("button", "aw-ed-del aw-ed-del-a", "×");
-      xoa.type = "button"; xoa.title = "Xoá dòng này";
-      xoa.onclick = () => { it.goiY.splice(ri, 1); veBang(); veNhan(); };
-      d.append(kieu, go, noi, xoa);
-      return d;
-    }
-
-    veNhan();
-    boc.append(nut, bang);
-    return boc;
-  }
-
-  /**
-   * ⤓ Nạp những câu HỌC SINH ĐÃ GÕ SAI THẬT cho chính câu hỏi này, từ các bài đã giao
-   * của act. Thầy chỉ việc viết câu hướng dẫn, khỏi ngồi đoán em sẽ sai kiểu gì.
-   * ⚠️ Act chưa lưu (chưa có `id`) hoặc chưa giao bài lần nào thì báo rõ, đừng im lặng.
-   */
-  async function layCauSaiThat(it, nut, veBang, veNhan) {
-    const nhan = nut.textContent;
-    nut.disabled = true; nut.textContent = "đang đọc bài học sinh…";
-    try {
-      if (!activity || !activity.id) { showInfo("Act chưa lưu lần nào nên chưa có bài học sinh để đọc."); return; }
-      const asMod = await import("../../core/assignments.js");
-      const ds = await asMod.listAssignmentsForAct(activity.id, { includeTrashed: true });
-      if (!ds.length) { showInfo("Act này chưa giao bài lần nào, nên chưa có câu sai nào để lấy."); return; }
-      const dem = new Map();
-      for (const bg of ds) {
-        const rows = await asMod.listResults(bg.code);
-        for (const r of rows) {
-          for (const q of (r.review || [])) {
-            if (q.yourCorrect || !q.yourText) continue;
-            if (String(q.question || "").trim() !== String(it.prompt || "").trim()) continue;
-            const k = String(q.yourText).trim();
-            if (k) dem.set(k, (dem.get(k) || 0) + 1);
-          }
-        }
-      }
-      if (!dem.size) { showInfo("Chưa có em nào gõ sai ở câu này."); return; }
-      const daCo = new Set(it.goiY.map(r => String(r.go || "").trim().toLowerCase()));
-      const them = [...dem.entries()].sort((a, b) => b[1] - a[1])
-        .filter(([go]) => !daCo.has(go.toLowerCase()));
-      them.forEach(([go]) => it.goiY.push({ go, kieu: "yhet", noi: "" }));
-      veBang(); veNhan();
-      showInfo(them.length
-        ? `Đã nạp ${them.length} câu sai thật của học sinh — thầy viết câu hướng dẫn cho từng dòng.`
-        : "Mọi câu sai của học sinh đều đã có trong bảng rồi.");
-    } catch (e) {
-      showError("Không đọc được bài học sinh: " + (e.message || e));
-    } finally {
-      nut.disabled = false; nut.textContent = nhan;
-    }
   }
 
   function answerRow(it, ai, qi) {
@@ -375,6 +284,194 @@ export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel,
     return row;
   }
 
+  // ===== ⚙ BẢNG TRA HƯỚNG DẪN KHI SAI — MỘT BẢNG CHO CẢ ACT (Đợt 309) =====
+  // Thầy 08/9: *"Liệu có thể gom hết vào 1 nút duy nhất, bấm vào đó thì mở 1 pop-up lớn
+  // có 3 cột … Khi học sinh làm thì sẽ tự động scan khớp câu, không cần phải gõ lẻ cho
+  // từng câu như hiện tại."* — Đợt 308 làm mỗi câu một nút, gõ lại một nội dung 30 lần.
+  //
+  // ⚠️ CỘT THỨ TƯ "ÁP DỤNG CHO" LÀ CÓ LÝ DO, ĐỪNG BỎ: một dòng chung có thể khớp nhầm
+  // câu khác. Ca thật ở Lesson 15: câu 1 đáp án là **want** to play, câu 11 là **need**
+  // to use — dòng chung "chứa want → đề hỏi CẦN" đúng cho câu 11 nhưng bậy cho câu 1.
+  // Mặc định vẫn là "Mọi câu" (đúng ý thầy), khoá vào một câu chỉ khi cần.
+  // ⚠️ Dòng khoá câu neo bằng ĐỀ BÀI (`de`), không phải số thứ tự: thầy xoá/chèn/đảo câu
+  // thì số thứ tự lệch hết, còn đề thì không.
+  function moBangTra() {
+    const overlay = el("div", "aw-modal-overlay");
+    const modal = el("div", "aw-modal aw-tta-ed-hmodal");
+    modal.append(el("div", "aw-modal-title", "Hướng dẫn khi học sinh trả lời sai"));
+    const than = el("div", "aw-modal-body");
+    modal.append(than);
+    overlay.append(modal);
+    overlay.onclick = e => { if (e.target === overlay) dong(); };
+    document.body.append(overlay);
+    ve();
+    return { dong };
+
+    function dong() { overlay.remove(); veNhanNut(); }
+
+    function ve() {
+      than.innerHTML = "";
+      than.append(el("div", "aw-tta-ed-hnote",
+        "Học sinh trả lời SAI thì máy dò bảng này từ trên xuống, dòng nào khớp trước thì hiện câu " +
+        "hướng dẫn của dòng đó. Không dòng nào khớp thì chỉ tô đỏ, không hiện chữ nào."));
+      const bang = el("div", "aw-tta-ed-htable");
+      const dau = el("div", "aw-tta-ed-hrow is-head");
+      ["Áp dụng cho", "Kiểu khớp", "Chữ học sinh gõ", "Câu hướng dẫn hiện ra", ""].forEach((t, i) => {
+        dau.append(el("div", "aw-tta-ed-hcell c" + i, t));
+      });
+      bang.append(dau);
+      data.content.goiY.forEach((r, ri) => bang.append(dongBang(r, ri)));
+      than.append(bang);
+      if (!data.content.goiY.length) {
+        than.append(el("div", "aw-tta-ed-hempty", "Chưa có dòng nào. Thêm dòng, hoặc lấy thẳng những câu học sinh đã gõ sai."));
+      }
+      const them = el("button", "aw-ed-adda", "+ Thêm dòng");
+      them.type = "button";
+      them.onclick = () => { data.content.goiY.push({ de: "", kieu: "yhet", go: "", noi: "" }); ve(); };
+      const lay = el("button", "aw-ed-adda aw-tta-ed-hlay", "⤓ Lấy câu sai thật của học sinh");
+      lay.type = "button";
+      lay.onclick = () => layCauSaiThat(lay, ve);
+      const xong = el("button", "aw-btn aw-btn-primary", "Xong");
+      xong.type = "button"; xong.onclick = dong;
+      const chan = el("div", "aw-tta-ed-hfoot");
+      chan.append(them, lay, xong);
+      than.append(chan);
+    }
+
+    function dongBang(r, ri) {
+      const d = el("div", "aw-tta-ed-hrow");
+
+      // cột 1 — ÁP DỤNG CHO
+      const pv = el("select", "aw-ed-input aw-ed-select");
+      const oAll = el("option", "", "Mọi câu"); oAll.value = ""; pv.append(oAll);
+      data.content.items.forEach((it, i) => {
+        const o = el("option", "", "Câu " + (i + 1) + " — " + String(it.prompt || "").slice(0, 24));
+        o.value = it.prompt || ("__c" + i);
+        pv.append(o);
+      });
+      // Đề đã bị sửa/xoá thì GIỮ NGUYÊN lựa chọn cũ và nói rõ, đừng âm thầm về "Mọi câu".
+      if (r.de && !data.content.items.some(it => (it.prompt || "") === r.de)) {
+        const o = el("option", "", "⚠ câu đã đổi đề: " + String(r.de).slice(0, 20));
+        o.value = r.de; pv.append(o);
+      }
+      pv.value = r.de || "";
+      pv.onchange = () => { r.de = pv.value; ve(); };
+      d.append(boc(pv, 0));
+
+      // cột 2 — KIỂU KHỚP
+      const kieu = el("select", "aw-ed-input aw-ed-select");
+      [["yhet", "Giống toàn bộ"], ["chua", "Có chứa"]].forEach(([v, t]) => {
+        const o = el("option", "", t); o.value = v; kieu.append(o);
+      });
+      kieu.value = r.kieu === "chua" ? "chua" : "yhet";
+      kieu.onchange = () => { r.kieu = kieu.value; ve(); };
+      d.append(boc(kieu, 1));
+
+      // cột 3 — CHỮ HỌC SINH GÕ
+      const go = el("input", "aw-ed-input");
+      go.value = r.go || "";
+      go.placeholder = "ví dụ: foolball";
+      go.oninput = () => { r.go = go.value; capNhatCanhBao(); };
+      const o3 = boc(go, 2);
+      const bao = el("div", "aw-tta-ed-hwarn");
+      o3.append(bao);
+      d.append(o3);
+
+      // cột 4 — CÂU HƯỚNG DẪN
+      const noi = el("input", "aw-ed-input");
+      noi.value = r.noi || "";
+      noi.placeholder = "câu hướng dẫn hiện cho em";
+      noi.oninput = () => { r.noi = noi.value; };
+      d.append(boc(noi, 3));
+
+      const xoa = el("button", "aw-ed-del aw-ed-del-a", "×");
+      xoa.type = "button"; xoa.title = "Xoá dòng này";
+      xoa.onclick = () => { data.content.goiY.splice(ri, 1); ve(); };
+      d.append(boc(xoa, 4));
+
+      capNhatCanhBao();
+      return d;
+
+      function capNhatCanhBao() { bao.textContent = canhBaoDong(r); bao.hidden = !bao.textContent; }
+    }
+
+    function boc(x, i) { const o = el("div", "aw-tta-ed-hcell c" + i); o.append(x); return o; }
+  }
+
+  /**
+   * ⚠️ ĐÈN CẢNH BÁO — thứ chặn đúng rủi ro lớn nhất của bảng gộp: một dòng khớp trúng
+   * **ĐÁP ÁN ĐÚNG** của câu nào đó thì em làm ĐÚNG mà vẫn bị mắng (khi em sai ở chỗ khác
+   * trong cùng câu). Nói rõ tại chỗ để thầy sửa ngay, thay vì đợi học sinh phát hiện.
+   */
+  function canhBaoDong(r) {
+    const k = chuanDeSo(r.go);
+    if (!k) return "";
+    const trung = [];
+    data.content.items.forEach((it, i) => {
+      if (r.de && (it.prompt || "") !== r.de) return;
+      (it.acceptedAnswers || []).forEach(a => {
+        const n = chuanDeSo(a);
+        if (!n) return;
+        if (r.kieu === "chua" ? n.includes(k) : n === k) trung.push(i + 1);
+      });
+    });
+    const ds = [...new Set(trung)];
+    return ds.length ? "⚠ khớp cả ĐÁP ÁN ĐÚNG của câu " + ds.slice(0, 6).join(", ") + (ds.length > 6 ? "…" : "") : "";
+  }
+
+  // ⚠️ Bản NHẸ của phép chuẩn hoá, CHỈ dùng cho đèn cảnh báo và phép chống trùng dòng.
+  // Phép so THẬT lúc chơi là `normalize()` trong `type-the-answer.js` (bỏ hoa-thường, bỏ
+  // dấu, gom khoảng trắng). Hai bên lệch nhau tí thì cùng lắm là thừa/thiếu một cảnh báo,
+  // KHÔNG bao giờ làm sai câu hướng dẫn hiện cho học sinh.
+  function chuanDeSo(s) {
+    return String(s == null ? "" : s).trim().replace(/\s+/g, " ")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  }
+
+  /**
+   * ⤓ Nạp những câu HỌC SINH ĐÃ GÕ SAI THẬT, từ các bài đã giao của act. Mỗi dòng nạp về
+   * được **khoá sẵn vào đúng câu** em sai (cột Áp dụng cho) — vì máy biết em sai ở câu nào,
+   * còn thầy thì khỏi phải dò.
+   * ⚠️ Act chưa lưu hoặc chưa giao bài lần nào thì nói rõ, đừng im lặng.
+   */
+  async function layCauSaiThat(nut, ve) {
+    const nhan = nut.textContent;
+    nut.disabled = true; nut.textContent = "đang đọc bài học sinh…";
+    try {
+      if (!activity || !activity.id) { showInfo("Act chưa lưu lần nào nên chưa có bài học sinh để đọc."); return; }
+      const asMod = await import("../../core/assignments.js");
+      const ds = await asMod.listAssignmentsForAct(activity.id, { includeTrashed: true });
+      if (!ds.length) { showInfo("Act này chưa giao bài lần nào, nên chưa có câu sai nào để lấy."); return; }
+      const dem = new Map();   // "<đề>\n<chữ em gõ>" -> số lượt
+      for (const bg of ds) {
+        const rows = await asMod.listResults(bg.code);
+        for (const r of rows) {
+          for (const q of (r.review || [])) {
+            if (q.yourCorrect || !q.yourText) continue;
+            const k = String(q.question || "").trim() + "\n" + String(q.yourText).trim();
+            dem.set(k, (dem.get(k) || 0) + 1);
+          }
+        }
+      }
+      if (!dem.size) { showInfo("Chưa có em nào gõ sai ở act này."); return; }
+      const daCo = new Set(data.content.goiY.map(r => chuanDeSo(r.de) + "\n" + chuanDeSo(r.go)));
+      let them = 0;
+      [...dem.entries()].sort((a, b) => b[1] - a[1]).forEach(([k]) => {
+        const [de, go] = k.split("\n");
+        if (daCo.has(chuanDeSo(de) + "\n" + chuanDeSo(go))) return;
+        data.content.goiY.push({ de, kieu: "yhet", go, noi: "" });
+        them++;
+      });
+      ve();
+      showInfo(them
+        ? `Đã nạp ${them} câu sai thật của học sinh — thầy viết câu hướng dẫn cho từng dòng.`
+        : "Mọi câu sai của học sinh đều đã có trong bảng rồi.");
+    } catch (e) {
+      showError("Không đọc được bài học sinh: " + (e.message || e));
+    } finally {
+      nut.disabled = false; nut.textContent = nhan;
+    }
+  }
   // ---------- save / cancel ----------
   cancelBtn.onclick = () => onCancel?.();
 
@@ -386,13 +483,20 @@ export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel,
     clean.content.items.forEach(it => {
       it.prompt = it.prompt.trim();
       it.acceptedAnswers = it.acceptedAnswers.map(a => a.trim()).filter(a => a !== "");
-      // ⭐ Đợt 308 — dọn bảng tra: bỏ dòng chưa gõ gì, và bỏ dòng có chuỗi mà CHƯA CÓ
-      // CÂU HƯỚNG DẪN (giữ lại chỉ tổ làm thầy tưởng đã soạn xong).
-      it.goiY = (Array.isArray(it.goiY) ? it.goiY : [])
-        .map(r => ({ go: String(r.go || "").trim(), kieu: r.kieu === "chua" ? "chua" : "yhet", noi: String(r.noi || "").trim() }))
-        .filter(r => r.go && r.noi);
-      if (!it.goiY.length) delete it.goiY;
+      delete it.goiY;   // ⭐ Đợt 309 — bảng tra nay là MỘT bảng của cả act (xem dưới)
     });
+    // ⭐ Đợt 309 — dọn BẢNG TRA của act: bỏ dòng chưa gõ gì, và bỏ dòng có chuỗi mà CHƯA
+    // CÓ CÂU HƯỚNG DẪN (giữ lại chỉ tổ làm thầy tưởng đã soạn xong).
+    clean.content.goiY = (Array.isArray(clean.content.goiY) ? clean.content.goiY : [])
+      .map(r => ({
+        de: String(r.de || "").trim(),
+        kieu: r.kieu === "chua" ? "chua" : "yhet",
+        go: String(r.go || "").trim(),
+        noi: String(r.noi || "").trim()
+      }))
+      .filter(r => r.go && r.noi);
+    if (!clean.content.goiY.length) delete clean.content.goiY;
+
     // Drop rows that were added but left completely empty.
     clean.content.items = clean.content.items.filter(it => !(it.prompt === "" && it.acceptedAnswers.length === 0));
 
@@ -438,7 +542,12 @@ export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel,
       renderQuestions();
       showInfo("All questions deleted.");
     };
-    bar.append(clearBtn);
+    // ⭐ Đợt 309 — MỘT nút cho cả act, thay cho mỗi câu một nút của Đợt 308.
+    nutBangTra = el("button", "aw-btn aw-tta-ed-hbtn");
+    nutBangTra.type = "button";
+    nutBangTra.onclick = () => moBangTra();
+    veNhanNut();
+    bar.append(clearBtn, nutBangTra);
     return bar;
   }
 
@@ -468,11 +577,21 @@ function normalize(activity) {
     acceptedAnswers = acceptedAnswers.slice(0, 1 + MAX_ALTERNATES).map(x => x || "");
     // ⛔ Đợt 308 — PHẢI CHÉP `goiY` SANG. Hàm này dựng lại từng câu từ số 0, nên trường
     // nào quên ở đây là **mất trắng ngay lần thầy bấm Save đầu tiên**, không báo gì cả.
-    const goiY = (Array.isArray(it.goiY) ? it.goiY : [])
-      .map(r => ({ go: String(r && r.go || ""), kieu: r && r.kieu === "chua" ? "chua" : "yhet", noi: String(r && r.noi || "") }))
-      .filter(r => r.go || r.noi);
-    return { prompt: it.prompt || "", acceptedAnswers, goiY };
+    return { prompt: it.prompt || "", acceptedAnswers, goiY: Array.isArray(it.goiY) ? it.goiY : null };
   });
+  // ⭐ Đợt 309 — MỘT bảng tra cho cả act. Bảng lẻ theo từng câu của Đợt 308 (nếu act nào
+  // lỡ lưu rồi) được GOM vào đây, khoá sẵn vào đúng câu của nó — không mất dòng nào.
+  const bang = Array.isArray(a.content.goiY) ? a.content.goiY.slice() : [];
+  a.content.items.forEach(it => {
+    (Array.isArray(it.goiY) ? it.goiY : []).forEach(r => {
+      if (r && (r.go || r.noi)) bang.push({ de: it.prompt || "", kieu: r.kieu === "chua" ? "chua" : "yhet", go: String(r.go || ""), noi: String(r.noi || "") });
+    });
+    delete it.goiY;
+  });
+  a.content.goiY = bang.map(r => ({
+    de: String(r && r.de || ""), kieu: r && r.kieu === "chua" ? "chua" : "yhet",
+    go: String(r && r.go || ""), noi: String(r && r.noi || "")
+  }));
   return a;
 }
 function blankItem() { return { prompt: "", acceptedAnswers: [""] }; }
