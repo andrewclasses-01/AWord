@@ -8,13 +8,26 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **08/9/2026 (Đợt 309 — Type the answer: bảng tra gộp về một nút +
+> Cập nhật lần cuối: **08/9/2026 (Đợt 310 — nạp bảng tra THẬT cho Lesson 15 từ câu sai
+> của HS 3 khoá NTK6/7/8)**. Trước đó: **(Đợt 309 — bảng tra gộp về một nút +
 > pop-up 4 cột)**. Trước đó: **(Đợt 308 — gỡ hẳn gợi ý tự động, thay bằng
 > BẢNG TRA của thầy)**. Trước đó: **(Đợt 307 — thêm ô tích "Auto next question",
 > mặc định tắt)**. Trước đó: **(Đợt 306 — rà soát cả khoá NỀN TẢNG trên AWord đối chiếu
 > file gốc RECOVERY WORDWALL: 7 act lệch, đã sửa)**. Trước đó: **(Đợt 305 — Type the answer: tô 2 màu từng từ
 > khi sai + dòng gợi ý chạy offline)**.
 >
+>
+> **Đợt 310** (08/9/2026, thầy giao) — ⭐⭐⭐ **NẠP BẢNG TRA THẬT CHO LESSON 15 TỪ CÂU SAI CỦA HỌC
+> SINH 3 KHOÁ.** Thầy đưa 3 link kết quả Wordwall (NTK6/7/8). Bóc 6 trang, lọc rác (giữ dòng có từ
+> độc lập "to"/"not"), 63 câu sai thật sau gộp. ⛔⛔ Vá sai lần đầu: chính tả tự chế so với MỘT DANH
+> SÁCH ĐỘNG TỪ CHUNG khiến "want" bị chấm sai chính tả của "wait" (2 nghĩa khác hẳn) — sửa đúng bằng
+> cách gọi thẳng `tta.bestMatch()`, hàm ĐANG CHẠY TRONG GAME, thay vì tự viết lại thuật toán so khớp.
+> ⛔⛔ Bẫy render trễ mới: "Show more" ẩn đi nhưng bảng DOM chưa chèn kịp hàng cuối — đo lại sau vài
+> giây (không làm gì) mới đủ. Đã ghi vào 2 act thật: BT1 35 dòng, BT2 87 dòng, đọc lại Firestore đối
+> chiếu khớp, quét rò rỉ 0 ca thật. Chi tiết:
+> `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md` Đợt 310.
+>
+> ---
 >
 > **Đợt 309** (08/9/2026, thầy giao) — ⭐⭐ **BẢNG TRA GỘP VỀ MỘT NÚT + POP-UP 4 CỘT CHO CẢ ACT.**
 > Thay cho "mỗi câu một nút" của Đợt 308. Cột thứ tư **Áp dụng cho** (mặc định "Mọi câu") là bắt buộc:

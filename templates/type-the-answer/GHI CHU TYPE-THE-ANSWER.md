@@ -1,5 +1,104 @@
 # GHI CHÚ — TEMPLATE TYPE THE ANSWER
 
+## Đợt 310 (08/9/2026, thầy giao) — ⭐⭐⭐ **NẠP BẢNG TRA THẬT CHO LESSON 15 TỪ CÂU SAI CỦA HỌC SINH 3 KHOÁ (NTK6/7/8)**
+
+Thầy: *"[3 link myresults Wordwall Lesson 15 của NTK6/NTK7/NTK8] Hãy lấy các câu sai ở các thư mục
+trên để đưa vào các act trong lesson của AWord nhé."*
+
+### Lấy dữ liệu — bóc từng trang kết quả Wordwall
+
+6 trang kết quả (BT1 + BT2 × 3 khoá), kỹ thuật giống skill `checkkhoanentang`
+(`tr.details-toggle` + `.js-detail-row-<hs>-<câu>` + đọc `.fa-xmark` để biết câu nào sai). Bấm
+**All** (không chỉ Best) + bấm hết **Show more** để lấy TRỌN mọi lượt làm, không chỉ lượt tốt nhất.
+
+⛔⛔ **BẪY GIỜ MỚI GẶP — RENDER TRỄ SAU KHI "SHOW MORE" ĐÃ ẨN.** Nút Show more biến mất
+(`display:none`) đúng lúc yêu cầu tải trang cuối đã gửi đi, nhưng **bảng DOM chưa kịp chèn nốt các
+hàng cuối** — đo ngay lúc đó ra `tr[class*="details-toggle"]` = 0 hoặc chỉ một phần (30/76 hàng),
+trong khi đợi thêm vài giây rồi đo LẠI (không làm gì thêm, không click gì nữa) thì đủ hàng. 5/6 trang
+đợt này đều dính bẫy ở lần đọc đầu; sửa bằng cách **tách hẳn thành lệnh JS thứ hai** sau một khoảng
+chờ, không cố nhồi hết vào một lệnh `await Promise` dài — độ trễ thật sự nằm NGOÀI vòng đời của cú
+gọi JS đó (khớp với `Bẫy: đo layout quá sớm` đã ghi trong trí nhớ, phiên bản mạng thay vì font).
+
+⚠️ Có buổi bấm **Best → All** qua LABEL (không phải bấm thẳng input) buộc trang render lại đúng —
+bấm lại `#filter_all` khi nó đã `checked=true` sẵn thì không kích hoạt lại việc tải dữ liệu.
+
+### Lọc rác — bỏ chuỗi gõ-phím-bừa
+
+Nhiều lượt là học sinh gõ lung tung (`"gc"`, `"r"`, `"ych"`, hoặc cả tràng phím bấm ngẫu nhiên dài
+hàng trăm ký tự) — không phải câu trả lời thật. Bài Lesson 15 luôn có dạng "động từ **to** động từ"
+hoặc "**not** …", nên luật lọc: **giữ dòng chỉ khi chuỗi có từ độc lập "to" hoặc "not"**. Lọc được
+~90% rác mà không mất câu thật nào (đã soi tay).
+
+### ⛔⛔ VÁ SAI LẦN ĐẦU — THUẬT TOÁN CHÍNH TẢ TỰ CHẾ SO SÁNH SAI TỪ ĐIỂN
+
+Bản đầu tự đoán "đây là lỗi chính tả" bằng cách so từ em gõ với MỘT DANH SÁCH ĐỘNG TỪ CHUNG của cả
+bài (`want, need, like, try, come,…`) qua khoảng cách Levenshtein. Hậu quả: **"want" bị chấm là lỗi
+chính tả của "wait"** (lệch đúng 1 chữ cái) dù đây là **hai động từ khác nghĩa hoàn toàn** — 18/35
+dòng của BT1 dính lỗi này. Bài học: KHÔNG so với một từ điển chung, phải so với **đúng đáp án của
+CHÍNH câu đó**.
+
+**Sửa đúng**: gọi thẳng `tta.bestMatch(go, acceptedAnswers)` — **chính hàm đang chạy trong game**
+(Đợt 305/308) — để lấy vết so khớp thật (`sub`/`missing`/`extra`), rồi mới suy luận câu hướng dẫn từ
+vết đó. ⭐ Không viết lại thuật toán so khớp lần hai — gọi thẳng module thật qua trình duyệt, tránh
+hẳn nguy cơ bản Python và bản JS lệch nhau.
+
+⚠️ Sau khi sửa vẫn còn một cụm từ sai: câu chữ cứng "**Động từ** '{tu}' chưa đúng nghĩa" — đúng với
+BT1 (mỗi câu chỉ là một cụm động từ ngắn) nhưng **sai ngữ pháp với BT2** (dịch CẢ CÂU dài): ví dụ
+`"he want to drive my car"` so với đáp án `"My brother wants to drive my car"` thì `bestMatch` canh
+`sub=["he","My"]` — **chủ ngữ, không phải động từ** — câu cũ sẽ nói oan "Động từ 'he' chưa đúng
+nghĩa". Bỏ hẳn chữ "Động từ" khỏi câu, dùng cách nói trung tính "Chữ '{tu}' chưa đúng…" cho an toàn
+với cả hai dạng bài.
+
+### Soạn câu hướng dẫn — 6 luật theo thứ tự ưu tiên (từ vết so khớp thật)
+
+1. Thiếu "not" (đổi hẳn nghĩa khẳng định↔phủ định) — ưu tiên cao nhất.
+2. Thừa ≥3 từ (viết cả câu thay vì đúng phần đề hỏi).
+3. Có cặp thay thế (`sub`): **gần giống** (Levenshtein ≤2, từ dài ≥4 chữ) → "sai chính tả"; **khác
+   hẳn** → "chưa đúng, xem lại nghĩa câu" (không gọi tên loại từ).
+4. Thiếu "to" (thiếu chữ nối cụm động từ kết hợp).
+5. Thiếu từ khác (not/to) — nói chung chung.
+6. Thừa 1–2 từ.
+
+⛔ Ba dòng có xoay vòng câu chữ (không lặp y hệt một mẫu) trong mỗi nhóm — đúng lời thầy dặn ở Đợt
+305 "không phải lúc nào cũng nhá".
+
+### Kiểm không rò rỉ đáp án (lại theo luật cũ của Đợt 305)
+
+Quét tự động: so mỗi câu hướng dẫn với các từ CÒN THIẾU trong đáp án đúng gần nhất. Ra 4 "rò rỉ" —
+soát tay cả 4: 3 câu chỉ nói "not" (từ chức năng đóng, đúng ngoại lệ đã chốt — dạy luật ngữ pháp,
+không phải mách từ vựng) và 1 câu là chính chữ học sinh đã gõ (`"book'"` ↔ `"book"`, khác biệt chỉ
+là dấu nháy — không phải rò rỉ thật). **0 rò rỉ thật.**
+
+### Kết quả — đã ghi thẳng vào 2 act thật của Lesson 15
+
+| Act | Số dòng bảng tra |
+|---|---|
+| `BT1. XAC DINH CUM DONG TU KET HOP TRONG CAU` (num 183) | **35 dòng** |
+| `BT2. TAO CAU CO NHIEU DONG TU KET HOP` (num 184) | **87 dòng** |
+
+Nguồn: 63 câu sai thật (sau lọc rác) gộp từ 3 khoá — **không dựng bài mẫu, không đoán**, mọi dòng đều
+là chữ một học sinh thật đã gõ.
+
+### Đường ghi dữ liệu (giống Đợt 306, thêm một bước GỌI HÀM THẬT giữa đường)
+
+1. Chrome thật của thầy → `core/store.js` đọc `items` của 2 act.
+2. Gửi `{đề, chữ_em_gõ, đáp_án}` lên **chính kho AWord** (`tools/…json`, xoá sau khi xong).
+3. Trang AWord `fetch` file đó, **gọi thẳng `tta.bestMatch()`** để lấy vết so khớp thật.
+4. Gửi kết quả phân tích VỀ máy qua `<form method=POST>` tới cầu nối `localhost` (form POST không bị
+   luật mixed-content HTTPS→localhost chặn như `fetch`).
+5. Python soạn câu hướng dẫn từ vết so khớp, đóng gói `content.goiY`, đẩy lại lên kho.
+6. Trang AWord đọc gói đó, `saveActivity()` vào đúng 2 act, đọc lại lần nữa để đối chiếu.
+
+### Đo thật
+- Đọc lại từ Firestore sau khi ghi: BT1 35 dòng, BT2 87 dòng — khớp.
+- Gọi trực tiếp `goiYTheoBang(act, item, "wants to drive")` trên act thật → đúng câu "Chữ 'wants' em
+  viết sai chính tả rồi đấy nhé." — đúng thiết kế Đợt 309 (một bảng, khoá theo đề).
+
+### VIỆC ĐANG CHỜ
+- ⬜ Thầy mở Edit 2 act Lesson 15 trên live, xem qua bảng — câu nào chưa ưng thì sửa thẳng.
+- ⬜ Còn 30 lesson khác của khoá nền tảng chưa có bảng tra nào — làm khi thầy có link kết quả tương
+  tự cho lesson đó.
+
 ## Đợt 309 (08/9/2026, thầy giao) — ⭐⭐ **BẢNG TRA GỘP VỀ MỘT NÚT + POP-UP 4 CỘT CHO CẢ ACT**
 
 Thầy: *"Hiện tôi đang thấy mỗi câu có 1 nút Hướng dẫn khi sai riêng. Liệu có thể gom hết vào 1 nút duy

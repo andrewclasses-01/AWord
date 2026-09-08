@@ -214,6 +214,29 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 310 (08/9/2026, thầy giao) — ⭐⭐⭐ **NẠP BẢNG TRA THẬT CHO LESSON 15 TỪ CÂU SAI CỦA HỌC SINH 3 KHOÁ**
+
+Thầy đưa 3 link kết quả Wordwall (NTK6/7/8, Lesson 15) yêu cầu lấy câu sai thật đưa vào bảng tra Đợt
+309. Bóc 6 trang kết quả (kỹ thuật `checkkhoanentang`), lọc rác (giữ dòng có từ độc lập "to"/"not"),
+còn 63 câu sai thật sau khi gộp trùng giữa 3 khoá.
+
+⛔⛔ **Vá sai lần đầu**: thuật toán chính tả tự chế so với MỘT DANH SÁCH ĐỘNG TỪ CHUNG khiến "want"
+bị chấm là lỗi chính tả của "wait" (lệch 1 chữ cái, nhưng 2 nghĩa khác hẳn nhau). Sửa đúng: gọi thẳng
+`tta.bestMatch()` — **hàm đang chạy trong game** — để lấy vết so khớp thật rồi mới suy luận, không tự
+viết lại thuật toán so khớp lần hai. Bỏ luôn chữ "Động từ" khỏi câu hướng dẫn (sai ngữ pháp với câu
+dài BT2 khi vết sub rơi vào chủ ngữ chứ không phải động từ).
+
+⛔⛔ **Bẫy render trễ mới**: nút "Show more" ẩn đi (nghĩa là đã tải xong theo trang) nhưng bảng DOM
+chưa kịp chèn nốt hàng cuối — đo ngay lúc đó ra thiếu dữ liệu, đợi thêm vài giây KHÔNG làm gì rồi đo
+lại mới đủ. Cùng họ với "Bẫy đo layout quá sớm" đã ghi trong trí nhớ.
+
+Đã ghi thẳng vào 2 act thật: `BT1. XAC DINH CUM DONG TU KET HOP` **35 dòng**, `BT2. TAO CAU CO NHIEU
+DONG TU KET HOP` **87 dòng**. Đọc lại từ Firestore đối chiếu khớp; quét rò rỉ đáp án — 0 rò rỉ thật
+(4 ca nghi ngờ đều thuộc ngoại lệ đã chốt ở Đợt 305: từ chức năng "not" hoặc chính chữ HS đã gõ).
+Chi tiết: `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md` Đợt 310.
+
+---
+
 ## Đợt 309 (08/9/2026, thầy giao) — ⭐⭐ **BẢNG TRA GỘP VỀ MỘT NÚT + POP-UP 4 CỘT CHO CẢ ACT**
 
 Thầy hỏi có nên gom bảng tra của từng câu về một nút + pop-up lớn không. **Nên** — lỗi học sinh phần
