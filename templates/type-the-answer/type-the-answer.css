@@ -374,3 +374,75 @@
   line-height: 1.35;
 }
 .aw-tta-ed-atext { flex: 1 1 auto; min-width: 0; }
+
+/* =============================================================
+   ⭐⭐ SO TỪNG TỪ + GỢI Ý KHI TRẢ LỜI SAI (Đợt 305, thầy 08/9/2026)
+   Thầy chốt: **2 màu** — xanh = từ đúng, đỏ = từ sai.
+   ============================================================= */
+
+/* Ô nhập là mốc neo của lớp chữ màu (và của dấu ✓/✗ bay). `flyMark()` cũng đặt
+   `position:relative` bằng tay lúc chạy; khai luôn ở đây để lớp phủ có mốc ngay từ
+   khung hình đầu, không phụ thuộc việc ai chạy trước. */
+.aw-tta-inputrow { position: relative; }
+
+/* ⚠️⚠️ BỘ SỐ DƯỚI ĐÂY PHẢI GIỐNG HỆT `.aw-tta-input` Ở TRÊN — cỡ chữ, độ đậm,
+   `line-height`, lề, bề dày viền, kiểu ngắt dòng. Lệch một thứ là lớp màu ngắt dòng
+   ở chỗ khác với chữ thật ⇒ chữ màu không nằm đúng chỗ chữ nó thay thế. Cỡ chữ đi
+   chung biến `--tta-input-fs` nên không bao giờ lệch được; mấy số còn lại thì SỬA Ô
+   NHẬP LÀ PHẢI SỬA CẢ ĐÂY. */
+.aw-tta-diff {
+  position: absolute; inset: 0;
+  box-sizing: border-box;
+  pointer-events: none;                /* không cản chạm vào ô thật */
+  font-family: inherit;
+  font-size: var(--tta-input-fs);
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  padding: calc(calc(0.62 * var(--aw-u)) * var(--fit)) calc(calc(1 * var(--aw-u)) * var(--fit));
+  border: calc(0.22 * var(--aw-u)) solid transparent;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* Chữ trong ô THẬT thành trong suốt (ô vẫn còn nguyên trong bố cục, chỉ không hiện
+   chữ) — `caret-color` cũng tắt cho chắc, dù lúc này ô đã bị khoá. */
+.aw-tta-input.is-diffed { color: transparent; caret-color: transparent; }
+
+.aw-tta-w-ok  { color: #10b981; }
+.aw-tta-w-bad { color: #ef4444; text-decoration: underline; text-decoration-thickness: 2px;
+                text-underline-offset: 3px; }
+
+/* Dòng gợi ý — nằm TRONG `.aw-tta-reveal-inner`, dưới dòng đáp án đúng. Nhỏ hơn và
+   nhạt hơn để không tranh chỗ với đáp án. `:empty` ẩn hẳn: một `<div>` rỗng vẫn
+   chiếm đúng một dòng chiều cao, mà mọi phép căn giữa của game đều đo thật. */
+.aw-tta-hint {
+  text-align: center;
+  font-weight: 600;
+  color: #64748b;
+  /* ⚠️ Có SÀN 12px: `--tta-input-fs` đã chạm sàn 16px trên điện thoại, nhân 0,55 nữa
+     thì ra ~9px — chữ gợi ý bé tới mức vô dụng đúng trên cái máy hay dùng nhất. */
+  font-size: max(12px, calc(var(--tta-input-fs) * 0.55));
+  line-height: 1.35;
+  padding-bottom: calc(calc(0.4 * var(--aw-u)) * var(--fit));
+}
+.aw-tta-hint:empty { display: none; }
+
+/* ⛔ FIGHT — lớp chữ màu và dòng gợi ý CŨNG là dấu vết trả lời, phải che cùng lúc với
+   ô nhập (luật Đợt 217 ở khối trên). ⚠️ Luật che cũ đặt `color:transparent` lên khối
+   cha, nhưng mấy `<span>` này khai màu RIÊNG nên KHÔNG bị thừa hưởng — phải gọi tên
+   thẳng, nếu không thì bàn đã xong vẫn phơi nguyên câu trả lời bằng màu. */
+.aw-fight-board.is-concealed .aw-tta-diff,
+.aw-fight-board.is-concealed .aw-tta-w-ok,
+.aw-fight-board.is-concealed .aw-tta-w-bad,
+.aw-fight-board.is-concealed .aw-tta-hint { color: transparent; }
+.aw-fight-board.is-concealed .aw-tta-w-bad { text-decoration-color: transparent; }
+
+/* Vạch đỏ đúng chỗ HỌC SINH THIẾU MẤT MỘT TỪ (thầy chốt 08/9) — vẫn nằm trong "2 màu",
+   vì vạch cũng là màu đỏ. `min-width` chứ không `width`: nội dung là một dấu cách cứng,
+   để nó giữ đúng chiều cao một dòng chữ. */
+.aw-tta-w-gap {
+  display: inline-block;
+  min-width: 1.6em;
+  border-bottom: 0.14em solid #ef4444;
+}
+.aw-fight-board.is-concealed .aw-tta-w-gap { border-bottom-color: transparent; }

@@ -55,6 +55,365 @@ function normLives(v) {
   return Math.min(MAX_LIVES, Math.max(1, Math.round(v)));
 }
 
+// =============================================================
+// ⭐⭐ SO TỪNG TỪ + GỢI Ý (Đợt 305, thầy 08/9/2026)
+//
+// Thầy: *"khi chơi và submit 1 đáp án, nếu câu trả lời dài hơn 1 từ thì hiện màu
+// xanh các từ đúng, hiện màu đỏ các từ sai. Tôi làm vậy để trong trường hợp answer
+// là cả câu dài, học sinh sẽ biết mình sai ở từ nào trong câu."* — thầy chốt qua
+// AskUserQuestion: **2 màu** (xanh/đỏ), và gợi ý **chạy ngay trong máy**, KHÔNG gọi
+// AI online (khoá API sẽ lộ trên trang HS không đăng nhập; lý do đầy đủ ghi ở
+// `GHI CHU DU AN.md` Đợt 304/305).
+//
+// Mấy hàm dưới đây CỐ Ý để ngoài `mount()`: chúng thuần tuý vào-ra, không đụng DOM,
+// nên bàn thử gọi thẳng được mà không cần dựng cả ván game.
+// =============================================================
+
+function wordsOf(s) { return String(s ?? "").trim().split(/\s+/).filter(Boolean); }
+// Khoá so sánh của MỘT TỪ: mượn đúng `normalize()` của phép chấm (bỏ hoa-thường, bỏ
+// dấu) rồi bỏ nốt dấu câu dính ở hai đầu — "go." và "go" phải là một, nếu không thì
+// dấu chấm cuối câu làm cả từ cuối hiện đỏ oan.
+function normWord(w) { return normalize(w).replace(/^[^a-z0-9']+|[^a-z0-9']+$/g, ""); }
+
+// Levenshtein cổ điển có VẾT (backtrace) — cùng khuôn `levenshteinAlign()` của
+// `core/speech-score.js` (nơi nó so từng ÂM để chấm phát âm), ở đây so từng TỪ.
+// ⚠️ CHƯA gom vào core: luật dự án cấm tự sửa core khi đang làm một template. Nếu
+// sau này có template thứ hai cần, hãy xuất hàm của speech-score ra dùng chung thay
+// vì đẻ bản thứ ba.
+// Trả về mảng thao tác theo ĐÚNG thứ tự câu: match · sub · extra (HS thừa) ·
+// missing (HS thiếu), mỗi cái mang chỉ số của từ ở hai bên.
+function alignWords(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1]);
+    }
+  }
+  const ops = [];
+  let i = m, j = n;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && a[i - 1] === b[j - 1] && dp[i][j] === dp[i - 1][j - 1]) {
+      ops.unshift({ op: "match", i: i - 1, j: j - 1 }); i--; j--;
+    } else if (i > 0 && j > 0 && dp[i][j] === dp[i - 1][j - 1] + 1) {
+      ops.unshift({ op: "sub", i: i - 1, j: j - 1 }); i--; j--;
+    } else if (i > 0 && dp[i][j] === dp[i - 1][j] + 1) {
+      ops.unshift({ op: "extra", i: i - 1, j: -1 }); i--;
+    } else {
+      ops.unshift({ op: "missing", i: -1, j: j - 1 }); j--;
+    }
+  }
+  return ops;
+}
+
+// Khoảng cách sửa giữa HAI CHỮ (để nhận ra lỗi chính tả sát nút: "recieve").
+function charDistance(a, b) {
+  const m = a.length, n = b.length;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) {
+      cur[j] = a[i - 1] === b[j - 1]
+        ? prev[j - 1]
+        : 1 + Math.min(prev[j - 1], prev[j], cur[j - 1]);
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+
+// ⚠️ MỘT CÂU CÓ THỂ CÓ NHIỀU ĐÁP ÁN ĐƯỢC CHẤP NHẬN. So với `acceptedAnswers[0]` là
+// sai: em viết theo mẫu đáp án phụ thì cả câu hiện đỏ dù chỉ lệch một từ với mẫu
+// chính. Phải chọn đáp án GẦN NHẤT với thứ em gõ (nhiều từ khớp nhất, ít lệch nhất).
+function bestMatch(typed, acceptedAnswers) {
+  const t = wordsOf(typed), tn = t.map(normWord);
+  let best = null;
+  (acceptedAnswers || []).forEach(ans => {
+    const e = wordsOf(ans), en = e.map(normWord);
+    const ops = alignWords(tn, en);
+    const matched = ops.filter(o => o.op === "match").length;
+    const wrong = ops.length - matched;
+    // Điểm: số từ khớp là chính, số thao tác lệch là phụ (để phá thế hoà).
+    const score = matched * 1000 - wrong;
+    if (!best || score > best.score) best = { score, ops, typedWords: t, expectedWords: e, expectedNorm: en, typedNorm: tn };
+  });
+  return best;
+}
+
+// Cắt đuôi biến hình đơn giản của tiếng Anh, chỉ để trả lời MỘT câu: "hai từ này có
+// phải cùng một từ khác dạng không?" (go/goes/going/went-KHÔNG bắt được — bất quy tắc
+// thì bó tay, và đó là chỗ ranh giới của một bộ gợi ý chạy offline).
+function stemOf(w) { return w.replace(/(ies|ied)$/, "y").replace(/(es|ed|ing|s)$/, ""); }
+
+// ---- "b là dạng <đuôi> của a hay không" — có tính cả luật gấp đôi phụ âm / bỏ e /
+// đổi y→i mà thầy dạy ở các bài số nhiều, đuôi -ing và quá khứ đơn.
+function dbl(w) { return w + w.slice(-1); }
+function isSOf(a, b) {
+  return b === a + "s" || b === a + "es" || (a.endsWith("y") && b === a.slice(0, -1) + "ies");
+}
+function isIngOf(a, b) {
+  return b === a + "ing" || b === dbl(a) + "ing" || (a.endsWith("e") && b === a.slice(0, -1) + "ing");
+}
+function isEdOf(a, b) {
+  return b === a + "ed" || b === a + "d" || b === dbl(a) + "ed" ||
+         (a.endsWith("y") && b === a.slice(0, -1) + "ied");
+}
+
+// =============================================================
+// ⭐⭐⭐ TỪ VỰNG CỦA CHÍNH THẦY — KHÔNG DÙNG THUẬT NGỮ SÁCH VỞ (Đợt 305)
+//
+// Thầy giao 08/9/2026: *"Các hướng dẫn-gợi ý cần sử dụng tiếng Việt và sử dụng phong
+// cách, kiến thức, giọng văn của tôi … Template Type the answer kèm hướng dẫn này chủ
+// yếu phục vụ cho course - khóa nền tảng tiếng Anh."*
+//
+// Nguồn đã đọc để lấy giọng + hệ thống gọi tên:
+//   · `E:\1. BAI GIANG SACH NEN TANG\ALL BAI GIANG TEXT\TAP 1..31.txt` (31 bài giảng)
+//   · `D:\11. KHOA NEN TANG TIENG ANH\RECOVERY WORDWALL\LESSON 0..32.xlsx` (bài tập)
+//
+// ⛔ ĐẾM THẬT TRÊN 31 BÀI GIẢNG — thầy gọi tên KHÁC sách giáo khoa, phải theo thầy:
+//   · **"từ xác định"** (4 lần) chứ KHÔNG phải "mạo từ" (đúng 1 lần) — a / an / the.
+//   · **"động từ thường"** (231) · **"câu có động từ"** (40) / **"câu không có động
+//     từ"** (9) — tức câu dùng `be`, đây là cách CHIA LOẠI CÂU của cả khoá (Lesson 21–23).
+//   · **"câu nói có"** (151) / **"câu nói không"** (94) · **"câu hỏi xác nhận"**.
+//   · **"bộ sáu"** (90) · **"chủ ngữ tương đồng"** (9) / **"tân ngữ tương đồng"** (10)
+//     — I↔me, we↔us, they↔them (Lesson 9: "bên tác động — bên bị tác động").
+//   · **"trạng từ tần suất"** (8) · **"đuôi ing"** (16) · **"thêm s"** (54).
+//   · Giọng: kết câu bằng **"nhá / nhé / đấy"**, hay nói **"nhớ cho thầy"**.
+// Dạng bài chính của khoá là **DỊCH VIỆT → ANH** (vd "Mẹ tôi đang làm một chiếc bánh"
+// → "My mother is making a cake"), nên gợi ý viết cho đúng ca đó.
+// =============================================================
+const ARTICLES = ["a", "an", "the"];
+const BE_FORMS = ["am", "is", "are", "was", "were", "be"];
+const AUX_FORMS = ["do", "does", "did"];
+// "bộ sáu" — chủ ngữ ↔ tân ngữ tương đồng (you/it giống nhau nên không cần liệt kê).
+const SUBJ_TO_OBJ = { i: "me", he: "him", she: "her", we: "us", they: "them" };
+const OBJ_TO_SUBJ = { me: "i", him: "he", her: "she", us: "we", them: "they" };
+// Trạng từ tần suất (Lesson 24) — thầy nói "gọi trạng từ tần suất hay từ tần suất đều được".
+const FREQ_ADVERBS = ["always", "usually", "often", "sometimes", "never", "rarely",
+                      "seldom", "frequently", "occasionally"];
+// Giới từ (Lesson 25) — đủ số hay gặp trong bài tập của khoá là được.
+const PREPOSITIONS = ["in", "on", "at", "to", "for", "with", "from", "of", "by", "about",
+                      "under", "over", "near", "into", "between", "behind", "above", "below",
+                      "next", "beside", "during", "after", "before", "around"];
+
+/**
+ * ⭐⭐⭐ KHO CÂU GỢI Ý — MỖI KIỂU SAI NHIỀU CÂU, MÁY ĐỔI CÂU CHO ĐỠ NHÀM.
+ *
+ * Thầy 08/9/2026: *"Không phải lúc nào cũng «nhá»"* — nên các câu ở đây cố ý khác nhau ở đuôi
+ * câu, nhiều câu không có từ đệm nào cả.
+ *
+ * ⛔⛔ ĐÂY LÀ CHỮ CỦA THẦY, KHÔNG PHẢI CHỖ ĐỂ PHIÊN SAU "VIẾT LẠI CHO HAY". Bản nháp em soạn
+ * nằm ở `GOI Y - 50 CAU (THAY SUA).md` cùng thư mục, thầy sửa rồi thì chép y nguyên vào đây.
+ * Muốn thêm/bớt câu thì sửa mảng, đừng đụng vào phần luật bên dưới.
+ * `{tu}` = chính chữ học sinh vừa gõ · `{n}` = số từ.
+ */
+const HINTS = {
+  thuTu: [
+    "Em đủ từ rồi, nhưng thứ tự chưa chuẩn nhé.",
+    "Từ của em đúng hết rồi, nhưng thứ tự trong câu chưa ổn.",
+    "Em đọc lại câu tiếng Việt xem cái gì đứng trước, cái gì sau nhé.",
+    "Đủ nguyên liệu rồi, em hãy xếp lại cho đúng thứ tự."
+  ],
+  thieuBeIng: [
+    "Thiếu mất động từ be rồi — nhớ cho thầy: be + động từ ở dạng tiếp diễn.",
+    "Đuôi -ing thì phải có be đi kèm em nhé.",
+    "Động từ đuôi -ing mà đứng một mình là chưa được đâu."
+  ],
+  thieuBe: [
+    "Câu này không có động từ thường, em phải dùng be (nhớ biến đổi dựa theo chủ ngữ).",
+    "Thiếu mất be rồi — câu không có động từ thì phải có be đứng ra gánh nhé.",
+    "Không có động từ thường thì câu phải có be nha (nhớ biến đổi theo chủ ngữ)."
+  ],
+  thieuTroDongTu: [
+    "Thiếu trợ động từ rồi em nhé.",
+    "Câu này cần trợ động từ em nha.",
+    "Muốn nói không hay muốn hỏi thì phải mượn do / does / did em nhé."
+  ],
+  thieuTuXacDinh: [
+    "Thiếu từ xác định rồi em nha.",
+    "Danh từ này còn thiếu từ xác định đứng trước đấy.",
+    "Nhớ cho thầy: từ đếm được số ít thì phải có a / an / the tùy tình huống."
+  ],
+  tanNguTuongDong: [
+    "Chỗ “{tu}” là bên BỊ tác động — dùng tân ngữ tương đồng em nhé.",
+    "“{tu}” đứng sau động từ thì phải đổi sang tân ngữ tương đồng em nhé."
+  ],
+  chuNguTuongDong: [
+    "Chỗ “{tu}” là bên tác động — em dùng chủ ngữ tương đồng nhé.",
+    "“{tu}” đứng đầu câu thì phải là chủ ngữ tương đồng em nha."
+  ],
+  thieuS: [
+    "Chữ “{tu}” còn thiếu thiếu gì đó nha.",
+    "Thêm gì đó vào sau “{tu}” nữa em nhé.",
+    "“{tu}” thiếu mất gì đó ở cuối rồi đấy."
+  ],
+  thuaS: [
+    "Chữ “{tu}” đang thừa cái gì đó ở cuối rồi.",
+    "Bỏ chữ đang bị thừa ở cuối “{tu}” đi là đúng nhé.",
+    "“{tu}” chỗ này không thêm s đâu."
+  ],
+  phaiIng: [
+    "Chữ “{tu}” phải ở dạng tiếp diễn em nha.",
+    "Chuyển thành dạng tiếp diễn cho “{tu}” là được em nhé.",
+    "“{tu}” đang là động từ kiểu tiếp diễn, em sửa lại đi."
+  ],
+  khongIng: [
+    "Chữ “{tu}” sai sai nha, em hãy xem lại đang dùng thì gì.",
+    "Đuôi -ing của “{tu}” có vấn đề nha."
+  ],
+  phaiQuaKhu: [
+    "Chữ “{tu}” phải ở dạng quá khứ chứ hic.",
+    "Em nhìn xem “{tu}” nên ở dạng gì.",
+    "Chuyện đã xảy ra rồi cơ mà, “{tu}” phải thay đổi thế nào?."
+  ],
+  chinhTa: [
+    "Xem lại chính tả chữ “{tu}” em nhé.",
+    "Chữ “{tu}” sai chính tả một tí thôi, em soi lại nào.",
+    "Đúng từ rồi đấy, chỉ là “{tu}” viết còn sai chính tả em nhé."
+  ],
+  thieuTu: [
+    "Còn thiếu từ em nhé, em đọc lại câu tiếng Việt xem đủ ý chưa.",
+    "Câu tiếng Việt vẫn còn một ý em chưa có ở câu tiếng Anh đâu.",
+    "Thiếu từ rồi em nhé, đọc lại câu tiếng Việt một lượt nào."
+  ],
+  thuaTu: [
+    "Em thừa từ rồi nha.",
+    "Có từ thừa trong câu rồi, em bỏ bớt đi."
+  ],
+  tanSuatSaiCho: [
+    "Trạng từ tần suất đặt sai chỗ rồi em nhé.",
+    "“{tu}” là trạng từ tần suất — em hãy xem lại nó nên đặt ở đâu.",
+    "Trạng từ tần suất đứng sau be, đứng trước động từ thường. Em xem lại nhé!."
+  ],
+  saiGioiTu: [
+    "Chỗ “{tu}” là sai giới từ rồi em.",
+    "Giới từ này chưa đúng — em xem lại chỗ “{tu}”.",
+    "Đúng ý rồi, nhưng giới từ chọn chưa chuẩn đâu em nhé."
+  ],
+  saiDang: [
+    "Chữ “{tu}” đúng từ rồi, chỉ sai dạng thôi em nhé.",
+    "“{tu}” là đúng từ đấy, em chỉ cần đổi dạng cho hợp câu."
+  ]
+};
+
+/**
+ * MỘT dòng gợi ý ngắn TIẾNG VIỆT cho câu vừa trả lời sai — "" nếu không có gì đáng nói.
+ *
+ * ⛔ LUẬT SỐNG CÒN: gợi ý KHÔNG ĐƯỢC LỘ ĐÁP ÁN. Mọi câu dưới đây chỉ nhắc lại CHÍNH
+ * CHỮ HỌC SINH ĐÃ GÕ, gọi tên một LUẬT của khoá, hoặc nói về số lượng/thứ tự — không
+ * bao giờ in ra một TỪ NỘI DUNG mà em chưa viết được. (Đáp án đúng vẫn hiện ở dòng
+ * reveal, nhưng đó là vì thầy bật "Show corrects"; gợi ý phải tự nó an toàn kể cả khi
+ * thầy tắt.) Nhóm từ CHỨC NĂNG đóng — a/an/the, be, do/does/did — thì được gọi tên đầy
+ * đủ: đó là dạy luật, không phải mách đáp án.
+ *
+ * Thứ tự ưu tiên: thứ tự câu → thiếu hẳn một viên gạch (be / trợ động từ / từ xác
+ * định) → sai bộ sáu → sai dạng từ → sai chính tả → đếm từ thiếu/thừa. Chỉ trả về CÂU
+ * ĐẦU TIÊN trúng, vì màn chơi chỉ có chỗ cho một dòng.
+ */
+// Bốc một câu trong nhóm rồi điền chữ vào chỗ trống. `pick` truyền vào được để bàn thử
+// chạy TẤT ĐỊNH (luôn bốc câu đầu); lúc chơi thật thì bốc ngẫu nhiên cho đỡ nhàm — thầy
+// dặn "không phải lúc nào cũng «nhá»", nên mỗi kiểu sai có vài câu khác giọng nhau.
+function sayHint(list, vars, pick) {
+  if (!list || !list.length) return "";
+  const s = (pick ? pick(list) : list[Math.floor(Math.random() * list.length)]) || "";
+  return s.replace("{tu}", vars.tu == null ? "" : vars.tu).replace("{n}", vars.n == null ? "" : vars.n);
+}
+
+function hintFor(m, pick) {
+  if (!m) return "";
+  const { ops, typedNorm, expectedNorm } = m;
+  if (!expectedNorm.length) return "";
+  const say = (k, vars = {}) => sayHint(HINTS[k], vars, pick);
+
+  const subs = ops.filter(o => o.op === "sub");
+  const missing = ops.filter(o => o.op === "missing");
+  const extra = ops.filter(o => o.op === "extra");
+  const missWords = missing.map(o => expectedNorm[o.j]);
+  const coIng = expectedNorm.some(w => w.endsWith("ing") && w.length > 4);
+
+  // 0. TRẠNG TỪ TẦN SUẤT ĐẶT SAI CHỖ (Lesson 24) — dấu hiệu: cùng một trạng từ vừa bị
+  //    tính là THỪA ở chỗ này vừa bị tính là THIẾU ở chỗ kia, tức là em có viết nó, chỉ
+  //    đặt nhầm chỗ. ⚠️ Phải xét TRƯỚC luật "sai thứ tự" chung: khi chỉ mỗi trạng từ đi
+  //    lạc chỗ thì luật chung cũng trúng, mà nó chỉ nói chung chung "sai thứ tự" trong
+  //    khi ở đây gọi đúng tên được luật của bài 24.
+  for (const o of extra) {
+    const w = typedNorm[o.i];
+    if (FREQ_ADVERBS.includes(w) && missWords.includes(w)) {
+      return say("tanSuatSaiCho", { tu: m.typedWords[o.i] });
+    }
+  }
+
+  // 1. Đủ từ, đúng từ, chỉ sai THỨ TỰ.
+  const sortedT = [...typedNorm].sort().join(" ");
+  const sortedE = [...expectedNorm].sort().join(" ");
+  if (sortedT === sortedE && typedNorm.join(" ") !== expectedNorm.join(" ")) return say("thuTu");
+
+  // ⚠️ RÀO "GẦN ĐÚNG" cho 3 luật thiếu-viên-gạch bên dưới. Bàn thử bắt được: gõ đại một
+  // chữ ("banana") cho câu "I have a car" thì trong vệt so khớp CÓ một từ "a" bị thiếu,
+  // và máy hồn nhiên mách "thiếu từ xác định" — một câu vô nghĩa cho em đang lạc đề
+  // hoàn toàn. Chỉ mách chuyện thiếu viên gạch khi em đã dựng được ít nhất NỬA câu.
+  const matched = ops.filter(o => o.op === "match").length;
+  const ganDung = matched >= Math.max(1, Math.ceil(expectedNorm.length / 2));
+
+  // 2. Thiếu hẳn `be` — "câu không có động từ" (Lesson 21–23), hoặc trái tim của thì
+  //    hiện tại tiếp diễn mà thầy hay nhắc: be + động từ đuôi -ing.
+  if (ganDung && missWords.some(w => BE_FORMS.includes(w))) return say(coIng ? "thieuBeIng" : "thieuBe");
+  // 3. Thiếu trợ động từ — câu nói không / câu hỏi xác nhận.
+  if (ganDung && missWords.some(w => AUX_FORMS.includes(w))) return say("thieuTroDongTu");
+  // 4. Thiếu từ xác định (thầy gọi vậy, không gọi "mạo từ") — Lesson 8.
+  if (ganDung && missWords.some(w => ARTICLES.includes(w))) return say("thieuTuXacDinh");
+
+  // 5. BỘ SÁU: viết chủ ngữ vào chỗ tân ngữ hoặc ngược lại (Lesson 9).
+  for (const o of subs) {
+    const a = typedNorm[o.i], b = expectedNorm[o.j], tu = m.typedWords[o.i];
+    if (SUBJ_TO_OBJ[a] === b) return say("tanNguTuongDong", { tu });
+    if (OBJ_TO_SUBJ[a] === b) return say("chuNguTuongDong", { tu });
+  }
+
+  // 6. SAI GIỚI TỪ (Lesson 25) — hai bên đều là giới từ, chỉ chọn nhầm cái.
+  //    ⚠️ Xét trước luật chính tả: "in" ↔ "on" lệch đúng 1 chữ cái.
+  for (const o of subs) {
+    const a = typedNorm[o.i], b = expectedNorm[o.j];
+    if (a !== b && PREPOSITIONS.includes(a) && PREPOSITIONS.includes(b)) {
+      return say("saiGioiTu", { tu: m.typedWords[o.i] });
+    }
+  }
+
+  // 7. Đúng từ nhưng SAI DẠNG.
+  // ⚠️ PHẢI XÉT TRƯỚC luật chính tả: "student" ↔ "students" chỉ lệch 1 chữ cái nên luật
+  // chính tả cũng trúng, và nó sẽ mắng em "sai chính tả" trong khi em viết đúng từ, chỉ
+  // sai dạng — đúng chỗ em cần được dạy. Bàn thử Đợt 305 bắt được đúng ca này.
+  for (const o of subs) {
+    const a = typedNorm[o.i], b = expectedNorm[o.j], tu = m.typedWords[o.i];
+    if (isIngOf(a, b)) return say("phaiIng", { tu });
+    if (isEdOf(a, b)) return say("phaiQuaKhu", { tu });
+    if (isSOf(a, b)) return say("thieuS", { tu });
+    if (isSOf(b, a)) return say("thuaS", { tu });
+    if (isIngOf(b, a)) return say("khongIng", { tu });
+    if (a !== b && stemOf(a) === stemOf(b)) return say("saiDang", { tu });
+  }
+
+  // 8. Sai chính tả sát nút: chỉ lệch 1–2 chữ cái so với từ đáng lẽ phải có.
+  for (const o of subs) {
+    const a = typedNorm[o.i], b = expectedNorm[o.j];
+    if (a.length >= 4 && b.length >= 4 && charDistance(a, b) <= 2) {
+      return say("chinhTa", { tu: m.typedWords[o.i] });
+    }
+  }
+
+  // 9–10. Còn lại thì chỉ nói SỐ LƯỢNG, tuyệt đối không nói là từ nào.
+  // ⚠️ Thầy sửa lời văn 08/9 bỏ hẳn con số ("Còn thiếu từ em nhé" chứ không "thiếu 2 từ"),
+  // nên hai nhóm một-từ / nhiều-từ gộp lại làm một. `{n}` không còn chỗ nào dùng, nhưng
+  // `sayHint` vẫn đỡ được, phòng khi thầy muốn nói số trở lại.
+  if (missing.length && !extra.length && !subs.length) return say("thieuTu");
+  if (extra.length && !missing.length && !subs.length) return say("thuaTu");
+  return "";
+}
+
 const ttaTemplate = {
   type: "type_the_answer",
   scorable: true,
@@ -206,6 +565,13 @@ const ttaTemplate = {
     let finished = false;
     let dead = false;   // "this mount was thrown away" — set ONLY by cleanup() (Đợt 114)
     let autoTimer = null;
+    // ⛔⛔ BẪY TDZ (core/HUONG DAN CORE.md, "hàm gọi ĐỒNG BỘ trong thân startGame") —
+    // ĐÃ CẮN THẬT ở Đợt 305: cờ này thoạt đầu được khai `let` ngay cạnh `showWordDiff()`
+    // tít bên dưới. Nhưng `loadQuestion(0)` chạy ĐỒNG BỘ lúc mount, gọi `showWordDiff`
+    // trước khi dòng `let` kia kịp chạy ⇒ `ReferenceError: Cannot access 'lastDiffShown'
+    // before initialization`, và nó ném ra từ trong `loadQuestion` nên nửa sau của việc
+    // dựng màn im lặng không chạy. Khai BIẾN ở đây, cạnh các biến trạng thái khác.
+    let lastDiffShown = false;   // "câu vừa rồi có tô 2 màu không" — dùng để nới thời gian chờ
     let livePoints = 0;                 // running score shown live (can be reduced by Minus mode)
     let livesLeft = normLives(opt.lives);   // null = unlimited (see normLives)
     let keyboardVisible = true;         // ON by default every time the act is opened
@@ -249,7 +615,13 @@ const ttaTemplate = {
     const revealWrap = el("div", "aw-tta-revealwrap");
     const revealInner = el("div", "aw-tta-reveal-inner");
     const revealText = el("div", "aw-tta-reveal-text");
-    revealInner.append(revealText);
+    // ⭐ Đợt 305 — dòng gợi ý ngắn khi trả lời sai. CỐ Ý nằm TRONG `revealWrap`: mọi
+    // phép tính bố cục của game (`blockEdges` → `centerBlock`/`fitLayout`) đo cụm đáp
+    // án từ MÉP TRÊN của `revealWrap` xuống, nên thứ gì đặt ngoài nó sẽ không được
+    // tính vào chiều cao ⇒ đè lên bàn phím. Nằm trong thì hưởng luôn cả hoạt cảnh mở
+    // 0fr→1fr và `scheduleRevealRefit()` sẵn có.
+    const hintEl = el("div", "aw-tta-hint");
+    revealInner.append(revealText, hintEl);
     revealWrap.append(revealInner);
     answerBlock.append(revealWrap);
 
@@ -277,6 +649,18 @@ const ttaTemplate = {
     // Also strip on the OS keyboard's compose end (Vietnamese Telex/VNI etc.).
     input.addEventListener("compositionend", () => { filterEnglish(); syncSubmitEnabled(); });
     row.append(input);
+    // ⭐⭐ Đợt 305 — LỚP CHỮ MÀU ĐÈ LÊN Ô NHẬP.
+    // ⛔ Bên trong một `<textarea>` KHÔNG tô màu từng chữ được (giới hạn của trình
+    // duyệt, không phải chuyện code khéo hơn thì làm được). Cách duy nhất chắc chắn:
+    // vẽ lại chính câu đó bằng các `<span>` màu, đặt ĐÈ đúng lên ô, rồi cho chữ trong
+    // ô thật thành trong suốt. Ô thật vẫn nằm nguyên trong bố cục ⇒ mọi phép đo
+    // (`blockEdges`, `autoGrow`, `flyMark`) không đổi một ly.
+    // ⚠️ Lớp phủ PHẢI ăn y hệt cỡ chữ / lề / bề ngang / `line-height` của ô thật, nếu
+    // không nó ngắt dòng ở chỗ khác ⇒ chữ màu lệch khỏi chữ thật. Ràng buộc đó nằm
+    // trong CSS `.aw-tta-diff` (chép đúng bộ số của `.aw-tta-input`).
+    const diffEl = el("div", "aw-tta-diff");
+    diffEl.setAttribute("aria-hidden", "true");
+    row.append(diffEl);
     answerBlock.append(row);
 
     const submitBtn = el("button", "aw-tta-submit", "Submit Answer");
@@ -537,7 +921,11 @@ const ttaTemplate = {
       if (st.graded) input.classList.add(st.correct ? "is-correct" : "is-wrong");
       const wrongShown = st.graded && !st.correct && opt.showAnswerWhenWrong !== false;
       revealText.textContent = wrongShown ? it.acceptedAnswers[0] : "";
-      revealWrap.classList.toggle("is-open", wrongShown);
+      // ⭐ Đợt 305 — bấm Back xem lại một câu đã trả lời sai thì thấy LẠI ĐÚNG thứ đã
+      // thấy lúc nộp (chữ 2 màu + dòng gợi ý), không phải một ô trơ trọi.
+      const backHint = showWordDiff(st, it);
+      hintEl.textContent = backHint;
+      revealWrap.classList.toggle("is-open", wrongShown || !!backHint);
       revealWrap.classList.remove("is-andrew");
       autoGrow(input);
       syncSubmitVisibility();
@@ -680,7 +1068,10 @@ const ttaTemplate = {
       // auto-advance/auto-finish fires — the teacher found 1.4s too fast to
       // actually read the reveal. When the reveal is off (showAnswerWhenWrong
       // false) there's nothing extra to read, so keep the original brisk pace.
-      const delay = st.correct ? 1000 : (revealShown ? 2600 : (outOfLives ? 1500 : 1400));
+      // ⭐ Đợt 305 — có chữ 2 màu / dòng gợi ý để ĐỌC thì cũng phải cho thời gian như
+      // khi hiện đáp án, kể cả lúc thầy tắt "Show corrects" (`lastDiffShown` do
+      // `showWordDiff` đặt trong `applyGradeVisuals` chạy ngay trên).
+      const delay = st.correct ? 1000 : ((revealShown || lastDiffShown) ? 2600 : (outOfLives ? 1500 : 1400));
       if (outOfLives) {
         autoTimer = setTimeout(() => finish("gameover"), delay);
       } else if (state.every(s => s.graded)) {
@@ -698,13 +1089,102 @@ const ttaTemplate = {
     // immediately — see submitAnswer's own note on why.
     function applyGradeVisuals(st, it, revealShown) {
       input.classList.add(st.correct ? "is-correct" : "is-wrong");
-      if (revealShown) {
-        revealText.textContent = it.acceptedAnswers[0];
+      const hint = showWordDiff(st, it);          // ⭐ Đợt 305 — tô 2 màu + lấy dòng gợi ý
+      revealText.textContent = revealShown ? it.acceptedAnswers[0] : "";
+      hintEl.textContent = hint;
+      if (revealShown || hint) {
         revealWrap.classList.add("is-open");
         scheduleRevealRefit();
+        // ⭐ Đo ở mốc 800ms — lúc hoạt cảnh mở đã xong hẳn (xem scheduleRevealRefit),
+        // trước khi tự chuyển câu (2600ms). Đo sớm hơn là đo một cái hộp đang cao dở.
+        setTimeout(dropHintIfNoRoom, 800);
       }
       if (st.correct) ttaSound.correct(); else ttaSound.wrong();   // real Wordwall TTA pack
       flyMark(st.correct, input);
+    }
+
+    // ⭐⭐ Đợt 305 — vẽ câu học sinh vừa gõ bằng 2 màu (xanh = từ đúng, đỏ = từ sai)
+    // và trả về dòng gợi ý. Trả "" nghĩa là không có gì để nói thêm.
+    //
+    // CHỈ chạy cho câu SAI: câu đúng đã có viền xanh + dấu ✓ bay, tô thêm chỉ là nhiễu.
+    // CHỈ tô khi câu **dài hơn một từ** (đúng lời thầy) — một từ đơn sai thì cả ô đỏ,
+    // chẳng nói thêm được gì; nhưng dòng GỢI Ý thì vẫn chạy cho cả câu một từ, vì
+    // "sai chính tả sát nút" là thứ đáng nhắc kể cả với một từ.
+    function showWordDiff(st, it) {
+      clearDiff();
+      lastDiffShown = false;
+      if (!st.graded || st.correct) return "";
+      const typed = String(st.typed ?? "");
+      if (!typed.trim()) return "";               // hết giờ / bỏ trống: không có gì để tô
+      const m = bestMatch(typed, it.acceptedAnswers);
+      if (!m) return "";
+      if (m.typedWords.length > 1 || m.expectedWords.length > 1) {
+        // Đi theo VẾT so khớp, không theo mảng từ: có thế mới giữ đúng thứ tự câu khi
+        // có từ thừa/thiếu xen giữa.
+        let first = true;
+        m.ops.forEach(o => {
+          // ⚠️ Dấu cách đặt TRƯỚC mỗi từ, trừ từ đầu. Thêm dấu cách SAU mỗi từ thì từ
+          // cuối cũng có một cái, mà `white-space:pre-wrap` giữ nguyên nó ⇒ cả dòng bị
+          // đẩy lệch trái so với chữ thật trong ô (căn giữa mà thừa một khoảng trắng).
+          if (!first) diffEl.append(document.createTextNode(" "));
+          first = false;
+          if (o.op === "missing") {
+            // ⭐ Thầy chốt 08/9 — CHỖ THIẾU cũng phải nhìn thấy. Trước đó từ thiếu không
+            // vẽ gì cả, nên câu chỉ sai vì THIẾU một từ thì trên màn MỌI CHỮ ĐỀU XANH mà
+            // vẫn báo sai, em không hiểu hỏng ở đâu. Nay có một vạch đỏ đúng chỗ trống —
+            // vẫn đúng "2 màu" thầy chốt, vì vạch cũng là màu đỏ.
+            diffEl.append(el("span", "aw-tta-w-gap", "&nbsp;"));
+            return;
+          }
+          diffEl.append(el("span", o.op === "match" ? "aw-tta-w-ok" : "aw-tta-w-bad", escapeHtml(m.typedWords[o.i])));
+        });
+        input.classList.add("is-diffed");         // chữ trong ô thật thành trong suốt
+        lastDiffShown = true;
+        fitDiffHeight();
+      }
+      return hintFor(m);
+    }
+    function clearDiff() {
+      diffEl.innerHTML = "";
+      input.classList.remove("is-diffed");
+      input.style.minHeight = "";
+    }
+    /**
+     * ⚠️ Mấy vạch đỏ chỗ thiếu làm dòng chữ DÀI RA so với chữ thật trong ô, nên lớp phủ
+     * có thể cần thêm một dòng mà ô thật thì không. Ô phải cao lên theo, không thì lớp
+     * phủ tràn khỏi ô và đè xuống bàn phím.
+     * ⛔ Phải dùng `min-height`, KHÔNG phải `height`: `fitLayout()` gọi `autoGrow()` vốn
+     * gán thẳng `height` theo nội dung THẬT của ô (đang trong suốt, ngắn hơn) — đặt
+     * `height` ở đây thì lần fit kế tiếp xoá sạch.
+     */
+    function fitDiffHeight() {
+      const need = diffEl.scrollHeight;
+      if (need > input.clientHeight) {
+        input.style.minHeight = need + "px";
+        fitLayout();
+      }
+    }
+
+    /**
+     * ⭐⭐ VỪA CHỖ THÌ GIỮ, KHÔNG VỪA THÌ BỎ DÒNG GỢI Ý.
+     *
+     * ⚠️ ĐO A/B THẬT TRÊN ĐIỆN THOẠI (bàn thử Đợt 305, viewport 375×812, câu trả lời
+     * dài 2 dòng + đang hiện đáp án đúng 2 dòng): khoảng trống giữa câu hỏi và bàn phím
+     * chỉ còn **98px** trong khi riêng cụm đáp án đã cần ~102px — tức là **đã kín chỗ
+     * TRƯỚC KHI** có dòng gợi ý (đo được: cụm đè lên câu hỏi **1px**, coi như vừa khít).
+     * Thêm một dòng gợi ý ~18px vào đó thì phép căn giữa của game — vốn ưu tiên KHÔNG
+     * đè bàn phím — đẩy cả cụm lên và **đè 18px vào câu hỏi**: chữ xanh chồng lên đề bài.
+     *
+     * Nên: đo xong mới quyết. Còn chỗ thì giữ gợi ý (màn to, câu ngắn — hầu hết các ca);
+     * hết chỗ thì bỏ nó đi, vì lúc đó ĐÁP ÁN ĐÚNG đang hiện ngay trên màn, giá trị hơn
+     * một dòng mách nước. ⛔ Đừng "chữa" bằng cách cho cụm đè bàn phím: bấm nhầm phím là
+     * hỏng cả ván, còn chữ đè chữ thì chỉ xấu.
+     */
+    function dropHintIfNoRoom() {
+      if (dead || finished || !hintEl.textContent) return;
+      if (neededHeight() <= regionHeight() - 2) return;   // vừa chỗ — giữ nguyên
+      hintEl.textContent = "";
+      fitLayout();
     }
 
     /**
@@ -1200,3 +1680,8 @@ function escapeHtml(s) {
 
 registerTemplate(ttaTemplate);
 export default ttaTemplate;
+// ⭐ Đợt 305 — xuất RA CHÍNH mấy hàm thuần của phép so từng từ để bàn thử
+// (`scratch/dot305-worddiff.html`) gọi được **đúng hàm game đang chạy**, thay vì chép
+// lại logic sang bàn thử rồi kiểm nhầm bản chép. Không ai khác import chúng, và việc
+// xuất thêm tên không đụng gì tới `registerTemplate` ở trên.
+export { wordsOf, normWord, alignWords, bestMatch, hintFor, HINTS };

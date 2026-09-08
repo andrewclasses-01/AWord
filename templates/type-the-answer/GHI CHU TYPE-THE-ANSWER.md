@@ -1,5 +1,210 @@
 # GHI CHÚ — TEMPLATE TYPE THE ANSWER
 
+## Đợt 305 (08/9/2026, thầy giao) — ⭐⭐⭐ MÀN CHƠI: TÔ 2 MÀU TỪNG TỪ KHI TRẢ LỜI SAI + DÒNG GỢI Ý CHẠY OFFLINE — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
+
+Thầy: *"khi chơi và submit 1 đáp án, nếu câu trả lời dài hơn 1 từ thì hiện màu xanh các từ đúng, hiện
+màu đỏ các từ sai. Tôi làm vậy để trong trường hợp answer là cả câu dài, học sinh sẽ biết mình sai ở từ
+nào trong câu. Nghiên cứu cả việc kết hợp AI online hoặc công cụ check câu nào đó để hiển thị gợi ý khi
+sai cho học sinh."* — sau báo cáo nghiên cứu, thầy chốt qua AskUserQuestion: **2 màu** (xanh/đỏ) và
+**gợi ý chạy offline**, ⛔ **KHÔNG dùng AI online**.
+
+### Vì sao không AI online (chốt để đợt sau khỏi nghiên cứu lại)
+| Hướng | Vì sao loại |
+|---|---|
+| Gọi thẳng AI từ trình duyệt | Khoá API nằm trong file web ai cũng đọc được, mà `play.html` **không bắt đăng nhập** ⇒ bất kỳ ai cũng xài chùa tới cạn tiền. |
+| Máy chủ trung gian (Firebase Function) | Làm được, nhưng là **hạ tầng mới chưa từng có** trong dự án, tốn tiền theo lượt (1 lớp 30 em × 20 câu = 600 lượt/buổi), phải viết thêm chặn lạm dụng, và **chậm 0,5–3s** giữa ván đang tính giờ. |
+| LanguageTool | Bản miễn phí ~20 lượt/phút/**IP** — cả lớp chung một wifi là chung một IP. Và nó **không biết đáp án của thầy** nên gợi ý lạc đề. |
+| Model chạy trong trình duyệt | Đúng nếp nhà (app đã có Kokoro TTS, eSpeak, wav2vec2 240MB ở `core/speech-score.js`) nhưng model sửa câu nặng 300MB–1GB+, máy/iPad của HS không kham nổi. |
+
+### Đã làm — `type-the-answer.js`
+
+**Hàm thuần (ngoài `mount`, bàn thử gọi thẳng được):** `wordsOf` · `normWord` · `alignWords` ·
+`charDistance` · `stemOf` · `bestMatch` · `hintFor`.
+- `alignWords` = Levenshtein **có vết**, cùng khuôn `levenshteinAlign()` của `core/speech-score.js`
+  (nơi nó so từng ÂM để chấm phát âm) — ở đây so từng TỪ, ra 4 loại: match · sub · extra · missing.
+  ⚠️ CHƯA gom vào core vì luật cấm tự sửa core khi đang làm template; template thứ hai cần thì xuất
+  hàm của `speech-score` ra dùng chung, **đừng đẻ bản thứ ba**.
+- `normWord` mượn chính `normalize()` của phép chấm (bỏ hoa-thường + bỏ dấu) rồi bỏ dấu câu hai đầu —
+  không thì dấu chấm cuối câu làm từ cuối **hiện đỏ oan**.
+- `bestMatch` chọn **đáp án gần nhất** trong `acceptedAnswers[]`, không phải cái đầu tiên: em viết theo
+  mẫu đáp án phụ mà so với mẫu chính thì cả câu đỏ.
+
+**Trên màn hình:** lớp `.aw-tta-diff` vẽ lại chính câu em gõ bằng `<span>` màu, **đè đúng lên ô nhập**,
+chữ ô thật thành trong suốt (`.is-diffed`). ⛔ Bên trong một `<textarea>` **không tô màu từng chữ được**
+— đó là giới hạn của trình duyệt, không phải chuyện viết khéo hơn. Ô thật vẫn nằm nguyên trong bố cục
+nên `blockEdges`/`autoGrow`/`flyMark` không đổi một ly. ⚠️ Lớp phủ phải ăn **y hệt** cỡ chữ/lề/viền/
+`line-height` của ô nhập, lệch một thứ là ngắt dòng khác chỗ (đo thật: hai hộp trùng khít 910×140).
+
+**Dòng gợi ý** `.aw-tta-hint` nằm **TRONG `revealWrap`** (dưới dòng đáp án đúng) — mọi phép căn giữa
+của game đo cụm từ mép trên `revealWrap`, đặt ngoài là đè bàn phím. Thứ tự luật: sai thứ tự → thiếu
+hẳn một viên gạch (be / trợ động từ / từ xác định) → sai bộ sáu → sai dạng từ → sai chính tả →
+đếm từ thiếu/thừa.
+⛔ **Gợi ý không được lộ đáp án**: mọi câu chỉ nhắc lại CHÍNH CHỮ EM GÕ hoặc nói số lượng/thứ tự. Bàn
+thử có hẳn một phép quét tự động bắt rò rỉ (ngoại lệ duy nhất: câu mạo từ in cả ba "a / an / the" như
+một thực đơn đóng).
+
+### ⭐⭐⭐ BA THỨ BÀN THỬ BẮT ĐƯỢC (không phải suy đoán)
+
+1. **BẪY TDZ — cắn thật.** `let lastDiffShown` thoạt đầu khai cạnh `showWordDiff()` ở dưới, mà
+   `loadQuestion(0)` chạy **đồng bộ** lúc mount ⇒ `ReferenceError: Cannot access 'lastDiffShown' before
+   initialization`, ném ra từ giữa `loadQuestion` nên nửa sau của việc dựng màn **im lặng không chạy**.
+   Đúng cái bẫy `core/HUONG DAN CORE.md` đã ghi. Chuyển lên khai cùng chỗ các biến trạng thái.
+2. **Thứ tự luật gợi ý sai.** "student" ↔ "students" lệch 1 chữ cái nên luật CHÍNH TẢ trúng trước và
+   mắng em sai chính tả, trong khi em viết đúng từ chỉ sai DẠNG. Đảo: xét dạng từ TRƯỚC chính tả.
+3. **Điện thoại hết chỗ — đo A/B mới thấy.** Viewport 375×812, câu trả lời 2 dòng + đang hiện đáp án 2
+   dòng: khoảng trống giữa câu hỏi và bàn phím chỉ **98px** mà cụm đáp án đã cần **~102px** — tức **đã
+   kín TRƯỚC KHI** có gợi ý (đo bản không gợi ý: cụm chạm câu hỏi 1px). Thêm dòng gợi ý ~18px vào thì
+   phép căn giữa (vốn ưu tiên không đè bàn phím) đẩy cụm lên và **đè 18px vào câu hỏi**. Sửa bằng
+   `dropHintIfNoRoom()`: đo ở mốc 800ms (hoạt cảnh mở đã xong, trước lúc tự chuyển câu 2600ms), còn chỗ
+   thì giữ, hết chỗ thì **bỏ dòng gợi ý** — lúc đó đáp án đúng đang hiện ngay trên màn, giá trị hơn.
+   Đo lại sau khi vá: điện thoại về đúng 1px như bản gốc, máy tính vẫn giữ gợi ý.
+
+### Cái khác đã lo
+- ⛔ **Fight**: lúc nộp trong trận `applyGradeVisuals` KHÔNG chạy (Đợt 170) nên màu không lộ sớm; thêm
+  tầng chắn thứ hai trong CSS — `.aw-fight-board.is-concealed` che cả `.aw-tta-diff`, hai lớp `w-ok`/
+  `w-bad` và dòng gợi ý. ⚠️ Luật che cũ (Đợt 217) đặt `color:transparent` ở khối cha, mà mấy `<span>`
+  này khai màu RIÊNG nên **không thừa hưởng** — phải gọi tên thẳng, đo được đủ 4 thứ về trong suốt.
+- Bấm **Back** xem lại câu sai thì màu + gợi ý hiện lại y như lúc nộp (`showWordDiff` gọi trong
+  `loadQuestion`).
+- Câu **ĐÚNG** không tô (đã có viền xanh + dấu ✓). Câu **một từ** không tô (đúng lời thầy) nhưng vẫn có
+  gợi ý chính tả. Câu **hết giờ** (không gõ gì) không tô.
+- Thời gian chờ trước khi tự chuyển câu: có màu/gợi ý để đọc thì cũng 2600ms như khi hiện đáp án, kể cả
+  lúc thầy tắt "Show corrects".
+- Cỡ chữ gợi ý có **sàn 12px** — `--tta-input-fs` đã chạm sàn 16px trên điện thoại, nhân 0,55 nữa ra
+  ~9px thì vô dụng đúng trên cái máy hay dùng nhất.
+
+### Bàn thử
+`scratch/dot305-worddiff.html` — **PHẦN A 16/16 ĐẠT**: gọi THẲNG hàm thật của template (import module,
+không chép logic sang bàn thử) cho 7 ca tô màu + 8 ca gợi ý + 1 phép quét rò rỉ đáp án. **PHẦN B** chạy
+ván THẬT qua `core/engine.js`: bấm Play → gõ → Enter → đo DOM.
+⚠️ Bàn thử có **bộ đếm lỗi riêng của trang** (`window.__errs`) vì khung đọc console của phiên tự động
+**giữ lại lỗi của các lần tải trước** — suýt kết luận nhầm là bản vá TDZ chưa ăn.
+
+| Phép đo (1280×900 nếu không ghi khác) | Kết quả |
+|---|---|
+| Câu sai 1 từ | 10 từ: 9 xanh `rgb(16,185,129)`, "student" đỏ `rgb(239,68,68)` có gạch chân |
+| Lớp phủ vs ô thật | hộp trùng khít `[178,277,910,140]`, cùng `46.41px/62.65/7.378` |
+| Chữ ô thật | `rgba(0,0,0,0)` (trong suốt) |
+| Gợi ý | "Thiếu mất be rồi nhá — nhớ cho thầy: be + động từ đuôi -ing." |
+| Bố cục | không đè bàn phím (cách 3px), không đè câu hỏi (1px) |
+| Câu đúng | 0 từ tô màu, chữ ô về màu thường, không gợi ý |
+| Câu một từ | 0 từ tô màu, vẫn có gợi ý chính tả |
+| Back về câu sai | màu + gợi ý hiện lại đủ |
+| 375×812 | gợi ý tự bỏ, màu vẫn còn, hết đè câu hỏi |
+| Fight che bài | cả 4 thứ về `rgba(0,0,0,0)` |
+| Lỗi | `window.__errs` rỗng ở mọi lượt · `node --input-type=module --check` sạch |
+
+### ⭐⭐⭐ VÒNG 2 — GỢI Ý VIẾT BẰNG TIẾNG VIỆT, THEO HỆ THỐNG GỌI TÊN CỦA CHÍNH THẦY
+
+Thầy xem bản tiếng Anh rồi chốt lại: *"Các hướng dẫn-gợi ý cần sử dụng tiếng Việt và sử dụng phong
+cách, kiến thức, giọng văn của tôi · Các câu cần hướng dẫn chủ yếu là dạng dịch Việt sang Anh · Hãy
+nghiên cứu các sub bài giảng … và các bài tập … để lấy kiến thức, style, vibe, giọng văn của tôi ·
+Template Type the answer kèm hướng dẫn này chủ yếu phục vụ cho course - khóa nền tảng tiếng Anh."*
+
+**Đã đọc để lấy nguyên liệu:** 31 file bài giảng `E:\1. BAI GIANG SACH NEN TANG\ALL BAI GIANG TEXT\`
+(TAP 1–31, ~1,4 MB chữ) + 36 file bài tập `D:\11. KHOA NEN TANG TIENG ANH\RECOVERY WORDWALL\`
+(LESSON 0–32).
+
+⛔⛔ **ĐẾM THẬT trên 31 bài giảng — thầy gọi tên KHÁC sách giáo khoa, gợi ý phải theo THẦY:**
+
+| Thầy nói | Số lần | Chỗ khác hay gọi |
+|---|---|---|
+| **"từ xác định"** (a / an / the) | 4 | "mạo từ" — thầy chỉ dùng đúng **1** lần trong cả khoá |
+| **"động từ thường"** | 231 | (giống) |
+| **"câu có động từ" / "câu không có động từ"** | 40 / 9 | câu thường / câu dùng to-be |
+| **"câu nói có" / "câu nói không"** | 151 / 94 | câu khẳng định / phủ định |
+| **"bộ sáu"** | 90 | đại từ nhân xưng |
+| **"chủ ngữ / tân ngữ tương đồng"** | 9 / 10 | đại từ chủ ngữ / tân ngữ |
+| **"trạng từ tần suất" · "đuôi ing" · "thêm s"** | 8 · 16 · 54 | — |
+
+Giọng: kết câu bằng **"nhá / nhé / đấy"**, hay nói **"nhớ cho thầy"**. Dạng bài chính của khoá là
+**DỊCH VIỆT → ANH** — câu mẫu lấy thẳng từ file bài tập thật ("Mẹ tôi đang làm một chiếc bánh" →
+"My mother is making a cake", L27 BT3; "Nam thấy tôi" → "Nam sees me", L13 BT4).
+
+**9 luật gợi ý** (xếp theo thứ tự ưu tiên, chỉ hiện MỘT câu):
+
+| Ca | Câu gợi ý |
+|---|---|
+| Đủ từ, sai thứ tự | *Đủ từ rồi đấy, chỉ là xếp chưa đúng thứ tự thôi nhá.* |
+| Thiếu `be`, câu có đuôi -ing | *Thiếu mất be rồi nhá — nhớ cho thầy: be + động từ đuôi -ing.* |
+| Thiếu `be`, câu không có động từ | *Câu này không có động từ thường, thiếu mất be (am / is / are) nhá.* |
+| Thiếu trợ động từ | *Thiếu trợ động từ rồi nhá (do / does / did).* |
+| Thiếu từ xác định | *Thiếu từ xác định rồi nhá — a / an / the.* |
+| Bộ sáu (I ↔ me) | *Chỗ “I” là bên BỊ tác động — dùng tân ngữ tương đồng nhá.* |
+| Sai dạng | *Chữ “make” phải ở dạng đuôi -ing nhá.* · *… phải ở dạng quá khứ nhá.* · *… còn thiếu s ở cuối nhá.* · *… đang thừa s ở cuối rồi đấy.* |
+| Sai chính tả | *Gần đúng rồi! Xem lại chính tả chữ “makking” nhá.* |
+| Thiếu / thừa từ | *Còn thiếu một từ nữa nhá, đọc lại câu tiếng Việt xem đủ ý chưa.* · *Thừa một từ rồi đấy nhá.* |
+
+⚠️ Luật nhận dạng đuôi có tính cả **gấp đôi phụ âm · bỏ e · y→i** (`isSOf`/`isIngOf`/`isEdOf`) đúng
+như thầy dạy ở bài số nhiều, đuôi -ing và quá khứ đơn.
+
+⛔ **Rào "gần đúng"** — bàn thử bắt được: gõ đại một chữ ("banana") cho câu "I have a car" thì trong
+vệt so khớp CÓ một từ "a" bị thiếu, máy hồn nhiên mách *"thiếu từ xác định"* — vô nghĩa với em đang
+lạc đề hoàn toàn. Nay 3 luật "thiếu viên gạch" chỉ chạy khi em đã dựng được **ít nhất nửa câu**.
+
+⛔ **Luật chống lộ đáp án nới đúng một chỗ**: nhóm từ **CHỨC NĂNG ĐÓNG** (a/an/the · be · do/does/did)
+được gọi tên đầy đủ vì đó là **dạy luật của khoá**, không phải mách đáp án; **từ nội dung** thì tuyệt
+đối không. Bàn thử có phép quét tự động canh đúng ranh giới này.
+
+### ⭐⭐ VÒNG 3 — KHO CÂU NHIỀU BIẾN THỂ + 2 LUẬT MỚI + VẠCH ĐỎ CHỖ THIẾU TỪ
+
+Thầy: *"Không phải lúc nào cũng «nhá»"* và chọn thêm cả 3 việc (trạng từ tần suất · giới từ · dấu chỗ
+trống màu đỏ). Thầy cũng yêu cầu **xem trước 50 câu** rồi tự sửa lời văn.
+
+**1. Kho câu `HINTS`** — 20 nhóm, mỗi nhóm 1–4 câu, máy **bốc ngẫu nhiên** nên chơi lâu không nhàm và
+đuôi câu không lặp lại một kiểu. `hintFor(m, pick)` nhận thêm tham số bốc câu để **bàn thử chạy tất
+định** (luôn lấy câu đầu). ⛔ `HINTS` là **chữ của thầy** — phiên sau đừng "viết lại cho hay"; bản nháp
+em soạn để thầy sửa nằm ở `GOI Y - 50 CAU (THAY SUA).md` cùng thư mục.
+⭐ Bàn thử **so với CHÍNH kho câu** (`HINTS[k][0]`) chứ không chép chữ sang bàn thử ⇒ thầy sửa lời văn
+thì bàn thử vẫn xanh, chỉ khi LUẬT bắn sai nhóm mới TRƯỢT.
+
+**2. Luật mới — TRẠNG TỪ TẦN SUẤT ĐẶT SAI CHỖ** (Lesson 24). Dấu hiệu: **cùng một trạng từ vừa bị tính
+là THỪA ở chỗ này vừa bị tính là THIẾU ở chỗ kia** ⇒ em có viết nó, chỉ đặt nhầm chỗ. ⚠️ Phải xét
+**TRƯỚC** luật "sai thứ tự" chung: khi chỉ mỗi trạng từ đi lạc thì luật chung cũng trúng, mà nó chỉ nói
+chung chung trong khi ở đây gọi đúng tên được bài 24.
+
+**3. Luật mới — SAI GIỚI TỪ** (Lesson 25): hai bên đều nằm trong danh sách giới từ. ⚠️ Xét **trước**
+luật chính tả — "in" ↔ "on" lệch đúng 1 chữ cái.
+
+**4. Vạch đỏ chỗ thiếu từ** (`.aw-tta-w-gap`). Trước đó từ thiếu không vẽ gì, nên câu chỉ sai vì THIẾU
+một từ thì **mọi chữ trên màn đều xanh mà vẫn báo sai** — em không hiểu hỏng ở đâu. Vẫn đúng "2 màu"
+thầy chốt vì vạch cũng màu đỏ.
+⚠️⚠️ Vạch làm dòng chữ **dài ra so với chữ thật trong ô**, nên lớp phủ có thể cần thêm một dòng mà ô
+thật thì không ⇒ tràn ra đè bàn phím. `fitDiffHeight()` cho ô cao lên theo, và **phải dùng `min-height`
+chứ không `height`**: `fitLayout()` gọi `autoGrow()` vốn gán thẳng `height` theo nội dung THẬT của ô
+(đang trong suốt, ngắn hơn) — đặt `height` ở đây thì lần fit kế tiếp xoá sạch.
+
+**Đo lại sau vòng 3** (bàn thử **26/26 ĐẠT**, có cả 2 luật mới; phép quét rò rỉ nay quét **mọi biến
+thể** của mỗi nhóm chứ không chỉ câu đầu): ván thật máy tính 1280 — 1 vạch đỏ đúng chỗ thiếu `is`,
+màu vạch `rgb(239,68,68)`, không đè bàn phím (41px), không đè câu hỏi. Điện thoại 375 — vẫn 1 vạch,
+gợi ý vẫn giữ, cách bàn phím 3px, chạm câu hỏi 1px. `window.__errs` rỗng cả hai lượt.
+
+### ⭐⭐⭐ VÒNG 4 — 50 CÂU THẦY ĐÃ SỬA, CHÉP Y NGUYÊN VÀO GAME
+
+Thầy sửa xong cả 50 câu và gửi lại (08/9). Đã chép **y nguyên từng chữ** vào `HINTS`, không sửa lại
+một dấu phẩy. Ba thay đổi về CẤU TRÚC mà lời văn của thầy kéo theo:
+
+1. **Xưng “em” xuyên suốt** — thầy thêm vào gần hết các câu.
+2. **Nhóm 7–11 cố ý NÓI MƠ HỒ ĐI**: *“còn thiếu thiếu gì đó”* · *“đang thừa cái gì đó ở cuối”* ·
+   *“sai sai nha, em hãy xem lại đang dùng thì gì”* · *“Em nhìn xem “{tu}” nên ở dạng gì”*. Bản nháp
+   của em nói thẳng "thiếu s" / "phải dạng quá khứ"; thầy đổi thành **gợi mở để em tự nghĩ**.
+   ⛔ **ĐỪNG “sửa lại cho rõ ràng”** ở phiên sau — mơ hồ ở đây là CỐ Ý, đúng cách dạy của thầy.
+3. **Bỏ hẳn con số** ("Còn thiếu từ em nhé" chứ không "thiếu 2 từ") ⇒ hai nhóm một-từ / nhiều-từ
+   **gộp lại làm một** (`thieuTu` · `thuaTu`). Kho còn **18 nhóm / 50 câu**. `{n}` không còn chỗ nào
+   dùng, `sayHint` vẫn đỡ được phòng khi thầy muốn nói số trở lại.
+
+**Đo lại với chính chữ của thầy:** bàn thử **26/26 ĐẠT**. Câu dài nhất **81 ký tự**
+(nhóm `thieuBe` câu 1) — đo trên **điện thoại 375×812 ván thật**: xuống **2 dòng**, VẪN GIỮ được
+(không bị `dropHintIfNoRoom` cắt), cách bàn phím 3px, chạm câu hỏi 1px, `window.__errs` rỗng.
+
+⚠️ Hai chỗ có dấu câu lạ, em **giữ nguyên** vì thầy viết vậy: câu 34 kết thúc `thế nào?.` và câu 45
+kết thúc `Em xem lại nhé!.` — thừa một dấu chấm sau `?` / `!`. Thầy muốn bỏ thì nói một tiếng.
+
+### VIỆC ĐANG CHỜ
+- ⬜ Thầy dùng thật với lớp khoá nền tảng rồi cho biết câu gợi ý nào cần sửa lời.
+- ⬜ Ca chưa có luật riêng: **thứ tự trong cụm danh từ có tính chất** (Lesson 7) · chia sai `be` theo chủ
+  ngữ (is/are) · thiếu `to` trong cụm động từ kết hợp (Lesson 15). Thêm được, chỉ cần thầy gật.
+
 ## Đợt 304 (08/9/2026, thầy giao) — ⭐⭐ EDITOR: VIỀN Ô QUESTION ĐẬM HƠN · HAI CỘT (hỏi trái | đáp án phải) · Ô TỰ XUỐNG DÒNG CHO THẤY HẾT CHỮ
 
 Thầy: *"Ô điền dòng Question có viền đậm hơn để nhìn rõ sự khác nhau với các ô answer · Dòng Question

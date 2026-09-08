@@ -8,9 +8,20 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **08/9/2026 (Đợt 304 — editor Type the answer: viền ô Question đậm hơn,
-> hai cột hỏi | đáp án, ô tự xuống dòng)**.
+> Cập nhật lần cuối: **08/9/2026 (Đợt 305 — Type the answer: tô 2 màu từng từ
+> khi sai + dòng gợi ý chạy offline)**.
 >
+>
+> **Đợt 305** (08/9/2026, thầy giao) — ⭐⭐⭐ **TYPE THE ANSWER: TÔ 2 MÀU TỪNG TỪ KHI SAI + DÒNG GỢI Ý
+> CHẠY OFFLINE** — ✅ **THẦY DUYỆT → COMMIT + PUSH.** Thầy chốt 2 màu (xanh đúng/đỏ sai) và gợi ý chạy
+> trong máy, ⛔ KHÔNG AI online (khoá API lộ trên trang HS không đăng nhập · Cloud Function tốn tiền +
+> chậm giữa ván · LanguageTool 20 lượt/phút/IP · model trong trình duyệt quá nặng cho máy HS). So từng
+> từ bằng Levenshtein có vết (khuôn `core/speech-score.js`), vẽ `<span>` màu ĐÈ lên ô nhập vì trong
+> `<textarea>` không tô màu từng chữ được. Bàn thử bắt 3 thứ: **bẫy TDZ cắn thật** · thứ tự luật gợi ý
+> sai · **điện thoại hết chỗ** (đo A/B: 98px chỗ trống mà cụm cần ~102px ⇒ gợi ý phải tự bỏ khi không
+> vừa). Chi tiết: `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md` Đợt 305.
+>
+> ---
 >
 > **Đợt 304** (08/9/2026, thầy giao) — ⭐⭐ **EDITOR TYPE THE ANSWER: VIỀN Ô QUESTION ĐẬM HƠN · HAI
 > CỘT (hỏi trái | đáp án phải) · Ô TỰ XUỐNG DÒNG CHO THẤY HẾT CHỮ.** ⛔ Gốc rễ việc "hai cột không ra
@@ -5128,6 +5139,20 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 
 ## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **08/9/2026 sau Đợt 304** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (08/9/2026 — sau **Đợt 305**)
+>
+> | | |
+> |---|---|
+> | Commit mới nhất | **Đợt 305** — `templates/type-the-answer/type-the-answer.js` · `.css` (+ `GOI Y - 50 CAU (THAY SUA).md` mới): tô 2 màu từng từ khi trả lời sai + dòng gợi ý tiếng Việt chạy offline. |
+> | Thầy chốt gì | 2 màu (xanh đúng / đỏ sai) · gợi ý chạy trong máy · ⛔ KHÔNG AI online · **gợi ý viết bằng TIẾNG VIỆT theo giọng văn + hệ thống gọi tên của chính thầy**, phục vụ khoá NỀN TẢNG TIẾNG ANH. |
+> | Nguyên liệu giọng văn | Đọc **31 bài giảng** `E:\1. BAI GIANG SACH NEN TANG\ALL BAI GIANG TEXT\` + **36 file bài tập** `D:\11. KHOA NEN TANG TIENG ANH\RECOVERY WORDWALL\`. ⛔ Thầy gọi tên KHÁC sách giáo khoa (đếm thật): **"từ xác định"** chứ không phải "mạo từ" · **"câu có / không có động từ"** · **"bộ sáu"** · **"chủ ngữ / tân ngữ tương đồng"** · **"động từ thường"**; giọng kết câu **"nhá / nhé / đấy"**, hay nói **"nhớ cho thầy"**. Dạng bài của khoá là **dịch Việt → Anh**. |
+> | Bàn thử | `scratch/dot305-worddiff.html` — PHẦN A **26/26 ĐẠT** (gọi thẳng hàm thật của template), PHẦN B ván thật qua engine. So với CHÍNH kho câu `HINTS` nên thầy sửa lời văn không làm đỏ bàn thử. |
+> | Kho câu | `HINTS` — 20 nhóm, mỗi nhóm 1–4 câu, bốc ngẫu nhiên cho đỡ nhàm (thầy: *"không phải lúc nào cũng «nhá»"*). ⛔ Là CHỮ CỦA THẦY, phiên sau đừng viết lại; bản nháp thầy đang sửa: `templates/type-the-answer/GOI Y - 50 CAU (THAY SUA).md`. |
+> | 3 thứ bàn thử bắt được | **BẪY TDZ cắn thật** (`let` khai sau chỗ `loadQuestion(0)` gọi đồng bộ) · thứ tự luật gợi ý sai ("student"↔"students" bị mắng sai chính tả) · **điện thoại hết chỗ** (A/B: 98px trống mà cụm cần ~102px ⇒ `dropHintIfNoRoom()` bỏ gợi ý khi không vừa). |
+> | Chi tiết | `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md` Đợt 305 + `GHI CHU DU AN.md` Đợt 305. |
+>
+> ---
+>
 > ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (08/9/2026 — sau **Đợt 304**)
 >
 > | | |

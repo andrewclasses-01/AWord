@@ -12,7 +12,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 304** (08/9/2026 — EDITOR TYPE THE ANSWER: viền ô Question đậm hơn · hai cột (hỏi
+> Mới nhất: **Đợt 305** (08/9/2026 — TYPE THE ANSWER tô **2 màu từng
+> từ** khi trả lời sai (xanh đúng / đỏ sai) + **dòng gợi ý chạy offline**, không AI online. Bàn thử bắt
+> 3 thứ: bẫy TDZ cắn thật · thứ tự luật gợi ý sai · điện thoại HẾT CHỖ nên gợi ý phải tự bỏ khi không
+> vừa. Xem mục Đợt 305 ngay dưới.)
+> Trước đó: **Đợt 304** (08/9/2026 — EDITOR TYPE THE ANSWER: viền ô Question đậm hơn · hai cột (hỏi
 > trái | đáp án phải) · mọi ô tự cao theo nội dung để không bao giờ cắt chữ. ⛔ Gốc rễ việc "hai cột
 > không ra hai cột": khối CSS `.aw-tta-ed-*` mà JS dùng từ 30/7 **chưa bao giờ tồn tại trong file**.
 > Bắt thêm 1 lỗi ẩn: `scrollHeight` không tính viền ⇒ ô viền dày hụt 2px chân chữ. Xem mục Đợt 304
@@ -202,6 +206,64 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 305 (08/9/2026, thầy giao) — ⭐⭐⭐ **TYPE THE ANSWER: TÔ 2 MÀU TỪNG TỪ + GỢI Ý CHẠY OFFLINE** — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
+
+Thầy muốn HS trả lời sai một câu DÀI thì biết **sai ở từ nào**, và hỏi có nên ghép AI online / công cụ
+kiểm câu để hiện gợi ý không. Sau báo cáo nghiên cứu, thầy chốt: **2 màu** + **gợi ý offline**,
+⛔ **không AI online** (khoá API lộ trên trang HS không đăng nhập · Cloud Function tốn tiền + chậm giữa
+ván · LanguageTool giới hạn 20 lượt/phút/IP mà cả lớp chung một IP · model chạy trong trình duyệt thì
+quá nặng cho máy HS). Chi tiết đầy đủ + bảng đo: `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md`
+Đợt 305.
+
+**Cách làm:** so từng TỪ bằng Levenshtein có vết (cùng khuôn `levenshteinAlign()` của
+`core/speech-score.js` vốn so từng ÂM), chọn **đáp án gần nhất** trong `acceptedAnswers[]`, rồi vẽ lại
+câu em gõ bằng `<span>` màu **đè lên ô nhập** (bên trong `<textarea>` không tô màu từng chữ được) —
+ô thật giữ nguyên trong bố cục nên mọi phép đo cũ không đổi. Dòng gợi ý nằm TRONG `revealWrap` để được
+tính vào chiều cao cụm. Không thêm thư viện, không gọi mạng, không tốn tiền.
+
+**Bàn thử bắt được 3 thứ** (`scratch/dot305-worddiff.html`, PHẦN A 16/16 ĐẠT + PHẦN B ván thật):
+1. **BẪY TDZ cắn thật** — `let lastDiffShown` khai sau chỗ `loadQuestion(0)` gọi đồng bộ ⇒
+   `ReferenceError` ném ra giữa `loadQuestion`, nửa sau việc dựng màn im lặng không chạy.
+2. **Thứ tự luật gợi ý sai** — "student"↔"students" bị mắng "sai chính tả" trong khi đó là sai DẠNG từ.
+3. **Điện thoại hết chỗ** — đo A/B: 375×812 khoảng trống chỉ 98px mà cụm đáp án đã cần ~102px, tức kín
+   TRƯỚC KHI có gợi ý; thêm dòng gợi ý thì đè 18px vào câu hỏi. Vá bằng `dropHintIfNoRoom()` (đo ở mốc
+   800ms, hết chỗ thì bỏ gợi ý, giữ màu).
+
+⚠️ Bàn thử phải có **bộ đếm lỗi riêng của trang**: khung đọc console của phiên tự động giữ lại lỗi của
+các lần tải TRƯỚC, suýt kết luận nhầm là bản vá chưa ăn.
+
+**File đổi**: `templates/type-the-answer/type-the-answer.js` + `.css`. Không đụng core, không thêm module.
+
+**VÒNG 2 — gợi ý bằng TIẾNG VIỆT theo giọng văn của thầy.** Thầy chốt lại sau khi xem bản tiếng Anh.
+Đã đọc **31 bài giảng** (`E:\1. BAI GIANG SACH NEN TANG\ALL BAI GIANG TEXT\`) + **36 file bài tập**
+(`D:\11. KHOA NEN TANG TIENG ANH\RECOVERY WORDWALL\`) để lấy giọng và **hệ thống gọi tên riêng** của
+thầy — đếm thật: "từ xác định" (4) chứ không phải "mạo từ" (1) · "câu có / không có động từ" (40/9) ·
+"bộ sáu" (90) · "chủ ngữ / tân ngữ tương đồng" (9/10) · "động từ thường" (231); giọng kết câu "nhá /
+nhé / đấy", hay nói "nhớ cho thầy". Dạng bài của khoá là **dịch Việt → Anh** nên 9 luật gợi ý viết
+đúng cho ca đó (thiếu be · thiếu trợ động từ · thiếu từ xác định · bộ sáu · thiếu/thừa s · đuôi -ing ·
+quá khứ · chính tả · đếm từ). Câu mẫu trong bàn thử lấy THẲNG từ bài tập thật của khoá.
+
+**VÒNG 3** — thầy dặn *"không phải lúc nào cũng «nhá»"* và chọn thêm cả 3 việc: kho câu `HINTS` **20
+nhóm, mỗi nhóm 1–4 câu bốc ngẫu nhiên** (bàn thử bốc tất định qua tham số `pick`), **luật trạng từ tần
+suất đặt sai chỗ** (dấu hiệu: cùng một trạng từ vừa THỪA chỗ này vừa THIẾU chỗ kia — xét TRƯỚC luật
+"sai thứ tự" chung), **luật sai giới từ** (xét TRƯỚC luật chính tả vì "in"↔"on" lệch 1 chữ cái), và
+**vạch đỏ đúng chỗ thiếu từ** (trước đó câu chỉ sai vì thiếu một từ thì mọi chữ đều xanh mà vẫn báo
+sai). ⚠️ Vạch làm dòng chữ dài ra nên lớp phủ có thể cần thêm dòng — `fitDiffHeight()` cho ô cao
+lên bằng **`min-height`**, dùng `height` thì `autoGrow()` xoá mất. Bàn thử lên **26/26 ĐẠT** và nay
+so với CHÍNH kho câu nên thầy sửa lời văn vẫn không làm đỏ bàn thử.
+
+### VIỆC ĐANG CHỜ (Đợt 305)
+**VÒNG 4 — 50 câu thầy đã sửa, chép Y NGUYÊN vào `HINTS`.** Ba thay đổi cấu trúc kéo theo: xưng "em"
+xuyên suốt · **nhóm 7–11 cố ý nói mơ hồ đi** ("còn thiếu thiếu gì đó" thay vì "thiếu s") để HS tự
+nghĩ — ⛔ phiên sau ĐỪNG "sửa cho rõ ràng" · bỏ hẳn con số nên hai nhóm một-từ/nhiều-từ gộp lại còn
+**18 nhóm / 50 câu**. Bàn thử 26/26 ĐẠT với chính chữ của thầy; câu dài nhất 81 ký tự vẫn giữ được
+trên điện thoại (2 dòng, không bị cắt).
+
+- ⬜ (đã xong) Thầy sửa 50 câu — file `templates/type-the-answer/GOI Y - 50 CAU (THAY SUA).md`.
+- ⬜ Ca chưa có luật riêng: thứ tự cụm danh từ có tính chất · chia sai be theo chủ ngữ · thiếu "to".
 
 ---
 
