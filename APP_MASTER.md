@@ -5203,9 +5203,52 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **08/9/2026 sau Đợt 306** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **08/9/2026 sau Đợt 310** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (08/9/2026 — sau **Đợt 306**)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (08/9/2026 — sau **Đợt 310**, gộp cả chuỗi Đợt 307→310)
+>
+> **Bốn đợt liền một buổi, cùng một vùng — TYPE THE ANSWER: gợi ý khi trả lời sai.** Đọc theo
+> đúng thứ tự xảy ra, vì mỗi đợt sau LẬT LẠI một phần đợt trước:
+>
+> | Đợt | Thầy giao gì | Đã làm |
+> |---|---|---|
+> | **307** | Thêm ô tích "Auto next question" (mặc định TẮT) | ⚠️ **Lật lại quyết định 3/8/2026**: từ nay game KHÔNG tự chuyển câu nữa trừ khi thầy tự bật — ảnh hưởng **mọi act TTA cũ**, kể cả 52 bài khoá nền tảng. Core đã có sẵn ô tích này (`tpl.usesAutoSwitch`), chỉ khai 1 dòng + rào 2 chỗ tự chuyển câu. |
+> | **308** | Gỡ bộ "gợi ý tự động" (đoán lỗi sai kiểu gì) | Thầy bắt tại trận: bài "trích một phần" (đề cả câu, đáp án chỉ là cụm) mà máy đi bình luận đuôi -ing của một chữ — **nói bậy có hệ thống** (19/52 bài khoá nền tảng cùng dạng). Xoá sạch `HINTS`+`hintFor`, **GIỮ** phần tô 2 màu + vạch đỏ. Thay bằng bảng tra `items[i].goiY` do THẦY tự viết; không khớp thì im lặng. |
+> | **309** | Gộp bảng tra (đang mỗi câu một nút) về 1 nút | 1 nút ở thanh trên + pop-up 4 cột (Áp dụng cho / Kiểu khớp / Chữ HS gõ / Câu hướng dẫn) cho **cả act**. Cột "Áp dụng cho" (mặc định "Mọi câu") + **đèn cảnh báo** khi một dòng khớp trúng đáp án ĐÚNG của câu khác — chặn đúng rủi ro "dòng chung khớp nhầm câu". |
+> | **310** | Nạp bảng tra **THẬT** cho Lesson 15 từ câu sai của HS 3 khoá (link Wordwall NTK6/7/8) | Bóc 63 câu sai thật, phân tích bằng CHÍNH `bestMatch()` của game (không tự đoán), ghi vào 2 act thật: BT1 **35 dòng**, BT2 **87 dòng**. |
+>
+> **⛔⛔ BA BẪY ĐÃ CẮN — đọc trước khi động vào vùng này:**
+> 1. **Bẫy TDZ, 2 lần liền** (Đợt 305 và Đợt 309) — biến `let` khai SAU chỗ một hàm chạy-lúc-dựng-trang
+>    đã dùng nó ⇒ `ReferenceError` ném ra GIỮA lúc dựng UI, **nửa màn hình im lặng biến mất**, không
+>    báo gì. Luật: biến nào bị đụng bởi code chạy đồng bộ lúc mount thì khai NGAY ĐẦU HÀM.
+> 2. **Thay khối code theo mốc đầu–cuối đã nuốt mất hàm `answerRow()`** (Đợt 309) — màn soạn chết ngay.
+>    Luật: sau mỗi lần thay khối lớn, so danh sách hàm bản mới với bản trong kho
+>    (`git show HEAD:<file> | grep "^  function"`), hàm nào biến mất mà không cố ý thì lộ ra ngay.
+> 3. **Thuật toán chính tả tự chế so với MỘT DANH SÁCH TỪ CHUNG** (Đợt 310) — "want" bị chấm sai
+>    chính tả của "wait" (2 nghĩa khác hẳn, chỉ tình cờ lệch 1 chữ). Luật: KHÔNG so với từ điển chung,
+>    phải gọi thẳng `bestMatch()` — hàm ĐANG CHẠY TRONG GAME — với đúng đáp án của chính câu đó.
+>
+> **Hình dạng dữ liệu hiện tại** (một bảng cho cả act, khoá theo ĐỀ chứ không phải số thứ tự):
+> ```js
+> activity.content.goiY = [ { de: "" | "<đúng nguyên đề câu>", kieu: "yhet"|"chua", go: "...", noi: "..." } ]
+> ```
+> `de` rỗng = áp cho MỌI câu. Sửa/xoá/đảo thứ tự câu không làm lệch bảng vì neo vào chữ đề, không neo
+> số thứ tự. (⚠️ Bảng lẻ kiểu Đợt 308 — `items[i].goiY` — vẫn được ĐỌC nếu act nào lỡ có, và TỰ GOM
+> vào bảng chung khi mở Edit; không cần di trú tay.)
+>
+> **⬜ Chờ tay/mắt thầy:**
+> 1. Mở Edit 2 act Lesson 15 BT1/BT2 trên live, bấm nút **"⚙ Hướng dẫn khi sai"**, soát qua bảng.
+> 2. Chơi thử một act Type the answer bất kỳ: xác nhận **không tự chuyển câu** nữa (đúng ý Đợt 307).
+> 3. Còn **30 lesson khác** của khoá nền tảng chưa có bảng tra nào — thầy đưa link kết quả Wordwall
+>    (dạng `wordwall.net/myresults/folder/<id>/…`) của lesson nào thì làm lesson đó, theo đúng quy
+>    trình đã chạy ở Đợt 310 (đã ghi vào trí nhớ dài hạn `nen-tang-tieng-anh-khoa.md`).
+>
+> Chi tiết đầy đủ từng đợt: `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md` (mục Đợt
+> 307/308/309/310) + `GHI CHU DU AN.md`.
+>
+> ---
+>
+> ### 🕘 TRẠNG THÁI CŨ HƠN (08/9/2026 — sau **Đợt 306**)
 >
 > | | |
 > |---|---|
@@ -5214,7 +5257,6 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 > | ⛔⛔ Bẫy lớn nhất | File nguồn dùng **dòng bỏ trống ô câu hỏi = ĐÁP ÁN PHỤ của câu trên**. Bản đọc đầu bỏ qua quy ước đó ⇒ tưởng AWord tự chế thêm **746 đáp án** ⇒ **đã vá đè 45 act và xoá sạch đáp án phụ THẬT**. Khôi phục bằng ảnh chụp trước khi vá, **SHA-256 nội dung từng act 167/167 khớp**. |
 > | ⚠️ Hai bẫy nhỏ | (1) **Hạ chữ HOA khi so sánh** — act `BT1. XAC DINH BEN TAC DONG` hỏi về CỤM VIẾT HOA nên hai câu chỉ khác chỗ viết hoa; hạ chữ hoa là nhập làm một và báo oan "sai 14 câu". (2) **Chữ Việt có NFC/NFD** — nhìn giống hệt mà máy báo khác. |
 > | Đường ghi dữ liệu | Chrome THẬT của thầy (đã đăng nhập) → `await import('/core/store.js')` → `saveActivity`. ⛔ Lấy dữ liệu ra: `fetch` HTTPS→`http://localhost` bị Chrome chặn, phải dùng **`<form method=POST enctype=text/plain>`**; máy chủ nhận phải `ThreadingHTTPServer`. ⛔ Đưa vào: đẩy file tạm lên **chính kho AWord** rồi trang `fetch` cùng nguồn gốc — **đã xoá file tạm** (`38bd5ef`). |
-> | ⬜ Chờ mắt thầy | Mở vài bài đã sửa, nhất là `TRAC NGHIEM BAI GIANG 16` (nay có tiền tố "Câu N." như các TNBG khác). |
 > | Chi tiết | `GHI CHU DU AN.md` Đợt 306. |
 >
 > ---
@@ -6734,10 +6776,28 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 302, 07/9/2026) — KHÔNG CÒN VIỆC CODE DANG DỞ.**
+> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 307→310, 08/9/2026) — KHÔNG CÒN VIỆC CODE DANG DỞ, chỉ còn việc DỮ LIỆU.**
+> Vùng: **Type the answer — gợi ý khi trả lời sai.** Bốn đợt liền một buổi: thêm ô tích "Auto next
+> question" (mặc định tắt, LẬT LẠI quyết định cũ) → gỡ hẳn bộ đoán-lỗi-tự-động (nói bậy có hệ thống) →
+> gộp bảng tra về 1 nút + pop-up 4 cột → nạp dữ liệu THẬT cho Lesson 15 từ câu sai của HS 3 khoá. Bản
+> đồ đầy đủ + 3 bẫy đã cắn ở mục **0a ▸ TRẠNG THÁI NGAY LÚC NÀY**.
+>
+> 1. ⬜ Mở Edit act `LESSON 15 / BT1` hoặc `BT2` trên live, bấm nút **"⚙ Hướng dẫn khi sai"** — soát
+>    qua 35 + 87 dòng đã nạp, sửa câu nào chưa ưng.
+> 2. ⬜ Chơi thử MỘT act Type the answer bất kỳ: xác nhận sau khi trả lời, game **KHÔNG tự chuyển câu**
+>    nữa (đúng ô tích Đợt 307, mặc định tắt) — nếu muốn act nào đó tự chuyển như trước thì tự bật ô
+>    tích trong Options của act đó.
+> 3. ⬜⭐ **Còn 30 lesson khác của khoá nền tảng CHƯA có bảng tra nào** (mới làm xong Lesson 15). Thầy
+>    đưa link kết quả Wordwall (`wordwall.net/myresults/folder/<id>/…`) của lesson nào thì làm lesson
+>    đó tiếp — quy trình đã ghi vào trí nhớ dài hạn (`nen-tang-tieng-anh-khoa.md`).
+> 4. ⬜ Test chạm **TOMKO** cho cả 3 thay đổi giao diện (ô tích mới, nút ⚙, pop-up 4 cột).
+>
+> ---
+>
+> ⭐⭐⭐⭐ **Đợt 302 (07/9/2026) — vẫn CHỜ TAY THẦY, chưa ai xác nhận đã hết bệnh.**
 > Vùng: **Fight + act VOICE — hai nút loa không đồng bộ, một bên bấm thì đẻ ra bản thứ hai
 > chồng lên.** `quiz` + `true-false` thiếu cả 4 mảnh khuôn giọng đọc. Bản đồ ở mục
-> **0a ▸ TRẠNG THÁI NGAY LÚC NÀY**.
+> **0a ▸ TRẠNG THÁI CŨ HƠN (sau Đợt 302)**.
 >
 > 1. ⬜ Mở một act **VOICE** ở chế độ **Fight**, chơi **Quiz**: hai nút loa phải sáng và tắt
 >    **CÙNG LÚC**; chạm nút loa **bên nào cũng được** — luôn chỉ có **MỘT** giọng đọc, không
