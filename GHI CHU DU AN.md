@@ -271,7 +271,10 @@ Cách chạy bàn thử: `python devserver.py 5511` rồi mở `/scratch/anagram
 `core/HUONG DAN CORE.md` (5 luật + bàn thử bắt buộc, đặt ngay dưới ĐIỂM PHẠT PHẢI BAY) + bẫy số 6 ở
 `APP_MASTER.md` mục 8 + trí nhớ dài hạn.
 
-**VIỆC ĐANG CHỜ:** ✅ đã commit + push 08/9/2026 (kiểm mã băm live ghi ở dưới). Thầy chơi tay 1 act Anagram "On submit": nộp từ cuối rồi bấm ☰ Submit answers
+**Commit + live:** code + hồ sơ `940dd1e` (08/9/2026) → Pages build xong sau ~30 s, so SHA-256 `anagram.js`
+(`31c541be…`) + `unjumble.js` (`b13eaf0f…`) trên aword.andrewclasses.com **khớp 2/2** với local.
+
+**VIỆC ĐANG CHỜ:** ✅ đã commit + push + LIVE. Thầy chơi tay 1 act Anagram "On submit": nộp từ cuối rồi bấm ☰ Submit answers
 NGAY → bảng phải ghi đủ; thử thêm act có Timer count down.
 
 ---
