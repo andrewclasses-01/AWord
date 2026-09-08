@@ -8,9 +8,22 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **08/9/2026 (Đợt 303 — đổi tên hiện ra của 4 gốc sang số ít: Activity ·
-> Result · Course · Game)**.
+> Cập nhật lần cuối: **08/9/2026 (Đợt 304 — editor Type the answer: viền ô Question đậm hơn,
+> hai cột hỏi | đáp án, ô tự xuống dòng)**.
 >
+>
+> **Đợt 304** (08/9/2026, thầy giao) — ⭐⭐ **EDITOR TYPE THE ANSWER: VIỀN Ô QUESTION ĐẬM HƠN · HAI
+> CỘT (hỏi trái | đáp án phải) · Ô TỰ XUỐNG DÒNG CHO THẤY HẾT CHỮ.** ⛔ Gốc rễ việc "hai cột không ra
+> hai cột": khối CSS `.aw-tta-ed-*` mà `type-the-answer-editor.js` dùng từ 30/7/2026 **chưa bao giờ
+> tồn tại trong file** (grep toàn kho 0 dòng, backup cũng trống) ⇒ ô câu hỏi nằm chồng lên cột đáp án.
+> Nay viết đủ khối đó vào `type-the-answer.css`; ô đáp án đổi `<input>` → `<textarea>` tự cao theo nội
+> dung (`growAll()` chạy ở 4 mốc, có cả lúc đổi bề ngang cửa sổ). ⭐ Bắt thêm một lỗi ẩn:
+> `scrollHeight` **không tính viền** trong khi `.aw-ed-input` là `border-box` ⇒ ô viền 2,5px hụt 2px
+> chân chữ; cộng viền vào thì hụt về 0. Bàn thử `scratch/dot304-editor.html` đo trình duyệt thật.
+> ⬜ thầy mở live xem Edit content. Chi tiết: `GHI CHU DU AN.md` Đợt 304 +
+> `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md`.
+>
+> ---
 >
 > **Đợt 303** (08/9/2026, thầy giao) — **ĐỔI TÊN HIỆN RA CỦA 4 GỐC SANG SỐ ÍT: Activity · Result ·
 > Course · Game.** Thầy: *"đổi tên 4 thư mục gốc … cho dễ gọi đã"*. **Đổi CHỮ, không đổi mã**: tên
@@ -5113,9 +5126,26 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **08/9/2026 sau Đợt 303** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **08/9/2026 sau Đợt 304** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (08/9/2026 — sau **Đợt 303**)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (08/9/2026 — sau **Đợt 304**)
+>
+> | | |
+> |---|---|
+> | Commit mới nhất | **Đợt 304** — `templates/type-the-answer/type-the-answer.css` · `…-editor.js`. |
+> | Thầy giao gì | 3 việc cho bảng soạn Type the answer: *"ô điền dòng Question có viền đậm hơn … Dòng Question ở cột bên trái, các dòng answer ở 1 cột bên phải … Khi chữ dài quá ô thì tăng rộng ô ra và xuống dòng 2 ngay trong ô. Đảm bảo luôn quan sát được hết text."* |
+> | ⛔ Gốc rễ | Khối CSS `.aw-tta-ed-*` **chưa bao giờ tồn tại** — JS gắn class từ 30/7/2026, ghi chú khai đã thêm CSS, nhưng grep toàn kho ra 0 dòng (backup `dot273` cũng trống) ⇒ `.aw-tta-ed-block` là `<div>` trần, ô câu hỏi chồng lên cột đáp án. **Ghi chú nói "đã thêm CSS" không phải bằng chứng có CSS.** |
+> | Đã sửa | CSS: lưới 2 cột (dưới 760px xếp chồng) · viền question 2,5px `#23303e` + nền nhạt · nút × bám mép trên · mọi ô `resize:none`+`overflow-wrap:anywhere`+`line-height:1.35`. JS: ô đáp án `<input>`→`<textarea rows=1>`, `autoGrow`+`noEnter`+`growAll()` ở 4 mốc (sau khi trang vào tài liệu · rAF · `fonts.ready` · resize cửa sổ, bộ nghe tự gỡ khi rời trang). |
+> | ⭐ Lỗi ẩn bắt được | `scrollHeight` tính padding nhưng **KHÔNG tính viền**, mà `.aw-ed-input` là `box-sizing:border-box` ⇒ ô viền 2,5px hụt **2px** chân chữ dòng cuối. Cộng viền ⇒ hụt 0. ⚠️ `crossword-editor.js` còn nguyên công thức cũ — cố ý không đụng. |
+> | Bàn thử | `scratch/dot304-editor.html` (mở thẳng editor, KHÔNG cần đăng nhập Google). 1280×900: lưới `346px 346px`, question x=280 / đáp án x=640 cùng mép trên; viền 2,5px vs 1,5px; câu 3 dòng 133px, đáp án 2 dòng 88px; **hụt chữ 0 ở mọi ô**; gõ dài rồi xoá bớt 45→88→45; Enter bị chặn; dán Excel đúng; 375px về 1 cột; Save đúng dữ liệu. `node --check` sạch, 0 lỗi console. |
+> | ⚠️ Bẫy bàn thử | Pane trình duyệt bị ẩn ⇒ viewport ~0 (lưới đo ra `0px`) **và** `rAF` đóng băng ⇒ bản đầu đặt chiều cao trong `rAF` không chạy, cho kết luận SAI "ô không tự cao". Phải `resize_window` ép viewport rồi đo; `growAll()` phải có nhánh đồng bộ. |
+> | ⬜ Chờ mắt thầy | Mở live → Edit content một act Type the answer thật. |
+> | ⬜ Đợt sau (thầy đã chốt) | Tô màu **2 màu** từng từ khi submit (xanh đúng / đỏ sai) + **gợi ý offline thông minh** khi sai. ⛔ **KHÔNG** AI online cho HS — lý do đầy đủ trong `GHI CHU DU AN.md` Đợt 304. |
+> | Chi tiết | `GHI CHU DU AN.md` Đợt 304 + `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md`. |
+>
+> ---
+>
+> ### 🕘 TRẠNG THÁI CŨ HƠN (08/9/2026 — sau **Đợt 303**)
 >
 > | | |
 > |---|---|

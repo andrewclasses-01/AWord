@@ -12,7 +12,12 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 303** (08/9/2026 — ĐỔI TÊN HIỆN RA CỦA 4 GỐC SANG SỐ ÍT: **Activity · Result ·
+> Mới nhất: **Đợt 304** (08/9/2026 — EDITOR TYPE THE ANSWER: viền ô Question đậm hơn · hai cột (hỏi
+> trái | đáp án phải) · mọi ô tự cao theo nội dung để không bao giờ cắt chữ. ⛔ Gốc rễ việc "hai cột
+> không ra hai cột": khối CSS `.aw-tta-ed-*` mà JS dùng từ 30/7 **chưa bao giờ tồn tại trong file**.
+> Bắt thêm 1 lỗi ẩn: `scrollHeight` không tính viền ⇒ ô viền dày hụt 2px chân chữ. Xem mục Đợt 304
+> ngay dưới.)
+> Trước đó: **Đợt 303** (08/9/2026 — ĐỔI TÊN HIỆN RA CỦA 4 GỐC SANG SỐ ÍT: **Activity · Result ·
 > Course · Game**. Đổi CHỮ, không đổi mã — `ROOTS` trong `core/store.js` và tiền tố `"Courses / "`
 > gửi sang myLesson giữ nguyên. Xem mục Đợt 303 ngay dưới.)
 > Trước đó: **Đợt 302** (07/9/2026 — FIGHT + VOICE: hai nút loa không đồng bộ, và một bên bấm thì
@@ -197,6 +202,46 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 304 (08/9/2026, thầy giao) — ⭐⭐ **EDITOR TYPE THE ANSWER: VIỀN Ô QUESTION ĐẬM HƠN · HAI CỘT · Ô TỰ XUỐNG DÒNG**
+
+Thầy giao 3 việc cho bảng soạn của template Type the answer: viền ô Question đậm hơn ô answer · Question
+cột trái, answer một cột phải · chữ dài thì xuống dòng ngay trong ô, luôn thấy hết chữ.
+
+**⛔ Gốc rễ việc 2 — khối CSS `.aw-tta-ed-*` CHƯA BAO GIỜ TỒN TẠI.** JS của editor gắn các class đó từ
+30/7/2026 và ghi chú đợt ấy khai là đã thêm CSS, nhưng grep toàn kho ra **0 dòng** (kể cả bản backup).
+Nên `.aw-tta-ed-block` là `<div>` trần ⇒ ô câu hỏi nằm chồng lên trên cột đáp án suốt hơn một tháng.
+
+**Đã sửa** — `templates/type-the-answer/type-the-answer.css` (thêm khối EDITOR: lưới 2 cột, dưới 760px
+xếp chồng; viền question 2,5px `#23303e` + nền nhạt; nút × bám mép trên; mọi ô `resize:none` +
+`overflow-wrap:anywhere` + `line-height:1.35`) và `templates/type-the-answer/type-the-answer-editor.js`
+(ô đáp án `<input>` → `<textarea rows=1>`; `autoGrow` + `noEnter` + `growAll()` chạy ở 4 mốc: sau khi
+trang vào tài liệu · rAF · `fonts.ready` · mỗi lần đổi bề ngang cửa sổ, bộ nghe tự gỡ khi rời trang).
+
+**⭐ Lỗi ẩn bắt được khi đo:** `scrollHeight` tính cả padding nhưng **không tính viền**, trong khi
+`.aw-ed-input` là `box-sizing:border-box` ⇒ ô câu hỏi viền 2,5px **hụt 2px chân chữ dòng cuối**. Cộng
+viền vào thì hụt về 0 ở mọi ô. (Bản gốc của công thức này ở `crossword-editor.js` còn nguyên lỗi —
+cố ý không đụng, không phải template của phiên.)
+
+**Bàn thử** `scratch/dot304-editor.html` (mở thẳng editor, không cần đăng nhập). Đo trình duyệt thật
+1280×900: lưới `346px 346px` · question x=280 / đáp án x=640 cùng mép trên · viền 2,5px vs 1,5px ·
+câu 3 dòng cao 133px, đáp án 2 dòng cao 88px · **hụt chữ = 0 ở tất cả ô** · gõ dài rồi xoá bớt thì ô
+co lại đúng (45→88→45) · Enter bị chặn · dán Excel vẫn đúng · màn 375px về 1 cột · Save ra đúng dữ
+liệu. `node --check` sạch, 0 lỗi console.
+
+⚠️ **Bẫy bàn thử**: pane trình duyệt của phiên bị ẩn ⇒ viewport gần như 0 (lưới đo ra `0px`) VÀ `rAF`
+đóng băng ⇒ bản đầu đặt chiều cao trong `rAF` không chạy, ra kết luận sai "ô không tự cao". Phải ép
+`resize_window` rồi đo, và `growAll()` phải có nhánh đồng bộ.
+
+### VIỆC ĐANG CHỜ (Đợt 304)
+- ⬜ Thầy mở live → Edit content của một act Type the answer thật, xem 3 điểm.
+- ⬜ Đợt sau, thầy đã chốt hướng qua AskUserQuestion (08/9): **tô màu 2 màu** từng từ khi submit (xanh
+  đúng / đỏ sai) + **gợi ý offline thông minh** khi sai. ⛔ Thầy chốt KHÔNG dùng AI online cho HS —
+  lý do đầy đủ (khoá API lộ trên trang HS không đăng nhập · Cloud Function tốn tiền + chậm giữa ván ·
+  LanguageTool giới hạn 20 lượt/phút/IP mà cả lớp chung một IP · model chạy trong trình duyệt thì quá
+  nặng cho máy HS) ghi ở đây để đợt sau khỏi nghiên cứu lại.
 
 ---
 

@@ -30,6 +30,34 @@ import { el } from "../../core/utils.js";
 const MAX_ITEMS = 50;          // Wordwall's real cap for this template (per Teacher Andrew, 30/7)
 const MAX_ALTERNATES = 5;      // alternate accepted answers per question, on top of the main one
 
+// ⭐ Đợt 304 (thầy, 08/9/2026) — "khi chữ dài quá ô thì … xuống dòng 2 ngay trong ô.
+// Đảm bảo luôn quan sát được hết text". Mọi ô của editor này nay là <textarea> cao
+// theo nội dung: cứ gõ tới đâu ô cao thêm tới đó, không bao giờ có chữ bị cắt hay
+// phải cuộn ngang. Cùng khuôn `autoGrow` của `templates/crossword/crossword-editor.js`.
+// ⚠️ `height:auto` TRƯỚC khi đọc `scrollHeight` — không có bước đó thì ô chỉ cao lên
+// được chứ không bao giờ thấp lại khi thầy xoá bớt chữ.
+// ⚠️⚠️ PHẢI CỘNG BỀ DÀY VIỀN. `.aw-ed-input` (core) khai `box-sizing:border-box`, mà
+// `scrollHeight` thì tính CẢ padding nhưng KHÔNG tính viền — gán thẳng
+// `height = scrollHeight` là phần chữ bị hụt đúng bằng viền trên + viền dưới. Đo thật
+// ở bàn thử Đợt 304: ô câu hỏi (viền 2,5px) hụt **2px**, tức dòng cuối bị liếm mất chân
+// chữ. Cộng viền vào thì hụt về 0 ở mọi ô. (Ô đáp án viền mỏng hơn nên gần như không
+// thấy — đúng kiểu lỗi sống sót nhiều bản vì "nhìn thì có sao đâu".)
+function autoGrow(ta) {
+  if (!ta) return;
+  ta.style.height = "auto";
+  const cs = getComputedStyle(ta);
+  const border = cs.boxSizing === "border-box"
+    ? (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0)
+    : 0;
+  ta.style.height = (ta.scrollHeight + border + 2) + "px";
+}
+// Ô nào cũng giữ đúng MỘT dòng dữ liệu (prompt / một đáp án), nên Enter không được
+// chèn xuống dòng: chữ vẫn tự xuống dòng khi chạm mép ô, còn "\n" thật thì lúc chơi
+// chỉ hiện ra như một dấu cách — lưu vào chỉ tổ làm phép so đáp án lệch.
+function noEnter(ta) {
+  ta.addEventListener("keydown", e => { if (e.key === "Enter") e.preventDefault(); });
+}
+
 export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel, header, footer } = {}) {
   const isNew = !(activity && activity.id);
   const data = normalize(activity);
@@ -81,6 +109,26 @@ export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel,
 
   container.append(page);
   titleInput.focus();
+  // ⚠️ CHỖ NÀY MỚI ĐO ĐƯỢC, không phải lúc `renderQuestions()` ở trên: trước
+  // `container.append(page)` cả trang còn NGOÀI tài liệu, `scrollHeight` của một ô
+  // chưa có bề ngang thật thì trả về số vô nghĩa. Đo lại 3 mốc theo đúng luật của
+  // core (`HUONG DAN CORE.md` — font web tải muộn là một cú nhảy kích thước):
+  // ngay bây giờ · khung hình kế · lúc font đã sẵn sàng.
+  growAll();
+  requestAnimationFrame(growAll);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(growAll).catch(() => {});
+  // Đổi bề ngang cửa sổ là đổi số dòng của mọi ô (và ở dưới 760px thì hai cột xếp
+  // chồng lại) — phải đo lại, không thì ô giữ nguyên chiều cao cũ và cắt mất chữ.
+  // Tự gỡ mình khi trang editor đã bị thay bằng thứ khác, để không rò bộ nhớ.
+  window.addEventListener("resize", onWindowResize);
+  function onWindowResize() {
+    if (!page.isConnected) { window.removeEventListener("resize", onWindowResize); return; }
+    growAll();
+  }
+  // Cao lại TẤT CẢ ô của bảng soạn. Rẻ (mỗi ô 2 phép gán style) nên cứ gọi thoải mái.
+  function growAll() {
+    page.querySelectorAll(".aw-tta-ed-qtext, .aw-tta-ed-atext").forEach(autoGrow);
+  }
 
   // ---------- questions rendering ----------
   function renderQuestions() {
@@ -95,6 +143,10 @@ export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel,
     qWrap.append(addQ);
     const count = el("div", "aw-ed-qcount", `${data.content.items.length} / ${MAX_ITEMS} questions`);
     qWrap.append(count);
+    // Lần dựng đầu tiên trang còn chưa vào tài liệu nên phép đo chưa đúng — chỗ đó
+    // được đo lại ngay sau `container.append(page)`. Mọi lần dựng lại sau (thêm câu,
+    // xoá đáp án, dán Excel) thì trang đã ở trong tài liệu, đo được ngay tại đây.
+    if (page.isConnected) growAll();
   }
 
   // Parse a pasted Excel block: LEFT column = question, RIGHT column = one
@@ -177,9 +229,10 @@ export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel,
     qInput.rows = 1;
     qInput.value = it.prompt;
     qInput.placeholder = "Type the question…";
-    qInput.oninput = () => { it.prompt = qInput.value; clearError(); };
+    qInput.oninput = () => { it.prompt = qInput.value; autoGrow(qInput); clearError(); };
     qInput.addEventListener("paste", e => onBlockPaste(e, qi));
-    blockEl.append(qInput);
+    noEnter(qInput);
+    blockEl.append(qInput);   // chiều cao ban đầu do growAll() đặt — xem ghi chú ở đó
 
     const acol = el("div", "aw-tta-ed-acol");
     it.acceptedAnswers.forEach((ans, ai) => acol.append(answerRow(it, ai, qi)));
@@ -198,11 +251,15 @@ export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel,
 
   function answerRow(it, ai, qi) {
     const row = el("div", "aw-tta-ed-arow");
-    const txt = el("input", "aw-ed-input aw-tta-ed-atext");
+    // ⭐ Đợt 304 — <textarea> chứ không còn <input>: một đáp án có thể là CẢ CÂU dài,
+    // mà <input> thì không bao giờ xuống dòng — chữ chạy ngang ra khỏi tầm nhìn.
+    const txt = el("textarea", "aw-ed-input aw-tta-ed-atext");
+    txt.rows = 1;
     txt.value = it.acceptedAnswers[ai];
     txt.placeholder = ai === 0 ? "Answer" : "Alternative answer";
-    txt.oninput = () => { it.acceptedAnswers[ai] = txt.value; clearError(); };
+    txt.oninput = () => { it.acceptedAnswers[ai] = txt.value; autoGrow(txt); clearError(); };
     txt.addEventListener("paste", e => onBlockPaste(e, qi));
+    noEnter(txt);
 
     const del = el("button", "aw-ed-del aw-ed-del-a", "×");
     del.type = "button";

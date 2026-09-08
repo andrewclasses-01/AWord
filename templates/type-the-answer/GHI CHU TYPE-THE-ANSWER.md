@@ -1,5 +1,83 @@
 # GHI CHÚ — TEMPLATE TYPE THE ANSWER
 
+## Đợt 304 (08/9/2026, thầy giao) — ⭐⭐ EDITOR: VIỀN Ô QUESTION ĐẬM HƠN · HAI CỘT (hỏi trái | đáp án phải) · Ô TỰ XUỐNG DÒNG CHO THẤY HẾT CHỮ
+
+Thầy: *"Ô điền dòng Question có viền đậm hơn để nhìn rõ sự khác nhau với các ô answer · Dòng Question
+ở cột bên trái, các dòng answer ở 1 cột bên phải cho dễ nhìn, dễ phân biệt · Khi chữ dài quá ô thì
+tăng rộng ô ra và xuống dòng 2 ngay trong ô. Đảm bảo luôn quan sát được hết text."*
+
+### ⛔⛔ GỐC RỄ VIỆC 2: KHỐI CSS `.aw-tta-ed-*` CHƯA BAO GIỜ TỒN TẠI
+
+`type-the-answer-editor.js` gắn `.aw-tta-ed-block` · `-qtext` · `-acol` · `-arow` · `-atext` từ
+**30/7/2026**, và chính ghi chú đợt đó khai *"chỉ thêm khối nhỏ `.aw-tta-ed-*` vào
+`type-the-answer.css` của chính template này"*. Nhưng **trong file không hề có một luật nào** —
+`grep -rn "aw-tta-ed" --include=*.css` toàn kho ra **0 dòng**, kiểm cả `_backup/dot273/` cũng trống.
+Hậu quả suốt hơn một tháng: `.aw-tta-ed-block` là `<div>` trần ⇒ ô câu hỏi **nằm chồng LÊN TRÊN** cột
+đáp án, đúng thứ thầy thấy. ⚠️ Bài học: **ghi chú nói "đã thêm CSS" không phải bằng chứng có CSS** —
+class bên JS và luật bên CSS không có gì tự kiểm nhau, phải grep mới biết.
+
+### Đã sửa
+
+**`type-the-answer.css`** — thêm hẳn khối EDITOR còn thiếu (cuối file, có ghi chú cảnh báo ở trên):
+- `.aw-tta-ed-block` = lưới **2 cột đều nhau** (`minmax(0,1fr)` ×2, gap 14px, `align-items:start`);
+  dưới **760px** tự xếp chồng lại (hai cột 1fr trên điện thoại thì cột nào cũng hẹp quá).
+- `.aw-tta-ed-qtext` viền **2,5px `#23303e`** + chữ đậm + nền `#f7f9fc` (ô đáp án giữ nguyên viền nhạt
+  1,5px `#d7e0ec` của `.aw-ed-input` bên core) — lúc focus vẫn nhường màu xanh của core kẻo không biết
+  con trỏ đang ở đâu.
+- Cột đáp án `flex-direction:column`, nút `×` bám **mép trên** (`align-items:flex-start`) để ô đáp án
+  nhiều dòng không đẩy nút xuống lửng lơ giữa ô.
+- Cả 2 loại ô: `resize:none` · `overflow:hidden` · `overflow-wrap:anywhere` · `line-height:1.35`.
+
+**`type-the-answer-editor.js`** — ô đáp án đổi từ `<input>` sang **`<textarea rows=1>`** (một `<input>`
+không bao giờ xuống dòng: đáp án là cả câu thì chữ chạy ngang ra khỏi tầm mắt). Thêm:
+- `autoGrow(ta)` — cao theo nội dung, khuôn của `templates/crossword/crossword-editor.js`.
+- `noEnter(ta)` — Enter không chèn `\n`: mỗi ô giữ đúng MỘT dòng dữ liệu (và lúc chơi `\n` chỉ hiện
+  ra như một dấu cách, lưu vào chỉ tổ làm phép so đáp án lệch).
+- `growAll()` gọi ở **4 mốc**: ngay sau `container.append(page)` · khung hình kế (`rAF`) ·
+  `document.fonts.ready` · và mỗi lần **cửa sổ đổi bề ngang**. Bộ nghe `resize` tự gỡ mình khi trang
+  editor đã bị thay (`page.isConnected`), không rò bộ nhớ.
+
+### ⭐⭐ MỘT LỖI ẨN BẮT ĐƯỢC KHI ĐO — `scrollHeight` KHÔNG TÍNH VIỀN
+
+Bản `autoGrow` chép từ Crossword gán `height = scrollHeight + 2`. Nhưng `.aw-ed-input` (core) khai
+`box-sizing:border-box`, mà `scrollHeight` tính **cả padding nhưng KHÔNG tính viền** ⇒ phần chữ hụt
+đúng bằng viền trên + viền dưới. Đo thật ở bàn thử: ô câu hỏi (viền 2,5px) **hụt 2px** — dòng cuối bị
+liếm mất chân chữ. Sửa: cộng `borderTop + borderBottom` khi `box-sizing` là `border-box` ⇒ hụt về
+**0px ở mọi ô**. ⚠️ `templates/crossword/crossword-editor.js` còn nguyên bản cũ (viền mỏng nên gần như
+không thấy) — **không đụng ở đợt này** vì không phải template của phiên; ai làm Crossword thì vá theo.
+
+### Bàn thử + phép đo
+
+`scratch/dot304-editor.html` (gitignore, không lên kho) — mở THẲNG `openTypeTheAnswerEditor` với 3 câu,
+câu 2 cố ý mang câu hỏi rất dài + 2 đáp án rất dài. **Không cần đăng nhập Google.** Đo qua
+`javascript_tool` trên trình duyệt thật, viewport 1280×900:
+
+| Phép đo | Kết quả |
+|---|---|
+| Lưới | `346px 346px` — câu hỏi x=280, cột đáp án x=640, **cùng mép trên** |
+| Viền | question **2,5px `rgb(35,48,62)`** · answer **1,5px `rgb(215,224,236)`** |
+| Ô nhiều dòng | câu 3 dòng cao **133px**, đáp án 2 dòng cao **88px** |
+| Hụt chữ (`scrollHeight − clientHeight`) | **0 ở TẤT CẢ ô** (trước khi vá viền: 2px ở ô câu hỏi) |
+| Gõ chữ dài rồi xoá bớt | 45px → **88px** → về lại **45px** (ô co lại được, không kẹt cao) |
+| Enter | bị chặn, giá trị không đổi |
+| Dán Excel | dán `Q one⇥ans1⇥ans2 / Q two⇥only answer` từ ô câu 2 → ra đúng 3 thẻ, đáp án phụ đúng chỗ |
+| Màn 375px (mobile) | lưới về **1 cột**, hụt chữ vẫn 0 |
+| Save | trả về đúng `items` đã sửa |
+
+`node --input-type=module --check` sạch. **0 lỗi console** suốt bàn thử.
+
+⚠️ **Bẫy bàn thử đã cắn ngay trong đợt này**: lượt đo đầu ra `gridTemplateColumns: 0px`, ô rộng 28px —
+vì pane trình duyệt của phiên đang **bị ẩn**, bề ngang gần như bằng 0. Và trong pane ẩn thì
+`requestAnimationFrame` **đóng băng hoàn toàn** (luật đã ghi ở `APP_MASTER.md` mục 8) nên bản đầu tiên
+đặt chiều cao trong `rAF` không bao giờ chạy ⇒ "ô không tự cao" là kết luận SAI của bàn thử hỏng.
+Phải `resize_window` ép viewport thật rồi mới đo, và `growAll()` phải có nhánh **đồng bộ**, không chỉ rAF.
+
+### VIỆC ĐANG CHỜ
+- ⬜ Thầy mở bản live, vào **Edit content** của một act Type the answer thật, xem 3 điểm trên.
+- ⬜ **Đợt sau (thầy đã chốt hướng qua AskUserQuestion 08/9)**: tô màu **2 màu** từng từ khi submit
+  (xanh = đúng, đỏ = sai) + **gợi ý offline thông minh** khi trả lời sai (thiếu/thừa/sai thứ tự/sai
+  chính tả/sai dạng động từ). ⛔ Thầy chốt **KHÔNG** dùng AI online cho HS.
+
 ## Đợt 97 (10/8/2026, v0.9.71) — 3 tinh chỉnh màn chơi: chống iOS Safari tự zoom ô nhập, đẩy xa dấu
 tích/X, hiện đáp án đúng lâu hơn khi sai. KHÔNG đụng core (chỉ `type-the-answer.js` + `.css`). ✅ THẦY
 DUYỆT → COMMIT `931ca20` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/` (đo DOM qua trình duyệt

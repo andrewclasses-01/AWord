@@ -312,3 +312,65 @@
 .aw-fight-board.is-concealed .aw-tta-answer-area { color: transparent; transition: color .18s ease; }
 .aw-fight-board.is-concealed .aw-tta-answer-area .aw-tta-input,
 .aw-fight-board.is-concealed .aw-tta-answer-slot { color: transparent; }
+
+/* =============================================================
+   EDITOR — BẢNG SOẠN CÂU HỎI (Đợt 304, thầy 08/9/2026)
+
+   ⛔⛔ ĐỌC TRƯỚC KHI SỬA: khối này TỪNG BIẾN MẤT. `type-the-answer-editor.js` đã
+   gắn các class `.aw-tta-ed-*` từ 30/7/2026 và ghi chú của template khai là "đã thêm
+   khối nhỏ .aw-tta-ed-* vào type-the-answer.css", nhưng trong file KHÔNG hề có một
+   luật nào — kiểm cả bản `_backup/dot273/` cũng trống. Hậu quả suốt từ đó: `.aw-tta-ed-block`
+   là một `<div>` trần ⇒ câu hỏi NẰM ĐÈ LÊN TRÊN cột đáp án thay vì hai cột cạnh nhau
+   (đúng thứ thầy báo 08/9). Ai gỡ class nào bên JS thì nhớ gỡ luôn luật ở đây, và
+   ngược lại — hai đầu này không có gì tự kiểm nhau.
+
+   Bảng Options + editor nằm NGOÀI khung container-query của màn chơi, nên ở đây dùng
+   px/rem, không dùng `var(--aw-u)` (nó không phân giải được).
+   ============================================================= */
+
+/* Thầy 08/9: "Dòng Question ở cột bên trái, các dòng answer ở 1 cột bên phải". */
+.aw-tta-ed-block {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+/* Màn hẹp thì xếp chồng lại — hai cột 1fr trên điện thoại là hai cột đều quá hẹp. */
+@media (max-width: 760px) {
+  .aw-tta-ed-block { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Thầy 08/9: "ô điền dòng Question có viền đậm hơn để nhìn rõ sự khác nhau với các ô
+   answer". Ô đáp án giữ nguyên viền nhạt 1.5px #d7e0ec của `.aw-ed-input` (core). */
+.aw-tta-ed-qtext {
+  font-weight: 700;
+  border-width: 2.5px;
+  border-color: #23303e;
+  background: #f7f9fc;
+}
+/* Lúc đang gõ vẫn nhường cho màu focus xanh của core, kẻo không biết con trỏ ở đâu. */
+.aw-tta-ed-qtext:focus { border-color: #2f7bff; }
+
+/* Cột đáp án: mỗi đáp án một dòng, nút × bám MÉP TRÊN (`flex-start`) để ô đáp án
+   nhiều dòng không đẩy nút xuống lửng lơ giữa ô. */
+.aw-tta-ed-acol { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.aw-tta-ed-arow { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.aw-tta-ed-acol .aw-ed-adda { margin-top: 4px; }
+
+/* Cả hai loại ô nay là <textarea> cao theo nội dung (autoGrow bên JS):
+   · `resize:none` — thầy không phải tự kéo, ô tự cao;
+   · `overflow:hidden` — autoGrow luôn để ô đủ cao nên không bao giờ cần thanh cuộn,
+     mà để `auto` thì chính thanh cuộn lại làm `scrollHeight` nhảy số;
+   · `overflow-wrap:anywhere` — một từ dài kín mít (link, chuỗi không dấu cách) vẫn
+     bẻ dòng thay vì chạy ngang ra khỏi tầm mắt;
+   · `line-height:1.35` — sàn cho chữ Việt (luật ở core/HUONG DAN CORE.md). */
+.aw-tta-ed-qtext,
+.aw-tta-ed-atext {
+  display: block;
+  resize: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+.aw-tta-ed-atext { flex: 1 1 auto; min-width: 0; }
