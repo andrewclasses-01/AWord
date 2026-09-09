@@ -1209,9 +1209,16 @@ function buildSetSwitchButtons(sw, contentSetSwitch, sel, onViewChange) {
 export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange = null, templatePicker = null, mergedSetSwitch = null }) {
   const shown = contentSwitch.shown === "voice" ? "voice" : "text";
   // ⭐ Đợt 299 (thầy chốt 07/9) — BỘ NGHĨA NÀO ĐÃ GIAO BÀI thì đeo dấu ✓ ngay
-  // cạnh tên nó (ENG1 · VI2…), bất kể giao bằng template nào. `daGiao` là một
-  // Map "khoá bộ nghĩa -> mảng template đã dùng"; không truyền thì hàng nút vẽ
-  // y như trước (Settings không có act nên không bao giờ truyền).
+  // cạnh tên nó (ENG1 · VI2…). `daGiao` là một Map "khoá bộ nghĩa -> mảng
+  // template đã dùng"; không truyền thì hàng nút vẽ y như trước (Settings
+  // không có act nên không bao giờ truyền).
+  // ⭐⭐ Đợt 314 (thầy chốt 09/9/2026) — DẤU ✓ NAY TRA THEO ĐÚNG TEMPLATE ĐANG
+  // CHỌN, không còn "bất kể template nào" như Đợt 299. Thầy: chọn TEXT · VI1 ·
+  // QUIZ rồi tạo bài giao thì VI1 tích ✓ đúng — nhưng chọn tiếp cho act khác
+  // TEXT · VI1 · ANAGRAM thì tích PHẢI TẮT (chưa có bài giao ANAGRAM cho VI1),
+  // dù VI1 đã có template khác rồi. Cho phép tạo NHIỀU template khác nhau cho
+  // cùng một bộ nghĩa — dấu ✓ chỉ nói "template NÀY, bộ NÀY đã giao chưa", xem
+  // `paintHalf()` bên dưới (so với `templatePicker.label()`).
   const daGiao = contentSwitch.daGiao instanceof Map ? contentSwitch.daGiao : null;
   const variants = contentSwitch.variants || null;
   const voiceVariants = contentSwitch.voiceVariants || variants;
@@ -1391,13 +1398,20 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
       b.classList.toggle("is-on", k === current);
       // ⭐⭐ Đợt 312 — dấu ✓ đổi theo NỬA ĐANG ĐỨNG. `mode` ở đây luôn là nửa
       // vừa chọn, nên lật TEXT↔VOICE là ✓ tự đúng lại ngay trong cùng khung hình.
+      // ⭐⭐ Đợt 314 (thầy chốt 09/9) — VÀ ĐỔI THEO TEMPLATE ĐANG CHỌN: `dg` là
+      // mảng NHÃN template đã từng giao cho bộ này (vd ["QUIZ"]); tích ✓ CHỈ khi
+      // template đang đứng ở `templatePicker` NẰM TRONG mảng đó — đổi sang
+      // template khác (vd ANAGRAM) mà bộ này chưa giao bằng ANAGRAM thì tích tắt
+      // ngay, dù đã có bài giao QUIZ cho đúng bộ này (thầy cho phép nhiều
+      // template khác nhau cùng một bộ nghĩa).
       const dg = daGiao && daGiao.get(mode + "|" + k);
-      const co = !!(dg && dg.length);
+      const tplHien = templatePicker ? templatePicker.label() : null;
+      const co = !!(dg && dg.length && (!tplHien || dg.includes(tplHien)));
       b.classList.toggle("aw-seg-daGiao", co);
       const tick = b.querySelector(".aw-seg-tick");
       if (tick) tick.hidden = !co;
       b.title = co
-        ? "Đã giao bài với bộ này (" + mode + "): " + dg.join(" · ")
+        ? "Đã giao bài \"" + tplHien + "\" với bộ này (" + mode + ")"
         : "";
     });
   };
