@@ -18,7 +18,8 @@ import { startGame } from "./core/engine.js";
 import { el } from "./core/utils.js";
 import {
   getAssignment, queueAttempt, sendAttempt, flushOutbox,
-  listScores, isLate, nameKey, prettiestName, rankCompare
+  listScores, isLate, nameKey, prettiestName, rankCompare,
+  sendSpecialAttempt   // myLesson "HỌC SINH ĐẶC BIỆT" — kho điểm RIÊNG, xem assignments.js
 } from "./core/assignments.js";
 import { ensureTemplate } from "./core/registry.js";
 // No template is imported here on purpose. ensureTemplate() fetches the ONE
@@ -178,6 +179,12 @@ async function play(assignment, studentName, className) {
   }
 
   app.innerHTML = "";
+  // ⭐⭐ myLesson "HỌC SINH ĐẶC BIỆT" (thầy Andrew chốt 09/09/2026) — phụ huynh
+  // luyện bài CÙNG con qua trang nhúng của myLesson, mang cờ `&db=1`. Chơi được,
+  // nhưng KHÔNG được ghi vào kho điểm chung của lớp (không tính lượt nộp, không
+  // vào leaderboard/kết quả của thầy) và màn kết thúc CHỈ được thấy đúng dòng của
+  // CHÍNH mình — xem `submit`/`retrySubmit`/`entries` bên dưới.
+  const dacBiet = new URLSearchParams(location.search).get("db") === "1";
   // ⭐ Đợt 246 — one attempt at a time. `submit` freezes the play into the
   // outbox and starts delivering; `retrySubmit` re-runs delivery for the SAME
   // attempt (same fixed id — a re-send can never create a second row). Both
@@ -212,17 +219,41 @@ async function play(assignment, studentName, className) {
       // Không nhúng (mở tab thường, parent === window) thì không bắn gì.
       // ⛔ Chỉ bắn khi kq.ok — nộp treo/hỏng mà báo là bảng bên kia làm mới vô ích.
       submit: ({ score, total, timeMs, review }) => {
+        if (dacBiet) {
+          // KHÔNG queueAttempt(): entry đó rơi vào outbox CHUNG cho mọi lượt chơi
+          // trên máy, và flushOutbox() (dòng ~45, chạy ở MỌI lần mở trang) sẽ âm
+          // thầm gửi nó lên sau vào ĐÚNG kho điểm ta đang tránh. Ghi qua kho RIÊNG
+          // `sendSpecialAttempt` — xem chú thích ⛔ đầy đủ ở core/assignments.js.
+          attempt = { attemptId: "", score: Math.round(score) | 0,
+                      total: Math.round(total) | 0, timeMs: Math.round(timeMs) | 0 };
+          return sendSpecialAttempt({ code: assignment.code, studentName,
+                                      score, total, timeMs });
+        }
         attempt = queueAttempt({ code: assignment.code, studentName, score, total, timeMs, review });
         return baoNopChoTrangMe(sendAttempt(attempt));
       },
-      retrySubmit: () => attempt
-        ? baoNopChoTrangMe(sendAttempt(attempt))
-        : Promise.resolve({ ok: false }),
+      retrySubmit: () => {
+        if (dacBiet) return attempt
+          ? sendSpecialAttempt({ code: assignment.code, studentName,
+                                 score: attempt.score, total: attempt.total,
+                                 timeMs: attempt.timeMs })
+          : Promise.resolve({ ok: false });
+        return attempt ? baoNopChoTrangMe(sendAttempt(attempt)) : Promise.resolve({ ok: false });
+      },
       attemptId: () => attempt ? attempt.attemptId : "",
 
       // The class ranking: each student's BEST attempt, best score first and,
       // on a tie, the faster time (the teacher's rule).
       entries: async () => {
+        if (dacBiet) {
+          // KHÔNG đọc kho điểm chung (listScores) — phụ huynh không được thấy/
+          // không được lọt vào bảng của lớp. Chỉ trả về ĐÚNG dòng của chính họ,
+          // dựng thẳng từ lượt vừa chơi (không tốn lượt đọc nào).
+          return attempt
+            ? [{ name: studentName, score: attempt.score, total: attempt.total,
+                 timeMs: attempt.timeMs, mine: true }]
+            : [];
+        }
         const rows = await listScores(assignment.code);
         const best = new Map(), names = new Map();
         rows.forEach(r => {

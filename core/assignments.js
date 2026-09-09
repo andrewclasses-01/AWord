@@ -573,6 +573,44 @@ export async function sendAttempt(entry, { tries = 3, tryTimeoutMs = 6000 } = {}
   return { ok: false };
 }
 
+// ═══════════ myLesson "HỌC SINH ĐẶC BIỆT" (thầy Andrew chốt 09/09/2026) ═══════════
+// Phụ huynh luyện bài CÙNG con qua link nhúng của myLesson mang cờ `&db=1`
+// (play.js đọc). Điểm của họ đi vào một kho HOÀN TOÀN RIÊNG:
+//
+//   specialAttempts/{code}/entries/{id}   PUBLIC CREATE, cùng mức tin cậy như
+//                                         assignments/{code}/scores — KHÔNG app
+//                                         nào khác trong hệ đọc collection này.
+//
+// ⛔ CỐ Ý KHÔNG đụng `assignments/{code}/scores` (leaderboard của lớp),
+// `results/{id}` (kho bài làm để thầy chấm — trộn một dòng của phụ huynh vào đó
+// là thầy chấm nhầm), và KHÔNG tăng `submitCount`/`lastSubmitAt` của assignment
+// (điều khiển chấm "CÓ BÀI MỚI" cho GIÁO VIÊN — không phải việc của phụ huynh).
+// ⛔ CỐ Ý KHÔNG đi qua saveOutboxEntry()/readOutbox(): outbox đó là kho CHUNG cho
+// MỌI lượt chơi trên máy, và flushOutbox() (chạy ở MỌI lần mở play.html) sẽ gửi
+// lại bất cứ gì còn trong đó — nhét một attempt "đặc biệt" vào chung outbox là
+// sớm muộn nó cũng bị gửi vào ĐÚNG chỗ ta đang cố tránh. Vì vậy hàm này không có
+// cơ chế thử lại giữa các lần tải trang — mất mạng thì mất đúng lượt đó, không
+// nguy hiểm bằng nguy cơ rò rỉ.
+export async function sendSpecialAttempt({ code, studentName, score, total, timeMs },
+                                          { tries = 2, tryTimeoutMs = 6000 } = {}) {
+  let d, sdk;
+  try { [d, sdk] = await Promise.all([db(), fs()]); }
+  catch (e) { return { ok: false }; }
+  const { doc, setDoc } = sdk;
+  const name = String(studentName || "Player").trim().replace(/\s+/g, " ").slice(0, 40) || "Player";
+  const id = `sp${now()}x${Array.from(crypto.getRandomValues(new Uint8Array(4)),
+    b => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("")}`;
+  const ref = doc(d, "specialAttempts", String(code), "entries", id);
+  const data = { name, score: Math.round(score) | 0, total: Math.round(total) | 0,
+                 timeMs: Math.round(timeMs) | 0, createdAt: now() };
+  for (let round = 0; round < tries; round++) {
+    if (round) await new Promise(r => setTimeout(r, 700 * round));
+    try { await withTimeout(setDoc(ref, data), tryTimeoutMs); return { ok: true }; }
+    catch (e) { /* thử lại vòng sau; hết vòng thì thôi — xem chú thích ⛔ ở trên */ }
+  }
+  return { ok: false };
+}
+
 // Deliver whatever previous visits still owe — run on every play.html load,
 // in the background, never blocking anything. Sequential on purpose: these are
 // leftovers on a possibly-bad connection, not a race.

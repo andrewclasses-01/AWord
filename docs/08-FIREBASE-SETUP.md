@@ -216,6 +216,23 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isTeacher();
     }
+
+    // (09/9/2026) myLesson "HỌC SINH ĐẶC BIỆT": phụ huynh luyện bài CÙNG con bằng
+    // một ID riêng — điểm của họ đi vào kho RIÊNG này, TÁCH HẲN khỏi
+    // assignments/{code}/scores (bảng xếp hạng của lớp) và /results (bài làm để
+    // thầy chấm). Cùng mức tin cậy như bảng xếp hạng: tạo được, không sửa/xoá.
+    match /specialAttempts/{code}/entries/{entryId} {
+      allow read: if isTeacher();
+      allow create: if request.resource.data.keys().hasOnly(
+                        ['name','score','total','timeMs','createdAt'])
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() <= 40
+                    && request.resource.data.score is int
+                    && request.resource.data.total is int
+                    && request.resource.data.timeMs is int
+                    && request.resource.data.createdAt is int;
+      allow update, delete: if isTeacher();
+    }
   }
 }
 ```
@@ -273,6 +290,13 @@ voiceClips/{clipId}           ← (10/8/2026) 1 document/từ = 1 giọng đọc
                                  1 act/assignment, không list được cả collection. Tách riêng
                                  khỏi act/assignment vì audio ~50-150KB/từ, 100 từ sẽ vỡ giới
                                  hạn 1MB/document nếu nhét chung. core/voice-clips.js.
+
+specialAttempts/{code}/entries/{id}  ← (09/9/2026) myLesson "HỌC SINH ĐẶC BIỆT" (phụ huynh
+                                 luyện bài CÙNG con, link nhúng mang cờ &db=1). Cùng hình
+                                 dạng field với assignments/{code}/scores nhưng CHỈ THẦY đọc
+                                 — không ai khác trong hệ (kể cả bảng xếp hạng của chính bài
+                                 đó) chạm tới collection này. core/assignments.js
+                                 (sendSpecialAttempt).
 ```
 
 **Vì sao tách `assignments` ra khỏi thư viện?** Để thư viện của thầy luôn riêng tư — HS chỉ
