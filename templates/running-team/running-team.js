@@ -213,10 +213,10 @@ const rtTemplate = {
   // sliders became tooltips on their cells: a paragraph of prose inside a
   // grid cell is what made this panel's rows uneven.
   buildExtraOptions({ panel, draft, mkSliderCell }) {
-    // -- main clock: 0:30 to 10:00, snapped to whole 30s steps --
-    const mainSecs = Math.round(clampInt(draft.mainSeconds, 30, 600, 600) / 30) * 30;
+    // -- main clock: 0:30 to 10:00, snapped to whole 5s steps --
+    const mainSecs = Math.round(clampInt(draft.mainSeconds, 30, 600, 600) / 5) * 5;
     const cMain = mkSliderCell({
-      label: "Round time", sub: "whole game", min: 30, max: 600, step: 30, value: mainSecs, tone: "blue",
+      label: "Round time", sub: "whole game", min: 30, max: 600, step: 5, value: mainSecs, tone: "blue",
       fmt: v => fmtClock(v * 1000),
       onInput: v => { draft.mainSeconds = v; }
     });
@@ -716,7 +716,7 @@ const rtTemplate = {
     // ===== THE ROUND ========================================================
     function startRunning() {
       order = current.order.slice();
-      roster = rosterOf(current);
+      roster = shuffle(rosterOf(current));
       queue = shuffle(order.map((_, i) => i));
       livesLeft = cfg.lives;
       mainLeft = cfg.mainMs;

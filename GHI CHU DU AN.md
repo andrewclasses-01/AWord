@@ -12,7 +12,24 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 314** (09/9/2026, thầy yêu cầu — TẠO VOICE NGAY TRONG OPTIONS, không cần vào
+> Mới nhất: **Đợt 315** (09/9/2026, thầy yêu cầu — RUNNING TEAM: mỗi lần bấm START RUNNING xáo lại
+> THỨ TỰ GỌI TÊN dù dùng lại cùng SET, để chơi lần 2/3 không lặp y hệt lần trước; tỉ lệ xuất hiện các
+> tên vẫn đều tuyệt đối (round-robin có sẵn); và thanh trượt **Round time** đổi nấc 30s → **5s**.
+> `startRunning()` (`templates/running-team/running-team.js`) đổi `roster = rosterOf(current)` thành
+> `roster = shuffle(rosterOf(current))` — `shuffle()` (core/utils.js) COPY mảng (Fisher–Yates, không
+> đụng `current.studentNames` gốc), chỉ xáo THỨ TỰ gọi của module-level `roster`, không đụng
+> `rosterDraft` (danh sách điểm danh ở màn setup). Round-robin `roster[turnPtr % roster.length]` với
+> `turnPtr` reset về 0 mỗi `startRunning()` đã LUÔN đảm bảo không ai được gọi lần 2 trước khi mọi
+> người được gọi lần 1 — xáo chỉ đổi ĐIỂM BẮT ĐẦU của vòng quay, không phá tính đều. `buildExtraOptions`
+> đổi `step: 30`→`step: 5` (Round time), công thức làm tròn giá trị cũ cũng đổi chia-cho-30 →
+> chia-cho-5 để giá trị đã lưu (bội số của 30) không lệch nấc mới. Bàn thử trình duyệt thật qua
+> `templates/running-team/test.html` (SET DEMO 10 học sinh có sẵn): bấm START RUNNING 2 lần liên tiếp
+> (reload giữa 2 lần) ra tên đầu tiên **TUẦN KIỆT** rồi **ĐỨC ANH** — cả hai đều không phải học sinh
+> đầu danh sách gốc (Minh Anh) ⇒ xáo có tác dụng thật; `input[type=range]` đo trực tiếp trong DOM xác
+> nhận `step:"5"` trên slider Round time (2 slider còn lại — Lives, Question time — không đổi); kéo
+> thử giá trị 35 (bội số 5, không phải bội số 30) ra đúng nhãn "0:35". 0 lỗi console. Xem mục Đợt 315
+> ngay dưới.)
+> Trước đó: **Đợt 314** (09/9/2026, thầy yêu cầu — TẠO VOICE NGAY TRONG OPTIONS, không cần vào
 > Edit: act tích hợp CHƯA hề có giọng (ENG1 lẫn ENG2 đều 0 clip) nay vẫn hiện nút VOICE — nền
 > đen/chữ trắng — bấm vào hỏi "Do you want to generate voices for this activity?" ngay tại chỗ,
 > Có thì tạo giọng "Random mix UK" (đúng chế độ Mix voice có sẵn) cho cả ENG1+ENG2, thấy tiến
@@ -240,6 +257,62 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 315 (09/9/2026, thầy yêu cầu) — **RUNNING TEAM: XÁO THỨ TỰ GỌI TÊN MỖI LẦN START + ROUND TIME NẤC 5s**
+
+### Yêu cầu gốc (thầy)
+
+Đọc template RUNNING TEAM, muốn 3 việc:
+1. Mỗi khi START RUNNING lại, dù cùng 1 SET, vẫn xáo lộn thứ tự gọi tên mỗi lượt mới — chơi lần
+   2, 3... không bao giờ trùng thứ tự cũ.
+2. Tỉ lệ xuất hiện mỗi tên phải đều nhau — một người không được gọi lần 2 khi người khác chưa được
+   gọi lần nào.
+3. Trong Options: thanh trượt Round time đổi nấc 30s → 5s.
+
+### Đã tìm ra gì trước khi sửa
+
+`templates/running-team/running-team.js` `startRunning()` gán `roster = rosterOf(current)` —
+`rosterOf()` (`rt-sets.js`) trả đúng thứ tự đã lưu trong SET (thứ tự điểm danh/lớp), CỐ ĐỊNH mỗi lần
+gọi. Việc gọi tên trong game dùng round-robin thuần: `roster[turnPtr % roster.length]`, `turnPtr`
+reset về 0 và tăng đúng 1 lần mỗi câu (dù đúng hay sai, dòng 892 và 934). Round-robin kiểu này TỰ NÓ
+đã đảm bảo yêu cầu (2) — không ai được gọi lần 2 trước khi hết vòng — chỉ thiếu đúng một việc: thứ
+tự xuất phát của vòng quay luôn giống hệt nhau (Minh Anh luôn là người đầu tiên) vì `roster` chưa
+từng bị xáo.
+
+### Đã sửa
+
+1. **`running-team.js` dòng ~719** — `roster = rosterOf(current)` → `roster = shuffle(rosterOf(current))`.
+   `shuffle()` (`core/utils.js`) COPY mảng bằng `[...arr]` rồi Fisher–Yates, không mutate mảng gốc —
+   an toàn vì không đụng `current.studentNames`/`rosterDraft` (danh sách điểm danh ở màn setup dùng
+   biến khác). Round-robin giữ nguyên nên yêu cầu (2) tiếp tục đúng — xáo chỉ đổi ĐIỂM XUẤT PHÁT của
+   vòng quay mỗi ván, không phá tính đều.
+2. **`buildExtraOptions()` — slider Round time**: `step: 30` → `step: 5`; công thức làm tròn giá trị
+   đã lưu `Math.round(... / 30) * 30` → `Math.round(... / 5) * 5` (giá trị cũ là bội số 30 vẫn khớp
+   nấc mới, không bị lệch khi mở lại act cũ).
+
+### Bàn thử (trình duyệt thật qua devserver, `templates/running-team/test.html` — SET "DEMO" 10 học sinh có sẵn)
+
+- Bấm START RUNNING, ghi tên đầu tiên hiện ra ở màn READY → **TUẦN KIỆT**. Reload trang, bấm START
+  RUNNING lần 2 → **ĐỨC ANH**. Cả hai đều không phải "Minh Anh" (học sinh đầu danh sách gốc) ⇒ xáo có
+  tác dụng thật, không phải trùng ngẫu nhiên với thứ tự cũ.
+- `document.querySelectorAll('input[type=range]')` đọc trực tiếp DOM: slider Round time (min 30, max
+  600) ra `step:"5"`; 2 slider còn lại (Lives, Question time) không đổi.
+- Gán thử giá trị `35` (bội số 5, không phải bội số 30) vào slider Round time rồi bắn `input` event →
+  nhãn hiện đúng `"0:35"`.
+- 0 lỗi console suốt phiên bàn thử.
+
+### Commit + Push
+
+⬜ CHƯA COMMIT — chờ thầy duyệt qua chat trước khi đẩy (theo quy tắc mặc định của dự án).
+
+### ⬜ VIỆC ĐANG CHỜ
+
+- [ ] Thầy tự chơi lại 2–3 lượt trên act RUNNING TEAM thật (không phải sample DEMO) để xác nhận cảm
+      giác xáo tên đúng ý.
+- [ ] Thầy tự kéo thử thanh Round time trên màn Options thật (không phải qua JS như bàn thử) để xác
+      nhận nấc 5s bấm/kéo bằng tay thoải mái, không quá vụn.
 
 ---
 

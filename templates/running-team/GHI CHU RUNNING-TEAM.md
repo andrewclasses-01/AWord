@@ -1,5 +1,17 @@
 # GHI CHU RUNNING TEAM (RUNNINGT)
 
+> **Đợt 315 dự án (09/9/2026) — XÁO THỨ TỰ GỌI TÊN MỖI LẦN START RUNNING + ROUND TIME NẤC 5s.
+> KHÔNG ĐỤNG CORE. ⬜ CHỜ THẦY DUYỆT (chưa commit).**
+> Thầy: mỗi lần bấm START RUNNING (dù cùng 1 SET) muốn thứ tự gọi tên xáo lại để chơi lần 2/3 không
+> lặp y hệt lần trước, và tỉ lệ gọi tên phải đều tuyệt đối (không ai gọi lần 2 trước khi người khác
+> được gọi lần 1). `startRunning()` đổi `roster = rosterOf(current)` → `roster = shuffle(rosterOf(current))`
+> — round-robin `roster[turnPtr % roster.length]` (`turnPtr` reset 0 mỗi ván, +1 mỗi câu dù đúng/sai)
+> vốn ĐÃ đảm bảo tính đều, chỉ thiếu xáo điểm xuất phát; `shuffle()` copy mảng nên không đụng
+> `current.studentNames`/`rosterDraft`. Riêng Options: slider **Round time** đổi nấc 30s → 5s (`step`
+> + công thức làm tròn giá trị đã lưu). Bàn thử qua `test.html` (SET DEMO): START 2 lần liên tiếp (có
+> reload) ra người đầu tiên khác nhau (TUẦN KIỆT rồi ĐỨC ANH, đều khác Minh Anh — người đầu danh sách
+> gốc); đọc DOM slider xác nhận `step:"5"`; 0 lỗi console. Chi tiết: `GHI CHU DU AN.md` Đợt 315.
+
 > **Đợt 117 dự án (11/8/2026) — ĐỒNG BỘ Ô SET VỚI RUNNING WORD, KHOÁ START THEO SAVE, IN TO TỐI ĐA,
 > TÊN HIỆN TỪ READY + ĐẾM CHẬM HƠN + ANIMATION MƯỢT, DẤU ✓/✗ BAY ĐÚNG LỚP. KHÔNG ĐỤNG CORE.**
 > Xem mục 16 (chi tiết đầy đủ) + `GHI CHU DU AN.md` Đợt 117. Tóm tắt: Shuffle/Save/Print vào hẳn trong ô

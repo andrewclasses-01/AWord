@@ -5219,9 +5219,30 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **09/9/2026 sau Đợt 312b** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **09/9/2026 sau Đợt 315** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (09/9/2026 — sau **Đợt 312b**: ✅ ĐẨY LIVE)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (09/9/2026 — sau **Đợt 315**: ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE)
+>
+> **Đợt 315 — RUNNING TEAM: xáo thứ tự gọi tên mỗi lần START RUNNING + Round time nấc 5s.**
+> Thầy: (1) mỗi lần bấm START RUNNING dù cùng 1 SET vẫn phải xáo lại thứ tự gọi tên, chơi lần 2/3
+> không lặp y hệt lần trước; (2) tỉ lệ gọi tên phải đều tuyệt đối; (3) Options → Round time đổi
+> nấc 30s → 5s. File: `templates/running-team/running-team.js`.
+> `startRunning()` đổi `roster = rosterOf(current)` → `roster = shuffle(rosterOf(current))` —
+> round-robin `roster[turnPtr % roster.length]` sẵn có (turnPtr reset 0 mỗi ván, +1 mỗi câu dù
+> đúng/sai) đã tự đảm bảo yêu cầu (2), chỉ thiếu xáo điểm xuất phát của vòng quay cho yêu cầu (1).
+> `shuffle()` copy mảng (Fisher–Yates), không đụng `current.studentNames`/`rosterDraft`.
+> `buildExtraOptions()`: slider Round time `step: 30` → `step: 5` + công thức làm tròn giá trị cũ
+> đổi theo. Bàn thử qua `test.html` (SET DEMO): START 2 lần liên tiếp (reload giữa 2 lần) ra người
+> gọi đầu tiên khác nhau (Tuấn Kiệt rồi Đức Anh, đều khác Minh Anh — đầu danh sách gốc); đọc DOM xác
+> nhận slider `step:"5"`. 0 lỗi console. Chi tiết: `GHI CHU DU AN.md` Đợt 315 +
+> `templates/running-team/GHI CHU RUNNING-TEAM.md`.
+>
+> ⬜ Còn chờ: thầy tự chơi lại 2–3 lượt trên act RUNNING TEAM thật (không phải sample DEMO) và tự
+> kéo thử thanh Round time trên màn Options thật.
+>
+> ---
+>
+> ### 🟢 TRẠNG THÁI CŨ HƠN (09/9/2026 — sau **Đợt 312b**: ✅ ĐẨY LIVE)
 >
 > **Đợt 312b — chặn trùng không nổ vì HAI BÊN NẮN BỘ NGHĨA THEO HAI LUẬT.** Thầy tạo được HAI
 > bài giao ENG1 TEXT + ANAGRAM y hệt nhau (`h65rdw` + `c9ns8n`). Đo trên kho: cả hai lưu
