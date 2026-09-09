@@ -8,11 +8,15 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **09/9/2026 (Đợt 314 — TẠO VOICE NGAY TRONG OPTIONS: act tích hợp chưa hề có
-> giọng nay vẫn hiện nút VOICE (đen), bấm hỏi "Do you want to generate voices…", Có thì tạo Random
-> mix UK cho ENG1+ENG2 ngay tại chỗ rồi tự lưu, không cần vào Edit; ✅ THẦY CHỈ ĐẠO ĐẨY LIVE trực
-> tiếp trong chat — CHƯA qua bước thầy tự bấm tay trên act thật, chỉ có bàn thử tự động, xem
-> GHI CHU DU AN.md Đợt 314)**. Trước đó: **(Đợt 311 — ANAGRAM + UNJUMBLE: HS làm đúng 30 câu mà máy ghi
+> Cập nhật lần cuối: **09/9/2026 (Đợt 316 — DẤU ✓ "ĐÃ GIAO" TRA THEO ĐÚNG TEMPLATE ĐANG CHỌN: chọn
+> TEXT·VI1·QUIZ tạo bài giao thì VI1 tích ✓, nhưng chọn tiếp TEXT·VI1·ANAGRAM cho act khác thì tích
+> phải TẮT — trước đây (Đợt 299) tích bất kể template nào; ✅ thầy đã xem demo trực tiếp rồi mới
+> commit + push, xem GHI CHU DU AN.md Đợt 316)**. Trước đó: **(Đợt 315 — RUNNING TEAM: xáo thứ tự
+> gọi tên mỗi lần START RUNNING + Round time nấc 5s)**. Trước đó: **(Đợt 314 — TẠO VOICE NGAY TRONG
+> OPTIONS: act tích hợp chưa hề có giọng nay vẫn hiện nút VOICE (đen), bấm hỏi "Do you want to
+> generate voices…", Có thì tạo Random mix UK cho ENG1+ENG2 ngay tại chỗ rồi tự lưu, không cần vào
+> Edit; ✅ THẦY CHỈ ĐẠO ĐẨY LIVE trực tiếp trong chat — CHƯA qua bước thầy tự bấm tay trên act thật,
+> chỉ có bàn thử tự động, xem GHI CHU DU AN.md Đợt 314)**. Trước đó: **(Đợt 311 — ANAGRAM + UNJUMBLE: HS làm đúng 30 câu mà máy ghi
 > 29 — "cửa sổ nộp"; ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE)**. Trước đó: **(Đợt 310 — nạp bảng tra THẬT cho
 > Lesson 15 từ câu sai của HS 3 khoá NTK6/7/8)**. Trước đó: **(Đợt 309 — bảng tra gộp về một nút +
 > pop-up 4 cột)**. Trước đó: **(Đợt 308 — gỡ hẳn gợi ý tự động, thay bằng
@@ -5219,9 +5223,28 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **09/9/2026 sau Đợt 315** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **09/9/2026 sau Đợt 316** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (09/9/2026 — sau **Đợt 315**: ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (09/9/2026 — sau **Đợt 316**: ✅ THẦY XEM DEMO TRỰC TIẾP → COMMIT + PUSH)
+>
+> **Đợt 316 — DẤU ✓ "ĐÃ GIAO" TRA THEO ĐÚNG TEMPLATE ĐANG CHỌN** (chốt qua phiên sửa myLesson).
+> Thầy: chọn TEXT·VI1·QUIZ tạo bài giao thì VI1 tích ✓ đúng, nhưng chọn tiếp TEXT·VI1·ANAGRAM cho
+> act khác thì tích phải TẮT (chưa có bài giao ANAGRAM cho VI1) dù VI1 đã có template QUIZ rồi —
+> cho phép tạo NHIỀU template khác nhau cho cùng một bộ nghĩa. Đợt 299 (gốc) tích ✓ bất kể template
+> nào. File: `core/options-panel.js` (`buildContentSwitchRow()`/`paintHalf()`) — so thêm
+> `templatePicker.label()` (template đang chọn) với mảng nhãn template đã từng giao (`dg`); tích chỉ
+> bật khi CẢ bộ nghĩa LẪN template đang chọn đều khớp. Không đổi shape `daGiao` bên `assignment-ui.js`.
+> Bàn thử: trang demo gọi thẳng hàm thật (không ghi vào repo) — giả VI1(text)/ENG2(voice) đã giao
+> bằng QUIZ: đứng ở QUIZ cả hai tích ✓ đúng, đổi sang ANAGRAM tích tắt sạch ngay. 0 lỗi console.
+> ✅ **Thầy đã xem demo trực tiếp trên trình duyệt (không phải ảnh chụp), xác nhận đúng ý rồi mới
+> commit + push** — thứ tự ngược với các Đợt khác (thường push trước, thầy bấm tay sau) vì AWord
+> chạy thật cho học sinh. Chi tiết: `GHI CHU DU AN.md` Đợt 316.
+>
+> ⬜ Còn chờ: thầy tự tạo 2 bài giao thật cùng bộ nghĩa khác template trên máy thật để xác nhận lại.
+>
+> ---
+>
+> ### 🟢 TRẠNG THÁI CŨ HƠN (09/9/2026 — sau **Đợt 315**: ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE)
 >
 > **Đợt 315 — RUNNING TEAM: xáo thứ tự gọi tên mỗi lần START RUNNING + Round time nấc 5s.**
 > Thầy: (1) mỗi lần bấm START RUNNING dù cùng 1 SET vẫn phải xáo lại thứ tự gọi tên, chơi lần 2/3

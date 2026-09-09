@@ -1212,13 +1212,17 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
   // cạnh tên nó (ENG1 · VI2…). `daGiao` là một Map "khoá bộ nghĩa -> mảng
   // template đã dùng"; không truyền thì hàng nút vẽ y như trước (Settings
   // không có act nên không bao giờ truyền).
-  // ⭐⭐ Đợt 314 (thầy chốt 09/9/2026) — DẤU ✓ NAY TRA THEO ĐÚNG TEMPLATE ĐANG
+  // ⭐⭐ Đợt 316 (thầy chốt 09/9/2026) — DẤU ✓ NAY TRA THEO ĐÚNG TEMPLATE ĐANG
   // CHỌN, không còn "bất kể template nào" như Đợt 299. Thầy: chọn TEXT · VI1 ·
   // QUIZ rồi tạo bài giao thì VI1 tích ✓ đúng — nhưng chọn tiếp cho act khác
   // TEXT · VI1 · ANAGRAM thì tích PHẢI TẮT (chưa có bài giao ANAGRAM cho VI1),
   // dù VI1 đã có template khác rồi. Cho phép tạo NHIỀU template khác nhau cho
   // cùng một bộ nghĩa — dấu ✓ chỉ nói "template NÀY, bộ NÀY đã giao chưa", xem
   // `paintHalf()` bên dưới (so với `templatePicker.label()`).
+  // ⛔ Số Đợt: viết ban đầu nhầm là "Đợt 314" — lúc soạn KHÔNG thấy Đợt 314
+  // (tạo voice trong Options) và Đợt 315 (Running team) đã chiếm hai số đó
+  // trên máy khác trong CÙNG buổi tối 09/9; sửa lại đúng thành Đợt 316 ngay
+  // sau khi gộp — xem GHI CHU DU AN.md.
   const daGiao = contentSwitch.daGiao instanceof Map ? contentSwitch.daGiao : null;
   const variants = contentSwitch.variants || null;
   const voiceVariants = contentSwitch.voiceVariants || variants;
@@ -1398,7 +1402,7 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
       b.classList.toggle("is-on", k === current);
       // ⭐⭐ Đợt 312 — dấu ✓ đổi theo NỬA ĐANG ĐỨNG. `mode` ở đây luôn là nửa
       // vừa chọn, nên lật TEXT↔VOICE là ✓ tự đúng lại ngay trong cùng khung hình.
-      // ⭐⭐ Đợt 314 (thầy chốt 09/9) — VÀ ĐỔI THEO TEMPLATE ĐANG CHỌN: `dg` là
+      // ⭐⭐ Đợt 316 (thầy chốt 09/9) — VÀ ĐỔI THEO TEMPLATE ĐANG CHỌN: `dg` là
       // mảng NHÃN template đã từng giao cho bộ này (vd ["QUIZ"]); tích ✓ CHỈ khi
       // template đang đứng ở `templatePicker` NẰM TRONG mảng đó — đổi sang
       // template khác (vd ANAGRAM) mà bộ này chưa giao bằng ANAGRAM thì tích tắt

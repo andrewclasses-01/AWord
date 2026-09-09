@@ -12,7 +12,20 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 315** (09/9/2026, thầy yêu cầu — RUNNING TEAM: mỗi lần bấm START RUNNING xáo lại
+> Mới nhất: **Đợt 316** (09/9/2026, thầy chốt qua myLesson — DẤU ✓ "ĐÃ GIAO" TRA THEO ĐÚNG TEMPLATE
+> ĐANG CHỌN: Đợt 299 tích ✓ bất kể giao bằng template nào — chọn TEXT·VI1·QUIZ tạo bài giao thì VI1
+> tích ✓ đúng, nhưng chọn tiếp TEXT·VI1·ANAGRAM cho act khác thì tích VẪN SÁNG dù ANAGRAM chưa hề
+> giao cho VI1 (chỉ QUIZ đã giao). `buildContentSwitchRow()`/`paintHalf()` (`core/options-panel.js`)
+> nay so thêm `templatePicker.label()` (template đang chọn) với mảng nhãn template đã từng giao
+> (`dg`) — tích chỉ bật khi CẢ bộ nghĩa LẪN template đang chọn đều khớp; thầy vẫn tạo được NHIỀU
+> template khác nhau cho cùng một bộ nghĩa, chỉ là mỗi cặp bộ+template có dấu ✓ riêng của nó. Thử
+> trực tiếp bằng trang demo gọi THẲNG hàm thật (không ghi vào repo, xoá sau khi thử): giả `daGiao`
+> có VI1(text)/ENG2(voice) đã giao bằng QUIZ — đứng ở QUIZ thì cả hai tích ✓ đúng, bấm đổi sang
+> ANAGRAM thì tích tắt sạch ngay lập tức. ⛔ Việc này viết code lúc CHƯA thấy Đợt 314/315 đã lên máy
+> khác trong cùng buổi tối — số đợt ban đầu ghi nhầm "Đợt 314" trong code, đã sửa lại đúng thành
+> Đợt 316 ngay khi gộp nhánh. ✅ Thầy đã xem demo trực tiếp, xác nhận đúng ý rồi mới commit + push.
+> Xem mục Đợt 316 ngay dưới.)
+> Trước đó: **Đợt 315** (09/9/2026, thầy yêu cầu — RUNNING TEAM: mỗi lần bấm START RUNNING xáo lại
 > THỨ TỰ GỌI TÊN dù dùng lại cùng SET, để chơi lần 2/3 không lặp y hệt lần trước; tỉ lệ xuất hiện các
 > tên vẫn đều tuyệt đối (round-robin có sẵn); và thanh trượt **Round time** đổi nấc 30s → **5s**.
 > `startRunning()` (`templates/running-team/running-team.js`) đổi `roster = rosterOf(current)` thành
@@ -257,6 +270,66 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 316 (09/9/2026, thầy chốt qua myLesson) — **DẤU ✓ "ĐÃ GIAO" TRA THEO ĐÚNG TEMPLATE ĐANG CHỌN**
+
+### Yêu cầu gốc (thầy)
+
+Nói qua phiên đang sửa myLesson (thầy giao một loạt việc STAGE, việc này là 1 trong 10 việc):
+> "Nếu chọn TEXT - VI1 - QUIZ và tạo assignment rồi thì VI1 tích ✓, nhưng nếu chọn tiếp cho act
+> khác là TEXT - VI1 - ANAGRAM thì bỏ tích đi để thể hiện chưa tạo template này cho act này dù đã
+> có template khác cho chính act này rồi (cho phép tạo nhiều template khác nhau cho cùng 1 act)."
+
+### Đã tìm ra gì trước khi sửa
+
+Đợt 299 (07/9) làm dấu ✓ đúng ý ban đầu ("bộ nghĩa nào đã giao bài thì đeo ✓") nhưng cố ý **bất kể
+giao bằng template nào** (xem chú thích gốc trong `paintHalf()`). Đợt 312/312b sau đó vá thêm phần
+"chế độ text/voice" vào khoá tra cứu nhưng KHÔNG đụng tới phần template — nên tích ✓ tới giờ vẫn
+chỉ biết "bộ này (ở chế độ này) đã giao bằng BẤT KỲ template nào chưa", không phân biệt QUIZ với
+ANAGRAM. Đúng như thầy tả: giao VI1 bằng QUIZ rồi chọn ANAGRAM cho act khác thì tích vẫn sáng.
+
+### Đã sửa
+
+`core/options-panel.js`, hàm `buildContentSwitchRow()`/`paintHalf()`:
+- `daGiao` (Map "khoá bộ nghĩa+chế độ → mảng NHÃN template đã giao", dựng ở `assignment-ui.js` từ
+  Đợt 299, không đổi shape) nay được so thêm với **template đang chọn** — đọc qua
+  `templatePicker.label()` (chính là nhãn hiển thị của `playType` bên `assignment-ui.js`, luôn có
+  mặt cùng lúc với `daGiao` vì cả hai chỉ được truyền ở màn "Set assignment").
+- Dấu ✓ (`co`) nay bật khi **CẢ** mảng `dg` không rỗng **VÀ** nhãn template đang chọn nằm trong `dg`
+  (`dg.includes(tplHien)`). Đổi sang template khác mà bộ đó chưa từng giao bằng template đó thì
+  tích tắt ngay trong cùng khung hình (không cần đóng mở lại pop-up).
+- Chữ chú thích khi trỏ chuột (`title`) đổi từ liệt kê MỌI template đã giao, sang nói đúng MỘT
+  template đang xét: `Đã giao bài "QUIZ" với bộ này (text)`.
+- Không đổi shape `daGiao`/cách dựng nó ở `assignment-ui.js` — chỉ đổi cách ĐỌC ở `options-panel.js`,
+  nên không ảnh hưởng gì tới phép chặn trùng thật (`doStart()`), vẫn đúng luật Đợt 299/312/312b.
+
+### Bàn thử (trang demo gọi thẳng hàm thật `buildContentSwitchRow`, không ghi vào repo — xoá ngay sau khi thử)
+
+Giả `daGiao` = VI1(text) và ENG2(voice) đã từng giao bằng QUIZ, chưa từng giao bằng ANAGRAM:
+- Đứng ở template QUIZ, nửa TEXT: VI1 hiện dấu ✓. Chuyển nửa VOICE: ENG2 hiện dấu ✓.
+- Bấm đổi sang template ANAGRAM: **cả hai dấu ✓ tắt sạch ngay lập tức** — đúng ý thầy.
+- 0 lỗi console. `node --input-type=module --check` sạch.
+- ✅ **Thầy đã xem trực tiếp bàn thử trên trình duyệt (không phải ảnh chụp), xác nhận đúng ý rồi mới
+  cho commit + push** — khác các Đợt trước không có bước này vì AWord chạy thật cho học sinh.
+
+⛔ **Số Đợt bị trùng khi soạn**: đã `git pull --ff-only` đúng lúc bắt đầu sửa (kéo về đủ cả Đợt 314
++ 315 từ máy khác), nhưng lúc viết chú thích code lại không soát lại xem hai số đó đã bị chiếm —
+ghi nhầm "Đợt 314" cho việc này (một số ĐÃ DÙNG cho việc tạo voice trong Options, khác hẳn). Trước
+khi commit đã kiểm lại `git log`, phát hiện trùng số, sửa lại đúng thành **Đợt 316** cả trong code
+lẫn ở đây; nội dung/hành vi không đổi gì so với lúc thầy đã xem demo.
+
+### Commit + Push
+
+✅ **Đã commit + push** — `87e7b0d` (Dấu ✓ tra đúng theo template) + một commit theo sau đổi số Đợt
+314→316 trong chú thích code và ghi mục này. Không có bước "chờ thầy duyệt qua chat" vì đã làm đúng
+thứ tự ngược lại: xem demo trực tiếp TRƯỚC (mục Bàn thử ở trên), thầy gật đầu rồi mới commit.
+
+### ⬜ VIỆC ĐANG CHỜ
+
+- [ ] Thầy tự tạo thử 2 bài giao thật cùng một bộ nghĩa nhưng khác template (vd VI1·QUIZ rồi
+      VI1·ANAGRAM) trên máy thật, xác nhận dấu ✓ đổi đúng theo template đang đứng.
 
 ---
 
