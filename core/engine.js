@@ -25,7 +25,7 @@ import { collectVoiceIds, preloadVoiceClips } from "./voice-clips.js";
 import { hasAnyVoice, hasHiddenText } from "./voice-playback.js";
 import {
   resolveActivity, variantsOf, voiceVariantsOf, variantLabel, activeVariant,
-  contentSetsOf, activeContentSet, setLabel,
+  contentSetsOf, activeContentSet, setLabel, clueOf, setVoiceOf,
   viewKeyOf, subActKeyOf, splitViewOptions, optionsForView, storeViewOptions, VIEW_SELECTOR_KEYS
 } from "./content-view.js";
 import { switchTargets, convertActivity, toRecords } from "./convert.js";
@@ -4178,6 +4178,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     const src = subActSource();
     const variants = variantsOf(src.content);
     const coVoice = hasAnyVoice(src.content || {});
+    const voiceVariants = voiceVariantsOf(src.content);
     if (!variants && !coVoice) return null;
     return {
       shown: selState.contentMode || (hasHiddenText(src.content) ? "voice" : "text"),
@@ -4187,11 +4188,74 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // halves, say) instead of drawing a button that lands on a dead half.
       hasVoice: coVoice,
       variants,
-      voiceVariants: voiceVariantsOf(src.content),
+      voiceVariants,
       labelOf: key => variantLabel(src.content, key),
       variant: selState.contentVariant || activeVariant({ ...src, options: { ...selState, contentMode: "text" } }),
-      voiceVariant: selState.voiceVariant || activeVariant({ ...src, options: { ...selState, contentMode: "voice" } })
+      voiceVariant: selState.voiceVariant || activeVariant({ ...src, options: { ...selState, contentMode: "voice" } }),
+      // ⭐⭐ Đợt 314 (thầy) — "chưa tạo voice thì tạo NGAY trong Options, không
+      // phải mở Edit". Chỉ trao con đường này khi act CHƯA CÓ giọng nào
+      // (`!coVoice`) NHƯNG khai báo được (`voiceVariants` non-empty — capability
+      // ghi từ lúc import, xem core/lesson-import.js) — một act không hề hỗ trợ
+      // giọng (quiz's PRACTICE/HOMEWORK, Vấn đề 4) không nhận field này, giữ
+      // đúng luật ẩn nút cũ. `null` khi không có gì để tạo — buildContentSwitchRow
+      // đọc field này để quyết định có vẽ nút đen "chưa tạo" hay không; core/
+      // settings.js không bao giờ truyền field này (không có act thật), nên
+      // hành vi ở đó không đổi.
+      onGenerateVoices: (!coVoice && voiceVariants && voiceVariants.length)
+        ? (opts) => generateInlineVoices(src, voiceVariants, opts)
+        : null
     };
+  }
+
+  // ⭐⭐ Đợt 314 — TẠO GIỌNG NGAY TẠI CHỖ cho một act tích hợp chưa hề có clip
+  // nào, gọi từ nút VOICE (đen) của Options panel. `src` LUÔN là act thật —
+  // `subActSource()` đã tự quy đúng object (libAct / originAct / act thật của
+  // Fight) ở `makeContentSwitch()` phía trên, nên ở đây chỉ việc mutate + lưu
+  // đúng object đó, không tự dò lại.
+  //
+  // ⚠️ KHÔNG ép rebuild/replay ván đang chơi hay restart Fight: act chưa hề ở
+  // chế độ Voice (0 clip) nên không round nào đang hiển thị nội dung Voice cần
+  // làm mới — giáo viên bấm VOICE sau khi tạo xong sẽ tự đi qua đúng đường
+  // Apply/`fight.ctl.applyOptions` sẵn có (không đổi gì ở đó).
+  //
+  // Tạo TỪNG bộ nghĩa (`keys`, thường ["eng1","eng2"]) bằng
+  // core/voice-batch.js's generateVoicesBatch — hàm đó viết vào field PHẲNG
+  // `it.voice`/`it.voiceId` (khuôn cho act không-variant); gói lại vào
+  // `it.voices[key]` bằng setVoiceOf() đúng cách templates/anagram/anagram-
+  // editor.js's commitCurrentTab() đã làm, rồi xoá field phẳng để không để lại
+  // rác trong Firestore.
+  async function generateInlineVoices(src, keys, { onProgress, isCancelled } = {}) {
+    const items = (src.content && src.content.items) || [];
+    const total = items.length * keys.length;
+    let doneOverall = 0, failedOverall = 0, signedOut = false;
+    for (const key of keys) {
+      if (signedOut || (isCancelled && isCancelled())) break;
+      const [{ generateVoicesBatch }, { planFor }, { DEFAULT_VOICE }] = await Promise.all([
+        import("./voice-batch.js"), import("./voice-mix.js"), import("./tts.js")
+      ]);
+      // Thầy chốt (09/9/2026): giọng cho luồng nhanh này luôn là "Random — mix
+      // ALL UK voices", đúng chế độ Mix voice có sẵn trong popover "Generate
+      // all voices" của Anagram editor — không hỏi thêm giọng nào ở đây.
+      const { voiceId } = planFor({ mix: true, random: true, accent: "en-gb", singleId: DEFAULT_VOICE }, items.length);
+      const doneBefore = doneOverall, failedBefore = failedOverall;
+      const result = await generateVoicesBatch(items, voiceId, {
+        textFor: it => clueOf(it, key),
+        isCancelled,
+        onProgress: (d, f) => onProgress && onProgress(doneBefore + d, failedBefore + f, total)
+      });
+      items.forEach(it => {
+        if (it.voice) setVoiceOf(it, key, { voice: it.voice, voiceId: it.voiceId });
+        delete it.voice; delete it.voiceId;
+      });
+      doneOverall += result.done; failedOverall += result.failed;
+      if (result.signedOut) signedOut = true;
+    }
+    if (doneOverall > 0 && src.id && !/^(conv|mist)_/.test(String(src.id))) {
+      const { saveActivity } = await import("./store.js");
+      await saveActivity(src).catch(() => {});
+      toast(`Đã tạo giọng đọc cho ${doneOverall} mục`);
+    }
+    return { done: doneOverall, failed: failedOverall, total, signedOut };
   }
 
   // ⭐⭐ THE SUB-ACT HALF OF "APPLY" (lifted out of the Options panel in Đợt 155).

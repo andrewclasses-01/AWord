@@ -1574,6 +1574,27 @@ html.aw-nhung .aw-below { display: none; }
   transition: color .18s ease;
 }
 .aw-opt-switch-btn.is-active { color: var(--aw-grp-on, #2f7bff); }
+/* ⭐⭐ Đợt 314 (thầy) — VOICE CHƯA TẠO: nền đen/chữ trắng, cố ý khác hẳn ngôn
+   ngữ màu xanh lá của cả nhóm (thầy: "nền đen chữ trắng"). Đè trực tiếp lên
+   nền trong suốt của nút — không đụng `--aw-grp-*`/thumb, vì đây là một trạng
+   thái riêng (chưa sẵn sàng chọn) chứ không phải "đang chọn"/"chưa chọn" bình
+   thường. Không có `.is-active` nào đứng cùng lúc — mode không bao giờ là
+   "voice" khi đang pending (xem `mode` ở buildContentSwitchRow). */
+.aw-opt-switch-btn.is-novoice { background: #14161c; color: #ffffff; }
+
+/* ⭐⭐ Đợt 314 — khối hỏi/tiến trình tạo giọng ngay trong Options, mở dưới
+   hàng TEXT|VOICE khi bấm nút VOICE còn đen. `grid-column: 1 / -1` để nằm
+   tràn hết bề ngang của lưới 2 cột (`.has-variants`) thay vì bị ép vào một ô. */
+.aw-opt-content.has-variants > .aw-opt-voicegen { grid-column: 1 / -1; }
+.aw-opt-voicegen {
+  margin-top: 10px; padding: 10px 12px;
+  background: #f3f4f7; border-radius: 10px; font-size: 13px;
+}
+.aw-opt-voicegen-q { margin-bottom: 8px; font-weight: 600; }
+.aw-opt-voicegen-btns { display: flex; gap: 8px; }
+.aw-opt-voicegen-status { margin-bottom: 6px; }
+.aw-opt-voicegen-progress { height: 6px; border-radius: 3px; background: #dfe3ea; overflow: hidden; }
+.aw-opt-voicegen-progress-fill { height: 100%; width: 0; background: #166534; transition: width .2s ease; }
 
 /* ⭐ Đợt 148 — SWAPPING WHAT IS INSIDE A BOX, smoothly (core/engine.js
    swapContents). Two things use it: going Options → Template/Style/Mode, where

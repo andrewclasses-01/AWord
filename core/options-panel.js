@@ -1221,8 +1221,24 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
   // Voice button rather than draw one that always lands on an empty half.
   // Omitted key (no act to ask — Settings' own defaults screen) keeps both
   // buttons, exactly as before this đợt.
-  const coVoiceBtn = contentSwitch.hasVoice !== false;
-  let mode = coVoiceBtn ? shown : "text";
+  const coVoice = contentSwitch.hasVoice !== false;
+  // ⭐⭐ Đợt 314 (thầy) — MỘT NGOẠI LỆ CÓ CHỦ Ý CỦA LUẬT OPT-IN TRÊN: một act CÓ
+  // KHAI BÁO khả năng đọc (voiceVariants non-empty — capability ghi từ lúc
+  // import, độc lập với việc đã tạo giọng thật hay chưa, xem core/engine.js's
+  // makeContentSwitch) mà CHƯA từng tạo clip nào (`!coVoice`) vẫn được vẽ nút
+  // VOICE — nhưng ở dạng "chưa tạo" (nền đen, xem is-novoice bên dưới) thay vì
+  // dạng chọn được, và CHỈ khi người gọi trao cho một đường tạo giọng thật
+  // (`contentSwitch.onGenerateVoices`). core/settings.js không bao giờ truyền
+  // field đó (không có act thật để tạo giọng), nên ở đó `genVoices` luôn null
+  // và hành vi giữ nguyên y hệt trước Đợt 314 — nút vẫn ẩn khi chưa có giọng.
+  const canVoiceCapability = !!(voiceVariants && voiceVariants.length);
+  const genVoices = typeof contentSwitch.onGenerateVoices === "function" ? contentSwitch.onGenerateVoices : null;
+  let voicePending = !coVoice && canVoiceCapability && !!genVoices;
+  const coVoiceBtn = coVoice || voicePending;
+  // While pending there is nothing behind "voice" to stand on — a stray stored
+  // `contentMode: "voice"` from before a clip existed must not start the row
+  // with the black "not generated" pill lit up as if it were a real choice.
+  let mode = coVoiceBtn ? (voicePending ? "text" : shown) : "text";
   const firstText = variants && variants.length ? variants[0] : null;
   let pickedText = contentSwitch.variant || firstText;
   let pickedVoice = contentSwitch.voiceVariant || (voiceVariants ? voiceVariants[0] : null);
@@ -1260,8 +1276,12 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
   } else {
     switchEl.append(el("div", "aw-opt-switch-thumb"));
     MODES.forEach(([key, label]) => {
-      const b = el("button", "aw-opt-switch-btn" + (mode === key ? " is-active" : ""), label);
+      const isPendingVoice = key === "voice" && voicePending;
+      const b = el("button", "aw-opt-switch-btn"
+        + (mode === key ? " is-active" : "")
+        + (isPendingVoice ? " is-novoice" : ""), label);
       b.type = "button";
+      if (isPendingVoice) b.title = "Voice not generated yet — tap to create it";
       modeBtns.set(key, b);
       switchEl.append(b);
     });
@@ -1399,6 +1419,93 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
     onViewChange?.();   // Đợt 147 — TEXT and VOICE are separate views
   };
   modeBtns.forEach((b, k) => { b.onclick = () => pick(k); });
+
+  // ⭐⭐ Đợt 314 (thầy) — the pending VOICE button does not pick a mode: it
+  // opens a small inline confirm ("Do you want to generate voices for this
+  // activity?") that generates every declared voice set (ENG1 + ENG2) right
+  // here via `contentSwitch.onGenerateVoices` (core/engine.js), then settles
+  // back into an ordinary mode button — no rebuild/replay needed, since a
+  // never-voiced act has no round on screen showing Voice content to refresh;
+  // applying VOICE afterwards goes through the normal Apply path untouched.
+  // ⚠️ This file never saves anything or touches an activity itself (see the
+  // file header) — all generation + persistence lives in `genVoices`, this
+  // row only drives the confirm/progress UI and reacts to its result.
+  const voiceBtn = modeBtns.get("voice");
+  let voiceGenBox = null;
+  function closeVoiceGenBox() { if (voiceGenBox) { voiceGenBox.remove(); voiceGenBox = null; } }
+  function settleVoiceBtn() {
+    if (!voiceBtn) return;
+    voicePending = false;
+    voiceBtn.classList.remove("is-novoice");
+    voiceBtn.title = "";
+    voiceBtn.onclick = () => pick("voice");
+  }
+  async function runVoiceGen(box) {
+    box.innerHTML = "";
+    const status = el("div", "aw-opt-voicegen-status", "Generating voices…");
+    const progressWrap = el("div", "aw-opt-voicegen-progress");
+    const progressFill = el("div", "aw-opt-voicegen-progress-fill");
+    progressWrap.append(progressFill);
+    const btnRow = el("div", "aw-opt-voicegen-btns");
+    const cancelBtn = el("button", "aw-btn", "Cancel");
+    cancelBtn.type = "button";
+    btnRow.append(cancelBtn);
+    box.append(status, progressWrap, btnRow);
+
+    // Soft-cancel, same idiom as the Anagram editor's own bulk popover: the
+    // word already in flight always finishes, the flag is only read BETWEEN
+    // items/sets (see core/voice-batch.js's isCancelled).
+    let cancelled = false;
+    cancelBtn.onclick = () => { cancelled = true; cancelBtn.disabled = true; cancelBtn.textContent = "Cancelling…"; };
+
+    const result = await genVoices({
+      onProgress: (d, f, total) => {
+        status.textContent = `Generating voices… ${d + f} / ${total}`;
+        progressFill.style.width = total ? `${Math.round(((d + f) / total) * 100)}%` : "0%";
+      },
+      isCancelled: () => cancelled
+    });
+
+    // Even one generated clip already satisfies the app-wide `hasAnyVoice`
+    // definition the rest of the row reads — a partial batch (some failed,
+    // or cancelled midway) still counts as "now has voice" rather than
+    // stranding the button black forever over one bad row.
+    if (result.done > 0) {
+      settleVoiceBtn();
+      status.textContent = `Generated voice for ${result.done} item(s)`
+        + (result.failed ? `, ${result.failed} failed` : "");
+      btnRow.remove();
+      setTimeout(closeVoiceGenBox, 1200);
+      return;
+    }
+    status.textContent = result.signedOut
+      ? "Please sign in first."
+      : "Could not generate voices — please try again.";
+    btnRow.innerHTML = "";
+    const closeBtn = el("button", "aw-btn", "Close");
+    closeBtn.type = "button";
+    closeBtn.onclick = () => { sound.click(); closeVoiceGenBox(); };
+    btnRow.append(closeBtn);
+  }
+  function buildVoiceGenBox() {
+    closeVoiceGenBox();   // only one popover at a time, same rule as Anagram's
+    const box = el("div", "aw-opt-voicegen");
+    const q = el("div", "aw-opt-voicegen-q", "Do you want to generate voices for this activity?");
+    const btnRow = el("div", "aw-opt-voicegen-btns");
+    const yesBtn = el("button", "aw-btn aw-btn-primary", "Yes");
+    yesBtn.type = "button";
+    yesBtn.onclick = () => { sound.click(); runVoiceGen(box); };
+    const noBtn = el("button", "aw-btn", "No");
+    noBtn.type = "button";
+    noBtn.onclick = () => { sound.click(); closeVoiceGenBox(); };
+    btnRow.append(yesBtn, noBtn);
+    box.append(q, btnRow);
+    row.append(box);
+    voiceGenBox = box;
+  }
+  if (voiceBtn && voicePending) {
+    voiceBtn.onclick = () => { sound.click(); buildVoiceGenBox(); };
+  }
 
   paintSwitch();
   paintHalf();

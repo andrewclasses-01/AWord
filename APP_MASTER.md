@@ -8,7 +8,11 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **08/9/2026 (Đợt 311 — ANAGRAM + UNJUMBLE: HS làm đúng 30 câu mà máy ghi
+> Cập nhật lần cuối: **09/9/2026 (Đợt 314 — TẠO VOICE NGAY TRONG OPTIONS: act tích hợp chưa hề có
+> giọng nay vẫn hiện nút VOICE (đen), bấm hỏi "Do you want to generate voices…", Có thì tạo Random
+> mix UK cho ENG1+ENG2 ngay tại chỗ rồi tự lưu, không cần vào Edit; ✅ THẦY CHỈ ĐẠO ĐẨY LIVE trực
+> tiếp trong chat — CHƯA qua bước thầy tự bấm tay trên act thật, chỉ có bàn thử tự động, xem
+> GHI CHU DU AN.md Đợt 314)**. Trước đó: **(Đợt 311 — ANAGRAM + UNJUMBLE: HS làm đúng 30 câu mà máy ghi
 > 29 — "cửa sổ nộp"; ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE)**. Trước đó: **(Đợt 310 — nạp bảng tra THẬT cho
 > Lesson 15 từ câu sai của HS 3 khoá NTK6/7/8)**. Trước đó: **(Đợt 309 — bảng tra gộp về một nút +
 > pop-up 4 cột)**. Trước đó: **(Đợt 308 — gỡ hẳn gợi ý tự động, thay bằng

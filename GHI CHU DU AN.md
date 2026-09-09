@@ -12,7 +12,20 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 312b** (09/9/2026 — thầy báo NGAY sau khi đẩy 312: tạo được **HAI** bài giao
+> Mới nhất: **Đợt 314** (09/9/2026, thầy yêu cầu — TẠO VOICE NGAY TRONG OPTIONS, không cần vào
+> Edit: act tích hợp CHƯA hề có giọng (ENG1 lẫn ENG2 đều 0 clip) nay vẫn hiện nút VOICE — nền
+> đen/chữ trắng — bấm vào hỏi "Do you want to generate voices for this activity?" ngay tại chỗ,
+> Có thì tạo giọng "Random mix UK" (đúng chế độ Mix voice có sẵn) cho cả ENG1+ENG2, thấy tiến
+> trình, xong tự lưu + nút VOICE trở lại bình thường — không rebuild/replay ván đang chơi, không
+> đổi gì ở `core/settings.js`/assignment form (vẫn ẩn nút như cũ vì không có act để tạo). Áp dụng
+> cả Single lẫn Fight (act thật do `subActSource()` quy sẵn, không cần đường riêng cho Fight).
+> Bàn thử `scratch/dot314-voicegen.html` (import thật `buildContentSwitchRow`) 22/22 PASS, gồm 2
+> phép đối chứng ngược (Settings không truyền callback vẫn ẩn nút; act không có capability vẫn
+> ẩn nút). ✅ THẦY CHỈ ĐẠO ĐẨY LIVE TRỰC TIẾP TRONG CHAT — ĐÃ COMMIT + PUSH.
+> ⚠️ Khác các Đợt trước: đợt này **CHƯA có bước thầy tự bấm tay** trên act thật (tạo giọng thật
+> qua Firestore cần tài khoản thầy, sandbox không đăng nhập được) — chỉ có bàn thử tự động ở
+> trên. ⬜ Thầy nhớ tự thử lại trên máy thật sau khi live. Xem mục Đợt 314 ngay dưới.)
+> Trước đó: **Đợt 312b** (09/9/2026 — thầy báo NGAY sau khi đẩy 312: tạo được **HAI** bài giao
 > ENG1 TEXT + ANAGRAM y hệt nhau mà không bị chặn gì. Gốc: phía bài giao đã lưu **đọc THÔ**
 > `contentVariant` (ra `text|pron` — `pron` đã nghỉ hưu), phía form đi qua `activeVariant()` (ra
 > `text|eng1`) ⇒ hai khoá không bao giờ gặp nhau. Nay **cả hai bên dùng chung `khoaTu()`**. Bàn thử
@@ -227,6 +240,114 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 314 (09/9/2026, thầy yêu cầu) — ⭐⭐⭐ **TẠO VOICE NGAY TRONG OPTIONS, KHÔNG CẦN VÀO EDIT** · ✅ THẦY CHỈ ĐẠO ĐẨY LIVE (chưa qua bước bấm tay)
+
+### Yêu cầu gốc (thầy)
+
+Trong Options của một act tích hợp (ENG1/ENG2/VI1/VI2 chữ + ENG1/ENG2 giọng), nếu **chưa tạo
+giọng** (chưa có ENG1 VOICE lẫn ENG2 VOICE) thì nút chọn VOICE (cạnh nút TEXT) hiện **nền đen chữ
+trắng**; bấm vào **không chuyển sang VOICE** mà hỏi ngay một dòng nhỏ *"Do you want to generate
+voices for this activity?"* — bấm **Có** thì **tạo giọng ngay tại đó cho cả ENG1 và ENG2**, thấy
+tiến trình, xong thì **VOICE trở về bình thường và chơi được ngay** — thay vì phải mở tận màn
+Edit của act để tạo.
+
+### Đọc trước khi sửa — chỗ đứng của tính năng
+
+Nút TEXT|VOICE sống trong `core/options-panel.js` hàm `buildContentSwitchRow()` (từ Đợt
+145/147/212/299…), dựng dựa trên object `contentSwitch` mà `core/engine.js`'s
+`makeContentSwitch()` lắp ra từ `subActSource()` (act thật — tự quy đúng `libAct`/`originAct`/
+act thật của Fight, KHÔNG cần viết thêm đường riêng cho Fight). Trước Đợt 314: `hasVoice` =
+`hasAnyVoice(content)` (quét đệ quy toàn content tìm bất kỳ `.voice`) quyết định **có vẽ nút VOICE
+hay ẩn hẳn** (luật OPT-IN của Đợt 143/Vấn đề 4 — không vẽ nút chết) — nên một act CHƯA TỪNG tạo
+giọng thì nút VOICE **ẩn tiệt**, không đen như thầy mô tả muốn thấy.
+
+`core/options-panel.js` có luật ghi ngay đầu file: *"this file never saves anything and never
+touches an activity"* — file này dùng chung cho cả `core/engine.js` (act thật) lẫn
+`core/settings.js` (Default options, KHÔNG có act). Nên toàn bộ việc tạo giọng + lưu Firestore
+phải nằm ở `core/engine.js` (nơi có `saveActivity`/`fight`/`subActSource`), `options-panel.js`
+chỉ nhận một callback và vẽ UI.
+
+### Đã làm
+
+- `core/engine.js` `makeContentSwitch()`: thêm field `onGenerateVoices` vào object trả về — CHỈ
+  có khi act **chưa có giọng nào** (`!coVoice`) **nhưng khai báo được** (`voiceVariantsOf(content)`
+  non-empty — capability ghi từ lúc import, `core/lesson-import.js`, độc lập với việc đã tạo
+  giọng thật hay chưa). Hàm mới `generateInlineVoices(src, keys, {onProgress, isCancelled})`:
+  chạy `generateVoicesBatch()` (`core/voice-batch.js`, pool Worker song song, có sẵn) cho TỪNG
+  key (`eng1`, `eng2`), gói kết quả (field phẳng `it.voice`/`it.voiceId` mà hàm batch ghi) vào
+  đúng `it.voices[key]` bằng `setVoiceOf()` — đúng khuôn `commitCurrentTab()` của
+  `templates/anagram/anagram-editor.js` đã làm — rồi xoá field phẳng (không để rác). Giọng dùng
+  `planFor({mix:true, random:true, accent:"en-gb"}, count)` (`core/voice-mix.js`) = "Random mix
+  ALL UK voices", đúng chế độ Mix voice có sẵn trong popover "Generate all voices" của Anagram
+  editor — thầy chốt qua câu hỏi rõ ràng, không tự đoán. Xong thì lưu qua `saveActivity(src)` (rào
+  `conv_`/`mist_` y hệt khuôn Apply hiện có) và `toast()` báo ngắn.
+- `core/options-panel.js` `buildContentSwitchRow()`: nút VOICE nay vẽ khi `hasVoice` HOẶC đang
+  "voicePending" (act khai báo được + có `onGenerateVoices`) — `mode` bị ép về `"text"` khi đang
+  pending (không đứng được ở nửa Voice trong lúc chưa có gì). Nút pending mang class
+  `.is-novoice` + `onclick` riêng mở hộp hỏi Yes/No thay vì `pick("voice")`. Yes → tiến trình
+  inline (progress bar, Cancel — soft-cancel giống hệt khuôn Anagram editor) → gọi
+  `onGenerateVoices()` → `done>0` thì gỡ `.is-novoice`, gắn lại `onclick = () => pick("voice")`
+  (y hệt nút thường), tự đóng hộp sau ~1.2s; `signedOut`/`done===0` thì giữ đen + hiện nút Close.
+  `core/settings.js`/`assignment-ui.js` không truyền `onGenerateVoices` ⇒ rơi về đúng hành vi CŨ
+  (ẩn nút khi chưa có giọng) — không regression.
+- `core/app.css`: `.aw-opt-switch-btn.is-novoice` (nền `#14161c`/chữ trắng, đè lên track xanh lá
+  của cả nhóm — cố ý khác hẳn ngôn ngữ màu, đúng yêu cầu thầy) + khối `.aw-opt-voicegen*` (hộp
+  hỏi/tiến trình, `grid-column:1/-1` để tràn hết bề ngang hàng 2 cột).
+
+### Quyết định kỹ thuật đáng nhớ
+
+- **KHÔNG rebuild/replay ván đang chơi hay restart Fight match** khi tạo giọng xong: act chưa hề
+  ở chế độ Voice (0 clip) nên không round nào đang hiển thị nội dung Voice cần làm mới — chỉ patch
+  DOM nút Voice tại chỗ là đủ; áp dụng Voice thật sau đó đi qua đúng Apply/`fight.ctl.applyOptions`
+  sẵn có, không đổi gì ở đó. Nhờ vậy Fight KHÔNG cần đường riêng — `subActSource()` đã tự quy đúng
+  act thật của match (`fight.ctl.matchAct()`) từ trước.
+- **Không đổi hành vi khi act đã có MỘT PHẦN giọng** (VD chỉ ENG1 xong, ENG2 chưa) — `hasAnyVoice`
+  vẫn `true` nên nút VOICE vẽ bình thường như cũ, đúng nguyên văn yêu cầu thầy ("chưa tạo voice
+  eng1, voice eng2" = CẢ HAI chưa có).
+- Một clip tạo thành công (`done>0`) đã đủ coi là "đã có giọng" (đúng định nghĩa `hasAnyVoice`
+  toàn app dùng ở mọi nơi khác) — kể cả khi Cancel giữa chừng hay một phần lỗi, không bắt phải
+  "tạo hết 100%" mới hết đen.
+
+### Bàn thử
+
+`scratch/dot314-voicegen.html` — import THẬT `buildContentSwitchRow` từ `core/options-panel.js`
+(không viết lại logic), dựng `contentSwitch` giả với `onGenerateVoices` giả lập delay + progress,
+chạy trong Browser pane qua devserver (`aword`, cổng 5511 phiên này). **22/22 PASS**, gồm:
+- Nút Voice hiện đen khi `hasVoice:false` + có `onGenerateVoices`; bấm KHÔNG đổi `sel.contentMode`
+  (đối chứng: state không đổi) mà mở hộp hỏi đúng câu chữ thầy yêu cầu.
+- No → hộp biến mất, không gọi `onGenerateVoices`, nút vẫn đen.
+- Yes → progress chạy đúng thứ tự tăng dần, gọi `onGenerateVoices` đúng 1 lần, xong → nút hết đen
+  → bấm lại đổi được `sel.contentMode` thành `"voice"` (đối chứng: nút giờ hoạt động như nút
+  thường) → hộp tự đóng sau ~1.2s.
+- `signedOut` → hiện "Please sign in first.", GIỮ đen (không coi là xong), có nút Close.
+- **Đối chứng ngược 1**: act đã có giọng sẵn (`hasVoice:true`, `onGenerateVoices:null`) → nút vẽ
+  bình thường (không đen), bấm đổi mode ngay, không hộp hỏi nào — y hệt trước Đợt 314.
+- **Đối chứng ngược 2 (regression guard)**: `onGenerateVoices` không truyền (đúng cảnh
+  `core/settings.js`) → nút VOICE **ẨN HẲN**, đúng luật OPT-IN cũ.
+- **Đối chứng ngược 3**: act không hề có `voiceVariants` (quiz…) dù có `onGenerateVoices` (không
+  thể xảy ra thật, nhưng bàn thử ép cảnh này) → vẫn ẩn nút, callback không bao giờ bị gọi.
+Kiểm cú pháp: `node --input-type=module --check` sạch cho cả `core/engine.js` lẫn
+`core/options-panel.js` (đúng bẫy ESM đã ghi trong bộ nhớ — `node --check` thường không đủ).
+
+### Commit + Push
+
+Thầy chỉ đạo đẩy live trực tiếp trong chat (09/9/2026), **không đợi bước tự bấm tay trước** — khác
+nếp thường lệ của các Đợt gần đây ("✅ THẦY DUYỆT SAU KHI bấm thử rồi mới push"). Ghi rõ ở đây để
+phiên sau biết: xác nhận DUY NHẤT cho Đợt 314 là bàn thử tự động `scratch/dot314-voicegen.html`
+(22/22, mô phỏng callback) + `node --check` — CHƯA có ai bấm tay trên act thật/Firestore thật.
+
+### ⬜ VIỆC ĐANG CHỜ
+
+- ⬜⬜ **Thầy tự bấm thử trên máy thật, tài khoản thật SAU KHI đã live**: mở một act tích hợp CHƯA
+  từng tạo giọng (hoặc tạo mới qua taoact/import), mở Options — nút VOICE phải đen, bấm hỏi, bấm
+  Có, thấy tiến trình, xong nút trở lại xanh bình thường, bấm VOICE → Apply → nghe được.
+- ⬜ Thử lại y hệt trong một trận **Fight/Showdown** — xác nhận không cần restart trận, và Apply
+  Voice sau đó chạy qua đúng `fight.ctl.applyOptions`.
+- ⬜ Nếu bấm tay phát hiện lỗi: đây là lần đầu tính năng này chạy trên dữ liệu/Firestore thật,
+  nên soi kỹ hơn bình thường trước khi coi là ổn định.
 
 ---
 
