@@ -12,7 +12,20 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 316** (09/9/2026, thầy chốt qua myLesson — DẤU ✓ "ĐÃ GIAO" TRA THEO ĐÚNG TEMPLATE
+> Mới nhất: **Đợt 317** (10/9/2026, thầy báo qua myLesson — CHECK THƯ MỤC/ACT KHÔNG THẤY MỤC VỪA
+> TẠO: webview ẩn myLesson mở lên MỘT LẦN khi mở app rồi sống suốt phiên, `readAll()` (core/store.js)
+> cache toàn bộ `users/{uid}/items` trong biến module-level và chỉ đọc lại khi `resetCache()` được
+> gọi (chỉ ở lúc đăng nhập) — nên thư mục AWord thầy tạo SAU khi mở myLesson không nằm trong cache,
+> bấm CHECK báo "Không thấy thư mục nào..." dù thư mục đã có thật trên Firestore. Sửa: `timThuMuc`
+> và `lietKeAct` (hai hàm `window.__awordLib` myLesson gọi để tìm thư mục/act) gọi `resetCache()`
+> ngay trước khi đọc, đổi lấy một lượt đọc Firestore mới mỗi lần CHECK để luôn thấy dữ liệu mới nhất
+> — chấp nhận được vì CHECK là hành động thầy chủ động bấm, không lặp liên tục. Không đổi
+> `lietKeBaiGiao` vì nó đã luôn đọc thẳng Firestore (`listAllAssignments`, không qua cache này).
+> 0 lỗi console khi tải trang qua dev server cục bộ; gọi thử `timThuMuc` lúc chưa đăng nhập trả về
+> đúng `{ok:false, loi:"chua-dang-nhap"}`, không văng lỗi. ⬜ Không thử được đường dẫn thật (cần đăng
+> nhập Google + tạo thư mục thật) trong phiên này — thầy tự bấm CHECK lại trên máy thật sau khi live.
+> Xem mục Đợt 317 ngay dưới.)
+> Trước đó: **Đợt 316** (09/9/2026, thầy chốt qua myLesson — DẤU ✓ "ĐÃ GIAO" TRA THEO ĐÚNG TEMPLATE
 > ĐANG CHỌN: Đợt 299 tích ✓ bất kể giao bằng template nào — chọn TEXT·VI1·QUIZ tạo bài giao thì VI1
 > tích ✓ đúng, nhưng chọn tiếp TEXT·VI1·ANAGRAM cho act khác thì tích VẪN SÁNG dù ANAGRAM chưa hề
 > giao cho VI1 (chỉ QUIZ đã giao). `buildContentSwitchRow()`/`paintHalf()` (`core/options-panel.js`)
@@ -270,6 +283,62 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 317 (10/9/2026, thầy báo qua myLesson) — **CHECK THƯ MỤC/ACT KHÔNG THẤY MỤC VỪA TẠO SAU KHI MỞ APP**
+
+### Yêu cầu gốc (thầy)
+
+Ảnh chụp myLesson: bấm dấu tích ở dòng WORDS `IEL-S15.T4.P1` báo lỗi `Không thấy thư mục nào
+trong AWord có tên chứa "IEL-S15.T4.P1".` dù thư mục đó có thật bên AWord. Thầy chỉ ra nguyên nhân:
+"thư mục AWord được tạo sau khi đã mở app myLesson nên nó cập nhật dữ liệu cũ mà không load dữ liệu
+mới" — yêu cầu sửa để bấm tích thì LUÔN đọc dữ liệu mới, không kết luận theo dữ liệu cũ.
+
+### Đã tìm ra gì
+
+myLesson mở AWord trong một `<webview>` ẨN (`awNao()`, `app.js`) đúng MỘT LẦN lúc app khởi động, rồi
+giữ webview đó sống suốt phiên làm việc — không reload trước mỗi lần CHECK (chỉ reload khi đóng popup
+đăng nhập lại). Bên trong webview đó, mọi lời gọi `window.__awordLib.timThuMuc(...)` /
+`lietKeAct(...)` (cầu nối cho myLesson) đều đi qua `readAll()` (`core/store.js`), hàm này giữ MỘT
+biến cache module-level (`cache`/`cacheUid`) và chỉ đọc lại Firestore khi cache trống — `resetCache()`
+xưa nay chỉ được gọi lúc đăng nhập/đăng xuất, KHÔNG có nơi nào gọi khi có thư mục mới. Kết quả: thư
+mục thầy tạo bên AWord (cửa sổ/tab khác) sau khi myLesson đã mở lên sẽ không có trong `cache`, nên
+`timThuMuc` trả về danh sách rỗng dù thư mục đã tồn tại thật trên Firestore — đúng như thầy mô tả.
+`lietKeBaiGiao` (đọc collection `assignments` riêng, qua `listAllAssignments`) không dính lỗi này vì
+hàm đó luôn truy vấn Firestore trực tiếp, không qua `readAll()`/cache.
+
+### Đã sửa
+
+`web/main.js`, hai hàm trong `window.__awordLib`:
+- `timThuMuc(chuoi)` — gọi `resetCache()` (đã có sẵn import từ `core/store.js`) ngay sau bước kiểm
+  tra đăng nhập, trước khi `listFolders(root)`. Cache bị xoá buộc `readAll()` (bên trong `store.js`,
+  không đổi gì ở đây) chạy lại một lượt đọc Firestore thật, luôn thấy thư mục mới nhất.
+- `lietKeAct(folderId)` — cùng lý do, cùng cách vá: `resetCache()` trước khi `getItem`/`listChildren`.
+
+Không đổi chữ ký hàm, không đổi shape dữ liệu trả về, không đụng `store.js` — chỉ hai điểm gọi thêm
+một dòng `resetCache()` trước khi đọc, đúng cách sign-in/`dongModalAw()` đã làm để buộc dữ liệu mới.
+Đây là điểm chặn CHUNG cho cả ba đường CHECK bên myLesson (`checkThuMucAWord`, `checkBaiGiaoLop`,
+`tlCheckNguon`) vì tất cả cùng đi qua `timThuMuc`/`lietKeAct`.
+
+### Bàn thử
+
+Chạy `devserver.py` cục bộ (port 5510), mở trang, `read_console_messages` sạch — 0 lỗi khi tải
+`main.js` đã sửa. Gọi trực tiếp `await window.__awordLib.timThuMuc("IEL-S15.T4.P1")` lúc CHƯA đăng
+nhập (trình duyệt bàn thử không có phiên Google) trả đúng `{ok:false, loi:"chua-dang-nhap"}`, không
+văng lỗi — xác nhận đường gọi hàm còn nguyên vẹn sau khi thêm `resetCache()`. `node --check` sạch.
+⬜ **Chưa thử được đường thật** (cần đăng nhập Google + tạo thư mục mới rồi bấm CHECK bên myLesson) —
+không có trong phạm vi phiên này; thầy tự thử lại trên máy thật sau khi live.
+
+### Commit + Push
+
+✅ Thầy yêu cầu sửa trực tiếp qua chat cho lỗi đã có ảnh chụp rõ ràng + tự chỉ ra đúng nguyên nhân,
+không phải tính năng mới — sửa xong đẩy thẳng, không chờ bước duyệt riêng.
+
+### ⬜ VIỆC ĐANG CHỜ
+
+- [ ] Thầy tự tạo một thư mục/act mới bên AWord SAU KHI đã mở myLesson, quay lại myLesson bấm CHECK
+      ngay (không tắt mở lại app), xác nhận tìm thấy thư mục/act mới ngay lần bấm đầu tiên.
 
 ---
 

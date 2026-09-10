@@ -130,6 +130,12 @@ window.__awordLib = {
     const q = String(chuoi || "").trim().toLowerCase();
     if (!q) return { ok: true, ds: [] };
     try {
+      // ⭐ myLesson mở webview này MỘT LẦN rồi giữ sống suốt phiên làm việc, nên
+      // `readAll()` (core/store.js) có thể đang trả về cache lấy từ lúc mở app —
+      // thư mục thầy vừa tạo bên AWord thật sẽ không có trong đó. CHECK là hành
+      // động thầy chủ động bấm (không lặp lại liên tục), nên cứ bỏ cache trước,
+      // đổi lấy một lượt đọc Firestore để chắc chắn thấy thư mục MỚI NHẤT.
+      resetCache();
       // ⭐ Đợt 287 — tìm ở CẢ HAI cây có act: Activities rồi Courses (thầy chốt
       // 03/9). Mục thuộc Courses có đường dẫn mở đầu "Courses / " để myLesson
       // phân biệt được với thư mục trùng tên bên Activities; kèm khoá `root`.
@@ -151,6 +157,9 @@ window.__awordLib = {
   async lietKeAct(folderId) {
     if (!state.user) return { ok: false, loi: "chua-dang-nhap" };
     try {
+      // Cùng lý do với timThuMuc ở trên: bỏ cache để thấy act mới nhất trong
+      // thư mục, không phải danh sách chụp từ lúc webview này mở lên.
+      resetCache();
       // ⭐ Đợt 287 — thư mục có thể thuộc Courses: hỏi chính nó xem thuộc cây nào.
       const fld = folderId ? await getItem(folderId) : null;
       const items = await listChildren(fld && fld.root ? fld.root : "activities", folderId || null);
