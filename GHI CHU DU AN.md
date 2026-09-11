@@ -330,6 +330,50 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 322 (11/9/2026, thầy báo qua chat — chặn trùng cắn nhầm lớp khác) — **CHẶN TẠO TRÙNG (Đợt 299) SO SÁNH BỎ QUA LỚP: TẠO CHO B1AH BỊ CHẶN BỞI B2B**
+
+Thầy: đang tạo bài giao ANAGRAM cho lớp **B1AH** (act ENG1, bộ đề IEL-S15.T3.P4) thì bị chặn với lý
+do *"đã có bài giao ANAGRAM (B2B_9.9_15:53_STAGE IEL-S15.T3.P4 — WP3 — ANAGRAM)"* — nhưng lớp B1AH
+**chưa từng tạo act-template này bao giờ**. B2B là lớp khác hẳn, học sinh khác hẳn.
+
+### Gốc rễ
+Phép chặn trùng của Đợt 299 (`core/assignment-ui.js::doStart()`) gọi `baiGiaoCuaAct()` để tìm bài
+giao khác đã dùng CÙNG bộ nghĩa + CÙNG template của act này, rồi chặn hẳn với lý do *"the same pair
+twice would split one leaderboard in two"*. Nhưng `baiGiaoCuaAct()` (dòng 543 cũ) chỉ lọc theo
+`a.activityId === act.id` — **không lọc theo lớp (`folderId`)** — trong khi `allAssignments` nó đọc
+là `listAllAssignments()`, danh sách bài giao của **TOÀN BỘ tài khoản, mọi lớp**. Vì vậy hai lớp
+khác nhau cùng dùng một bộ đề (chuyện bình thường — nhiều lớp học cùng bài) lại cắn nhau.
+⛔ Lý do "chia đôi bảng điểm" mà app đưa ra vốn chỉ đúng khi **CÙNG một lớp** bị giao trùng — hai
+lớp khác nhau không có học sinh chung, không bảng điểm nào bị chia cả nên việc chặn ở đây SAI.
+So sánh: ngay cạnh đó, phép chặn TRÙNG TÊN (dòng 681, `assignmentNameTaken()`) đã lọc đúng theo
+`folderId` từ trước — chỉ riêng phép chặn trùng NỘI DUNG (dòng 695) là quên lọc lớp.
+
+### Vá
+`baiGiaoCuaAct()` nay nhận thêm tham số `folderId` (optional):
+- Gọi **CÓ** `folderId` (trong `doStart(folderId)`, đúng lớp đang tạo bài) → chỉ đếm bài giao
+  **CÙNG lớp** (`(a.folderId ?? null) === (folderId ?? null)`), khớp cách `assignmentNameTaken()`
+  đã làm.
+- Gọi **KHÔNG** kèm tham số (`bangDaGiao()` — dấu ✓ xanh cạnh bộ nghĩa trong Options, thông tin
+  tham khảo "bộ này đã giao ở đâu rồi") → **giữ nguyên hành vi cũ**, vẫn soi mọi lớp — đây là
+  tính năng tham khảo, không phải phép chặn, cố ý không thu hẹp.
+Câu lỗi thêm cụm **"in this class"** cho rõ phạm vi so sánh.
+
+### Đã kiểm
+`node --input-type=module --check` sạch `assignment-ui.js`. Bàn thử độc lập
+`scratch/dot322-folderid-filter-test.mjs` (copy nguyên văn biểu thức lọc từ code thật, không diễn
+giải lại) — 5/5 ĐẠT: cùng lớp B1AH không dính bài B2B · cùng lớp B2B không dính bài B1AH · lớp mới
+chưa giao lần nào ra rỗng · gọi không kèm `folderId` (đường `bangDaGiao`) vẫn thấy mọi lớp như cũ ·
+`folderId=null` (Results top-level, không có lớp) khớp đúng bài top-level, không lẫn sang lớp khác.
+⬜ **CHƯA đăng nhập trang aword thật để bấm tay** (sandbox phiên này không đăng nhập Google được) —
+thầy mở Set assignment cho một bộ đề ĐÃ giao ở lớp khác, xác nhận: (a) tạo cho lớp MỚI không còn bị
+chặn oan, (b) tạo lại đúng CÙNG lớp + cùng bộ nghĩa + cùng template vẫn bị chặn như cũ (Đợt 299 vẫn
+còn tác dụng thật, không bị vá quá tay thành mất hẳn).
+
+### VIỆC ĐANG CHỜ
+⬜ Thầy bấm tay xác nhận 2 ý ở trên trên trang thật.
+
+---
+
 ## Đợt 321b (11/9/2026 tối, thầy xem ảnh chụp app thật rồi chỉnh lại) — **ICON LOA TRONG OPTIONS: HIỆN Ở MỌI MODE + VÁ BẪY TRÀN CHỮ CHIP**
 
 Thầy nêu 2 điều sau khi xem ảnh chụp: *(1)* myLesson — icon phải cùng màu ENG1 và đứng bên phải

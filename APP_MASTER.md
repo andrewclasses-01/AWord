@@ -8,17 +8,27 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **11/9/2026 tối (Đợt 321b — thầy xem ảnh chụp app thật rồi chỉnh lại icon loa
-> Đợt 321, đoạn dưới): icon chip ENG1/ENG2 trong Options nay HIỆN Ở MỌI MODE (bản 321 chỉ bật khi
-> đứng ở nửa VOICE — mặc định luôn đứng TEXT nên coi như vô hình), xét tĩnh
-> `coVoice=(voiceVariants||[]).includes(k)` thay vì toggle theo `mode`. ⛔⛔ Bàn thử
-> `scratch/voice-icon-test.html` (gọi thẳng `buildOptionsBody()` thật) bắt được: icon NẰM TRONG DÒNG
-> CHỮ làm 4 chip chia đều `flex:1 1 0` (~43px, hẹp hơn ở Fight `.is-compact-opts`) TRÀN chữ, "ENG1"
-> bị `ellipsis` cắt thành "ENG" — vá bằng **dấu góc** `position:absolute` (không chiếm chỗ dòng chữ),
-> không khai `color` riêng (ăn `currentColor` của nút). Nút "Voice" hàng công tắc TEXT/VOICE giữ
-> nguyên kiểu inline (rộng rãi, không dính bẫy). `node --check` sạch, brace `app.css` cân bằng
-> (1860=1860), đo DOM xác nhận icon góc không tràn ra ngoài nút kể cả Fight mode. ⬜ CHƯA đăng nhập
-> trang thật để bấm tay. Xem GHI CHU DU AN.md Đợt 321b)**.
+> Cập nhật lần cuối: **11/9/2026 (Đợt 322 — thầy báo qua chat: tạo bài giao cho lớp B1AH bị chặn
+> oan với lý do "đã có bài giao ANAGRAM của B2B" — B1AH chưa từng tạo act-template này. Gốc rễ:
+> phép chặn trùng của Đợt 299 (`baiGiaoCuaAct()` trong `core/assignment-ui.js::doStart()`) chỉ lọc
+> theo `activityId`, KHÔNG lọc theo lớp (`folderId`), nên soi nhầm bài giao của MỌI lớp trong tài
+> khoản thay vì chỉ lớp đang tạo — hai lớp khác nhau (khác học sinh) không hề chia bảng điểm nào cả
+> nên việc chặn là sai. Vá: `baiGiaoCuaAct(folderId)` nhận thêm tham số optional — gọi CÓ `folderId`
+> (trong `doStart()`) thì chỉ đếm bài giao CÙNG lớp (khớp cách `assignmentNameTaken()` cạnh đó đã
+> lọc); gọi KHÔNG kèm tham số (`bangDaGiao()` — dấu ✓ cạnh bộ nghĩa trong Options) giữ nguyên soi
+> mọi lớp như cũ, vì đó là thông tin tham khảo chứ không phải phép chặn. `node --check` sạch; bàn
+> thử độc lập `scratch/dot322-folderid-filter-test.mjs` (copy nguyên văn biểu thức lọc từ code
+> thật) 5/5 ĐẠT. ⬜ CHƯA đăng nhập trang thật để bấm tay xác nhận. Xem GHI CHU DU AN.md Đợt 322)**.
+> Trước đó: **(Đợt 321b — thầy xem ảnh chụp app thật rồi chỉnh lại icon loa Đợt 321: icon chip
+> ENG1/ENG2 trong Options nay HIỆN Ở MỌI MODE (bản 321 chỉ bật khi đứng ở nửa VOICE — mặc định luôn
+> đứng TEXT nên coi như vô hình), xét tĩnh `coVoice=(voiceVariants||[]).includes(k)` thay vì toggle
+> theo `mode`. ⛔⛔ Bàn thử `scratch/voice-icon-test.html` (gọi thẳng `buildOptionsBody()` thật) bắt
+> được: icon NẰM TRONG DÒNG CHỮ làm 4 chip chia đều `flex:1 1 0` (~43px, hẹp hơn ở Fight
+> `.is-compact-opts`) TRÀN chữ, "ENG1" bị `ellipsis` cắt thành "ENG" — vá bằng **dấu góc**
+> `position:absolute` (không chiếm chỗ dòng chữ), không khai `color` riêng (ăn `currentColor` của
+> nút). Nút "Voice" hàng công tắc TEXT/VOICE giữ nguyên kiểu inline (rộng rãi, không dính bẫy).
+> `node --check` sạch, brace `app.css` cân bằng (1860=1860), đo DOM xác nhận icon góc không tràn ra
+> ngoài nút kể cả Fight mode. ⬜ CHƯA đăng nhập trang thật để bấm tay. Xem GHI CHU DU AN.md Đợt 321b)**.
 > Trước đó: **(Đợt 321 — ICON LOA CHO BỘ NGHĨA VOICE, thầy yêu cầu qua myLesson: nút công tắc
 > TEXT/VOICE trong Options đeo icon loa cạnh chữ "Voice"; marker `MYACT:AW:ASSIGN` (main.js +
 > engine.js::giaoBai) kèm thêm `che:"voice"|"text"` (đọc từ `cheDoDangChon()` Đợt 312) để myLesson
@@ -5282,9 +5292,29 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **09/9/2026 sau Đợt 316** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **11/9/2026 sau Đợt 322** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (09/9/2026 — sau **Đợt 316**: ✅ THẦY XEM DEMO TRỰC TIẾP → COMMIT + PUSH)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (11/9/2026 — sau **Đợt 322**: ✅ THẦY BÁO QUA CHAT → COMMIT + PUSH)
+>
+> **Đợt 322 — CHẶN TẠO TRÙNG (Đợt 299) CẮN NHẦM LỚP KHÁC.** Thầy: tạo bài giao ANAGRAM cho lớp
+> **B1AH** thì bị chặn với lý do "đã có bài giao ANAGRAM (B2B_9.9_15:53...)" — nhưng B1AH **chưa
+> từng tạo act-template này**. Gốc rễ: `baiGiaoCuaAct()` trong `core/assignment-ui.js::doStart()`
+> chỉ lọc theo `activityId`, KHÔNG lọc theo lớp (`folderId`), nên soi bài giao của MỌI lớp trong
+> tài khoản thay vì chỉ lớp đang tạo. Lý do app đưa ra ("chia đôi bảng điểm") chỉ đúng khi CÙNG một
+> lớp bị giao trùng — hai lớp khác học sinh thì không hề chia bảng điểm nào.
+> Vá: `baiGiaoCuaAct(folderId)` nhận thêm tham số optional — gọi CÓ `folderId` (trong `doStart()`)
+> chỉ đếm bài giao CÙNG lớp (khớp cách `assignmentNameTaken()` cạnh đó đã lọc từ trước); gọi KHÔNG
+> kèm tham số (`bangDaGiao()` — dấu ✓ trong Options, chỉ để tham khảo) giữ nguyên soi mọi lớp.
+> `node --check` sạch. Bàn thử độc lập `scratch/dot322-folderid-filter-test.mjs` (copy nguyên văn
+> biểu thức lọc từ code thật) 5/5 ĐẠT. Chi tiết: `GHI CHU DU AN.md` Đợt 322.
+>
+> ⬜ Còn chờ: thầy mở Set assignment cho một bộ đề ĐÃ giao ở lớp khác, xác nhận (a) tạo cho lớp MỚI
+> không còn bị chặn oan, (b) tạo lại đúng CÙNG lớp + cùng bộ nghĩa + cùng template vẫn bị chặn như
+> cũ (Đợt 299 còn tác dụng, không bị vá quá tay).
+>
+> ---
+>
+> ### 🟢 TRẠNG THÁI CŨ HƠN (09/9/2026 — sau **Đợt 316**: ✅ THẦY XEM DEMO TRỰC TIẾP → COMMIT + PUSH)
 >
 > **Đợt 316 — DẤU ✓ "ĐÃ GIAO" TRA THEO ĐÚNG TEMPLATE ĐANG CHỌN** (chốt qua phiên sửa myLesson).
 > Thầy: chọn TEXT·VI1·QUIZ tạo bài giao thì VI1 tích ✓ đúng, nhưng chọn tiếp TEXT·VI1·ANAGRAM cho

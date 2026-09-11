@@ -540,8 +540,14 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
     // Khớp act bằng `activityId` — nó luôn là act GỐC kể cả khi bài giao được
     // tạo bằng cách đổi template (`sourceAct`), nên một act đổi sang QUIZ vẫn
     // đếm về đúng act con của nó.
-    const baiGiaoCuaAct = () => (allAssignments || [])
-      .filter(a => a && !a.trashed && a.activityId === act.id);
+    // ⭐⭐⭐ Đợt 322 (thầy báo 11/9/2026) — CHẶN TRÙNG CẮN NHẦM LỚP KHÁC. `folderId`
+    // optional: dấu ✓ trong Options (`bangDaGiao()`, gọi KHÔNG kèm tham số) vẫn
+    // soi TOÀN BỘ bài giao của act này ở MỌI lớp — đó là thông tin "bộ này đã
+    // giao ở đâu rồi", cố ý không đổi. Còn phép CHẶN HẲN trong `doStart()` (dòng
+    // dưới) mới cần đúng LỚP đang tạo, nên truyền `folderId` vào để lọc thêm.
+    const baiGiaoCuaAct = (folderId) => (allAssignments || [])
+      .filter(a => a && !a.trashed && a.activityId === act.id &&
+        (folderId === undefined || (a.folderId ?? null) === (folderId ?? null)));
     const bangDaGiao = () => {
       const m = new Map();
       baiGiaoCuaAct().forEach(a => {
@@ -690,16 +696,23 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
       // nghĩa đã đủ để liếc là biết bộ nào đã giao bằng template nào.
       // ⛔ `boNay` nay là "text|eng1" / "voice|eng1" (xem `boDangChon`), nên
       // ENG1 TEXT và ENG1 VOICE KHÔNG còn chặn nhầm nhau nữa.
+      // ⭐⭐⭐ Đợt 322 (thầy báo 11/9/2026) — CHẶN CẮN NHẦM LỚP KHÁC. `baiGiaoCuaAct()`
+      // trước đây soi TOÀN BỘ bài giao của act này ở MỌI lớp, không riêng lớp
+      // đang tạo — nên tạo ENG1·ANAGRAM cho B1AH bị chặn bởi B2B đã giao y hệt
+      // bộ này trước đó, dù hai lớp học sinh khác hẳn nhau, KHÔNG hề chia bảng
+      // điểm nào cả (lý do app đưa ra để chặn). Nay truyền `folderId` — đúng
+      // tham số `doStart()` đã nhận sẵn, cùng cách `assignmentNameTaken()` ở
+      // trên đã lọc theo lớp — để chỉ chặn khi trùng THẬT trong CÙNG một lớp.
       const boNay = boDangChon();
       if (boNay) {
-        const cungCa = baiGiaoCuaAct()
+        const cungCa = baiGiaoCuaAct(folderId)
           .filter(a => boCuaBaiGiao(a) === boNay && (a.activityType || "") === playType);
         if (cungCa.length) {
           const tenBo = variantLabel(act.content, boDangChonThuan()) || boDangChonThuan();
           const cheDo = cheDoDangChon() === "voice" ? "voice" : "text";
           err.textContent = `“${escapeText(tenBo)}” (${cheDo}) `
             + `already has a ${templateLabel(playType) || playType} assignment `
-            + `(“${escapeText(cungCa[0].title || cungCa[0].code)}”). `
+            + `(“${escapeText(cungCa[0].title || cungCa[0].code)}”) in this class. `
             + `Pick another clue set or another template — the same pair twice would split one leaderboard in two.`;
           return;
         }
