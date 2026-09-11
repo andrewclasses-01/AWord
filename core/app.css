@@ -3801,6 +3801,30 @@ html.aw-nhung .aw-below { display: none; }
 .aw-print-pop-note { margin-top: 16px; text-align: center; font-size: .8rem; color: #8a97a8; }
 .aw-print-pop-empty { text-align: center; font-size: .95rem; color: #6b7787; padding: 6px 4px 2px; }
 
+/* ---- Word format's 2 extra steps (which clue set -> which class), stacked
+   inside the SAME .aw-print-pop box openPrintPopup() already built — see
+   core/print.js showWordVariantStep()/showClassStep(). ---- */
+.aw-print-pop-headrow { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.aw-print-pop-headrow .aw-print-pop-head { margin-bottom: 0; flex: 1 1 auto; text-align: left; }
+.aw-print-pop-back {
+  flex: none; width: 32px; height: 32px; border: 0; border-radius: 10px; cursor: pointer;
+  background: #eef3f9; color: #55657a; display: grid; place-items: center;
+}
+.aw-print-pop-back:hover { background: #e2eaf4; color: #23303e; }
+.aw-print-pop-back svg { width: 17px; height: 17px; }
+/* WORD_VARIANTS buttons (ALL/ENG1/ENG2/VI1/VI2) are text-only — a short pill
+   reads better here than the 106px icon square the 5 format buttons use. */
+.aw-print-pop-btn-text { width: auto; height: auto; min-width: 74px; padding: 12px 18px; }
+.aw-print-pop-list { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow: auto; }
+.aw-print-pop-listitem {
+  font-family: inherit; font-size: .98rem; font-weight: 700; color: #23303e; text-align: left;
+  padding: .6rem .8rem; border: 1.5px solid #e2e9f2; border-radius: 12px; background: #fff; cursor: pointer;
+  transition: border-color .12s ease, color .12s ease;
+}
+.aw-print-pop-listitem:hover { border-color: #2f7bff; color: #2f7bff; }
+.aw-print-pop-listitem-skip { color: #7a8aa0; font-weight: 600; font-style: italic; }
+.aw-print-pop-loading { font-size: .86rem; font-weight: 600; color: #92a1b5; padding: 6px 2px; }
+
 /* ---- printed worksheet (hidden on screen; shown only in @media print) ---- */
 .aw-print-sheet { display: none; }
 
@@ -3829,67 +3853,95 @@ html.aw-nhung .aw-below { display: none; }
     font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
-
-  /* two-column body; the browser flows items down col 1, then col 2, then next page */
-  .aw-print-body { column-count: 2; column-gap: 11mm; column-rule: 1.3px dashed #c9ced5; }
-  .aw-print-item { break-inside: avoid; page-break-inside: avoid; margin: 0 0 6.5mm; }
-
-  .aw-pf-clue { display: flex; align-items: flex-start; gap: 5px; font-size: 13px; line-height: 1.3; }
-  .aw-pf-num { font-weight: 700; min-width: 20px; }
-  .aw-pf-bulb { flex: none; }
-  .aw-pf-bulb svg { width: 15px; height: 15px; color: #7d8894; vertical-align: -2px; margin-top: 1px; }
-  .aw-pf-cluetext { flex: 1; }
-
-  /* ANAGRAM */
-  .aw-pf-scramble { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 5px 20px; }
-  .aw-pf-sbox {
-    min-width: 20px; height: 22px; padding: 0 3px; border-radius: 5px; background: #eef1f4;
-    display: inline-flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 13px; letter-spacing: .04em; color: #4a5560;
-  }
-  .aw-pf-blanks { display: flex; flex-wrap: wrap; gap: 5px; margin-left: 20px; }
-  .aw-pf-blank { width: 26px; height: 30px; border: 1.4px solid #9aa3ac; border-radius: 6px; }
-
-  /* QUIZ */
-  .aw-pf-options { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 16px; margin: 7px 0 0 20px; }
-  .aw-pf-opt { display: flex; align-items: center; gap: 7px; font-size: 12.5px; }
-  .aw-pf-letter { font-weight: 700; }
-  .aw-pf-check { flex: none; width: 16px; height: 16px; border: 1.4px solid #8a939c; border-radius: 4px; }
-  .aw-pf-opttext { letter-spacing: .01em; }
-
-  /* UNJUMBLE */
-  .aw-pf-jumble { font-size: 13px; line-height: 1.5; }
-  .aw-pf-jumble .aw-pf-num { display: inline; margin-right: 8px; }
-  .aw-pf-word { display: inline-block; margin: 0 14px 2px 0; }
-  .aw-pf-writeline { height: 0; border-bottom: 1px solid #b9c0c8; margin: 9px 0 2px; }
-
-  /* CROSSWORD — a single interlocking grid (not the 2-col item flow above:
-     .aw-pf-cw-wrap replaces .aw-print-body for this one format) + a numbered
-     ACROSS/DOWN clue list underneath. Cell size (--cw-cell) and column count
-     (--cw-cols) are set per print run by core/print.js, in mm — the only unit
-     that means the same thing on paper as in that file's layout maths. */
-  .aw-pf-cw-wrap { break-inside: avoid; }
-  .aw-pf-cw-empty { font-size: 13px; color: #6b7787; }
-  .aw-pf-cw-grid {
-    display: grid; grid-template-columns: repeat(var(--cw-cols), var(--cw-cell));
-    grid-auto-rows: var(--cw-cell); gap: 0; margin: 2mm auto 7mm; break-inside: avoid;
-  }
-  .aw-pf-cw-cell {
-    box-sizing: border-box; border: 0.35mm solid #232f3b; position: relative;
-  }
-  .aw-pf-cw-cell.is-blank { border: none; visibility: hidden; }
-  .aw-pf-cw-num {
-    position: absolute; top: 0.2mm; left: 0.5mm; font-size: 2.1mm; line-height: 1; font-weight: 700;
-  }
-  .aw-pf-cw-clues { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16mm; }
-  .aw-pf-cw-col { break-inside: avoid; }
-  .aw-pf-cw-collabel {
-    font-size: 11.5px; font-weight: 800; letter-spacing: .06em; color: #566472;
-    margin: 0 0 4px; padding-bottom: 2px; border-bottom: 1.3px solid #c9ced5;
-  }
-  .aw-pf-cw-clueline { display: flex; align-items: flex-start; gap: 5px; font-size: 12px; line-height: 1.4; margin: 0 0 4px; }
-  .aw-pf-cw-cluenum { font-weight: 700; min-width: 16px; flex: none; }
 }
+
+/* ---- printed worksheet TYPOGRAPHY — plain rules, NOT inside @media print.
+   core/print.js needs to MEASURE the real rendered height of a worksheet
+   BEFORE printing (PAGE-FIT: land on a full, even sheet count for duplex —
+   see the comment block in print.js), by briefly building a hidden,
+   off-canvas clone with these exact classes. That only works if the rules
+   below apply outside of an actual print job too. Harmless on screen: the
+   real .aw-print-sheet stays display:none there (rule above) unless
+   print.js's own probe overrides it with an inline style, off-canvas.
+   --pf-scale is print.js's page-fit knob (0.92–1.15, default 1 = untouched
+   size) set as an inline custom property per print run. */
+.aw-print-body { column-count: 2; column-gap: 11mm; column-rule: 1.3px dashed #c9ced5; }
+.aw-print-item { break-inside: avoid; page-break-inside: avoid; margin: 0 0 calc(6.5mm * var(--pf-scale, 1)); }
+
+.aw-pf-clue { display: flex; align-items: flex-start; gap: 5px; font-size: calc(13px * var(--pf-scale, 1)); line-height: 1.3; }
+.aw-pf-num { font-weight: 700; min-width: 20px; }
+.aw-pf-bulb { flex: none; }
+.aw-pf-bulb svg { width: 15px; height: 15px; color: #7d8894; vertical-align: -2px; margin-top: 1px; }
+.aw-pf-cluetext { flex: 1; }
+
+/* ANAGRAM */
+.aw-pf-scramble { display: flex; flex-wrap: wrap; gap: calc(5px * var(--pf-scale, 1)); margin: calc(6px * var(--pf-scale, 1)) 0 calc(5px * var(--pf-scale, 1)) 20px; }
+.aw-pf-sbox {
+  min-width: calc(20px * var(--pf-scale, 1)); height: calc(22px * var(--pf-scale, 1)); padding: 0 3px; border-radius: 5px; background: #eef1f4;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: calc(13px * var(--pf-scale, 1)); letter-spacing: .04em; color: #4a5560;
+}
+.aw-pf-blanks { display: flex; flex-wrap: wrap; gap: calc(5px * var(--pf-scale, 1)); margin-left: 20px; }
+.aw-pf-blank { width: calc(26px * var(--pf-scale, 1)); height: calc(30px * var(--pf-scale, 1)); border: 1.4px solid #9aa3ac; border-radius: 6px; }
+
+/* QUIZ */
+.aw-pf-options { display: grid; grid-template-columns: 1fr 1fr; gap: calc(5px * var(--pf-scale, 1)) 16px; margin: calc(7px * var(--pf-scale, 1)) 0 0 20px; }
+.aw-pf-opt { display: flex; align-items: center; gap: 7px; font-size: calc(12.5px * var(--pf-scale, 1)); }
+.aw-pf-letter { font-weight: 700; }
+.aw-pf-check { flex: none; width: calc(16px * var(--pf-scale, 1)); height: calc(16px * var(--pf-scale, 1)); border: 1.4px solid #8a939c; border-radius: 4px; }
+.aw-pf-opttext { letter-spacing: .01em; }
+
+/* UNJUMBLE */
+.aw-pf-jumble { font-size: calc(13px * var(--pf-scale, 1)); line-height: 1.5; }
+.aw-pf-jumble .aw-pf-num { display: inline; margin-right: 8px; }
+.aw-pf-word { display: inline-block; margin: 0 14px calc(2px * var(--pf-scale, 1)) 0; }
+.aw-pf-writeline { height: 0; border-bottom: 1px solid #b9c0c8; margin: calc(9px * var(--pf-scale, 1)) 0 2px; }
+
+/* WORD — a plain vocabulary TABLE (STT · word/IPA · definition(s)), no column
+   headers (teacher: "không cần tiêu đề"). Denser than the 3 worksheet formats
+   above (a reference sheet, not a game with boxes to fill in), so its own
+   `.aw-print-item` override shrinks the row gap well below the shared 6.5mm —
+   two classes on one element beats the one-class base rule on specificity, so
+   this doesn't need `!important` or to come after it in the file. */
+.aw-print-item.aw-pf-word { margin-bottom: calc(2.4mm * var(--pf-scale, 1)); }
+.aw-wl-row {
+  display: grid; grid-template-columns: 22px 1fr 1.5fr; column-gap: 10px; align-items: baseline;
+  font-size: calc(12.5px * var(--pf-scale, 1)); line-height: 1.4;
+}
+.aw-wl-row.is-all { grid-template-columns: 22px .95fr 1fr 1fr; }
+.aw-wl-stt { font-weight: 700; color: #8a97a8; text-align: right; }
+.aw-wl-wordtext { font-weight: 800; color: #1c2733; }
+.aw-wl-ipa { font-weight: 400; color: #9aa4af; }
+.aw-wl-def { color: #333f4c; }
+
+/* CROSSWORD — a single interlocking grid (not the 2-col item flow above:
+   .aw-pf-cw-wrap replaces .aw-print-body for this one format) + a numbered
+   ACROSS/DOWN clue list underneath. Cell size (--cw-cell) and column count
+   (--cw-cols) are set per print run by core/print.js, in mm — the only unit
+   that means the same thing on paper as in that file's layout maths;
+   --pf-scale there already folds into --cw-cell itself (print.js), so only
+   the clue text below needs its own var(--pf-scale) reference. */
+.aw-pf-cw-wrap { break-inside: avoid; }
+.aw-pf-cw-empty { font-size: 13px; color: #6b7787; }
+.aw-pf-cw-grid {
+  display: grid; grid-template-columns: repeat(var(--cw-cols), var(--cw-cell));
+  grid-auto-rows: var(--cw-cell); gap: 0; margin: 2mm auto 7mm; break-inside: avoid;
+}
+.aw-pf-cw-cell {
+  box-sizing: border-box; border: 0.35mm solid #232f3b; position: relative;
+}
+.aw-pf-cw-cell.is-blank { border: none; visibility: hidden; }
+.aw-pf-cw-num {
+  position: absolute; top: 0.2mm; left: 0.5mm; font-size: 2.1mm; line-height: 1; font-weight: 700;
+}
+.aw-pf-cw-clues { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16mm; }
+.aw-pf-cw-col { break-inside: avoid; }
+.aw-pf-cw-collabel {
+  font-size: 11.5px; font-weight: 800; letter-spacing: .06em; color: #566472;
+  margin: 0 0 4px; padding-bottom: 2px; border-bottom: 1.3px solid #c9ced5;
+}
+.aw-pf-cw-clueline { display: flex; align-items: flex-start; gap: 5px; font-size: calc(12px * var(--pf-scale, 1)); line-height: 1.4; margin: 0 0 calc(4px * var(--pf-scale, 1)); }
+.aw-pf-cw-cluenum { font-weight: 700; min-width: 16px; flex: none; }
 
 /* move dialog tree */
 .aw-move-tree { max-height: 46vh; overflow: auto; border: 1px solid #eef2f7; border-radius: 12px; padding: 6px; }

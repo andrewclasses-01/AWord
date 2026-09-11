@@ -127,6 +127,8 @@ export const icons = {
   fmtCrossword: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1.6"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/><rect x="3" y="3" width="6" height="6" fill="currentColor" stroke="none" opacity="0.18"/><rect x="15" y="9" width="6" height="6" fill="currentColor" stroke="none" opacity="0.18"/><rect x="9" y="15" width="6" height="6" fill="currentColor" stroke="none" opacity="0.18"/></svg>`,
   fmtQuiz: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="5" rx="1.2"/><rect x="3" y="13" width="5" height="5" rx="1.2"/><path d="M4.4 6.3l1 1 1.6-1.9"/><path d="M11 6.2h9M11 15.5h9"/></svg>`,
   fmtUnjumble: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h7M14 6h7"/><path d="M3 12h11M18 12h3"/><path d="M3 18h5M12 18h9"/><path d="M12 4l2 2-2 2M18 10l-2 2 2 2"/></svg>`,
+  // A plain vocabulary list: numbered rows, each a word + a longer definition line.
+  fmtWord: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h1.4M4 12h1.4M4 17.5h1.4"/><path d="M9 6.5h11M9 12h11M9 17.5h6"/></svg>`,
 
   // ----- Đợt 148: the games that had no icon of their own -----
   // Same Lucide-ish stroke language as the four above. Added because the

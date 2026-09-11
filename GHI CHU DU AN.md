@@ -286,6 +286,193 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 320 (11/9/2026, thầy giao) — **IN: THÊM ĐỊNH DẠNG "WORD" — BẢNG TỪ VỰNG (STT · TỪ/IPA · ĐỊNH NGHĨA)**
+
+### Yêu cầu gốc (thầy)
+
+Trong popup Print của mỗi act, thêm 1 ô định dạng nữa tên **Word**. Bấm vào hiện popup nhỏ chọn
+**ALL / ENG1 / ENG2 / VI1 / VI2**; chọn xong hiện tiếp popup nhỏ chọn **LỚP** (trong danh sách lớp đã
+đặt ở AWord); chọn lớp xong thì vào thẳng preview in. Nội dung: cột **STT**; cột **TỪ • IPA** (từ đậm,
+IPA mảnh/nhạt); cột định nghĩa theo lựa chọn — ENG1/ENG2/VI1/VI2 thì 1 cột, riêng **ALL** thì 2 cột
+**ENG1 + VI2**. Không cần tiêu đề cột. Header trên cùng: tên act trái, ngày + lớp phải. Footer: AWord +
+slogan trái, số trang x/y phải — "vừa đủ, không gian chủ yếu dành cho text".
+
+### Bàn trước khi code — nguồn dữ liệu thật nằm ở đâu
+
+Nhờ Explore agent dò trước khi viết dòng nào: dữ liệu 4 bộ nghĩa (ENG1/ENG2/VI1/VI2) + IPA của một
+"WORDS" act **CÓ nằm sẵn** trong act, nhưng ở bản act GỐC (`libAct.content.items[i] = {word, clue,
+clues:{eng1,eng2,vi1,vi2}, ipa}`, Đợt 145 `core/content-view.js`) — `resolveActivity(libAct)` (mà nút
+Print vẫn gọi trước khi mở popup) **LÀM PHẲNG** 4 bộ đó xuống còn đúng 1 `.clue` trước khi bất cứ
+định dạng in nào khác thấy nó, để 17 template không phải biết biến thể tồn tại. ⇒ Word phải đọc thẳng
+`libAct` CHƯA resolve, nghĩa là chữ ký `openPrintPopup(activity)` cần thêm tham số. "Danh sách lớp" là
+`core/classes.js` `listClasses()` (roster Settings ▸ Classes, KHÁC hẳn "Courses/<course>" là cây thư
+mục bài giao) — mẫu UI để soi theo là `openClassPicker()` trong `core/assignment-ui.js`.
+
+### Đã sửa
+
+- `core/engine.js` — nút Print (dòng `printBtn.onclick`) gọi `openPrintPopup(resolveActivity(libAct),
+  libAct)` thay vì chỉ 1 tham số — tham số thứ hai là act GỐC, CHỈ Word dùng tới.
+- `core/print.js`:
+  - `openPrintPopup(activity, libAct = activity)` — dựng LẠI thành máy trạng thái 3 bước bên trong
+    CÙNG một `.aw-print-pop` (không mở overlay chồng): `showFormatStep()` (như cũ, thêm nút Word) →
+    `showWordVariantStep()` (5 nút ALL/ENG1/ENG2/VI1/VI2, ALL luôn hiện, 4 nút kia lọc theo
+    `variantsOf(libAct.content)`) → `showClassStep(variantKey)` (`listClasses()`, có nút "(No class)"
+    luôn hiện kể cả khi tải lỗi/chưa đăng nhập — không kẹt màn). Nút back (`icons.back`) mỗi bước.
+  - `eligibleFormats(activity, libAct)` — thêm "word" khi `variantsOf(libAct.content)` có thật VÀ act
+    có ít nhất 1 từ (`wordRowsOf`).
+  - `renderWord(rows, cols, isAll)` + `wordIpaCell()` — mỗi từ 1 `.aw-print-item.aw-pf-word` chứa 1
+    `.aw-wl-row` (STT · từ đậm + " • ipa" mảnh nhạt, không có dấu chấm mồ côi khi thiếu IPA · 1-2 cột
+    `.aw-wl-def` qua `clueOf(item, key)`, hàm DÙNG CHUNG có sẵn của `content-view.js`).
+  - `runPrintWord(libAct, variantKey, className)` — tái dùng NGUYÊN VẸN PAGE-FIT (Đợt 318): mỗi hàng
+    từ là 1 `.aw-print-item` nên `resolveFitScale(s => measureFlow(itemEls, s), 2)` chạy y hệt 3 định
+    dạng kia, `runPrint()` không cần sửa gì để biết Word tồn tại.
+  - `buildSheet`/`pageChromeStyle` nhận thêm `topRight` tuỳ chọn (mặc định vẫn "Name / Date: ___" cho
+    4 định dạng cũ) — Word truyền `"ngày hôm nay   •   tên lớp"` (`formatDateVN()`); logo+slogan+số
+    trang ở `@bottom-*` giữ NGUYÊN (đã sẵn đúng ý "AWord + slogan trái, số trang phải").
+  - Tách phần đuôi dùng chung của `runPrint`/`runPrintWord` (append sheet, `afterprint` cleanup,
+    `window.print()`) ra `finishAndPrint(sheet)` — tránh chép 2 lần.
+- `core/icons.js` — thêm `fmtWord` (icon danh sách có số, khớp phong cách 4 icon `fmt*` sẵn có).
+- `core/app.css` — CSS 2 bước phụ của popup (`.aw-print-pop-headrow`/`-back`/`-list`/`-listitem`/
+  `-loading`, phỏng theo đúng `.aw-as-picklist`/`.aw-as-pickitem` đã có ở màn Set assignment nhưng
+  đặt tên riêng dưới `.aw-print-pop-*`, không đụng namespace `aw-as-`) + CSS `.aw-wl-*` (đặt CẠNH khối
+  UNJUMBLE trong phần typography KHÔNG nằm trong `@media print`, Đợt 318 đã tách sẵn — Word thừa hưởng
+  đo off-screen luôn, không phải tách gì thêm) với margin hàng riêng `.aw-print-item.aw-pf-word` NHỎ
+  HƠN 3 định dạng kia (bảng từ vựng dày đặc, không phải worksheet có ô/khoảng trống cần thở).
+
+### Bàn thử
+
+`node --input-type=module --check` sạch 5 file JS đụng tới. Bàn thử DOM thật qua Chrome
+(`scratch/print-word-dom-test.html`, `devserver.py` cục bộ) — dựng 1 "WORDS" act giả đúng hình dạng
+Đợt 145 (5 từ, 2 từ cố ý để trống VI2) rồi TỰ BẤM qua cả 3 bước (không mô phỏng bằng tay): Word → ENG1
+→ (No class), và Word → ALL → (No class). **18/18 ĐẠT** sau khi sửa 2 lỗi THẬT NẰM Ở BÀI TEST (không
+phải ở `print.js`): (1) hàm phụ `qa(sel, root)` của bài test quên dùng tham số `root`, khiến câu hỏi
+"cột định nghĩa hàng 2 có đúng 2 không" tình cờ đếm TOÀN BỘ trang (10, đúng 5 hàng × 2 cột); (2) kỳ
+vọng sai hành vi của `clueOf()` — hàm chỉ rơi về `.clue` khi khoá THẬT SỰ THIẾU, còn `vi2: ""` khai rõ
+ràng thì đúng ra phải IN RA RỖNG (không lặp lại nghĩa mặc định), bài test ban đầu kỳ vọng ngược. Xác
+nhận thêm bằng ảnh chụp (ép sheet hiện tạm trên màn hình, bỏ `window.print()`): 3 từ chảy đúng 2 cột
+trang (PAGE-FIT hoạt động), từ đậm/IPA nhạt/định nghĩa ENG1+VI2 đúng cột, dòng thiếu VI2 để trống chứ
+không lặp chữ cũ. Act không có clue-set variants (VD: quiz thường) xác nhận KHÔNG hiện nút Word.
+
+### Commit + Push
+
+⬜ **CHƯA COMMIT** — cùng lý do trang in ở Đợt 318: chỉ nhìn thấy thật khi thầy tự bấm và cầm giấy.
+Chờ thầy thử trên act "WORDS" thật (đặc biệt: chọn lớp có thật trong Settings ▸ Classes, không phải
+nhánh "(No class)"/lỗi tải mà bàn thử này chỉ đi được tới) rồi mới commit + push.
+
+### ⬜ VIỆC ĐANG CHỜ
+
+- [ ] Thầy tự bấm Print trên một act "WORDS" thật → Word → thử cả 5 lựa chọn (ALL/ENG1/ENG2/VI1/VI2)
+      → chọn một LỚP CÓ THẬT (không phải "(No class)") → xác nhận header phải hiện đúng ngày + tên
+      lớp, bảng từ đọc được, chữ đậm/nhạt rõ ràng.
+- [ ] Xác nhận cột ALL (ENG1+VI2) đúng ý thầy muốn — nếu muốn đổi cặp cột khác (VD ENG1+VI1) chỉ cần
+      sửa 1 dòng `cols = isAll ? ["eng1","vi2"] : [variantKey]` trong `runPrintWord()`.
+- [ ] In thử giấy thật xem mật độ dòng (đã cố tình dày hơn Anagram/Quiz/Unjumble) có vừa mắt không.
+
+---
+
+## Đợt 318 (11/9/2026, thầy đề xuất — bàn ý tưởng rồi chốt luôn) — **IN: PAGE-FIT — NHẮM SỐ TRANG CHẴN CHO MÁY IN 2 MẶT**
+
+### Yêu cầu gốc (thầy)
+
+Nhìn một bản in Anagram (ảnh chụp: LSA2-S4.T4.P1-2-3-4-5, trang 1/4) rồi đề xuất: máy in của thầy là
+máy 2 mặt, muốn ưu tiên **số trang chẵn**. Hai ví dụ: (1) nội dung tự nhiên tràn nhẹ sang trang lẻ
+(VD 3 trang, trang 3 chỉ vài câu) → NÉN lại cho vừa 2 trang thôi; (2) nội dung ít (~1,5 trang) → GIÃN
+ra cho **trọn 2 trang**, đỡ chật/đỡ trống.
+
+### Bàn trước khi code
+
+Đọc `core/print.js` (bộ máy in DÙNG CHUNG 4 định dạng: Anagram/Crossword/Quiz/Unjumble — thả trôi
+CSS `column-count:2`, trình duyệt tự chia trang, KHÔNG hề biết trước ra bao nhiêu trang) và tiền lệ
+gần nhất `templates/running-word/rw-print.js` (Đợt 193/203 ở đó: đã từng CHỦ ĐỘNG tính cỡ chữ để ép
+vừa đúng 1 trang, thay vì để trình duyệt tự lo — bài học "ngân sách chỗ trống phải cùng đơn vị với
+thứ nó chừa chỗ"). Hỏi thầy chốt 3 điểm trước khi code (AskUserQuestion): (1) áp dụng cho **cả 4 định
+dạng** kể cả Crossword; (2) biên độ co/giãn **vừa phải — co tối đa 8%, giãn tối đa 15%**; (3) lệch quá
+biên thì **giữ số trang lẻ tự nhiên**, không ép bằng mọi giá.
+
+### Thiết kế
+
+CSS thuần không có khái niệm "nhắm đúng N trang" — phải theo mô hình **ĐO trước → TÍNH → CO/GIÃN**,
+đúng tinh thần rw-print.js:
+
+- `packPages(heightsPx, capacityPx, colsPerPage)` (PURE + EXPORT, core rule 19) — gói từng câu
+  (`break-inside:avoid` nên không câu nào bị cắt đôi) vào cột 1 rồi cột 2 rồi trang mới, đúng quy tắc
+  CSS Multi-column khi phân trang thật (chỉ cụm CUỐI mới "balance", mọi trang trước fill tuần tự).
+- `resolveFitScale(measureFn, colsPerPage)` — nhị phân tìm `--pf-scale` trong biên
+  `[1-8%, 1+15%]`: số trang tự nhiên LẺ (>1) và co được về chẵn trong biên → NÉN; nén không đạt (hoặc
+  đã chẵn/chỉ 1 trang) mà trang cuối còn trống → GIÃN, chỉ tới mức KHÔNG đẻ thêm trang; không đạt cả
+  hai → giữ scale=1 (tự nhiên). Đo THẬT bằng DOM (không suy luận tuyến tính) vì đổi cỡ chữ có thể làm
+  câu XUỐNG DÒNG THÊM — một bước nhảy, không phải quan hệ tuyến tính.
+- `--pf-scale` là 1 biến CSS tuỳ biến, mọi kích thước quan trọng của `.aw-pf-*`/`.aw-print-item` bọc
+  qua `calc(X * var(--pf-scale, 1))` — một core/print.js JS chỉ set MỘT giá trị, CSS tự co giãn đều.
+- Crossword khác hình (1 khối lưới+chú thích liền, không chia cột) nên dùng `colsPerPage=1`, capacity
+  = chiều cao khả dụng 1 trang; scale nhân trực tiếp vào `cellMm` (không vượt bề ngang trang) + cỡ
+  chữ chú thích qua cùng `--pf-scale`.
+
+### ⛔⛔ Bẫy gặp khi TỰ bàn thử (bắt bằng đo, không phải đọc code suông)
+
+1. **Kiểu chữ in nằm trong `@media print`** — đo off-screen NGOÀI lúc in thì các luật `.aw-pf-*` không
+   khớp gì cả (chỉ có lúc in thật mới bật). Phải tách phần TYPOGRAPHY ra khỏi `@media print` thành
+   luật thường (vô hại lúc màn hình vì `.aw-print-sheet{display:none}` vẫn đứng nguyên, chỉ có bản dò
+   ẩn của print.js mới cố tình lật `display:block` ở toạ độ ngoài màn hình để đo).
+2. **CSS custom property chỉ kế thừa qua CÂY DOM đang gắn** — bàn thử tự viết lúc đầu clone
+   `.aw-print-item` ra một hộp dò MỚI mà quên gán lại `--pf-scale` lên hộp đó ⇒ mọi phép đối chứng lặng
+   lẽ tụt về mặc định (scale=1), làm tưởng có ca "nén ra số trang lẻ" (n=24: hộp giả báo 3 trang) —
+   không phải lỗi ở `print.js`, mà ở chính bàn thử; sửa xong đối chứng lại khớp 100%.
+3. Font "Baloo 2" tải qua `@font-face` (`font-display:swap`) — nếu đo trước khi font tải xong thì lấy
+   nhầm metrics font dự phòng. Thêm `await document.fonts.ready` đầu `runPrint()` (giờ là hàm async)
+   cho chắc, dù thực tế nút Print chỉ bấm được sau khi cả app đã hiện ra (font gần như chắc chắn đã
+   tải) nên gần như không bao giờ có tác dụng thật, chỉ là lưới an toàn rẻ tiền.
+
+### Đã sửa
+
+- `core/print.js` — thêm khối "PAGE-FIT": `packPages`/`resolveFitScale` (export) + `measureFlow`
+  (đo Anagram/Quiz/Unjumble) + `measureBlock` (đo Crossword); `runPrint()` giờ `async`, gọi
+  `resolveFitScale` rồi set `--pf-scale` lên `.aw-print-sheet`; `renderCrossword(items, scale=1)`
+  nhận thêm tham số scale, nhân vào `cellMm` (kẹp không vượt bề ngang trang) + set `--pf-scale` lên
+  `.aw-pf-cw-wrap` cho cỡ chữ chú thích.
+- `core/app.css` — tách khối typography `.aw-print-body`/`.aw-print-item`/mọi `.aw-pf-*` ra khỏi
+  `@media print` (chỉ còn các luật ẨN/HIỆN + màu/font-family ở lại trong đó), bọc `calc(X *
+  var(--pf-scale, 1))` vào các kích thước chính (margin câu, cỡ chữ clue, khung/ô chữ Anagram, lưới
+  Quiz, dòng Unjumble, cỡ chữ chú thích Crossword).
+- `scratch/print-pagefit-test.mjs` — bàn thử LOGIC thuần (chép lại `packPages`/`resolveFitScale`, lý
+  do chép giống hệt lý do crossword-grid-builder trong `print.js` đã ghi: import thẳng `print.js` kéo
+  theo `registry.js` chạm `document` ở module-scope, không chạy được Node). Quét 1..150 câu + đúng 2
+  ví dụ của thầy + ca "nén không đạt vẫn phải giãn lấp trang cuối".
+- `scratch/print-pagefit-dom-test.html` — bàn thử DOM THẬT (gọi thẳng `openPrintPopup`/`packPages`/
+  `resolveFitScale` thật, nạp `core/app.css` thật, cướp `window.print` để khỏi mở hộp thoại thật).
+
+### Bàn thử
+
+- `node scratch/print-pagefit-test.mjs`: **TẤT CẢ ĐẠT** — 2 ví dụ của thầy (nén 3→2 trang; giãn 1,5→
+  trọn 2 trang) + ca nén-không-đạt-vẫn-giãn + quét 1..150 câu (0 ca tăng số trang, 0 ca lệch biên).
+- Bàn thử DOM thật (`node --input-type=module --check` sạch cả 2 file; qua `devserver.py` cục bộ +
+  Chrome thật, `read_console_messages` sạch lỗi cả hai lần): dựng đúng nội dung 2 ví dụ của thầy —
+  **n=22** (giả lập tràn nhẹ): tự nhiên 3 trang/lấp 17% → nén (scale 0.971) còn **2 trang/lấp 83%**.
+  **n=34** (giả lập ít câu): tự nhiên đã 4 trang nhưng lấp 34% → giãn (scale 1.129) vẫn **4 trang** mà
+  **lấp 90%**. Quét thêm n=12/44/58 đều đúng quy luật (không câu nào tăng số trang khi giãn; số trang
+  sau nén luôn CHẴN). Crossword (n=4/8/15/30) scale luôn trong biên 0.92–1.15, không lỗi console.
+- ⚠️ Biên "vừa phải" (8%/15%) thầy chọn có giới hạn thật: một trang RẤT thưa (VD 3 câu, ~17-22% một
+  trang) chỉ giãn lên được ~34-65% chứ không tới "trọn đầy" — cải thiện rõ rệt nhưng không hoàn hảo.
+  Nếu in thử giấy thấy vẫn còn trống nhiều, nâng biên giãn (15%→ vd 20-25%) là chỗ duy nhất cần đổi.
+
+### Commit + Push
+
+⬜ **CHƯA COMMIT** — đã bàn thử kỹ bằng máy (logic + DOM thật), nhưng đây là thay đổi core ảnh hưởng
+CẢ 4 định dạng in của MỌI act, và trang in là thứ chỉ nhìn thấy thật khi cầm giấy — theo đúng lệ dự án
+(rw-print.js Đợt 193/203 cũng vậy), chờ thầy **IN THỬ TRÊN GIẤY THẬT** vài mốc số câu trước khi commit.
+
+### ⬜ VIỆC ĐANG CHỜ
+
+- [ ] Thầy in thử ít nhất 3 mốc: (a) một act sẽ tràn nhẹ sang trang lẻ ở bản CŨ — xác nhận bản MỚI
+      nén gọn về trang chẵn, chữ vẫn đọc được thoải mái; (b) một act ít câu (~1,5 trang) — xác nhận
+      trang 2 đỡ trống hơn hẳn; (c) một act đã đẹp sẵn (số trang chẵn, đầy) — xác nhận KHÔNG bị đụng
+      vào (scale=1, y hệt bản cũ).
+- [ ] Thầy xem cỡ chữ ở biên co 8% (nhỏ nhất) và biên giãn 15% (lớn nhất) có còn "vừa mắt" không —
+      nếu cần nới biên, chỉ cần đổi `FIT_SHRINK_MAX`/`FIT_GROW_MAX` ở đầu `core/print.js`.
+- [ ] Duyệt xong mới commit + push + kiểm bản live (đúng lệ dự án).
+
+---
+
 ## Đợt 317 (10/9/2026, thầy báo qua myLesson) — **CHECK THƯ MỤC/ACT KHÔNG THẤY MỤC VỪA TẠO SAU KHI MỞ APP**
 
 ### Yêu cầu gốc (thầy)

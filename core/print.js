@@ -2,12 +2,16 @@
 // PRINT — paper worksheets (100% English product). GENERIC across templates.
 //
 // Clicking the Print button opens a small popup to pick a print FORMAT:
-//   Anagram · Crossword · Quiz · Unjumble
+//   Anagram · Crossword · Quiz · Unjumble · Word
 // Which formats are offered depends on the activity type + question count:
 //   • Anagram  — every template, any number of questions
 //   • Quiz     — every template, any number of questions
 //   • Crossword— 2..35 questions, every template EXCEPT "type-the-answer"
 //   • Unjumble — only "type-the-answer", any number of questions
+//   • Word     — only a "WORDS" act carrying clue-set variants (Đợt 145,
+//                core/content-view.js) — a plain vocabulary TABLE, not a game
+//                worksheet; picking it asks WHICH clue set (ALL/ENG1/ENG2/
+//                VI1/VI2) then WHICH CLASS (core/classes.js), then prints.
 // Formats that don't apply simply don't show an icon.
 //
 // A format renders a printable sheet from a NORMALISED item list
@@ -29,33 +33,73 @@
 // varies the on-screen puzzle across "Start again" — a worksheet should print
 // the SAME puzzle every time it's generated, so placement here is a stable
 // longest-word-first sort with no randomness at all.
+//
+// WORD reads the RAW library act, not the resolved one — `openPrintPopup`'s
+// second parameter (`libAct`). `resolveActivity()` (core/content-view.js)
+// flattens a variant act's four clue sets down to whichever ONE is active
+// before every other format ever sees it (so 17 templates never have to know
+// variants exist) — exactly the data Word's ALL/ENG1/ENG2/VI1/VI2 picker
+// needs is what that flattening throws away, so Word has to reach past it.
 // =============================================================
 
 import { getTemplate } from "./registry.js";
 import { shuffle, el } from "./utils.js";
 import { icons } from "./icons.js";
 import { sound } from "./sound.js";
+import { variantsOf, clueOf } from "./content-view.js";
+import { listClasses } from "./classes.js";
 
 const FORMAT_META = {
   anagram:   { label: "Anagram",   icon: icons.fmtAnagram },
   crossword: { label: "Crossword", icon: icons.fmtCrossword },
   quiz:      { label: "Quiz",      icon: icons.fmtQuiz },
-  unjumble:  { label: "Unjumble",  icon: icons.fmtUnjumble }
+  unjumble:  { label: "Unjumble",  icon: icons.fmtUnjumble },
+  word:      { label: "Word",      icon: icons.fmtWord }
 };
-// Order shown in the popup (teacher's order): Anagram, Crossword, Quiz, Unjumble.
-const FORMAT_ORDER = ["anagram", "crossword", "quiz", "unjumble"];
+// Order shown in the popup (teacher's order): Anagram, Crossword, Quiz, Unjumble, Word.
+const FORMAT_ORDER = ["anagram", "crossword", "quiz", "unjumble", "word"];
+
+// The 5 clue-set choices Word's second step offers, teacher's fixed order.
+// "all" is the only one that is never filtered out by availability (below) —
+// it degrades gracefully (clueOf() falls back to the act's default clue for
+// whichever half a given word doesn't have) since it is inherently a
+// best-effort combination, not a claim that one specific set is showing.
+const WORD_VARIANTS = [
+  { key: "all",  label: "ALL" },
+  { key: "eng1", label: "ENG1" },
+  { key: "eng2", label: "ENG2" },
+  { key: "vi1",  label: "VI1" },
+  { key: "vi2",  label: "VI2" }
+];
 
 // ---------- public entry (called by core/engine.js Print button) ----------
-export function openPrintPopup(activity) {
-  const formats = eligibleFormats(activity);
+// `libAct` (optional, defaults to `activity`) is the RAW library act, needed
+// only by the Word format — see the file-header comment above. Every other
+// format keeps reading `activity` (already resolved to one clue set), so
+// they see zero change from this parameter existing.
+export function openPrintPopup(activity, libAct = activity) {
+  const formats = eligibleFormats(activity, libAct);
 
   const overlay = el("div", "aw-print-pop-overlay");
   const box = el("div", "aw-print-pop");
-  box.append(el("div", "aw-print-pop-head", "Print"));
+  overlay.append(box);
+  overlay.onclick = ev => { if (ev.target === overlay) close(); };
+  document.body.append(overlay);
+  document.addEventListener("keydown", onEsc);
 
-  if (formats.length === 0) {
-    box.append(el("div", "aw-print-pop-empty", "Add some questions first, then you can print."));
-  } else {
+  function onEsc(ev) { if (ev.key === "Escape") close(); }
+  function close() { overlay.remove(); document.removeEventListener("keydown", onEsc); }
+
+  showFormatStep();
+
+  // ---- step 1: pick a FORMAT (unchanged look for the original 4) ----
+  function showFormatStep() {
+    box.innerHTML = "";
+    box.append(el("div", "aw-print-pop-head", "Print"));
+    if (formats.length === 0) {
+      box.append(el("div", "aw-print-pop-empty", "Add some questions first, then you can print."));
+      return;
+    }
     const row = el("div", "aw-print-pop-row");
     const note = el("div", "aw-print-pop-note",
       "Paper A4 &middot; black &amp; white. Pick <b>double-sided</b> in your printer dialog.");
@@ -68,25 +112,77 @@ export function openPrintPopup(activity) {
       btn.onclick = () => {
         sound.click();
         if (meta.comingSoon) { note.innerHTML = `<b>${meta.label}</b> — coming soon.`; return; }
+        if (f === "word") { showWordVariantStep(); return; }
         close();
-        runPrint(activity, f);
+        void runPrint(activity, f);
       };
       row.append(btn);
     });
     box.append(row, note);
   }
 
-  overlay.append(box);
-  overlay.onclick = ev => { if (ev.target === overlay) close(); };
-  document.body.append(overlay);
-  document.addEventListener("keydown", onEsc);
+  // ---- step 2 (Word only): pick WHICH clue set(s) ----
+  function showWordVariantStep() {
+    const available = variantsOf(libAct && libAct.content) || [];
+    const choices = WORD_VARIANTS.filter(v => v.key === "all" || available.includes(v.key));
+    box.innerHTML = "";
+    box.append(backRow("Print — which clue set?", showFormatStep));
+    const row = el("div", "aw-print-pop-row");
+    choices.forEach(v => {
+      const btn = el("button", "aw-print-pop-btn aw-print-pop-btn-text");
+      btn.type = "button";
+      btn.append(el("span", "aw-print-pop-label", v.label));
+      btn.onclick = () => { sound.click(); showClassStep(v.key); };
+      row.append(btn);
+    });
+    box.append(row);
+  }
 
-  function onEsc(ev) { if (ev.key === "Escape") close(); }
-  function close() { overlay.remove(); document.removeEventListener("keydown", onEsc); }
+  // ---- step 3 (Word only): pick a CLASS to stamp on the header ----
+  function showClassStep(variantKey) {
+    box.innerHTML = "";
+    box.append(backRow("Print — which class?", showWordVariantStep));
+    const host = el("div", "aw-print-pop-list");
+    host.append(el("div", "aw-print-pop-loading", "Loading…"));
+    box.append(host);
+
+    const skip = el("button", "aw-print-pop-listitem aw-print-pop-listitem-skip", "(No class)");
+    skip.type = "button";
+    skip.onclick = () => { close(); void runPrintWord(libAct, variantKey, ""); };
+
+    listClasses().then(list => {
+      if (!host.isConnected) return;
+      host.innerHTML = "";
+      host.append(skip);
+      if (!list.length) {
+        host.append(el("div", "aw-print-pop-loading", "No classes in Settings yet."));
+        return;
+      }
+      list.forEach(c => {
+        const b = el("button", "aw-print-pop-listitem", escapeHtml(c.name || ""));
+        b.type = "button";
+        b.onclick = () => { close(); void runPrintWord(libAct, variantKey, c.name || ""); };
+        host.append(b);
+      });
+    }).catch(() => {
+      if (!host.isConnected) return;
+      host.innerHTML = "";
+      host.append(skip, el("div", "aw-print-pop-loading", "Could not load your classes."));
+    });
+  }
+
+  function backRow(title, onBack) {
+    const row = el("div", "aw-print-pop-headrow");
+    const back = el("button", "aw-print-pop-back", icons.back);
+    back.type = "button";
+    back.onclick = () => { sound.click(); onBack(); };
+    row.append(back, el("div", "aw-print-pop-head", title));
+    return row;
+  }
 }
 
 // ---------- eligibility ----------
-function eligibleFormats(activity) {
+function eligibleFormats(activity, libAct) {
   const n = extractItems(activity).length;
   const type = activity.type;
   const out = [];
@@ -94,8 +190,15 @@ function eligibleFormats(activity) {
   if (n >= 2 && n <= 35 && type !== "type-the-answer") out.push("crossword");
   if (n >= 1) out.push("quiz");
   if (type === "type-the-answer" && n >= 1) out.push("unjumble");
+  if (variantsOf(libAct && libAct.content) && wordRowsOf(libAct).length) out.push("word");
   // keep the fixed display order
   return FORMAT_ORDER.filter(f => out.includes(f));
+}
+
+// ---------- Word format: normalise the RAW act -> [{word, ipa, clues}] ----------
+function wordRowsOf(libAct) {
+  const items = (libAct && libAct.content && libAct.content.items) || [];
+  return items.filter(it => it && it.word);
 }
 
 // ---------- normalise activity -> [{clue, answer, options}] ----------
@@ -116,20 +219,180 @@ function extractItems(activity) {
     }));
 }
 
+// ---------- PAGE-FIT: land on a full, EVEN sheet count for duplex printers ----------
+// Pure CSS multi-column fragmentation (see core/app.css) has no notion of a
+// TARGET page count — the browser just flows content and starts new
+// pages/columns as needed. To land on an even sheet count (so a duplex
+// printer never leaves a blank back side, and a barely-used trailing page
+// never looks sparse) we do what templates/running-word/rw-print.js already
+// does for its own worksheet (Đợt 193/203 there): MEASURE the real rendered
+// height first, then pick a small size scale (--pf-scale, ±8%/+15% — thầy
+// chốt "vừa phải") that nudges the content to a full even page count, and
+// only if that's reachable within the bound — otherwise keep the natural
+// (possibly odd) page count untouched (thầy chốt: đừng ép bằng mọi giá).
+const PF_CONTENT_W_MM = 186;   // A4 minus this sheet's @page side margins (12mm×2)
+const PF_CONTENT_H_MM = 267;   // A4 minus this sheet's @page top/bottom margins (16+14mm)
+const PF_COL_GAP_MM = 11;      // matches .aw-print-body column-gap
+const PF_COL_W_MM = (PF_CONTENT_W_MM - PF_COL_GAP_MM) / 2;
+const MM_PX = 96 / 25.4;       // CSS spec: 1mm = 96/25.4px, true on screen AND on paper
+const FIT_SHRINK_MAX = 0.08;   // co tối đa 8%
+const FIT_GROW_MAX = 0.15;     // giãn tối đa 15%
+const FIT_GOOD_FILL = 0.75;    // trang cuối đã đầy ≥75% thì khỏi giãn thêm
+const FIT_ITERS = 6;           // đủ mịn trong biên ±8%/+15% (~0.3% mỗi bước cuối)
+// Phải khớp font-family thật của .aw-print-sheet lúc in (core/app.css) — nếu
+// không phép đo lấy nhầm font mặc định của app, metrics khác thì chiều cao đo sai.
+const PRINT_FONT = `"Baloo 2", "Segoe UI", Arial, sans-serif`;
+
+// Greedy pack: cột 1 đầy mới sang cột 2, cột 2 đầy mới sang trang mới — đúng
+// quy tắc CSS Multi-column khi phân trang (chỉ CỤM CUỐI mới "balance", mọi
+// trang trước fill tuần tự), nên số trang tính ra khớp bản in thật của Chrome.
+// PURE + EXPORT + quét toàn dải giá trị (luật "chia/xếp" ở
+// core/HUONG DAN CORE.md mục 19) — bàn thử: scratch/print-pagefit-test.mjs.
+export function packPages(heightsPx, capacityPx, colsPerPage = 2) {
+  let pages = 1, col = 0, colUsed = 0, pageUsed = 0, lastPageUsed = 0;
+  for (const h of heightsPx) {
+    if (colUsed > 0 && colUsed + h > capacityPx) {
+      if (col < colsPerPage - 1) { col++; colUsed = 0; }
+      else { pages++; col = 0; colUsed = 0; pageUsed = 0; }
+    }
+    colUsed += h;
+    pageUsed += h;
+    lastPageUsed = pageUsed;
+  }
+  return { pages, fillRatio: lastPageUsed / (capacityPx * colsPerPage) };
+}
+
+// Chọn --pf-scale trong biên [1-FIT_SHRINK_MAX, 1+FIT_GROW_MAX]:
+//  - số trang tự nhiên LẺ (>1) và co được về số chẵn liền dưới trong biên → NÉN.
+//  - số trang tự nhiên đã chẵn (hoặc chỉ 1) nhưng trang cuối còn trống nhiều → GIÃN,
+//    chỉ tới mức KHÔNG đẻ thêm trang mới.
+//  - không đạt trong biên (co lẫn giãn) → giữ nguyên tự nhiên.
+// measureFn(scale) đo THẬT bằng DOM (measureFlow/measureBlock bên dưới) — đúng
+// tinh thần "ĐO, KHÔNG ĐOÁN" của rw-print.js Đợt 203, không suy luận tuyến tính
+// vì đổi cỡ chữ có thể làm câu XUỐNG DÒNG THÊM (bước nhảy, không tuyến tính).
+export function resolveFitScale(measureFn, colsPerPage = 2) {
+  const capacityPx = PF_CONTENT_H_MM * MM_PX;
+  const pagesAt = s => packPages(measureFn(s), capacityPx, colsPerPage);
+  const natural = pagesAt(1);
+  if (natural.pages < 1) return 1;
+
+  if (natural.pages > 1 && natural.pages % 2 === 1) {
+    const target = natural.pages - 1;
+    if (pagesAt(1 - FIT_SHRINK_MAX).pages <= target) {
+      let lo = 1 - FIT_SHRINK_MAX, hi = 1;
+      for (let i = 0; i < FIT_ITERS; i++) {
+        const mid = (lo + hi) / 2;
+        if (pagesAt(mid).pages <= target) lo = mid; else hi = mid;
+      }
+      return lo;
+    }
+    // Nén không đạt (vượt biên 8%) -> rơi xuống nhánh giãn bên dưới để ít
+    // nhất lấp trang cuối cho đỡ trống, vẫn giữ nguyên số trang lẻ tự nhiên.
+  }
+
+  if (natural.fillRatio >= FIT_GOOD_FILL) return 1;
+  const target = natural.pages;
+  if (pagesAt(1 + FIT_GROW_MAX).pages <= target) return 1 + FIT_GROW_MAX;
+  let lo = 1, hi = 1 + FIT_GROW_MAX;
+  for (let i = 0; i < FIT_ITERS; i++) {
+    const mid = (lo + hi) / 2;
+    if (pagesAt(mid).pages <= target) lo = mid; else hi = mid;
+  }
+  return lo;
+}
+
+// Đo chiều cao thật từng câu (Anagram/Quiz/Unjumble) ở một --pf-scale, dựng
+// trong bản dò ẩn NGOÀI màn hình — bề ngang đúng bằng 1 CỘT thật (PF_COL_W_MM)
+// vì mỗi câu luôn nằm trọn trong 1 cột (break-inside:avoid), không phụ thuộc
+// tổng có bao nhiêu cột/trang.
+function measureFlow(itemEls, scale) {
+  const probe = el("div", "aw-print-sheet");
+  probe.style.cssText = `position:fixed; left:-99999px; top:0; visibility:hidden; display:block; font-family:${PRINT_FONT};`;
+  probe.style.setProperty("--pf-scale", String(scale));
+  const wrap = el("div", "aw-print-body");
+  wrap.style.cssText = `column-count:1; width:${PF_COL_W_MM}mm;`;
+  itemEls.forEach(src => wrap.append(src.cloneNode(true)));
+  probe.append(wrap);
+  document.body.append(probe);
+  const heights = Array.from(wrap.children).map(c =>
+    c.getBoundingClientRect().height + parseFloat(getComputedStyle(c).marginBottom || "0"));
+  probe.remove();
+  return heights;
+}
+
+// Đo chiều cao thật của MỘT khối liền (Crossword: lưới + 2 cột chú thích
+// không tách cột như 3 định dạng kia) ở đúng bề ngang 1 trang.
+function measureBlock(node, widthMm) {
+  const probe = el("div", "aw-print-sheet");
+  probe.style.cssText = `position:fixed; left:-99999px; top:0; visibility:hidden; display:block; font-family:${PRINT_FONT}; width:${widthMm}mm;`;
+  probe.append(node);
+  document.body.append(probe);
+  const h = node.getBoundingClientRect().height;
+  probe.remove();
+  return h;
+}
+
 // ---------- run one format ----------
-function runPrint(activity, format) {
+async function runPrint(activity, format) {
   const items = extractItems(activity);
   const pool = items.map(i => i.answer).filter(Boolean);
-  let body;
+  let body, scale = 1;
   if (format === "anagram") body = renderAnagram(items);
   else if (format === "quiz") body = renderQuiz(items, pool);
   else if (format === "unjumble") body = renderUnjumble(items);
   else if (format === "crossword") body = renderCrossword(items);
   else return;
 
-  const sheet = buildSheet(activity, body, format);
-  document.body.append(sheet);
+  // PAGE-FIT đo chiều cao thật bằng font-family thật (PRINT_FONT) — nếu
+  // "Baloo 2" (font-display:swap, @font-face trong app.css) chưa tải xong,
+  // phép đo lấy nhầm metrics của font dự phòng và tính sai số trang. Hầu như
+  // không bao giờ xảy ra thật (nút Print chỉ bấm được sau khi cả app đã hiện
+  // ra, tức font gần như chắc chắn đã tải) nhưng đợi cho chắc, gần như miễn phí.
+  await document.fonts.ready;
 
+  // PAGE-FIT: nhắm số trang chẵn (đầy tờ, hợp máy in 2 mặt) — xem khối "PAGE-FIT" ở trên.
+  if (format === "crossword") {
+    if (body.querySelector(".aw-pf-cw-grid")) {
+      scale = resolveFitScale(s => [measureBlock(renderCrossword(items, s), PF_CONTENT_W_MM)], 1);
+      if (scale !== 1) body = renderCrossword(items, scale);
+    }
+  } else {
+    const itemEls = Array.from(body.children);
+    if (itemEls.length) scale = resolveFitScale(s => measureFlow(itemEls, s), 2);
+  }
+
+  const sheet = buildSheet(activity, body, format);
+  sheet.style.setProperty("--pf-scale", String(scale));
+  finishAndPrint(sheet);
+}
+
+// ---------- Word format: a plain vocabulary TABLE, not a game worksheet ----
+// `variantKey` is one of WORD_VARIANTS's keys ("all"/"eng1"/"eng2"/"vi1"/"vi2");
+// `className` is whatever showClassStep() got back from the picker ("" for
+// "(No class)"). Shares the exact same PAGE-FIT machinery as the other 3
+// flowing formats (measureFlow/resolveFitScale/packPages) by shaping each
+// word row as an ordinary `.aw-print-item` — runPrint() never has to know
+// Word exists in order for that to keep working.
+async function runPrintWord(libAct, variantKey, className) {
+  const rows = wordRowsOf(libAct);
+  if (!rows.length) return;
+  const isAll = variantKey === "all";
+  const cols = isAll ? ["eng1", "vi2"] : [variantKey];
+  const body = renderWord(rows, cols, isAll);
+
+  await document.fonts.ready; // same font-metrics safety net as runPrint() — see there
+
+  const itemEls = Array.from(body.children);
+  const scale = itemEls.length ? resolveFitScale(s => measureFlow(itemEls, s), 2) : 1;
+
+  const topRight = formatDateVN(new Date()) + (className ? "   •   " + className : "");
+  const sheet = buildSheet(libAct, body, "word", topRight);
+  sheet.style.setProperty("--pf-scale", String(scale));
+  finishAndPrint(sheet);
+}
+
+function finishAndPrint(sheet) {
+  document.body.append(sheet);
   // Remove the sheet once the print dialog closes (whether printed or
   // cancelled). afterprint + a long fallback per the core animate/callback rule.
   let done = false;
@@ -137,6 +400,10 @@ function runPrint(activity, format) {
   window.addEventListener("afterprint", cleanup);
   setTimeout(() => window.print(), 40);   // let the sheet paint first
   setTimeout(cleanup, 120000);            // fallback (afterprint occasionally doesn't fire)
+}
+
+function formatDateVN(d) {
+  return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
 }
 
 // ---------- shared page chrome ----------
@@ -158,13 +425,15 @@ function runPrint(activity, format) {
 // spaced) can't live in one CSS `content` string, so it's a small drawn SVG
 // used as the box's image content instead — still a margin box, just an image
 // one rather than a text one.
-function buildSheet(activity, body, format) {
+// `topRight` (optional) overrides the default "Name / Date: ___" blank line —
+// Word uses it for the printed date + chosen class instead (runPrintWord()).
+function buildSheet(activity, body, format, topRight) {
   const sheet = el("div", "aw-print-sheet aw-print-" + format);
-  sheet.append(pageChromeStyle(activity.title || "Worksheet"), body);
+  sheet.append(pageChromeStyle(activity.title || "Worksheet", topRight), body);
   return sheet;
 }
 
-function pageChromeStyle(title) {
+function pageChromeStyle(title, topRight) {
   const style = document.createElement("style");
   const font = `font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;`;
   style.textContent = `
@@ -176,7 +445,7 @@ function pageChromeStyle(title) {
         ${font} font-weight: 800; font-size: 12.5pt; color: #1c2733;
       }
       @top-right {
-        content: "Name / Date: ________________________";
+        content: ${cssString(topRight || "Name / Date: ________________________")};
         ${font} font-size: 9.5pt; color: #3a4653;
       }
       @bottom-left {
@@ -283,6 +552,34 @@ function renderUnjumble(items) {
     body.append(item);
   });
   return body;
+}
+
+// ---------- WORD: a plain vocabulary TABLE (STT · word/IPA · definition(s)) ----------
+// `cols` is 1 key ("eng1"/"eng2"/"vi1"/"vi2") or 2 ("eng1","vi2" for ALL).
+// No column headers (teacher: "không cần tiêu đề từng cột") — just rows, one
+// word per row, original act order (a reference sheet, not a shuffled game).
+function renderWord(rows, cols, isAll) {
+  const body = el("div", "aw-print-body");
+  rows.forEach((it, i) => {
+    const item = el("div", "aw-print-item aw-pf-word");
+    const line = el("div", "aw-wl-row" + (isAll ? " is-all" : ""));
+    line.append(el("span", "aw-wl-stt", String(i + 1)));
+    line.append(wordIpaCell(it.word, it.ipa));
+    cols.forEach(k => line.append(el("span", "aw-wl-def", escapeHtml(clueOf(it, k)))));
+    item.append(line);
+    body.append(item);
+  });
+  return body;
+}
+
+// "word" bold, " • ipa" thin/muted (teacher: "từ font đậm, ipa mảnh, nhạt") —
+// the dot lives INSIDE the ipa span so both share its lighter weight/color;
+// no dot at all when a word has no IPA (not every WORDS act has it filled in).
+function wordIpaCell(word, ipa) {
+  const cell = el("span", "aw-wl-word");
+  cell.append(el("span", "aw-wl-wordtext", escapeHtml(word || "")));
+  if (ipa) cell.append(el("span", "aw-wl-ipa", " • " + escapeHtml(ipa)));
+  return cell;
 }
 
 // ---------- CROSSWORD: an interlocking grid + numbered ACROSS/DOWN clues ----------
@@ -407,7 +704,7 @@ const CW_PAGE_WIDTH_MM = 176;   // A4 minus this sheet's own left/right @page ma
 const CW_CELL_MAX_MM = 9;
 const CW_CELL_MIN_MM = 5;
 
-function renderCrossword(items) {
+function renderCrossword(items, scale = 1) {
   const built = buildCrosswordGrid(items);
   const wrap = el("div", "aw-pf-cw-wrap");
   if (!built.grid) {
@@ -416,7 +713,12 @@ function renderCrossword(items) {
     return wrap;
   }
   const { grid, clues, rows, cols } = built;
-  const cellMm = Math.max(CW_CELL_MIN_MM, Math.min(CW_CELL_MAX_MM, CW_PAGE_WIDTH_MM / cols));
+  const widthFitMm = CW_PAGE_WIDTH_MM / cols;
+  const baseCellMm = Math.max(CW_CELL_MIN_MM, Math.min(CW_CELL_MAX_MM, widthFitMm));
+  // PAGE-FIT (xem runPrint) có thể GIÃN cỡ ô quá mốc CW_CELL_MAX_MM khi trang
+  // còn trống nhiều — nhưng không bao giờ vượt bề ngang thật của trang.
+  const cellMm = Math.min(baseCellMm * scale, widthFitMm);
+  wrap.style.setProperty("--pf-scale", String(scale)); // cỡ chữ chú thích co/giãn theo cùng tỉ lệ
 
   const gridEl = el("div", "aw-pf-cw-grid");
   gridEl.style.setProperty("--cw-cols", String(cols));

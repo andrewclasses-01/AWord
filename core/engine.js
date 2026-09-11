@@ -2065,7 +2065,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // teacher had since picked. `resolveActivity(libAct)` re-reads the current
   // choice every time the button is pressed — cheap and idempotent, exactly
   // begin()'s fix, just for the READY-screen Print button instead of Play.
-  printBtn.onclick = () => { sound.click(); openPrintPopup(resolveActivity(libAct)); };
+  // Second arg = the RAW library act, for the "Word" print format only — it
+  // needs the clue-set variants (ENG1/ENG2/VI1/VI2) that resolveActivity()
+  // just flattened away on the first arg. See core/print.js file header.
+  printBtn.onclick = () => { sound.click(); openPrintPopup(resolveActivity(libAct), libAct); };
 
   below.append(belowLeft, belowCenter, belowRight);
 

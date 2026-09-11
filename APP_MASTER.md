@@ -8,7 +8,32 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **09/9/2026 (Đợt 316 — DẤU ✓ "ĐÃ GIAO" TRA THEO ĐÚNG TEMPLATE ĐANG CHỌN: chọn
+> Cập nhật lần cuối: **11/9/2026 (Đợt 320 — IN: THÊM ĐỊNH DẠNG "WORD" — bảng từ vựng STT/từ+IPA/định
+> nghĩa. Thầy giao: popup Print thêm ô Word → chọn bộ nghĩa (ALL/ENG1/ENG2/VI1/VI2) → chọn lớp → in
+> thẳng. Dữ liệu 4 bộ nghĩa nằm sẵn trong act GỐC (`libAct.content.items[].clues`, Đợt 145) nhưng
+> `resolveActivity()` làm phẳng trước khi mọi định dạng in khác thấy — `openPrintPopup` nay nhận thêm
+> tham số `libAct` để Word đọc thẳng bản gốc. `core/print.js` dựng máy trạng thái 3 bước trong cùng 1
+> popup, tái dùng NGUYÊN VẸN PAGE-FIT (Đợt 318) cho mỗi hàng từ; "lớp" lấy từ `core/classes.js`
+> `listClasses()` (roster Settings ▸ Classes). Bàn thử DOM thật `scratch/print-word-dom-test.html`
+> 18/18 đạt (bắt 2 lỗi THẬT NẰM Ở BÀI TEST, không phải print.js — xem GHI CHU DU AN.md Đợt 320), kèm
+> ảnh chụp xác nhận layout (từ đậm/IPA nhạt/2 cột ENG1+VI2 cho ALL/chảy 2 cột trang). ⬜ **CHƯA COMMIT**
+> — chờ thầy tự bấm Print → Word trên act "WORDS" thật + chọn 1 lớp CÓ THẬT rồi mới commit + push, xem
+> GHI CHU DU AN.md Đợt 320)**.
+> Trước đó: **(Đợt 318 — IN: PAGE-FIT, nhắm số trang chẵn cho máy in 2 mặt. Thầy
+> đề xuất từ ảnh chụp 1 bản in Anagram: tràn nhẹ sang trang lẻ thì NÉN lại; ít câu (~1,5 trang) thì
+> GIÃN cho trọn 2 trang. `core/print.js` thêm `packPages`/`resolveFitScale` (đo DOM thật rồi co/giãn
+> `--pf-scale` trong biên co 8%/giãn 15% thầy chốt, lệch quá biên thì giữ số trang lẻ tự nhiên — không
+> ép bằng mọi giá), áp cho cả 4 định dạng (Anagram/Quiz/Unjumble qua `measureFlow`, Crossword qua
+> `measureBlock` + nhân vào cỡ ô lưới). `core/app.css` tách khối kiểu chữ `.aw-pf-*` ra khỏi
+> `@media print` để đo được ngoài lúc in, bọc `calc(X * var(--pf-scale,1))`. Bàn thử: logic thuần quét
+> 1..150 câu (`scratch/print-pagefit-test.mjs`) + DOM thật qua Chrome (`scratch/print-pagefit-dom-test.html`)
+> đúng cả 2 ví dụ của thầy (n=22 giả tràn nhẹ: 3 trang/17% → nén còn 2 trang/83%; n=34 giả ít câu: đã
+> 4 trang/34% → giãn vẫn 4 trang/90%). ⬜ **CHƯA COMMIT** — chờ thầy IN THỬ GIẤY THẬT (đúng lệ trang in
+> chỉ nhìn thấy thật khi cầm giấy, giống rw-print.js Đợt 193/203), xem GHI CHU DU AN.md Đợt 318)**.
+> Trước đó: **(Đợt 317 — CHECK THƯ MỤC/ACT bên myLesson không thấy mục vừa tạo sau khi mở app: webview
+> ẩn cache `readAll()` không tự làm mới; vá bằng `resetCache()` trước mỗi lần `timThuMuc`/`lietKeAct`;
+> ✅ thầy yêu cầu sửa thẳng qua chat, đã đẩy, ⬜ chờ thầy bấm tay thật trên máy live, xem GHI CHU DU AN.md
+> Đợt 317)**. Trước đó: **(Đợt 316 — DẤU ✓ "ĐÃ GIAO" TRA THEO ĐÚNG TEMPLATE ĐANG CHỌN: chọn
 > TEXT·VI1·QUIZ tạo bài giao thì VI1 tích ✓, nhưng chọn tiếp TEXT·VI1·ANAGRAM cho act khác thì tích
 > phải TẮT — trước đây (Đợt 299) tích bất kể template nào; ✅ thầy đã xem demo trực tiếp rồi mới
 > commit + push, xem GHI CHU DU AN.md Đợt 316)**. Trước đó: **(Đợt 315 — RUNNING TEAM: xáo thứ tự

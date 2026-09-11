@@ -4489,14 +4489,17 @@ KHÔNG chặn con trỏ nháy hay bàn phím vật lý; đổi lại `"text"` kh
 
 ### PRINT — hệ thống in DÙNG CHUNG ở `core/print.js` (v0.7.1)
 
-Print KHÔNG còn viết riêng cho từng template. Nút **Print** ngoài khung gọi `openPrintPopup(activity)`
-(`core/print.js`) → hiện **popup chọn ĐỊNH DẠNG in**: Anagram / Crossword / Quiz / Unjumble. Định dạng
-nào KHẢ DỤNG mới hiện icon (luật khả dụng theo `activity.type` + số câu):
+Print KHÔNG còn viết riêng cho từng template. Nút **Print** ngoài khung gọi
+`openPrintPopup(activity, libAct)` (`core/print.js`) → hiện **popup chọn ĐỊNH DẠNG in**: Anagram /
+Crossword / Quiz / Unjumble / Word. Định dạng nào KHẢ DỤNG mới hiện icon (luật khả dụng theo
+`activity.type` + số câu):
 
 - **Anagram** & **Quiz**: mọi template, mọi số câu.
 - **Crossword**: 2..35 câu, mọi template TRỪ `type-the-answer` (renderer CHƯA build → hiện icon nhưng
   bấm chỉ báo "coming soon").
 - **Unjumble**: chỉ `type-the-answer`, mọi số câu.
+- **Word** (Đợt 320) — chỉ act có clue-set variants (`content.variants`, xem mục biến thể ở trên);
+  không phải game worksheet, là một BẢNG TỪ VỰNG (STT · từ/IPA · định nghĩa).
 
 `core/print.js` chuẩn hoá activity thành danh sách item `{clue, answer, options}` rồi render định dạng
 đã chọn ra 1 `.aw-print-sheet` (gắn làm anh em `#app`, `window.print()`, gỡ khi `afterprint` + setTimeout
@@ -4509,11 +4512,43 @@ cho HS (Anagram/Quiz), `answer` = từ/câu đích (Anagram xáo chữ cái; Unj
 sách lựa chọn nếu game có sẵn (Quiz). Không có hook → print dùng bộ đọc mặc định kiểu Quiz
 (`content.questions[].answers[]`). Xem `templates/quiz/quiz.js` `toPrintItems` làm mẫu.
 
-**Style in** (`.aw-print-*` + `.aw-pf-*`, chỉ trong `@media print`; popup chọn định dạng `.aw-print-pop-*`
-hiện trên màn hình) nằm trong `core/app.css` — DÙNG CHUNG cho mọi template, không viết CSS in riêng.
-Header (title + Name/Date) và footer (logo AWord) là `position:fixed` để LẶP trên mọi trang giấy; body
-2 cột (`column-count`) có vạch phân cách nét đứt. Thêm định dạng in mới = thêm renderer + icon trong
-`print.js`/`icons.js` (không đụng template).
+**Style in** (`.aw-print-*` + `.aw-pf-*`; popup chọn định dạng `.aw-print-pop-*` hiện trên màn hình)
+nằm trong `core/app.css` — DÙNG CHUNG cho mọi template, không viết CSS in riêng. ⚠️ Chỉ phần ẨN/HIỆN +
+màu/font-family còn trong `@media print` — khối TYPOGRAPHY (`.aw-print-body`/`.aw-print-item`/mọi
+`.aw-pf-*`) đã tách ra thành luật thường từ Đợt 318 (PAGE-FIT bên dưới cần đo được off-screen NGOÀI
+lúc in). Header (title + Name/Date) và footer (logo AWord) là **@page margin box** (`@top-left`/
+`@top-right`/`@bottom-left`/`@bottom-right`, Chrome 131+), KHÔNG phải `position:fixed` (đã bỏ, xem
+comment `pageChromeStyle()` trong `print.js` — offset của phần tử fixed đo sai khi @page có margin
+khác 0). Body 2 cột (`column-count`) có vạch phân cách nét đứt. Thêm định dạng in mới = thêm renderer
++ icon trong `print.js`/`icons.js` (không đụng template).
+
+**PAGE-FIT (Đợt 318)** — nhắm SỐ TRANG CHẴN cho máy in 2 mặt, thầy đề xuất từ 2 ví dụ: tràn nhẹ sang
+trang lẻ thì NÉN lại; ít câu (dở trang) thì GIÃN cho trọn. CSS auto-column không có khái niệm "nhắm
+đúng N trang" nên `print.js` tự đo (`measureFlow`/`measureBlock`, dựng bản dò ẩn off-screen với đúng
+CSS thật) rồi nhị phân tìm một hệ số `--pf-scale` (biên co 8%/giãn 15%, `FIT_SHRINK_MAX`/
+`FIT_GROW_MAX` đầu file) áp lên mọi `.aw-pf-*` qua `calc(X * var(--pf-scale,1))` — lệch quá biên thì
+GIỮ NGUYÊN tự nhiên (không ép). `packPages()`/`resolveFitScale()` là hàm THUẦN, có export, bàn thử ở
+`scratch/print-pagefit-test.mjs` (logic, quét 1..150 câu) + `scratch/print-pagefit-dom-test.html`
+(DOM thật qua Chrome — nạp `core/app.css` thật, cướp `window.print` để không mở hộp thoại). ⛔ Đo
+`--pf-scale` ngoài lúc in ĐƯỢC vì khối typography không còn nằm trong `@media print` (xem trên) — nếu
+sau này lỡ tay đưa nó về lại @media print thì mọi phép đo trước-khi-in sẽ câm lặng (không lỗi, chỉ đo
+sai — bẫy y hệt lỗi bàn thử tự bắt: clone rời cây DOM là MẤT custom property kế thừa từ `--pf-scale`).
+
+**WORD (Đợt 320)** — `openPrintPopup(activity, libAct)`: tham số THỨ HAI, mặc định = tham số đầu, là
+act GỐC CHƯA resolve. Lý do phải có: `resolveActivity(libAct)` (mà mọi Print button vẫn gọi trước khi
+đưa `activity` vào popup) làm PHẲNG 4 bộ gợi ý xuống còn đúng 1 `.clue` — đúng thứ Word cần lại là cái
+vừa bị làm phẳng. Bấm Word không in ngay: hiện thêm 2 bước NGAY TRONG CÙNG `.aw-print-pop` (không mở
+overlay mới) — chọn bộ nghĩa (`WORD_VARIANTS`: ALL/ENG1/ENG2/VI1/VI2, lọc theo `variantsOf(libAct.content)`
+trừ ALL luôn hiện) rồi chọn lớp (`listClasses()`, `core/classes.js` — có nút "(No class)" nếu chưa có
+lớp hoặc `listClasses()` lỗi/chưa đăng nhập, KHÔNG kẹt màn). Đọc dữ liệu qua `clueOf(item, key)`
+(`core/content-view.js`, hàm dùng chung — rơi về `.clue` mặc định khi khoá THẬT SỰ THIẾU, còn chuỗi
+`""` khai rõ ràng thì giữ nguyên rỗng, không đoán). Mỗi từ = 1 `.aw-print-item` (tái dùng NGUYÊN VẸN
+PAGE-FIT ở trên qua `measureFlow`/`resolveFitScale`, `runPrint()` không cần biết Word tồn tại) chứa 1
+`.aw-wl-row` (CSS grid: STT · từ đậm+IPA mảnh nhạt · 1-2 cột định nghĩa tuỳ ALL hay không, không tiêu
+đề cột). Header/footer DÙNG CHUNG với 4 định dạng kia (`buildSheet`/`pageChromeStyle` nay nhận thêm
+`topRight` tuỳ chọn) — CHỈ đổi dòng `@top-right` từ "Name / Date: ___" sang "ngày hôm nay • lớp đã
+chọn"; logo+slogan+số trang ở `@bottom-*` giữ NGUYÊN, không cần sửa gì để đạt "vừa đủ, dành chỗ cho
+text". Bàn thử DOM thật: `scratch/print-word-dom-test.html`.
 
 ### ⚠️⚠️ CSS của template Ở LẠI DOCUMENT VĨNH VIỄN — cấm luật TRẦN nhắm vào class của core
 
