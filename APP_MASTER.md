@@ -8,7 +8,22 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **11/9/2026 (Đợt 320 — IN: THÊM ĐỊNH DẠNG "WORD" — bảng từ vựng STT/từ+IPA/định
+> Cập nhật lần cuối: **11/9/2026 (Đợt 319 — SHOWDOWN PODIUM: hai cột tên trái/phải thay cho hai số
+> đếm nổi (thầy: "đã có số thứ tự trong tên rồi"), giới hạn lượt tích (2 bên không chênh quá 1 người,
+> luật nằm ngay trong `onclick` của nút tích), và LƯU LẠI THEO BẢNG lên Firestore (chỉ ghi ở 3 mốc:
+> đóng bảng / Esc / chuyển nút Table-List — không ghi giữa chừng lúc đang tích). `renderReviewPodium`
+> (core/showdown-review.js) bỏ hẳn `mkCount`/`paintCounts`/`placePodiumCounts`; `core/showdown-history.js`
+> thêm `picks` vào `normMatch` + `setMatchPicks()` (cùng khuôn `setMatchClassify`); `core/engine.js`
+> thêm `sdLastMatchRef` để cả màn Show Answers ngay sau ván (kể cả ván solo/alone) cũng resolve đúng
+> MỘT `matchId`, không chỉ Recent Results. Bàn thử: harness độc lập import thật `renderReviewPodium`
+> qua dev server cục bộ (không đụng Firestore, xoá sau khi xong) — giới hạn lượt/cột tên/bỏ-tích-tích-lại
+> đều đúng, 0 lỗi console; `node --input-type=module --check` sạch 4 file JS. ⚠️ Va chạm cây làm việc
+> với phiên Claude khác đang làm Đợt 318/320 (In Word/PAGE-FIT) cùng lúc — họ tự phát hiện, tách hunk
+> bằng `git apply --cached`, đổi số của họ từ 319 sang 320 để tránh đụng; đã soát lại `git diff --stat`
+> sau khi họ commit (`15e3ad8`) xác nhận 4 file JS + app.css của đợt này còn nguyên, sạch. ⬜ **CHƯA
+> COMMIT** — chờ thầy chơi 1 ván Showdown thật (kể cả ván solo) + mở lại Recent Results xác nhận `picks`
+> lưu/đọc đúng, xem GHI CHU DU AN.md Đợt 319)**.
+> Trước đó: **(Đợt 320 — IN: THÊM ĐỊNH DẠNG "WORD" — bảng từ vựng STT/từ+IPA/định
 > nghĩa. Thầy giao: popup Print thêm ô Word → chọn bộ nghĩa (ALL/ENG1/ENG2/VI1/VI2) → chọn lớp → in
 > thẳng. Dữ liệu 4 bộ nghĩa nằm sẵn trong act GỐC (`libAct.content.items[].clues`, Đợt 145) nhưng
 > `resolveActivity()` làm phẳng trước khi mọi định dạng in khác thấy — `openPrintPopup` nay nhận thêm

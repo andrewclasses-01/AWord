@@ -6735,55 +6735,46 @@ html.aw-nhung .aw-below { display: none; }
   display: flex; flex-direction: column; gap: calc(0.35 * var(--aw-u));   /* "khoảng cách rất nhỏ" */
   padding: calc(0.6 * var(--aw-u)) 0 calc(1 * var(--aw-u));
 }
-/* ⭐ Đợt 207 — the scroller and the two tick counters, side by side. The
-   counters must NOT scroll with the list (thầy: "không di chuyển khi cuộn lên
-   xuống"), so they are siblings of `.aw-sd-pod`, not children of it. */
-.aw-sd-podwrap { position: relative; flex: 1 1 auto; min-height: 0; display: flex; }
+/* ⭐⭐⭐ Đợt 319 — THE SCROLLER AND ITS TWO NAME COLUMNS, side by side (replaces
+   Đợt 207/208's scroller-plus-two-floating-digits: thầy, "bỏ ô số đếm tích đi
+   vì đã có số thứ tự trong tên rồi" — so the count moved INTO a list instead of
+   floating over the funnel). All three are flex children here — that is also
+   what makes `.aw-sd-pod-box`'s `--w` percentages shrink automatically the
+   moment the two side columns claim their own width: `--w` resolves against
+   `.aw-sd-pod`'s own (now narrower) box, nothing in showdown-review.js had to
+   change for "co ngắn 2 bên trái phải". */
+.aw-sd-podwrap { position: relative; flex: 1 1 auto; min-height: 0; display: flex; gap: calc(0.8 * var(--aw-u)); }
 .aw-sd-podwrap > .aw-sd-pod { flex: 1 1 auto; min-width: 0; }
-/* ⭐⭐ Đợt 207 — HOW MANY ARE TICKED TO EACH SIDE. Đợt 208 moved them: the height
-   is now the middle of the FOURTH row and the width is halfway between the
-   frame's inner edge and that row's tick (thầy — see placePodiumCounts() in
-   core/showdown-review.js, which is what sets `top`/`left`/`right`).
-   ⚠️ NO `top`/`left`/`right` HERE ON PURPOSE. Đợt 207 pinned them with fixed
-   offsets and the right-hand one ended up UNDER THE SCROLLBAR: a fixed offset
-   cannot know the funnel's shape, and the funnel is the thing it must avoid.
-   The only geometry left in CSS is the centring transform, so a change of font
-   size (one digit → two) never shifts the number off its measured centre.
-   ⚠️ `pointer-events:none` — it sits over the tick dots of the shorter rows, and
-   a decoration that swallowed a tick would be maddening to diagnose. */
-.aw-sd-podcount {
-  position: absolute; transform: translate(-50%, -50%);
-  text-align: center;
-  font-size: calc(6.6 * var(--aw-u)); font-weight: 800; line-height: 1;
-  color: rgba(35, 48, 62, .14); font-variant-numeric: tabular-nums;
-  pointer-events: none; opacity: 0;
-  transition: opacity .22s ease, font-size .22s cubic-bezier(.22, .9, .3, 1),
-              color .28s ease;
+/* ⭐⭐⭐ Đợt 319 — THE TWO NAME COLUMNS. A little narrower than the funnel's own
+   gutters used to be (thầy: "co ngắn... một chút"), each scrolling on its own
+   so a long roster never grows the funnel's own height to match. */
+.aw-sd-pod-side {
+  flex: 0 0 17%; min-width: 0; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: calc(0.25 * var(--aw-u));
+  padding: calc(0.6 * var(--aw-u)) calc(0.3 * var(--aw-u)) calc(1 * var(--aw-u));
 }
-/* The right-hand one is anchored by its RIGHT edge (see placePodiumCounts), so
-   it must not be pulled half its own width to the left as well. */
-.aw-sd-podcount.is-r { transform: translate(50%, -50%); }
+.aw-sd-pod-side-head {
+  flex: 0 0 auto; position: sticky; top: 0; z-index: 1;
+  font-size: calc(1.4 * var(--aw-u)); font-weight: 800; letter-spacing: .05em;
+  color: #6b7a90; text-align: center; padding-bottom: calc(0.3 * var(--aw-u));
+  background: #f3f6fa;
+}
+.aw-sd-pod-side-list { display: flex; flex-direction: column; gap: calc(0.3 * var(--aw-u)); }
+.aw-sd-pod-side-item {
+  font-size: calc(1.55 * var(--aw-u)); font-weight: 700; color: #23303e;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+/* Each column's names hug the funnel rather than the outer edge — the same
+   "lean toward the middle" idiom the tick dots themselves already use. */
+.aw-sd-pod-side.is-l .aw-sd-pod-side-item { text-align: right; }
+.aw-sd-pod-side.is-r .aw-sd-pod-side-item { text-align: left; }
 /* ⭐⭐ Đợt 209 (thầy) — EVERYBODY PLACED: "2 số tổng ô tích 2 bên sẽ chuyển thành
-   màu xanh lá rõ nét và có sparkle vàng lấp lánh xung quanh số đó". Up to that
-   moment the pair is a faint watermark; the instant the last pupil lands it is
-   the answer to the question the teacher has been working towards, so it stops
-   whispering. Green here is the app's own "this is right" green (`#16a34a`, the
-   same one pctBand's top band uses) — not a fourth green. */
-.aw-sd-podcount-n { position: relative; z-index: 1; }
-.aw-sd-podcount-spark {
-  position: absolute; inset: calc(-0.5 * var(--aw-u)) calc(-0.9 * var(--aw-u)); pointer-events: none;
-  color: #f0b429; opacity: 0; transition: opacity .28s ease;
-}
-.aw-sd-podwrap.is-all .aw-sd-podcount { color: #16a34a; }
-.aw-sd-podwrap.is-all .aw-sd-podcount-spark { opacity: 1; }
-/* ⚠️ The stars only ANIMATE while they are on show. Left running underneath an
-   `opacity:0` layer they would cost a repaint a frame for the whole lesson. */
-.aw-sd-podcount-spark .aw-sd-pod-star { animation-play-state: paused; }
-.aw-sd-podwrap.is-all .aw-sd-podcount-spark .aw-sd-pod-star { animation-play-state: running; }
-/* Both or neither — thầy: "khi 1 bên hiện 1 thì bên còn lại cũng hiện đồng thời
-   (hiện 0)". One class on the wrapper is what makes that impossible to get wrong. */
-.aw-sd-podwrap.has-picks .aw-sd-podcount { opacity: 1; }
-.aw-sd-podwrap.is-wide-count .aw-sd-podcount { font-size: calc(4 * var(--aw-u)); }
+   màu xanh lá rõ nét". ⭐⭐⭐ Đợt 319 carries the same green over onto the two
+   column heads now that the digits themselves are gone. Green here is the
+   app's own "this is right" green (`#16a34a`, the same one pctBand's top band
+   uses) — not a fourth green. */
+.aw-sd-podwrap.is-all .aw-sd-pod-side-head { color: #16a34a; }
 .aw-sd-pod-row {
   position: relative; display: flex; justify-content: center; align-items: center;
   gap: calc(0.9 * var(--aw-u));      /* only ever seen when the tick boxes are there */

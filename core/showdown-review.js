@@ -205,6 +205,13 @@ function gestures(node, { onTap, onDouble, onHold }) {
  *              keeps every gesture that word carries. "" (the default) keeps the
  *              old word, so an act with no title never blanks the title.
  *   toast      the engine's toast
+ *   savePicks  (optional, ⭐⭐⭐ Đợt 319) async (picks: Object<string,"l"|"r">)
+ *              => boolean — write the Podium's team-split ticks to this play's
+ *              own row in the class ledger. Handed in for the same reason
+ *              loadTeams/watchTeams are: this file must stay free of
+ *              Firestore. Omitted (the default) means the ticks stay exactly
+ *              what they always were — "đánh dấu tạm", gone the moment the
+ *              screen closes.
  *
  * Returns `dispose()` — MUST be called when the review leaves the screen, or the
  * Firestore listener outlives the panel (the same class of leak as the
@@ -212,7 +219,8 @@ function gestures(node, { onTap, onDouble, onHold }) {
  */
 export function mountShowdownReview({
   head, before, host, pick, review, loadTeams,
-  watchTeams = null, flushPending = null, isPending = () => false, actName = "", toast = () => {}
+  watchTeams = null, flushPending = null, isPending = () => false, actName = "", toast = () => {},
+  savePicks = null
 }) {
   // THIS team, from memory. Authoritative: it is the play that just happened on
   // this screen, and it is what the class board shows for us even if the write
@@ -682,6 +690,9 @@ export function mountShowdownReview({
       sound.glide({ freq: 660, freqEnd: 1180, dur: 240, gain: 0.08, type: "triangle" });
     } else if (view === "podium") {
       sound.glide({ freq: 1000, freqEnd: 620, dur: 200, gain: 0.06, type: "triangle" });
+      // ⭐⭐⭐ Đợt 319 — LEAVING the podium is one of the teacher's three named
+      // checkpoints ("chuyển sang nút hiển thị khác").
+      commitPicks();
     } else {
       sound.tick();
     }
@@ -710,11 +721,37 @@ export function mountShowdownReview({
   // ⭐ Đợt 207 — the tick marks live HERE, in the review's own closure, not
   // inside the render. The board is rebuilt on every scope switch and on every
   // arrival from the live listener, so a Map owned by the renderer would throw
-  // the teacher's team-split away the moment another column finished. Owned by
-  // the screen, it also dies with the screen — which is what "đánh dấu tạm"
-  // means and why nothing here goes near Firestore.
+  // the teacher's team-split away the moment another column finished.
+  // ⭐⭐⭐ Đợt 319 — no longer only "đánh dấu tạm": `commitPicks()` below can now
+  // write it out, but ONLY at a handful of checkpoints (see its own note), so
+  // the Map staying right here — surviving a scope switch, a listener arrival,
+  // every repaint — is still exactly what makes that possible.
   const picks = new Map();
-  const renderPodium = ranked => renderReviewPodium(ranked, { showTeam: scope === "class", picks });
+  let picksDirty = false;      // something changed since the last save
+  const renderPodium = ranked => renderReviewPodium(ranked, {
+    showTeam: scope === "class", picks, onChange: () => { picksDirty = true; }
+  });
+
+  /**
+   * ⭐⭐⭐ Đợt 319 (thầy: "bắt đầu lưu khi đóng bảng podium, bấm esc hoặc chuyển
+   * sang nút hiển thị khác... nếu đang trong quá trình tích chọn thì chưa lưu
+   * vội") — WRITE THE TICKS OUT, but only when THIS is called: a checkpoint, not
+   * every tap. Called from setView() (leaving "podium"), from the fullscreen
+   * Esc handler, and from dispose() — never from inside renderReviewPodium's
+   * own tick handler, which only ever flips `picksDirty` (see `onChange` above).
+   * ⚠️ `picksDirty` guards against writing on EVERY checkpoint regardless of
+   * whether anything happened — a teacher who only ever looked at Podium and
+   * ticked nothing must not spend a write clearing a row that was already
+   * empty.
+   */
+  function commitPicks() {
+    if (!picksDirty || !savePicks) return;
+    picksDirty = false;
+    const obj = {};
+    picks.forEach((v, k) => { obj[k] = v; });
+    try { Promise.resolve(savePicks(obj)).catch(() => { /* best-effort, see savePicks' own note */ }); }
+    catch { /* synchronous throw from a hand-rolled savePicks — still best-effort */ }
+  }
 
   // ---------------------------------------------------------------
   // ⭐⭐ Đợt 207 — FULLSCREEN (thầy: "nút fullscreen ở góc dưới bên trái hộp
@@ -760,6 +797,13 @@ export function mountShowdownReview({
     host.classList.toggle("is-fs", on);
     fsBtn.classList.toggle("is-on", on);
     fsBtn.title = on ? "Leave fullscreen" : "Fullscreen";
+    // ⭐⭐⭐ Đợt 319 — LEAVING fullscreen is how "bấm esc" actually reaches this
+    // screen (there is no Escape listener of this file's own — the browser's
+    // native "Esc exits fullscreen" is what fires this event). Whichever view
+    // was up when that happened, commit it: a teacher who ticks names on the
+    // funnel and then hits Esc must not lose the split just because the
+    // podium never technically "closed".
+    if (!on) commitPicks();
     fitPodiumNames(host);
   };
   document.addEventListener("fullscreenchange", onFsChange);
@@ -864,6 +908,11 @@ export function mountShowdownReview({
    */
   return function dispose() {
     disposed = true;
+    // ⭐⭐⭐ Đợt 319 — CLOSING THE WHOLE SCREEN is the third named checkpoint
+    // ("đóng bảng podium"). `onFsChange` will not fire in time for this (the
+    // listener is removed below, before exitFullscreen() runs), so this is the
+    // one place that has to call it directly.
+    commitPicks();
     if (stopWatch) { try { stopWatch(); } catch { /* already gone */ } stopWatch = null; }
     if (doneTimer) { clearTimeout(doneTimer); doneTimer = null; }
     // ⭐ Đợt 207 — the same rule as the listener above, applied to the two things
@@ -1043,43 +1092,71 @@ export function renderReviewList(ranked, { showTeam = false } = {}) {
  *   • TWO TICK BOXES per row, for splitting the class into two teams straight
  *     off the results (see `picks`).
  *
+ * ⭐⭐⭐ Đợt 319 — THREE more changes, thầy again:
+ *   • THE TWO FLOATING TICK-COUNTS ARE GONE ("bỏ ô số đếm tích đi vì đã có số
+ *     thứ tự trong tên rồi") — replaced by two name-list columns flanking the
+ *     funnel (see `sides`/`paintSides` below), each entry already carrying its
+ *     own running number.
+ *   • A NEW PICK MAY NOT PUSH THE TWO SIDES MORE THAN ONE APART (thầy: "2 bên
+ *     không chênh nhau quá 1 người") — enforced inside the tick's own
+ *     `onclick`, which simulates the count the pick would produce and simply
+ *     refuses (a buzz + a shake, nothing changes) when it would not hold.
+ *     Un-ticking is always allowed — it can only shrink the gap.
+ *   • THE TICKS CAN NOW BE SAVED ("lưu lại theo bảng") — but not by this
+ *     function: it only calls `onChange` so the CALLER knows something moved,
+ *     and the caller decides WHEN that is actually worth a write (see
+ *     mountShowdownReview's `commitPicks`/`picksDirty`).
+ *
  * @param {object}  opts.picks  the caller's OWN Map of `block.key → "l" | "r"`.
  *   Passed in rather than kept here because this board is re-rendered on every
  *   scope switch and on every arrival from the live listener; a Map owned by the
- *   render would drop the teacher's ticks the moment another team finished. The
- *   caller creating it per screen is also what makes the marks temporary, which
- *   is what thầy asked for (20/8/2026: "đánh dấu tạm").
- *   Omit it and the tick boxes are not built at all — that is how the
+ *   render would drop the teacher's ticks the moment another team finished.
+ * @param {function} [opts.onChange]  called after EVERY tick that actually
+ *   changes the Map (not on a blocked one — see the turn-limit note below).
+ *   ⭐⭐⭐ Đợt 319 — this is how a caller with `savePicks` (core/showdown-review.js's
+ *   mountShowdownReview, core/showdown-home.js's openTileDetail) knows there is
+ *   now something worth writing out, WITHOUT this render function knowing
+ *   anything about Firestore or about WHEN a save is allowed to happen — see
+ *   those callers' own `commitPicks`/`picksDirty`.
+ *   Omit `picks` and the tick boxes are not built at all — that is how the
  *   miniature/preview callers stay untouched.
  */
-export function renderReviewPodium(ranked, { showTeam = false, picks = null } = {}) {
+export function renderReviewPodium(ranked, { showTeam = false, picks = null, onChange = null } = {}) {
   // ⚠️ Đợt 207 — the returned root is now a WRAPPER, not `.aw-sd-pod` itself.
-  // The two counters have to stay put while the list scrolls under them, so they
-  // are siblings of the scroller rather than children of it. Anything that
-  // removes this board by selector must know both names — see paintBody().
+  // ⭐⭐⭐ Đợt 319 — and now holds THREE children when `picks` is on: the two
+  // name-list columns flank the funnel rather than floating two digits over
+  // it (see the file header on WHY — the count is unreadable at a glance past
+  // a handful of pupils, a running roster is not). All three must stay put
+  // while the middle one scrolls, so they are FLEX SIBLINGS of the scroller
+  // and each scrolls on its own. Anything that removes this board by selector
+  // must know all the names involved — see paintBody().
   const wrap = el("div", "aw-sd-podwrap");
   const box = el("div", "aw-sd-pod");
-  wrap.append(box);
   const n = ranked.length;
-  // The two faint tallies of how many pupils have been ticked to each side.
-  // Built even when nothing is ticked yet (CSS hides them at 0/0), so the count
-  // can fade in rather than appear from nowhere on the first tick.
-  // ⭐ Đợt 209 — each counter carries its OWN sparkle layer and its own digit
-  // node, because the "everybody is placed" state lights the number and sets
-  // sparkles off around it (see paintCounts). The digit lives in a child rather
-  // than in the counter's textContent so the sparkles are siblings of it and can
-  // sit outside the glyph without being written over on the next repaint.
-  const mkCount = side => {
-    const c = el("div", "aw-sd-podcount is-" + side);
-    c.append(el("span", "aw-sd-podcount-n"));
-    const spark = el("span", "aw-sd-podcount-spark");
-    spark.setAttribute("aria-hidden", "true");
-    for (let s = 0; s < 6; s++) spark.append(el("i", "aw-sd-pod-star s" + s));
-    c.append(spark);
-    return c;
+
+  // ⭐⭐⭐ Đợt 319 — THE TWO NAME COLUMNS (replaces Đợt 208/209's two floating
+  // tick-counts, thầy: "bỏ ô số đếm tích đi vì đã có số thứ tự trong tên rồi").
+  // Built even with nobody ticked yet: an empty scroller costs nothing and
+  // appearing from nothing on the first tick would be a visible pop.
+  // ⚠️ THE NUMBER IS EACH SIDE'S OWN DRAFT ORDER, not the funnel's rank: side
+  // ("l"/"r") + Map insertion order together are the closest thing this Map
+  // has to "who did this side pick first", and re-ticking a name (delete then
+  // set) puts it at the end of ITS side's own list on purpose — that IS a
+  // fresh pick.
+  const mkSide = side => {
+    const col = el("div", "aw-sd-pod-side is-" + side);
+    col.append(el("div", "aw-sd-pod-side-head", side === "l" ? "LEFT" : "RIGHT"));
+    col.append(el("div", "aw-sd-pod-side-list"));
+    return col;
   };
-  const counts = picks ? { l: mkCount("l"), r: mkCount("r") } : null;
-  if (counts) wrap.append(counts.l, counts.r);
+  const sides = picks ? { l: mkSide("l"), r: mkSide("r") } : null;
+  if (sides) wrap.append(sides.l);
+  wrap.append(box);
+  if (sides) wrap.append(sides.r);
+
+  // Filled in as rows are built below — the side lists need every picked
+  // pupil's DISPLAY NAME, and the row loop is the only place that has it.
+  const nameByKey = new Map();
 
   // ⭐⭐ Đợt 219 — MỖI HÀNG ĐỂ LẠI ĐÂY CÁCH TỰ VẼ CỦA NÓ, và một cú tích vẽ LẠI CẢ
   // BẢNG chứ không chỉ hàng vừa bấm.
@@ -1093,27 +1170,39 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null } = 
   const rowPaints = [];
   const paintAll = () => rowPaints.forEach(fn => fn());
 
-  /** Both counters, from the one Map. Thầy: one side showing means both show. */
-  function paintCounts() {
-    if (!counts) return;
+  /** `{l, r}` — how many pupils are ticked to each side right now. */
+  function sideCounts() {
     let l = 0, r = 0;
     picks.forEach(v => { if (v === "l") l++; else if (v === "r") r++; });
-    counts.l.querySelector(".aw-sd-podcount-n").textContent = String(l);
-    counts.r.querySelector(".aw-sd-podcount-n").textContent = String(r);
-    // ⚠️ ONE class on the WRAPPER, not one per counter: "khi 1 bên hiện 1 thì
-    // bên còn lại cũng hiện đồng thời (hiện 0)" — they are a pair, and a pair
-    // that could half-appear would read as a bug.
-    wrap.classList.toggle("has-picks", l + r > 0);
-    // Two digits need more room than one, and the room is only the sliver
-    // outside the widest row (see `.aw-sd-podcount` in app.css).
-    wrap.classList.toggle("is-wide-count", String(Math.max(l, r)).length > 1);
-    // ⭐⭐ Đợt 209 (thầy) — "khi 2 bên đã tích toàn bộ học sinh rồi (không còn dư
-    // ai), thì 2 số tổng ô tích 2 bên sẽ chuyển thành màu xanh lá rõ nét và có
-    // sparkle vàng lấp lánh xung quanh số đó."
-    // ⚠️ The test is against the number of pupils ON THIS BOARD (`n`), not the
-    // class register: a team scope shows one team, the class scope shows whoever
-    // has finished. "Nobody left over" has to mean nobody left over on the board
-    // in front of the teacher, or the light would never come on in team scope.
+    return { l, r };
+  }
+
+  /**
+   * ⭐⭐⭐ Đợt 319 (thầy: "chờ bên kia chọn trước... miễn sao 2 bên không chênh
+   * nhau quá 1 người") — REBUILD BOTH NAME COLUMNS from the one Map, same
+   * "redraw everything, never just the one row" reasoning `paintAll` already
+   * uses for the tick dots.
+   */
+  function paintSides() {
+    if (!sides) return;
+    const order = { l: [], r: [] };
+    picks.forEach((side, key) => { if (order[side]) order[side].push(key); });
+    (["l", "r"]).forEach(side => {
+      const list = sides[side].querySelector(".aw-sd-pod-side-list");
+      list.innerHTML = "";
+      order[side].forEach((key, idx) => {
+        const item = el("div", "aw-sd-pod-side-item");
+        const name = nameByKey.get(key) || "";
+        item.textContent = `${idx + 1}. ${name}`;
+        item.title = name;
+        list.append(item);
+      });
+    });
+    const { l, r } = sideCounts();
+    // ⭐⭐ Đợt 209's "everybody placed" light, carried over onto the two column
+    // heads now that the digits themselves are gone — same green, same test
+    // (against the board's OWN size, not the class register: see the old
+    // paintCounts note this replaces).
     wrap.classList.toggle("is-all", n > 0 && l + r === n);
   }
 
@@ -1134,6 +1223,7 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null } = 
     const pk = String(b.key || "").trim()
       || String(b.name || "").trim().toLowerCase()
       || `#${i}`;
+    nameByKey.set(pk, b.name);
 
     const card = el("div", "aw-sd-pod-box" + (i < 3 ? ` is-m${i + 1}` : ""));
 
@@ -1233,9 +1323,33 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null } = 
         t.onclick = e => {
           e.stopPropagation();
           const cur = picks.get(pk);
-          if (cur === side) picks.delete(pk); else picks.set(pk, side);
+          if (cur === side) {
+            picks.delete(pk);          // un-ticking never makes the gap worse
+          } else {
+            // ⭐⭐⭐ Đợt 319 (thầy: "chờ bên kia chọn trước... miễn sao 2 bên
+            // không chênh nhau quá 1 người") — a NEW pick (never an unset) must
+            // not push the two sides more than one apart. Simulate the count
+            // AFTER this one pupil moves — pulling them off their OLD side
+            // first, since a straight l→r tap is a MOVE, not two separate taps.
+            const after = sideCounts();
+            if (cur === "l") after.l--; else if (cur === "r") after.r--;
+            if (side === "l") after.l++; else after.r++;
+            if (Math.abs(after.l - after.r) > 1) {
+              try { sound.buzz(); } catch { /* âm thanh là trang trí */ }
+              try {
+                row.animate(
+                  [{ transform: "translateX(0)" }, { transform: "translateX(-3%)" },
+                   { transform: "translateX(3%)" }, { transform: "translateX(-2%)" }, { transform: "translateX(0)" }],
+                  { duration: 240, easing: "ease-in-out" }
+                );
+              } catch { /* Web Animations không có thì bỏ qua hiệu ứng, không chặn gì cả */ }
+              return;               // blocked — nothing changed, nothing to redraw or save
+            }
+            picks.set(pk, side);
+          }
           paintAll();
-          paintCounts();
+          paintSides();
+          onChange?.();
           try { sound.tick(); } catch { /* âm thanh là trang trí, không được chặn việc vẽ */ }
         };
         return t;
@@ -1261,7 +1375,7 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null } = 
     }
     box.append(row);
   });
-  paintCounts();
+  paintSides();
   return wrap;
 }
 
@@ -1339,7 +1453,7 @@ export function fitPodiumNames(root, sel = ".aw-sd-pod-name") {
       }
     });
   };
-  const both = () => { pass(); placePodiumCounts(root); return measured; };
+  const both = () => { pass(); return measured; };
   both();
   // The re-run is scheduled, never awaited: a browser without `document.fonts`
   // (or one where the promise never settles) still gets the first pass.
@@ -1397,63 +1511,10 @@ export function fitPodiumNames(root, sel = ".aw-sd-pod-name") {
   } catch { /* không có ResizeObserver: hai lượt ở trên vẫn đứng */ }
 }
 
-/**
- * ⭐⭐ Đợt 208 — WHERE THE TWO TICK COUNTS SIT (thầy, 20/8/2026):
- * *"vị trí số người đã được tích sẽ nằm cao lên một chút, ở mức chính giữa tâm
- * của ô học sinh thứ 4 khi chưa cuộn. Số 2 bên cũng được đẩy về giữa một chút để
- * nằm chính giữa mép màn hình và vị trí dấu tích của ô tên học sinh thứ 4 (do
- * thanh scroll đang đè lên số bên phải, đẩy vào thì ko bị đè nữa)."*
- *
- * Đợt 207 pinned them to the middle of the whole board with a fixed CSS offset.
- * That is why the right-hand one ended up under the scrollbar — a fixed offset
- * cannot know the funnel's shape, and the funnel is the thing it has to avoid.
- * So this MEASURES: fourth row for the height, that row's own tick for the width.
- *
- * ⚠️ THE ANCHOR IS READ UNSCROLLED, ON PURPOSE. `offsetTop` does not move when
- * the list scrolls, which is exactly thầy's "khi chưa cuộn" — the counters are
- * outside the scroller and must not drift when the list is dragged.
- * ⚠️ THE RIGHT-HAND EDGE EXCLUDES THE SCROLLBAR (`offsetWidth − clientWidth`).
- * That is the whole reason the right number was being sat on.
- * ⚠️ A class of fewer than four falls back to its last row — there is no fourth
- * row to aim at, and aiming at nothing would leave the counters at 0,0.
- * ⛔ No requestAnimationFrame: a backgrounded myActivity column freezes it, and
- * counters left unplaced would sit in the corner for the rest of the lesson.
- */
-export function placePodiumCounts(root) {
-  const wrap = root?.querySelector?.(".aw-sd-podwrap");
-  if (!wrap) return;
-  const cl = wrap.querySelector(".aw-sd-podcount.is-l");
-  const cr = wrap.querySelector(".aw-sd-podcount.is-r");
-  const pod = wrap.querySelector(".aw-sd-pod");
-  const rows = wrap.querySelectorAll(".aw-sd-pod-row");
-  if (!cl || !cr || !pod || !rows.length) return;
-  const anchor = rows[Math.min(3, rows.length - 1)];
-  const ticks = anchor.querySelectorAll(".aw-sd-pod-tick");
-  if (ticks.length < 2) return;
-
-  // ---- height: the middle of the fourth row, measured unscrolled ----
-  const top = anchor.offsetTop + anchor.offsetHeight / 2;
-  cl.style.top = cr.style.top = `${Math.round(top)}px`;
-
-  // ---- width: halfway between the frame's inner edge and that row's tick ----
-  const wr = wrap.getBoundingClientRect();
-  const lt = ticks[0].getBoundingClientRect();
-  const rt = ticks[1].getBoundingClientRect();
-  const sb = Math.max(0, pod.offsetWidth - pod.clientWidth);   // the scrollbar, if any
-  // ⚠️ `left`/`right` are offsets FROM THE WRAP'S EDGES, and the transform then
-  // pulls each number onto that point by half its own width. So the sum to solve
-  // is "wrap edge → wanted centre", nothing more. Getting this wrong by exactly
-  // `sb` is what put the right-hand number back under the scrollbar on the first
-  // build of this đợt — the grid caught it at 4px of overlap.
-  const lWant = (wr.left + lt.left) / 2;                       // midway: frame edge ↔ row-4 tick
-  const rWant = (wr.right - sb + rt.right) / 2;                // …and the same on the right
-  const lx = lWant - wr.left;
-  const rx = wr.right - rWant;
-  cl.style.left = `${Math.round(lx)}px`;
-  cl.style.right = "auto";
-  cr.style.right = `${Math.round(rx)}px`;
-  cr.style.left = "auto";
-}
+// ⭐⭐⭐ Đợt 319 — `placePodiumCounts()` (Đợt 208's measured position for the two
+// floating tick-counts) is GONE along with the counts themselves: the two name
+// columns are ordinary flex children laid out by CSS alone (`.aw-sd-pod-side`
+// in app.css), nothing left to measure and place by hand.
 
 function mark(cls, glyph, text) {
   const box = el("div", "aw-sd-rv-mk " + cls);

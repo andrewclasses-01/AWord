@@ -174,6 +174,21 @@ async function requireUid() {
   return user.uid;
 }
 
+// ⭐⭐⭐ Đợt 319 — THE TEAM-SPLIT TICKS (`renderReviewPodium`'s `picks`), same
+// shape the render side already used (`block.key → "l" | "r"`), just written as
+// a plain object because Firestore has no Map. Anything else in the raw value
+// (a stray key, a third side) is dropped rather than trusted — same posture as
+// every other reader in this file.
+function normPicks(raw) {
+  const out = {};
+  if (raw && typeof raw === "object") {
+    for (const [k, v] of Object.entries(raw)) {
+      if (k && (v === "l" || v === "r")) out[String(k)] = v;
+    }
+  }
+  return out;
+}
+
 // Firestore rejects `undefined`, so drop those keys before writing.
 function clean(value) {
   if (Array.isArray(value)) return value.map(clean);
@@ -262,6 +277,10 @@ function normMatch(m) {
       && Number.isFinite(Number(m.classify.hi)) && Number.isFinite(Number(m.classify.lo)))
       ? { hi: Math.max(0, Math.min(100, Number(m.classify.hi))), lo: Math.max(0, Math.min(100, Number(m.classify.lo))) }
       : null,
+    // ⭐⭐⭐ Đợt 319 — the Podium's own left/right team-split ticks (thầy: "lưu lại
+    // theo bảng"), keyed the same way `renderReviewPodium` keys its Map. `{}`
+    // means "nothing ticked yet", same as a match filed before this đợt.
+    picks: normPicks(m?.picks),
     at: Number(m?.at) || 0,
     updatedAt: Number(m?.updatedAt) || 0,
     rowsDropped: !!m?.rowsDropped,
@@ -348,8 +367,15 @@ function fitToBudget(node) {
  * ⚠️ Called from saveMatchResult, which core/engine.js calls EXACTLY ONCE per
  * finished play. A retry wrapped AROUND that call would mint a second id and
  * file a second tile — any retry belongs inside the transaction, not around it.
+ *
+ * ⭐⭐⭐ Đợt 319 — EXPORTED so engine.js can resolve the SAME id a lone play's
+ * saveMatchResult() is about to mint, BEFORE that write lands, and use it to
+ * name the very match a live "Show answers" screen's own picks-save must
+ * target. Two independent mints (one here, one in the caller) would give the
+ * live screen a matchId the ledger never uses — exactly the "hai chỗ hỏi ai là
+ * ai phải hỏi cùng một câu" trap this file's own header warns about elsewhere.
  */
-function mintLoneRoundId() {
+export function mintLoneRoundId() {
   return "alone_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6);
 }
 
@@ -759,6 +785,38 @@ export async function setMatchClassify(classId, yyyymm, matchId, classify) {
     m.classify = (classify && Number.isFinite(Number(classify.hi)) && Number.isFinite(Number(classify.lo)))
       ? { hi: Math.max(0, Math.min(100, Number(classify.hi))), lo: Math.max(0, Math.min(100, Number(classify.lo))) }
       : null;
+    found = true;
+    node.updatedAt = Date.now();
+    tx.set(ref, clean(node));
+  });
+  return found;
+}
+
+/**
+ * ⭐⭐⭐ Đợt 319 (thầy: "lưu lại theo bảng") — SAVE THE PODIUM'S LEFT/RIGHT
+ * TEAM-SPLIT TICKS. Same shape as setMatchClassify() right above (its own
+ * copy-paste template): a transaction, scoped to the one month the match
+ * lives in, so a concurrent write from another column can never clobber this
+ * one.
+ * @param {Object<string,"l"|"r">} picks  `block.key → side`, straight out of
+ *   renderReviewPodium's own Map — the caller (mountShowdownReview's
+ *   `commitPicks`, openTileDetail's own copy) walks the Map into a plain
+ *   object first, since Firestore has no Map. `{}` clears every tick back to
+ *   "nothing split yet".
+ */
+export async function setMatchPicks(classId, yyyymm, matchId, picks) {
+  if (!classId || !yyyymm || !matchId) return false;
+  const uid = await requireUid();
+  const [d, { doc, runTransaction }] = await Promise.all([db(), fs()]);
+  const ref = doc(d, `users/${uid}/items`, monthDocId(classId, yyyymm));
+  let found = false;
+  await runTransaction(d, async tx => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const node = normMonthDoc(snap.data(), classId, yyyymm);
+    const m = node.matches.find(x => x.matchId === matchId);
+    if (!m) return;
+    m.picks = normPicks(picks);
     found = true;
     node.updatedAt = Date.now();
     tx.set(ref, clean(node));

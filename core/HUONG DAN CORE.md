@@ -1425,11 +1425,11 @@ Dải vàng chạy ngang chữ (`background-clip: text` + `color: transparent`) 
   cái mép nó cần đứng lên.
 - Cả ba đều VÀNG (thầy chốt), kể cả ô bạc và ô đồng.
 
-**(d) ⭐⭐ HAI Ô TÍCH CHIA ĐỘI + HAI SỐ ĐẾM (`renderReviewPodium(..., { picks })`).**
+**(d) ⭐⭐ HAI Ô TÍCH CHIA ĐỘI + HAI CỘT TÊN (`renderReviewPodium(..., { picks, onChange })`).**
 ⭐ Đợt 208 đổi hình: **chấm tròn đặc mờ**, bấm ra **dấu ✓ to dày xanh dương đứng một mình**, không khung.
 ⚠️ **Nút giữ nguyên 4.8cqw** — chấm chỉ là con của nó. Thu nút xuống bằng cái chấm là để lại đích bấm
 to bằng móng tay trên cái bảng người ta chạm từ khoảng cách một cánh tay.
-Thầy dùng bảng kết quả để **chia đội cho hoạt động sau**: tích trái/phải, đếm hai bên.
+Thầy dùng bảng kết quả để **chia đội cho hoạt động sau**: tích trái/phải.
 - **`picks` là Map do MÀN HÌNH truyền vào**, không phải bộ vẽ tự giữ. Bảng bị dựng lại mỗi lần đổi
   phạm vi và **mỗi lần một đội khác nộp kết quả** (listener Đợt 196) — Map nằm trong bộ vẽ là công chia
   đội bay mất giữa chừng. Không truyền `picks` thì không dựng ô tích.
@@ -1437,24 +1437,39 @@ Thầy dùng bảng kết quả để **chia đội cho hoạt động sau**: t�
   không ô tên nhảy ngang ngay dưới ngón tay.
 - ⚠️ **Ô tích là con của HÀNG**, nên nó bám mép ô và **hẹp dần theo phễu, cố ý KHÔNG thẳng hàng** (thầy
   chốt). Đừng "căn cho thẳng".
-- ⚠️⚠️ **Đợt 208 — VỊ TRÍ HAI SỐ ĐẾM DO `placePodiumCounts()` ĐO, KHÔNG PHẢI CSS GHIM.** Ngang tâm
-  **ô HS thứ 4** (`offsetTop`, nên không trôi khi cuộn — đúng nghĩa "khi chưa cuộn" thầy nói), và chính
-  giữa mép trong khung ↔ dấu tích của hàng đó, **mép phải đã trừ thanh cuộn**
-  (`offsetWidth − clientWidth`). ⛔ **Đừng ghim lại bằng `top`/`left`/`right` trong CSS**: số đo cứng của
-  Đợt 207 chính là lý do số bên phải nằm dưới thanh cuộn — nó không thể biết hình dạng cái phễu, mà cái
-  phễu đúng là thứ nó phải tránh. CSS chỉ còn giữ phép `translate` căn tâm, để đổi cỡ chữ (1 chữ số →
-  2 chữ số) không đẩy số lệch khỏi tâm đã đo.
-  🐞 Bẫy đại số đã cắn: `left`/`right` là **khoảng cách TỪ MÉP**, không phải toạ độ — viết
-  `right = mép − sb − đích` thay vì `mép − đích` là lệch **đúng bằng bề rộng thanh cuộn**.
-- Hai số **hiện cùng lúc** (bên kia hiện `0`) và **đứng yên khi cuộn**: chúng là anh em của khung cuộn
-  `.aw-sd-pod`, không phải con của nó — đó là lý do bộ vẽ trả về **`.aw-sd-podwrap`**, không trả
-  `.aw-sd-pod`. ⚠️ **Ai xoá bảng theo selector phải biết CẢ HAI tên.**
-- ⭐⭐ **Đợt 209 — TÍCH HẾT THÌ HAI SỐ CHUYỂN XANH LÁ + SPARKLE VÀNG** (`.aw-sd-podwrap.is-all`).
-  ⚠️ **So với sĩ số TRÊN BẢNG (`ranked.length`), KHÔNG phải sổ lớp**: phạm vi ĐỘI chỉ có một đội, phạm
-  vi LỚP chỉ có những em đã xong — so với sổ lớp là đèn không bao giờ sáng ở phạm vi đội.
-  ⚠️ Xanh `#16a34a` là **xanh "đúng rồi" sẵn có** (dải cao nhất của `pctBand`), đừng đẻ màu xanh thứ tư.
-  ⚠️ Sao phải `animation-play-state: paused` khi chưa dùng tới — chạy dưới một lớp `opacity:0` là ngốn
-  một lần vẽ lại mỗi khung hình suốt cả buổi học.
+- Hai cột tên **là anh em của khung cuộn `.aw-sd-pod`, không phải con của nó** — đó là lý do bộ vẽ trả
+  về **`.aw-sd-podwrap`**, không trả `.aw-sd-pod`. ⚠️ **Ai xoá bảng theo selector phải biết CẢ BA tên**
+  (`.aw-sd-pod`, `.aw-sd-pod-side.is-l`, `.aw-sd-pod-side.is-r`).
+- ⭐⭐⭐ **Đợt 319 — HAI SỐ ĐẾM NỔI + `placePodiumCounts()` ĐÃ BỊ GỠ HẲN** (thầy: "bỏ ô số đếm tích đi vì
+  đã có số thứ tự trong tên rồi"). Thay bằng **hai cột danh sách tên, mỗi tên có số thứ tự riêng của
+  bên đó** (`sides.l`/`sides.r`, mỗi bên một `.aw-sd-pod-side-list`, xây lại TOÀN BỘ mỗi lần tích —
+  cùng lý do `paintAll` vẽ lại cả bảng chứ không chỉ một hàng). Số thứ tự là **thứ tự Map của RIÊNG bên
+  đó** (lọc theo `side` rồi mới đếm), không phải hạng trên phễu — tích lại một em (bỏ rồi tích lại) đẩy
+  em đó xuống cuối danh sách của bên mới, đúng nghĩa "một lượt chọn mới".
+  ⚠️ Vì số đếm không còn là ô riêng, `.aw-sd-podwrap.is-all` (đủ người, xanh lá — Đợt 209) nay tô màu
+  **hai cái đầu cột** (`.aw-sd-pod-side-head`) thay vì hai con số nổi. Vẫn so với **sĩ số TRÊN BẢNG**
+  (`ranked.length`), KHÔNG phải sổ lớp, và vẫn dùng đúng xanh `#16a34a` sẵn có.
+  ⚠️ **`.aw-sd-pod-side` chỉ là flex con của `.aw-sd-podwrap`** — không CSS nào phải đo/ghim vị trí bằng
+  tay nữa, vì chính việc chúng CHIẾM CHỖ là thứ làm `.aw-sd-pod-box`'s `--w` (một tỉ lệ phần trăm) co
+  hẹp lại theo, tự động — đừng viết lại phép co `--w` ở nơi khác khi "co ngắn 2 bên" được yêu cầu tiếp.
+- ⭐⭐⭐ **Đợt 319 — GIỚI HẠN LƯỢT: HAI BÊN KHÔNG ĐƯỢC CHÊNH QUÁ 1 NGƯỜI** (thầy: "chờ bên kia chọn
+  trước... miễn sao 2 bên không chênh nhau quá 1 người"). Nằm NGAY TRONG `onclick` của nút tích: mô
+  phỏng số đếm HAI BÊN nếu cú bấm này xảy ra (trừ bên CŨ của học sinh đó trước, vì đổi bên là MỘT lượt
+  di chuyển chứ không phải hai lượt riêng), `Math.abs(l-r) > 1` thì CHẶN (rung `row.animate()` + tiếng
+  `sound.buzz()`, không đổi Map, không gọi `onChange`). **BỎ TÍCH luôn được phép** — nó chỉ có thể làm
+  hẹp khoảng cách lại, không bao giờ nới rộng thêm.
+  ⛔ Đừng chuyển luật này thành "lượt đi xen kẽ nghiêm ngặt" (bên A rồi bắt buộc bên B rồi mới tới A) —
+  thầy tả rõ một bên được phép NỚI TRƯỚC tới khi chênh đúng 1, không phải luân phiên từng người một.
+- ⭐⭐⭐ **Đợt 319 — LƯU LẠI THEO BẢNG, NHƯNG KHÔNG PHẢI MỖI CÚ BẤM.** `renderReviewPodium` tự nó KHÔNG
+  đụng Firestore — nó chỉ gọi `onChange()` mỗi khi Map thật sự đổi (không gọi khi cú tích bị chặn ở
+  luật trên). Người gọi (`mountShowdownReview`'s `commitPicks`/`picksDirty`, `openTileDetail`'s
+  cặp cùng tên) mới quyết **KHI NÀO** ghi xuống: đóng bảng, bấm Esc (tức thoát fullscreen — `onFsChange`
+  gọi `commitPicks()`), hoặc chuyển sang nút Table/List — KHÔNG BAO GIỜ ngay trong `onclick` của tích.
+  Ghi xuống `core/showdown-history.js`'s `setMatchPicks(classId, yyyymm, matchId, picks)`, cùng khuôn
+  transaction với `setMatchClassify`. Màn Recent Results luôn có `matchId` thật nên luôn lưu được; màn
+  Show Answers ngay sau ván chỉ lưu được khi `engine.js`'s `sdLastMatchRef` đã resolve xong (xem
+  `engine.js`'s note tại chỗ gọi `saveMatchResult` — ván solo/alone vẫn lưu được vì `rid` được resolve
+  ở ĐÚNG một chỗ, không mint hai lần khác nhau).
 
 **(e) ⭐⭐ FULLSCREEN CỦA MÀN SHOW ANSWERS — `container-type` LÀ THỨ CHỊU LỰC.**
 Nút ở góc dưới trái, nhắm vào **chính `.aw-review`**, KHÔNG phải `root` (ngược luật Đợt 12 — ở đây mục

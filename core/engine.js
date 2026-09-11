@@ -589,6 +589,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   let sdReviewStop = null;
   let sdPending = sdCanPublish && !!readPendingResult();
   function refreshSdPending() { sdPending = sdCanPublish && !!readPendingResult(); }
+  // ⭐⭐⭐ Đợt 319 — WHICH LEDGER ROW THE PODIUM'S TEAM-SPLIT TICKS BELONG TO.
+  // Set (or cleared to null) at the very moment this play's saveMatchResult()
+  // fires, and read later by showReview()'s `savePicks` — the review can open
+  // any time after finish(), so this cannot be a local of finish() itself. See
+  // that call site's own note for why the id is resolved THERE and not re-mint
+  // guessed here.
+  let sdLastMatchRef = null;
 
   // ⭐⭐⭐ Đợt 220 (thầy, 21/8/2026) — FREE / COUNT: CHIA BÀI CHO TỪNG HỌC SINH.
   //   options.sdDeal       "normal" | "free" | "count"   (Showdown only)
@@ -5835,6 +5842,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // opens Show answers — said out loud on the board itself. `sdPending` is
       // set BEFORE the import so the very first frame of a review opened during
       // a bad minute already carries the warning.
+      // ⭐⭐⭐ Đợt 319 — reset BEFORE the block below decides whether to fill it
+      // back in. A play with nothing answered (or a mistakes-practice round)
+      // never reaches saveMatchResult, and a review opened for THAT play must
+      // not inherit the PREVIOUS play's matchId — a tick made on this board
+      // would silently land on somebody else's ledger row.
+      sdLastMatchRef = null;
       if (showdownPick && answered > 0 && !activity._mistakes) {
         const students = groupByMember(reviewData, showdownPick.members);
         const roundKey = showdownRoundKey();
@@ -5890,12 +5903,26 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         // ledger then mints an `alone_…` id and this play gets its own tile.
         if (showdownPick.classId) {
           import("./showdown-history.js")
-            .then(h => h.saveMatchResult({
-              classId: showdownPick.classId, className: showdownPick.className,
-              tableId: showdownPick.tableId || "", roundKey, roundId: sdRoundId,
-              actName, contentVariant, templateType,
-              teamId: showdownPick.teamId, teamName: showdownPick.teamName, students
-            }))
+            .then(h => {
+              // ⭐⭐⭐ Đợt 319 — resolve the id a LONE play would otherwise have
+              // saveMatchResult() mint internally, HERE, so `sdLastMatchRef`
+              // names the exact row that write is about to touch. Passing the
+              // resolved `rid` down means saveMatchResult's own `roundId ||
+              // mintLoneRoundId()` line finds it already non-empty and never
+              // mints a SECOND, different id for the same play.
+              const rid = String(sdRoundId || "") || h.mintLoneRoundId();
+              sdLastMatchRef = {
+                classId: showdownPick.classId,
+                yyyymm: h.yyyymmOf(Date.now()),
+                matchId: h.matchIdOf(showdownPick.tableId || "", roundKey, rid)
+              };
+              return h.saveMatchResult({
+                classId: showdownPick.classId, className: showdownPick.className,
+                tableId: showdownPick.tableId || "", roundKey, roundId: rid,
+                actName, contentVariant, templateType,
+                teamId: showdownPick.teamId, teamName: showdownPick.teamName, students
+              });
+            })
             .catch(e => console.warn("AWord: could not file this result in the class history", e));
         }
       }
@@ -6660,6 +6687,19 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         // Synchronous, so the title can be painted on the very first frame: the
         // outbox is sessionStorage, and reading it must not wait on a module.
         isPending: () => !!sdPending,
+        // ⭐⭐⭐ Đợt 319 — SAVE THE PODIUM'S TEAM-SPLIT TICKS, same "hand in a
+        // callback, never import Firestore directly" shape as loadTeams/
+        // watchTeams/flushPending above. `sdLastMatchRef` is read at CALL TIME
+        // (not captured earlier), so a save that fires after the teacher has
+        // already started a NEXT play still lands on the row this review
+        // itself is showing.
+        savePicks: picks => {
+          const ref = sdLastMatchRef;
+          if (!ref) return Promise.resolve(false);
+          return import("./showdown-history.js")
+            .then(h => h.setMatchPicks(ref.classId, ref.yyyymm, ref.matchId, picks))
+            .catch(e => { console.warn("AWord: could not save the team split", e); return false; });
+        },
         toast
       });
       inner.append(rv);

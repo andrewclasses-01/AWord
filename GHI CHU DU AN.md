@@ -400,6 +400,129 @@ commit phần của mình sau.
 
 ---
 
+## Đợt 319 (11/9/2026, thầy yêu cầu) — **SHOWDOWN PODIUM: HAI CỘT TÊN TRÁI/PHẢI + GIỚI HẠN LƯỢT + LƯU LẠI THEO BẢNG**
+
+### Yêu cầu gốc (thầy)
+
+Trong bảng Podium của Showdown (bảng chóp ngược, nơi tích chọn đồng đội cho mỗi đội sau khi xem kết
+quả), cả ở màn "Show answers" ngay sau ván lẫn màn Recent Results:
+1. Co ngắn thẻ tên hai bên trái/phải một chút, dành chỗ cho 2 cột hiện tên thành viên đã được chọn —
+   sau mỗi cú tích, tên hiện ra ở cột tương ứng, có số thứ tự (VD "1. NHẬT NAM").
+2. Bỏ ô số đếm tích (đã có số thứ tự trong tên rồi, khỏi cần đếm riêng).
+3. Giới hạn lượt: bên trái tích 1 người thì phải chờ bên phải tích người 1 trước khi bên trái tích
+   người 2 — nhưng nếu bên trái mới tích 1 người, bên phải được phép tích liền 2 người (miễn hai bên
+   không chênh nhau quá 1 người).
+4. Dữ liệu tích lưu lại THEO BẢNG (theo trận), bắt đầu lưu khi đóng bảng podium / bấm Esc / chuyển
+   sang nút hiển thị khác — KHÔNG lưu ngay giữa lúc đang tích.
+
+### Quyết định trước khi code (hỏi thầy qua AskUserQuestion)
+
+Lưu ở đâu là điểm rẽ nhánh lớn nhất: localStorage (chỉ máy đó, luôn chạy được) hay Firestore (đồng bộ,
+bền, đúng khuôn `classify` đã có sẵn cho Table view, nhưng màn Show Answers ngay sau ván chỉ lưu chắc
+được khi có `matchId` thật — ván solo/alone mint id RANDOM nội bộ trong `saveMatchResult`, không lộ ra
+ngoài để khớp lại). Thầy chọn **Firestore**, chấp nhận vế "cần sửa thêm để ván solo cũng lưu được" —
+nên đợt này làm luôn phần sửa đó (`sdLastMatchRef`, xem dưới) thay vì bỏ lửng.
+
+### Đã sửa
+
+- **`core/showdown-review.js`** — `renderReviewPodium`:
+  - Bỏ hẳn `mkCount`/`counts`/`paintCounts` (hai số đếm nổi đo bằng `placePodiumCounts()`) và chính
+    `placePodiumCounts()` (cuối file) — không còn gì để đo/ghim bằng tay nữa.
+  - Thêm hai cột `.aw-sd-pod-side` (trái/phải), là ANH EM flex của `.aw-sd-pod` trong `.aw-sd-podwrap`
+    (không phải con của nó) — chính việc chúng CHIẾM CHỖ đã tự động co hẹp `--w` (phần trăm) của
+    `.aw-sd-pod-box`, không phải sửa gì ở công thức tính bề rộng hàng.
+  - `nameByKey` (Map khoá → tên) dựng trong vòng `ranked.forEach`, `paintSides()` xây LẠI TOÀN BỘ hai
+    cột mỗi lần tích (cùng lý do `paintAll()` vẽ lại cả bảng: `picks` đánh theo khoá học sinh, hai hàng
+    trùng khoá phải luôn khớp nhau trên màn). Số thứ tự trong mỗi cột là thứ tự Map CỦA RIÊNG bên đó
+    (lọc theo `side` rồi mới đếm) — tích lại một em đẩy em đó xuống cuối danh sách bên mới.
+  - Luật chênh lệch nằm NGAY trong `onclick` của nút tích: mô phỏng số đếm hai bên NẾU cú bấm này xảy
+    ra (trừ bên CŨ trước — đổi bên là MỘT lượt di chuyển, không phải hai lượt riêng), `|l-r| > 1` thì
+    CHẶN (rung `row.animate()` nhẹ + `sound.buzz()`, không đổi Map, không gọi `onChange`). Bỏ tích luôn
+    được phép (chỉ có thể làm hẹp khoảng cách lại).
+  - Thêm tham số `onChange` — gọi mỗi khi Map THẬT SỰ đổi (không gọi khi bị chặn). Hàm này KHÔNG đụng
+    Firestore; người gọi tự quyết khi nào đáng lưu.
+  - `.aw-sd-podwrap.is-all` (đủ người, xanh lá — Đợt 209) nay tô hai cái ĐẦU CỘT thay vì hai con số nổi.
+- **`core/showdown-history.js`**:
+  - `normPicks()` + thêm trường `picks` vào `normMatch()` (mặc định `{}`).
+  - `export function mintLoneRoundId()` — trước là hàm riêng, nay export để `engine.js` gọi ĐÚNG MỘT
+    LẦN cho ván solo/alone, tránh mint hai id khác nhau cho cùng một ván (một cái saveMatchResult tự
+    mint, một cái sdLastMatchRef tự mint — sẽ ra hai matchId khác nhau nếu không cẩn thận).
+  - `export async function setMatchPicks(classId, yyyymm, matchId, picks)` — cùng khuôn transaction
+    với `setMatchClassify()` (bản sao chép mẫu).
+- **`core/engine.js`**:
+  - Thêm `sdLastMatchRef` (biến cấp module, reset về `null` NGAY TRƯỚC khối `if (showdownPick &&
+    answered > 0 && !activity._mistakes)` trong `finish()` — một ván không có gì để lưu ledger thì
+    review mở cho ván ĐÓ không được thừa hưởng `matchId` của ván TRƯỚC).
+  - Chỗ gọi `saveMatchResult()`: resolve `rid = sdRoundId || h.mintLoneRoundId()` ngay tại đó, gán
+    `sdLastMatchRef = {classId, yyyymm, matchId}` TRƯỚC khi gọi `saveMatchResult({...roundId: rid})` —
+    nên `saveMatchResult`'s own `roundId || mintLoneRoundId()` luôn thấy `rid` đã có sẵn, không tự mint
+    một id khác.
+  - `mountShowdownReview(...)` nhận thêm `savePicks` — callback đọc `sdLastMatchRef` TẠI THỜI ĐIỂM GỌI
+    (không chụp sớm), gọi `setMatchPicks()` qua `import()` động — giữ đúng luật "file showdown-review.js
+    không được đụng Firestore trực tiếp" đã ghi ở đầu file đó.
+- **`core/showdown-review.js`** (`mountShowdownReview`):
+  - `picksDirty` + `commitPicks()` — chỉ ghi khi có gì đổi, gọi ở BA mốc: `setView()` lúc rời "podium",
+    `onFsChange` lúc thoát fullscreen (đây chính là "bấm Esc" — không có Escape listener riêng, trình
+    duyệt tự thoát fullscreen khi Esc), và `dispose()` lúc đóng cả màn.
+- **`core/showdown-home.js`** (`openTileDetail`):
+  - `picks` seed từ `m.picks` (mở lại trận cũ thấy đúng đội đã chia) thay vì luôn `new Map()` rỗng.
+  - `picksDirty`/`commitPicks()` riêng, gọi ở `closeDetail()` (✕ và Esc-qua-fullscreen dùng chung hàm
+    này) và ở `setView()` lúc rời "podium".
+- **`core/app.css`** — CSS cho `.aw-sd-pod-side`/`-head`/`-list`/`-item` (17% mỗi bên, chữ căn về phía
+  phễu — bên trái căn phải, bên phải căn trái, giống lối "áp sát mép" của nút tích); xoá sạch
+  `.aw-sd-podcount*`/`.has-picks`/`.is-wide-count`.
+- **`core/HUONG DAN CORE.md`** — viết lại mục (d) HAI Ô TÍCH CHIA ĐỘI, xoá phần mô tả
+  `placePodiumCounts()` đã gỡ, thêm luật giới hạn lượt + luật lưu-theo-checkpoint.
+
+### Bàn thử
+
+Không đụng Firestore/đăng nhập được trong sandbox này, nên bàn thử là **harness độc lập** import THẬT
+`renderReviewPodium`/`fitPodiumNames` qua dev server cục bộ (`devserver.py`, port do `launch.json`
+cấp), dựng 15 học sinh giả, gắn `console.log` vào `onChange`. Xoá harness ngay sau khi xong, không đưa
+vào repo. Kết quả bấm tay qua trình duyệt thật (screenshot xác nhận từng bước):
+- Tích trái người 1 → cột LEFT hiện "1. NGUYEN VAN AN", dấu ✓ xanh dương hiện, dấu tích bên phải CÙNG
+  HÀNG ẩn đi (đúng hành vi cũ).
+- Tích trái người 2 (khi trái đã có 1, phải có 0) → **BỊ CHẶN** đúng: không có dòng `onChange` log mới,
+  cột LEFT không đổi.
+- Tích phải người 1 rồi người 2 liên tiếp (khi trái vẫn đang có 1) → **CẢ HAI ĐỀU ĐƯỢC**, cột RIGHT
+  hiện "1. TRAN THI BICH" / "2. LE HOANG MINH K…" (tên dài tự cắt bằng `text-overflow:ellipsis`).
+- Tích phải người thứ 3 (phải=2, trái=1, chênh sẽ thành 2) → **BỊ CHẶN** đúng.
+- Bỏ tích trái người 1 → cột LEFT rỗng lại, log Map đúng còn `{k1:"r",k2:"r"}`.
+- Tích lại trái người 1 (trái=0→1, phải=2, chênh=1) → **ĐƯỢC**, cột LEFT hiện lại "1. NGUYEN VAN AN".
+- 0 lỗi console suốt cả phiên bấm thử.
+`node --input-type=module --check` sạch cả 4 file JS đụng tới (`showdown-review.js`,
+`showdown-home.js`, `showdown-history.js`, `engine.js`).
+
+### ⚠️ Va chạm với phiên Claude khác cùng lúc
+
+Trong lúc đang sửa, một phiên Claude khác (làm tính năng In Word/PAGE-FIT, Đợt 318/320) cũng đang
+chỉnh `app.css`/`GHI CHU DU AN.md`/`APP_MASTER.md`/`core/HUONG DAN CORE.md` trong CÙNG cây làm việc —
+phiên đó phát hiện trước, tự tách hunk bằng `git apply --cached` để KHÔNG commit nhầm phần
+"showdown"/"sd-pod"/"renderReviewPodium" của đợt này, và đổi số của chính họ từ 319 sang 320 để tránh
+đụng số. Đã kiểm tra lại `git status`/`git diff --stat` sau khi họ commit (`15e3ad8`): cả 4 file JS +
+`app.css` của đợt này vẫn giữ nguyên, sạch, không lẫn nội dung hai đợt vào nhau; `node --input-type=module
+--check` chạy lại lần nữa sau đó vẫn OK cả 4 file.
+
+### Commit + Push
+
+⬜ **CHƯA COMMIT** — chờ thầy xem qua thật: màn Show Answers ngay sau một ván Showdown (cần chơi thật
+qua nhiều đội) và Recent Results (mở lại một trận cũ, xác nhận `picks` seed đúng khi có sẵn). Sandbox
+không đăng nhập Firestore được nên phần LƯU THẬT lên Firestore mới chỉ được kiểm bằng đọc code + bàn
+thử harness không-Firestore ở trên, chưa được xác nhận bằng một cú lưu-đọc lại thật.
+
+### ⬜ VIỆC ĐANG CHỜ
+
+- [ ] Thầy tự chơi 1 ván Showdown nhiều đội thật → mở Show answers → chuyển Podium → tích chia đội cả
+      hai bên → đóng bảng (hoặc Esc, hoặc chuyển Table/List) → mở lại Recent Results của đúng trận đó
+      → xác nhận hai đội tích vẫn còn nguyên.
+- [ ] Xác nhận ván SOLO (một mình một đội, không qua phòng chờ) cũng lưu được — đây là ca `sdLastMatchRef`
+      phải tự resolve `mintLoneRoundId()` đúng một lần, chưa test được bằng tay thật (cần đăng nhập).
+- [ ] Ngắm bằng mắt trên máy cảm ứng/TOMKO thật: 2 cột 17% mỗi bên có "quá chật" so với phễu ở giữa
+      không (đo trên trình duyệt desktop thấy vừa mắt, nhưng chưa thử màn cảm ứng thật).
+- [ ] Duyệt xong mới commit + push (đúng lệ dự án).
+
+---
+
 ## Đợt 318 (11/9/2026, thầy đề xuất — bàn ý tưởng rồi chốt luôn) — **IN: PAGE-FIT — NHẮM SỐ TRANG CHẴN CHO MÁY IN 2 MẶT**
 
 ### Yêu cầu gốc (thầy)

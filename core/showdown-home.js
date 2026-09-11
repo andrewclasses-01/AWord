@@ -912,6 +912,11 @@ export function mountShowdownHome(host, opts = {}) {
     function closeDetail() {
       if (closing) return;
       closing = true;
+      // ⭐⭐⭐ Đợt 319 (thầy: "lưu lại theo bảng... bắt đầu lưu khi đóng bảng
+      // podium, bấm esc") — this IS both of those triggers here: the ✕ button
+      // calls this directly, and the browser's own "Esc exits fullscreen"
+      // reaches it through `onFsChange` right above.
+      commitPicks();
       document.removeEventListener("fullscreenchange", onFsChange);
       teardownFns.delete(closeDetail);
       if (document.fullscreenElement === det) { try { document.exitFullscreen(); } catch { /* going anyway */ } }
@@ -924,7 +929,26 @@ export function mountShowdownHome(host, opts = {}) {
     dh.append(dt, tableBtn, podiumBtn, listBtn, dlBtn, back);
     const dbody = el("div", "aw-sd-rec-dbody");
     det.append(dh, dbody, classifyRow);
-    const picks = new Map();
+    // ⭐⭐⭐ Đợt 319 — seeded from the ledger's OWN saved split, so reopening a
+    // match the teacher already ticked shows the same two teams straight away
+    // rather than a blank funnel. `m.picks` is the plain object normMatch()
+    // hands back (`{}` for a match filed before this đợt, or never split).
+    const picks = new Map(Object.entries(m.picks || {}));
+    let picksDirty = false;
+    /**
+     * Same "checkpoint, not every tap" rule as core/showdown-review.js's own
+     * commitPicks — see that file's note on why `picksDirty` guards it.
+     */
+    function commitPicks() {
+      if (!picksDirty) return;
+      picksDirty = false;
+      const obj = {};
+      picks.forEach((v, k) => { obj[k] = v; });
+      import("./showdown-history.js")
+        .then(h => h.setMatchPicks(curClassId, m._yyyymm, m.matchId, obj))
+        .then(ok => { if (ok) m.picks = obj; })
+        .catch(e => console.warn("AWord: could not save the team split", e));
+    }
     function paintViewBtns() {
       tableBtn.classList.toggle("is-on", view === "table");
       podiumBtn.classList.toggle("is-on", view === "podium");
@@ -940,17 +964,23 @@ export function mountShowdownHome(host, opts = {}) {
       classifyRow.style.display = showingTable ? "" : "none";
       if (!hasRows && view !== "podium") {
         dbody.append(el("div", "aw-sd-rec-note", "The answers for this match were not kept — here is the ranking."));
-        dbody.append(renderReviewPodium(ranked, { showTeam: true, picks }));
+        dbody.append(renderReviewPodium(ranked, { showTeam: true, picks, onChange: () => { picksDirty = true; } }));
       } else if (view === "table") {
         dbody.append(renderReviewTable(ranked, [curClassName, displayName(m)].filter(Boolean).join(" • "), { classify }));
       } else if (view === "podium") {
-        dbody.append(renderReviewPodium(ranked, { showTeam: true, picks }));
+        dbody.append(renderReviewPodium(ranked, { showTeam: true, picks, onChange: () => { picksDirty = true; } }));
       } else {
         dbody.append(renderReviewList(ranked, { showTeam: true }));
       }
       fitPodiumNames(dbody);
     }
-    const setView = v => { if (view === v) return; view = v; sfx.tap(); paintViewBtns(); paint(); };
+    const setView = v => {
+      if (view === v) return;
+      // ⭐⭐⭐ Đợt 319 — LEAVING the podium is the third named checkpoint
+      // ("chuyển sang nút hiển thị khác").
+      if (view === "podium") commitPicks();
+      view = v; sfx.tap(); paintViewBtns(); paint();
+    };
     tableBtn.onclick = () => setView("table");
     podiumBtn.onclick = () => setView("podium");
     listBtn.onclick = () => setView("list");
