@@ -16,9 +16,12 @@
 > popup, tái dùng NGUYÊN VẸN PAGE-FIT (Đợt 318) cho mỗi hàng từ; "lớp" lấy từ `core/classes.js`
 > `listClasses()` (roster Settings ▸ Classes). Bàn thử DOM thật `scratch/print-word-dom-test.html`
 > 18/18 đạt (bắt 2 lỗi THẬT NẰM Ở BÀI TEST, không phải print.js — xem GHI CHU DU AN.md Đợt 320), kèm
-> ảnh chụp xác nhận layout (từ đậm/IPA nhạt/2 cột ENG1+VI2 cho ALL/chảy 2 cột trang). ⬜ **CHƯA COMMIT**
-> — chờ thầy tự bấm Print → Word trên act "WORDS" thật + chọn 1 lớp CÓ THẬT rồi mới commit + push, xem
-> GHI CHU DU AN.md Đợt 320)**.
+> ảnh chụp xác nhận layout (từ đậm/IPA nhạt/2 cột ENG1+VI2 cho ALL/chảy 2 cột trang). ✅ **THẦY CHỈ
+> ĐẠO COMMIT + PUSH TRỰC TIẾP QUA CHAT** (11/9/2026) — CHƯA qua bước thầy tự bấm tay act thật/chọn lớp
+> có thật, gộp chung 1 commit với Đợt 318 (cùng phiên): `15e3ad8`, ĐÃ PUSH + SHA-256 khớp bản live cả
+> 4 file (`print.js`/`app.css`/`icons.js`/`engine.js`); soát kỹ 3 file bị TRỘN với 1 phiên song song
+> khác đang sửa Showdown (cũng tự đặt "Đợt 319" — nên đợt này đổi thành "Đợt 320" để khỏi đụng số),
+> tách đúng hunk của mình bằng patch thay vì `git add` cả file, xem GHI CHU DU AN.md Đợt 320)**.
 > Trước đó: **(Đợt 318 — IN: PAGE-FIT, nhắm số trang chẵn cho máy in 2 mặt. Thầy
 > đề xuất từ ảnh chụp 1 bản in Anagram: tràn nhẹ sang trang lẻ thì NÉN lại; ít câu (~1,5 trang) thì
 > GIÃN cho trọn 2 trang. `core/print.js` thêm `packPages`/`resolveFitScale` (đo DOM thật rồi co/giãn
@@ -28,8 +31,9 @@
 > `@media print` để đo được ngoài lúc in, bọc `calc(X * var(--pf-scale,1))`. Bàn thử: logic thuần quét
 > 1..150 câu (`scratch/print-pagefit-test.mjs`) + DOM thật qua Chrome (`scratch/print-pagefit-dom-test.html`)
 > đúng cả 2 ví dụ của thầy (n=22 giả tràn nhẹ: 3 trang/17% → nén còn 2 trang/83%; n=34 giả ít câu: đã
-> 4 trang/34% → giãn vẫn 4 trang/90%). ⬜ **CHƯA COMMIT** — chờ thầy IN THỬ GIẤY THẬT (đúng lệ trang in
-> chỉ nhìn thấy thật khi cầm giấy, giống rw-print.js Đợt 193/203), xem GHI CHU DU AN.md Đợt 318)**.
+> 4 trang/34% → giãn vẫn 4 trang/90%). ✅ **THẦY CHỈ ĐẠO COMMIT + PUSH TRỰC TIẾP QUA CHAT** (11/9/2026)
+> — CHƯA qua bước IN THỬ GIẤY THẬT, gộp 1 commit với Đợt 320: `15e3ad8`, ĐÃ PUSH + LIVE kiểm chứng,
+> xem GHI CHU DU AN.md Đợt 318)**.
 > Trước đó: **(Đợt 317 — CHECK THƯ MỤC/ACT bên myLesson không thấy mục vừa tạo sau khi mở app: webview
 > ẩn cache `readAll()` không tự làm mới; vá bằng `resetCache()` trước mỗi lần `timThuMuc`/`lietKeAct`;
 > ✅ thầy yêu cầu sửa thẳng qua chat, đã đẩy, ⬜ chờ thầy bấm tay thật trên máy live, xem GHI CHU DU AN.md

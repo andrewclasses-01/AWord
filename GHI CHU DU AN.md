@@ -12,7 +12,26 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 317** (10/9/2026, thầy báo qua myLesson — CHECK THƯ MỤC/ACT KHÔNG THẤY MỤC VỪA
+> Mới nhất: **Đợt 319** (11/9/2026, thầy yêu cầu — SHOWDOWN PODIUM: hai cột tên trái/phải thay cho
+> hai số đếm nổi, giới hạn lượt tích (2 bên không chênh quá 1 người), và LƯU LẠI THEO BẢNG. `renderReviewPodium`
+> (core/showdown-review.js) bỏ hẳn `mkCount`/`paintCounts`/`placePodiumCounts`, thay bằng hai cột
+> `.aw-sd-pod-side` liệt kê tên theo thứ tự tích riêng của mỗi bên ("1. NHẬT NAM"), luật chênh lệch
+> nằm ngay trong `onclick` của nút tích (mô phỏng số đếm trước khi cho phép, chặn thì rung + `sound.buzz()`,
+> không đổi Map); hàm chỉ gọi `onChange()` khi Map thật sự đổi, KHÔNG tự lưu Firestore. Cả hai màn gọi
+> (mountShowdownReview, openTileDetail) tự giữ `picksDirty` + `commitPicks()` riêng, chỉ ghi xuống ở
+> ba mốc thầy chốt: đóng bảng / Esc (thoát fullscreen) / chuyển nút Table-List — KHÔNG ghi giữa chừng
+> lúc đang tích. `core/showdown-history.js` thêm `picks` vào `normMatch` + `setMatchPicks()` (cùng
+> khuôn transaction với `setMatchClassify`); `engine.js` thêm `sdLastMatchRef` (resolve `matchId` thật
+> ngay tại chỗ gọi `saveMatchResult`, kể cả ván solo/alone — `mintLoneRoundId()` nay export ra để gọi
+> đúng MỘT lần, không mint hai id khác nhau cho cùng một ván) để màn Show Answers ngay sau ván cũng
+> lưu được, không chỉ Recent Results. Bàn thử: harness độc lập import thẳng `renderReviewPodium` thật
+> qua dev server cục bộ (không đụng Firestore) — tích trái rồi tích trái lần 2 bị CHẶN đúng (không
+> đổi Map, không log `onChange`), tích phải được 2 lần liên tiếp trong lúc trái mới có 1 (đúng luật
+> "chênh không quá 1"), tích phải lần 3 bị chặn, bỏ tích rồi tích lại đều đúng, cột tên cập nhật số
+> thứ tự đúng theo thứ tự tích của từng bên. 0 lỗi console. ⬜ CHƯA commit/push — chờ thầy xem qua
+> Recent Results + màn Show Answers thật (cần đăng nhập + trận thật, sandbox không đăng nhập được).
+> Xem mục Đợt 319 ngay dưới.)
+> Trước đó: **Đợt 317** (10/9/2026, thầy báo qua myLesson — CHECK THƯ MỤC/ACT KHÔNG THẤY MỤC VỪA
 > TẠO: webview ẩn myLesson mở lên MỘT LẦN khi mở app rồi sống suốt phiên, `readAll()` (core/store.js)
 > cache toàn bộ `users/{uid}/items` trong biến module-level và chỉ đọc lại khi `resetCache()` được
 > gọi (chỉ ở lúc đăng nhập) — nên thư mục AWord thầy tạo SAU khi mở myLesson không nằm trong cache,
@@ -355,9 +374,20 @@ không lặp chữ cũ. Act không có clue-set variants (VD: quiz thường) x�
 
 ### Commit + Push
 
-⬜ **CHƯA COMMIT** — cùng lý do trang in ở Đợt 318: chỉ nhìn thấy thật khi thầy tự bấm và cầm giấy.
-Chờ thầy thử trên act "WORDS" thật (đặc biệt: chọn lớp có thật trong Settings ▸ Classes, không phải
-nhánh "(No class)"/lỗi tải mà bàn thử này chỉ đi được tới) rồi mới commit + push.
+✅ **THẦY CHỈ ĐẠO COMMIT + PUSH TRỰC TIẾP QUA CHAT** (11/9/2026, "check commit + bàn giao + push") —
+CHƯA qua bước thầy tự bấm tay trên act thật/cầm giấy. Gộp chung 1 commit với Đợt 318 (cùng phiên,
+cùng chủ đề in ấn): `15e3ad8` (`Dot 318+319/320: In PAGE-FIT ... + dinh dang in Word ...`), ĐÃ PUSH,
+đã `curl` kiểm SHA-256 khớp tuyệt đối cả 4 file live (`core/print.js`/`core/app.css`/`core/icons.js`/
+`core/engine.js`) so với đúng nội dung trong commit.
+
+⚠️ **`core/engine.js`, `core/app.css`, `core/HUONG DAN CORE.md` có phiên song song khác đang sửa dở
+CÙNG lúc** (tính năng Showdown podium/team-split, tự đặt số "Đợt 319" — trùng với số ban đầu của đợt
+này, nên đợt này đã ĐỔI SANG "Đợt 320" để tránh đụng). Trước khi `git add`, đã soát riêng từng file
+bằng `git diff`, xác nhận cả 3 file đều bị TRỘN 2 phiên trong cùng cây làm việc; tách đúng hunk của
+mình bằng `git apply --cached <patch chỉ chứa hunk của mình>` (không phải `git add -p` vì cần soát
+kỹ trước khi chọn, không đoán) — kiểm lại `git diff --cached` sạch 100% không còn chữ "showdown"/
+"sd-pod"/"renderReviewPodium" nào trước khi commit. Cây làm việc của phiên kia GIỮ NGUYÊN, họ tự
+commit phần của mình sau.
 
 ### ⬜ VIỆC ĐANG CHỜ
 
@@ -457,9 +487,10 @@ CSS thuần không có khái niệm "nhắm đúng N trang" — phải theo mô 
 
 ### Commit + Push
 
-⬜ **CHƯA COMMIT** — đã bàn thử kỹ bằng máy (logic + DOM thật), nhưng đây là thay đổi core ảnh hưởng
-CẢ 4 định dạng in của MỌI act, và trang in là thứ chỉ nhìn thấy thật khi cầm giấy — theo đúng lệ dự án
-(rw-print.js Đợt 193/203 cũng vậy), chờ thầy **IN THỬ TRÊN GIẤY THẬT** vài mốc số câu trước khi commit.
+✅ **THẦY CHỈ ĐẠO COMMIT + PUSH TRỰC TIẾP QUA CHAT** (11/9/2026, "check commit + bàn giao + push") —
+CHƯA qua bước thầy tự IN THỬ TRÊN GIẤY THẬT (mục "còn chờ" bên dưới vẫn còn nguyên, không tự coi là
+đã xong). Gộp chung 1 commit với Đợt 320 (cùng phiên): `15e3ad8`, ĐÃ PUSH + đã kiểm SHA-256 khớp bản
+live (chi tiết soát phiên song song xem mục Commit + Push của Đợt 320 ngay bên trên — cùng 1 commit).
 
 ### ⬜ VIỆC ĐANG CHỜ
 
