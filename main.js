@@ -349,6 +349,7 @@ async function routeFromLocation() {
                 bo: (ct && ct.bo) || "", boTen: (ct && ct.boTen) || "",
                 mauType: (ct && ct.mauType) || a.activityType || "",
                 mauTen: (ct && ct.mauTen) || "",
+                che: (ct && ct.che) || "",     // ⭐ 11/09/2026 — "voice" | "text"
               }));
             } catch (_) {}
           },

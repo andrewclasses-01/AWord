@@ -8,7 +8,15 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **11/9/2026 (Đợt 319 — SHOWDOWN PODIUM: hai cột tên trái/phải thay cho hai số
+> Cập nhật lần cuối: **11/9/2026 (Đợt 321 — ICON LOA CHO BỘ NGHĨA VOICE, thầy yêu cầu qua myLesson:
+> nút công tắc TEXT/VOICE trong Options đeo icon loa cạnh chữ "Voice" (`buildContentSwitchRow()`,
+> core/options-panel.js), mỗi chip ENG1/ENG2… cũng đeo icon khi nửa VOICE đang đứng (`paintHalf()`
+> toggle class `is-voice-half` trên `seg`). Marker `MYACT:AW:ASSIGN` (main.js + engine.js::giaoBai)
+> nay kèm thêm `che:"voice"|"text"` (đọc từ `cheDoDangChon()` Đợt 312) để myLesson biết bộ nghĩa vừa
+> giao là TEXT hay VOICE — bảng BT App bên đó giờ cũng đeo icon loa cùng lúc. `node --check` sạch cả
+> 4 file JS. ⬜ CHƯA thử bằng mắt Options thật (cần đăng nhập, sandbox không đăng nhập được) — nửa
+> myLesson ĐÃ thử qua bàn thử trình duyệt, đúng. Xem GHI CHU DU AN.md Đợt 321)**.
+> Trước đó: **(Đợt 319 — SHOWDOWN PODIUM: hai cột tên trái/phải thay cho hai số
 > đếm nổi (thầy: "đã có số thứ tự trong tên rồi"), giới hạn lượt tích (2 bên không chênh quá 1 người,
 > luật nằm ngay trong `onclick` của nút tích), và LƯU LẠI THEO BẢNG lên Firestore (chỉ ghi ở 3 mốc:
 > đóng bảng / Esc / chuyển nút Table-List — không ghi giữa chừng lúc đang tích). `renderReviewPodium`

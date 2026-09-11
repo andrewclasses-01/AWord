@@ -1582,6 +1582,16 @@ html.aw-nhung .aw-below { display: none; }
    "voice" khi đang pending (xem `mode` ở buildContentSwitchRow). */
 .aw-opt-switch-btn.is-novoice { background: #14161c; color: #ffffff; }
 
+/* ⭐ 11/09/2026 (thầy chốt) — icon loa nhỏ ngay trước chữ "VOICE" của nút công
+   tắc TEXT/VOICE, để phân biệt ngay bằng mắt với TEXT (không icon). Cùng SVG
+   `icons.soundOn` dùng cho nút tắt/mở tiếng của trò chơi — một icon, một
+   nghĩa duy nhất trong toàn app. */
+.aw-opt-switch-ic {
+  display: inline-flex; width: 12px; height: 12px; margin-right: 4px;
+  vertical-align: -2px; flex: none;
+}
+.aw-opt-switch-ic svg { width: 100%; height: 100%; display: block; }
+
 /* ⭐⭐ Đợt 314 — khối hỏi/tiến trình tạo giọng ngay trong Options, mở dưới
    hàng TEXT|VOICE khi bấm nút VOICE còn đen. `grid-column: 1 / -1` để nằm
    tràn hết bề ngang của lưới 2 cột (`.has-variants`) thay vì bị ép vào một ô. */
@@ -7644,3 +7654,13 @@ body.aw-khung-mode .aw-giao-nen{display:none}
    cần một ngày ai đó thêm `display:` cho `.aw-seg-tick` là `hidden` hết ăn, dấu
    ✓ hiện sai ở nửa kia — sai CÂM, không lỗi nào hiện ra. */
 .aw-seg-tick[hidden] { display: none; }
+
+/* ⭐ 11/09/2026 (thầy chốt) — icon loa trên chip ENG1/ENG2… khi nửa VOICE đang
+   đứng (`.aw-seg.is-voice-half`, đặt trong `paintHalf()`). Ẩn tường minh khi
+   nửa TEXT — cùng lý do đã ghi ở `.aw-seg-tick[hidden]` ngay trên: đừng trông
+   vào default trình duyệt cho một phần tử nằm trong `.aw-seg-btn` (flex). */
+.aw-seg-voiceic {
+  display: none; width: 11px; height: 11px; margin-right: 3px; flex: none;
+}
+.aw-seg-voiceic svg { width: 100%; height: 100%; display: block; }
+.aw-seg.is-voice-half .aw-seg-voiceic { display: inline-flex; }

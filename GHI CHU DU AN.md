@@ -12,7 +12,23 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 319** (11/9/2026, thầy yêu cầu — SHOWDOWN PODIUM: hai cột tên trái/phải thay cho
+> Mới nhất: **Đợt 321** (11/9/2026, thầy yêu cầu qua myLesson — ICON LOA CHO BỘ NGHĨA VOICE TRONG
+> OPTIONS: nút công tắc TEXT/VOICE nay đeo icon loa (`icons.soundOn`) ngay cạnh chữ "Voice" —
+> `buildContentSwitchRow()` (core/options-panel.js); mỗi chip bộ nghĩa (ENG1/ENG2…) cũng đeo icon
+> loa khi NỬA ĐANG ĐỨNG là voice (`seg.classList.toggle("is-voice-half", mode==="voice")` trong
+> `paintHalf()`, CSS `.aw-seg.is-voice-half .aw-seg-voiceic{display:inline-flex}` — ẩn tường minh ở
+> nửa TEXT, cùng luật đã ghi ở `.aw-seg-tick[hidden]`). Lý do: myLesson (BT App) không có cách nào
+> phân biệt "ENG1 TEXT" với "ENG1 VOICE" trên bảng soạn bài (hai bộ khác hẳn nhau — xem Đợt 312),
+> nên marker `MYACT:AW:ASSIGN` (bắn lúc bấm START, cả hai cửa `main.js` lẫn `engine.js::giaoBai`)
+> nay kèm thêm khoá `che:"voice"|"text"` — đọc từ `cheDoDangChon()` (Đợt 312, CÙNG hàm form dùng để
+> tự chặn trùng, chắc chắn khớp với act con vừa tạo) trong `onCreated` của `openAssignmentSetup`
+> (assignment-ui.js). Đã kiểm: `node --input-type=module --check` sạch cả 3 file JS sửa
+> (options-panel.js/assignment-ui.js/engine.js) + `main.js`; brace CSS `app.css` cân bằng
+> (1861 mở = 1861 đóng). ⬜ CHƯA thử bằng mắt trên Options thật (cần đăng nhập + act thật để mở
+> form Set assignment — sandbox phiên này không đăng nhập được, chỉ soi code + syntax check). Nửa
+> myLesson của việc này (icon loa trong bảng BT App đọc `che`) ĐÃ thử bằng mắt qua bàn thử trình
+> duyệt của myLesson — xem `GHI CHU DU AN.md` bên đó. Xem mục Đợt 321 ngay dưới.)
+> Trước đó: **Đợt 319** (11/9/2026, thầy yêu cầu — SHOWDOWN PODIUM: hai cột tên trái/phải thay cho
 > hai số đếm nổi, giới hạn lượt tích (2 bên không chênh quá 1 người), và LƯU LẠI THEO BẢNG. `renderReviewPodium`
 > (core/showdown-review.js) bỏ hẳn `mkCount`/`paintCounts`/`placePodiumCounts`, thay bằng hai cột
 > `.aw-sd-pod-side` liệt kê tên theo thứ tự tích riêng của mỗi bên ("1. NHẬT NAM"), luật chênh lệch
@@ -302,6 +318,56 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 321 (11/9/2026, thầy yêu cầu qua myLesson) — **ICON LOA CHO BỘ NGHĨA VOICE (OPTIONS + MARKER GỬI MYLESSON)**
+
+Thầy soạn bài trong myLesson (BT App), nhìn bảng chỉ thấy chữ "ENG1"/"ENG2" cho cả hai act con
+TEXT lẫn VOICE — không cách nào phân biệt bằng mắt trong bảng đó, dù bên AWord (Options) đã có
+hàng công tắc TEXT/VOICE rõ ràng. Yêu cầu: thêm icon loa nhỏ cạnh ENG1/ENG2 khi chúng là VOICE, ở
+CẢ HAI nơi — bảng myLesson lẫn Options của chính AWord.
+
+### 1. Options — icon loa cạnh "Voice" và cạnh mỗi chip ENG1/ENG2 khi đang đứng ở nửa VOICE
+`core/options-panel.js::buildContentSwitchRow()`:
+- Nút công tắc `["voice","Voice"]` nay đeo `<span class="aw-opt-switch-ic">` chứa `icons.soundOn`
+  ngay trước chữ "Voice" (TEXT không đổi). CSS mới `.aw-opt-switch-ic` (app.css).
+- Mỗi chip bộ nghĩa trong `seg` (ENG1/ENG2/VI1/VI2…) đeo sẵn `<span class="aw-seg-voiceic">` —
+  ẨN mặc định. `paintHalf()` (chạy mỗi lần lật TEXT↔VOICE hoặc lúc dựng hàng) toggle class
+  `is-voice-half` trên chính `seg` theo `mode === "voice"`; CSS
+  `.aw-seg.is-voice-half .aw-seg-voiceic{display:inline-flex}` bật icon cho MỌI chip đang hiện ở
+  nửa đó (chip là MỘT nút vật lý dùng chung cho cả hai nửa — Đợt 150 cố tình không dựng lại nút
+  khi lật, nên icon phải bật/tắt qua class container, không gắn theo từng `k`). Ẩn tường minh bằng
+  CSS (không trông vào default trình duyệt) — cùng luật đã ghi ở `.aw-seg-tick[hidden]`.
+- Icon dùng lại `icons.soundOn` có sẵn (nút tắt/mở tiếng của trò chơi) — một icon, một nghĩa
+  duy nhất trong toàn app, đỡ phải vẽ SVG mới.
+
+### 2. Marker gửi myLesson — thêm khoá `che`
+myLesson không đọc được `options-panel.js` (chạy trong webview riêng của AWord), nên phải NÓI cho
+nó biết bằng marker lúc tạo bài giao:
+- `assignment-ui.js::openAssignmentSetup()` — `onCreated` nay trả thêm
+  `che: cheDoDangChon()` ("voice"|"text", Đợt 312 — CÙNG hàm form dùng để tự chặn trùng bộ
+  nghĩa/chế độ, nên chắc chắn khớp với act con vừa tạo, không đọc thô một trường khác).
+- Hai cửa build marker `MYACT:AW:ASSIGN:{...}` — `main.js` (đường `?giao=` nhúng myLesson) và
+  `engine.js::giaoBai()` (đường bridge myLesson gọi qua webview trực tiếp) — đều thêm
+  `che: (ct && ct.che) || ""`. ⛔ Marker cũ (trước Đợt 321) không có khoá này — myLesson tự lùi về
+  "text" (không hiện icon), không vỡ bài giao cũ.
+
+### Đã kiểm
+`node --input-type=module --check` sạch cả 4 file (options-panel.js/assignment-ui.js/engine.js/
+main.js); CSS `app.css` cân bằng ngoặc (1861 mở = 1861 đóng). ⬜ **CHƯA thử bằng mắt trên Options
+thật** — cần đăng nhập Google + act thật để mở form Set assignment, sandbox phiên này không đăng
+nhập được. Nửa myLesson của cùng việc này (icon loa đọc `che` trong bảng BT App) ĐÃ thử bằng mắt
+qua bàn thử trình duyệt của myLesson (dev server tĩnh cục bộ) — xác nhận đúng: act con `che:'voice'`
+hiện icon loa góc trái ô "ENG1", act con không có `che`/`che:'text'` (ENG2/VI1/VI2) không hiện gì,
+0 lỗi console. Xem `myLesson\GHI CHU DU AN.md` mục cùng ngày.
+
+⬜ **VIỆC ĐANG CHỜ — thầy cần làm thật:**
+1. Mở Options của một act có VOICE thật (form Set assignment hoặc trong game) — xác nhận icon loa
+   hiện cạnh "Voice" và cạnh các chip ENG1/ENG2 khi đứng ở nửa VOICE, TẮT khi đứng ở nửa TEXT.
+2. Giao thử MỘT bài bằng bộ nghĩa VOICE qua myLesson — xác nhận ô đó hiện icon loa trong bảng BT
+   App bên myLesson (bài giao TRƯỚC Đợt 321 sẽ không có icon, đúng — chỉ bài giao MỚI mới mang
+   `che`).
 
 ---
 

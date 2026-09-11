@@ -67,6 +67,7 @@
 import { el } from "./utils.js";
 import { makeHStepper, makeTimeStepper } from "./numberstepper.js";
 import { sound } from "./sound.js";
+import { icons } from "./icons.js";
 
 // ---- POINTS OFF / TIME COST: ONE scale for the whole app (Đợt 143) ----
 // Teacher: "đưa về 1 thang chung là 0-100, nấc 1 điểm". Before this, the same
@@ -1286,12 +1287,17 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
     buildSetSwitchButtons(switchEl, mergedSetSwitch, sel, onViewChange);
   } else {
     switchEl.append(el("div", "aw-opt-switch-thumb"));
+    // ⭐ 11/09/2026 (thầy chốt) — nút VOICE đeo icon loa NGAY CẠNH CHỮ: thầy
+    // nhìn hàng TEXT/VOICE này rất nhanh khi soạn bài, muốn biết ngay bên nào
+    // là giọng đọc mà không phải đọc chữ. TEXT giữ nguyên không icon.
     MODES.forEach(([key, label]) => {
       const isPendingVoice = key === "voice" && voicePending;
       const b = el("button", "aw-opt-switch-btn"
         + (mode === key ? " is-active" : "")
-        + (isPendingVoice ? " is-novoice" : ""), label);
+        + (isPendingVoice ? " is-novoice" : ""));
       b.type = "button";
+      if (key === "voice") b.append(el("span", "aw-opt-switch-ic", icons.soundOn));
+      b.append(document.createTextNode(label));
       if (isPendingVoice) b.title = "Voice not generated yet — tap to create it";
       modeBtns.set(key, b);
       switchEl.append(b);
@@ -1333,8 +1339,16 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
     seg = el("div", "aw-seg aw-seg-anim");
     seg.append(el("div", "aw-seg-thumb"));
     union.forEach(k => {
-      const b = el("button", "aw-seg-btn", labelOf(k));
+      const b = el("button", "aw-seg-btn");
       b.type = "button";
+      // ⭐ 11/09/2026 (thầy chốt) — icon loa CẠNH TÊN BỘ (ENG1/ENG2…) khi nửa
+      // ĐANG ĐỨNG là VOICE, ẩn khi nửa TEXT — cùng một nút vật lý đứng cho cả
+      // hai nửa (Đợt 150 cố tình không dựng lại khi lật TEXT↔VOICE), nên icon
+      // không gắn theo `k` mà theo class `is-voice-half` trên chính `seg`
+      // (đặt trong `paintHalf()` bên dưới, CSS `.aw-seg.is-voice-half
+      // .aw-seg-voiceic`). Ẩn tường minh bằng CSS, không trông vào default của
+      // trình duyệt — đúng luật đã ghi ở `.aw-seg-tick[hidden]`.
+      b.append(el("span", "aw-seg-voiceic", icons.soundOn), document.createTextNode(labelOf(k)));
       // ⭐⭐ Đợt 312 (thầy báo 09/9/2026) — dấu ✓ tra theo khoá "<chế độ>|<bộ>".
       // ⛔ Đợt 299 tra theo MỖI tên bộ nghĩa, nên ENG1 đeo ✓ ngay cả khi thầy mới
       // chỉ giao ENG1 VOICE mà đang đứng ở nửa TEXT — nói sai tình hình. Hai thứ
@@ -1374,6 +1388,9 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
   };
   const paintHalf = () => {
     if (!seg) return;
+    // ⭐ 11/09/2026 — icon loa của mỗi chip ENG1/ENG2… bật/tắt theo NỬA ĐANG
+    // ĐỨNG (xem chú thích lúc dựng nút ở trên).
+    seg.classList.toggle("is-voice-half", mode === "voice");
     const list = (mode === "voice" ? voiceVariants : variants) || [];
     // One choice is not a choice (the Đợt 143 OPT-IN rule): under 2 sets the
     // whole half fades out instead of showing a lone dead button.

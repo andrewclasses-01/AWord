@@ -752,6 +752,12 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
           boTen: boKey ? variantLabel(act.content, boKey) : "",    // "ENG1"  (chữ đọc được)
           mauType: playType,                                      // "quiz"
           mauTen: templateLabel(playType) || "",                  // "Quiz"
+          // ⭐ 11/09/2026 (thầy chốt) — "text" | "voice": myLesson không phân
+          // biệt được ENG1 TEXT với ENG1 VOICE trong bảng BT App (cùng chữ
+          // "ENG1"), nên phải nói kèm CHẾ ĐỘ đang chọn lúc bấm START, không chỉ
+          // tên bộ nghĩa. Đọc từ `cheDoDangChon()` (Đợt 312) — cùng một hàm form
+          // dùng để tự chặn trùng, chắc chắn khớp với act con vừa tạo.
+          che: cheDoDangChon(),                                   // "voice" | "text"
         });
       } catch (e) {
         start.disabled = back.disabled = false;
