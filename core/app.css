@@ -7655,12 +7655,24 @@ body.aw-khung-mode .aw-giao-nen{display:none}
    ✓ hiện sai ở nửa kia — sai CÂM, không lỗi nào hiện ra. */
 .aw-seg-tick[hidden] { display: none; }
 
-/* ⭐ 11/09/2026 (thầy chốt) — icon loa trên chip ENG1/ENG2… khi nửa VOICE đang
-   đứng (`.aw-seg.is-voice-half`, đặt trong `paintHalf()`). Ẩn tường minh khi
-   nửa TEXT — cùng lý do đã ghi ở `.aw-seg-tick[hidden]` ngay trên: đừng trông
-   vào default trình duyệt cho một phần tử nằm trong `.aw-seg-btn` (flex). */
+/* ⭐⭐ 11/09/2026 (thầy chốt, ĐỢT 2) — icon loa trên chip ENG1/ENG2… báo BỘ ĐÓ
+   CÓ GIỌNG ĐỌC, hiện Ở MỌI MODE (không riêng nửa VOICE — bản đầu chỉ bật khi
+   đứng ở nửa voice, mà mặc định vào Options luôn đứng ở TEXT nên coi như
+   không ai thấy icon). Phần tử này chỉ được `options-panel.js` gắn vào nút
+   khi bộ đó thật sự nằm trong `voiceVariants`.
+   ⛔⛔ BẪY ĐO ĐƯỢC bằng bàn thử `scratch/voice-icon-test.html`: bản đầu để icon
+   NẰM TRONG DÒNG CHỮ (`margin-right`) — bốn chip ENG1/ENG2/VI1/VI2 chia đều
+   nhau bằng `flex:1 1 0` (xem `.aw-seg-anim .aw-seg-btn`), ô rộng chỉ ~43px ở
+   panel thường (còn hẹp hơn ở `.is-compact-opts`); text "ENG1" một mình đã gần
+   chạm mép, cộng icon 14px là TRÀN, `text-overflow:ellipsis` cắt cụt "ENG1"
+   thành "ENG" — cái dấu báo lại làm chữ khó đọc hơn, phản tác dụng. Vá bằng
+   DẤU GÓC (`position:absolute`, không chiếm chỗ dòng chữ) thay vì dấu trong
+   dòng — giống hệt cách `.bw-co-nghe`/`.bw-co-voice` bên myLesson đã làm.
+   Không đặt `color` riêng: icon dùng `stroke="currentColor"` nên tự ăn theo
+   màu chữ hiện tại của `.aw-seg-btn` (xám khi chưa chọn, xanh `is-on` khi
+   đang chọn) — không cần khai `color` thêm. */
 .aw-seg-voiceic {
-  display: none; width: 11px; height: 11px; margin-right: 3px; flex: none;
+  position: absolute; top: 1px; right: 1px; z-index: 2; pointer-events: none;
+  display: flex; width: 8px; height: 8px;
 }
 .aw-seg-voiceic svg { width: 100%; height: 100%; display: block; }
-.aw-seg.is-voice-half .aw-seg-voiceic { display: inline-flex; }

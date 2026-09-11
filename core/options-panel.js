@@ -1341,14 +1341,18 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
     union.forEach(k => {
       const b = el("button", "aw-seg-btn");
       b.type = "button";
-      // ⭐ 11/09/2026 (thầy chốt) — icon loa CẠNH TÊN BỘ (ENG1/ENG2…) khi nửa
-      // ĐANG ĐỨNG là VOICE, ẩn khi nửa TEXT — cùng một nút vật lý đứng cho cả
-      // hai nửa (Đợt 150 cố tình không dựng lại khi lật TEXT↔VOICE), nên icon
-      // không gắn theo `k` mà theo class `is-voice-half` trên chính `seg`
-      // (đặt trong `paintHalf()` bên dưới, CSS `.aw-seg.is-voice-half
-      // .aw-seg-voiceic`). Ẩn tường minh bằng CSS, không trông vào default của
-      // trình duyệt — đúng luật đã ghi ở `.aw-seg-tick[hidden]`.
-      b.append(el("span", "aw-seg-voiceic", icons.soundOn), document.createTextNode(labelOf(k)));
+      // ⭐⭐ 11/09/2026 (thầy chốt, ĐỢT 2) — icon loa cạnh tên bộ (ENG1/ENG2…)
+      // nay bám theo BỘ ĐÓ CÓ GIỌNG HAY KHÔNG, KHÔNG bám theo nửa đang đứng.
+      // ⛔ Bản đầu (cùng ngày) chỉ bật icon khi `mode==="voice"` — thầy vào
+      // Options thật thì mặc định luôn đứng ở nửa TEXT (nửa phổ biến nhất) nên
+      // KHÔNG BAO GIỜ thấy icon, coi như tính năng vô hình. Thầy chốt: icon là
+      // để biết "bộ này CÓ SẴN giọng đọc", một sự thật KHÔNG đổi theo việc đang
+      // xem nửa nào — nên hiện Ở MỌI MODE, chỉ ẩn với bộ không có giọng (VI1/VI2
+      // trong ví dụ thầy chỉ). Vì vậy chỉ cần XÉT TĨNH một lần ở đây (thành viên
+      // của `voiceVariants`), không cần `paintHalf()` bật/tắt theo `mode` nữa.
+      const coVoice = (voiceVariants || []).includes(k);
+      if (coVoice) b.append(el("span", "aw-seg-voiceic", icons.soundOn));
+      b.append(document.createTextNode(labelOf(k)));
       // ⭐⭐ Đợt 312 (thầy báo 09/9/2026) — dấu ✓ tra theo khoá "<chế độ>|<bộ>".
       // ⛔ Đợt 299 tra theo MỖI tên bộ nghĩa, nên ENG1 đeo ✓ ngay cả khi thầy mới
       // chỉ giao ENG1 VOICE mà đang đứng ở nửa TEXT — nói sai tình hình. Hai thứ
@@ -1388,9 +1392,6 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
   };
   const paintHalf = () => {
     if (!seg) return;
-    // ⭐ 11/09/2026 — icon loa của mỗi chip ENG1/ENG2… bật/tắt theo NỬA ĐANG
-    // ĐỨNG (xem chú thích lúc dựng nút ở trên).
-    seg.classList.toggle("is-voice-half", mode === "voice");
     const list = (mode === "voice" ? voiceVariants : variants) || [];
     // One choice is not a choice (the Đợt 143 OPT-IN rule): under 2 sets the
     // whole half fades out instead of showing a lone dead button.

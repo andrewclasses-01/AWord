@@ -8,14 +8,21 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **11/9/2026 (Đợt 321 — ICON LOA CHO BỘ NGHĨA VOICE, thầy yêu cầu qua myLesson:
-> nút công tắc TEXT/VOICE trong Options đeo icon loa cạnh chữ "Voice" (`buildContentSwitchRow()`,
-> core/options-panel.js), mỗi chip ENG1/ENG2… cũng đeo icon khi nửa VOICE đang đứng (`paintHalf()`
-> toggle class `is-voice-half` trên `seg`). Marker `MYACT:AW:ASSIGN` (main.js + engine.js::giaoBai)
-> nay kèm thêm `che:"voice"|"text"` (đọc từ `cheDoDangChon()` Đợt 312) để myLesson biết bộ nghĩa vừa
-> giao là TEXT hay VOICE — bảng BT App bên đó giờ cũng đeo icon loa cùng lúc. `node --check` sạch cả
-> 4 file JS. ⬜ CHƯA thử bằng mắt Options thật (cần đăng nhập, sandbox không đăng nhập được) — nửa
-> myLesson ĐÃ thử qua bàn thử trình duyệt, đúng. Xem GHI CHU DU AN.md Đợt 321)**.
+> Cập nhật lần cuối: **11/9/2026 tối (Đợt 321b — thầy xem ảnh chụp app thật rồi chỉnh lại icon loa
+> Đợt 321, đoạn dưới): icon chip ENG1/ENG2 trong Options nay HIỆN Ở MỌI MODE (bản 321 chỉ bật khi
+> đứng ở nửa VOICE — mặc định luôn đứng TEXT nên coi như vô hình), xét tĩnh
+> `coVoice=(voiceVariants||[]).includes(k)` thay vì toggle theo `mode`. ⛔⛔ Bàn thử
+> `scratch/voice-icon-test.html` (gọi thẳng `buildOptionsBody()` thật) bắt được: icon NẰM TRONG DÒNG
+> CHỮ làm 4 chip chia đều `flex:1 1 0` (~43px, hẹp hơn ở Fight `.is-compact-opts`) TRÀN chữ, "ENG1"
+> bị `ellipsis` cắt thành "ENG" — vá bằng **dấu góc** `position:absolute` (không chiếm chỗ dòng chữ),
+> không khai `color` riêng (ăn `currentColor` của nút). Nút "Voice" hàng công tắc TEXT/VOICE giữ
+> nguyên kiểu inline (rộng rãi, không dính bẫy). `node --check` sạch, brace `app.css` cân bằng
+> (1860=1860), đo DOM xác nhận icon góc không tràn ra ngoài nút kể cả Fight mode. ⬜ CHƯA đăng nhập
+> trang thật để bấm tay. Xem GHI CHU DU AN.md Đợt 321b)**.
+> Trước đó: **(Đợt 321 — ICON LOA CHO BỘ NGHĨA VOICE, thầy yêu cầu qua myLesson: nút công tắc
+> TEXT/VOICE trong Options đeo icon loa cạnh chữ "Voice"; marker `MYACT:AW:ASSIGN` (main.js +
+> engine.js::giaoBai) kèm thêm `che:"voice"|"text"` (đọc từ `cheDoDangChon()` Đợt 312) để myLesson
+> biết bộ nghĩa vừa giao là TEXT hay VOICE. Xem GHI CHU DU AN.md Đợt 321)**.
 > Trước đó: **(Đợt 319 — SHOWDOWN PODIUM: hai cột tên trái/phải thay cho hai số
 > đếm nổi (thầy: "đã có số thứ tự trong tên rồi"), giới hạn lượt tích (2 bên không chênh quá 1 người,
 > luật nằm ngay trong `onclick` của nút tích), và LƯU LẠI THEO BẢNG lên Firestore (chỉ ghi ở 3 mốc:

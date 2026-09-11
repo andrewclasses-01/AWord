@@ -12,22 +12,31 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 321** (11/9/2026, thầy yêu cầu qua myLesson — ICON LOA CHO BỘ NGHĨA VOICE TRONG
+> Mới nhất: **Đợt 321b** (11/9/2026 tối, thầy xem ảnh chụp app thật rồi chỉnh lại — ICON LOA
+> TRONG OPTIONS: HIỆN Ở MỌI MODE, KHÔNG RIÊNG NỬA VOICE: bản Đợt 321 (đoạn dưới) chỉ bật icon chip
+> ENG1/ENG2 khi `mode==="voice"` — mà mặc định vào Options LUÔN đứng ở nửa TEXT nên thầy KHÔNG BAO
+> GIỜ thấy icon, coi như vô hình. Nay `buildContentSwitchRow()` xét TĨNH một lần lúc dựng nút:
+> `coVoice = (voiceVariants||[]).includes(k)` — bộ nào CÓ giọng thì đeo icon LUÔN bất kể đang xem nửa
+> nào; bỏ hẳn `paintHalf()` toggle class `is-voice-half`. ⛔⛔ **BẪY BẮT ĐƯỢC qua bàn thử** (dựng
+> `scratch/voice-icon-test.html` gọi THẲNG `buildOptionsBody()` thật, xoá sau khi xong): icon NẰM
+> TRONG DÒNG CHỮ (kiểu Đợt 321) thì 4 chip ENG1/ENG2/VI1/VI2 chia đều bằng `flex:1 1 0`, ô chỉ ~43px
+> (còn hẹp hơn ở `.is-compact-opts` — **Fight mode**), text "ENG1" một mình đã gần chạm mép, cộng icon
+> là TRÀN, `text-overflow:ellipsis` cắt cụt "ENG1" thành "ENG" — vá bằng **dấu góc**
+> (`.aw-seg-voiceic{position:absolute;top:1px;right:1px;width:8px;height:8px}`, không `color` riêng,
+> ăn `currentColor` của nút) thay vì dấu trong dòng chữ. Nút "Voice" của hàng công tắc TEXT/VOICE
+> (`.aw-opt-switch-ic`) giữ nguyên kiểu inline — nút đó chỉ 2 lựa chọn nên rộng rãi, không bị bẫy này.
+> Đã kiểm bằng harness gọi hàm thật, DOM đo `getBoundingClientRect` xác nhận icon góc KHÔNG tràn ra
+> ngoài nút kể cả ở Fight mode compact; `node --check` sạch; brace `app.css` cân bằng (1860=1860).
+> ⬜ CHƯA đăng nhập trang thật để bấm tay. Xem mục **Đợt 321b** ngay dưới.
+> Trước đó: **Đợt 321** (11/9/2026, thầy yêu cầu qua myLesson — ICON LOA CHO BỘ NGHĨA VOICE TRONG
 > OPTIONS: nút công tắc TEXT/VOICE nay đeo icon loa (`icons.soundOn`) ngay cạnh chữ "Voice" —
-> `buildContentSwitchRow()` (core/options-panel.js); mỗi chip bộ nghĩa (ENG1/ENG2…) cũng đeo icon
-> loa khi NỬA ĐANG ĐỨNG là voice (`seg.classList.toggle("is-voice-half", mode==="voice")` trong
-> `paintHalf()`, CSS `.aw-seg.is-voice-half .aw-seg-voiceic{display:inline-flex}` — ẩn tường minh ở
-> nửa TEXT, cùng luật đã ghi ở `.aw-seg-tick[hidden]`). Lý do: myLesson (BT App) không có cách nào
+> `buildContentSwitchRow()` (core/options-panel.js). Lý do: myLesson (BT App) không có cách nào
 > phân biệt "ENG1 TEXT" với "ENG1 VOICE" trên bảng soạn bài (hai bộ khác hẳn nhau — xem Đợt 312),
 > nên marker `MYACT:AW:ASSIGN` (bắn lúc bấm START, cả hai cửa `main.js` lẫn `engine.js::giaoBai`)
 > nay kèm thêm khoá `che:"voice"|"text"` — đọc từ `cheDoDangChon()` (Đợt 312, CÙNG hàm form dùng để
 > tự chặn trùng, chắc chắn khớp với act con vừa tạo) trong `onCreated` của `openAssignmentSetup`
-> (assignment-ui.js). Đã kiểm: `node --input-type=module --check` sạch cả 3 file JS sửa
-> (options-panel.js/assignment-ui.js/engine.js) + `main.js`; brace CSS `app.css` cân bằng
-> (1861 mở = 1861 đóng). ⬜ CHƯA thử bằng mắt trên Options thật (cần đăng nhập + act thật để mở
-> form Set assignment — sandbox phiên này không đăng nhập được, chỉ soi code + syntax check). Nửa
-> myLesson của việc này (icon loa trong bảng BT App đọc `che`) ĐÃ thử bằng mắt qua bàn thử trình
-> duyệt của myLesson — xem `GHI CHU DU AN.md` bên đó. Xem mục Đợt 321 ngay dưới.)
+> (assignment-ui.js). Nửa myLesson của việc này (icon loa trong bảng BT App đọc `che`) ĐÃ thử bằng
+> mắt qua bàn thử trình duyệt của myLesson — xem `GHI CHU DU AN.md` bên đó. Xem mục Đợt 321 ngay dưới.)
 > Trước đó: **Đợt 319** (11/9/2026, thầy yêu cầu — SHOWDOWN PODIUM: hai cột tên trái/phải thay cho
 > hai số đếm nổi, giới hạn lượt tích (2 bên không chênh quá 1 người), và LƯU LẠI THEO BẢNG. `renderReviewPodium`
 > (core/showdown-review.js) bỏ hẳn `mkCount`/`paintCounts`/`placePodiumCounts`, thay bằng hai cột
@@ -318,6 +327,57 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 321b (11/9/2026 tối, thầy xem ảnh chụp app thật rồi chỉnh lại) — **ICON LOA TRONG OPTIONS: HIỆN Ở MỌI MODE + VÁ BẪY TRÀN CHỮ CHIP**
+
+Thầy nêu 2 điều sau khi xem ảnh chụp: *(1)* myLesson — icon phải cùng màu ENG1 và đứng bên phải
+chữ (mục riêng, xem `myLesson\GHI CHU DU AN.md` chặng cùng ngày); *(2)* AWord — "options của các
+game trong mọi mode cũng hiển thị icon loa". Đọc kỹ ý (2): bản Đợt 321 chỉ bật icon chip ENG1/ENG2
+khi `mode === "voice"` (nửa đang đứng) — mà vào Options LUÔN mặc định đứng ở nửa TEXT (nửa phổ biến
+nhất), nên thầy **không bao giờ** thấy icon đó, coi như tính năng vô hình.
+
+### 1. Icon chip nay xét TĨNH, không phụ thuộc nửa đang đứng
+`core/options-panel.js::buildContentSwitchRow()` — trong `union.forEach(k => …)` (chỗ dựng từng
+nút chip), thay vì gắn icon rồi chờ `paintHalf()` bật/tắt theo `mode`, tính thẳng
+`coVoice = (voiceVariants||[]).includes(k)` — bộ nào NẰM TRONG danh sách có giọng thì đeo icon
+NGAY LÚC DỰNG, không đổi theo lượt lật TEXT↔VOICE nữa. Xoá dòng
+`seg.classList.toggle("is-voice-half", mode==="voice")` trong `paintHalf()` (không còn ai đọc class
+đó). Bộ không có giọng (VI1/VI2 trong ví dụ thầy chỉ) không bao giờ đeo icon — đúng ý ban đầu.
+
+### 2. ⛔⛔ BẪY BẮT ĐƯỢC: icon-trong-dòng-chữ làm TRÀN chip hẹp (đặc biệt Fight mode)
+Dựng bàn thử `scratch/voice-icon-test.html` (gọi THẲNG `buildOptionsBody()` thật, KHÔNG đụng
+Firestore, xoá ngay sau khi xong) — 4 kịch bản cạnh nhau: (A) style Set assignment (có
+`templatePicker`), (B) Options trong game (không `templatePicker`), (C) **Fight mode**
+`.is-compact-opts` (bàn hẹp nhất), (D) act không có voice. Đo `getBoundingClientRect` trên DOM thật:
+4 chip ENG1/ENG2/VI1/VI2 chia đều bằng `flex:1 1 0` (`.aw-seg-anim .aw-seg-btn`) — panel thường mỗi
+ô chỉ **~43px**, compact còn **~30px**. Chữ "ENG1" một mình đã gần khít mép trong (còn ~27px sau
+padding); cộng icon kiểu Đợt 321 (11px + 3px margin = 14px chiếm trong dòng) là TRÀN hẳn —
+`overflow:hidden;text-overflow:ellipsis` của `.aw-seg-btn` cắt cụt "ENG1" thành "ENG" — dấu báo lại
+làm chữ khó đọc hơn, **phản đúng mục đích** icon sinh ra để làm.
+
+### 3. Vá — icon chuyển thành DẤU GÓC, không chiếm chỗ dòng chữ
+`app.css` — `.aw-seg-voiceic` đổi từ `display:inline-flex; margin-right:3px` (chiếm không gian
+trong dòng) sang `position:absolute; top:1px; right:1px; width:8px; height:8px` (góc trên-phải nút,
+không đụng tới bề rộng dành cho chữ). Không khai `color` riêng: SVG `icons.soundOn` có
+`stroke="currentColor"` nên tự ăn màu chữ HIỆN TẠI của `.aw-seg-btn` (xám khi chưa chọn, xanh khi
+`.is-on`) — đổi trạng thái chọn thì icon đổi màu theo, không cần đồng bộ tay ở hai chỗ. Đo lại: icon
+góc **không tràn ra ngoài nút** kể cả ở Fight mode compact (`icRight ≤ btnRight` mọi trường hợp đo
+được), chữ "ENG1"/"ENG2" không còn bị `ellipsis` cắt cụt ở cả 4 kịch bản A/B/C/D.
+⛔ **Nút "Voice" của hàng công tắc TEXT/VOICE** (`.aw-opt-switch-ic`, cạnh chữ "Voice") **GIỮ NGUYÊN
+kiểu inline** của Đợt 321, KHÔNG đổi — hàng đó chỉ có 2 lựa chọn (Text/Voice) nên mỗi nút rộng gần
+nửa panel, thừa chỗ, không dính bẫy chip 4-nút chia đều ở trên.
+
+### Đã kiểm
+`node --input-type=module --check` sạch `options-panel.js`; brace `app.css` cân bằng (1860 mở =
+1860 đóng, không đổi so với trước vì chỉ sửa RULE có sẵn, không thêm/bớt khối). Bàn thử harness 4
+kịch bản (A/B/C/D) như mục 2 ở trên — B/C có icon đúng chỗ đúng bộ, D không icon (đúng, act không
+voice), A (Set assignment) icon + `templatePicker` không đụng nhau. Đã xoá
+`scratch/voice-icon-test.html` sau khi xong.
+⬜ **CHƯA đăng nhập trang aword thật** để bấm tay trên act có giọng thật (sandbox phiên này không
+đăng nhập Google được) — thầy mở Options một act voice thật, lật qua cả Fight mode, xác nhận icon
+đứng góc chip ENG1/ENG2, KHÔNG đè lên chữ, KHÔNG tràn ra ngoài nút.
 
 ---
 
