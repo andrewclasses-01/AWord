@@ -6745,6 +6745,12 @@ html.aw-nhung .aw-below { display: none; }
   display: flex; flex-direction: column; gap: calc(0.35 * var(--aw-u));   /* "khoảng cách rất nhỏ" */
   padding: calc(0.6 * var(--aw-u)) 0 calc(1 * var(--aw-u));
 }
+/* ⭐⭐⭐ Đợt 323 (thầy: "bỏ hiển thị thanh cuộn") — still scrolls (a long class
+   still needs it), just without a visible track/thumb. Three rules for three
+   engines: Firefox reads the property, Chromium/Electron (what TOMKO and every
+   myX column actually run) reads the pseudo-element, old Edge read `-ms-`. */
+.aw-sd-pod, .aw-sd-pod-side { scrollbar-width: none; -ms-overflow-style: none; }
+.aw-sd-pod::-webkit-scrollbar, .aw-sd-pod-side::-webkit-scrollbar { display: none; width: 0; height: 0; }
 /* ⭐⭐⭐ Đợt 319 — THE SCROLLER AND ITS TWO NAME COLUMNS, side by side (replaces
    Đợt 207/208's scroller-plus-two-floating-digits: thầy, "bỏ ô số đếm tích đi
    vì đã có số thứ tự trong tên rồi" — so the count moved INTO a list instead of
@@ -6760,18 +6766,25 @@ html.aw-nhung .aw-below { display: none; }
    so a long roster never grows the funnel's own height to match. */
 .aw-sd-pod-side {
   flex: 0 0 17%; min-width: 0; min-height: 0; overflow-y: auto;
-  display: flex; flex-direction: column; gap: calc(0.25 * var(--aw-u));
+  display: flex; flex-direction: column;
   padding: calc(0.6 * var(--aw-u)) calc(0.3 * var(--aw-u)) calc(1 * var(--aw-u));
 }
-.aw-sd-pod-side-head {
-  flex: 0 0 auto; position: sticky; top: 0; z-index: 1;
-  font-size: calc(1.4 * var(--aw-u)); font-weight: 800; letter-spacing: .05em;
-  color: #6b7a90; text-align: center; padding-bottom: calc(0.3 * var(--aw-u));
-  background: #f3f6fa;
+/* ⭐⭐⭐ Đợt 323 (thầy: "bỏ chữ left/right") — the LEFT/RIGHT header row is gone;
+   the list below is the column's only content now.
+   ⭐⭐⭐ Đợt 323 (thầy: "tên đặt vào giữa theo chiều cao... có thêm học sinh thì
+   dàn đều để cân bằng ở giữa") — the list GROWS to fill the column
+   (`flex:1 1 auto`) and spaces its own children with `space-evenly`: one name
+   sits dead centre, several spread out with equal gaps above/below/between —
+   both readings of "centred" thầy asked for, from the one rule. */
+.aw-sd-pod-side-list {
+  flex: 1 1 auto; display: flex; flex-direction: column; justify-content: space-evenly;
+  gap: calc(0.3 * var(--aw-u));
 }
-.aw-sd-pod-side-list { display: flex; flex-direction: column; gap: calc(0.3 * var(--aw-u)); }
+/* ⭐⭐⭐ Đợt 323 — size lớn hơn cùng đợt tên trong phễu tăng (thầy: "size tên
+   tăng lên thêm"); không còn số thứ tự trước tên (xem paintSides trong
+   showdown-review.js). */
 .aw-sd-pod-side-item {
-  font-size: calc(1.55 * var(--aw-u)); font-weight: 700; color: #23303e;
+  font-size: calc(1.9 * var(--aw-u)); font-weight: 700; color: #23303e;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   font-variant-numeric: tabular-nums;
 }
@@ -6779,16 +6792,22 @@ html.aw-nhung .aw-below { display: none; }
    "lean toward the middle" idiom the tick dots themselves already use. */
 .aw-sd-pod-side.is-l .aw-sd-pod-side-item { text-align: right; }
 .aw-sd-pod-side.is-r .aw-sd-pod-side-item { text-align: left; }
-/* ⭐⭐ Đợt 209 (thầy) — EVERYBODY PLACED: "2 số tổng ô tích 2 bên sẽ chuyển thành
-   màu xanh lá rõ nét". ⭐⭐⭐ Đợt 319 carries the same green over onto the two
-   column heads now that the digits themselves are gone. Green here is the
-   app's own "this is right" green (`#16a34a`, the same one pctBand's top band
-   uses) — not a fourth green. */
-.aw-sd-podwrap.is-all .aw-sd-pod-side-head { color: #16a34a; }
 .aw-sd-pod-row {
   position: relative; display: flex; justify-content: center; align-items: center;
   gap: calc(0.9 * var(--aw-u));      /* only ever seen when the tick boxes are there */
 }
+/* ⭐⭐⭐ Đợt 323 (thầy: "có phân cách bằng 1 nét đứt với cụm các ô chưa chọn") —
+   a dashed rule between the still-ranked funnel and the picked group below it.
+   `display:none` until there is at least one picked row (layoutRows toggles
+   `.is-on`) so it never shows as an empty line above an untouched board. Not
+   part of the FLIP animation itself — it snaps in/out with the reorder rather
+   than fading, same moment the rows themselves jump to their measured start. */
+.aw-sd-pod-sep {
+  display: none; flex: 0 0 auto;
+  border: none; border-top: calc(0.16 * var(--aw-u)) dashed #b7c2d0;
+  margin: calc(0.5 * var(--aw-u)) calc(1 * var(--aw-u));
+}
+.aw-sd-pod-sep.is-on { display: block; }
 .aw-sd-pod-box {
   position: relative;      /* Đợt 207 — the sparkle layer is positioned against it */
   width: var(--w); box-sizing: border-box; min-height: calc(7.2 * var(--aw-u));
@@ -6801,9 +6820,18 @@ html.aw-nhung .aw-below { display: none; }
 .aw-sd-pod-box.is-m1 { background: linear-gradient(100deg, #fff7db, #ffe8a3); border-color: #efc03c; }
 .aw-sd-pod-box.is-m2 { background: linear-gradient(100deg, #f8fafd, #e5ebf2); border-color: #c3ced9; }
 .aw-sd-pod-box.is-m3 { background: linear-gradient(100deg, #fdf0e4, #f6dcc2); border-color: #dda56a; }
+/* ⭐⭐⭐ Đợt 323 (thầy: "các ô đã chọn có nền màu xanh nhạt") — a picked row now
+   sits below the dashed separator (see `.aw-sd-pod-sep` and `layoutRows` in
+   showdown-review.js) and reads as "done" rather than "ranked": flat light
+   blue wins over the medal gradient, which is why this selector's three
+   classes outrank `.aw-sd-pod-box.is-m1/2/3`'s two without needing `!important`. */
+.aw-sd-pod-row.is-picked .aw-sd-pod-box { background: #dbeafe; border-color: #93c5fd; }
 .aw-sd-pod-who { display: flex; align-items: center; gap: calc(0.8 * var(--aw-u)); min-width: 0; flex: 1 1 auto; }
 .aw-sd-pod-name {
-  font-size: calc(2.6 * var(--aw-u)); font-weight: 800; color: #23303e; line-height: 1.3;
+  /* ⭐⭐⭐ Đợt 323 (thầy: "size tên tăng lên thêm") — up from 2.6; names are now
+     ALWAYS the short "N.B.AN" form (see showdown-review.js), so there is room
+     to print them bigger without fitPodiumNames having to shrink as often. */
+  font-size: calc(3.3 * var(--aw-u)); font-weight: 800; color: #23303e; line-height: 1.3;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   /* ⚠️ Đợt 207 — `min-width:0` is what lets a flex item shrink below its own
      text. Without it the name refuses to narrow, the ellipsis never appears —
@@ -6958,17 +6986,22 @@ html.aw-nhung .aw-below { display: none; }
   12%      { opacity: .95; transform: scale(1) rotate(25deg); }
   30%      { opacity: 0; transform: scale(.35) rotate(50deg); }
 }
-.aw-sd-pod-team {
-  flex: 0 0 auto; font-size: calc(1.5 * var(--aw-u)); font-weight: 800; color: #6b7a90;
-  background: rgba(255, 255, 255, .75); border-radius: calc(0.5 * var(--aw-u)); padding: calc(0.15 * var(--aw-u)) calc(0.6 * var(--aw-u));
-}
+/* ⭐⭐⭐ Đợt 323 (thầy: "bỏ tên TEAM trong các ô tên học sinh") — `.aw-sd-pod-team`
+   removed along with the code that built it; the gold/silver/bronze box and the
+   two side columns already say which team/place without a third chip. */
 .aw-sd-pod-stats {
-  flex: 0 0 auto; display: flex; align-items: center; gap: calc(1.1 * var(--aw-u));
-  font-size: calc(2.1 * var(--aw-u)); font-weight: 800; white-space: nowrap;
+  flex: 0 0 auto; display: flex; align-items: center; gap: calc(1.1 * var(--aw-u) * var(--sc, 1));
+  /* ⭐⭐⭐ Đợt 323 (thầy: "các ô ở dưới... giảm size của kết quả, %, thời gian đi
+     tương ứng để không bị co mất nội dung") — `--sc` is the SAME ratio the box's
+     own `--w` tapers by (set alongside it in showdown-review.js), so a bottom
+     row's stats shrink exactly as much as its box narrows and never have to
+     clip what the top row shows in full. */
+  font-size: calc(2.1 * var(--aw-u) * var(--sc, 1)); font-weight: 800; white-space: nowrap;
 }
-.aw-sd-pod-stats svg { width: calc(1.9 * var(--aw-u)); height: calc(1.9 * var(--aw-u)); vertical-align: calc(-0.22 * var(--aw-u)); }
-.aw-sd-pod-ok { color: #2ec27e; }
-.aw-sd-pod-bad { color: #e03131; }
+/* ⭐⭐⭐ Đợt 323 (thầy: "phần đúng sai chuyển thành dạng số câu đúng trên tổng
+   thể, VD: 19/20 (19 màu xanh, 20 màu đen)") — replaces the old ✓/✗ pair. */
+.aw-sd-pod-score .is-right { color: #2ec27e; }
+.aw-sd-pod-score .is-total { color: #23303e; }
 .aw-sd-pod-time { color: #2563eb; }
 /* ⭐ Đợt 180 — % câu đúng trong ô rank (thầy, 17/8/2026). Dùng ĐÚNG 5 dải màu
    của danh sách (pctBand, core/showdown.js) chứ không đặt bảng màu thứ hai:

@@ -8,7 +8,26 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **11/9/2026 (Đợt 322 — thầy báo qua chat: tạo bài giao cho lớp B1AH bị chặn
+> Cập nhật lần cuối: **12/9/2026 (Đợt 323 — SHOWDOWN PODIUM: thầy gửi 2 ảnh chụp bảng thật rồi liệt
+> kê 10 điều chỉnh giao diện. Tên trong phễu VÀ hai cột chọn nay LUÔN viết tắt "N.B.AN"
+> (`assignShortLabels`, group-aware — không còn chỉ là lưới cuối của `fitPodiumNames` khi tràn); bỏ
+> chữ LEFT/RIGHT và số thứ tự trước tên trong cột chọn, cột co giãn lấp cột + `justify-content:
+> space-evenly` để dàn đều/căn giữa theo chiều cao; bỏ chip "Team N" trong ô tên (`showTeam` gỡ khỏi
+> tham số `renderReviewPodium`); ✓/✗ hai số đổi thành MỘT phân số `right/total` (xanh/đen); thêm biến
+> `--sc` (cùng công thức `--w` sẵn có) nhân vào cỡ chữ khối thống kê để hàng hẹp cuối phễu không tràn
+> chữ — đúng bức ảnh phóng to hàng 13–18 thầy gửi. ⭐⭐⭐ Tích một em nay DỜI CẢ HÀNG xuống khu vực đã
+> chọn (vạch đứt phân cách, nền xanh nhạt `#dbeafe`), FLIP animation mượt cả hai chiều (`layoutRows()`
+> mới: đo `getBoundingClientRect()` mọi hàng trước/sau khi `.append()` lại thứ tự, `row.animate()` từ
+> độ lệch về 0). Bỏ hiển thị thanh cuộn (`scrollbar-width:none`+`::-webkit-scrollbar{display:none}`),
+> vẫn cuộn được. Toàn bộ trong `renderReviewPodium()` (`core/showdown-review.js`) + CSS `.aw-sd-pod*`
+> (`core/app.css`), không đụng file khác. `node --input-type=module --check` sạch; brace `app.css`
+> cân bằng (1861=1861). Bàn thử: mở harness có sẵn `scratch/showdown-review-test.html` qua dev server
+> cục bộ (`.claude/launch.json` "aword"), bấm Podium, soi DOM thật qua `javascript_tool` — tên viết
+> tắt đúng, điểm "2/3" đúng màu, tích/bỏ tích dời hàng + đổi nền + vạch đứt đúng như tả, `--sc` mỗi
+> hàng đúng công thức (1.000→0.650 cho phễu 5 người), 0 lỗi console. ⬜ CHƯA đăng nhập trang aword
+> thật để bấm tay (sandbox không đăng nhập Google được) — thầy tự mở Podium thật, tích 1 em xem có
+> dời mượt không, và bảng lớp đông (16+ HS) không vỡ ở hàng cuối. Xem GHI CHU DU AN.md Đợt 323)**.
+> Trước đó: **(Đợt 322 — thầy báo qua chat: tạo bài giao cho lớp B1AH bị chặn
 > oan với lý do "đã có bài giao ANAGRAM của B2B" — B1AH chưa từng tạo act-template này. Gốc rễ:
 > phép chặn trùng của Đợt 299 (`baiGiaoCuaAct()` trong `core/assignment-ui.js::doStart()`) chỉ lọc
 > theo `activityId`, KHÔNG lọc theo lớp (`folderId`), nên soi nhầm bài giao của MỌI lớp trong tài

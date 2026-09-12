@@ -12,7 +12,33 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 321b** (11/9/2026 tối, thầy xem ảnh chụp app thật rồi chỉnh lại — ICON LOA
+> Mới nhất: **Đợt 323** (12/9/2026, thầy gửi 2 ảnh chụp bảng Podium thật rồi liệt kê 10 điều chỉnh
+> — LÀM LẠI GIAO DIỆN SHOWDOWN PODIUM: tên trong phễu VÀ hai cột chọn nay LUÔN viết tắt "N.B.AN"
+> (`assignShortLabels`, group-aware — không còn là lưới cuối của `fitPodiumNames`); bỏ chữ LEFT/RIGHT
+> và số thứ tự trước tên, cột tên co giãn lấp cột + `justify-content:space-evenly` để dàn đều/căn
+> giữa theo chiều cao; bỏ chip "Team N" trong ô tên (`showTeam` gỡ khỏi tham số); ✓/✗ hai số đổi
+> thành MỘT phân số `right/total` (xanh/đen); thêm biến `--sc` (cùng công thức `--w` đã có) nhân vào
+> `font-size` của khối thống kê để hàng hẹp cuối phễu không tràn chữ — đúng bức ảnh phóng to hàng
+> 13–18 thầy gửi; ⭐⭐⭐ tích một em nay DỜI CẢ HÀNG xuống khu vực đã chọn (vạch đứt phân cách, nền xanh
+> nhạt `#dbeafe`), có FLIP animation mượt (`row.animate()`, đo rect trước/sau khi `.append()` lại thứ
+> tự) cho cả chiều dời xuống lẫn quay lên khi bỏ tích; bỏ hiển thị thanh cuộn (`scrollbar-width:none`
+> + `::-webkit-scrollbar{display:none}`), vẫn cuộn được. Toàn bộ nằm trong `renderReviewPodium()`
+> (`core/showdown-review.js`) + CSS `.aw-sd-pod*` (`core/app.css`), không đụng file khác. `node
+> --input-type=module --check` sạch; brace `app.css` cân bằng (1861=1861). Bàn thử: mở harness có sẵn
+> `scratch/showdown-review-test.html` qua dev server cục bộ (`.claude/launch.json` "aword"), bấm
+> Podium, soi DOM thật qua `javascript_tool` — tên viết tắt đúng, điểm "2/3" đúng màu, tích/bỏ tích
+> dời hàng + đổi nền + vạch đứt đúng như tả, `--sc` mỗi hàng đúng công thức (1.000→0.650 cho phễu 5
+> người), 0 lỗi console. ⬜ CHƯA đăng nhập trang aword thật để bấm tay (sandbox không đăng nhập Google
+> được) — thầy tự mở Podium thật, tích 1 em xem có dời mượt không, và bảng lớp đông (16+ HS) không vỡ
+> ở hàng cuối. Xem mục **Đợt 323** trong file này.)
+> Trước đó: **Đợt 322** (11/9/2026, thầy báo qua chat — chặn tạo trùng của Đợt 299 so sánh bỏ qua
+> lớp: tạo bài giao ANAGRAM cho B1AH bị chặn oan vì "đã có bài giao ANAGRAM của B2B" dù hai lớp khác
+> hẳn nhau, học sinh khác hẳn; vá `baiGiaoCuaAct()` (`core/assignment-ui.js::doStart()`) nhận thêm
+> `folderId` optional — gọi CÓ `folderId` thì chỉ đếm bài giao CÙNG lớp, gọi KHÔNG kèm giữ nguyên soi
+> mọi lớp (dùng cho dấu ✓ tham khảo trong Options). `node --check` sạch; bàn thử độc lập
+> `scratch/dot322-folderid-filter-test.mjs` 5/5 ĐẠT. ⬜ CHƯA đăng nhập trang thật để bấm tay. Xem mục
+> Đợt 322.)
+> Trước đó: **Đợt 321b** (11/9/2026 tối, thầy xem ảnh chụp app thật rồi chỉnh lại — ICON LOA
 > TRONG OPTIONS: HIỆN Ở MỌI MODE, KHÔNG RIÊNG NỬA VOICE: bản Đợt 321 (đoạn dưới) chỉ bật icon chip
 > ENG1/ENG2 khi `mode==="voice"` — mà mặc định vào Options LUÔN đứng ở nửa TEXT nên thầy KHÔNG BAO
 > GIỜ thấy icon, coi như vô hình. Nay `buildContentSwitchRow()` xét TĨNH một lần lúc dựng nút:
@@ -327,6 +353,99 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 323 (12/9/2026, thầy gửi 2 ảnh chụp Podium thật) — **LÀM LẠI GIAO DIỆN SHOWDOWN PODIUM: TÊN VIẾT TẮT LUÔN, BỎ TEAM/SỐ THỨ TỰ/LEFT-RIGHT, ĐIỂM DẠNG PHÂN SỐ, CO SIZE THEO HÀNG HẸP, TÍCH = DỜI XUỐNG KHU ĐÃ CHỌN**
+
+Thầy gửi ảnh chụp bảng Podium thật (một ảnh toàn cảnh có 2 cột LEFT/RIGHT, một ảnh phóng to hàng
+13–18 lộ rõ chữ bị tràn — "C.T…", "M…", tên rút gọn còn 1 chữ) rồi liệt kê 10 điều chỉnh. Tất cả nằm
+trong `renderReviewPodium()`/`fitPodiumNames` (`core/showdown-review.js`) + khối CSS `.aw-sd-pod*`
+(`core/app.css`) — không đụng file nào khác.
+
+### 1. Tên LUÔN viết tắt "N.B.AN", cả phễu lẫn hai cột chọn
+Trước đây `shortenName` chỉ là LƯỚI CUỐI của `fitPodiumNames` (chỉ viết tắt khi co hết cỡ vẫn tràn).
+Nay dùng `assignShortLabels(ranked.map(b => b.name))` (đã có sẵn trong `core/showdown.js`, nhóm-nhận-
+biết — hai em có cùng chữ đầu như TUỆ LÂM/TÙNG LÂM không bị trùng thành T.LÂM, xem Đợt 289) tính
+TRƯỚC một lần, in thẳng label này vào cả `.aw-sd-pod-name` lẫn `.aw-sd-pod-side-item` — không còn là
+phương án dự phòng nữa mà là dạng hiển thị mặc định. `nm.title`/tooltip vẫn giữ tên đầy đủ.
+
+### 2. Bỏ chữ LEFT/RIGHT, bỏ số thứ tự trước tên, tên trong cột dàn đều theo chiều cao
+`mkSide()` không còn dựng `.aw-sd-pod-side-head` nữa. `paintSides()` in thẳng tên (không còn
+`${idx+1}. `). CSS: `.aw-sd-pod-side-list` co giãn lấp đầy cột (`flex:1 1 auto`) và tự dàn bằng
+`justify-content: space-evenly` — ít tên thì tên nằm giữa cột, nhiều tên thì dàn đều khoảng cách,
+đúng ý thầy "đặt vào giữa... có thêm học sinh thì dàn đều để cân bằng ở giữa".
+⚠️ Vì đầu cột không còn, luật tô xanh "đủ người" của Đợt 319 mất chỗ để tô — `wrap.classList.toggle
+("is-all", ...)` vẫn chạy (rẻ, để dành cho sau) nhưng hiện không CSS nào đọc.
+
+### 3. Bỏ chip "Team N" trong ô tên
+Xoá đoạn `if (showTeam && b.teamName) {...}` cùng `.aw-sd-pod-team` (CSS). Tham số `showTeam` bị gỡ
+khỏi chữ ký `renderReviewPodium` — 3 nơi gọi cũ (`showdown-setup.js` ×2, `showdown-home.js` ×2) vẫn
+truyền `showTeam: true`, JS bỏ qua field thừa, không cần sửa các nơi gọi.
+
+### 4. ✓/✗ hai số → MỘT phân số "đúng/tổng", ví dụ 19/20
+`.aw-sd-pod-score` thay `.aw-sd-pod-ok`/`.aw-sd-pod-bad`: `<span class="is-right">${b.right}</span>
+<span class="is-total">/${b.total}</span>` — is-right xanh `#2ec27e`, is-total đen `#23303e`. Không
+phải số mới: `b.right + b.wrong === b.total` luôn đúng (xem `pctOf` trong `core/showdown.js`), chỉ
+đổi cách đọc.
+
+### 5. Size tên tăng, size thống kê hàng hẹp tự co theo — vá đúng bức ảnh phóng to
+Tên (`--aw-sd-pod-name`) tăng từ `2.6*aw-u` lên `3.3*aw-u` (thầy: "size tên tăng lên thêm" — có chỗ
+tăng vì giờ tên luôn ngắn). Ảnh phóng to hàng 13–18 lộ rõ tên/chip tràn ở đáy phễu vì font cỡ CỐ
+ĐỊNH trong khi bề rộng box CO DẦN theo hạng — vá bằng biến `--sc` mới, đặt CÙNG lúc với `--w` ngay
+trong `showdown-review.js` (`row.style.setProperty("--sc", w / POD_MAX_W)`), rồi nhân vào
+`font-size`/`gap` của `.aw-sd-pod-stats` bằng `calc()`. Hàng đáy phễu luôn có `--sc` = POD_MIN_W /
+POD_MAX_W = 0.65 (không phụ thuộc sĩ số, vì `--w` vốn đã CHỈ chạy trong khoảng cố định 80%→52%) —
+không phải một lượt đo DOM mới như `fitPodiumNames`, chỉ ăn theo đúng tỉ lệ hình học `--w` đã có sẵn.
+
+### 6. ⭐⭐⭐ Tích một em = dời cả hàng xuống khu đã chọn, có vạch đứt, nền xanh nhạt, animation mượt
+Thêm `layoutRows(animate)` trong `renderReviewPodium`: lọc lại TOÀN BỘ `rowEls` (mảng `{pk, row}` giữ
+theo đúng thứ tự hạng, gom trong vòng lặp dựng hàng) theo `picks` — hàng nào có trong Map thì xuống
+dưới một `<div class="aw-sd-pod-sep">` (vạch đứt, `display:none` khi chưa ai được tích), rồi
+`box.append()` lại TỪNG hàng theo thứ tự mới. `.append()` trên phần tử ĐANG CÓ trong DOM là DI
+CHUYỂN nó (không nhân bản) — nên chỉ cần lặp lại đúng thứ tự mong muốn, không phải tự viết lại logic
+chèn/xoá.
+- **FLIP, không phải CSS transition**: đo `getBoundingClientRect()` của MỌI hàng (kể cả hàng không
+  đổi phe, vì hàng KIA chuyển đi có thể đẩy hàng này lệch vị trí) TRƯỚC khi `.append()` lại, xếp lại,
+  đo lần hai, `row.animate([{transform:delta},{transform:none}], {duration:320, easing:"cubic-bezier
+  (.22,.9,.3,1)"})` — cùng khuôn Web Animations + `try/catch` mà cú rung giới hạn lượt (Đợt 319) đã
+  dùng; không có Web Animations thì hàng vẫn tới đúng chỗ, chỉ mất chuyển động.
+- Gọi `layoutRows(false)` (không hoạt ảnh) MỘT LẦN ngay sau khi dựng xong bảng — vì `picks` có thể
+  tới ĐÃ CÓ dữ liệu sẵn (đọc lại từ Firestore, Đợt 319), không được để nó "nhảy" ngay lúc mở bảng.
+- Gọi `layoutRows(true)` trong chính `onclick` của nút tích, ngay sau `paintAll()`/`paintSides()`.
+- Hàng đã chọn đổi nền xanh nhạt `#dbeafe`/viền `#93c5fd` qua `.aw-sd-pod-row.is-picked .aw-sd-pod-
+  box` — 3 lớp class nên thắng cả `.is-m1/2/3` (huy chương) mà không cần `!important`; huy chương và
+  tên vàng lấp lánh (nếu lọt top 3) vẫn giữ nguyên, chỉ riêng NỀN box đổi.
+
+### 7. Bỏ hiển thị thanh cuộn
+`.aw-sd-pod`/`.aw-sd-pod-side` thêm `scrollbar-width:none` (Firefox) + `-ms-overflow-style:none` (Edge
+cũ) + `::-webkit-scrollbar{display:none}` (Chromium/Electron — engine thật của TOMKO/myX). Vẫn cuộn
+được bằng ngón tay/bánh chuột, chỉ không thấy thanh trượt.
+
+### Đã kiểm
+`node --input-type=module --check` sạch `showdown-review.js`; brace `app.css` cân bằng (1861 mở =
+1861 đóng — tăng 1 cặp so với Đợt 321b vì thêm khối `.aw-sd-pod-sep`/scrollbar, đã đếm lại bằng
+script, không chỉ bằng mắt). Bàn thử: chạy THẲNG dev server cục bộ có sẵn (`.claude/launch.json`
+"aword", `python devserver.py`) mở `scratch/showdown-review-test.html` (harness Đợt 177 có sẵn, gọi
+`mountShowdownReview` thật, KHÔNG viết file bàn thử mới) — bấm nút "Podium" (qua `document.querySelector
+('button[title="Podium"]').click()`, vì nút này chỉ có icon+title chứ không có chữ), quan sát DOM
+thật qua `javascript_tool`:
+- Tên hiện đúng "N.B.An"/"T.M.Khôi"... (viết tắt, giữ nguyên chữ cuối) ở cả phễu lẫn cột chọn.
+- Điểm hiện đúng "2/3" (2 xanh, /3 đen), không còn ✓/✗.
+- Không còn chip "Team", không còn chữ LEFT/RIGHT, không còn số thứ tự trước tên trong cột chọn.
+- Bấm nút tích trái của hạng 1 (N.B.An, đang đội vàng): hàng dời XUỐNG hạng cuối, `row.className`
+  thành `"aw-sd-pod-row is-picked"`, `getComputedStyle(box).backgroundColor` = `rgb(219,234,254)`
+  (`#dbeafe`), `.aw-sd-pod-sep` đổi `display:none` → `block` (`.is-on`), cột trái hiện đúng tên
+  "N.B.An" không số thứ tự. Bỏ tích: hàng quay lại đúng hạng 1 ban đầu (huy chương vàng, sparkle trở
+  lại). `--sc` mỗi hàng đúng công thức: 1.000 / 0.912 / 0.825 / 0.738 / 0.650 cho phễu 5 người.
+- 0 lỗi console suốt toàn bộ thao tác (mount → đổi view → tích → bỏ tích → đổi phạm vi).
+⚠️ `--aw-u` không resolve trong bối cảnh harness lúc bàn thử (border-radius/border của box đo ra 0px)
+— đây là hạn chế CÓ SẴN của bench (biến container-query cần đúng `.aw-stage` thật của app, không
+phải lỗi do đợt này gây ra; không sửa vì không đụng tới phần đó).
+⬜ **CHƯA đăng nhập trang aword thật** để bấm tay trên bảng Podium thật (sandbox phiên này không đăng
+nhập Google được) — thầy mở Recent Results/Show Answers ▸ Podium thật, xác nhận tên viết tắt đọc
+được, tích 1 em xem hàng có dời mượt xuống dưới không, và bảng lớp đông (16+ HS) không bị vỡ ở hàng
+cuối cùng.
 
 ---
 

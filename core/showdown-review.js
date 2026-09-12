@@ -49,8 +49,8 @@ import { el } from "./utils.js";
 import { icons } from "./icons.js";
 import { sound } from "./sound.js";
 import {
-  fmtRoundMs, pctBand, pctOf, shortenName, groupByMember, rankBlocks, mergeClassBlocks,
-  buildAnalysisRows
+  fmtRoundMs, pctBand, pctOf, shortenName, assignShortLabels, groupByMember, rankBlocks,
+  mergeClassBlocks, buildAnalysisRows
 } from "./showdown.js";
 
 // Long enough that an ordinary tap never reaches it, short enough that the
@@ -1120,8 +1120,25 @@ export function renderReviewList(ranked, { showTeam = false } = {}) {
  *   those callers' own `commitPicks`/`picksDirty`.
  *   Omit `picks` and the tick boxes are not built at all — that is how the
  *   miniature/preview callers stay untouched.
+ *
+ * ⭐⭐⭐ Đợt 323 — SIX more changes, thầy again, all in the same visit:
+ *   • Names are ALWAYS the abbreviated "N.B.AN" form now (group-aware, see
+ *     `assignShortLabels`), in both the funnel and the two side columns —
+ *     no longer only a fallback fitPodiumNames reaches for on overflow.
+ *   • The LEFT/RIGHT header text and the running "1. "/"2. " numbers on each
+ *     side-column entry are both gone; the side lists now grow to fill their
+ *     column and space themselves with `space-evenly` (CSS) so a short roster
+ *     still reads as centred, not stuck at the top.
+ *   • The "Team N" chip inside each box is gone (`showTeam` removed).
+ *   • ✓5 ✗5 became one fraction, `right/total` (green over plain black).
+ *   • Each row now carries `--sc`, the same taper `--w` already used, so a
+ *     narrow bottom row's stats shrink instead of clipping (CSS `calc`, no
+ *     extra measuring pass).
+ *   • A NEW PICK MOVES THE ROW: ticked rows drop below a dashed separator,
+ *     turn light blue, and animate there with a FLIP (`layoutRows` below);
+ *     un-ticking sends them back up the same way.
  */
-export function renderReviewPodium(ranked, { showTeam = false, picks = null, onChange = null } = {}) {
+export function renderReviewPodium(ranked, { picks = null, onChange = null } = {}) {
   // ⚠️ Đợt 207 — the returned root is now a WRAPPER, not `.aw-sd-pod` itself.
   // ⭐⭐⭐ Đợt 319 — and now holds THREE children when `picks` is on: the two
   // name-list columns flank the funnel rather than floating two digits over
@@ -1143,9 +1160,10 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null, onC
   // has to "who did this side pick first", and re-ticking a name (delete then
   // set) puts it at the end of ITS side's own list on purpose — that IS a
   // fresh pick.
+  // ⭐⭐⭐ Đợt 323 (thầy: "bỏ chữ left/right") — no header row any more, just the
+  // scrolling name list itself.
   const mkSide = side => {
     const col = el("div", "aw-sd-pod-side is-" + side);
-    col.append(el("div", "aw-sd-pod-side-head", side === "l" ? "LEFT" : "RIGHT"));
     col.append(el("div", "aw-sd-pod-side-list"));
     return col;
   };
@@ -1156,7 +1174,15 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null, onC
 
   // Filled in as rows are built below — the side lists need every picked
   // pupil's DISPLAY NAME, and the row loop is the only place that has it.
+  // ⭐⭐⭐ Đợt 323 — `nameByKey` now holds the ABBREVIATED label ("N.B.AN"), the
+  // same one the funnel itself prints (thầy: "các tên đều viết tắt... cả ở
+  // trong cột tên chọn và các ô tên ở giữa"); `fullNameByKey` keeps the real
+  // name around only for the side item's hover tooltip.
   const nameByKey = new Map();
+  const fullNameByKey = new Map();
+  // Group-aware so two pupils who would abbreviate to the same initials (see
+  // assignShortLabels's own header) still read apart on this board.
+  const labels = assignShortLabels(ranked.map(b => b.name));
 
   // ⭐⭐ Đợt 219 — MỖI HÀNG ĐỂ LẠI ĐÂY CÁCH TỰ VẼ CỦA NÓ, và một cú tích vẽ LẠI CẢ
   // BẢNG chứ không chỉ hàng vừa bấm.
@@ -1190,11 +1216,12 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null, onC
     (["l", "r"]).forEach(side => {
       const list = sides[side].querySelector(".aw-sd-pod-side-list");
       list.innerHTML = "";
-      order[side].forEach((key, idx) => {
+      // ⭐⭐⭐ Đợt 323 (thầy: "bỏ các số ở tên") — just the (already abbreviated,
+      // see `labels` below) name, no running number in front of it any more.
+      order[side].forEach(key => {
         const item = el("div", "aw-sd-pod-side-item");
-        const name = nameByKey.get(key) || "";
-        item.textContent = `${idx + 1}. ${name}`;
-        item.title = name;
+        item.textContent = nameByKey.get(key) || "";
+        item.title = fullNameByKey.get(key) || "";
         list.append(item);
       });
     });
@@ -1206,12 +1233,68 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null, onC
     wrap.classList.toggle("is-all", n > 0 && l + r === n);
   }
 
+  /**
+   * ⭐⭐⭐ Đợt 323 (thầy: "khi 1 học sinh được tích, ô học sinh sẽ được di
+   * chuyển xuống khu vực dưới cùng, có phân cách bằng 1 nét đứt... Hiệu ứng
+   * chuyển xuống/lên sẽ là animation mượt mà") — every tick now also moves the
+   * whole ROW out of the ranked funnel and down into a second group below a
+   * dashed line, and un-ticking sends it back up.
+   *
+   * ⚠️ REBUILD THE WHOLE ORDER FROM `picks`, never move just the one row that
+   * was tapped — same reasoning as `paintAll`/`paintSides` above: a row's place
+   * is decided by the ONE shared Map, so re-partitioning the full list on every
+   * tick is what keeps "picked" and "where it sits" from ever disagreeing.
+   * `.append()` on an element already in the document MOVES it, so replaying
+   * the whole order is just two `forEach`s and a cheap for 6–20 rows.
+   *
+   * ⚠️ FLIP, not a layout-triggered transition: `box.append()` jumps every
+   * moved (and shifted) row straight to its new spot with no browser animation
+   * of its own. Measure every row's rect BEFORE the reorder, reorder, measure
+   * again, and hand `.animate()` the delta — the same Web-Animations idiom the
+   * turn-limit buzz above already uses, with the same try/catch (a browser
+   * without WAAPI just lands the rows at their new spot with no motion, which
+   * is correct, not broken).
+   */
+  const sep = picks ? el("div", "aw-sd-pod-sep") : null;
+  const rowEls = [];   // { pk, row } in RANK order — filled in by the loop below
+  function layoutRows(animate) {
+    if (!picks) return;
+    const before = animate
+      ? new Map(rowEls.map(({ row }) => [row, row.getBoundingClientRect()]))
+      : null;
+    const unpicked = [], pickedRows = [];
+    rowEls.forEach(({ pk, row }) => (picks.get(pk) ? pickedRows : unpicked).push(row));
+    unpicked.forEach(r => box.append(r));
+    box.append(sep);
+    pickedRows.forEach(r => box.append(r));
+    sep.classList.toggle("is-on", pickedRows.length > 0);
+    if (!before) return;
+    rowEls.forEach(({ row }) => {
+      const b0 = before.get(row);
+      const b1 = row.getBoundingClientRect();
+      const dy = b0.top - b1.top;
+      if (Math.abs(dy) < 0.5) return;      // did not actually move — nothing to animate
+      try {
+        row.animate(
+          [{ transform: `translateY(${dy}px)` }, { transform: "translateY(0)" }],
+          { duration: 320, easing: "cubic-bezier(.22,.9,.3,1)" }
+        );
+      } catch { /* không có Web Animations thì hàng vẫn tới đúng chỗ, chỉ là không trượt */ }
+    });
+  }
+
   ranked.forEach((b, i) => {
     // Linear from POD_MAX_W down to POD_MIN_W across however many pupils there
     // are — see the constants' own note for why this is not a fixed step.
     const w = n > 1 ? POD_MAX_W - (POD_MAX_W - POD_MIN_W) * (i / (n - 1)) : POD_MAX_W;
     const row = el("div", "aw-sd-pod-row");
     row.style.setProperty("--w", w.toFixed(2) + "%");
+    // ⭐⭐⭐ Đợt 323 — how far THIS row's stats (score fraction/%/time) shrink,
+    // tied to the same taper the box width already follows: a box that is 65%
+    // as wide as the top one gets stats at 65% of the base size too, so a
+    // narrow bottom row never has to clip what a wide top row shows in full
+    // (thầy: "giảm size... đi tương ứng để không bị co mất nội dung").
+    row.style.setProperty("--sc", (w / POD_MAX_W).toFixed(3));
     // ⭐ Đợt 219 — KHOÁ CỦA MỘT LẦN TÍCH, và nó KHÔNG được là `b.key` trần.
     // `b.key` tới từ hai đường khác nhau: bảng Show answers dựng nó từ `m.id` (luôn
     // có), còn Recent results đọc nó ra khỏi SỔ CÁI, nơi `normStudent` viết
@@ -1223,7 +1306,9 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null, onC
     const pk = String(b.key || "").trim()
       || String(b.name || "").trim().toLowerCase()
       || `#${i}`;
-    nameByKey.set(pk, b.name);
+    const label = labels[i];
+    nameByKey.set(pk, label);
+    fullNameByKey.set(pk, b.name);
 
     const card = el("div", "aw-sd-pod-box" + (i < 3 ? ` is-m${i + 1}` : ""));
 
@@ -1243,8 +1328,14 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null, onC
     // it would be clipped away at exactly the edges it is meant to sit on.
     const nmWrap = el("span", "aw-sd-pod-nm");
     const nm = el("span", "aw-sd-pod-name" + (i < 3 ? " is-top" : ""));
-    nm.textContent = b.name;                                // pupil's own name: textContent only
-    nm.dataset.full = b.name;                               // fitPodiumNames needs the original back
+    // ⭐⭐⭐ Đợt 323 (thầy: "các tên đều viết tắt họ và tên đệm") — the funnel now
+    // always prints the abbreviated label, not just when it overflows; the full
+    // name survives only as the hover title. `dataset.full` still feeds
+    // fitPodiumNames its "start from here" text — which is now this label, so a
+    // name whose INITIALS still overflow a very narrow bottom row keeps
+    // shrinking exactly as before.
+    nm.textContent = label;                                 // pupil's own name: textContent only
+    nm.dataset.full = label;                                // fitPodiumNames needs the original back
     nm.title = b.name;
     nmWrap.append(nm);
     // ⭐ Đợt 208 — SPARKLES ON THE NAME. A layer of its own, `pointer-events:none`
@@ -1259,22 +1350,18 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null, onC
       nmWrap.append(spark);
     }
     left.append(nmWrap);
-    if (showTeam && b.teamName) {
-      const tag = el("span", "aw-sd-pod-team");
-      tag.textContent = b.teamName;
-      left.append(tag);
-    }
+    // ⭐⭐⭐ Đợt 323 (thầy: "bỏ tên TEAM trong các ô tên học sinh") — the funnel
+    // used to carry a "Team N" chip beside the name (`showTeam`); gone, the
+    // side columns and the box's own gold/silver/bronze already say enough.
 
     const stats = el("div", "aw-sd-pod-stats");
-    // ⭐ Đợt 180 (teacher: "% tỷ lệ đúng trong ô rank"), reshaped in Đợt 207 to
-    // thầy's own reading order — "5 ✓ 5 ✗ 50%" — with the percentage last,
-    // after the two numbers it is the sum of. One rule for the figure (pctOf)
-    // and one for its colour (pctBand), both in core/showdown.js, so this board
-    // and the list can never disagree about what a pupil scored or what green
-    // means.
+    // ⭐⭐⭐ Đợt 323 (thầy: "phần đúng sai chuyển thành dạng số câu đúng trên
+    // tổng thể, VD: 19/20") — replaces the old "✓5 ✗5" pair with ONE fraction,
+    // right (green) over total dealt (plain). `b.right + b.wrong === b.total`
+    // always (see pctOf's own note in core/showdown.js), so this is not a new
+    // number, just a new way to read the two the board already had.
     stats.append(
-      el("span", "aw-sd-pod-ok", `${icons.check} ${b.right}`),
-      el("span", "aw-sd-pod-bad", `${icons.cross} ${b.wrong}`)
+      el("span", "aw-sd-pod-score", `<span class="is-right">${b.right}</span><span class="is-total">/${b.total}</span>`)
     );
     const pct = pctOf(b);
     if (pct !== null) stats.append(el("span", "aw-sd-pod-pct " + pctBand(pct), pct + "%"));
@@ -1349,6 +1436,10 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null, onC
           }
           paintAll();
           paintSides();
+          // ⭐⭐⭐ Đợt 323 — the row itself now also moves: up into the funnel when
+          // un-ticked, down below the dashed line when ticked. Animated (see
+          // layoutRows' own note); the sound and onChange still fire regardless.
+          layoutRows(true);
           onChange?.();
           try { sound.tick(); } catch { /* âm thanh là trang trí, không được chặn việc vẽ */ }
         };
@@ -1374,8 +1465,10 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null, onC
       row.append(card);
     }
     box.append(row);
+    rowEls.push({ pk, row });
   });
   paintSides();
+  layoutRows(false);   // initial placement — no motion, `picks` may arrive pre-filled
   return wrap;
 }
 

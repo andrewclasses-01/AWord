@@ -1470,6 +1470,39 @@ Thầy dùng bảng kết quả để **chia đội cho hoạt động sau**: t�
   Show Answers ngay sau ván chỉ lưu được khi `engine.js`'s `sdLastMatchRef` đã resolve xong (xem
   `engine.js`'s note tại chỗ gọi `saveMatchResult` — ván solo/alone vẫn lưu được vì `rid` được resolve
   ở ĐÚNG một chỗ, không mint hai lần khác nhau).
+- ⭐⭐⭐ **Đợt 323 — SÁU THAY ĐỔI GIAO DIỆN, thầy sau khi xem ảnh chụp bảng thật:**
+  - **Tên LUÔN viết tắt "N.B.AN"** (`assignShortLabels`, group-aware — tránh trùng như bài học Đợt 289),
+    cả trong phễu lẫn hai cột tên — KHÔNG còn là lưới cuối của `fitPodiumNames` nữa, mà là dạng hiển thị
+    mặc định NGAY TỪ ĐẦU. `nm.title`/tooltip vẫn giữ tên đầy đủ.
+  - **`.aw-sd-pod-side-head` (chữ LEFT/RIGHT) BỊ GỠ HẲN**, cùng với số thứ tự "1. "/"2. " trước mỗi tên
+    trong `paintSides()`. ⚠️ Vì đầu cột không còn, **luật tô xanh "đủ người" của Đợt 319 KHÔNG còn nơi
+    để tô** — `wrap.classList.toggle("is-all", ...)` vẫn chạy (rẻ, để dành) nhưng không CSS nào đọc nó
+    nữa; đừng ngạc nhiên khi không thấy gì đổi màu.
+  - **`.aw-sd-pod-side-list` co giãn lấp đầy cột** (`flex:1 1 auto`) và tự dàn bằng `justify-content:
+    space-evenly` — thầy: "tên đặt vào giữa theo chiều cao... có thêm học sinh thì dàn đều để cân bằng".
+  - **`.aw-sd-pod-team` (chip "Team N" trong ô tên) BỊ GỠ HẲN** cùng đoạn code dựng nó — `showTeam` không
+    còn là tham số của `renderReviewPodium` nữa (3 nơi gọi vẫn truyền `showTeam: true`, vô hại, JS bỏ qua
+    field thừa).
+  - **✓5 ✗5 → MỘT phân số `right/total`** (`.aw-sd-pod-score`, xanh/đen) — không phải số mới, chỉ đổi
+    cách đọc hai số cũ (`b.right + b.wrong === b.total`, xem `pctOf`).
+  - ⭐ **`--sc` — TỈ LỆ CO CỦA STATS, ăn theo `--w`** (thầy: "các ô ở dưới... giảm size... đi tương ứng để
+    không bị co mất nội dung", đúng bức ảnh phễu bị tràn chữ ở hàng 13–18). `row.style.setProperty("--sc",
+    w/POD_MAX_W)` ngay cạnh `--w`; `.aw-sd-pod-stats`'s `font-size`/`gap` nhân với nó trong `calc()` —
+    KHÔNG phải một lượt đo DOM như `fitPodiumNames`, chỉ là CÙNG tỉ lệ hình học mà `--w` đã tự có sẵn.
+  - ⭐⭐⭐ **TÍCH MỘT EM = DỜI CẢ HÀNG XUỐNG KHU VỰC ĐÃ CHỌN** (thầy: "di chuyển xuống khu vực dưới cùng...
+    animation mượt mà"), qua `layoutRows()` mới: lọc lại TOÀN BỘ `rowEls` theo `picks` (hàng nào có
+    trong Map thì xuống dưới `.aw-sd-pod-sep` — vạch đứt, ẩn khi chưa ai được tích), `box.append()` lại
+    từng hàng theo thứ tự mới (phần tử ĐANG CÓ trong DOM thì `.append()` DI CHUYỂN nó, không nhân bản).
+    ⚠️ **FLIP, không phải transition CSS**: đo `getBoundingClientRect()` của MỌI hàng TRƯỚC khi xếp lại,
+    xếp lại, đo lần hai, rồi `row.animate()` từ độ lệch về 0 — cùng khuôn với cú rung giới hạn lượt của
+    Đợt 319 (`try/catch`, không có Web Animations thì hàng vẫn tới đúng chỗ, chỉ mất chuyển động). Gọi
+    `layoutRows(false)` (không hoạt ảnh) một lần lúc dựng xong bảng — vì `picks` có thể tới ĐÃ CÓ sẵn dữ
+    liệu (đọc từ Firestore), và `layoutRows(true)` mỗi lần tích/bỏ tích trong `onclick`.
+    ⚠️ Hàng đã chọn đổi nền xanh nhạt `#dbeafe` (CSS `.aw-sd-pod-row.is-picked .aw-sd-pod-box`, 3 lớp
+    class nên thắng cả `.is-m1/2/3` không cần `!important`) — HUY CHƯƠNG và tên vàng lấp lánh của em đó
+    (nếu lọt top 3) vẫn giữ nguyên, chỉ riêng NỀN đổi.
+  - **Bỏ hiển thị thanh cuộn** trên `.aw-sd-pod`/`.aw-sd-pod-side` (`scrollbar-width:none` +
+    `::-webkit-scrollbar{display:none}`) — vẫn cuộn được bằng ngón tay/bánh xe, chỉ không thấy thanh.
 
 **(e) ⭐⭐ FULLSCREEN CỦA MÀN SHOW ANSWERS — `container-type` LÀ THỨ CHỊU LỰC.**
 Nút ở góc dưới trái, nhắm vào **chính `.aw-review`**, KHÔNG phải `root` (ngược luật Đợt 12 — ở đây mục
