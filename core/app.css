@@ -6780,12 +6780,14 @@ html.aw-nhung .aw-below { display: none; }
   flex: 1 1 auto; display: flex; flex-direction: column; justify-content: space-evenly;
   gap: calc(0.3 * var(--aw-u));
 }
-/* ⭐⭐⭐ Đợt 323 — size lớn hơn cùng đợt tên trong phễu tăng (thầy: "size tên
-   tăng lên thêm"); không còn số thứ tự trước tên (xem paintSides trong
-   showdown-review.js). */
+/* ⭐⭐⭐ Đợt 324 (thầy: "font chữ to tối đa") — up again from Đợt 323's 1.9.
+   "Tối đa" nghĩa là KHÔNG đoán một số cố định vừa mắt, mà đặt cỡ CỐ Ý QUÁ TO
+   rồi để `fitPodiumNames` (gọi thêm trên selector này — xem
+   showdown-review.js) tự co từng tên xuống MỨC LỚN NHẤT còn vừa cột, đúng
+   khuôn "to hết cỡ, chỉ co khi thật sự tràn" mà tên trong phễu đã dùng. */
 .aw-sd-pod-side-item {
-  font-size: calc(1.9 * var(--aw-u)); font-weight: 700; color: #23303e;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: calc(4 * var(--aw-u)); font-weight: 700; color: #23303e; line-height: 1.25;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
   font-variant-numeric: tabular-nums;
 }
 /* Each column's names hug the funnel rather than the outer edge — the same
@@ -6802,12 +6804,25 @@ html.aw-nhung .aw-below { display: none; }
    `.is-on`) so it never shows as an empty line above an untouched board. Not
    part of the FLIP animation itself — it snaps in/out with the reorder rather
    than fading, same moment the rows themselves jump to their measured start. */
+/* ⭐⭐⭐ Đợt 324 (thầy: "tăng không gian giãn cách ở khoảng giữa này ra một
+   chút") — margin lên gần gấp 3 so với Đợt 323 (0.5→1.4), viền đậm/tối hơn
+   một chút để tự nó đủ rõ là một ranh giới, không chỉ là khoảng trắng tình cờ. */
 .aw-sd-pod-sep {
   display: none; flex: 0 0 auto;
-  border: none; border-top: calc(0.16 * var(--aw-u)) dashed #b7c2d0;
-  margin: calc(0.5 * var(--aw-u)) calc(1 * var(--aw-u));
+  border: none; border-top: calc(0.2 * var(--aw-u)) dashed #94a3b8;
+  margin: calc(1.4 * var(--aw-u)) calc(1 * var(--aw-u));
 }
 .aw-sd-pod-sep.is-on { display: block; }
+/* ⭐⭐⭐ Đợt 324 (thầy: "di chuyển dần TRÊN MẶT các ô khác") — the ONE row a tap
+   just moved (see `layoutRows`'s `movedPk` in showdown-review.js), for the
+   length of its own slide. `.aw-sd-pod-row` is already `position:relative`
+   (above), so `z-index` alone lifts it above whichever rows it passes; the
+   shadow on its OWN box (not the row, which is just ticks+box side by side)
+   is what sells "picked up", not just "reordered". */
+.aw-sd-pod-row.is-moving { z-index: 5; }
+.aw-sd-pod-row.is-moving .aw-sd-pod-box {
+  box-shadow: 0 calc(0.9 * var(--aw-u)) calc(2.2 * var(--aw-u)) rgba(15, 23, 42, .28);
+}
 .aw-sd-pod-box {
   position: relative;      /* Đợt 207 — the sparkle layer is positioned against it */
   width: var(--w); box-sizing: border-box; min-height: calc(7.2 * var(--aw-u));
@@ -6820,12 +6835,11 @@ html.aw-nhung .aw-below { display: none; }
 .aw-sd-pod-box.is-m1 { background: linear-gradient(100deg, #fff7db, #ffe8a3); border-color: #efc03c; }
 .aw-sd-pod-box.is-m2 { background: linear-gradient(100deg, #f8fafd, #e5ebf2); border-color: #c3ced9; }
 .aw-sd-pod-box.is-m3 { background: linear-gradient(100deg, #fdf0e4, #f6dcc2); border-color: #dda56a; }
-/* ⭐⭐⭐ Đợt 323 (thầy: "các ô đã chọn có nền màu xanh nhạt") — a picked row now
-   sits below the dashed separator (see `.aw-sd-pod-sep` and `layoutRows` in
-   showdown-review.js) and reads as "done" rather than "ranked": flat light
-   blue wins over the medal gradient, which is why this selector's three
-   classes outrank `.aw-sd-pod-box.is-m1/2/3`'s two without needing `!important`. */
-.aw-sd-pod-row.is-picked .aw-sd-pod-box { background: #dbeafe; border-color: #93c5fd; }
+/* ⭐⭐⭐ Đợt 324 (thầy, sau khi xem ảnh chụp: "đổi nền nút thành xanh lá") — was
+   light blue (Đợt 323); a picked row reads as "done" rather than "ranked", so
+   flat light green wins over the medal gradient. Same 3-class-selector trick
+   as before, no `!important` needed against `.aw-sd-pod-box.is-m1/2/3`. */
+.aw-sd-pod-row.is-picked .aw-sd-pod-box { background: #dcfce7; border-color: #4ade80; }
 .aw-sd-pod-who { display: flex; align-items: center; gap: calc(0.8 * var(--aw-u)); min-width: 0; flex: 1 1 auto; }
 .aw-sd-pod-name {
   /* ⭐⭐⭐ Đợt 323 (thầy: "size tên tăng lên thêm") — up from 2.6; names are now
@@ -6999,21 +7013,28 @@ html.aw-nhung .aw-below { display: none; }
   font-size: calc(2.1 * var(--aw-u) * var(--sc, 1)); font-weight: 800; white-space: nowrap;
 }
 /* ⭐⭐⭐ Đợt 323 (thầy: "phần đúng sai chuyển thành dạng số câu đúng trên tổng
-   thể, VD: 19/20 (19 màu xanh, 20 màu đen)") — replaces the old ✓/✗ pair. */
-.aw-sd-pod-score .is-right { color: #2ec27e; }
+   thể, VD: 19/20") — replaces the old ✓/✗ pair.
+   ⭐⭐⭐ Đợt 324 (thầy: "số 19 sử dụng màu giống màu của %") — `.is-right` no
+   longer has a fixed colour of its own; it now carries the SAME `.is-pN` band
+   class the % chip does (set together in showdown-review.js), so the five
+   rules below colour BOTH. `.is-right` alone (no band — a pupil dealt no
+   question) falls back to the plain colour, same as `.is-total`. */
+.aw-sd-pod-score .is-right { color: #23303e; }
 .aw-sd-pod-score .is-total { color: #23303e; }
 .aw-sd-pod-time { color: #2563eb; }
 /* ⭐ Đợt 180 — % câu đúng trong ô rank (thầy, 17/8/2026). Dùng ĐÚNG 5 dải màu
    của danh sách (pctBand, core/showdown.js) chứ không đặt bảng màu thứ hai:
    cùng một con số thì phễu và danh sách phải cùng một màu. Ô huy chương vàng
    có nền khá sáng nên riêng dải vàng bị ghì tối một nấc trong ô đó để không
-   chìm — chỉ ở đó, mọi chỗ khác giữ nguyên. */
-.aw-sd-pod-pct.is-p0 { color: #dc2626; }
-.aw-sd-pod-pct.is-p1 { color: #ca8a04; }
-.aw-sd-pod-pct.is-p2 { color: #ea580c; }
-.aw-sd-pod-pct.is-p3 { color: #2563eb; }
-.aw-sd-pod-pct.is-p4 { color: #16a34a; }
-.aw-sd-pod-box.is-m1 .aw-sd-pod-pct.is-p1 { color: #a16207; }
+   chìm — chỉ ở đó, mọi chỗ khác giữ nguyên. ⭐⭐⭐ Đợt 324 — mỗi dải nay tô
+   CẢ `.aw-sd-pod-pct` LẪN `.aw-sd-pod-score .is-right` bằng chung một rule. */
+.aw-sd-pod-pct.is-p0, .aw-sd-pod-score .is-right.is-p0 { color: #dc2626; }
+.aw-sd-pod-pct.is-p1, .aw-sd-pod-score .is-right.is-p1 { color: #ca8a04; }
+.aw-sd-pod-pct.is-p2, .aw-sd-pod-score .is-right.is-p2 { color: #ea580c; }
+.aw-sd-pod-pct.is-p3, .aw-sd-pod-score .is-right.is-p3 { color: #2563eb; }
+.aw-sd-pod-pct.is-p4, .aw-sd-pod-score .is-right.is-p4 { color: #16a34a; }
+.aw-sd-pod-box.is-m1 .aw-sd-pod-pct.is-p1,
+.aw-sd-pod-box.is-m1 .aw-sd-pod-score .is-right.is-p1 { color: #a16207; }
 
 /* =============================================================
    ⭐⭐⭐ Đợt 236 — SHOWDOWN HOME: the full-page durable ledger.

@@ -12,7 +12,23 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 323** (12/9/2026, thầy gửi 2 ảnh chụp bảng Podium thật rồi liệt kê 10 điều chỉnh
+> Mới nhất: **Đợt 324** (12/9/2026, thầy gửi thêm 1 ảnh chụp bảng thật sau Đợt 323 — 5 tinh chỉnh
+> tiếp cho Podium: nền ô đã chọn đổi xanh dương → **xanh lá** nhạt (`#dcfce7`/`#4ade80`); vạch chia
+> giữa 2 khối đậm hơn + khoảng cách tăng gần gấp 3 (`0.5→1.4 aw-u`); ⭐⭐⭐ hiệu ứng tích nay khiến ĐÚNG
+> hàng vừa bấm **nổi lên trên** các hàng khác (`z-index:5`+shadow, class `.is-moving` chỉ gắn cho MỘT
+> hàng qua tham số `movedPk` mới của `layoutRows()`) rồi trượt CHẬM hơn xuống dưới (320ms→640/700ms) —
+> lý do cần z-index RIÊNG: DOM xếp lại trước khi đo FLIP nên hàng bỏ tích (dời lên) đứng SỚM hơn
+> trong DOM so với hàng nó đi qua, không có z-index sẽ trông như chui XUỐNG DƯỚI thay vì nổi lên;
+> tên trong cột đã chọn tăng cỡ chữ **tối đa** (`1.9→4 aw-u`, cố ý đặt quá to) rồi để `fitPodiumNames`
+> (đổi selector mặc định thành `".aw-sd-pod-name, .aw-sd-pod-side-item"`, một lần sửa ăn cả 6 nơi gọi
+> có sẵn) tự co xuống mức lớn nhất còn vừa; số bên trái phân số (VD 19) nay ăn màu CHUNG với % (cùng
+> `pctBand`, gắn class `is-pN` lên cả hai) thay vì xanh cố định. `node --check` sạch; brace `app.css`
+> cân bằng (1863=1863). Bàn thử lại harness có sẵn, kiểm màu số khớp %, `.is-moving` bắn đồng bộ ngay
+> lúc bấm, gán thử `--aw-u` (bench gốc không tự đo) để chụp ảnh gần app thật xác nhận vạch đứt/khoảng
+> cách/nền xanh lá/tên to đều đúng, 0 lỗi console. ⬜ CHƯA đăng nhập trang thật — mục tên to/căn giữa
+> nghi cache CSS cũ (app.css không có tham số phá cache), khuyên thầy tải lại CỨNG (Ctrl+F5) trước
+> khi kết luận. Xem mục **Đợt 324** trong file này.)
+> Trước đó: **Đợt 323** (12/9/2026, thầy gửi 2 ảnh chụp bảng Podium thật rồi liệt kê 10 điều chỉnh
 > — LÀM LẠI GIAO DIỆN SHOWDOWN PODIUM: tên trong phễu VÀ hai cột chọn nay LUÔN viết tắt "N.B.AN"
 > (`assignShortLabels`, group-aware — không còn là lưới cuối của `fitPodiumNames`); bỏ chữ LEFT/RIGHT
 > và số thứ tự trước tên, cột tên co giãn lấp cột + `justify-content:space-evenly` để dàn đều/căn
@@ -353,6 +369,77 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 324 (12/9/2026, thầy gửi thêm 1 ảnh chụp bảng thật sau Đợt 323) — **TINH CHỈNH PODIUM: NỀN XANH LÁ CHO Ô ĐÃ CHỌN, VẠCH CHIA RÕ HƠN, HIỆU ỨNG NỔI-LÊN-TRƯỢT-XUỐNG CHẬM MƯỢT, TÊN CỘT CHỌN TO TỐI ĐA, SỐ ĐIỂM ĂN MÀU %**
+
+Thầy xem bảng Podium thật (đã lên live từ Đợt 323 — xác nhận: tên viết tắt, bỏ LEFT/RIGHT, bỏ số
+thứ tự, phân số điểm, tích = dời hàng đều đã chạy đúng) rồi yêu cầu 5 điều chỉnh tiếp, tất cả vẫn
+trong `renderReviewPodium()`/`fitPodiumNames()` (`core/showdown-review.js`) + CSS `.aw-sd-pod*`
+(`core/app.css`).
+
+### 1. Nền ô đã chọn: xanh nhạt (Đợt 323) → xanh LÁ nhạt
+`.aw-sd-pod-row.is-picked .aw-sd-pod-box` đổi `background:#dbeafe;border-color:#93c5fd` (xanh dương)
+thành `background:#dcfce7;border-color:#4ade80` (xanh lá) — vẫn thắng gradient huy chương nhờ 3 lớp
+class, không cần `!important`.
+
+### 2. Vạch chia rõ hơn + tăng khoảng cách
+`.aw-sd-pod-sep`: margin trên/dưới từ `0.5*aw-u` lên `1.4*aw-u` (gần gấp 3), viền từ `#b7c2d0` dày
+`0.16*aw-u` lên `#94a3b8` dày `0.2*aw-u` — đủ đậm để tự nó đọc ra là một ranh giới, không chỉ là
+khoảng trắng tình cờ giữa hai khối.
+
+### 3. ⭐⭐⭐ Hiệu ứng tích: NỔI LÊN TRÊN các ô khác rồi chạy chậm xuống dưới
+Thầy: "ô đó sẽ có hiệu ứng di chuyển dần TRÊN MẶT các ô khác và chạy dần xuống dưới. Tốc độ chậm và
+mượt." `layoutRows()` nay nhận thêm tham số `movedPk` (khoá của đúng em vừa được bấm) — CHỈ hàng đó
+được gắn class `.is-moving` (CSS: `z-index:5` + `box-shadow`) trong suốt thời gian nó trượt, để nó
+visually "nổi lên" chứ không chỉ là một hàng đổi chỗ ngang bằng các hàng khác.
+- ⚠️ **Vì sao cần z-index riêng cho MỘT hàng, không phải tất cả**: bàn thử phát hiện — vì DOM được
+  xếp lại TRƯỚC khi đo FLIP (để phép đo khớp đúng vị trí cuối cùng), một em BỎ TÍCH (dời NGƯỢC LÊN)
+  sẽ đứng SỚM HƠN trong DOM so với những hàng nó "đi ngang qua" trong lúc trượt — mà thứ tự vẽ chồng
+  mặc định là hàng ĐỨNG SAU trong DOM vẽ ĐÈ LÊN hàng đứng trước, nên không có z-index thì hàng đang
+  bay lên sẽ trông như CHUI XUỐNG DƯỚI các hàng nó đi qua, ngược với "nổi lên trên" thầy tả.
+- Thời lượng animation: 320ms (Đợt 323) → 640ms cho mọi hàng bị xê dịch, **700ms riêng cho hàng được
+  tích** (thêm 60ms để nó "chạm đất" sau khi mọi hàng khác đã yên) — đúng ý "tốc độ chậm".
+- `anim.onfinish` gỡ `.is-moving` khi xong, kèm `setTimeout` dự phòng (luật "mọi `element.animate()`
+  phải có timeout dự phòng" ở đầu file — một cột bị chạy nền có thể không bao giờ bắn `onfinish`).
+
+### 4. Tên cột đã chọn: to TỐI ĐA, ăn theo `fitPodiumNames`
+`.aw-sd-pod-side-item` tăng cỡ chữ từ `1.9*aw-u` (Đợt 323) lên **`4*aw-u`** — cố ý ĐẶT QUÁ TO, không
+đoán một số vừa mắt. `fitPodiumNames(root, sel)` đổi selector mặc định thành
+`".aw-sd-pod-name, .aw-sd-pod-side-item"` (một selector nối dấu phẩy — `querySelectorAll` nhận
+thẳng) nên CẢ 6 nơi gọi hàm này sẵn có (không nơi nào truyền `sel` riêng) tự động co tên cột chọn
+xuống mức LỚN NHẤT còn vừa cột, đúng khuôn "to hết cỡ, chỉ co khi tràn" mà tên trong phễu đã dùng —
+không phải viết thêm một lượt gọi ở 6 chỗ. Việc "chưa căn giữa theo chiều cao" thầy nêu — logic
+`justify-content:space-evenly` đã có từ Đợt 323 và đo lại đúng (bàn thử: `list.getBoundingClientRect()
+.height === side.getBoundingClientRect().height`, khớp 100% chiều cao cột); nhiều khả năng ảnh thầy
+chụp là bản CSS CŨ còn cache trên trình duyệt (app.css không có tham số phá cache) — không sửa gì
+thêm ở mục này, chỉ tăng size như thầy yêu cầu.
+
+### 5. Số bên trái phân số (VD 19) ăn màu của %
+Trước: `.is-right` màu xanh cố định `#2ec27e`. Nay tính `pct`/`pctBand(pct)` (`core/showdown.js`)
+TRƯỚC khi dựng span điểm, gắn LUÔN class `is-pN` đó vào `<span class="is-right is-pN">` — CSS gộp
+`.aw-sd-pod-pct.is-pN` và `.aw-sd-pod-score .is-right.is-pN` vào chung một rule cho cả 5 dải + ca
+đặc biệt ô vàng (`is-m1`), nên số 19 và chữ % bên cạnh KHÔNG BAO GIỜ có thể lệch màu nhau — một nguồn
+màu duy nhất (`pctBand`) cho cả hai. Em không có % (dealt 0 câu) thì `.is-right` không có band, rơi
+về màu đen mặc định như `.is-total`.
+
+### Đã kiểm
+`node --input-type=module --check` sạch; brace `app.css` cân bằng (1863 mở = 1863 đóng — tăng 2 cặp
+so với Đợt 323 vì thêm `.is-moving`). Bàn thử lại CHÍNH harness `scratch/showdown-review-test.html`
+(không tạo file mới) qua dev server cục bộ, soi DOM qua `javascript_tool`:
+- Điểm "2/3" và "67%" cùng `getComputedStyle().color` = `rgb(161,98,7)` (đúng dải `is-p1`, ca đặc
+  biệt ô vàng) — khớp tuyệt đối.
+- Bấm tích: `row.classList` có `is-moving` NGAY LẬP TỨC (đồng bộ, trong cùng lời gọi click), `z-index:
+  5`; hàng chuyển sang nền xanh lá `rgb(220,252,231)`/viền `rgb(74,222,128)` sau khi vẽ lại.
+- Gán thử `--aw-u:9px` lên `#stage` (bench gốc không tự đo `--aw-u` như app thật vì không nạp
+  `core/unit.js`) để chụp ảnh ở tỉ lệ gần app thật: vạch đứt hiện rõ + khoảng cách rộng hơn hẳn, tên
+  cột chọn to, `list.height === side.height` (căn giữa đúng theo chiều cao cột), bỏ tích thì hàng
+  quay lại đúng hạng cũ (huy chương vàng trở lại), 0 lỗi console suốt toàn bộ thao tác tích/bỏ tích
+  hai chiều.
+⬜ **CHƯA đăng nhập trang aword thật** để bấm tay xác nhận (sandbox không đăng nhập Google được) —
+đặc biệt mục 4 (nghi ngờ cache trình duyệt cũ), thầy nên **tải lại cứng (Ctrl+F5 / Cmd+Shift+R)**
+trang trước khi kết luận tên cột chọn có căn giữa đúng hay chưa.
 
 ---
 

@@ -1254,10 +1254,23 @@ export function renderReviewPodium(ranked, { picks = null, onChange = null } = {
    * turn-limit buzz above already uses, with the same try/catch (a browser
    * without WAAPI just lands the rows at their new spot with no motion, which
    * is correct, not broken).
+   *
+   * ⭐⭐⭐ Đợt 324 (thầy, sau khi xem ảnh chụp: "hiệu ứng di chuyển dần TRÊN MẶT
+   * các ô khác và chạy dần xuống dưới. Tốc độ chậm và mượt") — `movedPk` names
+   * the ONE row a tap just toggled (`null`/omitted for the initial, unanimated
+   * layout). That row alone gets `.is-moving` (z-index + shadow, CSS) for the
+   * length of its own animation, so it visibly LIFTS OFF and glides over
+   * whichever rows it passes — without it, a row moving UP (un-tick) would
+   * paint BEHIND the rows it passes, because reordering the DOM first (so the
+   * FLIP measurement is against the real final layout) leaves it earlier in
+   * DOM order than them, and plain stacking order paints later-in-DOM on top.
+   * Duration is up from 320ms to 640ms (700ms for the lifted row, so it visibly
+   * lands a beat after everything else has settled) — thầy's own "chậm mượt".
    */
+  const MOVE_MS = 640;
   const sep = picks ? el("div", "aw-sd-pod-sep") : null;
   const rowEls = [];   // { pk, row } in RANK order — filled in by the loop below
-  function layoutRows(animate) {
+  function layoutRows(animate, movedPk) {
     if (!picks) return;
     const before = animate
       ? new Map(rowEls.map(({ row }) => [row, row.getBoundingClientRect()]))
@@ -1269,17 +1282,28 @@ export function renderReviewPodium(ranked, { picks = null, onChange = null } = {
     pickedRows.forEach(r => box.append(r));
     sep.classList.toggle("is-on", pickedRows.length > 0);
     if (!before) return;
-    rowEls.forEach(({ row }) => {
+    rowEls.forEach(({ pk, row }) => {
       const b0 = before.get(row);
       const b1 = row.getBoundingClientRect();
       const dy = b0.top - b1.top;
       if (Math.abs(dy) < 0.5) return;      // did not actually move — nothing to animate
+      const lifted = pk === movedPk;
+      if (lifted) row.classList.add("is-moving");
       try {
-        row.animate(
+        const anim = row.animate(
           [{ transform: `translateY(${dy}px)` }, { transform: "translateY(0)" }],
-          { duration: 320, easing: "cubic-bezier(.22,.9,.3,1)" }
+          { duration: lifted ? MOVE_MS + 60 : MOVE_MS, easing: "cubic-bezier(.22,.61,.22,1)" }
         );
-      } catch { /* không có Web Animations thì hàng vẫn tới đúng chỗ, chỉ là không trượt */ }
+        if (lifted) {
+          const settle = () => row.classList.remove("is-moving");
+          anim.onfinish = settle;
+          // ⚠️ Every element.animate() needs a timeout fallback (file header,
+          // Đợt 219's own rule) — a backgrounded column can leave `onfinish`
+          // never firing, and `.is-moving` stuck would leave this one pupil's
+          // row permanently floating above its neighbours.
+          setTimeout(settle, MOVE_MS + 200);
+        }
+      } catch { if (lifted) row.classList.remove("is-moving"); }
     });
   }
 
@@ -1357,14 +1381,22 @@ export function renderReviewPodium(ranked, { picks = null, onChange = null } = {
     const stats = el("div", "aw-sd-pod-stats");
     // ⭐⭐⭐ Đợt 323 (thầy: "phần đúng sai chuyển thành dạng số câu đúng trên
     // tổng thể, VD: 19/20") — replaces the old "✓5 ✗5" pair with ONE fraction,
-    // right (green) over total dealt (plain). `b.right + b.wrong === b.total`
+    // right over total dealt (plain black). `b.right + b.wrong === b.total`
     // always (see pctOf's own note in core/showdown.js), so this is not a new
     // number, just a new way to read the two the board already had.
-    stats.append(
-      el("span", "aw-sd-pod-score", `<span class="is-right">${b.right}</span><span class="is-total">/${b.total}</span>`)
-    );
+    // ⭐⭐⭐ Đợt 324 (thầy: "số 19 sử dụng màu giống màu của %") — computed BEFORE
+    // building the score span now, so its "is-right" number can carry the SAME
+    // `pctBand` class the % chip beside it uses — one rule (`pctBand`, in
+    // core/showdown.js) for both colours, so they can never disagree about what
+    // this pupil scored. A pupil dealt no question at all (`pct === null`) gets
+    // no band class — falls back to the same plain colour as the total.
     const pct = pctOf(b);
-    if (pct !== null) stats.append(el("span", "aw-sd-pod-pct " + pctBand(pct), pct + "%"));
+    const band = pct !== null ? pctBand(pct) : "";
+    stats.append(
+      el("span", "aw-sd-pod-score",
+        `<span class="is-right ${band}">${b.right}</span><span class="is-total">/${b.total}</span>`)
+    );
+    if (pct !== null) stats.append(el("span", "aw-sd-pod-pct " + band, pct + "%"));
     // Only when the round clock was on — a Showdown played without it shows
     // the two tallies alone rather than a column of dashes.
     if (b.hasTime) stats.append(el("span", "aw-sd-pod-time", fmtRoundMs(b.ms)));
@@ -1439,7 +1471,9 @@ export function renderReviewPodium(ranked, { picks = null, onChange = null } = {
           // ⭐⭐⭐ Đợt 323 — the row itself now also moves: up into the funnel when
           // un-ticked, down below the dashed line when ticked. Animated (see
           // layoutRows' own note); the sound and onChange still fire regardless.
-          layoutRows(true);
+          // ⭐⭐⭐ Đợt 324 — `pk` tells layoutRows WHICH row to lift above the rest
+          // while it travels (see its own note on `movedPk`/`.is-moving`).
+          layoutRows(true, pk);
           onChange?.();
           try { sound.tick(); } catch { /* âm thanh là trang trí, không được chặn việc vẽ */ }
         };
@@ -1490,12 +1524,17 @@ export function renderReviewPodium(ranked, { picks = null, onChange = null } = {
  * column rAF never fires, and a name left at its unshrunk size — or worse, left
  * mid-shrink — would be the one thing this function exists to prevent.
  *
- * @param {string} sel  which names to fit. Defaults to the real board's; the
- *   Recently-results columns in core/showdown-setup.js pass `.aw-sd-mini-name`,
- *   because the rule ("shrink, then abbreviate, never cut") is the same one and
- *   two copies of it would drift the first time either board was touched.
+ * @param {string} sel  which names to fit. Defaults to the real board's — BOTH
+ *   the funnel names AND the two side-column names (Đợt 324, thầy: "font chữ
+ *   to tối đa" for the chosen column — a comma-joined selector so every
+ *   existing caller that omits `sel` picks up the side list for free, no
+ *   second call to remember at each of the 6 sites that already call this).
+ *   The Recently-results columns in core/showdown-setup.js pass
+ *   `.aw-sd-mini-name` explicitly, because the rule ("shrink, then abbreviate,
+ *   never cut") is the same one and two copies of it would drift the first
+ *   time either board was touched.
  */
-export function fitPodiumNames(root, sel = ".aw-sd-pod-name") {
+export function fitPodiumNames(root, sel = ".aw-sd-pod-name, .aw-sd-pod-side-item") {
   if (!root || !root.querySelectorAll) return;
   const fits = nm => nm.scrollWidth <= nm.clientWidth + 0.5;
   // ⭐ Đợt 217 — `pass()` nay TRẢ LỜI "có đo được không", chứ không chỉ làm rồi thôi.

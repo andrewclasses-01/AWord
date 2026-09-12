@@ -8,7 +8,23 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **12/9/2026 (Đợt 323 — SHOWDOWN PODIUM: thầy gửi 2 ảnh chụp bảng thật rồi liệt
+> Cập nhật lần cuối: **12/9/2026 (Đợt 324 — SHOWDOWN PODIUM, tinh chỉnh tiếp sau Đợt 323: thầy gửi
+> thêm 1 ảnh chụp bảng thật rồi yêu cầu 5 điều. Nền ô đã chọn đổi xanh dương → xanh lá nhạt
+> (`#dcfce7`/`#4ade80`); vạch chia giữa 2 khối đậm hơn + khoảng cách tăng gần gấp 3 (`0.5→1.4 aw-u`);
+> ⭐⭐⭐ hiệu ứng tích nay khiến ĐÚNG hàng vừa bấm nổi lên trên (`z-index:5`+shadow qua class
+> `.is-moving`, chỉ gắn một hàng nhờ tham số `movedPk` mới của `layoutRows()` — cần z-index riêng vì
+> hàng bỏ tích dời NGƯỢC LÊN đứng sớm hơn trong DOM sau khi xếp lại, không có z-index sẽ trông như
+> chui XUỐNG DƯỚI thay vì nổi lên) rồi trượt CHẬM hơn xuống dưới (320ms→640/700ms); tên cột đã chọn
+> tăng cỡ chữ tối đa (`1.9→4 aw-u`, cố ý quá to) rồi để `fitPodiumNames` (selector mặc định đổi thành
+> `".aw-sd-pod-name, .aw-sd-pod-side-item"`, một sửa ăn cả 6 nơi gọi có sẵn) tự co xuống mức lớn nhất
+> còn vừa; số bên trái phân số (VD 19) nay ăn màu CHUNG với % qua cùng `pctBand` thay vì xanh cố
+> định. `node --check` sạch; brace `app.css` cân bằng (1863=1863). Bàn thử lại harness có sẵn
+> `scratch/showdown-review-test.html`, gán thử `--aw-u` lên `#stage` (bench gốc không tự đo) để chụp
+> ảnh gần app thật — vạch đứt/khoảng cách/nền xanh lá/tên to/màu số khớp % đều đúng, `.is-moving` bắn
+> đồng bộ ngay lúc bấm, 0 lỗi console. ⬜ CHƯA đăng nhập trang thật — mục tên to/căn giữa nghi cache
+> CSS cũ (app.css không có tham số phá cache), khuyên thầy tải lại CỨNG (Ctrl+F5) trước khi kết luận.
+> Xem GHI CHU DU AN.md Đợt 324)**.
+> Trước đó: **(Đợt 323 — SHOWDOWN PODIUM: thầy gửi 2 ảnh chụp bảng thật rồi liệt
 > kê 10 điều chỉnh giao diện. Tên trong phễu VÀ hai cột chọn nay LUÔN viết tắt "N.B.AN"
 > (`assignShortLabels`, group-aware — không còn chỉ là lưới cuối của `fitPodiumNames` khi tràn); bỏ
 > chữ LEFT/RIGHT và số thứ tự trước tên trong cột chọn, cột co giãn lấp cột + `justify-content:
