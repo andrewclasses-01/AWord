@@ -140,7 +140,8 @@ export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel,
 
   function veNhanNut() {
     if (!nutBangTra) return;
-    const n = (data.content.goiY || []).filter(r => String(r.go || "").trim()).length;
+    // Đợt 326 — đếm dòng CÓ câu hướng dẫn (chi-dau/gan không có `go` nhưng vẫn là dòng thật)
+    const n = (data.content.goiY || []).filter(r => String(r.noi || "").trim() && (String(r.go || "").trim() || r.kieu === "chi-dau" || r.kieu === "gan")).length;
     nutBangTra.textContent = n ? `⚙ Hướng dẫn khi sai — ${n} dòng` : "⚙ Hướng dẫn khi sai";
     nutBangTra.classList.toggle("co-dong", n > 0);
   }
