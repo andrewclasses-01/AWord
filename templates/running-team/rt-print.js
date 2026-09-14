@@ -44,17 +44,35 @@ import { el } from "../../core/utils.js";
 const PAGE_BODY_MM = 297 - 15 - 13;      // 269mm between the top and bottom margins
 // The heading block measures ~10.6mm (5mm tag + 3mm subtitle + 1mm padding +
 // 1.6mm margin — both trimmed from Đợt 109's 1.4/2.4mm, Đợt 117: "less
-// spacing, more space for the words"). The rest is DELIBERATE SLACK, kept
-// deliberately non-zero: the row maths below divides the remaining height
-// EXACTLY between the rows, so with a tight budget any small real-world
-// excess — a rounded border, a font metric, a printer driver that rounds a
-// margin up — lands the final row on a second sheet. Running word's sheets
-// learned this at 0mm slack (rw-print.js). Nothing here can measure the
-// printed page from JS: these rules live inside `@media print`, so on screen
-// they simply do not apply and any DOM measurement of them is measuring the
-// wrong layout. Đợt 117 trims the slack from 9mm to ~5mm (21 -> 17) rather
-// than to 0 — still real insurance against a 2-line title, just less of it.
+// spacing, more space for the words"). The rest is DELIBERATE SLACK against
+// the HEADING only (a 2-line title, a rounded border) — it does NOT cover the
+// row maths below. Nothing here can measure the printed page from JS: these
+// rules live inside `@media print`, so on screen they simply do not apply and
+// any DOM measurement of them is measuring the wrong layout.
 const HEADING_MM = 17;
+// ⭐ 14/9/2026 — real A4 print (Teacher Andrew's first, mục 11 "VIỆC ĐANG
+// CHỜ" of GHI CHU RUNNING-TEAM.md): an 85-word pool printed with the LAST row
+// of both full 29-row columns sliced off at the page's bottom edge, while the
+// short 27-row third column printed whole. Cause is the same one rw-print.js
+// paid for on 19/8/2026 and this file's own header (mục 19-25) only quoted
+// the FIRST half of: `rowH = ROWS_MM / perCol` divides the page's height
+// EXACTLY (zero slack) across the rows, but a text line's rendered glyphs
+// stand proud of its own CSS line box (a font metric, not a bug) even though
+// `.aw-rt-ps-c-word` clips it visually with `overflow: hidden` — Chromium's
+// page-break maths still reserves the taller, unclipped box, so the ONE exact
+// division above leaves nowhere for that overhang to go: the last row of a
+// FULL column lands right on the page's bottom edge and gets sliced off
+// there instead of flowing onto a second sheet (this sheet has no page-2
+// fallback). Reserving a fraction of a row below fixes it without shrinking
+// the type anyone can see; the heading's own slack above is a different
+// budget and was never enough for this on its own (it protects the heading
+// block, not the 29th row of a column nowhere near the heading).
+// Derived the same way rw-print.js measured for this same font ("Baloo 2"
+// bold, content area ≈1.58em vs a line-height of 1/FS_HEIGHT_RATIO em): at
+// FS_HEIGHT_RATIO 0.8 that's (1.58 - 1/0.8)/2 = 0.165em of overhang, i.e.
+// 0.165/1.25 ≈ 0.132 of a row — rounded up with the same "third to spare"
+// margin rw-print.js used (0.132 × 4/3 ≈ 0.18).
+const OVERHANG_ROWS = 0.18;
 const ROWS_MM = PAGE_BODY_MM - HEADING_MM;
 const ROW_MIN_MM = 4.2;                   // ~7.5pt — below this nobody can scan it standing up
 const COLS = 3;                           // always 3 (Đợt 109) — see file header
@@ -104,7 +122,9 @@ function wordColumnWidthMm(cols) {
 // (and so every shorter one) from being ellipsised.
 function metrics(count, cols, longestWord) {
   const perCol = Math.ceil(Math.max(1, count) / cols);
-  const rowH = Math.max(ROW_MIN_MM, ROWS_MM / perCol);
+  // + OVERHANG_ROWS reserves a fraction of a row so the LAST row of a full
+  // column never touches the page's true bottom edge — see the const above.
+  const rowH = Math.max(ROW_MIN_MM, ROWS_MM / (perCol + OVERHANG_ROWS));
   const fsByHeight = rowH * FS_HEIGHT_RATIO;
   const chars = Math.max(1, String(longestWord || "").length);
   const fsByWidth = wordColumnWidthMm(cols) / (chars * CHAR_WIDTH_EM);

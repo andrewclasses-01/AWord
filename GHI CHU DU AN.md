@@ -31,6 +31,17 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > ⬜ CHƯA đăng nhập trang thật để bấm tay (sandbox không đăng nhập Google được) — thầy tự mở một act,
 > xem danh sách bài giao có gấp mặc định không, giữ nút checklist ~nửa giây xem có bung đúng chỗ
 > không, và bấm nhanh vẫn ra form Set assignment như cũ. Xem mục **Đợt 330** trong file này.)
+> Trước đó: **Đợt 327** (14/9/2026, thầy chụp 3 ảnh — bản xem trước trên máy, tờ giấy thật, và cửa sổ
+> "Print preview" của myActivity — sau lần đầu in tờ WORD LIST của RUNNING TEAM ra giấy A4 thật): tờ 85
+> từ bị CẮT MẤT dòng cuối ở 2/3 cột (dòng 29 và dòng 58 — đúng 2 cột đủ 29 dòng; cột 3 chỉ 27 dòng thì in
+> trọn). Gốc: `rt-print.js::metrics()` chia đúng khít chiều cao trang cho số dòng (`rowH = ROWS_MM /
+> perCol`, 0mm dư) — CÙNG bẫy chữ tràn khung dòng (glyph overhang) mà `rw-print.js` (Running word) đã trả
+> giá và vá bằng `OVERHANG_ROWS` hôm 19/8/2026, nhưng `rt-print.js` chưa từng nhận bản vá đó (file header
+> của nó chỉ chép lại nửa bài học ĐẦU của rw-print — tính đúng số cột — chứ không phải nửa SAU). Đã thêm
+> `OVERHANG_ROWS = 0.18` (suy từ đúng công thức đo của rw-print cho font "Baloo 2", đổi theo tỉ lệ cỡ chữ
+> 0.8 của game này) vào mẫu số — cột 29 dòng giờ chừa dư 1,55mm ở đáy, cỡ chữ hầu như không đổi
+> (6,95→6,91mm). Đo lại bằng script Node độc lập xác nhận đúng số; `node --input-type=module --check`
+> sạch. ✅ **Thầy đã in giấy thật lại (14/9/2026) — hết cắt.** Xem mục **Đợt 327**.
 > Trước đó: **Đợt 326** (14/9/2026, thầy "ok hết các đề xuất" sau khảo sát 4.959 câu sai thật của khoá Nền
 > tảng): bảng "Hướng dẫn khi sai" có thêm 3 KIỂU KHỚP — `chi-dau` (chữ đúng, chỉ sai dấu câu/dấu cách) · `mau`
 > (regex, cho rác/bấm 1 phím = 19% lượt sai) · `gan` (sai chính tả 1 từ qua `bestMatch()` + 3 lưới chống nói bậy,
@@ -575,6 +586,67 @@ theo số đo trang là rơi xuống dưới ô; và ô đang trôi nên phải 
 hàm tên `loop`) mới bấm trúng. ⬜ **Chờ thầy bấm tay** trên máy soạn + TOMKO/điện thoại (cảm ứng chưa đo).
 
 ---
+
+## Đợt 327 (14/9/2026, thầy chụp 3 ảnh sau lần in giấy A4 thật ĐẦU TIÊN của Running team) — **TỜ "WORD LIST" CẮT MẤT DÒNG CUỐI Ở 2/3 CỘT — cùng bẫy glyph-overhang `rw-print.js` đã trả giá, chưa từng vá bên này**
+
+**Bối cảnh.** Thầy in thử tờ giấy chuyền tay của Running team (`rt-print.js`) lần đầu tiên trên máy in
+thật — pool 85 từ, lớp B2-B, luôn 3 cột theo thiết kế Đợt 109. Gửi 3 ảnh: bản xem trước trên máy (đủ 85
+từ), ảnh chụp tờ giấy thật, và cửa sổ "Print preview" riêng của myActivity (`renderer/print-preview.html`
+— đọc thẳng bytes PDF `wc.printToPDF()` sinh ra bằng pdf.js, đúng những gì sẽ ra máy in, không phải hộp
+thoại Windows). Cả ảnh giấy thật lẫn cửa sổ preview đó đều THIẾU phần dưới so với bản xem trước.
+
+**Đọc kỹ 3 ảnh mới thấy đúng hình dạng lỗi:** cột 1 (từ 1–29) và cột 2 (30–58) đều **ĐỦ 29 dòng** — và cả
+hai đều bị cắt đúng ở DÒNG CUỐI CÙNG (29 và 58). Cột 3 (59–85) chỉ có **27 dòng** (pool 85 từ chia 3 cột dư
+2) và in TRỌN VẸN tới FETCH. Không phải lỗi ngẫu nhiên: đúng cột nào chạm mức tối đa (29 dòng) mới bị cắt,
+cột hụt 2 dòng thì thừa chỗ.
+
+**Gốc rễ — đọc `rt-print.js`:** `metrics()` tính `rowH = ROWS_MM / perCol` — chia ĐÚNG KHÍT chiều cao khả
+dụng của trang (252mm) cho số dòng mỗi cột, **không chừa dư một milimet nào**. File header của chính nó
+(mục 19-25) đã cảnh báo về bẫy toán của `rw-print.js` (Running word) — nhưng chỉ cảnh báo **nửa đầu** của
+bài học đó (tính helper theo đúng số cột thật, không lấy nhầm số cột khác). `rw-print.js` còn một bài học
+**thứ hai**, muộn hơn 2 tuần (19/8/2026, xem comment `OVERHANG_ROWS` trong file đó): dù `line-height` được
+gán đúng bằng chiều cao hàng và `.aw-rt-ps-c-word`/`.aw-rw-ps-c-word` đều có `overflow:hidden` để cắt hình
+ảnh chữ tràn, **maths NGẮT TRANG của Chromium vẫn tính theo khung dòng CHƯA CẮT** (glyph của font đứng
+"trồi" ra ngoài khung dòng CSS một chút — thuộc tính riêng của font, không phải lỗi code) — nên một phép
+chia đúng khít 0mm dư vẫn đẩy dòng cuối cùng của một cột ĐẦY vượt quá mép dưới trang thật, và vì
+`.aw-rt-ps-page { page-break-after: avoid }` + tờ này không có trang 2 dự phòng, phần vượt đó bị CẮT THẲNG
+tại mép trang thay vì trôi sang tờ khác. `rw-print.js` đã đo và vá bằng hằng `OVERHANG_ROWS` (một phân số
+của một dòng, tỉ lệ theo `FS_HEIGHT_RATIO`) cộng vào MẪU SỐ của phép chia — nhưng bản vá đó chưa từng
+được chép sang `rt-print.js`, dù cùng font "Baloo 2" đậm, cùng kỹ thuật `overflow:hidden` che chữ tràn.
+
+**Đo thật trước khi vá (không qua app, không qua print thật):** dựng trang HTML độc lập trong scratchpad,
+nạp đúng font `baloo-2-700.woff2`/`baloo-2-800.woff2` từ `core/assets/fonts/`, chép nguyên CSS
+`.aw-rt-ps-head`/`.aw-rt-ps-row`/`.aw-rt-ps-c-word` (bỏ khối `@media print` vì đơn vị `mm` là tuyệt đối,
+render giống hệt trên màn hình lẫn trên giấy), phục vụ qua `python -m http.server` (file `file://` bị
+Browser pane chặn không cho chạy JS) rồi đo `getBoundingClientRect()` thật của khối tiêu đề và một dòng:
+khối tiêu đề đo được **11,844mm** — NHỎ hơn hẳn ngân sách `HEADING_MM=17mm` (dư 5,16mm, đúng như comment cũ
+mô tả) — xác nhận khối tiêu đề **không phải nguyên nhân**; dòng chữ đo qua `getBoundingClientRect` gần như
+khớp khung CSS (không lộ overhang qua phép đo này, vì `getBoundingClientRect` trả về khung LAYOUT đã bị
+`overflow:hidden` cắt, không phải mực chữ thật tràn ra ngoài mà `rw-print.js` đo được qua chính bộ máy in
+CDP+Chromium thật hôm 19/8). Vì vậy bản vá dùng lại ĐÚNG công thức suy luận của `rw-print.js` (không đoán
+số mới): overhang mỗi bên ≈ (nội dung font ~1,58em − line-height 1/tỉ_lệ em) / 2; ở `FS_HEIGHT_RATIO=0.8`
+của Running team (so với 0,78 của Running word) ra **0,165em** overhang, quy về phân số của một dòng
+**0,132**, nhân hệ số dư "một phần ba" như `rw-print.js` đã dùng → **`OVERHANG_ROWS = 0.18`**.
+
+**Vá:** `rt-print.js` — thêm hằng `OVERHANG_ROWS = 0.18` (kèm comment suy ra công thức, dẫn nguồn
+`rw-print.js`), đổi `metrics()`: `rowH = ROWS_MM / perCol` → `rowH = ROWS_MM / (perCol + OVERHANG_ROWS)`.
+Với pool 85 từ (3 cột, 29 dòng/cột): tổng chiều cao dùng còn **250,45mm** trên ngân sách 252mm (dư
+**1,55mm** ở đáy so với 0mm trước đó), cỡ chữ gần như không đổi (**6,95 → 6,91mm**, ~0,6%, mắt thường
+không thấy khác). Đã đối chiếu bằng script Node độc lập (không qua app) in ra đúng 2 bộ số trước/sau ở
+trên; `node --input-type=module --check < rt-print.js` sạch. Không đụng CSS, không đụng số cột, không đụng
+WIDTH GUARD (mục 13d cũ) — chỉ một hằng số và một dòng công thức.
+
+✅ **Thầy đã in giấy thật lại (14/9/2026) — HẾT CẮT** ở cả 3 cột, xác nhận đúng lớp phép đo mà JS
+không thay thế được (`printToPDF`/`wc.print()` qua driver máy in thật) — đúng bài học mục 10.4 của
+`GHI CHU RUNNING-TEAM.md` ("layout in không đo được từ màn hình... phải in giấy thật").
+
+**VIỆC ĐANG CHỜ**
+- [x] ⭐ Thầy in lại tờ WORD LIST (Running team) và xác nhận không còn cắt dòng cuối ở cột nào. — ✅ Đạt.
+- [ ] Cân nhắc dài hạn (chưa làm, ngoài phạm vi đợt này): cho `.aw-rt-ps-table` một chiều cao CSS tường
+      minh để `column-fill: auto` phát huy đúng nghĩa (hiện không có chiều cao tường minh nên trình duyệt
+      lặng lẽ xử lý như `balance` — theo đúng spec CSS multicol) — nếu làm được, một pool vượt quá 1 trang
+      sẽ tự trôi sang TRANG 2 thay vì im lặng cắt mất chữ, thay vì phải tin tuyệt đối vào toán zero-slack.
+      `rw-print.js`/`rt-print.js` hiện đều dựa hoàn toàn vào toán đúng, không có lưới an toàn thứ hai này.
 
 ## Đợt 326 (14/9/2026, thầy "ok hết các đề xuất" sau khảo sát 4.959 câu sai thật) — **BA KIỂU KHỚP MỚI cho bảng "Hướng dẫn khi sai": CHỈ SAI DẤU · MẪU (regex) · GẦN ĐÚNG (chính tả 1 từ) + nới đáp án phụ 5 → 15**
 

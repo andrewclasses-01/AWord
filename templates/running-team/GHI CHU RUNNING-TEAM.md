@@ -1,5 +1,25 @@
 # GHI CHU RUNNING TEAM (RUNNINGT)
 
+> **Đợt 327 dự án (14/9/2026) — TỜ IN "WORD LIST" (85 từ) BỊ CẮT MẤT DÒNG CUỐI Ở 2/3 CỘT KHI THẦY IN
+> GIẤY A4 THẬT LẦN ĐẦU (mục 11 "VIỆC ĐANG CHỜ" cũ). ✅ THẦY IN LẠI XÁC NHẬN HẾT CẮT — ĐÃ COMMIT + PUSH.**
+> Thầy gửi 3 ảnh: bản xem trước trên máy hiện đủ 85 từ/3 cột, nhưng tờ giấy thật VÀ cửa sổ "Print
+> preview" của myActivity (đọc thẳng PDF `printToPDF` sinh ra — đúng bytes sẽ in) đều CẮT MẤT dòng
+> cuối của 2 cột đủ 29 dòng (dòng 29 NEVERTHELESS, dòng 58 CLEANSE) — trong khi cột 3 chỉ 27 dòng
+> (ngắn hơn 2 dòng) thì in trọn vẹn tới FETCH. Đúng chữ ký của bẫy `rw-print.js` (Running word) đã trả
+> giá hôm 19/8/2026: `metrics()` ở đây chia đúng chiều cao trang cho `perCol` **KHÔNG chừa dư**
+> (`rowH = ROWS_MM / perCol`) — chữ vẽ ra tràn nhẹ khỏi khung dòng CSS dù `.aw-rt-ps-c-word` có
+> `overflow:hidden` cắt hình, vì maths ngắt trang của Chromium vẫn tính theo khung chưa cắt. Cột đủ
+> 29 dòng vừa khít 252,00mm/252mm ngân sách ⇒ 0mm dư, nên dòng cuối rơi đúng lên mép trang và tờ này
+> KHÔNG có trang 2 dự phòng (`page-break-after:avoid`) nên bị CẮT thẳng thay vì trôi sang tờ khác. File
+> header (mục 19-25) trước đây chỉ chép lại **nửa đầu** bài học của rw-print (tính đúng số cột) mà bỏ
+> sót nửa sau (19/8/2026, `OVERHANG_ROWS`) — file này chưa từng nhận bản vá đó.
+> **Đã vá:** thêm hằng `OVERHANG_ROWS = 0.18` (cùng công thức đo của rw-print cho đúng font "Baloo 2"
+> đậm, đổi theo `FS_HEIGHT_RATIO` 0.8 của game này thay vì 0.78 của Running word) và đổi
+> `rowH = ROWS_MM / (perCol + OVERHANG_ROWS)` — cột 29 dòng giờ dùng 250,45mm/252mm, chừa 1,55mm dư ở
+> đáy; cỡ chữ hầu như không đổi (6,95mm → 6,91mm, ~0,6%, mắt thường không thấy). Đã đo lại bằng script
+> Node độc lập (không qua app) xác nhận số trước/sau đúng như trên; `node --input-type=module --check`
+> sạch. ✅ **Thầy đã in giấy thật lại — hết cắt.** Code `rt-print.js` + ghi chú này ĐÃ COMMIT + PUSH.
+
 > **Đợt 315 dự án (09/9/2026) — XÁO THỨ TỰ GỌI TÊN MỖI LẦN START RUNNING + ROUND TIME NẤC 5s.
 > KHÔNG ĐỤNG CORE. ⬜ CHỜ THẦY DUYỆT (chưa commit).**
 > Thầy: mỗi lần bấm START RUNNING (dù cùng 1 SET) muốn thứ tự gọi tên xáo lại để chơi lần 2/3 không
@@ -398,10 +418,9 @@ dải **160px**. Chi tiết: `GHI CHU DU AN.md` Đợt 87.
 - [ ] **⭐ Thầy tạo lớp thật trong Settings → Classes** rồi báo kết quả. Máy **không tự làm được** khúc
       này: popup đăng nhập Google không tự động hoá được, nên đường ghi Firestore của `core/classes.js`
       **chưa từng chạy thật**. Đây là rủi ro còn lại lớn nhất của đợt này.
-- [ ] **⭐ In thử tờ A4 thật** (Đợt 109 đổi luôn 3 cột, Đợt 117 tăng cỡ chữ thêm lần nữa — chưa in giấy
-      thật lần nào để xác nhận). Cần thầy xác nhận: 3 cột có làm rối việc dò số không so với 1-2 cột cũ
-      (nếu rối thì hạ `COLS` trong `rt-print.js`), cỡ chữ WIDTH GUARD mới (mục 9c + 16, ưu tiên không
-      cắt chữ hơn là chữ thật to) có vừa mắt không.
+- [x] **⭐ In thử tờ A4 thật LẦN NỮA sau Đợt 327** — ✅ 14/9/2026: thầy in lại, xác nhận **HẾT CẮT** dòng
+      cuối ở cả 3 cột sau khi vá `OVERHANG_ROWS = 0.18`. Còn để ngỏ (chưa hỏi riêng): 3 cột có làm rối
+      việc dò số không so với 1-2 cột cũ, cỡ chữ WIDTH GUARD (mục 9c + 16) có vừa mắt không.
 - [ ] Chơi thử trên **TOMKO / iPad**: khung 4:3, nút Fullscreen kiểu zoom, 6 ô có đủ to để em cuối lớp
       đọc không; **Đợt 117**: ô SET có icon mới bấm dễ bằng ngón tay không (nút tròn Delete 1.9cqw), tốc
       độ đếm 3-2-1 mới (1300/1000ms) và cỡ tên trên overlay có vừa mắt/cân đối không.
