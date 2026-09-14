@@ -1,7 +1,11 @@
 # GHI CHU RUNNING TEAM (RUNNINGT)
 
-> **Đợt 327 dự án (14/9/2026) — TỜ IN "WORD LIST" (85 từ) BỊ CẮT MẤT DÒNG CUỐI Ở 2/3 CỘT KHI THẦY IN
+> **Đợt 331 dự án (14/9/2026) — TỜ IN "WORD LIST" (85 từ) BỊ CẮT MẤT DÒNG CUỐI Ở 2/3 CỘT KHI THẦY IN
 > GIẤY A4 THẬT LẦN ĐẦU (mục 11 "VIỆC ĐANG CHỜ" cũ). ✅ THẦY IN LẠI XÁC NHẬN HẾT CẮT — ĐÃ COMMIT + PUSH.**
+> ⚠️ Commit git lỡ ghi "Dot 327" (đụng đúng số của "Group sort → Speed sorting" — 2 phiên làm việc cùng
+> lúc trên cùng repo AWord, mỗi bên tự tính số tiếp theo từ cùng bản gốc Đợt 326 nên trùng nhau). Số
+> ĐÚNG (sau Đợt 330, phiên kia đã dùng 327-330) là **331** — đã sửa lại trong ghi chú, không sửa commit
+> message cũ (đã đẩy lên GitHub). Xem `GHI CHU DU AN.md` mục Đợt 331.
 > Thầy gửi 3 ảnh: bản xem trước trên máy hiện đủ 85 từ/3 cột, nhưng tờ giấy thật VÀ cửa sổ "Print
 > preview" của myActivity (đọc thẳng PDF `printToPDF` sinh ra — đúng bytes sẽ in) đều CẮT MẤT dòng
 > cuối của 2 cột đủ 29 dòng (dòng 29 NEVERTHELESS, dòng 58 CLEANSE) — trong khi cột 3 chỉ 27 dòng
@@ -418,7 +422,7 @@ dải **160px**. Chi tiết: `GHI CHU DU AN.md` Đợt 87.
 - [ ] **⭐ Thầy tạo lớp thật trong Settings → Classes** rồi báo kết quả. Máy **không tự làm được** khúc
       này: popup đăng nhập Google không tự động hoá được, nên đường ghi Firestore của `core/classes.js`
       **chưa từng chạy thật**. Đây là rủi ro còn lại lớn nhất của đợt này.
-- [x] **⭐ In thử tờ A4 thật LẦN NỮA sau Đợt 327** — ✅ 14/9/2026: thầy in lại, xác nhận **HẾT CẮT** dòng
+- [x] **⭐ In thử tờ A4 thật LẦN NỮA sau Đợt 331** — ✅ 14/9/2026: thầy in lại, xác nhận **HẾT CẮT** dòng
       cuối ở cả 3 cột sau khi vá `OVERHANG_ROWS = 0.18`. Còn để ngỏ (chưa hỏi riêng): 3 cột có làm rối
       việc dò số không so với 1-2 cột cũ, cỡ chữ WIDTH GUARD (mục 9c + 16) có vừa mắt không.
 - [ ] Chơi thử trên **TOMKO / iPad**: khung 4:3, nút Fullscreen kiểu zoom, 6 ô có đủ to để em cuối lớp

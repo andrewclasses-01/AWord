@@ -12,7 +12,20 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **⭐ Đợt 330** (14/9/2026, thầy yêu cầu qua chat — GẤP DANH SÁCH BÀI GIAO DƯỚI STAGE VÀO
+> Mới nhất: **⭐ Đợt 331** (14/9/2026, thầy chụp 3 ảnh — bản xem trước trên máy, tờ giấy thật, và cửa sổ
+> "Print preview" của myActivity — sau lần đầu in tờ WORD LIST của RUNNING TEAM ra giấy A4 thật): tờ 85
+> từ bị CẮT MẤT dòng cuối ở 2/3 cột (dòng 29 và dòng 58 — đúng 2 cột đủ 29 dòng; cột 3 chỉ 27 dòng thì in
+> trọn). Gốc: `rt-print.js::metrics()` chia đúng khít chiều cao trang cho số dòng (`rowH = ROWS_MM /
+> perCol`, 0mm dư) — CÙNG bẫy chữ tràn khung dòng (glyph overhang) mà `rw-print.js` (Running word) đã trả
+> giá và vá bằng `OVERHANG_ROWS` hôm 19/8/2026, nhưng `rt-print.js` chưa từng nhận bản vá đó (file header
+> của nó chỉ chép lại nửa bài học ĐẦU của rw-print — tính đúng số cột — chứ không phải nửa SAU). Đã thêm
+> `OVERHANG_ROWS = 0.18` (suy từ đúng công thức đo của rw-print cho font "Baloo 2", đổi theo tỉ lệ cỡ chữ
+> 0.8 của game này) vào mẫu số — cột 29 dòng giờ chừa dư 1,55mm ở đáy, cỡ chữ hầu như không đổi
+> (6,95→6,91mm). Đo lại bằng script Node độc lập xác nhận đúng số; `node --input-type=module --check`
+> sạch. ✅ **Thầy đã in giấy thật lại (14/9/2026) — hết cắt.** ⚠️ Commit git lỡ ghi số 327 (đụng số của
+> "Group sort → Speed sorting" — 2 phiên làm việc cùng lúc cùng repo) — mục chi tiết đã đổi đúng lại
+> thành 331. Xem mục **Đợt 331**.
+> Trước đó: **Đợt 330** (14/9/2026, thầy yêu cầu qua chat — GẤP DANH SÁCH BÀI GIAO DƯỚI STAGE VÀO
 > NÚT "Set assignment"): danh sách `.aw-as-bars` (một dòng mỗi bài giao của act, dưới khung stage)
 > mặc định GẤP LẠI (`is-collapsed{display:none}`, app.css); NHẤN GIỮ nút "Set assignment" (icon
 > checklist, cụm phải dưới stage) bung/gấp lại NGAY TẠI VỊ TRÍ CŨ (chỉ toggle class trên phần tử đã
@@ -31,17 +44,6 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > ⬜ CHƯA đăng nhập trang thật để bấm tay (sandbox không đăng nhập Google được) — thầy tự mở một act,
 > xem danh sách bài giao có gấp mặc định không, giữ nút checklist ~nửa giây xem có bung đúng chỗ
 > không, và bấm nhanh vẫn ra form Set assignment như cũ. Xem mục **Đợt 330** trong file này.)
-> Trước đó: **Đợt 327** (14/9/2026, thầy chụp 3 ảnh — bản xem trước trên máy, tờ giấy thật, và cửa sổ
-> "Print preview" của myActivity — sau lần đầu in tờ WORD LIST của RUNNING TEAM ra giấy A4 thật): tờ 85
-> từ bị CẮT MẤT dòng cuối ở 2/3 cột (dòng 29 và dòng 58 — đúng 2 cột đủ 29 dòng; cột 3 chỉ 27 dòng thì in
-> trọn). Gốc: `rt-print.js::metrics()` chia đúng khít chiều cao trang cho số dòng (`rowH = ROWS_MM /
-> perCol`, 0mm dư) — CÙNG bẫy chữ tràn khung dòng (glyph overhang) mà `rw-print.js` (Running word) đã trả
-> giá và vá bằng `OVERHANG_ROWS` hôm 19/8/2026, nhưng `rt-print.js` chưa từng nhận bản vá đó (file header
-> của nó chỉ chép lại nửa bài học ĐẦU của rw-print — tính đúng số cột — chứ không phải nửa SAU). Đã thêm
-> `OVERHANG_ROWS = 0.18` (suy từ đúng công thức đo của rw-print cho font "Baloo 2", đổi theo tỉ lệ cỡ chữ
-> 0.8 của game này) vào mẫu số — cột 29 dòng giờ chừa dư 1,55mm ở đáy, cỡ chữ hầu như không đổi
-> (6,95→6,91mm). Đo lại bằng script Node độc lập xác nhận đúng số; `node --input-type=module --check`
-> sạch. ✅ **Thầy đã in giấy thật lại (14/9/2026) — hết cắt.** Xem mục **Đợt 327**.
 > Trước đó: **Đợt 326** (14/9/2026, thầy "ok hết các đề xuất" sau khảo sát 4.959 câu sai thật của khoá Nền
 > tảng): bảng "Hướng dẫn khi sai" có thêm 3 KIỂU KHỚP — `chi-dau` (chữ đúng, chỉ sai dấu câu/dấu cách) · `mau`
 > (regex, cho rác/bấm 1 phím = 19% lượt sai) · `gan` (sai chính tả 1 từ qua `bestMatch()` + 3 lưới chống nói bậy,
@@ -587,7 +589,12 @@ hàm tên `loop`) mới bấm trúng. ⬜ **Chờ thầy bấm tay** trên máy 
 
 ---
 
-## Đợt 327 (14/9/2026, thầy chụp 3 ảnh sau lần in giấy A4 thật ĐẦU TIÊN của Running team) — **TỜ "WORD LIST" CẮT MẤT DÒNG CUỐI Ở 2/3 CỘT — cùng bẫy glyph-overhang `rw-print.js` đã trả giá, chưa từng vá bên này**
+## Đợt 331 (14/9/2026, thầy chụp 3 ảnh sau lần in giấy A4 thật ĐẦU TIÊN của Running team) — **TỜ "WORD LIST" CẮT MẤT DÒNG CUỐI Ở 2/3 CỘT — cùng bẫy glyph-overhang `rw-print.js` đã trả giá, chưa từng vá bên này**
+
+> ⚠️ Trong commit git, chặng này lỡ ghi số **327** (đụng đúng số của "Group sort → Speed sorting" ở
+> mục ngay trên — 2 phiên làm việc cùng lúc trên cùng repo, mỗi bên tự tính số tiếp theo từ cùng một
+> bản gốc "Đợt 326" nên trùng nhau). Đã đổi lại thành **331** ở đây (số tiếp theo thật, sau Đợt 330)
+> — không sửa lại commit message cũ vì đã đẩy lên GitHub rồi.
 
 **Bối cảnh.** Thầy in thử tờ giấy chuyền tay của Running team (`rt-print.js`) lần đầu tiên trên máy in
 thật — pool 85 từ, lớp B2-B, luôn 3 cột theo thiết kế Đợt 109. Gửi 3 ảnh: bản xem trước trên máy (đủ 85
