@@ -5368,9 +5368,41 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **14/9/2026 tối sau Đợt 332** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **14/9/2026 sau Đợt 333** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (14/9/2026 tối — sau **Đợt 332**: ⬜ ĐÃ SỬA + TỰ KIỂM BẰNG BÀN THỬ TRÊN FORM THẬT, CHƯA BẤM TAY TRANG THẬT)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (14/9/2026 — sau **Đợt 333**: ✅ ĐÃ COMMIT `1ab4936` + PUSH + LIVE KIỂM CHỨNG BẰNG MÃ BĂM, ⬜ CHƯA BẤM TAY TRANG THẬT)
+>
+> **⭐⭐ Đợt 333 — FIGHT: Speed bonus có Off · hết Time delay chưa xong tính như sai · icon loa dời phải
+> to bằng chữ, chỉ hiện ở VOICE (thầy giao 3 việc qua chat + 1 chốt tiếp, cùng ngày).** (1) Speed bonus
+> gộp 2 hình dạng pick-turn/Time delay về chung `0..100` có Off ở 0 (`core/fight.js`), bỏ luôn cục "tự
+> vá về +5" trong `syncDelay` — nó từng đè ngược lựa chọn Off của thầy mỗi lần đụng thanh Time delay. (2)
+> `finalizeSingleWinner`: hết cửa sổ Time delay mà đội sau chưa nộp gì thì khoá NGAY coi như sai (silent
+> lock — không tiếng/không dấu ✗/không trừ điểm, giống hệt nấc 0,1s vẫn làm), bỏ hẳn khung chơi thêm
+> `LATE_LIMIT_MS` (20 giây, "Both finish" cũ) — dò lại 3 nơi gọi hàm này xác nhận 2/3 nơi vốn đã chốt
+> ngay (`roundDone[other]` đã true từ `wordDone()`), chỉ ca timer tự nổ (`pendingDue.fire`) là còn khung
+> giờ ké đó. `LATE_LIMIT_MS`/`DEFAULT_SPEED_BONUS` hết đường dùng, bỏ hai hằng số, chừa ghi chú lịch sử.
+> Không đụng "Auto next question" — kiểm tra thấy checkbox đó hiện không được game nào đọc, Fight vốn đã
+> luôn tự sang câu sau `ROUND_HOLD_MS`. (3) Icon loa ở nút VOICE và chip ENG1/ENG2 dời từ "đứng trước
+> chữ, cỡ cố định nhỏ" sang "đứng SAU chữ, to `1em` bằng cỡ chữ" (`core/options-panel.js` +
+> `core/app.css`) — vá ĐÚNG GỐC bẫy ellipsis-cắt-giữa-chữ đã cắn 11/9 (`.aw-seg-voiceic`) bằng cách tách
+> chữ ra `.aw-opt-switch-label`/`.aw-seg-label` RIÊNG (tự co/ellipsis của chính nó), icon `flex:none`
+> không bao giờ bị cắt. (3b) Chốt tiếp NGAY SAU, cùng ngày: icon ở ENG1/ENG2 QUAY LẠI chỉ hiện khi đang
+> đứng ở nửa VOICE (bỏ khỏi TEXT) — `paintHalf()` đặt `icEl.hidden`, kèm luật CSS tường minh
+> `.aw-seg-voiceic[hidden]{display:none}` (bẫy độ-đặc-hiệu giống `.aw-seg-tick[hidden]` đã có trước).
+> `node --input-type=module --check` sạch `fight.js` + `options-panel.js`; brace `app.css` cân bằng
+> 1868=1868. Bàn thử `scratch/dot333-icon-test.html` + `scratch/dot333b-icon-textvoice-test.html` (link
+> thẳng `core/app.css`/`core/icons.js` THẬT) — icon không bị cắt ở panel hẹp, vắng mặt đúng ở TEXT/hiện
+> đúng ở VOICE; việc (1)/(2) chỉ soát được bằng đọc code (cần trận Fight thật để đo sống, không bench
+> tĩnh được). **✅ Đã commit `1ab4936` + push `origin/main` + build GitHub Pages `built` cho đúng commit
+> này + so MÃ BĂM 5 file (`core/fight.js`, `core/options-panel.js`, `core/app.css`, `APP_MASTER.md`,
+> `GHI CHU DU AN.md`) giữa bản đã push và bản đang phục vụ tại `aword.andrewclasses.com` — KHỚP TUYỆT
+> ĐỐI (so qua `git cat-file -p origin/main:<file>`, không so file cục bộ vì CRLF checkout Windows làm
+> khác byte dù cùng nội dung).** ⬜ Còn thiếu duy nhất: CHƯA đăng nhập trang thật để bấm tay (sandbox
+> không đăng nhập Google được) — 3 việc thầy cần tự kiểm, xem `GHI CHU DU AN.md` Đợt 333 mục VIỆC ĐANG
+> CHỜ (đặc biệt việc (2): cần một trận Fight 2 bàn thật, Time delay vài giây, cố tình một bên không bấm
+> gì).
+>
+> **Trước đó — Đợt 332 (⬜ ĐÃ SỬA + TỰ KIỂM BẰNG BÀN THỬ TRÊN FORM THẬT, CHƯA BẤM TAY TRANG THẬT):**
 >
 > **⭐⭐ Đợt 332 — TÊN BÀI GIAO NẾP MỚI `<đầu>[ <NHÃN>]/<ĐUÔI>` (thầy chốt qua chat + 4 câu hỏi; đi cặp myLesson
 > v2.69.0).** Thầy đưa 5 mẫu `B1AH_14/9.22:05_IEL-S15.T3.P4 WORDS/ANAGRAM · …/QUIZ · …DS-S4.I2.W4/TF · /FILLING ·
