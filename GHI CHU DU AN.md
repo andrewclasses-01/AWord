@@ -12,7 +12,22 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **⭐ Đợt 331** (14/9/2026, thầy chụp 3 ảnh — bản xem trước trên máy, tờ giấy thật, và cửa sổ
+> Mới nhất: **⭐⭐ Đợt 332** (14/9/2026 tối, thầy giao qua chat + trả lời 4 câu hỏi — TÊN BÀI GIAO NẾP
+> MỚI `<đầu>[ <NHÃN>]/<ĐUÔI>`, đi cặp myLesson v2.69.0): thầy đưa 5 mẫu `B1AH_14/9.22:05_IEL-S15.T3.P4
+> WORDS/ANAGRAM · …/QUIZ · …DS-S4.I2.W4/TF · /FILLING · /RDQUIZ` rồi chốt thêm: ô từ vựng phân biệt
+> bằng BỘ NGHĨA + chế độ (`ENG1/ANAGRAM`, `ENG1.VOICE/ANAGRAM`, hai ô WP cùng template không còn trùng
+> tên) · PRONUNCIATION → ` PRON/{TPL}`, ô tự đặt/STAGE → ` <chữ ô>/{TPL}` · ô QUIZ đuôi theo template
+> (`/GSQUIZ`, READING `/RDGSQUIZ`) · form mở từ chính AWord cũng theo nếp mới. Cách làm: form dựng ĐUÔI
+> từ một MẪU (`&duoi=` myLesson gửi theo ô; thẻ `{BO}`/`{BO|X}`/`{TPL}`/`{TPL|X}`, hàm thuần
+> `duoiTieuDe`/`datDuoi`/`fmtMocTieuDe`), đuôi ĐỔI SỐNG theo bộ nghĩa/TEXT↔VOICE (`onSelector` mới của
+> `buildOptionsControls`, đi vào khe `onViewChange` nhưng chỉ viết lại ô tiêu đề) và theo template;
+> ghi `dataset.duoi` (myLesson mới đọc) + vẫn ghi `dataset.tpl` (myLesson cũ). ⛔ Bẫy TDZ: khối nối
+> đuôi phải đứng SAU `boDangChonThuan` — đặt ở chỗ dựng `titleInput` là hỏng câm. Bàn thử
+> `scratch/dot332-title.html` chạy form THẬT 36/36 ĐẠT (bấm VI1/VOICE/TEXT/đổi template qua picker
+> thật/sửa tay/mặc định/act quiz + đối chứng đoạn JS myLesson bơm vào webview). `node
+> --input-type=module --check` sạch 3 file. ⬜ CHƯA đăng nhập trang thật (thầy tạo 1 bài từ myLesson
+> v2.69.0 xem tên ra đúng). Xem mục **Đợt 332**.
+> Trước đó: **⭐ Đợt 331** (14/9/2026, thầy chụp 3 ảnh — bản xem trước trên máy, tờ giấy thật, và cửa sổ
 > "Print preview" của myActivity — sau lần đầu in tờ WORD LIST của RUNNING TEAM ra giấy A4 thật): tờ 85
 > từ bị CẮT MẤT dòng cuối ở 2/3 cột (dòng 29 và dòng 58 — đúng 2 cột đủ 29 dòng; cột 3 chỉ 27 dòng thì in
 > trọn). Gốc: `rt-print.js::metrics()` chia đúng khít chiều cao trang cho số dòng (`rowH = ROWS_MM /
@@ -440,6 +455,78 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
+
+## Đợt 332 (14/9/2026 tối, thầy giao qua chat + trả lời 4 câu hỏi) — **TÊN BÀI GIAO NẾP MỚI `<đầu>[ <NHÃN>]/<ĐUÔI>` — đuôi do form dựng, đổi sống theo bộ nghĩa · voice · template (đi cặp myLesson v2.69.0)**
+
+**Bối cảnh.** Thầy: "tập trung vào phần title cho assignment khi tạo assignment, đặc biệt là khi tạo
+trong các act ở myLesson", kèm 5 tên mẫu:
+```
+B1AH_14/9.22:05_IEL-S15.T3.P4 WORDS/ANAGRAM
+B1AH_14/9.22:05_IEL-S15.T3.P4/QUIZ
+B1AH_14/9.22:05_DS-S4.I2.W4/TF
+B1AH_14/9.22:05_DS-S4.I2.W4/FILLING
+B1AH_14/9.22:05_DS-S4.I2.W4/RDQUIZ
+```
+Trước đó (Đợt 255 + myLesson v2.34.0) tên là `A2A_7.9_15:56_WORDS KEY — WP1 — ANAGRAM`: có chữ DẠNG,
+có " — ", ô từ vựng đánh số WP1/WP2, đuôi template do form nối.
+
+**Thầy chốt qua 4 câu hỏi (AskUserQuestion):**
+1. Hai ô WORD PRACTICE cùng template (VI1-anagram + ENG1-anagram — thực tế trong dữ liệu cũ
+   `B1AH_9.6_WORDS … (vi1-ana,eng1-ana,pronunciation)`) sẽ TRÙNG TÊN nếu tạo cùng phút mà
+   `assignmentNameTaken()` chặn trùng trong cùng lớp ⇒ thầy chốt phân biệt bằng BỘ NGHĨA + chế độ:
+   `… ENG1/ANAGRAM`, `… ENG1.VOICE/ANAGRAM`. Chữ "WORDS" trong mẫu đầu chỉ còn là ĐƯỜNG LÙI khi act
+   không có bộ nghĩa (`{BO|WORDS}`).
+2. PRONUNCIATION → ` PRON/{TPL}`; ô tự đặt tên / STAGE (ACT 1…) → ` <chữ ô>/{TPL}`.
+3. Ô QUIZ đổi template khác ⇒ đuôi THEO TEMPLATE (`/GSQUIZ`; READING: `/RDGSQUIZ`). Riêng FILLING
+   của READING (act gốc là Find the match → tplShortName ra MATCH) giữ chữ FILLING chừng nào còn template
+   gốc — thẻ `{TPL|FILLING}`.
+4. Form Set assignment mở từ CHÍNH AWord (không qua myLesson) cũng đổi sang nếp mới:
+   `B1AH_14/9.22:05_<tên act> ENG1/QUIZ` (trước: `B1AH — 14.9 — <tên act> — QUIZ`).
+
+**Cách làm — chia việc đúng chỗ biết thông tin.** myLesson biết LỚP + MỐC + MÃ BÀI + LOẠI Ô nhưng
+KHÔNG biết bộ nghĩa/chế độ/template thầy sẽ chọn trong form; form biết ba thứ đó. Nên:
+- myLesson gửi `?giao=…&td=<đầu>&duoi=<MẪU ĐUÔI>` (`&duoi=` MỚI). Mẫu theo ô: WORD PRACTICE
+  `" {BO|WORDS}/{TPL}"` · PRONUNCIATION `" PRON/{TPL}"` · QUIZ `"/{TPL}"` (READING `"/RD{TPL}"`) ·
+  READING TRUE OR FALSE `"/{TPL}"` · READING FILLING `"/{TPL|FILLING}"` · khác `" <CHỮ Ô>/{TPL}"`.
+- `core/assignment-ui.js`: hàm thuần export `duoiTieuDe(mau,{bo,tpl,tplGoc})` (điền thẻ, gọn " /"→"/"),
+  `datDuoi(title,cu,moi)` (nối/thay đuôi, tôn trọng tay thầy), `fmtMocTieuDe(ms)` ("14/9.22:05"),
+  `DUOI_MAU_MAC_DINH = " {BO}/{TPL}"`. Trong form: `boChoTieuDe()` (bộ nghĩa qua đúng
+  `boDangChonThuan()` Đợt 312b + ".VOICE"), `capNhatDuoi()` ghi `dataset.duoi` + `dataset.tpl`; gọi
+  lúc mở form, ở `templatePicker.onPick` (thay khối Đợt 255) và ở `onSelector` (mới) của
+  `buildOptionsControls` → `core/settings.js` truyền vào khe `onViewChange` của `buildOptionsBody`
+  (null với mọi nơi gọi khác). Tiêu đề mặc định đổi thành `<lớp>_<mốc>_<tên act>`.
+- `main.js` `?giao=`: đọc thêm `p.get("duoi")` → `duoiMau`.
+- `datDuoiTemplate` (Đợt 255) giữ lại làm vỏ mỏng cho bàn thử lịch sử `dot255-title.html`.
+
+**⛔ Bẫy đã trả giá trong lúc viết.** (1) **TDZ**: `boDangChonThuan/cheDoDangChon` là `const` khai ở
+giữa hàm (sau chỗ dựng `titleInput` ~190 dòng) — gọi `capNhatDuoi()` lần đầu ngay chỗ dựng ô tiêu đề
+(nơi khối Đợt 255 từng đứng) là ReferenceError nuốt câm cả form. Đã dời khối nối đuôi xuống ngay dưới
+`boDangChon`, có chú thích tại chỗ cũ. (2) Bàn thử lúc đầu tìm nút VI1 bằng `textContent === "VI1"` —
+trượt vì nút mang thêm dấu ✓ ẩn (Đợt 312); tìm nút đổi template bằng `.aw-as-pickbtn` — đó là nút chọn
+LỚP, nút template là `.aw-opt-tplpick` trong Options. Hai cái này là lỗi của BÀN THỬ, code đúng từ đầu
+— nhưng nếu không đối chiếu DOM thật thì đã tưởng code hỏng.
+
+**Tương thích 3 máy.** `dataset.tpl` VẪN ghi ⇒ myLesson bản cũ (chưa v2.69.0) mở form AWord mới vẫn nối
+được " — <TPL>" khi thầy đổi tích tiêu đề (tên ra kiểu cũ, không vỡ). Ngược lại myLesson v2.69.0 gặp
+AWord cũ (chưa Đợt 332): `capNhatTenBaiGiao` lùi về `dataset.tpl` — đã đo cả hai chiều trong bench.
+`classTokenOf()` (xếp bài giao vào thư mục lớp) đọc token đầu tới `_`/khoảng trắng — nếp mới vẫn
+bắt đầu `B1AH_` nên không đổi.
+
+**Đã kiểm.** `node --input-type=module --check` sạch `core/assignment-ui.js`, `core/settings.js`,
+`main.js`. Bàn thử `scratch/dot332-title.html` (form THẬT qua `fake-firebase.js`) **36/36 ĐẠT**: 17 phép
+hàm thuần · form `&td=&duoi=` ra `B1AH_14/9.22:05_IEL-S15.T3.P4 ENG1/ANAGRAM` + `dataset.duoi/tpl` ·
+bấm VI1 → ` VI1/ANAGRAM` · bấm VOICE → ` ENG1.VOICE/ANAGRAM` · TEXT lại → nhớ VI1 · đổi template qua
+picker thật → ` VI1/QUIZ` · sửa tay mất đuôi rồi bấm bộ khác → giữ nguyên · mặc định không `&td=` →
+`B1AH_<mốc>_IEL-S15.T3.P4 / WORDS ENG1/ANAGRAM` · act quiz + `/RD{TPL}` → `…/RDQUIZ`. Thêm một phép
+chạy NGUYÊN VĂN đoạn JS myLesson bơm vào webview (`capNhatTenBaiGiao`) trên form đang mở: bơm đầu mới
+giữ đúng đuôi ` VI1/ANAGRAM`; xoá `dataset.duoi` giả AWord cũ → lùi ` — ANAGRAM`. Bên myLesson:
+`tools/thu-ten-bai-giao.js` 34/34 (xem GHI CHU DU AN.md của myLesson v2.69.0).
+
+**⬜ VIỆC ĐANG CHỜ.** Thầy đăng nhập AWord thật + myLesson v2.69.0: tạo 1 bài từ ô WORD PRACTICE (xem
+tên ra ` ENG1/ANAGRAM`, đổi VI1/VOICE/template xem đuôi đổi theo), 1 bài ô QUIZ DICTS, 3 ô READING —
+đối chiếu đúng 5 mẫu thầy đưa. Chưa đụng đường KHÓA HỌC (`tieuDeNoiBoLop` bên myLesson có khuôn riêng
+`NTK9-11.9-LS17-BT2.<act>-TYPE`, thầy chốt 11/09) — với AWord mới, đuôi mặc định ` ENG1/QUIZ` sẽ nối
+sau chuỗi đó (trước là ` — QUIZ`), nếu thầy muốn khác thì gửi `&duoi=` từ `moTaoBaiGiaoLop`.
 
 ## Đợt 329 (14/9/2026, thầy test tay Đợt 328 rồi báo 3 điều chỉnh) — **SPEED SORTING: chữ trong ô chạy TO TỐI ĐA (đo thật) · ô chạy vào từ mép sân · dấu ✓ đứng tại chỗ**
 

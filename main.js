@@ -438,6 +438,9 @@ async function routeFromLocation() {
         const moForm = () => openAssignmentSetup(node, {
           lop: p.get("lop") || "",
           tieuDe: p.get("td") || "",
+          // ⭐ Đợt 332 — &duoi=: MẪU ĐUÔI tiêu đề theo ô (" {BO}/{TPL}", "/RD{TPL}"…
+          // xem `duoiTieuDe` trong core/assignment-ui.js). Không có ⇒ mẫu mặc định.
+          duoiMau: p.get("duoi") || "",
           onCreated: (a, ct) => {
             // Cùng một marker với đường bridge (core/engine.js giaoBai) — myLesson
             // chỉ nghe MỘT chỗ. ⛔ Đừng đổi tên marker / bỏ 2 khoá cũ code+title.

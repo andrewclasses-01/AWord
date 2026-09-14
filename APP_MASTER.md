@@ -8,7 +8,12 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **14/9/2026 (Đợt 325 — 4 việc cho trang thư viện, thầy giao qua chat: (1) nút
+> Cập nhật lần cuối: **14/9/2026 tối (Đợt 332 — TÊN BÀI GIAO NẾP MỚI `<đầu>[ <NHÃN>]/<ĐUÔI>`, thầy chốt:
+> `B1AH_14/9.22:05_IEL-S15.T3.P4 ENG1/ANAGRAM` · `…ENG1.VOICE/ANAGRAM` · `…/QUIZ` · `…DS-S4.I2.W4/TF` · `/FILLING` ·
+> `/RDQUIZ`. Form dựng đuôi từ MẪU (`&duoi=` myLesson gửi theo ô, thẻ `{BO}`/`{TPL}`), đuôi đổi sống theo bộ
+> nghĩa/voice/template, ghi `dataset.duoi` (+ vẫn `dataset.tpl` cho myLesson cũ); form mở từ AWord cũng theo nếp
+> mới. Đi cặp myLesson v2.69.0. Bàn thử form thật 36/36. ⬜ chưa bấm tay trang thật. Xem GHI CHU DU AN.md Đợt 332)**.
+> Trước đó: **14/9/2026 (Đợt 325 — 4 việc cho trang thư viện, thầy giao qua chat: (1) nút
 > icon Sort cạnh Grid/List, 6 kiểu (tên A→Z/Z→A · sửa gần nhất/cũ nhất · tạo gần nhất/cũ nhất), nhớ ở
 > `localStorage`, thư mục LUÔN trước act/bài giao (`applyChosenSort`), "sửa gần nhất" của một THƯ MỤC
 > CHỈ tính chính nó — sửa act bên trong không làm nó nhảy lên (thầy chốt); (2) bỏ nút Import + khung
@@ -5348,9 +5353,26 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **14/9/2026 sau Đợt 330** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **14/9/2026 tối sau Đợt 332** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (14/9/2026 — sau **Đợt 330**: ⬜ ĐÃ SỬA + TỰ KIỂM BẰNG BÀN THỬ, CHƯA BẤM TAY TRANG THẬT)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (14/9/2026 tối — sau **Đợt 332**: ⬜ ĐÃ SỬA + TỰ KIỂM BẰNG BÀN THỬ TRÊN FORM THẬT, CHƯA BẤM TAY TRANG THẬT)
+>
+> **⭐⭐ Đợt 332 — TÊN BÀI GIAO NẾP MỚI `<đầu>[ <NHÃN>]/<ĐUÔI>` (thầy chốt qua chat + 4 câu hỏi; đi cặp myLesson
+> v2.69.0).** Thầy đưa 5 mẫu `B1AH_14/9.22:05_IEL-S15.T3.P4 WORDS/ANAGRAM · …/QUIZ · …DS-S4.I2.W4/TF · /FILLING ·
+> /RDQUIZ`, chốt thêm: ô từ vựng phân biệt bằng BỘ NGHĨA + chế độ (` ENG1/ANAGRAM`, ` ENG1.VOICE/ANAGRAM` — hết
+> WP1/WP2, hết trùng tên khi hai ô WP cùng template) · PRONUNCIATION ` PRON/{TPL}` · ô tự đặt/STAGE ` <chữ ô>/{TPL}`
+> · ô QUIZ đuôi theo template (`/GSQUIZ`, READING `/RDGSQUIZ`) · form mở từ CHÍNH AWord cũng theo nếp mới
+> (`B1AH_14/9.22:05_<tên act> ENG1/QUIZ`). Form dựng ĐUÔI từ MẪU (`?giao=…&duoi=` MỚI, myLesson gửi theo ô; thẻ
+> `{BO}`/`{BO|X}`/`{TPL}`/`{TPL|X}`; hàm thuần `duoiTieuDe`/`datDuoi`/`fmtMocTieuDe` trong `core/assignment-ui.js`),
+> đuôi ĐỔI SỐNG theo bộ nghĩa/TEXT↔VOICE (`onSelector` mới của `buildOptionsControls`, `core/settings.js`) và template;
+> ghi `titleInput.dataset.duoi` (myLesson mới) + vẫn `dataset.tpl` (myLesson cũ). ⛔ Bẫy TDZ: khối nối đuôi phải đứng
+> SAU `boDangChonThuan`. Hợp đồng: `core/HUONG DAN CORE.md` mục Đợt 332 (thay Đợt 255). Bàn thử
+> `scratch/dot332-title.html` chạy form THẬT **36/36 ĐẠT** (bấm VI1/VOICE/TEXT/đổi template qua picker/sửa tay/mặc
+> định/act quiz + chạy nguyên văn đoạn JS myLesson bơm vào webview); `node --input-type=module --check` sạch 3 file.
+> ⬜ CHƯA đăng nhập trang thật: thầy tạo 1 bài từ myLesson v2.69.0 (ô WORD PRACTICE · QUIZ · 3 ô READING) xem tên ra
+> đúng 5 mẫu. Chi tiết: `GHI CHU DU AN.md` Đợt 332.
+>
+> **Trước đó — Đợt 330 (⬜ ĐÃ SỬA + TỰ KIỂM BẰNG BÀN THỬ, CHƯA BẤM TAY TRANG THẬT):**
 >
 > **⭐ Đợt 330 — GẤP DANH SÁCH BÀI GIAO DƯỚI STAGE VÀO NÚT "Set assignment", nhấn giữ để bung.** Thầy yêu cầu qua
 > chat: danh sách bài giao (`.aw-as-bars`, dưới khung stage của một act) mặc định GẤP LẠI, nhấn GIỮ nút "Set

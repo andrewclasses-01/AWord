@@ -114,6 +114,14 @@ function fmtDateShort(ms) {
   const d = new Date(ms);
   return `${d.getDate()}.${d.getMonth() + 1}`;
 }
+// ⭐ Đợt 332 — MỐC LÚC TẠO trong tiêu đề bài giao, nếp mới thầy chốt 14/9/2026:
+// "14/9.22:05" (ngày/tháng . giờ:phút). Giờ:phút có mặt để hai bài giao cùng act
+// trong cùng buổi vẫn khác tên (đúng lý do myLesson v2.34.0 đã thêm giờ).
+export function fmtMocTieuDe(ms) {
+  const d = new Date(ms);
+  const p = n => String(n).padStart(2, "0");
+  return `${d.getDate()}/${d.getMonth() + 1}.${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 
 // Swap out just the CLASS token at the very start of a title, keeping
 // whatever comes after it untouched — so editing the Class field updates
@@ -229,17 +237,47 @@ export function tplShortName(type) {
   return TPL_SHORT[type]
     || String(templateLabel(type) || type || "").toUpperCase().replace(/[^A-Z0-9]+/g, "");
 }
-// Thay/nối đuôi " — <TPL>" của tiêu đề. `cu` = đuôi đang đứng (null nếu chưa
-// có). ⚠️ Tôn trọng tay thầy: tiêu đề KHÔNG kết thúc bằng đuôi cũ (thầy đã sửa
-// tay) thì để nguyên, không đắp thêm.
-export function datDuoiTemplate(title, cu, moi) {
+// ⭐⭐ Đợt 332 (thầy chốt 14/9/2026) — ĐUÔI TIÊU ĐỀ NẾP MỚI. Tiêu đề bài giao nay
+// có dạng   <đầu>[ <NHÃN>]/<ĐUÔI>   thay cho "<đầu> — <WPn> — <TPL>" của Đợt 255:
+//     B1AH_14/9.22:05_IEL-S15.T3.P4 ENG1/ANAGRAM        (ô từ vựng, bộ ENG1, text)
+//     B1AH_14/9.22:05_IEL-S15.T3.P4 ENG1.VOICE/ANAGRAM  (cùng bộ, chế độ voice)
+//     B1AH_14/9.22:05_IEL-S15.T3.P4/QUIZ                (act không có bộ nghĩa)
+//     B1AH_14/9.22:05_DS-S4.I2.W4/TF · /FILLING · /RDQUIZ  (ba ô READING)
+// Phần đuôi do CHÍNH FORM dựng vì chỉ form biết bộ nghĩa + text/voice + template
+// đang chọn — và nó ĐỔI THEO khi thầy đổi bất kỳ thứ nào trong ba thứ đó.
+//
+// Đuôi được dựng từ một MẪU (`duoiMau`, myLesson gửi qua `&duoi=` theo từng ô;
+// không gửi ⇒ mặc định `DUOI_MAU_MAC_DINH`). Trong mẫu có hai thẻ:
+//   {BO}     bộ nghĩa đang chọn (ENG1/VI1…), đeo ".VOICE" khi chế độ voice;
+//            act không có bộ nghĩa ⇒ rỗng. {BO|X} ⇒ X khi rỗng.
+//   {TPL}    tên tắt template đang chọn (tplShortName). {TPL|X} ⇒ X khi template
+//            VẪN LÀ template gốc của act (READING "FILLING" là Find the match:
+//            giữ chữ FILLING chừng nào thầy chưa đổi game, đổi thì ra tên game mới).
+// Nhãn rỗng thì " /" gọn lại thành "/" (không để khoảng trắng mồ côi).
+export const DUOI_MAU_MAC_DINH = " {BO}/{TPL}";
+export function duoiTieuDe(mau, { bo = "", tpl = "", tplGoc = "" } = {}) {
+  const m = String(mau || "").trim() ? String(mau) : DUOI_MAU_MAC_DINH;
+  const tplTen = tplShortName(tpl);
+  const ra = m
+    .replace(/\{BO(?:\|([^}]*))?\}/g, (_, x) => bo || x || "")
+    .replace(/\{TPL(?:\|([^}]*))?\}/g, (_, x) => (x && tpl === tplGoc) ? x : tplTen);
+  return ra.replace(/\s+\//g, "/").replace(/\s{2,}/g, " ");
+}
+// Thay/nối ĐUÔI (chuỗi bất kỳ, kể cả khoảng trắng đầu) của tiêu đề. `cu` = đuôi
+// đang đứng (null nếu chưa có). ⚠️ Tôn trọng tay thầy: tiêu đề KHÔNG kết thúc
+// bằng đuôi cũ (thầy đã sửa tay) thì để nguyên, không đắp thêm.
+export function datDuoi(title, cu, moi) {
   const t = String(title || "");
-  const duoiMoi = " — " + moi;
-  if (t.endsWith(duoiMoi)) return t;
-  if (cu === null || cu === undefined) return t + duoiMoi;
-  const duoiCu = " — " + cu;
-  if (t.endsWith(duoiCu)) return t.slice(0, t.length - duoiCu.length) + duoiMoi;
+  if (!moi) return t;
+  if (t.endsWith(moi)) return t;
+  if (cu === null || cu === undefined || cu === "") return t + moi;
+  if (t.endsWith(cu)) return t.slice(0, t.length - cu.length) + moi;
   return t;
+}
+// Bản Đợt 255 (đuôi " — <TPL>") — giữ cho bàn thử cũ `scratch/dot255-title.html`;
+// form không còn gọi tới từ Đợt 332.
+export function datDuoiTemplate(title, cu, moi) {
+  return datDuoi(title, cu === null || cu === undefined ? null : " — " + cu, " — " + moi);
 }
 
 function headRow(title, close) {
@@ -311,7 +349,9 @@ function iconButton(icon, title, onClick) {
 //     (`convertActivity` gỡ sạch `variants`). Vì vậy hai chữ đó phải tính Ở ĐÂY,
 //     lúc act gốc còn nguyên, rồi báo ra ngoài. Người gọi cũ bỏ qua tham số này
 //     là chuyện thường — không ai vỡ.
-export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
+// ⭐ Đợt 332 — `duoiMau`: MẪU ĐUÔI tiêu đề theo từng ô của myLesson (xem
+//   `duoiTieuDe` ở đầu file). Không truyền ⇒ mẫu mặc định " {BO}/{TPL}".
+export function openAssignmentSetup(act, { onCreated, lop, tieuDe, duoiMau } = {}) {
   openModal("optswide", (modal, close) => {
     modal.append(headRow("Set assignment", close));
     const body = el("div", "aw-as-body");
@@ -381,7 +421,9 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
     const titleInput = el("input", "aw-as-input");
     titleInput.type = "text";
     titleInput.maxLength = 80;
-    titleInput.value = classInput.value + " — " + fmtDateShort(Date.now()) + " — " + (act.title || "Untitled");
+    // ⭐ Đợt 332 — nếp mới "<lớp>_<ngày/tháng.giờ:phút>_<tên act>" (đuôi nối ở
+    // dưới, sau khi biết bộ nghĩa). Trước: "<lớp> — <ngày.tháng> — <tên act>".
+    titleInput.value = classInput.value + "_" + fmtMocTieuDe(Date.now()) + "_" + (act.title || "Untitled");
     titleCell.append(titleInput);
     top.append(titleCell);
 
@@ -404,17 +446,10 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
     // cái tên thầy đã đặt bên myLesson.
     if (tieuDe) titleInput.value = String(tieuDe).slice(0, 80);
 
-    // ⭐ Đợt 255 — ĐUÔI TEMPLATE trong tiêu đề (thầy chốt quy tắc tên): tiêu đề
-    // tự động kết thúc bằng " — <TPL viết tắt>" (QUIZ · ANAGRAM · GSQUIZ…),
-    // đổi template trong form là đuôi tự đổi theo (xem templatePicker.onPick).
-    // Đuôi hiện hành ghi vào `dataset.tpl` để myLesson (capNhatTenBaiGiao) khi
-    // bơm lại phần đầu tiêu đề biết giữ đuôi — ⛔ đừng bỏ dataset này.
-    // ⚠️ Thầy sửa tay tiêu đề làm mất đuôi thì datDuoiTemplate tôn trọng, không
-    // đắp lại. Gán .value vượt maxlength=80 là chuyện được phép (maxlength chỉ
-    // chặn phím gõ) — đuôi không bao giờ bị xén nửa chừng.
-    let tplDuoi = tplShortName(act.type);
-    titleInput.value = datDuoiTemplate(titleInput.value, null, tplDuoi);
-    titleInput.dataset.tpl = tplDuoi;
+    // ⭐ Đợt 255 → ⭐⭐ Đợt 332 — ĐUÔI của tiêu đề (" ENG1/ANAGRAM", "/QUIZ"…) do
+    // form nối và tự đổi theo bộ nghĩa · text/voice · template. Việc nối làm Ở
+    // DƯỚI (`capNhatDuoi`, ngay sau khi các hàm đọc bộ nghĩa `boDangChon…` được
+    // khai) — ⛔ gọi sớm hơn là đụng TDZ của các `const` đó, hỏng câm cả form.
 
     // --- end of game — ⭐ Đợt 246 (thầy): ONE tick left (Show answers, governs
     // both modes' menus). ⭐ Đợt 255 — cái ô đó nay dựng Ở TRÊN, cạnh nhãn
@@ -479,12 +514,9 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
         // Vấn đề 5 — a template swap rebuilds the draft from scratch, so the
         // HOMEWORK default has to be re-applied here too (same act, same sets).
         if (coNuaHomework) hwDraft.contentSet = "homework";
-        // ⭐ Đợt 255 — đuôi template trong tiêu đề đổi theo (tôn trọng bản thầy
+        // ⭐ Đợt 255/332 — đuôi tiêu đề đổi theo template (tôn trọng bản thầy
         // đã sửa tay: mất đuôi cũ thì thôi, không đắp).
-        const duoiMoi = tplShortName(playType);
-        titleInput.value = datDuoiTemplate(titleInput.value, tplDuoi, duoiMoi);
-        tplDuoi = duoiMoi;
-        titleInput.dataset.tpl = duoiMoi;
+        capNhatDuoi();
         renderOptions();
       })
     };
@@ -574,6 +606,33 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
       return bo ? cheDoDangChon() + "|" + bo : "";
     };
 
+    // ⭐⭐ Đợt 332 — ĐUÔI TIÊU ĐỀ SỐNG. Dựng từ mẫu (`duoiMau`) + ba thứ form
+    // đang chọn: bộ nghĩa (đeo ".VOICE" khi voice) · template. Gọi lúc mở form,
+    // mỗi lần đổi template (templatePicker.onPick) và mỗi lần thầy bấm bộ
+    // nghĩa / TEXT↔VOICE trong Options (`onSelector` → buildOptionsControls).
+    // Đuôi hiện hành ghi vào `dataset.duoi` để myLesson (`capNhatTenBaiGiao`)
+    // khi bơm lại phần đầu tiêu đề biết giữ đuôi — ⛔ đừng bỏ dataset này.
+    // `dataset.tpl` (Đợt 255) VẪN ghi để myLesson bản cũ (chưa cập nhật) còn
+    // nối được " — <TPL>" như trước; bản mới ưu tiên `dataset.duoi`.
+    // ⚠️ Thầy sửa tay tiêu đề làm mất đuôi thì `datDuoi` tôn trọng, không đắp
+    // lại. Gán .value vượt maxlength=80 là chuyện được phép (maxlength chỉ chặn
+    // phím gõ) — đuôi không bao giờ bị xén nửa chừng.
+    let duoiHien = null;
+    function boChoTieuDe() {
+      const bo = boDangChonThuan();
+      if (!bo) return "";
+      const ten = String(variantLabel(act.content, bo) || bo).toUpperCase().replace(/\s+/g, "");
+      return cheDoDangChon() === "voice" ? ten + ".VOICE" : ten;
+    }
+    function capNhatDuoi() {
+      const moi = duoiTieuDe(duoiMau, { bo: boChoTieuDe(), tpl: playType, tplGoc: act.type });
+      titleInput.value = datDuoi(titleInput.value, duoiHien, moi);
+      duoiHien = moi;
+      titleInput.dataset.duoi = moi;
+      titleInput.dataset.tpl = tplShortName(playType);
+    }
+    capNhatDuoi();
+
     function renderOptions() {
       const seq = ++optsSeq;
       optsHost.innerHTML = "";
@@ -585,7 +644,9 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
         // converted act has none (see the header note), so handing the played
         // type's act here would empty the very row the teacher chooses from.
         optsHost.append(buildOptionsControls(tpl, hwDraft,
-          { kind: "homework", act, templatePicker, daGiao: bangDaGiao() }));
+          { kind: "homework", act, templatePicker, daGiao: bangDaGiao(),
+            // ⭐ Đợt 332 — chỉ để ĐUÔI TIÊU ĐỀ đổi theo bộ nghĩa/text-voice.
+            onSelector: capNhatDuoi }));
       }).catch(() => {
         if (!optsHost.isConnected || seq !== optsSeq) return;
         optsHost.innerHTML = "";

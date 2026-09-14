@@ -3233,13 +3233,34 @@ Marker: `MYACT:AW:ASSIGN:{"code","title","bo","boTen","mauType","mauTen"}` — b
 (myLesson gọi vào, và thầy tự bấm nút Set assignment). ⛔ **Đừng đổi tên marker, đừng bỏ 2 khoá
 cũ `code`/`title`** — myLesson đang đọc đúng chúng.
 
-**⭐ Đợt 255 — ĐUÔI TEMPLATE + `dataset.tpl`.** Tiêu đề bài giao tự động kết thúc bằng
+**⭐⭐ Đợt 332 (14/9/2026, thầy chốt) — TÊN BÀI GIAO NẾP MỚI `<đầu>[ <NHÃN>]/<ĐUÔI>` + `dataset.duoi`
++ `&duoi=`.** Thay khuôn Đợt 255 ("… — WP1 — ANAGRAM"). Ví dụ thầy đưa:
+`B1AH_14/9.22:05_IEL-S15.T3.P4 ENG1/ANAGRAM` · `…ENG1.VOICE/ANAGRAM` · `…IEL-S15.T3.P4/QUIZ` ·
+`…DS-S4.I2.W4/TF` · `/FILLING` · `/RDQUIZ`. Phần ĐUÔI do FORM dựng từ một **MẪU** (`duoiMau`, myLesson
+gửi qua `?giao=…&duoi=` theo từng ô; không có ⇒ `DUOI_MAU_MAC_DINH = " {BO}/{TPL}"`) — thẻ `{BO}` = bộ
+nghĩa đang chọn (`ENG1`, đeo `.VOICE` khi chế độ voice; `{BO|X}` = X khi act không có bộ nghĩa),
+`{TPL}` = tên tắt template đang chọn (`tplShortName`, bảng `TPL_SHORT`; `{TPL|X}` = X chừng nào
+template còn là template gốc của act). Hàm thuần export: `duoiTieuDe(mau,{bo,tpl,tplGoc})`,
+`datDuoi(title,cu,moi)`, `fmtMocTieuDe(ms)` ("14/9.22:05"). **Đuôi đổi SỐNG** theo ba thứ: template
+(`templatePicker.onPick` → `capNhatDuoi`), bộ nghĩa và TEXT↔VOICE (`buildOptionsControls({onSelector})`
+→ đi vào khe `onViewChange` của `buildOptionsBody` — CHỈ viết lại ô tiêu đề, KHÔNG nạp lại options;
+đừng nhân đó nối thêm việc). ⛔ `capNhatDuoi()` lần đầu phải gọi SAU khi `boDangChonThuan/
+cheDoDangChon` đã khai (TDZ) — vì thế khối nối đuôi nằm ngay dưới `boDangChon`, không ở chỗ dựng
+`titleInput`. **Đuôi hiện hành ghi vào `titleInput.dataset.duoi`** — myLesson v2.69.0
+(`capNhatTenBaiGiao`) ưu tiên đọc nó, còn `dataset.tpl` (Đợt 255) **VẪN GHI** để myLesson bản cũ nối
+" — <TPL>" như trước (3 máy không luôn cùng bản). Tiêu đề MẶC ĐỊNH (form mở từ chính AWord) cũng theo
+nếp mới: `<lớp>_<ngày/tháng.giờ:phút>_<tên act> ENG1/QUIZ`. Thầy sửa tay mất đuôi ⇒ `datDuoi` tôn
+trọng, không đắp. `classTokenOf` (xếp vào thư mục lớp) vẫn đọc token đầu tới `_` — không đổi. Bàn thử:
+`scratch/dot332-title.html` (36 phép trên form THẬT: bấm VI1/VOICE/TEXT/đổi template qua picker).
+`datDuoiTemplate` giữ lại chỉ cho bàn thử lịch sử `dot255-title.html`.
+Ô Show answers nằm ở hàng `.aw-as-titlehead` (cạnh nhãn Assignment title); `cbAnswers` vẫn cùng scope
+với đường START như cũ.
+
+**(Lịch sử) ⭐ Đợt 255 — ĐUÔI TEMPLATE + `dataset.tpl`.** Tiêu đề bài giao tự động kết thúc bằng
 " — <TPL viết tắt>" (bảng `TPL_SHORT`, export `tplShortName`/`datDuoiTemplate`); đổi template
-trong form là đuôi đổi theo; thầy sửa tay mất đuôi thì tôn trọng. **Đuôi hiện hành ghi vào
-`titleInput.dataset.tpl`** — myLesson (`capNhatTenBaiGiao`) đọc nó để nối lại đuôi khi bơm phần
-đầu tiêu đề. ⛔ Đừng bỏ dataset.tpl, đừng đổi khuôn " — " của đuôi — hai bên đang bắt tay đúng
-khuôn đó. Ô Show answers nằm ở hàng `.aw-as-titlehead` (cạnh nhãn Assignment title); `cbAnswers`
-vẫn cùng scope với đường START như cũ.
+trong form là đuôi đổi theo; thầy sửa tay mất đuôi thì tôn trọng. Đuôi hiện hành ghi vào
+`titleInput.dataset.tpl` — myLesson (`capNhatTenBaiGiao`) đọc nó để nối lại đuôi khi bơm phần
+đầu tiêu đề. Khuôn " — " đã THAY bằng khuôn Đợt 332 ở trên; `dataset.tpl` vẫn còn vì lý do tương thích.
 
 **⭐ Đợt 254 — `?giao=…&khung=1` (CHẾ ĐỘ NHÚNG) + marker `MYACT:AW:GIAO:DONG`.** Có `&khung=`
 thì `body` mang thêm `aw-khung-mode`: pop-up GỐC (mở lúc `modalStack` RỖNG — form Set assignment,

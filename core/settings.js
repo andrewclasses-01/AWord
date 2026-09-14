@@ -112,7 +112,12 @@ export function saveDefaultOptions(type, options, kind = "activity") {
  *        WHICH content is being handed out. See the Đợt 245 note below.
  * @returns {Element}
  */
-export function buildOptionsControls(tpl, options, { kind = "activity", act = null, templatePicker = null, daGiao = null } = {}) {
+// ⭐ Đợt 332 — `onSelector`: CHỈ form Set assignment truyền. Gọi sau mỗi cú bấm
+// bộ nghĩa (ENG1/VI1…) hay TEXT↔VOICE, để ĐUÔI TIÊU ĐỀ bài giao đổi theo. Nó đi
+// vào `onViewChange` của buildOptionsBody — nhưng KHÔNG mang nghĩa "nạp lại
+// options theo view" như trong game (xem khối ⛔⛔ NO `onViewChange` bên dưới):
+// callback bên form chỉ đọc lựa chọn rồi viết lại ô tiêu đề, không đụng draft.
+export function buildOptionsControls(tpl, options, { kind = "activity", act = null, templatePicker = null, daGiao = null, onSelector = null } = {}) {
   const wrap = el("div", "aw-set-opts");
   if (!tpl) {
     // A template that failed to load would otherwise throw here and take the
@@ -149,6 +154,9 @@ export function buildOptionsControls(tpl, options, { kind = "activity", act = nu
   // there is nothing to reload; and doing it anyway would let a tap on ENG2
   // silently throw away the timer and penalties the teacher had just set for
   // THIS assignment. The row moves, the settings below it stay put — deliberate.
+  // ⭐ Đợt 332 — `onSelector` (form Set assignment) đi vào đúng khe `onViewChange`
+  // nhưng KHÔNG vi phạm điều trên: callback ấy chỉ viết lại ĐUÔI TIÊU ĐỀ, không
+  // đọc/nạp lại bucket options nào. Đừng ai nhân đó mà nối thêm việc nạp lại.
   //
   // ⚠️ Settings passes no `act` at all and therefore still gets the bare
   // Text/Voice switch it has always had: there is no act yet when you are
@@ -196,6 +204,7 @@ export function buildOptionsControls(tpl, options, { kind = "activity", act = nu
       ? { sets, labelOf: k => setLabel(content, k), current: activeContentSet({ content, options }) }
       : null,
     fight: null,
+    onViewChange: onSelector,   // Đợt 332 — null với mọi nơi gọi khác (y như trước)
     hideEndShowAnswers: isHw,
     // ⭐ Đợt 250 — only the Set assignment form sends one (see
     // buildContentSwitchRow in core/options-panel.js). Settings never does:
