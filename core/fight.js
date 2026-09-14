@@ -83,9 +83,10 @@ function escapeText(s) {
 // turn over while the points it earned are still flying, or a frozen "slower
 // team" would unfreeze just in time to keep them after all.
 const ROUND_HOLD_MS = 2100;
-// "Let the other team finish" can't wait forever — a team that walks away must
-// not freeze the lesson.
-const LATE_LIMIT_MS = 20000;
+// ⛔ LATE_LIMIT_MS (20000ms, "let the other team finish, but not forever") was
+// retired at Đợt 333 (14/9/2026): the moment Time delay's own window closes
+// with the other side still not done, that side is now locked out on the
+// spot — see finalizeSingleWinner. Nothing calls this constant any more.
 // Đợt 133 (teacher, 13/8/2026): two correct finishes within this many ms of
 // each other count as SIMULTANEOUS — both score, neither is locked/frozen.
 // A clean 0.1s per the teacher's own words; well inside ROUND_HOLD_MS's own
@@ -104,9 +105,11 @@ const TIE_WINDOW_MS = 100;
 // ⚠️⚠️ SO ∞ HAS NO TIMER AT ALL. The round now ends on an EVENT (the other board
 // reporting its word done, right or wrong), not on a clock. Two consequences,
 // both deliberate and both the teacher's call:
-//   · the 20s walk-away backstop that every other path keeps (LATE_LIMIT_MS) does
-//     NOT cover this one — a team that simply stops playing holds the round open,
-//     and the way out is the teacher's own Menu ▸ Start again;
+//   · every OTHER Time delay setting locks the loser out the instant its own
+//     window closes (finalizeSingleWinner, Đợt 333) — ∞ is the one setting
+//     that arms no such window at all, so a team that simply stops playing
+//     holds the round open, and the way out is the teacher's own Menu ▸
+//     Start again;
 //   · nothing may be handed `Infinity` as a duration. `setTimeout(fn, Infinity)`
 //     fires on the NEXT TICK (the spec clamps a non-finite delay to 0), which
 //     would have made ∞ the FASTEST setting on the slider instead of the slowest.
@@ -116,11 +119,10 @@ const TIE_WINDOW_MS = 100;
 // (teacher: the bar shows "ở MỌI mức từ 0,2s trở lên"). 0.1s is exactly the old
 // invisible tie-window, and it stays invisible.
 const WAIT_BAR_MIN_MS = 200;
-// What the Speed bonus slider jumps to the first time it becomes reachable. The
-// old slider was 0..20 with 0 meaning "Off"; the new one is 1..100 with no Off
-// at all (turning the bonus off is what dragging TIME DELAY back to 0.1s does),
-// so an act carrying the old 0 has no legal value to show and is repaired to this.
-const DEFAULT_SPEED_BONUS = 5;
+// ⛔ DEFAULT_SPEED_BONUS (was 5) is gone at Đợt 333: it existed only to repair
+// an act saved with 0 back when 0 was unreachable on the Speed bonus slider
+// (min 1). 0 is a real, reachable "Off" again now — see cBonus below — so
+// there is nothing left to repair.
 
 export const FIGHT_DEFAULTS = {
   // Đợt 133 (teacher): "same" ("same word, same letters") is GONE as a
@@ -167,11 +169,14 @@ export const FIGHT_DEFAULTS = {
   // thiết lập được phần này"*.
   // This used to be the module's own hard-coded 20-second walk-away backstop
   // (LATE_LIMIT_MS) with nothing on screen to control it. It is now a
-  // slider, and LATE_LIMIT_MS itself is UNTOUCHED everywhere else it is
-  // used — the other walk-away wait, in finalizeSingleWinner, for "the round
-  // already has a winner, the loser is still finishing to keep its own
-  // points" (Both-finish mode) — the teacher's own call to keep those two
-  // separate, 27/8/2026.
+  // slider. At the time this control was built (27/8/2026), LATE_LIMIT_MS
+  // itself stayed untouched elsewhere — the OTHER walk-away wait, in
+  // finalizeSingleWinner, for "the round already has a winner, the loser is
+  // still finishing to keep its own points" (Both-finish mode), was kept
+  // deliberately separate. ⛔ Đợt 333 (14/9/2026) retired that other wait
+  // outright (thầy: hết Time delay mà chưa xong thì tính như sai, khoá
+  // ngay, không còn chơi thêm) — LATE_LIMIT_MS is gone from the file now,
+  // this slider is the only walk-away wait fight.js still has.
   // IN SECONDS, 0 … 20, or **-1 = ∞** — deliberately NOT the house "0 means
   // ∞" convention every other fight slider on this panel uses, because 0 IS
   // a real, legal value here (an instant cutoff the moment the mistake
@@ -1066,14 +1071,26 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // Dấu hiệu duy nhất cho lớp biết bàn đó vừa thua là `silentLose()`: MỘT lớp
     // CSS chung (`is-fight-silentlost`, core/app.css) làm cả khung ngả đen
     // trắng — "mất màu" đúng nghĩa đen, không cần động tới JS của template nào.
-    if (lockLoser() && !roundDone[other]) {
+    // ⭐⭐⭐ Đợt 333 (thầy, 14/9/2026) — VÀ GIỜ LUÔN KHOÁ, KHÔNG RIÊNG NẤC 0,1s
+    // NỮA. Trước đây, ở mọi mức Time delay khác 0,1s, hàm này chạy tới đây mà
+    // `lockLoser()` vẫn false nếu bàn kia CHƯA làm gì — vòng vẫn để ngỏ thêm
+    // LATE_LIMIT_MS (20 giây) cho nó CHƠI TIẾP, vẫn giữ điểm nếu kịp xong
+    // ("Both finish" cũ). Thầy chốt (14/9/2026): *"đội sau nếu không làm gì
+    // trong thời gian delay trên thì bị tính coi như sai ... vẫn ở lại nhưng
+    // không chọn được đáp án, không làm được gì nữa coi như đã bị sai"* — hết
+    // hạn Time delay là hết cơ hội, khoá NGAY đúng kiểu nấc 0,1s vẫn làm
+    // (silent, không tiếng, không dấu ✗, không trừ điểm — bàn này chưa hề nộp
+    // gì nên vốn không có gì để chấm sai), không còn khung giờ chơi thêm nào
+    // nữa. `roundDone[other]` giờ LUÔN true khi hàm chạy xong — đúng ở 2 chỗ
+    // gọi còn lại vốn đã vậy từ trước (xem wordDone) — nên nhánh LATE_LIMIT_MS
+    // hết đường dùng, bỏ luôn hằng số đó.
+    if (!roundDone[other]) {
       roundDone[other] = true;
       silentLose(other);
       boards[other] && boards[other].lock(true);
     }
-    const nobodyLeft = lockLoser() || roundDone[other];
-    if (nobodyLeft) revealBoards();
-    later(advanceRound, nobodyLeft ? ROUND_HOLD_MS : LATE_LIMIT_MS);
+    revealBoards();
+    later(advanceRound, ROUND_HOLD_MS);
     syncNavGates();   // Đợt 220 — khoá đội thua cũng là "hết người đang làm"
   }
 
@@ -2047,27 +2064,23 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     });
     cDelay.cell.title = "How long a team that answered second still counts as level. At the minimum, the slower team is locked out at once; above it, they keep playing until they finish and always keep what they earn. ∞ waits for as long as it takes.";
 
-    // Same slider, two shapes. In a pick-turn game there is no TIME DELAY to
-    // turn the bonus off with, so it keeps its own "Off" at 0 exactly as before;
-    // everywhere else the range starts at 1 and 0.1s on TIME DELAY is the off
-    // switch. Both got the ceiling the teacher asked for (20 -> 100).
-    const cBonus = pickMode
-      ? mkSliderCell({
-          label: "Speed bonus", sub: "finish first",
-          // Đợt 213 — AMBER: this awards up to +100 points, so by thầy's law
-          // ("các thanh thưởng luôn có màu vàng") it is a reward, and the panel
-          // now seats rewards on the left off the back of that same tone.
-          min: 0, max: 100, step: 1, value: cur.fightSpeedBonus, tone: "amber", offAt: 0,
-          fmt: v => (v === 0 ? "Off" : "+" + v),
-          onInput: v => { draft.fightSpeedBonus = v; }
-        })
-      : mkSliderCell({
-          label: "Speed bonus", sub: "finish first",
-          min: 1, max: 100, step: 1, value: Math.max(1, cur.fightSpeedBonus || DEFAULT_SPEED_BONUS),
-          tone: "amber",   // Đợt 213 — same slider, same rule as the branch above
-          fmt: v => "+" + v,
-          onInput: v => { draft.fightSpeedBonus = v; }
-        });
+    // ⭐ Đợt 213 — AMBER: this awards up to +100 points, so by thầy's law
+    // ("các thanh thưởng luôn có màu vàng") it is a reward, and the panel
+    // seats rewards on the left off the back of that same tone.
+    // ⭐⭐ Đợt 333 (thầy, 14/9/2026) — MỘT HÌNH DẠNG DUY NHẤT CHO CẢ HAI CHẾ ĐỘ.
+    // Trước đây pick-turn có "Off" ở 0 còn nhánh Time delay bắt đầu từ 1 (không
+    // có Off riêng — Off của nó vốn là kéo TIME DELAY về 0,1s, xem
+    // `speedBonusApplies`). Thầy: *"thanh speed bonus thêm số 0 nữa, nhanh hơn
+    // cũng có thể không được thưởng"* — dù Time delay đang ở mức khiến bonus
+    // CÓ THỂ thưởng, thầy vẫn muốn tắt hẳn được ngay trên chính thanh đó, không
+    // bắt buộc phải lùi Time delay về 0,1s (thứ còn khoá cứng cả đội chậm) mới
+    // tắt được thưởng. Vì vậy cả hai nhánh giờ dùng chung 0..100 với Off ở 0.
+    const cBonus = mkSliderCell({
+      label: "Speed bonus", sub: "finish first",
+      min: 0, max: 100, step: 1, value: cur.fightSpeedBonus, tone: "amber", offAt: 0,
+      fmt: v => (v === 0 ? "Off" : "+" + v),
+      onInput: v => { draft.fightSpeedBonus = v; }
+    });
 
     // ⭐⭐ Đợt 259 — PICK TIME, built ONLY for a pick-turn game (Crossword · Open
     // the box). Every other template has no choosing phase at all, so a control
@@ -2172,20 +2185,16 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     function syncDelay(w) {
       const bonusOn = speedBonusApplies({ fightTieWindow: w });
       setLocked(cBonus.cell, !bonusOn);
-      // Repair an unreachable value rather than show a lie: the old slider went
-      // 0..20 with 0 = "Off", the new one starts at 1, so an act saved with 0
-      // has nothing legal to show the moment the bonus becomes reachable.
-      // ⚠️ Đợt 188 — the value is NO LONGER zeroed when the bonus goes dead. It is
+      // ⚠️ Đợt 188 — the value is NEVER zeroed when the bonus goes dead. It is
       // `speedBonusApplies()` at run time that ignores it (that gate is the actual
       // rule), so the number the teacher set survives being greyed out and comes
-      // straight back to life the moment TIME DELAY leaves 0.1s. Writing 0 here
-      // used to destroy it silently, and greying a control while quietly changing
-      // the value under it would be the worse of the two lies.
-      if (bonusOn && (Number(draft.fightSpeedBonus) || 0) < 1) {
-        draft.fightSpeedBonus = DEFAULT_SPEED_BONUS;
-        cBonus.slider.value = String(DEFAULT_SPEED_BONUS);
-        cBonus.paint(DEFAULT_SPEED_BONUS);
-      }
+      // straight back to life the moment TIME DELAY leaves 0.1s.
+      // ⛔ Đợt 333 — this used to also REPAIR the value up to DEFAULT_SPEED_BONUS
+      // whenever it read below 1, because 0 used to be unreachable on this slider
+      // (min was 1) and could only mean a stale act from the old 0..20 shape. Now
+      // that 0 is a real, reachable "Off" the teacher can pick on purpose (thầy:
+      // "thanh speed bonus thêm số 0 nữa"), silently bumping it to 5 the next time
+      // Time delay moved would undo that choice behind his back — removed.
     }
     // ⭐⭐ Đợt 202 — In turns takes the entire race apart, so all three race
     // controls go dead TOGETHER (why: see the block above `tieMs`).

@@ -12,7 +12,40 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **⭐⭐ Đợt 332** (14/9/2026 tối, thầy giao qua chat + trả lời 4 câu hỏi — TÊN BÀI GIAO NẾP
+> Mới nhất: **⭐⭐ Đợt 333** (14/9/2026, thầy giao 3 việc qua chat cho FIGHT + Options chung): (1) THANH
+> SPEED BONUS THÊM SỐ 0 — trước đây ở mọi mức Time delay khác 0,1s thanh này bắt đầu từ 1 (không tắt
+> được ngay trên chính nó, phải lùi Time delay về 0,1s mới tắt thưởng — mà nấc đó lại khoá cứng luôn cả
+> đội chậm); nay CẢ HAI chế độ (pick-turn lẫn Time delay) dùng chung một hình dạng 0..100, Off ở 0, và
+> bỏ luôn cục "tự vá về 5" trong `syncDelay` (nó từng âm thầm ghi đè lựa chọn Off về lại +5 mỗi lần thầy
+> đụng thanh Time delay — đúng nghịch với yêu cầu). (2) HẾT TIME DELAY MÀ ĐỘI SAU CHƯA XONG THÌ TÍNH
+> NHƯ SAI — trước đây `finalizeSingleWinner` chỉ khoá TRẦN TRỤI đúng ở nấc 0,1s; mọi mức khác, hết cửa
+> sổ Time delay mà đội sau chưa nộp gì thì vẫn được chơi thêm `LATE_LIMIT_MS` (20 giây) và vẫn giữ điểm
+> nếu kịp xong ("Both finish" cũ) — thầy chốt bỏ hẳn khung giờ ké đó: hết Time delay là khoá NGAY (silent
+> lock — không tiếng, không dấu ✗, không trừ điểm, giống hệt cách nấc 0,1s vẫn làm, vì bàn chưa hề nộp gì
+> nên vốn không có gì để chấm), round tự động sang câu tiếp theo sau `ROUND_HOLD_MS` như bình thường.
+> `LATE_LIMIT_MS`/`DEFAULT_SPEED_BONUS` hết đường dùng, đã bỏ luôn hai hằng số đó (chỉ còn ghi chú lịch
+> sử tại chỗ cũ). (3) ICON LOA DỜI SANG PHẢI + TO BẰNG CỠ CHỮ — nút TEXT/VOICE và chip ENG1/ENG2 (bộ
+> nghĩa có giọng đọc) đổi icon loa từ "đứng trước chữ, 12px/8px cố định" sang "đứng SAU chữ, 1em (ăn
+> theo font-size của chính nút)". ⛔ Đây CHÍNH LÀ bẫy đã cắn ngày 11/9 (icon đứng sau/trước chữ trần cùng
+> chia một `text-overflow:ellipsis` của nút ⇒ ô hẹp cắt cụt "ENG1" thành "ENG") — vá ĐÚNG GỐC lần này
+> bằng cách tách chữ ra `.aw-opt-switch-label`/`.aw-seg-label` RIÊNG (tự co/ellipsis của chính nó,
+> `min-width:0`), icon `flex:none` không bao giờ bị đụng tới nên luôn hiện trọn. (3b) — thầy chốt tiếp
+> NGAY SAU ĐÓ cùng ngày: "bỏ icon loa ở ENG1 ENG2 của TEXT, chỉ hiện khi chọn VOICE" — quay lại đúng
+> hành vi bản đầu 11/9 (mà Đợt ấy đã CHỦ Ý đổi sang hiện-mọi-mode), lần này giữ được cả 2 điều: icon vẫn
+> chỉ tạo ra khi bộ có giọng đọc (`coVoice`, không đổi), nhưng `paintHalf()` nay còn đặt `icEl.hidden =
+> mode !== "voice"` mỗi lần lật TEXT↔VOICE — thêm luật CSS tường minh `.aw-seg-voiceic[hidden]{display:
+> none}` (giống `.aw-seg-tick[hidden]` sẵn có) vì `.aw-seg-voiceic{display:flex}` cùng độ đặc hiệu với
+> `[hidden]` mặc định, không viết rõ ra là thua theo THỨ TỰ TRONG FILE chứ không theo ý nghĩa. `node
+> --input-type=module --check` sạch 2 file; brace `app.css` cân bằng (1868=1868). Bàn thử
+> `scratch/dot333-icon-test.html` + `scratch/dot333b-icon-textvoice-test.html` (link thẳng
+> `core/app.css` + `core/icons.js` thật, dựng đúng markup mới) — panel rộng 340px: icon rõ ràng bên
+> phải, cỡ ăn theo chữ; panel hẹp ~190px (đúng ca 43px/chip đã cắn cũ): nhãn "ENG1" co ellipsis thành
+> "E…", ICON VẪN HIỆN TRỌN — không còn cắt cụt chữ giữa dòng như bản đầu 11/9; đứng ở TEXT: icon vắng
+> mặt cả ENG1/ENG2 — đứng ở VOICE: icon hiện lại đúng, VI1/VI2 vẫn không có vì vốn không có giọng. ⬜
+> CHƯA bấm tay trang thật (sandbox không đăng nhập Google được — nhất là việc (2): cần một trận Fight 2
+> bàn thật, để Time delay ở vài giây, cố tình để một bên không bấm gì, xem có khoá/tối màu/sang câu
+> đúng không). Xem mục **Đợt 333**.
+> Trước đó: **⭐⭐ Đợt 332** (14/9/2026 tối, thầy giao qua chat + trả lời 4 câu hỏi — TÊN BÀI GIAO NẾP
 > MỚI `<đầu>[ <NHÃN>]/<ĐUÔI>`, đi cặp myLesson v2.69.0): thầy đưa 5 mẫu `B1AH_14/9.22:05_IEL-S15.T3.P4
 > WORDS/ANAGRAM · …/QUIZ · …DS-S4.I2.W4/TF · /FILLING · /RDQUIZ` rồi chốt thêm: ô từ vựng phân biệt
 > bằng BỘ NGHĨA + chế độ (`ENG1/ANAGRAM`, `ENG1.VOICE/ANAGRAM`, hai ô WP cùng template không còn trùng
@@ -453,6 +486,115 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 333 (14/9/2026, thầy giao 3 việc qua chat + 1 chốt tiếp) — **FIGHT: Speed bonus có Off · hết Time delay chưa xong tính như sai · icon loa dời phải to bằng chữ, chỉ hiện ở VOICE**
+
+**Bối cảnh.** Thầy gửi ảnh chụp panel Options của chế độ FIGHT rồi yêu cầu 3 việc:
+1. "Thanh speed bonus thêm số 0 nữa. Nhanh hơn cũng có thể ko được thưởng."
+2. "Khi bật time delay, sau khi đội trước xong, đội sau nếu không làm gì trong thời gian delay trên thì
+   bị tính coi như sai và next sang câu khác (nếu bật auto next question) hoặc vẫn ở lại nhưng không
+   chọn được đáp án, không làm được gì nữa coi như đã bị sai."
+3. "Chỗ chữ ENG với icon loa, chuyển icon loa với VOICE về ngang cạnh phải ENG1, ENG2 và size icon to
+   bằng size chữ. Ở nút VOICE cũng chuyển icon loa về bên phải và size tương tự."
+
+**(1) Speed bonus — thêm Off ở 0, `core/fight.js`.** Slider này trước đây có HAI HÌNH DẠNG: pick-turn
+(Crossword/Open the box) đi `0..100` với Off thật ở 0; mọi game còn lại (có Time delay) đi `1..100`,
+KHÔNG có Off riêng — muốn tắt thưởng phải lùi hẳn thanh Time delay về nấc 0,1s (thứ đồng thời khoá cứng
+luôn cả đội chậm, "First wins" cũ). Thầy muốn tắt được thưởng NGAY TRÊN CHÍNH THANH ĐÓ dù Time delay
+đang ở mức khiến bonus có thể thưởng. Gộp hai nhánh về một `mkSliderCell` duy nhất `min:0, max:100,
+offAt:0, fmt: v=>v===0?"Off":"+"+v`.
+⛔ Kéo theo một cục vá phải bỏ: `syncDelay()` (chạy mỗi khi kéo thanh Time delay) từng có đoạn "sửa giá
+trị không hợp lệ" — hễ thấy `fightSpeedBonus < 1` lúc bonus đang bật thì ÂM THẦM ghi đè về
+`DEFAULT_SPEED_BONUS` (5). Đoạn đó sinh ra từ thời min=1 (0 khi đó THẬT SỰ không hợp lệ, chỉ có thể là
+rác từ bản cũ 0..20). Giờ 0 lại là một lựa chọn CÓ CHỦ Ý — giữ nguyên đoạn vá sẽ khiến: thầy kéo Speed
+bonus về 0 (Off) → đụng nhẹ thanh Time delay bên cạnh → Off bị ghi đè ngược lại thành +5, đúng ngược ý
+thầy. Bỏ hẳn đoạn vá, và vì đó là nơi DUY NHẤT còn gọi `DEFAULT_SPEED_BONUS`, hằng số đó cũng hết việc,
+bỏ luôn (chỉ còn dòng ghi chú lịch sử ở chỗ cũ, không phải "// removed" trần trụi mà giải thích LÝ DO
+mất, theo đúng nếp ghi chú cả file này đang dùng).
+
+**(2) Hết Time delay mà đội sau chưa nộp gì thì khoá luôn, `core/fight.js::finalizeSingleWinner`.** Dò
+lại toàn bộ luồng: hàm này chỉ có ĐÚNG BA nơi gọi tới — (a) đội kia vừa trả lời SAI trong lúc đang chờ,
+(b) đội kia đã xong (đúng lẫn sai) từ trước, (c) bộ đếm cửa sổ Time delay (`pendingDue`) tự nổ vì hết
+giờ mà chẳng ai làm gì thêm. Ở (a) và (b), `roundDone[other]` đã LUÔN là true từ trước khi gọi (bàn kia
+đã thật sự nộp bài, dù đúng hay sai — `wordDone()` set cờ này cho MỌI kiểu kết thúc, xem dòng
+`roundDone[side] = true` ngay đầu hàm đó) — hai đường này vốn đã chốt ngay, không dây dưa. CHỈ (c) —
+đúng cảnh thầy mô tả, "đội sau không làm gì" — là nơi `roundDone[other]` còn `false`, và bản cũ cho nó
+CHƠI THÊM `LATE_LIMIT_MS` (20 giây cứng, không có thanh nào điều khiển) mà vẫn giữ điểm nếu kịp xong
+("Both finish" — hành vi có chủ ý cũ, thầy từng chốt giữ tách biệt với thanh Miss wait ở Đợt 276). Xoá
+điều kiện `lockLoser()` canh gác đoạn khoá "trần trụi" (silentLose + `board.lock(true)`, không tiếng,
+không dấu ✗, không trừ điểm — logic có sẵn, trước chỉ chạy ở đúng nấc 0,1s) để nó chạy ở MỌI mức Time
+delay hễ `roundDone[other]` còn false lúc hàm này được gọi — tức đúng lúc timer (c) tự nổ. Sau đó
+`nobodyLeft` LUÔN true ở cả 3 nơi gọi, nên bỏ luôn nhánh rẽ `ROUND_HOLD_MS`/`LATE_LIMIT_MS`, còn mỗi
+`ROUND_HOLD_MS` — vòng luôn `revealBoards()` rồi tự sang câu, đúng thứ Fight vẫn làm ở mọi round khác.
+`LATE_LIMIT_MS` hết chỗ dùng, bỏ hằng số, chừa ghi chú lịch sử ở chỗ cũ + 2 chỗ comment khác từng nhắc
+tên nó (đoạn nói về ∞ không có backstop, đoạn định nghĩa Miss wait) cũng sửa lại cho khớp sự thật mới.
+⚠️ KHÔNG đụng tới `autoSwitch`/"Auto next question": kiểm tra thấy checkbox đó (`core/options-panel.js`
+dòng ~55, tự ghi chú "shown in 13 of 17 games, read by NOT ONE of them") hiện KHÔNG được game nào đọc —
+Fight vốn LUÔN tự động sang câu sau `ROUND_HOLD_MS` bất kể checkbox đó, nên vế "next sang câu khác nếu
+bật auto next question" trong yêu cầu của thầy đã tự đúng sẵn mà không cần nối dây gì thêm; nối nó vào
+riêng cho Fight sẽ là việc ngoài phạm vi 3 yêu cầu và đụng tới một quy ước rộng hơn cả file này.
+
+**(3) Icon loa dời sang phải + to bằng cỡ chữ, `core/options-panel.js` + `core/app.css`.** Hai chỗ đổi:
+nút VOICE của hàng TEXT/VOICE (`.aw-opt-switch-ic`) và icon cạnh tên bộ nghĩa có giọng đọc trong dải
+ENG1/ENG2/VI1/VI2 (`.aw-seg-voiceic`). Cả hai TRƯỚC đây đứng bên TRÁI chữ, cỡ cố định nhỏ hơn chữ
+(12px/8px) — nay đứng SAU chữ, cỡ `1em` (tự ăn theo `font-size` của chính nút, kể cả khi thu nhỏ ở
+`.is-compact-opts`).
+⛔⛔ ĐÂY CHÍNH LÀ bẫy app.css đã tự ghi lại từ 11/9/2026 (`.aw-seg-voiceic`, "BẪY ĐO ĐƯỢC bằng bàn thử
+scratch/voice-icon-test.html"): bản đầu hôm đó để icon nằm ngay trong dòng chữ bằng `margin-right` —
+icon và chữ là HAI mẩu nội dung trần cùng chia một `text-overflow:ellipsis` của CHÍNH NÚT, ô hẹp (~43px
+ở panel thường, hẹp hơn nữa ở `.is-compact-opts`) co cả cụm lại rồi cắt ngay GIỮA CHỮ — "ENG1" thành
+"ENG". Bản vá hôm đó né bằng dấu góc tuyệt đối (`position:absolute`, không chiếm chỗ dòng chữ). Thầy
+hôm nay lại muốn đúng hình dạng "trong dòng, bên phải, to bằng chữ" — nên phải vá ĐÚNG GỐC lần này thay
+vì né: tách CHỮ vào một span RIÊNG (`.aw-opt-switch-label` / `.aw-seg-label`, `min-width:0`, tự mang
+`overflow:hidden;text-overflow:ellipsis;white-space:nowrap` CỦA CHÍNH NÓ), nút cha chuyển `display:flex`
+với icon là `flex:none` đứng cạnh — icon không bao giờ tham gia co/cắt nữa, chỉ chữ tự co khi hẹp. Nút
+TEXT/VOICE có `gap:4px` mới; seg ENG1/ENG2 dùng `gap:3px` sẵn có của `.aw-seg-btn` (đã là flex từ trước,
+chỉ thêm gap). `node --input-type=module --check` sạch cả `options-panel.js`; brace `app.css` cân bằng
+1867=1867 trước và sau (không dư/thiếu cặp nào — chỉ đổi nội dung rule, không thêm/bớt số cặp `{}`
+ròng qua các lần sửa).
+
+**(3b) Bỏ icon loa khỏi ENG1/ENG2 khi đứng ở TEXT — chốt tiếp NGAY SAU (3), cùng ngày.** Thầy: "Bỏ icon
+loa ở ENG1 ENG2 của TEXT, chỉ hiện khi chọn VOICE." Đảo ngược đúng phần "hiện Ở MỌI MODE" mà Đợt 11/9
+(ĐỢT 2) từng chủ ý đổi — quay lại hành vi bản ĐẦU của 11/9 (chỉ hiện ở voice), nhưng lần này giữ được
+cả hai điều tốt của bản 11/9 sau: icon vẫn CHỈ ĐƯỢC TẠO khi bộ có giọng đọc thật (`coVoice` xét tĩnh một
+lần lúc dựng nút — không đổi), và vị trí/cỡ vẫn theo dáng mới của (3) (bên phải, `1em`). Chỉ thêm MỘT
+việc: `paintHalf()` — hàm vốn đã chạy mỗi lần lật TEXT↔VOICE để tô `is-on`/dấu ✓ — nay còn đọc
+`b.querySelector(".aw-seg-voiceic")` và đặt `icEl.hidden = mode !== "voice"`, giống hệt khuôn có sẵn
+của dấu ✓ (`tick.hidden`) ngay phía trên nó. Icon dựng ra ban đầu với `hidden` mặc định `true` (phòng
+trường hợp mode khởi tạo là "text", tránh một khung hình icon hiện rồi tắt ngay).
+⛔ Cái BẪY suýt lặp lại ở bước này: `.aw-seg-voiceic{display:flex}` VÀ `[hidden]` mặc định của trình
+duyệt CÙNG độ đặc hiệu CSS — ai thắng phụ thuộc THỨ TỰ TRONG FILE, không phải ý nghĩa. `.aw-seg-tick`
+đã từng cắn y hệt (xem chú thích Đợt 312 ngay cạnh) nên có sẵn khuôn: viết THÊM một luật
+`.aw-seg-voiceic[hidden]{display:none}` TƯỜNG MINH ngay sau rule gốc, đừng trông cậy luật ẩn mặc định.
+
+**Bàn thử.** `node --input-type=module --check` sạch `core/fight.js` + `core/options-panel.js` (nhiều
+lần, trước/sau mỗi khối sửa (1)(2)(3)(3b)). `scratch/dot333-icon-test.html` (link thẳng `core/app.css` +
+`core/icons.js` THẬT, dựng đúng markup mới bằng tay — không phải ảnh chụp riêng, là DOM/CSS thật của
+app): panel rộng 340px — icon rõ bên phải cả 2 hàng, cỡ ăn theo chữ đẹp mắt; panel hẹp ~190px, chip
+~43px/cái (đúng cỡ ô đã cắn hôm 11/9) — nhãn "ENG1"/"ENG2" co ellipsis thành "E…", **icon vẫn hiện
+TRỌN VẸN**, không còn kiểu cắt cụt giữa chữ như bản đầu 11/9. `scratch/dot333b-icon-textvoice-test.html`
+(bench riêng cho (3b), cùng khuôn link CSS/icons thật) — hàng TEXT: icon vắng mặt ở cả ENG1/ENG2; hàng
+VOICE: icon hiện lại đúng, VI1/VI2 vẫn không có (đúng, không có giọng đọc). Chạy qua `preview_start`
+(server riêng cổng 5599, không đụng server phiên Claude khác đang chạy sẵn trong cùng thư mục) +
+screenshot xác nhận bằng mắt cho cả 2 bench. ⛔ Việc (1)/(2) KHÔNG bàn thử được bằng bench tĩnh — cần
+một trận Fight thật (2 bàn, đồng hồ thật, `later()`/`setTimeout` thật) nên chỉ soát bằng đọc code + dò
+hết 3 nơi gọi `finalizeSingleWinner` (xác nhận (a)/(b) vốn đã có `roundDone[other]=true` từ
+`wordDone()` trước khi gọi, chỉ (c) là ca timer tự nổ) — không phải đo hành vi sống.
+
+**⬜ VIỆC ĐANG CHỜ (chặng này).**
+- CHƯA đăng nhập trang thật để bấm tay (sandbox không đăng nhập Google được). Thầy cần tự kiểm:
+  - Mở Options một act Fight có bộ nghĩa có giọng đọc (vd ENG1 VOICE) — icon loa ở nút VOICE có đứng
+    bên phải, to gần bằng chữ không; panel hẹp (điện thoại/máy nhỏ) chữ có co lại gọn gàng, icon không
+    biến mất/không bị cắt không. Đứng ở nửa TEXT: ENG1/ENG2 KHÔNG được có icon loa nào cả. Lật sang
+    VOICE: icon phải hiện lại ngay cạnh ENG1/ENG2 (bộ nào có giọng đọc).
+  - Kéo Speed bonus về 0 xem có hiện "Off" không, kéo thanh Time delay bên cạnh xem Off có bị nhảy về
+    +5 nữa không (KHÔNG được nhảy — đây là lỗi Đợt 333 vừa vá).
+  - Chơi thử một trận Fight (Anagram hoặc Quiz), bật Time delay vài giây, một bên trả lời đúng trước,
+    bên còn lại CỐ Ý không bấm gì cho tới hết Time delay: bàn đó có tối màu/khoá lại (không tiếng,
+    không dấu ✗) và trận có tự sang câu tiếp theo sau khoảng `ROUND_HOLD_MS` (~2,1 giây) không, thay vì
+    còn chơi thêm gần 20 giây như trước.
 
 ---
 

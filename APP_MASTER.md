@@ -8,7 +8,22 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **14/9/2026 tối (Đợt 332 — TÊN BÀI GIAO NẾP MỚI `<đầu>[ <NHÃN>]/<ĐUÔI>`, thầy chốt:
+> Cập nhật lần cuối: **14/9/2026 (Đợt 333 — FIGHT: Speed bonus thêm Off ở 0 (bỏ luôn cục tự vá về +5
+> trong `syncDelay` — nó từng đè ngược lựa chọn Off của thầy) · hết cửa sổ Time delay mà đội sau chưa
+> nộp gì thì khoá NGAY coi như sai (silent lock, không tiếng/không dấu ✗/không trừ điểm, giống hệt nấc
+> 0,1s), bỏ hẳn khung chơi thêm `LATE_LIMIT_MS` (20s) — dò lại 3 nơi gọi `finalizeSingleWinner` xác nhận
+> 2/3 nơi vốn đã chốt ngay, chỉ ca timer tự nổ là còn khung giờ ké đó · icon loa ở nút VOICE và chip
+> ENG1/ENG2 dời sang bên PHẢI chữ + to bằng cỡ chữ (vá ĐÚNG GỐC bẫy ellipsis-cắt-giữa-chữ đã cắn 11/9,
+> bằng cách tách chữ ra span riêng tự co, icon `flex:none` không bao giờ bị cắt) · chốt tiếp cùng ngày:
+> icon ở chip ENG1/ENG2 QUAY LẠI chỉ hiện khi đang đứng ở nửa VOICE (bỏ khỏi TEXT) —
+> `paintHalf()` đặt `icEl.hidden`, kèm luật CSS tường minh `.aw-seg-voiceic[hidden]{display:none}` vì
+> rule gốc đã tự đặt `display:flex` (cùng bẫy độ-đặc-hiệu `.aw-seg-tick[hidden]` từng cắn). `node
+> --input-type=module --check` sạch 2 file; brace app.css cân bằng 1868=1868. Bàn thử
+> `scratch/dot333-icon-test.html` + `scratch/dot333b-icon-textvoice-test.html` (CSS/markup thật) xác
+> nhận icon không còn bị cắt ở panel hẹp, và vắng mặt đúng ở TEXT/hiện đúng ở VOICE; việc Time
+> delay/Speed bonus chỉ soát được bằng đọc code (cần trận Fight thật để đo sống). ⬜ CHƯA bấm tay
+> trang thật. Xem GHI CHU DU AN.md Đợt 333)**.
+> Trước đó: **14/9/2026 tối (Đợt 332 — TÊN BÀI GIAO NẾP MỚI `<đầu>[ <NHÃN>]/<ĐUÔI>`, thầy chốt:
 > `B1AH_14/9.22:05_IEL-S15.T3.P4 ENG1/ANAGRAM` · `…ENG1.VOICE/ANAGRAM` · `…/QUIZ` · `…DS-S4.I2.W4/TF` · `/FILLING` ·
 > `/RDQUIZ`. Form dựng đuôi từ MẪU (`&duoi=` myLesson gửi theo ô, thẻ `{BO}`/`{TPL}`), đuôi đổi sống theo bộ
 > nghĩa/voice/template, ghi `dataset.duoi` (+ vẫn `dataset.tpl` cho myLesson cũ); form mở từ AWord cũng theo nếp

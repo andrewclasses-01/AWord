@@ -1544,6 +1544,11 @@ html.aw-nhung .aw-below { display: none; }
   min-width: 0;
   border: none; background: transparent;
   padding: 10px 0;
+  /* ⭐ 14/9/2026 (thầy chốt) — chữ + icon loa nay là 2 flex-item riêng (trước
+     là icon + text node trần, canh giữa nhờ text-align mặc định của
+     <button>), để `.aw-opt-switch-label` có thể tự co ellipsis mà KHÔNG đụng
+     tới icon — xem chú thích ở `.aw-opt-switch-ic` bên dưới. */
+  display: flex; align-items: center; justify-content: center; gap: 4px;
   /* ⭐⭐ Đợt 212 — BACK TO A FLAT 13px, exactly as before Đợt 205.
      The `clamp(8px, 3.15cqw, 13px)` that stood here existed for ONE reason:
      "PRONUNCIATION" is 13 characters against Text's 4, and three of them had to
@@ -1558,13 +1563,6 @@ html.aw-nhung .aw-below { display: none; }
      `min-width:0` stays: it lets the grid track shrink at all (a grid item's
      default `auto` minimum is its content). */
   font-size: 13px;
-  /* Below ~430px of panel even 8px does not fit (a narrow window: the panel is
-     `min(94vw, 580px)`). 8px is the floor because smaller is not reading, it is
-     decoration — so past that point the WORD gives way, clipped with an ellipsis
-     INSIDE its own button. What must never happen is the button spilling over
-     the track and shoving the row sideways, and that is what these two lines
-     guarantee. */
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
   /* Đợt 215b — the group's OFF colour is a variable too. Fallback = the grey it
      has always been, so every seg below the dashed rule is untouched. */
@@ -1574,6 +1572,21 @@ html.aw-nhung .aw-below { display: none; }
   transition: color .18s ease;
 }
 .aw-opt-switch-btn.is-active { color: var(--aw-grp-on, #2f7bff); }
+/* ⭐ 14/9/2026 — the label carries its OWN ellipsis now (moved off the button,
+   which became a flex row and can hold the icon as a sibling instead of a
+   piece of the same text line). `min-width:0` is what lets a flex child
+   shrink below its content size at all — without it "PRONUNCIATION" would
+   push the icon out past the track exactly like Đợt 205's grid item did.
+   Below ~430px of panel even 8px does not fit (a narrow window: the panel is
+   `min(94vw, 580px)`). 8px is the floor because smaller is not reading, it is
+   decoration — so past that point the WORD gives way, clipped with an
+   ellipsis INSIDE the label. What must never happen is the button spilling
+   over the track and shoving the row sideways, and that is what these lines
+   guarantee. */
+.aw-opt-switch-label {
+  min-width: 0; flex: 0 1 auto;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 /* ⭐⭐ Đợt 314 (thầy) — VOICE CHƯA TẠO: nền đen/chữ trắng, cố ý khác hẳn ngôn
    ngữ màu xanh lá của cả nhóm (thầy: "nền đen chữ trắng"). Đè trực tiếp lên
    nền trong suốt của nút — không đụng `--aw-grp-*`/thumb, vì đây là một trạng
@@ -1582,13 +1595,17 @@ html.aw-nhung .aw-below { display: none; }
    "voice" khi đang pending (xem `mode` ở buildContentSwitchRow). */
 .aw-opt-switch-btn.is-novoice { background: #14161c; color: #ffffff; }
 
-/* ⭐ 11/09/2026 (thầy chốt) — icon loa nhỏ ngay trước chữ "VOICE" của nút công
-   tắc TEXT/VOICE, để phân biệt ngay bằng mắt với TEXT (không icon). Cùng SVG
+/* ⭐ 11/09/2026 (thầy chốt) — icon loa nhỏ cạnh chữ "VOICE" của nút công tắc
+   TEXT/VOICE, để phân biệt ngay bằng mắt với TEXT (không icon). Cùng SVG
    `icons.soundOn` dùng cho nút tắt/mở tiếng của trò chơi — một icon, một
-   nghĩa duy nhất trong toàn app. */
+   nghĩa duy nhất trong toàn app.
+   ⭐⭐ 14/9/2026 (thầy chốt) — dời sang BÊN PHẢI chữ (trước đứng bên trái) và
+   phóng cỡ lên NGANG CHỮ: `12px` cố định → `1em`, tự ăn theo `font-size` của
+   `.aw-opt-switch-btn` (13px thường, xuống 11px ở `.is-compact-opts`) thay vì
+   đứng yên một cỡ khi chữ đổi cỡ. `flex:none` giữ icon LUÔN hiện trọn vẹn —
+   chỉ `.aw-opt-switch-label` phía trên mới là phần được phép co/ellipsis. */
 .aw-opt-switch-ic {
-  display: inline-flex; width: 12px; height: 12px; margin-right: 4px;
-  vertical-align: -2px; flex: none;
+  display: inline-flex; width: 1em; height: 1em; flex: none;
 }
 .aw-opt-switch-ic svg { width: 100%; height: 100%; display: block; }
 
@@ -1992,12 +2009,18 @@ html.aw-nhung .aw-below { display: none; }
 }
 .aw-seg-btn {
   position: relative; z-index: 1;   /* above the thumb, which slides underneath */
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: center; justify-content: center; gap: 3px;
   border: none; background: transparent; padding: 0 8px;
   font-family: inherit; font-size: 12.5px; font-weight: 700;
   color: var(--aw-grp-off, #6b7688); border-radius: 7px; cursor: pointer;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   transition: color .18s ease;
+}
+/* ⭐ 14/9/2026 — the ellipsis moved off the button (now a flex row holding the
+   label AND the voice icon as separate items) onto the label alone, so a
+   narrow chip clips the WORD and never the icon — see `.aw-seg-voiceic`. */
+.aw-seg-label {
+  min-width: 0; flex: 0 1 auto;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 /* No background/shadow here any more — the thumb draws those. Leaving them on
    the button as well would show a second pill jumping ahead of the sliding one. */
@@ -7725,24 +7748,41 @@ body.aw-khung-mode .aw-giao-nen{display:none}
    ✓ hiện sai ở nửa kia — sai CÂM, không lỗi nào hiện ra. */
 .aw-seg-tick[hidden] { display: none; }
 
-/* ⭐⭐ 11/09/2026 (thầy chốt, ĐỢT 2) — icon loa trên chip ENG1/ENG2… báo BỘ ĐÓ
-   CÓ GIỌNG ĐỌC, hiện Ở MỌI MODE (không riêng nửa VOICE — bản đầu chỉ bật khi
-   đứng ở nửa voice, mà mặc định vào Options luôn đứng ở TEXT nên coi như
-   không ai thấy icon). Phần tử này chỉ được `options-panel.js` gắn vào nút
-   khi bộ đó thật sự nằm trong `voiceVariants`.
-   ⛔⛔ BẪY ĐO ĐƯỢC bằng bàn thử `scratch/voice-icon-test.html`: bản đầu để icon
-   NẰM TRONG DÒNG CHỮ (`margin-right`) — bốn chip ENG1/ENG2/VI1/VI2 chia đều
-   nhau bằng `flex:1 1 0` (xem `.aw-seg-anim .aw-seg-btn`), ô rộng chỉ ~43px ở
-   panel thường (còn hẹp hơn ở `.is-compact-opts`); text "ENG1" một mình đã gần
-   chạm mép, cộng icon 14px là TRÀN, `text-overflow:ellipsis` cắt cụt "ENG1"
-   thành "ENG" — cái dấu báo lại làm chữ khó đọc hơn, phản tác dụng. Vá bằng
-   DẤU GÓC (`position:absolute`, không chiếm chỗ dòng chữ) thay vì dấu trong
-   dòng — giống hệt cách `.bw-co-nghe`/`.bw-co-voice` bên myLesson đã làm.
+/* ⭐⭐ 11/09/2026 (thầy chốt, ĐỢT 2) — icon loa trên chip ENG1/ENG2… từng đổi
+   sang báo BỘ ĐÓ CÓ GIỌNG ĐỌC, hiện Ở MỌI MODE (không riêng nửa VOICE — bản
+   đầu chỉ bật khi đứng ở nửa voice, mà mặc định vào Options luôn đứng ở TEXT
+   nên coi như không ai thấy icon).
+   ⭐⭐ 14/9/2026 (thầy chốt, ĐỢT 2) — QUAY LẠI CHỈ HIỆN Ở NỬA VOICE ("bỏ icon
+   loa ở ENG1 ENG2 của TEXT, chỉ hiện khi chọn VOICE"): `coVoice` (bộ có giọng
+   đọc hay không) vẫn quyết định phần tử này có được TẠO RA hay không, y hệt
+   trước — chỉ khác là giờ `paintHalf()` còn ẨN/HIỆN nó theo `mode` mỗi lần
+   lật TEXT↔VOICE, xem luật `[hidden]` tường minh ngay dưới. Phần tử này chỉ
+   được `options-panel.js` gắn vào nút khi bộ đó thật sự nằm trong
+   `voiceVariants`.
+   ⛔⛔ BẪY ĐO ĐƯỢC bằng bàn thử `scratch/voice-icon-test.html` — LÝ DO cũ bản
+   đầu 11/9 bị cắn: icon + chữ là HAI DÒNG TEXT TRẦN cùng chia sẻ MỘT
+   `text-overflow:ellipsis` của CHÍNH NÚT `.aw-seg-btn`; ô hẹp (~43px, còn hẹp
+   hơn ở `.is-compact-opts`) co cả cụm lại rồi cắt ngay giữa chữ ("ENG1" →
+   "ENG"). Hôm đó vá tạm bằng DẤU GÓC tuyệt đối, nhỏ 8px, không chiếm chỗ
+   dòng chữ.
+   ⭐⭐ 14/9/2026 (thầy chốt) — thầy muốn icon đứng NGANG HÀNG bên phải chữ (như
+   ở nút TEXT/VOICE) và to NGANG CỠ CHỮ, không còn là dấu góc nữa. Sửa ĐÚNG
+   GỐC bẫy cũ lần này: `.aw-seg-label` (span riêng, xem app.css phía trên,
+   `min-width:0` + ellipsis CỦA RIÊNG NÓ) giữ hết phần co giãn — icon ở đây
+   `flex:none`, không bao giờ tham gia co/cắt, nên không tái diễn được kiểu
+   cắt-giữa-chữ đã đo được năm xưa.
    Không đặt `color` riêng: icon dùng `stroke="currentColor"` nên tự ăn theo
    màu chữ hiện tại của `.aw-seg-btn` (xám khi chưa chọn, xanh `is-on` khi
    đang chọn) — không cần khai `color` thêm. */
 .aw-seg-voiceic {
-  position: absolute; top: 1px; right: 1px; z-index: 2; pointer-events: none;
-  display: flex; width: 8px; height: 8px;
+  display: flex; width: 1em; height: 1em; flex: none; pointer-events: none;
 }
 .aw-seg-voiceic svg { width: 100%; height: 100%; display: block; }
+/* ⭐⭐ 14/9/2026 (thầy chốt, ĐỢT 2) — icon loa QUAY LẠI chỉ hiện ở nửa VOICE
+   ("bỏ icon loa ở ENG1 ENG2 của TEXT, chỉ hiện khi chọn VOICE"; xem
+   `paintHalf` trong options-panel.js đặt `icEl.hidden`). Luật ẩn phải viết
+   TƯỜNG MINH ở đây, giống `.aw-seg-tick[hidden]` ngay dưới — `.aw-seg-voiceic`
+   tự đặt `display:flex` ở trên, cùng độ đặc hiệu với `[hidden]` mặc định của
+   trình duyệt, nên thứ tự trong file mới là thứ quyết định ai thắng; không
+   viết rõ ra đây thì một ngày ai đó dời khối CSS này là icon hết ẩn được. */
+.aw-seg-voiceic[hidden] { display: none; }

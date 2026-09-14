@@ -1290,14 +1290,20 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
     // ⭐ 11/09/2026 (thầy chốt) — nút VOICE đeo icon loa NGAY CẠNH CHỮ: thầy
     // nhìn hàng TEXT/VOICE này rất nhanh khi soạn bài, muốn biết ngay bên nào
     // là giọng đọc mà không phải đọc chữ. TEXT giữ nguyên không icon.
+    // ⭐⭐ 14/9/2026 (thầy chốt) — icon dời sang BÊN PHẢI chữ (trước đứng bên
+    // trái) và phóng to lên NGANG CỠ CHỮ (12px cố định → 1em, tự ăn theo
+    // font-size của nút, kể cả bản .is-compact-opts nhỏ hơn). Chữ nằm trong
+    // `.aw-opt-switch-label` riêng để GIỮ được `text-overflow:ellipsis` của
+    // CHÍNH nó — icon để `flex:none` nên luôn hiện trọn, không bị cắt cụt như
+    // bẫy đã cắn ở chip ENG1/ENG2 bên dưới (xem `.aw-seg-voiceic`).
     MODES.forEach(([key, label]) => {
       const isPendingVoice = key === "voice" && voicePending;
       const b = el("button", "aw-opt-switch-btn"
         + (mode === key ? " is-active" : "")
         + (isPendingVoice ? " is-novoice" : ""));
       b.type = "button";
+      b.append(el("span", "aw-opt-switch-label", label));
       if (key === "voice") b.append(el("span", "aw-opt-switch-ic", icons.soundOn));
-      b.append(document.createTextNode(label));
       if (isPendingVoice) b.title = "Voice not generated yet — tap to create it";
       modeBtns.set(key, b);
       switchEl.append(b);
@@ -1342,17 +1348,32 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
       const b = el("button", "aw-seg-btn");
       b.type = "button";
       // ⭐⭐ 11/09/2026 (thầy chốt, ĐỢT 2) — icon loa cạnh tên bộ (ENG1/ENG2…)
-      // nay bám theo BỘ ĐÓ CÓ GIỌNG HAY KHÔNG, KHÔNG bám theo nửa đang đứng.
-      // ⛔ Bản đầu (cùng ngày) chỉ bật icon khi `mode==="voice"` — thầy vào
-      // Options thật thì mặc định luôn đứng ở nửa TEXT (nửa phổ biến nhất) nên
-      // KHÔNG BAO GIỜ thấy icon, coi như tính năng vô hình. Thầy chốt: icon là
-      // để biết "bộ này CÓ SẴN giọng đọc", một sự thật KHÔNG đổi theo việc đang
-      // xem nửa nào — nên hiện Ở MỌI MODE, chỉ ẩn với bộ không có giọng (VI1/VI2
-      // trong ví dụ thầy chỉ). Vì vậy chỉ cần XÉT TĨNH một lần ở đây (thành viên
-      // của `voiceVariants`), không cần `paintHalf()` bật/tắt theo `mode` nữa.
+      // từng đổi sang bám theo BỘ ĐÓ CÓ GIỌNG HAY KHÔNG, hiện Ở MỌI MODE, vì
+      // bản đầu (chỉ bật khi `mode==="voice"`) làm icon vô hình — Options mặc
+      // định luôn mở ở nửa TEXT.
+      // ⭐⭐ 14/9/2026 (thầy chốt, ĐỢT 2) — QUAY LẠI THEO NỬA ĐANG ĐỨNG: "bỏ
+      // icon loa ở ENG1 ENG2 của TEXT, chỉ hiện khi chọn VOICE". `coVoice` vẫn
+      // xét tĩnh một lần ở đây (bộ này CÓ giọng đọc hay không, không đổi theo
+      // mode) — đó là ĐIỀU KIỆN TẠO phần tử; `paintHalf()` bên dưới mới quyết
+      // định ẨN/HIỆN nó mỗi lần lật TEXT↔VOICE, qua `icEl.hidden`.
       const coVoice = (voiceVariants || []).includes(k);
-      if (coVoice) b.append(el("span", "aw-seg-voiceic", icons.soundOn));
-      b.append(document.createTextNode(labelOf(k)));
+      // ⭐⭐ 14/9/2026 (thầy chốt) — icon loa dời sang BÊN PHẢI tên bộ (trước là
+      // dấu góc tuyệt đối ở top-right) và phóng lên NGANG CỠ CHỮ (8px cố định
+      // → 1em). Tên bộ nằm trong `.aw-seg-label` RIÊNG để giữ ellipsis của
+      // CHÍNH NÓ (`min-width:0;flex:1 1 auto`) — icon `flex:none` nên luôn
+      // hiện trọn vẹn, không bao giờ bị cắt. Đây CHÍNH LÀ bẫy bản đầu 11/9 đã
+      // cắn ("ENG1" bị ellipsis cụt thành "ENG"): khi đó cả icon lẫn chữ cùng
+      // là 2 dòng text trần chia sẻ MỘT `text-overflow` của nút, ô hẹp co hết
+      // cả cụm lại rồi cắt ngay giữa chữ. Tách `.aw-seg-label` ra khỏi nút để
+      // chỉ CHỮ tự co (không bao giờ chạm tới icon) là thứ bản đầu thiếu.
+      const label = el("span", "aw-seg-label", labelOf(k));
+      b.append(label);
+      let icEl = null;
+      if (coVoice) {
+        icEl = el("span", "aw-seg-voiceic", icons.soundOn);
+        icEl.hidden = true;   // paintHalf() sets the real state on every paint
+        b.append(icEl);
+      }
       // ⭐⭐ Đợt 312 (thầy báo 09/9/2026) — dấu ✓ tra theo khoá "<chế độ>|<bộ>".
       // ⛔ Đợt 299 tra theo MỖI tên bộ nghĩa, nên ENG1 đeo ✓ ngay cả khi thầy mới
       // chỉ giao ENG1 VOICE mà đang đứng ở nửa TEXT — nói sai tình hình. Hai thứ
@@ -1432,6 +1453,13 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
       b.classList.toggle("aw-seg-daGiao", co);
       const tick = b.querySelector(".aw-seg-tick");
       if (tick) tick.hidden = !co;
+      // ⭐⭐ 14/9/2026 (thầy chốt, ĐỢT 2) — icon loa CHỈ hiện khi đang đứng ở
+      // nửa VOICE ("bỏ icon loa ở ENG1 ENG2 của TEXT, chỉ hiện khi chọn
+      // VOICE"), không còn hiện ở mọi mode như bản 11/9 nữa. `.aw-seg-voiceic`
+      // chỉ tồn tại trên nút của bộ CÓ giọng đọc (`coVoice` lúc dựng), nên
+      // `querySelector` trả null ở bộ không có giọng — an toàn.
+      const icEl = b.querySelector(".aw-seg-voiceic");
+      if (icEl) icEl.hidden = mode !== "voice";
       b.title = co
         ? "Đã giao bài \"" + tplHien + "\" với bộ này (" + mode + ")"
         : "";
