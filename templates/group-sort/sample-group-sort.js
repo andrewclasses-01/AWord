@@ -1,5 +1,5 @@
 // =============================================================
-// Sample GROUP SORT content — used by test.html and the home page.
+// Sample SPEED SORTING (type group_sort) content — used by test.html and the home page.
 // CONVENTION: every template's sample data file exports
 //   `export const activity = {...}`  (standard name).
 //
@@ -14,15 +14,15 @@ export const activity = {
   id: "act_sample_gs",
   schemaVersion: 1,
   type: "group_sort",
-  title: "QUESTION WORDS — Group sort",
+  title: "QUESTION WORDS — Speed sorting",
   instruction: "Put each question into the right group.",
   theme: "classic",
   options: {
     timer: "countUp",
     shuffleQuestions: true,
     showAnswers: true,
-    mode: "tap",            // "tap" = one item at a time, tap the group · "drag" = drag every item into its box
-    speed: 0,               // tap mode: 0 = the item waits at the centre until answered
+    mode: "tap",            // "tap" = SPEED SORTING (chips ride a belt, drag each onto its pill) · "drag" = GROUP SORT (pool + boxes)
+    speed: 3,               // belt mode: 1..10 = belt speed (Đợt 327; the old 0 = "wait" is read as 3)
     lives: 0,               // 0 = unlimited hearts
     repeatUntilCorrect: false,
     dragCheck: "submit",    // drag mode: "submit" = graded when all are placed / Submit · "instant" = graded on every drop

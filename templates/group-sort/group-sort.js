@@ -1,32 +1,39 @@
 // =============================================================
-// TEMPLATE: GROUP SORT — Wordwall's "Group sort" + "Speed sorting" in ONE game.
-// Built Đợt 288 (03/9/2026) for the NEN TANG TIENG ANH course (Lesson 16 BT2
-// "phân biệt 7 loại câu hỏi xin thông tin" is a Speed sorting on Wordwall).
+// TEMPLATE: SPEED SORTING — Wordwall's "Speed sorting" + "Group sort" in ONE
+// game. Built Đợt 288 (03/9/2026) as "Group sort" for the NEN TANG TIENG ANH
+// course; Đợt 327 (14/9/2026) rebuilt the conveyor mode from thầy's mockup
+// and renamed the template to "Speed sorting" (type id stays `group_sort` —
+// every saved act and assignment keeps working).
 //
 // TWO MODES (options.mode):
-//  • "tap"  (default) — SPEED SORTING. One item glides in on the True-false
-//    conveyor belt; below sit N GROUP BUTTONS (2..8, coloured with the theme's
-//    tile palette). Tap the right group: the item flies INTO that button with a
-//    burst of stars and the score ticks up. Tap wrong: ✗ + wrong sound, a heart
-//    pops (if lives are on), the item glides off (and comes back later when
-//    "Repeat" is on). Speed 0..10 = how fast an unanswered item drifts away
-//    (0 = waits). Keys 1..9 = tap group 1..9.
-//  • "drag" — GROUP SORT proper. EVERY item sits in a pool at the top; drag each
-//    chip into its group box (or tap a chip, then tap a box). options.dragCheck:
-//    "submit" = graded once the pool is empty or Submit is pressed (✓/✗ on every
-//    chip, then the summary); "instant" = graded on every drop (a wrong chip
-//    shakes, costs a heart/points and jumps back to the pool).
+//  • "tap"  (default) — SPEED SORTING, a real CONVEYOR BELT. Same-sized
+//    coloured chips drift left→right across a lane at the top, on a loop;
+//    below sit N dashed amber GROUP PILLS (no colours, no numbers — nothing
+//    that hints at the answer). Press ANY chip and it is yours: a clone
+//    follows the pointer while the chip's own slot keeps riding the belt.
+//    Drop it on the right pill → ✓ bursts on the pill, stars fly to the
+//    score. Drop it on a wrong pill → ✗ bursts there, a heart pops (if lives
+//    are on), points off — and the item is SPENT either way (it does not
+//    come back). Let go over nothing → the chip flies back to exactly where
+//    its slot is now. Speed 1..10 = belt speed. Game complete when every
+//    item has been dropped somewhere; time's up / out of hearts end it early.
+//    (The option value stays "tap" so acts saved before Đợt 327 open in the
+//    same mode they were saved in.)
+//  • "drag" — GROUP SORT proper. EVERY item sits in a pool at the top; drag
+//    each chip into its group box (or tap a chip, then tap a box).
+//    options.dragCheck: "submit" = graded once the pool is empty or Submit is
+//    pressed; "instant" = graded on every drop (a wrong chip shakes, costs a
+//    heart/points and jumps back to the pool).
 //
 // DATA:  content.groups = [name, …] · content.items = [{ text, group: name }]
 // A FLAT item list on purpose — "Start with mistakes" (itemsKey) and Show
 // answers want one array of playable things. `group` is the NAME, not an
 // index, so the editor can reorder groups without touching every item.
 //
-// Everything else follows CONG THUC MAU.md and the True-false template (the
-// closest relative: conveyor, lives in the top bar via ui.livesSlot, the 3-2-1
-// prep countdown with manualTimerStart, points-off through ui.flyPenalty).
-// NOT in this first build (see GHI CHU GROUP-SORT.md): Fight mode, Showdown,
-// per-item voice, Change template conversions.
+// Everything else follows CONG THUC MAU.md: lives in the top bar via
+// ui.livesSlot, the 3-2-1 prep countdown with manualTimerStart, points-off
+// through ui.flyPenalty. NOT built: Fight mode, Showdown, per-item voice,
+// Change template conversions (see GHI CHU GROUP-SORT.md).
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
@@ -39,15 +46,20 @@ import { gsSound } from "./gs-sound.js";
 import { MIN_GROUPS, normalizeGroups, groupIndexOf } from "./gs-shared.js";
 
 const MAX_LIVES = 10;
-const ENTER_MS = 1300;   // tap mode: left edge -> centre (same pace as True-false)
-const EXIT_MS = 550;     // tap mode: wherever it is -> off the right edge
 const TAP_SLOP_PX = 7;   // drag mode: a pointer that moved less than this is a TAP, not a drag
+const BELT_SLOTS = 5;    // belt mode: chip slots kept alive on the belt at once
+const CHIP_COLOURS = 5;  // belt mode: theme tiles 0..3 + the template's own purple
 
-// Speed 0-10 -> how long the centre-to-right-edge drift takes (tap mode).
-function crawlMsFor(speed) {
-  if (!speed) return null;
-  const t = (speed - 1) / 9;
-  return Math.round(5600 - t * (5600 - 1100));
+// Belt speed 1..10 -> lane-widths per second (3 ≈ the pace thầy approved).
+function beltFractionFor(speed) {
+  return 0.06 + (speed - 1) * 0.03;
+}
+
+// options.speed for the belt: 1..10; anything else (incl. the old "0 =
+// wait", which has no meaning on a belt that must keep moving) = 3.
+function normSpeed(v) {
+  const n = Number.isInteger(v) ? v : 0;
+  return n >= 1 ? Math.min(10, n) : 3;
 }
 
 // options.lives: 0 / null / undefined = unlimited (this game defaults to
@@ -67,7 +79,7 @@ function escapeHtml(s) {
 const gsTemplate = {
   type: "group_sort",
   scorable: true,
-  name: "Group sort",
+  name: "Speed sorting",
   timeCost: true,
   itemsKey: "items",
   checkOrder: ["shuffle", "showAnswers"],
@@ -93,17 +105,17 @@ const gsTemplate = {
   buildExtraOptions({ panel, draft, mkSliderCell, mkSeg, mkCell }) {
     const mode = mkCell({ label: "Mode" });
     mode.ctl.append(mkSeg([
-      { value: "tap", label: "Tap", title: "One item at a time — tap its group (Speed sorting)" },
-      { value: "drag", label: "Drag", title: "Every item in a pool — drag each into its box (Group sort)" }
+      { value: "tap", label: "Speed sorting", title: "Items ride a conveyor belt — grab each one and drop it into its group" },
+      { value: "drag", label: "Group sort", title: "Every item in a pool — drag each into its box" }
     ], draft.mode === "drag" ? "drag" : "tap", v => { draft.mode = v; }));
 
     const speed = mkSliderCell({
-      label: "Speed", sub: "tap · 0 = wait", min: 0, max: 10, step: 1,
-      value: Number.isInteger(draft.speed) ? draft.speed : 0, tone: "blue", offAt: 0,
-      fmt: v => (v === 0 ? "Off" : String(v)),
+      label: "Speed", sub: "belt", min: 1, max: 10, step: 1,
+      value: normSpeed(draft.speed), tone: "blue",
+      fmt: v => String(v),
       onInput: v => { draft.speed = v; }
     });
-    speed.cell.title = "Tap mode only: 0 = the item waits for an answer; 10 = it drifts away fastest";
+    speed.cell.title = "Speed sorting only: how fast the belt moves (1 = slow, 10 = fastest)";
 
     const curLives = normLives(draft.lives) || 0;
     const lives = mkSliderCell({
@@ -113,21 +125,14 @@ const gsTemplate = {
     });
     lives.cell.title = "0 = unlimited lives";
 
-    const repeat = mkCell({ label: "Unanswered", sub: "tap" });
-    repeat.ctl.append(mkSeg([
-      { value: "once", label: "Ask once", title: "Show each item once" },
-      { value: "repeat", label: "Repeat", title: "A missed item comes back later" }
-    ], draft.repeatUntilCorrect === true ? "repeat" : "once",
-      v => { draft.repeatUntilCorrect = v === "repeat"; }));
-
-    const check = mkCell({ label: "Checking", sub: "drag" });
+    const check = mkCell({ label: "Checking", sub: "group sort" });
     check.ctl.append(mkSeg([
       { value: "submit", label: "On submit", title: "Graded once every chip is placed (or Submit is pressed)" },
       { value: "instant", label: "Instantly", title: "Every drop is graded at once; a wrong chip returns to the pool" }
     ], draft.dragCheck === "instant" ? "instant" : "submit",
       v => { draft.dragCheck = v; }));
 
-    panel.append(mode.cell, speed.cell, lives.cell, repeat.cell, check.cell);
+    panel.append(mode.cell, speed.cell, lives.cell, check.cell);
   },
 
   mount(root, activity, ui) {
@@ -233,7 +238,7 @@ const gsTemplate = {
       }
     }
 
-    // Review rows — one per item, in play order (tap) / content order (drag).
+    // Review rows — one per item, in play order (belt) / content order (drag).
     function reviewRow(idx) {
       const it = items[idx], s = state[idx];
       return {
@@ -259,7 +264,8 @@ const gsTemplate = {
       const perQuestion = review.map((r, i) => ({ q: i, correct: r.yourCorrect === true }));
       const correct = perQuestion.filter(p => p.correct).length;
       ui.finish({ score: correct - penalty, correct, incorrect: total - correct, total, perQuestion, review,
-                  answered: review.filter(r => r.answered).length });
+                  answered: review.filter(r => r.answered).length,
+                  title: reason === "gameover" ? "Game over" : undefined });
     }
 
     let paintNav = () => {};
@@ -267,7 +273,7 @@ const gsTemplate = {
     let cleanupMode = () => {};
 
     if (mode === "drag") cleanupMode = mountDrag();
-    else cleanupMode = mountTap();
+    else cleanupMode = mountBelt();
 
     return function cleanup() {
       finished = true;
@@ -278,71 +284,73 @@ const gsTemplate = {
     };
 
     // =====================================================================
-    // TAP MODE — the conveyor (True-false's motion engine) + N group buttons.
+    // BELT MODE (options.mode "tap") — the conveyor: same-sized chips ride
+    // left→right on a loop; press one, drop it on a dashed pill below.
+    // Positions are plain layout px kept in JS (`chip.x`) and applied as a
+    // transform each frame — NOT flex — because a held chip's slot must keep
+    // moving in step with its neighbours while the chip itself is off with
+    // the pointer, or it would land on top of one when it came back.
     // =====================================================================
-    function mountTap() {
-      const speed = Number.isInteger(opt.speed) ? Math.max(0, Math.min(10, opt.speed)) : 0;
-      const crawlMs = crawlMsFor(speed);
-      const repeatUntilCorrect = opt.repeatUntilCorrect === true;
-
+    function mountBelt() {
+      const speedFrac = beltFractionFor(normSpeed(opt.speed));
       const order = opt.shuffleQuestions === false ? items.map((_, i) => i) : shuffle(items.map((_, i) => i));
       reviewOrder = order;
-      const queue = [...order];
-      let promptAnim = null, fallbackTimer = null, prepTimer = null, gateTimer = null, fitter = null;
+      const pool = [...order];          // items not yet dropped anywhere
+      let poolCursor = 0;
+      const onBelt = new Set();         // item indices currently occupying a slot
+      const played = [];                // item indices in the order they were dropped
+      let belt = [];                    // { el, x, itemIdx, held }
+      let chipW = 0, chipH = 0, chipGap = 0, colourCursor = 0;
+      let rafId = null, lastTime = null, running = false;
+      let prepTimer = null, fitter = null, drag = null;
       const tickTimers = [];
-      let curIdx = -1;
+      let lane, pills, pillEls = [];
 
       ui.onSubmit(() => finish("timesup"));
-      window.addEventListener("keydown", onKey);
       renderShell();
-      ui.setIdleGuard?.(() => {
-        if (finished || prepTimer) return true;
-        const btn = root.querySelector(".aw-gs-gbtn");
-        return !!(btn && btn.disabled);
-      });
+      ui.setIdleGuard?.(() => finished || !running);
 
       if (timerMode === "countUp") runPrepCountdown();
       else {
         ui.startTimer();
         if (timerMode !== "none") gsSound.go();
         if (timerMode === "countDown") armCountdownTicks();
-        startCycle();
-      }
-
-      function armFallback(fn, ms) {
-        if (fallbackTimer) clearTimeout(fallbackTimer);
-        fallbackTimer = setTimeout(fn, ms);
+        startBelt();
       }
 
       function renderShell() {
         root.innerHTML = "";
-        const card = el("div", "aw-gs-card is-tap");
-        const track = el("div", "aw-gs-track");
-        track.append(el("div", "aw-gs-prompt"));
-        card.append(track);
-        card.append(el("div", "aw-gs-divider"));
-
-        const grid = el("div", "aw-gs-groups");
-        const n = groups.length;
-        const cols = n <= 3 ? n : n === 4 ? 2 : n <= 6 ? 3 : 4;
-        grid.style.setProperty("--gs-cols", String(cols));
-        groups.forEach((g, i) => {
-          const b = el("button", "aw-gs-gbtn");
-          b.type = "button";
-          b.style.setProperty("--tile", `var(--aw-tile-${i % 4})`);
-          b.style.setProperty("--tile-dark", `var(--aw-tile-${i % 4}d)`);
-          b.dataset.group = String(i);
-          b.append(el("span", "aw-gs-gkey", String(i + 1)), el("span", "aw-gs-gtext", escapeHtml(g)));
-          b.disabled = true;
-          press(b, () => choose(i, b));
-          grid.append(b);
+        const card = el("div", "aw-gs-card is-belt");
+        const railTop = el("div", "aw-gs-rail");
+        lane = el("div", "aw-gs-lane");
+        const railMid = el("div", "aw-gs-rail");
+        pills = el("div", "aw-gs-pills");
+        // The pill ROW is a non-stretched child of the stretched .aw-gs-pills,
+        // so its offsetHeight is the TRUE content height for autoFit (a
+        // stretched box's scrollHeight == its box height — the fit.js trap).
+        const pillRow = el("div", "aw-gs-pillrow");
+        pillEls = groups.map((g, i) => {
+          const p = el("div", "aw-gs-pill", escapeHtml(g));
+          p.dataset.group = String(i);
+          pillRow.append(p);
+          return p;
         });
-        card.append(grid);
+        pills.append(pillRow);
+        card.append(railTop, lane, railMid, pills);
         root.append(card);
 
+        const outer = n => {
+          const cs = getComputedStyle(n);
+          return n.offsetHeight + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom);
+        };
         fitter = autoFit(root, card, s => card.style.setProperty("--fit", s), {
-          slack: root.clientWidth * 0.03,
-          measure: () => track.offsetHeight + grid.scrollHeight
+          slack: root.clientWidth * 0.02,
+          measure: () => {
+            const cs = getComputedStyle(card), ps = getComputedStyle(pills);
+            return outer(railTop) + outer(lane) + outer(railMid)
+                 + pillRow.offsetHeight + parseFloat(ps.paddingTop) + parseFloat(ps.paddingBottom)
+                 + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+          }
         });
         ui.setScore(liveScore());
         paintNav = updateNav;
@@ -350,28 +358,25 @@ const gsTemplate = {
       }
 
       function updateNav() {
-        const row = curIdx < 0 ? 0 : Math.min(total, order.indexOf(curIdx) + 1);
-        ui.setNav({ index: Math.max(1, row), total, label: `${liveScore()} of ${total}`, onPrev: null, onNext: null });
+        ui.setNav({ index: Math.max(1, played.length), total, label: `${liveScore()} of ${total}`, onPrev: null, onNext: null });
       }
 
       function runPrepCountdown() {
-        const promptEl = root.querySelector(".aw-gs-prompt");
-        if (!promptEl) { ui.startTimer(); gsSound.go(); startCycle(); return; }
-        promptEl.classList.add("is-countdown");
+        const count = el("div", "aw-gs-count");
+        lane.append(count);
         let n = 3;
         const tick = () => {
           if (finished) return;
-          promptEl.textContent = String(n);
+          count.textContent = String(n);
           gsSound.clockTick();
           n--;
           if (n > 0) { prepTimer = setTimeout(tick, 1000); return; }
           prepTimer = setTimeout(() => {
             prepTimer = null;
-            promptEl.classList.remove("is-countdown");
-            promptEl.textContent = "";
+            count.remove();
             ui.startTimer();
             gsSound.go();
-            startCycle();
+            startBelt();
           }, 1000);
         };
         tick();
@@ -387,197 +392,325 @@ const gsTemplate = {
         });
       }
 
-      function offscreenPx() { return Math.round((root.clientWidth || 1) * 1.15); }
-      function lockButtons() { root.querySelectorAll(".aw-gs-gbtn").forEach(b => { b.disabled = true; }); }
-      function unlockButtons() { root.querySelectorAll(".aw-gs-gbtn").forEach(b => { b.disabled = false; }); }
-
-      function startCycle() {
-        if (finished) return;
-        if (!queue.length) { armFallback(() => finish("complete"), 400); return; }
-        const promptEl = root.querySelector(".aw-gs-prompt");
-        if (!promptEl) return;
-        promptEl.style.visibility = "";
-        curIdx = queue[0];
-        promptEl.textContent = items[curIdx].text;
-        const off = offscreenPx();
-        promptEl.style.transform = `translateX(${-off}px)`;
-        void promptEl.offsetWidth;
-        gsSound.conveyorAppear();
-        const enter = promptEl.animate(
-          [{ transform: `translateX(${-off}px)` }, { transform: "translateX(0px)" }],
-          { duration: ENTER_MS, easing: "ease-out", fill: "forwards" });
-        promptAnim = enter;
-        lockButtons();
-        if (gateTimer) clearTimeout(gateTimer);
-        gateTimer = setTimeout(() => {
-          if (finished || !queue.length) return;
-          unlockButtons();
-          updateNav();
-        }, Math.round(ENTER_MS * 0.5));
-        let done = false;
-        const onEntered = () => {
-          if (done) return; done = true;
-          promptAnim = null;
-          if (finished) return;
-          gsSound.conveyorCentred();
-          armCrawl();
-        };
-        enter.onfinish = onEntered;
-        armFallback(onEntered, ENTER_MS + 100);
+      // ---- the belt ----
+      // Every chip is the SAME fixed size, so one hidden probe gives the box
+      // in LAYOUT px (offsetWidth, not getBoundingClientRect — the zoom
+      // fullscreen scales the stage, and chip.x lives in unscaled px).
+      function measureChip() {
+        const probe = el("div", "aw-gs-bchip");
+        probe.style.visibility = "hidden";
+        lane.append(probe);
+        chipW = probe.offsetWidth; chipH = probe.offsetHeight;
+        probe.remove();
+        chipGap = chipW * 0.16;
       }
 
-      function armCrawl() {
-        if (finished || !queue.length || !crawlMs) return;
-        const promptEl = root.querySelector(".aw-gs-prompt");
-        if (!promptEl) return;
-        const off = offscreenPx();
-        gsSound.conveyorLeave();
-        const crawl = promptEl.animate(
-          [{ transform: "translateX(0px)" }, { transform: `translateX(${off}px)` }],
-          { duration: crawlMs, easing: "linear", fill: "forwards" });
-        promptAnim = crawl;
-        let done = false;
-        const onCrawlDone = () => {
-          if (done) return; done = true;
-          promptAnim = null;
-          if (!finished) onTimeUp();
-        };
-        crawl.onfinish = onCrawlDone;
-        armFallback(onCrawlDone, crawlMs + 120);
+      function paintChip(chip, idx) {
+        const k = colourCursor % CHIP_COLOURS; colourCursor++;
+        chip.el.style.setProperty("--tile", k < 4 ? `var(--aw-tile-${k})` : "var(--aw-gs-tile-4)");
+        chip.el.style.setProperty("--tile-dark", k < 4 ? `var(--aw-tile-${k}d)` : "var(--aw-gs-tile-4d)");
+        chip.el.innerHTML = "";
+        const t = el("span", "aw-gs-bchiptext");
+        t.textContent = items[idx].text;
+        chip.el.append(t);
+        chip.itemIdx = idx;
       }
 
-      function haltPromptAnim() {
-        if (promptAnim) {
-          try { promptAnim.commitStyles(); } catch (e) { /* ignore */ }
-          try { promptAnim.cancel(); } catch (e) { /* ignore */ }
-          promptAnim = null;
+      function positionChip(c) { c.el.style.transform = `translate(${c.x}px, -50%)`; }
+
+      // Next pool item that is NOT already on another slot — null once every
+      // remaining item is already visible (or none is left).
+      function nextItemForSlot() {
+        if (!pool.length) return null;
+        for (let k = 0; k < pool.length; k++) {
+          const idx = pool[poolCursor % pool.length];
+          poolCursor++;
+          if (!onBelt.has(idx)) return idx;
         }
+        return null;
       }
 
-      // Puts an item back at a RANDOM later spot (never slot 0). Removing from
-      // the front is the CALLER's job (the True-false Đợt 179 split).
-      function requeueRandom(idx) {
-        if (!queue.length) { queue.push(idx); return; }
-        const pos = 1 + Math.floor(Math.random() * queue.length);
-        queue.splice(pos, 0, idx);
+      function startBelt() {
+        if (finished) return;
+        measureChip();
+        const count = Math.min(BELT_SLOTS, pool.length);
+        let x = chipGap;
+        for (let i = 0; i < count; i++) {
+          const idx = pool[poolCursor % pool.length]; poolCursor++;
+          onBelt.add(idx);
+          const chip = { el: el("div", "aw-gs-bchip"), x, itemIdx: idx, held: false };
+          paintChip(chip, idx);
+          positionChip(chip);
+          attachDrag(chip);
+          lane.append(chip.el);
+          belt.push(chip);
+          x += chipW + chipGap;
+        }
+        running = true;
+        lastTime = null;
+        rafId = requestAnimationFrame(loop);
       }
 
-      function onTimeUp() {
-        if (finished || !queue.length) return;
-        const idx = queue.shift();
-        if (repeatUntilCorrect) requeueRandom(idx);
-        else { state[idx].answered = true; state[idx].correct = false; state[idx].timedOut = true; }
-        startCycle();
+      // Every chip drifts — a HELD one too (its slot stays in sequence).
+      // Whatever has fully left the right edge comes back in from the left
+      // with the next item; a held chip is never recycled.
+      function loop(now) {
+        if (finished || !running) return;
+        if (lastTime == null) lastTime = now;
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+        const laneW = lane.clientWidth || 1;
+        const speed = laneW * speedFrac;
+        let minX = Infinity;
+        belt.forEach(c => {
+          c.x += speed * dt;
+          positionChip(c);
+          if (c.x < minX) minX = c.x;
+        });
+        const exited = belt.filter(c => !c.held && c.x > laneW + chipGap);
+        exited.forEach(c => {          // one at a time, so two exits on one frame never stack
+          recycle(c, minX);
+          if (c.x < minX) minX = c.x;
+        });
+        rafId = requestAnimationFrame(loop);
       }
 
-      function exitPromptThenCall(cb) {
-        const promptEl = root.querySelector(".aw-gs-prompt");
-        haltPromptAnim();
-        if (!promptEl) { cb(); return; }
-        gsSound.conveyorLeave();
-        const off = offscreenPx();
-        const exit = promptEl.animate([{ transform: `translateX(${off}px)` }],
-          { duration: EXIT_MS, easing: "ease-in", fill: "forwards" });
-        promptAnim = exit;
-        let done = false;
-        const run = () => { if (done) return; done = true; promptAnim = null; if (!finished) cb(); };
-        exit.onfinish = run;
-        armFallback(run, EXIT_MS + 100);
+      function recycle(chip, minX) {
+        onBelt.delete(chip.itemIdx);
+        const nextIdx = nextItemForSlot();
+        if (nextIdx == null) { retireSlot(chip); return; }
+        onBelt.add(nextIdx);
+        chip.x = minX - chipW - chipGap;
+        paintChip(chip, nextIdx);
+        positionChip(chip);
       }
 
-      // A CORRECT tap: a clone of the item flies INTO the tapped group button
-      // (that is where it belongs), stars stream to the score, score ticks up.
-      function flyPromptToButton(promptEl, btn, cb) {
-        const host = document.fullscreenElement || document.body;
-        let called = false;
-        const done = () => { if (called) return; called = true; if (!finished) cb(); };
-        const scoreEl = ui.scoreEl;
-        if (!promptEl || !btn) { done(); return; }
-        const from = promptEl.getBoundingClientRect();
-        const to = btn.getBoundingClientRect();
-        const cs = getComputedStyle(promptEl);
-        const clone = el("div", "aw-gs-flyclone");
-        clone.textContent = promptEl.textContent;
-        clone.style.left = from.left + "px"; clone.style.top = from.top + "px";
-        clone.style.width = from.width + "px"; clone.style.height = from.height + "px";
-        clone.style.font = cs.font; clone.style.color = cs.color;
-        host.appendChild(clone);
-        promptEl.style.visibility = "hidden";
-        const dx = (to.left + to.width / 2) - (from.left + from.width / 2);
-        const dy = (to.top + to.height / 2) - (from.top + from.height / 2);
-        try {
-          clone.animate([
-            { transform: "translate(0,0) scale(1)", opacity: 1 },
-            { transform: `translate(${dx * 0.6}px, ${dy * 0.6}px) scale(0.55)`, opacity: 0.8, offset: 0.6 },
-            { transform: `translate(${dx}px, ${dy}px) scale(0.1)`, opacity: 0 }
-          ], { duration: 560, easing: "cubic-bezier(.5,0,.3,1)", fill: "forwards" }).onfinish = () => clone.remove();
-        } catch (e) { /* ignore */ }
-        later(() => clone.remove(), 900);
-        if (scoreEl) spawnStars(to, scoreEl.getBoundingClientRect());
-        try {
-          btn.animate([{ transform: "scale(1)" }, { transform: "scale(1.08)" }, { transform: "scale(1)" }],
-            { duration: 360, easing: "ease-out", delay: 380 });
-        } catch (e) { /* ignore */ }
-        later(() => {
-          if (finished) return;
-          ui.setScore(liveScore());
-          updateNav();
-          try { scoreEl?.animate([{ transform: "scale(1)" }, { transform: "scale(1.35)" }, { transform: "scale(1)" }], { duration: 340, easing: "ease-out" }); } catch (e) { /* ignore */ }
-        }, 420);
-        later(done, 640);
+      function retireSlot(chip) {
+        chip.el.remove();
+        belt = belt.filter(b => b !== chip);
       }
 
-      function choose(gi, btn) {
-        if (finished || !queue.length) return;
-        if (btn.disabled) return;
-        const idx = queue[0];
-        const isRight = answerOf(items[idx]) === gi;
+      // A dropped chip (right OR wrong) is spent: out of the pool for good,
+      // and its slot picks up the next item from off the left edge.
+      function consume(chip) {
+        const pi = pool.indexOf(chip.itemIdx);
+        if (pi >= 0) pool.splice(pi, 1);
+        onBelt.delete(chip.itemIdx);
+        played.push(chip.itemIdx);
+        const playedSet = new Set(played);
+        reviewOrder = played.concat(order.filter(i => !playedSet.has(i)));
+        const nextIdx = nextItemForSlot();
+        if (nextIdx == null) {
+          retireSlot(chip);
+        } else {
+          onBelt.add(nextIdx);
+          let minX = Infinity;
+          belt.forEach(b => { if (b.x < minX) minX = b.x; });
+          chip.x = Math.min(minX - chipW - chipGap, -chipW - chipGap);
+          paintChip(chip, nextIdx);
+          positionChip(chip);
+          chip.held = false;
+          chip.el.classList.remove("is-held");
+        }
+        updateNav();
+      }
+
+      // ---- drag: press ANY chip → a fixed clone follows the pointer ----
+      // Move/up/cancel are listened for on WINDOW for the whole drag, so a
+      // release anywhere (even after pointer capture is lost) ends it.
+      function attachDrag(chip) {
+        chip.el.addEventListener("pointerdown", e => {
+          if (finished || !running || chip.held || drag) return;
+          if (e.button != null && e.button !== 0) return;
+          e.preventDefault();
+          startDrag(chip, e);
+        });
+      }
+
+      function startDrag(chip, e) {
+        const src = chip.el;
+        const r = src.getBoundingClientRect();
+        const cs = getComputedStyle(src);
+        chip.held = true;
+        src.classList.add("is-held");
         ui.noteActivity?.();
-        queue.shift();
+        gsSound.pickup();
+
+        // The clone lives on <body>/fullscreen host, outside the stage, where
+        // --aw-u does not exist — so every unit-derived size is copied in px.
+        const clone = src.cloneNode(true);
+        clone.className = "aw-gs-dragclone is-belt";
+        clone.style.cssText = "";
+        clone.style.left = r.left + "px"; clone.style.top = r.top + "px";
+        clone.style.width = r.width + "px"; clone.style.height = r.height + "px";
+        clone.style.background = cs.backgroundColor;
+        clone.style.borderRadius = cs.borderRadius;
+        clone.style.border = cs.border;
+        clone.style.padding = cs.padding;
+        clone.style.fontFamily = cs.fontFamily;
+        clone.style.fontSize = cs.fontSize;
+        clone.style.fontWeight = cs.fontWeight;
+        clone.style.lineHeight = cs.lineHeight;
+        clone.style.color = cs.color;
+        clone.style.textShadow = cs.textShadow;
+        (document.fullscreenElement || document.body).append(clone);
+
+        const pillRects = pillEls.map(p => p.getBoundingClientRect());
+        drag = {
+          chip, clone, id: e.pointerId,
+          offX: e.clientX - r.left, offY: e.clientY - r.top,
+          pillRects, lastX: e.clientX, lastY: e.clientY
+        };
+        try { src.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        window.addEventListener("pointermove", onDragMove);
+        window.addEventListener("pointerup", onDragUp);
+        window.addEventListener("pointercancel", onDragUp);
+        document.addEventListener("visibilitychange", onHidden);
+      }
+
+      function pillAt(x, y, rects) {
+        for (let i = 0; i < rects.length; i++) {
+          const r = rects[i];
+          if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return i;
+        }
+        return -1;
+      }
+
+      function onDragMove(e) {
+        const d = drag;
+        if (!d || e.pointerId !== d.id) return;
+        d.lastX = e.clientX; d.lastY = e.clientY;
+        d.clone.style.left = (e.clientX - d.offX) + "px";
+        d.clone.style.top = (e.clientY - d.offY) + "px";
+        const over = pillAt(e.clientX, e.clientY, d.pillRects);
+        pillEls.forEach((p, i) => p.classList.toggle("is-over", over === i));
+      }
+
+      function onDragUp(e) {
+        const d = drag;
+        if (!d || e.pointerId !== d.id) return;
+        endDrag(e.clientX, e.clientY);
+      }
+
+      // The tab going hidden mid-drag (app switch on a phone) ends it where
+      // the pointer last was. NOT window blur: any focus flicker (a screenshot
+      // tool, a system dialog) would drop the chip while the finger is still
+      // down.
+      function onHidden() {
+        if (document.hidden && drag) endDrag(drag.lastX, drag.lastY);
+      }
+
+      function unhookDrag() {
+        window.removeEventListener("pointermove", onDragMove);
+        window.removeEventListener("pointerup", onDragUp);
+        window.removeEventListener("pointercancel", onDragUp);
+        document.removeEventListener("visibilitychange", onHidden);
+      }
+
+      function endDrag(x, y) {
+        const d = drag;
+        drag = null;
+        unhookDrag();
+        try { d.chip.el.releasePointerCapture(d.id); } catch (err) { /* ignore */ }
+        pillEls.forEach(p => p.classList.remove("is-over"));
+        if (finished) { d.clone.remove(); return; }
+
+        const chip = d.chip, clone = d.clone;
+        const gi = pillAt(x, y, d.pillRects);
+        if (gi < 0) { flyBackToBelt(chip, clone); return; }
+
+        const idx = chip.itemIdx;
+        const pill = pillEls[gi];
+        const isRight = answerOf(items[idx]) === gi;
+        clone.remove();
         state[idx].answered = true;
         state[idx].chosen = gi;
         state[idx].timedOut = false;
+        state[idx].correct = isRight;
+        ui.noteActivity?.();
         ui.roundDone?.();
-        lockButtons();
         if (isRight) {
-          state[idx].correct = true;
           gsSound.correct();
-          flyMark(btn, true);
-          const promptEl = root.querySelector(".aw-gs-prompt");
-          haltPromptAnim();
-          flyPromptToButton(promptEl, btn, () => { if (!queue.length) finish("complete"); else startCycle(); });
+          flyMark(pill, true);
+          pill.classList.add("is-correct");
+          later(() => pill.classList.remove("is-correct"), 550);
+          const scoreEl = ui.scoreEl;
+          if (scoreEl) spawnStars(pill.getBoundingClientRect(), scoreEl.getBoundingClientRect());
+          consume(chip);
+          later(() => {
+            if (finished) return;
+            ui.setScore(liveScore());
+            updateNav();
+            try { scoreEl?.animate([{ transform: "scale(1)" }, { transform: "scale(1.35)" }, { transform: "scale(1)" }], { duration: 340, easing: "ease-out" }); } catch (e) { /* ignore */ }
+          }, 420);
+          if (!pool.length && !belt.length) later(() => finish("complete"), 700);
         } else {
-          state[idx].correct = false;
           gsSound.wrong();
-          flyMark(btn, false);
-          if (pointsOff) chargePenalty(btn, pointsOff);
+          flyMark(pill, false);
+          pill.classList.add("is-wrong");
+          later(() => pill.classList.remove("is-wrong"), 480);
+          if (pointsOff) chargePenalty(pill, pointsOff);
           const outOfLives = loseLife();
-          if (repeatUntilCorrect) requeueRandom(idx);
-          exitPromptThenCall(() => {
-            if (outOfLives) finish("gameover");
-            else if (!queue.length) finish("complete");
-            else startCycle();
-          });
+          consume(chip);
+          if (outOfLives) { later(() => finish("gameover"), 500); return; }
+          if (!pool.length && !belt.length) later(() => finish("complete"), 700);
         }
       }
 
-      function onKey(e) {
-        if (finished) return;
-        const n = Number(e.key);
-        if (!Number.isInteger(n) || n < 1 || n > groups.length) return;
-        const btn = root.querySelector(`.aw-gs-gbtn[data-group="${n - 1}"]`);
-        if (btn && !btn.disabled) { e.preventDefault(); choose(n - 1, btn); }
+      // Let go over nothing: the clone flies to where the chip's slot is
+      // RIGHT NOW (re-read every frame — the slot kept drifting), then the
+      // real chip shows again and carries on. A slot that already left the
+      // lane re-enters from the left like any recycled chip instead.
+      function flyBackToBelt(chip, clone) {
+        const laneW = lane.clientWidth || 1;
+        let done = false;
+        const finishFly = () => {
+          if (done) return; done = true;
+          clone.remove();
+          chip.held = false;
+          chip.el.classList.remove("is-held");
+        };
+        if (chip.x + chipW > laneW) {
+          let minX = Infinity;
+          belt.forEach(b => { if (b !== chip && b.x < minX) minX = b.x; });
+          chip.x = Math.min(isFinite(minX) ? minX - chipW - chipGap : 0, -chipW - chipGap);
+          positionChip(chip);
+          const f0 = performance.now();
+          const fade = now => {
+            if (finished) { finishFly(); return; }
+            const p = Math.min(1, (now - f0) / 180);
+            clone.style.opacity = String(1 - p);
+            if (p < 1) requestAnimationFrame(fade); else finishFly();
+          };
+          requestAnimationFrame(fade);
+          return;
+        }
+        const startL = parseFloat(clone.style.left) || 0, startT = parseFloat(clone.style.top) || 0;
+        const t0 = performance.now(), DUR = 260;
+        const step = now => {
+          if (finished) { finishFly(); return; }
+          const p = Math.min(1, (now - t0) / DUR);
+          const ease = 1 - Math.pow(1 - p, 3);
+          const lr = lane.getBoundingClientRect();
+          const k = lr.width / (lane.clientWidth || 1);   // zoom-fullscreen scale
+          const tl = lr.left + chip.x * k;
+          const tt = lr.top + lr.height / 2 - (chipH * k) / 2;
+          clone.style.left = (startL + (tl - startL) * ease) + "px";
+          clone.style.top = (startT + (tt - startT) * ease) + "px";
+          clone.style.transform = `scale(${1.04 - 0.04 * ease})`;
+          if (p < 1) requestAnimationFrame(step); else finishFly();
+        };
+        requestAnimationFrame(step);
       }
 
       tapCleanup = () => {
-        haltPromptAnim();
-        if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
+        running = false;
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
         if (prepTimer) { clearTimeout(prepTimer); prepTimer = null; }
-        if (gateTimer) { clearTimeout(gateTimer); gateTimer = null; }
         tickTimers.forEach(clearTimeout); tickTimers.length = 0;
+        if (drag) { const d = drag; drag = null; unhookDrag(); d.clone.remove(); }
       };
-      return function cleanupTap() {
-        window.removeEventListener("keydown", onKey);
+      return function cleanupBelt() {
         tapCleanup();
         if (fitter) fitter.destroy();
       };

@@ -5348,9 +5348,20 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **14/9/2026 sau Đợt 326** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **14/9/2026 sau Đợt 327** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (14/9/2026 — sau **Đợt 326**: ⬜ CHƯA BẤM TAY EDITOR, CHỜ THẦY XÁC NHẬN)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (14/9/2026 — sau **Đợt 327**: ⬜ CHƯA BẤM TAY, CHỜ THẦY XÁC NHẬN)
+>
+> **⭐ Đợt 327 — GROUP SORT → "SPEED SORTING": chế độ băng chuyền làm lại từ mockup thầy duyệt (6 vòng).**
+> Ô câu cùng cỡ trôi trái→phải trên lane 30%, ô nhóm vàng nét đứt không màu/không số; **chạm giữ bất kỳ ô nào**
+> rồi kéo thả — đúng ✓/sai ✗ đều **tiêu câu** (sai không về băng), thả ra ngoài bay về đúng chỗ slot đang trôi.
+> ⛔ `type: "group_sort"` + giá trị `mode` "tap"/"drag" GIỮ NGUYÊN (act cũ mở đúng). Đổi tên hiển thị ở catalog ·
+> editor · nút template; Options: Mode "Speed sorting | Group sort", Speed 1–10 (0 cũ → 3), bỏ ô Unanswered.
+> Chế độ "drag" (pool) không đụng. 3 bẫy ghi ở `GHI CHU DU AN.md` Đợt 327: autoFit đo hộp kéo giãn · clone ngoài
+> stage không có `--aw-u` · ô đang giữ phải vẫn trôi theo băng. Đã kiểm dev server đủ đường (0 lỗi console);
+> ⬜ thầy bấm tay máy soạn + TOMKO/điện thoại (cảm ứng chưa đo). Backup `_backup/dot327/`.
+>
+> **Trước đó — Đợt 326 (⬜ CHƯA BẤM TAY EDITOR, CHỜ THẦY XÁC NHẬN):**
 >
 > **⭐ Đợt 326 — 3 KIỂU KHỚP MỚI cho bảng "Hướng dẫn khi sai" (Type the answer), thầy "ok hết các đề xuất".**
 > `goiYTheoBang()` nhận thêm `kieu`: `chi-dau` (chữ đúng, chỉ sai dấu câu/dấu cách — `go` trống) · `mau` (regex trên

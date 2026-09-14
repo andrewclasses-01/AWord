@@ -50,8 +50,10 @@ export const TEMPLATES = [
 
   // ⭐ Đợt 288 (03/9/2026) — Wordwall's Group sort + Speed sorting in one game
   // (options.mode "tap" / "drag"). Built for the NEN TANG TIENG ANH course.
-  { type: "group_sort",      label: "Group sort",      built: true,
-    blurb: "Put each item into the right group — tap the group, or drag it in.",
+  // Đợt 327 (14/9/2026): renamed "Speed sorting" + the conveyor mode rebuilt
+  // (chips ride a belt, drag each onto a dashed pill). Type id unchanged.
+  { type: "group_sort",      label: "Speed sorting",   built: true,
+    blurb: "Items ride a conveyor belt — grab each one and drop it into its group.",
     css: "templates/group-sort/group-sort.css",
     load: () => import("../templates/group-sort/group-sort.js"),
     sample: () => import("../templates/group-sort/sample-group-sort.js") },

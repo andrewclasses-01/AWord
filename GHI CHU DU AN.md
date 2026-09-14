@@ -409,6 +409,51 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 327 (14/9/2026, thầy "ok build, đưa vào aword thật" sau 6 vòng mockup) — **GROUP SORT → SPEED SORTING: chế độ băng chuyền làm lại, kéo-thả thay bấm nút**
+
+**Bối cảnh.** Thầy đưa 2 ảnh (Speed sorting thật của Wordwall + bản AWord đang có) và 5 yêu cầu; thiết kế
+trước bằng mockup HTML (artifact "AWord Speed Sorting", 6 phiên bản, thầy sửa qua từng vòng: băng chuyền chạy
+liên tục · ô bằng nhau · chạm giữ · đảo chiều · chữ dài tiếng Việt · 4 lỗi kéo-thả) rồi mới đưa vào code thật.
+**Backup `_backup/dot327/`.** Sửa 5 file: `templates/group-sort/group-sort.js` (viết lại chế độ "tap") ·
+`group-sort.css` (khối TAP MODE → BELT MODE) · `group-sort-editor.js` (badge) · `sample-group-sort.js` ·
+`core/catalog.js` (label + blurb). **KHÔNG đổi `type: "group_sort"`, KHÔNG đổi giá trị `options.mode`** ("tap"/"drag")
+⇒ mọi act/bài giao đã lưu mở đúng chế độ cũ của nó, không cần migration.
+
+**Chế độ "tap" nay là BĂNG CHUYỀN (Speed sorting):**
+- Lane trên (30% thẻ) giữa hai vạch tick `.aw-gs-rail`: ô `.aw-gs-bchip` **cùng một cỡ cố định** (24,3u × 11,9u,
+  chữ 2u, cắt 3 dòng) trôi **trái → phải** liên tục; 5 ô sống cùng lúc (`BELT_SLOTS`), ô ra khỏi mép phải vào lại
+  từ mép trái với câu kế (không lặp câu đang hiện). Màu ô xoay 4 tile theme + tím riêng `--aw-gs-tile-4`.
+- Dưới: ô nhóm `.aw-gs-pill` **vàng nhạt viền nét đứt, không màu, không số** (không lộ đáp án), `flex-wrap` tự canh
+  giữa, đệm trên 3,8u (thầy chốt "hạ khối xuống"). `autoFit` đo qua `.aw-gs-pillrow` KHÔNG kéo giãn (⛔ bẫy fit.js:
+  hộp kéo giãn thì `scrollHeight` = chiều cao hộp ⇒ co về min 0.4 — lần chạy đầu ô nhóm tí hon vì đúng bẫy này).
+- **Chạm giữ BẤT KỲ ô nào** → ô đó ẩn (`.is-held`), bản sao `.aw-gs-dragclone.is-belt` bám con trỏ (gắn vào
+  body/fullscreen host; ⛔ ngoài stage không có `--aw-u` nên bo góc/đệm/chữ **chép bằng px** từ `getComputedStyle`).
+  ⭐ **Ô đang giữ vẫn TRÔI theo băng** (chỉ ẩn) — đóng băng chỗ cũ là khi thả về đè lên ô bên cạnh (mockup v5 dính).
+  move/up/cancel nghe trên **window** suốt cú kéo (không chỉ trên ô) + `visibilitychange` (⛔ không dùng `blur`:
+  công cụ chụp màn hình/hộp thoại làm rơi ô giữa chừng).
+- Thả đúng → ✓ bay trên ô nhóm + sao bay về điểm + **câu bị tiêu** (rời pool, slot nhận câu mới từ mép trái).
+  Thả sai → ✗ trên ô nhóm + mất tim + trừ điểm (`ui.flyPenalty`) + **câu cũng bị tiêu, KHÔNG về băng** (thầy chốt).
+  Thả ra ngoài → clone **bay về đúng chỗ slot đang trôi** (rAF đọc lại đích mỗi khung, có bù tỉ lệ zoom fullscreen
+  `laneRect.width / lane.clientWidth`); slot đã trôi khỏi lane thì vào lại từ mép trái, clone mờ đi.
+- Hết câu → Game complete; hết tim → **Game over** (nay truyền `title` cho `ui.finish` — trước đây True-false/Group sort
+  đều hiện "Game complete" cả khi thua); Time's up giữ nguyên. Show answers theo **thứ tự chơi** (`played` rồi tới
+  câu chưa chơi). Đếm 3-2-1 (`.aw-gs-count`) vẫn chạy ở countUp.
+- Options: Mode **"Speed sorting | Group sort"** (giá trị vẫn "tap"/"drag") · **Speed 1–10 (belt)** — `normSpeed()`
+  đọc 0/thiếu cũ thành 3 (băng phải chạy, "0 = chờ" hết nghĩa) · Lives · Checking (group sort). **Bỏ ô "Unanswered
+  Ask once/Repeat"** — trên băng chuyền câu chưa trả lời chỉ chạy vòng lại, `repeatUntilCorrect` trong act cũ vô hại.
+- Bỏ phím 1–9 chọn nhóm (không còn nút nhóm). Chế độ "drag" (pool + hộp) **không đổi một dòng** (class `.aw-gs-chip`
+  vẫn là ô pool; ô băng chuyền là `.aw-gs-bchip`).
+
+**Đã kiểm trên dev server (test.html, 0 lỗi console):** băng chạy + 4 ô nhóm 1 hàng · thả đúng +1 & slot đổi câu ·
+thả sai −tim & câu tiêu · thả ra ngoài về băng · chơi hết 12 câu → 11/12, Show answers 12 hàng đúng thứ tự ·
+`?lives=1` thả sai → Game over · `?mode=drag` pool nguyên vẹn · act 7 nhóm tiếng Việt chữ dài (act thật Lesson 16
+BT2 kiểu "7 loại câu hỏi") tự xếp 3+3+1, `--fit` 0.99 · kéo **chuột thật** qua công cụ trình duyệt: đúng/sai đều ăn.
+⛔ Bẫy bàn thử: công cụ chuột của Browser pane dùng khung 800px, **lệch 1,11× so với toạ độ trang** — thả "đúng ô"
+theo số đo trang là rơi xuống dưới ô; và ô đang trôi nên phải đóng băng vòng lặp (`requestAnimationFrame` chỉ chặn
+hàm tên `loop`) mới bấm trúng. ⬜ **Chờ thầy bấm tay** trên máy soạn + TOMKO/điện thoại (cảm ứng chưa đo).
+
+---
+
 ## Đợt 326 (14/9/2026, thầy "ok hết các đề xuất" sau khảo sát 4.959 câu sai thật) — **BA KIỂU KHỚP MỚI cho bảng "Hướng dẫn khi sai": CHỈ SAI DẤU · MẪU (regex) · GẦN ĐÚNG (chính tả 1 từ) + nới đáp án phụ 5 → 15**
 
 **Bối cảnh.** Phiên skill `/chamloitypetheanswer` v2.0 bóc TOÀN BỘ kết quả Type the answer của khoá Nền tảng trên

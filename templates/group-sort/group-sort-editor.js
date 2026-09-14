@@ -1,5 +1,5 @@
 // =============================================================
-// GROUP SORT EDITOR — one column PER GROUP (2..8): the group's name on top,
+// SPEED SORTING EDITOR (type group_sort) — one column PER GROUP (2..8): the group's name on top,
 // its items below. Same page chrome + contract as the other editors:
 //   openGsEditor(container, activity, { onSave, onCancel, header, footer })
 // Saves `content.groups = [name…]` + `content.items = [{text, group}]`
@@ -26,7 +26,7 @@ export function openGsEditor(container, activity, { onSave, onCancel, header, fo
 
   const head = el("div", "aw-ed-head");
   const headL = el("div", "aw-ed-headleft");
-  headL.append(el("span", "aw-ed-typebadge", "GROUP SORT"));
+  headL.append(el("span", "aw-ed-typebadge", "SPEED SORTING"));
   headL.append(el("div", "aw-ed-heading", isNew ? "New activity" : "Edit content"));
   head.append(headL);
   const actions = el("div", "aw-ed-headactions");
@@ -47,7 +47,7 @@ export function openGsEditor(container, activity, { onSave, onCancel, header, fo
   const meta = el("div", "aw-ed-meta");
   const titleInput = el("input", "aw-ed-input");
   titleInput.value = data.title;
-  titleInput.placeholder = "e.g. Question words — Group sort";
+  titleInput.placeholder = "e.g. Question words — Speed sorting";
   titleInput.oninput = () => { data.title = titleInput.value; clearError(); };
   meta.append(field("Activity Title", titleInput));
   body.append(meta);
