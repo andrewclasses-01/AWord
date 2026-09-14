@@ -8,7 +8,23 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **12/9/2026 (Đợt 324 — SHOWDOWN PODIUM, tinh chỉnh tiếp sau Đợt 323: thầy gửi
+> Cập nhật lần cuối: **14/9/2026 (Đợt 325 — 4 việc cho trang thư viện, thầy giao qua chat: (1) nút
+> icon Sort cạnh Grid/List, 6 kiểu (tên A→Z/Z→A · sửa gần nhất/cũ nhất · tạo gần nhất/cũ nhất), nhớ ở
+> `localStorage`, thư mục LUÔN trước act/bài giao (`applyChosenSort`), "sửa gần nhất" của một THƯ MỤC
+> CHỈ tính chính nó — sửa act bên trong không làm nó nhảy lên (thầy chốt); (2) bỏ nút Import + khung
+> "Drag a lesson file here" — `installGlobalDrop()` MỘT listener trên `document`, thả vào vùng trống
+> bất kỳ = nhập vào thư mục đang đứng (việc nút cũ làm), thả vào Quick access vẫn từ GỐC Activities
+> như cũ (không đụng `qaAcceptFiles()`), viền xanh nét đứt toàn trang lúc kéo; (3)
+> `window.__awordLib.timThuMuc(chuoi, chiCay)` thêm tham số CÂY optional
+> ("activities"|"courses") — myLesson v2.67.0 tab LESSON gọi kèm "activities", tab COURSE gọi kèm
+> "courses", hai tab hết thấy thư mục trùng tên của cây kia; (4) tab trình duyệt đổi theo NƠI ĐANG
+> ĐỨNG (`updatePageTitle()`, gọi đầu `render()`) — trong thư mục hiện tên thư mục, ở gốc hiện tên gốc,
+> mở act hiện tên act, nơi khác giữ "AWord in ANDREW CLASSES". `node --check` sạch; brace `app.css`
+> cân bằng (1864=1864). Bàn thử độc lập (copy nguyên văn biểu thức code thật): sort 7/7 ĐẠT, lọc cây
+> `timThuMuc` 3/3 ĐẠT, regex kho giả myLesson 6/6 ĐẠT. ⬜ CHƯA đăng nhập trang thật để bấm tay — kéo
+> file thật, đổi 6 kiểu Sort, CHECK cả 2 tab myLesson với thư mục trùng tên 2 cây, xem tab đổi tên
+> đúng lúc bấm qua lại thư mục/act. Xem GHI CHU DU AN.md Đợt 325)**.
+> Trước đó: **(Đợt 324 — SHOWDOWN PODIUM, tinh chỉnh tiếp sau Đợt 323: thầy gửi
 > thêm 1 ảnh chụp bảng thật rồi yêu cầu 5 điều. Nền ô đã chọn đổi xanh dương → xanh lá nhạt
 > (`#dcfce7`/`#4ade80`); vạch chia giữa 2 khối đậm hơn + khoảng cách tăng gần gấp 3 (`0.5→1.4 aw-u`);
 > ⭐⭐⭐ hiệu ứng tích nay khiến ĐÚNG hàng vừa bấm nổi lên trên (`z-index:5`+shadow qua class
@@ -5327,9 +5343,32 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **11/9/2026 sau Đợt 322** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **14/9/2026 sau Đợt 325** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (11/9/2026 — sau **Đợt 322**: ✅ THẦY BÁO QUA CHAT → COMMIT + PUSH)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (14/9/2026 — sau **Đợt 325**: ⬜ CHƯA BẤM TAY, CHỜ THẦY XÁC NHẬN)
+>
+> **Đợt 325 — 4 việc cho trang thư viện, thầy giao qua chat (đã hỏi bằng AskUserQuestion trước khi
+> code, thầy chốt "ok build").** (1) Nút icon Sort cạnh Grid/List — 6 kiểu (tên A→Z/Z→A · sửa gần
+> nhất/cũ nhất · tạo gần nhất/cũ nhất), thư mục LUÔN trước act/bài giao, "sửa gần nhất" của một THƯ
+> MỤC chỉ tính chính nó (thầy chốt — sửa act bên trong KHÔNG làm thư mục nhảy lên). (2) Bỏ nút Import
+> + khung "Drag a lesson file here" — kéo file vào BẤT KỲ vùng trống nào trong trang đều nhập vào thư
+> mục đang đứng (`installGlobalDrop()`), riêng Quick access vẫn giữ nguyên "từ gốc Activities" như cũ.
+> (3) `window.__awordLib.timThuMuc(chuoi, chiCay)` thêm tham số CÂY — myLesson v2.67.0 tab LESSON chỉ
+> tìm Activity, tab COURSE chỉ tìm Course, hết lẫn thư mục trùng tên hai cây. (4) Tab trình duyệt đổi
+> tên theo nơi đang đứng (`?f=416` → "LSA2-S2.T3.P1-2" thay vì luôn "AWord in ANDREW CLASSES").
+> `node --check` sạch; brace `app.css` cân bằng (1864=1864). 3 bàn thử độc lập (sort/lọc cây/regex kho
+> giả myLesson) tổng 16/16 ĐẠT. Chi tiết: `GHI CHU DU AN.md` Đợt 325.
+>
+> ⬜ Còn chờ — **CHƯA đăng nhập trang aword thật để bấm tay việc nào** (sandbox không đăng nhập Google
+> được): (a) đổi 6 kiểu Sort, xem thứ tự card đúng mắt thầy không; (b) kéo file .xlsm thật vào vùng
+> trống của trang (không phải Quick access) — xác nhận nhập đúng thư mục đang đứng, viền xanh nét đứt
+> hiện đúng lúc; (c) kéo file vào Quick access — vẫn từ gốc Activities như cũ; (d) myLesson v2.67.0:
+> CHECK ở tab LESSON và tab COURSE cho một thư mục cố tình trùng tên ở cả hai cây — mỗi tab chỉ còn
+> thấy ĐÚNG MỘT kết quả; (e) bấm qua lại vài thư mục/act/gốc — xem tên tab trình duyệt đổi đúng không.
+>
+> ---
+>
+> ### 🟢 TRẠNG THÁI CŨ HƠN (11/9/2026 — sau **Đợt 322**: ✅ THẦY BÁO QUA CHAT → COMMIT + PUSH)
 >
 > **Đợt 322 — CHẶN TẠO TRÙNG (Đợt 299) CẮN NHẦM LỚP KHÁC.** Thầy: tạo bài giao ANAGRAM cho lớp
 > **B1AH** thì bị chặn với lý do "đã có bài giao ANAGRAM (B2B_9.9_15:53...)" — nhưng B1AH **chưa

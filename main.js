@@ -80,6 +80,12 @@ const app = document.getElementById("app");
 // `?r=activities`, và trong tiền tố `"Courses / "` của cầu nối myLesson (hàm
 // timThuMuc bên dưới — myLesson lọc bằng chính chuỗi đó, xem app.js ~9186).
 const ROOT_LABEL = { activities: "Activity", results: "Result", courses: "Course", games: "Game" };
+// ⭐ Đợt 325 (thầy 14/9/2026) — the browser TAB TITLE follows wherever the
+// teacher is, exactly like the address bar already does: a folder shows its
+// own name (so ?f=416 reads "LSA2-S2.T3.P1-2", not the app's own name), an act
+// shows its own title, everything else falls back to this. `document.title`
+// PAGE_TITLE_BASE == the `<title>` already sitting in index.html/play.html.
+const PAGE_TITLE_BASE = "AWord in ANDREW CLASSES";
 // ⭐ Đợt 287c (thầy 03/9) — the TOP of Courses is a list of COURSES, nothing else:
 // no New activity / New folder / Import / file drop there, only "+ New course"
 // (a plain folder at the top of the tree) and the recycle bin. One level down,
@@ -92,11 +98,51 @@ const FOLDER_DEFAULT_COLOR = "#f5b13b";
 // Modern 8-color set for the folder-color picker.
 const FOLDER_COLORS = ["#ef4444", "#f97316", "#f5b13b", "#22c55e", "#14b8a6", "#3b82f6", "#8b5cf6", "#ec4899"];
 
+// ⭐ Đợt 325 — SORT (thầy: một nút icon đổi cách xếp thư mục/act — tên, ngày
+// sửa, ngày tạo). Thư mục luôn đứng trước act/bài giao (như cũ); lựa chọn chỉ
+// đổi thứ tự BÊN TRONG mỗi nhóm đó, và được nhớ chung cho mọi thư mục — giống
+// hệt cách `aword-view` (grid/list) đã làm. "Sửa gần nhất" của một THƯ MỤC chỉ
+// tính chính thư mục đó (đổi tên/dời/đổi màu/ghim) — KHÔNG nhảy lên khi một
+// act bên trong được sửa (thầy chốt 14/9/2026).
+const SORT_OPTIONS = [
+  ["name-asc", "Name (A→Z)"],
+  ["name-desc", "Name (Z→A)"],
+  ["modified-desc", "Last modified (newest first)"],
+  ["modified-asc", "Last modified (oldest first)"],
+  ["created-desc", "Date created (newest first)"],
+  ["created-asc", "Date created (oldest first)"],
+];
+function sortKeyOf(node) { return itemName(node).toLowerCase(); }
+// An assignment card has no `updatedAt` of its own (nothing ever bumps one) —
+// fall back to `createdAt` so "Last modified" still means something for it
+// instead of silently doing nothing.
+function modifiedOf(node) { return node.updatedAt ?? node.createdAt ?? 0; }
+function compareBySort(a, b) {
+  switch (state.sort) {
+    case "name-desc": return sortKeyOf(b).localeCompare(sortKeyOf(a));
+    case "modified-desc": return modifiedOf(b) - modifiedOf(a);
+    case "modified-asc": return modifiedOf(a) - modifiedOf(b);
+    case "created-desc": return (b.createdAt || 0) - (a.createdAt || 0);
+    case "created-asc": return (a.createdAt || 0) - (b.createdAt || 0);
+    case "name-asc": default: return sortKeyOf(a).localeCompare(sortKeyOf(b));
+  }
+}
+// Re-sort a mixed folder/act list by the chosen key while keeping folders
+// ahead of acts — the one rule that never changes no matter what thầy picks.
+function applyChosenSort(items) {
+  const folders = items.filter(n => n.kind === "folder");
+  const rest = items.filter(n => n.kind !== "folder");
+  folders.sort(compareBySort);
+  rest.sort(compareBySort);
+  return [...folders, ...rest];
+}
+
 const state = {
   view: "top",          // "top" | "folder" | "search" | "trash" | "showdown-home"
   root: null,           // one of store.ROOTS: "activities" | "results" | "courses" | "games"
   folderId: null,       // current folder (null = root of the tree)
   mode: localStorage.getItem("aword-view") || "grid",   // "grid" | "list"
+  sort: localStorage.getItem("aword-sort") || "name-asc",   // ⭐ Đợt 325 — see SORT_OPTIONS
   query: "",
   user: null,           // the signed-in teacher (null = signed out)
   showdownClassId: ""   // ⭐ Đợt 236 — which class "showdown-home" is open on
@@ -125,7 +171,11 @@ let sdHomeBtnSetAnalyse = null;
 // quyết định options/optVer/xếp thư mục Results.
 window.__awordLib = {
   daDangNhap: () => !!state.user,
-  async timThuMuc(chuoi) {
+  // ⭐ Đợt 325 (thầy 14/9/2026) — `chiCay` giới hạn tìm trong MỘT cây thôi:
+  // "activities" cho tab LESSON, "courses" cho tab COURSE — hai tab của
+  // myLesson không còn thấy thư mục trùng tên của cây kia nữa. Gọi KHÔNG kèm
+  // tham số (mọi chỗ khác) vẫn tìm cả hai cây như trước, không đổi hành vi.
+  async timThuMuc(chuoi, chiCay) {
     if (!state.user) return { ok: false, loi: "chua-dang-nhap" };
     const q = String(chuoi || "").trim().toLowerCase();
     if (!q) return { ok: true, ds: [] };
@@ -140,7 +190,8 @@ window.__awordLib = {
       // 03/9). Mục thuộc Courses có đường dẫn mở đầu "Courses / " để myLesson
       // phân biệt được với thư mục trùng tên bên Activities; kèm khoá `root`.
       const ds = [];
-      for (const root of ["activities", "courses"]) {
+      const cays = (chiCay === "activities" || chiCay === "courses") ? [chiCay] : ["activities", "courses"];
+      for (const root of cays) {
         const folders = await listFolders(root);
         const khop = folders.filter(f => String(f.name || "").toLowerCase().includes(q));
         for (const f of khop) {
@@ -222,7 +273,47 @@ async function init() {
   // panel's row span was a number this file computed and had to recompute when
   // myActivity changed its column count under it. The rail is plain flex now:
   // the browser reflows it, and there is nothing left for JS to keep in step.
+  installGlobalDrop();   // ⭐ Đợt 325 — drop a lesson file anywhere on the page
   await routeFromLocation();
+}
+
+// ⭐ Đợt 325 (thầy 14/9/2026) — "kéo file vào bất kỳ vùng trống nào trong
+// trang" replaces the old toolbar Import button + the dedicated empty-folder
+// drop box: ONE listener on the whole document does that button's job
+// everywhere a file can land. The Quick access panel keeps its OWN listener
+// (qaAcceptFiles, Đợt 221) untouched and unchanged — dropping there still
+// means "from the top of Activities", so this one steps aside whenever the
+// drop lands inside `.aw-qa`.
+function canImportHere() {
+  return state.view !== "trash" && holdsActs(state.root) && !coursesTop();
+}
+function installGlobalDrop() {
+  const hasFiles = e => !!(e.dataTransfer && [...(e.dataTransfer.types || [])].includes("Files"));
+  const insideQuickAccess = e => !!(e.target && e.target.closest && e.target.closest(".aw-qa"));
+  ["dragenter", "dragover"].forEach(ev => document.addEventListener(ev, e => {
+    if (!hasFiles(e) || insideQuickAccess(e)) return;
+    // preventDefault no matter what, so a file dragged over a page/spot that
+    // cannot accept it (Results, Games, the top of Courses, trash, search)
+    // never falls through to the browser's own "navigate to this file".
+    e.preventDefault();
+    const ok = canImportHere();
+    e.dataTransfer.dropEffect = ok ? "copy" : "none";
+    document.body.classList.toggle("aw-page-dragover", ok);
+  }));
+  document.addEventListener("dragleave", e => {
+    // A pointer that lands back on some element still inside the document
+    // fires dragleave too (bubbling) — only clear the highlight once it has
+    // actually left the window (relatedTarget is null then).
+    if (e.relatedTarget === null) document.body.classList.remove("aw-page-dragover");
+  });
+  document.addEventListener("drop", e => {
+    document.body.classList.remove("aw-page-dragover");
+    if (!hasFiles(e) || insideQuickAccess(e)) return;
+    e.preventDefault();
+    if (!canImportHere()) { toastMsg("Can't import a lesson file here."); return; }
+    const f = e.dataTransfer.files[0];
+    if (f) importFlow(f);
+  });
 }
 
 // ---------------- shareable links & the address bar (v0.8.0) ----------------
@@ -382,6 +473,7 @@ async function routeFromLocation() {
       catch (e) { toast(`${templateLabel(node.type)} — could not load`); return goTop(opts); }
       state.view = "play";
       if (!p.get("a")) setUrl(await linkFor(node), true);   // upgrade an old link in place
+      document.title = node.title || PAGE_TITLE_BASE;   // ⭐ Đợt 325
       startGame(app, node, { onExit: goTop });
       return;
     }
@@ -514,9 +606,31 @@ async function render() {
   // reason to wait for that when we are the ones doing the removing.
   if (showdownHomeHandle) { showdownHomeHandle.dispose(); showdownHomeHandle = null; }
   app.innerHTML = "";
+  updatePageTitle();   // ⭐ Đợt 325 — fire-and-forget: don't hold up the paint
+                        // for a Firestore round trip just to rename the tab.
   if (state.view === "showdown-home") return renderShowdownHome();
   if (state.view === "top") return renderTop();
   return renderInside();
+}
+
+// ⭐ Đợt 325 — the tab title mirrors wherever the teacher is standing: a
+// folder's own name inside it, the root's label at the top of a tree
+// (Activity/Result/Course/Game), the app's own name everywhere else (Home,
+// Showdown, the recycle bin, a search). Only the FOLDER case was thầy's ask
+// (14/9/2026) — the rest is the same idea applied consistently, at no cost.
+async function updatePageTitle() {
+  try {
+    if (state.view === "folder" && state.folderId) {
+      const node = await getItem(state.folderId);
+      document.title = (node && itemName(node)) || PAGE_TITLE_BASE;
+      return;
+    }
+    if (state.view === "folder" && !state.folderId && state.root && ROOT_LABEL[state.root]) {
+      document.title = ROOT_LABEL[state.root];
+      return;
+    }
+  } catch (e) { /* fall through to the app's own name below */ }
+  document.title = PAGE_TITLE_BASE;
 }
 function goTop(opts = {}) {
   state.view = "top"; state.root = null; state.folderId = null; state.query = "";
@@ -611,6 +725,10 @@ async function renderInside() {
   if (state.view === "trash") items = await listTrash(state.root);
   else if (state.view === "search") items = await searchItems(state.root, state.query);
   else items = await listChildren(state.root, state.folderId);
+  // ⭐ Đợt 325 — the teacher's sort choice, applied everywhere except the
+  // recycle bin (that list is a fact — most-recently-deleted first — not
+  // something to re-order). Folders still always come before acts.
+  if (state.view !== "trash") items = applyChosenSort(items);
 
   // RESULTS shows the assignments themselves — there is no copy of them in the
   // library, so what you see here IS the strip under the act (v0.9.0).
@@ -619,50 +737,22 @@ async function renderInside() {
   const assignments = holdsAssignments(state.root) ? await assignmentsForView() : await loadAssignmentsForDots();
 
   if (!items.length && !assignments.length) {
-    // ⭐ Đợt 192 (thầy: "Với 1 thư mục trống, thay vì hiện dòng This folder is
-    // empty thì hiển thị ô Import file để kéo thẳng file vào được luôn") — an
-    // empty folder is not a fact to report, it is a job waiting to be done, and
-    // the job is almost always "put a lesson in it". The zone is the SAME
-    // `.aw-imp-drop` the Import dialog uses, deliberately: it already carries
-    // the drag-over state and the teacher has learned that shape.
-    // ⚠ ONLY for a real, empty LIBRARY folder. Trash, a search with no hits and
-    // an empty Results folder are all still statements of fact — dropping a
-    // lesson file into the recycle bin means nothing, and offering it there
-    // would be an invitation to a place that cannot accept it.
+    // ⭐ Đợt 325 — the dedicated "Drag a lesson file here" box is gone (thầy
+    // 14/9/2026: dropping ANYWHERE on the page now does the same job — see
+    // installGlobalDrop()). An empty folder is back to being a plain fact, the
+    // same shape as every other empty state on this screen.
     // Đợt 218b — an empty view still shows the panel. It is the one thing on
     // this screen that can take the teacher somewhere; hiding it exactly when
     // there is nothing else here would be backwards.
     // Đợt 287 — Games holds no acts, so an empty Games folder is a fact too.
     // Đợt 287c — the top of Courses never offers the lesson-file drop zone either.
-    if (state.view === "trash" || state.view === "search" || !holdsActs(state.root) || coursesTop()) {
-      body.append(await withQuickAccess(el("div", "aw-fm-empty",
-        state.view === "trash" ? "Recycle bin is empty."
-        : state.view === "search" ? `No results for “${escapeText(state.query)}”.`
-        : coursesTop() ? "No courses yet. Click <b>+ New course</b> to make one."
-        : state.root === "games" ? "Nothing here yet — the fixed games will be built here."
-        : "No assignments here yet. Give one out from an activity.")));
-      return;
-    }
-    const drop = el("div", "aw-imp-drop aw-fm-emptydrop",
-      `<div class="aw-imp-drop-icon">${IMP_UPLOAD_SVG}</div>` +
-      `<div class="aw-imp-drop-title">Drag a lesson file here, or <b>click to browse</b></div>` +
-      `<div class="aw-imp-drop-sub">.xlsm · .xlsx · .xls</div>`);
-    // Click opens the ordinary Import dialog (its own drop zone does the
-    // browsing); a file dropped HERE goes straight in as that dialog's
-    // `initialFile`, so the teacher gets the same review-and-pick screen either
-    // way — nothing is ever imported without being shown first.
-    drop.onclick = () => importFlow();
-    ["dragenter", "dragover"].forEach(ev =>
-      drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("is-over"); }));
-    ["dragleave", "dragend"].forEach(ev =>
-      drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("is-over"); }));
-    drop.addEventListener("drop", e => {
-      e.preventDefault();
-      drop.classList.remove("is-over");
-      const f = e.dataTransfer && e.dataTransfer.files[0];
-      if (f) importFlow(f);
-    });
-    body.append(await withQuickAccess(drop));
+    body.append(await withQuickAccess(el("div", "aw-fm-empty",
+      state.view === "trash" ? "Recycle bin is empty."
+      : state.view === "search" ? `No results for “${escapeText(state.query)}”.`
+      : coursesTop() ? "No courses yet. Click <b>+ New course</b> to make one."
+      : state.root === "games" ? "Nothing here yet — the fixed games will be built here."
+      : holdsActs(state.root) ? "This folder is empty. Drop a lesson file anywhere on the page to import it."
+      : "No assignments here yet. Give one out from an activity.")));
     return;
   }
 
@@ -740,7 +830,6 @@ async function assignmentsForView() {
     assignmentCache = [];
     return [];
   }
-  const byName = (a, b) => String(a.title || "").toLowerCase().localeCompare(String(b.title || "").toLowerCase());
   // ⭐ Đợt 287 — an assignment carries no root: it belongs to the tree its
   // folder is in (no folder = top of Results). The recycle bin and a search
   // list assignments by TREE, or every trashed assignment would show up in
@@ -754,13 +843,14 @@ async function assignmentsForView() {
   if (state.view === "trash") return assignmentCache.filter(a => a.trashed && inTree(a)).sort((a, b) => (b.trashedAt || 0) - (a.trashedAt || 0));
   if (state.view === "search") {
     const q = state.query.trim().toLowerCase();
-    return assignmentCache.filter(a => !a.trashed && inTree(a) && String(a.title || "").toLowerCase().includes(q)).sort(byName);
+    // ⭐ Đợt 325 — thầy's sort choice, same as the folder/act list above.
+    return assignmentCache.filter(a => !a.trashed && inTree(a) && String(a.title || "").toLowerCase().includes(q)).sort(compareBySort);
   }
   // ⭐ Đợt 287b — `inTree` HERE TOO (thầy bắt 03/9: gốc Courses hiện cả đống bài
   // giao). The top of Courses and the top of Results are both "folderId null",
   // so without the tree check every top-level Results assignment showed up in
   // Courses. (Inside a real folder the id alone already separates the trees.)
-  return assignmentCache.filter(a => !a.trashed && inTree(a) && (a.folderId ?? null) === (state.folderId ?? null)).sort(byName);
+  return assignmentCache.filter(a => !a.trashed && inTree(a) && (a.folderId ?? null) === (state.folderId ?? null)).sort(compareBySort);
 }
 
 // How many assignments sit anywhere inside this Results folder (for the badge).
@@ -1167,24 +1257,9 @@ function toolbar() {
     newFolder.type = "button"; newFolder.onclick = newFolderFlow;
     left.append(newFolder);
   }
-  if (state.view !== "trash" && holdsActs(state.root) && !coursesTop()) {
-    // Wider than a plain icon button on purpose (teacher's request
-    // 10/8/2026) — it doubles as a drop target: dragging a lesson file
-    // straight onto it opens Import already reading that file, skipping
-    // the click-to-open step. The dialog's own internal drop-zone (inside
-    // importFlow()) still works too, for picking a different file once open.
-    const imp = el("button", "aw-btn aw-fm-iconbtn aw-fm-importbtn", IMP_UPLOAD_SVG);
-    imp.type = "button"; imp.title = "Import from a lesson file — or drag one here"; imp.setAttribute("aria-label", "Import");
-    imp.onclick = () => importFlow();
-    ["dragenter", "dragover"].forEach(ev => imp.addEventListener(ev, e => { e.preventDefault(); imp.classList.add("is-dragover"); }));
-    ["dragleave", "dragend"].forEach(ev => imp.addEventListener(ev, e => { e.preventDefault(); imp.classList.remove("is-dragover"); }));
-    imp.addEventListener("drop", e => {
-      e.preventDefault(); imp.classList.remove("is-dragover");
-      const f = e.dataTransfer && e.dataTransfer.files[0];
-      importFlow(f || undefined);
-    });
-    left.append(imp);
-  }
+  // ⭐ Đợt 325 — the toolbar Import button is gone (thầy 14/9/2026: "kéo file
+  // vào bất kỳ vùng trống nào trong trang" is now the only way in). See
+  // installGlobalDrop() — it is the button's whole job, just page-wide.
   const inTrash = state.view === "trash";
   const bin = el("button", "aw-btn aw-fm-iconbtn" + (inTrash ? " is-on" : ""), inTrash ? icons.prev : icons.trash);
   bin.type = "button"; bin.title = inTrash ? "Back" : "Recycle bin"; bin.setAttribute("aria-label", bin.title);
@@ -1205,6 +1280,20 @@ function toolbar() {
     form.onsubmit = e => { e.preventDefault(); const q = inp.value.trim(); state.query = q; state.view = q ? "search" : "folder"; render(); };
     form.append(inp, btn);
     right.append(form);
+
+    // ⭐ Đợt 325 — sort button (icon-only), same shelf life as the view toggle:
+    // one choice, remembered for every folder. The dropdown re-uses the app's
+    // ordinary ⁝ menu (openMenu) so it looks and behaves like everything else.
+    const sortBtn = el("button", "aw-btn aw-fm-iconbtn", icons.sort);
+    sortBtn.type = "button"; sortBtn.title = "Sort by"; sortBtn.setAttribute("aria-label", "Sort by");
+    sortBtn.onclick = e => {
+      e.stopPropagation();
+      openMenu(sortBtn, SORT_OPTIONS.map(([key, label]) =>
+        [(state.sort === key ? "✓ " : "") + label, () => {
+          state.sort = key; localStorage.setItem("aword-sort", key); render();
+        }]));
+    };
+    right.append(sortBtn);
 
     const grp = el("div", "aw-fm-viewtoggle");
     const g = viewBtn("grid", GRID_SVG, "Grid view");
@@ -1803,7 +1892,8 @@ function importFlow(initialFile, opts = {}) {
         setDrop(...IDLE); showErr("Could not read that file: " + (e && e.message ? e.message : e));
       }
     }
-    // A file dropped straight onto the toolbar's Import button (teacher's
+    // A file dropped anywhere on the page (installGlobalDrop, Đợt 325 — the
+    // toolbar Import button it replaced worked the same way, teacher's
     // request 10/8/2026) skips the click-to-open step — the dialog opens
     // already reading it.
     if (initialFile) handleFile(initialFile);

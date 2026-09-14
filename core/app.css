@@ -2865,6 +2865,19 @@ html.aw-nhung .aw-below { display: none; }
   box-shadow: inset 0 0 0 2px #2f7bff;
 }
 
+/* ⭐ Đợt 325 — a lesson file dragged over ANY part of the page (installGlobalDrop
+   in main.js, replacing the old toolbar Import button + empty-folder drop box).
+   A fixed inset border rather than anything inside the layout, so it can never
+   disturb a card grid or a modal underneath; `pointer-events:none` so it never
+   swallows the drop itself. Same blue as every other drop target in the app. */
+body.aw-page-dragover::after {
+  content: "";
+  position: fixed; inset: 12px;
+  border: 3px dashed #2f7bff; border-radius: 20px;
+  background: rgba(47, 123, 255, .04);
+  pointer-events: none; z-index: 9998;
+}
+
 /* ⭐ Đợt 221 — THE RAIL. One layout for grid view, list view and every empty
    state: Quick access in a fixed column on the left, everything else in a box
    of its own on the right.

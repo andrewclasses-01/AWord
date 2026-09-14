@@ -12,7 +12,31 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 324** (12/9/2026, thầy gửi thêm 1 ảnh chụp bảng thật sau Đợt 323 — 5 tinh chỉnh
+> Mới nhất: **Đợt 325** (14/9/2026, thầy giao 4 việc cho trang thư viện — SORT · KÉO FILE VÀO BẤT
+> KỲ ĐÂU · myLesson tìm ĐÚNG CÂY · TÊN TAB THEO THƯ MỤC): (1) nút icon Sort cạnh Grid/List, 6 kiểu
+> (tên A→Z/Z→A, sửa gần nhất/cũ nhất, tạo gần nhất/cũ nhất — nhớ chung như `aword-view`), thư mục
+> LUÔN đứng trước act/bài giao (`applyChosenSort` xếp riêng 2 nhóm rồi ghép), "sửa gần nhất" của một
+> THƯ MỤC chỉ tính chính nó (đổi tên/dời/đổi màu/ghim) — sửa act bên trong KHÔNG làm thư mục nhảy lên
+> (thầy chốt); (2) bỏ hẳn nút Import + khung "Drag a lesson file here" — `installGlobalDrop()` lắng
+> nghe `dragover`/`drop` trên CẢ TRANG (`document`), thả vào bất kỳ đâu = nhập vào thư mục đang đứng
+> (đúng việc nút cũ làm), thả vào Quick access vẫn từ GỐC Activities như cũ (bước qua khi
+> `e.target.closest(".aw-qa")`, không đụng `qaAcceptFiles()`); viền xanh nét đứt toàn trang lúc kéo
+> (`body.aw-page-dragover::after`, `pointer-events:none`); (3) `window.__awordLib.timThuMuc(chuoi,
+> chiCay)` thêm tham số CÂY optional ("activities"|"courses", không truyền = cả hai như cũ) — myLesson
+> tab LESSON gọi kèm "activities", tab COURSE (2 chỗ) gọi kèm "courses", nên hai tab không còn thấy
+> thư mục trùng tên của cây kia nữa; (4) tab trình duyệt đổi theo NƠI ĐANG ĐỨNG — trong thư mục hiện
+> tên thư mục (`?f=416` → "LSA2-S2.T3.P1-2"), đứng ở gốc Activity/Result/Course/Game hiện tên gốc, act
+> mở qua `?a=` hiện tên act, mọi nơi khác giữ "AWord in ANDREW CLASSES" (`updatePageTitle()`, gọi
+> fire-and-forget đầu `render()` để không chặn vẽ trang chờ một lượt đọc Firestore). `node
+> --input-type=module --check` sạch; brace `app.css` cân bằng (1864=1864, +1 cặp so Đợt 324 — riêng
+> khối overlay kéo-thả). Bàn thử độc lập (copy nguyên văn biểu thức từ code thật): `applyChosenSort`
+> 7/7 ĐẠT cả 6 kiểu sort + ca bài giao (không `updatedAt`) rơi về `createdAt`; vòng lặp lọc cây của
+> `timThuMuc` 3/3 ĐẠT (chỉ activities/chỉ courses/không truyền = cả hai); regex tách tham số của kho
+> giả myLesson 6/6 ĐẠT (không vỡ lời gọi 1 tham số cũ). ⬜ CHƯA đăng nhập trang thật để bấm tay — đặc
+> biệt: kéo file thật vào giữa trang trống có nhập đúng thư mục đang đứng; nút Sort đổi thứ tự đúng
+> mắt thầy; myLesson v2.67.0 bấm CHECK ở cả 2 tab không còn hỏi chọn nhầm thư mục cây kia; tab trình
+> duyệt đổi tên đúng khi bấm qua lại các thư mục. Xem mục **Đợt 325** trong file này.)
+> Trước đó: **Đợt 324** (12/9/2026, thầy gửi thêm 1 ảnh chụp bảng thật sau Đợt 323 — 5 tinh chỉnh
 > tiếp cho Podium: nền ô đã chọn đổi xanh dương → **xanh lá** nhạt (`#dcfce7`/`#4ade80`); vạch chia
 > giữa 2 khối đậm hơn + khoảng cách tăng gần gấp 3 (`0.5→1.4 aw-u`); ⭐⭐⭐ hiệu ứng tích nay khiến ĐÚNG
 > hàng vừa bấm **nổi lên trên** các hàng khác (`z-index:5`+shadow, class `.is-moving` chỉ gắn cho MỘT
@@ -369,6 +393,116 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 325 (14/9/2026, thầy giao 4 việc cho trang thư viện) — **SORT · KÉO FILE VÀO BẤT KỲ ĐÂU · myLesson TÌM ĐÚNG CÂY · TÊN TAB THEO THƯ MỤC**
+
+Bốn việc độc lập trên `main.js`/`core/store.js`/`core/app.css`/`core/icons.js` (AWord) và
+`src/renderer/js/app.js` (myLesson v2.67.0), thầy hỏi trước ("nghiên cứu + báo xung đột") rồi chốt
+"ok build" mới code — không đụng file nào khác.
+
+### 1. Nút Sort (chỉ icon), cạnh Grid/List
+`SORT_OPTIONS` (6 kiểu: Name A→Z/Z→A, Last modified newest/oldest, Date created newest/oldest) +
+`compareBySort()`/`applyChosenSort()` mới. Nút mở đúng `openMenu()` có sẵn (dropdown ⁝ dùng chung
+toàn app), dòng đang chọn có tiền tố "✓ ". Lựa chọn nhớ ở `localStorage["aword-sort"]`, giống hệt
+cách `aword-view` (grid/list) đã làm — không cần đăng nhập lại để giữ.
+- **Thư mục LUÔN đứng trước act/bài giao** — `applyChosenSort()` tách `items` thành 2 mảng theo
+  `kind === "folder"`, sort riêng từng mảng rồi ghép `[...folders, ...rest]`. Áp dụng ở CẢ `items`
+  (`renderInside()`) LẪN `assignments` (`assignmentsForView()` — thay 2 chỗ `.sort(byName)` cũ bằng
+  `.sort(compareBySort)`), trừ view `"trash"` (giữ nguyên `trashedAt` desc — đó là một sự thật, không
+  phải thứ để xếp lại).
+- **"Sửa gần nhất" của một THƯ MỤC = trường `updatedAt` của CHÍNH nó** (thầy chốt qua AskUserQuestion
+  14/9: "chỉ tính chính thư mục", không cộng dồn mốc sửa của act bên trong) — field này vốn đã được
+  `renameItem`/`moveItem`/`setFolderColor`/`setFolderPinned` bump sẵn trong `core/store.js`, không
+  cần sửa gì ở tầng dữ liệu.
+- Bài giao (assignment) không có `updatedAt` riêng (không ai bump) — `modifiedOf(node)` fallback về
+  `createdAt` để "Last modified" vẫn có nghĩa cho Result/Course thay vì im lặng không đổi gì.
+- Icon `sort` mới trong `core/icons.js` (ba dòng ngắn dần + mũi tên lên/xuống, kiểu file-manager).
+
+### 2. Bỏ nút Import + khung "Drag a lesson file here" — kéo vào ĐÂU CŨNG ĐƯỢC
+Thầy: *"Bỏ nút import file và khung Drag a lesson file here... kéo file vào bất kỳ vùng trống nào
+trong trang là thực hiện import"*. Gỡ nút Import khỏi `toolbar()` và khung `.aw-imp-drop` riêng khi
+folder trống (`renderInside()` — giờ chỉ còn một dòng chữ như mọi empty-state khác). Thay bằng
+`installGlobalDrop()`, MỘT listener `dragenter`/`dragover`/`drop` gắn thẳng lên `document`, cài từ
+`init()` (chạy đúng một lần).
+- **Thả vào vùng trống bất kỳ** → hành vi CŨ của nút Import (nhập vào thư mục đang đứng,
+  `importFlow(f)`, `basePid = state.folderId`).
+- **Thả vào Quick access** → GIỮ NGUYÊN hành vi cũ (từ GỐC Activities, `fromRoot:true`) — không đụng
+  một dòng nào của `qaAcceptFiles()` (Đợt 221); `installGlobalDrop()` chỉ bước qua bằng
+  `e.target.closest(".aw-qa")` nên không có xung đột hai listener cùng xử lý một cú thả.
+- `canImportHere()` giữ NGUYÊN VĂN điều kiện cũ từng gác nút Import (`state.view !== "trash" &&
+  holdsActs(state.root) && !coursesTop()`) — Result/Games/đầu Courses/thùng rác/tìm kiếm vẫn không
+  nhận file; `dragover` LUÔN `preventDefault()` khi có file (kể cả nơi không nhận), để trình duyệt
+  không bao giờ tự mở file ra thành trang mới; nơi không nhận thì `dropEffect="none"` + nếu lỡ thả
+  vẫn có `toastMsg` báo "Can't import a lesson file here." thay vì im lặng không có gì xảy ra.
+- Viền xanh nét đứt toàn trang lúc đang kéo file qua (`body.aw-page-dragover::after`, CSS mới,
+  `pointer-events:none`, `z-index:9998` — không chạm luật "không z-index" của `.aw-zoomed` vì đây là
+  trang thư viện, không phải màn chơi game).
+- Không còn cách BẤM CHUỘT để chọn file ngoài kéo-thả (thầy chốt qua AskUserQuestion 14/9, chọn
+  "Không cần, chỉ kéo-thả") — hộp thoại Import (mở khi đã có `initialFile` từ một cú thả) vẫn giữ
+  nguyên khung kéo-thả + nút "click to browse" CỦA RIÊNG NÓ để đổi file khác sau khi đã mở, không đổi
+  gì ở đó.
+
+### 3. myLesson: tab LESSON chỉ thấy Activity, tab COURSE chỉ thấy Course
+`window.__awordLib.timThuMuc(chuoi, chiCay)` (AWord) nhận thêm tham số `chiCay` optional
+(`"activities"` | `"courses"`) — không truyền (mọi lời gọi cũ, myActivity/myLink nếu có) vẫn tìm CẢ
+HAI cây như trước, không đổi hành vi cho ai không biết tham số mới.
+- myLesson `checkThuMucAWord()` (nút CHECK tab LESSON, `veKhoiDong()` — xác nhận qua `grep` là hàm
+  DUY NHẤT gọi `timThuMuc` không lọc theo cây, và KHÔNG hề được dùng ở tab COURSE) nay gọi kèm
+  `"activities"`.
+- `timActKhoChung()` và `tlCheckNguon()` (2 chỗ CHECK của tab COURSE, vốn ĐÃ tự lọc `f.root ===
+  'courses'` sau khi nhận kết quả — nên KHÔNG có lỗi hiển thị cho thầy trước đây) nay gọi kèm
+  `"courses"` luôn từ AWord, đỡ một vòng lọc thừa; bộ lọc cũ giữ nguyên làm lưới chặn thứ hai.
+- **Dán thẳng link `?f=` vào ô File/link** (nhánh `if (linkF)` phía trên `timThuMuc`, đọc thẳng
+  `getByNum()`) — thầy chốt qua AskUserQuestion 14/9 "vẫn nhận": không có cây nào để chặn, thầy dán
+  đúng thư mục nào thì lấy đúng thư mục đó, kể cả link trỏ sang Course.
+- Kho giả (`awNaoGia()`, LA_SHIM) cập nhật theo: `thamSo()` nới regex để còn khớp lời gọi có THÊM
+  tham số thứ 2 (trước chỉ khớp đúng một tham số), thêm `thamSoThu2()` đọc cây, và thêm một thư mục
+  mock root `'activities'` (`f416` — trùng đúng ví dụ thầy đưa, "LSA2-S2.T3.P1-2") để bàn thử tab
+  LESSON có gì đó THẬT để tìm, tách bạch với `f186` (root `'courses'`) có sẵn.
+
+### 4. Tên tab trình duyệt theo NƠI ĐANG ĐỨNG
+Thầy: *"dù ở thư mục bất kỳ nào thì tên trang web chỉ là AWORD IN ANDREW CLASSES thôi"* — ví dụ
+`?f=416` muốn hiện "LSA2-S2.T3.P1-2". `updatePageTitle()` mới, gọi ở ĐẦU `render()` (dispatcher duy
+nhất sau MỌI điều hướng: `goTop`/`openRoot`/`enterFolder`/`openShowdownHome` đều mutate `state` rồi
+gọi `render()`) — KHÔNG `await`, để một lượt đọc Firestore (`getItem(folderId)`) không chặn việc vẽ
+trang; tab đổi tên một nhịp sau khi trang đã hiện, không phải trước.
+- Trong một thư mục: `itemName(node)` — chỉ tên thư mục, không thêm hậu tố "— AWord" (thầy chốt qua
+  AskUserQuestion 14/9, chọn phương án "chỉ tên thư mục").
+- Đứng ở gốc một cây (Activity/Result/Course/Game, không mở thư mục nào): `ROOT_LABEL[state.root]`.
+- Act mở qua deep-link `?a=`/`?play=` (đường riêng, KHÔNG đi qua `render()` vì nhảy thẳng
+  `startGame()`): set `document.title = node.title` ngay tại chỗ, cùng chỗ với `state.view = "play"`.
+- Mọi nơi khác (Home, Showdown, thùng rác, tìm kiếm) giữ nguyên `PAGE_TITLE_BASE` = "AWord in ANDREW
+  CLASSES" (hằng số mới, lấy đúng chữ đang có sẵn trong `<title>` của `index.html`/`play.html`).
+
+### Đã kiểm
+`node --input-type=module --check` sạch cho `main.js` + `core/icons.js`; brace `core/app.css` cân
+bằng (1864 mở = 1864 đóng, +1 cặp so Đợt 324 — đúng MỘT rule `.aw-page-dragover::after` mới thêm).
+Ba bàn thử độc lập, copy NGUYÊN VĂN biểu thức từ code thật (không gõ lại tay):
+- `dot325-sort-test.mjs` — 7/7 ĐẠT: cả 6 kiểu sort đều đúng thứ tự VÀ giữ thư mục trước act; một
+  "assignment" giả (không `kind`, không `updatedAt`) sort theo `modified-desc` rơi đúng về thứ tự
+  `createdAt`.
+- `dot325-timthumuc-test.mjs` — 3/3 ĐẠT: `chiCay:"activities"` chỉ thấy folder root activities,
+  `chiCay:"courses"` chỉ thấy root courses, không truyền `chiCay` vẫn thấy CẢ HAI (hành vi cũ nguyên
+  vẹn cho mọi caller khác chưa cập nhật).
+- Regex kho giả myLesson — 6/6 ĐẠT: tách đúng tham số 1 (tên) VÀ tham số 2 (cây) cho cả lời gọi 1
+  tham số (cũ) lẫn 2 tham số (mới); `lietKeAct(...)` (vẫn 1 tham số) không bị vỡ bởi regex nới ra.
+
+⬜ **CHƯA đăng nhập trang aword thật để bấm tay** (sandbox không đăng nhập Google được) — cụ thể:
+- Bấm nút Sort thật, đổi qua 6 kiểu, xem thứ tự card có đúng mắt thầy không (đặc biệt "Last modified"
+  của thư mục — chốt là CHỈ tính chính thư mục, không tính act bên trong, nên một thư mục vừa sửa act
+  gần đây SẼ KHÔNG nhảy lên đầu nếu chọn "Last modified" — xin thầy xác nhận đây đúng là điều thầy
+  muốn khi nhìn kết quả thật, không phải chỉ đọc mô tả).
+- Kéo một file .xlsm thật vào giữa vùng trống của trang (không phải Quick access) — xác nhận nhập vào
+  ĐÚNG thư mục đang đứng, viền xanh nét đứt hiện đúng lúc kéo qua, không hiện ở Results/Games/thùng
+  rác.
+- Kéo file vào Quick access — vẫn nhập từ GỐC Activities như cũ (không bị đổi hành vi).
+- myLesson v2.67.0: bấm CHECK ở tab LESSON và tab COURSE cho một thư mục CỐ TÌNH trùng tên ở cả hai
+  cây — xác nhận mỗi tab chỉ còn thấy ĐÚNG MỘT kết quả (của cây mình), không còn hỏi "có N thư mục
+  trùng — chọn đúng cái cần" giữa hai cây khác nhau nữa.
+- Bấm qua lại vài thư mục/act/gốc — xem tab trình duyệt (viền tab, không phải nội dung trang) có đổi
+  tên đúng như tả không.
 
 ---
 
