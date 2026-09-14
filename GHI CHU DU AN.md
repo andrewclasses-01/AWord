@@ -409,6 +409,32 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 329 (14/9/2026, thầy test tay Đợt 328 rồi báo 3 điều chỉnh) — **SPEED SORTING: chữ trong ô chạy TO TỐI ĐA (đo thật) · ô chạy vào từ mép sân · dấu ✓ đứng tại chỗ**
+
+Backup `_backup/dot329/`. Sửa 2 file: `group-sort.js` · `group-sort.css`.
+
+- **Cỡ chữ ô chạy = MỘT cỡ cho cả ván, nhưng là cỡ LỚN NHẤT mà MỌI câu đều lọt khung.** Trước là hằng 1,35u (ô thừa
+  rất nhiều chỗ). Nay `fitChipFont()` chạy một lần lúc băng bắt đầu: dựng ô dò `.aw-gs-bchip.is-probe` (cùng cỡ, cùng
+  đệm; chữ bên trong bỏ cắt dòng để đo chiều cao thật), **tìm nhị phân K ∈ [1,0 ; 3,6]** (chữ = K × `--aw-u`), mỗi
+  bước đặt thử từng câu vào ô dò và đòi `scrollHeight ≤ cao khả dụng` + `scrollWidth ≤ rộng khả dụng`; 9 bước × ≤150
+  câu = vài trăm phép đo, một lần mỗi ván. Ghi ra `--gs-chipfont: calc(K * var(--aw-u))` trên `.aw-gs-card` ⇒ vẫn co
+  giãn theo sân (fullscreen/điện thoại). Đo: bộ mẫu tiếng Anh K = 2,32; bộ 7 nhóm tiếng Việt câu dài K = 2,00
+  (+48 %). `.aw-gs-bchiptext` nới clamp 4 → 6 dòng (chỉ là lưới an toàn, cỡ đã đo nên không cắt).
+- **Ô chạy vào từ mép sân** — hai lỗi cộng lại, sửa cả hai: (1) `.aw-stage-inner` đệm 2,2u mỗi bên nên lane bị cắt
+  ở một vạch **bên trong** sân — ô "hiện ra" tại vạch đó thay vì trượt từ mép; `.aw-gs-lane` + `.aw-gs-rail` nay
+  `margin: 0 calc(-2.2u)` tràn tới mép sân (đo: khoảng cách lane↔sân = 0,0px hai bên; vạch tick cũng chạy suốt bề
+  ngang như Wordwall). (2) ⛔ `recycle()` đặt ô tái dùng ở `minX − chipW − gap` — khi băng đã thưa (nhiều câu bị tiêu),
+  `minX` nằm hẳn trong màn ⇒ ô mới **bật ra giữa lane**. Nay `Math.min(…, −chipW − gap)` như `consume()` đã làm: luôn
+  xuất phát hoàn toàn ngoài mép trái (đo: ô mới x = −97px với chipW 84 + gap 13).
+- **Dấu ✓/✗ đứng tại chỗ rồi mờ**: lõi `aw-mark-fly` dùng keyframes `aw-fly` bay lên −170 % (và `aw-fly-cross` nhấp
+  nhô). Template ghi đè `.aw-gs-pill .aw-mark-fly` bằng `aw-gs-markstay` (.8s: bật lên 1,12 → 1 → giữ → mờ, không đổi
+  vị trí; đo `top` 277→280px = đứng yên). Áp cả ✗ cho cùng một họ (thầy chỉ nói ✓, nhưng ✗ bay lên bên cạnh ✓ đứng
+  yên sẽ lệch tông — nếu thầy muốn ✗ khác thì tách rule).
+
+⬜ Thầy bấm tay lại: cỡ chữ ô chạy đã "to hết mức" chưa, ô có trượt mượt từ mép vào không, ✓ có còn bay không.
+
+---
+
 ## Đợt 328 (14/9/2026, thầy test tay Đợt 327 rồi báo 4 điều chỉnh) — **SPEED SORTING: dừng hẳn nền khi mở Menu · bỏ bóng 3D · ô vuông to hơn (cả chạy lẫn cố định)**
 
 **Bối cảnh.** Thầy bấm tay Đợt 327 ngay sau khi lên live, báo 3 việc: (1) mở ☰ Menu thì băng chuyền vẫn chạy phía

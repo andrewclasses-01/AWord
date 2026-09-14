@@ -416,12 +416,47 @@ const gsTemplate = {
       // in LAYOUT px (offsetWidth, not getBoundingClientRect — the zoom
       // fullscreen scales the stage, and chip.x lives in unscaled px).
       function measureChip() {
-        const probe = el("div", "aw-gs-bchip");
-        probe.style.visibility = "hidden";
+        const probe = el("div", "aw-gs-bchip is-probe");
         lane.append(probe);
         chipW = probe.offsetWidth; chipH = probe.offsetHeight;
         probe.remove();
         chipGap = chipW * 0.16;
+      }
+
+      // Đợt 329 — ONE font size for all chips, the LARGEST at which EVERY item
+      // still fits the fixed box. Binary search over K (font = K × --aw-u) with a
+      // probe chip: at each K every text is laid out naturally (no clamp) and
+      // must fit both the content height and width. ≤150 items × 9 steps of
+      // layout reads, once per play — cheap. Written as `calc(K * var(--aw-u))`
+      // so it keeps scaling with the stage (fullscreen, phone).
+      function fitChipFont() {
+        const card = root.querySelector(".aw-gs-card");
+        const u = parseFloat(getComputedStyle(lane).getPropertyValue("--aw-u")) || 1;
+        const probe = el("div", "aw-gs-bchip is-probe");
+        const span = el("span", "aw-gs-bchiptext");
+        probe.append(span);
+        lane.append(probe);
+        const cs = getComputedStyle(probe);
+        const availH = probe.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+        const availW = probe.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+        const fitsAll = k => {
+          probe.style.fontSize = (k * u) + "px";
+          for (let i = 0; i < items.length; i++) {
+            span.textContent = items[i].text;
+            if (span.scrollHeight > availH + 0.5 || span.scrollWidth > availW + 0.5) return false;
+          }
+          return true;
+        };
+        let lo = 1.0, hi = 3.6, best = lo;
+        if (fitsAll(hi)) best = hi;
+        else {
+          for (let s = 0; s < 9; s++) {
+            const mid = (lo + hi) / 2;
+            if (fitsAll(mid)) { best = mid; lo = mid; } else hi = mid;
+          }
+        }
+        probe.remove();
+        card?.style.setProperty("--gs-chipfont", `calc(${best.toFixed(3)} * var(--aw-u))`);
       }
 
       function paintChip(chip, idx) {
@@ -452,6 +487,7 @@ const gsTemplate = {
       function startBelt() {
         if (finished) return;
         measureChip();
+        fitChipFont();
         const count = Math.min(BELT_SLOTS, pool.length);
         let x = chipGap;
         for (let i = 0; i < count; i++) {
@@ -515,7 +551,11 @@ const gsTemplate = {
         const nextIdx = nextItemForSlot();
         if (nextIdx == null) { retireSlot(chip); return; }
         onBelt.add(nextIdx);
-        chip.x = minX - chipW - chipGap;
+        // Behind the leftmost chip — but NEVER inside the lane: when the belt
+        // has thinned out, minX can be well inside, and a chip placed just
+        // behind it would pop into view instead of sliding in from the edge
+        // (thầy saw exactly that, Đợt 329).
+        chip.x = Math.min(minX - chipW - chipGap, -chipW - chipGap);
         paintChip(chip, nextIdx);
         positionChip(chip);
       }

@@ -29,10 +29,14 @@
   --aw-gs-tile-4: #7c4fd6;   /* a 5th chip colour beyond the theme's 4 tiles */
   --aw-gs-tile-4d: #5a35a8;
 }
+/* Rails and lane BLEED to the stage edge (Đợt 329): `.aw-stage-inner` pads
+   2.2u each side, so a chip used to be clipped 2.2u INSIDE the stage and
+   looked like it popped into being at a line near the edge instead of
+   sliding in from it. The negative margin cancels that padding; the lane's
+   own overflow:hidden now sits on the stage edge. */
 .aw-gs-rail {
   flex: 0 0 auto; height: calc(0.45 * var(--aw-u));
-  margin: calc(1.2 * var(--aw-u)) calc(1 * var(--aw-u));
-  border-radius: calc(0.25 * var(--aw-u));
+  margin: calc(1.2 * var(--aw-u)) calc(-2.2 * var(--aw-u));
   background-image: repeating-linear-gradient(to right,
     var(--aw-muted, #b9c5d8) 0 calc(0.9 * var(--aw-u)),
     transparent calc(0.9 * var(--aw-u)) calc(1.9 * var(--aw-u)));
@@ -40,6 +44,7 @@
 }
 .aw-gs-lane {
   flex: 0 0 30%; min-height: 0;
+  margin: 0 calc(-2.2 * var(--aw-u));
   position: relative; overflow: hidden;
 }
 /* 3-2-1 before the belt starts (countUp timer only). */
@@ -68,15 +73,26 @@
   border: var(--aw-tile-border-width, 0) solid var(--aw-tile-border-color, transparent);
   background: var(--tile-eff);
   box-shadow: none;
-  color: #fff; font-weight: 600; font-size: calc(1.35 * var(--aw-u)); line-height: 1.24;
+  /* ONE font size for every chip, but the LARGEST one at which every item of
+     this act still fits the box (Đợt 329): group-sort.js measures each text
+     in a probe and sets --gs-chipfont on the card as `calc(K * var(--aw-u))`,
+     so it keeps scaling with the stage. The fallback only shows if the
+     measurement never ran. */
+  color: #fff; font-weight: 600; font-size: var(--gs-chipfont, calc(1.35 * var(--aw-u))); line-height: 1.24;
   text-shadow: 0 calc(0.1 * var(--aw-u)) calc(0.25 * var(--aw-u)) rgba(0, 0, 0, .2);
   cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
   will-change: transform;
 }
 .aw-gs-bchip:active { cursor: grabbing; }
 .aw-gs-bchiptext {
-  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 6;
   overflow: hidden; max-width: 100%; overflow-wrap: anywhere;
+}
+/* The measuring probe: same chip, same padding, but the text laid out
+   naturally (no clamp) so its scrollHeight/scrollWidth is the true need. */
+.aw-gs-bchip.is-probe { visibility: hidden; pointer-events: none; }
+.aw-gs-bchip.is-probe .aw-gs-bchiptext {
+  display: block; width: 100%; -webkit-line-clamp: unset; overflow: visible;
 }
 /* A held chip: its slot keeps riding the belt (the script still moves it),
    only hidden — the fixed-position clone is the visible copy. */
@@ -121,7 +137,21 @@
 .aw-gs-pill.is-over { transform: scale(1.035); background: #fdedc4; border-style: solid; border-color: #cf8f13; }
 .aw-gs-pill.is-correct { background: #e5f7ea; border-style: solid; border-color: var(--aw-ok); color: #1f6b37; }
 .aw-gs-pill.is-wrong { background: #fdeceb; border-style: solid; border-color: var(--aw-no); color: #a3291f; animation: aw-gs-shake .45s ease; }
-.aw-gs-pill .aw-mark-fly { z-index: 2; }
+/* ✓ / ✗ on a pill: pop in place, hold, fade — NOT the core `aw-fly`, which
+   drifts the mark up and away (thầy, Đợt 329: "chỉ hiển thị tại chỗ rồi ẩn").
+   Same rule for the cross, so the two feel like one family. */
+.aw-gs-pill .aw-mark-fly,
+.aw-gs-pill .aw-mark-fly.is-cross {
+  z-index: 2;
+  animation: aw-gs-markstay .8s ease-out forwards;
+}
+@keyframes aw-gs-markstay {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.4); }
+  22%  { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+  40%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  72%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
 
 /* The belt's drag clone — same node as the pool's (.aw-gs-dragclone, below),
    plus the chip's own centring; radius/padding/font arrive inline in px. */

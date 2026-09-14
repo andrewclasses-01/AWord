@@ -1,6 +1,6 @@
 # GHI CHÚ — SPEED SORTING (type `group_sort`: Speed sorting · Group sort)
 
-**Trạng thái: ⬜ Đợt 328 (14/9/2026) — thầy bấm tay Đợt 327 rồi báo 3 điều chỉnh, ĐÃ vá, CHỜ THẦY BẤM TAY LẠI.**
+**Trạng thái: ⬜ Đợt 329 (14/9/2026) — thầy bấm tay Đợt 328 rồi báo 3 điều chỉnh nữa, ĐÃ vá, CHỜ THẦY BẤM TAY LẠI.**
 Đợt 288 (03/9/2026) dựng lần đầu dưới tên "Group sort" cho khóa NỀN TẢNG TIẾNG ANH (Lesson 16 BT2 trên Wordwall
 là *Speed sorting* 7 nhóm; Lesson 13 BT1 là *Group sort* kéo thả). Đợt 327 **đổi tên hiển thị thành "Speed sorting"**
 và **làm lại chế độ băng chuyền** theo mockup thầy duyệt (artifact "AWord Speed Sorting"). Đợt 328: **☰ Menu dừng
@@ -14,10 +14,13 @@ Dữ liệu: `content.groups = [tên…]` (2–8 nhóm) · `content.items = [{ t
 Danh sách phẳng để "Start with mistakes" (`itemsKey: "items"`) và Show answers chạy đúng khuôn lõi.
 
 **Chế độ BĂNG CHUYỀN** (`options.mode = "tap"`, mặc định — Speed sorting):
-- Lane trên (30% thẻ) kẹp giữa hai vạch tick `.aw-gs-rail`; ô câu `.aw-gs-bchip` **cùng một cỡ cố định, vuông**
-  (Đợt 328: 13,5u × 13,5u — trước là chữ nhật dẹt 24,3×11,9u; chữ 1,35u, cắt tới **4 dòng**, **bỏ hẳn bóng đổ
-  "3D"** `box-shadow: none`) trôi **trái → phải** liên tục (rAF, `chip.x` px layout → transform). 5 ô sống cùng lúc
-  (`BELT_SLOTS`); ô ra khỏi mép phải vào lại từ mép trái mang câu kế (không lặp câu đang hiện trên băng). Màu xoay
+- Lane trên (30% thẻ) kẹp giữa hai vạch tick `.aw-gs-rail`, **cả lane lẫn rail tràn tới mép sân** (`margin: 0 -2.2u`
+  bù đệm của `.aw-stage-inner`, Đợt 329 — không thì ô bị cắt ở một vạch trong sân, trông như bật ra chứ không trượt vào); ô câu `.aw-gs-bchip` **cùng một cỡ cố định, vuông**
+  (Đợt 328: 13,5u × 13,5u — trước là chữ nhật dẹt 24,3×11,9u; **bỏ hẳn bóng đổ "3D"** `box-shadow: none`; Đợt 329:
+  chữ **một cỡ cho cả ván = cỡ LỚN NHẤT mà mọi câu đều lọt khung**, `fitChipFont()` đo bằng ô dò `.is-probe` rồi ghi
+  `--gs-chipfont: calc(K*var(--aw-u))`, clamp 6 dòng chỉ là lưới an toàn) trôi **trái → phải** liên tục (rAF, `chip.x` px layout → transform). 5 ô sống cùng lúc
+  (`BELT_SLOTS`); ô ra khỏi mép phải vào lại từ mép trái mang câu kế (không lặp câu đang hiện trên băng) — ⛔ luôn đặt
+  `min(minX − chipW − gap, −chipW − gap)`: khi băng thưa `minX` nằm trong màn, thiếu vế sau là ô bật ra giữa lane (Đợt 329). Màu xoay
   4 tile theme + tím riêng `--aw-gs-tile-4` (`--aw-tile-fixed` vẫn thắng).
 - Dưới: ô nhóm `.aw-gs-pill` **vàng nhạt viền nét đứt, không màu theo nhóm, không số** (không lộ đáp án), Đợt 328
   đổi sang **kích thước cố định 16u × 9,4u đều nhau tuyệt đối** (trước co giãn theo độ dài tên — dễ kéo trượt vì
@@ -29,7 +32,8 @@ Danh sách phẳng để "Start with mistakes" (`itemsKey: "items"`) và Show an
   move/up/cancel nghe trên **window** + `document.visibilitychange` (⛔ không dùng `blur`).
 - **☰ Menu dừng hẳn băng chuyền** (Đợt 328): `gsPauseHandlers` module-level bắc cầu sang `tpl.onPause(paused)` —
   engine chỉ tự dừng animation qua WAAPI, rAF viết tay phải tự khai (đúng khuôn `maze-chase.js`/`gameshow.js`).
-- Thả **đúng**: ✓ (`aw-mark-fly`) trên ô nhóm + sao bay về điểm + điểm +1 + **câu tiêu**, slot nhận câu mới từ mép trái.
+- Thả **đúng**: ✓ (`aw-mark-fly`, nhưng keyframes riêng `aw-gs-markstay` — **đứng tại chỗ rồi mờ**, không bay lên
+  như `aw-fly` của lõi; Đợt 329, áp cả ✗) trên ô nhóm + sao bay về điểm + điểm +1 + **câu tiêu**, slot nhận câu mới từ mép trái.
   Thả **sai**: ✗ trên ô nhóm + tiếng sai + mất tim (nếu bật) + trừ điểm (`pointsOff` qua `ui.flyPenalty`) + **câu cũng
   tiêu, KHÔNG quay lại băng** (thầy chốt). Thả **ra ngoài**: clone bay về đúng chỗ slot đang trôi (đích đọc lại mỗi
   khung, bù tỉ lệ zoom fullscreen); slot đã trôi khỏi lane ⇒ vào lại từ mép trái, clone mờ đi.

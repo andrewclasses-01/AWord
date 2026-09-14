@@ -5348,9 +5348,18 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **14/9/2026 sau Đợt 328** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **14/9/2026 sau Đợt 329** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (14/9/2026 — sau **Đợt 328**: ⬜ CHƯA BẤM TAY, CHỜ THẦY XÁC NHẬN)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (14/9/2026 — sau **Đợt 329**: ⬜ CHƯA BẤM TAY, CHỜ THẦY XÁC NHẬN)
+>
+> **⭐ Đợt 329 — SPEED SORTING: 3 chỉnh sau khi thầy bấm tay Đợt 328.** (1) Chữ ô chạy = MỘT cỡ cho cả ván nhưng là
+> cỡ LỚN NHẤT mà mọi câu đều lọt khung — `fitChipFont()` đo thật bằng ô dò, tìm nhị phân K, ghi `--gs-chipfont:
+> calc(K*var(--aw-u))` (mẫu Anh K=2,32 · Việt dài K=2,00, từ hằng 1,35u). (2) Ô chạy vào từ mép sân: lane+rail tràn
+> `margin: 0 -2.2u` (hết cắt ở vạch trong sân) + `recycle()` ép ô tái dùng luôn xuất phát ngoài mép trái (trước bật ra
+> giữa lane khi băng thưa). (3) ✓/✗ trên ô nhóm ghi đè `aw-fly` bằng `aw-gs-markstay` — đứng tại chỗ rồi mờ. Đã đo
+> cả ba trên dev server. Backup `_backup/dot329/`. Chi tiết: `GHI CHU DU AN.md` Đợt 329.
+>
+> **Trước đó — Đợt 328 (thầy đã bấm tay, ra 3 việc của Đợt 329):**
 >
 > **⭐ Đợt 328 — SPEED SORTING: 3 chỉnh sau khi thầy bấm tay Đợt 327.** (1) ☰ Menu nay dừng HẲN băng chuyền —
 > `requestAnimationFrame` viết tay không nằm trong tầm dừng WAAPI của engine, vá bằng cầu nối `gsPauseHandlers`
