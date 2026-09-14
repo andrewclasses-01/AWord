@@ -163,6 +163,9 @@ function bestMatch(typed, acceptedAnswers) {
 function goiYTheoBang(activity, it, typed) {
   const t = normalize(typed);
   if (!t) return "";
+  // Đợt 326 — gõ ĐÚNG (khớp một đáp án) thì im lặng tuyệt đối, kể cả khi bảng có dòng "chi-dau"/"mau"
+  // (bàn thử gọi thẳng hàm này với câu đúng phải ra "" — xem skill chamloitypetheanswer PART 6).
+  if ((it && it.acceptedAnswers || []).some(a => normalize(a) === t)) return "";
   // ⭐ Đợt 309 — MỘT BẢNG CHO CẢ ACT (thầy 08/9): lỗi của học sinh phần lớn lặp lại qua
   // nhiều câu (foolball · lisiten · thiếu "to"…), soạn lẻ từng câu là gõ lại 30 lần.
   // ⚠️ Vẫn đọc `it.goiY` TRƯỚC — đó là bảng lẻ theo từng câu của Đợt 308; act nào lỡ lưu
@@ -176,12 +179,64 @@ function goiYTheoBang(activity, it, typed) {
     // Dòng khoá vào MỘT câu: `de` giữ nguyên văn ĐỀ của câu đó. Neo bằng đề chứ không
     // bằng số thứ tự — thầy xoá/chèn/đảo câu thì số thứ tự lệch hết, đề thì không.
     if (r.de && normalize(r.de) !== deNay) continue;
+    // ⭐ Đợt 326 (thầy 14/9/2026, "ok hết các đề xuất") — BA KIỂU KHỚP MỚI, đo trên 4.959 câu sai thật
+    // của 4 khoá Nền tảng. Vẫn là DÒNG do thầy đặt trong bảng (không có luật đoán ngầm nào chạy
+    // khi bảng không có dòng đó) — đúng tinh thần Đợt 308.
+    //   "chi-dau": chữ đúng hết, CHỈ sai dấu câu/dấu cách (thiếu `?`, ` ?`, `>` thay `?`, `yes,x`,
+    //              dính chữ, thừa `\` cuối). `go` bỏ trống. Một dòng cho cả act ≈ 5% lượt sai.
+    //   "mau":     biểu thức chính quy (regex, không phân biệt hoa-thường) trên chữ đã normalize —
+    //              dùng cho rác/bấm 1 phím lướt bài `^(.{1,2}|[^a-z]*)$` (19% lượt sai) và mẫu chung.
+    //   "gan":     sai chính tả 1–2 ký tự trên ĐÚNG MỘT từ (≥4 chữ), so với đáp án của CHÍNH câu qua
+    //              `bestMatch()` (⛔ không so từ điển chung — bài học Đợt 310 "want"↔"wait"). Trong `noi`,
+    //              chỗ `{tu}` được thay bằng chữ em đã gõ (chữ đúng KHÔNG bao giờ được nhắc).
+    if (r.kieu === "chi-dau") {
+      const loi = s => normalize(s).replace(/[^a-z0-9]+/g, "");
+      const tl = loi(t);
+      if (tl && (it.acceptedAnswers || []).some(a => loi(a) === tl)) return String(r.noi || "").trim();
+      continue;
+    }
+    if (r.kieu === "mau") {
+      let re = null;
+      try { re = new RegExp(String(r.go || ""), "i"); } catch (_) { continue; }   // regex hỏng → bỏ qua dòng, không nổ
+      if (r.go && re.test(t)) return String(r.noi || "").trim();
+      continue;
+    }
+    if (r.kieu === "gan") {
+      const m = bestMatch(typed, it.acceptedAnswers);
+      if (!m || m.typedWords.length !== m.expectedWords.length) continue;
+      const subs = m.ops.filter(o => o.op === "sub");
+      if (subs.length !== 1 || m.ops.length !== m.ops.filter(o => o.op === "match" || o.op === "sub").length) continue;
+      const a = m.typedNorm[subs[0].i], b = m.expectedNorm[subs[0].j];
+      const lv = levChu(a, b);
+      // lệch 1 ký tự: từ ≥4 chữ; lệch 2 ký tự: từ ≥5 chữ (tell↔talk, woke↔wakes là NHẦM TỪ, không phải chính tả)
+      if (lv > 2 || Math.min(a.length, b.length) < (lv === 2 ? 5 : 4)) continue;
+      // Khác nhau chỉ ở ĐUÔI ngữ pháp (s/es/ed/ing/ly) thì là lỗi chia từ, KHÔNG phải chính tả → để dòng khác lo
+      const goc = w => { const r = new Set([w]); for (const d of ["s", "es", "ies", "ed", "d", "ied", "ing", "ly", "ily"]) if (w.endsWith(d) && w.length - d.length >= 2) r.add(w.slice(0, -d.length) + (d === "ies" || d === "ied" || d === "ily" ? "y" : "")); return r; };
+      const ga = goc(a), gb = goc(b); if ([...ga].some(x => gb.has(x))) continue;
+      // Chữ em gõ là một TỪ THẬT có mặt trong đáp án của act (want ↔ wait, salt ↔ petrol…) thì đó là nhầm
+      // NGHĨA chứ không phải chính tả — im lặng để dòng khác (hoặc thầy) lo. Bài học Đợt 310.
+      const tuAct = new Set(((activity && activity.content && activity.content.items) || [])
+        .flatMap(x => (x.acceptedAnswers || []).flatMap(y => wordsOf(y).map(normWord))));
+      if (tuAct.has(a)) continue;
+      return String(r.noi || "").trim().replace(/\{tu\}/g, m.typedWords[subs[0].i]);
+    }
     const k = normalize(r.go);
     if (!k) continue;
     const trung = (r.kieu === "chua") ? t.includes(k) : t === k;
     if (trung) return String(r.noi || "").trim();
   }
   return "";
+}
+// Levenshtein theo KÝ TỰ giữa hai từ ngắn (cho kiểu "gan"). Cùng khuôn `alignWords` nhưng không cần vết.
+function levChu(a, b) {
+  const m = a.length, n = b.length;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) cur[j] = a[i - 1] === b[j - 1] ? prev[j - 1] : 1 + Math.min(prev[j - 1], prev[j], cur[j - 1]);
+    prev = cur;
+  }
+  return prev[n];
 }
 const ttaTemplate = {
   type: "type_the_answer",
@@ -1471,4 +1526,4 @@ export default ttaTemplate;
 // (`scratch/dot305-worddiff.html`) gọi được **đúng hàm game đang chạy**, thay vì chép
 // lại logic sang bàn thử rồi kiểm nhầm bản chép. Không ai khác import chúng, và việc
 // xuất thêm tên không đụng gì tới `registerTemplate` ở trên.
-export { wordsOf, normWord, alignWords, bestMatch, goiYTheoBang };
+export { wordsOf, normWord, alignWords, bestMatch, goiYTheoBang, levChu };

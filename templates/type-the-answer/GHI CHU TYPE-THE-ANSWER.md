@@ -1,5 +1,14 @@
 # GHI CHÚ — TEMPLATE TYPE THE ANSWER
 
+## Đợt 326 (14/9/2026) — ⭐ **3 KIỂU KHỚP MỚI `chi-dau` · `mau` · `gan` + `MAX_ALTERNATES` 15**
+
+Chi tiết đầy đủ ở `GHI CHU DU AN.md` Đợt 326. Tóm tắt cho người sửa template:
+- `goiYTheoBang()` xét `kieu` theo thứ tự dòng như cũ; 3 kiểu mới không cần `go` (trừ `mau` = regex). Gõ đúng → `""`.
+- `gan` KHÔNG so từ điển; so với đáp án của CHÍNH câu qua `bestMatch()`, lọc khác đuôi ngữ pháp, lọc chữ là từ thật
+  của act, ngưỡng độ dài 4/5. Đừng nới 3 lưới này mà không đo lại `do-dot326.mjs` (kho `DU LIEU TONG HOP\WORDWALL…`).
+- Editor: `chuanKieu()` là nơi DUY NHẤT biết danh sách kiểu hợp lệ — thêm kiểu mới thì sửa ở đó + dropdown.
+- Skill `/chamloitypetheanswer` v2.0 tự sinh cả bảng (yhet/chua theo câu + 3 dòng chung cuối bảng).
+
 ## Đợt 310 (08/9/2026, thầy giao) — ⭐⭐⭐ **NẠP BẢNG TRA THẬT CHO LESSON 15 TỪ CÂU SAI CỦA HỌC SINH 3 KHOÁ (NTK6/7/8)**
 
 Thầy: *"[3 link myresults Wordwall Lesson 15 của NTK6/NTK7/NTK8] Hãy lấy các câu sai ở các thư mục

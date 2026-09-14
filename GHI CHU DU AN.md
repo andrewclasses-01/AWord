@@ -12,7 +12,13 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 325** (14/9/2026, thầy giao 4 việc cho trang thư viện — SORT · KÉO FILE VÀO BẤT
+> Mới nhất: **⭐ Đợt 326** (14/9/2026, thầy "ok hết các đề xuất" sau khảo sát 4.959 câu sai thật của khoá Nền
+> tảng): bảng "Hướng dẫn khi sai" có thêm 3 KIỂU KHỚP — `chi-dau` (chữ đúng, chỉ sai dấu câu/dấu cách) · `mau`
+> (regex, cho rác/bấm 1 phím = 19% lượt sai) · `gan` (sai chính tả 1 từ qua `bestMatch()` + 3 lưới chống nói bậy,
+> `{tu}` = chữ em gõ); `MAX_ALTERNATES` 5 → 15 (editor từng cắt mất đáp án phụ 7–14 của 29 câu khi Save). Đo trên dữ
+> liệu thật: 0/95.100 câu đúng bị bắn nhầm; bảng sinh 43,9% → +3 dòng chung = 66,2% câu sai có hướng dẫn. ⬜ chưa
+> bấm tay editor. Xem mục **Đợt 326**.
+> Trước đó: **Đợt 325** (14/9/2026, thầy giao 4 việc cho trang thư viện — SORT · KÉO FILE VÀO BẤT
 > KỲ ĐÂU · myLesson tìm ĐÚNG CÂY · TÊN TAB THEO THƯ MỤC): (1) nút icon Sort cạnh Grid/List, 6 kiểu
 > (tên A→Z/Z→A, sửa gần nhất/cũ nhất, tạo gần nhất/cũ nhất — nhớ chung như `aword-view`), thư mục
 > LUÔN đứng trước act/bài giao (`applyChosenSort` xếp riêng 2 nhóm rồi ghép), "sửa gần nhất" của một
@@ -400,6 +406,52 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 326 (14/9/2026, thầy "ok hết các đề xuất" sau khảo sát 4.959 câu sai thật) — **BA KIỂU KHỚP MỚI cho bảng "Hướng dẫn khi sai": CHỈ SAI DẤU · MẪU (regex) · GẦN ĐÚNG (chính tả 1 từ) + nới đáp án phụ 5 → 15**
+
+**Bối cảnh.** Phiên skill `/chamloitypetheanswer` v2.0 bóc TOÀN BỘ kết quả Type the answer của khoá Nền tảng trên
+Wordwall (123 act × 4 khoá NTK6/7/8/9: 3.695 lượt, 100.059 câu, **4.959 câu sai**), 7 agent phân tích, rồi viết bộ
+sinh dòng bảng tra `sinh-go.js` (hồ sơ + dữ liệu thô + script đo: `E:\LAP TRINH APP\DU LIEU TONG HOP\WORDWALL KET
+QUA TYPE THE ANSWER 14-09-2026\`). Bảng `yhet`/`chua` sinh tự động bắt được 43,9% câu sai; phần lớn phần còn lại rơi
+vào 3 nhóm mà bảng tĩnh KHÔNG biểu diễn được: **rác/bấm 1 phím lướt bài** (962 lượt = 19%, chỉ ~15 học sinh), **sai
+chính tả 1–2 ký tự** (vô hạn biến thể), **chữ đúng hết chỉ sai dấu câu/dấu cách**. Thầy đọc đề xuất và chốt "ok hết"
+(giữ nguyên cách CHẤM ĐIỂM — đề xuất cắt ký tự lạ cuối câu thầy KHÔNG lấy).
+
+**Làm gì — `templates/type-the-answer/type-the-answer.js`, `goiYTheoBang()`:** vẫn đúng tinh thần Đợt 308 (không có
+luật đoán ngầm; mọi thứ là DÒNG thầy đặt trong bảng, không có dòng thì game im lặng), chỉ thêm 3 giá trị `kieu`:
+- `"chi-dau"` — khớp khi `normalize(typed)` bỏ hết ký tự không phải chữ/số **bằng** cùng phép đó của MỘT đáp án của
+  câu. `go` bỏ trống, `de` trống = mọi câu. Bắt: thiếu `?`, ` ?`, `>` thay `?`, `yes,x`, dính chữ, thừa `\` cuối.
+- `"mau"` — `new RegExp(go, "i").test(normalize(typed))`; regex hỏng → bỏ qua dòng (try/catch), không nổ. Dùng cho
+  rác `^(.{1,2}|[^a-z]*)$` (skill tự loại trừ đáp án ≤2 ký tự của act, VD quy ước `x` của LS12).
+- `"gan"` — dùng `bestMatch()` sẵn có (Đợt 305): cùng số từ, ĐÚNG 1 thao tác `sub`, hai từ ≥4 chữ (lệch 1) / ≥5 chữ
+  (lệch 2) theo `levChu()` mới (Levenshtein ký tự); trong `noi`, `{tu}` = chữ em đã gõ. ⛔ Ba lưới chống nói bậy, đo
+  từng cái trên dữ liệu thật: (1) khác nhau chỉ ở ĐUÔI s/es/ies/ed/ing/ly → là lỗi chia từ, bỏ qua (`apple`↔`apples`,
+  `come`↔`comes`); (2) chữ em gõ là TỪ THẬT có mặt trong đáp án của act → nhầm nghĩa, bỏ qua (bài học Đợt 310
+  `want`↔`wait`); (3) ngưỡng độ dài (`tell`↔`talk`, `woke`↔`wakes` bị loại). Sau 3 lưới, top hit toàn là chính tả
+  thật: `reraly`, `vagetables`, `clen`, `studens`, `imformations`, `MOTOBIKE`, `bolw`, `theif`, `caculator`, `siting`.
+- Đầu hàm thêm cửa: `typed` khớp một đáp án (sau normalize) → trả `""` NGAY, kể cả bảng có `chi-dau`/`mau` — bàn thử
+  gọi thẳng hàm với câu đúng phải im lặng. Export thêm `levChu`.
+
+**`type-the-answer-editor.js`:** dropdown "Kiểu khớp" 5 lựa chọn; `chuanKieu()` thay 4 chỗ ép về yhet/chua; ô "chữ
+học sinh gõ" đổi placeholder theo kiểu và KHOÁ với chi-dau/gan; Save giữ dòng chi-dau/gan dù `go` trống (trước đây
+`filter(r => r.go && r.noi)` sẽ xoá); đèn cảnh báo "khớp cả đáp án đúng" bỏ qua chi-dau/gan, với `mau` thì báo regex
+hỏng. ⭐ **`MAX_ALTERNATES` 5 → 15**: khoá Nền tảng nhập từ Wordwall có 29 câu mang 7–14 đáp án phụ; `normalize()` của
+editor `slice(0, 6)` ⇒ thầy mở Edit rồi Save là MẤT đáp án không báo gì (bug có sẵn, phát hiện nhờ đếm
+`dap-an-hop-nhat.json`).
+
+**Đo thật (`do-dot326.mjs`, trích các hàm THUẦN từ chính file template — không chép lại thuật toán):** 95.100 câu
+ĐÚNG → 0 hint bắn nhầm; 4.959 câu SAI → bảng sinh 43,9% · 3 dòng chung 26,6% (gan 310 · mau 872 · chi-dau 139) ·
+gộp **66,2%**. `node --input-type=module --check` sạch cả 2 file. Backup `_backup/dot326/`.
+
+**Không đụng:** `normalize()` chấm điểm, `bestMatch()`, engine, CSS, luật Firestore. Act cũ không có dòng kiểu mới thì
+chạy y hệt trước.
+
+### VIỆC ĐANG CHỜ
+- ⬜ Thầy mở Edit một act Type the answer → nút bảng tra → thấy 5 kiểu trong dropdown; thêm 1 dòng "Chỉ sai dấu
+  câu/dấu cách" + 1 dòng "Gần đúng" rồi Save → mở lại còn nguyên.
+- ⬜ Skill v2.0 chạy thử LESSON 18 (`?f=191`) ngay sau khi bản này lên live (phiên 14/9 đang làm).
 
 ---
 

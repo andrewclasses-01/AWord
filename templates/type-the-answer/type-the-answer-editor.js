@@ -28,7 +28,9 @@
 import { el } from "../../core/utils.js";
 
 const MAX_ITEMS = 50;          // Wordwall's real cap for this template (per Teacher Andrew, 30/7)
-const MAX_ALTERNATES = 5;      // alternate accepted answers per question, on top of the main one
+// ⭐ Đợt 326 — 5 → 15. Khoá Nền tảng nhập từ Wordwall có 29 câu mang 7–14 đáp án phụ ("Tôi mệt quá" = 8 cách
+// nói); `normalize()` dưới kia cắt về 6 khi mở editor ⇒ thầy bấm Save là MẤT ĐÁP ÁN mà không báo gì.
+const MAX_ALTERNATES = 15;     // alternate accepted answers per question, on top of the main one
 
 // ⭐ Đợt 304 (thầy, 08/9/2026) — "khi chữ dài quá ô thì … xuống dòng 2 ngay trong ô.
 // Đảm bảo luôn quan sát được hết text". Mọi ô của editor này nay là <textarea> cao
@@ -313,7 +315,8 @@ export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel,
       than.innerHTML = "";
       than.append(el("div", "aw-tta-ed-hnote",
         "Học sinh trả lời SAI thì máy dò bảng này từ trên xuống, dòng nào khớp trước thì hiện câu " +
-        "hướng dẫn của dòng đó. Không dòng nào khớp thì chỉ tô đỏ, không hiện chữ nào."));
+        "hướng dẫn của dòng đó. Không dòng nào khớp thì chỉ tô đỏ, không hiện chữ nào. " +
+        "Kiểu “Chỉ sai dấu câu/dấu cách” và “Gần đúng” không cần ô chữ gõ; “Mẫu” là regex."));
       const bang = el("div", "aw-tta-ed-htable");
       const dau = el("div", "aw-tta-ed-hrow is-head");
       ["Áp dụng cho", "Kiểu khớp", "Chữ học sinh gõ", "Câu hướng dẫn hiện ra", ""].forEach((t, i) => {
@@ -360,17 +363,21 @@ export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel,
 
       // cột 2 — KIỂU KHỚP
       const kieu = el("select", "aw-ed-input aw-ed-select");
-      [["yhet", "Giống toàn bộ"], ["chua", "Có chứa"]].forEach(([v, t]) => {
+      // ⭐ Đợt 326 — thêm 3 kiểu: chỉ sai dấu · mẫu (regex) · gần đúng (chính tả 1 từ)
+      [["yhet", "Giống toàn bộ"], ["chua", "Có chứa"], ["chi-dau", "Chỉ sai dấu câu/dấu cách"], ["mau", "Mẫu (regex)"], ["gan", "Gần đúng (sai chính tả 1 từ)"]].forEach(([v, t]) => {
         const o = el("option", "", t); o.value = v; kieu.append(o);
       });
-      kieu.value = r.kieu === "chua" ? "chua" : "yhet";
+      kieu.value = chuanKieu(r.kieu);
       kieu.onchange = () => { r.kieu = kieu.value; ve(); };
       d.append(boc(kieu, 1));
 
       // cột 3 — CHỮ HỌC SINH GÕ
       const go = el("input", "aw-ed-input");
       go.value = r.go || "";
-      go.placeholder = "ví dụ: foolball";
+      // Đợt 326 — ô "chữ học sinh gõ" đổi vai theo kiểu: chi-dau/gan không cần; mau là regex
+      const kr = chuanKieu(r.kieu);
+      go.placeholder = kr === "chi-dau" ? "(bỏ trống — so với đáp án của câu)" : kr === "gan" ? "(bỏ trống — {tu} trong câu hướng dẫn = chữ em gõ)" : kr === "mau" ? "ví dụ: ^(.{1,2}|[^a-z]*)$" : "ví dụ: foolball";
+      go.disabled = (kr === "chi-dau" || kr === "gan");
       go.oninput = () => { r.go = go.value; capNhatCanhBao(); };
       const o3 = boc(go, 2);
       const bao = el("div", "aw-tta-ed-hwarn");
@@ -404,6 +411,9 @@ export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel,
    * trong cùng câu). Nói rõ tại chỗ để thầy sửa ngay, thay vì đợi học sinh phát hiện.
    */
   function canhBaoDong(r) {
+    const kr = chuanKieu(r.kieu);
+    if (kr === "chi-dau" || kr === "gan") return "";          // Đợt 326 — hai kiểu này không có chuỗi để so
+    if (kr === "mau") { try { new RegExp(String(r.go || ""), "i"); } catch (_) { return "⚠ mẫu regex không hợp lệ"; } }
     const k = chuanDeSo(r.go);
     if (!k) return "";
     const trung = [];
@@ -412,7 +422,10 @@ export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel,
       (it.acceptedAnswers || []).forEach(a => {
         const n = chuanDeSo(a);
         if (!n) return;
-        if (r.kieu === "chua" ? n.includes(k) : n === k) trung.push(i + 1);
+        let hit = false;
+        if (kr === "mau") { try { hit = new RegExp(String(r.go || ""), "i").test(n); } catch (_) { hit = false; } }
+        else hit = kr === "chua" ? n.includes(k) : n === k;
+        if (hit) trung.push(i + 1);
       });
     });
     const ds = [...new Set(trung)];
@@ -490,11 +503,12 @@ export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel,
     clean.content.goiY = (Array.isArray(clean.content.goiY) ? clean.content.goiY : [])
       .map(r => ({
         de: String(r.de || "").trim(),
-        kieu: r.kieu === "chua" ? "chua" : "yhet",
+        kieu: chuanKieu(r.kieu),
         go: String(r.go || "").trim(),
         noi: String(r.noi || "").trim()
       }))
-      .filter(r => r.go && r.noi);
+      // Đợt 326 — chi-dau/gan hợp lệ với `go` trống; các kiểu khác vẫn phải có chuỗi
+      .filter(r => r.noi && (r.go || r.kieu === "chi-dau" || r.kieu === "gan"));
     if (!clean.content.goiY.length) delete clean.content.goiY;
 
     // Drop rows that were added but left completely empty.
@@ -560,6 +574,9 @@ export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel,
 }
 
 // ===== data helpers =====
+// ⭐ Đợt 326 — 5 kiểu khớp hợp lệ (xem goiYTheoBang trong type-the-answer.js). Kiểu lạ → "yhet".
+const KIEU_HOP_LE = ["yhet", "chua", "chi-dau", "mau", "gan"];
+function chuanKieu(k) { return KIEU_HOP_LE.includes(k) ? k : "yhet"; }
 function normalize(activity) {
   const a = activity ? JSON.parse(JSON.stringify(activity)) : {};
   a.type = "type_the_answer";
@@ -584,12 +601,12 @@ function normalize(activity) {
   const bang = Array.isArray(a.content.goiY) ? a.content.goiY.slice() : [];
   a.content.items.forEach(it => {
     (Array.isArray(it.goiY) ? it.goiY : []).forEach(r => {
-      if (r && (r.go || r.noi)) bang.push({ de: it.prompt || "", kieu: r.kieu === "chua" ? "chua" : "yhet", go: String(r.go || ""), noi: String(r.noi || "") });
+      if (r && (r.go || r.noi)) bang.push({ de: it.prompt || "", kieu: chuanKieu(r.kieu), go: String(r.go || ""), noi: String(r.noi || "") });
     });
     delete it.goiY;
   });
   a.content.goiY = bang.map(r => ({
-    de: String(r && r.de || ""), kieu: r && r.kieu === "chua" ? "chua" : "yhet",
+    de: String(r && r.de || ""), kieu: chuanKieu(r && r.kieu),
     go: String(r && r.go || ""), noi: String(r && r.noi || "")
   }));
   return a;

@@ -5348,9 +5348,22 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **14/9/2026 sau Đợt 325** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **14/9/2026 sau Đợt 326** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (14/9/2026 — sau **Đợt 325**: ⬜ CHƯA BẤM TAY, CHỜ THẦY XÁC NHẬN)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (14/9/2026 — sau **Đợt 326**: ⬜ CHƯA BẤM TAY EDITOR, CHỜ THẦY XÁC NHẬN)
+>
+> **⭐ Đợt 326 — 3 KIỂU KHỚP MỚI cho bảng "Hướng dẫn khi sai" (Type the answer), thầy "ok hết các đề xuất".**
+> `goiYTheoBang()` nhận thêm `kieu`: `chi-dau` (chữ đúng, chỉ sai dấu câu/dấu cách — `go` trống) · `mau` (regex trên
+> chữ đã normalize; dùng cho rác/bấm 1 phím lướt bài = 19% lượt sai thật) · `gan` (sai chính tả 1 từ, qua `bestMatch()`
+> + `levChu()` + 3 lưới: bỏ khác đuôi s/ed/ing/ly, bỏ chữ là từ thật trong act, ngưỡng độ dài; `{tu}` = chữ em gõ).
+> Cửa mới ở đầu hàm: gõ ĐÚNG → `""` luôn. Editor: dropdown 5 kiểu, `chuanKieu()`, Save giữ dòng chi-dau/gan không có
+> `go`; ⭐ `MAX_ALTERNATES` 5 → 15 (bug có sẵn: editor cắt đáp án phụ thứ 7+ khi Save — 29 câu khoá Nền tảng dính).
+> Đo trên 100.059 câu trả lời thật (4.959 sai): 0 câu đúng bị bắn nhầm; 66,2% câu sai có hướng dẫn (trước: 43,9%).
+> Nguồn dữ liệu + script đo: `E:\LAP TRINH APP\DU LIEU TONG HOP\WORDWALL KET QUA TYPE THE ANSWER 14-09-2026\`;
+> bộ sinh bảng tra: skill `/chamloitypetheanswer` v2.0. Chi tiết: `GHI CHU DU AN.md` Đợt 326. ⬜ Thầy mở Edit một act
+> TTA → bảng tra → thấy 5 kiểu; thêm dòng chi-dau/gan → Save → mở lại còn nguyên.
+>
+> **Trước đó — Đợt 325 (⬜ CHƯA BẤM TAY, CHỜ THẦY XÁC NHẬN):**
 >
 > **Đợt 325 — 4 việc cho trang thư viện, thầy giao qua chat (đã hỏi bằng AskUserQuestion trước khi
 > code, thầy chốt "ok build").** (1) Nút icon Sort cạnh Grid/List — 6 kiểu (tên A→Z/Z→A · sửa gần
