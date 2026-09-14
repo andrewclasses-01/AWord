@@ -263,7 +263,12 @@ export function itemName(node) {
 function byName(a, b) {
   // folders first, then by name (case-insensitive)
   if (a.kind !== b.kind) return a.kind === "folder" ? -1 : 1;
-  return itemName(a).toLowerCase().localeCompare(itemName(b).toLowerCase());
+  // ⭐ Đợt 325b — `{numeric:true}` reads a run of digits as ONE number instead
+  // of comparing character-by-character, so "LESSON 2" sorts before "LESSON
+  // 10" (plain localeCompare put "LESSON 10"/"11" before "LESSON 2" — thầy
+  // caught this on the live grid, 14/9/2026 photo). `sensitivity:"base"`
+  // replaces the old `.toLowerCase()` (also folds accents).
+  return itemName(a).localeCompare(itemName(b), undefined, { numeric: true, sensitivity: "base" });
 }
 function descendantsOf(map, id) {
   // all folders/acts anywhere under folder `id`

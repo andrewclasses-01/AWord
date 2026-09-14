@@ -24,6 +24,11 @@
 > `timThuMuc` 3/3 ĐẠT, regex kho giả myLesson 6/6 ĐẠT. ⬜ CHƯA đăng nhập trang thật để bấm tay — kéo
 > file thật, đổi 6 kiểu Sort, CHECK cả 2 tab myLesson với thư mục trùng tên 2 cây, xem tab đổi tên
 > đúng lúc bấm qua lại thư mục/act. Xem GHI CHU DU AN.md Đợt 325)**.
+> **⭐ Đợt 325b (14/9/2026, thầy chụp ảnh grid thật): thư mục xếp "LESSON 1,10,11…,2" thay vì
+> "1,2,3…10" — `localeCompare` mặc định so từng ký tự, không đọc số làm một khối. Vá bằng
+> `{numeric:true}` (`compareNames()`) ở 4 chỗ so tên: nút Sort, 2 khung "Move to…",
+> `core/store.js::byName()`. Bàn thử 12 tên đúng trong ảnh 2/2 ĐẠT. ⬜ CHƯA bấm tay. Xem GHI CHU DU
+> AN.md Đợt 325b)**.
 > Trước đó: **(Đợt 324 — SHOWDOWN PODIUM, tinh chỉnh tiếp sau Đợt 323: thầy gửi
 > thêm 1 ảnh chụp bảng thật rồi yêu cầu 5 điều. Nền ô đã chọn đổi xanh dương → xanh lá nhạt
 > (`#dcfce7`/`#4ade80`); vạch chia giữa 2 khối đậm hơn + khoảng cách tăng gần gấp 3 (`0.5→1.4 aw-u`);
@@ -5358,6 +5363,15 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 > tên theo nơi đang đứng (`?f=416` → "LSA2-S2.T3.P1-2" thay vì luôn "AWord in ANDREW CLASSES").
 > `node --check` sạch; brace `app.css` cân bằng (1864=1864). 3 bàn thử độc lập (sort/lọc cây/regex kho
 > giả myLesson) tổng 16/16 ĐẠT. Chi tiết: `GHI CHU DU AN.md` Đợt 325.
+>
+> **⭐ Đợt 325b (14/9/2026, thầy chụp ảnh grid thật ngay sau khi lên live)** — thư mục LESSON xếp
+> "1, 10, 11, 12…, 2" thay vì "1, 2, 3…10, 11, 12": `localeCompare` mặc định so TỪNG KÝ TỰ, không đọc
+> một cụm số làm một khối (bug có sẵn từ trước Đợt 325 — `core/store.js::byName()` gốc; Sort mới chỉ
+> làm nó lộ ra). Vá bằng tuỳ chọn Intl có sẵn `{numeric:true}` (hàm `compareNames()` mới trong
+> `main.js`) ở ĐỦ 4 chỗ so tên trong app: nút Sort (`compareBySort`), 2 khung "Move to…" (xếp cây thư
+> mục), và `byName()` (mặc định của mọi danh sách trước khi Sort có thể đổi lại). Bàn thử độc lập bằng
+> đúng 12 tên trong ảnh thầy chụp — 2/2 ĐẠT, xếp đúng `0→1→10→…→14→14.5→15→16`. Chi tiết: `GHI CHU DU
+> AN.md` Đợt 325b. ⬜ CHƯA đăng nhập trang thật để bấm tay xác nhận.
 >
 > ⬜ Còn chờ — **CHƯA đăng nhập trang aword thật để bấm tay việc nào** (sandbox không đăng nhập Google
 > được): (a) đổi 6 kiểu Sort, xem thứ tự card đúng mắt thầy không; (b) kéo file .xlsm thật vào vùng

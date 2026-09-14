@@ -112,19 +112,26 @@ const SORT_OPTIONS = [
   ["created-desc", "Date created (newest first)"],
   ["created-asc", "Date created (oldest first)"],
 ];
-function sortKeyOf(node) { return itemName(node).toLowerCase(); }
+function sortKeyOf(node) { return itemName(node); }
+// ⭐ Đợt 325b (thầy 14/9/2026, ảnh chụp) — "LESSON 1, LESSON 10, LESSON 11…"
+// thay vì "LESSON 1, 2, 3…": tên PLAIN localeCompare so từng KÝ TỰ, nên "1" <
+// "10" < "2" vì '1' < '2' rồi hết chuỗi số ngắn hơn thắng — không đọc số làm
+// một khối. `{numeric:true}` là NGAY CHÍNH tuỳ chọn Intl cho việc này ("natural
+// sort" — so từng đoạn số như một số, không phải chuỗi ký tự); `sensitivity:
+// "base"` thay cho `.toLowerCase()` cũ (không phân biệt hoa/thường lẫn dấu).
+function compareNames(a, b) { return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }); }
 // An assignment card has no `updatedAt` of its own (nothing ever bumps one) —
 // fall back to `createdAt` so "Last modified" still means something for it
 // instead of silently doing nothing.
 function modifiedOf(node) { return node.updatedAt ?? node.createdAt ?? 0; }
 function compareBySort(a, b) {
   switch (state.sort) {
-    case "name-desc": return sortKeyOf(b).localeCompare(sortKeyOf(a));
+    case "name-desc": return compareNames(sortKeyOf(b), sortKeyOf(a));
     case "modified-desc": return modifiedOf(b) - modifiedOf(a);
     case "modified-asc": return modifiedOf(a) - modifiedOf(b);
     case "created-desc": return (b.createdAt || 0) - (a.createdAt || 0);
     case "created-asc": return (a.createdAt || 0) - (b.createdAt || 0);
-    case "name-asc": default: return sortKeyOf(a).localeCompare(sortKeyOf(b));
+    case "name-asc": default: return compareNames(sortKeyOf(a), sortKeyOf(b));
   }
 }
 // Re-sort a mixed folder/act list by the chosen key while keeping folders
@@ -1603,7 +1610,7 @@ async function moveAssignmentFlow(a) {
 
     function renderChildren(parentId, depth) {
       folders.filter(f => (f.parentId ?? null) === (parentId ?? null))
-        .sort((x, y) => itemName(x).localeCompare(itemName(y)))
+        .sort((x, y) => compareNames(itemName(x), itemName(y)))   // ⭐ Đợt 325b — natural sort
         .forEach(f => { tree.append(pickRow(itemName(f), depth, f.id)); renderChildren(f.id, depth + 1); });
     }
     function pickRow(label, depth, id) {
@@ -2598,7 +2605,7 @@ async function moveFlow(node) {
 
     function renderChildren(parentId, depth) {
       folders.filter(f => (f.parentId ?? null) === (parentId ?? null) && !forbidden.has(f.id))
-        .sort((a, b) => itemName(a).localeCompare(itemName(b)))
+        .sort((a, b) => compareNames(itemName(a), itemName(b)))   // ⭐ Đợt 325b — natural sort
         .forEach(f => { tree.append(pickRow(itemName(f), depth, f.id)); renderChildren(f.id, depth + 1); });
     }
     function pickRow(label, depth, id) {

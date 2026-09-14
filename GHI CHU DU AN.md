@@ -36,6 +36,13 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > biệt: kéo file thật vào giữa trang trống có nhập đúng thư mục đang đứng; nút Sort đổi thứ tự đúng
 > mắt thầy; myLesson v2.67.0 bấm CHECK ở cả 2 tab không còn hỏi chọn nhầm thư mục cây kia; tab trình
 > duyệt đổi tên đúng khi bấm qua lại các thư mục. Xem mục **Đợt 325** trong file này.)
+> **⭐ Đợt 325b** (14/9/2026, thầy chụp ảnh grid thật ngay sau khi Đợt 325 lên live): thư mục xếp
+> "LESSON 1, 10, 11, 12…, 2" thay vì "1, 2, 3…10" — `localeCompare` mặc định so TỪNG KÝ TỰ, không đọc
+> số làm một khối (bug có sẵn từ trước Đợt 325, Sort mới chỉ làm lộ ra). Vá bằng tuỳ chọn có sẵn
+> `{numeric:true}` (`compareNames()` mới) ở CẢ 4 chỗ so tên trong app: nút Sort, 2 khung "Move to…",
+> và `core/store.js::byName()` (mặc định của mọi danh sách). Bàn thử độc lập bằng đúng 12 tên trong
+> ảnh thầy chụp — 2/2 ĐẠT, xếp đúng `0→1→10→…→14→14.5→15→16`. ⬜ CHƯA đăng nhập trang thật để bấm tay.
+> Xem mục **Đợt 325b**.)
 > Trước đó: **Đợt 324** (12/9/2026, thầy gửi thêm 1 ảnh chụp bảng thật sau Đợt 323 — 5 tinh chỉnh
 > tiếp cho Podium: nền ô đã chọn đổi xanh dương → **xanh lá** nhạt (`#dcfce7`/`#4ade80`); vạch chia
 > giữa 2 khối đậm hơn + khoảng cách tăng gần gấp 3 (`0.5→1.4 aw-u`); ⭐⭐⭐ hiệu ứng tích nay khiến ĐÚNG
@@ -503,6 +510,41 @@ Ba bàn thử độc lập, copy NGUYÊN VĂN biểu thức từ code thật (kh
   trùng — chọn đúng cái cần" giữa hai cây khác nhau nữa.
 - Bấm qua lại vài thư mục/act/gốc — xem tab trình duyệt (viền tab, không phải nội dung trang) có đổi
   tên đúng như tả không.
+
+---
+
+## Đợt 325b (14/9/2026, thầy xem ảnh chụp grid thật sau khi lên live Đợt 325) — **SẮP XẾP TÊN THEO SỐ THẬT ("NATURAL SORT"), KHÔNG PHẢI TỪNG KÝ TỰ**
+
+Thầy chụp ảnh grid: các thư mục LESSON hiện theo thứ tự "LESSON 1, LESSON 10, LESSON 11, LESSON
+12…, LESSON 2" thay vì "1, 2, 3…10, 11, 12". Đây KHÔNG phải bug riêng của nút Sort mới (Đợt 325) —
+nó là cách `String.prototype.localeCompare` mặc định vẫn luôn so SÁCH TỪNG KÝ TỰ MỘT: "LESSON 1" và
+"LESSON 10" cùng bắt đầu "LESSON 1", ký tự tiếp theo là `""` (hết chuỗi, nhỏ nhất) so với `"0"` ⇒
+"LESSON 1" < "LESSON 10"; còn "LESSON 2" so với "LESSON 1" thì `"2" > "1"` ⇒ "LESSON 2" đứng SAU cả
+cụm "LESSON 1x" — đúng là so chữ, không phải so số. Bug này đã có SẴN từ trước Đợt 325 (hàm `byName`
+gốc trong `core/store.js` dùng đúng kiểu so này) — Sort mới chỉ làm nó LỘ RÕ vì giờ có nút bấm để
+nhìn thấy "Name (A→Z)" tường minh.
+
+### Vá — MỘT công thức, sửa ở cả 4 chỗ so tên trong app
+`Intl`/`localeCompare` có sẵn tuỳ chọn CHÍNH XÁC cho việc này: `{numeric: true}` — đọc một CỤM CHỮ
+SỐ liên tiếp thành MỘT SỐ để so, thay vì so từng chữ số riêng lẻ (kèm `sensitivity: "base"` thay cho
+`.toLowerCase()` cũ, cũng bỏ qua dấu tiếng Việt luôn). Không cần viết thuật toán "natural sort" tay —
+trình duyệt có sẵn.
+- `compareNames(a, b)` mới trong `main.js`, dùng bởi `compareBySort()` (nút Sort, Đợt 325) VÀ 2 chỗ
+  xếp cây thư mục trong hộp thoại "Move to…" (trước đó gọi thẳng `.localeCompare()` trần).
+- `core/store.js::byName()` — hàm mặc định xếp MỌI danh sách thư mục/act (trước khi nút Sort có thể
+  đổi lại) — cùng công thức, nên cả những chỗ Sort chưa với tới (search fallback trước khi resort,
+  danh sách gốc cho `timThuMuc`/`listFolders`…) cũng tự nhiên đúng theo.
+
+### Đã kiểm
+`node --input-type=module --check` sạch cho `main.js` + `core/store.js`; brace `app.css` không đổi
+(1864=1864, đợt này không đụng CSS). Bàn thử độc lập bằng chính 12 tên thư mục trong ảnh thầy chụp
+(`CHUONG NEN TANG Y THUC`, `DU PHONG BT 27...`, `LESSON 0`→`LESSON 16`, có cả `LESSON 14.5`) — xếp
+đúng thứ tự số thật `0→1→10→11→12→13→14→14.5→15→16`, và một phép thử riêng với dải đủ `1..15` xác
+nhận `LESSON 2` đứng đúng giữa `LESSON 1` và `LESSON 3`, trước `LESSON 9`/`LESSON 10`.
+
+⬜ **CHƯA đăng nhập trang thật để bấm tay** — thầy tải lại (Ctrl+F5 để chắc không dính cache CSS/JS
+cũ) rồi xem lại grid, xác nhận thứ tự đúng 1,2,3…9,10,11… ở mọi thư mục có đánh số, kể cả những chỗ
+số không liền mạch (14 rồi 14.5 rồi 15 như ảnh thầy gửi).
 
 ---
 
