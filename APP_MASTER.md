@@ -5350,7 +5350,14 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 
 ## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **14/9/2026 sau Đợt 329** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (14/9/2026 — sau **Đợt 329**: ⬜ CHƯA BẤM TAY, CHỜ THẦY XÁC NHẬN)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (14/9/2026 — sau **Đợt 329**: ⬜ THẦY CHỐT "TẠM THẾ ĐÃ", DỪNG PHIÊN — CHƯA BẤM TAY
+> ĐẦY ĐỦ, sẽ cải tiến Speed Sorting tiếp ở phiên sau)
+>
+> Thầy gõ *"ok tạm thế đã. Tôi sẽ cải tiến thêm sau, bàn giao và kết thúc phiên ở đây"* ngay sau Đợt 329 — KHÔNG
+> phải "đã test xong", mà là tạm dừng vòng chỉnh Speed Sorting ở trạng thái hiện tại (đã lên live, đã tự kiểm bằng
+> số trên dev server) để làm việc khác; ⬜ vẫn còn treo việc bấm tay đầy đủ (máy soạn · TOMKO · điện thoại) từ các
+> đợt trước. Phiên sau nếu thầy quay lại Speed Sorting: đọc đủ **Đợt 327 → 329** bên dưới trước khi sửa tiếp, và
+> hỏi thầy đã thử được tới đâu rồi mới đoán việc còn lại.
 >
 > **⭐ Đợt 329 — SPEED SORTING: 3 chỉnh sau khi thầy bấm tay Đợt 328.** (1) Chữ ô chạy = MỘT cỡ cho cả ván nhưng là
 > cỡ LỚN NHẤT mà mọi câu đều lọt khung — `fitChipFont()` đo thật bằng ô dò, tìm nhị phân K, ghi `--gs-chipfont:

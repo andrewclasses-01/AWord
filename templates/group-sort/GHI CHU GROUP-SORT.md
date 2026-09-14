@@ -1,6 +1,8 @@
 # GHI CHÚ — SPEED SORTING (type `group_sort`: Speed sorting · Group sort)
 
-**Trạng thái: ⬜ Đợt 329 (14/9/2026) — thầy bấm tay Đợt 328 rồi báo 3 điều chỉnh nữa, ĐÃ vá, CHỜ THẦY BẤM TAY LẠI.**
+**Trạng thái: ⬜ Đợt 329 (14/9/2026) — thầy "ok tạm thế đã, cải tiến thêm sau" rồi DỪNG PHIÊN.** Đã lên live, đã tự
+kiểm bằng số trên dev server, nhưng **chưa phải thầy đã bấm tay đầy đủ máy soạn/TOMKO/điện thoại xác nhận xong** —
+phiên sau quay lại thì đọc hết Đợt 327→329 trước, hỏi thầy đã thử tới đâu rồi mới làm tiếp, đừng coi là đã chốt.
 Đợt 288 (03/9/2026) dựng lần đầu dưới tên "Group sort" cho khóa NỀN TẢNG TIẾNG ANH (Lesson 16 BT2 trên Wordwall
 là *Speed sorting* 7 nhóm; Lesson 13 BT1 là *Group sort* kéo thả). Đợt 327 **đổi tên hiển thị thành "Speed sorting"**
 và **làm lại chế độ băng chuyền** theo mockup thầy duyệt (artifact "AWord Speed Sorting"). Đợt 328: **☰ Menu dừng
