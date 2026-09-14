@@ -5348,9 +5348,19 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **14/9/2026 sau Đợt 327** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **14/9/2026 sau Đợt 328** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (14/9/2026 — sau **Đợt 327**: ⬜ CHƯA BẤM TAY, CHỜ THẦY XÁC NHẬN)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (14/9/2026 — sau **Đợt 328**: ⬜ CHƯA BẤM TAY, CHỜ THẦY XÁC NHẬN)
+>
+> **⭐ Đợt 328 — SPEED SORTING: 3 chỉnh sau khi thầy bấm tay Đợt 327.** (1) ☰ Menu nay dừng HẲN băng chuyền —
+> `requestAnimationFrame` viết tay không nằm trong tầm dừng WAAPI của engine, vá bằng cầu nối `gsPauseHandlers`
+> (module-level) sang `tpl.onPause(paused)`, đúng khuôn `maze-chase.js`. (2) Bỏ bóng 3D mép dưới ô chạy
+> (`box-shadow: none`, không theo theme nữa). (3) Ô chạy đổi **vuông 13,5u** (từ chữ nhật dẹt 24,3×11,9u); ô nhóm
+> cố định đổi **kích thước cố định 16×9,4u ĐỀU NHAU TUYỆT ĐỐI** (trước co theo độ dài tên) — cả hai cho chữ xuống
+> tới 4 dòng, co nhỏ nếu cần. Đã kiểm: Menu dừng/chạy lại đúng, bộ 7 nhóm tiếng Việt dài không tràn/không cắt chữ,
+> Group sort (pool) không đụng. Backup `_backup/dot328/`. Chi tiết: `GHI CHU DU AN.md` Đợt 328.
+>
+> **Trước đó — Đợt 327 (⬜ CHƯA BẤM TAY, CHỜ THẦY XÁC NHẬN):**
 >
 > **⭐ Đợt 327 — GROUP SORT → "SPEED SORTING": chế độ băng chuyền làm lại từ mockup thầy duyệt (6 vòng).**
 > Ô câu cùng cỡ trôi trái→phải trên lane 30%, ô nhóm vàng nét đứt không màu/không số; **chạm giữ bất kỳ ô nào**

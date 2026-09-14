@@ -1,10 +1,12 @@
 # GHI CHÚ — SPEED SORTING (type `group_sort`: Speed sorting · Group sort)
 
-**Trạng thái: ⬜ Đợt 327 (14/9/2026) — thầy "ok build" sau 6 vòng mockup, ĐÃ đưa vào code, CHỜ THẦY BẤM TAY.**
+**Trạng thái: ⬜ Đợt 328 (14/9/2026) — thầy bấm tay Đợt 327 rồi báo 3 điều chỉnh, ĐÃ vá, CHỜ THẦY BẤM TAY LẠI.**
 Đợt 288 (03/9/2026) dựng lần đầu dưới tên "Group sort" cho khóa NỀN TẢNG TIẾNG ANH (Lesson 16 BT2 trên Wordwall
 là *Speed sorting* 7 nhóm; Lesson 13 BT1 là *Group sort* kéo thả). Đợt 327 **đổi tên hiển thị thành "Speed sorting"**
-và **làm lại chế độ băng chuyền** theo mockup thầy duyệt (artifact "AWord Speed Sorting"). ⛔ `type` và giá trị
-`options.mode` ("tap"/"drag") **KHÔNG đổi** — act/bài giao đã lưu mở đúng chế độ cũ, không migration.
+và **làm lại chế độ băng chuyền** theo mockup thầy duyệt (artifact "AWord Speed Sorting"). Đợt 328: **☰ Menu dừng
+hẳn băng chuyền · bỏ bóng 3D · ô chạy + ô nhóm đổi sang vuông/chữ nhật to hơn, đều nhau tuyệt đối** (kéo thả chính
+xác hơn). ⛔ `type` và giá trị `options.mode` ("tap"/"drag") **KHÔNG đổi** — act/bài giao đã lưu mở đúng chế độ cũ,
+không migration.
 
 ## Cách chơi
 
@@ -12,15 +14,21 @@ Dữ liệu: `content.groups = [tên…]` (2–8 nhóm) · `content.items = [{ t
 Danh sách phẳng để "Start with mistakes" (`itemsKey: "items"`) và Show answers chạy đúng khuôn lõi.
 
 **Chế độ BĂNG CHUYỀN** (`options.mode = "tap"`, mặc định — Speed sorting):
-- Lane trên (30% thẻ) kẹp giữa hai vạch tick `.aw-gs-rail`; ô câu `.aw-gs-bchip` **cùng một cỡ cố định**
-  (24,3u × 11,9u, chữ 2u, cắt 3 dòng) trôi **trái → phải** liên tục (rAF, `chip.x` px layout → transform). 5 ô sống
-  cùng lúc (`BELT_SLOTS`); ô ra khỏi mép phải vào lại từ mép trái mang câu kế (không lặp câu đang hiện trên băng).
-  Màu xoay 4 tile theme + tím riêng `--aw-gs-tile-4` (`--aw-tile-fixed` vẫn thắng).
-- Dưới: ô nhóm `.aw-gs-pill` **vàng nhạt viền nét đứt, không màu theo nhóm, không số** (không lộ đáp án), xếp
-  `flex-wrap` tự canh giữa (7 nhóm ⇒ 3+3+1 / 4+3 tuỳ độ dài tên), đệm trên 3,8u. `autoFit` đo qua `.aw-gs-pillrow`.
+- Lane trên (30% thẻ) kẹp giữa hai vạch tick `.aw-gs-rail`; ô câu `.aw-gs-bchip` **cùng một cỡ cố định, vuông**
+  (Đợt 328: 13,5u × 13,5u — trước là chữ nhật dẹt 24,3×11,9u; chữ 1,35u, cắt tới **4 dòng**, **bỏ hẳn bóng đổ
+  "3D"** `box-shadow: none`) trôi **trái → phải** liên tục (rAF, `chip.x` px layout → transform). 5 ô sống cùng lúc
+  (`BELT_SLOTS`); ô ra khỏi mép phải vào lại từ mép trái mang câu kế (không lặp câu đang hiện trên băng). Màu xoay
+  4 tile theme + tím riêng `--aw-gs-tile-4` (`--aw-tile-fixed` vẫn thắng).
+- Dưới: ô nhóm `.aw-gs-pill` **vàng nhạt viền nét đứt, không màu theo nhóm, không số** (không lộ đáp án), Đợt 328
+  đổi sang **kích thước cố định 16u × 9,4u đều nhau tuyệt đối** (trước co giãn theo độ dài tên — dễ kéo trượt vì
+  mỗi ô một cỡ); chữ nằm trong `<span class="aw-gs-pilltext">` cắt tới 4 dòng, cả width/height nhân `var(--fit)`
+  để `autoFit` vẫn co được. `flex-wrap` tự canh giữa (7 nhóm ⇒ 5+2 hàng), đệm trên 3,8u. `autoFit` đo qua
+  `.aw-gs-pillrow`.
 - **Chạm giữ BẤT KỲ ô nào**: ô ẩn (`.is-held`) nhưng **slot vẫn trôi theo băng**; bản sao `.aw-gs-dragclone.is-belt`
   bám con trỏ (trên body/fullscreen host, cỡ/bo góc/đệm/chữ chép bằng px vì ngoài stage không có `--aw-u`).
   move/up/cancel nghe trên **window** + `document.visibilitychange` (⛔ không dùng `blur`).
+- **☰ Menu dừng hẳn băng chuyền** (Đợt 328): `gsPauseHandlers` module-level bắc cầu sang `tpl.onPause(paused)` —
+  engine chỉ tự dừng animation qua WAAPI, rAF viết tay phải tự khai (đúng khuôn `maze-chase.js`/`gameshow.js`).
 - Thả **đúng**: ✓ (`aw-mark-fly`) trên ô nhóm + sao bay về điểm + điểm +1 + **câu tiêu**, slot nhận câu mới từ mép trái.
   Thả **sai**: ✗ trên ô nhóm + tiếng sai + mất tim (nếu bật) + trừ điểm (`pointsOff` qua `ui.flyPenalty`) + **câu cũng
   tiêu, KHÔNG quay lại băng** (thầy chốt). Thả **ra ngoài**: clone bay về đúng chỗ slot đang trôi (đích đọc lại mỗi
@@ -58,6 +66,17 @@ Lưu ra `{groups, items}`; item của nhóm không còn tồn tại bị bỏ kh
   ô nhóm tí hon; phải đo `.aw-gs-pillrow` không kéo giãn (đúng cảnh báo đầu `core/fit.js`).
 - ⛔ Bẫy bàn thử: công cụ chuột của Browser pane lệch **1,11×** so với toạ độ trang; ô đang trôi nên phải chặn riêng
   `requestAnimationFrame` cho hàm `loop` mới bấm trúng. Bẫy Đợt 288 (sao bay `fill:"both"`) vẫn đúng.
+
+## Đã kiểm (dev server, test.html, 14/9/2026 — Đợt 328)
+- Ô chạy đo đúng 13,5u × 13,5u, `box-shadow: none`; đệm còn lại trong lane ~1,1u trên/dưới (không tràn/không bị
+  `overflow:hidden` của `.aw-gs-lane` cắt). Ô nhóm đo đúng 16u × 9,4u mọi ô, `--fit` giữ 1 với bộ 7 nhóm tiếng Việt
+  dài (5+2 hàng), không ô nào bị cắt chữ (`scrollHeight` so `clientHeight` của `.aw-gs-pilltext`).
+- Mở ☰ Menu giữa ván (`?speed=1`): đo `transform` của mọi ô chạy 2 lần cách 900ms — **y hệt nhau tuyệt đối** (trước
+  vá: vẫn trôi). Bấm Resume: băng chạy tiếp bình thường, không giật/nhảy vị trí. `.aw-stage-dim` xuất hiện/biến
+  mất đúng nhịp mở/đóng Menu (⛔ lớp phủ đúng là `.aw-stage-dim`, KHÔNG phải `.aw-tool-dim` — tên khác, dùng cho
+  việc khác trong engine.js).
+  Kéo thả lại một câu đúng sau khi đổi cỡ ô — vẫn ăn điểm, nav "1 of 12" bình thường.
+- Group sort (`?mode=drag`, `.aw-gs-chip`/`.aw-gs-box`) đo lại — không đổi hình, không dính CSS mới.
 
 ## Chưa làm / ĐỀ XUẤT
 - ⬜ Thầy bấm tay: máy soạn · TOMKO · điện thoại (cảm ứng chưa đo — `touch-action:none` + pointer capture như Unjumble).

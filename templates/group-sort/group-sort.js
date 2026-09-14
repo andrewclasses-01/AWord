@@ -48,6 +48,15 @@ import { MIN_GROUPS, normalizeGroups, groupIndexOf } from "./gs-shared.js";
 const MAX_LIVES = 10;
 const TAP_SLOP_PX = 7;   // drag mode: a pointer that moved less than this is a TAP, not a drag
 const BELT_SLOTS = 5;    // belt mode: chip slots kept alive on the belt at once
+
+// Menu pause (Đợt 328) — bridges the CURRENT mount's belt pause/resume pair
+// out to the template-level `onPause` hook engine.js calls when the ☰ menu
+// opens/closes. Module-level single, same pattern as maze-chase's
+// `mazePauseHandlers`: AWord only ever mounts one activity at a time. The
+// engine's own step (pausing every WAAPI `.animate()` under the stage) does
+// NOT reach the belt — it moves via a plain requestAnimationFrame loop, not
+// `.animate()` — so without this the conveyor kept drifting behind the dim.
+let gsPauseHandlers = null;
 const CHIP_COLOURS = 5;  // belt mode: theme tiles 0..3 + the template's own purple
 
 // Belt speed 1..10 -> lane-widths per second (3 ≈ the pace thầy approved).
@@ -95,6 +104,13 @@ const gsTemplate = {
   },
 
   edit: openGsEditor,
+
+  // See `gsPauseHandlers` above: only the belt mode has anything of its own
+  // to pause (drag mode has no timer/animation outside the engine's reach).
+  onPause(paused) {
+    if (!gsPauseHandlers) return;
+    if (paused) gsPauseHandlers.pause(); else gsPauseHandlers.resume();
+  },
 
   sounds: {
     play: gsSound.intro,
@@ -271,6 +287,7 @@ const gsTemplate = {
     let paintNav = () => {};
     let tapCleanup = null;
     let cleanupMode = () => {};
+    gsPauseHandlers = null;   // this mount's own, until mountBelt() (if any) sets it
 
     if (mode === "drag") cleanupMode = mountDrag();
     else cleanupMode = mountBelt();
@@ -279,6 +296,7 @@ const gsTemplate = {
       finished = true;
       timers.forEach(clearTimeout); timers.length = 0;
       cleanupMode();
+      gsPauseHandlers = null;
       if (ui.livesSlot) ui.livesSlot.innerHTML = "";
       document.querySelectorAll(".aw-gs-flyclone, .aw-gs-star, .aw-gs-dragclone").forEach(n => n.remove());
     };
@@ -330,8 +348,9 @@ const gsTemplate = {
         // stretched box's scrollHeight == its box height — the fit.js trap).
         const pillRow = el("div", "aw-gs-pillrow");
         pillEls = groups.map((g, i) => {
-          const p = el("div", "aw-gs-pill", escapeHtml(g));
+          const p = el("div", "aw-gs-pill");
           p.dataset.group = String(i);
+          p.append(el("span", "aw-gs-pilltext", escapeHtml(g)));
           pillRow.append(p);
           return p;
         });
@@ -450,6 +469,22 @@ const gsTemplate = {
         lastTime = null;
         rafId = requestAnimationFrame(loop);
       }
+
+      // Đợt 328 — the ☰ Menu dims the stage but does NOT reach a plain
+      // requestAnimationFrame loop (only WAAPI `.animate()` calls), so
+      // without this bridge the belt kept drifting behind the dim. Bridged
+      // to the template-level `onPause` hook via `gsPauseHandlers` above.
+      function pauseGame() {
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+        running = false;
+      }
+      function resumeGame() {
+        if (finished || prepTimer || !belt.length) return;   // over, still counting in, or nothing left to run
+        running = true;
+        lastTime = null;
+        rafId = requestAnimationFrame(loop);
+      }
+      gsPauseHandlers = { pause: pauseGame, resume: resumeGame };
 
       // Every chip drifts — a HELD one too (its slot stays in sequence).
       // Whatever has fully left the right edge comes back in from the left

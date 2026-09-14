@@ -409,6 +409,42 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 328 (14/9/2026, thầy test tay Đợt 327 rồi báo 4 điều chỉnh) — **SPEED SORTING: dừng hẳn nền khi mở Menu · bỏ bóng 3D · ô vuông to hơn (cả chạy lẫn cố định)**
+
+**Bối cảnh.** Thầy bấm tay Đợt 327 ngay sau khi lên live, báo 3 việc: (1) mở ☰ Menu thì băng chuyền vẫn chạy phía
+sau lớp phủ tối; (2) bỏ bóng đổ kiểu nút 3D ở mép dưới ô chạy, để phẳng; (3) ô chạy quá nhỏ/dẹt nên kéo thả hay
+trượt vị trí — đổi cả ô chạy lẫn ô nhóm cố định sang **hình vuông/chữ nhật to hơn, kích thước bằng nhau tuyệt đối**,
+cho phép chữ xuống 2-3-4 dòng và co nhỏ lại. Backup `_backup/dot328/` (bản trước sửa của 2 file, lấy từ
+`git show HEAD:`). Sửa 2 file: `group-sort.js` (bridge tạm dừng) · `group-sort.css` (kích thước + bỏ bóng).
+
+- **Dừng băng chuyền khi mở Menu**: `core/engine.js` chỉ tự dừng những gì chạy qua Web Animations API
+  (`stage.getAnimations({subtree:true})`) khi mở ☰ — băng chuyền của template này chạy bằng
+  `requestAnimationFrame` viết tay nên KHÔNG nằm trong tầm với đó (đúng lỗi thầy thấy). Vá theo đúng khuôn đã có
+  sẵn ở `maze-chase.js`/`gameshow.js`/…: `let gsPauseHandlers = null;` **ở cấp module** (không phải trong
+  `mount()` — engine gọi `tpl.onPause` trên chính định nghĩa template, không phải trên một phiên chơi) làm cầu nối
+  sang `tpl.onPause(paused)` mới thêm; `mountBelt()` đăng ký `gsPauseHandlers = { pause: pauseGame, resume:
+  resumeGame }` — `pauseGame()` huỷ `rafId` + `running=false`, `resumeGame()` đặt lại `lastTime=null` rồi xin khung
+  hình mới (tránh nhảy cóc vị trí do `dt` dồn trong lúc dừng). `mount()` đặt `gsPauseHandlers = null` trước khi rẽ
+  nhánh (và trong `cleanup()`) để chế độ Group sort (không có gì cần dừng) hoặc lượt chơi TRƯỚC không để lại tham
+  chiếu chết. Đã kiểm: mở Menu → toạ độ `transform` của mọi ô đứng yên tuyệt đối (đo 2 lần cách 900ms, y hệt nhau);
+  bấm Resume → chạy tiếp bình thường, không giật.
+- **Bỏ bóng 3D**: `.aw-gs-bchip` đổi `box-shadow` từ cái "gờ nổi" `var(--aw-tile-shadow, 0 0.6u 0 var(--tile-dark-eff))`
+  sang thẳng `none` (không theo biến theme nữa — thầy muốn phẳng tuyệt đối, không tuỳ theme).
+- **Ô chạy vuông to hơn**: `.aw-gs-bchip` từ 24,3u × 11,9u (chữ nhật dẹt) → **13,5u × 13,5u (vuông)**, chữ 2u → 1,35u,
+  `.aw-gs-bchiptext` cắt dòng 3 → **4 dòng**. Đo lane cao ~15,63u ⇒ ô 13,5u để lại ~1,1u đệm trên/dưới, không tràn.
+- **Ô nhóm cố định to hơn, ĐỀU NHAU TUYỆT ĐỐI** (trước đây rộng theo độ dài tên, chỉ cao vừa đủ chữ — dễ kéo trượt
+  vì mỗi ô một cỡ): `.aw-gs-pill` bỏ `min-width` co giãn, đổi hẳn sang **width/height cố định 16u × 9,4u** (nhân
+  `var(--fit)` như cũ để `autoFit` vẫn co được khi 6-8 tên nhóm dài cần nhiều hàng); chữ nay nằm trong
+  `<span class="aw-gs-pilltext">` mới (JS bọc thêm) để cắt dòng dọc theo đúng khuôn `.aw-gs-bchiptext` — trước đó
+  chữ là text node trần, không cắt dòng được nếu ép chiều cao cố định. Đã kiểm bộ 7 nhóm tiếng Việt dài (câu hỏi
+  Lesson 16 BT2): 2 hàng (5+2), `--fit` vẫn = 1, 0 ô bị cắt chữ (`scrollHeight` so `clientHeight`).
+- ✔ Đo lại chế độ Group sort (pool + hộp `.aw-gs-chip`/`.aw-gs-box`) — không đụng, không đổi hình.
+
+⬜ **Thầy bấm tay lại** trên máy soạn/TOMKO: mở Menu giữa ván xem nền có đứng im hoàn toàn không, cảm nhận cỡ ô mới
+có kéo thả chính xác hơn không.
+
+---
+
 ## Đợt 327 (14/9/2026, thầy "ok build, đưa vào aword thật" sau 6 vòng mockup) — **GROUP SORT → SPEED SORTING: chế độ băng chuyền làm lại, kéo-thả thay bấm nút**
 
 **Bối cảnh.** Thầy đưa 2 ảnh (Speed sorting thật của Wordwall + bản AWord đang có) và 5 yêu cầu; thiết kế
