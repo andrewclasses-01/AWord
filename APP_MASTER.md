@@ -5348,10 +5348,22 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **14/9/2026 sau Đợt 329** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **14/9/2026 sau Đợt 330** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (14/9/2026 — sau **Đợt 329**: ⬜ THẦY CHỐT "TẠM THẾ ĐÃ", DỪNG PHIÊN — CHƯA BẤM TAY
-> ĐẦY ĐỦ, sẽ cải tiến Speed Sorting tiếp ở phiên sau)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (14/9/2026 — sau **Đợt 330**: ⬜ ĐÃ SỬA + TỰ KIỂM BẰNG BÀN THỬ, CHƯA BẤM TAY TRANG THẬT)
+>
+> **⭐ Đợt 330 — GẤP DANH SÁCH BÀI GIAO DƯỚI STAGE VÀO NÚT "Set assignment", nhấn giữ để bung.** Thầy yêu cầu qua
+> chat: danh sách bài giao (`.aw-as-bars`, dưới khung stage của một act) mặc định GẤP LẠI, nhấn GIỮ nút "Set
+> assignment" (icon checklist, cụm phải dưới stage) để bung/gấp lại NGAY TẠI VỊ TRÍ CŨ; chạm ngắn vẫn mở form Set
+> assignment như trước. Dùng lại đúng khuôn `tapOrHold()` (`core/press.js`, Đợt 192/194/195): `onTap` = logic mở
+> form cũ nguyên vẹn, `onHold` chỉ toggle class `is-collapsed`. Sửa `core/engine.js` + `core/app.css`. Bàn thử mới
+> `scratch/dot330-test.html` (chạy thật `startGame()`, cử chỉ pointerdown/up giả lập) 11/11 ĐẠT; `node
+> --input-type=module --check` sạch; brace `app.css` cân bằng (1865=1865). Vá kèm 2 export còn thiếu trong
+> `scratch/fake-firebase.js` (gitignored) để bench chạm được tới `openAssignmentSetup`. Chi tiết: `GHI CHU DU
+> AN.md` Đợt 330. ⬜ CHƯA đăng nhập trang thật để bấm tay (sandbox không đăng nhập Google được).
+>
+> **Trước đó — Đợt 329 (⬜ THẦY CHỐT "TẠM THẾ ĐÃ", DỪNG PHIÊN — CHƯA BẤM TAY ĐẦY ĐỦ, sẽ cải tiến Speed Sorting tiếp
+> ở phiên sau):**
 >
 > Thầy gõ *"ok tạm thế đã. Tôi sẽ cải tiến thêm sau, bàn giao và kết thúc phiên ở đây"* ngay sau Đợt 329 — KHÔNG
 > phải "đã test xong", mà là tạm dừng vòng chỉnh Speed Sorting ở trạng thái hiện tại (đã lên live, đã tự kiểm bằng
@@ -7125,7 +7137,19 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐⭐⭐⭐ **MỚI NHẤT (Đợt 311, 08/9/2026) — ✅ ĐÃ COMMIT + PUSH, chỉ còn tay thầy.**
+> ⭐⭐⭐⭐⭐ **MỚI NHẤT (Đợt 330, 14/9/2026) — ⬜ ĐÃ SỬA + TỰ KIỂM BẰNG BÀN THỬ, CHƯA BẤM TAY TRANG THẬT.**
+> Vùng: **danh sách bài giao dưới stage gấp vào nút "Set assignment"**, nhấn giữ để bung/gấp. Bản đồ ở
+> mục **0a ▸ TRẠNG THÁI NGAY LÚC NÀY**; chi tiết `GHI CHU DU AN.md` Đợt 330.
+>
+> 1. ⬜ Mở một act có sẵn vài bài giao: xác nhận danh sách GẤP LẠI mặc định (không tự hiện lúc mới vào).
+> 2. ⬜ Giữ nút icon checklist "Set assignment" (~nửa giây) ngay dưới stage: danh sách phải BUNG ra
+>    đúng tại chỗ nó vẫn đứng trước đây (không nhảy vị trí, không mở popup nào).
+> 3. ⬜ Giữ lần nữa: danh sách gấp lại. Chạm NHANH (không giữ) vẫn phải mở form "Set assignment" như cũ.
+> 4. ⬜ Test chạm **TOMKO** (màn cảm ứng, cử chỉ giữ tay chưa đo trên phần cứng thật).
+>
+> ---
+>
+> ⭐⭐⭐⭐⭐ **Đợt 311 (08/9/2026) — ✅ ĐÃ COMMIT + PUSH, chỉ còn tay thầy.**
 > Vùng: **Anagram + Unjumble — "cửa sổ nộp"** (HS làm đúng 30 câu, máy ghi 29). Vá xong, 2 bàn thử xanh
 > (19/19 + 15/15) có đối chứng ngược. Bản đồ ở mục **0a ▸ TRẠNG THÁI NGAY LÚC NÀY**; luật phòng ngừa ở
 > `core/HUONG DAN CORE.md` mục **CỬA SỔ NỘP**.

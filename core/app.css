@@ -4063,6 +4063,9 @@ body.aw-page-dragover::after {
   border-top: 1px solid #dde6f1;
 }
 .aw-as-bars:empty { border-top: 0; margin-top: 0; padding-top: 0; }
+/* ⭐ Đợt 330 — danh sách bài giao mặc định GẤP LẠI, nhấn giữ nút "Set assignment"
+   để bung ra ngay tại chỗ này (xem tapOrHold(assignBtn, …) trong core/engine.js). */
+.aw-as-bars.is-collapsed { display: none; }
 .aw-as-bar {
   display: flex; align-items: center; gap: 12px; width: 100%; cursor: pointer; text-align: left;
   background: #fff; border: 1px solid #e2eaf4; border-radius: 14px; padding: 11px 16px;

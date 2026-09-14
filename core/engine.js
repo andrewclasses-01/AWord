@@ -2045,21 +2045,31 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     assignBtn.classList.add("is-dim");
     assignBtn.title = "Cannot be set as homework — " + tpl.noAssignment;
   }
-  // Set assignment -> the setup form; a new assignment appears as a strip below.
-  assignBtn.onclick = async () => {
-    sound.click();
-    if (tpl.noAssignment) { toast(tpl.noAssignment); return; }
-    const ui = await import("./assignment-ui.js");
-    // `libAct` again (Đợt 145): the assignment snapshot must keep every clue
-    // set, so the teacher can still switch the given act between them later.
-    // ⭐ Đợt 247 — onCreated giờ phát thêm marker ASSIGN cho myLesson (nếu trang
-    // này đang nằm trong webview của nó); đứng một mình thì awEmit chỉ là một
-    // dòng console.log vô hại.
-    ui.openAssignmentSetup(libAct, { onCreated: (a) => {
-      loadAssignmentBars();
-      awEmit("ASSIGN", JSON.stringify({ code: a.code, title: a.title }));
-    } });
-  };
+  // Tap -> the setup form; a new assignment appears as a strip below.
+  // ⭐⭐ Đợt 330 (14/9/2026, thầy) — PRESS-AND-HOLD gấp/bung danh sách bài giao
+  // NGAY TẠI CHỖ nó đứng (`barsWrap`, dựng bên dưới). Cùng khuôn `tapOrHold` mà
+  // Options/Mode đã dùng (core/press.js) — một nút, hai việc: chạm ngắn vẫn mở
+  // form Set assignment như cũ, giữ tay mới đụng tới danh sách.
+  // ⚠️ Toggle chạy được BẤT KỂ `tpl.noAssignment`: những bài giao TẠO TRƯỚC lúc
+  // game bị cấm giao vẫn còn đó và vẫn cần xem lại (xem chú thích Đợt 245 ở gần
+  // đầu khối này) — chỉ riêng việc TẠO MỚI (đường onTap) mới bị chặn.
+  tapOrHold(assignBtn, {
+    onTap: async () => {
+      sound.click();
+      if (tpl.noAssignment) { toast(tpl.noAssignment); return; }
+      const ui = await import("./assignment-ui.js");
+      // `libAct` again (Đợt 145): the assignment snapshot must keep every clue
+      // set, so the teacher can still switch the given act between them later.
+      // ⭐ Đợt 247 — onCreated giờ phát thêm marker ASSIGN cho myLesson (nếu trang
+      // này đang nằm trong webview của nó); đứng một mình thì awEmit chỉ là một
+      // dòng console.log vô hại.
+      ui.openAssignmentSetup(libAct, { onCreated: (a) => {
+        loadAssignmentBars();
+        awEmit("ASSIGN", JSON.stringify({ code: a.code, title: a.title }));
+      } });
+    },
+    onHold: () => { sound.click(); barsWrap.classList.toggle("is-collapsed"); }
+  });
   // Print opens a popup to pick a worksheet FORMAT (Anagram/Crossword/Quiz/
   // Unjumble) — the whole flow lives in core/print.js (generic, template-agnostic).
   // ⭐ Đợt 225 — re-resolve off `libAct` AT CLICK TIME, not the closed-over
@@ -2085,7 +2095,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
 
   // ----- The assignment strips, a little below the stage -----
   // One per assignment made from this act; clicking one opens its report.
-  const barsWrap = el("div", "aw-as-bars");
+  // ⭐ Đợt 330 — GẤP LẠI mặc định; nhấn giữ nút "Set assignment" (belowRight)
+  // để bung/gấp lại, xem tapOrHold(assignBtn, …) ở trên.
+  const barsWrap = el("div", "aw-as-bars is-collapsed");
   if (!session && !fight && activity.id) {
     page.append(barsWrap);
     loadAssignmentBars();

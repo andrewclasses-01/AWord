@@ -12,7 +12,26 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **⭐ Đợt 326** (14/9/2026, thầy "ok hết các đề xuất" sau khảo sát 4.959 câu sai thật của khoá Nền
+> Mới nhất: **⭐ Đợt 330** (14/9/2026, thầy yêu cầu qua chat — GẤP DANH SÁCH BÀI GIAO DƯỚI STAGE VÀO
+> NÚT "Set assignment"): danh sách `.aw-as-bars` (một dòng mỗi bài giao của act, dưới khung stage)
+> mặc định GẤP LẠI (`is-collapsed{display:none}`, app.css); NHẤN GIỮ nút "Set assignment" (icon
+> checklist, cụm phải dưới stage) bung/gấp lại NGAY TẠI VỊ TRÍ CŨ (chỉ toggle class trên phần tử đã
+> có sẵn, không dời DOM) — CHẠM NGẮN vẫn mở form Set assignment y hệt trước. Dùng lại đúng khuôn
+> `tapOrHold()` (core/press.js) mà Options/Mode đã dùng (Đợt 192/194/195): `onTap` = logic mở form cũ
+> nguyên vẹn, `onHold` chỉ `barsWrap.classList.toggle("is-collapsed")` — toggle chạy được BẤT KỂ
+> `tpl.noAssignment` (bài giao tạo trước lúc game bị cấm giao vẫn cần xem lại, chỉ việc TẠO MỚI mới
+> bị chặn). `node --input-type=module --check` sạch; brace `app.css` cân bằng (1865=1865, +1 cặp).
+> Bàn thử mới `scratch/dot330-test.html` (chạy thật `core/engine.js` qua `startGame()`, cử chỉ
+> pointerdown/up giả lập đúng khuôn `press-test.html`) 11/11 ĐẠT: mặc định ẩn thật (`display:none`) ·
+> giữ lần 1 bung (hết `is-collapsed`) · giữ lần 2 gấp lại · chạm ngắn vẫn mở popup "Set assignment" mà
+> không đụng trạng thái ẩn/hiện. ⛔ Vá kèm `scratch/fake-firebase.js` (gitignored, không lên bản thật):
+> thêm export `auth()`/`firebaseConfig` — thiếu hai export này làm `core/assignments.js` vỡ import
+> tĩnh ngay khi bench chạm tới `openAssignmentSetup`, một khoảng trống có sẵn từ trước (chưa bench nào
+> từng chạy `assignment-ui.js` qua bộ giả), không phải do Đợt 330 sinh ra nhưng phải vá mới đo được.
+> ⬜ CHƯA đăng nhập trang thật để bấm tay (sandbox không đăng nhập Google được) — thầy tự mở một act,
+> xem danh sách bài giao có gấp mặc định không, giữ nút checklist ~nửa giây xem có bung đúng chỗ
+> không, và bấm nhanh vẫn ra form Set assignment như cũ. Xem mục **Đợt 330** trong file này.)
+> Trước đó: **Đợt 326** (14/9/2026, thầy "ok hết các đề xuất" sau khảo sát 4.959 câu sai thật của khoá Nền
 > tảng): bảng "Hướng dẫn khi sai" có thêm 3 KIỂU KHỚP — `chi-dau` (chữ đúng, chỉ sai dấu câu/dấu cách) · `mau`
 > (regex, cho rác/bấm 1 phím = 19% lượt sai) · `gan` (sai chính tả 1 từ qua `bestMatch()` + 3 lưới chống nói bậy,
 > `{tu}` = chữ em gõ); `MAX_ALTERNATES` 5 → 15 (editor từng cắt mất đáp án phụ 7–14 của 29 câu khi Save). Đo trên dữ
@@ -432,6 +451,47 @@ Backup `_backup/dot329/`. Sửa 2 file: `group-sort.js` · `group-sort.css`.
   yên sẽ lệch tông — nếu thầy muốn ✗ khác thì tách rule).
 
 ⬜ Thầy bấm tay lại: cỡ chữ ô chạy đã "to hết mức" chưa, ô có trượt mượt từ mép vào không, ✓ có còn bay không.
+
+---
+
+## Đợt 330 (14/9/2026, thầy yêu cầu qua chat) — **GẤP DANH SÁCH BÀI GIAO VÀO NÚT "Set assignment", nhấn giữ để bung**
+
+**Bối cảnh.** Dưới khung stage của một act, danh sách bài giao đã tạo (`.aw-as-bars`, mỗi dòng một bài — xem
+`assignmentBar()` trong `core/assignment-ui.js`) LUÔN hiện sẵn, chiếm chỗ ngay cả khi chưa ai cần xem. Thầy muốn
+gom nó vào nút "Set assignment" (icon checklist, cụm nút phải dưới stage): NHẤN GIỮ ẩn/hiện danh sách NGAY TẠI
+VỊ TRÍ CŨ, mặc định ẨN. Sửa 2 file: `core/engine.js` (gắn cử chỉ) · `core/app.css` (class ẩn).
+
+- **Mặc định ẩn**: `barsWrap = el("div", "aw-as-bars is-collapsed")` — thêm sẵn class ngay lúc dựng, trước khi
+  quyết định có `page.append(barsWrap)` hay không (act không có bài giao nào thì khối vẫn rỗng + ẩn, vô hại).
+- **`.aw-as-bars.is-collapsed { display: none; }`** (app.css) — bắt buộc phải là RULE RIÊNG: bản thân
+  `.aw-as-bars` đã có `display: flex` (rule tác giả), nên đặt `[hidden]` suông sẽ bị `.aw-as-bars` đè ngược lại
+  (author CSS luôn thắng UA stylesheet bất kể thứ tự) — dùng class thay vì thuộc tính `hidden`.
+- **Một nút, hai việc** — đúng khuôn `tapOrHold()` (`core/press.js`) mà Options (Đợt 194) và Mode (Đợt 195) đã
+  dùng: CHẠM = `onTap` (y nguyên logic mở form `openAssignmentSetup` cũ, không đổi một dòng), GIỮ ~420ms =
+  `onHold` chỉ làm đúng một việc `barsWrap.classList.toggle("is-collapsed")`. Không cần thêm biến trạng thái gì
+  khác — `classList.toggle` tự nhớ đang ẩn hay hiện qua chính DOM.
+- **Toggle không bị khoá bởi `tpl.noAssignment`**: cờ đó chỉ chặn nhánh TẠO MỚI (Đợt 245 — 3 template không thể
+  làm bài giao), còn bài giao ĐÃ CÓ TỪ TRƯỚC (kể cả của một game giờ đã bị cấm) vẫn phải xem lại được, nên
+  `onHold` đặt NGOÀI mọi điều kiện `tpl.noAssignment`/`err`.
+
+**Bàn thử.** `scratch/dot330-test.html` — chạy THẬT `core/engine.js` qua `startGame()` (không mô phỏng lại dòng
+nào), cử chỉ pointerdown/pointerup giả lập đúng khuôn `press-test.html`/`edit194-test.html`. 11/11 ĐẠT: mặc định
+`is-collapsed` + `display:none` thật · giữ lần 1 bung (hết class, `display` khác `none`, KHÔNG mở popup) · giữ
+lần 2 gấp lại · chạm ngắn vẫn mở popup "Set assignment" mà không đụng trạng thái ẩn/hiện. `node
+--input-type=module --check` sạch; brace `app.css` cân bằng (1865=1865, +1 cặp so Đợt 325).
+
+⛔ **Vá kèm `scratch/fake-firebase.js`** (gitignored, không lên bản thật): bench đầu tiên vỡ ngay ở bước chạm
+mở "Set assignment" — `core/assignments.js` nhập thêm `auth`/`firebaseConfig` từ `firebase.js` mà bộ giả chưa
+từng export (chưa bench nào trước đây chạy `assignment-ui.js` qua bộ giả này), nên import TĨNH vỡ luôn
+("does not provide an export named 'auth'"). Thêm `export async function auth(){return{currentUser:null}}` +
+`export const firebaseConfig={projectId:"fake-project"}` là đủ — `listResultsLight()` tự rơi về nhánh không có
+token qua `try/catch` sẵn có. Khoảng trống này có sẵn từ trước Đợt 330, không phải do đợt này sinh ra, nhưng
+phải vá thì mới đo được cử chỉ CHẠM thật.
+
+⬜ **VIỆC ĐANG CHỜ** — CHƯA đăng nhập trang aword thật để bấm tay (sandbox không đăng nhập Google được): thầy
+tự mở một act có sẵn vài bài giao, xác nhận danh sách gấp mặc định (không tự hiện lúc mới vào), giữ nút
+checklist ~nửa giây xem có bung ĐÚNG TẠI vị trí cũ (ngay dưới stage) không, giữ lần nữa gấp lại được không, và
+chạm nhanh (không giữ) vẫn ra form Set assignment như trước — kể cả trên màn cảm ứng TOMKO (chưa test riêng).
 
 ---
 
