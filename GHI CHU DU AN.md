@@ -448,10 +448,28 @@ gộp **66,2%**. `node --input-type=module --check` sạch cả 2 file. Backup `
 **Không đụng:** `normalize()` chấm điểm, `bestMatch()`, engine, CSS, luật Firestore. Act cũ không có dòng kiểu mới thì
 chạy y hệt trước.
 
+**Đã kiểm trên bản LIVE (cùng phiên, sau khi Pages lên):** import editor thật `?v=326` trên act 195 → dropdown đủ 5
+kiểu, ô chữ gõ KHOÁ với chi-dau/gan, Save qua `clean` giữ đủ 1.705 dòng kể cả 3 dòng chung; nhãn nút đếm lệch 2 (đếm
+theo `go`) → **Đợt 326b `1af7dd7`** đếm theo `noi`.
+
+**Dữ liệu (không qua git) — thầy "ok hết" + chốt 4 quy ước qua AskUserQuestion:** "thường" nhận cả `usually`; "đó/này/kia"
+nhận cả `the` lẫn `that/this/these/those` (đúng số); KHÔNG nhận viết tắt; "nào" = `which`. Áp **85 đáp án phụ vào 19 act**
+khoá Nền tảng (khớp đúng đề, hoặc khớp đáp án lệch đúng 1 từ trong bảng cặp an toàn — this/these chỉ khi đề có "này",
+that/those chỉ khi "đó/kia/ấy") + bỏ 5 đáp án trùng; 28 dòng không tìm thấy đề y hệt → KHÔNG đoán, để lại
+`skill chamloitypetheanswer/references/DAP AN PHU CHUA AP (14-09-2026).md`. ⛔ Bẫy đã tránh: khớp "mềm" theo Levenshtein
+từ ≤2 không có bảng cặp sẽ ghép `x`→`talk`, `our questions`→`OUR PLANS`, `Does she smile?`→`Yes, it does` — phải có
+allowlist cặp + luật này/đó.
+
+**Test LESSON 18 (`?f=191`, act 195 `BT4. TAO CAU HOI XIN THONG TIN`, dạng câu hỏi Wh-):** skill v2.1 sinh **1.705 dòng**
+(280 KB, 0 rò rỉ, 32 dòng từ kho lỗi thật + 3 dòng chung), lưu qua `saveActivity`, đọc lại 30/30 câu nguyên vẹn. Gọi
+`goiYTheoBang()` THẬT (`?v=326`): thiếu `?` · ` ?` · `/` cuối (chi-dau) · `brothr` (gan, hint có chữ em gõ) · `d` (mau) ·
+`do` thay `does` · đúng đáp án → `""` — đều đúng. Bao phủ trên 88 lượt sai thật của chính LS18: **95,5%** (có kho lỗi
+thật của đề đó; số "chưa từng thấy" toàn khoá vẫn là 52–58% + 3 dòng chung ≈ 66%).
+
 ### VIỆC ĐANG CHỜ
-- ⬜ Thầy mở Edit một act Type the answer → nút bảng tra → thấy 5 kiểu trong dropdown; thêm 1 dòng "Chỉ sai dấu
-  câu/dấu cách" + 1 dòng "Gần đúng" rồi Save → mở lại còn nguyên.
-- ⬜ Skill v2.0 chạy thử LESSON 18 (`?f=191`) ngay sau khi bản này lên live (phiên 14/9 đang làm).
+- ⬜ Thầy mở Edit act 195 (hoặc act bất kỳ) → nút bảng tra → thấy 5 kiểu; chơi thử act 195 gõ vài kiểu sai xem hint.
+- ⬜ 28 dòng đáp án phụ chưa áp (file trên) — thầy tra tay nếu muốn.
+- ⬜ 51 act Type the answer còn lại của khoá chưa có bảng tra — chạy skill từng lesson khi thầy gọi.
 
 ---
 

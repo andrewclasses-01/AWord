@@ -5360,8 +5360,10 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 > `go`; ⭐ `MAX_ALTERNATES` 5 → 15 (bug có sẵn: editor cắt đáp án phụ thứ 7+ khi Save — 29 câu khoá Nền tảng dính).
 > Đo trên 100.059 câu trả lời thật (4.959 sai): 0 câu đúng bị bắn nhầm; 66,2% câu sai có hướng dẫn (trước: 43,9%).
 > Nguồn dữ liệu + script đo: `E:\LAP TRINH APP\DU LIEU TONG HOP\WORDWALL KET QUA TYPE THE ANSWER 14-09-2026\`;
-> bộ sinh bảng tra: skill `/chamloitypetheanswer` v2.0. Chi tiết: `GHI CHU DU AN.md` Đợt 326. ⬜ Thầy mở Edit một act
-> TTA → bảng tra → thấy 5 kiểu; thêm dòng chi-dau/gan → Save → mở lại còn nguyên.
+> bộ sinh bảng tra: skill `/chamloitypetheanswer` v2.1. Chi tiết: `GHI CHU DU AN.md` Đợt 326. ✅ Đã kiểm editor thật
+> qua import `?v=326` (5 kiểu, Save giữ dòng chi-dau/gan; Đợt 326b sửa nhãn đếm). **Dữ liệu:** 85 đáp án phụ áp vào 19 act
+> khoá Nền tảng theo 4 quy ước thầy chốt (usually OK · the/that/this OK · không viết tắt · nào = which), 5 đáp án trùng bỏ;
+> act 195 (LS18.BT4) có bảng tra 1.705 dòng, gọi hàm thật đúng 7/7 ca, bao phủ 95,5% lỗi thật LS18. ⬜ Thầy chơi thử act 195.
 >
 > **Trước đó — Đợt 325 (⬜ CHƯA BẤM TAY, CHỜ THẦY XÁC NHẬN):**
 >
