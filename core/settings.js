@@ -77,7 +77,22 @@ function writeAll(s) { localStorage.setItem(KEY, JSON.stringify(s)); }
 // options" above. `kind` picks which bucket: "activity" (default, unchanged
 // behaviour for every existing caller) or "homework". The two never mix — a
 // teacher may want a strict countdown for homework but not for classwork.
-function bucketKey(kind) { return kind === "homework" ? "homeworkOptionsByType" : "optionsByType"; }
+// ⭐ Đợt 337 (16/9/2026, thầy) — a THIRD bucket, "course": the options a "Set
+// assignment" form starts with when the act lives in the COURSES tree
+// (`act.root === "courses"`, the paid-course lessons of Đợt 287). Fully
+// independent of "homework" (thầy chốt: a type with no saved course default
+// falls back to BUILTIN_DEFAULTS, NOT to the homework bucket). Which bucket a
+// form reads is decided in core/assignment-ui.js (`kindForAct`).
+export const KINDS = ["activity", "homework", "course"];
+function bucketKey(kind) {
+  return kind === "homework" ? "homeworkOptionsByType"
+       : kind === "course"   ? "courseOptionsByType"
+       : "optionsByType";
+}
+// Both assignment buckets build the same panel shape (no dead "Show answers at
+// end" switch, see buildOptionsControls) — one test, so a fourth bucket later
+// cannot forget one of the two places.
+export function isAssignmentKind(kind) { return kind === "homework" || kind === "course"; }
 
 // The stored default options for a type, merged over the built-ins so a missing
 // field always has a sane value. Returns a fresh copy (safe to mutate).
@@ -104,9 +119,9 @@ export function saveDefaultOptions(type, options, kind = "activity") {
  *                          its buildExtraOptions is where most of the controls come from)
  * @param {object} options  edited IN PLACE; the caller decides when to save
  * @param {object} [extra]
- * @param {"activity"|"homework"} [extra.kind]  which bucket this form belongs to.
- *        "homework" (both assignment forms) drops the dead "Show answers at end"
- *        switch — see the long note in core/options-panel.js where it is built.
+ * @param {"activity"|"homework"|"course"} [extra.kind]  which bucket this form belongs to.
+ *        "homework" / "course" (the assignment forms) drop the dead "Show answers at
+ *        end" switch — see the long note in core/options-panel.js where it is built.
  * @param {object} [extra.act]  the ACT being assigned (or an assignment's frozen
  *        `activity` snapshot). Only its `content` is read, and only to describe
  *        WHICH content is being handed out. See the Đợt 245 note below.
@@ -125,7 +140,7 @@ export function buildOptionsControls(tpl, options, { kind = "activity", act = nu
     wrap.append(el("div", "aw-set-hint", "This game's options could not be loaded."));
     return wrap;
   }
-  const isHw = kind === "homework";
+  const isHw = isAssignmentKind(kind);   // Đợt 337 — "course" is an assignment bucket too
 
   // ⭐⭐⭐ Đợt 245 (23/8/2026, thầy) — THE TWO ROWS THAT NAME THE CONTENT.
   //

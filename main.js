@@ -2864,6 +2864,11 @@ function openSettingsFlow() {
         "Set the options new activities start with", () => showTemplates("activity")));
       list.append(menuRow("Default homework options",
         "Set the options a new assignment starts with", () => showTemplates("homework")));
+      // ⭐ Đợt 337 (16/9/2026, thầy) — a third bucket for the paid COURSES tree:
+      // a "Set assignment" form opened on an act inside Courses starts from
+      // these instead of the homework ones (core/assignment-ui.js kindForAct).
+      list.append(menuRow("Default course options",
+        "Set the options a new COURSES assignment starts with", () => showTemplates("course")));
       list.append(menuRow("Classes",
         "Class rolls used by activities that call pupils by name", showClasses));
       // ⭐ Đợt 274 (27/8/2026, thầy) — a meme sound effect for wrong answers,
@@ -3263,7 +3268,9 @@ function openSettingsFlow() {
     // see settings.js's bucketKey().
     function showTemplates(kind) {
       body.closest(".aw-modal")?.classList.remove("is-optswide");
-      setTitle(kind === "homework" ? "Default homework options" : "Default activity options", showMenu);
+      setTitle(kind === "homework" ? "Default homework options"
+             : kind === "course" ? "Default course options"        // Đợt 337
+             : "Default activity options", showMenu);
       body.innerHTML = "";
       body.append(el("div", "aw-set-hint", "Choose a template to set its default options."));
       const grid = el("div", "aw-pick-grid");
@@ -3285,10 +3292,14 @@ function openSettingsFlow() {
     // buildExtraOptions, so the template module has to be loaded first — the
     // Settings dialog is reachable without ever having played anything.
     async function showOptions(t, kind) {
-      const isHw = kind === "homework";
-      setTitle(`${t.label} ${isHw ? "homework " : ""}defaults`, () => showTemplates(kind));
+      // Đợt 337 — three buckets now: activity · homework · course. The panel is
+      // the same for the two assignment kinds; only the words differ.
+      const isHw = kind === "homework", isCourse = kind === "course";
+      setTitle(`${t.label} ${isHw ? "homework " : isCourse ? "course " : ""}defaults`, () => showTemplates(kind));
       body.innerHTML = "";
-      body.append(el("div", "aw-set-hint", isHw
+      body.append(el("div", "aw-set-hint", isCourse
+        ? `A new "Set assignment" form for a ${t.label} act inside COURSES will start with these options.`
+        : isHw
         ? `A new "Set assignment" form for ${t.label} will start with these options.`
         : `New ${t.label} activities will start with these options.`));
       // The full panel is a 2-column grid; the 440px Settings dialog is too

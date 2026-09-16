@@ -12,7 +12,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **⭐ Đợt 336** (16/9/2026, UNJUMBLE, ngay sau 335): ✓ **xanh lá** / ✗ **đỏ** (tô lại 2 nét icon
+> Mới nhất: **⭐ Đợt 337** (16/9/2026, SETTINGS): hàng mới **"Default course options"** — bộ mặc định thứ 3
+> (`courseOptionsByType`) gieo form Set assignment khi act nằm trong cây COURSES (`kindForAct`,
+> `core/assignment-ui.js`); độc lập với homework, chưa cài thì về mặc định gốc (thầy chốt). Bàn thử
+> 15/15 + 13/13 + 4/4 (form thật + main.js thật + đường `?giao=`). Xem mục **Đợt 337**.
+> Trước đó: **⭐ Đợt 336** (16/9/2026, UNJUMBLE, ngay sau 335): ✓ **xanh lá** / ✗ **đỏ** (tô lại 2 nét icon
 > core qua `.is-ok`/`.is-bad`), và On submit có tiếng **"ting"** khi đúng / **"tùng"** khi sai đúng lúc dấu
 > hiện (`unjumbleSound.correct/wrong`, wrong đã bọc lớp âm meme như mọi template). Bàn thử 32/32. Xem mục
 > **Đợt 336**.
@@ -544,6 +548,42 @@ console):**
 thoại cảm ứng vẫn chưa đo (từ Đợt 327).
 
 ---
+
+## Đợt 337 (16/9/2026, thầy giao qua chat + chốt 1 câu hỏi) — **SETTINGS ▸ "DEFAULT COURSE OPTIONS": bộ mặc định thứ 3 cho bài giao act trong COURSES** · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY TRANG THẬT
+
+**Thầy (nguyên văn):** *"Trong cài đặt ở AWord, tôi muốn thêm một chức năng Default course options, ở đây
+sẽ chỉnh mặc định options khi tạo assignment cho các act trong COURSE (khóa học)."* Chốt qua câu hỏi:
+template chưa lưu bộ course → **mặc định gốc của app** (bộ course độc lập hoàn toàn với homework).
+
+**Rà trước khi làm.** Settings đã có 2 bộ (Đợt C 15/8: `optionsByType` act mới · `homeworkOptionsByType`
+form Set assignment). Form Set gieo từ bộ homework ở 2 chỗ (mở form + đổi template); Edit assignment không
+gieo. Form đã biết act thuộc COURSES qua `act.root === "courses"` (Đợt 287 dùng để xếp bài vào
+`results/<lớp>` của lesson); đường `?giao=` (myLesson) đưa vào act thư viện có `root`. ⚠️ Giới hạn có sẵn
+(nhắc lại): mặc định lưu localStorage theo máy + theo trình duyệt — AWord nhúng trong myLesson là một
+"trình duyệt" riêng, phải cài trong chính khung đó.
+
+**Sửa 3 file + 1 hồ sơ core.** `core/settings.js`: `bucketKey("course") → courseOptionsByType`, export
+`KINDS` + `isAssignmentKind()` (homework ∨ course — cả hai bỏ ô "Show answers at end" chết).
+`core/assignment-ui.js`: `kindForAct(act)` = `root === "courses" ? "course" : "homework"`, tính MỘT LẦN
+lúc mở form (`hwKind`), dùng ở cả 3 chỗ: gieo lúc mở · gieo lại khi đổi template · `kind` truyền vào
+`buildOptionsControls`. `main.js` Settings: hàng **"Default course options"** ngay dưới "Default homework
+options" (phụ đề rút gọn 1 dòng sau khi chụp thấy 2 dòng), `showTemplates`/`showOptions` nhận `kind =
+"course"` (tiêu đề "… course defaults", gợi ý "inside COURSES"). `core/HUONG DAN CORE.md` mục BÀI GIAO
+thêm điểm 4 (ba bộ mặc định). Backup `_backup/dot337/`.
+
+**Bàn thử (dev server 5535, fake Firestore `fake-firebase246.js`, main.js + form THẬT).**
+- `scratch/dot337-course-defaults.html` **15/15**: 3 khoá localStorage độc lập; `getDefaultOptions(quiz,
+  course)` = 0:45 đếm ngược trong khi homework vẫn 2:00 và activity = gốc; anagram chưa lưu bộ course →
+  gốc (KHÔNG mượn homework 5:00); form Set thật: act `root:"courses"` gieo Count down 0:45, act thường
+  gieo Count up 2:00, act courses/anagram chưa cài → gốc.
+- `scratch/dot337-settings.html?mode=settings` **13/13**: bấm bánh răng → hàng mới đúng vị trí + phụ đề
+  → chọn Quiz → bảng Options rộng, không ô chết → đổi Count down → Save → ghi đúng `courseOptionsByType.
+  quiz`, không rơi vào 2 khoá kia. `?mode=giao` **4/4**: act tạo trong cây courses, mở qua `?giao=<num>`
+  như myLesson → Timer gieo 0:45 của bộ course. `node --check` sạch 3 file; console 0 lỗi.
+
+**VIỆC ĐANG CHỜ.** ⬜ Thầy bấm tay trang thật: Settings → Default course options → cài cho vài template
+→ mở act trong khóa NỀN TẢNG → Set assignment xem options có đúng; ⚠️ nếu giao từ myLesson thì cài trong
+khung AWord nhúng của myLesson.
 
 ## Đợt 336 (16/9/2026, thầy giao tiếp ngay sau 335) — **UNJUMBLE: ✓ XANH LÁ · ✗ ĐỎ · TIẾNG "TING"/"TÙNG" KHI ĐÚNG/SAI Ở ON SUBMIT** · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY · KHÔNG SỬA CORE
 

@@ -31,6 +31,17 @@ import { TEMPLATES, templateLabel, templateIcon } from "./catalog.js";
 import { listClasses } from "./classes.js";
 import { ensureTemplate } from "./registry.js";
 import { getDefaultOptions, buildOptionsControls } from "./settings.js";
+
+// ⭐ Đợt 337 (16/9/2026, thầy) — WHICH defaults bucket a NEW assignment for
+// `act` starts from. An act in the COURSES tree (Đợt 287, `root === "courses"`)
+// reads Settings ▸ "Default course options"; every other act keeps reading
+// "Default homework options". The same test the form already uses further
+// down to file the assignment under the lesson's results/<class> folder — one
+// fact, read the same way twice, so the two can never disagree about what a
+// course act is.
+// ⛔ Only the SET form seeds from a bucket. Edit assignment keeps the options
+// the assignment was created with and never reads Settings — unchanged.
+function kindForAct(act) { return act && act.root === "courses" ? "course" : "homework"; }
 // Đợt 211 — splits an options object into the keys that say WHICH CONTENT is
 // played (contentMode / contentVariant / voiceVariant / contentSet, plus the
 // optVer stamp) and the rest. Already the app's own name for that category —
@@ -487,7 +498,11 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe, duoiMau } = {
     // or the in-game Options panel (not creating an assignment at all).
     const coNuaHomework = (contentSetsOf(act.content) || []).includes("homework");
     let playType = act.type;                    // which GAME the class will play
-    let hwDraft = { ...getDefaultOptions(act.type, "homework"),
+    // ⭐ Đợt 337 — "course" bucket for an act in COURSES, "homework" otherwise.
+    // Decided once from the act itself: the bucket does not change when the
+    // teacher swaps template below (the act is still the same course act).
+    const hwKind = kindForAct(act);
+    let hwDraft = { ...getDefaultOptions(act.type, hwKind),
                     ...splitViewOptions(act.options).selectors };
     if (coNuaHomework) hwDraft.contentSet = "homework";
 
@@ -509,7 +524,7 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe, duoiMau } = {
         playType = type;
         // ⚠️ Selectors carried, settings NOT (thầy chốt: "Về mặc định của game
         // mới"). A number named the same in two games is not the same number.
-        hwDraft = { ...getDefaultOptions(playType, "homework"),
+        hwDraft = { ...getDefaultOptions(playType, hwKind),
                     ...splitViewOptions(hwDraft).selectors };
         // Vấn đề 5 — a template swap rebuilds the draft from scratch, so the
         // HOMEWORK default has to be re-applied here too (same act, same sets).
@@ -644,7 +659,7 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe, duoiMau } = {
         // converted act has none (see the header note), so handing the played
         // type's act here would empty the very row the teacher chooses from.
         optsHost.append(buildOptionsControls(tpl, hwDraft,
-          { kind: "homework", act, templatePicker, daGiao: bangDaGiao(),
+          { kind: hwKind, act, templatePicker, daGiao: bangDaGiao(),   // Đợt 337 — same panel shape either way
             // ⭐ Đợt 332 — chỉ để ĐUÔI TIÊU ĐỀ đổi theo bộ nghĩa/text-voice.
             onSelector: capNhatDuoi }));
       }).catch(() => {

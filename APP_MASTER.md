@@ -5377,9 +5377,25 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **16/9/2026 sau Đợt 336** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **16/9/2026 sau Đợt 337** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (16/9/2026 — sau **Đợt 335 → 336** (Unjumble) và **Đợt 334** (Speed sorting) — HAI PHIÊN SONG SONG CÙNG BUỔI SÁNG, cả hai ✅ ĐÃ COMMIT + PUSH + LIVE, ⬜ THẦY CHƯA BẤM TAY LẠI)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (16/9/2026 — sau **Đợt 337** (Settings ▸ Default course options), **Đợt 335 → 336** (Unjumble) và **Đợt 334** (Speed sorting, phiên song song) — tất cả ✅ ĐÃ COMMIT + PUSH + LIVE, ⬜ THẦY CHƯA BẤM TAY LẠI)
+>
+> **⭐ Đợt 337 — SETTINGS ▸ "DEFAULT COURSE OPTIONS": bộ mặc định thứ 3, gieo form Set assignment cho act
+> trong cây COURSES (thầy giao qua chat + chốt 1 câu hỏi; "ok build").** `core/settings.js`: khoá
+> `courseOptionsByType`, export `KINDS`/`isAssignmentKind()`; `core/assignment-ui.js`: `kindForAct(act)` =
+> `root === "courses" ? "course" : "homework"`, quyết một lần lúc mở form, dùng ở gieo lúc mở · gieo lại
+> khi đổi template · `kind` của panel; `main.js`: hàng "Default course options" dưới "Default homework
+> options", màn chọn template + bảng Options nhận `kind = "course"`. ⛔ Bộ course ĐỘC LẬP: template chưa lưu
+> → `BUILTIN_DEFAULTS`, không mượn homework (thầy chốt). Edit assignment không đọc bộ nào. Bàn thử
+> `scratch/dot337-course-defaults.html` 15/15 (tầng lưu + form Set thật) · `scratch/dot337-settings.html?
+> mode=settings` 13/13 (bánh răng → hàng mới → Quiz → Save đúng khoá) · `?mode=giao` 4/4 (act trong cây
+> courses mở qua `?giao=` như myLesson → gieo bộ course). ⚠️ Nhắc lại giới hạn có sẵn: mặc định lưu
+> localStorage theo máy + trình duyệt — AWord nhúng trong myLesson phải cài trong chính khung đó. Hợp đồng:
+> `core/HUONG DAN CORE.md` BÀI GIAO ▸ điểm 4. Backup `_backup/dot337/`. ⬜ Thầy bấm tay trang thật. Chi tiết:
+> `GHI CHU DU AN.md` Đợt 337.
+>
+> **Trước đó — Đợt 335 → 336 (Unjumble):**
 >
 > **⭐ Đợt 336 — UNJUMBLE: ✓ XANH LÁ · ✗ ĐỎ · TIẾNG "TING"/"TÙNG" Ở ON SUBMIT (thầy giao ngay sau 335).**
 > `flyToScore(…, big)` nhận TONE `"ok"`/`"bad"` → CSS `.is-ok`/`.is-bad` tô lại 2 nét icon core (✓ `#0f6b41`/

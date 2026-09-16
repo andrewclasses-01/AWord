@@ -3307,9 +3307,17 @@ results / <lớp> / [bài giao]`. Form Set assignment nhìn `act.root` để ch�
    **lúc bấm START**, không phải lúc bấm chọn template.
 2. ⛔ **Giữ act GỐC nguyên vẹn suốt form.** Act đã chuyển đổi không còn `content.variants` — đưa nó
    cho bảng Options là hàng ENG1/ENG2/VI1 trống trơn. `buildOptionsControls` luôn nhận `act` gốc.
-3. ⛔ **Đổi template ⇒ dựng LẠI options** từ `getDefaultOptions(typeMới, "homework")`, chỉ bê sang 4
+3. ⛔ **Đổi template ⇒ dựng LẠI options** từ `getDefaultOptions(typeMới, hwKind)`, chỉ bê sang 4
    khoá selector (`splitViewOptions().selectors`). Thầy chốt 24/8: cùng một tên ô ở hai game không
    phải cùng một con số.
+4. ⭐ **Đợt 337 (16/9/2026) — BA BỘ MẶC ĐỊNH trong Settings** (`core/settings.js`, localStorage
+   `aword-settings`): `optionsByType` (act mới) · `homeworkOptionsByType` (Set assignment thường) ·
+   `courseOptionsByType` (Set assignment cho act **trong cây COURSES**). Form chọn bộ bằng
+   `kindForAct(act)` = `act.root === "courses" ? "course" : "homework"` — quyết MỘT LẦN lúc mở form,
+   không đổi khi đổi template. ⛔ Bộ course **độc lập**: template chưa lưu bộ course rơi về
+   `BUILTIN_DEFAULTS`, KHÔNG mượn bộ homework (thầy chốt). `isAssignmentKind(kind)` = homework ∨
+   course — cả hai bỏ ô "Show answers at end" chết. Edit assignment không đọc bộ nào (giữ options
+   bài đã giao).
 
 ⚠️ `tpl.noAssignment` (Đợt 245) là **một CÂU, không phải boolean** — 3 template không giao được
 (`speaking_cards` không gọi `ui.finish()`; `running_word`/`running_team` báo cáo theo ĐỘI). Bảng chọn
