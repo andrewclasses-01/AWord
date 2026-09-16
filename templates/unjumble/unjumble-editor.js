@@ -82,6 +82,9 @@ export function openUnjumbleEditor(container, activity, { onSave, onCancel, head
 
   if (footer) page.append(footer);
   container.append(page);
+  growAllCells();   // Đợt 335 — cells can only be measured once they're in the document
+  // re-wrap when the editor's width changes (window resize / side panel)
+  if (typeof ResizeObserver === "function") new ResizeObserver(growAllCells).observe(iWrap);
   titleInput.focus();
 
   // ---------- sentence-list rendering ----------
@@ -96,6 +99,7 @@ export function openUnjumbleEditor(container, activity, { onSave, onCancel, head
     };
     iWrap.append(addI);
     iWrap.append(el("div", "aw-ed-qcount", `${data.content.items.length} / ${MAX_ITEMS} sentences`));
+    growAllCells();   // Đợt 335 — no-op on the very first render (iWrap is off-document until page mounts)
   }
 
   // Paste a copied Excel RANGE: first column -> sentence, second -> clue.
@@ -128,15 +132,15 @@ export function openUnjumbleEditor(container, activity, { onSave, onCancel, head
     row.append(el("div", "aw-unj-ed-num", String(ii + 1) + "."));
 
     const box = el("div", "aw-unj-ed-box");
-    const sentInput = el("input", "aw-unj-ed-sentence");
-    sentInput.value = it.sentence;
-    sentInput.placeholder = "Type the correct sentence";
-    sentInput.oninput = () => { it.sentence = sentInput.value; clearError(); };
+    // ⭐ Đợt 335 (thầy, 16/9/2026) — both cells are auto-growing TEXTAREAS (were
+    // one-line inputs): a long sentence or clue wraps onto more lines so the whole
+    // text is always readable. Enter is swallowed (the sentence is one line in the
+    // game; wrapping here is display only) and the Excel paste hook is unchanged.
+    const sentInput = growingCell("aw-unj-ed-sentence", it.sentence, "Type the correct sentence",
+      v => { it.sentence = v; clearError(); });
     sentInput.addEventListener("paste", e => onRowPaste(e, ii));
-    const clueInput = el("input", "aw-unj-ed-clue");
-    clueInput.value = it.clue;
-    clueInput.placeholder = "Optional clue";
-    clueInput.oninput = () => { it.clue = clueInput.value; clearError(); };
+    const clueInput = growingCell("aw-unj-ed-clue", it.clue, "Optional clue",
+      v => { it.clue = v; clearError(); });
     clueInput.addEventListener("paste", e => onRowPaste(e, ii));
     box.append(sentInput, clueInput);
     row.append(box);
@@ -166,6 +170,35 @@ export function openUnjumbleEditor(container, activity, { onSave, onCancel, head
     wireRowDropTarget(row, () => data.content.items.indexOf(it));
     return row;
   }
+
+  // ⭐ Đợt 335 — an auto-growing one-line-or-more cell. `rows=1` is the floor; on
+  // every input the height is re-measured from scrollHeight so long text shows in
+  // full instead of scrolling sideways inside a single line.
+  function growingCell(cls, value, placeholder, onChange) {
+    const ta = el("textarea", cls);
+    ta.rows = 1;
+    ta.value = value || "";
+    ta.placeholder = placeholder;
+    ta.addEventListener("input", () => { onChange(ta.value); growCell(ta); });
+    // Enter never inserts a line break: the game plays the sentence as ONE line and
+    // the clue is one line on the card — wrapping here is for reading only.
+    ta.addEventListener("keydown", e => { if (e.key === "Enter") e.preventDefault(); });
+    return ta;
+  }
+  function growCell(ta) {
+    if (!ta.isConnected) return;   // not measurable yet (first render builds off-document)
+    // Measure at zero height so a shrunk text re-measures too (scrollHeight never
+    // reports LESS than the current box). The result goes into min-height, NOT
+    // height: the two cells of a row are flex items that STRETCH to the taller one,
+    // and an explicit height would opt a cell out of that stretch (short clue, long
+    // sentence → the clue's divider line would stop halfway down the row).
+    ta.style.minHeight = "0";
+    ta.style.height = "0px";
+    const h = ta.scrollHeight;
+    ta.style.height = "";
+    ta.style.minHeight = h + "px";
+  }
+  function growAllCells() { iWrap.querySelectorAll("textarea").forEach(growCell); }
 
   function iconBtn(svg, title, extraClass) {
     const b = el("button", "aw-unj-ed-iconbtn" + (extraClass ? " " + extraClass : ""), svg);

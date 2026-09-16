@@ -4,6 +4,51 @@
 tồn kho một lượt, rồi tự test và xác nhận). Đã `built:true` trong `core/catalog.js`, commit + push,
 GitHub Pages đã deploy. Chơi thử riêng vẫn được: `templates/unjumble/test.html`.
 
+## ⭐ Đợt 335 (16/9/2026, thầy giao qua chat + chốt 3 câu hỏi) — ✓/✗ LỚN BAY VỀ Ô ĐIỂM THAY CHÙM SAO · EDITOR Ô TỰ CAO · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY TRANG THẬT · KHÔNG SỬA CORE
+
+> ⚠️ Số đợt: phiên song song cùng buổi sáng đang dùng **Đợt 334 cho Group sort/Speed sorting**
+> (`_backup/dot334/` có sẵn file group-sort lúc phiên này bắt đầu) nên Unjumble lấy **335** — cùng
+> tiền lệ Đợt 34/35. Backup của đợt này: `_backup/dot335/`.
+
+Thầy yêu cầu 3 việc: (1) đúng → bỏ sao vàng, **✓ lớn bay về ô điểm**; (2) sai → bỏ sao đỏ, **✗ lớn bay
+về ô điểm**; (3) editor: cột Clue rộng hơn, text dài **xuống dòng** để đọc trọn. Chốt qua AskUserQuestion:
+✗ bay rồi **hoá thành "−N"** (một cú bay) · ✓ ở With bonus **cũng lên cỡ lớn** · **cả Sentence lẫn Clue**
+tự cao.
+
+**Chỉ đụng `templates/unjumble/{unjumble.js, unjumble.css, unjumble-editor.js}`.**
+- `flyToScore(start, icon, points, apply, big)` thêm tham số `big`: cỡ chữ = **1/4 chiều cao STAGE**
+  (`BIGMARK_STAGE_FRAC = 0.25`, đo từ `stageEl`, không đo board vì câu 1 hàng board chỉ cao ~80px);
+  `points === 0` → ẩn số (`display:none`) nhưng callback vẫn chạy lúc hạ cánh để chốt `st.points`/
+  `pendingSettle`. CSS `.aw-unj-flygain.is-big`: bóng đổ thu về `.04em` (bóng em-scaled cũ sẽ ~27px),
+  số bên trong `.5em` để "+1"/"−N" không to bằng 1/4 màn.
+- `doSubmit`: đúng → `flyToScore(boardEl, icons.markCheck, 1, …, true)`; sai → `flyToScore(boardEl,
+  icons.markCross, −pointsOff | 0, …, true)`. **Bỏ gọi `ui.flyPenalty` ở nhánh này** — cú bay ✗ CHÍNH LÀ
+  cú bay "−N" (icon mờ dần thành số đỏ giữa đường), gọi cả hai là vẽ hai con số. Luật Đợt 256 vẫn giữ:
+  MỘT cú bay, MỘT chủ nợ, `st.points` đặt TRONG callback lúc hạ cánh. `roundTimeUp()` (hết giờ vòng
+  Showdown) vẫn dùng `ui.flyPenalty(null, …)` như cũ — không có gì để chỉ vào.
+- `finalizeLiveWord` (With bonus): ✓ lên `big`; chip "BONUS" giữ cỡ nhỏ (24px, đo thật).
+- Gỡ `flyStarsToScore` + `STAR_SVG`/`STAR_RED_SVG` + CSS `.aw-unj-flystar`, `.aw-unj-star` (chết từ Đợt
+  41), `.aw-unj-board .aw-mark-fly` (chết từ Đợt 40).
+- Editor: `growingCell()` — Sentence/Clue là `<textarea rows=1>` tự cao: đo `scrollHeight` ở height 0
+  rồi ghi vào **`min-height`** (KHÔNG ghi `height` — hai ô là flex item `stretch` theo ô cao hơn, ghi
+  `height` là ô ngắn thoát khỏi stretch, vạch chia giữa dừng lưng chừng). Enter bị chặn (game chơi 1
+  dòng). Đo lại: mỗi `input`, sau mỗi `renderItems()`, sau khi gắn vào trang, và `ResizeObserver` trên
+  `iWrap` khi đổi bề ngang. Dán Excel/kéo hàng/Swap/Save không đổi. CSS: Clue `34% → 42%`, textarea
+  `box-sizing:border-box; resize:none; overflow:hidden; display:block`.
+
+**Bàn thử (dev server riêng cổng 5535, chạy engine + template THẬT):**
+- `scratch/unjumble335-test.html` — kéo-thả bằng pointer events thật, **28/28 ĐẠT**: A submit đúng (điểm
+  còn 0 khi ✓ đang giữ → "1 / 2" sau hạ cánh, cỡ 136,5px = 1/4 stage 546px, số "+1"); B submit sai
+  Points off 3 (✗, số "-3", **0 node `.aw-penalty-fly` của core**, "-3 / 2" sau hạ cánh, câu đúng lộ);
+  C Points off = Off (✗ bay, số ẩn, điểm giữ "0 / 2"); D With bonus (✓ big 136,5px, BONUS 24px, "2 / 4");
+  E ☰ Submit answers khi ✗ còn đang giữ → bảng kết quả "-3/2" đúng (Đợt 311 còn nguyên), không sót node.
+  ⚠️ Bàn thử phải đặt `optVer: 4` trên act giả — không có là `core/options-migrate.js` nhân Points off
+  ×20 (3 → 60), đúng luật của nó, không phải lỗi.
+- `scratch/unjumble335-editor-test.html` — 1/2/3 dòng = 40,5/83/126px, hai ô cùng cao, Clue 41,8%;
+  gõ dài 40→104, xoá về 40; Enter `defaultPrevented`; dán Excel 2×2 ra 2 hàng đúng và ô tự cao; Save ra
+  đúng dữ liệu. Console 0 lỗi.
+⬜ Thầy bấm tay: cảm giác ✓/✗ to trên TOMKO + điện thoại; editor với câu rất dài.
+
 ## ⭐ Đợt 311 (08/9/2026) — "CỬA SỔ NỘP" cùng bệnh với Anagram · ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE · KHÔNG SỬA CODE CORE
 
 Thầy báo lỗi trên Anagram (HS làm đúng 30 câu, máy ghi 29/30); rà thấy Unjumble có y hệt 3 mặt:

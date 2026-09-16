@@ -5377,9 +5377,31 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **16/9/2026 sau Đợt 334** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **16/9/2026 sau Đợt 335** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (16/9/2026 — sau **Đợt 334**: ✅ ĐÃ COMMIT `3135f32` + PUSH + LIVE KIỂM CHỨNG BẰNG MÃ BĂM, ⬜ THẦY CHƯA BẤM TAY LẠI)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (16/9/2026 — sau **Đợt 335** (Unjumble) và **Đợt 334** (Speed sorting) — HAI PHIÊN SONG SONG CÙNG BUỔI SÁNG, cả hai ✅ ĐÃ COMMIT + PUSH, ⬜ THẦY CHƯA BẤM TAY LẠI)
+>
+> **⭐ Đợt 335 — UNJUMBLE: ✓ / ✗ LỚN BAY VỀ Ô ĐIỂM THAY CHÙM SAO · EDITOR Ô TỰ CAO THEO NỘI DUNG (thầy giao
+> 3 việc qua chat + chốt 3 câu hỏi; "ok build").** Chỉ sửa `templates/unjumble/{unjumble.js, unjumble.css,
+> unjumble-editor.js}`, KHÔNG đụng core. (1) On submit ĐÚNG: bỏ 12 sao vàng → **✓ lớn (1/4 chiều cao khung,
+> `BIGMARK_STAGE_FRAC`)** giữ 0,55s rồi bay về ô điểm hoá "+1", tới nơi mới cộng. (2) On submit SAI: bỏ sao đỏ
+> → **✗ lớn bay về ô điểm, giữa đường hoá "−N" đỏ**, tới nơi mới trừ; ⚠️ **bỏ gọi `ui.flyPenalty` ở nhánh
+> này** (cú bay ✗ chính là cú bay "−N" — gọi cả hai là hai con số), luật Đợt 256 "một cú bay, một chủ nợ" vẫn
+> giữ nguyên tinh thần; Points off = Off ⇒ ✗ vẫn bay nhưng không số, không trừ; `roundTimeUp()` vẫn dùng
+> `ui.flyPenalty(null,…)`. (3) ✓ của With bonus cũng lên cỡ lớn, chip BONUS giữ nhỏ. (4) Editor: Sentence +
+> Clue là `<textarea rows=1>` tự cao theo nội dung (`growingCell`, ghi `min-height` chứ KHÔNG `height` kẻo
+> ô ngắn thoát flex-stretch), Enter chặn, Clue 34→42%; dán Excel/kéo hàng/Save không đổi. Gỡ
+> `flyStarsToScore` + SVG sao + 3 luật CSS chết. **Bàn thử** (dev server riêng cổng 5535, engine+template
+> thật, kéo-thả pointer events thật): `scratch/unjumble335-test.html` **28/28** (điểm còn 0 khi dấu đang giữ
+> → đúng số sau hạ cánh; 0 node `.aw-penalty-fly` của core; Off không trừ; ☰ Submit answers giữa lúc bay vẫn
+> ra "-3/2" — Đợt 311 còn nguyên) + `scratch/unjumble335-editor-test.html` (1/2/3 dòng 40/83/126px, hai ô
+> cùng cao, dán Excel, Save). ⚠️ Act giả trong bàn thử phải có `optVer: 4`, không thì `options-migrate` nhân
+> Points off ×20. ⚠️ Số đợt: phiên song song giữ 334 cho Speed sorting nên Unjumble lấy 335 (tiền lệ Đợt
+> 34/35); commit chỉ stage `templates/unjumble/` + hồ sơ. Backup `_backup/dot335/`. ⬜ Thầy bấm tay: cỡ ✓/✗
+> trên TOMKO + điện thoại, editor câu dài. Chi tiết: `GHI CHU DU AN.md` Đợt 335 + `templates/unjumble/GHI
+> CHU UNJUMBLE.md`.
+>
+> **Cùng ngày, phiên song song — Đợt 334 (✅ ĐÃ COMMIT `3135f32` + PUSH + LIVE KIỂM CHỨNG BẰNG MÃ BĂM, ⬜ THẦY CHƯA BẤM TAY LẠI):**
 >
 > **⭐⭐ Đợt 334 — SPEED SORTING: băng bắt đầu TRỐNG rồi ô đầu trượt vào từ mép · băng LIỀN một dải, hết
 > đứt cụm · LUÔN trộn ngẫu nhiên mọi nhóm (thầy bấm tay live Đợt 329 rồi báo 3 điều chỉnh; chốt "trộn

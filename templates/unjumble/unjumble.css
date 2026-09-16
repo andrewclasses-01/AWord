@@ -104,10 +104,6 @@
 .aw-unj-intro-title { font-weight: 800; font-size: calc(12 * var(--aw-u)); line-height: .95; color: #2b3a55; }
 .aw-unj-intro-sub { font-weight: 700; font-size: calc(4.2 * var(--aw-u)); line-height: 1; color: #33456a; opacity: .92; letter-spacing: .02em; }
 
-/* stars that stream from a correct submitted sentence into the score (fixed, on body) */
-.aw-unj-flystar { position: fixed; z-index: 60; pointer-events: none; filter: drop-shadow(0 1px 2px rgba(0,0,0,.2)); }
-.aw-unj-flystar svg { width: 100%; height: 100%; display: block; }
-
 /* "N moves for bonus" — GREEN, at the BOTTOM of the card where Submit sits (bonus
    mode). A card flex child, so it's hidden with the words during the intro (Đợt 40). */
 .aw-unj-moves {
@@ -224,14 +220,6 @@
   text-shadow: 0 calc(0.4 * var(--aw-u)) calc(1 * var(--aw-u)) rgba(20, 35, 60, .28);
 }
 
-/* little gold stars bursting from a word marked correct in submit mode (JS-animated) */
-.aw-unj-star {
-  position: absolute; left: 50%; top: 50%;
-  width: calc(2.6 * var(--aw-u)); height: calc(2.6 * var(--aw-u)); pointer-events: none; z-index: 6;
-  filter: drop-shadow(0 calc(0.1 * var(--aw-u)) calc(0.2 * var(--aw-u)) rgba(0, 0, 0, .2));
-}
-.aw-unj-star svg { width: 100%; height: 100%; display: block; }
-
 /* ---------- correct-sentence reveal (submit mode, wrong answer) ----------
    FIXED height (reserved whether empty or filled) so showing the correct answer
    never nudges the wrong sentence upward (teacher, Đợt 42). One line, no wrap. */
@@ -263,15 +251,17 @@
 .aw-unj-submit:active:not(:disabled) { transform: translateY(calc(0.3 * var(--aw-u))); box-shadow: 0 calc(0.15 * var(--aw-u)) 0 rgba(0, 0, 0, .18); }
 .aw-unj-submit:disabled { opacity: .4; cursor: default; }
 
-/* big check/cross (core .aw-mark-fly) — a touch smaller here */
-.aw-unj-board .aw-mark-fly { width: 26%; }
-
 /* "fly to score" wrapper (fixed, JS-positioned) — same as Anagram's */
 .aw-unj-flygain {
   position: fixed; width: 1em; height: 1em;
   pointer-events: none; z-index: 60;
   filter: drop-shadow(0 0.15em 0.3em rgba(0, 0, 0, .3));
 }
+/* ⭐ Đợt 335 — the BIG ✓ / ✗ over a graded sentence (font-size = 1/4 of the stage,
+   set in JS). The number it turns into mid-flight is kept readable, not 1/4 stage:
+   half the icon's size, so "+1" / "−N" lands at the same weight as before. */
+.aw-unj-flygain.is-big { filter: drop-shadow(0 .04em .08em rgba(0, 0, 0, .28)); }   /* em-scaled shadow would be ~27px at this size */
+.aw-unj-flygain.is-big .afg-num { font-size: .5em; }
 .aw-unj-flygain .afg-icon,
 .aw-unj-flygain .afg-num {
   position: absolute; inset: 0;
@@ -338,7 +328,7 @@
 .aw-unj-ed-headrow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .aw-unj-ed-headcols { display: flex; flex: 1; gap: 8px; padding-left: 34px; margin-right: 152px; }
 .aw-unj-ed-headcol { flex: 1; font-size: .82rem; font-weight: 700; color: #55657a; }
-.aw-unj-ed-headcol.is-clue { flex: 0 0 34%; }
+.aw-unj-ed-headcol.is-clue { flex: 0 0 42%; }   /* Đợt 335 — wider clue column (was 34%) */
 
 .aw-unj-ed-row { display: flex; align-items: stretch; gap: 8px; }
 .aw-unj-ed-row.is-dragging { opacity: .4; }
@@ -356,10 +346,15 @@
 }
 .aw-unj-ed-box:focus-within { border-color: #2f7bff; box-shadow: 0 0 0 3px rgba(47, 123, 255, .15); }
 .aw-unj-ed-sentence { flex: 1; min-width: 0; }
-.aw-unj-ed-clue { flex: 0 0 34%; min-width: 0; border-left: 1.5px solid #e2e9f2; }
+.aw-unj-ed-clue { flex: 0 0 42%; min-width: 0; border-left: 1.5px solid #e2e9f2; }   /* Đợt 335 — was 34% */
+/* Đợt 335 — both cells are auto-growing textareas (unjumble-editor.js growCell):
+   no manual resize grip, no inner scrollbar, border-box so scrollHeight == the
+   height to set. `display:block` kills the inline-textarea baseline gap. */
 .aw-unj-ed-sentence, .aw-unj-ed-clue {
   border-top: none; border-right: none; border-bottom: none; outline: none; background: transparent;
   padding: .6rem .75rem; font-size: .95rem; font-family: inherit; color: #23303e;
+  display: block; box-sizing: border-box; resize: none; overflow: hidden;
+  line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere;
 }
 .aw-unj-ed-sentence { border-left: none; font-weight: 600; }
 

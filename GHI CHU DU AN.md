@@ -12,7 +12,14 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **⭐⭐ Đợt 333** (14/9/2026, thầy giao 3 việc qua chat cho FIGHT + Options chung): (1) THANH
+> Mới nhất: **⭐ Đợt 335** (16/9/2026, UNJUMBLE — thầy giao 3 việc qua chat): On submit đúng/sai không còn
+> chùm sao — **✓ / ✗ LỚN (1/4 chiều cao khung) bay về ô điểm**, ✗ hoá thành "−N" giữa đường, tới nơi mới
+> trừ (giữ luật Đợt 256 nhưng cú bay là của template, bỏ `ui.flyPenalty` ở nhánh đó); ✓ của With bonus cũng
+> lên cỡ lớn; editor Sentence/Clue là ô **tự cao theo nội dung**, Clue 34→42%. Bàn thử 28/28 + editor đủ.
+> ⬜ chưa bấm tay trang thật. Xem mục **Đợt 335**.
+> Cùng ngày, phiên song song: **⭐⭐ Đợt 334** (16/9/2026, SPEED SORTING — băng bắt đầu trống rồi ô đầu trượt
+> vào từ mép · băng liền một dải · luôn trộn ngẫu nhiên; ✅ commit `3135f32` + live) — xem mục **Đợt 334**.
+> Trước đó: **⭐⭐ Đợt 333** (14/9/2026, thầy giao 3 việc qua chat cho FIGHT + Options chung): (1) THANH
 > SPEED BONUS THÊM SỐ 0 — trước đây ở mọi mức Time delay khác 0,1s thanh này bắt đầu từ 1 (không tắt
 > được ngay trên chính nó, phải lùi Time delay về 0,1s mới tắt thưởng — mà nấc đó lại khoá cứng luôn cả
 > đội chậm); nay CẢ HAI chế độ (pick-turn lẫn Time delay) dùng chung một hình dạng 0..100, Off ở 0, và
@@ -533,6 +540,51 @@ console):**
 thoại cảm ứng vẫn chưa đo (từ Đợt 327).
 
 ---
+
+## Đợt 335 (16/9/2026, thầy giao 3 việc qua chat + chốt 3 câu hỏi) — **UNJUMBLE: ✓/✗ LỚN BAY VỀ Ô ĐIỂM THAY CHÙM SAO · EDITOR Ô TỰ CAO THEO NỘI DUNG** · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY TRANG THẬT · KHÔNG SỬA CORE
+
+> ⚠️ **Số đợt:** phiên song song cùng buổi sáng 16/9 đang giữ **Đợt 334 cho Group sort / Speed sorting**
+> (`_backup/dot334/` đã có file group-sort + `group-sort.js` đang sửa dở trong kho lúc phiên này bắt đầu)
+> nên Unjumble lấy **335** — cùng tiền lệ Đợt 34 (Gameshow) / 35 (Unjumble) ngày 1/8. Commit của đợt này
+> chỉ stage `templates/unjumble/` + 3 file hồ sơ, KHÔNG cuốn `group-sort.js`.
+
+**Thầy yêu cầu (nguyên văn):** *"Khi đúng, bỏ các ngôi sao vàng nhỏ xung quanh đáp án, thay bằng một dấu
+tích ✓ lớn và dấu này bay về ô điểm · Khi sai, bỏ các ngôi sao nhỏ đỏ xung quanh đáp án, thay bằng một dấu
+X lớn và dấu này bay về ô điểm · Trong edit: Ô optional Clue rộng hơn một chút để dễ quan sát các câu, khi
+text dài sẽ hiển thị thêm dòng để luôn quan sát được hết các text."* Chốt qua 3 câu hỏi: ✗ bay rồi **hoá
+thành "−N"** (một cú bay, giữ luật Đợt 256) · ✓ ở With bonus **cũng lên cỡ lớn** · **cả Sentence lẫn Clue**
+tự cao.
+
+**Rà trước khi làm.** (a) Chế độ *With bonus* đã có ✓ bay từ Đợt 39, không có sao → việc (1) chỉ đụng *On
+submit*; Đợt 40 từng làm đúng như thầy tả rồi Đợt 41/42 thầy đổi sang sao — nay quay lại, hàm `flyToScore`
+còn nguyên. (b) **Xung đột với Đợt 256**: mọi template có trừ điểm phải cho con số "−N" bay (core
+`ui.flyPenalty`) — Unjumble sai đang = số "−N" (core) + sao đỏ (riêng). Thầy chọn "✗ bay rồi hoá −N": giữ
+ĐÚNG tinh thần Đợt 256 (một cú bay, một chủ nợ, tới nơi mới trừ) nhưng cú bay là của template, **bỏ gọi
+`ui.flyPenalty` ở nhánh submit sai** kẻo hai con số. `roundTimeUp()` giữ nguyên `ui.flyPenalty(null, …)`.
+
+**Sửa (chỉ `templates/unjumble/`).** `flyToScore(…, big)`: cỡ = **1/4 chiều cao STAGE** (`BIGMARK_STAGE_FRAC`,
+đo `stageEl` — board câu 1 hàng chỉ ~80px nên không dùng); `points === 0` (Points off = Off) → ✗ vẫn bay
+cho lớp thấy sai nhưng ẩn số, callback vẫn chạy lúc hạ cánh để chốt `st.points`/`pendingSettle` (Đợt 311).
+CSS `.is-big`: bóng `.04em` (bóng em-scaled cũ sẽ ~27px ở cỡ này), số bên trong `.5em`. Gỡ
+`flyStarsToScore` + 2 SVG sao + 3 luật CSS chết. Editor: `growingCell()` — `<textarea rows=1>`, đo
+`scrollHeight` ở height 0 rồi ghi **`min-height`** (⚠️ KHÔNG ghi `height`: hai ô là flex item `stretch`
+theo ô cao hơn, ghi `height` là ô ngắn thoát stretch, vạch chia dừng lưng chừng); Enter chặn; đo lại mỗi
+`input` · sau `renderItems()` · sau khi gắn trang · `ResizeObserver`. Clue `34% → 42%`.
+
+**Bàn thử (dev server riêng cổng 5535 vì 5510 phiên kia đang chiếm; engine + template THẬT).**
+`scratch/unjumble335-test.html` kéo-thả pointer events thật **28/28 ĐẠT** — A submit đúng: điểm còn "0 / 2"
+khi ✓ đang giữ, "1 / 2" sau hạ cánh, cỡ 136,5px = 1/4 stage 546px, số "+1", 0 sao · B submit sai −3: ✗,
+số "-3", **0 node `.aw-penalty-fly` của core**, "-3 / 2" sau hạ cánh, câu đúng lộ · C Points off = Off: ✗
+bay, số `display:none`, "0 / 2" · D With bonus: ✓ big 136,5px, chip BONUS vẫn 24px, "2 / 4" · E ☰ Submit
+answers khi ✗ còn giữ → bảng kết quả "-3/2" (Đợt 311 còn nguyên), không sót node. ⚠️ Act giả phải có
+`optVer: 4`, không thì `core/options-migrate.js` nhân Points off ×20 (3 → 60) — luật của nó, không phải
+lỗi; lần chạy đầu 2 FAIL vì đúng chỗ này + đo bảng kết quả sớm hơn fanfare 2,2s.
+`scratch/unjumble335-editor-test.html`: 1/2/3 dòng = 40,5/83/126px, hai ô cùng cao, Clue 41,8%; gõ dài
+40→104, xoá về 40; Enter `defaultPrevented`; dán Excel 2×2 đúng + ô tự cao; Save đúng. Console 0 lỗi.
+`node --input-type=module --check` sạch 2 file JS; brace `unjumble.css` cân 100=100.
+
+**VIỆC ĐANG CHỜ.** ⬜ Thầy bấm tay trang thật: cỡ ✓/✗ trên TOMKO 86" + điện thoại (1/4 khung có to quá
+không), nhịp giữ 0,55s → bay 0,55s; editor với câu rất dài / dán Excel thật.
 
 ## Đợt 333 (14/9/2026, thầy giao 3 việc qua chat + 1 chốt tiếp) — **FIGHT: Speed bonus có Off · hết Time delay chưa xong tính như sai · icon loa dời phải to bằng chữ, chỉ hiện ở VOICE**
 

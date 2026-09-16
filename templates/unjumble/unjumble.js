@@ -49,17 +49,17 @@ const STAGGER_MS = 240;     // ms — gap between each position's reveal in "sub
 const INTRO_MS = 3272;      // ms — matches intro.mp3 (~3.27s): full "zoom in from far" intro
 const DROP_FLY_MS = 190;    // ms — a dropped word glides smoothly to its caret slot
 
-// Little sparkle stars that stream to the score — gold on a correct sentence,
-// red on a wrong one (submit mode).
-const STAR_SVG = `<svg viewBox="0 0 24 24" fill="#ffd23f" stroke="#e8920c" stroke-width="1"><path d="M12 2l2.6 6.3L21 9l-5 4.3L17.6 20 12 16.4 6.4 20 8 13.3 3 9l6.4-.7z"/></svg>`;
-const STAR_RED_SVG = `<svg viewBox="0 0 24 24" fill="#ef4b57" stroke="#a5111c" stroke-width="1"><path d="M12 2l2.6 6.3L21 9l-5 4.3L17.6 20 12 16.4 6.4 20 8 13.3 3 9l6.4-.7z"/></svg>`;
-
 // Shared "hold, then fly to the score, morph into +points, pulse-count it in"
 // timings (same feel as Anagram's PERFECT bonus).
 const FLYGAIN_HOLD_MS = 550;
 const FLYGAIN_FLIGHT_MS = 550;
 const FLYGAIN_PULSE_MS = 420;
 const FLYGAIN_TOTAL_MS = FLYGAIN_HOLD_MS + FLYGAIN_FLIGHT_MS;
+// ⭐ Đợt 335 (thầy, 16/9/2026) — the BIG ✓ / ✗ that a graded sentence earns is sized
+// from the STAGE height (not the board, whose height is one row for a short
+// sentence), so it reads as one large mark over the whole sentence on every
+// screen. The "BONUS" chip keeps its own small size (see flyToScore's `big`).
+const BIGMARK_STAGE_FRAC = 0.25;
 
 // Split a sentence into words (whitespace), keeping punctuation attached to
 // its word (e.g. "week." stays one token, matching Wordwall). Returns
@@ -753,7 +753,8 @@ const unjumbleTemplate = {
       updateNav();
       celebrateBounce();   // all words do a little wave-bounce (teacher, Đợt 36)
       // The ✓ for a correct sentence flies into the score (+1) (teacher, Đợt 39).
-      flyToScore(boardEl, icons.markCheck, 1, () => { st.points = 1; if (!perfect && pendingSettle === mine) pendingSettle = null; return scoreNow(); });
+      // Đợt 335 — BIG, same size as the submit-mode ✓/✗ (thầy: "cùng một cỡ lớn").
+      flyToScore(boardEl, icons.markCheck, 1, () => { st.points = 1; if (!perfect && pendingSettle === mine) pendingSettle = null; return scoreNow(); }, true);
       if (perfect) {
         unjumbleSound.perfect();
         // the "moves for bonus" spot launches a "BONUS" chip into the score (+1 more).
@@ -811,29 +812,28 @@ const unjumbleTemplate = {
         updateSubmitState();
         updateNav();
         if (revealEl) revealEl.textContent = (!allCorrect && showAnswerWhenWrong) ? sentenceText(it) : "";
-        // Score by SENTENCE (correct = 1; wrong costs pointsOff, 0–5). Both correct AND
-        // wrong now shower stars that stream to the score — GOLD +1 on correct, RED
-        // −pointsOff on wrong (no big ✗, teacher Đợt 42). A wrong sentence also costs a
+        // Score by SENTENCE (correct = 1; wrong costs pointsOff).
+        // ⭐ Đợt 335 (thầy, 16/9/2026) — ONE BIG MARK, NO STARS. A correct sentence
+        // shows a big ✓ that flies into the score and turns into "+1"; a wrong one
+        // shows a big ✗ that flies in and turns into "−N" (Đợt 40's look, back by
+        // request — Đợt 41/42's star showers are gone). A wrong sentence also costs a
         // life; running out ends the game.
+        // ⚠️⚠️ Đợt 256's rule still holds — ONE flight, ONE creditor, and the points
+        // change only when the mark LANDS: `st.points` is set inside flyToScore's
+        // callback. The ✗ flight IS the "−N" flight now (the icon fades into the red
+        // number mid-air), so `ui.flyPenalty` is no longer called on this path —
+        // calling both would draw two "−N"s. roundTimeUp() still uses ui.flyPenalty
+        // (nothing was tapped there, so the number rises from mid-frame).
+        // ⚠️ Points off = Off (0): the ✗ still flies (the class must SEE it was wrong)
+        // but carries no number and deducts nothing.
         let outOfLives = false;
         if (allCorrect) {
           celebrateBounce();
-          flyStarsToScore(boardEl, () => { st.points = 1; if (pendingSettle === mine) pendingSettle = null; return scoreNow(); });
+          flyToScore(boardEl, icons.markCheck, 1, () => { st.points = 1; if (pendingSettle === mine) pendingSettle = null; return scoreNow(); }, true);
         } else {
           outOfLives = loseLife();
-          // ⭐⭐⭐ Đợt 256 (thầy, 24/8/2026) — CON SỐ, KHÔNG CHỈ NGÔI SAO.
-          // Unjumble vốn đã làm đúng nửa quan trọng nhất từ Đợt 41/42: chùm sao ĐỎ bay
-          // từ cả câu vào ô điểm và phép trừ chỉ áp KHI SAO TỚI NƠI. Thiếu đúng một
-          // thứ — nó không nói TRỪ BAO NHIÊU, mà đó chính là điều thầy hỏi.
-          // ⚠️⚠️ CHỈ MỘT NGƯỜI ĐƯỢC TRỪ. Quyền trừ chuyển sang CON SỐ (`st.points`
-          // nay đặt trong callback của ui.flyPenalty), còn callback của chùm sao hạ
-          // xuống thành "vẽ lại điểm hiện hành". Để cả hai cùng đặt `st.points` thì vô
-          // hại (gán chứ không cộng dồn) — nhưng để cả hai cùng TRỪ ở một template
-          // khác thì là trừ hai lần, nên luật viết ra ở đây là: một cú bay, một chủ nợ.
-          // ⭐ Con số bay 920ms, chùm sao 1100ms ⇒ số tới TRƯỚC, điểm tụt lúc nó cắm
-          // vào, rồi sao mới tới và chỉ vẽ lại đúng con số ấy. Không có nhịp nảy ngược.
-          ui.flyPenalty?.(boardEl, pointsOff, () => { st.points = -pointsOff; if (pendingSettle === mine) pendingSettle = null; return scoreNow(); });
-          flyStarsToScore(boardEl, () => scoreNow(), true);
+          flyToScore(boardEl, icons.markCross, pointsOff ? -pointsOff : 0,
+            () => { st.points = pointsOff ? -pointsOff : 0; if (pendingSettle === mine) pendingSettle = null; return scoreNow(); }, true);
         }
         if (outOfLives) autoTimer = setTimeout(() => finish("gameover"), FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 400);
         else if (state.every(doneCheck)) autoTimer = setTimeout(finish, FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 400);
@@ -845,36 +845,6 @@ const unjumbleTemplate = {
       if (!submitBtnEl) return;
       const st = state[index];
       submitBtnEl.disabled = st.graded || busy;
-    }
-
-    // A shower of little stars pops up around the whole sentence and streams into
-    // the score, then the point lands — GOLD on a correct submit, RED on a wrong
-    // one (teacher, Đợt 41/42).
-    function flyStarsToScore(sourceEl, applyAndGetNewTotal, red) {
-      const scoreEl = document.querySelector(".aw-top-score");
-      if (!sourceEl || !scoreEl) { pulseScoreTo(applyAndGetNewTotal()); return; }
-      const gr = sourceEl.getBoundingClientRect();
-      const er = scoreEl.getBoundingClientRect();
-      const ex = er.left + er.width / 2, ey = er.top + er.height / 2;
-      const size = Math.max(14, gr.height * 0.16);
-      const N = 12;
-      for (let i = 0; i < N; i++) {
-        const s = el("span", "aw-unj-flystar");
-        s.innerHTML = red ? STAR_RED_SVG : STAR_SVG;
-        s.style.width = s.style.height = size + "px";
-        const sx = gr.left + gr.width * (0.08 + 0.84 * ((i * 0.3819) % 1));
-        const sy = gr.top + gr.height * (0.15 + 0.7 * ((i * 0.6180) % 1));
-        s.style.left = sx + "px"; s.style.top = sy + "px";
-        document.body.append(s);
-        activeFlyNodes.add(s);
-        s.animate([
-          { transform: "translate(-50%,-50%) scale(.3) rotate(0deg)", opacity: 0, offset: 0 },
-          { transform: "translate(-50%,-50%) scale(1) rotate(40deg)", opacity: 1, offset: .25 },
-          { transform: `translate(calc(-50% + ${ex - sx}px), calc(-50% + ${ey - sy}px)) scale(.35) rotate(160deg)`, opacity: 0, offset: 1 }
-        ], { duration: 750 + i * 25, delay: i * 20, easing: "cubic-bezier(.4,.2,.25,1)", fill: "forwards" });
-        setTimeout(() => { s.remove(); activeFlyNodes.delete(s); }, 820 + i * 45);
-      }
-      setTimeout(() => pulseScoreTo(applyAndGetNewTotal()), 760);
     }
 
     // A left-to-right wave of little hops across the solved sentence's words.
@@ -894,7 +864,11 @@ const unjumbleTemplate = {
     // that a solved sentence earns, and (on a bonus) a second "BONUS" flight.
     // `start` may be an element OR a plain rect {left,top,width,height} (e.g. the
     // captured "moves for bonus" spot, since that element is cleared before we fly).
-    function flyToScore(start, iconHtml, points, applyAndGetNewTotal) {
+    // ⭐ Đợt 335 — `big` = the large ✓/✗ over the whole sentence: sized from the STAGE
+    // height (BIGMARK_STAGE_FRAC), not the start rect. `points === 0` (Points off =
+    // Off on a wrong sentence): the mark flies and fades, no number is shown, and the
+    // callback still runs on landing so the sentence's points/pendingSettle settle.
+    function flyToScore(start, iconHtml, points, applyAndGetNewTotal, big) {
       const scoreEl = document.querySelector(".aw-top-score");
       if (!start || !scoreEl) { pulseScoreTo(applyAndGetNewTotal()); return; }
       const startRect = start.getBoundingClientRect ? start.getBoundingClientRect() : start;
@@ -904,13 +878,15 @@ const unjumbleTemplate = {
       const dx = (endRect.left + endRect.width / 2) - cx;
       const dy = (endRect.top + endRect.height / 2) - cy;
 
-      const wrap = el("div", "aw-unj-flygain");
+      const wrap = el("div", "aw-unj-flygain" + (big ? " is-big" : ""));
       wrap.style.left = cx + "px";
       wrap.style.top = cy + "px";
-      wrap.style.fontSize = Math.max(24, startRect.width * 0.06) + "px";
+      const stageH = (stageEl || root).getBoundingClientRect().height;
+      wrap.style.fontSize = (big ? Math.max(48, stageH * BIGMARK_STAGE_FRAC) : Math.max(24, startRect.width * 0.06)) + "px";
 
       const iconSpan = el("span", "afg-icon", iconHtml);
       const numSpan = el("span", "afg-num" + (points < 0 ? " is-neg" : ""), (points >= 0 ? "+" : "") + points);
+      if (points === 0) numSpan.style.display = "none";   // ✗ with Points off = Off: no number
       wrap.append(iconSpan, numSpan);
       document.body.append(wrap);
       activeFlyNodes.add(wrap);
