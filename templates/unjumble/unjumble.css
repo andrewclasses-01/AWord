@@ -262,6 +262,14 @@
    half the icon's size, so "+1" / "−N" lands at the same weight as before. */
 .aw-unj-flygain.is-big { filter: drop-shadow(0 .04em .08em rgba(0, 0, 0, .28)); }   /* em-scaled shadow would be ~27px at this size */
 .aw-unj-flygain.is-big .afg-num { font-size: .5em; }
+/* ⭐ Đợt 336 — the big mark is GREEN for ✓ and RED for ✗ (thầy). core/icons.js's
+   markCheck/markCross are two stacked strokes: a dark outline path first, a white
+   fill path second. Recolour both — the outline a deep shade, the fill the same
+   green / red the words themselves turn (--ink-correct / the negative-score red). */
+.aw-unj-flygain.is-ok .afg-icon svg path:first-child  { stroke: #0f6b41; }
+.aw-unj-flygain.is-ok .afg-icon svg path:last-child   { stroke: #1faa6b; }
+.aw-unj-flygain.is-bad .afg-icon svg path:first-child { stroke: #8a1e27; }
+.aw-unj-flygain.is-bad .afg-icon svg path:last-child  { stroke: #e23b45; }
 .aw-unj-flygain .afg-icon,
 .aw-unj-flygain .afg-num {
   position: absolute; inset: 0;

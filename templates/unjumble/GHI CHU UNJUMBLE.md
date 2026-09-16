@@ -4,6 +4,26 @@
 tồn kho một lượt, rồi tự test và xác nhận). Đã `built:true` trong `core/catalog.js`, commit + push,
 GitHub Pages đã deploy. Chơi thử riêng vẫn được: `templates/unjumble/test.html`.
 
+## ⭐ Đợt 336 (16/9/2026, thầy giao tiếp ngay sau 335) — ✓ XANH LÁ · ✗ ĐỎ · TIẾNG "TING"/"TÙNG" KHI ĐÚNG/SAI Ở ON SUBMIT · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY · KHÔNG SỬA CORE
+
+Thầy: *"Đổi ✓ xanh lá, ✗ đỏ luôn đi. Thêm tiếng ting khi đúng và tùng khi sai (trong on submit) như các
+template khác nữa."* Backup `_backup/dot336/` (= bản sau Đợt 335).
+- **Màu:** `flyToScore(…, big)` — `big` nay là TONE `"ok"`/`"bad"` → lớp `is-big is-ok` / `is-big is-bad`.
+  CSS tô lại 2 nét của icon core (`markCheck`/`markCross` = nét viền tối + nét trắng): ✓ viền `#0f6b41`,
+  ruột `#1faa6b` (= `--ink-correct`, màu chữ đúng); ✗ viền `#8a1e27`, ruột `#e23b45` (= màu điểm âm).
+  Áp cả ✓ của With bonus. Số "+1"/"−N" giữ màu cũ (vàng / đỏ).
+- **Tiếng:** nhánh On submit từ trước CHỈ phát tiếng tách nhỏ theo từng chữ lúc lộ (`fastCorrect`/
+  `fastWrong`), không có tiếng phán quyết cả câu. Nay đúng lúc ✓/✗ hiện: đúng → `unjumbleSound.correct()`
+  ("ting" ChipMinor của theme), sai → `unjumbleSound.wrong()` ("tùng" ChipFail, đã `wrapWrong` nên lớp âm
+  meme thầy chọn trong Cài đặt vẫn chồng lên như mọi template, và KHÔNG chồng trong bài giao). Tiếng tách
+  từng chữ vẫn giữ. With bonus không đổi (đã có `correct` khi dải xanh dài thêm + `perfect`).
+- **Bàn thử** `scratch/unjumble335-test.html` nâng lên **32/32**: đo `stroke` thật của 2 nét (✓
+  `rgb(31,170,107)`/`rgb(15,107,65)`, ✗ `rgb(226,59,69)`/`rgb(138,30,39)`), bọc `unjumbleSound.correct/
+  wrong` đếm lượt gọi (đúng: ting 1/tùng 0 · sai: tùng 1/ting 0), bonus ✓ cũng `is-ok`. ⚠️ Lần này khung
+  xem ẨN (`document.visibilityState === "hidden"`) nên rAF đóng băng, số đếm không vẽ (đúng ghi chú Đợt 36)
+  — bench đọc điểm thật bằng cách bấm ▷◁ (render gọi `showScore(scoreNow())` đồng bộ); ảnh chụp lớp phủ
+  `position:fixed` cũng không ra (bẫy đã biết). Console 0 lỗi.
+
 ## ⭐ Đợt 335 (16/9/2026, thầy giao qua chat + chốt 3 câu hỏi) — ✓/✗ LỚN BAY VỀ Ô ĐIỂM THAY CHÙM SAO · EDITOR Ô TỰ CAO · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY TRANG THẬT · KHÔNG SỬA CORE
 
 > ⚠️ Số đợt: phiên song song cùng buổi sáng đang dùng **Đợt 334 cho Group sort/Speed sorting**

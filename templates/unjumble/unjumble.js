@@ -754,7 +754,7 @@ const unjumbleTemplate = {
       celebrateBounce();   // all words do a little wave-bounce (teacher, Đợt 36)
       // The ✓ for a correct sentence flies into the score (+1) (teacher, Đợt 39).
       // Đợt 335 — BIG, same size as the submit-mode ✓/✗ (thầy: "cùng một cỡ lớn").
-      flyToScore(boardEl, icons.markCheck, 1, () => { st.points = 1; if (!perfect && pendingSettle === mine) pendingSettle = null; return scoreNow(); }, true);
+      flyToScore(boardEl, icons.markCheck, 1, () => { st.points = 1; if (!perfect && pendingSettle === mine) pendingSettle = null; return scoreNow(); }, "ok");
       if (perfect) {
         unjumbleSound.perfect();
         // the "moves for bonus" spot launches a "BONUS" chip into the score (+1 more).
@@ -826,14 +826,21 @@ const unjumbleTemplate = {
         // (nothing was tapped there, so the number rises from mid-frame).
         // ⚠️ Points off = Off (0): the ✗ still flies (the class must SEE it was wrong)
         // but carries no number and deducts nothing.
+        // ⭐ Đợt 336 (thầy, 16/9/2026) — the mark is GREEN (✓) / RED (✗), and the sentence
+        // verdict now SOUNDS like every other template: the theme's "ting" (`correct`)
+        // when the ✓ pops, the theme's "tùng" (`wrong` — wrapped by core/wrong-sound.js,
+        // so the teacher's chosen extra clip layers on in normal play, never in an
+        // assignment) when the ✗ pops. The soft per-word ticks of the reveal above stay.
         let outOfLives = false;
         if (allCorrect) {
           celebrateBounce();
-          flyToScore(boardEl, icons.markCheck, 1, () => { st.points = 1; if (pendingSettle === mine) pendingSettle = null; return scoreNow(); }, true);
+          unjumbleSound.correct();
+          flyToScore(boardEl, icons.markCheck, 1, () => { st.points = 1; if (pendingSettle === mine) pendingSettle = null; return scoreNow(); }, "ok");
         } else {
           outOfLives = loseLife();
+          unjumbleSound.wrong();
           flyToScore(boardEl, icons.markCross, pointsOff ? -pointsOff : 0,
-            () => { st.points = pointsOff ? -pointsOff : 0; if (pendingSettle === mine) pendingSettle = null; return scoreNow(); }, true);
+            () => { st.points = pointsOff ? -pointsOff : 0; if (pendingSettle === mine) pendingSettle = null; return scoreNow(); }, "bad");
         }
         if (outOfLives) autoTimer = setTimeout(() => finish("gameover"), FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 400);
         else if (state.every(doneCheck)) autoTimer = setTimeout(finish, FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 400);
@@ -868,6 +875,8 @@ const unjumbleTemplate = {
     // height (BIGMARK_STAGE_FRAC), not the start rect. `points === 0` (Points off =
     // Off on a wrong sentence): the mark flies and fades, no number is shown, and the
     // callback still runs on landing so the sentence's points/pendingSettle settle.
+    // ⭐ Đợt 336 — `big` is a TONE: "ok" (green ✓) or "bad" (red ✗); the colour lives
+    // in unjumble.css (`.is-ok` / `.is-bad` recolour the icon's two strokes).
     function flyToScore(start, iconHtml, points, applyAndGetNewTotal, big) {
       const scoreEl = document.querySelector(".aw-top-score");
       if (!start || !scoreEl) { pulseScoreTo(applyAndGetNewTotal()); return; }
@@ -878,7 +887,7 @@ const unjumbleTemplate = {
       const dx = (endRect.left + endRect.width / 2) - cx;
       const dy = (endRect.top + endRect.height / 2) - cy;
 
-      const wrap = el("div", "aw-unj-flygain" + (big ? " is-big" : ""));
+      const wrap = el("div", "aw-unj-flygain" + (big ? " is-big is-" + big : ""));
       wrap.style.left = cx + "px";
       wrap.style.top = cy + "px";
       const stageH = (stageEl || root).getBoundingClientRect().height;

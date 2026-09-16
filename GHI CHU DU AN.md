@@ -12,7 +12,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **⭐ Đợt 335** (16/9/2026, UNJUMBLE — thầy giao 3 việc qua chat): On submit đúng/sai không còn
+> Mới nhất: **⭐ Đợt 336** (16/9/2026, UNJUMBLE, ngay sau 335): ✓ **xanh lá** / ✗ **đỏ** (tô lại 2 nét icon
+> core qua `.is-ok`/`.is-bad`), và On submit có tiếng **"ting"** khi đúng / **"tùng"** khi sai đúng lúc dấu
+> hiện (`unjumbleSound.correct/wrong`, wrong đã bọc lớp âm meme như mọi template). Bàn thử 32/32. Xem mục
+> **Đợt 336**.
+> Trước đó: **⭐ Đợt 335** (16/9/2026, UNJUMBLE — thầy giao 3 việc qua chat): On submit đúng/sai không còn
 > chùm sao — **✓ / ✗ LỚN (1/4 chiều cao khung) bay về ô điểm**, ✗ hoá thành "−N" giữa đường, tới nơi mới
 > trừ (giữ luật Đợt 256 nhưng cú bay là của template, bỏ `ui.flyPenalty` ở nhánh đó); ✓ của With bonus cũng
 > lên cỡ lớn; editor Sentence/Clue là ô **tự cao theo nội dung**, Clue 34→42%. Bàn thử 28/28 + editor đủ.
@@ -540,6 +544,28 @@ console):**
 thoại cảm ứng vẫn chưa đo (từ Đợt 327).
 
 ---
+
+## Đợt 336 (16/9/2026, thầy giao tiếp ngay sau 335) — **UNJUMBLE: ✓ XANH LÁ · ✗ ĐỎ · TIẾNG "TING"/"TÙNG" KHI ĐÚNG/SAI Ở ON SUBMIT** · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY · KHÔNG SỬA CORE
+
+**Thầy (nguyên văn):** *"Đổi ✓ xanh lá, ✗ đỏ luôn đi. Thêm tiếng ting khi đúng và tùng khi sai (trong on
+submit) như các template khác nữa."* Chỉ sửa `templates/unjumble/{unjumble.js, unjumble.css}`; backup
+`_backup/dot336/` (= bản sau Đợt 335; ⚠️ lỡ tay ghi đè `_backup/dot335/` rồi khôi phục lại từ `a06b992`,
+đã diff xác nhận đúng bản TRƯỚC 335).
+- **Màu:** tham số `big` của `flyToScore` thành TONE `"ok"`/`"bad"` → lớp `is-ok`/`is-bad`; CSS tô lại
+  2 nét icon core (viền tối + ruột trắng): ✓ `#0f6b41`/`#1faa6b` (= `--ink-correct`), ✗ `#8a1e27`/`#e23b45`
+  (= màu điểm âm). ✓ của With bonus cũng xanh. Số "+1"/"−N" giữ màu cũ.
+- **Tiếng:** On submit trước chỉ có tiếng tách nhỏ theo từng chữ lúc lộ, không có tiếng phán quyết cả câu.
+  Nay đúng lúc ✓/✗ hiện: `unjumbleSound.correct()` ("ting" ChipMinor theme Whiteboard) / `unjumbleSound.
+  wrong()` ("tùng" ChipFail, đã `wrapWrong` → lớp âm meme trong Cài đặt chồng lên như mọi template, không
+  chồng trong bài giao). Tiếng tách từng chữ giữ. With bonus không đổi.
+- **Bàn thử** `scratch/unjumble335-test.html` → **32/32**: đo `stroke` thật 2 nét, bọc `unjumbleSound.
+  correct/wrong` đếm lượt gọi (đúng: 1/0 · sai: 0/1), bonus ✓ `is-ok`. ⚠️ Khung xem lúc chạy ĐANG ẨN
+  (`visibilityState = hidden`) ⇒ rAF đóng băng, số đếm không vẽ (ghi chú Đợt 36) — bench đọc điểm thật
+  bằng ▷◁ (render gọi `showScore(scoreNow())` đồng bộ); ảnh chụp lớp phủ fixed không ra (bẫy đã biết).
+  `node --check` sạch, brace css 104=104, console 0 lỗi.
+
+**VIỆC ĐANG CHỜ.** ⬜ Thầy nghe thật tiếng ting/tùng trên loa lớp (có bị chồng với tiếng tách từng chữ
+khó chịu không — nếu có thì bỏ tiếng tách ở nhánh On submit); nhìn màu ✓ xanh/✗ đỏ trên nền Classic.
 
 ## Đợt 335 (16/9/2026, thầy giao 3 việc qua chat + chốt 3 câu hỏi) — **UNJUMBLE: ✓/✗ LỚN BAY VỀ Ô ĐIỂM THAY CHÙM SAO · EDITOR Ô TỰ CAO THEO NỘI DUNG** · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY TRANG THẬT · KHÔNG SỬA CORE
 

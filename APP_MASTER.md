@@ -5377,9 +5377,19 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **16/9/2026 sau Đợt 335** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **16/9/2026 sau Đợt 336** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (16/9/2026 — sau **Đợt 335** (Unjumble) và **Đợt 334** (Speed sorting) — HAI PHIÊN SONG SONG CÙNG BUỔI SÁNG, cả hai ✅ ĐÃ COMMIT + PUSH, ⬜ THẦY CHƯA BẤM TAY LẠI)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (16/9/2026 — sau **Đợt 335 → 336** (Unjumble) và **Đợt 334** (Speed sorting) — HAI PHIÊN SONG SONG CÙNG BUỔI SÁNG, cả hai ✅ ĐÃ COMMIT + PUSH + LIVE, ⬜ THẦY CHƯA BẤM TAY LẠI)
+>
+> **⭐ Đợt 336 — UNJUMBLE: ✓ XANH LÁ · ✗ ĐỎ · TIẾNG "TING"/"TÙNG" Ở ON SUBMIT (thầy giao ngay sau 335).**
+> `flyToScore(…, big)` nhận TONE `"ok"`/`"bad"` → CSS `.is-ok`/`.is-bad` tô lại 2 nét icon core (✓ `#0f6b41`/
+> `#1faa6b`, ✗ `#8a1e27`/`#e23b45`), ✓ With bonus cũng xanh; đúng lúc dấu hiện phát `unjumbleSound.correct()`
+> (ting) / `.wrong()` (tùng — đã `wrapWrong`, lớp âm meme trong Cài đặt chồng lên như mọi template, không
+> chồng trong bài giao); tiếng tách từng chữ lúc lộ vẫn giữ. Bàn thử `scratch/unjumble335-test.html` **32/32**
+> (đo `stroke` thật + đếm lượt gọi âm). ⚠️ Lúc chạy bench khung xem ẨN ⇒ rAF đóng băng, số đếm không vẽ —
+> bench đọc điểm thật bằng ▷◁; nếu phiên sau thấy "điểm đứng ở 0" trong bench thì kiểm `document.
+> visibilityState` trước khi nghi code. Backup `_backup/dot336/`. ⬜ Thầy nghe tiếng thật trên loa lớp (ting/
+> tùng có chồng khó chịu với tiếng tách từng chữ không). Chi tiết: `GHI CHU DU AN.md` Đợt 336.
 >
 > **⭐ Đợt 335 — UNJUMBLE: ✓ / ✗ LỚN BAY VỀ Ô ĐIỂM THAY CHÙM SAO · EDITOR Ô TỰ CAO THEO NỘI DUNG (thầy giao
 > 3 việc qua chat + chốt 3 câu hỏi; "ok build").** Chỉ sửa `templates/unjumble/{unjumble.js, unjumble.css,
