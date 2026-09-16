@@ -8,7 +8,16 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **14/9/2026 (Đợt 333 — FIGHT: Speed bonus thêm Off ở 0 (bỏ luôn cục tự vá về +5
+> Cập nhật lần cuối: **16/9/2026 (Đợt 334 — SPEED SORTING: thầy bấm tay live Đợt 329 báo 3 lỗi băng
+> chuyền, đã vá `templates/group-sort/group-sort.js` (1 file): lane bắt đầu TRỐNG rồi ô đầu trượt vào từ mép
+> (`spawnChip(-chipW)`) thay vì 5 ô hiện sẵn giữa lane · băng LIỀN một dải — bỏ hằng `BELT_SLOTS = 5` (gốc
+> của "cụm 5 ô + lỗ ~3 ô chạy vòng"), `loop()` xoá ô ra hẳn mép phải rồi sinh ô kế ngay khi ô trái nhất lọt hẳn
+> vào lane, cách đúng một khe, tự lấp kín mọi bề rộng lane · LUÔN `shuffle()` mọi nhóm bất kể ô Shuffle (editor
+> lưu theo cột nhóm nên băng theo thứ tự đó là lộ đáp án), hàng đợi trộn lại mỗi vòng. Đo bằng máy ghi rAF trên
+> dev server: ô đầu x = −116 = −chipW, mọi khe = 134,6px suốt 44s, 7–8 ô lấp kín lane, chơi hết ván 11/12, Menu
+> dừng/chạy lại đúng, 0 lỗi console. ✅ Commit `3135f32` + push + Pages built đúng commit + mã băm live KHỚP.
+> ⬜ Thầy CHƯA bấm tay lại; TOMKO/điện thoại cảm ứng chưa đo từ Đợt 327. Xem GHI CHU DU AN.md Đợt 334)**.
+> Trước đó: **14/9/2026 (Đợt 333 — FIGHT: Speed bonus thêm Off ở 0 (bỏ luôn cục tự vá về +5
 > trong `syncDelay` — nó từng đè ngược lựa chọn Off của thầy) · hết cửa sổ Time delay mà đội sau chưa
 > nộp gì thì khoá NGAY coi như sai (silent lock, không tiếng/không dấu ✗/không trừ điểm, giống hệt nấc
 > 0,1s), bỏ hẳn khung chơi thêm `LATE_LIMIT_MS` (20s) — dò lại 3 nơi gọi `finalizeSingleWinner` xác nhận
@@ -5368,9 +5377,32 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **14/9/2026 sau Đợt 333** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **16/9/2026 sau Đợt 334** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (14/9/2026 — sau **Đợt 333**: ✅ ĐÃ COMMIT `1ab4936` + PUSH + LIVE KIỂM CHỨNG BẰNG MÃ BĂM, ⬜ CHƯA BẤM TAY TRANG THẬT)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (16/9/2026 — sau **Đợt 334**: ✅ ĐÃ COMMIT `3135f32` + PUSH + LIVE KIỂM CHỨNG BẰNG MÃ BĂM, ⬜ THẦY CHƯA BẤM TAY LẠI)
+>
+> **⭐⭐ Đợt 334 — SPEED SORTING: băng bắt đầu TRỐNG rồi ô đầu trượt vào từ mép · băng LIỀN một dải, hết
+> đứt cụm · LUÔN trộn ngẫu nhiên mọi nhóm (thầy bấm tay live Đợt 329 rồi báo 3 điều chỉnh; chốt "trộn
+> thường" + "ok build + push live luôn").** Sửa 1 file `templates/group-sort/group-sort.js` (chỉ chế độ băng
+> chuyền `mode:"tap"`; CSS và chế độ Group sort không đụng). Gốc 3 lỗi: (1) `startBelt()` đặt sẵn 5 ô TRONG
+> lane rồi mới chạy — Đợt 329 chỉ sửa ô tái dùng; (2) hằng `BELT_SLOTS = 5` trong khi lane chứa 7–8 ô ⇒ cụm 5
+> + lỗ ~3 ô chạy vòng vĩnh viễn (ô ra mép phải luôn nhét sau đuôi cụm); (3) editor lưu câu THEO CỘT NHÓM và
+> băng chỉ trộn khi ô "Shuffle questions" bật, kể cả bật thì mỗi vòng y hệt vòng trước. Vá: lane bắt đầu trống,
+> `spawnChip(-chipW)`; bỏ `BELT_SLOTS`/`recycle()`, `loop()` mỗi khung xoá ô `x > laneW` (`retireSlot`) rồi hễ
+> ô trái nhất `minX ≥ 0` thì `spawnChip(minX − chipW − gap)`; băng LUÔN `shuffle()`, hàng đợi `queue` cạn thì
+> trộn lại pool, item đang trên băng đẩy về cuối hàng đợi; thả ra ngoài khi slot đã trôi khỏi lane ⇒ gỡ ô +
+> item lên đầu hàng đợi. Đo trên dev server bằng máy ghi rAF đọc `transform` từng khung: ô đầu xuất hiện tại
+> **x = −116 = −chipW**, 25 ô sau đều xuất hiện ở x ≈ −134 (ngoài mép); **mọi khe = 134,6px** suốt 44 giây (min
+> = max), 7–8 ô lấp kín lane 856px; thứ tự xen nhóm, vòng 2 khác vòng 1; chơi bằng PointerEvent giả lập: đúng
+> ✓/sai ✗/ra ngoài về băng/Menu dừng tuyệt đối 900ms rồi Resume/hết ván GAME COMPLETE 11/12; 0 lỗi console.
+> ⛔ Bẫy kho gặp lại: `core.autocrlf=true` nhưng thư mục trộn LF+CRLF (`GHI CHU GROUP-SORT.md` là LF, `group-sort.js`
+> CRLF) — script vá hồ sơ phải giữ kiểu của TỪNG file. ⚠️ Lúc commit, kho có sẵn `templates/unjumble/*` đang sửa
+> dở của PHIÊN KHÁC — chỉ stage đúng 3 file của đợt, KHÔNG `git add -A`. **✅ Commit `3135f32` + push
+> `origin/main` + Pages `built` đúng commit + mã băm `group-sort.js` live = origin/main (`86fbb877…`).** ⬜ Thầy
+> bấm tay bản live: ô đầu có trượt từ mép, băng còn đứt cụm, đáp án có xen nhóm; TOMKO/điện thoại cảm ứng chưa đo
+> từ Đợt 327. Chi tiết: `GHI CHU DU AN.md` Đợt 334 + `templates/group-sort/GHI CHU GROUP-SORT.md`.
+>
+> **Trước đó — Đợt 333 (✅ ĐÃ COMMIT `1ab4936` + PUSH + LIVE KIỂM CHỨNG BẰNG MÃ BĂM, ⬜ CHƯA BẤM TAY TRANG THẬT):**
 >
 > **⭐⭐ Đợt 333 — FIGHT: Speed bonus có Off · hết Time delay chưa xong tính như sai · icon loa dời phải
 > to bằng chữ, chỉ hiện ở VOICE (thầy giao 3 việc qua chat + 1 chốt tiếp, cùng ngày).** (1) Speed bonus
