@@ -192,6 +192,12 @@ const THEME_SWATCH = {
 // because it has to outlive the play that set it — and it is read-and-cleared,
 // so it can only ever fire for the next mount, never a later one.
 let openShowdownOnMount = false;
+// ⭐⭐ Đợt 339 — the same one-shot handover, for Fight → RUNNING / IPA. A play
+// mode borrows ONE board, a match is TWO, so the tile inside a match leaves the
+// match first (`fight.ctl.exitFight()`) and the single board that comes back
+// reads this — `{ mode, targetType }` — and calls enterPlayMode() itself.
+// Read-and-cleared at mount, exactly like openShowdownOnMount above.
+let playModeOnMount = null;
 // ⭐⭐⭐ Đợt 261 — SỢI DÂY DUY NHẤT NỐI HAI MOUNT CỦA PHÒNG CHỜ.
 // Kéo dữ liệu chuẩn về = dựng lại ván = mọi biến trong closure của startGame() sinh ra
 // mới. Cờ này (0 = không, >0 = vào lại phòng chờ và ĐÃ THỬ ngần ấy lần) là thứ duy nhất
@@ -1612,9 +1618,27 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // picker that has to be read every time.
   const RUN_ORDER = ["running_word", "running_team"];
   const RUN_LABEL = { running_word: "WORD", running_team: "TEAM" };
+  // ⭐⭐ Đợt 339 (thầy, 16/9/2026) — RUNNING AND IPA ARE OFFERED INSIDE A MATCH TOO.
+  // "Ở mode Fight hiện chỉ đang chọn được single và showdown khi bấm nút mode ⇒ cho
+  // phép chọn qua lại giữa mọi mode khi đang ở bất cứ mode nào." Both used to be
+  // shut off by a bare `fight` test, for a real reason that is now handled the
+  // way Fight → Showdown already is (Đợt 191b): a play mode is ONE borrowed
+  // board and a match is TWO, so the tile cannot simply convert in place — it
+  // leaves the match first and the single board that comes back enters the mode
+  // by itself (`playModeOnMount`, see buildIpaConfirmPanel / buildRunningPickPanel).
+  // ⚠️ ASK THE MATCH'S ORIGIN, NOT THIS BOARD'S COPY (same rule as `modeTpl`
+  // above): inside a fight `originAct` in this closure is the board's frozen,
+  // already-resolved copy — its words and transcriptions are intact, so the two
+  // tests below would mostly still pass, but the act the mode will actually be
+  // built from is `fight.ctl.sourceActivity()`, and asking anything else is a
+  // second answer waiting to disagree with the first.
+  const modeSrcAct = () => (fight ? fight.ctl.sourceActivity() : originAct);
   const runTargets = () => {
-    if (session || fight) return [];
-    const list = switchList().filter(t => RUN_ORDER.includes(t.type))
+    if (session) return [];
+    const targets = fight
+      ? switchTargets(modeSrcAct()).filter(t => t.type !== activity.type)
+      : switchList();
+    const list = targets.filter(t => RUN_ORDER.includes(t.type))
       .sort((a, b) => RUN_ORDER.indexOf(a.type) - RUN_ORDER.indexOf(b.type));
     if (!list.length) return [];
     // ⚠️ A WORD POOL, NOT JUST ANY ANSWERS. Change template has offered Running
@@ -1626,15 +1650,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // scoped to the mode — the Template button's own list is left exactly as it
     // has always been, because narrowing that would change behaviour the teacher
     // has been using for weeks.
-    const terms = toRecords(originAct).records.map(r => (r.term || "").trim()).filter(Boolean);
+    const terms = toRecords(modeSrcAct()).records.map(r => (r.term || "").trim()).filter(Boolean);
     if (!terms.length) return [];
     const wordy = terms.filter(t => t.length <= WORD_POOL_MAX_LEN).length;
     return wordy / terms.length >= 0.8 ? list : [];
   };
-  const canRunning = !session && !fight && runTargets().length > 0;
+  const canRunning = !session && runTargets().length > 0;
   const canIpa = (() => {
-    if (session || fight || playMode === "ipa") return false;
-    const items = resolveActivity(originAct).content?.items;
+    if (session || playMode === "ipa") return false;
+    const items = resolveActivity(modeSrcAct()).content?.items;
     return Array.isArray(items) && items.some(it => it && it.ipa);
   })();
   // ⚠️⚠️ `|| playMode` IS THE WAY OUT. Running word and Speaking cards declare
@@ -1695,6 +1719,18 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // Next tick: let this mount finish first — openToolPanel measures the
       // toolbar it is about to hang the panel under.
       setTimeout(() => { if (modeBtn.isConnected) openToolPanel(modeBtn, buildShowdownPanelHost); }, 0);
+    }
+  }
+  // ⭐⭐ Đợt 339 — the other half of Fight → RUNNING / IPA (see playModeOnMount).
+  // Read-and-cleared FIRST for the same reason as above. Only honoured on a plain
+  // single board: a board that somehow came back inside a match, or as a pupil,
+  // consumes the flag and does nothing. Next tick, like the Showdown handover —
+  // enterPlayMode() tears this very mount down, and it must be finished first.
+  if (playModeOnMount) {
+    const hop = playModeOnMount;
+    playModeOnMount = null;
+    if (!fight && !session && hop.mode && hop.targetType) {
+      setTimeout(() => { if (root.isConnected) enterPlayMode(hop.mode, hop.targetType); }, 0);
     }
   }
 
@@ -1793,7 +1829,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       const tile = el("button", "aw-mp-tile", `<span class="aw-mp-icon">${icons.fmtRace}</span>` +
         `<span class="aw-mp-label">${escapeText(short)}</span>`);
       tile.type = "button"; tile.title = t.label; tile.setAttribute("aria-label", t.label);
-      tile.onclick = () => { sound.click(); closeToolPanel(false); enterPlayMode("running", t.type); };
+      tile.onclick = () => { sound.click(); closeToolPanel(false); goPlayMode("running", t.type); };
       grid.append(tile);
     });
     panel.append(grid);
@@ -1807,17 +1843,77 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
 
   function buildIpaConfirmPanel(panel) {
     panel.append(el("div", "aw-tool-panel-head", "Switch to IPA mode?"));
-    panel.append(el("div", "aw-mode-confirm-text",
-      "Deal the words as cards, each with its pronunciation. Your activity is not changed."));
+    panel.append(el("div", "aw-mode-confirm-text", fight
+      ? "Leave the match first. The words are then dealt as cards, each with its pronunciation. Your activity is not changed."
+      : "Deal the words as cards, each with its pronunciation. Your activity is not changed."));
     const row = el("div", "aw-mode-confirm-row");
     const cancelBtn = el("button", "aw-btn aw-mode-confirm-btn", "Cancel");
     cancelBtn.type = "button";
     cancelBtn.onclick = () => { sound.click(); switchToolPanel(buildModePickPanel); };
     const goBtn = el("button", "aw-btn aw-btn-primary aw-mode-confirm-btn", "Start IPA");
     goBtn.type = "button";
-    goBtn.onclick = () => { sound.click(); closeToolPanel(false); enterPlayMode("ipa", "speaking_cards"); };
+    goBtn.onclick = () => { sound.click(); closeToolPanel(false); goPlayMode("ipa", "speaking_cards"); };
+    // ⭐⭐ Đợt 339 (thầy, 16/9/2026) — WORD VOICES, right where IPA is switched on.
+    // The IPA card's listen button plays the clip of the WORD (`wordVoice`, see
+    // core/convert.js); a word without one simply gets no button. Every act voiced
+    // before this đợt has clue clips only, so without a door here the button would
+    // exist for no act the teacher owns. One line of status + one "Generate"
+    // that runs generateInlineVoices() for the MISSING words only (never touches
+    // clue clips), then saves — the same generator, voice and save path as the
+    // black VOICE button of Đợt 314. Only for a real library act: a converted
+    // or "mistakes" copy has nowhere to keep the clips.
+    const ipaSrc = modeSrcAct();
+    const ipaItems = ((ipaSrc.content && ipaSrc.content.items) || []).filter(it => it && String(it.word || "").trim());
+    const voicedCount = () => ipaItems.filter(it => it.wordVoice).length;
+    const saveable = ipaSrc.id && !/^(conv|mist)_/.test(String(ipaSrc.id)) && ipaItems.length > 0;
+    if (saveable && voicedCount() < ipaItems.length) {
+      const wv = el("div", "aw-mode-wordvoice");
+      const wvText = el("span", "aw-mode-wordvoice-text");
+      const paintWv = () => { wvText.textContent = `Word voices: ${voicedCount()} / ${ipaItems.length} ready`; };
+      paintWv();
+      const wvBtn = el("button", "aw-btn aw-mode-wordvoice-btn", "Generate");
+      wvBtn.type = "button";
+      wvBtn.title = "Voice each word (British English mix) so the IPA cards can play it";
+      let cancelled = false;
+      wvBtn.onclick = async () => {
+        sound.click();
+        if (wvBtn.dataset.running) { cancelled = true; wvBtn.disabled = true; wvBtn.textContent = "Cancelling…"; return; }
+        wvBtn.dataset.running = "1";
+        wvBtn.textContent = "Cancel";
+        goBtn.disabled = true;
+        const result = await generateInlineVoices(ipaSrc, [], {
+          word: true, wordOnlyMissing: true,
+          isCancelled: () => cancelled,
+          onProgress: (d, f, total) => { wvText.textContent = `Generating word voices… ${d + f} / ${total}`; }
+        });
+        delete wvBtn.dataset.running;
+        goBtn.disabled = false;
+        paintWv();
+        if (result.signedOut) wvText.textContent = "Please sign in first.";
+        else if (!result.done && result.failed) wvText.textContent = "Could not generate word voices — please try again.";
+        if (voicedCount() >= ipaItems.length) { wv.remove(); return; }
+        cancelled = false;
+        wvBtn.disabled = false;
+        wvBtn.textContent = "Generate";
+      };
+      wv.append(wvText, wvBtn);
+      panel.append(wv);
+    }
     row.append(cancelBtn, goBtn);
     panel.append(row);
+  }
+
+  // ⭐⭐ Đợt 339 — ONE DOOR INTO A PLAY MODE, from wherever the teacher is.
+  // Single / Showdown / the other play mode: enter straight away (enterPlayMode
+  // drops a Showdown pick itself and always converts from the origin). Inside a
+  // MATCH the board on screen is one of two, so the mode is handed to the single
+  // board that exitFight() brings back, through `playModeOnMount` — the same
+  // one-shot handover Fight → Showdown has used since Đợt 191b.
+  function goPlayMode(mode, targetType) {
+    if (!fight) { enterPlayMode(mode, targetType); return; }
+    playModeOnMount = { mode, targetType };
+    fight.ctl.exitFight();
+    awEmit("FIGHT", "off");
   }
 
   // Borrow another template for a while. Deliberately the SAME machinery as
@@ -4247,11 +4343,24 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // `it.voices[key]` bằng setVoiceOf() đúng cách templates/anagram/anagram-
   // editor.js's commitCurrentTab() đã làm, rồi xoá field phẳng để không để lại
   // rác trong Firestore.
-  async function generateInlineVoices(src, keys, { onProgress, isCancelled } = {}) {
+  // ⭐⭐ Đợt 339 (thầy, 16/9/2026) — `word: true` adds ONE MORE PASS that voices
+  // the WORD ITSELF (`it.word`) into the flat `wordVoice`/`wordVoiceId` fields
+  // (see qaRec in core/convert.js for why flat). It is what MODE › IPA's small
+  // listen button plays. `keys` may be EMPTY with `word: true` — that is the
+  // "Generate word voices" path of buildIpaConfirmPanel for an act that already
+  // has its clue clips (the whole library as of this đợt) and only lacks these.
+  // `wordOnlyMissing` skips words that already have a clip, so that path never
+  // re-voices what is there.
+  async function generateInlineVoices(src, keys, { onProgress, isCancelled, word = true, wordOnlyMissing = false } = {}) {
     const items = (src.content && src.content.items) || [];
-    const total = items.length * keys.length;
+    const wordRows = word
+      ? items.filter(it => it && String(it.word || "").trim() && !(wordOnlyMissing && it.wordVoice))
+      : [];
+    const total = items.length * keys.length + wordRows.length;
     let doneOverall = 0, failedOverall = 0, signedOut = false;
-    for (const key of keys) {
+    // ⚠️ `null` = the WORD pass; every other entry is a clue set key.
+    const passes = [...keys, ...(wordRows.length ? [null] : [])];
+    for (const key of passes) {
       if (signedOut || (isCancelled && isCancelled())) break;
       const [{ generateVoicesBatch }, { planFor }, { DEFAULT_VOICE }] = await Promise.all([
         import("./voice-batch.js"), import("./voice-mix.js"), import("./tts.js")
@@ -4259,17 +4368,28 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // Thầy chốt (09/9/2026): giọng cho luồng nhanh này luôn là "Random — mix
       // ALL UK voices", đúng chế độ Mix voice có sẵn trong popover "Generate
       // all voices" của Anagram editor — không hỏi thêm giọng nào ở đây.
-      const { voiceId } = planFor({ mix: true, random: true, accent: "en-gb", singleId: DEFAULT_VOICE }, items.length);
+      const rows = key === null
+        // A PROJECTION, because generateVoicesBatch writes its answer onto
+        // `row.voice`/`row.voiceId` — the same trick main.js's import batch uses
+        // for each clue set. Carrying the existing clip id in lets a re-run
+        // overwrite the same clip instead of orphaning it.
+        ? wordRows.map(it => ({ voice: it.wordVoice || "", voiceId: it.wordVoiceId || "", word: it.word }))
+        : items;
+      const { voiceId } = planFor({ mix: true, random: true, accent: "en-gb", singleId: DEFAULT_VOICE }, rows.length);
       const doneBefore = doneOverall, failedBefore = failedOverall;
-      const result = await generateVoicesBatch(items, voiceId, {
-        textFor: it => clueOf(it, key),
+      const result = await generateVoicesBatch(rows, voiceId, {
+        textFor: it => (key === null ? String(it.word || "").trim() : clueOf(it, key)),
         isCancelled,
         onProgress: (d, f) => onProgress && onProgress(doneBefore + d, failedBefore + f, total)
       });
-      items.forEach(it => {
-        if (it.voice) setVoiceOf(it, key, { voice: it.voice, voiceId: it.voiceId });
-        delete it.voice; delete it.voiceId;
-      });
+      if (key === null) {
+        rows.forEach((r, i) => { if (r.voice) { wordRows[i].wordVoice = r.voice; wordRows[i].wordVoiceId = r.voiceId || ""; } });
+      } else {
+        items.forEach(it => {
+          if (it.voice) setVoiceOf(it, key, { voice: it.voice, voiceId: it.voiceId });
+          delete it.voice; delete it.voiceId;
+        });
+      }
       doneOverall += result.done; failedOverall += result.failed;
       if (result.signedOut) signedOut = true;
     }
@@ -4951,6 +5071,24 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       sound.click();
       grid.classList.add("is-busy");
       item.classList.add("is-loading");
+      // ⭐⭐ Đợt 339 (thầy, 16/9/2026) — THE UN-APPLIED CONTENT PICK TRAVELS WITH
+      // THE SWITCH. "Nếu đang chọn TEXT/ENG1 (chưa bấm Apply) mà tiếp tục chọn đổi
+      // Template thì TEXT/ENG1 vẫn giữ nguyên, không tự động đổi về act cũ."
+      // The Content rows write into `selState` (Đợt 149) and nothing but Apply
+      // ever copied it onto the act — while doSwitchTemplate() converts straight
+      // from the origin's STORED selectors, so the new game came up on the clue
+      // set the teacher had just moved away from. Same four keys, same target
+      // object and same in-place write as applySubActSelection(): the origin (or
+      // the match's act in a fight) is what convert.js reads, so it is the one
+      // place the pick has to be before the conversion starts.
+      // ⚠️ SELECTORS ONLY. The rest of the draft (timer, penalties…) is still
+      // dropped, as Đợt 250 decided: a template swap starts from the new game's
+      // own defaults, and a number named the same in two games is not the same
+      // number. Nothing is saved here either — Apply on the new game persists,
+      // exactly as it does after applySubActSelection().
+      const pickSrc = subActSource();
+      if (!pickSrc.options) pickSrc.options = {};
+      VIEW_SELECTOR_KEYS.forEach(k => { if (selState[k] !== undefined) pickSrc.options[k] = selState[k]; });
       if (!fight) openOptionsOnMount = true;
       await doSwitchTemplate(targetType);
       if (!fight) openOptionsOnMount = false;

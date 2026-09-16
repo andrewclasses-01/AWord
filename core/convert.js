@@ -156,6 +156,16 @@ function qaRec(term, clue, extra) {
     // item (see resolveItem), so RUNNING mode and IPA mode both read it from
     // here instead of each inventing its own way back to the original act.
     ipa: (extra && extra.ipa) || "",
+    // ⭐ Đợt 339 — the clip of the WORD ITSELF (not of a clue), generated
+    // alongside the clue clips (main.js import batch · Options' inline generator
+    // · the Anagram editor's "Generate all voices") and stored flat on the item
+    // as `wordVoice`/`wordVoiceId`, beside `ipa`. Flat on purpose: it is not a
+    // clue set, so `voices.<set>` would be the wrong drawer, and a key that is
+    // not named `voice` is invisible to hasAnyVoice()/collectVoiceIds() — an
+    // ordinary play neither counts it as "this act has voice" nor preloads it.
+    // Only IPA mode reads it (the speaking_cards branch of buildContent below).
+    wordVoice: (extra && extra.wordVoice) || "",
+    wordVoiceId: (extra && extra.wordVoiceId) || "",
     hideText: !!(extra && extra.voice && extra.hideText)   // only ever true alongside a real voice
   };
 }
@@ -382,10 +392,17 @@ function buildContent(targetType, kind, records, style) {
       // is untouched and still puts the CLUE on the card (a definition is the
       // richer thing to talk about); the two cannot share one rule, because a
       // card carrying an English definition is a different exercise entirely.
-      return { cards: records.map(r => ({
-        text: style === "ipa" ? ipaCardText(r, kind) : cardText(r, kind),
-        voice: voiceOf(r), voiceId: voiceIdOf(r), hideText: hideTextOf(r)
-      })) };
+      // ⭐⭐ Đợt 339 (thầy, 16/9/2026) — an IPA card carries the clip of the WORD
+      // it shows, never the clue's: thầy chốt "nút loa đọc voice của chính từ đó
+      // trong act, nếu không có voice thì bỏ nút loa". So the card's `voice` is
+      // `wordVoice` here, and a word with no clip yet gets NO voice at all (the
+      // clue clip must not stand in — it would read the definition under a card
+      // that says "TROUSERS /ˈtraʊzəz/"). `hideText` is never carried into an IPA
+      // card either: voiceView() (core/voice-playback.js) forces the text on in
+      // this mode anyway, but a flag that means nothing should not travel.
+      return { cards: records.map(r => (style === "ipa"
+        ? { text: ipaCardText(r, kind), voice: r.wordVoice || "", voiceId: r.wordVoiceId || "", hideText: false }
+        : { text: cardText(r, kind), voice: voiceOf(r), voiceId: voiceIdOf(r), hideText: hideTextOf(r) })) };
     // Only the terms travel: the clue (if the source had one) is dropped on
     // purpose, because this game never shows a clue — and with no clue
     // there is nothing for hideText to stand in for either, so voice/

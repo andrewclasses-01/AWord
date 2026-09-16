@@ -333,6 +333,17 @@ tạm**, còn act trong thư viện thì y nguyên.
 | act đang chơi | vẫn act đó | **bản chuyển đổi tạm** (`conv_…`) |
 | bật bằng | cờ trên template (`fightMode`…) | **NỘI DUNG act có đi tới đó được không** |
 | đường ra | `exitFight()` / bỏ pick | `doSwitchTemplate(originAct.type)` |
+| **đường VÀO từ Fight** (Đợt 339) | — | `goPlayMode()` đặt cờ một-lần `playModeOnMount = {mode, targetType}` + `exitFight()`; bàn đơn dựng lại đọc cờ → `enterPlayMode` |
+
+⭐ **Đợt 339 — TỪ MODE NÀO CŨNG SANG ĐƯỢC MỌI MODE.** Hai ô RUNNING/IPA từng bị tắt cứng trong Fight
+(`runTargets()` trả rỗng, `canIpa` false) vì play mode mượn MỘT bàn còn trận là HAI bàn. Nay `modeSrcAct()`
+(= `fight.ctl.sourceActivity()` trong trận, `originAct` ngoài trận) là act duy nhất hai phép đo hỏi, và cú
+vào đi qua **`goPlayMode(mode, targetType)`** — không Fight thì `enterPlayMode` thẳng; đang Fight thì y khuôn
+Fight → Showdown (`openShowdownOnMount`, Đợt 191b). ⛔ Đừng gọi `enterPlayMode` trực tiếp từ tile nữa.
+
+⭐ **Đợt 339 — ĐỔI TEMPLATE Ở CHÂN BẢNG OPTIONS MANG THEO LỰA CHỌN CHƯA APPLY.** `pickTemplate` chép 4 khoá
+`VIEW_SELECTOR_KEYS` từ `selState` lên `subActSource()` TRƯỚC `doSwitchTemplate` (y `applySubActSelection`).
+Chỉ selector; phần còn lại của nháp vẫn bỏ (Đợt 250). Không lưu ở đây — Apply trên game mới lưu.
 
 **Máy móc bên dưới CHÍNH LÀ Change template** — `convertActivity(originAct, …)` rồi `startGame` với
 `base: originAct`. Thứ duy nhất thêm vào là dấu **`activity._mode`** (`"running"` | `"ipa"`), và engine
@@ -1984,6 +1995,18 @@ y hệt nhau. Nay **một act mang cả hai**, và `activity.options.contentMode
 | `"text"` | hiện | nhỏ, cạnh chữ | **không** |
 | `"voice"` | ẩn | to, giữa khung | có |
 | **không khai** (AUTO) | theo `hideText` từng từ | theo `hideText` | có |
+| **`activity._mode === "ipa"`** (Đợt 339, xét TRƯỚC 3 dòng trên) | **luôn hiện** | nhỏ, chỉ khi thẻ có clip | **không** |
+
+> ⭐⭐ **Đợt 339 (16/9/2026) — GIỌNG CỦA CHÍNH TỪ: `item.wordVoice` / `item.wordVoiceId`.** Clip trong
+> `voices.eng1/eng2` đọc GỢI Ý (định nghĩa), không đọc từ. MODE › IPA cần nghe TỪ, nên mỗi từ có thêm một
+> clip riêng, lưu **phẳng** cạnh `ipa`. ⛔ Cố ý KHÔNG đặt trong `voices.<bộ>` và KHÔNG tên là `voice`:
+> `hasAnyVoice()`/`collectVoiceIds()` chỉ nhìn khoá `voice` ⇒ chơi thường không tính là "có giọng", không
+> nạp trước thêm 100 clip; `resolveItem()` mang qua `...rest` không cần sửa. Ai đọc: `qaRec()` (convert.js)
+> chở sang record → nhánh `speaking_cards` với `style:"ipa"` đặt `card.voice = wordVoice` (không có ⇒ không
+> nút). Ai ghi: cả 3 đường tạo giọng gợi ý đều tạo kèm lượt WORD (import `runVoiceBatch` · Options
+> `generateInlineVoices(src, keys, {word, wordOnlyMissing})` · editor "Generate all voices"), và màn "Switch
+> to IPA mode?" có nút Generate cho act cũ chỉ tạo phần thiếu. ⚠️ Editor Anagram dựng hàng từ TRƯỜNG CÓ TÊN
+> — đã kê `wordVoice`/`wordVoiceId` ở normalize + Save; thêm editor khác cho act WORDS thì phải kê y vậy.
 
 > ⚠️ **TEMPLATE TUYỆT ĐỐI KHÔNG ĐỌC THẲNG `item.hideText` NỮA.** Phải đi qua
 > **`voiceView(activity, item)`** của `core/voice-playback.js` — trả `{hasVoice, hideText, autoPlay}`.

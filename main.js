@@ -2394,12 +2394,19 @@ function confirmVoiceGeneration(wordCount, voiceWhat) {
 // clue sets and each spoken one needs its OWN clip per word, so a 100-word act
 // with ENG1 + ENG2 is 200 clips, not 100. `[null]` means "the act has no clue
 // sets" — the plain, pre-Đợt-145 path, one clip per item read off `.clue`.
+// ⭐ Đợt 339 (thầy, 16/9/2026) — PLUS ONE PASS FOR THE WORDS THEMSELVES. Thầy:
+// "khi tạo voice có thể gán luôn voice cho từ đó lúc import file". Each item
+// also gets a clip of `it.word` in the flat `wordVoice`/`wordVoiceId` fields
+// (see qaRec in core/convert.js) — the clip MODE › IPA's cards play. So a
+// 100-word act with ENG1 + ENG2 is now 300 clips, and the shared voice plan is
+// sized to match (`count` is what planFor() is handed).
 function voiceJobsOf(act) {
   const items = (act.content && act.content.items) || [];
   const variants = (act.ttsVariants && act.ttsVariants.length)
     ? act.ttsVariants
     : (voiceVariantsOf(act.content) || [null]);
-  return { items, variants, count: items.length * variants.length };
+  const words = items.filter(it => it && String(it.word || "").trim()).length;
+  return { items, variants, words, count: items.length * variants.length + words };
 }
 
 function runVoiceBatch(acts, choice, ttsMod) {
@@ -2470,6 +2477,31 @@ function runVoiceBatch(acts, choice, ttsMod) {
       }
       // Saved ONCE per act, after all of its sets — a cancel or a sign-out
       // partway through still keeps whatever was generated before it.
+      // ⭐ Đợt 339 — the WORD pass, after the clue sets. Same projection trick:
+      // generateVoicesBatch writes onto `row.voice`/`row.voiceId`, and the answer
+      // is copied into the item's flat `wordVoice`/`wordVoiceId` afterwards.
+      if (!cancelled && !signedOut) {
+        const wordItems = items.filter(it => it && String(it.word || "").trim());
+        if (wordItems.length) {
+          const rows = wordItems.map(it => ({ voice: it.wordVoice || "", voiceId: it.wordVoiceId || "", word: it.word }));
+          const base = planOffset;
+          const voiceFor = choice.plan ? ((it, i) => choice.plan[base + i]) : choice.voiceId;
+          planOffset += rows.length;
+          const label = `${act.title} · WORD`;
+          const res = await ttsMod.generateVoicesBatch(rows, voiceFor, {
+            textFor: it => String(it.word || "").trim(),
+            isCancelled: () => cancelled,
+            onProgress: (done, failed) => {
+              status.textContent = `Generating ${doneWords + done + failedWords + failed} / ${totalWords}… (${label})`;
+              progressFill.style.width = `${Math.round(((doneWords + done + failedWords + failed) / totalWords) * 100)}%`;
+            }
+          });
+          rows.forEach((r, i) => { if (r.voice) { wordItems[i].wordVoice = r.voice; wordItems[i].wordVoiceId = r.voiceId || ""; } });
+          doneWords += res.done; failedWords += res.failed;
+          if (res.done) anyDone = true;
+          if (res.signedOut) signedOut = true;
+        }
+      }
       if (anyDone) {
         // Strip the import-only flags before persisting — they have no place
         // in the saved activity document.

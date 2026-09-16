@@ -2503,6 +2503,13 @@ html.aw-nhung .aw-below { display: none; }
 .aw-mode-confirm-text { font-size: 13px; color: #57667a; line-height: 1.4; margin-top: 2px; max-width: 30ch; }
 .aw-mode-confirm-row { display: flex; justify-content: center; gap: 10px; margin-top: 16px; }
 .aw-btn.aw-mode-confirm-btn { padding: 9px 20px; font-size: 14px; }
+/* ⭐ Đợt 339 — "Word voices: N / M ready · Generate" on the IPA confirm (core/engine.js
+   buildIpaConfirmPanel). Same fixed-px world as the two rules above (outside the stage). */
+.aw-mode-wordvoice { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-top: 12px; padding: 8px 10px; border: 1px dashed #c9d2de; border-radius: 10px;
+  font-size: 12.5px; color: #57667a; max-width: 30ch; }
+.aw-mode-wordvoice-text { min-width: 0; line-height: 1.35; }
+.aw-btn.aw-mode-wordvoice-btn { padding: 6px 12px; font-size: 12.5px; flex: none; }
 
 /* ⭐⭐ MODE PICKER (Đợt 158) — the one button that replaced MODE + SHOWDOWN opens
    this: icon tiles, ONE PER MODE, and no words ("dùng icon thật to, không dùng

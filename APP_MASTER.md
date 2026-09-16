@@ -5377,9 +5377,30 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **16/9/2026 sau Đợt 338** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **16/9/2026 sau Đợt 339** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (16/9/2026 — sau **Đợt 338** (đồng bộ Settings qua Firestore), **Đợt 337** (Default course options), **Đợt 335 → 336** (Unjumble) và **Đợt 334** (Speed sorting) — tất cả ✅ ĐÃ COMMIT + PUSH + LIVE, ⬜ THẦY CHƯA BẤM TAY LẠI)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (16/9/2026 — sau **Đợt 339** (Options × Template · IPA · Fight → mọi mode), **Đợt 338** (đồng bộ Settings qua Firestore), **Đợt 337** (Default course options), **Đợt 335 → 336** (Unjumble) và **Đợt 334** (Speed sorting) — tất cả ✅ ĐÃ COMMIT + PUSH + LIVE, ⬜ THẦY CHƯA BẤM TAY LẠI)
+>
+> **⭐ Đợt 339 — BA VIỆC TRONG OPTIONS/MODE (thầy giao qua chat, chốt 2 câu hỏi, "ok build + push live luôn").**
+> (1) **Chọn TEXT/VOICE + bộ nghĩa CHƯA Apply rồi đổi template ở chân bảng ⇒ lựa chọn ĐI THEO** —
+> `pickTemplate` chép 4 khoá `VIEW_SELECTOR_KEYS` từ `selState` lên `subActSource()` trước `doSwitchTemplate`
+> (y cách `applySubActSelection`); chỉ selector, thanh trượt chưa Apply vẫn bỏ (luật Đợt 250). (2) **MODE › IPA
+> LUÔN ra TỪ + phiên âm, loa nhỏ đọc GIỌNG CỦA TỪ, không tự đọc** — `voiceView()` thêm nhánh `_mode === "ipa"`;
+> trường mới trên từng từ **`wordVoice`/`wordVoiceId`** (phẳng cạnh `ipa`; ⛔ không tên `voice`, không trong
+> `voices.<bộ>` — chơi thường không thấy, không nạp thêm clip); `convert.js` thẻ IPA lấy `wordVoice` (không có ⇒
+> không nút); giọng TỪ được tạo ở CẢ 3 đường tạo giọng (import `runVoiceBatch` · nút VOICE đen Options
+> `generateInlineVoices` · editor "Generate all voices"); act cũ: màn "Switch to IPA mode?" có dòng `Word
+> voices: N / M ready` + **Generate** (chỉ tạo phần thiếu, lưu act). ⚠️ Editor Anagram đã kê tên 2 trường mới ở
+> normalize + Save (bẫy `ipa` Đợt 212). (3) **Trong Fight nay bấm MODE thấy đủ Single·Showdown·Running·IPA** —
+> `runTargets`/`canIpa` hỏi `fight.ctl.sourceActivity()`; `goPlayMode()` đang Fight thì đặt cờ một-lần
+> `playModeOnMount` + `exitFight()`, bàn đơn dựng lại tự `enterPlayMode` (khuôn `openShowdownOnMount` Đợt 191b).
+> Bàn thử `scratch/dot339-bench.html` (3 việc, dev 5539) · `dot339-gen.html` (tạo giọng với Kokoro GIẢ
+> `fake-voice-batch339.js` qua importmap) · `dot339-editor.html` (Save giữ `wordVoice`) — đo bằng số, console 0
+> lỗi. ⚠️ Chưa chạy thật: lượt WORD của import trong `main.js` + Kokoro thật. Backup `_backup/dot339/`. ⬜ Thầy
+> bấm tay trang thật (đặc biệt: act cũ → MODE › IPA → Generate → thẻ có loa đọc đúng TỪ). Chi tiết: `GHI CHU DU
+> AN.md` Đợt 339.
+>
+> **Trước đó — Đợt 338 (đồng bộ Settings):**
 >
 > **⭐ Đợt 338 — BỘ MẶC ĐỊNH OPTIONS (cả 3: activity/homework/course) ĐỒNG BỘ QUA FIRESTORE (thầy báo lỗi
 > kèm 3 ảnh: AWord đứng riêng ↔ Set assignment từ myLesson lệch nhau; chốt cả 3 bộ; "ok build").** Gốc bệnh:

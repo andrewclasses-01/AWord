@@ -738,7 +738,9 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     goBtn.onclick = async () => {
       const skipExisting = skipChk.checked;
       const targets = data.content.items.filter(it => !skipExisting || !it.voice);
-      if (!targets.length) { status.textContent = "Nothing to generate — every row already has a voice."; return; }
+      // Đợt 339 — a row with its clue clip but no WORD clip still has work to do.
+      const anyWordMissing = data.content.items.some(it => String(it.word || "").trim() && (!skipExisting || !it.wordVoice));
+      if (!targets.length && !anyWordMissing) { status.textContent = "Nothing to generate — every row already has a voice."; return; }
 
       // Đợt 132 — resolve to either a single string (unchanged path) or a
       // pre-computed per-row plan, indexed by this row's position in
@@ -774,14 +776,43 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
       // this thread — a real speedup on a large word list, not just a
       // DRY-up (10/8/2026, teacher asked for parallel generation here too).
       const { generateVoicesBatch } = await import("../../core/voice-batch.js");
-      const { done, failed, signedOut } = await generateVoicesBatch(targets, voiceId, {
+      // ⭐ Đợt 339 (thầy, 16/9/2026) — TWO PASSES: the clue clips this popover has
+      // always made, then a clip of each WORD ITSELF into the flat
+      // `wordVoice`/`wordVoiceId` fields (what MODE › IPA's cards play — see qaRec
+      // in core/convert.js). "Skip rows that already have a voice" applies to each
+      // pass on its own terms (a row may have its clue clip and lack its word clip).
+      // Progress counts BOTH passes so the bar does not fill up and then start over.
+      const wordTargets = data.content.items.filter(it => String(it.word || "").trim() && (!skipExisting || !it.wordVoice));
+      const grand = targets.length + wordTargets.length;
+      const clueRes = await generateVoicesBatch(targets, voiceId, {
         textFor: speakTextFor,
         isCancelled: () => cancelled,
-        onProgress: (d, f, total) => {
-          status.textContent = `Generating ${d + f} / ${total}…`;
-          progressFill.style.width = `${Math.round(((d + f) / total) * 100)}%`;
+        onProgress: (d, f) => {
+          status.textContent = `Generating ${d + f} / ${grand}…`;
+          progressFill.style.width = `${Math.round(((d + f) / grand) * 100)}%`;
         }
       });
+      let done = clueRes.done, failed = clueRes.failed, signedOut = clueRes.signedOut;
+      if (!cancelled && !signedOut && wordTargets.length) {
+        // A PROJECTION — generateVoicesBatch writes its answer onto row.voice /
+        // row.voiceId; the existing word clip id rides in so a re-run overwrites
+        // the same clip instead of orphaning it (the "Regenerate" contract).
+        const rows = wordTargets.map(it => ({ voice: it.wordVoice || "", voiceId: it.wordVoiceId || "", word: it.word }));
+        const { voiceId: wordVoiceId } = planFor({
+          mix: mixChk.checked, random: randomChk.checked, accent: mixAccent,
+          mixIds: mixRows.map(r => r.select.value), singleId: select.value
+        }, rows.length);
+        const wordRes = await generateVoicesBatch(rows, wordVoiceId, {
+          textFor: it => String(it.word || "").trim(),
+          isCancelled: () => cancelled,
+          onProgress: (d, f) => {
+            status.textContent = `Generating ${targets.length + d + f} / ${grand}… (words)`;
+            progressFill.style.width = `${Math.round(((targets.length + d + f) / grand) * 100)}%`;
+          }
+        });
+        rows.forEach((r, i) => { if (r.voice) { wordTargets[i].wordVoice = r.voice; wordTargets[i].wordVoiceId = r.voiceId || ""; } });
+        done += wordRes.done; failed += wordRes.failed; signedOut = signedOut || wordRes.signedOut;
+      }
       pop._running = false;
 
       if (cancelled) {
@@ -965,7 +996,8 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
         // Ordinary act — unchanged since the editor was written.
         if (!variantKeys) {
           const clue = (it.clue || "").trim();
-          return { word, clue, voice: it.voice || "", voiceId: it.voiceId || "", hideText: !!(it.voice && it.hideText) };
+          return { word, clue, voice: it.voice || "", voiceId: it.voiceId || "", hideText: !!(it.voice && it.hideText),
+                   ...(it.wordVoice ? { wordVoice: it.wordVoice, wordVoiceId: it.wordVoiceId || "" } : {}) };
         }
         // Đợt 165 — every set this row carries rides along together
         // (`clues`/`voices`, kept in step by commitCurrentTab() on every tab
@@ -983,7 +1015,12 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
         // Only written when there IS one, so acts without a transcription stay
         // byte-for-byte what they were.
         return { word, clue: clues[defaultKey] || "", clues, voices: { ...(it.voices || {}) },
-                 ...(String(it.ipa || "").trim() ? { ipa: String(it.ipa).trim() } : {}) };
+                 ...(String(it.ipa || "").trim() ? { ipa: String(it.ipa).trim() } : {}),
+                 // ⚠️ Đợt 339 — `wordVoice`/`wordVoiceId` MUST BE LISTED HERE BY HAND,
+                 // for exactly the reason `ipa` above is: an unnamed field is dropped on
+                 // Save, and MODE › IPA would quietly lose its listen buttons the first
+                 // time thầy edited the act. Only written when there IS a clip.
+                 ...(it.wordVoice ? { wordVoice: it.wordVoice, wordVoiceId: it.wordVoiceId || "" } : {}) };
       })
       .filter(it => it.word !== "");
 
@@ -1198,7 +1235,9 @@ function normalize(activity, variantKeys, currentKey) {
       return {
         word: it.word || "", clue: it.clue || "",
         voice: it.voice || "", voiceId: it.voiceId || "",
-        hideText: !!(it.voice && it.hideText)   // hideText only ever means anything alongside a voice
+        hideText: !!(it.voice && it.hideText),   // hideText only ever means anything alongside a voice
+        // Đợt 339 — the WORD's own clip (MODE › IPA), a passenger like `ipa` below.
+        wordVoice: it.wordVoice || "", wordVoiceId: it.wordVoiceId || ""
       };
     }
     const clip = voiceOf(it, currentKey);
@@ -1211,7 +1250,9 @@ function normalize(activity, variantKeys, currentKey) {
       // names it: the editor passes rows by named field, so an unnamed one is
       // gone before Save is ever pressed. No tab shows it and nothing edits it;
       // it is a passenger, and the whole job here is not to drop the passenger.
-      ipa: it.ipa || ""
+      ipa: it.ipa || "",
+      // Đợt 339 — same passenger rule for the WORD's own clip (MODE › IPA).
+      wordVoice: it.wordVoice || "", wordVoiceId: it.wordVoiceId || ""
     };
   });
   return a;

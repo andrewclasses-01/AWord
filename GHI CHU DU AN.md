@@ -508,6 +508,72 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 339 (16/9/2026, thầy giao 3 việc trong Options/Mode qua chat + chốt 2 câu hỏi) — **CHỌN BỘ NGHĨA CHƯA APPLY VẪN ĐI THEO ĐỔI TEMPLATE · IPA MODE LUÔN RA TỪ + PHIÊN ÂM (+ loa đọc TỪ) · FIGHT → MỌI MODE** · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY TRANG THẬT
+
+**Thầy giao (nguyên văn rút gọn):** (1) *"Nếu đang chọn TEXT/ENG1 (chưa bấm Apply) mà tiếp tục chọn đổi Template
+thì TEXT/ENG1 vẫn giữ nguyên, không tự động đổi về act cũ."* (2) *"Khi chọn nút Mode và mở IPA, đôi khi sẽ ra
+dạng voice (không hiển thị text, không hiển thị IPA) khi single trước đó chọn voice ⇒ chọn chế độ IPA luôn ra
+text (gồm từ và phiên âm)."* (3) *"Ở mode Fight hiện chỉ đang chọn được single và showdown khi bấm nút mode ⇒ cho
+phép chọn qua lại giữa mọi mode khi đang ở bất cứ mode nào."* Chốt qua AskUserQuestion: thẻ IPA có **nút loa
+nhỏ đọc GIỌNG CỦA CHÍNH TỪ** ("nếu không có voice thì bỏ nút loa… khi tạo voice có thể gán luôn voice cho từ
+đó lúc import"); "ok build + push live luôn".
+
+### 1. Đổi template mang theo lựa chọn nội dung chưa Apply (`core/engine.js` `pickTemplate`)
+Gốc: hàng TEXT/VOICE + bộ nghĩa ghi vào hộp nháp `selState` (Đợt 149), chỉ Apply mới chép lên act; nút template
+ở chân bảng gọi thẳng `doSwitchTemplate()` → `convertActivity()` đọc selector ĐÃ LƯU trên act gốc ⇒ game mới
+dựng bằng bộ cũ. Vá: trước khi đổi, chép 4 khoá `VIEW_SELECTOR_KEYS` từ `selState` lên `subActSource()` (act gốc
+/ act của trận) — y cách `applySubActSelection()` làm. Chỉ mang selector; thanh trượt/ô tích chưa Apply vẫn
+bỏ (luật Đợt 250: đổi template = về mặc định game mới). Không tự lưu — Apply sau đó lưu như cũ.
+
+### 2. IPA mode luôn "TỪ + phiên âm + loa nhỏ đọc TỪ" (`voice-playback.js` · `convert.js` · 3 đường tạo giọng)
+Gốc: `convert.js` cố ý chép `contentMode` từ act gốc sang act tạm (Đợt 123); IPA đi đúng đường đó nên Single
+đang VOICE ⇒ bộ thẻ nhận `voice` ⇒ Speaking cards giấu chữ. Và clip trong act WORDS là clip GỢI Ý (định nghĩa),
+không phải TỪ — gắn nút loa bằng clip sẵn có là nghe định nghĩa dưới thẻ "TROUSERS /ˈtraʊzəz/".
+- **`voiceView()`** thêm nhánh `activity._mode === "ipa"` → `{hasVoice: !!item.voice, hideText:false,
+  autoPlay:false}` — một chốt duy nhất, không sửa template nào.
+- **Trường mới trên từng từ: `wordVoice` / `wordVoiceId`** (phẳng, cạnh `ipa`). ⛔ Cố ý KHÔNG nằm trong
+  `voices.<bộ>` và KHÔNG tên là `voice`: `hasAnyVoice()`/`collectVoiceIds()` không thấy ⇒ chơi thường không
+  tính là "có giọng", không nạp trước thêm clip; `resolveItem()` mang qua `...rest` miễn phí.
+- **`convert.js`**: `qaRec` chở `wordVoice`; nhánh `speaking_cards` với `style:"ipa"` đặt `voice = r.wordVoice`
+  (không có thì `""` ⇒ không nút), `hideText:false`. Đường Change template thường KHÔNG đổi.
+- **Tạo giọng TỪ ở cả 3 đường** đang tạo giọng gợi ý: import (`main.js` `runVoiceBatch` + `voiceJobsOf` đếm
+  thêm số từ để `planFor` đủ giọng) · nút VOICE đen trong Options (`generateInlineVoices(src, keys, {word,
+  wordOnlyMissing})` — lượt WORD = `null` trong danh sách pass) · editor Anagram "Generate all voices" (lượt 2,
+  tôn trọng "skip existing" theo từng lượt; thanh % đếm cả hai). Giọng: cùng plan/mix với gợi ý.
+- **Act cũ** (cả thư viện hôm nay: có giọng gợi ý, chưa có giọng từ): màn "Switch to IPA mode?" thêm dòng
+  `Word voices: N / M ready` + nút **Generate** — chạy `generateInlineVoices(src, [], {word:true,
+  wordOnlyMissing:true})` rồi `saveActivity`; đủ M/M thì dòng tự biến. Chỉ act thật (không `conv_`/`mist_`).
+- ⚠️ **Editor Anagram phải KÊ TÊN** `wordVoice`/`wordVoiceId` ở normalize (2 nhánh) + Save (2 nhánh) — cùng bẫy
+  `ipa` Đợt 212, không kê là Lưu một lần mất sạch. Đã kê. "Delete all voices" KHÔNG xoá giọng từ (không ai yêu
+  cầu; muốn thì thêm sau).
+
+### 3. Fight → Running / IPA (`core/engine.js`)
+Gốc: `runTargets()` trả rỗng và `canIpa` false khi `fight` — lý do thật: play mode mượn MỘT bàn, trận là HAI bàn,
+chạy thẳng `enterPlayMode` là chỉ đổi một bàn. Vá theo đúng khuôn Fight → Showdown (Đợt 191b): hai ô nay hỏi
+act GỐC của trận (`modeSrcAct()` = `fight.ctl.sourceActivity()`), bấm vào đi qua `goPlayMode(mode, type)`: không
+Fight thì `enterPlayMode` ngay; đang Fight thì đặt cờ một-lần `playModeOnMount = {mode, targetType}` + `exitFight()`,
+bàn đơn dựng lại đọc cờ (cạnh `openShowdownOnMount`) và tự vào mode. Màn xác nhận IPA trong Fight nói rõ "Leave
+the match first". Sau đợt này: Single ↔ Fight ↔ Showdown ↔ Running ↔ IPA đều thông từ mọi phía.
+
+### Đã kiểm (dev server 5539, `scratch/dot339-bench.html` + fake Firestore 246, đo bằng số)
+- Việc 1: act lưu VI1 → Options chọn ENG2 (không Apply) → chân bảng → Quiz ⇒ Quiz dựng `WORDS - ENG2`, chip ENG2
+  sáng, `options.contentVariant = "eng2"`, **câu hỏi trên màn là gợi ý ENG2** (đối chiếu chuỗi thật). TEXT→VOICE
+  chưa Apply → Quiz ⇒ `contentMode:"voice"`, nút VOICE sáng.
+- Việc 2: act VOICE + 5 từ có `wordVoice` → MODE › IPA ⇒ 12/12 thẻ chữ hiện (rect > 0), có `/ipa/`, `0` thẻ
+  `.aw-clue-voiceonly`, nút loa nhỏ CHỈ ở đúng 5 từ có clip, không `.is-lg`, không tự phát. `convertActivity(…,
+  {style:"ipa"})`: `cards[].voice` = wordVoice; convert thường vẫn clip gợi ý. Màn xác nhận: "Word voices: 5 / 12 ready".
+- Tạo giọng (Kokoro thay bằng `scratch/fake-voice-batch339.js` qua importmap, `scratch/dot339-gen.html`): nút
+  Generate ở màn IPA với 3/12 sẵn ⇒ tạo đúng 9 từ thiếu, giữ 3 cũ, giọng gợi ý không đụng, dòng tự biến, Firestore
+  giả nhận doc đủ 12 `wordVoice`; editor "Generate all" ⇒ 21 = 12 gợi ý + 9 từ, Save giữ đủ. `scratch/dot339-editor.html`:
+  đổi tab VI1→ENG1 rồi Save giữ `wordVoice` ở CẢ act có variants lẫn act thường.
+- Việc 3: Single → Fight → MODE ⇒ 4 ô Single·Showdown·Running·IPA; IPA ⇒ về 1 bàn `mode-ipa act-speaking_cards`;
+  IPA → Fight (đường cũ) → Running › WORD ⇒ 1 bàn `mode-running act-running_word`; từ Running thấy đủ 5 ô. Console 0 lỗi.
+- ⚠️ CHƯA chạy thật: lượt WORD trong `main.js` import (cùng khuôn với 2 đường đã chạy, `node --check` sạch) và
+  Kokoro thật (86MB). ⬜ Thầy bấm tay trang thật: import 1 file xem có giọng từ; act cũ → MODE › IPA → Generate.
+
+Sửa 7 file: `core/engine.js` · `core/convert.js` · `core/voice-playback.js` · `core/app.css` · `main.js` ·
+`templates/anagram/anagram-editor.js` + 3 hồ sơ. Backup `_backup/dot339/`. Kho sạch lúc bắt đầu; stage đúng đường dẫn.
+
 ## Đợt 334 (16/9/2026, thầy bấm tay bản live Đợt 329 rồi báo 3 điều chỉnh) — **SPEED SORTING: băng bắt đầu TRỐNG rồi ô đầu trượt vào từ mép · băng LIỀN một dải, hết đứt cụm · LUÔN trộn ngẫu nhiên mọi nhóm**
 
 Backup `_backup/dot334/`. Sửa 1 file: `templates/group-sort/group-sort.js` (chỉ chế độ băng chuyền; CSS và chế độ

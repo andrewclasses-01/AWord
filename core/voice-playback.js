@@ -78,6 +78,19 @@ export const DEFAULT_INTRO_DELAY_MS = 650;
 export function voiceView(activity, item) {
   const hasVoice = !!(item && item.voice);
   if (!hasVoice) return { hasVoice: false, hideText: false, autoPlay: false };
+  // ⭐⭐ Đợt 339 (thầy, 16/9/2026) — IPA MODE IS ALWAYS "WORD + TRANSCRIPTION
+  // ON THE CARD, small listen button, never spoken on its own". Thầy found the
+  // deck coming up as the VOICE shape (text hidden, one big speaker, no IPA at
+  // all) whenever Single had been left on VOICE: core/convert.js copies
+  // `contentMode` across every switch on purpose (Đợt 123), and IPA mode goes
+  // through that same switch. But a card built for this mode carries the clip
+  // of the WORD itself (`wordVoice`, see convert.js's speaking_cards branch),
+  // not the clue — so "hide the text and play it" would hide the very thing
+  // the pupil is meant to read. Decided here, at the one choke point every
+  // template already goes through, so the mode cannot be argued with by a
+  // stored contentMode or a per-item hideText flag from an old act.
+  // `_mode` is the mark enterPlayMode() puts on the borrowed act (core/engine.js).
+  if (activity && activity._mode === "ipa") return { hasVoice: true, hideText: false, autoPlay: false };
   const mode = activity && activity.options ? activity.options.contentMode : null;
   if (mode === "text") return { hasVoice: false, hideText: false, autoPlay: false };
   if (mode === "voice") return { hasVoice: true, hideText: true, autoPlay: true };
