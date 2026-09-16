@@ -489,6 +489,51 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 334 (16/9/2026, thầy bấm tay bản live Đợt 329 rồi báo 3 điều chỉnh) — **SPEED SORTING: băng bắt đầu TRỐNG rồi ô đầu trượt vào từ mép · băng LIỀN một dải, hết đứt cụm · LUÔN trộn ngẫu nhiên mọi nhóm**
+
+Backup `_backup/dot334/`. Sửa 1 file: `templates/group-sort/group-sort.js` (chỉ chế độ băng chuyền; CSS và chế độ
+Group sort không đụng dòng nào).
+
+**Bối cảnh.** Thầy bấm bản live báo: (1) hết 3-2-1 các ô "đột ngột xuất hiện ở giữa"; (2) băng chạy theo cụm 5 ô rồi
+trống ~3 ô rồi lại cụm 5; (3) muốn đáp án trên băng trộn ngẫu nhiên từ toàn bộ mọi nhóm. Thầy chốt "trộn thường"
+(không cần tránh hai câu cùng nhóm đứng cạnh nhau) + "ok build + push live luôn".
+
+- **Gốc (1):** `startBelt()` đặt sẵn 5 ô tại x = gap, gap+ô, … tức đã nằm TRONG lane rồi mới chạy — Đợt 329 chỉ sửa ô
+  *tái dùng* trượt vào từ mép, chưa sửa 5 ô *khởi đầu*. Nay lane bắt đầu TRỐNG: `spawnChip(-chipW)` đặt ô đầu ngay ngoài
+  mép trái (mép phải ô = 0) và khung hình đầu tiên nó trượt vào.
+- **Gốc (2):** hằng `BELT_SLOTS = 5` cố định; lane 856px chứa ~7–8 ô nên 5 ô thành một cụm, ô ra mép phải được nhét
+  ngay sau ĐUÔI cụm ⇒ cụm mãi là 5, khoảng trống (lane − 5 ô) chạy theo sau vĩnh viễn. Nay BỎ hằng số, `loop()` mỗi
+  khung: ô nào `x > laneW` thì `retireSlot()` (xoá phần tử, item quay về hàng đợi); rồi nếu ô trái nhất đã lọt hẳn vào
+  lane (`minX ≥ 0`) thì `spawnChip(minX − chipW − gap)` — ô kế luôn xuất phát ngoài mép, cách đúng một khe. Băng tự lấp
+  đầy dù lane rộng bao nhiêu (fullscreen / điện thoại / đổi cỡ cửa sổ) và dù 12 hay 150 câu; tối đa 1 ô sinh mỗi khung
+  là đủ vì ô không bao giờ đi quá một bề rộng trong một khung. `recycle()` bỏ hẳn; `consume()` nay chỉ gỡ ô (lỗ trống
+  1 ô trôi tiếp về phải, giống Wordwall), không tự nhét ô về đầu băng nữa.
+- **Gốc (3):** editor lưu câu THEO CỘT NHÓM; băng chỉ trộn khi ô "Shuffle questions" trong Options bật — act thầy thử
+  đang tắt ⇒ băng chạy hết nhóm này tới nhóm kia; kể cả bật, mỗi vòng lặp y hệt vòng trước (`poolCursor` xoay tuần tự).
+  Nay chế độ băng **LUÔN `shuffle()` toàn bộ** (ô Shuffle chỉ còn tác dụng với chế độ Group sort — dòng đọc
+  `shuffleQuestions` của `mountDrag()` giữ nguyên); hàng đợi `queue` mỗi lần cạn lại `shuffle([...pool])` ⇒ vòng sau
+  khác vòng trước; item đang ở trên băng được đẩy về CUỐI hàng đợi chứ không bị bỏ qua cả vòng.
+- Thả ra ngoài khi slot đã trôi khỏi lane: trước là dời ô về sau ô trái nhất; nay `retireSlot()` + đặt item lên ĐẦU hàng
+  đợi ⇒ vẫn là ô kế tiếp trượt vào từ mép trái (cảm giác như cũ). `resumeGame()` điều kiện "không còn gì để chạy" đổi
+  `!belt.length` → `!belt.length && !pool.length` (băng có thể trống đúng một khung trong khi pool còn câu).
+
+**Đã kiểm (dev server `templates/group-sort/test.html?speed=2`, máy ghi rAF đọc `transform` của mọi ô từng khung, 0 lỗi
+console):**
+- Ô đầu tiên xuất hiện tại **x = −116 = −chipW** đúng lúc băng bắt đầu; 25 ô sinh sau đó đều xuất hiện lần đầu tại
+  x ≈ −134 (ngoài mép) — không ô nào "hiện" bên trong lane.
+- Suốt 44 giây (26 lượt sinh ô, hơn 2 vòng): **mọi khe giữa hai ô liên tiếp = 134,6px** (= chipW 116 + 16%), min = max;
+  số ô sống 7–8 lấp kín lane 856px (trước: 5 ô + lỗ ~3 ô).
+- Thứ tự sinh: WHEN WHY WHO WHEN WHO WHERE WHO WHERE WHY WHEN WHERE WHY — xen nhóm; vòng 2 thứ tự khác vòng 1.
+- Chơi bằng `PointerEvent` giả lập (pointerdown trên ô, move/up trên window đúng như code nghe): thả đúng → ✓ + 10 sao +
+  ô tiêu; thả sai → ✗ + ô tiêu; thả ra ngoài → clone bay về, ô hiện lại, không mất câu; ☰ Menu: `transform` mọi ô đứng
+  yên tuyệt đối trong 900ms + `.aw-stage-dim` hiện, Resume chạy tiếp; chơi hết 12 câu → GAME COMPLETE 11/12 (1 sai cố ý).
+- Ảnh chụp giữa ván: băng một dải 6 ô + ô đỏ đang ló từ mép trái, nhóm xen kẽ.
+
+⬜ Thầy bấm tay bản live: ô đầu có trượt từ mép không, băng còn đứt cụm không, đáp án có xen nhóm không. TOMKO / điện
+thoại cảm ứng vẫn chưa đo (từ Đợt 327).
+
+---
+
 ## Đợt 333 (14/9/2026, thầy giao 3 việc qua chat + 1 chốt tiếp) — **FIGHT: Speed bonus có Off · hết Time delay chưa xong tính như sai · icon loa dời phải to bằng chữ, chỉ hiện ở VOICE**
 
 **Bối cảnh.** Thầy gửi ảnh chụp panel Options của chế độ FIGHT rồi yêu cầu 3 việc:

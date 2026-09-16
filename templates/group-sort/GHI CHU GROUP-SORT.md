@@ -1,8 +1,10 @@
 # GHI CHÚ — SPEED SORTING (type `group_sort`: Speed sorting · Group sort)
 
-**Trạng thái: ⬜ Đợt 329 (14/9/2026) — thầy "ok tạm thế đã, cải tiến thêm sau" rồi DỪNG PHIÊN.** Đã lên live, đã tự
-kiểm bằng số trên dev server, nhưng **chưa phải thầy đã bấm tay đầy đủ máy soạn/TOMKO/điện thoại xác nhận xong** —
-phiên sau quay lại thì đọc hết Đợt 327→329 trước, hỏi thầy đã thử tới đâu rồi mới làm tiếp, đừng coi là đã chốt.
+**Trạng thái: ⬜ Đợt 334 (16/9/2026) — thầy bấm tay live Đợt 329 rồi báo 3 lỗi băng chuyền, đã vá + lên live, CHƯA bấm
+tay lại.** Băng nay bắt đầu TRỐNG rồi ô đầu trượt vào từ mép · băng LIỀN một dải (sinh ô theo nhu cầu, hết `BELT_SLOTS`)
+· LUÔN trộn ngẫu nhiên mọi nhóm (bỏ qua ô Shuffle). Đợt 329 (14/9) thầy "ok tạm thế đã, cải tiến thêm sau". Phiên sau
+quay lại thì đọc hết Đợt 327→334 trước, hỏi thầy đã thử tới đâu rồi mới làm tiếp, đừng coi là đã chốt. TOMKO/điện thoại
+cảm ứng vẫn chưa đo lần nào.
 Đợt 288 (03/9/2026) dựng lần đầu dưới tên "Group sort" cho khóa NỀN TẢNG TIẾNG ANH (Lesson 16 BT2 trên Wordwall
 là *Speed sorting* 7 nhóm; Lesson 13 BT1 là *Group sort* kéo thả). Đợt 327 **đổi tên hiển thị thành "Speed sorting"**
 và **làm lại chế độ băng chuyền** theo mockup thầy duyệt (artifact "AWord Speed Sorting"). Đợt 328: **☰ Menu dừng
@@ -20,9 +22,13 @@ Danh sách phẳng để "Start with mistakes" (`itemsKey: "items"`) và Show an
   bù đệm của `.aw-stage-inner`, Đợt 329 — không thì ô bị cắt ở một vạch trong sân, trông như bật ra chứ không trượt vào); ô câu `.aw-gs-bchip` **cùng một cỡ cố định, vuông**
   (Đợt 328: 13,5u × 13,5u — trước là chữ nhật dẹt 24,3×11,9u; **bỏ hẳn bóng đổ "3D"** `box-shadow: none`; Đợt 329:
   chữ **một cỡ cho cả ván = cỡ LỚN NHẤT mà mọi câu đều lọt khung**, `fitChipFont()` đo bằng ô dò `.is-probe` rồi ghi
-  `--gs-chipfont: calc(K*var(--aw-u))`, clamp 6 dòng chỉ là lưới an toàn) trôi **trái → phải** liên tục (rAF, `chip.x` px layout → transform). 5 ô sống cùng lúc
-  (`BELT_SLOTS`); ô ra khỏi mép phải vào lại từ mép trái mang câu kế (không lặp câu đang hiện trên băng) — ⛔ luôn đặt
-  `min(minX − chipW − gap, −chipW − gap)`: khi băng thưa `minX` nằm trong màn, thiếu vế sau là ô bật ra giữa lane (Đợt 329). Màu xoay
+  `--gs-chipfont: calc(K*var(--aw-u))`, clamp 6 dòng chỉ là lưới an toàn) trôi **trái → phải** liên tục (rAF, `chip.x` px layout → transform). **Đợt 334: lane bắt đầu TRỐNG** —
+  `spawnChip(-chipW)` đặt ô đầu ngay ngoài mép trái rồi trượt vào; **không còn số ô cố định** (`BELT_SLOTS` bỏ): mỗi khung
+  `loop()` xoá ô đã ra hẳn mép phải (`x > laneW`, item về hàng đợi) rồi hễ ô trái nhất đã lọt hẳn vào lane (`minX ≥ 0`)
+  thì sinh ô kế tại `minX − chipW − gap` ⇒ băng liền một dải cách đều đúng một khe, tự lấp kín mọi bề rộng lane. ⛔ Trước
+  đó `BELT_SLOTS = 5` để lại cụm 5 ô + lỗ ~3 ô chạy vòng vĩnh viễn (ô tái dùng luôn nhét sau đuôi cụm). **Thứ tự câu:
+  LUÔN `shuffle()`** bất kể ô "Shuffle questions" (editor lưu theo cột nhóm — băng theo thứ tự đó là lộ đáp án); hàng
+  đợi `queue` cạn thì trộn lại pool ⇒ vòng sau khác vòng trước; item đang trên băng đẩy về cuối hàng đợi. Màu xoay
   4 tile theme + tím riêng `--aw-gs-tile-4` (`--aw-tile-fixed` vẫn thắng).
 - Dưới: ô nhóm `.aw-gs-pill` **vàng nhạt viền nét đứt, không màu theo nhóm, không số** (không lộ đáp án), Đợt 328
   đổi sang **kích thước cố định 16u × 9,4u đều nhau tuyệt đối** (trước co giãn theo độ dài tên — dễ kéo trượt vì
@@ -38,7 +44,7 @@ Danh sách phẳng để "Start with mistakes" (`itemsKey: "items"`) và Show an
   như `aw-fly` của lõi; Đợt 329, áp cả ✗) trên ô nhóm + sao bay về điểm + điểm +1 + **câu tiêu**, slot nhận câu mới từ mép trái.
   Thả **sai**: ✗ trên ô nhóm + tiếng sai + mất tim (nếu bật) + trừ điểm (`pointsOff` qua `ui.flyPenalty`) + **câu cũng
   tiêu, KHÔNG quay lại băng** (thầy chốt). Thả **ra ngoài**: clone bay về đúng chỗ slot đang trôi (đích đọc lại mỗi
-  khung, bù tỉ lệ zoom fullscreen); slot đã trôi khỏi lane ⇒ vào lại từ mép trái, clone mờ đi.
+  khung, bù tỉ lệ zoom fullscreen); slot đã trôi khỏi lane ⇒ ô bị gỡ + item lên ĐẦU hàng đợi (là ô kế vào từ mép trái), clone mờ đi.
 - Hết câu ⇒ Game complete; hết tim ⇒ **Game over** (`title` truyền vào `ui.finish`); Time's up khi countDown hết.
   Show answers theo **thứ tự chơi**. `speed` 1–10 = tốc độ băng (`normSpeed`: 0/thiếu ⇒ 3); `lives` 0 = vô hạn
   (mặc định). Đếm 3-2-1 ở countUp (`manualTimerStart`), tim ở thanh trên (`hasLivesSlot`). Không còn phím 1–9.
@@ -83,6 +89,15 @@ Lưu ra `{groups, items}`; item của nhóm không còn tồn tại bị bỏ kh
   việc khác trong engine.js).
   Kéo thả lại một câu đúng sau khi đổi cỡ ô — vẫn ăn điểm, nav "1 of 12" bình thường.
 - Group sort (`?mode=drag`, `.aw-gs-chip`/`.aw-gs-box`) đo lại — không đổi hình, không dính CSS mới.
+
+## Đã kiểm (dev server, test.html?speed=2, 16/9/2026 — Đợt 334)
+- Máy ghi rAF đọc `transform` mọi ô từng khung: ô đầu tiên xuất hiện tại **x = −116 = −chipW** đúng lúc băng bắt đầu; 25
+  ô sau đều xuất hiện lần đầu tại x ≈ −134 (ngoài mép). Suốt 44 giây (26 lượt sinh, > 2 vòng): **mọi khe = 134,6px**
+  (chipW 116 + 16%), min = max; 7–8 ô sống lấp kín lane 856px. Thứ tự sinh xen nhóm, vòng 2 khác vòng 1.
+- Chơi bằng `PointerEvent` giả lập: thả đúng ✓ + sao + ô tiêu · thả sai ✗ + ô tiêu · thả ra ngoài → về băng không mất
+  câu · ☰ Menu đứng yên tuyệt đối 900ms rồi Resume chạy tiếp · hết 12 câu → GAME COMPLETE 11/12. 0 lỗi console.
+- ⛔ Bẫy kho: `core.autocrlf=true`, file trên đĩa CRLF — Edit chèn dòng LF thành file trộn (git vẫn chuẩn hoá khi commit,
+  nhưng nắn lại cả file về CRLF trước khi commit cho sạch).
 
 ## Chưa làm / ĐỀ XUẤT
 - ⬜ Thầy bấm tay: máy soạn · TOMKO · điện thoại (cảm ứng chưa đo — `touch-action:none` + pointer capture như Unjumble).

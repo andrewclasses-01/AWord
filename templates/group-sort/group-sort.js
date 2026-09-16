@@ -7,7 +7,13 @@
 //
 // TWO MODES (options.mode):
 //  • "tap"  (default) — SPEED SORTING, a real CONVEYOR BELT. Same-sized
-//    coloured chips drift left→right across a lane at the top, on a loop;
+//    coloured chips drift left→right across a lane at the top, on a loop —
+//    ALWAYS in a random mix of every group (Đợt 334: the belt ignores the
+//    "Shuffle questions" checkbox, which only governs drag mode; the editor
+//    stores items group by group, and a belt in that order is a give-away).
+//    The lane starts EMPTY after 3-2-1 and the first chip slides in from
+//    the left edge; a new chip follows as soon as the last one is fully in,
+//    so the belt is one continuous, gap-free line however wide the lane is;
 //    below sit N dashed amber GROUP PILLS (no colours, no numbers — nothing
 //    that hints at the answer). Press ANY chip and it is yours: a clone
 //    follows the pointer while the chip's own slot keeps riding the belt.
@@ -47,7 +53,11 @@ import { MIN_GROUPS, normalizeGroups, groupIndexOf } from "./gs-shared.js";
 
 const MAX_LIVES = 10;
 const TAP_SLOP_PX = 7;   // drag mode: a pointer that moved less than this is a TAP, not a drag
-const BELT_SLOTS = 5;    // belt mode: chip slots kept alive on the belt at once
+// Đợt 334 — no fixed slot count any more (was BELT_SLOTS = 5, which left a
+// 5-chip cluster followed by a ~3-chip hole trailing round the lane for
+// ever: the recycled chip always re-entered right behind the cluster's tail,
+// so the cluster never grew to fill the lane). The belt now SPAWNS a chip
+// whenever the leftmost one has fully entered the lane — see spawnChip().
 
 // Menu pause (Đợt 328) — bridges the CURRENT mount's belt pause/resume pair
 // out to the template-level `onPause` hook engine.js calls when the ☰ menu
@@ -311,11 +321,15 @@ const gsTemplate = {
     // =====================================================================
     function mountBelt() {
       const speedFrac = beltFractionFor(normSpeed(opt.speed));
-      const order = opt.shuffleQuestions === false ? items.map((_, i) => i) : shuffle(items.map((_, i) => i));
+      // ALWAYS shuffled (Đợt 334) — the editor saves items group by group, and
+      // a belt that runs "all of WHERE, then all of WHEN…" hands out the answer.
+      // `shuffleQuestions` is left to drag mode. (Show answers still lists the
+      // items in the order they were PLAYED — see consume().)
+      const order = shuffle(items.map((_, i) => i));
       reviewOrder = order;
       const pool = [...order];          // items not yet dropped anywhere
-      let poolCursor = 0;
-      const onBelt = new Set();         // item indices currently occupying a slot
+      let queue = [];                   // this lap's feed order — reshuffled from `pool` each time it runs dry
+      const onBelt = new Set();         // item indices currently riding the belt
       const played = [];                // item indices in the order they were dropped
       let belt = [];                    // { el, x, itemIdx, held }
       let chipW = 0, chipH = 0, chipGap = 0, colourCursor = 0;
@@ -472,35 +486,47 @@ const gsTemplate = {
 
       function positionChip(c) { c.el.style.transform = `translate(${c.x}px, -50%)`; }
 
-      // Next pool item that is NOT already on another slot — null once every
-      // remaining item is already visible (or none is left).
+      // Next item to feed onto the belt: this lap's queue, reshuffled from the
+      // pool whenever it runs dry (so no two laps show the same order). An item
+      // still riding the belt goes to the back of the queue rather than being
+      // skipped for a lap. null = every remaining item is already on the belt
+      // (or none is left) — the caller just tries again next frame.
       function nextItemForSlot() {
         if (!pool.length) return null;
-        for (let k = 0; k < pool.length; k++) {
-          const idx = pool[poolCursor % pool.length];
-          poolCursor++;
-          if (!onBelt.has(idx)) return idx;
+        if (!queue.length) queue = shuffle([...pool]);
+        for (let k = queue.length; k > 0; k--) {
+          const idx = queue.shift();
+          if (!pool.includes(idx)) continue;                  // dropped since it was queued
+          if (onBelt.has(idx)) { queue.push(idx); continue; } // still in view — later
+          return idx;
         }
         return null;
       }
 
+      // One new chip at layout x (its LEFT edge; ≤ -chipW keeps it fully
+      // outside the lane, so it slides in rather than appearing).
+      function spawnChip(x) {
+        const idx = nextItemForSlot();
+        if (idx == null) return null;
+        onBelt.add(idx);
+        const chip = { el: el("div", "aw-gs-bchip"), x, itemIdx: idx, held: false };
+        paintChip(chip, idx);
+        positionChip(chip);
+        attachDrag(chip);
+        lane.append(chip.el);
+        belt.push(chip);
+        return chip;
+      }
+
+      // The lane starts EMPTY (Đợt 334): the first chip is parked just
+      // outside the left edge and the very first frame starts it sliding in
+      // — nothing "appears" mid-lane after 3-2-1 any more. Every later chip
+      // is spawned by loop() the moment the one before it is fully inside.
       function startBelt() {
         if (finished) return;
         measureChip();
         fitChipFont();
-        const count = Math.min(BELT_SLOTS, pool.length);
-        let x = chipGap;
-        for (let i = 0; i < count; i++) {
-          const idx = pool[poolCursor % pool.length]; poolCursor++;
-          onBelt.add(idx);
-          const chip = { el: el("div", "aw-gs-bchip"), x, itemIdx: idx, held: false };
-          paintChip(chip, idx);
-          positionChip(chip);
-          attachDrag(chip);
-          lane.append(chip.el);
-          belt.push(chip);
-          x += chipW + chipGap;
-        }
+        spawnChip(-chipW);
         running = true;
         lastTime = null;
         rafId = requestAnimationFrame(loop);
@@ -515,7 +541,7 @@ const gsTemplate = {
         running = false;
       }
       function resumeGame() {
-        if (finished || prepTimer || !belt.length) return;   // over, still counting in, or nothing left to run
+        if (finished || prepTimer || (!belt.length && !pool.length)) return;   // over, still counting in, or nothing left to run
         running = true;
         lastTime = null;
         rafId = requestAnimationFrame(loop);
@@ -523,8 +549,13 @@ const gsTemplate = {
       gsPauseHandlers = { pause: pauseGame, resume: resumeGame };
 
       // Every chip drifts — a HELD one too (its slot stays in sequence).
-      // Whatever has fully left the right edge comes back in from the left
-      // with the next item; a held chip is never recycled.
+      // A chip that has fully left the right edge is dropped (its item goes
+      // back round through the queue); a held chip never exits. Then, if the
+      // leftmost chip is fully inside the lane, the next one is spawned right
+      // behind it — one chip-gap apart, always starting outside the edge —
+      // which is what keeps the belt one unbroken line whatever the lane
+      // width (fullscreen, phone, resize) and however many items there are.
+      // One spawn per frame is plenty: a chip never moves a full width in one.
       function loop(now) {
         if (finished || !running) return;
         if (lastTime == null) lastTime = now;
@@ -532,61 +563,32 @@ const gsTemplate = {
         lastTime = now;
         const laneW = lane.clientWidth || 1;
         const speed = laneW * speedFrac;
+        belt.forEach(c => { c.x += speed * dt; positionChip(c); });
+        belt.filter(c => !c.held && c.x > laneW).forEach(retireSlot);
         let minX = Infinity;
-        belt.forEach(c => {
-          c.x += speed * dt;
-          positionChip(c);
-          if (c.x < minX) minX = c.x;
-        });
-        const exited = belt.filter(c => !c.held && c.x > laneW + chipGap);
-        exited.forEach(c => {          // one at a time, so two exits on one frame never stack
-          recycle(c, minX);
-          if (c.x < minX) minX = c.x;
-        });
+        belt.forEach(c => { if (c.x < minX) minX = c.x; });
+        if (!belt.length) spawnChip(-chipW);
+        else if (minX >= 0) spawnChip(minX - chipW - chipGap);
         rafId = requestAnimationFrame(loop);
       }
 
-      function recycle(chip, minX) {
-        onBelt.delete(chip.itemIdx);
-        const nextIdx = nextItemForSlot();
-        if (nextIdx == null) { retireSlot(chip); return; }
-        onBelt.add(nextIdx);
-        // Behind the leftmost chip — but NEVER inside the lane: when the belt
-        // has thinned out, minX can be well inside, and a chip placed just
-        // behind it would pop into view instead of sliding in from the edge
-        // (thầy saw exactly that, Đợt 329).
-        chip.x = Math.min(minX - chipW - chipGap, -chipW - chipGap);
-        paintChip(chip, nextIdx);
-        positionChip(chip);
-      }
-
+      // Off the belt (exited, dropped, or a held one whose slot rode out).
       function retireSlot(chip) {
+        onBelt.delete(chip.itemIdx);
         chip.el.remove();
         belt = belt.filter(b => b !== chip);
       }
 
-      // A dropped chip (right OR wrong) is spent: out of the pool for good,
-      // and its slot picks up the next item from off the left edge.
+      // A dropped chip (right OR wrong) is spent: out of the pool for good and
+      // off the belt; the hole it leaves drifts on, and loop() feeds the next
+      // item in from the left edge as usual.
       function consume(chip) {
         const pi = pool.indexOf(chip.itemIdx);
         if (pi >= 0) pool.splice(pi, 1);
-        onBelt.delete(chip.itemIdx);
         played.push(chip.itemIdx);
         const playedSet = new Set(played);
         reviewOrder = played.concat(order.filter(i => !playedSet.has(i)));
-        const nextIdx = nextItemForSlot();
-        if (nextIdx == null) {
-          retireSlot(chip);
-        } else {
-          onBelt.add(nextIdx);
-          let minX = Infinity;
-          belt.forEach(b => { if (b.x < minX) minX = b.x; });
-          chip.x = Math.min(minX - chipW - chipGap, -chipW - chipGap);
-          paintChip(chip, nextIdx);
-          positionChip(chip);
-          chip.held = false;
-          chip.el.classList.remove("is-held");
-        }
+        retireSlot(chip);
         updateNav();
       }
 
@@ -746,10 +748,11 @@ const gsTemplate = {
           chip.el.classList.remove("is-held");
         };
         if (chip.x + chipW > laneW) {
-          let minX = Infinity;
-          belt.forEach(b => { if (b !== chip && b.x < minX) minX = b.x; });
-          chip.x = Math.min(isFinite(minX) ? minX - chipW - chipGap : 0, -chipW - chipGap);
-          positionChip(chip);
+          // Its slot has ridden out: drop the chip and put the item at the
+          // head of the queue, so it is the next to slide in from the left.
+          const idx = chip.itemIdx;
+          retireSlot(chip);
+          queue = [idx, ...queue.filter(i => i !== idx)];
           const f0 = performance.now();
           const fade = now => {
             if (finished) { finishFly(); return; }
