@@ -26,7 +26,7 @@ import { el, copyText } from "./core/utils.js";
 import { icons } from "./core/icons.js";
 import { ensureTemplate } from "./core/registry.js";
 import { TEMPLATES, templateLabel, templateIcon } from "./core/catalog.js";
-import { getDefaultOptions, saveDefaultOptions, buildOptionsControls } from "./core/settings.js";
+import { getDefaultOptions, saveDefaultOptions, buildOptionsControls, loadSettings, resetSettingsCache } from "./core/settings.js";
 import { getEntries as getWrongSoundEntries, getWrongChoice, setWrongChoice, previewSound as previewWrongSound, renameSound as renameWrongSound, removeSound as removeWrongSound, uploadSound as uploadWrongSound } from "./core/wrong-sound.js";
 import {
   ROOTS, holdsActs, holdsAssignments, folderIdsOfRoot,
@@ -270,6 +270,11 @@ async function init() {
   try {
     await maybeSeed();
     await ensureNumbers();      // one-time: give older items their link numbers
+    // ⭐ Đợt 338 — pull the shared option defaults out of Firestore into
+    // localStorage BEFORE any Set-assignment form can open (routeFromLocation
+    // below handles ?giao=), so a default set on one machine seeds the form on
+    // every machine and inside the myLesson webview. Never throws.
+    await loadSettings();
   } catch (e) {
     renderLogin("Could not load your library: " + e.message);
     return;
@@ -550,6 +555,7 @@ function renderLogin(errorMsg) {
     try {
       await signIn();
       resetCache();
+      resetSettingsCache();  // Đợt 338 — re-pull option defaults for the new account
       resetClassesCache();   // classes keep their own cache — drop it too, or the
                              // previous account's class rolls would linger
       // Đợt 155 — and the same for Showdown: its team table is another account's
@@ -2786,6 +2792,7 @@ async function doSignOut() {
   try { await signOutNow(); } catch { /* ignore */ }
   resetCache();
   resetClassesCache();
+  resetSettingsCache();    // Đợt 338 — next sign-in re-pulls that account's defaults
   resetShowdownCache();
   clearShowdownPick();     // Đợt 155 — see the matching pair in the sign-in path
   state.user = null;

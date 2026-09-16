@@ -3318,6 +3318,17 @@ results / <lớp> / [bài giao]`. Form Set assignment nhìn `act.root` để ch�
    `BUILTIN_DEFAULTS`, KHÔNG mượn bộ homework (thầy chốt). `isAssignmentKind(kind)` = homework ∨
    course — cả hai bỏ ô "Show answers at end" chết. Edit assignment không đọc bộ nào (giữ options
    bài đã giao).
+5. ⭐ **Đợt 338 (16/9/2026) — BA BỘ ĐÓ ĐỒNG BỘ QUA FIRESTORE** để "cài một lần, mọi nơi theo". Trước
+   đó `getDefaultOptions` chỉ đọc localStorage — mà AWord đứng riêng và AWord nhúng trong webview
+   myLesson là HAI localStorage khác nhau, nên bộ mặc định cài ở bên này bên kia không thấy (thầy
+   báo: Set assignment từ myLesson ra options khác). Nay: 3 bộ nằm ở **`users/{uid}/items/aw-settings`**
+   (`kind:"settings"`, KHÔNG có `root` → mọi listing lọc theo root đều bỏ qua; luật `items/{itemId}`
+   cho thầy ghi tự do, không cần sửa console). `loadSettings()` (gọi trong `main.js` init, TRƯỚC khi mở
+   form đầu tiên) kéo doc về localStorage → `getDefaultOptions` vẫn ĐỒNG BỘ đọc cache. `saveDefaultOptions`
+   ghi localStorage (tức thì) + Firestore (write-through fire-and-forget). ⛔ Lần đầu nâng cấp: Firestore
+   trống mà localStorage có bộ cũ → **tải lên** (không mất cấu hình). `resetSettingsCache()` gọi lúc
+   đăng nhập/đăng xuất. Offline/chưa đăng nhập/đọc bị chặn: `loadSettings` KHÔNG ném, chạy trên bản
+   local. Webview myLesson mỗi lần mở `?giao=` là tải lại trang → luôn lấy bản Firestore mới.
 
 ⚠️ `tpl.noAssignment` (Đợt 245) là **một CÂU, không phải boolean** — 3 template không giao được
 (`speaking_cards` không gọi `ui.finish()`; `running_word`/`running_team` báo cáo theo ĐỘI). Bảng chọn

@@ -12,7 +12,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **⭐ Đợt 337** (16/9/2026, SETTINGS): hàng mới **"Default course options"** — bộ mặc định thứ 3
+> Mới nhất: **⭐ Đợt 338** (16/9/2026, SETTINGS): 3 bộ mặc định Options (activity/homework/course) **đồng bộ
+> qua Firestore** (`users/{uid}/items/aw-settings`, `loadSettings()` gọi lúc init) — sửa gốc bệnh AWord đứng
+> riêng ↔ webview myLesson lệch nhau (localStorage riêng từng trình duyệt). Luật `items/{itemId}` cho ghi
+> sẵn, không cần sửa console. Bàn thử 16/16 + 13/13 + 4/4. Xem mục **Đợt 338**.
+> Trước đó: **⭐ Đợt 337** (16/9/2026, SETTINGS): hàng mới **"Default course options"** — bộ mặc định thứ 3
 > (`courseOptionsByType`) gieo form Set assignment khi act nằm trong cây COURSES (`kindForAct`,
 > `core/assignment-ui.js`); độc lập với homework, chưa cài thì về mặc định gốc (thầy chốt). Bàn thử
 > 15/15 + 13/13 + 4/4 (form thật + main.js thật + đường `?giao=`). Xem mục **Đợt 337**.
@@ -548,6 +552,44 @@ console):**
 thoại cảm ứng vẫn chưa đo (từ Đợt 327).
 
 ---
+
+## Đợt 338 (16/9/2026, thầy báo lỗi kèm 3 ảnh + chốt phạm vi) — **BỘ MẶC ĐỊNH OPTIONS ĐỒNG BỘ QUA FIRESTORE (AWord đứng riêng ↔ webview myLesson)** · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY TRANG THẬT
+
+**Thầy báo:** Options của act trong AWord · Set assignment trong AWord · Set assignment cùng act đó mở từ
+myLesson — ba nơi KHÔNG đồng bộ (ảnh 3 myLesson "Show corrects" bật, hai ảnh kia tắt). Muốn: tạo assignment
+**ở bất kỳ đâu đều theo bộ mặc định trong Settings trước**; cái chỉnh tay riêng (options trên act, trên
+assignment cũ) vẫn giữ. Chốt câu hỏi: **đồng bộ cả 3 bộ** (activity/homework/course).
+
+**Gốc bệnh (mổ code).** `getDefaultOptions` đọc `localStorage "aword-settings"` — riêng từng trình duyệt.
+AWord đứng riêng (Chrome desktop thầy) và AWord nhúng trong webview myLesson là HAI localStorage tách biệt
+⇒ bộ mặc định cài bên này bên kia không thấy, form myLesson rơi về mặc định gốc template ("Show corrects"
+bật). Options trên act (Firestore, ảnh 1) vốn đồng bộ nhưng là options riêng act — đúng thiết kế, thầy
+đồng ý giữ; chỉ cần đổi NGUỒN GIEO form assignment mới.
+
+**Ràng buộc đã kiểm.** Luật Firestore `docs/08-FIREBASE-SETUP.md` dòng 159: `match /users/{uid}/items/
+{itemId} { allow read, write: if isTeacher() && request.auth.uid == uid }` — KHÔNG giới hạn field/kind ⇒
+ghi `kind:"settings"` được sẵn, **không cần sửa luật console**. Webview myLesson có đăng nhập (init bắt
+`currentUser`) và mỗi lần mở `?giao=` là tải lại trang ⇒ luôn lấy bản mới.
+
+**Sửa (`core/settings.js` + `main.js`, KHÔNG đụng template).** 3 bộ lưu ở **`users/{uid}/items/aw-settings`**
+(`kind:"settings"`, không `root` → mọi listing lọc root bỏ qua; store.readAll kéo về cache nhưng chỉ
+migrate `kind:"act"` nên không đụng). `loadSettings()` async: đọc doc → ghi đè 3 bộ vào localStorage
+(remote thắng); doc trống mà local có → **tải local lên** (nâng cấp không mất cấu hình); offline/chưa đăng
+nhập/đọc bị chặn → KHÔNG ném, chạy bản local. `getDefaultOptions` vẫn ĐỒNG BỘ (đọc localStorage đã
+hydrate). `saveDefaultOptions` ghi localStorage + `writeRemote` fire-and-forget. `main.js` init `await
+loadSettings()` TRƯỚC `routeFromLocation()`; `resetSettingsCache()` ở đăng nhập/đăng xuất. Chỉ đồng bộ
+3 khoá `SYNCED_KEYS` (âm thanh sai lưu IndexedDB riêng, không đụng). Backup `_backup/dot338/`.
+
+**Bàn thử (dev server 5535, fake Firestore `fake-firebase246.js` — có `doc/getDoc/setDoc{merge}`).**
+`scratch/dot338-sync.html` **16/16**: máy A Save → Firestore có doc `kind:settings` không `root`; máy B
+(localStorage rỗng, chung Firestore) loadSettings kéo về đúng 0:45 + anagram 5:00, template chưa cài vẫn
+built-in không mượn course; đổi ở B → A load lại thấy; nâng cấp lần đầu tải localStorage cũ lên; chưa đăng
+nhập + mất mạng lúc đọc đều không ném, local nguyên. Chạy lại `dot337-settings.html` **13/13 + 4/4** (init
+có `loadSettings` không hỏng gì). `node --check` sạch 2 file; console 0 lỗi.
+
+**VIỆC ĐANG CHỜ.** ⬜ Thầy bấm tay trang thật: cài Default course options ở AWord đứng riêng → mở Set
+assignment cùng act đó **từ myLesson** xem options đã giống chưa (ảnh 3 hết lệch). ⚠️ myLesson phải là bản
+đã tải lại sau khi thầy cài (mỗi lần mở `?giao=` là tải mới nên thường tự đúng).
 
 ## Đợt 337 (16/9/2026, thầy giao qua chat + chốt 1 câu hỏi) — **SETTINGS ▸ "DEFAULT COURSE OPTIONS": bộ mặc định thứ 3 cho bài giao act trong COURSES** · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY TRANG THẬT
 

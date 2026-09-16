@@ -31,6 +31,14 @@
 // =============================================================
 
 import { el } from "./utils.js";
+// ⭐ Đợt 338 (16/9/2026, thầy) — the option DEFAULTS now live in Firestore too,
+// so "set a default once, it applies everywhere" actually holds. Before this,
+// getDefaultOptions read localStorage ONLY, and localStorage is per-browser:
+// the AWord the teacher opens on their own screen and the AWord embedded in
+// myLesson's webview are two different localStorages, so a default set in one
+// was invisible to the other (thầy's report: Set assignment from myLesson
+// showed different options than the same act in AWord). See loadSettings().
+import { db, fs, currentUser } from "./firebase.js";
 import { buildOptionsBody } from "./options-panel.js";
 // Đợt 245 — reading (never writing) the act's clue sets and halves, so the two
 // assignment forms can NAME the content they are handing out. Same functions the
@@ -63,6 +71,24 @@ export const BUILTIN_DEFAULTS = {
   showAnswers: true
 };
 
+// ⭐ Đợt 338 — TWO layers, one shape.
+//   • localStorage "aword-settings" — instant, offline, per-browser. Still the
+//     thing getDefaultOptions()/saveDefaultOptions() read and write synchronously,
+//     so every existing caller keeps working unchanged and nothing waits on the
+//     network to open a form.
+//   • Firestore users/{uid}/items/aw-settings — the SHARED copy. loadSettings()
+//     pulls it into localStorage once at startup (so the sync readers see it),
+//     and every save writes through to it. This is what makes the myLesson
+//     webview and standalone AWord agree.
+// ⛔ WHY an item, not users/{uid}/prefs/... : the published Firestore rules open
+// exactly ONE path, users/{uid}/items/{itemId} (see the long note in
+// core/store.js). A new collection would be refused until the rules are edited
+// in the console. So this rides in `items` like a class does — with kind
+// "settings" and no library `root`, so no listing (which all filter by root)
+// ever shows it, and store.js's readAll (which pulls all items) simply carries
+// an extra doc it never looks at.
+const REMOTE_ID = "aw-settings";
+
 function readAll() {
   try {
     const s = JSON.parse(localStorage.getItem(KEY));
@@ -70,7 +96,79 @@ function readAll() {
   } catch { /* ignore */ }
   return {};
 }
-function writeAll(s) { localStorage.setItem(KEY, JSON.stringify(s)); }
+function writeAll(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* ignore */ } }
+
+// The three option buckets, i.e. everything getDefaultOptions/saveDefaultOptions
+// touch — this is exactly what travels to Firestore. Anything else that ever
+// lands in `aword-settings` stays local unless it is added here on purpose.
+const SYNCED_KEYS = ["optionsByType", "homeworkOptionsByType", "courseOptionsByType"];
+function pickSynced(all) {
+  const out = {};
+  for (const k of SYNCED_KEYS) if (all[k] && typeof all[k] === "object") out[k] = all[k];
+  return out;
+}
+
+async function itemsDoc() {
+  const user = await currentUser();
+  if (!user) return null;
+  const [d, { doc }] = await Promise.all([db(), fs()]);
+  return doc(d, `users/${user.uid}/items`, REMOTE_ID);
+}
+
+let loadedUid = null;   // guard so a second loadSettings() for the same user is a no-op
+// ⭐ Đợt 338 — drop the "already loaded" guard on sign-out / account switch, so
+// the next loadSettings() re-pulls for the new account (matches resetClassesCache).
+// The localStorage copy is left as-is: it is the offline fallback, and the next
+// loadSettings() overwrites its three buckets from the new account's Firestore.
+export function resetSettingsCache() { loadedUid = null; }
+
+/**
+ * ⭐ Đợt 338 — pull the shared defaults out of Firestore into localStorage, so
+ * the synchronous getDefaultOptions() below sees the same numbers on every
+ * machine and inside the myLesson webview. Call once at startup (main.js init),
+ * BEFORE the first Set-assignment form can open.
+ *
+ * First run after this đợt: if Firestore has no settings doc yet but this
+ * browser already has locally-saved defaults, they are UPLOADED once — so the
+ * teacher's current configuration becomes the shared one instead of being lost.
+ * If both exist, Firestore wins (it is the shared truth); a machine that wants
+ * different numbers is exactly what per-assignment hand-tweaks are for.
+ *
+ * Never throws: offline / signed-out / a denied read just leaves localStorage
+ * as-is, and the app runs on the local copy like it always did.
+ */
+export async function loadSettings() {
+  try {
+    const user = await currentUser();
+    if (!user) return;
+    if (loadedUid === user.uid) return;
+    const ref = await itemsDoc();
+    if (!ref) return;
+    const { getDoc } = await fs();
+    const snap = await getDoc(ref);
+    const local = readAll();
+    if (snap.exists()) {
+      const remote = pickSynced(snap.data() || {});
+      writeAll({ ...local, ...remote });   // remote wins for the three buckets
+    } else {
+      // Nothing shared yet — seed Firestore from whatever this browser holds
+      // (may be {}), so from now on every machine reads the same doc.
+      await writeRemote(pickSynced(local));
+    }
+    loadedUid = user.uid;
+  } catch { /* offline / denied — stay on the local copy */ }
+}
+
+// Write the three buckets to Firestore. Fire-and-forget from saveDefaultOptions
+// (the localStorage write already happened, so the UI is correct instantly);
+// awaited from loadSettings' first-run upload.
+async function writeRemote(buckets) {
+  const ref = await itemsDoc();
+  if (!ref) return;
+  const { setDoc } = await fs();
+  // kind "settings" + NO root → invisible to every library listing.
+  await setDoc(ref, { id: REMOTE_ID, kind: "settings", ...buckets }, { merge: true });
+}
 
 // ⭐ Đợt C (15/8/2026) — a SECOND bucket of defaults, for the options a
 // "Set assignment" form starts with, kept apart from "Default activity
@@ -109,6 +207,12 @@ export function saveDefaultOptions(type, options, kind = "activity") {
   s[key] = s[key] || {};
   s[key][type] = { ...options };
   writeAll(s);
+  // ⭐ Đợt 338 — write through to the shared copy so the other machines and the
+  // myLesson webview pick it up on their next load. Fire-and-forget: the
+  // localStorage write above already made the UI correct; a network failure
+  // here just means the shared copy lags until the next successful save, and
+  // the local copy is still right for this browser.
+  writeRemote(pickSynced(s)).catch(() => { /* offline — local copy stands */ });
 }
 
 /**

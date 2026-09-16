@@ -5377,9 +5377,25 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **16/9/2026 sau Đợt 337** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **16/9/2026 sau Đợt 338** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (16/9/2026 — sau **Đợt 337** (Settings ▸ Default course options), **Đợt 335 → 336** (Unjumble) và **Đợt 334** (Speed sorting, phiên song song) — tất cả ✅ ĐÃ COMMIT + PUSH + LIVE, ⬜ THẦY CHƯA BẤM TAY LẠI)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (16/9/2026 — sau **Đợt 338** (đồng bộ Settings qua Firestore), **Đợt 337** (Default course options), **Đợt 335 → 336** (Unjumble) và **Đợt 334** (Speed sorting) — tất cả ✅ ĐÃ COMMIT + PUSH + LIVE, ⬜ THẦY CHƯA BẤM TAY LẠI)
+>
+> **⭐ Đợt 338 — BỘ MẶC ĐỊNH OPTIONS (cả 3: activity/homework/course) ĐỒNG BỘ QUA FIRESTORE (thầy báo lỗi
+> kèm 3 ảnh: AWord đứng riêng ↔ Set assignment từ myLesson lệch nhau; chốt cả 3 bộ; "ok build").** Gốc bệnh:
+> `getDefaultOptions` đọc `localStorage` — AWord đứng riêng và AWord nhúng webview myLesson là hai
+> localStorage khác nhau. Sửa (`core/settings.js` + `main.js`, KHÔNG đụng template): 3 bộ lưu ở
+> `users/{uid}/items/aw-settings` (`kind:"settings"`, không `root` → không lọt thư viện; luật
+> `items/{itemId}` cho ghi sẵn, KHÔNG sửa console). `loadSettings()` gọi trong init TRƯỚC khi mở form —
+> kéo doc về localStorage nên `getDefaultOptions` vẫn đồng bộ; `saveDefaultOptions` ghi local + Firestore
+> (write-through). Lần đầu nâng cấp Firestore trống + local có bộ cũ → tải lên (không mất cấu hình).
+> `resetSettingsCache()` ở đăng nhập/đăng xuất; offline/chưa đăng nhập không ném. Webview myLesson mỗi lần
+> `?giao=` tải lại trang → luôn lấy bản mới. Bàn thử `scratch/dot338-sync.html` **16/16** (2 "trình duyệt"
+> chung 1 Firestore giả) + chạy lại `dot337-settings.html` **13/13 + 4/4**. Hợp đồng: `core/HUONG DAN
+> CORE.md` BÀI GIAO ▸ điểm 5. Backup `_backup/dot338/`. ⬜ Thầy bấm tay: cài ở AWord đứng riêng → Set
+> assignment cùng act từ myLesson xem hết lệch. Chi tiết: `GHI CHU DU AN.md` Đợt 338.
+>
+> **Trước đó — Đợt 337 (Settings ▸ Default course options):**
 >
 > **⭐ Đợt 337 — SETTINGS ▸ "DEFAULT COURSE OPTIONS": bộ mặc định thứ 3, gieo form Set assignment cho act
 > trong cây COURSES (thầy giao qua chat + chốt 1 câu hỏi; "ok build").** `core/settings.js`: khoá
