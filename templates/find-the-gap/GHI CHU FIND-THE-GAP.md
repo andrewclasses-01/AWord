@@ -179,3 +179,5 @@ Game và editor **không đổi một dòng**. Thay đổi nằm ở nguồn d�
 - ⬜ Chưa Import gói này vào trang thật / chưa chơi 3 mode với câu hỏi gộp (câu dài hơn ở dải trên — cần nhìn TOMKO).
 
 ## Đợt 342 (18/9/2026 tối) — Import: kéo `.xlsm` có FILLGAP vào trang KHÔNG ra Find the gap (cần mốc giây) — hộp Import nay nói rõ + gợi ý gói `.ftg.json`; `ftg-prepare.py --require-fillgap` (myWord luôn truyền). Xem `GHI CHU DU AN.md` Đợt 342.
+
+## Đợt 343 (18/9/2026 khuya) — NGUỒN DỮ LIỆU CHÍNH nay là Import `.xlsm`: `core/lesson-import.js` đọc sheet FILLGAP (A người nói · B câu [ngoặc] · C/D/E nhiễu · **F/G mốc giây do myWord v2.6.0 đo** · H match) → act riêng `<mã> / FIND THE GAP`. `ftg-prepare.py` còn hai vai: `--align-json` (myWord gọi lấy mốc giây) và đường gói `.ftg.json` cũ. Xem `GHI CHU DU AN.md` Đợt 343.

@@ -513,6 +513,24 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 343 (18/9/2026 khuya, thầy chốt theo ảnh hộp Import: "kéo file Excel, có ô tích riêng cho Find the gap, ra 1 act riêng, tên theo file") — **IMPORT .xlsm → ACT FIND THE GAP TỪ SHEET FILLGAP (mốc giây do myWord v2.6.0 ghi sẵn cột F/G)** · `core/lesson-import.js` cộng thêm 1 khối + `parseBracketLine` · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY HỘP IMPORT THẬT
+
+Rào cản duy nhất của việc "dựng Find the gap từ xlsm" là mốc giây — nay myWord đo ngay sau CLI (Parakeet, cache) và ghi vào
+chính sheet FILLGAP: `A SPEAKER · B câu có [ngoặc] · C/D/E nhiễu chỗ 1/2/3 · F START (s) · G END (s) · H MATCH`. Bên này:
+- `parseLessonToBundle`: có FILLGAP → thêm act `{type:"find_the_gap", title:"<mã> / FIND THE GAP", content:{audio:<mã>,
+  items:[{speaker,text,gaps:[{word,span?,choices?}],start,end,enabled:true,weak?}]}}`, options mặc định như
+  `tools/ftg-prepare.py` (Each sentence · 6 ô). `parseBracketLine()` (export) là bản JS của tool Python: bỏ ngoặc rồi tách
+  theo khoảng trắng nên chỉ số từ khớp `tokenize()` của game. Bundle trả thêm `fillGapRows` + `fillGapNoTimes` +
+  `lessonCode`. File myWord v2.4/2.5 (chưa có F/G) vẫn ra act (start/end 0) và hộp Import cảnh báo đặt giây.
+- `main.js` hộp Import: bỏ gợi ý "kéo .ftg.json" của Đợt 342 (không còn cần), chỉ còn cảnh báo khi thiếu mốc giây. Hàng
+  FIND THE GAP hiện như mọi act (ô tích riêng, `items` đếm câu hỏi) — đúng ý thầy.
+- Đo (dev server, `scratch/dot343-import.html`, file = P1.xlsm thầy lưu + mốc giây myWord): **3 act** WORDS · QUIZ ·
+  FIND THE GAP 50 items · `fillGapNoTimes 0` · `normalizeItems` 50/50 · 93 chỗ trống · 3 cụm span>1 · nhiễu đúng cột.
+  Hộp Import thật cần đăng nhập Google nên chưa bấm tay; đường JSON→`importBundle` là đường cũ của mọi act.
+- `tools/ftg-prepare.py`: thêm `--align-json <in> --align-out <out>` (`align_only`) cho myWord — chỉ mốc giây, không tạo
+  gói; đường gói `.ftg.json` giữ nguyên. Phía myWord: v2.6.0 (`goi-aword.js mocGiay`, tự chạy sau CLI, nút "Nghe băng
+  lấy lại mốc giây"). ⬜ Thầy kéo `LSB1-S1.T1.P1.xlsm` (sau khi LƯU lại có mốc giây) vào trang thật → tích FIND THE GAP → Import → chơi.
+
 ## Đợt 342 (18/9/2026 tối, thầy kéo file .xlsm có FILLGAP vào trang và báo "chưa có cơ chế import Find the gap") — **IMPORT: nhắc `.ftg.json` + gợi ý khi .xlsm có sheet FILLGAP; `ftg-prepare.py --require-fillgap`** · sửa `core/lesson-import.js` 1 chỗ CỘNG THÊM · ✅ COMMIT + PUSH
 
 Kiểm tra: đường Import gói `.json` **đã có** từ Đợt 221 (kéo vào bất kỳ đâu → `importFlow` → `JSON.parse` → `importBundle`;

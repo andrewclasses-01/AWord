@@ -353,6 +353,53 @@ def suggest_gaps(text, vocab):
     return gaps[:3]
 
 # ---------------------------------------------------------------- main
+def lines_from_json(path):
+    """[{speaker, text}] (text còn [ngoặc]) → cùng hình dạng read_fillgap() để align() dùng chung."""
+    raw = json.load(io.open(path, encoding="utf-8"))
+    lines = []
+    for x in raw if isinstance(raw, list) else []:
+        text, _gaps = parse_bracket_line(str((x or {}).get("text") or ""))
+        words = [t for w in re.findall(r"[A-Za-z0-9’'.:]+", text) for t in asr_tokens(w)]
+        lines.append({"speaker": str((x or {}).get("speaker") or ""), "text": text, "words": words, "narrator": False, "gaps": _gaps})
+    return lines
+
+def align_only(a, mats, code):
+    """Đợt 343 — myWord gọi ngay sau khi CLI khoét xong: chỉ trả mốc giây từng câu hỏi (JSON), không đụng .xlsm,
+    không tạo gói. Cache Parakeet dùng chung với đường gói. Dòng cuối stdout: @@KQ {"n","weak","cache"}."""
+    lines = lines_from_json(a.align_json)
+    if not lines:
+        raise SystemExit("--align-json rỗng")
+    src = mats["audio"] or mats["mp4"]
+    if not src:
+        raise SystemExit(f"Không thấy file nghe của {code} (AUDIO\\{code}.mp3 hay {code}.mp4) trong {LISTEN_ROOT}")
+    log(f">> {len(lines)} câu hỏi cần mốc giây · audio: {src}")
+    with tempfile.TemporaryDirectory(prefix="ftg_") as tmp:
+        if a.pk:
+            asr, from_cache = json.load(io.open(a.pk, encoding="utf-8")), True
+        else:
+            cp = cache_path(src)
+            audio = src if (not a.no_cache and os.path.exists(cp)) else (mats["audio"] or extract_audio(mats["mp4"], tmp))
+            asr, from_cache = load_or_run_parakeet(audio, tmp, use_cache=not a.no_cache, cache_for=src)
+        log(f"   ASR: {len(asr)} chữ")
+        align(lines, asr, whole=True)
+    out, weak = [], 0
+    for L in lines:
+        if L["start"] is None:
+            weak += 1
+            out.append({"start": 0.0, "end": 0.0, "ratio": 0.0, "heard": "", "weak": True})
+            log(f"   ⚠ không khớp: {L['text'][:60]}")
+            continue
+        w = L["ratio"] < 0.6
+        if w:
+            weak += 1
+            log(f"   ⚠ khớp yếu {L['ratio']:.2f}: {L['text'][:50]}  ←  máy nghe: {L['heard'][:50]}")
+        out.append({"start": max(0.0, round(L["start"] - 0.15, 2)), "end": round(L["end"] + 0.25, 2), "ratio": L["ratio"], "heard": L["heard"] if w else "", "weak": w})
+    tmp_out = a.align_out + ".tmp"
+    io.open(tmp_out, "w", encoding="utf-8").write(json.dumps(out, ensure_ascii=False))
+    os.replace(tmp_out, a.align_out)
+    log(f"XONG: {len(out)} mốc giây · {weak} câu cần thầy xem → {a.align_out}")
+    log("@@KQ " + json.dumps({"n": len(out), "weak": weak, "cache": from_cache}, ensure_ascii=False))
+
 def main():
     ap = argparse.ArgumentParser(description="Chuẩn bị act Find the gap từ một bài nghe")
     ap.add_argument("code", nargs="?", help="mã bài, vd LSA2-S1.T1.P1-2-3")
@@ -361,6 +408,8 @@ def main():
     ap.add_argument("--no-gaps", action="store_true"); ap.add_argument("--keep-narrator", action="store_true")
     ap.add_argument("--no-cache", action="store_true", help="nghe lại băng dù đã có <audio>.pk.json")
     ap.add_argument("--require-fillgap", action="store_true", help="myWord: file .xlsm PHẢI có sheet FILLGAP, không thì dừng (không rơi về gợi ý máy từ .txt)")
+    ap.add_argument("--align-json", help="Đợt 343 (myWord v2.6.0): CHỈ lấy mốc giây — đọc [{speaker,text có [ngoặc]}] từ file JSON này, ghi [{start,end,ratio,heard}] ra --align-out, không tạo gói")
+    ap.add_argument("--align-out")
     a = ap.parse_args()
     code = a.code or a.code_opt
     if not code:
@@ -372,6 +421,8 @@ def main():
         f = find_materials(code)
         for k in mats:
             mats[k] = mats[k] or f.get(k)
+    if a.align_json:
+        return align_only(a, mats, code)
     if not mats["txt"] and not mats["xlsm"]:
         raise SystemExit("Không thấy file .txt kịch bản (hoặc .xlsm có sheet FILLGAP)")
     log(f"   txt  : {mats['txt']}\n   audio: {mats['audio'] or '(rút từ mp4: %s)' % mats['mp4']}\n   xlsm : {mats['xlsm'] or '(không có)'}")

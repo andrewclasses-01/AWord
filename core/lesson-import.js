@@ -703,17 +703,53 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
   // kept beside it (the deepest segment) because a hand-written .json bundle
   // still only has that, and `importBundle()` falls back to it.
   const path = lessonFolderPath(fileName);
-  // ⭐ Đợt 342 — sheet FILLGAP (myWord ≥ v2.4.0, Find the gap) is deliberately NOT
-  // read here: its lines need the audio TIMESTAMPS that only `tools/ftg-prepare.py`
-  // (Parakeet, on the teacher's PC) can produce, and myWord's "Tạo gói AWord"
-  // button turns it into `<code>.ftg.json`. Until this count was reported the
-  // sheet was skipped in silence and the teacher read that as "AWord cannot
-  // import Find the gap" (18/9/2026). The dialog turns it into a hint.
+  // ⭐ Đợt 343 (18/9/2026, teacher: "kéo file Excel là ra act Find the gap riêng,
+  // tên theo file") — sheet FILLGAP, written by myWord ≥ v2.6.0:
+  //   row 1 header · A speaker · B the line with gaps in [brackets] · C/D/E the
+  //   distractor lists for gap 1/2/3 (comma-separated) · F start (s) · G end (s)
+  //   · H match note ("ok" / "weak … — heard: …").
+  // myWord measures F/G itself right after the CLI (Parakeet, cached next to the
+  // mp3), so the spreadsheet alone is enough here: ONE `find_the_gap` act, own
+  // row in the Import dialog, `content.audio` = the lesson code (the audio store
+  // `myLesson-audio` is keyed by it). A file from myWord v2.4/2.5 has no F/G —
+  // the act is still built (start/end 0) and `fillGapNoTimes` lets the dialog
+  // warn that the teacher must re-run myWord or set times in the editor.
+  // Đợt 342's silent-skip hint stays for files with NO usable lines.
   const fillGap = sheet("FILLGAP");
-  let fillGapRows = 0;
+  let fillGapRows = 0, fillGapNoTimes = 0;
   if (fillGap) {
-    const g = gridOf(fillGap);
-    fillGapRows = g.slice(1).filter(r => /\[[^\]]+\]/.test(String(r[1] || ""))).length;   // col B = line with [gaps]
+    const g = gridOf(fillGap, 8);
+    const items = [];
+    g.slice(1).forEach(r => {
+      const raw = String(r[1] || "").trim();
+      if (!raw || !/\[[^\]]+\]/.test(raw)) return;
+      const { text, gaps } = parseBracketLine(raw);
+      if (!gaps.length) return;
+      gaps.forEach((gp, k) => {
+        const ch = String(r[2 + k] || "").split(/[,;]/).map(s => s.trim()).filter(Boolean);
+        if (ch.length) gp.choices = ch;
+      });
+      const start = Number(String(r[5] || "").replace(",", ".")), end = Number(String(r[6] || "").replace(",", "."));
+      const hasTimes = Number.isFinite(end) && end > 0;
+      if (!hasTimes) fillGapNoTimes++;
+      const it = { speaker: String(r[0] || "").trim(), text, gaps,
+        start: hasTimes && Number.isFinite(start) ? Math.max(0, start) : 0, end: hasTimes ? end : 0, enabled: true };
+      if (/^weak/i.test(String(r[7] || ""))) it.weak = true;
+      items.push(it);
+    });
+    fillGapRows = items.length;
+    if (items.length) {
+      acts.push({
+        type: "find_the_gap",
+        title: `${source} / FIND THE GAP`,
+        instruction: "Listen and fill in the missing words.",
+        theme: "classic",
+        // same defaults as tools/ftg-prepare.py (Đợt 340): Each sentence scoring, 6 choices
+        options: { timer: "countUp", shuffleQuestions: true, showAnswers: true, allowSkip: false,
+                   speakerNames: true, mode: "quiz", scoring: "sentence", choices: 6, lives: 0, pointsOff: 0 },
+        content: { audio: path.known ? path.leaf : source, items }
+      });
+    }
   }
   return {
     folder: folder || path.leaf || source,
@@ -721,8 +757,34 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
     folderPathKnown: folder ? false : path.known,
     activities: acts,
     fillGapRows,
+    fillGapNoTimes,
     lessonCode: path.known ? path.leaf : ""
   };
+}
+
+// "I work in the [High Street], next to the [bookshop]." → { text, gaps:[{word, span?}] }.
+// Brackets are only markers: strip them, then split on whitespace, so punctuation
+// glued to a word ("[bookshop].") stays inside the token and the word indices match
+// ftg-shared.js's tokenize(). Port of tools/ftg-prepare.py parse_bracket_line().
+export function parseBracketLine(text) {
+  const out = [], gaps = [];
+  let openAt = null;
+  for (const tok of String(text || "").split(/\s+/)) {
+    if (!tok) continue;
+    const hasOpen = tok.includes("["), hasClose = tok.includes("]");
+    const clean = tok.replace(/[\[\]]/g, "");
+    if (!clean) continue;
+    const idx = out.length;
+    out.push(clean);
+    if (hasOpen && openAt === null) openAt = idx;
+    if (hasClose && openAt !== null) {
+      const span = idx - openAt + 1;
+      gaps.push(span > 1 ? { word: openAt, span } : { word: openAt });
+      openAt = null;
+    }
+  }
+  if (openAt !== null) gaps.push({ word: openAt });   // unclosed bracket: one-word gap
+  return { text: out.join(" "), gaps };
 }
 
 // Is this a spreadsheet we can read directly (vs a .json bundle)?

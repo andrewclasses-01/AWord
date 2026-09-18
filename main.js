@@ -1892,14 +1892,13 @@ function importFlow(initialFile, opts = {}) {
         const bundle = isSpreadsheet(f.name)
           ? await parseLessonToBundle(await f.arrayBuffer(), { fileName: f.name })
           : JSON.parse(await f.text());
-        // ⭐ Đợt 342 — a lesson .xlsm carrying myWord's FILLGAP sheet: Find the gap
-        // is NOT built from the spreadsheet (its lines need audio timestamps that
-        // only myWord's "Tạo gói AWord" → `<code>.ftg.json` can supply). Say so
-        // instead of skipping the sheet in silence — teacher dragged the .xlsm on
-        // 18/9/2026 and concluded Find the gap could not be imported at all.
-        const fgHint = bundle && bundle.fillGapRows
-          ? `This file also has a <b>FILLGAP</b> sheet (${bundle.fillGapRows} Find the gap lines). Find the gap is not built from the spreadsheet — ` +
-            `in myWord press <b>Tạo gói AWord</b> (top of the FIND THE GAP tab), then drop <b>${escapeText((bundle.lessonCode || "<code>") + ".ftg.json")}</b> here.`
+        // ⭐ Đợt 343 — a lesson .xlsm with myWord's FILLGAP sheet now yields its own
+        // FIND THE GAP act (core/lesson-import.js). The only thing worth a warning
+        // is a sheet from myWord v2.4/2.5 that has no START/END columns: the act
+        // is created, but every line plays from 0 until the times are set.
+        const fgHint = bundle && bundle.fillGapNoTimes
+          ? `<b>FIND THE GAP</b>: ${bundle.fillGapNoTimes} of ${bundle.fillGapRows} lines have no audio timestamps (START/END columns). ` +
+            `Run FIND THE GAP again in myWord (v2.6 measures them from the recording) and save, or set the times by hand in the editor after importing.`
           : "";
         if (!bundle || !Array.isArray(bundle.activities) || !bundle.activities.length) {
           setDrop(...IDLE); showErr("No activities found in that file."); if (fgHint) { err.innerHTML += "<br>" + fgHint; } return;
