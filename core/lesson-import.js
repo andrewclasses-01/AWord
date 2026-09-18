@@ -718,7 +718,11 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
   const fillGap = sheet("FILLGAP");
   let fillGapRows = 0, fillGapNoTimes = 0;
   if (fillGap) {
-    const g = gridOf(fillGap, 8);
+    const g = gridOf(fillGap, 9);
+    // I2 = AUDIO (myWord v2.6.1): the lesson code the recording is stored under
+    // in `myLesson-audio`, written by myWord so the act no longer depends on the
+    // spreadsheet's file name. Older sheets have no column I → fall back below.
+    const audioCell = g[1] ? String(g[1][8] || "").trim() : "";
     const items = [];
     g.slice(1).forEach(r => {
       const raw = String(r[1] || "").trim();
@@ -747,7 +751,7 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
         // same defaults as tools/ftg-prepare.py (Đợt 340): Each sentence scoring, 6 choices
         options: { timer: "countUp", shuffleQuestions: true, showAnswers: true, allowSkip: false,
                    speakerNames: true, mode: "quiz", scoring: "sentence", choices: 6, lives: 0, pointsOff: 0 },
-        content: { audio: path.known ? path.leaf : source, items }
+        content: { audio: audioCell || (path.known ? path.leaf : source), items }
       });
     }
   }
@@ -758,6 +762,7 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
     activities: acts,
     fillGapRows,
     fillGapNoTimes,
+    hasFillGapSheet: !!fillGap,
     lessonCode: path.known ? path.leaf : ""
   };
 }

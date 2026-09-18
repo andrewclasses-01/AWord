@@ -513,6 +513,13 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 344 (18/9/2026 khuya, thầy kéo P2.xlsm lần 3 và báo "không thấy trong import") — **FILLGAP cột I AUDIO · hộp Import báo rõ "file này không có sheet FILLGAP"** · ✅ COMMIT + PUSH
+
+Điều tra: file thầy làm Find the gap là **P1.xlsm** (21:00, FILLGAP 50 dòng đủ mốc giây), còn file thầy kéo là **P2.xlsm** (chưa
+từng có FILLGAP). Bản live đã có Đợt 343. Sửa cho lần sau đỡ lạc: (1) `lesson-import.js` đọc ô **I2 AUDIO** (myWord v2.6.1
+ghi mã bài) làm `content.audio`, không có mới suy từ tên file; bundle trả `hasFillGapSheet`. (2) Hộp Import: xlsm KHÔNG có
+sheet FILLGAP → dòng báo "No FILLGAP sheet in this file… check the file name (…P1.xlsm vs …P2.xlsm)". Chưa bấm tay hộp thật.
+
 ## Đợt 343 (18/9/2026 khuya, thầy chốt theo ảnh hộp Import: "kéo file Excel, có ô tích riêng cho Find the gap, ra 1 act riêng, tên theo file") — **IMPORT .xlsm → ACT FIND THE GAP TỪ SHEET FILLGAP (mốc giây do myWord v2.6.0 ghi sẵn cột F/G)** · `core/lesson-import.js` cộng thêm 1 khối + `parseBracketLine` · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY HỘP IMPORT THẬT
 
 Rào cản duy nhất của việc "dựng Find the gap từ xlsm" là mốc giây — nay myWord đo ngay sau CLI (Parakeet, cache) và ghi vào

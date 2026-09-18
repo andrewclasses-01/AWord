@@ -1896,10 +1896,16 @@ function importFlow(initialFile, opts = {}) {
         // FIND THE GAP act (core/lesson-import.js). The only thing worth a warning
         // is a sheet from myWord v2.4/2.5 that has no START/END columns: the act
         // is created, but every line plays from 0 until the times are set.
+        // Đợt 344 — and when a spreadsheet has NO FILLGAP sheet at all, say that too:
+        // the teacher dragged P2.xlsm three times while the Find the gap lived in
+        // P1.xlsm (18/9/2026) — a dialog that lists WORDS + QUIZ and nothing else
+        // gives no clue that the file is simply the wrong one.
         const fgHint = bundle && bundle.fillGapNoTimes
           ? `<b>FIND THE GAP</b>: ${bundle.fillGapNoTimes} of ${bundle.fillGapRows} lines have no audio timestamps (START/END columns). ` +
             `Run FIND THE GAP again in myWord (v2.6 measures them from the recording) and save, or set the times by hand in the editor after importing.`
-          : "";
+          : (bundle && isSpreadsheet(f.name) && bundle.fillGapRows === 0 && bundle.hasFillGapSheet === false)
+            ? `No <b>FILLGAP</b> sheet in this file, so no Find the gap act. If you made one in myWord, check the file name — the FIND THE GAP tab there names the file to drag (e.g. …P1.xlsm vs …P2.xlsm).`
+            : "";
         if (!bundle || !Array.isArray(bundle.activities) || !bundle.activities.length) {
           setDrop(...IDLE); showErr("No activities found in that file."); if (fgHint) { err.innerHTML += "<br>" + fgHint; } return;
         }
