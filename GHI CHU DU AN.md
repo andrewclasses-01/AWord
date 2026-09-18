@@ -513,7 +513,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 344 (18/9/2026 khuya, thầy kéo P2.xlsm lần 3 và báo "không thấy trong import") — **FILLGAP cột I AUDIO · hộp Import báo rõ "file này không có sheet FILLGAP"** · ✅ COMMIT + PUSH
+## Đợt 344 (18/9/2026 khuya, thầy kéo P2.xlsm lần 3 và báo "không thấy trong import") — **FILLGAP cột I AUDIO · hộp Import báo rõ "file này không có sheet FILLGAP"** · ✅ COMMIT + PUSH · ✅ THẦY NGHIỆM THU (kéo P1.xlsm vào trang thật → act FIND THE GAP, "ok ngon rồi")
 
 Điều tra: file thầy làm Find the gap là **P1.xlsm** (21:00, FILLGAP 50 dòng đủ mốc giây), còn file thầy kéo là **P2.xlsm** (chưa
 từng có FILLGAP). Bản live đã có Đợt 343. Sửa cho lần sau đỡ lạc: (1) `lesson-import.js` đọc ô **I2 AUDIO** (myWord v2.6.1

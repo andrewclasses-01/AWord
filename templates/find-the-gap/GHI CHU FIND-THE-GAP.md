@@ -1,6 +1,6 @@
 # GHI CHÚ — FIND THE GAP (type `find_the_gap`, template thứ 19)
 
-**Trạng thái: ✅ ĐÃ CHỐT — Đợt 340 (18/9/2026); Đợt 341 (18/9 tối) chỉ sửa `tools/ftg-prepare.py` theo myWord v2.5.0 (xem mục cuối): thầy bấm tay 4 vòng (test.html, 3 mode, Options) rồi "Đã test ok" → COMMIT + PUSH +
+**Trạng thái: ✅ ĐÃ CHỐT — Đợt 340 (18/9/2026); Đợt 341–344 (18/9 tối/khuya): nguồn dữ liệu = Import `.xlsm` có sheet FILLGAP (myWord v2.6.1), ✅ thầy nghiệm thu trên trang thật (xem mục cuối): thầy bấm tay 4 vòng (test.html, 3 mode, Options) rồi "Đã test ok" → COMMIT + PUSH +
 LIVE cùng ngày; bench cuối 63/63; đã ở `core/catalog.js` (mục thứ 19).** ⬜ Chưa bấm tay trên TRANG CHỦ THẬT (New activity ▸
 Find the gap, Import gói `.ftg.json`, editor lưu Firestore), TOMKO, điện thoại, Showdown thật, myWord app thật. Game do thầy tự nghĩ (không có trong Wordwall):
 nghe băng thật, điền chỗ trống. Thiết kế đã duyệt qua canvas https://claude.ai/artifact/Qe5PJEBRUfGSHU6azNFzkF

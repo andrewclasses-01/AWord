@@ -5377,9 +5377,11 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **18/9/2026 khuya sau Đợt 344 — ✅ đã commit + push** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **18/9/2026 khuya sau Đợt 344 — ✅ đã commit + push + THẦY NGHIỆM THU Import Find the gap** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
 > ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (16/9/2026 — sau **Đợt 339** (Options × Template · IPA · Fight → mọi mode), **Đợt 338** (đồng bộ Settings qua Firestore), **Đợt 337** (Default course options), **Đợt 335 → 336** (Unjumble) và **Đợt 334** (Speed sorting) — tất cả ✅ ĐÃ COMMIT + PUSH + LIVE, ⬜ THẦY CHƯA BẤM TAY LẠI)
+>
+> **✅ 18/9/2026 khuya — THẦY NGHIỆM THU đường Import `.xlsm` → act FIND THE GAP (Đợt 343/344) trên trang thật với bài LSB1-S1.T1.P1 ("ok ngon rồi").** ⬜ Còn: chơi 3 mode + Fight/Showdown với câu hỏi gộp trên TOMKO.
 >
 > **Đợt 344 (18/9/2026 khuya):** FILLGAP cột I AUDIO (mã bài) được ưu tiên làm `content.audio`; hộp Import báo rõ khi xlsm không có sheet FILLGAP (thầy kéo nhầm P2 thay vì P1 ba lần).
 >
