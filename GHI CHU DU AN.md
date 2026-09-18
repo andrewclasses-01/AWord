@@ -513,6 +513,23 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 341 (18/9/2026 tối, đi cùng myWord v2.5.0 — thầy chốt "SỐ CÂU HỎI" + dùng hết câu thoại + nút "Tạo gói AWord" trong myWord) — **`tools/ftg-prepare.py`: giao ước `--out` của Parakeet · cache mốc giây cạnh audio · dò ffmpeg · Narrator bật · dòng `@@KQ`** · KHÔNG ĐỤNG `core/` LẪN TEMPLATE · ✅ COMMIT + PUSH · ⬜ CHƯA IMPORT GÓI LÊN TRANG THẬT
+
+Bối cảnh: thầy hỏi ô "Số câu thoại lấy ra" của myWord tính thế nào — hoá ra là số đặt tay đi thẳng vào prompt, đơn vị LƯỢT
+NÓI (B1: 26–72 từ/lượt). Thầy chốt lại: đơn vị **CÂU**, ô = **Số câu hỏi** = số lượt chơi, **mọi câu thoại đều phải được dùng**
+(câu dư máy gộp vào câu liền kề cùng người nói, không gộp chéo người nói), câu đề bài/`Question N:` là câu thường, cache
+Parakeet lưu cạnh audio. Phần chọn/gộp/khoét nằm trọn bên myWord (`find-gap.js` v2.5.0, 6 bộ test xanh, CLI thật P1
+185 s → 45 câu hỏi/81 chỗ). Bên này chỉ sửa công cụ chuẩn bị:
+- `parakeet_words.py` gọi **có `--out`** (bản Đợt 340 thiếu ⇒ máy 1 chết ngay ở bước nghe; "16 s" của Đợt 340 đo trên máy
+  khác — ổ E không đồng bộ) + `realpath` thư mục tạm (bẫy 8.3, mySpeaking 21/07).
+- **Cache `AUDIO\<mã>.pk.json`**: P1 41,2 s lần đầu → **1,0 s** lần sau; `--no-cache`. Ngoại lệ duy nhất của "chỉ đọc thư mục bài".
+- ffmpeg dò 6 chỗ + PATH (máy 1 có ở AutoSubs, không có `MODEL\ffmpeg`). Dòng FILLGAP luôn `enabled:true`; dòng không khớp
+  băng giữ lại với `weak` (không bỏ, để đủ N). `OK.`↔`Okay.`. Cuối stdout in `@@KQ {out,items,gaps,weak,cache}` cho myWord đọc.
+- Đo: gói P1 45 dòng · 81 chỗ · **45/45 chơi được** qua `normalizeItems` của game (8 cụm span>1); 1 dòng khớp yếu là do
+  **text gốc P1.3 sai** (băng nói "Who lives with Josh in his house?"). Chi tiết: `templates/find-the-gap/GHI CHU FIND-THE-GAP.md`
+  mục Đợt 341; phía myWord: `E:\LAP TRINH APP\myWord\GHI CHU DU AN.md` mục v2.5.0.
+- ⬜ Thầy: Import gói `.ftg.json` lên trang thật, chơi 3 mode với câu hỏi GỘP (dải trên dài hơn — nhìn TOMKO), Fight/Showdown.
+
 ## Đợt 340 (18/9/2026, thầy đề xuất template MỚI của riêng thầy, bàn thiết kế qua 3 vòng AskUserQuestion + canvas, "ok build", rồi 4 vòng sửa theo tay thầy) — **FIND THE GAP: nghe băng thật, điền chỗ trống — 3 mode QUIZ / TYPE / FIND** · ✅ THẦY DUYỆT ("Đã test ok") → COMMIT + PUSH + LIVE
 
 Template thứ 19, `templates/find-the-gap/` (type `find_the_gap`, class `.aw-ftg-*`). Mỗi lượt = MỘT CÂU THOẠI của

@@ -5377,9 +5377,17 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **18/9/2026 tối sau Đợt 340 — ✅ đã commit + push + live** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **18/9/2026 tối sau Đợt 341 — ✅ đã commit + push** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
 > ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (16/9/2026 — sau **Đợt 339** (Options × Template · IPA · Fight → mọi mode), **Đợt 338** (đồng bộ Settings qua Firestore), **Đợt 337** (Default course options), **Đợt 335 → 336** (Unjumble) và **Đợt 334** (Speed sorting) — tất cả ✅ ĐÃ COMMIT + PUSH + LIVE, ⬜ THẦY CHƯA BẤM TAY LẠI)
+>
+> **Đợt 341 (18/9/2026 tối, đi cùng myWord v2.5.0) — CHỈ `tools/ftg-prepare.py`, không đụng core/template.** Thầy chốt lại
+> nguồn dữ liệu Find the gap: đơn vị **CÂU**, ô myWord đổi thành **"Số câu hỏi"** (= số lượt chơi), **mọi câu thoại đều được
+> dùng** (câu dư MÁY gộp vào câu liền kề cùng người nói; N ∈ [số lượt nói … số câu]), câu đề bài/`Question N:` là câu thường
+> (Narrator, luôn `enabled`). Tool: gọi Parakeet **có `--out`** (bản Đợt 340 thiếu ⇒ chết trên máy 1), **cache
+> `AUDIO\<mã>.pk.json`** (41 s → 1 s), dò ffmpeg, dòng `@@KQ` cho myWord đọc — myWord nay có nút **"Tạo gói AWord"** spawn
+> tool này. Đo P1: 55 câu/27 lượt → 45 câu hỏi · 81 chỗ · 45/45 chơi được. ⬜ Chưa Import lên trang thật. Chi tiết:
+> `GHI CHU DU AN.md` Đợt 341 + `templates/find-the-gap/GHI CHU FIND-THE-GAP.md` mục Đợt 341.
 >
 > **⭐⭐ Đợt 340 (18/9/2026) — TEMPLATE MỚI CỦA THẦY: FIND THE GAP · ✅ THẦY DUYỆT ("Đã test ok") → COMMIT + PUSH + LIVE.**
 > Nghe băng thật (kho `myLesson-audio`, act chỉ lưu MÃ BÀI + mốc giây từng câu), mỗi lượt một câu thoại có chỗ

@@ -22,19 +22,49 @@ Dùng:
   python tools\ftg-prepare.py --txt a.txt --audio a.mp3 [--xlsm a.xlsm] --code LSA2-S1.T1.P1-2-3
   --no-gaps      không gợi ý chỗ trống     --keep-narrator  KHÔNG tắt các dòng "Question N:" (mặc định giữ nhưng tắt)
   --pk file.json dùng lại kết quả Parakeet đã có (bỏ qua bước nghe)
+  --no-cache     nghe lại băng dù đã có cache <audio>.pk.json
 
-⛔ CHỈ ĐỌC nguyên liệu gốc; mọi file tạm (wav, _pk.json) ghi vào %TEMP%. Không đụng .xlsm/.txt/.mp3.
-Yêu cầu: Python 3 + openpyxl (đọc .xlsm), ffmpeg ở E:\LAP TRINH APP\MODEL\ffmpeg\ffmpeg.exe,
-Parakeet venv E:\LAP TRINH APP\MODEL\_parakeet_venv (GPU).
+Đợt 341 (18/9/2026 — myWord v2.5.0 gọi tool này bằng nút "Tạo gói AWord"):
+  • Gọi parakeet_words.py ĐÚNG GIAO ƯỚC `--out <base>` (bản cũ quên --out → argparse chết ngay trên máy có
+    parakeet_words.py bản 20/07). Thư mục tạm trải về đường dẫn đầy đủ (bẫy 8.3 `ANDREW~1` làm libsndfile không mở
+    được wav — bài học mySpeaking 21/07).
+  • CACHE mốc giây từng chữ cạnh audio: `AUDIO\<mã>.pk.json` (thầy chốt 18/9) — sửa FILLGAP rồi tạo gói lại chỉ khớp
+    lại (<1 s), không nghe lại cả băng. Đây là NGOẠI LỆ duy nhất của luật "chỉ đọc thư mục bài".
+  • ffmpeg DÒ nhiều chỗ (MODEL\ffmpeg, AutoSubs, myLesson-data\bin, PATH) — máy thầy không có ffmpeg trong PATH.
+  • Dòng FILLGAP (kể cả Narrator) LUÔN enabled — thầy chốt "câu hỏi đề bài tính như câu thoại thường".
+  • Dòng cuối stdout: `@@KQ {"out","items","gaps","weak","cache"}` để myWord đọc kết quả, không đoán từ log.
+
+⛔ CHỈ ĐỌC nguyên liệu gốc (trừ file cache .pk.json nói trên); wav tạm ghi vào %TEMP%. Không đụng .xlsm/.txt/.mp3.
+Yêu cầu: Python 3 + openpyxl (đọc .xlsm), ffmpeg (dò), Parakeet venv E:\LAP TRINH APP\MODEL\_parakeet_venv (GPU).
 """
 import argparse, io, json, os, re, subprocess, sys, tempfile, time
 from difflib import SequenceMatcher
 
 MODEL_DIR = r"E:\LAP TRINH APP\MODEL"
-FFMPEG = os.path.join(MODEL_DIR, "ffmpeg", "ffmpeg.exe")
 PK_PY = os.path.join(MODEL_DIR, "_parakeet_venv", "Scripts", "python.exe")
 PK_SCRIPT = os.path.join(MODEL_DIR, "parakeet_words.py")
 LISTEN_ROOT = r"D:\4. LISTENING"
+
+def find_ffmpeg():
+    """ffmpeg không có trong PATH của máy thầy — dò các chỗ đã biết (khuôn mySpeaking sub.js) rồi mới tới PATH."""
+    cands = [
+        os.path.join(MODEL_DIR, "ffmpeg", "ffmpeg.exe"),
+        os.path.join(os.path.expanduser("~"), "AppData", "Local", "AutoSubs", "ffmpeg.exe"),
+        os.path.join(MODEL_DIR, "whispercpp", "ffmpeg.exe"),
+        r"E:\LAP TRINH APP\myLesson-data\bin\ffmpeg.exe",
+        r"E:\LAP TRINH APP\myStudent-data\bin\ffmpeg.exe",
+        r"C:\ffmpeg\bin\ffmpeg.exe",
+    ]
+    for p in cands:
+        if os.path.exists(p):
+            return p
+    for d in os.environ.get("PATH", "").split(os.pathsep):
+        p = os.path.join(d, "ffmpeg.exe")
+        if d and os.path.exists(p):
+            return p
+    return None
+
+FFMPEG = find_ffmpeg()
 
 # Cây thư mục của AWord (chép từ core/lesson-import.js LESSON_TREE — giữ cho khớp)
 LESSON_TREE = {
@@ -56,7 +86,8 @@ def log(*a):
 
 def norm_word(w):
     w = w.lower().replace("’", "'").replace("‘", "'")
-    return re.sub(r"[^a-z0-9']", "", w)
+    w = re.sub(r"[^a-z0-9']", "", w)
+    return "okay" if w in ("ok", "o'k") else w   # kịch bản viết "OK." còn máy nghe "Okay." (đo P1: dòng 1 chữ khớp 0.00 oan)
 
 def asr_tokens(word):
     """Một 'chữ' ASR có thể là '6.15' hay '10' — đổi số thành chữ để so được với kịch bản."""
@@ -179,24 +210,63 @@ def read_fillgap(xlsm):
     return lines
 
 # ---------------------------------------------------------------- audio → ASR
+def need_ffmpeg():
+    if not FFMPEG:
+        raise SystemExit("Không thấy ffmpeg.exe (đã dò MODEL\\ffmpeg, AutoSubs, myLesson-data\\bin, PATH)")
+    return FFMPEG
+
+def cache_path(audio_path):
+    """Cache mốc giây từng chữ cạnh audio: AUDIO\\LSB1-S1.T1.P1.mp3 → AUDIO\\LSB1-S1.T1.P1.pk.json."""
+    base, _ = os.path.splitext(audio_path)
+    return base + ".pk.json"
+
 def run_parakeet(audio_path, tmpdir):
+    # tmpdir có thể ở dạng 8.3 (C:\Users\ANDREW~1\...) → thư viện đọc âm của Parakeet không mở được; trải về đường dẫn đầy đủ
+    tmpdir = os.path.realpath(tmpdir)
     wav = os.path.join(tmpdir, "ftg.wav")
     log(f">> ffmpeg → wav 16 kHz: {audio_path}")
-    subprocess.run([FFMPEG, "-v", "error", "-y", "-i", audio_path, "-ac", "1", "-ar", "16000", wav], check=True)
+    subprocess.run([need_ffmpeg(), "-v", "error", "-y", "-i", audio_path, "-ac", "1", "-ar", "16000", wav], check=True)
+    if not os.path.exists(PK_PY) or not os.path.exists(PK_SCRIPT):
+        raise SystemExit(f"Không thấy Parakeet ({PK_PY} / {PK_SCRIPT}) — máy này chưa dựng kho MODEL")
     log(">> Parakeet (GPU)…")
     t0 = time.time()
-    r = subprocess.run([PK_PY, PK_SCRIPT, wav, "--model", "v2"], capture_output=True, text=True, encoding="utf-8", errors="replace")
-    if r.returncode != 0:
+    base = os.path.join(tmpdir, "ftg_pk")
+    env = dict(os.environ, HF_HOME=os.path.join(MODEL_DIR, "_cache"), PYTHONIOENCODING="utf-8")
+    r = subprocess.run([PK_PY, PK_SCRIPT, wav, "--out", base, "--model", "v2"], capture_output=True, text=True,
+                       encoding="utf-8", errors="replace", env=env)
+    pk = base + ".json"
+    if r.returncode != 0 or not os.path.exists(pk):
         sys.stderr.write(r.stdout[-3000:] + "\n" + r.stderr[-3000:] + "\n")   # giữ trọn đuôi lỗi, không cắt gọn
         raise SystemExit("Parakeet lỗi (mã thoát %d)" % r.returncode)
     log(f"   xong sau {time.time() - t0:.1f}s")
-    pk = os.path.join(tmpdir, "ftg_pk.json")
     return json.load(io.open(pk, encoding="utf-8"))
 
+def load_or_run_parakeet(audio_path, tmpdir, use_cache=True, cache_for=None):
+    """Có cache cạnh audio thì dùng; không thì nghe rồi ghi cache (ghi qua file tạm + os.replace).
+    cache_for = file gốc để đặt cache cạnh (mp3 trong AUDIO, hoặc .mp4 khi tiếng phải rút từ video)."""
+    cp = cache_path(cache_for or audio_path)
+    if use_cache and os.path.exists(cp):
+        try:
+            asr = json.load(io.open(cp, encoding="utf-8"))
+            if isinstance(asr, list) and asr:
+                log(f">> mốc giây lấy từ cache: {cp}")
+                return asr, True
+        except Exception as e:   # cache hỏng thì nghe lại, không chết
+            log(f"   ⚠ cache hỏng ({e}) — nghe lại")
+    asr = run_parakeet(audio_path, tmpdir)
+    try:
+        tmp = cp + ".tmp"
+        io.open(tmp, "w", encoding="utf-8").write(json.dumps(asr, ensure_ascii=False))
+        os.replace(tmp, cp)
+        log(f"   đã ghi cache: {cp}")
+    except Exception as e:
+        log(f"   ⚠ không ghi được cache ({e}) — bỏ qua")
+    return asr, False
+
 def extract_audio(mp4, tmpdir):
-    mp3 = os.path.join(tmpdir, "ftg.mp3")
+    mp3 = os.path.join(os.path.realpath(tmpdir), "ftg.mp3")
     log(f">> rút tiếng từ mp4: {mp4}")
-    subprocess.run([FFMPEG, "-v", "error", "-y", "-i", mp4, "-vn", "-ac", "1", "-ar", "44100", "-b:a", "64k", mp3], check=True)
+    subprocess.run([need_ffmpeg(), "-v", "error", "-y", "-i", mp4, "-vn", "-ac", "1", "-ar", "44100", "-b:a", "64k", mp3], check=True)
     return mp3
 
 # ---------------------------------------------------------------- khớp
@@ -289,6 +359,7 @@ def main():
     ap.add_argument("--txt"); ap.add_argument("--audio"); ap.add_argument("--xlsm"); ap.add_argument("--code", dest="code_opt")
     ap.add_argument("--out"); ap.add_argument("--pk", help="file _pk.json Parakeet đã có")
     ap.add_argument("--no-gaps", action="store_true"); ap.add_argument("--keep-narrator", action="store_true")
+    ap.add_argument("--no-cache", action="store_true", help="nghe lại băng dù đã có <audio>.pk.json")
     a = ap.parse_args()
     code = a.code or a.code_opt
     if not code:
@@ -312,14 +383,20 @@ def main():
         lines = read_transcript(mats["txt"])
         log(f">> {len(lines)} dòng kịch bản")
 
+    from_cache = False
     with tempfile.TemporaryDirectory(prefix="ftg_") as tmp:
         if a.pk:
             asr = json.load(io.open(a.pk, encoding="utf-8"))
         else:
-            audio = mats["audio"] or (extract_audio(mats["mp4"], tmp) if mats["mp4"] else None)
-            if not audio:
+            src = mats["audio"] or mats["mp4"]
+            if not src:
                 raise SystemExit("Không có file nghe (.mp3/.mp4)")
-            asr = run_parakeet(audio, tmp)
+            cp = cache_path(src)
+            if not a.no_cache and os.path.exists(cp):
+                audio = src                      # có cache thì khỏi rút tiếng/ffmpeg
+            else:
+                audio = mats["audio"] or extract_audio(mats["mp4"], tmp)
+            asr, from_cache = load_or_run_parakeet(audio, tmp, use_cache=not a.no_cache, cache_for=src)
         log(f"   ASR: {len(asr)} chữ")
         align(lines, asr, whole=bool(fill))
 
@@ -332,11 +409,16 @@ def main():
         if L["start"] is None:
             weak += 1
             log(f"   ⚠ không khớp: {L['text'][:60]}")
-            continue
+            if not fill:
+                continue
+            # FILLGAP: KHÔNG được bỏ câu hỏi nào ("dùng hết mọi câu thoại") — giữ với mốc 0 + cờ weak để thầy đặt tay trong editor
+            L.update(start=0.0, end=0.0, ratio=0.0, heard="")
         gaps = L["gaps"] if "gaps" in L else ([] if (a.no_gaps or L["narrator"]) else suggest_gaps(L["text"], vocab))
+        # Sheet FILLGAP (myWord): MỌI dòng đều là câu hỏi của game, kể cả Narrator (thầy chốt 18/9 — "câu hỏi
+        # đề bài tính như câu thoại thường"); chỉ đường .txt cũ mới tắt dòng "Question N:" theo --keep-narrator.
         it = {"speaker": L["speaker"], "text": L["text"], "gaps": gaps,
               "start": max(0.0, round(L["start"] - 0.15, 2)), "end": round(L["end"] + 0.25, 2),
-              "enabled": not (L["narrator"] and not a.keep_narrator)}
+              "enabled": True if fill else (not (L["narrator"] and not a.keep_narrator))}
         if L["ratio"] < 0.6:
             weak += 1
             it["weak"] = True
@@ -360,8 +442,10 @@ def main():
     io.open(tmp_out, "w", encoding="utf-8").write(json.dumps(bundle, ensure_ascii=False, indent=1))
     os.replace(tmp_out, out)
     ngaps = sum(len(i["gaps"]) for i in items)
-    log(f"\nXONG: {len(items)} dòng · {ngaps} chỗ trống gợi ý · {weak} dòng cần thầy xem\n   → {out}\n"
+    log(f"\nXONG: {len(items)} dòng · {ngaps} chỗ trống · {weak} dòng cần thầy xem\n   → {out}\n"
         f"   Import vào AWord (nút Import ▸ chọn file .json) rồi mở editor để duyệt chỗ trống.")
+    # dòng máy đọc (myWord "Tạo gói AWord") — luôn là dòng CUỐI của stdout
+    log("@@KQ " + json.dumps({"out": out, "items": len(items), "gaps": ngaps, "weak": weak, "cache": from_cache}, ensure_ascii=False))
 
 if __name__ == "__main__":
     main()

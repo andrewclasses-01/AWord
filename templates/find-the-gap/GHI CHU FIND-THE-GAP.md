@@ -1,6 +1,6 @@
 # GHI CHÚ — FIND THE GAP (type `find_the_gap`, template thứ 19)
 
-**Trạng thái: ✅ ĐÃ CHỐT — Đợt 340 (18/9/2026): thầy bấm tay 4 vòng (test.html, 3 mode, Options) rồi "Đã test ok" → COMMIT + PUSH +
+**Trạng thái: ✅ ĐÃ CHỐT — Đợt 340 (18/9/2026); Đợt 341 (18/9 tối) chỉ sửa `tools/ftg-prepare.py` theo myWord v2.5.0 (xem mục cuối): thầy bấm tay 4 vòng (test.html, 3 mode, Options) rồi "Đã test ok" → COMMIT + PUSH +
 LIVE cùng ngày; bench cuối 63/63; đã ở `core/catalog.js` (mục thứ 19).** ⬜ Chưa bấm tay trên TRANG CHỦ THẬT (New activity ▸
 Find the gap, Import gói `.ftg.json`, editor lưu Firestore), TOMKO, điện thoại, Showdown thật, myWord app thật. Game do thầy tự nghĩ (không có trong Wordwall):
 nghe băng thật, điền chỗ trống. Thiết kế đã duyệt qua canvas https://claude.ai/artifact/Qe5PJEBRUfGSHU6azNFzkF
@@ -154,3 +154,26 @@ khối preload sinh lại bằng `tools/sinh-preload.py --write` (tiện thể n
   ⛔ Fight: hai bàn PHẢI khoét cùng từ — bàn 0 bốc rồi ghi vào sổ chung `ftgFightLedger.gaps` (khoá theo object
   câu gốc `it.src`, hai bàn dùng chung object), bàn 1 lấy lại. Cùng khuôn với sổ đếm ô vòng 2.
 - Cài đặt ở `applyGapPolicy()` (module-level, đầu file) — chạy sau khi xáo câu, trước khi dựng `pool`/`state`.
+
+## Đợt 341 (18/9/2026 tối, đi cùng myWord v2.5.0 — thầy chốt "SỐ CÂU HỎI" + dùng hết câu thoại + nút Tạo gói) — CHỈ `tools/ftg-prepare.py`
+Game và editor **không đổi một dòng**. Thay đổi nằm ở nguồn dữ liệu và công cụ chuẩn bị:
+- **Sheet FILLGAP nay là CÂU HỎI, không phải lượt nói** (myWord `find-gap.js tachCau` + `gopCauHoi`): kịch bản được máy tách
+  thành CÂU, thầy đặt **Số câu hỏi** N ∈ [số lượt nói … số câu], câu dư được MÁY gộp vào câu liền kề cùng người nói ⇒ **mọi
+  câu thoại đều được dùng, mỗi dòng sheet = một lượt chơi**, ô B có thể là 2–3 câu nối nhau. Dòng đề bài / `Question N:` là
+  câu thường với người nói `Narrator` (thầy chốt) ⇒ tool **luôn `enabled:true`** cho dòng FILLGAP (đường `.txt` cũ vẫn tắt
+  Narrator theo `--keep-narrator`).
+- **`parakeet_words.py` gọi ĐÚNG giao ước `--out <base>`** — bản Đợt 340 quên `--out` nên trên máy có `parakeet_words.py`
+  bản 20/07 (`required=True`) là argparse chết ngay; con số "16 s" của Đợt 340 đo trên máy khác (ổ E không đồng bộ).
+  `tmpdir` trải `os.path.realpath` (bẫy đường dẫn 8.3 làm libsndfile không mở wav — mySpeaking 21/07).
+- **Cache mốc giây cạnh audio: `AUDIO\<mã>.pk.json`** (hoặc cạnh `.mp4` khi tiếng rút từ video). Đo P1: Parakeet 41,2 s lần
+  đầu → **1,0 s** lần sau; `--no-cache` để nghe lại. Đây là ngoại lệ duy nhất của luật "chỉ đọc thư mục bài".
+- **ffmpeg DÒ** (MODEL\ffmpeg → AutoSubs → MODEL\whispercpp → myLesson-data\bin → myStudent-data\bin → C:\ffmpeg → PATH);
+  máy 1 không có `MODEL\ffmpeg`, có ở AutoSubs.
+- Dòng FILLGAP **không khớp băng thì KHÔNG bị bỏ** (giữ `start 0 / end 0.25` + `weak`) để đủ N — thầy đặt mốc tay trong editor.
+  `OK.` ↔ `Okay.` quy về một từ khi so.
+- Dòng cuối stdout `@@KQ {"out","items","gaps","weak","cache"}` — myWord (`goi-aword.js`) spawn tool này bằng nút **"Tạo gói
+  AWord"** (`--xlsm <file bài> --code <mã> --out <cạnh file>.ftg.json`), stream log vào app, đọc dòng này ra kết quả.
+- **Đo thật trên P1 (LSB1-S1.T1.P1, 55 câu / 27 lượt → 45 câu hỏi, 81 chỗ trống):** gói 45 dòng, **45/45 chơi được** qua
+  `normalizeItems` (8 cụm `span > 1`: "platform six", "lost property", "sports bags"…), 1 dòng khớp yếu — và lần này cũng là
+  **text gốc sai**: dòng đề bài P1.3 trong `.txt` chép nhầm câu của Girl, băng nói "Who lives with Josh in his house?".
+- ⬜ Chưa Import gói này vào trang thật / chưa chơi 3 mode với câu hỏi gộp (câu dài hơn ở dải trên — cần nhìn TOMKO).
