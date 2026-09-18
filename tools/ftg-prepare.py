@@ -360,6 +360,7 @@ def main():
     ap.add_argument("--out"); ap.add_argument("--pk", help="file _pk.json Parakeet đã có")
     ap.add_argument("--no-gaps", action="store_true"); ap.add_argument("--keep-narrator", action="store_true")
     ap.add_argument("--no-cache", action="store_true", help="nghe lại băng dù đã có <audio>.pk.json")
+    ap.add_argument("--require-fillgap", action="store_true", help="myWord: file .xlsm PHẢI có sheet FILLGAP, không thì dừng (không rơi về gợi ý máy từ .txt)")
     a = ap.parse_args()
     code = a.code or a.code_opt
     if not code:
@@ -376,6 +377,8 @@ def main():
     log(f"   txt  : {mats['txt']}\n   audio: {mats['audio'] or '(rút từ mp4: %s)' % mats['mp4']}\n   xlsm : {mats['xlsm'] or '(không có)'}")
 
     fill = read_fillgap(mats["xlsm"]) if mats["xlsm"] else None
+    if a.require_fillgap and not fill:
+        raise SystemExit("File .xlsm chưa có sheet FILLGAP (hoặc sheet trống) — trong myWord hãy tạo FIND THE GAP rồi LƯU file trước, rồi mới Tạo gói AWord.")
     if fill:
         lines = fill
         log(f">> sheet FILLGAP: {len(lines)} dòng (chỗ trống + nhiễu lấy từ sheet, bỏ gợi ý máy)")

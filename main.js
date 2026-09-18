@@ -1851,7 +1851,7 @@ function importFlow(initialFile, opts = {}) {
       drop.innerHTML = `<div class="aw-imp-drop-icon">${IMP_UPLOAD_SVG}</div>` +
         `<div class="aw-imp-drop-title">${title}</div><div class="aw-imp-drop-sub">${sub}</div>`;
     };
-    const IDLE = ["Drag a lesson file here, or <b>click to browse</b>", ".xlsm · .xlsx · .xls"];
+    const IDLE = ["Drag a lesson file here, or <b>click to browse</b>", ".xlsm · .xlsx · .xls · .ftg.json (Find the gap, from myWord)"];
     setDrop(...IDLE);
     drop.onclick = () => fileInput.click();
     ["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("is-over"); }));
@@ -1892,10 +1892,20 @@ function importFlow(initialFile, opts = {}) {
         const bundle = isSpreadsheet(f.name)
           ? await parseLessonToBundle(await f.arrayBuffer(), { fileName: f.name })
           : JSON.parse(await f.text());
+        // ⭐ Đợt 342 — a lesson .xlsm carrying myWord's FILLGAP sheet: Find the gap
+        // is NOT built from the spreadsheet (its lines need audio timestamps that
+        // only myWord's "Tạo gói AWord" → `<code>.ftg.json` can supply). Say so
+        // instead of skipping the sheet in silence — teacher dragged the .xlsm on
+        // 18/9/2026 and concluded Find the gap could not be imported at all.
+        const fgHint = bundle && bundle.fillGapRows
+          ? `This file also has a <b>FILLGAP</b> sheet (${bundle.fillGapRows} Find the gap lines). Find the gap is not built from the spreadsheet — ` +
+            `in myWord press <b>Tạo gói AWord</b> (top of the FIND THE GAP tab), then drop <b>${escapeText((bundle.lessonCode || "<code>") + ".ftg.json")}</b> here.`
+          : "";
         if (!bundle || !Array.isArray(bundle.activities) || !bundle.activities.length) {
-          setDrop(...IDLE); showErr("No activities found in that file."); return;
+          setDrop(...IDLE); showErr("No activities found in that file."); if (fgHint) { err.innerHTML += "<br>" + fgHint; } return;
         }
         acts = bundle.activities;
+        if (fgHint) { err.style.display = ""; err.innerHTML = fgHint; }
         sourceName = bundle.folder || "";
         // ⭐ Đợt 221 — the whole folder PATH the file name asks for. A .json
         // bundle carries only a name, so fall back to a one-level path.

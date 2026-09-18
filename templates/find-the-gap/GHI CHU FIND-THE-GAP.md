@@ -177,3 +177,5 @@ Game và editor **không đổi một dòng**. Thay đổi nằm ở nguồn d�
   `normalizeItems` (8 cụm `span > 1`: "platform six", "lost property", "sports bags"…), 1 dòng khớp yếu — và lần này cũng là
   **text gốc sai**: dòng đề bài P1.3 trong `.txt` chép nhầm câu của Girl, băng nói "Who lives with Josh in his house?".
 - ⬜ Chưa Import gói này vào trang thật / chưa chơi 3 mode với câu hỏi gộp (câu dài hơn ở dải trên — cần nhìn TOMKO).
+
+## Đợt 342 (18/9/2026 tối) — Import: kéo `.xlsm` có FILLGAP vào trang KHÔNG ra Find the gap (cần mốc giây) — hộp Import nay nói rõ + gợi ý gói `.ftg.json`; `ftg-prepare.py --require-fillgap` (myWord luôn truyền). Xem `GHI CHU DU AN.md` Đợt 342.

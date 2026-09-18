@@ -513,6 +513,21 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 342 (18/9/2026 tối, thầy kéo file .xlsm có FILLGAP vào trang và báo "chưa có cơ chế import Find the gap") — **IMPORT: nhắc `.ftg.json` + gợi ý khi .xlsm có sheet FILLGAP; `ftg-prepare.py --require-fillgap`** · sửa `core/lesson-import.js` 1 chỗ CỘNG THÊM · ✅ COMMIT + PUSH
+
+Kiểm tra: đường Import gói `.json` **đã có** từ Đợt 221 (kéo vào bất kỳ đâu → `importFlow` → `JSON.parse` → `importBundle`;
+thử `parseLessonToBundle` + đọc gói P1 trên dev server: gói 45 items nhận đúng type `find_the_gap`, folderPath 5 tầng).
+Cái thiếu là **lời nói**: dòng mời chỉ ghi ".xlsm · .xlsx · .xls", và xlsm có FILLGAP thì bị bỏ qua IM LẶNG (luật `^FILL`
+cố ý từ Đợt 340) ⇒ thầy kết luận sai. Find the gap không dựng được từ xlsm vì cần mốc giây (Parakeet trên máy thầy).
+- `core/lesson-import.js`: bundle trả thêm `fillGapRows` (số dòng B có `[ngoặc]`) + `lessonCode` — chỉ thêm 2 trường, không
+  đổi luồng đọc sheet nào. `main.js` hộp Import: dòng mời thêm "`.ftg.json` (Find the gap, from myWord)"; xlsm có FILLGAP
+  → hiện gợi ý "file này có N dòng Find the gap — trong myWord bấm Tạo gói AWord rồi kéo `<mã>.ftg.json` vào đây" (cả khi
+  file không ra act nào). Chưa bấm tay hộp thoại thật (dev server chặn ở màn đăng nhập Google) — chỉ kiểm cú pháp ESM + parse.
+- `tools/ftg-prepare.py --require-fillgap` (myWord luôn truyền): xlsm không có FILLGAP thì dừng với câu báo, không rơi về gợi
+  ý máy từ `.txt` (đã rơi thật khi gọi trên P2 chưa có sheet: gói 12 dòng/3 chỗ vô nghĩa).
+- Đã tạo gói thật cho thầy từ file P1 thầy LƯU trên app: `LSB1-S1.T1.P1.ftg.json` (50 câu hỏi · 93 chỗ · cache 1 s).
+- Phía myWord v2.5.1: khối "Tạo gói AWord" dời lên đầu tab + 3 bước đánh số. ⬜ Thầy kéo gói P1 vào trang thật → Import → chơi.
+
 ## Đợt 341 (18/9/2026 tối, đi cùng myWord v2.5.0 — thầy chốt "SỐ CÂU HỎI" + dùng hết câu thoại + nút "Tạo gói AWord" trong myWord) — **`tools/ftg-prepare.py`: giao ước `--out` của Parakeet · cache mốc giây cạnh audio · dò ffmpeg · Narrator bật · dòng `@@KQ`** · KHÔNG ĐỤNG `core/` LẪN TEMPLATE · ✅ COMMIT + PUSH · ⬜ CHƯA IMPORT GÓI LÊN TRANG THẬT
 
 Bối cảnh: thầy hỏi ô "Số câu thoại lấy ra" của myWord tính thế nào — hoá ra là số đặt tay đi thẳng vào prompt, đơn vị LƯỢT

@@ -5377,9 +5377,14 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **18/9/2026 tối sau Đợt 341 — ✅ đã commit + push** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **18/9/2026 tối sau Đợt 342 — ✅ đã commit + push** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
 > ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (16/9/2026 — sau **Đợt 339** (Options × Template · IPA · Fight → mọi mode), **Đợt 338** (đồng bộ Settings qua Firestore), **Đợt 337** (Default course options), **Đợt 335 → 336** (Unjumble) và **Đợt 334** (Speed sorting) — tất cả ✅ ĐÃ COMMIT + PUSH + LIVE, ⬜ THẦY CHƯA BẤM TAY LẠI)
+>
+> **Đợt 342 (18/9/2026 tối) — IMPORT nói rõ về Find the gap:** thầy kéo `.xlsm` có FILLGAP vào trang, AWord im lặng bỏ
+> qua (luật `^FILL`) ⇒ tưởng "chưa import được Find the gap". Đường gói `.ftg.json` vốn ĐÃ CÓ; nay dòng mời ghi `.ftg.json`,
+> xlsm có FILLGAP thì hiện gợi ý bấm "Tạo gói AWord" trong myWord (`core/lesson-import.js` trả thêm `fillGapRows`/`lessonCode`
+> — cộng thêm, không đổi luồng); `ftg-prepare.py --require-fillgap`. Gói P1 đã tạo sẵn cạnh file bài. ⬜ Thầy kéo gói vào.
 >
 > **Đợt 341 (18/9/2026 tối, đi cùng myWord v2.5.0) — CHỈ `tools/ftg-prepare.py`, không đụng core/template.** Thầy chốt lại
 > nguồn dữ liệu Find the gap: đơn vị **CÂU**, ô myWord đổi thành **"Số câu hỏi"** (= số lượt chơi), **mọi câu thoại đều được

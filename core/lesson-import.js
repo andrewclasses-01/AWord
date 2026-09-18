@@ -703,11 +703,25 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
   // kept beside it (the deepest segment) because a hand-written .json bundle
   // still only has that, and `importBundle()` falls back to it.
   const path = lessonFolderPath(fileName);
+  // ⭐ Đợt 342 — sheet FILLGAP (myWord ≥ v2.4.0, Find the gap) is deliberately NOT
+  // read here: its lines need the audio TIMESTAMPS that only `tools/ftg-prepare.py`
+  // (Parakeet, on the teacher's PC) can produce, and myWord's "Tạo gói AWord"
+  // button turns it into `<code>.ftg.json`. Until this count was reported the
+  // sheet was skipped in silence and the teacher read that as "AWord cannot
+  // import Find the gap" (18/9/2026). The dialog turns it into a hint.
+  const fillGap = sheet("FILLGAP");
+  let fillGapRows = 0;
+  if (fillGap) {
+    const g = gridOf(fillGap);
+    fillGapRows = g.slice(1).filter(r => /\[[^\]]+\]/.test(String(r[1] || ""))).length;   // col B = line with [gaps]
+  }
   return {
     folder: folder || path.leaf || source,
     folderPath: folder ? [folder] : path.segments,
     folderPathKnown: folder ? false : path.known,
-    activities: acts
+    activities: acts,
+    fillGapRows,
+    lessonCode: path.known ? path.leaf : ""
   };
 }
 
