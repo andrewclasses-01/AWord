@@ -12,7 +12,12 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **⭐ Đợt 338** (16/9/2026, SETTINGS): 3 bộ mặc định Options (activity/homework/course) **đồng bộ
+> Mới nhất: **⭐⭐ Đợt 340** (18/9/2026, TEMPLATE MỚI của thầy — **FIND THE GAP**): nghe băng thật từ kho
+> `myLesson-audio`, mỗi lượt một câu thoại, điền chỗ trống theo 3 mode QUIZ / TYPE / FIND; audio tải trọn trước
+> PLAY (đo: tua 1 ms mọi mạng); Fight/Showdown nối dây; công cụ `tools/ftg-prepare.py` (Parakeet + khớp kịch bản
+> + gợi ý gap) 16 s/bài; 4 vòng sửa theo tay thầy (nhiễu số ít/nhiều, Each sentence, Fight so số ô, khoét cụm, Min gaps,
+> Random gaps, Options mờ theo mode) + myWord v2.4.0 sinh sheet FILLGAP. Bench 63/63. ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE. Xem mục **Đợt 340**.
+> Trước đó: **⭐ Đợt 338** (16/9/2026, SETTINGS): 3 bộ mặc định Options (activity/homework/course) **đồng bộ
 > qua Firestore** (`users/{uid}/items/aw-settings`, `loadSettings()` gọi lúc init) — sửa gốc bệnh AWord đứng
 > riêng ↔ webview myLesson lệch nhau (localStorage riêng từng trình duyệt). Luật `items/{itemId}` cho ghi
 > sẵn, không cần sửa console. Bàn thử 16/16 + 13/13 + 4/4. Xem mục **Đợt 338**.
@@ -507,6 +512,65 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
+
+## Đợt 340 (18/9/2026, thầy đề xuất template MỚI của riêng thầy, bàn thiết kế qua 3 vòng AskUserQuestion + canvas, "ok build", rồi 4 vòng sửa theo tay thầy) — **FIND THE GAP: nghe băng thật, điền chỗ trống — 3 mode QUIZ / TYPE / FIND** · ✅ THẦY DUYỆT ("Đã test ok") → COMMIT + PUSH + LIVE
+
+Template thứ 19, `templates/find-the-gap/` (type `find_the_gap`, class `.aw-ftg-*`). Mỗi lượt = MỘT CÂU THOẠI của
+bài nghe: câu hiện với chỗ trống ₁ ₂ ở dải trên, băng tự phát đúng đoạn `start→end`, 🔊 nghe lại không giới hạn;
+vùng dưới hiện NGAY và trả lời được cả lúc đang nghe (thầy chốt bản 2 thiết kế). Điền lần lượt từng chỗ trống; xong
+câu tự sang câu kế. Chi tiết luật, dữ liệu, Fight/Showdown, editor: `templates/find-the-gap/GHI CHU FIND-THE-GAP.md`.
+
+### Những quyết định thầy chốt (18/9)
+- **Audio = kho GitHub `myLesson-audio` + mốc giây**, act chỉ lưu MÃ BÀI; **tải trọn file trước PLAY** qua
+  `tpl.prepare` (thanh %), cache 1 ngày. Đo `scratch/ftg-seek-test.html`: tua nhảy cóc 1 ms sau khi file về máy
+  (wifi 0,67 s · 4G giả lập 14 s · 3G yếu 52 s), còn phát thẳng URL trên 3G mỗi câu chờ 1–1,8 s ⇒ loại.
+- Nhiều chỗ trống: điền LẦN LƯỢT; QUIZ mỗi chỗ một bộ ô; FIND bấm xong ₁ tự sang ₂; TYPE mỗi chỗ một ô nhập,
+  Submit từng ô, đúng sáng xanh (trong Fight ẩn). Điểm: option `scoring` "Each gap / Each sentence". Nhiễu QUIZ tự
+  lấy từ đáp án khác trong bài, ưu tiên giống nhất. Chỗ trống: máy gợi ý từ từ vựng bài (sheet WORDS) + thầy sửa
+  trong editor. Lời dẫn "Question N:" giữ, thầy tự tắt. Bảng Options đúng khuôn `core/options-panel.js`.
+
+### Đã làm
+- Game 3 mode + Fight (giấu tới reveal, chỉ bàn 0 phát tiếng, bàn kia nhại 🔊) + Showdown (nối dây `setNav`
+  index / `roundDone` / `setRoundTimeout`) + Lives / Points off bay / Time cost / Allow skip / Speaker names.
+- `ftg-audio.js` (tải trọn + Cache Storage + phát đoạn, ☰ pause qua `tpl.onPause`), `ftg-shared.js` (lá),
+  editor (chip từng từ = khoét, ▶ nghe thử đoạn, Paste transcript, Suggest gaps), sample 14 câu thật, test.html.
+- **`tools/ftg-prepare.py`**: mã bài → tìm nguyên liệu trong `D:\4. LISTENING` → ffmpeg → Parakeet GPU → khớp
+  kịch bản ↔ ASR → gợi ý gap từ WORDTABLE → gói `.ftg.json` đúng hình dạng Import. Bài LSA2-S1.T1.P1-2-3: 16 s,
+  53/53 dòng, 1 dòng yếu = text gốc sai. ⛔ chỉ đọc nguyên liệu.
+- Gộp: 1 mục `core/catalog.js` + icon `fmtWord`; `sinh-preload.py --write` sinh lại `core/tpl-files.js` (+ nó bổ
+  sung `core/classes.js` bị sót vào khối preload `play.html`). KHÔNG sửa `core/` ngoài hai file sinh tự động.
+- Bench `scratch/ftg-bench.html` **40/40** (3 mode, phạt, tim, Submit giữa chừng, Start again), 0 lỗi console;
+  Fight bấm thử 2 bàn trên dev server 5591. Bẫy đã trả giá: TDZ `let tiles` (khai sau chỗ gọi), FIND khoá ô sau
+  khi chuyển câu, "Each sentence" chip điểm không cập nhật ngay, bench giả tap phải bắn ĐÚNG `pointerdown` (press
+  nghe cả click không tin cậy), `optVer` ở cấp act.
+
+### Sửa vòng 2 (cùng ngày, thầy bấm tay rồi góp 4 nhóm ý) — bench **50/50**
+QUIZ nhiễu có **cặp số ít/nhiều** của từ đúng + từ giống nhất trong bài · điểm mặc định **Each sentence** (đúng cả 2 ô
+mới 1 điểm) · **Fight: ai nhiều ô đúng hơn thắng vòng** (sổ chung 2 bàn trong template, báo trọng tài `correct = ≥1 ô`,
+chốt điểm ở `reveal()` — đo 4 vòng đúng bảng thầy; KHÔNG sửa core) · FIND hết lẹm hàng cuối (ResizeObserver ô đầu
+lưới) · thêm ô **Remove corrects** như Find the match. Chi tiết: `GHI CHU FIND-THE-GAP.md` mục "Sửa vòng 2".
+**Vòng 3 cùng ngày (thầy "ok build" phần liên app):** template khoét được **cụm nhiều từ** (`gap.span`, editor có
+`−`/`+ word`); `tools/ftg-prepare.py` đọc sheet **FILLGAP** (myWord sinh) thay gợi ý máy, dò ASR toàn băng cho câu rải
+rác; **myWord v2.4.0 `008f58e`** (đã commit + push theo luật kho đó): ô tích FIND THE GAP → CLI chọn câu thoại + khoét
+[ngoặc] + 5 nhiễu khó (dạng khác của từ · âm gần · cùng chủ đề) → sheet FILLGAP (thêm sheet mới nếu file cũ chưa có);
+6 test xanh, CLI thật 32 s / 8 câu / 0 lỗi luật. ⬜ Thầy chưa bấm tay app myWord thật.
+**Vòng 4 cùng ngày (4 ý về Options):** Choices/Remove corrects **mờ theo mode** (`.is-locked` của core) · thanh **Min gaps**
+1–10 (thiếu thì khoét thêm từ dài trước, câu ngắn khoét hết) · ô **Random gaps** (mỗi ván bốc lại vị trí chỗ trống, Fight
+hai bàn dùng chung bộ bốc qua sổ chung). Bench **63/63**.
+
+**✅ 18/9/2026 tối — thầy "Đã test ok, commit + ghi hồ sơ + bàn giao + push toàn bộ"** → commit Đợt 340 (stage đúng 7
+đường dẫn: `templates/find-the-gap/`, `tools/ftg-prepare.py`, `core/catalog.js`, `core/tpl-files.js`, `play.html`, 2 hồ sơ)
++ push + kiểm mã băm live. Thầy tiếp tục ở phiên sau — xem VIỆC ĐANG CHỜ ngay dưới.
+
+### ⬜ VIỆC ĐANG CHỜ (phiên sau)
+- Thầy bấm tay trên TRANG CHỦ THẬT (đăng nhập): New activity ▸ Find the gap (mẫu) · **Import gói `.ftg.json`** do
+  `tools/ftg-prepare.py` xuất (đường Import chưa chạy thật trong phiên này vì cần đăng nhập) · editor lưu lên Firestore ·
+  giao bài cho một lớp thử · TOMKO cảm ứng · điện thoại (lần đầu tải trọn mp3).
+- **myWord app thật** (Electron, v2.4.0 đã push): tích FIND THE GAP → Bắt đầu tạo → LƯU → Excel mở thấy sheet FILLGAP
+  không hỏi sửa chữa → `ftg-prepare.py <mã bài>` đọc sheet → Import AWord.
+- Đã bấm tay OK trên dev server (test.html): 3 mode, Fight 2 bàn, Options 4 vòng sửa. Bench `scratch/ftg-bench.html` 63/63.
+- Showdown thật · Change template sang/từ Find the gap (`core/convert.js`, sửa core — chờ thầy) · thiết kế canvas:
+  https://claude.ai/artifact/Qe5PJEBRUfGSHU6azNFzkF
 
 ## Đợt 339 (16/9/2026, thầy giao 3 việc trong Options/Mode qua chat + chốt 2 câu hỏi) — **CHỌN BỘ NGHĨA CHƯA APPLY VẪN ĐI THEO ĐỔI TEMPLATE · IPA MODE LUÔN RA TỪ + PHIÊN ÂM (+ loa đọc TỪ) · FIGHT → MỌI MODE** · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY TRANG THẬT
 

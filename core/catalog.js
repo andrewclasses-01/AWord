@@ -128,7 +128,16 @@ export const TEMPLATES = [
     blurb: "Say each word into the mic — an AI grades your pronunciation.",
     css: "templates/speaking/speaking.css",
     load: () => import("../templates/speaking/speaking.js"),
-    sample: () => import("../templates/speaking/sample-speaking.js") }
+    sample: () => import("../templates/speaking/sample-speaking.js") },
+
+  // ⭐ Đợt 340 (18/9/2026) — thầy's own listening gap-fill: one spoken line per
+  // turn from a real exam recording (myLesson-audio store), gaps filled by
+  // tapping a tile (QUIZ), typing (TYPE) or finding it in the big grid (FIND).
+  { type: "find_the_gap",    label: "Find the gap",    built: true,
+    blurb: "Listen to each line and fill in the missing words — tap, type or find them.",
+    css: "templates/find-the-gap/find-the-gap.css",
+    load: () => import("../templates/find-the-gap/find-the-gap.js"),
+    sample: () => import("../templates/find-the-gap/sample-find-the-gap.js") }
 ];
 
 export function templateEntry(type) {
@@ -157,7 +166,8 @@ export const TEMPLATE_ICON = {
   open_the_box: "fmtBox", maze_chase: "fmtMaze", whack_a_mole: "fmtMole",
   true_false: "check",
   speaking_cards: "mic", speaking: "mic",
-  running_word: "fmtRace", running_team: "fmtRace"
+  running_word: "fmtRace", running_team: "fmtRace",
+  find_the_gap: "fmtWord"
 };
 
 // The icon MARKUP for a type. `icons` is passed in rather than imported so this

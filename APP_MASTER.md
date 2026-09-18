@@ -5377,9 +5377,31 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **16/9/2026 sau Đợt 339** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **18/9/2026 tối sau Đợt 340 — ✅ đã commit + push + live** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
 > ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (16/9/2026 — sau **Đợt 339** (Options × Template · IPA · Fight → mọi mode), **Đợt 338** (đồng bộ Settings qua Firestore), **Đợt 337** (Default course options), **Đợt 335 → 336** (Unjumble) và **Đợt 334** (Speed sorting) — tất cả ✅ ĐÃ COMMIT + PUSH + LIVE, ⬜ THẦY CHƯA BẤM TAY LẠI)
+>
+> **⭐⭐ Đợt 340 (18/9/2026) — TEMPLATE MỚI CỦA THẦY: FIND THE GAP · ✅ THẦY DUYỆT ("Đã test ok") → COMMIT + PUSH + LIVE.**
+> Nghe băng thật (kho `myLesson-audio`, act chỉ lưu MÃ BÀI + mốc giây từng câu), mỗi lượt một câu thoại có chỗ
+> trống ₁ ₂, ba mode QUIZ (≤6 ô, nhiễu tự sinh) / TYPE (bàn phím core) / FIND (lưới toàn bộ đáp án); trả lời được
+> ngay cả khi đang nghe, 🔊 nghe lại không giới hạn; option Scoring "Each gap / Each sentence"; Fight (giấu tới
+> reveal, chỉ bàn 0 phát tiếng) + Showdown nối dây. Audio tải trọn trước PLAY qua `tpl.prepare` + Cache Storage 1
+> ngày (đo: tua 1 ms trên mọi mạng). Công cụ **`tools/ftg-prepare.py`** (Parakeet GPU + khớp kịch bản + gợi ý gap
+> từ WORDTABLE → gói `.ftg.json` Import) chạy 16 s/bài. Bộ file `templates/find-the-gap/` + 1 mục catalog +
+> `tpl-files.js`/`play.html` sinh lại; KHÔNG sửa core. Bench `scratch/ftg-bench.html` 40/40, Fight bấm thử 2 bàn.
+> **Vòng 2 cùng ngày** (thầy bấm tay + 4 góp ý): nhiễu QUIZ có cặp số ít/nhiều · mặc định Each sentence · Fight "ai
+> nhiều ô đúng hơn thắng" (sổ chung 2 bàn, không sửa core; đo 4 vòng đúng) · FIND hết lẹm (ResizeObserver) · ô Remove
+> corrects. Bench 50/50. **Vòng 3:** khoét được cụm nhiều từ (`gap.span`); `ftg-prepare.py` đọc sheet **FILLGAP**;
+> **myWord v2.4.0 `008f58e`** (đã push) sinh sheet đó bằng CLI (câu nguyên văn + [ngoặc] + 5 nhiễu khó; thêm sheet mới
+> vào file cũ). ⬜ Thầy chưa bấm tay myWord thật.
+> **Vòng 4:** Options — Choices/Remove corrects mờ theo mode · thanh Min gaps 1–10 · ô Random gaps (Fight dùng chung bộ bốc). Bench 63/63.
+> ⬜ PHIÊN SAU: thầy bấm tay TRANG CHỦ THẬT (New activity · Import gói `.ftg.json` · editor lưu Firestore · giao bài thử) ·
+> TOMKO · điện thoại · myWord app thật (tích FIND THE GAP → LƯU → sheet FILLGAP → `ftg-prepare.py`). Trên dev server thầy đã
+> bấm tay OK 4 vòng (3 mode, Fight, Options).
+> Chi tiết: `GHI CHU DU AN.md` Đợt 340 + `templates/find-the-gap/GHI CHU FIND-THE-GAP.md`; thiết kế:
+> https://claude.ai/artifact/Qe5PJEBRUfGSHU6azNFzkF
+>
+> **Trước đó — Đợt 339:**
 >
 > **⭐ Đợt 339 — BA VIỆC TRONG OPTIONS/MODE (thầy giao qua chat, chốt 2 câu hỏi, "ok build + push live luôn").**
 > (1) **Chọn TEXT/VOICE + bộ nghĩa CHƯA Apply rồi đổi template ở chân bảng ⇒ lựa chọn ĐI THEO** —

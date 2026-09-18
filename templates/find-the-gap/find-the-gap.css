@@ -1,0 +1,278 @@
+/* =============================================================
+   FIND THE GAP template — styles that belong ONLY to this template.
+   Class prefix: .aw-ftg-*
+
+   Layout (Find the match's skeleton): a fixed-height TOP strip holding the
+   speaker label + the spoken line with its gap boxes + the 🔊 button, a
+   dashed divider, and the answer AREA below, whose contents depend on
+   options.mode (.is-quiz / .is-type / .is-find on the card).
+   Sizes use calc(N * var(--aw-u)) (1u = 1% of the stage width), never cqw
+   — core/HUONG DAN CORE.md Đợt 273.
+   ============================================================= */
+
+.aw-ftg-card {
+  --sfit: 1;                 /* line shrink factor (fitNow) */
+  position: relative;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  padding-bottom: calc(0.2 * var(--aw-u));
+}
+.aw-ftg-empty {
+  margin: auto; text-align: center; color: var(--aw-muted);
+  font-size: calc(2.2 * var(--aw-u)); font-weight: 600;
+}
+
+/* ---------- top strip: speaker · line · listen ---------- */
+.aw-ftg-top {
+  position: relative;
+  flex: 0 0 auto;
+  height: calc(21 * var(--aw-u));
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: calc(0.6 * var(--aw-u));
+  padding: 0 calc(8 * var(--aw-u));   /* room for the 🔊 button on the right */
+  text-align: center;
+}
+.aw-ftg-card.is-type .aw-ftg-top { height: calc(16 * var(--aw-u)); }
+.aw-ftg-speaker {
+  font-size: calc(1.4 * var(--aw-u)); font-weight: 800; letter-spacing: .12em;
+  color: var(--aw-muted);
+}
+.aw-ftg-sentence {
+  font-size: calc(calc(3.6 * var(--aw-u)) * var(--sfit));
+  font-weight: 700;
+  line-height: 1.4;   /* ≥1.35 — Vietnamese diacritics rule */
+  color: var(--aw-question-fill, var(--aw-text));
+  -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
+  overflow-wrap: normal; word-break: normal;
+  max-width: 100%;
+}
+.aw-ftg-word { white-space: nowrap; }
+
+/* a gap: a box on the baseline. Number while open; the word once answered. */
+.aw-ftg-gap {
+  display: inline-block;
+  min-width: 3.6em;
+  padding: 0 .35em;
+  margin: 0 .08em;
+  border-radius: .3em .3em 0 0;
+  border-bottom: .13em solid var(--aw-nav-lip, #ccd9e8);
+  background: var(--aw-nav-plate, #f3f7fb);
+  color: var(--aw-muted);
+  line-height: 1.4;
+  vertical-align: baseline;
+  white-space: nowrap;
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+.aw-ftg-gapnum, .aw-ftg-gapdots {
+  font-size: .62em; font-weight: 800; vertical-align: .18em;
+}
+.aw-ftg-gap.is-current {
+  border-bottom-color: var(--aw-accent);
+  background: rgba(47, 123, 255, .12);
+  color: var(--aw-accent);
+  animation: aw-ftg-pulse 1.4s ease-in-out infinite;
+}
+.aw-ftg-gap.is-ok  { border-bottom-color: var(--aw-ok);  background: rgba(51, 162, 74, .13);  color: var(--aw-ok-d, var(--aw-ok)); }
+.aw-ftg-gap.is-bad { border-bottom-color: var(--aw-no);  background: rgba(226, 60, 60, .12);  color: var(--aw-no-d, var(--aw-no)); }
+.aw-ftg-gap.is-hidden { color: var(--aw-muted); letter-spacing: .1em; }
+@keyframes aw-ftg-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(47, 123, 255, .35); }
+  50%      { box-shadow: 0 0 0 .22em rgba(47, 123, 255, 0); }
+}
+
+/* 🔊 — round, top right of the strip. While the slice plays the icon gives
+   way to 7 bouncing bars (the "Listening…" wave of the design canvas). */
+.aw-ftg-listen {
+  position: absolute; right: calc(0.6 * var(--aw-u)); top: 50%;
+  transform: translateY(-50%);
+  width: calc(5.6 * var(--aw-u)); height: calc(5.6 * var(--aw-u));
+  border: 0; border-radius: 50%; padding: 0;
+  background: var(--aw-accent); color: #fff;
+  box-shadow: 0 calc(0.4 * var(--aw-u)) 0 rgba(0, 0, 0, .28);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.aw-ftg-listen svg { width: 55%; height: 55%; }
+.aw-ftg-listen:active { transform: translateY(calc(-50% + 0.25 * var(--aw-u))); box-shadow: 0 calc(0.15 * var(--aw-u)) 0 rgba(0, 0, 0, .28); }
+.aw-ftg-wave { display: none; align-items: flex-end; justify-content: center; gap: 9%; height: 50%; width: 60%; }
+.aw-ftg-bar { width: 8%; height: 30%; background: #fff; border-radius: 1px; animation: aw-ftg-bounce .9s ease-in-out infinite; }
+.aw-ftg-bar:nth-child(2) { animation-delay: .12s; }
+.aw-ftg-bar:nth-child(3) { animation-delay: .24s; }
+.aw-ftg-bar:nth-child(4) { animation-delay: .36s; }
+.aw-ftg-bar:nth-child(5) { animation-delay: .48s; }
+.aw-ftg-bar:nth-child(6) { animation-delay: .6s; }
+.aw-ftg-bar:nth-child(7) { animation-delay: .72s; }
+@keyframes aw-ftg-bounce { 0%, 100% { height: 25%; } 50% { height: 100%; } }
+.aw-ftg-listen.is-playing svg { display: none; }
+.aw-ftg-listen.is-playing .aw-ftg-wave { display: flex; }
+
+.aw-ftg-divider {
+  flex: 0 0 auto;
+  height: 0;
+  margin: 0 calc(1 * var(--aw-u)) calc(1.4 * var(--aw-u));
+  border-top: calc(0.22 * var(--aw-u)) dashed var(--aw-muted, #b9c3d1);
+  opacity: .6;
+}
+
+/* ---------- answer area ---------- */
+.aw-ftg-area {
+  position: relative;
+  flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: opacity .18s ease;
+}
+.aw-ftg-area.is-fightlost { opacity: .55; }
+
+/* one tile, shared by QUIZ (a row) and FIND (a grid). Per-tile colour via
+   --tile/--tile-dark set in JS; a theme may force one colour (--aw-tile-fixed). */
+.aw-ftg-tile {
+  --tfit: 1;
+  --tile-eff: var(--aw-tile-fixed, var(--tile, #3b82f6));
+  --tile-dark-eff: var(--aw-tile-fixed-dark, var(--tile-dark, #2563eb));
+  position: relative;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  overflow: hidden;
+  border-radius: var(--aw-tile-radius, calc(1.5 * var(--aw-u)));
+  border: var(--aw-tile-border-width, 0) solid var(--aw-tile-border-color, transparent);
+  background: var(--tile-eff);
+  box-shadow: var(--aw-tile-shadow, 0 calc(0.6 * var(--aw-u)) 0 var(--tile-dark-eff));
+  color: #fff; font-family: inherit; font-weight: 800; letter-spacing: .02em;
+  text-transform: uppercase;
+  text-shadow: 0 calc(0.1 * var(--aw-u)) calc(0.2 * var(--aw-u)) rgba(0, 0, 0, .18);
+  line-height: 1.3;
+  overflow-wrap: normal; word-break: normal;
+  cursor: pointer;
+  transition: transform .06s ease, box-shadow .06s ease, opacity .3s ease, filter .15s ease;
+}
+.aw-ftg-tiletext { display: block; font-size: calc(1em * var(--tfit)); }
+.aw-ftg-tile:hover:not(:disabled) { filter: brightness(1.05); }
+.aw-ftg-tile:active:not(:disabled) { transform: translateY(calc(0.3 * var(--aw-u))); box-shadow: var(--aw-tile-shadow-active, 0 calc(0.15 * var(--aw-u)) 0 rgba(0,0,0,.2)); }
+.aw-ftg-tile:disabled { cursor: default; }
+.aw-ftg-tile.is-solved { opacity: 0; transform: scale(.82); pointer-events: none; }
+.aw-ftg-tile.is-dimmed { opacity: .18; }
+.aw-ftg-tile.is-wrongpick { --tile-eff: var(--aw-no); --tile-dark-eff: var(--aw-no-d); }
+.aw-ftg-tile.is-right { outline: calc(0.4 * var(--aw-u)) solid #fff; outline-offset: calc(-0.4 * var(--aw-u)); }
+.aw-ftg-tile.is-taken { --tile-eff: #b3bac3; --tile-dark-eff: #98a0aa; }
+.aw-ftg-area.is-fightlost .aw-ftg-tile { --tile-eff: #b3bac3; --tile-dark-eff: #98a0aa; }
+
+/* QUIZ: up to 6 tiles, 2 rows of 3 */
+.aw-ftg-choices {
+  --gap: calc(1.6 * var(--aw-u));
+  width: 100%;
+  display: flex; flex-wrap: wrap; justify-content: center; align-content: center;
+  gap: var(--gap);
+  padding: 0 calc(0.5 * var(--aw-u));
+}
+.aw-ftg-choices .aw-ftg-tile {
+  flex: 0 1 calc((100% - (var(--per-row, 3) - 1) * var(--gap)) / var(--per-row, 3));
+  min-width: 0;
+  height: calc(11 * var(--aw-u));
+  font-size: calc(2.7 * var(--aw-u));
+  padding: calc(0.6 * var(--aw-u)) calc(1 * var(--aw-u));
+}
+.aw-ftg-choices.is-done { min-height: calc(11 * var(--aw-u)); }
+
+/* FIND: the grid of every gap word (Find the match geometry) */
+.aw-ftg-grid {
+  --gfit: 1;                 /* whole-grid shrink so 5 rows always fit the area (fitNow) */
+  flex: 1 1 auto; min-height: 0; width: 100%;
+  display: grid; justify-content: center; align-content: center;
+  gap: calc(calc(1.1 * var(--aw-u)) * var(--gfit));
+  overflow: hidden;
+}
+.aw-ftg-grid .aw-ftg-tile {
+  height: calc(calc(6.2 * var(--aw-u)) * var(--gfit));
+  font-size: calc(calc(1.85 * var(--aw-u)) * var(--gfit));
+  padding: calc(0.5 * var(--aw-u)) calc(0.7 * var(--aw-u));
+}
+
+/* TYPE: one box per gap + the shared keyboard under it */
+.aw-ftg-inputs {
+  width: 100%;
+  display: flex; gap: calc(1.2 * var(--aw-u));
+  padding: 0 calc(3 * var(--aw-u));
+}
+.aw-ftg-input {
+  --ftg-ink: var(--aw-nav-lip, #ccd9e8);
+  position: relative;
+  flex: 1 1 0; min-width: 0;
+  height: calc(6.4 * var(--aw-u));
+  display: flex; align-items: center; gap: calc(0.8 * var(--aw-u));
+  padding: 0 calc(1.2 * var(--aw-u));
+  border: calc(0.3 * var(--aw-u)) solid var(--ftg-ink);
+  border-radius: calc(1.6 * var(--aw-u));
+  background: var(--aw-card, #fff);
+  font-size: calc(2.6 * var(--aw-u)); font-weight: 700;
+  color: var(--aw-text);
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.aw-ftg-inputnum {
+  flex: 0 0 auto;
+  font-size: .55em; font-weight: 800;
+  padding: .1em .45em; border-radius: .6em;
+  background: var(--aw-nav-plate, #f3f7fb); color: var(--aw-muted);
+}
+.aw-ftg-inputtext { flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: left; }
+.aw-ftg-caret { display: none; width: .09em; height: 1.1em; background: var(--aw-accent); animation: aw-ftg-caret 1s steps(2, start) infinite; }
+@keyframes aw-ftg-caret { to { visibility: hidden; } }
+.aw-ftg-inputmark { flex: 0 0 auto; width: 1em; height: 1em; margin-left: auto; }
+.aw-ftg-inputmark svg { width: 100%; height: 100%; }
+.aw-ftg-input.is-current { --ftg-ink: var(--aw-accent); box-shadow: 0 0 0 calc(0.5 * var(--aw-u)) rgba(47, 123, 255, .18); }
+.aw-ftg-input.is-current .aw-ftg-caret { display: block; }
+.aw-ftg-input.is-current .aw-ftg-inputnum { background: rgba(47, 123, 255, .14); color: var(--aw-accent); }
+.aw-ftg-input.is-ok  { --ftg-ink: var(--aw-ok); background: rgba(51, 162, 74, .1); color: var(--aw-ok-d, var(--aw-ok)); }
+.aw-ftg-input.is-bad { --ftg-ink: var(--aw-no); background: rgba(226, 60, 60, .1); color: var(--aw-no-d, var(--aw-no)); }
+.aw-ftg-input.is-hidden { color: var(--aw-muted); letter-spacing: .1em; }
+.aw-ftg-card.is-type .aw-ftg-area { flex: 0 0 auto; margin-bottom: auto; }
+.aw-ftg-card.is-type .aw-kbd { margin-top: auto; }
+
+/* ghost box for the flying ✓/✗ (see flyMark in find-the-gap.js) */
+.aw-ftg-flyhost { position: absolute; pointer-events: none; z-index: 6; }
+
+/* ---------- FIGHT: "your go is over" + concealed traces ---------- */
+.aw-fight-board.is-concealed .aw-ftg-area { opacity: .12; filter: saturate(.1); transition: opacity .18s ease; }
+.aw-fight-board.is-concealed .aw-ftg-gap.is-ok,
+.aw-fight-board.is-concealed .aw-ftg-gap.is-bad { color: transparent; background: var(--aw-nav-plate, #f3f7fb); border-bottom-color: var(--aw-nav-lip, #ccd9e8); }
+
+/* ---------- Showdown: the pupil's name sits over the strip; nothing of ours
+   occupies that band (speaker label is small and centred), so no rule needed. */
+
+/* =============================================================
+   EDITOR (find-the-gap-editor.js) — page chrome is core's .aw-ed-*; these
+   are the rows: word chips, times, ▶, per-gap extra answers.
+   ============================================================= */
+.aw-ftg-ed-meta { display: grid; grid-template-columns: 1.2fr 1fr; gap: 14px; }
+.aw-ftg-ed-audio { display: flex; align-items: center; gap: 8px; }
+.aw-ftg-ed-audio .aw-ed-input { flex: 1 1 auto; min-width: 0; }
+.aw-ftg-ed-check { flex: 0 0 auto; }
+.aw-ftg-ed-audiostatus { flex: 0 0 auto; font-size: .85rem; font-weight: 700; color: #6b7a90; white-space: nowrap; }
+.aw-ftg-ed-audiostatus.is-ok { color: #237a37; }
+.aw-ftg-ed-audiostatus.is-bad { color: #b32a2a; }
+.aw-ftg-ed-hint { font-size: .85rem; color: #55657a; line-height: 1.5; margin: -6px 0 10px; }
+.aw-ftg-ed-row.is-off { opacity: .55; }
+.aw-ftg-ed-row .aw-ed-qtop { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.aw-ftg-ed-speaker { width: 120px; flex: 0 0 auto; }
+.aw-ftg-ed-times { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.aw-ftg-ed-time { width: 84px; text-align: center; font-variant-numeric: tabular-nums; }
+.aw-ftg-ed-arrow { color: #8b93a1; font-weight: 700; }
+.aw-ftg-ed-play { width: 36px; height: 36px; border-radius: 50%; background: #2f7bff; color: #fff; border: 0; padding: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.aw-ftg-ed-play svg { width: 60%; height: 60%; }
+.aw-ftg-ed-play.is-playing { background: #e23c3c; }
+.aw-ftg-ed-onoff { font-size: .8rem; padding: .35rem .7rem; }
+.aw-ftg-ed-row.is-off .aw-ftg-ed-onoff { background: #f3f7fb; color: #6b7a90; }
+.aw-ftg-ed-text { width: 100%; min-height: 40px; font: inherit; font-weight: 600; resize: vertical; }
+.aw-ftg-ed-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.aw-ftg-ed-chip {
+  font: inherit; font-size: .95rem; font-weight: 600; color: #23303e;
+  background: #f3f7fb; border: 1.5px solid #e2ebf4; border-radius: 8px;
+  padding: 3px 8px; cursor: pointer; line-height: 1.3;
+}
+.aw-ftg-ed-chip:hover:not(:disabled) { border-color: #2f7bff; }
+.aw-ftg-ed-chip.is-gap { background: #eaf2fb; color: #2f7bff; border-color: #2f7bff; border-bottom-width: 3px; font-weight: 800; }
+.aw-ftg-ed-chip.is-dead { opacity: .5; cursor: default; }
+.aw-ftg-ed-gaps { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.aw-ftg-ed-gaprow { display: flex; align-items: center; gap: 10px; }
+.aw-ftg-ed-gaplabel { flex: 0 0 auto; min-width: 120px; font-size: .85rem; font-weight: 800; color: #2f7bff; }
+.aw-ftg-ed-extra { flex: 1 1 auto; font-size: .85rem; }
+.aw-ftg-ed-spanbtn { flex: 0 0 auto; font-size: .78rem; padding: .3rem .55rem; }
+.aw-ftg-ed-modalbd { z-index: 320; }
