@@ -8,7 +8,12 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **19/9/2026 tối (Đợt 346 — CHỈ `tools/ftg-prepare.py`, đi cùng myWord v2.7.0 "nghe băng TRƯỚC, CLI chia câu":
+> Cập nhật lần cuối: **19/9/2026 khuya (Đợt 347 — CHỈ `tools/ftg-prepare.py`, thầy chốt "kho `myLesson-audio` là nguồn duy nhất":
+> `kho_audio()` lấy mp3 bài từ kho TRƯỚC (HEAD so cỡ với `AUDIO\<mã>.mp3` của buổi, khác/chưa có thì tải ~2 MB/3 s + xoá `.pk.json`
+> cũ), ổ D `.mp3`/`.mp4` chỉ là đường lùi khi mất mạng/kho chưa có bài. Kho đã đủ 145/145 bài của `D:\4. LISTENING`. Đo: Parakeet
+> trên mp3 kho = 587/587 chữ giống hệt bản đo từ mp4, lệch 0,000 s. Đi cùng myWord v2.7.1 + myLesson v2.85.0 (popup Nghe hỏi kho
+> trước). `core/`/template không đổi. Xem GHI CHU DU AN.md Đợt 347)**.
+> Trước đó: **19/9/2026 tối (Đợt 346 — CHỈ `tools/ftg-prepare.py`, đi cùng myWord v2.7.0 "nghe băng TRƯỚC, CLI chia câu":
 > cờ `--asr-only --asr-out` trả words+text Parakeet cho myWord làm bản chuẩn sửa chữ câu hỏi theo băng; Parakeet chạy qua Popen
 > stream dòng `[pk]` + in `@@TD {dur}` để myWord vẽ %. `core/`/template không đổi. Xem GHI CHU DU AN.md Đợt 346)**.
 > Trước đó: **19/9/2026 (Đợt 345 — DẤU ✓ BỘ NGHĨA TRONG FORM SET ASSIGNMENT NAY THEO LỚP: thầy mở form cho A2B
@@ -7078,7 +7083,7 @@ vừa xảy ra.
 > sang `scratch/fake-firebase-full.js`, rồi gieo cây thư mục bằng chính `createFolder()` thật).
 >
 > **Mảng đang chạy: TRANG CHỦ (thư viện)** — thầy đi từng đợt ngắn và tự chỉ hướng mỗi lần. Trước
-> chuỗi này thầy vừa **đọc dự án + quét 2 ổ nội dung** `D:. LISTENING` + `D:. READING` (138
+> chuỗi này thầy vừa **đọc dự án + quét 2 ổ nội dung** `D:\4. LISTENING` + `D:\5. READING` (138
 > workbook) để chuẩn bị **cải tiến IMPORT** — xem mục ⬜ VIỆC ĐANG CHỜ, có sẵn danh sách khoảng hở đã
 > đo của importer.
 >
@@ -7714,7 +7719,7 @@ act nào gọi tên HS thì đọc từ đó.
 > ⛔ Đừng tự chọn hướng — hỏi thầy muốn làm mục nào trước.
 >
 > ⭐⭐ **(LỊCH SỬ) VIỆC THẦY ĐÃ NHẮM TỚI TRƯỚC ĐỢT 221: CẢI TIẾN IMPORT.** Trước Đợt 218 thầy bảo đọc dự án + quét
-> `D:. LISTENING` và `D:. READING` "để chuẩn bị áp dụng một số thay đổi". **Đã quét xong 138
+> `D:\4. LISTENING` và `D:\5. READING` "để chuẩn bị áp dụng một số thay đổi". **Đã quét xong 138
 > workbook, số liệu để sẵn đây** — phiên sau khỏi quét lại:
 > - **Cây nội dung rất đều**: `<cấp độ>/<bộ LSA2-S1>/<đề .T1>/<file .P1-2-3.xlsm>` (LISTENING) và
 >   `<loạt>/<mùa DS-S4>/<chủ đề .I1>/<bài .W1>/<file>` (READING); mỗi thư mục lá còn `AUDIO/` và

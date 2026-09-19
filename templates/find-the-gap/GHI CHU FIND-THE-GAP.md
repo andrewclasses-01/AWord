@@ -190,3 +190,12 @@ Game và editor **không đổi một dòng**. Thay đổi nằm ở nguồn d�
   in NGAY để app vẽ tiến trình; trước khi nghe in `@@TD {"dur": <giây>}` (đo từ wav 16 kHz mono) cho app ước lượng %.
   Đuôi 60 dòng log vẫn giữ để in khi lỗi. Đo máy 1: P1 269 s băng → Parakeet 46,3 s (cache → 1 s).
 - `core/` + template KHÔNG đổi; Import `.xlsm` vẫn đọc FILLGAP như Đợt 343/344. Xem myWord `GHI CHU DU AN.md` v2.7.0.
+
+## Đợt 347 (19/9/2026 khuya, đi cùng myWord v2.7.1 + myLesson v2.85.0) — CHỈ `tools/ftg-prepare.py`: băng lấy từ KHO trước
+- Toast *Could not load the audio* (`find-the-gap.js:373`, `.catch` của `loadAudio`) = URL kho trả 404: bài CHƯA lên kho
+  (myLesson chỉ đẩy khi bấm Xác nhận; nghe thử trong popup là phát `.mp4` ổ D). Chẩn nhanh: `curl -o NUL -w %{http_code}
+  https://andrewclasses-01.github.io/myLesson-audio/<LEVEL>/<mã>.mp3`. Kho nay đủ 145/145 bài.
+- `kho_audio(code, mats)`: HEAD so cỡ với `AUDIO\<mã>.mp3` của buổi → dùng/tải; kho đổi file ⇒ xoá `.pk.json` cũ. Gọi trước
+  `mats["audio"] or mats["mp4"]` ở `asr_only`/`align_only`/`main`. Ổ D chỉ còn là đường lùi (mất mạng / bài mới chưa lên kho).
+- Đo: Parakeet trên mp3 kho = 587/587 chữ giống hệt, lệch 0,000 s so với bản đo từ mp4 gốc (cùng tham số ffmpeg 64k mono).
+- Template/`core/` không đổi. ⬜ Ý tưởng: hộp Import HEAD URL kho lúc import để báo sớm bài chưa có tiếng.

@@ -513,6 +513,33 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 347 (19/9/2026 khuya, đi cùng myWord v2.7.1 + myLesson v2.85.0) — CHỈ `tools/ftg-prepare.py`: FILE NGHE LẤY TỪ KHO `myLesson-audio` TRƯỚC (`kho_audio()`), ổ D là đường lùi · KHÔNG đụng `core/`/template · ✅ commit riêng
+
+**Gốc.** Act `LSB1-S3.T2.P3-4 / FIND THE GAP` trên trang thật báo toast *Could not load the audio* (`find-the-gap.js:373`): template ghép
+`audioUrlOf("LSB1-S3.T2.P3-4")` → `myLesson-audio/LSB1/LSB1-S3.T2.P3-4.mp3` → **404** — thầy chưa bấm Xác nhận trong popup myLesson
+(popup phát `.mp4` ổ D để nghe thử nên "vẫn nghe được"). Kho lúc đó 21/145 bài. Thầy chốt: đẩy trọn kho + "myLesson/myWord chỉ việc
+lấy trên kho" + đo Parakeet trên mp3 kho trước khi build.
+
+**Kho.** `myLesson-audio` `847ecb6` (+118) · `3050183` (+6, `FLY-S2.*` đổi tên `LSFLY-S2.*` cho đúng quy ước level) · README `6d2e062`:
+**145/145 bài, 288 MB**; 7/7 file live khớp SHA-256 bản local. Bản mp3 cũng cất vào `AUDIO\` từng buổi trên ổ D.
+
+**Phép đo** (`scratchpad/do-parakeet-kho.py`, so cache `.pk.json` đo từ `.mp4` gốc): tải 1,79 MB 2,9 s · Parakeet 36,7 s · **587/587 chữ
+giống hệt, lệch START/END trung bình 0,000 s, lớn nhất 0,000 s** — vì `extract_audio()` đường cũ cũng rút mp4 → 64k mono 44,1k bằng
+đúng tham số ffmpeg mà kho dùng. ⇒ dùng kho không lag/không lệch.
+
+**Code — `tools/ftg-prepare.py`:** `KHO_AUDIO` + `KHO_CACHE_DIR`; `find_materials()` nhớ thêm `folder` (thư mục buổi); **`kho_audio(code,
+mats)`**: HEAD lấy Content-Length → đích `AUDIO\<mã>.mp3` trong thư mục buổi (không có thư mục buổi thì `%LOCALAPPDATA%\AWord\audio-kho\
+<LEVEL>\`) → cùng cỡ thì dùng luôn, khác/chưa có thì tải (`.tmp` + `os.replace`) và xoá `.pk.json` cũ; 404 → log "kho CHƯA CÓ bài …
+(myLesson ▸ ô AUDIO ▸ Xác nhận)", mạng hỏng → log rồi rơi về đường cũ. Gọi TRƯỚC `mats["audio"] or mats["mp4"]` ở cả 3 lối
+(`asr_only` · `align_only` · `main`). Test 4 nhánh: bản sẵn cùng cỡ (không tải) · xoá bản + cache giả → tải 2,02 MB/1,4 s + cache bị xoá ·
+mã không có trên kho → None · mã có trên kho nhưng không thư mục buổi → `%LOCALAPPDATA%`. Chạy thật `--asr-only` LSB1-S3.T2.P3-4 ✓.
+
+**Bên kia:** myWord v2.7.1 `3f4c641` (chữ báo + `giaiDoanTuLog` nhận dòng kho) · myLesson v2.85.0 `9192746` (`nghe.trenKho` + popup
+phát thẳng URL kho, Xác nhận xong tức thì). ⬜ Ý tưởng chưa chốt: hộp Import kiểm HEAD URL kho lúc import để báo sớm "bài nghe chưa
+có trên kho" (cùng tinh thần cảnh báo thiếu mốc giây Đợt 343).
+
+---
+
 ## Đợt 346 (19/9/2026 tối, đi cùng myWord v2.7.0 "nghe băng TRƯỚC, CLI chia câu") — CHỈ `tools/ftg-prepare.py`: cờ `--asr-only --asr-out` (chỉ nghe băng, trả words+text cho myWord làm bản chuẩn sửa chữ câu hỏi theo băng) + Parakeet chạy qua Popen stream dòng `[pk]` + in `@@TD {dur}` để myWord vẽ % · KHÔNG đụng `core/`/template · ⬜ chưa commit riêng (commit cùng đợt này)
 
 Chi tiết ở `templates/find-the-gap/GHI CHU FIND-THE-GAP.md` mục Đợt 346 và myWord `GHI CHU DU AN.md` v2.7.0. Đo máy 1: P1 269 s băng → 46,3 s Parakeet, stream đủ mốc `[pk] nap model` / `nhan dang` / `XONG`; có cache → 1 s.

@@ -40,16 +40,29 @@ Dùng:
   • Parakeet nay chạy qua Popen: dòng `[pk] …` được chuyển tiếp ngay (không gom tới cuối) để app vẽ tiến trình;
     trước khi nghe in `@@TD {"dur": <giây băng>}` (đo từ wav 16 kHz mono) để app ước lượng % theo thời lượng.
 
-⛔ CHỈ ĐỌC nguyên liệu gốc (trừ file cache .pk.json nói trên); wav tạm ghi vào %TEMP%. Không đụng .xlsm/.txt/.mp3.
+Đợt 347 (19/9/2026 — thầy chốt "kho là nguồn duy nhất, myLesson/myWord chỉ việc lấy trên kho"):
+  • FILE NGHE LẤY TỪ KHO `myLesson-audio` TRƯỚC (https://andrewclasses-01.github.io/myLesson-audio/<LEVEL>/<mã>.mp3,
+    kho đã đủ 145/145 bài của D:\4. LISTENING từ 19/9). `kho_audio()`: HEAD lấy Content-Length → bản mp3 trong
+    `AUDIO\<mã>.mp3` của buổi (hoặc %LOCALAPPDATA%\AWord\audio-kho\<LEVEL>\ khi máy không có thư mục buổi) CÙNG CỠ
+    thì dùng luôn (không tải lại); khác cỡ/chưa có thì tải về (~2 MB, ~3 s) và XOÁ cache .pk.json cũ (kho đổi file
+    ⇒ mốc giây cũ vô nghĩa). Mạng hỏng / kho chưa có bài ⇒ rơi về đường cũ: AUDIO\<mã>.mp3 rồi rút từ .mp4.
+  • Đo 19/9 trên LSB1-S3.T2.P3-4: Parakeet trên mp3 kho ra 587/587 chữ giống hệt bản đo từ mp4 gốc, lệch mốc
+    0,000 s — vì đường cũ cũng rút mp4 → mp3 64k mono bằng đúng tham số ffmpeg đó rồi mới nghe. Tải 1,79 MB: 2,9 s.
+
+⛔ CHỈ ĐỌC nguyên liệu gốc (trừ file cache .pk.json nói trên và bản mp3 tải từ kho vào AUDIO\); wav tạm ghi vào %TEMP%.
+   Không đụng .xlsm/.txt/.mp4.
 Yêu cầu: Python 3 + openpyxl (đọc .xlsm), ffmpeg (dò), Parakeet venv E:\LAP TRINH APP\MODEL\_parakeet_venv (GPU).
 """
-import argparse, io, json, os, re, subprocess, sys, tempfile, time
+import argparse, io, json, os, re, subprocess, sys, tempfile, time, urllib.request
 from difflib import SequenceMatcher
 
 MODEL_DIR = r"E:\LAP TRINH APP\MODEL"
 PK_PY = os.path.join(MODEL_DIR, "_parakeet_venv", "Scripts", "python.exe")
 PK_SCRIPT = os.path.join(MODEL_DIR, "parakeet_words.py")
 LISTEN_ROOT = r"D:\4. LISTENING"
+# Đợt 347 — kho file nghe (myLesson-audio README: <LEVEL>/<mã>.mp3, level = phần trước dấu gạch đầu tiên).
+KHO_AUDIO = "https://andrewclasses-01.github.io/myLesson-audio/"
+KHO_CACHE_DIR = os.path.join(os.environ.get("LOCALAPPDATA") or tempfile.gettempdir(), "AWord", "audio-kho")
 
 def find_ffmpeg():
     """ffmpeg không có trong PATH của máy thầy — dò các chỗ đã biết (khuôn mySpeaking sub.js) rồi mới tới PATH."""
@@ -140,7 +153,66 @@ def find_materials(code):
             elif e == ".mp3": found["audio"] = found["audio"] or p
             elif e == ".mp4": found["mp4"] = found["mp4"] or p
             elif e in (".xlsm", ".xlsx"): found["xlsm"] = found["xlsm"] or p
+            # Đợt 347: nhớ THƯ MỤC BUỔI (file nào cùng mã cũng được) để cất bản mp3 tải từ kho vào AUDIO của nó
+            if e in (".txt", ".mp3", ".mp4", ".xlsm", ".xlsx", ".docm") and not found.get("folder"):
+                found["folder"] = root if os.path.basename(root).upper() != "AUDIO" else os.path.dirname(root)
     return found
+
+# ---------------------------------------------------------------- kho file nghe (Đợt 347)
+def kho_url(code):
+    from urllib.parse import quote
+    return KHO_AUDIO + quote(code.split("-")[0]) + "/" + quote(code) + ".mp3"
+
+def kho_audio(code, mats):
+    r"""Lấy mp3 của bài từ kho myLesson-audio (kho là nguồn duy nhất — thầy chốt 19/9). Trả đường mp3 local
+    (bản trong AUDIO\ của buổi, hoặc %LOCALAPPDATA%\AWord\audio-kho\<LEVEL>\) hoặc None khi kho không với tới /
+    chưa có bài — lúc đó người gọi rơi về đường cũ (mp3/mp4 trên ổ D)."""
+    url = kho_url(code)
+    try:
+        req = urllib.request.Request(url, method="HEAD", headers={"Cache-Control": "no-cache"})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            size = int(r.headers.get("Content-Length") or 0)
+    except Exception as e:
+        if getattr(e, "code", None) == 404:
+            log(f">> kho myLesson-audio CHƯA CÓ bài {code} (myLesson ▸ ô AUDIO ▸ Xác nhận để đẩy lên) — dùng file trên ổ D")
+        else:
+            log(f">> kho myLesson-audio không với tới ({str(e)[:80]}) — dùng file trên ổ D")
+        return None
+    folder = mats.get("folder") or (os.path.dirname(mats["audio"]) if mats.get("audio") else None)
+    if folder and os.path.basename(folder).upper() == "AUDIO":
+        folder = os.path.dirname(folder)
+    dest = os.path.join(folder, "AUDIO", code + ".mp3") if folder else os.path.join(KHO_CACHE_DIR, code.split("-")[0], code + ".mp3")
+    if os.path.exists(dest) and size and os.path.getsize(dest) == size:
+        log(f">> file nghe: bản kho đã có sẵn ({size/1048576:.2f} MB) → {dest}")
+        return dest
+    t0 = time.time()
+    try:
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        tmp = dest + ".tmp"
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"Cache-Control": "no-cache"}), timeout=120) as r, open(tmp, "wb") as f:
+            while True:
+                b = r.read(1 << 16)
+                if not b:
+                    break
+                f.write(b)
+        os.replace(tmp, dest)
+    except Exception as e:
+        log(f">> tải từ kho hỏng ({str(e)[:80]}) — dùng file trên ổ D")
+        try:
+            os.remove(dest + ".tmp")
+        except Exception:
+            pass
+        return None
+    # File trên kho ĐỔI (cỡ khác bản cũ) ⇒ mốc giây cũ vô nghĩa, xoá cache để nghe lại
+    cp = cache_path(dest)
+    if os.path.exists(cp):
+        try:
+            os.remove(cp)
+            log("   cache mốc giây cũ đã xoá (file kho đổi)")
+        except Exception:
+            pass
+    log(f">> đã tải từ kho: {size/1048576:.2f} MB trong {time.time()-t0:.1f} s → {dest}")
+    return dest
 
 # ---------------------------------------------------------------- kịch bản
 def read_transcript(path):
@@ -394,9 +466,9 @@ def align_only(a, mats, code):
     lines = lines_from_json(a.align_json)
     if not lines:
         raise SystemExit("--align-json rỗng")
-    src = mats["audio"] or mats["mp4"]
+    src = kho_audio(code, mats) or mats["audio"] or mats["mp4"]
     if not src:
-        raise SystemExit(f"Không thấy file nghe của {code} (AUDIO\\{code}.mp3 hay {code}.mp4) trong {LISTEN_ROOT}")
+        raise SystemExit(f"Không thấy file nghe của {code}: kho myLesson-audio chưa có bài này, ổ D cũng không có AUDIO\\{code}.mp3 hay {code}.mp4")
     log(f">> {len(lines)} câu hỏi cần mốc giây · audio: {src}")
     with tempfile.TemporaryDirectory(prefix="ftg_") as tmp:
         if a.pk:
@@ -429,9 +501,9 @@ def asr_only(a, mats, code):
     """Đợt 346 — myWord v2.7.0 gọi ĐẦU TIÊN khi "Bắt đầu tạo": chỉ nghe băng (Parakeet, cache cạnh audio) rồi ghi
     {"words","text","cache","audio","dur"} ra --asr-out. Text này là BẢN CHUẨN để CLI sửa chữ câu hỏi theo băng.
     Dòng cuối stdout: @@KQ {"n","cache","dur"}."""
-    src = mats["audio"] or mats["mp4"]
+    src = kho_audio(code, mats) or mats["audio"] or mats["mp4"]
     if not src:
-        raise SystemExit(f"Không thấy file nghe của {code} (AUDIO\\{code}.mp3 hay {code}.mp4) trong {LISTEN_ROOT}")
+        raise SystemExit(f"Không thấy file nghe của {code}: kho myLesson-audio chưa có bài này, ổ D cũng không có AUDIO\\{code}.mp3 hay {code}.mp4")
     log(f">> nghe băng: {src}")
     with tempfile.TemporaryDirectory(prefix="ftg_") as tmp:
         cp = cache_path(src)
@@ -464,7 +536,7 @@ def main():
     if not code:
         ap.error("cần mã bài (hoặc --code)")
 
-    mats = {"txt": a.txt, "audio": a.audio, "xlsm": a.xlsm, "mp4": None}
+    mats = {"txt": a.txt, "audio": a.audio, "xlsm": a.xlsm, "mp4": None, "folder": None}
     if not (mats["txt"] and mats["audio"]):
         log(f">> tìm nguyên liệu {code} trong {LISTEN_ROOT}…")
         f = find_materials(code)
@@ -495,9 +567,9 @@ def main():
         if a.pk:
             asr = json.load(io.open(a.pk, encoding="utf-8"))
         else:
-            src = mats["audio"] or mats["mp4"]
+            src = kho_audio(code, mats) or mats["audio"] or mats["mp4"]
             if not src:
-                raise SystemExit("Không có file nghe (.mp3/.mp4)")
+                raise SystemExit("Không có file nghe (kho myLesson-audio chưa có bài, ổ D không có .mp3/.mp4)")
             cp = cache_path(src)
             if not a.no_cache and os.path.exists(cp):
                 audio = src                      # có cache thì khỏi rút tiếng/ffmpeg
