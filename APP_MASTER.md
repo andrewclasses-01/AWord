@@ -8,7 +8,10 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **19/9/2026 (Đợt 345 — DẤU ✓ BỘ NGHĨA TRONG FORM SET ASSIGNMENT NAY THEO LỚP: thầy mở form cho A2B
+> Cập nhật lần cuối: **19/9/2026 tối (Đợt 346 — CHỈ `tools/ftg-prepare.py`, đi cùng myWord v2.7.0 "nghe băng TRƯỚC, CLI chia câu":
+> cờ `--asr-only --asr-out` trả words+text Parakeet cho myWord làm bản chuẩn sửa chữ câu hỏi theo băng; Parakeet chạy qua Popen
+> stream dòng `[pk]` + in `@@TD {dur}` để myWord vẽ %. `core/`/template không đổi. Xem GHI CHU DU AN.md Đợt 346)**.
+> Trước đó: **19/9/2026 (Đợt 345 — DẤU ✓ BỘ NGHĨA TRONG FORM SET ASSIGNMENT NAY THEO LỚP: thầy mở form cho A2B
 > thấy ENG1 ✓ dù A2B chưa giao act — Đợt 322 cố ý để `bangDaGiao()` soi bài giao của act ở MỌI lớp (A1A/A2A đã giao ENG1·ANAGRAM
 > cùng act, đo trên bản sao kho 18/9). Vá `core/assignment-ui.js`: `thuMucLopDangChon()` (đọc thư mục lớp y hệt đường START) +
 > `locCungLop()` (cùng thư mục lớp HOẶC thư mục con `DONE` — bài hôm trước của chính lớp vẫn tính; lớp chưa có thư mục so chữ

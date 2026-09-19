@@ -513,6 +513,12 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 346 (19/9/2026 tối, đi cùng myWord v2.7.0 "nghe băng TRƯỚC, CLI chia câu") — CHỈ `tools/ftg-prepare.py`: cờ `--asr-only --asr-out` (chỉ nghe băng, trả words+text cho myWord làm bản chuẩn sửa chữ câu hỏi theo băng) + Parakeet chạy qua Popen stream dòng `[pk]` + in `@@TD {dur}` để myWord vẽ % · KHÔNG đụng `core/`/template · ⬜ chưa commit riêng (commit cùng đợt này)
+
+Chi tiết ở `templates/find-the-gap/GHI CHU FIND-THE-GAP.md` mục Đợt 346 và myWord `GHI CHU DU AN.md` v2.7.0. Đo máy 1: P1 269 s băng → 46,3 s Parakeet, stream đủ mốc `[pk] nap model` / `nhan dang` / `XONG`; có cache → 1 s.
+
+---
+
 ## Đợt 345 (19/9/2026, thầy báo qua myLesson kèm ảnh form Set assignment lớp A2B) — **DẤU ✓ BỘ NGHĨA TRONG OPTIONS NAY THEO LỚP: A2B KHÔNG ĐEO ✓ CỦA A1A/A2A** · sửa `core/assignment-ui.js` (1 file) · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY TRANG THẬT
 
 Thầy: mở form cho **A2B** (act LSB1-S1.T1.P2, template ANAGRAM), chip **ENG1 đã đeo ✓** dù A2B chưa hề giao act này — thầy

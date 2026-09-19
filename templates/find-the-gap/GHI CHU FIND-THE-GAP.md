@@ -181,3 +181,12 @@ Game và editor **không đổi một dòng**. Thay đổi nằm ở nguồn d�
 ## Đợt 342 (18/9/2026 tối) — Import: kéo `.xlsm` có FILLGAP vào trang KHÔNG ra Find the gap (cần mốc giây) — hộp Import nay nói rõ + gợi ý gói `.ftg.json`; `ftg-prepare.py --require-fillgap` (myWord luôn truyền). Xem `GHI CHU DU AN.md` Đợt 342.
 
 ## Đợt 343 (18/9/2026 khuya) — NGUỒN DỮ LIỆU CHÍNH nay là Import `.xlsm`: `core/lesson-import.js` đọc sheet FILLGAP (A người nói · B câu [ngoặc] · C/D/E nhiễu · **F/G mốc giây do myWord v2.6.0 đo** · H match) → act riêng `<mã> / FIND THE GAP`. `ftg-prepare.py` còn hai vai: `--align-json` (myWord gọi lấy mốc giây) và đường gói `.ftg.json` cũ. Xem `GHI CHU DU AN.md` Đợt 343.
+
+## Đợt 346 (19/9/2026 tối, đi cùng myWord v2.7.0 "nghe băng TRƯỚC, CLI chia câu") — CHỈ `tools/ftg-prepare.py`
+- Cờ mới **`--asr-only --asr-out <file>`**: chỉ nghe băng (Parakeet, cache `AUDIO\<mã>.pk.json` như cũ) rồi ghi
+  `{"words":[{word,start,end}], "text", "cache", "audio", "dur"}` — myWord gọi ĐẦU TIÊN khi "Bắt đầu tạo", lấy `text` làm
+  bản chuẩn để CLI chia câu hỏi + sửa chữ theo băng, rồi mới gọi `--align-json` (cache ⇒ ~1 s) lấy mốc giây. Không đụng .xlsm.
+- `run_parakeet()` chuyển từ `capture_output` sang `Popen` đọc từng dòng: dòng `[pk] …` (nạp model / nhận dạng / XONG) được
+  in NGAY để app vẽ tiến trình; trước khi nghe in `@@TD {"dur": <giây>}` (đo từ wav 16 kHz mono) cho app ước lượng %.
+  Đuôi 60 dòng log vẫn giữ để in khi lỗi. Đo máy 1: P1 269 s băng → Parakeet 46,3 s (cache → 1 s).
+- `core/` + template KHÔNG đổi; Import `.xlsm` vẫn đọc FILLGAP như Đợt 343/344. Xem myWord `GHI CHU DU AN.md` v2.7.0.

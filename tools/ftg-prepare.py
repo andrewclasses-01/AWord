@@ -34,6 +34,12 @@ Dùng:
   • Dòng FILLGAP (kể cả Narrator) LUÔN enabled — thầy chốt "câu hỏi đề bài tính như câu thoại thường".
   • Dòng cuối stdout: `@@KQ {"out","items","gaps","weak","cache"}` để myWord đọc kết quả, không đoán từ log.
 
+Đợt 346 (19/9/2026 — myWord v2.7.0 "nghe băng TRƯỚC, CLI sau"):
+  • `--asr-only --asr-out <file>`: CHỈ nghe băng (Parakeet, cache) rồi ghi {"words":[{word,start,end}], "text", "cache",
+    "audio", "dur"} ra file — myWord dùng text này làm BẢN CHUẨN cho CLI sửa chữ câu hỏi theo băng. Không đụng .xlsm.
+  • Parakeet nay chạy qua Popen: dòng `[pk] …` được chuyển tiếp ngay (không gom tới cuối) để app vẽ tiến trình;
+    trước khi nghe in `@@TD {"dur": <giây băng>}` (đo từ wav 16 kHz mono) để app ước lượng % theo thời lượng.
+
 ⛔ CHỈ ĐỌC nguyên liệu gốc (trừ file cache .pk.json nói trên); wav tạm ghi vào %TEMP%. Không đụng .xlsm/.txt/.mp3.
 Yêu cầu: Python 3 + openpyxl (đọc .xlsm), ffmpeg (dò), Parakeet venv E:\LAP TRINH APP\MODEL\_parakeet_venv (GPU).
 """
@@ -228,16 +234,35 @@ def run_parakeet(audio_path, tmpdir):
     subprocess.run([need_ffmpeg(), "-v", "error", "-y", "-i", audio_path, "-ac", "1", "-ar", "16000", wav], check=True)
     if not os.path.exists(PK_PY) or not os.path.exists(PK_SCRIPT):
         raise SystemExit(f"Không thấy Parakeet ({PK_PY} / {PK_SCRIPT}) — máy này chưa dựng kho MODEL")
+    # Đợt 346: thời lượng băng (wav 16 kHz mono 16-bit = 32.000 byte/giây) → app ước lượng % nhận dạng
+    try:
+        dur = max(0.0, (os.path.getsize(wav) - 44) / 32000.0)
+    except Exception:
+        dur = 0.0
+    log("@@TD " + json.dumps({"dur": round(dur, 1)}))
     log(">> Parakeet (GPU)…")
     t0 = time.time()
     base = os.path.join(tmpdir, "ftg_pk")
-    env = dict(os.environ, HF_HOME=os.path.join(MODEL_DIR, "_cache"), PYTHONIOENCODING="utf-8")
-    r = subprocess.run([PK_PY, PK_SCRIPT, wav, "--out", base, "--model", "v2"], capture_output=True, text=True,
-                       encoding="utf-8", errors="replace", env=env)
+    env = dict(os.environ, HF_HOME=os.path.join(MODEL_DIR, "_cache"), PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
+    # Đợt 346: Popen + đọc từng dòng để chuyển tiếp `[pk] nap model…` / `[pk] nhan dang…` NGAY (myWord vẽ tiến trình);
+    # bản cũ capture_output gom hết tới cuối nên app đứng im 40 s không biết máy đang làm gì. Đuôi log giữ để in khi lỗi.
+    duoi = []
+    p = subprocess.Popen([PK_PY, PK_SCRIPT, wav, "--out", base, "--model", "v2"], stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace", env=env)
+    for dong in p.stdout:
+        dong = dong.rstrip("\r\n")
+        if not dong.strip():
+            continue
+        duoi.append(dong)
+        if len(duoi) > 60:
+            duoi.pop(0)
+        if dong.startswith("[pk]"):
+            log("   " + dong)
+    rc = p.wait()
     pk = base + ".json"
-    if r.returncode != 0 or not os.path.exists(pk):
-        sys.stderr.write(r.stdout[-3000:] + "\n" + r.stderr[-3000:] + "\n")   # giữ trọn đuôi lỗi, không cắt gọn
-        raise SystemExit("Parakeet lỗi (mã thoát %d)" % r.returncode)
+    if rc != 0 or not os.path.exists(pk):
+        sys.stderr.write("\n".join(duoi) + "\n")   # giữ trọn đuôi lỗi, không cắt gọn
+        raise SystemExit("Parakeet lỗi (mã thoát %d)" % rc)
     log(f"   xong sau {time.time() - t0:.1f}s")
     return json.load(io.open(pk, encoding="utf-8"))
 
@@ -400,6 +425,28 @@ def align_only(a, mats, code):
     log(f"XONG: {len(out)} mốc giây · {weak} câu cần thầy xem → {a.align_out}")
     log("@@KQ " + json.dumps({"n": len(out), "weak": weak, "cache": from_cache}, ensure_ascii=False))
 
+def asr_only(a, mats, code):
+    """Đợt 346 — myWord v2.7.0 gọi ĐẦU TIÊN khi "Bắt đầu tạo": chỉ nghe băng (Parakeet, cache cạnh audio) rồi ghi
+    {"words","text","cache","audio","dur"} ra --asr-out. Text này là BẢN CHUẨN để CLI sửa chữ câu hỏi theo băng.
+    Dòng cuối stdout: @@KQ {"n","cache","dur"}."""
+    src = mats["audio"] or mats["mp4"]
+    if not src:
+        raise SystemExit(f"Không thấy file nghe của {code} (AUDIO\\{code}.mp3 hay {code}.mp4) trong {LISTEN_ROOT}")
+    log(f">> nghe băng: {src}")
+    with tempfile.TemporaryDirectory(prefix="ftg_") as tmp:
+        cp = cache_path(src)
+        audio = src if (not a.no_cache and os.path.exists(cp)) else (mats["audio"] or extract_audio(mats["mp4"], tmp))
+        asr, from_cache = load_or_run_parakeet(audio, tmp, use_cache=not a.no_cache, cache_for=src)
+    words = [w for w in asr if isinstance(w, dict) and w.get("start") is not None]
+    dur = round(float(words[-1].get("end") or 0), 1) if words else 0.0
+    out = {"words": words, "text": " ".join(str(w.get("word", "")).strip() for w in words if str(w.get("word", "")).strip()),
+           "cache": from_cache, "audio": src, "dur": dur}
+    tmp_out = a.asr_out + ".tmp"
+    io.open(tmp_out, "w", encoding="utf-8").write(json.dumps(out, ensure_ascii=False))
+    os.replace(tmp_out, a.asr_out)
+    log(f"XONG: {len(words)} chữ · {dur:.1f} s băng{' (cache)' if from_cache else ''} → {a.asr_out}")
+    log("@@KQ " + json.dumps({"n": len(words), "cache": from_cache, "dur": dur}, ensure_ascii=False))
+
 def main():
     ap = argparse.ArgumentParser(description="Chuẩn bị act Find the gap từ một bài nghe")
     ap.add_argument("code", nargs="?", help="mã bài, vd LSA2-S1.T1.P1-2-3")
@@ -410,6 +457,8 @@ def main():
     ap.add_argument("--require-fillgap", action="store_true", help="myWord: file .xlsm PHẢI có sheet FILLGAP, không thì dừng (không rơi về gợi ý máy từ .txt)")
     ap.add_argument("--align-json", help="Đợt 343 (myWord v2.6.0): CHỈ lấy mốc giây — đọc [{speaker,text có [ngoặc]}] từ file JSON này, ghi [{start,end,ratio,heard}] ra --align-out, không tạo gói")
     ap.add_argument("--align-out")
+    ap.add_argument("--asr-only", action="store_true", help="Đợt 346 (myWord v2.7.0): CHỈ nghe băng (Parakeet, cache) rồi ghi words+text ra --asr-out")
+    ap.add_argument("--asr-out")
     a = ap.parse_args()
     code = a.code or a.code_opt
     if not code:
@@ -421,6 +470,10 @@ def main():
         f = find_materials(code)
         for k in mats:
             mats[k] = mats[k] or f.get(k)
+    if a.asr_only:
+        if not a.asr_out:
+            ap.error("--asr-only cần --asr-out")
+        return asr_only(a, mats, code)
     if a.align_json:
         return align_only(a, mats, code)
     if not mats["txt"] and not mats["xlsm"]:
