@@ -8,7 +8,14 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **16/9/2026 (Đợt 334 — SPEED SORTING: thầy bấm tay live Đợt 329 báo 3 lỗi băng
+> Cập nhật lần cuối: **19/9/2026 (Đợt 345 — DẤU ✓ BỘ NGHĨA TRONG FORM SET ASSIGNMENT NAY THEO LỚP: thầy mở form cho A2B
+> thấy ENG1 ✓ dù A2B chưa giao act — Đợt 322 cố ý để `bangDaGiao()` soi bài giao của act ở MỌI lớp (A1A/A2A đã giao ENG1·ANAGRAM
+> cùng act, đo trên bản sao kho 18/9). Vá `core/assignment-ui.js`: `thuMucLopDangChon()` (đọc thư mục lớp y hệt đường START) +
+> `locCungLop()` (cùng thư mục lớp HOẶC thư mục con `DONE` — bài hôm trước của chính lớp vẫn tính; lớp chưa có thư mục so chữ
+> lớp đầu tiêu đề) lọc trước khi gom Map ✓; gõ ô Class/tiêu đề ⇒ Options vẽ lại sau 350 ms. Phép CHẶN `doStart()` KHÔNG đổi.
+> Bench form thật `scratch/dot345-tich-theo-lop.html` 13/13 (đối chứng ngược mã cũ 7/13), hồi quy dot332 36/36 + dot322 5/5.
+> ✅ Commit + push. ⬜ Thầy CHƯA bấm tay trang thật. Xem GHI CHU DU AN.md Đợt 345)**.
+> Trước đó: **16/9/2026 (Đợt 334 — SPEED SORTING: thầy bấm tay live Đợt 329 báo 3 lỗi băng
 > chuyền, đã vá `templates/group-sort/group-sort.js` (1 file): lane bắt đầu TRỐNG rồi ô đầu trượt vào từ mép
 > (`spawnChip(-chipW)`) thay vì 5 ô hiện sẵn giữa lane · băng LIỀN một dải — bỏ hằng `BELT_SLOTS = 5` (gốc
 > của "cụm 5 ô + lỗ ~3 ô chạy vòng"), `loop()` xoá ô ra hẳn mép phải rồi sinh ô kế ngay khi ô trái nhất lọt hẳn
@@ -5377,7 +5384,9 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **18/9/2026 khuya sau Đợt 344 — ✅ đã commit + push + THẦY NGHIỆM THU Import Find the gap** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **19/9/2026 sau Đợt 345 — ✓ bộ nghĩa theo LỚP, ✅ đã commit + push, ⬜ thầy chưa bấm tay** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+
+> **Đợt 345 (19/9/2026, thầy báo qua myLesson kèm ảnh):** dấu ✓ cạnh ENG1/VI1/VI2 trong Options của form Set assignment nay chỉ đếm bài giao **của lớp đang điền** (thư mục lớp + con `DONE`), không còn gom mọi lớp như Đợt 322 cố ý để; gõ ô Class/tiêu đề là ✓ vẽ lại. Phép chặn START không đổi. Bench form thật 13/13, đối chứng mã cũ 7/13. ⬜ Thầy bấm tay: mở form cho lớp chưa giao act mà lớp khác đã giao → không ✓.
 
 > ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (16/9/2026 — sau **Đợt 339** (Options × Template · IPA · Fight → mọi mode), **Đợt 338** (đồng bộ Settings qua Firestore), **Đợt 337** (Default course options), **Đợt 335 → 336** (Unjumble) và **Đợt 334** (Speed sorting) — tất cả ✅ ĐÃ COMMIT + PUSH + LIVE, ⬜ THẦY CHƯA BẤM TAY LẠI)
 >

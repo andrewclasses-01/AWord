@@ -513,6 +513,48 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 345 (19/9/2026, thầy báo qua myLesson kèm ảnh form Set assignment lớp A2B) — **DẤU ✓ BỘ NGHĨA TRONG OPTIONS NAY THEO LỚP: A2B KHÔNG ĐEO ✓ CỦA A1A/A2A** · sửa `core/assignment-ui.js` (1 file) · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY TRANG THẬT
+
+Thầy: mở form cho **A2B** (act LSB1-S1.T1.P2, template ANAGRAM), chip **ENG1 đã đeo ✓** dù A2B chưa hề giao act này — thầy
+mới giao cho A2A. Nghi các lớp khác cũng dính. Tích không chặn tạo bài, chỉ gây hiểu lầm "đã trùng".
+
+### Gốc rễ
+`bangDaGiao()` (nguồn của Map `daGiao` mà `core/options-panel.js::paintHalf()` dùng để bật ✓) gọi `baiGiaoCuaAct()`
+**KHÔNG kèm `folderId`** ⇒ gom bài giao của act này ở **MỌI lớp**. Đây là lựa chọn CỐ Ý của Đợt 322 (11/9): hôm đó chỉ vá
+phép CHẶN trong `doStart()` theo lớp, còn dấu ✓ được coi là "thông tin tham khảo — bộ này đã giao ở đâu rồi". Thực tế thầy đọc
+✓ là "LỚP NÀY đã giao bộ này + template này". Xác minh trên bản sao kho 18/9 (`_SAO LUU FIRESTORE/2026-09-18_2154/
+assignments.json`): cùng `activityId act_mu16nv52_b075i` đã có `6xz54t` **A1A**_17/9.23:20_LSB1-S1.T1.P2 ENG1/ANAGRAM
+(+ A2A ngày 19/9 chưa vào bản sao) ⇒ mọi lớp mở act này đều thấy ENG1 ✓ ở ANAGRAM. Lỗi áp cho MỌI lớp, không riêng A2B.
+
+### Vá (`core/assignment-ui.js`, khối Set assignment)
+- `thuMucLopDangChon()`: thư mục lớp của form ĐANG điền, đọc **y hệt đường START**: Results theo chữ đầu TIÊU ĐỀ
+  (`classFolderFor`), Courses theo ô Class (`courseResultsFor`).
+- `locCungLop(folderId)`: "cùng lớp" = cùng thư mục lớp **hoặc thư mục con của nó** — vì `archiveOlderSiblings` dồn bài hôm
+  trước vào `<lớp>/DONE`; chỉ so `folderId` bằng nhau là bài hôm qua của CHÍNH lớp này biến mất khỏi ✓ (sai chiều ngược).
+  Lớp chưa có thư mục (Results top-level) ⇒ so chữ lớp đầu tiêu đề (`classTokenOf`, nhập thêm từ assignments.js);
+  Courses không có thư mục lớp ⇒ rỗng.
+- `bangDaGiao()` lọc qua `locCungLop(thuMucLopDangChon())` rồi mới gom Map như cũ (khoá `text|eng1`, mảng nhãn template —
+  Đợt 312/316 giữ nguyên).
+- `veLaiTichTheoLop()` (hoãn 350 ms) gắn vào `classInput.oninput` + `titleInput.oninput`: Options trước chỉ vẽ lúc mở form +
+  đổi template, nay thầy sửa ô Class / chữ lớp trong tiêu đề là ✓ vẽ lại theo lớp mới.
+- ⛔ Phép CHẶN trong `doStart()` **KHÔNG đổi** (vẫn so đúng MỘT thư mục như Đợt 322): giao lại cho lớp sau nhiều ngày (bài cũ
+  trong DONE) là việc thường — ✓ nhắc, không chặn. Chú thích Đợt 322 tại `baiGiaoCuaAct` đã sửa cho khỏi nói ngược.
+
+### Đã kiểm
+- `node --input-type=module --check` sạch; 0 bare LF/CR (file CRLF 1692 dòng).
+- Bàn thử **form thật** `scratch/dot345-tich-theo-lop.html` (dev server 5591, kho giả `scratch/fake-firebase-345.js` =
+  fake-firebase-full + `auth`/`firebaseConfig` — bộ full cũ thiếu 2 export nên chưa từng chạy được assignment-ui): Results
+  A1A · A2A · A2B · A2B/DONE + bài top-level "C1X_…", cùng 1 act 3 bộ. **13/13 ĐẠT**: A2B mở form ENG1 KHÔNG ✓ · VI1 ✓
+  (từ DONE) · VI2 không ✓ (template khác) · gõ A2A/A1A chỉ ENG1 ✓ · C1X ✓ theo chữ lớp · ZZZ không ✓ · gõ lại A2B về đúng ·
+  tiêu đề đổi theo · A2A+ENG1+ANAGRAM START bị chặn "in this class" · A2B+ENG1+ANAGRAM START KHÔNG bị chặn.
+- **Đối chứng ngược** (stash bản vá, chạy lại đúng bench): **7/13** — trượt đúng 6 phép về ✓ (A2B thấy `["ENG1","VI1"]`, gõ lớp
+  nào cũng vậy). Bench thật sự bắt được lỗi, không phải xanh vì không đo gì.
+- Hồi quy: `scratch/dot332-title.html` 36/36 · `scratch/dot322-folderid-filter-test.mjs` 5/5. Console 0 lỗi.
+
+### VIỆC ĐANG CHỜ
+⬜ Thầy mở myLesson → đúp ô act của một lớp CHƯA giao act mà lớp khác đã giao → xác nhận chip không ✓; đổi ô Class sang lớp
+đã giao → ✓ hiện sau ~0,4 s. (Pages build 1–11 phút + cache 10 phút; myLesson là webview nên Thoát app → mở lại nếu còn thấy cũ.)
+
 ## Đợt 344 (18/9/2026 khuya, thầy kéo P2.xlsm lần 3 và báo "không thấy trong import") — **FILLGAP cột I AUDIO · hộp Import báo rõ "file này không có sheet FILLGAP"** · ✅ COMMIT + PUSH · ✅ THẦY NGHIỆM THU (kéo P1.xlsm vào trang thật → act FIND THE GAP, "ok ngon rồi")
 
 Điều tra: file thầy làm Find the gap là **P1.xlsm** (21:00, FILLGAP 50 dòng đủ mốc giây), còn file thầy kéo là **P2.xlsm** (chưa

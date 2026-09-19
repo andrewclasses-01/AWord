@@ -16,7 +16,7 @@ import { icons } from "./icons.js";
 import { qrSvg, copyQrImage, downloadQrPng } from "./qr.js";
 import {
   createAssignment, updateAssignment, trashAssignment, listResultsLight, readResultReview, listScores,
-  listAllAssignments, assignmentLink, classFolderFor, assignmentNameTaken,
+  listAllAssignments, assignmentLink, classFolderFor, classTokenOf, assignmentNameTaken,
   courseResultsFor, COURSE_RESULTS_NAME,
   assignmentsToArchive, hasNewResults, markAssignmentSeen,
   nameKey, prettiestName, rankCompare
@@ -443,6 +443,7 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe, duoiMau } = {
       classTouched = true;
       titleInput.value = replaceClassToken(titleInput.value, classInput.value);
       err.textContent = "";
+      veLaiTichTheoLop();   // Đợt 345 — dấu ✓ trong Options đi theo lớp
     };
     // ⭐ Đợt 247 — lớp điền sẵn từ myLesson (bridge `giaoBai`). Đặt
     // `classTouched` để cú đoán theo thư mục của act (khối act.parentId dưới)
@@ -588,16 +589,56 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe, duoiMau } = {
     // tạo bằng cách đổi template (`sourceAct`), nên một act đổi sang QUIZ vẫn
     // đếm về đúng act con của nó.
     // ⭐⭐⭐ Đợt 322 (thầy báo 11/9/2026) — CHẶN TRÙNG CẮN NHẦM LỚP KHÁC. `folderId`
-    // optional: dấu ✓ trong Options (`bangDaGiao()`, gọi KHÔNG kèm tham số) vẫn
-    // soi TOÀN BỘ bài giao của act này ở MỌI lớp — đó là thông tin "bộ này đã
-    // giao ở đâu rồi", cố ý không đổi. Còn phép CHẶN HẲN trong `doStart()` (dòng
-    // dưới) mới cần đúng LỚP đang tạo, nên truyền `folderId` vào để lọc thêm.
+    // optional: gọi KHÔNG kèm tham số thì soi TOÀN BỘ bài giao của act này ở MỌI
+    // lớp; phép CHẶN HẲN trong `doStart()` (dòng dưới) cần đúng LỚP đang tạo nên
+    // truyền `folderId` vào để lọc thêm.
     const baiGiaoCuaAct = (folderId) => (allAssignments || [])
       .filter(a => a && !a.trashed && a.activityId === act.id &&
         (folderId === undefined || (a.folderId ?? null) === (folderId ?? null)));
+    // ⭐⭐⭐ Đợt 345 (thầy báo 19/9/2026, kèm ảnh) — DẤU ✓ CŨNG PHẢI THEO LỚP.
+    // Đợt 322 cố ý để `bangDaGiao()` (dấu ✓ cạnh ENG1/VI2… trong Options) soi
+    // MỌI lớp, coi đó là "thông tin tham khảo". Thực tế thầy đọc dấu ✓ là "LỚP
+    // NÀY đã giao bộ này + template này rồi, đừng tạo lặp": mở form cho A2B, act
+    // LSB1-S1.T1.P2 chưa hề giao cho A2B mà ENG1 vẫn ✓ (ANAGRAM) — vì A1A/A2A đã
+    // giao đúng cặp đó cho cùng act (đo trên bản sao kho 18/9: `6xz54t`
+    // A1A_17/9.23:20_… ENG1/ANAGRAM, cùng `activityId`). Nay dấu ✓ chỉ đếm bài
+    // giao CỦA LỚP ĐANG ĐIỀN TRONG FORM — lớp nào của lớp đấy, như phép chặn.
+    //
+    // "Cùng lớp" = cùng THƯ MỤC LỚP **hoặc thư mục con của nó**: `archiveOlderSiblings`
+    // dồn bài giao của ngày trước vào `<lớp>/DONE`, nên chỉ so bằng `folderId`
+    // là bài hôm qua của chính lớp này biến mất khỏi dấu ✓ — sai theo chiều
+    // ngược lại. (Phép CHẶN trong `doStart()` vẫn so đúng một thư mục như Đợt
+    // 322: giao lại cho lớp sau nhiều ngày là việc thường, chỉ nhắc bằng ✓,
+    // không chặn.) Lớp chưa có thư mục (Results top-level) thì so CHỮ LỚP đầu
+    // tiêu đề (`classTokenOf`) — trong Courses không có ca này (không thư mục
+    // lớp = chưa có bài nào của lớp).
+    // Thư mục lớp đọc y hệt đường START đọc: Results theo chữ đầu TIÊU ĐỀ
+    // (`classFolderFor`), Courses theo ô Class (`courseResultsFor`).
+    const thuMucLopDangChon = () => {
+      if (inCourses) {
+        const r = courseResultsFor(act.parentId, folders, classInput.value.trim());
+        return r.classFolder ? r.classFolder.id : null;
+      }
+      return classFolderFor(titleInput.value, folders);
+    };
+    const locCungLop = (folderId) => {
+      if (folderId) {
+        const tap = new Set([folderId]);          // thư mục lớp + mọi thư mục con (DONE…)
+        for (let them = true; them;) {
+          them = false;
+          (folders || []).forEach(f => {
+            if (f && f.parentId && tap.has(f.parentId) && !tap.has(f.id)) { tap.add(f.id); them = true; }
+          });
+        }
+        return a => tap.has(a.folderId);
+      }
+      if (inCourses) return () => false;
+      const token = classTokenOf(titleInput.value).toLowerCase();
+      return a => (a.folderId ?? null) === null && classTokenOf(a.title).toLowerCase() === token;
+    };
     const bangDaGiao = () => {
       const m = new Map();
-      baiGiaoCuaAct().forEach(a => {
+      baiGiaoCuaAct().filter(locCungLop(thuMucLopDangChon())).forEach(a => {
         const k = boCuaBaiGiao(a);
         if (!k) return;
         const ten = templateLabel(a.activityType) || a.activityType || "?";
@@ -669,6 +710,17 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe, duoiMau } = {
       });
     }
     renderOptions();
+    // ⭐ Đợt 345 — dấu ✓ nay theo LỚP, mà lớp đọc từ ô Class / chữ đầu tiêu đề,
+    // nên thầy sửa hai ô đó là phải vẽ lại Options (trước chỉ vẽ lúc mở form +
+    // lúc đổi template). Hoãn 350 ms gom phím gõ; `ensureTemplate` đã có sẵn
+    // trong bộ nhớ nên lượt vẽ lại xong trong một khung hình, không thấy nháy.
+    // Khai bằng `function` (hoisted): hai handler `oninput` gắn ở khối trên,
+    // trước chỗ này về mặt chữ.
+    let hoanVeTich = 0;
+    function veLaiTichTheoLop() {
+      clearTimeout(hoanVeTich);
+      hoanVeTich = setTimeout(() => { if (optsHost.isConnected) renderOptions(); }, 350);
+    }
 
     // --- where it will be filed in Results (worked out from the title).
     // ⚠️ Đợt 250 — the LINE that said so is gone (thầy: no prose), but the
@@ -698,7 +750,8 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe, duoiMau } = {
         titleInput.value = replaceClassToken(titleInput.value, classInput.value);
       }).catch(() => { /* no guess, teacher types it */ });
     }
-    titleInput.oninput = () => { err.textContent = ""; };
+    // Đợt 345 — Results xếp theo CHỮ ĐẦU tiêu đề, nên sửa tiêu đề cũng có thể đổi lớp.
+    titleInput.oninput = () => { err.textContent = ""; veLaiTichTheoLop(); };
 
     body.append(err);
     modal.append(body);
