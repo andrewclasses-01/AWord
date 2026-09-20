@@ -356,6 +356,47 @@
 .aw-rr-start:active { transform: translateY(calc(.4 * var(--aw-u))); box-shadow: 0 calc(.3 * var(--aw-u)) 0 #b07a08; }
 
 /* =============================================================
+   FIGHT (Đợt 351) — `tpl.fightLayout: "shared-top"`: the race lives in the
+   match's shared area above the two boards (`.aw-rr-shared`, an element
+   core/fight.js builds; this module sets `--aw-u` on it itself), and each
+   board's stage (`.is-fightboard`) is just that team's question panel.
+   ============================================================= */
+.aw-rr-shared {
+  font-family: "Baloo 2", system-ui, sans-serif;
+  background: radial-gradient(120% 90% at 70% 0%, #2a1a5e 0%, #160b3f 45%, #090520 100%);
+  color: #fff; user-select: none; -webkit-user-select: none;
+}
+/* 32.8u tall instead of 65.6u: the strip and the track are re-cut to fit */
+.aw-rr-shared .aw-rr-minimap { top: calc(1.2 * var(--aw-u)); height: calc(1.8 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-track { top: calc(4 * var(--aw-u)); height: calc(27 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-rocket { width: calc(13 * var(--aw-u)); transition: left .6s cubic-bezier(.2,.9,.25,1); }
+.aw-rr-shared .aw-rr-pilot { font-size: calc(13 * var(--aw-u) * .155); }
+.aw-rr-shared .aw-rr-tag { font-size: calc(2 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-planet.is-big { top: calc(6 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-bannertxt { font-size: calc(7 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-bannertxt.is-go { font-size: calc(9 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-bannertxt.is-turbo { font-size: calc(6 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-bannertxt.is-win { font-size: calc(6 * var(--aw-u)); }
+
+/* the board below: team chip + question + tiles filling the whole frame */
+.aw-rr-stage.is-fightboard .aw-rr-panel { top: calc(1.6 * var(--aw-u)); bottom: calc(1.6 * var(--aw-u)); gap: calc(1 * var(--aw-u)); }
+.aw-rr-stage.is-fightboard .aw-rr-turn { height: calc(5 * var(--aw-u)); font-size: calc(3.2 * var(--aw-u)); letter-spacing: .08em; }
+.aw-rr-stage.is-fightboard .aw-rr-turnbadge { width: calc(4.4 * var(--aw-u)); height: calc(4.4 * var(--aw-u)); font-size: calc(2.8 * var(--aw-u)); }
+.aw-rr-stage.is-fightboard .aw-rr-q { min-height: calc(12 * var(--aw-u)); max-height: calc(18 * var(--aw-u)); border-color: var(--rc, #7b5bd6); }
+.aw-rr-stage.is-fightboard .aw-rr-qtext { font-size: calc(4.4 * var(--aw-u) * var(--fit)); }
+.aw-rr-stage.is-fightboard .aw-rr-tiletext { font-size: calc(3.6 * var(--aw-u) * var(--tw, 1)); }
+.aw-rr-stage.is-fightboard .aw-rr-answers { gap: calc(1.2 * var(--aw-u)); }
+
+/* "too slow" / result withheld: the tiles go grey (Quiz's rule) */
+.aw-rr-tile { --tile-eff: var(--tile); --tile-dark-eff: var(--tile-dark); background: var(--tile-eff); box-shadow: 0 calc(.6 * var(--aw-u)) 0 var(--tile-dark-eff); }
+.aw-rr-answers.is-fightlost { opacity: .55; }
+.aw-rr-answers.is-fightlost .aw-rr-tile { --tile-eff: #b3bac3; --tile-dark-eff: #98a0aa; }
+/* the referee puts `.is-concealed` on the board that finished first while the
+   other is still playing: this template's "answer trace" is its tile row */
+.aw-fight-board.is-concealed .aw-rr-answers { opacity: .12; filter: saturate(.1); }
+.aw-fight-board.is-concealed .aw-rr-answers, .aw-fight-board.is-concealed .aw-rr-answers * { transition: opacity .18s ease; }
+
+/* =============================================================
    PHONE (full-bleed frame ≈ 375×246px, Đợt 258): the track becomes a thin
    strip and the question takes the room. ⚠️ Must stay the LAST block: a
    @media rule adds no specificity, so anything below it would win.

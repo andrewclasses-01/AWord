@@ -24,6 +24,15 @@
 //    go round the teams (and, if a class is picked, round its pupils); a right
 //    answer moves that team's rocket, a wrong one stalls it and the question
 //    is spent. The race ends when every team's questions are used up.
+//  • FIGHT (MODE button, Đợt 351 — thầy 20/9/2026): the core referee runs the
+//    match exactly as it does for Quiz (same question on both boards, first
+//    right answer wins the round, Time delay / Speed bonus / In turns from the
+//    match Options), but the frame is `tpl.fightLayout: "shared-top"`: ONE
+//    race across the top (both teams' rockets on one track, drawn by this
+//    module into `ctl.sharedRoot()`) and each board below is that team's
+//    question panel. A right answer fires that team's rocket one segment; a
+//    wrong one stalls it and the question is spent (no retry). Lives, crates
+//    and rivals are off in a match.
 //  • Real-time WITHOUT requestAnimationFrame (a hidden tab freezes rAF — core
 //    rule): one setInterval tick with a delta clamp drives rivals, the question
 //    clock and the crate. CSS transitions do the smoothing.
@@ -88,6 +97,11 @@ const HULLS = [
 ];
 const PILOTS = ["🐱", "🐶", "🦊", "🐼", "🐸", "🐧", "🐨", "🐯"];
 const RIVAL_NAMES = ["Mia", "Leo", "Zoe", "Noah", "Aria", "Liam", "Kai", "Ella"];
+// FIGHT — the two boards' rockets: left board = blue cat, right board = red fox.
+const FIGHT_TEAMS = [
+  { name: "TEAM 1", pilot: "🐱", hull: HULLS[2] },
+  { name: "TEAM 2", pilot: "🦊", hull: HULLS[1] }
+];
 
 const ROCKET_SVG = `<svg viewBox="0 0 160 70" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
   <path class="aw-rr-fin" d="M34 16 L10 4 L26 30 Z"/>
@@ -103,7 +117,6 @@ const FLAME_SVG = `<svg viewBox="0 0 90 50" xmlns="http://www.w3.org/2000/svg" a
   <path class="aw-rr-flame-in" d="M88 25 C74 14 46 14 26 25 C46 36 74 36 88 25 Z"/>
 </svg>`;
 const CRATE_ICON = { shield: "🛡", turbo: "🚀", meteor: "☄" };
-const CRATE_NAME = { shield: "SHIELD", turbo: "TURBO", meteor: "METEOR" };
 const MEDAL = ["🥇", "🥈", "🥉"];
 
 function placeWord(n) {
@@ -144,8 +157,88 @@ function fitLabelWidth(node, min = 0.4) {
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(run).catch(() => {});
 }
 
-// Menu pause (Đợt 91) bridge — module-level, AWord mounts one activity at a time.
-let rrPauseHandlers = null;
+// ---- the scene: sky + minimap + track + fx + banner, built into any host ----
+// In SOLO / TEAMS the host is this play's own `.aw-rr-stage`; in FIGHT it is
+// the match's shared area above the two boards (`ctl.sharedRoot()`), where the
+// ONE scene holds both teams' rockets.
+function buildScene(host) {
+  const sky = el("div", "aw-rr-sky");
+  sky.append(el("div", "aw-rr-stars is-far"), el("div", "aw-rr-stars is-near"),
+    Object.assign(el("img", "aw-rr-planet is-sun"), { src: imgUrl("sun.webp"), alt: "" }),
+    Object.assign(el("img", "aw-rr-planet is-big"), { src: imgUrl("bigplanet.webp"), alt: "" }),
+    Object.assign(el("img", "aw-rr-planet is-green"), { src: imgUrl("greenplanet.webp"), alt: "" }));
+  const minimap = el("div", "aw-rr-minimap");
+  const track = el("div", "aw-rr-track");
+  const lanesEl = el("div", "aw-rr-lanes");
+  const finishEl = el("div", "aw-rr-finish");
+  finishEl.style.left = (TRACK_END + 7) + "%";
+  track.append(finishEl, lanesEl);
+  const fxLayer = el("div", "aw-rr-fx");
+  const banner = el("div", "aw-rr-banner");
+  host.append(sky, minimap, track, fxLayer, banner);
+  return { host, sky, minimap, track, lanesEl, fxLayer, banner };
+}
+// One rocket's DOM (flame · hull · pilot · name tag) + its minimap dot.
+function buildRocketEl(scene, r, laneIdx, laneCount) {
+  const lane = el("div", "aw-rr-lane");
+  lane.style.setProperty("--lane", laneIdx);
+  const rk = el("div", "aw-rr-rocket" + (r.isPlayer ? " is-player" : ""));
+  rk.dataset.side = String(r.id);
+  rk.style.setProperty("--rc", r.hull.c);
+  rk.style.setProperty("--rd", r.hull.d);
+  rk.style.setProperty("--x", TRACK_START);
+  rk.style.setProperty("--wob", r.wobble.toFixed(2) + "s");
+  const flame = el("div", "aw-rr-flame", FLAME_SVG);
+  const body = el("div", "aw-rr-body", ROCKET_SVG);
+  const pilot = el("div", "aw-rr-pilot", r.pilot);
+  const tag = el("div", "aw-rr-tag", "");
+  tag.textContent = r.name;
+  rk.append(flame, body, pilot, tag);
+  lane.append(rk);
+  scene.lanesEl.append(lane);
+  const dot = el("div", "aw-rr-dot" + (r.isPlayer ? " is-player" : ""));
+  dot.style.setProperty("--rc", r.hull.c);
+  dot.style.setProperty("--x", TRACK_START);
+  scene.minimap.append(dot);
+  r.el = rk; r.tag = tag; r.dot = dot;
+  void laneCount;
+}
+
+// ---- FIGHT: the one shared scene both boards draw into (module-level; AWord
+// runs one match at a time). Rebuilt whenever the match hands us a new root.
+let rrFightScene = null;
+function ensureFightScene(ctl) {
+  const host = ctl.sharedRoot && ctl.sharedRoot();
+  if (!host) return null;
+  if (rrFightScene && rrFightScene.host === host) return rrFightScene;
+  if (rrFightScene && rrFightScene.ro) { try { rrFightScene.ro.disconnect(); } catch { /* ignore */ } }
+  host.innerHTML = "";
+  host.classList.add("aw-rr-shared");
+  const scene = buildScene(host);
+  scene.lanesEl.style.setProperty("--lanes", 2);
+  scene.rockets = FIGHT_TEAMS.map((t, i) => {
+    const r = { id: i, name: t.name, pilot: t.pilot, hull: t.hull, isPlayer: false, p: 0, L: 1,
+                el: null, tag: null, dot: null, done: false, place: 0, wobble: i * 1.3 };
+    buildRocketEl(scene, r, i, 2);
+    return r;
+  });
+  const flag = el("div", "aw-rr-dot is-flag", "🏁");
+  flag.style.setProperty("--x", TRACK_END);
+  scene.minimap.append(flag);
+  scene.finishedCount = 0;
+  // `--aw-u` (1% of the width) is what every size in this scene is written in.
+  // core/unit.js only sets it on `.aw-stage`; the shared area is not one, so
+  // this module measures it itself. ⚠️ CONTENT width, same as core/unit.js.
+  const setUnit = () => { host.style.setProperty("--aw-u", (host.clientWidth / 100).toFixed(3) + "px"); };
+  setUnit();
+  if (window.ResizeObserver) { scene.ro = new ResizeObserver(setUnit); scene.ro.observe(host); }
+  else window.addEventListener("resize", setUnit);
+  rrFightScene = scene;
+  return scene;
+}
+
+// Menu pause (Đợt 91) bridge — one handler per live mount (a match has TWO).
+const rrPauseHandlers = new Set();
 
 const rocketRaceTemplate = {
   type: "rocket_race",
@@ -163,6 +256,11 @@ const rocketRaceTemplate = {
   checkOrder: ["shuffle", "shuffleAnswers", "showAnswers"],
   // Planets are dropped in by JS (not CSS) so the engine's CSS scan can't see them.
   preloadImages: ["bigplanet.webp", "greenplanet.webp", "sun.webp"].map(imgUrl),
+  // FIGHT (Đợt 351): the MODE button offers a match; core/fight.js builds the
+  // frame with a shared area on top (`fightLayout`) that this module draws the
+  // race into. See the `_fight` branches in mount().
+  fightMode: true,
+  fightLayout: "shared-top",
 
   edit: openRocketRaceEditor,
 
@@ -183,7 +281,12 @@ const rocketRaceTemplate = {
   },
 
   // Options panel extras (engine calls this — CONG THUC MAU §5).
-  buildExtraOptions({ panel, draft, mkCell, mkSeg, mkSliderCell, addCheck }) {
+  // ⚠️ `inFight` (Đợt 259b): inside a match every control below is overridden
+  // by the referee (no rivals, no teams, no lives, the match's own Time delay in
+  // place of Question time, no crates) — so the cells are simply not built,
+  // which is the rule against dead switches. `draft` is left untouched.
+  buildExtraOptions({ panel, draft, mkCell, mkSeg, mkSliderCell, addCheck, inFight }) {
+    if (inFight) return;
     const cur = Number.isInteger(draft.lives) ? Math.min(MAX_LIVES, Math.max(0, draft.lives)) : 0;
     const lives = mkSliderCell({
       label: "Lives", min: 0, max: MAX_LIVES, step: 1, value: cur, tone: "green", offAt: 0,
@@ -234,38 +337,42 @@ const rocketRaceTemplate = {
   mount(root, activity, ui) {
     const opt = activity.options || {};
     const pointsOff = Math.max(0, Math.min(100, Number(opt.pointsOff) || 0));
+
+    // ----- FIGHT MODE — this play is one of two boards of a match. `_fight` is
+    // put here by core/fight.js; everything below falls back to ordinary
+    // single-board behaviour when it is absent (same pattern as Quiz).
+    const fight = activity._fight || null;
+    const fightSide = fight ? fight.side : 0;
+    const fightCtl = fight ? fight.ctl : null;
+    let fightBoardLock = false;            // set by the referee between rounds
+    const fightLocked = () => fightBoardLock || !!(fightCtl && fightCtl.isLocked(fightSide));
+    let fightPendingReveal = false;        // answered, ✓/✗ withheld until the round settles
+    const speaks = () => !fightCtl || fightCtl.speaks(fightSide);   // banners / shared sounds: board 0 only
+
     let items = (activity.content?.questions || [])
       .filter(q => q && Array.isArray(q.answers) && q.answers.some(a => a && a.correct) && q.answers.length >= 2);
-    if (opt.shuffleQuestions) items = shuffle(items);
+    // ⚠️ In a match the referee owns the order (both boards must hold the same
+    // question at the same index) — the match act already has shuffle forced off.
+    if (opt.shuffleQuestions && !fightCtl) items = shuffle(items);
     const N = items.length;
 
     // Teacher vs pupil device: the engine strips its toolbar under the frame in
     // student mode (same signal Running team relies on). Teams mode is a
     // classroom thing — a homework link always races solo.
     const isTeacher = !!document.querySelector(".aw-below-right");
-    const teamsMode = opt.rrMode === "teams" && isTeacher;
+    const teamsMode = !fightCtl && opt.rrMode === "teams" && isTeacher;
     const rivalCount = clampInt(opt.rrRivals, 3, 5, 4);
     const teamCount = clampInt(opt.rrTeams, 2, MAX_ROCKETS, 2);
     const rivalSecs = RIVAL_SECS[opt.rrSpeed] || RIVAL_SECS.normal;
-    const powerups = opt.rrPowerups !== false && !teamsMode;
-    const questionMs = clampInt(opt.rrQuestionSeconds, 0, 60, 0) * 1000;   // 0 = untimed
+    const powerups = opt.rrPowerups !== false && !teamsMode && !fightCtl;
+    const questionMs = fightCtl ? 0 : clampInt(opt.rrQuestionSeconds, 0, 60, 0) * 1000;   // 0 = untimed
 
     // ---- scene ----
     root.innerHTML = "";
-    const stage = el("div", "aw-rr-stage" + (teamsMode ? " is-teams" : ""));
-    const sky = el("div", "aw-rr-sky");
-    sky.append(el("div", "aw-rr-stars is-far"), el("div", "aw-rr-stars is-near"),
-      Object.assign(el("img", "aw-rr-planet is-sun"), { src: imgUrl("sun.webp"), alt: "" }),
-      Object.assign(el("img", "aw-rr-planet is-big"), { src: imgUrl("bigplanet.webp"), alt: "" }),
-      Object.assign(el("img", "aw-rr-planet is-green"), { src: imgUrl("greenplanet.webp"), alt: "" }));
-    const minimap = el("div", "aw-rr-minimap");
-    const track = el("div", "aw-rr-track");
-    const lanesEl = el("div", "aw-rr-lanes");
-    const finishEl = el("div", "aw-rr-finish");
-    finishEl.style.left = (TRACK_END + 7) + "%";
-    track.append(finishEl, lanesEl);
-    const fxLayer = el("div", "aw-rr-fx");
-    const banner = el("div", "aw-rr-banner");
+    const stage = el("div", "aw-rr-stage" + (teamsMode ? " is-teams" : "") + (fightCtl ? " is-fightboard" : ""));
+    // The race scene: inside this stage, or — in a match — the ONE shared area.
+    const scene = fightCtl ? ensureFightScene(fightCtl) : buildScene(stage);
+    const sceneRoot = fightCtl ? (scene ? scene.host : stage) : stage;
     const panel = el("div", "aw-rr-panel");
     const turnChip = el("div", "aw-rr-turn");
     const qBox = el("div", "aw-rr-q");
@@ -276,7 +383,7 @@ const rocketRaceTemplate = {
     qTimer.append(qTimerBar);
     const answersEl = el("div", "aw-rr-answers");
     panel.append(turnChip, qBox, qTimer, answersEl);
-    stage.append(sky, minimap, track, fxLayer, panel, banner);
+    stage.append(panel);
     root.append(stage);
 
     if (N === 0) {
@@ -297,34 +404,38 @@ const rocketRaceTemplate = {
     let tickTimer = null, last = 0;
     const timers = new Set();
     const later = (fn, ms) => { const id = setTimeout(() => { timers.delete(id); if (!dead) fn(); }, ms); timers.add(id); return id; };
-    const clearLater = id => { clearTimeout(id); timers.delete(id); };
-    let livesLeft = normLives(opt.lives);
+    let livesLeft = fightCtl ? null : normLives(opt.lives);
     const tilePalette = shuffle(PALETTE);
-    const voicePlayer = createVoicePlayer();
+    const voicePlayer = createVoicePlayer({
+      // FIGHT voice contract: the speaking board mirrors its glow to the other one.
+      onGlow(on) { if (fightCtl && fightCtl.speaks(fightSide)) fightCtl.reportVoiceState(fightSide, { playing: on }); }
+    });
+    let curVoiceBtn = null;
     let firstQuestionSpoken = false;
     let qDeadline = 0, qTickAt = 0;        // question clock (absolute deadline, shifted on pause)
     let turboUntil = 0;
     let shield = false;
     let crate = null;                      // { kind, el } — a power-up waiting in the player's lane
-    let cratesEarned = 0;
     let finishedCount = 0;                 // rockets over the line (rank = finishedCount + 1)
     let curItem = -1;                      // index into items of the question on screen
     let tiles = [];
+    let started = false;                   // GO has happened (fight: questions may be shown)
+    let fightIndex = 0;                    // fight: the index the referee last asked for
 
     // ---- rockets ----
     // Each rocket: { id, name, pilot, hull, p (segments), L (segments to finish),
     //   rate (segments/s, rivals only), el, tag, dot, done, place, stunUntil,
     //   queue (teams: item indices), pupils (teams: names), pupilPtr }
     let rockets = [];
-    let player = null;                     // solo: the pupil's rocket
+    let player = null;                     // solo / fight: this board's rocket
     let queue = shuffle(items.map((_, i) => i));   // solo question order (wrong → back of the queue)
     let teamPtr = 0;                       // teams: whose turn
     // ⚠️ TDZ: declared HERE, above the first call into renderSetup() — a `let`
     // written next to the function that uses it is a ReferenceError at mount.
     let setupEl = null, classes = null, classError = "", pickedClassId = "";
 
-    if (teamsMode) buildTeams(); else buildSolo();
-    renderRockets();
+    if (fightCtl) buildFight(); else if (teamsMode) buildTeams(); else buildSolo();
+    if (!fightCtl) renderRockets();
     renderLives();
     ui.setScore(0);
     ui.onSubmit(finish, () => state.filter(s => s.attempts > 0).length);
@@ -337,7 +448,7 @@ const rocketRaceTemplate = {
       wasRunning = !!tickTimer;
       if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
       pausedAt = performance.now();
-      rrSound.hum.stop();
+      if (speaks()) rrSound.hum.stop();
     }
     function resumeGame() {
       if (finished || dead) return;
@@ -348,10 +459,31 @@ const rocketRaceTemplate = {
         rockets.forEach(r => { if (r.stunUntil) r.stunUntil += gap; });
         pausedAt = 0;
       }
-      if (wasRunning) { last = performance.now(); tickTimer = setInterval(tick, TICK_MS); if (running) rrSound.hum.start(); }
+      if (wasRunning) { last = performance.now(); tickTimer = setInterval(tick, TICK_MS); if (running && speaks()) rrSound.hum.start(); }
       wasRunning = false;
     }
-    rrPauseHandlers = { pause: pauseGame, resume: resumeGame };
+    const pauseHandler = { pause: pauseGame, resume: resumeGame };
+    rrPauseHandlers.add(pauseHandler);
+
+    // ----- FIGHT: the referee drives this board through here (registered after
+    // the functions it calls exist; board 1 mounts later and is moved at once).
+    if (fightCtl) {
+      fightCtl.attach(fightSide, {
+        total: N,
+        goToIndex(i) { fightIndex = i; if (started) showQuestion(i); },
+        lock(on) { fightBoardLock = !!on; syncFightLock(); },
+        reveal: revealFightMarks,
+        review: buildReview,
+        toggleVoiceRemote(clipId) {
+          if (!fightCtl.speaks(fightSide)) return;
+          voicePlayer.toggle(clipId, curVoiceBtn);
+        },
+        syncVoice(st) {
+          if (!st || st.playing === undefined) return;
+          curVoiceBtn?.classList.toggle("is-playing", !!st.playing);
+        }
+      });
+    }
 
     if (teamsMode) renderSetup(); else startCountdown();
 
@@ -374,9 +506,8 @@ const rocketRaceTemplate = {
         rockets.push(r);
       }
       player = mkRocket(0, "YOU", "😎", HULLS[0], true);
+      rockets = shuffle(rockets);
       // the player rides the middle lane
-      rockets.splice(Math.floor(rockets.length / 2), 0, player);
-      rockets = shuffle(rockets.filter(r => !r.isPlayer)).slice();
       rockets.splice(Math.floor(rockets.length / 2), 0, player);
     }
     function buildTeams() {
@@ -388,6 +519,20 @@ const rocketRaceTemplate = {
       }
       dealTeams();
     }
+    // FIGHT: this board's rocket is the one the shared scene already holds for
+    // its side; the other team's rocket is that board's business.
+    function buildFight() {
+      rockets = scene ? scene.rockets : FIGHT_TEAMS.map((t, i) => mkRocket(i, t.name, t.pilot, t.hull, false));
+      player = rockets[fightSide];
+      player.p = 0; player.L = N; player.done = false; player.place = 0;
+      const t = FIGHT_TEAMS[fightSide];
+      turnChip.textContent = "";
+      const b = el("span", "aw-rr-turnbadge", t.pilot);
+      b.style.setProperty("--rc", t.hull.c);
+      turnChip.append(b, document.createTextNode(t.name));
+      turnChip.classList.add("is-on");
+      stage.style.setProperty("--rc", t.hull.c);
+    }
     // Deal the (already shuffled) questions round-robin — every team gets the
     // same number ±1, and a team's track is exactly as long as its hand.
     function dealTeams() {
@@ -397,36 +542,16 @@ const rocketRaceTemplate = {
     }
 
     function renderRockets() {
-      lanesEl.innerHTML = ""; minimap.innerHTML = "";
-      lanesEl.style.setProperty("--lanes", rockets.length);
-      rockets.forEach((r, laneIdx) => {
-        const lane = el("div", "aw-rr-lane");
-        lane.style.setProperty("--lane", laneIdx);
-        const rk = el("div", "aw-rr-rocket" + (r.isPlayer ? " is-player" : ""));
-        rk.style.setProperty("--rc", r.hull.c);
-        rk.style.setProperty("--rd", r.hull.d);
-        rk.style.setProperty("--x", TRACK_START);
-        rk.style.setProperty("--wob", r.wobble.toFixed(2) + "s");
-        const flame = el("div", "aw-rr-flame", FLAME_SVG);
-        const body = el("div", "aw-rr-body", ROCKET_SVG);
-        const pilot = el("div", "aw-rr-pilot", r.pilot);
-        const tag = el("div", "aw-rr-tag", "");
-        tag.textContent = r.name;
-        rk.append(flame, body, pilot, tag);
-        lane.append(rk);
-        lanesEl.append(lane);
-        const dot = el("div", "aw-rr-dot" + (r.isPlayer ? " is-player" : ""));
-        dot.style.setProperty("--rc", r.hull.c);
-        dot.style.setProperty("--x", TRACK_START);
-        minimap.append(dot);
-        r.el = rk; r.tag = tag; r.dot = dot;
-      });
+      scene.lanesEl.innerHTML = ""; scene.minimap.innerHTML = "";
+      scene.lanesEl.style.setProperty("--lanes", rockets.length);
+      rockets.forEach((r, laneIdx) => buildRocketEl(scene, r, laneIdx, rockets.length));
       const flag = el("div", "aw-rr-dot is-flag", "🏁");
       flag.style.setProperty("--x", TRACK_END);
-      minimap.append(flag);
+      scene.minimap.append(flag);
     }
     function xOf(r) { return TRACK_START + (Math.min(r.p, r.L) / r.L) * (TRACK_END - TRACK_START); }
     function paintRocket(r) {
+      if (!r.el) return;
       const x = xOf(r).toFixed(2);
       r.el.style.setProperty("--x", x);
       r.dot.style.setProperty("--x", x);
@@ -511,30 +636,29 @@ const rocketRaceTemplate = {
       let n = 3;
       const step = () => {
         if (n > 0) {
-          showBanner(String(n), "is-count");
-          rrSound.count(n);
+          if (speaks()) { showBanner(String(n), "is-count"); rrSound.count(n); }
           n--;
           later(step, 800);
         } else {
-          showBanner("GO!", "is-go");
-          rrSound.go();
+          if (speaks()) { showBanner("GO!", "is-go"); rrSound.go(); rrSound.hum.start(); }
           ui.startTimer?.();
           running = true;
+          started = true;
           last = performance.now();
           tickTimer = setInterval(tick, TICK_MS);
-          rrSound.hum.start();
-          rockets.forEach(r => r.el.classList.add("is-flying"));
-          later(nextQuestion, 500);
+          rockets.forEach(r => r.el && r.el.classList.add("is-flying"));
+          later(() => { if (fightCtl) showQuestion(fightIndex); else nextQuestion(); }, 500);
         }
       };
       later(step, 300);
     }
 
     function showBanner(text, cls, ms = 700) {
+      if (!scene) return;
       const b = el("div", "aw-rr-bannertxt " + (cls || ""), "");
       b.textContent = text;
-      banner.innerHTML = "";
-      banner.append(b);
+      scene.banner.innerHTML = "";
+      scene.banner.append(b);
       later(() => { if (b.parentNode) b.remove(); }, ms);
     }
 
@@ -550,18 +674,26 @@ const rocketRaceTemplate = {
         let tries = 0;
         while (tries < rockets.length && !rockets[teamPtr].queue.length) { teamPtr = (teamPtr + 1) % rockets.length; tries++; }
         if (!rockets[teamPtr].queue.length) { endTeams(); return; }
-        curItem = rockets[teamPtr].queue[0];
+        showQuestion(rockets[teamPtr].queue[0]);
       } else {
         if (!queue.length) { finish(); return; }
-        curItem = queue[0];
+        showQuestion(queue[0]);
       }
+    }
+
+    // Put question `idx` on the panel. Solo/Teams reach it through
+    // nextQuestion(); a match reaches it through the referee's goToIndex.
+    function showQuestion(idx) {
+      if (finished || dead) return;
+      curItem = idx;
       turnNo++;
       const q = items[curItem];
-      paintTurnChip();
-      rockets.forEach(r => r.el.classList.toggle("is-turn", teamsMode && r === currentTeam()));
+      if (!fightCtl) paintTurnChip();
+      rockets.forEach(r => r.el && r.el.classList.toggle("is-turn", teamsMode && r === currentTeam()));
 
       // question text (+ optional voice)
       voicePlayer.stop();
+      curVoiceBtn = null;
       qBox.innerHTML = ""; qBox.className = "aw-rr-q";
       const vv = voiceView(activity, q);
       const t = el("div", "aw-rr-qtext", "");
@@ -570,9 +702,16 @@ const rocketRaceTemplate = {
       if (vv.hasVoice) {
         const vBtn = el("button", "aw-voicebtn" + (vv.hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
         vBtn.type = "button"; vBtn.setAttribute("aria-label", "Listen");
-        press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(q.voice, vBtn); });
+        curVoiceBtn = vBtn;
+        press(vBtn, e => {
+          e.stopPropagation();
+          // FIGHT: only board 0 owns real playback; the other board asks the referee.
+          if (fightCtl && !fightCtl.speaks(fightSide)) { fightCtl.requestVoiceToggle(q.voice); return; }
+          voicePlayer.toggle(q.voice, vBtn);
+        });
         t.append(vBtn);
-        if (vv.autoPlay) voicePlayer.playDelayed(q.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+        if (vv.autoPlay && speaks()) voicePlayer.playDelayed(q.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+        else if (fightCtl) { const st = fightCtl.voiceState && fightCtl.voiceState(); if (st && st.playing) vBtn.classList.add("is-playing"); }
       }
       firstQuestionSpoken = true;
       fitText(qBox, t);
@@ -580,6 +719,8 @@ const rocketRaceTemplate = {
       // answer tiles
       const answers = (opt.shuffleAnswers ? shuffle(q.answers) : [...q.answers]).filter(a => a && a.text != null);
       answersEl.innerHTML = "";
+      answersEl.classList.remove("is-fightlost");
+      fightPendingReveal = false;
       answersEl.style.setProperty("--per-row", answers.length <= 3 ? answers.length : answers.length === 4 ? 2 : 3);
       tiles = answers.map((a, i) => {
         const tile = el("button", "aw-rr-tile");
@@ -608,8 +749,9 @@ const rocketRaceTemplate = {
       } else { qDeadline = 0; qTimer.classList.remove("is-on"); }
 
       const mover = teamsMode ? currentTeam() : player;
-      ui.setNav({ index: Math.min(mover.p + 1, mover.L), total: mover.L });
+      ui.setNav({ index: fightCtl ? idx + 1 : Math.min(mover.p + 1, mover.L), total: fightCtl ? N : mover.L });
       locked = false;
+      if (fightCtl) syncFightLock();
     }
 
     function paintTurnChip() {
@@ -624,8 +766,37 @@ const rocketRaceTemplate = {
       turnChip.classList.add("is-on");
     }
 
+    // ----- FIGHT: lock / reveal bookkeeping (mirrors Quiz) -----
+    function currentAnswered() { return curItem >= 0 && state[curItem].attempts > 0; }
+    function syncFightLock() {
+      if (!fightCtl) return;
+      const l = fightLocked();
+      const answered = currentAnswered();
+      if (!answered) tiles.forEach(t => { t.tile.disabled = l || locked; });
+      // grey while this board's go is over but its result is withheld (or it
+      // never got to play — "too slow")
+      answersEl.classList.toggle("is-fightlost", l && (!answered || fightPendingReveal));
+    }
+    function addBadges(t, k, st) {
+      if (t.ans.correct) t.tile.append(el("span", "aw-tile-badge", icons.markCheck));
+      else {
+        if (st.answeredWith === t.ans.text && k === st.chosenTile) t.tile.append(el("span", "aw-tile-badge", icons.markCross));
+        t.tile.classList.add("is-dimmed");
+      }
+    }
+    function revealFightMarks() {
+      if (curItem < 0) return;
+      const st = state[curItem];
+      fightPendingReveal = false;
+      tiles.forEach((t, k) => {
+        if (t.tile.querySelector(".aw-tile-badge")) return;
+        addBadges(t, k, st);
+      });
+      syncFightLock();
+    }
+
     function choose(i) {
-      if (locked || finished || dead) return;
+      if (locked || finished || dead || fightLocked()) return;
       const q = items[curItem];
       const st = state[curItem];
       const a = tiles[i].ans;
@@ -633,19 +804,27 @@ const rocketRaceTemplate = {
       qDeadline = 0; qTimer.classList.remove("is-on");
       st.attempts++;
       st.answeredWith = a.text;
+      st.chosenTile = i;
       ui.noteActivity?.();
       ui.roundDone?.();
       tiles.forEach(t => (t.tile.disabled = true));
       const tile = tiles[i].tile;
-      const fly = el("span", "aw-mark-fly" + (a.correct ? "" : " is-cross"), a.correct ? icons.markCheck : icons.markCross);
-      tile.append(fly);
-      later(() => fly.remove(), a.correct ? 900 : 2000);
-      tiles.forEach((t, k) => {
-        if (t.ans.correct) t.tile.append(el("span", "aw-tile-badge", icons.markCheck));
-        else { if (k === i) t.tile.append(el("span", "aw-tile-badge", icons.markCross)); t.tile.classList.add("is-dimmed"); }
-      });
+      if (fightCtl) {
+        // FIGHT: every visual that says WHICH answer was right is withheld until
+        // the referee says the round is settled (the rocket moving says only
+        // "we were right", like the sound does — not which tile).
+        fightPendingReveal = true;
+        syncFightLock();
+      } else {
+        const fly = el("span", "aw-mark-fly" + (a.correct ? "" : " is-cross"), a.correct ? icons.markCheck : icons.markCross);
+        tile.append(fly);
+        later(() => fly.remove(), a.correct ? 900 : 2000);
+        tiles.forEach((t, k) => addBadges(t, k, st));
+      }
 
       if (a.correct) onCorrect(q, st); else onWrong(q, st, tile);
+      // report to the referee AFTER our own bookkeeping — `correct` decides the round
+      if (fightCtl) fightCtl.wordDone(fightSide, { index: curItem, correct: !!a.correct });
     }
 
     function onTimeout() {
@@ -663,14 +842,18 @@ const rocketRaceTemplate = {
 
     function onCorrect(q, st) {
       st.correct = true;
-      st.wrong = st.wrong;   // (kept — a later wrong pass never happens once correct)
       streak++;
       rrSound.correct();
       const mover = teamsMode ? currentTeam() : player;
-      if (teamsMode) mover.queue.shift(); else queue.shift();
+      if (teamsMode) mover.queue.shift(); else if (!fightCtl) queue.shift();
       mover.p = Math.min(mover.L, mover.p + 1);
       fireRocket(mover);
       ui.setScore(scoreNow());
+      if (fightCtl) {
+        // the referee turns the round over; turbo is the one flourish kept
+        if (streak >= TURBO_STREAK && performance.now() >= turboUntil) startTurbo("TURBO!");
+        return;
+      }
       if (teamsMode) {
         mover.pupilPtr++;
         teamPtr = (teamPtr + 1) % rockets.length;
@@ -693,10 +876,10 @@ const rocketRaceTemplate = {
       rrSound.wrong();
       const mover = teamsMode ? currentTeam() : player;
       if (teamsMode) { mover.queue.shift(); mover.pupilPtr++; teamPtr = (teamPtr + 1) % rockets.length; }
-      else { queue.push(queue.shift()); }      // ask it again later
+      else if (!fightCtl) { queue.push(queue.shift()); }      // ask it again later
       if (pointsOff) ui.flyPenalty?.(tileEl, pointsOff, () => { penalty += pointsOff; return scoreNow(); });
 
-      if (shield && !teamsMode) {
+      if (shield && !teamsMode && !fightCtl) {
         shield = false;
         player.el.classList.remove("has-shield");
         rrSound.shield();
@@ -705,6 +888,7 @@ const rocketRaceTemplate = {
         return;
       }
       stallRocket(mover);
+      if (fightCtl) return;     // the referee decides what happens next
       if (loseLife()) return;   // game over ends everything
       later(nextQuestion, STALL_MS + 200);
     }
@@ -717,6 +901,7 @@ const rocketRaceTemplate = {
     // =========================================================
     function fireRocket(r) {
       rrSound.boost();
+      if (!r.el) return;
       r.el.classList.remove("is-stall");
       r.el.classList.add("is-boost");
       later(() => r.el.classList.remove("is-boost"), 700);
@@ -726,22 +911,25 @@ const rocketRaceTemplate = {
     }
     function stallRocket(r) {
       rrSound.stall();
+      if (!r.el) return;
       r.el.classList.add("is-stall");
       later(() => r.el.classList.remove("is-stall"), STALL_MS);
       for (let i = 0; i < 3; i++) later(() => spawnSmoke(r), i * 220);
     }
     function spawnPuff(r) {
-      const rect = relRect(r.el, fxLayer);
+      if (!scene) return;
+      const rect = relRect(r.el, scene.fxLayer);
       const p = el("div", "aw-rr-puff");
       p.style.left = rect.x + "px"; p.style.top = (rect.y + rect.h * 0.5) + "px";
-      fxLayer.append(p);
+      scene.fxLayer.append(p);
       later(() => p.remove(), 700);
     }
     function spawnSmoke(r) {
-      const rect = relRect(r.el, fxLayer);
+      if (!scene) return;
+      const rect = relRect(r.el, scene.fxLayer);
       const s = el("div", "aw-rr-smoke");
       s.style.left = (rect.x + rect.w * 0.15) + "px"; s.style.top = (rect.y + rect.h * 0.45) + "px";
-      fxLayer.append(s);
+      scene.fxLayer.append(s);
       later(() => s.remove(), 900);
     }
     function relRect(node, within) {
@@ -751,16 +939,17 @@ const rocketRaceTemplate = {
 
     function startTurbo(label) {
       turboUntil = performance.now() + TURBO_MS;
-      player.el.classList.add("is-turbo");
-      stage.classList.add("is-turbo");
-      rrSound.turbo(); rrSound.hum.rev(true);
+      player.el && player.el.classList.add("is-turbo");
+      sceneRoot.classList.add("is-turbo");
+      rrSound.turbo(); if (speaks()) rrSound.hum.rev(true);
       showBanner(label, "is-turbo", 1000);
     }
     function endTurbo() {
       turboUntil = 0;
-      player.el.classList.remove("is-turbo");
-      stage.classList.remove("is-turbo");
-      rrSound.hum.rev(false);
+      player.el && player.el.classList.remove("is-turbo");
+      // FIGHT: the shared scene's star-speed belongs to whichever board is in turbo
+      if (!fightCtl || !rockets.some(r => r !== player && r.el && r.el.classList.contains("is-turbo"))) sceneRoot.classList.remove("is-turbo");
+      if (speaks()) rrSound.hum.rev(false);
     }
 
     function spawnCrate() {
@@ -776,7 +965,6 @@ const rocketRaceTemplate = {
       const c = crate; crate = null;
       c.el.classList.add("is-taken");
       later(() => c.el.remove(), 500);
-      cratesEarned++;
       rrSound.pickup();
       if (c.kind === "shield") { shield = true; player.el.classList.add("has-shield"); showBanner("🛡 SHIELD", "is-shield", 900); }
       else if (c.kind === "turbo") { startTurbo("🚀 TURBO!"); }
@@ -797,9 +985,9 @@ const rocketRaceTemplate = {
     }
     function throwMeteor(target) {
       const m = el("div", "aw-rr-meteor", "☄");
-      const tr = relRect(target.el, fxLayer);
+      const tr = relRect(target.el, scene.fxLayer);
       m.style.left = (tr.x + tr.w * 0.6) + "px"; m.style.top = (tr.y + tr.h * 0.5) + "px";
-      fxLayer.append(m);
+      scene.fxLayer.append(m);
       later(() => m.remove(), 900);
     }
 
@@ -824,8 +1012,8 @@ const rocketRaceTemplate = {
       // turbo window
       if (turboUntil && now >= turboUntil) endTurbo();
 
-      // rivals fly on their own clock
-      if (!teamsMode) {
+      // rivals fly on their own clock (solo only)
+      if (!teamsMode && !fightCtl) {
         const turbo = turboUntil > 0;
         for (const r of rockets) {
           if (r.isPlayer || r.done) continue;
@@ -844,12 +1032,19 @@ const rocketRaceTemplate = {
     function crossedLine(r) {
       if (r.done) return;
       r.done = true;
-      finishedCount++;
-      r.place = finishedCount;
+      if (fightCtl && scene) {
+        // both boards share one scene, so the finish order lives on it
+        scene.finishedCount = (scene.finishedCount || 0) + 1;
+        r.place = scene.finishedCount;
+      } else {
+        finishedCount++;
+        r.place = finishedCount;
+      }
       r.el.classList.add("is-done");
       r.el.classList.remove("is-turn");
       const medal = el("div", "aw-rr-medal", MEDAL[r.place - 1] || placeWord(r.place));
       r.el.append(medal);
+      if (fightCtl) { if (r.place === 1) { rrSound.win(); showBanner(r.name + " FINISHED!", "is-win", FINISH_BANNER_MS); } return; }
       if (r.isPlayer) endSolo(r.place);
       else if (!teamsMode) { rrSound.rivalFinish(); }
       else if (rockets.every(x => x.done)) endTeams();
@@ -924,21 +1119,9 @@ const rocketRaceTemplate = {
       if (n >= 1 && n <= tiles.length) { e.preventDefault(); choose(n - 1); }
     }
 
-    function finish() {
-      if (finished || dead) return;
-      finished = true;
-      // Chốt sổ TRƯỚC khi đọc điểm: một "−N" đang bay là một phép trừ chưa áp (Đợt 256).
-      ui.flushPenalties?.();
-      running = false;
-      if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
-      rrSound.hum.stop();
-      voicePlayer.stop();
-      locked = true;
-      const perQuestion = state.map((s, i) => ({ q: i, correct: s.correct === true }));
-      const correct = perQuestion.filter(p => p.correct).length;
-      const wrongTurns = state.reduce((n, s) => n + s.wrong.length, 0);
-      const never = state.filter(s => s.attempts === 0).length;
-      const review = items.map((q, i) => {
+    // per-question detail for Show answers (also read by the Fight end panel)
+    function buildReview() {
+      return items.map((q, i) => {
         const s = state[i];
         const correctText = (q.answers.find(a => a.correct) || {}).text || "";
         return {
@@ -950,6 +1133,23 @@ const rocketRaceTemplate = {
           src: q   // `items` is a shallow copy, so `q` IS the content object
         };
       });
+    }
+
+    function finish() {
+      if (finished || dead) return;
+      finished = true;
+      // Chốt sổ TRƯỚC khi đọc điểm: một "−N" đang bay là một phép trừ chưa áp (Đợt 256).
+      ui.flushPenalties?.();
+      running = false;
+      if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+      if (speaks()) rrSound.hum.stop();
+      voicePlayer.stop();
+      locked = true;
+      const perQuestion = state.map((s, i) => ({ q: i, correct: s.correct === true }));
+      const correct = perQuestion.filter(p => p.correct).length;
+      const wrongTurns = state.reduce((n, s) => n + s.wrong.length, 0);
+      const never = state.filter(s => s.attempts === 0).length;
+      const review = buildReview();
       const answered = state.filter(s => s.attempts > 0).length;
       // `total` counts TURNS (a re-asked question is another row) + questions
       // never reached; `items` is the size of the paper, for the assignment's
@@ -963,20 +1163,20 @@ const rocketRaceTemplate = {
     return function cleanup() {
       dead = true;            // MUST come first — the only brake on bare callbacks
       finished = true;
-      rrPauseHandlers = null;
+      rrPauseHandlers.delete(pauseHandler);
       window.removeEventListener("keydown", onKey);
       if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
       timers.forEach(id => clearTimeout(id)); timers.clear();
-      rrSound.hum.stop();
+      if (speaks()) rrSound.hum.stop();
       voicePlayer.stop();
       if (ui.livesSlot) ui.livesSlot.innerHTML = "";
     };
   },
 
   // Menu pause hook (Đợt 91) — engine calls this on ☰ Menu open(true)/close(false).
+  // A match has two live mounts; each registered its own pair.
   onPause(paused) {
-    if (!rrPauseHandlers) return;
-    if (paused) rrPauseHandlers.pause(); else rrPauseHandlers.resume();
+    rrPauseHandlers.forEach(h => { if (paused) h.pause(); else h.resume(); });
   }
 };
 

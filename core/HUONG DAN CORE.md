@@ -444,10 +444,23 @@ Mọi thứ vươn RA NGOÀI một ván mới là chỗ phải vá — nhớ dan
 | Giọng đọc | chỉ bàn 0 đọc (`ctl.speaks(side)`) |
 | Nhạc lifecycle (`tpl.sounds.play/restart/timeWarning`) | engine chỉ phát ở bàn 0 |
 
+⭐ **`tpl.fightLayout: "shared-top"` — VÙNG CHUNG TRÊN HAI BÀN (Đợt 351, 20/9/2026, Rocket race).** Template
+khai cờ này thì `startFight()` dựng thêm **`.aw-fight-shared`** (rộng bằng cả trận, `aspect-ratio: 32/10.5` = đúng
+chiều cao hai bàn 16:10.5 cạnh nhau) nằm GIỮA dải điểm và hàng hai bàn, và trao nó qua **`ctl.sharedRoot()`** (null
+với template khác — khung y hệt cũ). Template tự vẽ vào đó (Rocket race: cả cuộc đua, 2 tên lửa); mỗi bàn dưới là
+phần riêng của đội. Luật đi kèm:
+- Hai bàn là HAI mount của cùng module ⇒ thứ dùng chung để ở biến **cấp module** (Rocket race: `ensureFightScene`),
+  và phải so `ctl.sharedRoot()` với lần trước — `restartMatch()` dựng khung MỚI nên vùng chung cũng mới.
+- Vùng này **không phải `.aw-stage`** nên `core/unit.js` KHÔNG đặt `--aw-u` cho nó: template tự đo (ResizeObserver,
+  1 % bề ngang) nếu CSS của nó viết bằng `--aw-u`.
+- Fullscreen trận: `.aw-fight.is-fs.is-shared-top` chia bề ngang theo cả bức 32:21 (`core/app.css`), vùng chung và
+  hàng bàn cùng một `max-width` để luôn thẳng mép.
+- Bridge `onPause` cấp module của template phải chịu được **hai mount cùng lúc** (Set, không phải một biến).
+
 **AI ĐANG BẬT IN TURNS (Đợt 202)**: **Type the answer** — 1/17, thầy chốt thử một game trước.
 
 **AI ĐANG BẬT FIGHT (cập nhật Đợt 186)**: Anagram · Quiz · Type the answer · True/false · **Open the box**
-· **Find the match** · **Crossword** — 7/17.
+· **Find the match** · **Crossword** — 7/17; + **Find the gap** (Đợt 340) + **Rocket race** (Đợt 351, bố cục `fightLayout`).
 
 ⭐⭐ **HAI KIỂU VÒNG (Đợt 183) — `tpl.fightPick`.** Ngoài vòng thường (trọng tài đi 0,1,2…), `fight.js`
 có **vòng LƯỢT CHỌN** cho game mà chính lớp chọn câu kế tiếp:

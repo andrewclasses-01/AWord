@@ -327,6 +327,13 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // same field core/mistakes.js reads.
   const itemsKey = getTemplate(activity.type)?.itemsKey || "items";
   const srcItems = (playAct.content && playAct.content[itemsKey]) || [];
+  // ⭐ Đợt 351 (20/9/2026, Rocket race) — `tpl.fightLayout: "shared-top"`: the
+  // match gets ONE full-width area ABOVE the two boards that the template owns
+  // (Rocket race draws the whole race there — both teams' rockets on one track —
+  // and each board below is that team's question panel). Reached by the
+  // template through `ctl.sharedRoot()`; null for every other template, and the
+  // frame is byte-identical to before when the flag is absent.
+  const sharedLayout = getTemplate(activity.type)?.fightLayout === "shared-top";
 
   // ----- shell -----
   const wrap = el("div", "aw-fight");
@@ -389,7 +396,9 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
 
   const boardEls = [el("div", "aw-fight-board"), el("div", "aw-fight-board")];
   boardsRow.append(boardEls[0], boardEls[1]);
-  wrap.append(top, boardsRow, controlsRow);
+  const sharedEl = sharedLayout ? el("div", "aw-fight-shared") : null;
+  if (sharedEl) { wrap.classList.add("is-shared-top"); wrap.append(top, sharedEl, boardsRow, controlsRow); }
+  else wrap.append(top, boardsRow, controlsRow);
   root.append(wrap);
 
   function makeTeam(side) {
@@ -1360,6 +1369,10 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // The frames have no score chip in fight mode, so a template's "+N" flies
     // all the way out to this team's number on the strip above its board.
     scoreTarget(side) { return teams[side].value; },
+    // ⭐ Đợt 351 — the template-owned area above the boards (`tpl.fightLayout ===
+    // "shared-top"`), or null. Rebuilt with every match (restartMatch builds a
+    // new frame), so a template must compare it against what it drew into last.
+    sharedRoot() { return sharedEl; },
 
     // Đợt 133 (teacher: "chỉ phát 1 voice duy nhất cho cả 2 đội") — a tap on
     // EITHER board's listen button routes here (see anagram.js's

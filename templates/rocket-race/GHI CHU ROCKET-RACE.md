@@ -1,6 +1,6 @@
 # GHI CHÚ — ROCKET RACE (đua tên lửa)
 
-Trạng thái: 🟢 **CHỜ THẦY DUYỆT** (build xong 20/9/2026, Đợt 350 — số đợt chốt lại sau `git pull`).
+Trạng thái: ✅ Đợt 350 `f55aa2d` COMMIT + PUSH (thầy duyệt 20/9) · 🟢 **FIGHT (Đợt 351) CHỜ THẦY DUYỆT** — xem mục 9.
 Kế hoạch gốc + lý do từng quyết định: `KE HOACH ROCKET-RACE.md` cùng thư mục. Thầy đã chốt 20/9:
 build **chặng 1 + chặng 2 cùng lúc** · luật điểm **A** (mỗi câu đúng = 1 nấc, không hơn) · tên
 "Rocket race" · phi công **emoji thú**.
@@ -51,7 +51,7 @@ Cờ khai: `itemsKey:"questions"` · `hasLivesSlot` · `manualTimerStart` (đồ
 `rrPauseHandlers`, dừng interval + tiếng nền, dịch hạn `qDeadline`/`turboUntil`/`stunUntil`).
 Vòng lặp: **`setInterval` 50 ms, delta kẹp 100 ms** — không rAF (tab ẩn chỉ làm cuộc đua chậm lại).
 
-## 4. ĐỀ XUẤT SỬA CORE — đã sửa TẠM trong cây làm việc, thầy duyệt rồi mới commit
+## 4. SỬA CORE (Đợt 350, thầy đã duyệt, đã commit `f55aa2d`)
 Tất cả đều là **thêm 1 dòng theo đúng khuôn Maze chase**, không đổi nhánh nào đang chạy:
 1. `core/catalog.js` — 1 mục `rocket_race` (dòng đăng ký hợp lệ theo luật) + `TEMPLATE_ICON.rocket_race: "fmtRace"`.
 2. `core/convert.js` — `"rocket_race"` vào `QA_TARGETS` + `NEED_CLUE`; thêm `case "rocket_race"` cạnh
@@ -84,8 +84,8 @@ Tất cả đều là **thêm 1 dòng theo đúng khuôn Maze chase**, không đ
 - ⬜ Cảm giác tốc độ Normal 7 s/nấc có vừa với lớp không — chỉnh `RIVAL_SECS` ở đầu file.
 
 ## 7. Chưa làm (có chủ ý)
-- Fight / Showdown: chưa khai (`fightMode`/`showdownMode`) — cần chốt chỗ đặt dòng tên HS trên
-  cảnh đua toàn khung (cùng lý do Maze chase / Flying fruit chưa bật). Ghi ở kế hoạch chặng 2.
+- Showdown: chưa khai (`showdownMode`) — cần chốt chỗ đặt dòng tên HS trên cảnh đua toàn khung (cùng lý do
+  Maze chase / Flying fruit chưa bật). Fight ĐÃ có từ Đợt 351 (mục 9).
 - Chặng 3 LIVE nhiều điện thoại: hạ tầng riêng (`assignments/{code}/race/*` + `race.html`), xem
   `KE HOACH ROCKET-RACE.md` mục 4 — chờ thầy quyết.
 - Time cost: không khai (câu hỏi đã có Question time riêng).
@@ -98,3 +98,36 @@ Tất cả đều là **thêm 1 dòng theo đúng khuôn Maze chase**, không đ
   TRƯỚC khi return (đội về đích xong game vẫn tiếp).
 - Bàn thử: `press()` bắn handler ở `pointerdown` VÀ ở `click` không tin cậy — driver mô phỏng
   chỉ nên `el.click()`, đừng bắn cả hai kẻo handler chạy 2 lần (đã có `locked` chặn nhưng đừng dựa).
+
+## 9. FIGHT (Đợt 351, 20/9/2026 — thầy: "50% không gian nửa trên dành cho toàn bộ race, nửa dưới chia làm 2 cho 2 đội")
+Thầy chốt qua AskUserQuestion: vào bằng **nút MODE** · luật câu hỏi **giống Quiz/Fight** (cùng câu, ai đúng trước ăn) ·
+sai = **mất câu, không làm lại, phạt theo Options** · ok build.
+
+**Cách làm**: dùng ĐÚNG trọng tài `core/fight.js` (Time delay · Speed bonus · Fight content · Miss wait · In turns…),
+chỉ thêm cho core MỘT kiểu bố cục: template khai `fightLayout: "shared-top"` ⇒ `fight.js` dựng thêm
+`.aw-fight-shared` (rộng bằng cả trận, tỷ lệ 32:10.5 = đúng chiều cao hai bàn 16:10.5 đứng cạnh nhau) NẰM GIỮA dải
+điểm và hàng 2 bàn, trao cho template qua `ctl.sharedRoot()`. Template khác không khai gì thì khung y hệt cũ.
+- **Vùng chung**: `ensureFightScene(ctl)` (cấp module) dựng cảnh đua MỘT lần cho mỗi trận (so `host` với lần trước;
+  `restartMatch` dựng khung mới ⇒ cảnh mới, tên lửa về vạch xuất phát). 2 tên lửa cố định: TEAM 1 🐱 xanh (bàn trái),
+  TEAM 2 🦊 đỏ (bàn phải). `--aw-u` của vùng này do template tự đo bằng `ResizeObserver` (core/unit.js chỉ đặt cho
+  `.aw-stage`).
+- **Bàn** (`.aw-rr-stage.is-fightboard`): chỉ chip đội + câu hỏi + ô đáp án, chữ to hơn solo. Không tim, không hộp,
+  không Question time (Options trong trận không dựng các ô riêng — `inFight`), không tên lửa máy.
+- **Nối trọng tài y như Quiz**: `attach(side, {total, goToIndex, lock, reveal, review, toggleVoiceRemote, syncVoice})`;
+  chạm ô → `wordDone(side, {index, correct})`; ✓/✗ GIẤU tới `reveal()` (tên lửa bay chỉ nói "đúng", không nói ô nào —
+  như tiếng); bàn bị khoá/chờ lộ ⇒ `.aw-rr-answers.is-fightlost` xám; `.aw-fight-board.is-concealed` mờ hàng ô.
+  Đúng → tên lửa đội đó +1 nấc (N nấc = N câu); sai → khựng, câu MẤT (trọng tài chuyển vòng); về đích trước → huy
+  chương + banner "TEAM 1 FINISHED!" (trận vẫn chạy tới hết câu; kết quả trận do bảng của trọng tài quyết).
+- Đếm 3-2-1 chạy ở CẢ hai bàn (khoá ô), nhưng banner + tiếng + drone động cơ chỉ ở bàn 0 (`ctl.speaks`).
+- Pause: bridge `rrPauseHandlers` nay là **Set** (trận có 2 mount cùng lúc, bản cũ 1 biến bị bàn 1 đè).
+
+**Sửa core (đề xuất đã áp, chờ thầy duyệt commit)**: `core/fight.js` (+`sharedLayout`, `sharedEl`, `ctl.sharedRoot()`,
+~12 dòng) · `core/app.css` (`.aw-fight-shared` + luật fullscreen `.is-fs.is-shared-top` chia cao theo 32:21).
+
+**Đã tự kiểm (bàn thử test.html, 1280×900, 0 lỗi mới)**: MODE → Fight → Start fight: khung có vùng chung 1241×407 +
+2 bàn 613×403 (bằng nhau); PLAY bàn 0 kéo bàn 1; cả 2 bàn cùng câu; bàn 0 đúng → tên lửa 1 `--x` 5→13,1, điểm dải 1–0,
+bàn 1 xám (`is-fightlost`); sau ROUND_HOLD cả 2 sang câu 2; bàn 1 sai → khựng, bàn 0 đúng → 2–0; chơi hết → bảng
+"TEAM LEFT WINS 10—0", Show answers 2 cột 20 dòng; Start again → tên lửa về 5, điểm 0–0; Options trong trận chỉ còn
+Time delay/Speed bonus/Fight content/Miss wait/Points off/Shuffle/Show answers.
+⬜ Chưa kiểm: fullscreen trận (cần cử chỉ tay), TOMKO hai đội chạm cùng lúc, In turns (2 bộ câu khác nhau — code đi
+đường chung của trọng tài, chưa bấm), ☰ Menu pause giữa trận.

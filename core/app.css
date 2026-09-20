@@ -4604,6 +4604,22 @@ body.aw-page-dragover::after {
    .aw-penalty-fly above). The old `.aw-fight-flash`/@keyframes aw-fight-flash
    are DELETED with `flashTeam()` (core/fight.js), not left dormant. */
 
+/* ⭐ Đợt 351 (Rocket race) — `tpl.fightLayout: "shared-top"`: one template-owned
+   area the full width of the match, above the two boards. Its aspect is
+   32:10.5 = exactly as tall as the two 16:10.5 boards beside each other, so the
+   match reads as one 32:21 picture: the race on top, the two question boards
+   below. Inert for every other template (core/fight.js only builds it on the flag). */
+.aw-fight-shared {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 32 / 10.5;
+  min-width: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #0b0620;
+  box-shadow: 0 6px 18px rgba(0,0,0,.18);
+}
+
 /* --- the two boards --- */
 .aw-fight-boards {
   display: grid;
@@ -4820,6 +4836,16 @@ body.aw-page-dragover::after {
   min-height: 0;
   width: 100%;
   max-width: calc((100dvh - var(--aw-fight-chrome)) * 16 / 10.5 * 2);
+  margin: 0 auto;
+}
+/* ⭐ Đợt 351 — with a shared area on top the picture is 32:21 (shared 32:10.5 +
+   boards 32:10.5, plus the 8px gap between them), so the width cap is derived
+   from the WHOLE height, and both rows share the same cap so they stay flush. */
+.aw-fight.is-fs.is-shared-top .aw-fight-boards,
+.aw-fight.is-fs.is-shared-top .aw-fight-shared {
+  flex: 0 1 auto;
+  width: 100%;
+  max-width: calc((100dvh - var(--aw-fight-chrome) - 8px) * 32 / 21);
   margin: 0 auto;
 }
 /* Undo the single-mode fullscreen page/stage rules for the boards INSIDE a

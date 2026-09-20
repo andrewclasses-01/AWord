@@ -5403,6 +5403,12 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 
 ## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **20/9/2026 sau Đợt 350 (Rocket race, phiên khác, đã commit) + Đợt 349 (Balloon pop nối Menu pause, ✅ thầy duyệt → commit + push, ⬜ chưa bấm tay trang thật)** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
+> **⭐⭐ Đợt 351 (20/9/2026 chiều) — ROCKET RACE có FIGHT với bố cục riêng (cả cuộc đua ở nửa trên, 2 bàn hỏi–đáp ở nửa dưới) · 🟢 CHỜ THẦY DUYỆT · ⛔ CHƯA COMMIT.**
+> Trọng tài Fight của core giữ nguyên (cùng câu, ai đúng trước ăn, Time delay/Speed bonus/In turns); core chỉ thêm cờ `tpl.fightLayout: "shared-top"`
+> (`core/fight.js` dựng `.aw-fight-shared` 32:10.5 + `ctl.sharedRoot()`; `core/app.css` + fullscreen 32:21) — template khác byte-identical. Tự kiểm bằng máy
+> trọn trận (bảng "TEAM LEFT WINS 10—0", Show answers 2 cột, Start again, Options trong trận). Thầy bấm tay theo mục 4 dưới rồi mới commit
+> (`git add templates/rocket-race core/fight.js core/app.css "core/HUONG DAN CORE.md" "GHI CHU DU AN.md" APP_MASTER.md`, ⛔ không `-A`).
+
 > **Đợt 349 (20/9/2026, thầy giao):** Balloon pop là game duy nhất có vòng lặp rAF riêng mà chưa nối `tpl.onPause` (Đợt 91) ⇒ mở ☰ Menu giữa ván, đồng hồ vẫn đếm + blimp vẫn trôi sau lớp mờ. Vá chỉ `templates/balloon-pop/balloon-pop.js` (+40 dòng): cầu nối `bpPauseHandlers`, huỷ rAF lúc mở Menu, chạy lại với `lastTs = 0` lúc đóng (đồng hồ DELTA ⇒ không mất giờ), `cleanup()` reset. Đo bàn thử: Menu mở 3 s đồng hồ 0:44 đứng, 4 blimp đứng, Resume ⇒ 0:42 sau 2 s; Start again ⇒ ván mới vẫn dừng đúng; đối chứng mã cũ 0:49 → 0:46. Console 0 lỗi. **✅ THẦY DUYỆT (chat 20/9) → COMMIT + PUSH**; ⬜ thầy chưa bấm tay trang thật; đã commit đúng 4 file (`balloon-pop.js` + GHI CHU template + GHI CHU DU AN + APP_MASTER), KHÔNG `git add -A` (thư mục `templates/rocket-race/` của phiên khác đang untracked). Chi tiết: `GHI CHU DU AN.md` Đợt 349 + `templates/balloon-pop/GHI CHU BALLOON-POP.md`.
 
 > Trước đó — Đợt 345:
@@ -7404,6 +7410,16 @@ Ngoài ra: Settings có mục **Classes** (lớp + học sinh, `core/classes.js`
 act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
+
+> ⭐⭐⭐⭐⭐ **MỚI NHẤT (Đợt 351, 20/9/2026 chiều) — ROCKET RACE ▸ FIGHT: ⬜ ĐÃ BUILD + TỰ KIỂM BẰNG MÁY, CHƯA BẤM TAY, CHƯA COMMIT.**
+> 1. ⬜ Mở act Rocket race → nút MODE → Fight → Start fight: nửa trên là đường đua chung 2 tên lửa (TEAM 1 xanh trái · TEAM 2 đỏ phải), nửa dưới 2 bàn câu hỏi.
+> 2. ⬜ PLAY một bàn → cả hai cùng đếm 3-2-1; hai đội chạm cùng lúc trên TOMKO: đội đúng trước → tên lửa bay + điểm trên dải; đội kia xám (Time delay 0,1s) hoặc còn được làm (delay lớn hơn).
+> 3. ⬜ Sai → tên lửa khựng, câu mất, "−N" bay về điểm nếu bật Points off; hết câu → bảng WINS + Show answers 2 cột.
+> 4. ⬜ Nút Fullscreen của trận: vùng đua + 2 bàn + dải điểm + hàng nút phải vừa màn (luật 32:21 mới).
+> 5. ⬜ Options trong trận: In turns (2 bộ câu khác nhau) + Speed bonus; ☰ Menu pause giữa trận.
+> ✅ Thầy duyệt → commit "Dot 351" (đúng đường dẫn, không -A) → push.
+>
+> ---
 
 > ⭐⭐⭐⭐⭐ **MỚI NHẤT (Đợt 350, 20/9/2026) — ROCKET RACE: ⬜ ĐÃ BUILD + TỰ KIỂM BẰNG MÁY, CHƯA BẤM TAY, CHƯA COMMIT.**
 > 1. ⬜ Trang thật: New activity → **Rocket race** (mục cuối bảng chọn) → sửa vài câu → PLAY: 3-2-1, trả lời đúng/sai, TURBO, hộp ⭐, về đích.

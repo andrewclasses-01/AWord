@@ -12,9 +12,12 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **⭐⭐ Đợt 350** (20/9/2026, TEMPLATE MỚI theo ảnh Blastroom thầy gửi — **ROCKET RACE**, đua tên lửa):
+> Mới nhất: **⭐⭐ Đợt 351** (20/9/2026 chiều, ROCKET RACE — **FIGHT bố cục riêng**: cả cuộc đua ở nửa trên, 2 bàn
+> hỏi–đáp ở nửa dưới; trọng tài Fight của core giữ nguyên, core chỉ thêm cờ `tpl.fightLayout: "shared-top"` +
+> `ctl.sharedRoot()`; tự kiểm bằng máy trọn trận). 🟢 CHỜ THẦY DUYỆT · ⛔ CHƯA COMMIT. Xem mục **Đợt 351**.
+> Trước đó: **⭐⭐ Đợt 350** (20/9/2026, TEMPLATE MỚI theo ảnh Blastroom thầy gửi — **ROCKET RACE**, đua tên lửa):
 > Solo đua 3–5 tên lửa máy (níu dây, TURBO, power-up 🛡🚀☄) + Teams trên màn hình thầy; nội dung = bộ câu Quiz, điểm = số câu
-> đúng (luật A thầy chốt); tự kiểm bằng máy 0 lỗi; core sửa TẠM 4 chỗ. 🟢 CHỜ THẦY DUYỆT · ⛔ CHƯA COMMIT. Xem mục **Đợt 350**.
+> đúng (luật A thầy chốt); tự kiểm bằng máy 0 lỗi; core sửa 4 chỗ. ✅ THẦY DUYỆT → COMMIT + PUSH `f55aa2d`. Xem mục **Đợt 350**.
 > Trước đó: **⭐⭐ Đợt 340** (18/9/2026, TEMPLATE MỚI của thầy — **FIND THE GAP**): nghe băng thật từ kho
 > `myLesson-audio`, mỗi lượt một câu thoại, điền chỗ trống theo 3 mode QUIZ / TYPE / FIND; audio tải trọn trước
 > PLAY (đo: tua 1 ms mọi mạng); Fight/Showdown nối dây; công cụ `tools/ftg-prepare.py` (Parakeet + khớp kịch bản
@@ -516,7 +519,31 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 350 (20/9/2026, TEMPLATE MỚI — ROCKET RACE, đua tên lửa kiểu Blastroom) · 🟢 CHỜ THẦY DUYỆT · ⛔ CHƯA COMMIT
+## Đợt 351 (20/9/2026 chiều, ROCKET RACE — FIGHT với bố cục riêng: cả cuộc đua ở nửa trên, 2 bàn ở nửa dưới) · 🟢 CHỜ THẦY DUYỆT · ⛔ CHƯA COMMIT
+
+**Thầy giao**: "mở chế độ fight cho game này… 50% không gian nửa trên dành cho toàn bộ race, nửa dưới chia làm 2 cho 2 đội".
+Hỏi bằng AskUserQuestion, thầy chốt: vào bằng **nút MODE** · luật câu hỏi **giống Quiz/Fight** · sai = **mất câu, không
+làm lại, có thể bị phạt (Options)** · ok build.
+
+**Vì sao phải sửa core**: Fight của core = 2 ván thật cạnh nhau, không có chỗ cho một cảnh chung; tự viết trọng tài riêng
+trong template thì lặp cả Time delay/Speed bonus/In turns. ⇒ Thêm cho `core/fight.js` MỘT kiểu bố cục theo cờ
+`tpl.fightLayout: "shared-top"`: dựng `.aw-fight-shared` (32:10.5, rộng cả trận) giữa dải điểm và hàng 2 bàn, trao qua
+`ctl.sharedRoot()`; `core/app.css` thêm `.aw-fight-shared` + luật fullscreen `.is-fs.is-shared-top` (bức 32:21). Template
+khác không khai ⇒ byte-identical. Hợp đồng ghi ở `core/HUONG DAN CORE.md` (mục Fight, ngay trên "AI ĐANG BẬT IN TURNS").
+
+**Template** (`templates/rocket-race/`): `fightMode: true` + `fightLayout: "shared-top"`; cảnh đua tách thành `buildScene(host)`
+dùng cho cả stage lẫn vùng chung; `ensureFightScene(ctl)` cấp module dựng cảnh MỘT lần/trận (2 tên lửa TEAM 1 🐱 xanh ·
+TEAM 2 🦊 đỏ, tự đo `--aw-u` bằng ResizeObserver); bàn `.is-fightboard` chỉ còn chip đội + câu + ô; nối trọng tài y Quiz
+(`attach` goToIndex/lock/reveal/review + voice contract, `wordDone`, giấu ✓/✗ tới `reveal`, `.is-fightlost`, `.is-concealed`);
+đúng → +1 nấc tên lửa đội, sai → khựng + câu mất; `buildExtraOptions` bỏ ô riêng khi `inFight`; bridge pause thành Set.
+
+**Tự kiểm bằng máy** (test.html 1280×900, 0 lỗi mới): MODE → Fight → Start fight → vùng chung 1241×407 + 2 bàn 613×403;
+PLAY bàn 0 kéo bàn 1; cùng câu; bàn 0 đúng → tên lửa 5→13,1, điểm 1–0, bàn 1 xám; sang câu 2 cả hai; bàn 1 sai → khựng;
+chơi hết → "TEAM LEFT WINS 10—0" + Show answers 2 cột 20 dòng; Start again → tên lửa về vạch, 0–0; Options trong trận
+chỉ còn tuỳ chọn trận. ⬜ Chưa: fullscreen trận (cần cử chỉ), TOMKO 2 đội chạm cùng lúc, In turns, Menu pause giữa trận.
+Chi tiết: `templates/rocket-race/GHI CHU ROCKET-RACE.md` mục 9.
+
+## Đợt 350 (20/9/2026, TEMPLATE MỚI — ROCKET RACE, đua tên lửa kiểu Blastroom) · ✅ THẦY DUYỆT → COMMIT + PUSH `f55aa2d` · ⬜ chưa bấm tay trang thật
 
 **Thầy giao qua chat kèm ảnh Blastroom "BlastRace"** (6 tên lửa đua tới vạch đích): "lên kế hoạch cho một template
 mới với game hành động tương tự… hay, hấp dẫn, chuyên nghiệp mà vẫn học được tiếng Anh". Đã đọc hợp đồng core + 5
