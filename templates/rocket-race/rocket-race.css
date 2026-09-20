@@ -147,16 +147,16 @@
    • boost (lunge forward): the face is pressed BACK for the .6 s of the lunge;
    • stall / hit (hull shakes): the face rattles for exactly the shake's 3–4 beats. */
 .aw-rr-rocket.is-flying .aw-rr-face { animation: aw-rr-jiggle 2.6s ease-in-out infinite; animation-delay: calc(-1 * var(--wob, 0s) + .35s); }
+/* Đợt 362 — VERTICAL ONLY, one fifth of Đợt 361 (±1.2 %), every mode: no sideways
+   push on boost any more; the stall/hit rattle is a vertical tremor of the same size. */
 @keyframes aw-rr-jiggle {
-  0%, 100% { transform: translateY(6%); }
-  50%      { transform: translateY(-6%); }
+  0%, 100% { transform: translateY(1.2%); }
+  50%      { transform: translateY(-1.2%); }
 }
-.aw-rr-rocket.is-boost .aw-rr-face { animation: aw-rr-facepush .6s cubic-bezier(.2,.9,.25,1); }
-@keyframes aw-rr-facepush { 0% { transform: translateX(0); } 30% { transform: translateX(-14%); } 100% { transform: translateX(0); } }
 .aw-rr-rocket.is-stall .aw-rr-face { animation: aw-rr-facerattle .3s linear 3; }
 .aw-rr-rocket.is-hit .aw-rr-face { animation: aw-rr-facerattle .3s linear 4; }
 @keyframes aw-rr-facerattle {
-  0%, 100% { transform: translate(0, 0); } 25% { transform: translate(7%, -6%); } 75% { transform: translate(-7%, 6%); }
+  0%, 100% { transform: translateY(0); } 25% { transform: translateY(-1.2%); } 75% { transform: translateY(1.2%); }
 }
 /* Đợt 359 — a faint white exhaust behind the flame while flying: three soft puffs
    born at the flame's tip (the flame ends 22 % beyond the craft's left edge),

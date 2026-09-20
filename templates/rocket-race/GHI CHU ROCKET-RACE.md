@@ -293,3 +293,7 @@ Thầy: "thật ít, thật nhẹ và phù hợp vật lý với di chuyển ri�
 **cùng chu kỳ 2,6 s và cùng gốc pha `--wob` với `aw-rr-bob` của thân**, trễ +.35 s (quán tính), biên độ ±6 %; boost → mặt bị ép
 lùi −14 % đúng .6 s của `aw-rr-lunge` (`aw-rr-facepush`); stall/hit → mặt rung `aw-rr-facerattle` đúng 3/4 nhịp .3 s của
 `aw-rr-shake`. Đo 5 tàu solo: thân `aw-rr-bob 2.6s delay −6.23s` ↔ mặt `aw-rr-jiggle 2.6s delay −5.88s` (mỗi tàu một pha riêng).
+
+## 19. Phi công: chỉ lên xuống, biên độ 1/5 (Đợt 362, 20/9/2026 tối, mọi mode)
+Bỏ `aw-rr-facepush` (ép lùi ngang khi boost); `aw-rr-jiggle` ±1,2 % (1/5 của ±6 %); `aw-rr-facerattle` khi khựng/va chỉ dọc
+±1,2 %. Chu kỳ/pha vẫn bám thân tàu (Đợt 361). Đo: keyframes chỉ còn `translateY`, không `translateX`.
