@@ -531,7 +531,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 363 (20/9/2026 tối, QUIZ — thanh **TIME LIMIT** 1s..20s + nấc ∞, giới hạn giây MỖI CÂU ở MỌI MODE đơn · Fight · Showdown; hết giờ = sai) · 🟢 CHỜ THẦY DUYỆT · ⬜ CHƯA BẤM TAY
+## Đợt 363 (20/9/2026 tối, QUIZ — thanh **TIME LIMIT** 1s..20s + nấc ∞, giới hạn giây MỖI CÂU ở MỌI MODE đơn · Fight · Showdown; hết giờ = sai) · ✅ COMMIT + PUSH `a37686a` · ⬜ CHƯA BẤM TAY
 
 Thầy: *"Trong mọi mode của quiz, có thêm một thanh Time Limit: … kéo từ 1s đến 20s và nấc cuối cùng là không giới
 hạn, kéo theo nấc 1s."* Chỉ sửa `templates/quiz/quiz.js` + `quiz.css`, KHÔNG đụng `core/`.

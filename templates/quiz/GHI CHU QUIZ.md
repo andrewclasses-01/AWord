@@ -2,7 +2,7 @@
 
 ## Đợt 363 (20/9/2026 tối) — ⭐ **TIME LIMIT**: giới hạn giây cho MỖI CÂU, chạy ở MỌI MODE (đơn · Fight · Showdown)
 
-**Trạng thái: 🟢 CHỜ THẦY DUYỆT** (đã đo trên bàn thử `test.html` qua devserver, chưa commit lúc ghi dòng này).
+**Trạng thái: ✅ COMMIT + PUSH `a37686a`** (20/9/2026 tối, thầy bảo "commit + push" sau khi xem tóm tắt) · ⬜ CHƯA BẤM TAY trang thật.
 Chỉ sửa **`quiz.js` + `quiz.css`** — KHÔNG đụng `core/`.
 
 **Yêu cầu thầy (nguyên văn):** *"Trong mọi mode của quiz, có thêm một thanh Time Limit: đây là thời gian giới hạn để
