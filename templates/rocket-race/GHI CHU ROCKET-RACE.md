@@ -279,3 +279,11 @@ Sửa: ổ Time delay `position:absolute` ghim đáy (bottom −.8u, cao .6u, th
   (−170 %), phình ×2,4, tan dần; nhanh hơn (.9 s) khi boost/turbo; tắt khi stall/nổ/xác. Chỉ chạy khi `is-flying`.
 - Đo solo: 3 puff `aw-rr-exhaust`, opacity đang chạy .20/.09/.42, face transform chỉ Y. Ở vạch xuất phát khói bị mép trái
   khung cắt một phần (tàu ở x=5 %) — chấp nhận được.
+
+## 17. "Trong fight chưa thấy" khói + nhấp (Đợt 360, 20/9/2026 tối)
+Live đã khớp code (5/5 file so hash bỏ CRLF) ⇒ không phải cache. Đo trong Fight: tàu chỉ rộng 77 px (11u của 701 px) nên
+puff 16 % = 12 px mờ .55, phi công nhấp ±9 % của ô 12 px ≈ ±1 px — có chạy nhưng mắt không thấy; và ở vạch xuất phát
+(x = 5 %) đuôi lửa đã chạm mép trái khung (`overflow:hidden`) nên khói sinh ra ngoài màn. Sửa (chỉ CSS): puff 26 %, đậm .7,
+blur 1px, trôi −150 %, scale 2,2; phi công nhấp ±20 %; **`.aw-rr-shared .aw-rr-lanes { left: 7% }`** — làn đua lùi vào 7 %
+để sau lửa có chỗ (tàu về đích ở 87 % track, cờ 93 %). Đo: tàu ở 82 px, lửa 65 px, khói 55–76 px — hiện trọn. Bài học: hiệu
+ứng viết bằng % của tàu phải đo trên khung NHỎ NHẤT (Fight), không chỉ Solo.

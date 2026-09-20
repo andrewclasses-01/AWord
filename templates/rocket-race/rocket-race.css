@@ -142,20 +142,20 @@
 .aw-rr-rocket.is-flying .aw-rr-face { animation: aw-rr-jiggle 1.3s ease-in-out infinite; animation-delay: calc(-1 * var(--wob, 0s)); }
 /* Đợt 359 — up/down only, no sway (thầy: "không lắc 2 bên mà di chuyển nhẹ lên xuống") */
 @keyframes aw-rr-jiggle {
-  0%, 100% { transform: translateY(-9%); }
-  50%      { transform: translateY(9%); }
+  0%, 100% { transform: translateY(-20%); }
+  50%      { transform: translateY(20%); }
 }
 /* Đợt 359 — a faint white exhaust behind the flame while flying: three soft puffs
    born at the flame's tip (the flame ends 22 % beyond the craft's left edge),
    drifting back, swelling and fading, staggered so the trail never breaks. */
 .aw-rr-exhaust {
-  position: absolute; top: 50%; right: 116%; width: 16%; aspect-ratio: 1;
+  position: absolute; top: 50%; right: 108%; width: 26%; aspect-ratio: 1;
   transform: translateY(-50%); pointer-events: none; z-index: 0;
 }
 .aw-rr-exhaust-puff {
   position: absolute; inset: 0; border-radius: 50%; opacity: 0;
-  background: radial-gradient(rgba(255,255,255,.55), rgba(255,255,255,.22) 55%, transparent 72%);
-  filter: blur(.6px);
+  background: radial-gradient(rgba(255,255,255,.75), rgba(255,255,255,.3) 55%, transparent 72%);
+  filter: blur(1px);
 }
 .aw-rr-rocket.is-flying .aw-rr-exhaust-puff { animation: aw-rr-exhaust 1.35s linear infinite; }
 .aw-rr-rocket.is-flying .aw-rr-exhaust-puff:nth-child(2) { animation-delay: -.45s; }
@@ -164,8 +164,8 @@
 .aw-rr-rocket.is-stall .aw-rr-exhaust-puff, .aw-rr-rocket.is-wreck .aw-rr-exhaust-puff, .aw-rr-rocket.is-exploding .aw-rr-exhaust-puff { animation: none; opacity: 0; }
 @keyframes aw-rr-exhaust {
   0%   { opacity: 0;   transform: translate(20%, 0) scale(.5); }
-  15%  { opacity: .55; }
-  100% { opacity: 0;   transform: translate(-170%, -12%) scale(2.4); }
+  15%  { opacity: .7; }
+  100% { opacity: 0;   transform: translate(-150%, -12%) scale(2.2); }
 }
 
 .aw-rr-flame {
@@ -429,6 +429,11 @@
    the finish flag overhangs ½u each way, so it runs 5u→17u and no longer sits flush to the bottom edge
    with a gap on top (thầy: "vị trí thanh về đích lệch thấp"). */
 .aw-rr-shared .aw-rr-track { top: calc(5.5 * var(--aw-u)); height: calc(11 * var(--aw-u)); }
+/* Đợt 360 — the lanes start 7 % in, so a rocket on the start line has room behind its
+   flame for the exhaust (before, the flame tail already touched the clipped left edge
+   and the smoke was born off-screen — thầy: "trong fight chưa thấy"). The flag stays at
+   93 % of the track; a finished rocket (x = 86 % of the lane) now sits at 87 %. */
+.aw-rr-shared .aw-rr-lanes { left: 7%; }
 .aw-rr-shared .aw-rr-finish { top: calc(-.5 * var(--aw-u)); bottom: calc(-.5 * var(--aw-u)); }
 .aw-rr-shared .aw-rr-rocket { width: calc(11 * var(--aw-u)); transition: left .6s cubic-bezier(.2,.9,.25,1); }
 .aw-rr-shared .aw-rr-pilot { font-size: calc(11 * var(--aw-u) * .125); }
