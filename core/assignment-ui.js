@@ -54,6 +54,21 @@ import { splitViewOptions, activeVariant, variantLabel, contentSetsOf } from "./
 // scale before showing them, and stamps the result. See openAssignmentEdit.
 import { migrateActivityOptions, OPT_VER } from "./options-migrate.js";
 
+// Đợt 348 (20/9/2026, audit định kỳ toàn hệ): the template picker below used to call
+// `toast(why)` — but `toast` lives inside main.js (not exported), so clicking a greyed
+// template ("doesn't fit this content") threw a ReferenceError and the hint never showed.
+// Same floating `.aw-lib-toast` as main.js, kept LOCAL so this module stays importable
+// on its own (no main.js / engine.js import cycle).
+let libToastTimer = null;
+function libToast(msg) {
+  let t = document.querySelector(".aw-lib-toast");
+  if (!t) { t = el("div", "aw-lib-toast"); document.body.append(t); }
+  t.textContent = msg;
+  t.classList.add("is-on");
+  clearTimeout(libToastTimer);
+  libToastTimer = setTimeout(() => t.classList.remove("is-on"), 2200);
+}
+
 // =============================================================
 // HOMEWORK OPTIONS (Đợt C, 15/8/2026) — the bảng Options shown on both the
 // "Set assignment" and "Edit assignment" forms. `draft` is edited IN PLACE
@@ -988,7 +1003,7 @@ function openTemplatePicker(act, currentType, onPick) {
         item.append(el("span", "aw-tpl-icon", templateIcon(icons, t.type)),
                     el("span", "aw-tpl-name", escapeText(t.label)));
         if (enabled) item.onclick = () => { close(); onPick(t.type); };
-        else if (!isCurrent) { item.title = why; item.onclick = () => toast(why); }
+        else if (!isCurrent) { item.title = why; item.onclick = () => libToast(why); }   // Đợt 348: was `toast` (undefined here)
         grid.append(item);
       });
       host.append(grid);

@@ -8,7 +8,11 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **19/9/2026 khuya (Đợt 347 — CHỈ `tools/ftg-prepare.py`, thầy chốt "kho `myLesson-audio` là nguồn duy nhất":
+> Cập nhật lần cuối: **20/9/2026 sáng (Đợt 348 — CHỈ `core/assignment-ui.js`: bấm template XÁM trong bảng chọn template của
+> form Set assignment ném `ReferenceError: toast` (hàm nội bộ main.js, module không import) ⇒ thêm `libToast()` cục bộ cùng
+> `.aw-lib-toast`. Phát hiện bằng máy trong đợt audit định kỳ toàn hệ 20/9 (`DU LIEU TONG HOP\RA SOAT TOAN HE — 20-09-2026.md`).
+> Xem GHI CHU DU AN.md Đợt 348)**.
+> Trước đó: **19/9/2026 khuya (Đợt 347 — CHỈ `tools/ftg-prepare.py`, thầy chốt "kho `myLesson-audio` là nguồn duy nhất":
 > `kho_audio()` lấy mp3 bài từ kho TRƯỚC (HEAD so cỡ với `AUDIO\<mã>.mp3` của buổi, khác/chưa có thì tải ~2 MB/3 s + xoá `.pk.json`
 > cũ), ổ D `.mp3`/`.mp4` chỉ là đường lùi khi mất mạng/kho chưa có bài. Kho đã đủ 145/145 bài của `D:\4. LISTENING`. Đo: Parakeet
 > trên mp3 kho = 587/587 chữ giống hệt bản đo từ mp4, lệch 0,000 s. Đi cùng myWord v2.7.1 + myLesson v2.85.0 (popup Nghe hỏi kho

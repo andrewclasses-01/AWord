@@ -513,6 +513,18 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 348 (20/9/2026 sáng, audit định kỳ toàn hệ) — `core/assignment-ui.js` BẤM TEMPLATE XÁM TRONG BẢNG CHỌN TEMPLATE NÉM `ReferenceError: toast` · 1 file · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY TRANG THẬT
+
+**Phát hiện bằng máy** (đợt rà soát `DU LIEU TONG HOP\RA SOAT TOAN HE — 20-09-2026.md`, phép kiểm mới "biến lạ ở renderer ESM"
+`tsc --checkJs --lib dom` trên 139 file ESM): `assignment-ui.js:991` gọi `toast(why)` nhưng `toast` là hàm nội bộ của `main.js`
+(không export), module này không import ⇒ trong form **Set assignment**, bấm ô template **xám** ("— doesn't fit this content")
+ném `ReferenceError`, lời nhắn không hiện (tooltip `title` vẫn có). Không đụng gì khác nên mở app không thấy.
+
+**Sửa:** thêm `libToast()` cục bộ y hệt `main.js::toast` (cùng phần tử `.aw-lib-toast` + class `is-on`, CSS có sẵn
+`core/app.css:3412`), giữ LOCAL để không tạo vòng import main.js/engine.js; dòng 991 gọi `libToast(why)`. Không đổi giao diện,
+không đổi kho/luật. Kiểm: `node --input-type=module --check` + chạy lại `tsc-renderer` ⇒ 0 tên lạ ngoài vendor.
+`_backup/dot348/` giữ 3 file trước khi sửa.
+
 ## Đợt 347 (19/9/2026 khuya, đi cùng myWord v2.7.1 + myLesson v2.85.0) — CHỈ `tools/ftg-prepare.py`: FILE NGHE LẤY TỪ KHO `myLesson-audio` TRƯỚC (`kho_audio()`), ổ D là đường lùi · KHÔNG đụng `core/`/template · ✅ commit riêng
 
 **Gốc.** Act `LSB1-S3.T2.P3-4 / FIND THE GAP` trên trang thật báo toast *Could not load the audio* (`find-the-gap.js:373`): template ghép
