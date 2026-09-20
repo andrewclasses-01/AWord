@@ -100,3 +100,43 @@ PHẢI CUỘN** (chưa ai báo). Ba bộ chỉnh số ▲▼ cao 69px mỗi cái
 Levels dùng stepper **nằm ngang**, Balloon speed thành thanh trượt.
 
 **Đo thật panel của template này (1280×720, cùng phép đo trước/sau)**: **757px → 424px** (bản cũ **phải cuộn**, nay không).
+
+---
+
+## Đợt 349 (20/9/2026) — NỐI `onPause` CHO MENU PAUSE (cơ chế Đợt 91 của core): mở ☰ Menu là ĐỒNG HỒ + BLIMP ĐỨNG THẬT · chỉ `balloon-pop.js` (+40 dòng) · ✅ THẦY DUYỆT (chat 20/9) → COMMIT + PUSH · ⬜ thầy chưa bấm tay trang thật
+
+**Lỗi:** mở ☰ Menu giữa ván thì lớp mờ hiện ra, nhưng đồng hồ đếm ngược vẫn chạy và blimp vẫn trôi phía sau (đo mã cũ:
+Menu mở 3 s ⇒ 0:49 → 0:46, blimp dịch ~26 % bề ngang). Nguyên nhân: mọi thứ thời-gian-thực của game này nằm trong MỘT
+vòng lặp `requestAnimationFrame` (`tick`) — `freezePlay()` của engine chỉ dừng được animation CSS/WAAPI trong sân + mp3 của
+các pack `core/sfx.js`; vòng rAF thì engine không thấy, template phải tự nối hook `tpl.onPause`. Bốn game maze-chase /
+flying-fruit / whack-a-mole / running-team đã nối từ Đợt 91, game này bị sót (grep `onPause` = 0).
+
+**Sửa (KHÔNG đụng `core/`, không đụng template khác):**
+- Cầu nối cấp module `bpPauseHandlers` (mẫu `ffPauseHandlers` của flying-fruit — mount() mỗi ván một bộ closure, còn
+  `onPause` là hàm cấp template); `cleanup()` đặt lại `null` để ván sau không gọi nhầm handler của ván đã dọn.
+- `pauseGame()`: nhớ `wasRunning = !!rafId`, `cancelAnimationFrame`, `lastTs = 0`. `resumeGame()`: chỉ chạy khi
+  `wasRunning` và chưa `ended`/`dead`/chưa có rAF khác ⇒ `lastTs = 0` rồi `requestAnimationFrame(tick)` lại.
+- Là **kiểu đồng hồ 2 (DELTA)** theo `core/HUONG DAN CORE.md` mục onPause: `tick` tính `dt = ts − lastTs`, nên xoá `lastTs`
+  là khung hình đầu sau resume có `dt = 0` — **không mất một mili-giây nào của ván, cũng không nhảy**. Không cần dịch hạn.
+- Dừng rAF là dừng trọn: đồng hồ, blimp trôi, spawn blimp, nhịp máy bay (`ambientTimer`). Tiếng mp3 (máy bay/tàu/pop) và
+  animation máy bay thì core đã dừng sẵn (`pauseActive` + `stage.getAnimations`), đo thấy `plane: paused`.
+- Hook `onPause(paused)` trên object template, y hệt 4 game kia.
+
+**Đã đo trên bàn thử `test.html` (dev server cổng 5549, Browser pane hiện — rAF mới chạy):**
+
+| Tình huống | Đồng hồ | Blimp (`style.left`) |
+|---|---|---|
+| Chưa mở Menu, 2 s | 0:57 → 0:55 | trôi ~17 % |
+| ☰ Menu mở, 3 s | **0:44 → 0:44** | **4 blimp giữ nguyên toạ độ** |
+| Bấm Resume, 2 s sau | 0:44 → 0:42 (đã dừng ~18 s mà không mất giờ) | trôi lại |
+| Menu → Start again → Play (ván 2) | 0:58 → 0:56 chạy bình thường; mở Menu lần 2 đứng 0:46 suốt 2 s | đứng |
+| ĐỐI CHỨNG NGƯỢC mã cũ (`_backup/dot349/`) | Menu mở 3 s: **0:49 → 0:46** | trôi tiếp |
+
+Console 0 lỗi cả hai lượt. Mã băm file mới sau khi trả lại từ đối chứng: `b14e0e2c…7edb55`.
+
+**Giới hạn đã biết (không sửa, đúng "Giới hạn đã biết của bước 4" trong HUONG DAN CORE):** máy bay bay ngang có
+`setTimeout(5600)` dọn xác dự phòng, Menu mở lâu hơn thế thì lúc mở lại máy bay đã biến mất giữa trời (đo: `plane: null`
+sau 18 s) — chỉ lệch hình một nhịp, không ảnh hưởng điểm/giờ. Thùng hàng đang rơi lúc bấm Menu cũng thuộc giới hạn này.
+
+Backup trước sửa: `_backup/dot349/`. Danh sách "7 game đã nối onPause" ở `core/HUONG DAN CORE.md` nay thực tế là 8 —
+KHÔNG sửa vì đợt này không đụng `core/`; phụ trách tổng cập nhật khi tiện.

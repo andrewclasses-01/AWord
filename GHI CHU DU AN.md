@@ -547,6 +547,21 @@ power-up không cho nấc) · tên "Rocket race" · phi công emoji thú · "ok 
 giao bài 1 em xem điểm đúng/N · TOMKO/iPad chạm + tiếng Safari · tốc độ Normal 7 s/nấc có vừa lớp không. Fight/Showdown chưa khai
 (cùng lý do Maze chase). Chặng 3 LIVE nhiều điện thoại = hạ tầng riêng, xem kế hoạch mục 4.
 
+## Đợt 349 (20/9/2026, thầy giao: balloon-pop thiếu hook `onPause`) — BALLOON POP NỐI MENU PAUSE: mở ☰ Menu là đồng hồ + blimp ĐỨNG THẬT · chỉ `templates/balloon-pop/balloon-pop.js` (+40 dòng) · ✅ THẦY DUYỆT → COMMIT + PUSH · ⬜ CHƯA BẤM TAY TRANG THẬT
+
+**Lỗi:** 4 game rAF/timer riêng (maze-chase, flying-fruit, whack-a-mole, running-team) đã nối `tpl.onPause` từ Đợt 91, còn
+Balloon pop bị sót: mở ☰ Menu giữa ván, lớp mờ hiện nhưng đồng hồ vẫn đếm và blimp vẫn trôi sau lưng (đo mã cũ: Menu mở 3 s
+⇒ 0:49 → 0:46). Engine `freezePlay()` chỉ dừng được animation + mp3, không thấy vòng `requestAnimationFrame` của template.
+
+**Sửa:** cầu nối cấp module `bpPauseHandlers` (mẫu flying-fruit, `cleanup()` đặt `null`), `pauseGame()` huỷ rAF + `lastTs = 0`,
+`resumeGame()` chỉ chạy lại khi ván còn sống — kiểu đồng hồ DELTA (mục onPause của HUONG DAN CORE) nên **không mất/không nhảy
+giờ**. Không đụng `core/`, không đụng template khác.
+
+**Đo bàn thử `templates/balloon-pop/test.html` (dev 5549):** chưa mở Menu 0:57 → 0:55 / 2 s; Menu mở **0:44 → 0:44 suốt 3 s**,
+4 blimp giữ nguyên toạ độ, máy bay `paused`; Resume ⇒ 0:44 → 0:42 sau 2 s (đã dừng ~18 s); Start again ⇒ ván mới chạy, Menu lần
+2 vẫn dừng; **đối chứng ngược mã cũ: Menu mở 3 s ⇒ 0:49 → 0:46, blimp trôi**. Console 0 lỗi. Chi tiết + giới hạn đã biết
+(máy bay quá 5,6 s bị `setTimeout` dọn) ở `templates/balloon-pop/GHI CHU BALLOON-POP.md` Đợt 349. Backup `_backup/dot349/`.
+
 ## Đợt 348 (20/9/2026 sáng, audit định kỳ toàn hệ) — `core/assignment-ui.js` BẤM TEMPLATE XÁM TRONG BẢNG CHỌN TEMPLATE NÉM `ReferenceError: toast` · 1 file · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY TRANG THẬT
 
 **Phát hiện bằng máy** (đợt rà soát `DU LIEU TONG HOP\RA SOAT TOAN HE — 20-09-2026.md`, phép kiểm mới "biến lạ ở renderer ESM"

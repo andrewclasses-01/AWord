@@ -85,6 +85,12 @@ const ENGINE_SVG = `<svg viewBox="0 0 260 170" xmlns="http://www.w3.org/2000/svg
   <circle cx="210" cy="140" r="14" fill="#2c2018" stroke="#d9a441" stroke-width="3"/>
 </svg>`;
 
+// Menu pause (Đợt 349, 20/9/2026) — bridges the CURRENT mount's pause/resume
+// pair out to the template-level `onPause` hook engine.js calls (Đợt 91). Module-
+// level single, same pattern as flying-fruit's `ffPauseHandlers`: AWord only ever
+// mounts one activity at a time. cleanup() MUST reset it to null.
+let bpPauseHandlers = null;
+
 const balloonPopTemplate = {
   type: "balloon_pop",
   scorable: true,
@@ -125,6 +131,13 @@ const balloonPopTemplate = {
   },
 
   edit: openBalloonPopEditor,
+
+  // Menu pause hook (Đợt 349) — engine.js calls this on ☰ Menu open(true)/
+  // close(false). See `bpPauseHandlers` above for why it's a module bridge.
+  onPause(paused) {
+    if (!bpPauseHandlers) return;
+    if (paused) bpPauseHandlers.pause(); else bpPauseHandlers.resume();
+  },
 
   toPrintItems(activity) {
     return (activity.content?.items || [])
@@ -264,6 +277,32 @@ function mountBalloonPop(root, activity, ui) {
   loadLevel(0);
   updateScore();
   rafId = requestAnimationFrame(tick);
+
+  // ----- Menu pause (Đợt 349, 20/9/2026) -----
+  // Everything real-time in this game lives in ONE rAF loop (`tick`): the round
+  // clock, blimp drift, blimp spawning and the ambient plane cadence. engine.js's
+  // freezePlay() can't reach a rAF loop (it pauses CSS/WAAPI animations + the mp3
+  // packs — the plane's flight and its sound DO freeze that way), so before this đợt
+  // the clock kept counting down and blimps kept drifting behind the dimmed ☰ Menu.
+  // Type-2 clock (HUONG DAN CORE, onPause): `tick` works on `ts - lastTs`, so cancelling
+  // the frame and zeroing `lastTs` is the whole job — the first frame after resume
+  // re-bases with dt = 0 and NOT ONE ms of round time is lost or skipped.
+  // `wasRunning` remembers whether the loop was alive at pause time: the round can
+  // end (endRound nulls rafId) or the mount can be thrown away (`dead`) while the
+  // Menu is open, and neither must be resurrected by a later resume.
+  let wasRunning = false;
+  function pauseGame() {
+    wasRunning = !!rafId;
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    lastTs = 0;
+  }
+  function resumeGame() {
+    if (!wasRunning || ended || dead || rafId) return;
+    wasRunning = false;
+    lastTs = 0;
+    rafId = requestAnimationFrame(tick);
+  }
+  bpPauseHandlers = { pause: pauseGame, resume: resumeGame };
 
   // ----- TIME COST wiring (Đợt 143) — see core/engine.js's ui.setIdleGuard.
   // The guard answers ONE question: "could the student act right now?" If not,
@@ -683,6 +722,7 @@ function mountBalloonPop(root, activity, ui) {
   // =========================================================
   return function cleanup() {
     dead = true;      // Đợt 114 — the only brake on this file's 11 bare setTimeouts
+    bpPauseHandlers = null;   // Đợt 349 — never let the next mount reach this dead loop
     ended = true;
     if (rafId) cancelAnimationFrame(rafId);
     rafId = null;

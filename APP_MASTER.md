@@ -8,7 +8,12 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/9/2026 sáng (Đợt 348 — CHỈ `core/assignment-ui.js`: bấm template XÁM trong bảng chọn template của
+> Cập nhật lần cuối: **20/9/2026 (Đợt 349 — CHỈ `templates/balloon-pop/balloon-pop.js`: nối hook `onPause` cho MENU PAUSE
+> (cơ chế Đợt 91) — trước đó mở ☰ Menu giữa ván Balloon pop thì đồng hồ vẫn đếm + blimp vẫn trôi sau lớp mờ (game này chạy
+> trọn trong 1 vòng rAF mà engine không dừng được). Cầu nối `bpPauseHandlers` + huỷ/chạy lại rAF theo DELTA, không mất giờ.
+> Đo bàn thử: Menu mở 3 s đồng hồ 0:44 đứng yên, Resume chạy tiếp 0:42; đối chứng mã cũ 0:49 → 0:46. ✅ THẦY DUYỆT → COMMIT +
+> PUSH. ⬜ Thầy chưa bấm tay trang thật. Xem GHI CHU DU AN.md Đợt 349)**.
+> Trước đó: **20/9/2026 sáng (Đợt 348 — CHỈ `core/assignment-ui.js`: bấm template XÁM trong bảng chọn template của
 > form Set assignment ném `ReferenceError: toast` (hàm nội bộ main.js, module không import) ⇒ thêm `libToast()` cục bộ cùng
 > `.aw-lib-toast`. Phát hiện bằng máy trong đợt audit định kỳ toàn hệ 20/9 (`DU LIEU TONG HOP\RA SOAT TOAN HE — 20-09-2026.md`).
 > Xem GHI CHU DU AN.md Đợt 348)**.
@@ -5396,7 +5401,11 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **19/9/2026 sau Đợt 345 — ✓ bộ nghĩa theo LỚP, ✅ đã commit + push, ⬜ thầy chưa bấm tay** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **20/9/2026 sau Đợt 350 (Rocket race, phiên khác, đã commit) + Đợt 349 (Balloon pop nối Menu pause, ✅ thầy duyệt → commit + push, ⬜ chưa bấm tay trang thật)** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+
+> **Đợt 349 (20/9/2026, thầy giao):** Balloon pop là game duy nhất có vòng lặp rAF riêng mà chưa nối `tpl.onPause` (Đợt 91) ⇒ mở ☰ Menu giữa ván, đồng hồ vẫn đếm + blimp vẫn trôi sau lớp mờ. Vá chỉ `templates/balloon-pop/balloon-pop.js` (+40 dòng): cầu nối `bpPauseHandlers`, huỷ rAF lúc mở Menu, chạy lại với `lastTs = 0` lúc đóng (đồng hồ DELTA ⇒ không mất giờ), `cleanup()` reset. Đo bàn thử: Menu mở 3 s đồng hồ 0:44 đứng, 4 blimp đứng, Resume ⇒ 0:42 sau 2 s; Start again ⇒ ván mới vẫn dừng đúng; đối chứng mã cũ 0:49 → 0:46. Console 0 lỗi. **✅ THẦY DUYỆT (chat 20/9) → COMMIT + PUSH**; ⬜ thầy chưa bấm tay trang thật; đã commit đúng 4 file (`balloon-pop.js` + GHI CHU template + GHI CHU DU AN + APP_MASTER), KHÔNG `git add -A` (thư mục `templates/rocket-race/` của phiên khác đang untracked). Chi tiết: `GHI CHU DU AN.md` Đợt 349 + `templates/balloon-pop/GHI CHU BALLOON-POP.md`.
+
+> Trước đó — Đợt 345:
 
 > **⭐⭐ Đợt 350 (20/9/2026) — TEMPLATE MỚI "ROCKET RACE" (đua tên lửa kiểu Blastroom) · 🟢 CHỜ THẦY DUYỆT · ⛔ CHƯA COMMIT.**
 > Thầy chốt qua AskUserQuestion: chặng 1+2 · luật điểm A (1 câu đúng = 1 nấc) · emoji thú · ok build. Solo đua 3–5 tên lửa máy
