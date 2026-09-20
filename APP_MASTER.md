@@ -8,7 +8,8 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/9/2026 tối (Đợt 360 — Rocket race Fight: khói/nhấp phi công "chưa thấy" vì tàu 77 px quá nhỏ + đuôi lửa chạm mép trái ở vạch xuất phát; làn đua lùi 7 %, khói 26 %/đậm .7, phi công ±20 %. Live đã khớp code, không phải cache. Mục 17 GHI CHU ROCKET-RACE)**.
+> Cập nhật lần cuối: **20/9/2026 tối (Đợt 361 — Rocket race: phi công nhấp ±6 % cùng chu kỳ/pha với thân tàu (trễ .35 s), ép lùi khi boost, rung khi khựng — chỉ CSS. Mục 18 GHI CHU ROCKET-RACE)**.
+> Trước đó: **20/9/2026 tối (Đợt 360 — Rocket race Fight: khói/nhấp phi công "chưa thấy" vì tàu 77 px quá nhỏ + đuôi lửa chạm mép trái ở vạch xuất phát; làn đua lùi 7 %, khói 26 %/đậm .7, phi công ±20 %. Live đã khớp code, không phải cache. Mục 17 GHI CHU ROCKET-RACE)**.
 > Trước đó: **20/9/2026 tối (Đợt 359 — Rocket race: phi công chỉ nhấp lên xuống trong cửa sổ; thêm `.aw-rr-exhaust` 3 puff khói trắng mờ toả sau lửa khi bay. Mục 16 GHI CHU ROCKET-RACE)**.
 > Trước đó: **20/9/2026 tối (Đợt 358 — Rocket race: phi công là vòng tròn cắt đúng cửa sổ tàu, emoji lắc lư riêng bên trong (`aw-rr-jiggle`); bỏ đường kẻ mờ dọc làn. Mục 15 GHI CHU ROCKET-RACE)**.
 > Trước đó: **20/9/2026 tối (Đợt 357 — chỉ `rocket-race.css`: chip TEAM X + tim căn giữa dải dưới ô (ổ Time delay ghim đáy), vạch đích căn giữa dải đua; đo lệch ≤ 0,5 px. Xem GHI CHU ROCKET-RACE mục 14)**.

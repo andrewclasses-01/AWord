@@ -287,3 +287,9 @@ puff 16 % = 12 px mờ .55, phi công nhấp ±9 % của ô 12 px ≈ ±1 px —
 blur 1px, trôi −150 %, scale 2,2; phi công nhấp ±20 %; **`.aw-rr-shared .aw-rr-lanes { left: 7% }`** — làn đua lùi vào 7 %
 để sau lửa có chỗ (tàu về đích ở 87 % track, cờ 93 %). Đo: tàu ở 82 px, lửa 65 px, khói 55–76 px — hiện trọn. Bài học: hiệu
 ứng viết bằng % của tàu phải đo trên khung NHỎ NHẤT (Fight), không chỉ Solo.
+
+## 18. Phi công nhấp theo vật lý của chính tàu mình (Đợt 361, 20/9/2026 tối)
+Thầy: "thật ít, thật nhẹ và phù hợp vật lý với di chuyển riêng của từng tàu". Bỏ đồng hồ riêng 1,3 s ±20 %: `aw-rr-jiggle` nay
+**cùng chu kỳ 2,6 s và cùng gốc pha `--wob` với `aw-rr-bob` của thân**, trễ +.35 s (quán tính), biên độ ±6 %; boost → mặt bị ép
+lùi −14 % đúng .6 s của `aw-rr-lunge` (`aw-rr-facepush`); stall/hit → mặt rung `aw-rr-facerattle` đúng 3/4 nhịp .3 s của
+`aw-rr-shake`. Đo 5 tàu solo: thân `aw-rr-bob 2.6s delay −6.23s` ↔ mặt `aw-rr-jiggle 2.6s delay −5.88s` (mỗi tàu một pha riêng).

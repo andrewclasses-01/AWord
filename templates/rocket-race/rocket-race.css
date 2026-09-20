@@ -139,11 +139,24 @@
   pointer-events: none;
 }
 .aw-rr-face { display: block; line-height: 1; }
-.aw-rr-rocket.is-flying .aw-rr-face { animation: aw-rr-jiggle 1.3s ease-in-out infinite; animation-delay: calc(-1 * var(--wob, 0s)); }
-/* Đợt 359 — up/down only, no sway (thầy: "không lắc 2 bên mà di chuyển nhẹ lên xuống") */
+/* Đợt 361 — the pilot follows ITS OWN ship's physics, not a clock of its own
+   (thầy: "thật ít, thật nhẹ và phù hợp vật lý với di chuyển riêng của từng tàu"):
+   • cruising: the hull bobs (aw-rr-bob, 2.6 s, phase `--wob`); the face lags it by
+     .35 s with a tiny ±6 % — inertia, the same period and the same phase source,
+     so every rocket's pilot moves with that rocket and no other;
+   • boost (lunge forward): the face is pressed BACK for the .6 s of the lunge;
+   • stall / hit (hull shakes): the face rattles for exactly the shake's 3–4 beats. */
+.aw-rr-rocket.is-flying .aw-rr-face { animation: aw-rr-jiggle 2.6s ease-in-out infinite; animation-delay: calc(-1 * var(--wob, 0s) + .35s); }
 @keyframes aw-rr-jiggle {
-  0%, 100% { transform: translateY(-20%); }
-  50%      { transform: translateY(20%); }
+  0%, 100% { transform: translateY(6%); }
+  50%      { transform: translateY(-6%); }
+}
+.aw-rr-rocket.is-boost .aw-rr-face { animation: aw-rr-facepush .6s cubic-bezier(.2,.9,.25,1); }
+@keyframes aw-rr-facepush { 0% { transform: translateX(0); } 30% { transform: translateX(-14%); } 100% { transform: translateX(0); } }
+.aw-rr-rocket.is-stall .aw-rr-face { animation: aw-rr-facerattle .3s linear 3; }
+.aw-rr-rocket.is-hit .aw-rr-face { animation: aw-rr-facerattle .3s linear 4; }
+@keyframes aw-rr-facerattle {
+  0%, 100% { transform: translate(0, 0); } 25% { transform: translate(7%, -6%); } 75% { transform: translate(-7%, 6%); }
 }
 /* Đợt 359 — a faint white exhaust behind the flame while flying: three soft puffs
    born at the flame's tip (the flame ends 22 % beyond the craft's left edge),
