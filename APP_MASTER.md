@@ -8,7 +8,18 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/9/2026 (Đợt 349 — CHỈ `templates/balloon-pop/balloon-pop.js`: nối hook `onPause` cho MENU PAUSE
+> Cập nhật lần cuối: **20/9/2026 (Đợt 352 — FIND THE GAP · FIGHT: câu nhiều ô, đúng CHƯA HẾT vẫn ăn Time delay
+> thay vì Miss wait — thầy báo bug "câu 3 ô, đội 1 đúng 1/3 mà đội 2 bị khoá gần như ngay lập tức". Gốc:
+> `settleLine()` báo trọng tài `wordDone({correct: có ≥1 ô đúng})` nên câu chưa xong hết cũng đi nhánh ĐÚNG
+> (Time delay ngắn) của trọng tài giống hệt câu xong hết. Sửa 1 dòng trong
+> `templates/find-the-gap/find-the-gap.js`: đổi thành `correct: st.correct` (đúng HẾT mọi ô) — câu chưa xong
+> hết nay đi đúng nhánh SAI của trọng tài (Miss wait TRỌN VẸN cho đội kia); điểm vẫn tính riêng qua sổ
+> `ftgFightLedger` ở `reveal()` nên không ảnh hưởng hoà/thắng của đội đúng ít hơn. KHÔNG đụng
+> `core/fight.js`. Đo thật bằng `startFight()` trên trình duyệt thật (không mock DOM): 1/2 đúng → đội kia vẫn
+> bấm được tới ~2,5s trong Miss wait 3s, chỉ khoá lúc ~3,2s; 2/2 đúng → đội kia bị khoá lúc ~0,19s (đúng Time
+> delay 0,1s); hai đội cùng 1/2 (hoà, chưa tối đa) → cả hai cùng ăn điểm. Xem `templates/find-the-gap/GHI CHU
+> FIND-THE-GAP.md` Đợt 352. ⬜ Thầy chưa bấm tay trang thật)**.
+> Trước đó: **20/9/2026 (Đợt 349 — CHỈ `templates/balloon-pop/balloon-pop.js`: nối hook `onPause` cho MENU PAUSE
 > (cơ chế Đợt 91) — trước đó mở ☰ Menu giữa ván Balloon pop thì đồng hồ vẫn đếm + blimp vẫn trôi sau lớp mờ (game này chạy
 > trọn trong 1 vòng rAF mà engine không dừng được). Cầu nối `bpPauseHandlers` + huỷ/chạy lại rAF theo DELTA, không mất giờ.
 > Đo bàn thử: Menu mở 3 s đồng hồ 0:44 đứng yên, Resume chạy tiếp 0:42; đối chứng mã cũ 0:49 → 0:46. ✅ THẦY DUYỆT → COMMIT +
@@ -5401,7 +5412,9 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **20/9/2026 sau Đợt 350 (Rocket race, phiên khác, đã commit) + Đợt 349 (Balloon pop nối Menu pause, ✅ thầy duyệt → commit + push, ⬜ chưa bấm tay trang thật)** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **20/9/2026 sau Đợt 352 (Find the gap Fight — Miss wait/Time delay, phiên này, đã đo thật) + Đợt 350/351 (Rocket race, phiên khác, đã commit) + Đợt 349 (Balloon pop nối Menu pause, ✅ thầy duyệt → commit + push, ⬜ chưa bấm tay trang thật)** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+
+> **Đợt 352 (20/9/2026, thầy báo bug):** Fight mode của Find the gap — câu nhiều ô, một đội đúng CHƯA HẾT (vd 1/3) từng khiến đội kia bị khoá gần như ngay lập tức (ăn nhầm Time delay 0,1s) thay vì được trọn vẹn thanh Miss wait. Sửa 1 dòng ở `templates/find-the-gap/find-the-gap.js` (`settleLine()`): báo trọng tài `wordDone({correct: st.correct})` (đúng HẾT mọi ô) thay vì "có ≥1 ô đúng" — không đụng `core/fight.js`, điểm vẫn tính riêng qua sổ `ftgFightLedger` ở `reveal()`. Đo thật bằng `startFight()` trên trình duyệt: 1/2 đúng → đội kia còn nguyên Miss wait; 2/2 đúng → đội kia bị khoá đúng mốc Time delay; hai đội hoà 1/2 (chưa tối đa) → cả hai cùng ăn điểm. Chi tiết: `templates/find-the-gap/GHI CHU FIND-THE-GAP.md` Đợt 352 (được đánh số lại từ 348 vì con số đó phiên khác đã dùng trước khi phiên này push). ⬜ Thầy chưa bấm tay trang thật.
 
 > **⭐⭐ Đợt 351 (20/9/2026 chiều) — ROCKET RACE có FIGHT với bố cục riêng (cả cuộc đua ở nửa trên, 2 bàn hỏi–đáp ở nửa dưới) · 🟢 CHỜ THẦY DUYỆT · ⛔ CHƯA COMMIT.**
 > Trọng tài Fight của core giữ nguyên (cùng câu, ai đúng trước ăn, Time delay/Speed bonus/In turns); core chỉ thêm cờ `tpl.fightLayout: "shared-top"`

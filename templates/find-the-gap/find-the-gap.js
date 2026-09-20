@@ -741,10 +741,18 @@ const ftgTemplate = {
       updateNav();
       if (fightCtl) {
         syncFightLock();
-        // "correct" to the referee = at least one gap right: a 1/2 board must NOT
-        // be locked out as a plain wrong answer, or it could never tie a 1/2 rival.
-        // The point itself is decided at reveal() by comparing the ledger.
-        fightCtl.wordDone(fightSide, { index, correct: st.ok.some(Boolean) });
+        // ⭐ Đợt 352 (thầy, 20/9/2026) — "correct" to the referee = ALL gaps right
+        // (st.correct), not "at least one". A board that finished but is NOT
+        // 100% must go through the referee's WRONG path: that gives the other
+        // side the FULL Miss wait (not the short Time delay) to keep playing,
+        // exactly like a plain wrong answer in every other template (Đợt 128) —
+        // it only self-locks/greys while the round stays open, it is never
+        // scored zero for it. The point itself is still decided independently
+        // at reveal() by comparing the ledger (`hits[side] >= hits[other]`), so
+        // a 1/2 board still ties or beats a rival with fewer/equal hits; it is
+        // only a board that reaches ALL gaps first that gets to cut the other
+        // one off early via Time delay (a genuinely finished-and-correct line).
+        fightCtl.wordDone(fightSide, { index, correct: st.correct });
         return;   // the referee moves both boards
       }
       if (ending) return;

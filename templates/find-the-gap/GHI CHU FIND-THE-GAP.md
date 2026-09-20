@@ -198,4 +198,32 @@ Game và editor **không đổi một dòng**. Thay đổi nằm ở nguồn d�
 - `kho_audio(code, mats)`: HEAD so cỡ với `AUDIO\<mã>.mp3` của buổi → dùng/tải; kho đổi file ⇒ xoá `.pk.json` cũ. Gọi trước
   `mats["audio"] or mats["mp4"]` ở `asr_only`/`align_only`/`main`. Ổ D chỉ còn là đường lùi (mất mạng / bài mới chưa lên kho).
 - Đo: Parakeet trên mp3 kho = 587/587 chữ giống hệt, lệch 0,000 s so với bản đo từ mp4 gốc (cùng tham số ffmpeg 64k mono).
+
+## Đợt 352 (20/9/2026, thầy báo bug; đánh số lại từ 348 vì con số đó phiên khác đã dùng trước khi phiên này push — xem APP_MASTER.md) — Fight: câu nhiều ô, đúng CHƯA HẾT vẫn ăn Time delay thay vì Miss wait — sửa `find-the-gap.js`, KHÔNG đụng core
+- **Bug thầy thấy**: câu 3 ô, đội 1 điền 2 ô sai + 1 ô đúng (chưa xong hết) → đội 2 bị khoá gần như ngay lập
+  tức khi Time delay = 0,1s, đúng ra đội 2 phải còn NGUYÊN thanh Miss wait để làm nốt vì đội 1 chưa hoàn
+  thành đúng hết.
+- **Gốc bug** (`settleLine()`, dòng ~747): báo trọng tài `wordDone({correct: st.ok.some(Boolean)})` — chỉ
+  cần ≥1 ô đúng là báo "correct" — nên câu 1/3, 2/3 cũng đi vào nhánh ĐÚNG của trọng tài (mở cửa sổ Time
+  delay `pendingWinner`) y hệt câu 3/3, thay vì đi nhánh SAI (Miss wait `wrongWaitMs`) dành cho ai chưa
+  hoàn thành. Đây là quyết định thiết kế Đợt (vòng 2, 18/9) nhằm tránh bàn 1/2 bị khoá cứng như sai — nhưng
+  đã hiểu lầm: **điểm số của Find the gap KHÔNG đi qua cờ `correct` này** (nó chỉ quyết định THỜI GIAN chờ
+  của trọng tài) — điểm luôn tính riêng ở `reveal()` qua sổ chung `ftgFightLedger` (`hits[mình] >= hits[kia]`
+  thì được điểm), nên đổi cờ báo trọng tài không hề chặn khả năng hoà/thắng của bàn đúng ít hơn.
+- **Sửa**: đổi thành `wordDone({correct: st.correct})` — `st.correct` (`st.ok.every(Boolean)`, đã có sẵn ở
+  dòng trên) chỉ true khi ĐÚNG HẾT mọi ô. Câu chưa đúng hết đi đúng nhánh SAI của trọng tài: tự khoá/xám
+  MÌNH (đúng luật chung "GIẤU ĐÁP ÁN KHI VÒNG CÒN MỞ", core/HUONG DAN CORE.md) và cấp cho bàn kia TRỌN VẸN
+  thanh Miss wait; câu đúng hết mới mở cửa sổ Time delay ngắn để chốt luôn (thầy: "coi như đội 1 xong và
+  đúng rồi"). Không đụng một dòng nào trong `core/fight.js` — toàn bộ máy trạng thái miss-wait/time-delay/
+  tie-window đã có sẵn, chỉ là template báo sai cờ đầu vào.
+- **Đo thật bằng `startFight()` trên trình duyệt thật** (bench tạm `scratch/ftg-fight-bench.js`, xoá sau khi
+  đo — không phải mock DOM), câu "And the tickets are in my bag." (2 ô: tickets/bag), Miss wait 3s / Time
+  delay 0,1s:
+  - Đội 1 đúng 1/2 (chưa hết) → đội 2 **vẫn bấm được bình thường suốt tới ~2,5s**, chỉ bị khoá lúc ~3,2s
+    (đúng hết 3s Miss wait) — KHÔNG còn bị khoá ở mốc 0,1s như bug cũ.
+  - Đội 1 đúng 2/2 (hết) → đội 2 bị khoá lúc ~0,19s (đúng mốc Time delay 0,1s, có cộng độ trễ đo đạc).
+  - Đội 1 đúng 1/2 rồi đội 2 cũng đúng 1/2 (khác ô, hoà số ô, đều chưa hết) trong lúc còn Miss wait → **cả
+    hai cùng được 1 điểm** (đúng luật "bằng nhau, chưa tối đa thì cả hai tính điểm").
+- ⬜ Chưa đo case 2/3 vs 1/3 (nhiều hơn thắng, ít hơn không tính) bằng tay trên trang thật — đã suy từ đúng
+  công thức `reveal()` sẵn có (không đổi), chỉ đổi mỗi cờ báo trọng tài nên không có lý do khác đi.
 - Template/`core/` không đổi. ⬜ Ý tưởng: hộp Import HEAD URL kho lúc import để báo sớm bài chưa có tiếng.
