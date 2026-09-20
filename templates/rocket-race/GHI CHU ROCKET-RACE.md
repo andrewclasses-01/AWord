@@ -257,3 +257,10 @@ Chốt: "để thông tin (slogan, tên act, template…) ở vùng chơi, ở 2
   node trước rồi append. Bài học: kiểm `read_console_messages` cả mức warn khi "bấm không ăn".
 - Đo bàn thử: READY = vùng chung "ANDREW CLASSES / SPACE RACE / ROCKET RACE", bàn = "🐱 TEAM 1" + ▶; PLAY → readyinfo mất,
   2 tên lửa + qbar hiện, 0 lỗi.
+
+## 14. Căn lại chip đội + vạch đích (Đợt 357, 20/9/2026 tối — chỉ rocket-race.css)
+Thầy gửi 2 ảnh: "TEAM X - tim hơi lệch lên", "thanh về đích lệch thấp". Gốc: (a) ổ Time delay 1,2u nằm trong luồng dưới chip
+đẩy chip lên khỏi giữa dải dưới ô; (b) track 5,2u→17,2u ±1u vạch đích = 4,2u→18,2u, tràn đáy (17,97u) mà hở trên (qbar 4u).
+Sửa: ổ Time delay `position:absolute` ghim đáy (bottom −.8u, cao .6u, thanh 100 %), panel bottom 1,1u gap .9u ⇒ chip đúng giữa
+(đo: chipMid 97,9 vs bandMid 98,3 px); track 5,5u→16,5u, vạch đích ±.5u = 5u→17u ⇒ tâm 77,1 vs tâm dải 77,0 px; tim
+`line-height:1; top:.08em` ⇒ tâm tim/chữ/huy hiệu 241,4/240,9/240,9 px.

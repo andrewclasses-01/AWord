@@ -392,7 +392,11 @@
   background: transparent; border: 0; border-radius: 0; box-shadow: none;
 }
 .aw-rr-qbar .aw-rr-qtext { font-size: calc(2.4 * var(--aw-u) * var(--fit)); line-height: 1.2; white-space: nowrap; }
-.aw-rr-shared .aw-rr-track { top: calc(5.2 * var(--aw-u)); height: calc(12 * var(--aw-u)); }
+/* Đợt 357 — track centred in the 4u→17.97u band under the question bar (mid ≈ 11u): 5.5u + 11u/2 = 11u;
+   the finish flag overhangs ½u each way, so it runs 5u→17u and no longer sits flush to the bottom edge
+   with a gap on top (thầy: "vị trí thanh về đích lệch thấp"). */
+.aw-rr-shared .aw-rr-track { top: calc(5.5 * var(--aw-u)); height: calc(11 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-finish { top: calc(-.5 * var(--aw-u)); bottom: calc(-.5 * var(--aw-u)); }
 .aw-rr-shared .aw-rr-rocket { width: calc(11 * var(--aw-u)); transition: left .6s cubic-bezier(.2,.9,.25,1); }
 .aw-rr-shared .aw-rr-pilot { font-size: calc(11 * var(--aw-u) * .155); }
 .aw-rr-shared .aw-rr-num { font-size: calc(11 * var(--aw-u) * .12); }
@@ -414,12 +418,16 @@
   background: var(--rd, #160b3f);
   background: linear-gradient(180deg, color-mix(in srgb, var(--rc, #4fc3f7) 72%, #000) 0%, color-mix(in srgb, var(--rc, #4fc3f7) 45%, #000) 100%);
 }
-.aw-rr-stage.is-fightboard .aw-rr-panel { top: calc(1.2 * var(--aw-u)); bottom: calc(1 * var(--aw-u)); gap: calc(.8 * var(--aw-u)); }
+/* Đợt 357 — the Time delay slot is pinned to the foot (out of the flow), so the band under the tiles is
+   gap .9u + chip 3.4u + bottom 1.1u and the chip sits on its middle (thầy: "chữ TEAM X - tim hơi lệch lên"). */
+.aw-rr-stage.is-fightboard .aw-rr-panel { top: calc(1.2 * var(--aw-u)); bottom: calc(1.1 * var(--aw-u)); gap: calc(.9 * var(--aw-u)); }
+.aw-rr-stage.is-fightboard .aw-rr-waitslot { position: absolute; left: 0; right: 0; bottom: calc(-.8 * var(--aw-u)); height: calc(.6 * var(--aw-u)); }
+.aw-rr-stage.is-fightboard .aw-rr-waitslot .aw-waitbar { height: 100%; }
 .aw-rr-stage.is-fightboard .aw-rr-turn { height: calc(3.4 * var(--aw-u)); font-size: calc(2.2 * var(--aw-u)); letter-spacing: .08em; }
 .aw-rr-stage.is-fightboard .aw-rr-turnbadge { width: calc(3 * var(--aw-u)); height: calc(3 * var(--aw-u)); font-size: calc(1.9 * var(--aw-u)); }
 .aw-rr-stage.is-fightboard .aw-rr-tiletext { font-size: calc(3.2 * var(--aw-u) * var(--tw, 1)); }
 .aw-rr-stage.is-fightboard .aw-rr-answers { gap: calc(1.2 * var(--aw-u)); }
-.aw-rr-stage.is-fightboard .aw-rr-turnlives { font-size: calc(2 * var(--aw-u)); }
+.aw-rr-stage.is-fightboard .aw-rr-turnlives { font-size: calc(2 * var(--aw-u)); line-height: 1; position: relative; top: .08em; }
 /* the hosted wait bar: in flow, full width of the panel (core's `.is-hosted`
    drops the bottom-row positioning; height stays core's 1.2u) */
 .aw-rr-waitslot { position: relative; flex: 0 0 auto; height: calc(1.2 * var(--aw-u)); }

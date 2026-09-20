@@ -8,7 +8,8 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/9/2026 tối (Đợt 356 — ROCKET RACE · FIGHT màn START: bìa READY của engine bị cắt trong bàn 16:5 (ảnh
+> Cập nhật lần cuối: **20/9/2026 tối (Đợt 357 — chỉ `rocket-race.css`: chip TEAM X + tim căn giữa dải dưới ô (ổ Time delay ghim đáy), vạch đích căn giữa dải đua; đo lệch ≤ 0,5 px. Xem GHI CHU ROCKET-RACE mục 14)**.
+> Trước đó: **20/9/2026 tối (Đợt 356 — ROCKET RACE · FIGHT màn START: bìa READY của engine bị cắt trong bàn 16:5 (ảnh
 > thầy) → `fightFrame.readyShared` + `teams`: thông tin act (brand/tên/template) lên vùng chung, mỗi bàn chỉ còn icon + TEAM n + ▶;
 > lỗi tự tạo `append()` trả undefined bị engine nuốt thành `[warn] fight mode failed to load` — đã sửa. Xem GHI CHU ROCKET-RACE mục 13)**.
 > Trước đó: **20/9/2026 tối (Đợt 355 — ROCKET RACE · FIGHT, 9 ý thầy sau khi xem 353+354: câu hỏi thành MỘT DÒNG
