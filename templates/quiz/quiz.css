@@ -117,6 +117,54 @@
   --tile-dark-eff: #98a0aa;
 }
 
+/* ===== TIME LIMIT (Đợt 363, 20/9/2026) — hàng [số giây][thanh] GIỮA câu hỏi và
+   các ô đáp án. Thanh mang margin-top:auto (nhận thay cho .aw-quiz-answers khi có
+   nó) nên luôn nằm sát trên hàng ô; câu hỏi vẫn ở mép trên như cũ. Cùng ngôn ngữ
+   xanh → cam → đỏ của .aw-roundbar-fill / .aw-fight-missbar (core) — MỘT cách nói
+   "sắp hết giờ" cho cả app. Chữ số kiểu "7,45": giây to + phần trăm nhỏ, cùng dáng
+   đồng hồ lượt Đợt 176. Màu chữ đổi theo thanh. */
+.aw-quiz-tl {
+  --tl-c1: #6cd06a; --tl-c2: #3fae5a; --tl-num: #2f9a4a;
+  flex: 0 0 auto;
+  margin-top: auto;
+  width: 96%;
+  margin-left: auto; margin-right: auto;
+  display: flex; align-items: center;
+  gap: calc(1.4 * var(--aw-u));
+  height: calc(3 * var(--aw-u));
+}
+.aw-quiz-tl.is-orange { --tl-c1: #ffb24d; --tl-c2: #ff8c1a; --tl-num: #e0761a; }
+.aw-quiz-tl.is-red    { --tl-c1: #ff7a5c; --tl-c2: #e0453f; --tl-num: #d63a34; }
+.aw-quiz-tl-num {
+  flex: 0 0 auto;
+  min-width: calc(7 * var(--aw-u));
+  text-align: right;
+  font-size: calc(2.9 * var(--aw-u));
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--tl-num);
+  transition: color .3s ease;
+}
+.aw-quiz-tl-dec { font-size: .55em; font-weight: 700; opacity: .85; }
+.aw-quiz-tl-bar {
+  flex: 1 1 auto; min-width: 0; position: relative;
+  height: calc(1.2 * var(--aw-u)); border-radius: calc(1 * var(--aw-u));
+  background: rgba(0, 0, 0, .18);
+  overflow: hidden;
+}
+.aw-quiz-tl-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 100%;
+  border-radius: calc(1 * var(--aw-u));
+  background: linear-gradient(90deg, var(--tl-c1), var(--tl-c2));
+  /* Bề rộng ghi lại mỗi 50ms; transition chỉ làm mượt giữa 2 nhịp, dài hơn là trễ số. */
+  transition: width .08s linear, background .3s ease;
+}
+/* Có thanh thì hàng ô đáp án KHÔNG còn tự đẩy xuống đáy (margin-top:auto đã chuyển
+   sang thanh) — chỉ cách thanh một khe. ⚠️ quiz.js fitNow() cộng đúng khe này
+   (1.6 aw-u) vào phép đo chiều cao — đổi số ở đây thì đổi cả bên kia. */
+.aw-quiz-card.has-tl .aw-quiz-answers { margin-top: calc(1.6 * var(--aw-u)); }
+
 /* Lives slider in the Options panel (0 = Unlimited). This control lives OUTSIDE
    the 16:9 stage, so plain px/rem is right here — cqw would be meaningless.
    Same look as True/false's and Type the answer's Lives control. */

@@ -8,7 +8,8 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/9/2026 tối (Đợt 362 — Rocket race: phi công chỉ lên xuống ±1,2 % (1/5 của 361), bỏ ép lùi ngang khi boost, rung khựng cũng chỉ dọc; mọi mode. Mục 19 GHI CHU ROCKET-RACE)**.
+> Cập nhật lần cuối: **20/9/2026 tối (Đợt 363 — QUIZ: thanh TIME LIMIT 1s..20s + nấc ∞ trong Options, giới hạn giây MỖI CÂU ở MỌI mode (đơn · Fight · Showdown); hàng [giây][thanh] giữa câu hỏi và ô; hết giờ = sai qua đúng `roundTimeUp()` Đợt 174, Fight báo trọng tài `wordDone({correct:false})`; đóng băng khi trượt câu/Menu/clip đọc/bàn khoá; chỉ `templates/quiz/`, không đụng core. 🟢 chờ thầy duyệt. Xem `templates/quiz/GHI CHU QUIZ.md` Đợt 363)**.
+> Trước đó: **20/9/2026 tối (Đợt 362 — Rocket race: phi công chỉ lên xuống ±1,2 % (1/5 của 361), bỏ ép lùi ngang khi boost, rung khựng cũng chỉ dọc; mọi mode. Mục 19 GHI CHU ROCKET-RACE)**.
 > Trước đó: **20/9/2026 tối (Đợt 361 — Rocket race: phi công nhấp ±6 % cùng chu kỳ/pha với thân tàu (trễ .35 s), ép lùi khi boost, rung khi khựng — chỉ CSS. Mục 18 GHI CHU ROCKET-RACE)**.
 > Trước đó: **20/9/2026 tối (Đợt 360 — Rocket race Fight: khói/nhấp phi công "chưa thấy" vì tàu 77 px quá nhỏ + đuôi lửa chạm mép trái ở vạch xuất phát; làn đua lùi 7 %, khói 26 %/đậm .7, phi công ±20 %. Live đã khớp code, không phải cache. Mục 17 GHI CHU ROCKET-RACE)**.
 > Trước đó: **20/9/2026 tối (Đợt 359 — Rocket race: phi công chỉ nhấp lên xuống trong cửa sổ; thêm `.aw-rr-exhaust` 3 puff khói trắng mờ toả sau lửa khi bay. Mục 16 GHI CHU ROCKET-RACE)**.

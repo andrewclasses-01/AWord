@@ -531,6 +531,21 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 363 (20/9/2026 tối, QUIZ — thanh **TIME LIMIT** 1s..20s + nấc ∞, giới hạn giây MỖI CÂU ở MỌI MODE đơn · Fight · Showdown; hết giờ = sai) · 🟢 CHỜ THẦY DUYỆT · ⬜ CHƯA BẤM TAY
+
+Thầy: *"Trong mọi mode của quiz, có thêm một thanh Time Limit: … kéo từ 1s đến 20s và nấc cuối cùng là không giới
+hạn, kéo theo nấc 1s."* Chỉ sửa `templates/quiz/quiz.js` + `quiz.css`, KHÔNG đụng `core/`.
+Chi tiết đầy đủ (vì sao không dùng Time each round của engine, đồng hồ DELTA, nhánh Fight mới của `roundTimeUp()`,
+bridge `onPause` dạng Set, 12 phép đo bàn thử): **`templates/quiz/GHI CHU QUIZ.md` Đợt 363**.
+Tóm tắt: `options.timeLimit` 1..20 (0/thiếu = ∞ ⇒ act cũ y như xưa) · hàng `[giây][thanh]` giữa câu hỏi và ô ·
+hết giờ đi đúng đường `roundTimeUp()` Đợt 174 (✗, Points off bay, mất tim, auto next / đứng chờ ▷) · Fight: giấu
+✓/✗ + `wordDone({correct:false})` cho trọng tài · đóng băng khi trượt câu, Menu, clip đang đọc, bàn bị khoá.
+
+**VIỆC ĐANG CHỜ.** ⬜ Thầy bấm tay trang thật + TOMKO (kéo slider bằng ngón). ⬜ Showdown khi bật cả Time each round
+lẫn Time limit. ⬜ Time limit + Voice autoPlay (đồng hồ phải đứng lúc clip đọc).
+
+---
+
 ## Đợt 362 (20/9/2026 tối, ROCKET RACE — phi công chỉ lên xuống ±1,2 % (1/5), bỏ mọi dịch ngang; mọi mode) · ⬜ CHƯA BẤM TAY
 Mục 19 GHI CHU ROCKET-RACE.
 

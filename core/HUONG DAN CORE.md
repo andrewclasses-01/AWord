@@ -2490,6 +2490,10 @@ câu trả lời). Ba API, đều no-op khi tắt nên template nối một lầ
 > ⚠️ **Speaking là ngoại lệ có chủ ý**: chuông **không bao giờ** cắt ngang lúc đang thu / đang chấm
 > (`micState`) — cắt là chấm sai em vì độ trễ của chính cái model.
 > ⚠️ **FIGHT không bao giờ gọi `setRoundTimeout`** — ở đó trọng tài khoá bàn im lặng.
+> ⭐ **Đợt 363 — Quiz có đồng hồ MỖI CÂU RIÊNG ("Time limit", 1..20 s + ∞, `options.timeLimit`) chạy ở MỌI mode**,
+> kể cả ngoài Showdown và trong Fight — vì đồng hồ engine ở mục này là cấu trúc chỉ-Showdown. Nó nằm trọn trong
+> `templates/quiz/` (không đụng core), đổ về cùng `roundTimeUp()` của template; trong Fight, hàm ấy giấu ✓/✗ và báo
+> `wordDone({correct:false})` cho trọng tài. Chi tiết: `templates/quiz/GHI CHU QUIZ.md` Đợt 363.
 
 **Engine tự lo** (không template nào phải biết):
 - Mở lượt mới **tại `ui.setNav({index})`** — KHÔNG phải `ui.itemChanging` (cái đó chạy sớm 130ms, lúc câu

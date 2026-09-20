@@ -24,6 +24,12 @@
 //    costs a heart (shown in the top bar via ui.livesSlot, left of the score);
 //    reaching 0 ends the game right away with "Game over", even when questions
 //    are left. Same control + rendering as True/false and Type the answer.
+//  • TIME LIMIT (Options, slider 1s..20s, last notch ∞ = the default): seconds
+//    to answer EACH question, in EVERY mode (single · Fight · Showdown). A bar +
+//    seconds row sits between the question and the tiles; out of time = wrong
+//    (the same path as a wrong tap: ✗ sound, Points off, a heart, auto next; in
+//    Fight the referee is told wordDone({correct:false})). Frozen while the
+//    question slides, while a clip is being read, and while ☰ Menu is open.
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
@@ -58,6 +64,26 @@ function normLives(v) {
   if (v == null || v === 0) return null;
   return Math.min(MAX_LIVES, Math.max(1, Math.round(v)));
 }
+
+// ⭐⭐ TIME LIMIT (Đợt 363, thầy 20/9/2026) — số giây để trả lời MỖI CÂU, chạy ở
+// MỌI mode của Quiz (đơn · Fight · Showdown). Khác hẳn "Time each round" của engine
+// (Đợt 174, chỉ Showdown, 3..599s, có đếm lên): đây là của riêng Quiz, đặt trong
+// Options của template, thanh + số giây vẽ NGAY TRONG SÂN (giữa câu hỏi và các ô).
+// Thanh trượt: 1s → 20s từng nấc 1s, NẤC CUỐI (21) = ∞ không giới hạn (thầy chốt
+// "nấc cuối cùng là không giới hạn"). Lưu `options.timeLimit` = 1..20; 0 / null /
+// undefined = không giới hạn — mọi act cũ không có khoá này ⇒ chơi y như xưa.
+const TL_MAX_S = 20;
+function normTimeLimit(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.min(TL_MAX_S, Math.max(1, Math.round(n)));
+}
+
+// Cầu nối ☰ Menu pause cho đồng hồ Time limit (hợp đồng `tpl.onPause`, core/HUONG
+// DAN CORE.md mục 3). ⚠️ Là SET chứ không phải một biến: Fight mount HAI bàn cùng
+// lúc từ cùng module này (luật Đợt 351). Mỗi mount thêm handler của mình vào rồi
+// gỡ ra trong cleanup().
+const quizPauseHandlers = new Set();
 
 const quizTemplate = {
   type: "quiz",
@@ -161,8 +187,29 @@ const quizTemplate = {
     lives.cell.title = "0 = unlimited lives";
     panel.append(lives.cell);
 
+    // ⭐⭐ TIME LIMIT (Đợt 363) — 1s..20s từng nấc 1s, nấc cuối (21) hiện "∞" = không
+    // giới hạn. Thanh trượt đi 1..21 nhưng options chỉ lưu 1..20 hoặc 0 (= ∞): mọi
+    // act cũ không có khoá này đọc ra ∞, y như xưa. `offAt` là nấc ∞ để chip xám đi.
+    // Tone "blue" = một đại lượng thuần (luật 3 màu Đợt 143), không phải thưởng/phạt.
+    const tlCur = normTimeLimit(draft.timeLimit);
+    const tl = mkSliderCell({
+      label: "Time limit", min: 1, max: TL_MAX_S + 1, step: 1,
+      value: tlCur == null ? TL_MAX_S + 1 : tlCur, tone: "blue", offAt: TL_MAX_S + 1,
+      fmt: v => (v > TL_MAX_S ? "∞" : v + "s"),
+      onInput: v => { draft.timeLimit = v > TL_MAX_S ? 0 : v; }   // 0 stored = unlimited
+    });
+    tl.cell.title = "Seconds to answer each question (∞ = no limit). Out of time = wrong.";
+    panel.append(tl.cell);
+
     addCheck("Allow skip", draft.allowSkip === true, v => draft.allowSkip = v,
       { key: "allowSkip", title: "Allow skip (move on without answering)" });
+  },
+
+  // ☰ Menu pause (Đợt 363) — engine gọi onPause(true) lúc mở Menu / bảng công cụ,
+  // onPause(false) lúc đóng. Đồng hồ Time limit là timer RIÊNG của template (không
+  // đi qua đồng hồ chung) nên phải tự đóng băng; xem `quizPauseHandlers` ở đầu file.
+  onPause(paused) {
+    quizPauseHandlers.forEach(h => { try { if (paused) h.pause(); else h.resume(); } catch { /* mount đã dọn */ } });
   },
 
   mount(root, activity, ui) {
@@ -176,6 +223,11 @@ const quizTemplate = {
     // thì nó hiện ra như "game không lên".
     let pendingPenalty = 0;
     const allowSkip = opt.allowSkip === true;                                // move on without answering (default off)
+    // ⭐⭐ TIME LIMIT (Đợt 363) — giây cho mỗi câu; null = ∞ (thanh không dựng, đồng hồ
+    // không chạy, mọi thứ y như trước đợt này).
+    const timeLimitS = normTimeLimit(opt.timeLimit);
+    const tlOn = timeLimitS != null;
+    const tlTotalMs = tlOn ? timeLimitS * 1000 : 0;
 
     // ----- FIGHT MODE (12/8/2026, trial) — this play is one of two boards
     // racing. `_fight` is put here by core/fight.js; everything below falls
@@ -225,6 +277,13 @@ const quizTemplate = {
     // the idle guard), and a -1 there would have printed `undefined` into the
     // review instead of "No answer".
     const state = questions.map(() => ({ chosen: null, correct: null, timedOut: false }));
+    // TIME LIMIT (Đợt 363) — ms đã TIÊU của từng câu. Cộng dồn theo CÂU, không theo
+    // lượt xem (cùng luật với đồng hồ lượt của engine): quay lại câu chưa trả lời
+    // bằng ‹ thì đồng hồ chạy tiếp từ chỗ còn lại, không nạp lại từ đầu.
+    const tlUsed = questions.map(() => 0);
+    let tlId = null;        // ticker 50ms, chỉ tồn tại khi tlOn
+    let tlLast = 0;         // performance.now() của nhịp trước (đồng hồ kiểu DELTA)
+    let tlPaused = false;   // ☰ Menu / bảng công cụ đang mở (qua tpl.onPause)
     let index = 0;
     let finished = false;
     let autoTimer = null;   // pending "auto game complete" timer
@@ -269,7 +328,22 @@ const quizTemplate = {
     const card = el("div", "aw-quiz-card");
     const questionEl = el("div", "aw-quiz-question");
     const answersRow = el("div", "aw-quiz-answers");
-    card.append(questionEl, answersRow);
+    // ⭐⭐ TIME LIMIT (Đợt 363) — hàng [số giây][thanh] nằm GIỮA câu hỏi và các ô đáp
+    // án (thanh mang `margin-top:auto`, ô đáp án theo sau — xem quiz.css `.has-tl`).
+    // Dựng MỘT LẦN như card/tiles; sang câu chỉ vẽ lại số, không dựng lại.
+    let tlRow = null, tlNum = null, tlFill = null;
+    if (tlOn) {
+      tlRow = el("div", "aw-quiz-tl");
+      tlNum = el("span", "aw-quiz-tl-num");
+      const tlBar = el("div", "aw-quiz-tl-bar");
+      tlFill = el("div", "aw-quiz-tl-fill");
+      tlBar.append(tlFill);
+      tlRow.append(tlNum, tlBar);
+      card.classList.add("has-tl");
+      card.append(questionEl, tlRow, answersRow);
+    } else {
+      card.append(questionEl, answersRow);
+    }
     root.append(card);
 
     // tiles[] holds a persistent { tile, textEl, letterEl } per answer slot.
@@ -301,10 +375,81 @@ const quizTemplate = {
     // roundTimeUp() below, and core/engine.js's own block for the contract.
     ui.setRoundTimeout?.(roundTimeUp);
 
+    // =============================================================
+    // ⭐⭐ TIME LIMIT (Đợt 363) — đồng hồ MỖI CÂU của riêng Quiz, mọi mode
+    // =============================================================
+    // Đồng hồ kiểu DELTA (core/HUONG DAN CORE.md, onPause kiểu 2): mỗi nhịp cộng
+    // `now - tlLast` vào `tlUsed[index]` — nhưng CHỈ khi em thật sự có thể trả lời.
+    // Lúc không thể (đang trượt sang câu, Menu mở, câu đã chốt, bàn bị trọng tài khoá,
+    // clip đang đọc) thì `tlLast` vẫn được dời lên nên quãng ấy KHÔNG tính — cùng
+    // câu hỏi mà idleGuard của Time cost trả lời: "em có thể hành động lúc này không?".
+    // Hết giờ ⇒ `roundTimeUp()` — ĐÚNG con đường "hết giờ = sai" Đợt 174 đã có, không
+    // viết luật thứ hai (điểm trừ, mất tim, auto next, Fight báo trọng tài đều ở đó).
+    // ⚠️ Không dùng `ui.roundDone`/`setRoundTimeout` của engine cho việc này: đồng hồ
+    // ấy là cấu trúc CHỈ-SHOWDOWN (roundMode ép "none" ngoài Showdown) — còn thầy cần
+    // Time limit ở MỌI mode. Hai đồng hồ có thể cùng bật trong Showdown; cả hai cùng
+    // gọi roundTimeUp() và hàm ấy tự chặn lần thứ hai bằng `settled(st)`.
+    function voiceBusy() {
+      // Bàn không sở hữu tiếng trong Fight (chỉ bàn 0 có <audio> thật — Đợt 302)
+      // hỏi trọng tài xem clip có đang kêu không, y như nút loa gương của nó.
+      if (voicePlayer.isPlaying()) return true;
+      if (fightCtl && !fightCtl.speaks(fightSide)) {
+        const vs = fightCtl.voiceState && fightCtl.voiceState();
+        return !!(vs && vs.playing);
+      }
+      return false;
+    }
+    function tlBusy() {
+      return tlPaused || animating || finished || ending || fightLocked() ||
+        settled(state[index]) || voiceBusy();
+    }
+    function tlPaint() {
+      if (!tlOn || !tlFill) return;
+      const leftMs = Math.max(0, tlTotalMs - (tlUsed[index] || 0));
+      const pct = (leftMs / tlTotalMs) * 100;
+      tlFill.style.width = pct + "%";
+      // Cùng ngôn ngữ xanh→cam→đỏ của `.aw-roundbar-fill` / Miss wait: MỘT cách nói
+      // "sắp hết giờ" cho cả app. Mốc theo %, vì 1..20s thì mốc giây cố định vô nghĩa.
+      tlRow.classList.toggle("is-orange", pct <= 50 && pct > 20);
+      tlRow.classList.toggle("is-red", pct <= 20);
+      // Số giây kiểu "7,45" (giây + phần trăm nhỏ) — cùng dáng đồng hồ lượt Đợt 176.
+      // Tính từ ms NGUYÊN, không từ float giây (bẫy `,39` đã ghi trong HUONG DAN CORE).
+      const ms = Math.round(leftMs);
+      const whole = Math.floor(ms / 1000);
+      const cents = Math.floor((ms % 1000) / 10);
+      tlNum.textContent = String(whole);
+      tlNum.append(el("span", "aw-quiz-tl-dec", "," + String(cents).padStart(2, "0")));
+    }
+    function tlTick() {
+      const now = performance.now();
+      const dt = now - tlLast;
+      tlLast = now;
+      if (tlBusy()) return;                 // quãng này không tính, và số đã đứng yên
+      tlUsed[index] = (tlUsed[index] || 0) + dt;
+      if (tlUsed[index] >= tlTotalMs) {
+        tlUsed[index] = tlTotalMs;
+        tlPaint();
+        roundTimeUp();                      // hết giờ = sai, đúng đường Đợt 174
+        return;
+      }
+      tlPaint();
+    }
+    function tlStart() {
+      if (!tlOn || tlId) return;
+      tlLast = performance.now();
+      tlId = setInterval(tlTick, 50);       // 20Hz: số phần trăm không giật (bài học Đợt 176)
+    }
+    function tlStop() { if (tlId) clearInterval(tlId); tlId = null; }
+    // ☰ Menu pause — chỉ đổi cờ; nhịp kế tiếp thấy cờ là bỏ qua quãng đó. Không cần
+    // clearInterval/dịch hạn vì đồng hồ tính theo DELTA (kiểu 2 trong HUONG DAN CORE).
+    const tlPauseHandler = { pause: () => { tlPaused = true; }, resume: () => { tlPaused = false; } };
+    if (tlOn) quizPauseHandlers.add(tlPauseHandler);
+
     applyQuestion(0);   // first question, no animation
     ui.setScore(scoreNow());
     updateNav();
     renderLives();
+    tlStart();          // TIME LIMIT (Đợt 363) — câu 1 bắt đầu tính giờ từ đây
 
     // Fit now, once fonts are ready, and on every resize.
     fitNow();
@@ -459,6 +604,10 @@ const quizTemplate = {
       // re-evaluated here too — otherwise a lost round would leave the next
       // question's answers greyed out.
       if (fightCtl) syncFightLock();
+      // TIME LIMIT (Đợt 363) — vẽ ngay số/thanh của CÂU NÀY: nhịp ticker bỏ qua lúc
+      // `animating` nên không có dòng này thì thanh còn mang số của câu cũ suốt 190ms
+      // trượt vào.
+      tlPaint();
     }
 
     // Apply a lock change WITHOUT rebuilding anything — used by the fight
@@ -507,7 +656,12 @@ const quizTemplate = {
       // 1) HEIGHT fit: shrink --fit until question + answers fit the stage height.
       //    slack scales with the stage (card padding-bottom + 3D shadow lip).
       const slack = root.clientWidth * 0.045;
-      const measure = () => questionEl.offsetHeight + answersRow.offsetHeight;
+      // TIME LIMIT (Đợt 363) — the bar row + the gap under it (`.has-tl
+      // .aw-quiz-answers { margin-top }`, 1.6 aw-u = 1.6% of the stage width)
+      // take stage height too, or a long question would be fitted as if the
+      // row were not there and the tiles would overlap it.
+      const tlH = () => (tlRow ? tlRow.offsetHeight + root.clientWidth * 0.016 : 0);
+      const measure = () => questionEl.offsetHeight + tlH() + answersRow.offsetHeight;
       const overH = () => measure() > root.clientHeight - slack;
       if (overH()) {
         let lo = 0.4, hi = 1, best = 0.4;
@@ -667,12 +821,21 @@ const quizTemplate = {
      * ⚠️ The question is LOCKED (`tile.disabled`) and `settled()` now reports it
      * as dealt with, which is what lets ▷ move on with Allow skip off.
      *
-     * ⚠️ FIGHT MODE NEVER CALLS THIS. Đợt 222 briefly routed the referee's
-     * "Time delay window shut" signal through here (a `timeUp()` in
-     * `fightCtl.attach` below); Đợt 223 removed "Round rule" from Options and
-     * with it the only case that lock needed a "treat as wrong" reaction — the
-     * referee now locks that board silently (see core/fight.js's
-     * finalizeSingleWinner/silentLose). This function is single-mode only again.
+     * ⚠️ The ENGINE's round clock (ui.setRoundTimeout) never fires this in FIGHT.
+     * Đợt 222 briefly routed the referee's "Time delay window shut" signal
+     * through here (a `timeUp()` in `fightCtl.attach` below); Đợt 223 removed
+     * "Round rule" from Options and with it the only case that lock needed a
+     * "treat as wrong" reaction — the referee now locks that board silently
+     * (see core/fight.js's finalizeSingleWinner/silentLose).
+     *
+     * ⭐⭐ Đợt 363 — BUT QUIZ'S OWN TIME LIMIT (tlTick above) DOES fire this in
+     * every mode, Fight included (teacher: "trong mọi mode của quiz"). So this
+     * function now has the same two-way split choose() has: in a match the
+     * ✓/✗ stay WITHHELD (only neutral grey, the other team is still choosing —
+     * rule "GIẤU ĐÁP ÁN KHI VÒNG CÒN MỞ") and the referee is told
+     * `wordDone({correct:false})`, which locks this board and lets the other
+     * one play the round out; the match controller, not this board, decides
+     * when the round advances and when the match ends.
      */
     function roundTimeUp() {
       const st = state[index];
@@ -680,8 +843,18 @@ const quizTemplate = {
       const q = questions[index];
       st.timedOut = true;
       st.correct = false;
+      // Engine's per-pupil clock (Showdown "Time each round", count UP too): the
+      // turn is over, freeze its reading — same as choose() does on a tap.
+      ui.roundDone?.();
       tiles.forEach(t => (t.tile.disabled = true));
-      tiles.forEach((t, k) => addBadges(t.tile, q.answers[k], k, st));
+      if (fightCtl) {
+        // Đợt 363 — FIGHT: withhold the marks exactly as choose() does; the
+        // match's reveal() paints them once both boards are done.
+        fightPendingReveal = true;
+        syncFightLock();
+      } else {
+        tiles.forEach((t, k) => addBadges(t.tile, q.answers[k], k, st));
+      }
       quizSound.wrong();
       // ⭐ Đợt 256 — hết giờ cũng là một câu SAI (Đợt 174), nên nó cũng phải bay.
       // Không có ô nào được bấm ⇒ đưa `null`, core/engine.js rơi về giữa khung.
@@ -690,6 +863,10 @@ const quizTemplate = {
       ui.setScore(scoreNow());
       if (willFlyTO) ui.flyPenalty?.(null, pointsOff, () => settlePenalty(pointsOff));
       updateNav();
+      // Đợt 363 — FIGHT: the referee hears "this board is done, and wrong" —
+      // the honest flag, same as a wrong tap: the round stays open for the
+      // other team (core/fight.js wordDone → lock(true) on this side).
+      if (fightCtl) fightCtl.wordDone(fightSide, { index, correct: false });
       // A timeout costs a heart, exactly like a wrong answer — the point of
       // Lives is "this many mistakes", and sitting the clock out is one.
       if (loseLife()) {
@@ -700,6 +877,9 @@ const quizTemplate = {
         autoTimer = setTimeout(() => finish("gameover"), 1500);
         return;
       }
+      // FIGHT skips both automatic moves below, for the same reason choose()
+      // does: the match controller ends the match / advances the round itself.
+      if (fightCtl) return;
       if (state.every(settled)) { autoTimer = setTimeout(() => finish("complete"), 1500); return; }
       // AUTO NEXT — the teacher's choice when it is OFF is to STAY here, locked,
       // until they press ▷ themselves. So there is no `else`: doing nothing is
@@ -934,6 +1114,7 @@ const quizTemplate = {
       if (finished) return;
       finished = true;
       clearAutoTimer();
+      tlStop();   // TIME LIMIT (Đợt 363) — no ticker may outlive its play (Đợt 112/131 ghost-clock lesson)
       // ⚠️⚠️ Đợt 256 — CHỐT SỔ TRƯỚC KHI ĐỌC ĐIỂM. Một con số "−N" còn đang bay là
       // một phép trừ CHƯA áp; đọc điểm lúc này là ghi vào kết quả (và vào điểm nộp
       // của bài giao) một số CAO HƠN thật đúng bằng câu sai cuối cùng. Cú bay mất
@@ -974,6 +1155,8 @@ const quizTemplate = {
       cancelAnimationFrame(fitRaf);
       if (autoTimer) clearTimeout(autoTimer);
       if (heartTimer) clearTimeout(heartTimer);
+      tlStop();                                    // TIME LIMIT (Đợt 363)
+      quizPauseHandlers.delete(tlPauseHandler);    // BẮT BUỘC — kẻo lượt sau gọi handler của ván đã dọn
       voicePlayer.stop();
       if (ui.livesSlot) ui.livesSlot.innerHTML = "";   // hearts must not survive into the next game
     };

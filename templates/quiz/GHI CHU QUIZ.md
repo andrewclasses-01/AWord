@@ -1,5 +1,67 @@
 # GHI CHÚ QUIZ
 
+## Đợt 363 (20/9/2026 tối) — ⭐ **TIME LIMIT**: giới hạn giây cho MỖI CÂU, chạy ở MỌI MODE (đơn · Fight · Showdown)
+
+**Trạng thái: 🟢 CHỜ THẦY DUYỆT** (đã đo trên bàn thử `test.html` qua devserver, chưa commit lúc ghi dòng này).
+Chỉ sửa **`quiz.js` + `quiz.css`** — KHÔNG đụng `core/`.
+
+**Yêu cầu thầy (nguyên văn):** *"Trong mọi mode của quiz, có thêm một thanh Time Limit: đây là thời gian giới hạn để
+trả lời 1 câu, kéo từ 1s đến 20s và nấc cuối cùng là không giới hạn, kéo theo nấc 1s."*
+
+**Vì sao KHÔNG dùng "Time each round" của engine (Đợt 174):** đồng hồ ấy là option CẤU TRÚC chỉ-Showdown —
+`roundMode` bị ép `"none"` ngoài Showdown và ô Options của nó chỉ dựng khi `showdown`. Thầy cần thanh này ở
+MỌI mode ⇒ làm đồng hồ RIÊNG của Quiz, giống cách Gameshow/Open the box có đồng hồ mỗi câu của chúng.
+Hai đồng hồ có thể cùng bật trong Showdown; cả hai cùng đổ về `roundTimeUp()` và hàm ấy tự chặn lần hai bằng
+`settled(st)` — không có luật thứ hai.
+
+**Cài gì, ở đâu:**
+- **Options** (`buildExtraOptions`): `mkSliderCell` "Time limit", `min 1 · max 21 · step 1`, tone `blue`
+  (đại lượng thuần, luật 3 màu Đợt 143), `offAt 21`, chip in `"5s"`, nấc 21 in `"∞"`. Lưu
+  **`options.timeLimit` = 1..20**, nấc ∞ lưu **0**. `normTimeLimit()`: `0/null/undefined/NaN` ⇒ `null` = ∞ ⇒
+  **mọi act cũ không có khoá này chơi y như xưa** (không thanh, không ticker, không handler pause).
+- **Trong sân**: hàng `.aw-quiz-tl` = `[số giây "4,10"][thanh]` dựng MỘT LẦN giữa `questionEl` và `answersRow`;
+  thanh mang `margin-top:auto` (nhận thay cho hàng ô), hàng ô cách thanh `1.6 aw-u` (`.has-tl .aw-quiz-answers`).
+  ⚠️ `fitNow()` cộng `tlRow.offsetHeight + 1.6 % bề ngang` vào phép đo chiều cao — đổi khe CSS thì đổi cả bên đó.
+  Màu xanh → cam (≤50 %) → đỏ (≤20 %) cùng ngôn ngữ `.aw-roundbar-fill`/Miss wait; số kiểu `"7,45"` tính từ **ms
+  nguyên** (bẫy `,39` HUONG DAN CORE).
+- **Đồng hồ kiểu DELTA** (`tlTick` 50 ms): mỗi nhịp cộng `now − tlLast` vào **`tlUsed[index]`** — cộng dồn theo
+  CÂU, không theo lượt xem (‹ về câu chưa làm thì chạy tiếp từ chỗ còn lại, y luật engine). Nhịp bị BỎ QUA
+  (không tính giờ, số đứng yên) khi `tlBusy()`: đang trượt sang câu (`animating`) · ☰ Menu/bảng công cụ mở
+  (`tlPaused`, qua `tpl.onPause`) · câu đã chốt (`settled`) · bàn bị trọng tài khoá (`fightLocked`) · clip đang đọc
+  (`voiceBusy()` — bàn không sở hữu tiếng trong Fight hỏi `fightCtl.voiceState()`, y nút loa gương Đợt 302) ·
+  `finished`/`ending`. `applyQuestion()` gọi `tlPaint()` ngay để câu mới không mang số câu cũ suốt 190 ms trượt vào.
+- **Hết giờ = SAI** — gọi ĐÚNG `roundTimeUp()` của Đợt 174, không viết đường thứ hai: ✗ tiếng, Points off bay
+  từ giữa khung, mất tim (hết tim ⇒ Game over), auto next nếu bật, còn không thì ĐỨNG YÊN chờ thầy bấm ▷ (thầy
+  chốt Đợt 174). Dòng review `answered:false` ⇒ Show answers in "No answer".
+- **FIGHT** (mới, Đợt 363): `roundTimeUp()` nay có nhánh trận GIỐNG HỆT `choose()`: GIẤU ✓/✗ (`fightPendingReveal`
+  + `syncFightLock()` — luật "GIẤU ĐÁP ÁN KHI VÒNG CÒN MỞ"), báo trọng tài **`wordDone({index, correct:false})`** ⇒
+  trọng tài `lock(true)` bàn này, bàn kia chơi nốt (Miss wait); KHÔNG tự finish/auto next — trọng tài đẩy vòng.
+  Chú thích cũ "FIGHT MODE NEVER CALLS THIS" đã sửa lại cho đúng: đồng hồ ENGINE không gọi trong Fight, đồng hồ
+  RIÊNG của Quiz thì có.
+- **`tpl.onPause`** nối lần đầu cho Quiz: bridge cấp module là **`Set` (`quizPauseHandlers`)** chứ không phải một
+  biến — Fight mount HAI bàn từ cùng module (luật Đợt 351); mỗi mount add/delete handler của mình trong
+  `cleanup()`. Pause chỉ đổi cờ, không cần dịch hạn (đồng hồ DELTA = kiểu 2 trong HUONG DAN CORE mục onPause).
+- `ui.roundDone?.()` gọi thêm trong `roundTimeUp()` (đồng hồ lượt engine đóng băng khi hết giờ, kể cả Count up).
+- `finish()` + `cleanup()` đều `tlStop()` — không ticker nào sống quá ván (bài học đồng hồ ma Đợt 112/131).
+
+**Đã đo trên bàn thử thật** (devserver `:5562`, `templates/quiz/test.html`, Time limit 5 s):
+- Options: slider `min 1 max 21`, kéo tới 5 ⇒ chip `"5s"`; mặc định ở 21 ⇒ `"∞"` xám.
+- Đơn: Play ⇒ `3,04` sau ~2 s, thanh xanh; hết giờ ⇒ `0,00` đỏ, ✓ lên ô đúng, ô sai mờ, ▷ mở dù Allow skip tắt.
+  Sang câu 2 rồi bấm ô ⇒ đứng yên `4,10` (đo lại sau 1,5 s vẫn `4,10`). ☰ Menu ⇒ `4,31` đứng yên 2 s; Resume ⇒
+  1 s sau `3,31` (đúng 1 s). ‹ về câu 2 ⇒ hiện lại `4,10` đã đóng băng; › sang câu 3 ⇒ `3,15` → `2,11` (chạy tiếp
+  từ chỗ còn lại, không nạp lại). 0 lỗi console.
+- Fight: cả hai bàn có thanh, đồng bộ `3,49 / 3,48`; cả hai hết giờ ⇒ cả hai `is-fightlost`, 2 badge ✓ lộ, trọng
+  tài tự sang câu; hết 6 câu ⇒ "IT'S A DRAW 0 — 0", Show answers 12 dòng "No answer". 0 lỗi console.
+- Mặc định (∞): `.aw-quiz-tl` = 0 node, card không `has-tl`, 0 lỗi — hồi quy sạch.
+- ⚠️ Bẫy đo gặp khi test: cửa sổ bị che ⇒ Chromium đóng băng CSS transition, `style.width = 0%` mà computed vẫn
+  711 px (transition `87 % → 0 %` treo ở `t = 0`) — là chuyện của trình duyệt bị che (xem memory
+  `electron-test-throttle`), không phải lỗi thanh. Đo bằng `style.width` + số giây, đừng tin computed width lúc che.
+
+**⬜ VIỆC ĐANG CHỜ:** thầy bấm tay trang thật (TOMKO: kéo slider bằng ngón, xem thanh đủ to?), Showdown với cả
+hai đồng hồ cùng bật, Time limit + Voice (clip đang đọc thì đồng hồ có đứng?), Time limit 1 s + Lives.
+
+---
+
 ## Đợt 155 (14/8/2026) — ⭐ THAM GIA CHẾ ĐỘ MỚI **SHOWDOWN** (thêm ĐÚNG 1 DÒNG)
 
 ✅ **COMMIT `57677cf` + PUSH + LIVE** (14/8/2026). `quiz.js` chỉ thêm **`showdownMode: true`** — không một dòng nào khác.
