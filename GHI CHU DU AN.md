@@ -531,6 +531,19 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 364 (20/9/2026 khuya, QUIZ Time limit — cụm số+thanh cân đúng mép khối ô · tích dồn dập 5 s cuối · bỏ nhạc 6 s thừa khi hết mạng) · 🟢 CHỜ THẦY DUYỆT · ⬜ CHƯA BẤM TAY
+
+Thầy gửi 2 ảnh trang thật + 3 việc. (1) Cụm `[giây][thanh]` lệch tuỳ cỡ màn: ô số có min-width + căn phải để lại
+khoảng trống vô hình, hàng 96 % còn khối ô 3/hàng chỉ ~93,4 % ⇒ nay ô số rộng đúng số dài nhất (đo bản nháp ẩn), cụm
+rộng đúng mép trái ô đầu → mép phải ô cuối hàng trên (`fitNow()` bước 3); đo khớp 0,1 px cả 4 ô lẫn 3 ô. (2) 5 s cuối
+tích dồn dập tổng hợp (`quizSound.tick`, 500 ms rồi 250 ms giây cuối, cao dần; khử trùng 2 bàn Fight). (3) `gameOver`
+từng mượn `blockgametimeout` (nhạc 5-giây-cuối, 6 s+) ⇒ nay im + `stopWarning()` ở `finish()` cắt nhạc đồng hồ tổng
+còn chạy. Chi tiết + số đo: `templates/quiz/GHI CHU QUIZ.md` Đợt 364. Chỉ `templates/quiz/`.
+
+**VIỆC ĐANG CHỜ.** ⬜ Thầy nghe thật tiếng tích + xem cụm trên bài 6 ô thật + Fight.
+
+---
+
 ## Đợt 363 (20/9/2026 tối, QUIZ — thanh **TIME LIMIT** 1s..20s + nấc ∞, giới hạn giây MỖI CÂU ở MỌI MODE đơn · Fight · Showdown; hết giờ = sai) · ✅ COMMIT + PUSH `a37686a` · ⬜ CHƯA BẤM TAY
 
 Thầy: *"Trong mọi mode của quiz, có thêm một thanh Time Limit: … kéo từ 1s đến 20s và nấc cuối cùng là không giới

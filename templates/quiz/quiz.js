@@ -84,6 +84,10 @@ function normTimeLimit(v) {
 // lúc từ cùng module này (luật Đợt 351). Mỗi mount thêm handler của mình vào rồi
 // gỡ ra trong cleanup().
 const quizPauseHandlers = new Set();
+// Đợt 364 — tích dồn dập 5 giây cuối của Time limit: bắt đầu từ mốc này, và dấu
+// thời gian tiếng gần nhất (cấp module: hai bàn Fight chung một trang chỉ một tiếng).
+const TL_BEEP_FROM_MS = 5000;
+let tlBeepStamp = 0;
 
 const quizTemplate = {
   type: "quiz",
@@ -284,6 +288,7 @@ const quizTemplate = {
     let tlId = null;        // ticker 50ms, chỉ tồn tại khi tlOn
     let tlLast = 0;         // performance.now() của nhịp trước (đồng hồ kiểu DELTA)
     let tlPaused = false;   // ☰ Menu / bảng công cụ đang mở (qua tpl.onPause)
+    let tlBeepAtMs = Infinity;   // Đợt 364 — mốc ms-còn-lại đã tích gần nhất (∞ = chưa tích câu này)
     let index = 0;
     let finished = false;
     let autoTimer = null;   // pending "auto game complete" timer
@@ -331,14 +336,23 @@ const quizTemplate = {
     // ⭐⭐ TIME LIMIT (Đợt 363) — hàng [số giây][thanh] nằm GIỮA câu hỏi và các ô đáp
     // án (thanh mang `margin-top:auto`, ô đáp án theo sau — xem quiz.css `.has-tl`).
     // Dựng MỘT LẦN như card/tiles; sang câu chỉ vẽ lại số, không dựng lại.
-    let tlRow = null, tlNum = null, tlFill = null;
+    let tlRow = null, tlNum = null, tlFill = null, tlProbe = null;
     if (tlOn) {
       tlRow = el("div", "aw-quiz-tl");
       tlNum = el("span", "aw-quiz-tl-num");
       const tlBar = el("div", "aw-quiz-tl-bar");
       tlFill = el("div", "aw-quiz-tl-fill");
       tlBar.append(tlFill);
-      tlRow.append(tlNum, tlBar);
+      // ⭐ Đợt 364 (thầy: cụm số + thanh "có lúc hơi chưa cân đối") — ô số từng có
+      // `min-width` cố định + `text-align:right`, nên với số ngắn ("8,59") có một
+      // khoảng TRỐNG VÔ HÌNH bên trái: cụm vẫn cân theo khung nhưng MẮT thấy lệch.
+      // Nay ô số rộng ĐÚNG BẰNG số dài nhất có thể của giới hạn này ("88,88" hay
+      // "8,88"), đo bằng một bản nháp ẩn cùng font/cỡ (đo lại trong fitNow() vì cỡ
+      // chữ theo --aw-u), và cả cụm được đặt đúng mép khối ô đáp án — xem fitNow().
+      tlProbe = el("span", "aw-quiz-tl-num aw-quiz-tl-probe", (timeLimitS >= 10 ? "88" : "8"));
+      tlProbe.append(el("span", "aw-quiz-tl-dec", ",88"));
+      tlProbe.setAttribute("aria-hidden", "true");
+      tlRow.append(tlNum, tlBar, tlProbe);
       card.classList.add("has-tl");
       card.append(questionEl, tlRow, answersRow);
     } else {
@@ -433,6 +447,25 @@ const quizTemplate = {
         return;
       }
       tlPaint();
+      tlBeep(tlTotalMs - tlUsed[index]);
+    }
+    // ⭐ Đợt 364 — TÍCH DỒN DẬP 5 GIÂY CUỐI (thầy). Mốc theo ms CÒN LẠI, không theo
+    // nhịp ticker: 5 s → 1 s tích mỗi 500 ms, giây cuối mỗi 250 ms, cao dần (xem
+    // quizSound.tick). `tlBeepAtMs` là mốc đã tích gần nhất — reset ở applyQuestion()
+    // nên quay lại câu cũ bằng ‹ thì tích lại từ đúng chỗ còn lại, không dồn một tràng.
+    // ⚠️ Trong Fight hai bàn cùng trang cùng đếm ⇒ khử trùng bằng dấu thời gian cấp
+    // module (`tlBeepStamp`): hai bàn tích cùng mốc thì chỉ một tiếng kêu.
+    function tlBeep(leftMs) {
+      if (leftMs > TL_BEEP_FROM_MS) return;
+      const step = leftMs > 1000 ? 500 : 250;
+      if (tlBeepAtMs - leftMs < step) return;   // ∞ − x là ∞ ⇒ lần đầu luôn qua
+      // Mốc lượng tử hoá (mốc TRÊN gần nhất) để hai bàn Fight lệch nhau vài ms ra
+      // CÙNG một mốc, và tiếng kế đúng `step` sau đó.
+      tlBeepAtMs = Math.ceil(leftMs / step) * step;
+      const now = performance.now();
+      if (now - tlBeepStamp < 120) return;
+      tlBeepStamp = now;
+      quizSound.tick(1 - leftMs / TL_BEEP_FROM_MS);
     }
     function tlStart() {
       if (!tlOn || tlId) return;
@@ -607,6 +640,7 @@ const quizTemplate = {
       // TIME LIMIT (Đợt 363) — vẽ ngay số/thanh của CÂU NÀY: nhịp ticker bỏ qua lúc
       // `animating` nên không có dòng này thì thanh còn mang số của câu cũ suốt 190ms
       // trượt vào.
+      tlBeepAtMs = Infinity;   // Đợt 364 — câu mới (hay quay lại câu cũ) tích lại từ chỗ còn lại
       tlPaint();
     }
 
@@ -688,6 +722,24 @@ const quizTemplate = {
           textEl.style.setProperty("--tw", s.toFixed(3));
         }
       });
+
+      // 3) ⭐ Đợt 364 — CỤM [số][thanh] CÂN ĐÚNG MÉP KHỐI Ô ĐÁP ÁN (thầy: "luôn luôn
+      //    cân đối ở chính giữa và không thừa về bên nào"). Hai việc:
+      //    a) ô số rộng ĐÚNG bằng số dài nhất của giới hạn này (đo bản nháp ẩn cùng
+      //       font — cỡ chữ theo --aw-u nên đo lại mỗi lần fit/resize), căn trái ⇒
+      //       không còn khoảng trống vô hình bên trái số ngắn;
+      //    b) bề rộng cụm = từ mép TRÁI ô đầu tới mép PHẢI ô cuối của HÀNG TRÊN
+      //       (hàng 3 ô co 30 % mỗi ô nên khối hẹp hơn card; hàng 4 ô thì đầy card),
+      //       cụm tự cân giữa nhờ margin auto ⇒ trùng mép khối ô ở mọi bố cục.
+      if (tlRow && tlProbe) {
+        tlNum.style.width = Math.ceil(tlProbe.offsetWidth) + "px";
+        const per = Math.max(1, Number(answersRow.style.getPropertyValue("--per-row")) || tiles.length);
+        const first = tiles[0], last = tiles[Math.min(tiles.length, per) - 1];
+        if (first && last) {
+          const l = first.tile.getBoundingClientRect().left, r = last.tile.getBoundingClientRect().right;
+          if (r - l > 0) tlRow.style.width = (r - l) + "px";
+        }
+      }
     }
 
     // Small persistent marks after answering + dim every WRONG tile
@@ -1115,6 +1167,9 @@ const quizTemplate = {
       finished = true;
       clearAutoTimer();
       tlStop();   // TIME LIMIT (Đợt 363) — no ticker may outlive its play (Đợt 112/131 ghost-clock lesson)
+      // Đợt 364 — nhạc 5-giây-cuối của đồng hồ tổng (6 s+) không được kêu tiếp sau khi
+      // ván đã xong: thầy nghe nó chạy thừa trên màn Game over + leaderboard.
+      quizSound.stopWarning();
       // ⚠️⚠️ Đợt 256 — CHỐT SỔ TRƯỚC KHI ĐỌC ĐIỂM. Một con số "−N" còn đang bay là
       // một phép trừ CHƯA áp; đọc điểm lúc này là ghi vào kết quả (và vào điểm nộp
       // của bài giao) một số CAO HƠN thật đúng bằng câu sai cuối cùng. Cú bay mất

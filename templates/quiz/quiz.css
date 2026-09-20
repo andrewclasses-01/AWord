@@ -127,8 +127,11 @@
   --tl-c1: #6cd06a; --tl-c2: #3fae5a; --tl-num: #2f9a4a;
   flex: 0 0 auto;
   margin-top: auto;
-  width: 96%;
+  /* Đợt 364 — bề rộng do quiz.js fitNow() đặt bằng px = đúng mép khối ô đáp án
+     (hàng trên); 100 % chỉ là giá trị chờ tới lần đo đầu. Cân giữa nhờ margin auto. */
+  width: 100%;
   margin-left: auto; margin-right: auto;
+  position: relative;
   display: flex; align-items: center;
   gap: calc(1.4 * var(--aw-u));
   height: calc(3 * var(--aw-u));
@@ -137,8 +140,11 @@
 .aw-quiz-tl.is-red    { --tl-c1: #ff7a5c; --tl-c2: #e0453f; --tl-num: #d63a34; }
 .aw-quiz-tl-num {
   flex: 0 0 auto;
-  min-width: calc(7 * var(--aw-u));
-  text-align: right;
+  /* Đợt 364 — KHÔNG min-width cố định + căn PHẢI nữa (số ngắn để lại khoảng trống
+     vô hình bên trái ⇒ cụm nhìn lệch). Bề rộng do fitNow() đặt bằng px từ bản
+     nháp `.aw-quiz-tl-probe` ("88,88"/"8,88" cùng font); căn trái. */
+  text-align: left;
+  white-space: nowrap;
   font-size: calc(2.9 * var(--aw-u));
   font-weight: 800;
   font-variant-numeric: tabular-nums;
@@ -147,6 +153,12 @@
   transition: color .3s ease;
 }
 .aw-quiz-tl-dec { font-size: .55em; font-weight: 700; opacity: .85; }
+/* Bản nháp đo bề rộng số dài nhất — nằm ngoài luồng, vô hình, không bắt chạm. */
+.aw-quiz-tl-probe {
+  position: absolute; left: 0; top: 0;
+  visibility: hidden; pointer-events: none;
+  width: auto !important;
+}
 .aw-quiz-tl-bar {
   flex: 1 1 auto; min-width: 0; position: relative;
   height: calc(1.2 * var(--aw-u)); border-radius: calc(1 * var(--aw-u));

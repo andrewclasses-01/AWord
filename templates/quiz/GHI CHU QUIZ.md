@@ -1,5 +1,41 @@
 # GHI CHÚ QUIZ
 
+## Đợt 364 (20/9/2026 khuya) — TIME LIMIT: cụm số+thanh CÂN ĐÚNG MÉP KHỐI Ô · TÍCH DỒN DẬP 5 s CUỐI · bỏ nhạc thừa khi HẾT MẠNG
+
+**Trạng thái: 🟢 CHỜ THẦY DUYỆT** (đo bàn thử devserver `:5562`, chưa commit lúc ghi). Chỉ `quiz.js` · `quiz.css` · `quiz-sound.js`.
+Thầy gửi 2 ảnh trang thật (bài 30 câu 6 ô, bài 25 câu 4 ô) + 3 việc:
+
+**1. Cụm [số][thanh] "có lúc hơi chưa cân đối tuỳ cỡ màn hình".** Gốc có HAI lớp:
+- Ô số có `min-width: 7 aw-u` + `text-align:right` ⇒ số ngắn ("8,59") để lại KHOẢNG TRỐNG VÔ HÌNH bên trái — cụm
+  vẫn cân theo khung nhưng mắt thấy lệch phải.
+- Hàng rộng `96 %` của card, còn khối ô đáp án thì hàng 4 ô đầy 100 %, hàng 3 ô co `max-width 30 %` mỗi ô ⇒ chỉ ~93,4 %.
+  Hai "mép" khác nhau ⇒ thanh khi thò ra ngoài ô, khi thụt vào.
+- Vá: ô số rộng ĐÚNG bằng số dài nhất của giới hạn ("88,88" nếu ≥10 s, "8,88" nếu <10 s) — đo bằng bản nháp ẩn
+  `.aw-quiz-tl-probe` cùng font (absolute, hidden, `width:auto !important`), căn TRÁI; và `fitNow()` bước 3 đặt
+  `tlRow.style.width` = mép trái ô đầu → mép phải ô cuối của HÀNG TRÊN (`--per-row`), cụm cân giữa bằng margin auto.
+  Đo lại mỗi fit/resize vì cỡ chữ theo `--aw-u`. CSS `width:100%` chỉ là giá trị chờ.
+- Đo: hàng 4 ô — row `38,47 → 970,53` = tiles `38,47 → 970,53`, ô số 39 px = probe 39 px. Ép `--per-row: 3` + resize —
+  row `68,5 → 940,5` = khối 3 ô `68,5 → 940,5` (card `38,4 → 970,6`). Khớp tới 0,1 px cả hai bố cục.
+
+**2. Tích dồn dập 5 s cuối** (`quizSound.tick(urgency)` + `tlBeep()` trong `tlTick`): tổng hợp bằng
+`coreSound.glide` (blip vuông 55 ms, 880 → 1400 Hz cao dần, tôn trọng nút loa) — KHÔNG dùng `blockgametimeout` (6 s+,
+mỗi câu một lần suốt 30 câu thì phải cắt dở liên tục). Mốc theo **ms còn lại**: 5 s → 1 s mỗi 500 ms, giây cuối mỗi
+250 ms; `tlBeepAtMs` = mốc TRÊN gần nhất đã tích, reset ở `applyQuestion()` (‹ về câu cũ tích lại từ chỗ còn lại);
+`tlBeepStamp` cấp module khử trùng hai bàn Fight (cùng mốc chỉ một tiếng). Đo bằng patch `createOscillator`: limit
+7 s ⇒ 12 blip, khoảng cách `490·502·507·493·505·505·492·502` rồi `243·263·243` — đúng mốc.
+
+**3. Hết mạng: nhạc thừa 6 s+ trên màn Game over + leaderboard.** Gốc: `quizSound.gameOver` mượn
+`blockgametimeout` (chính là nhạc 5-giây-cuối của đồng hồ đếm ngược) làm tiếng thua từ 4/8/2026. Vá: `gameOver`
+**im** (tiếng ✗ câu sai cuối đã kêu 1,5 s trước), thêm `stopWarning()` = `pack.stop("blockgametimeout")` gọi ở đầu
+`finish()` — cắt luôn nhạc 5-giây-cuối của đồng hồ TỔNG nếu nó còn chạy lúc ván xong (hết mạng giữa lúc đang báo, hay
+nộp bài còn 3 s). Đo (patch `play`/`pause` media): Lives 1 + limit 3 s ⇒ play intro · play ✗ (+3,0 s) · **pause**
+(+4,5 s = lúc finish) · KHÔNG có `play` nào sau GAME OVER.
+
+**⬜ VIỆC ĐANG CHỜ:** thầy nghe thật tiếng tích (cao độ/độ to vừa tai lớp chưa?), xem cụm trên bài 6 ô thật
+(ảnh 1), Fight hai bàn cùng tích.
+
+---
+
 ## Đợt 363 (20/9/2026 tối) — ⭐ **TIME LIMIT**: giới hạn giây cho MỖI CÂU, chạy ở MỌI MODE (đơn · Fight · Showdown)
 
 **Trạng thái: ✅ COMMIT + PUSH `a37686a`** (20/9/2026 tối, thầy bảo "commit + push" sau khi xem tóm tắt) · ⬜ CHƯA BẤM TAY trang thật.

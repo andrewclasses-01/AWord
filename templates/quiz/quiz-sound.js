@@ -9,6 +9,7 @@
 
 import { createPack } from "../../core/sfx.js";
 import { wrapWrong } from "../../core/wrong-sound.js";
+import { sound as coreSound } from "../../core/sound.js";
 
 // Đợt 85 (7/8/2026) — the pack is now fetched AT IMPORT TIME (prime() below),
 // which `ensureTemplate()` runs before the READY screen is drawn, instead of
@@ -35,8 +36,24 @@ export const quizSound = {
   restart: () => playFile("blockgamerestart"),
   timeWarning: () => playFile("blockgametimeout"),
   complete: () => playFile("blockgamesuccessful"),
-  // Ran out of lives (Lives option, 4/8/2026) — the pack has no dedicated
-  // "game over" file, so the timeout cue stands in for it: a flat ending, not
-  // the success fanfare.
-  gameOver: () => playFile("blockgametimeout")
+  // ⭐ Đợt 364 (thầy, 20/9/2026) — HẾT MẠNG THÌ IM: trước đây `gameOver` mượn
+  // "blockgametimeout" (nhạc dồn dập 5 giây cuối của đồng hồ đếm ngược, dài hơn
+  // 6 s) làm tiếng thua ⇒ màn Game over + leaderboard đã hiện mà nhạc vẫn chạy thêm
+  // 6 s. Thầy: "cần bỏ đoạn nhạc này". Tiếng ✗ của câu sai cuối đã kêu 1,5 s trước
+  // đó, nên game over không cần thêm tiếng nào.
+  gameOver: () => {},
+  // Đợt 364 — cắt nhạc 5-giây-cuối nếu nó còn đang chạy lúc ván KẾT THÚC (hết mạng
+  // giữa lúc đồng hồ tổng đang báo 5 s cuối, hoặc nộp bài lúc còn 3 s): ván đã xong
+  // thì "sắp hết giờ" không còn nghĩa gì nữa.
+  stopWarning: () => pack.stop("blockgametimeout"),
+  // ⭐ Đợt 364 — TÍCH DỒN DẬP 5 GIÂY CUỐI của thanh Time limit (thầy: "trong 5s cuối
+  // của thanh thời gian cần có âm thanh dồn dập"). Tổng hợp bằng core/sound.js
+  // (tôn trọng nút loa chung) chứ không dùng "blockgametimeout": clip đó dài 6 s+,
+  // mỗi câu lại kêu một lần suốt 30 câu thì phải cắt dở liên tục. `urgency` 0..1
+  // (0 = còn 5 s, 1 = sắp hết): blip vuông ngắn, cao dần theo mức gấp.
+  tick: (urgency = 0) => {
+    const u = Math.max(0, Math.min(1, urgency));
+    const f = 880 + 520 * u;
+    coreSound.glide({ freq: f, freqEnd: f * 0.9, dur: 55, gain: 0.10 + 0.06 * u, type: "square" });
+  }
 };
