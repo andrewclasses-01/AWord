@@ -5398,6 +5398,14 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 
 ## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **19/9/2026 sau Đợt 345 — ✓ bộ nghĩa theo LỚP, ✅ đã commit + push, ⬜ thầy chưa bấm tay** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
+> **⭐⭐ Đợt 350 (20/9/2026) — TEMPLATE MỚI "ROCKET RACE" (đua tên lửa kiểu Blastroom) · 🟢 CHỜ THẦY DUYỆT · ⛔ CHƯA COMMIT.**
+> Thầy chốt qua AskUserQuestion: chặng 1+2 · luật điểm A (1 câu đúng = 1 nấc) · emoji thú · ok build. Solo đua 3–5 tên lửa máy
+> (níu dây, TURBO khi 3 đúng liên tiếp, power-up 🛡🚀☄, về đích "🥇 1st place!") + Teams trên màn hình thầy (đổi tên đội, chọn lớp gọi tên HS).
+> Nội dung = bộ câu Quiz (editor bọc quiz-editor, Change template 2 chiều). Core sửa TẠM: `catalog.js` · `convert.js` · `assignment-ui.js`
+> · `tpl-files.js` sinh lại. Tự kiểm bằng máy 0 lỗi (bàn thử `templates/rocket-race/test.html`). **Thầy bấm tay theo mục 6 của
+> `templates/rocket-race/GHI CHU ROCKET-RACE.md`** rồi mới commit (`git add` đúng `templates/rocket-race/` + 4 file core, ⛔ không `-A`
+> — cùng lúc có phiên khác đang sửa `templates/balloon-pop/balloon-pop.js`). Kế hoạch 3 chặng: `KE HOACH ROCKET-RACE.md`.
+
 > **Đợt 345 (19/9/2026, thầy báo qua myLesson kèm ảnh):** dấu ✓ cạnh ENG1/VI1/VI2 trong Options của form Set assignment nay chỉ đếm bài giao **của lớp đang điền** (thư mục lớp + con `DONE`), không còn gom mọi lớp như Đợt 322 cố ý để; gõ ô Class/tiêu đề là ✓ vẽ lại. Phép chặn START không đổi. Bench form thật 13/13, đối chứng mã cũ 7/13. ⬜ Thầy bấm tay: mở form cho lớp chưa giao act mà lớp khác đã giao → không ✓.
 
 > ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (16/9/2026 — sau **Đợt 339** (Options × Template · IPA · Fight → mọi mode), **Đợt 338** (đồng bộ Settings qua Firestore), **Đợt 337** (Default course options), **Đợt 335 → 336** (Unjumble) và **Đợt 334** (Speed sorting) — tất cả ✅ ĐÃ COMMIT + PUSH + LIVE, ⬜ THẦY CHƯA BẤM TAY LẠI)
@@ -7387,6 +7395,16 @@ Ngoài ra: Settings có mục **Classes** (lớp + học sinh, `core/classes.js`
 act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
+
+> ⭐⭐⭐⭐⭐ **MỚI NHẤT (Đợt 350, 20/9/2026) — ROCKET RACE: ⬜ ĐÃ BUILD + TỰ KIỂM BẰNG MÁY, CHƯA BẤM TAY, CHƯA COMMIT.**
+> 1. ⬜ Trang thật: New activity → **Rocket race** (mục cuối bảng chọn) → sửa vài câu → PLAY: 3-2-1, trả lời đúng/sai, TURBO, hộp ⭐, về đích.
+> 2. ⬜ Mở 1 act Quiz cũ → Template → Rocket race (Change template) → chơi; đổi ngược lại về Quiz.
+> 3. ⬜ Options → Mode Teams → PLAY: màn TEAMS, chọn lớp thật → tên HS ở chip lượt; START RACE.
+> 4. ⬜ Giao bài cho 1 em (link) → phải là Solo, điểm nộp = đúng/N, perfect khi đúng hết dù có lượt sai.
+> 5. ⬜ TOMKO/iPad: chạm ô đáp án, tiếng synth trên Safari; cảm giác tốc độ Normal (7 s/nấc).
+> ✅ Thầy duyệt → `git add templates/rocket-race core/catalog.js core/convert.js core/assignment-ui.js core/tpl-files.js "GHI CHU DU AN.md" APP_MASTER.md` → commit "Dot 350" → push.
+>
+> ---
 
 > ⭐⭐⭐⭐⭐ **MỚI NHẤT (Đợt 330, 14/9/2026) — ⬜ ĐÃ SỬA + TỰ KIỂM BẰNG BÀN THỬ, CHƯA BẤM TAY TRANG THẬT.**
 > Vùng: **danh sách bài giao dưới stage gấp vào nút "Set assignment"**, nhấn giữ để bung/gấp. Bản đồ ở

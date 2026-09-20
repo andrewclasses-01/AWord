@@ -12,7 +12,10 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **⭐⭐ Đợt 340** (18/9/2026, TEMPLATE MỚI của thầy — **FIND THE GAP**): nghe băng thật từ kho
+> Mới nhất: **⭐⭐ Đợt 350** (20/9/2026, TEMPLATE MỚI theo ảnh Blastroom thầy gửi — **ROCKET RACE**, đua tên lửa):
+> Solo đua 3–5 tên lửa máy (níu dây, TURBO, power-up 🛡🚀☄) + Teams trên màn hình thầy; nội dung = bộ câu Quiz, điểm = số câu
+> đúng (luật A thầy chốt); tự kiểm bằng máy 0 lỗi; core sửa TẠM 4 chỗ. 🟢 CHỜ THẦY DUYỆT · ⛔ CHƯA COMMIT. Xem mục **Đợt 350**.
+> Trước đó: **⭐⭐ Đợt 340** (18/9/2026, TEMPLATE MỚI của thầy — **FIND THE GAP**): nghe băng thật từ kho
 > `myLesson-audio`, mỗi lượt một câu thoại, điền chỗ trống theo 3 mode QUIZ / TYPE / FIND; audio tải trọn trước
 > PLAY (đo: tua 1 ms mọi mạng); Fight/Showdown nối dây; công cụ `tools/ftg-prepare.py` (Parakeet + khớp kịch bản
 > + gợi ý gap) 16 s/bài; 4 vòng sửa theo tay thầy (nhiễu số ít/nhiều, Each sentence, Fight so số ô, khoét cụm, Min gaps,
@@ -512,6 +515,37 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
+
+## Đợt 350 (20/9/2026, TEMPLATE MỚI — ROCKET RACE, đua tên lửa kiểu Blastroom) · 🟢 CHỜ THẦY DUYỆT · ⛔ CHƯA COMMIT
+
+**Thầy giao qua chat kèm ảnh Blastroom "BlastRace"** (6 tên lửa đua tới vạch đích): "lên kế hoạch cho một template
+mới với game hành động tương tự… hay, hấp dẫn, chuyên nghiệp mà vẫn học được tiếng Anh". Đã đọc hợp đồng core + 5
+template hành động + Showdown/Fight (3 nhóm nghiên cứu song song), viết `templates/rocket-race/KE HOACH ROCKET-RACE.md`
+(3 chặng), hỏi thầy bằng AskUserQuestion — thầy chốt: **chặng 1 + 2 cùng lúc · luật điểm A (1 câu đúng = 1 nấc, streak/
+power-up không cho nấc) · tên "Rocket race" · phi công emoji thú · "ok build"**.
+
+**Đã build** (`templates/rocket-race/`, ~1.900 dòng js+css, hồ sơ đầy đủ ở `GHI CHU ROCKET-RACE.md`):
+- **Solo**: "YOU" đua 3–5 tên lửa máy có tên/mặt thú, "níu dây" ±45 % để sát nút; đúng → phụt lửa +1 nấc (N nấc = N câu);
+  sai → khựng + khói + mất tim + "−N" bay (`ui.flyPenalty`) + câu xếp cuối hàng; 3 đúng liên tiếp → TURBO (máy chậm 4,5 s);
+  power-up 🛡/🚀/☄ nhặt bằng câu đúng kế; về đích → "🥇 1st place!" làm tiêu đề bảng chuẩn (không dùng renderSummary,
+  giữ nguyên Leaderboard/Show answers). HS mở link bài giao LUÔN là Solo.
+- **Teams** (màn hình thầy): màn TEAMS đổi tên đội + chọn lớp (import động `core/classes.js`, gọi tên HS từng lượt);
+  câu chia vòng tròn, đội sai mất câu; "🏆 <đội> wins!".
+- Nội dung = bộ câu Quiz ⇒ editor bọc `quiz-editor.js`, Change template hai chiều. Điểm nộp = đúng/N (`items`, Đợt 294).
+- Kỹ thuật: `setInterval` 50 ms delta kẹp 100 ms (không rAF), `hasLivesSlot`, `manualTimerStart` (đồng hồ chạy lúc GO),
+  `onPause` bridge (dịch hạn `qDeadline`/`turboUntil`), `cleanup()` cờ `dead` + `later()` gom timer, tiếng 100 % Web Audio
+  synth (`rr-sound.js`, có drone động cơ), 3 hành tinh chép từ maze-chase, khối `@media` điện thoại cuối CSS.
+- **Sửa CORE tạm (ĐỀ XUẤT, thầy duyệt mới commit)**: `catalog.js` (+1 mục + icon), `convert.js` (+`rocket_race` cạnh
+  `maze_chase` ×4), `assignment-ui.js` (`TPL_SHORT.rocket_race: "ROCKET"`), `tpl-files.js` sinh lại (`sinh-preload.py --write`,
+  index/play.html KHỚP).
+- **Tự kiểm bằng máy** (bàn thử `test.html`, 1280×860 + 375×812, 0 lỗi console mới): sai/đúng/turbo/hộp/về đích 🥇 Score 10/11 ·
+  Lives 2 → GAME OVER + Show answers 10 dòng · Question time 3 s → TIME'S UP · Teams 3 đội đủ vòng lượt + "TEAM 3 WINS!" ·
+  ☰ Menu dừng máy · điện thoại không tràn (tên máy ẩn, chỉ giữ tag YOU) · `ensureTemplate("rocket_race")` nạp qua tpl-files.
+- Bẫy đã cắn: TDZ `let setupEl` khai sau chỗ gọi (0 lỗi `node --check`) · turbo tự bật lại sau về đích.
+
+⬜ **VIỆC ĐANG CHỜ (mắt thầy)**: New activity → Rocket race trên trang thật · Change template từ act Quiz · Teams + chọn lớp thật ·
+giao bài 1 em xem điểm đúng/N · TOMKO/iPad chạm + tiếng Safari · tốc độ Normal 7 s/nấc có vừa lớp không. Fight/Showdown chưa khai
+(cùng lý do Maze chase). Chặng 3 LIVE nhiều điện thoại = hạ tầng riêng, xem kế hoạch mục 4.
 
 ## Đợt 348 (20/9/2026 sáng, audit định kỳ toàn hệ) — `core/assignment-ui.js` BẤM TEMPLATE XÁM TRONG BẢNG CHỌN TEMPLATE NÉM `ReferenceError: toast` · 1 file · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY TRANG THẬT
 

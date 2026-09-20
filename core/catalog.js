@@ -137,7 +137,16 @@ export const TEMPLATES = [
     blurb: "Listen to each line and fill in the missing words — tap, type or find them.",
     css: "templates/find-the-gap/find-the-gap.css",
     load: () => import("../templates/find-the-gap/find-the-gap.js"),
-    sample: () => import("../templates/find-the-gap/sample-find-the-gap.js") }
+    sample: () => import("../templates/find-the-gap/sample-find-the-gap.js") },
+
+  // ⭐ Đợt 350 (20/9/2026) — space race on a Quiz question set: a right answer
+  // fires your rocket one segment towards the finish, rivals (or the class's
+  // teams) race alongside. See templates/rocket-race/GHI CHU ROCKET-RACE.md.
+  { type: "rocket_race",     label: "Rocket race",     built: true,
+    blurb: "Answer to fire your rocket — race the rivals (or the class's teams) to the finish line.",
+    css: "templates/rocket-race/rocket-race.css",
+    load: () => import("../templates/rocket-race/rocket-race.js"),
+    sample: () => import("../templates/rocket-race/sample-rocket-race.js") }
 ];
 
 export function templateEntry(type) {
@@ -166,7 +175,7 @@ export const TEMPLATE_ICON = {
   open_the_box: "fmtBox", maze_chase: "fmtMaze", whack_a_mole: "fmtMole",
   true_false: "check",
   speaking_cards: "mic", speaking: "mic",
-  running_word: "fmtRace", running_team: "fmtRace",
+  running_word: "fmtRace", running_team: "fmtRace", rocket_race: "fmtRace",
   find_the_gap: "fmtWord"
 };
 

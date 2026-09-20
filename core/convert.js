@@ -29,7 +29,8 @@ import { OPT_VER } from "./options-migrate.js";
 const QA_TARGETS = [
   "anagram", "flying_fruit", "crossword", "find_the_match", "balloon_pop",
   "quiz", "gameshow", "maze_chase", "open_the_box", "type_the_answer",
-  "whack_a_mole", "speaking_cards", "running_team", "running_word"
+  "whack_a_mole", "speaking_cards", "running_team", "running_word",
+  "rocket_race"   // Đợt 350 — same question shape as Quiz / Maze chase
 ];
 // Running team needs SIX words to fill a round (one answer + five look-alike
 // decoys). Hardcoded rather than imported from templates/running-team/rt-sets.js
@@ -48,7 +49,7 @@ const SENTENCE_TARGETS = ["speaking_cards", "type_the_answer"];
 // nếu bộ nguồn không có clue (vd Anagram withClues:false) thì loại chúng ra.
 const NEED_CLUE = new Set([
   "crossword", "find_the_match", "balloon_pop", "quiz", "gameshow",
-  "maze_chase", "open_the_box", "whack_a_mole", "type_the_answer"
+  "maze_chase", "open_the_box", "whack_a_mole", "type_the_answer", "rocket_race"
 ]);
 
 // =============================================================
@@ -95,6 +96,7 @@ export function toRecords(activityIn) {
     case "quiz":
     case "gameshow":
     case "maze_chase":
+    case "rocket_race":
     case "open_the_box":
       return { kind: "qa", records: fromMcQuestions(type === "open_the_box" ? c.items : c.questions) };
     case "whack_a_mole": {
@@ -363,6 +365,7 @@ function buildContent(targetType, kind, records, style) {
     case "quiz":
     case "gameshow":
     case "maze_chase":
+    case "rocket_race":
       return { questions: records.map(r => buildMc(r, records, kind)) };
     case "open_the_box":
       return { items: records.map(r => buildMc(r, records, kind)) };
