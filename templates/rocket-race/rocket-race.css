@@ -93,10 +93,7 @@
   top: calc(var(--lane) * 100% / var(--lanes, 5));
   height: calc(100% / var(--lanes, 5));
 }
-.aw-rr-lane::after {
-  content: ""; position: absolute; left: 3%; right: 6%; top: 50%; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.14) 20%, rgba(255,255,255,.14) 80%, transparent);
-}
+/* Đợt 358 — the faint guide line along each lane is gone (thầy: "bỏ đường line trên đường đua"). */
 
 /* ---- one rocket: flame · hull · pilot · name tag ---- */
 .aw-rr-rocket {
@@ -129,10 +126,25 @@
 .aw-rr-rocket.is-flying .aw-rr-craft { animation: aw-rr-bob 2.6s ease-in-out infinite; animation-delay: calc(-1 * var(--wob, 0s)); }
 @keyframes aw-rr-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(calc(-.5 * var(--aw-u))); } }
 
+/* Đợt 358 — the pilot is a CLIPPED CIRCLE laid exactly on the porthole (`<circle
+   cx=82 cy=35 r=16>` of the 160×70 hull ⇒ centre 51.25 % / 50 %, inner diameter
+   ≈ 17.5 % of the rocket's width), so the emoji can never poke out of the
+   window; the face inside it jiggles on its own (`aw-rr-jiggle`) while the
+   whole craft bobs — thầy: "nằm hẳn bên trong… lắc lư nhẹ… tàu có độ xóc". */
 .aw-rr-pilot {
-  position: absolute; left: 51%; top: 50%; transform: translate(-50%, -50%);
-  font-size: calc(min(13, 66 / var(--lanes, 5)) * var(--aw-u) * .155); line-height: 1;
+  position: absolute; left: 51.25%; top: 50%; transform: translate(-50%, -50%);
+  width: 17.5%; aspect-ratio: 1; border-radius: 50%; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  font-size: calc(min(13, 66 / var(--lanes, 5)) * var(--aw-u) * .13); line-height: 1;
   pointer-events: none;
+}
+.aw-rr-face { display: block; line-height: 1; }
+.aw-rr-rocket.is-flying .aw-rr-face { animation: aw-rr-jiggle 1.3s ease-in-out infinite; animation-delay: calc(-1 * var(--wob, 0s)); }
+@keyframes aw-rr-jiggle {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  25%      { transform: translate(-7%, 5%) rotate(-8deg); }
+  50%      { transform: translate(4%, -6%) rotate(5deg); }
+  75%      { transform: translate(6%, 4%) rotate(7deg); }
 }
 
 .aw-rr-flame {
@@ -398,7 +410,7 @@
 .aw-rr-shared .aw-rr-track { top: calc(5.5 * var(--aw-u)); height: calc(11 * var(--aw-u)); }
 .aw-rr-shared .aw-rr-finish { top: calc(-.5 * var(--aw-u)); bottom: calc(-.5 * var(--aw-u)); }
 .aw-rr-shared .aw-rr-rocket { width: calc(11 * var(--aw-u)); transition: left .6s cubic-bezier(.2,.9,.25,1); }
-.aw-rr-shared .aw-rr-pilot { font-size: calc(11 * var(--aw-u) * .155); }
+.aw-rr-shared .aw-rr-pilot { font-size: calc(11 * var(--aw-u) * .125); }
 .aw-rr-shared .aw-rr-num { font-size: calc(11 * var(--aw-u) * .12); }
 .aw-rr-shared .aw-rr-tag { display: none; }
 .aw-rr-shared .aw-rr-planet.is-sun { width: calc(9 * var(--aw-u)); top: calc(1 * var(--aw-u)); right: calc(9 * var(--aw-u)); }
@@ -528,7 +540,7 @@
   .aw-rr-minimap { top: calc(1 * var(--aw-u)); height: calc(2 * var(--aw-u)); }
   .aw-rr-track { top: calc(4.2 * var(--aw-u)); height: calc(19 * var(--aw-u)); }
   .aw-rr-rocket { width: calc(min(9, 44 / var(--lanes, 5)) * var(--aw-u)); }
-  .aw-rr-pilot { font-size: calc(min(9, 44 / var(--lanes, 5)) * var(--aw-u) * .155); }
+  .aw-rr-pilot { font-size: calc(min(9, 44 / var(--lanes, 5)) * var(--aw-u) * .125); }
   /* a 6px name is noise on a phone: rivals keep only their pilot face, the
      pupil's own tag stays (bigger) so "which one is me" is never in doubt */
   .aw-rr-tag { display: none; }

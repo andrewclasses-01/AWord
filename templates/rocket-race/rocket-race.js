@@ -201,7 +201,8 @@ function buildRocketEl(scene, r, laneIdx, laneCount) {
   rk.style.setProperty("--wob", r.wobble.toFixed(2) + "s");
   const flame = el("div", "aw-rr-flame", FLAME_SVG);
   const body = el("div", "aw-rr-body", ROCKET_SVG);
-  const pilot = el("div", "aw-rr-pilot", r.pilot);
+  const pilot = el("div", "aw-rr-pilot", "");   // Đợt 358: a clipped porthole circle…
+  const face = el("span", "aw-rr-face", ""); face.textContent = r.pilot; pilot.append(face);   // …with the jiggling face inside
   const tag = el("div", "aw-rr-tag", "");
   tag.textContent = r.name;
   const craft = el("div", "aw-rr-craft");

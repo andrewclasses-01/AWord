@@ -264,3 +264,10 @@ Thầy gửi 2 ảnh: "TEAM X - tim hơi lệch lên", "thanh về đích lệch
 Sửa: ổ Time delay `position:absolute` ghim đáy (bottom −.8u, cao .6u, thanh 100 %), panel bottom 1,1u gap .9u ⇒ chip đúng giữa
 (đo: chipMid 97,9 vs bandMid 98,3 px); track 5,5u→16,5u, vạch đích ±.5u = 5u→17u ⇒ tâm 77,1 vs tâm dải 77,0 px; tim
 `line-height:1; top:.08em` ⇒ tâm tim/chữ/huy hiệu 241,4/240,9/240,9 px.
+
+## 15. Phi công nằm hẳn trong cửa sổ + lắc lư; bỏ đường kẻ làn (Đợt 358, 20/9/2026 tối)
+- `.aw-rr-pilot` nay là HÌNH TRÒN CẮT (`width:17.5%` bề ngang tàu, `aspect-ratio:1`, `border-radius:50%`, `overflow:hidden`) đặt
+  đúng tâm cửa sổ (51,25 % / 50 % — `<circle cx=82 cy=35 r=16>` của viewBox 160×70); emoji nằm trong `<span class="aw-rr-face">`
+  và tự lắc (`aw-rr-jiggle` 1,3 s: dịch ±7 %, xoay ±8°, lệch pha theo `--wob`) trong khi cả craft nhấp nhô ⇒ "tàu có độ xóc".
+  Cỡ chữ hạ .155 → .13 (solo) / .125 (fight, phone). Đo: vòng phi công 15,7 px nằm trọn trong cửa sổ 18 px, `inside: true`.
+- Bỏ `.aw-rr-lane::after` (đường kẻ mờ từ tàu tới đích) ở mọi chế độ.
