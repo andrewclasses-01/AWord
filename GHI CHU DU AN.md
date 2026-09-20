@@ -531,7 +531,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 365 (20/9/2026 tối, FIND THE GAP — Fight khoét cùng từ · ô đã bấm giấu chữ · thanh GAPS hai nút min–max) · ⬜ CHƯA COMMIT, chờ thầy duyệt
+## Đợt 365 (20/9/2026 tối, FIND THE GAP — Fight khoét cùng từ · ô đã bấm giấu chữ · thanh GAPS hai nút min–max) · ✅ COMMIT + PUSH `09f470e` · ⬜ CHƯA BẤM TAY
 
 Thầy gửi ảnh Fight FIND 2 bàn + 3 ý. (1) Random gaps trong Fight: hai bàn khoét KHÁC từ — gốc là sổ chung
 `ftgFightLedger` bị bàn `side 0` làm mới lúc mount, mà trọng tài mount bàn KIA trước khi bấm ▶ (đo thật) ⇒ nay sổ mở

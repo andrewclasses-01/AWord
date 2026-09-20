@@ -228,7 +228,7 @@ Game và editor **không đổi một dòng**. Thay đổi nằm ở nguồn d�
   công thức `reveal()` sẵn có (không đổi), chỉ đổi mỗi cờ báo trọng tài nên không có lý do khác đi.
 - Template/`core/` không đổi. ⬜ Ý tưởng: hộp Import HEAD URL kho lúc import để báo sớm bài chưa có tiếng.
 
-## Đợt 365 (20/9/2026 tối, thầy gửi ảnh Fight FIND 2 bàn + 3 ý) — ⬜ CHƯA COMMIT, chờ thầy duyệt
+## Đợt 365 (20/9/2026 tối, thầy gửi ảnh Fight FIND 2 bàn + 3 ý) — ✅ thầy duyệt → COMMIT + PUSH `09f470e`, ⬜ chưa bấm tay trang thật
 Ba việc, chỉ `templates/find-the-gap/` (+ `core/tpl-files.js` sinh lại vì thêm file), KHÔNG đụng `core/`:
 
 1. **FIGHT + Random gaps: hai bàn khoét KHÁC từ** (ảnh: trái `household`+`but`, phải `and`+`household`). Gốc: sổ chung
