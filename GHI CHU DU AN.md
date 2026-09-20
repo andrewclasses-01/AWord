@@ -531,7 +531,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 364 (20/9/2026 khuya, QUIZ Time limit — cụm số+thanh cân đúng mép khối ô · tích dồn dập 5 s cuối · bỏ nhạc 6 s thừa khi hết mạng) · 🟢 CHỜ THẦY DUYỆT · ⬜ CHƯA BẤM TAY
+## Đợt 364 (20/9/2026 khuya, QUIZ Time limit — cụm số+thanh cân đúng mép khối ô · tích dồn dập 5 s cuối · bỏ nhạc 6 s thừa khi hết mạng) · ✅ COMMIT + PUSH `824aad0` · ⬜ CHƯA BẤM TAY
 
 Thầy gửi 2 ảnh trang thật + 3 việc. (1) Cụm `[giây][thanh]` lệch tuỳ cỡ màn: ô số có min-width + căn phải để lại
 khoảng trống vô hình, hàng 96 % còn khối ô 3/hàng chỉ ~93,4 % ⇒ nay ô số rộng đúng số dài nhất (đo bản nháp ẩn), cụm

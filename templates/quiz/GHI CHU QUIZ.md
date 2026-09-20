@@ -2,7 +2,7 @@
 
 ## Đợt 364 (20/9/2026 khuya) — TIME LIMIT: cụm số+thanh CÂN ĐÚNG MÉP KHỐI Ô · TÍCH DỒN DẬP 5 s CUỐI · bỏ nhạc thừa khi HẾT MẠNG
 
-**Trạng thái: 🟢 CHỜ THẦY DUYỆT** (đo bàn thử devserver `:5562`, chưa commit lúc ghi). Chỉ `quiz.js` · `quiz.css` · `quiz-sound.js`.
+**Trạng thái: ✅ COMMIT + PUSH `824aad0`** (thầy bảo "commit + ghi hồ sơ + push + kết thúc phiên") · ⬜ CHƯA BẤM TAY trang thật. Chỉ `quiz.js` · `quiz.css` · `quiz-sound.js`.
 Thầy gửi 2 ảnh trang thật (bài 30 câu 6 ô, bài 25 câu 4 ô) + 3 việc:
 
 **1. Cụm [số][thanh] "có lúc hơi chưa cân đối tuỳ cỡ màn hình".** Gốc có HAI lớp:
