@@ -271,3 +271,11 @@ Sửa: ổ Time delay `position:absolute` ghim đáy (bottom −.8u, cao .6u, th
   và tự lắc (`aw-rr-jiggle` 1,3 s: dịch ±7 %, xoay ±8°, lệch pha theo `--wob`) trong khi cả craft nhấp nhô ⇒ "tàu có độ xóc".
   Cỡ chữ hạ .155 → .13 (solo) / .125 (fight, phone). Đo: vòng phi công 15,7 px nằm trọn trong cửa sổ 18 px, `inside: true`.
 - Bỏ `.aw-rr-lane::after` (đường kẻ mờ từ tàu tới đích) ở mọi chế độ.
+
+## 16. Phi công chỉ nhấp lên xuống; khói trắng mờ sau lửa (Đợt 359, 20/9/2026 tối)
+- `aw-rr-jiggle` nay chỉ `translateY(±9 %)`, không xoay/không dịch ngang.
+- `.aw-rr-exhaust` (trong craft, `right:116 %`, 16 % bề ngang tàu, z-index dưới lửa) chứa 3 `.aw-rr-exhaust-puff` trắng mờ
+  (radial-gradient .55 → 0, blur .6px) chạy `aw-rr-exhaust` 1,35 s lệch pha −.45 s/−.9 s: sinh ở đầu lửa, trôi ra sau
+  (−170 %), phình ×2,4, tan dần; nhanh hơn (.9 s) khi boost/turbo; tắt khi stall/nổ/xác. Chỉ chạy khi `is-flying`.
+- Đo solo: 3 puff `aw-rr-exhaust`, opacity đang chạy .20/.09/.42, face transform chỉ Y. Ở vạch xuất phát khói bị mép trái
+  khung cắt một phần (tàu ở x=5 %) — chấp nhận được.

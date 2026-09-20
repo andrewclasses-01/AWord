@@ -206,7 +206,10 @@ function buildRocketEl(scene, r, laneIdx, laneCount) {
   const tag = el("div", "aw-rr-tag", "");
   tag.textContent = r.name;
   const craft = el("div", "aw-rr-craft");
-  craft.append(flame, body, pilot);
+  // Đợt 359 — faint white exhaust behind the flame (3 staggered puffs, CSS-driven)
+  const exhaust = el("div", "aw-rr-exhaust");
+  for (let i = 0; i < 3; i++) exhaust.append(el("span", "aw-rr-exhaust-puff"));
+  craft.append(exhaust, flame, body, pilot);
   rk.append(craft, tag);
   lane.append(rk);
   scene.lanesEl.append(lane);

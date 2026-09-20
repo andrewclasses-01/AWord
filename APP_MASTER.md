@@ -8,7 +8,8 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/9/2026 tối (Đợt 358 — Rocket race: phi công là vòng tròn cắt đúng cửa sổ tàu, emoji lắc lư riêng bên trong (`aw-rr-jiggle`); bỏ đường kẻ mờ dọc làn. Mục 15 GHI CHU ROCKET-RACE)**.
+> Cập nhật lần cuối: **20/9/2026 tối (Đợt 359 — Rocket race: phi công chỉ nhấp lên xuống trong cửa sổ; thêm `.aw-rr-exhaust` 3 puff khói trắng mờ toả sau lửa khi bay. Mục 16 GHI CHU ROCKET-RACE)**.
+> Trước đó: **20/9/2026 tối (Đợt 358 — Rocket race: phi công là vòng tròn cắt đúng cửa sổ tàu, emoji lắc lư riêng bên trong (`aw-rr-jiggle`); bỏ đường kẻ mờ dọc làn. Mục 15 GHI CHU ROCKET-RACE)**.
 > Trước đó: **20/9/2026 tối (Đợt 357 — chỉ `rocket-race.css`: chip TEAM X + tim căn giữa dải dưới ô (ổ Time delay ghim đáy), vạch đích căn giữa dải đua; đo lệch ≤ 0,5 px. Xem GHI CHU ROCKET-RACE mục 14)**.
 > Trước đó: **20/9/2026 tối (Đợt 356 — ROCKET RACE · FIGHT màn START: bìa READY của engine bị cắt trong bàn 16:5 (ảnh
 > thầy) → `fightFrame.readyShared` + `teams`: thông tin act (brand/tên/template) lên vùng chung, mỗi bàn chỉ còn icon + TEAM n + ▶;
