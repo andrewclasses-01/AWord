@@ -153,6 +153,17 @@
 .aw-ftg-tile.is-wrongpick { --tile-eff: var(--aw-no); --tile-dark-eff: var(--aw-no-d); }
 .aw-ftg-tile.is-right { outline: calc(0.4 * var(--aw-u)) solid #fff; outline-offset: calc(-0.4 * var(--aw-u)); }
 .aw-ftg-tile.is-taken { --tile-eff: #b3bac3; --tile-dark-eff: #98a0aa; }
+/* Dot 365 (thay, 20/9/2026) - FIGHT / FIND: a tile this board has tapped shows NO
+   word until the referee's reveal(): the other team sees this screen and would
+   simply copy the word off the grey tile (thay's screenshot: HOUSEHOLD still
+   readable). The text stays in the DOM (fitNow measures it, reveal() drops
+   .is-taken and it is back); the dots sit in a ::after over the whole tile. */
+.aw-ftg-tile.is-taken .aw-ftg-tiletext { visibility: hidden; }
+.aw-ftg-tile.is-taken::after {
+  content: "•••"; position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; letter-spacing: .12em; opacity: .9;
+}
 .aw-ftg-area.is-fightlost .aw-ftg-tile { --tile-eff: #b3bac3; --tile-dark-eff: #98a0aa; }
 
 /* QUIZ: up to 6 tiles, 2 rows of 3 */
@@ -236,6 +247,36 @@
 
 /* ---------- Showdown: the pupil's name sits over the strip; nothing of ours
    occupies that band (speaker label is small and centred), so no rule needed. */
+
+/* ---------- OPTIONS: the GAPS two-thumb range (ftg-range.js, Đợt 365) ----------
+   Drawn to core's slider drawing (core/app.css .aw-optc-slider): 18px control,
+   6px neutral track, the coloured part BETWEEN the thumbs, 16px thumbs with a
+   2px white ring (20px in all — THUMB in ftg-range.js), travel inset by half a
+   thumb at each end. --lo/--hi/--f are 0..1 fractions set by the JS. */
+.aw-ftg-range {
+  --ftg-acc: #2f7bff;
+  position: relative; flex: 1 1 auto; min-width: 0; height: 18px;
+  cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.aw-ftg-range-track { position: absolute; left: 0; right: 0; top: 6px; height: 6px; border-radius: 999px; background: #e9eef6; }
+.aw-ftg-range-fill {
+  position: absolute; top: 6px; height: 6px; border-radius: 999px; background: var(--ftg-acc);
+  left: calc(10px + var(--lo, 0) * (100% - 20px));
+  right: calc(10px + (1 - var(--hi, 1)) * (100% - 20px));
+}
+.aw-ftg-range-thumb {
+  position: absolute; top: -1px; box-sizing: content-box;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--ftg-acc); border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(20,30,45,.28);
+  left: calc(10px + var(--f, 0) * (100% - 20px)); transform: translateX(-50%);
+  transition: box-shadow .16s ease;
+}
+.aw-ftg-range-thumb:focus { outline: none; }
+.aw-ftg-range-thumb:focus-visible { box-shadow: 0 1px 3px rgba(20,30,45,.28), 0 0 0 4px rgba(47,123,255,.32); }
+.aw-tool-panel.is-compact-opts .aw-ftg-range { height: 16px; }
+.aw-tool-panel.is-compact-opts .aw-ftg-range-track, .aw-tool-panel.is-compact-opts .aw-ftg-range-fill { top: 5px; }
+.aw-tool-panel.is-compact-opts .aw-ftg-range-thumb { top: -2px; }
 
 /* =============================================================
    EDITOR (find-the-gap-editor.js) — page chrome is core's .aw-ed-*; these

@@ -145,7 +145,7 @@ khối preload sinh lại bằng `tools/sinh-preload.py --write` (tiện thể n
 - **Ô mờ theo mode**: `Choices` chỉ sáng ở Quiz, `Remove corrects` chỉ sáng ở Find — dùng đúng class core
   `.is-locked` (khuôn `setLocked` của Fight: mờ 0,4 + `disabled`, KHÔNG ẩn — luật Đợt 143/220); nghe seg Mode
   đổi là cập nhật ngay, mở bảng cũng đặt đúng trạng thái ban đầu.
-- **Min gaps** (thanh kéo 1–10, khoá `minGaps`, mặc định 1): mỗi câu ít nhất N chỗ trống — thiếu thì game khoét
+- **Min gaps** (⚠️ ĐÃ THAY bằng thanh GAPS 2 nút ở Đợt 365 — xem mục cuối) (thanh kéo 1–10, khoá `minGaps`, mặc định 1): mỗi câu ít nhất N chỗ trống — thiếu thì game khoét
   thêm, chọn ĐỊNH TRƯỚC từ dài trước (đáng nghe), cùng dài thì từ đứng trước; câu ít từ hơn N thì khoét hết
   (đo: kéo 10 trên câu 16 từ → 10 chỗ, chừa "it at I to").
 - **Random gaps** (ô tích, khoá `randomGaps`, mặc định tắt): mỗi ván — kể cả Start again — bốc lại vị trí chỗ
@@ -227,3 +227,34 @@ Game và editor **không đổi một dòng**. Thay đổi nằm ở nguồn d�
 - ⬜ Chưa đo case 2/3 vs 1/3 (nhiều hơn thắng, ít hơn không tính) bằng tay trên trang thật — đã suy từ đúng
   công thức `reveal()` sẵn có (không đổi), chỉ đổi mỗi cờ báo trọng tài nên không có lý do khác đi.
 - Template/`core/` không đổi. ⬜ Ý tưởng: hộp Import HEAD URL kho lúc import để báo sớm bài chưa có tiếng.
+
+## Đợt 365 (20/9/2026 tối, thầy gửi ảnh Fight FIND 2 bàn + 3 ý) — ⬜ CHƯA COMMIT, chờ thầy duyệt
+Ba việc, chỉ `templates/find-the-gap/` (+ `core/tpl-files.js` sinh lại vì thêm file), KHÔNG đụng `core/`:
+
+1. **FIGHT + Random gaps: hai bàn khoét KHÁC từ** (ảnh: trái `household`+`but`, phải `and`+`household`). Gốc: sổ chung
+   `ftgFightLedger` bị làm mới bởi *bàn có `side === 0`* lúc mount — nhưng từ Đợt 356 mỗi bàn có ▶ riêng, và đo thật
+   (`scratch/dot365-ftg-fight.html`, MutationObserver): **bấm ▶ bàn 0 thì trọng tài mount bàn 1 TRƯỚC** (và ngược lại).
+   Bàn 1 bốc gap → ghi sổ → bàn 0 mount sau xoá sổ → bốc lại ⇒ lệch. Sửa: sổ chỉ mở lại khi đổi TRẬN (`ctl` khác —
+   Start again = trận mới), bàn nào mount trước thì quyết định; khoá sổ = `ftgLineKey(it)` (`text|start|end`) thay vì
+   object `it.src` (begin() của engine resolve lại act mỗi lần ▶, không nên tin identity). Đo: 4 trận × 4 câu, xen kẽ
+   bàn bấm trước → **16/16 câu hai bàn cùng vị trí + cùng số ô**, trận sau bốc khác trận trước.
+2. **FIGHT · FIND: ô đã bấm còn hiện chữ** (ảnh: HOUSEHOLD xám nhưng đọc được ⇒ đội kia chép). CSS:
+   `.aw-ftg-tile.is-taken .aw-ftg-tiletext{visibility:hidden}` + `::after "•••"`; `reveal()` bỏ `is-taken` như cũ nên chữ
+   quay lại. Đo: lúc bấm `visibility:hidden` + `::after` = "•••"; sau reveal 0 ô ẩn. ⛔ Bẫy tự tạo: viết `"\2022"` qua
+   Python heredoc → `\202` bị hiểu là octal ⇒ file có U+0082 + "2" (hiện "222") — nay ghi thẳng ký tự `•` (file UTF-8).
+3. **Thanh MIN GAPS → GAPS hai nút** (`ftg-range.js`, module mới, `mkRangeCell`): `.aw-ftg-range` vẽ theo đúng bản vẽ
+   thanh core (track 6 px, nút 16 + viền 2, lùi nửa nút hai đầu), chip `.aw-optc-chip` bên phải hiện `N` (hai nút chung
+   chỗ) hoặc `a–b`. Cử chỉ = luật Đợt 213/216 mở rộng: kéo nút; hai nút trùng thì HƯỚNG kéo đầu tiên chọn nút (phải =
+   trên, trái = dưới); chạm ngoài = nút gần nhất nhích 1 nấc về phía ngón; nút không vượt nhau (đẩy vào nhau = đỗ chung);
+   bàn phím ← →. Đo bằng PointerEvent thật trên panel thật (chuột + touch): 20/20 phép đúng, pointercancel không kẹt.
+   **Luật đếm — thầy chốt "thanh quyết định hoàn toàn"** (`normGapRange` + `applyGapPolicy`): khoá `minGaps`/`maxGaps`
+   (1..10); số chỗ mỗi câu = `lo` nếu `lo === hi`, ngược lại bốc trong `[lo, hi]` mỗi câu mỗi ván; CÓ THỂ ÍT hơn số
+   thầy/CLI khoét; câu ít từ hơn thì khoét hết. Random gaps TẮT: xếp hạng định trước — chỗ thầy khoét trước (cụm/từ dài
+   trước, cùng dài thì đứng trước), rồi từ tự do dài trước, cắt lấy N. Random BẬT: bốc như cũ (từ ≥ 3 chữ trước). Fight:
+   bàn mount trước bốc rồi ghi sổ ⇒ hai bàn cùng SỐ lẫn VỊ TRÍ. ⚠️ **Act CŨ / act Import chưa có `maxGaps` ⇒ `hi = 10`**
+   (thầy chọn khi được hỏi) ⇒ ván mặc định bốc 1–10 chỗ mỗi câu (đo sample: 7 · 5 · 5 · 3 · 8) — muốn hiền hơn thì đổi
+   một số ở `normGapRange` (mặc định `hi`) hoặc thêm `maxGaps` vào `core/lesson-import.js` + `tools/ftg-prepare.py`.
+   Bench Node trên đúng thân hàm lấy từ file (`scratch` phiên: gap-policy-test.mjs) **219/219**; Apply → Play trên
+   test.html: đúng 3 → câu 1 có 3 ô, FIND 33 ô trang 1/2. `node --input-type=module --check` sạch 2 file; 0 lỗi console.
+- ⬜ Thầy bấm tay trang thật: Fight FIND (ảnh cũ) · Options GAPS bằng NGÓN trên TOMKO (chạm/kéo/hai nút trùng) · ván
+  thường với 1–10 mặc định (có hiền không?). ⬜ Showdown: mỗi máy bốc số/vị trí riêng — chưa đồng bộ qua Firestore.

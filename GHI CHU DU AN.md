@@ -531,6 +531,22 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 365 (20/9/2026 tối, FIND THE GAP — Fight khoét cùng từ · ô đã bấm giấu chữ · thanh GAPS hai nút min–max) · ⬜ CHƯA COMMIT, chờ thầy duyệt
+
+Thầy gửi ảnh Fight FIND 2 bàn + 3 ý. (1) Random gaps trong Fight: hai bàn khoét KHÁC từ — gốc là sổ chung
+`ftgFightLedger` bị bàn `side 0` làm mới lúc mount, mà trọng tài mount bàn KIA trước khi bấm ▶ (đo thật) ⇒ nay sổ mở
+một lần mỗi trận (`ctl`), khoá theo `text|start|end`; đo 16/16 câu hai bàn trùng. (2) FIND: ô `.is-taken` giấu chữ
+(`visibility:hidden` + `::after "•••"`) tới `reveal()`. (3) `Min gaps` → **GAPS hai nút** (`ftg-range.js` mới, vẽ theo
+thanh core, cử chỉ Đợt 213/216 mở rộng; 20/20 phép PointerEvent); luật đếm thầy chốt: thanh quyết định hoàn toàn — số
+chỗ = N (hai nút trùng) hoặc bốc trong [min,max] mỗi câu mỗi ván, có thể ít hơn số thầy khoét; bench 219/219. ⚠️ act
+chưa có `maxGaps` ⇒ hi = 10 (thầy chọn) ⇒ mặc định bốc 1–10 chỗ/câu. `core/tpl-files.js` sinh lại (thêm file).
+Chi tiết + số đo: `templates/find-the-gap/GHI CHU FIND-THE-GAP.md` Đợt 365. Không đụng `core/` (ngoài file sinh).
+
+**VIỆC ĐANG CHỜ.** ⬜ Thầy bấm tay: Fight FIND thật · GAPS bằng ngón TOMKO · ván thường với mặc định 1–10 (có hiền
+không? — đổi một số ở `normGapRange` nếu muốn) · Showdown mỗi máy bốc riêng, chưa đồng bộ.
+
+---
+
 ## Đợt 364 (20/9/2026 khuya, QUIZ Time limit — cụm số+thanh cân đúng mép khối ô · tích dồn dập 5 s cuối · bỏ nhạc 6 s thừa khi hết mạng) · ✅ COMMIT + PUSH `824aad0` · ⬜ CHƯA BẤM TAY
 
 Thầy gửi 2 ảnh trang thật + 3 việc. (1) Cụm `[giây][thanh]` lệch tuỳ cỡ màn: ô số có min-width + căn phải để lại

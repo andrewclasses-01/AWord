@@ -46,6 +46,7 @@ import { createKeyboard } from "../../core/keyboard.js";
 import { openFtgEditor } from "./find-the-gap-editor.js";
 import { ftgSound } from "./ftg-sound.js";
 import { loadAudio, createSegmentPlayer } from "./ftg-audio.js";
+import { mkRangeCell } from "./ftg-range.js";
 import {
   normalizeItems, answersOf, isRightAnswer, buildChoices, answerPool, gapEnd, gappable,
   audioUrlOf, escapeHtml, MAX_CHOICES, MIN_CHOICES
@@ -79,7 +80,16 @@ let ftgPauseHandlers = null;
 // this same module, so they share ONE ledger of "gaps right per side, per
 // round" and each board settles its own point at reveal(). Board 0 mounts
 // first and opens a fresh ledger for its referee; board 1 joins it.
-let ftgFightLedger = null;   // { ctl, rounds: Map<index, [hits0, hits1]>, gaps: Map<src, gaps[]> } — gaps: both boards MUST blank the same words
+let ftgFightLedger = null;   // { ctl, rounds: Map<index, [hits0, hits1]>, gaps: Map<lineKey, gaps[]> } — gaps: both boards MUST blank the same words
+// ⭐ Đợt 365 (thầy, 20/9/2026 — ảnh 2 bàn khoét KHÁC từ dù cùng Random gaps): the
+// ledger used to be re-opened by whichever mount had `side === 0`. Since Đợt 356
+// each board has its own ▶, so board 1 can mount FIRST (it blanks, writes the
+// ledger) and board 0 then wiped it and blanked again on its own. Now the ledger
+// is opened once per MATCH (a new referee `ctl` = a new match, Start again
+// included) by whichever board mounts first, and the other one simply reads it.
+// The key is the line's text + slice, not the object: begin() re-resolves the
+// act on every ▶, so an object identity is not something to lean on.
+const ftgLineKey = it => it.text + "\u0001" + it.start + "\u0001" + it.end;
 
 function normLives(v) {
   if (v === 0 || v === null || v === undefined || v === "") return null;   // unlimited
@@ -90,30 +100,41 @@ function normLives(v) {
 function normMode(v) { return v === "type" || v === "find" ? v : "quiz"; }
 // Thầy (18/9): một câu 2 chỗ trống phải đúng CẢ HAI mới được 1 điểm ⇒ mặc định "sentence"
 function normScoring(v) { return v === "gap" ? "gap" : "sentence"; }
-const MAX_MIN_GAPS = 10;
-function normMinGaps(v) {
-  const n = Number(v);
-  return Number.isFinite(n) ? Math.min(MAX_MIN_GAPS, Math.max(1, Math.round(n))) : 1;
+const MAX_GAPS = 10;
+// options.minGaps / options.maxGaps → the GAPS range [lo, hi] (1..10). An act
+// saved before Đợt 365 has only minGaps (the old "Min gaps" slider): its hi is
+// the top of the scale, exactly what thầy chose for old acts.
+function normGapRange(minV, maxV) {
+  const cl = (v, d) => { const n = Number(v); return Number.isFinite(n) && v !== null && v !== "" ? Math.min(MAX_GAPS, Math.max(1, Math.round(n))) : d; };
+  const lo = cl(minV, 1);
+  const hi = Math.max(lo, cl(maxV, MAX_GAPS));
+  return { lo, hi };
 }
 
-// ⭐ Thầy (18/9, vòng 4) — HAI LUẬT VỀ CHỖ TRỐNG LÚC CHƠI:
-//  • options.minGaps (1..10): mỗi câu ít nhất N chỗ trống. Câu thầy khoét ít hơn N thì game
-//    khoét thêm; câu có ít hơn N từ khoét được thì khoét HẾT.
-//  • options.randomGaps: mỗi ván (kể cả Start again) vị trí chỗ trống được bốc LẠI ngẫu nhiên
+// ⭐ Thầy (18/9 vòng 4; Đợt 365 20/9) — LUẬT VỀ CHỖ TRỐNG LÚC CHƠI:
+//  • GAPS [lo..hi] (options.minGaps / maxGaps, thanh 2 nút): SỐ chỗ trống mỗi câu. lo = hi
+//    ⇒ đúng N chỗ; lo < hi ⇒ mỗi câu, mỗi ván bốc một số trong khoảng. Thanh QUYẾT ĐỊNH
+//    hoàn toàn (thầy chốt 20/9): có thể ÍT hơn số thầy/CLI đã khoét sẵn; câu có ít từ khoét
+//    được hơn N thì khoét HẾT.
+//  • options.randomGaps: mỗi ván (kể cả Start again) VỊ TRÍ chỗ trống được bốc LẠI ngẫu nhiên
 //    — cùng một câu, lần này trống từ này, lần sau trống từ khác — để em phải NGHE thật chứ
-//    không nhớ vẹt. Số chỗ trống = max(minGaps, số thầy đã khoét); cụm thầy khoét vẫn là một
-//    "đơn vị" có thể được bốc.
-//  Thêm ngoài số thầy khoét (không random) thì chọn ĐỊNH TRƯỚC: từ dài trước (đáng nghe hơn),
-//  cùng độ dài thì từ đứng trước — nên không random thì ván nào cũng cùng một bộ.
+//    không nhớ vẹt. Cụm thầy khoét vẫn là một "đơn vị" có thể được bốc; ưu tiên từ ≥ 3 chữ,
+//    chỉ động tới "a/the/I" khi hết từ dài.
+//  • Random TẮT: chọn ĐỊNH TRƯỚC — chỗ thầy khoét đi trước (từ dài trước, cùng dài thì đứng
+//    trước), rồi tới từ tự do dài trước — nên cùng một SỐ thì ván nào cũng cùng một bộ.
 //  `gap.choices` chỉ theo chỗ trống thầy đặt; chỗ khoét thêm dùng nhiễu tự sinh (buildChoices).
-function applyGapPolicy(it, { minGaps, randomGaps, rnd = Math.random }) {
+//  FIGHT: bàn mount trước gọi hàm này rồi ghi sổ chung, bàn kia đọc lại (xem ftgFightLedger).
+function applyGapPolicy(it, { minGaps, maxGaps = minGaps, randomGaps, rnd = Math.random }) {
   const covered = new Set();
   it.gaps.forEach(g => { for (let i = g.word; i <= gapEnd(g); i++) covered.add(i); });
   // every gappable token outside the teacher's gaps is a one-word candidate unit
   const free = [];
   it.tokens.forEach((t, i) => { if (!covered.has(i) && gappable(t)) free.push({ word: i, span: 1, answers: [], choices: [], len: t.core.length }); });
   const units = it.gaps.length + free.length;
-  const need = Math.min(units, Math.max(minGaps, it.gaps.length));
+  const lo = Math.max(1, minGaps | 0), hi = Math.max(lo, maxGaps | 0);
+  const want = lo === hi ? lo : lo + Math.floor(rnd() * (hi - lo + 1));
+  const need = Math.min(units, want);
+  const byLen = (a, b) => (b.len - a.len) || (a.word - b.word);
   let chosen;
   if (randomGaps) {
     const all = [...it.gaps.map(g => ({ ...g, len: 99 })), ...free];
@@ -123,8 +144,8 @@ function applyGapPolicy(it, { minGaps, randomGaps, rnd = Math.random }) {
     chosen = pickFrom(long, need);
     if (chosen.length < need) chosen = chosen.concat(pickFrom(short, need - chosen.length));
   } else {
-    const extra = [...free].sort((a, b) => (b.len - a.len) || (a.word - b.word)).slice(0, need - it.gaps.length);
-    chosen = [...it.gaps, ...extra];
+    const teacher = it.gaps.map(g => ({ ...g, len: it.tokens.slice(g.word, gapEnd(g) + 1).reduce((n, t) => n + t.core.length, 0) })).sort(byLen);
+    chosen = [...teacher, ...free.sort(byLen)].slice(0, need);
   }
   return chosen.map(({ len, ...g }) => g).sort((a, b) => a.word - b.word);
 }
@@ -223,13 +244,14 @@ const ftgTemplate = {
     choices.cell.title = "Quiz mode: how many word tiles each gap offers (fewer when the activity has too few words)";
     choicesCell = choices.cell;
 
-    const minGaps = mkSliderCell({
-      label: "Min gaps", sub: "per line", min: 1, max: MAX_MIN_GAPS, step: 1,
-      value: normMinGaps(draft.minGaps), tone: "blue",
-      fmt: v => String(v),
-      onInput: v => { draft.minGaps = v; }
+    // ⭐ Đợt 365 — GAPS: a two-thumb range (ftg-range.js). Thumbs together = an
+    // exact count; apart = each line draws a count in between, every play.
+    const range = normGapRange(draft.minGaps, draft.maxGaps);
+    const gapsCell = mkRangeCell({
+      mkCell, label: "Gaps", sub: "per line", min: 1, max: MAX_GAPS, lo: range.lo, hi: range.hi, tone: "blue",
+      onInput: (lo, hi) => { draft.minGaps = lo; draft.maxGaps = hi; }
     });
-    minGaps.cell.title = "Every line gets at least this many gaps — extra words are blanked when the line has fewer; a line with fewer words than this is blanked completely";
+    gapsCell.cell.title = "How many gaps each line gets. Two thumbs on one number = exactly that many; apart = a random count in between for every line, every play. A line with fewer words is blanked completely";
 
     const curLives = normLives(draft.lives) || 0;
     const lives = mkSliderCell({
@@ -239,7 +261,7 @@ const ftgTemplate = {
     });
     lives.cell.title = "0 = unlimited lives";
 
-    panel.append(mode.cell, scoring.cell, choices.cell, minGaps.cell, lives.cell);
+    panel.append(mode.cell, scoring.cell, choices.cell, gapsCell.cell, lives.cell);
 
     addCheck("Random gaps", draft.randomGaps === true, v => { draft.randomGaps = v; },
       { key: "randomGaps", title: "Every play (Start again too) blanks DIFFERENT words of the same line — for real listening, not memory" });
@@ -270,22 +292,24 @@ const ftgTemplate = {
     const fightLocked = () => fightBoardLock || !!(fightCtl && fightCtl.isLocked(fightSide));
     let fightPendingReveal = false;   // this board answered, marks withheld until reveal()
     const speaks = () => !fightCtl || fightCtl.speaks(fightSide);
-    if (fightCtl && (fightSide === 0 || !ftgFightLedger || ftgFightLedger.ctl !== fightCtl)) ftgFightLedger = { ctl: fightCtl, rounds: new Map(), gaps: new Map() };
+    if (fightCtl && (!ftgFightLedger || ftgFightLedger.ctl !== fightCtl)) ftgFightLedger = { ctl: fightCtl, rounds: new Map(), gaps: new Map() };
     const fightRound = i => { const L = ftgFightLedger; if (!L.rounds.has(i)) L.rounds.set(i, [0, 0]); return L.rounds.get(i); };
 
     let items = normalizeItems(activity.content);
     // A dealt (Showdown) list must keep its order — one rule, one place (ui.keepItemOrder).
     if (opt.shuffleQuestions && !ui.keepItemOrder?.()) items = shuffle(items);
-    // Min gaps / Random gaps (see applyGapPolicy). In a FIGHT both boards must
-    // blank the SAME words: board 0 decides, board 1 takes the layout from the
-    // shared ledger (keyed by the source line object, which the two boards share).
-    const minGaps = normMinGaps(opt.minGaps), randomGaps = opt.randomGaps === true;
+    // GAPS range / Random gaps (see applyGapPolicy). In a FIGHT both boards must
+    // blank the SAME words (and the same NUMBER of them): the board that mounts
+    // FIRST decides, the other takes the layout from the shared ledger (keyed by
+    // ftgLineKey — see its note).
+    const { lo: minGaps, hi: maxGaps } = normGapRange(opt.minGaps, opt.maxGaps);
+    const randomGaps = opt.randomGaps === true;
     items = items.map(it => {
-      const key = it.src;
+      const key = ftgLineKey(it);
       if (fightCtl && ftgFightLedger.gaps.has(key)) return { ...it, gaps: ftgFightLedger.gaps.get(key) };
-      const gaps = (minGaps > 1 || randomGaps) ? applyGapPolicy(it, { minGaps, randomGaps }) : it.gaps;
+      const gaps = applyGapPolicy(it, { minGaps, maxGaps, randomGaps });
       if (fightCtl) ftgFightLedger.gaps.set(key, gaps);
-      return gaps === it.gaps ? it : { ...it, gaps };
+      return { ...it, gaps };
     });
     const total = items.length;
     if (total === 0) {
