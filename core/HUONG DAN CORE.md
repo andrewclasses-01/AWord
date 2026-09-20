@@ -471,6 +471,9 @@ phần riêng của đội. Luật đi kèm:
 - ⭐ **Đợt 354 — `ctl.forfeit(side)`**: bàn bỏ cuộc (Rocket race: hết mạng, tàu nổ). Đội KIA thắng bất kể điểm; trận kết
   sau ROUND_HOLD_MS bằng hẹn giờ RIÊNG (⚠️ không dùng `later()` của trọng tài — ô hẹn giờ vòng bị `wordDone` gắn lại ngay
   sau đó). Gọi `typeof fightCtl.forfeit === "function"` trước.
+- ⭐ **Đợt 355 — `fightFrame.topStrip: "below"`**: dải điểm/đồng hồ xếp DƯỚI hàng hai bàn (`.aw-fight.is-topbelow`: số điểm
+  cao 0, dải thành băng mỏng giữ Pick time / Miss wait), trận bắt đầu sát mép trên; kèm `boardTools: "shared"` thì `clockBox`
+  được dời vào `.aw-fight-boardtools`. Không khai → thứ tự `[top, shared?, boards, controls]` như cũ.
 
 **AI ĐANG BẬT IN TURNS (Đợt 202)**: **Type the answer** — 1/17, thầy chốt thử một game trước.
 

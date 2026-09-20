@@ -8,7 +8,13 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/9/2026 tối (Đợt 354 — ROCKET RACE · FIGHT, ngay sau Đợt 353, 3 ý thầy: (1) BỎ ĐIỂM trên dải
+> Cập nhật lần cuối: **20/9/2026 tối (Đợt 355 — ROCKET RACE · FIGHT, 9 ý thầy sau khi xem 353+354: câu hỏi thành MỘT DÒNG
+> trên cùng vùng chung (`.aw-rr-qbar`, 2 nửa gộp khi cùng chữ), bỏ minimap, đua 32:5.75, số mũi tàu nhỏ hơn, bàn 16:5 chỉ còn ô +
+> chip TEAM X ở dưới, NỀN BÀN = MÀU TÀU (color-mix, lùi `--rd`), dải điểm/đồng hồ xuống DƯỚI bàn (core `fightFrame.topStrip:"below"`,
+> băng mỏng giữ Miss wait) + đồng hồ vào dải nút cạnh 🔊, và **ĐƯỜNG ĐUA CO GIÃN**: `L = leader.p + số vòng còn lại` nên câu cuối tàu
+> dẫn đầu CHẠM ĐÍCH đúng lúc kết trận (đo: 10 câu xen kẽ → 86/86, "IT'S A DRAW 5—5"). Quiz Fight hồi quy không đổi. Xem
+> `templates/rocket-race/GHI CHU ROCKET-RACE.md` mục 12)**.
+> Trước đó: **20/9/2026 tối (Đợt 354 — ROCKET RACE · FIGHT, ngay sau Đợt 353, 3 ý thầy: (1) BỎ ĐIỂM trên dải
 > (`fightFrame.noScore`, điểm vẫn tính ngầm), sai + Points off ⇒ TÀU LÙI N nấc kèm "−N" bay từ tàu; (2) bỏ thẻ TEAM 1/2,
 > in SỐ 1/2 lên mũi tàu; (3) LIVES vào Options trận: mỗi mạng mất tàu NÁT DẦN (3 mức: nứt · xỉn · khói, chia theo tỉ lệ mạng),
 > hết mạng NỔ 💥 + xác xám + "TEAM n IS DOWN!" và bàn khoá; core `fight.js` thêm `ctl.forfeit(side)` ⇒ ĐỘI KIA THẮNG bất kể
@@ -7443,7 +7449,8 @@ act nào gọi tên HS thì đọc từ đó.
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
 > ⭐⭐⭐⭐⭐ **MỚI NHẤT (Đợt 353 + 354, 20/9/2026 tối) — ROCKET RACE ▸ FIGHT TỈ LỆ MỚI 32:7 + 16:7, KHÔNG ĐIỂM, SỐ MŨI TÀU, LIVES = NÁT → NỔ: ✅ COMMIT + PUSH `f5fd42e`, ⬜ CHƯA BẤM TAY TRANG THẬT.**
-> 0. ⬜ (354) Dải trên chỉ còn đồng hồ; mũi tàu số 1/2; Options trận → Lives 3 + Points off 1 → sai: tàu lùi 1 nấc + "−1", chip ♥ bớt, tàu nứt/xỉn/khói dần; hết mạng: 💥, xác xám, "TEAM n IS DOWN!", 2 s sau bảng đội KIA thắng. Bảng cuối vẫn in điểm — thầy có muốn ẩn không? Speed bonus nên tắt với Rocket race (điểm ≠ tàu).
+> 00. ⬜ (355) Câu hỏi 1 dòng trên cùng (Fight content = Different → 2 nửa); đua ngắn không minimap; bàn 16:5 nền màu tàu, TEAM X dưới ô; đồng hồ ở dải nút; băng mỏng Miss wait dưới bàn; chơi hết câu → tàu dẫn đầu CHẠM ĐÍCH đúng câu cuối.
+> 0. ⬜ (354) Dải trên (nay ở dưới) không còn số điểm; mũi tàu số 1/2; Options trận → Lives 3 + Points off 1 → sai: tàu lùi 1 nấc + "−1", chip ♥ bớt, tàu nứt/xỉn/khói dần; hết mạng: 💥, xác xám, "TEAM n IS DOWN!", 2 s sau bảng đội KIA thắng. Bảng cuối vẫn in điểm — thầy có muốn ẩn không? Speed bonus nên tắt với Rocket race (điểm ≠ tàu).
 > 1. ⬜ MODE → Fight → Start: dải đua mỏng (2 làn) trên, 2 bàn thấp (chip · câu · 1 hàng 4 ô · thanh Time delay mỏng ở đáy) dưới; dải nút = [☰][‹ n of N ›][🔊] | [Options][Mode].
 > 2. ⬜ Fullscreen thật trên màn 16:9: cả bức phải kín bề ngang, không dải đen hai bên, hàng nút không bị cắt.
 > 3. ⬜ Nhìn tên lửa: phi công 🐱/🦊 nằm TRONG cửa sổ; lửa đi theo thân khi nhấp nhô / lao tới (đúng) / rung (sai). Kiểm cả Solo.

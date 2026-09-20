@@ -1,6 +1,6 @@
 # GHI CHÚ — ROCKET RACE (đua tên lửa)
 
-Trạng thái: ✅ Đợt 350 `f55aa2d` · ✅ Đợt 351 `cb95795` (Fight) COMMIT + PUSH · 🟢 **Đợt 353 + 354 (Fight: tỉ lệ 32:7 + 16:7, phi công vào cửa sổ, lửa bám thân, ☰/‹ › lên dải chung; ẩn điểm, số mũi tàu, lùi tàu khi Points off, Lives = tàu nát dần → nổ) ✅ COMMIT + PUSH `f5fd42e`, ⬜ chưa bấm tay** — xem mục 10 + 11.
+Trạng thái: ✅ Đợt 350 `f55aa2d` · ✅ Đợt 351 `cb95795` (Fight) COMMIT + PUSH · 🟢 **Đợt 353 + 354 (Fight: tỉ lệ 32:7 + 16:7, phi công vào cửa sổ, lửa bám thân, ☰/‹ › lên dải chung; ẩn điểm, số mũi tàu, lùi tàu khi Points off, Lives = tàu nát dần → nổ) ✅ COMMIT + PUSH `f5fd42e`; **Đợt 355** (câu hỏi 1 dòng trên cùng, đua 32:5.75 không minimap, bàn 16:5 nền màu tàu, chip xuống dưới, dải điểm xuống dưới bàn + đồng hồ vào dải nút, ĐƯỜNG ĐUA CO GIÃN để câu cuối tàu chạm đích) — xem mục 10 + 11 + 12.
 Kế hoạch gốc + lý do từng quyết định: `KE HOACH ROCKET-RACE.md` cùng thư mục. Thầy đã chốt 20/9:
 build **chặng 1 + chặng 2 cùng lúc** · luật điểm **A** (mỗi câu đúng = 1 nấc, không hơn) · tên
 "Rocket race" · phi công **emoji thú**.
@@ -218,3 +218,28 @@ trừ thì tàu nát đi một tí, hết thì nổ tung".
 **"TEAM RIGHT WINS" −2 — 0** (đội phải `is-top`). Solo không đổi (vết nứt ẩn, không số mũi).
 ⬜ Chưa kiểm: TOMKO; nhiều mạng (5–10) xem 3 mức lên đúng nhịp; Speed bonus bật thì "+N" bay về ô điểm ẩn (vô hại) nhưng
 điểm trọng tài ≠ vị trí tàu — thầy cân nhắc tắt Speed bonus khi chơi Rocket race; bảng cuối trận vẫn in số điểm.
+
+## 12. FIGHT — CÂU HỎI 1 DÒNG, ĐUA NGẮN, BÀN 16:5 MÀU TÀU, ĐƯỜNG ĐUA CO GIÃN (Đợt 355, 20/9/2026 tối, 9 ý thầy)
+1. Bỏ minimap (`.aw-rr-shared .aw-rr-minimap { display:none }`; `r.dot` vẫn được ghi, vô hại).
+2. Số mũi tàu nhỏ hơn: tên lửa 11u, số `11u × .12` (Đợt 354 là 13u × .19).
+3. Vùng đua ngắn hơn: shared **32:5.75** (17.97u) = thanh câu hỏi 4u + track 12u (2 làn 6u, tàu 4.8u cao) — Đợt 353 là 32:7.
+4. **Câu cuối tàu phải chạm đích** — `fightTrackLength(scene, remaining) = max(1, leader.p + remaining)`; `remaining` = số
+   vòng CHƯA xử sau nước đi này (`N − fightIndex − (resolved ? 1 : 0)`); `fightRepaint()` gán `r.L` cho CẢ HAI tàu và vẽ lại
+   (cảnh dùng chung nên gọi từ bàn nào cũng được), gọi ở `goToIndex` (vòng mới), `onCorrect`, `onWrong` (kể cả lùi). Khi
+   `remaining === 0` mọi tàu có `p ≥ L` → `crossedLine` (hoà thì cả hai cùng chạm). Hệ quả đẹp: vòng nào không ai đúng thì
+   vạch đích tự tiến lại gần cả hai tàu. Đo: 10 câu, mỗi bàn thắng 5 vòng xen kẽ → x: 13.1/5 → 14/14 → 23/14 → … →
+   72.5/59 → **86/86** đúng câu 10, cả hai `is-done`, bảng "IT'S A DRAW 5—5". Solo/Teams giữ `L = N` cũ.
+5. Chữ TEAM X xuống hàng dưới các ô: panel Fight = `[answersEl, turnChip]` (+ ổ Time delay); chip 3.4u.
+6+8. Bỏ hẳn câu hỏi khỏi 2 bàn; **một dòng câu hỏi trên cùng** của vùng chung: `ensureFightScene` dựng `.aw-rr-qbar` (4u,
+   2 nửa `.aw-rr-qhalf`); mỗi bàn `replaceChildren(qBox)` vào nửa của mình (mọi logic voice/`fitText` giữ nguyên vì vẫn là
+   chính `qBox`); `syncQbar()` sau mỗi `showQuestion`: hai nửa cùng chữ → `is-same` (nửa phải ẩn, nửa trái trải hết) — Fight
+   content = Different thì hiện 2 nửa. `white-space: nowrap` + `fitText` co chữ để đúng 1 dòng.
+7. Bỏ dải đồng hồ trên đầu: core `fightFrame.topStrip: "below"` → `fight.js` xếp `[shared, boards, top, controls]`, lớp
+   `is-topbelow` (app.css: `.aw-fight-score` cao 0 để dải chỉ còn băng ~10px giữ thanh Pick time / Miss wait dưới mỗi bàn;
+   `.aw-fight { padding-top: 6px }`); `clockBox` (đồng hồ trận) được DỜI vào `.aw-fight-boardtools` sau nút 🔊 (18px). Dải nút
+   nay: [☰][‹ n of N ›][🔊][00:00] | [Options][Mode]. Template khác không khai → thứ tự cũ (Quiz Fight đo lại: `top, boards,
+   controls`, đồng hồ ở giữa dải, điểm visible).
+9. Nền bàn = màu tàu: `.aw-rr-stage.is-fightboard { background: linear-gradient(color-mix(var(--rc) 72% #000) → 45%) }`,
+   đường lùi `var(--rd)` cho trình duyệt không có `color-mix`; `--rc/--rd` đã được `buildFight` đặt lên stage từ Đợt 351.
+   Bàn **16:5** (`boardH: 5`) — bàn chỉ còn ô + chip nên 16:7 làm ô thành cột dọc.
+Bức cả trận nay 32:10.75 (≈ Quiz 32:10.5). ⬜ Chưa kiểm: TOMKO, Fight content = Different (2 nửa câu hỏi), câu hỏi rất dài.

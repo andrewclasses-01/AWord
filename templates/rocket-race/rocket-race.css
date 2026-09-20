@@ -373,42 +373,59 @@
   background: radial-gradient(120% 90% at 70% 0%, #2a1a5e 0%, #160b3f 45%, #090520 100%);
   color: #fff; user-select: none; -webkit-user-select: none;
 }
-/* ⭐ Đợt 353 — the strip is 32:7 = 21.875u tall (thầy, 20/9/2026: race = 2/3 of
-   the Đợt 351 32:10.5, which was mostly empty sky over two lanes). Two lanes of
-   8.5u hold a 13u-wide rocket (5.7u tall) with room for its bob; the minimap
-   stays, thinner, on the top edge; the big planet is dropped and the sun is
-   trimmed so the sky reads as a band, not a wall. Lane count is still `--lanes`
-   (2 today) — a 3-board match later only changes that number. */
-.aw-rr-shared .aw-rr-minimap { top: calc(1 * var(--aw-u)); height: calc(1.5 * var(--aw-u)); }
-.aw-rr-shared .aw-rr-track { top: calc(3.4 * var(--aw-u)); height: calc(17 * var(--aw-u)); }
-.aw-rr-shared .aw-rr-rocket { width: calc(13 * var(--aw-u)); transition: left .6s cubic-bezier(.2,.9,.25,1); }
-.aw-rr-shared .aw-rr-pilot { font-size: calc(13 * var(--aw-u) * .155); }
-.aw-rr-shared .aw-rr-tag { font-size: calc(2 * var(--aw-u)); }
-.aw-rr-shared .aw-rr-planet.is-sun { width: calc(12 * var(--aw-u)); top: calc(-4 * var(--aw-u)); right: calc(8 * var(--aw-u)); }
+/* ⭐ Đợt 355 — the shared area is 32:5.75 = 17.97u tall: a ONE-LINE question bar
+   (4u) across the top, then the race (no minimap any more — thầy, 20/9/2026 tối:
+   "bỏ thanh mini map · vùng đua ngắn hơn nữa · số ở đầu tên lửa nhỏ hơn nữa").
+   Two lanes of 6u hold an 11u-wide rocket (4.8u tall). Lane count is still
+   `--lanes` (2 today). Đợt 353 had 32:7 with the minimap; Đợt 351 32:10.5. */
+.aw-rr-shared .aw-rr-minimap { display: none; }
+.aw-rr-qbar {
+  position: absolute; left: 0; right: 0; top: 0; height: calc(4 * var(--aw-u));
+  display: flex; align-items: stretch; z-index: 7;
+  background: rgba(14, 6, 40, .88); border-bottom: 1px solid rgba(255,255,255,.14);
+}
+.aw-rr-qhalf { flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: center; }
+.aw-rr-qhalf + .aw-rr-qhalf { border-left: 1px solid rgba(255,255,255,.12); }
+.aw-rr-qbar.is-same .aw-rr-qhalf + .aw-rr-qhalf { display: none; }
+.aw-rr-qbar .aw-rr-q {
+  width: 100%; height: 100%; min-height: 0; max-height: none; padding: 0 calc(2 * var(--aw-u));
+  background: transparent; border: 0; border-radius: 0; box-shadow: none;
+}
+.aw-rr-qbar .aw-rr-qtext { font-size: calc(2.4 * var(--aw-u) * var(--fit)); line-height: 1.2; white-space: nowrap; }
+.aw-rr-shared .aw-rr-track { top: calc(5.2 * var(--aw-u)); height: calc(12 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-rocket { width: calc(11 * var(--aw-u)); transition: left .6s cubic-bezier(.2,.9,.25,1); }
+.aw-rr-shared .aw-rr-pilot { font-size: calc(11 * var(--aw-u) * .155); }
+.aw-rr-shared .aw-rr-num { font-size: calc(11 * var(--aw-u) * .12); }
+.aw-rr-shared .aw-rr-tag { display: none; }
+.aw-rr-shared .aw-rr-planet.is-sun { width: calc(9 * var(--aw-u)); top: calc(1 * var(--aw-u)); right: calc(9 * var(--aw-u)); }
 .aw-rr-shared .aw-rr-planet.is-big { display: none; }
-.aw-rr-shared .aw-rr-planet.is-green { top: calc(2.5 * var(--aw-u)); width: calc(4 * var(--aw-u)); }
-.aw-rr-shared .aw-rr-bannertxt { font-size: calc(5 * var(--aw-u)); }
-.aw-rr-shared .aw-rr-bannertxt.is-go { font-size: calc(6.5 * var(--aw-u)); }
-.aw-rr-shared .aw-rr-bannertxt.is-turbo { font-size: calc(4.5 * var(--aw-u)); }
-.aw-rr-shared .aw-rr-bannertxt.is-win { font-size: calc(4.5 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-planet.is-green { top: calc(6 * var(--aw-u)); width: calc(3 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-bannertxt { font-size: calc(4.2 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-bannertxt.is-go { font-size: calc(5.5 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-bannertxt.is-turbo { font-size: calc(3.8 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-bannertxt.is-win { font-size: calc(3.8 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-banner { top: calc(4 * var(--aw-u)); }
 
-/* the board below — a 16:7 frame (43.75u tall, `fightFrame.boardH`): team chip ·
-   question · ONE row of tiles (`--per-row` 4 for four answers, set in JS) ·
-   the referee's Time delay bar in `.aw-rr-waitslot` (Đợt 353). */
-.aw-rr-stage.is-fightboard .aw-rr-panel { top: calc(1.4 * var(--aw-u)); bottom: calc(1.2 * var(--aw-u)); gap: calc(.9 * var(--aw-u)); }
-.aw-rr-stage.is-fightboard .aw-rr-turn { height: calc(4.4 * var(--aw-u)); font-size: calc(2.8 * var(--aw-u)); letter-spacing: .08em; }
-.aw-rr-stage.is-fightboard .aw-rr-turnbadge { width: calc(3.8 * var(--aw-u)); height: calc(3.8 * var(--aw-u)); font-size: calc(2.4 * var(--aw-u)); }
-.aw-rr-stage.is-fightboard .aw-rr-q { min-height: calc(9 * var(--aw-u)); max-height: calc(14 * var(--aw-u)); border-color: var(--rc, #7b5bd6); }
-.aw-rr-stage.is-fightboard .aw-rr-qtext { font-size: calc(3.8 * var(--aw-u) * var(--fit)); }
+/* the board below — a 16:5 frame (31.25u, `fightFrame.boardH`): tiles fill it,
+   the team chip sits UNDER them, the referee's Time delay bar at the very foot.
+   Its background is the team's own hull colour (thầy: "nền của mỗi khung câu trả
+   lời cùng màu với con tàu") — `--rc`/`--rd` are set on the stage by buildFight. */
+.aw-rr-stage.is-fightboard {
+  background: var(--rd, #160b3f);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--rc, #4fc3f7) 72%, #000) 0%, color-mix(in srgb, var(--rc, #4fc3f7) 45%, #000) 100%);
+}
+.aw-rr-stage.is-fightboard .aw-rr-panel { top: calc(1.2 * var(--aw-u)); bottom: calc(1 * var(--aw-u)); gap: calc(.8 * var(--aw-u)); }
+.aw-rr-stage.is-fightboard .aw-rr-turn { height: calc(3.4 * var(--aw-u)); font-size: calc(2.2 * var(--aw-u)); letter-spacing: .08em; }
+.aw-rr-stage.is-fightboard .aw-rr-turnbadge { width: calc(3 * var(--aw-u)); height: calc(3 * var(--aw-u)); font-size: calc(1.9 * var(--aw-u)); }
 .aw-rr-stage.is-fightboard .aw-rr-tiletext { font-size: calc(3.2 * var(--aw-u) * var(--tw, 1)); }
 .aw-rr-stage.is-fightboard .aw-rr-answers { gap: calc(1.2 * var(--aw-u)); }
+.aw-rr-stage.is-fightboard .aw-rr-turnlives { font-size: calc(2 * var(--aw-u)); }
 /* the hosted wait bar: in flow, full width of the panel (core's `.is-hosted`
    drops the bottom-row positioning; height stays core's 1.2u) */
 .aw-rr-waitslot { position: relative; flex: 0 0 auto; height: calc(1.2 * var(--aw-u)); }
 
 /* ---- Đợt 354 (thầy, 20/9/2026) — no team tag, a number on the nose; lives =
    damage; the last life = explosion; Points off = the rocket backs up ---- */
-.aw-rr-shared .aw-rr-tag { display: none; }
 .aw-rr-num {
   position: absolute; left: 87.5%; top: 50%; transform: translate(-50%, -50%);
   font-size: calc(13 * var(--aw-u) * .19); font-weight: 900; line-height: 1;

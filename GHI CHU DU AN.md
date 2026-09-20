@@ -12,7 +12,10 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **⭐⭐ Đợt 354** (20/9/2026 tối, ROCKET RACE — **FIGHT không điểm, số mũi tàu, lùi tàu khi Points off, Lives =
+> Mới nhất: **⭐⭐ Đợt 355** (20/9/2026 tối, ROCKET RACE — **FIGHT bố cục gọn**: câu hỏi 1 dòng trên cùng, bỏ minimap, đua
+> 32:5.75, bàn 16:5 nền màu tàu + chip dưới ô, dải điểm xuống dưới bàn + đồng hồ vào dải nút (core `fightFrame.topStrip`),
+> ĐƯỜNG ĐUA CO GIÃN để câu cuối tàu chạm đích). Xem mục **Đợt 355**.
+> Trước đó: **⭐⭐ Đợt 354** (20/9/2026 tối, ROCKET RACE — **FIGHT không điểm, số mũi tàu, lùi tàu khi Points off, Lives =
 > tàu nát dần → nổ 💥**; core thêm `ctl.forfeit(side)` — đội nổ tung thua bất kể điểm; `fightFrame.noScore`). ✅ THẦY DUYỆT →
 > COMMIT + PUSH `f5fd42e` (gộp 353+354). Xem mục **Đợt 354**.
 > Trước đó: **⭐⭐ Đợt 353** (20/9/2026 tối, ROCKET RACE — **FIGHT tỉ lệ + bố cục lại**: đua 32:7 + bàn 16:7 thay 32:21;
@@ -523,6 +526,28 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 355 (20/9/2026 tối, ROCKET RACE — FIGHT bố cục gọn: câu hỏi 1 dòng, đua ngắn không minimap, bàn 16:5 màu tàu, dải điểm xuống dưới, đồng hồ vào dải nút, ĐƯỜNG ĐUA CO GIÃN) · ⬜ CHƯA BẤM TAY
+
+**9 ý thầy** (sau khi xem 353+354): bỏ minimap · số mũi tàu nhỏ hơn · đua ngắn hơn · câu cuối tàu phải chạm đích, không kết
+game khi tàu giữa chừng · chữ TEAM X xuống dưới ô · vùng câu hỏi ngắn hơn · bỏ dải đồng hồ trên đầu, game sát mép trên, đồng
+hồ về dải nút · bỏ câu hỏi khỏi 2 bàn, câu hỏi thành đúng 1 hàng trên cùng · nền bàn cùng màu tàu.
+
+**Đã làm.** Core: `fight.js` `fightFrame.topStrip:"below"` (xếp `[shared, boards, top, controls]`, lớp `is-topbelow`, dời
+`clockBox` vào `.aw-fight-boardtools`); `app.css` băng mỏng (`.aw-fight-score` cao 0) + đồng hồ 18px trong dải nút. Template:
+`.aw-rr-qbar` 2 nửa trong vùng chung, mỗi bàn dời `qBox` của mình vào (voice/fitText nguyên), `syncQbar` gộp khi cùng chữ;
+shared 32:5.75 (qbar 4u + track 12u), tàu 11u, số mũi `.12`, minimap ẩn; bàn 16:5 = `[ô, chip, ổ Time delay]`, nền
+`color-mix(--rc)`; **`fightTrackLength = leader.p + vòng còn lại`**, `fightRepaint()` vẽ lại cả hai tàu ở goToIndex/onCorrect/
+onWrong, `remaining === 0` → tàu `p ≥ L` chạm đích. Chi tiết `templates/rocket-race/GHI CHU ROCKET-RACE.md` mục 12.
+
+**Đã tự kiểm.** Bàn thử 0 lỗi: thứ tự DOM `shared, boards, top(10px), controls`; qbar `is-same`; đồng hồ trong dải nút;
+shared 5.57 (≈32:5.75), bàn 3.16 (≈16:5); nền bàn gradient màu tàu; 10 câu xen kẽ → x 86/86 đúng câu 10, "IT'S A DRAW 5—5".
+Quiz Fight: `top, boards, controls`, đồng hồ giữa dải, điểm visible — không đổi.
+
+**VIỆC ĐANG CHỜ.** ⬜ Thầy bấm tay (TOMKO, Fight content = Different, câu hỏi dài). ⬜ Các mục treo của 354 (bảng cuối in điểm,
+Speed bonus). ⬜ Fight 3 bàn.
 
 ---
 

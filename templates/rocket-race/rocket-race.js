@@ -228,6 +228,15 @@ function ensureFightScene(ctl) {
   host.innerHTML = "";
   host.classList.add("aw-rr-shared");
   const scene = buildScene(host);
+  // Đợt 355 — ONE question line across the top of the shared area (thầy: "để câu
+  // hỏi thành 1 hàng ở trên cùng, vừa đúng 1 hàng thôi"). Each board moves its own
+  // `.aw-rr-q` box into its half; `syncQbar` collapses the two halves into one
+  // centred line whenever both boards show the same text (Fight content = Same).
+  const qbar = el("div", "aw-rr-qbar");
+  scene.qhalves = [el("div", "aw-rr-qhalf"), el("div", "aw-rr-qhalf")];
+  qbar.append(scene.qhalves[0], scene.qhalves[1]);
+  host.append(qbar);
+  scene.qbar = qbar;
   scene.lanesEl.style.setProperty("--lanes", 2);
   scene.rockets = FIGHT_TEAMS.map((t, i) => {
     const r = { id: i, name: t.name, pilot: t.pilot, hull: t.hull, isPlayer: false, p: 0, L: 1,
@@ -236,7 +245,7 @@ function ensureFightScene(ctl) {
     // Đợt 354 — no "TEAM n" tag in a match (CSS hides it): a big 1 / 2 sits on the
     // nose instead, and a smoke node waits for the first lost life (see paintDamage).
     const craft = r.el.querySelector(".aw-rr-craft");
-    craft.append(el("div", "aw-rr-num", String(i + 1)), el("div", "aw-rr-dmgsmoke"));
+    craft.append(el("div", "aw-rr-num", String(i + 1)), el("div", "aw-rr-dmgsmoke"));   // Đợt 355: smaller number (CSS)
     return r;
   });
   const flag = el("div", "aw-rr-dot is-flag", "🏁");
@@ -252,6 +261,25 @@ function ensureFightScene(ctl) {
   else window.addEventListener("resize", setUnit);
   rrFightScene = scene;
   return scene;
+}
+
+// Đợt 355 — same text on both halves ⇒ one full-width line (the second half hides).
+function syncQbar(scene) {
+  if (!scene || !scene.qbar) return;
+  const t = scene.qhalves.map(h => (h.textContent || "").trim());
+  scene.qbar.classList.toggle("is-same", !!t[0] && t[0] === t[1]);
+}
+// Đợt 355 — THE TRACK IS AS LONG AS THE RACE CAN STILL GET (thầy: "khi kết thúc câu
+// cuối, tàu phải chạm đích; không được kết game khi tàu ở giữa chừng"). A match
+// deals every question to BOTH teams and only the first right answer scores, so
+// a fixed N-segment track was never finished by anyone. Instead the finish line
+// is always `leader + questions still open` segments away: after the last
+// question that is exactly the leader's own count, so the leading rocket touches
+// the flag at the very moment the match ends — and every unanswered round pulls
+// the flag one segment closer to both ships. Shared scene ⇒ one call repaints both.
+function fightTrackLength(scene, remaining) {
+  const lead = Math.max(0, ...scene.rockets.map(r => r.p));
+  return Math.max(1, lead + Math.max(0, remaining));
 }
 
 // Menu pause (Đợt 91) bridge — one handler per live mount (a match has TWO).
@@ -291,7 +319,10 @@ const rocketRaceTemplate = {
   //   noScore → the strip's two big numbers are hidden (Đợt 354, thầy: "không tính
   //                điểm nữa vì đã tính vị trí của tàu rồi"); the referee still counts
   //                points underneath (winner, end panel), the rockets show them.
-  fightFrame: { sharedH: 7, boardH: 7, boardTools: "shared", noScore: true },
+  //   Đợt 355 (thầy, 20/9/2026 tối): shared = ONE question line (4u) + a shorter race
+  //   (no minimap) = 32:5.75; boards 16:5 hold only the tiles + the team chip; the
+  //   score/clock strip goes below the boards and the clock into the toolbar.
+  fightFrame: { sharedH: 5.75, boardH: 5, boardTools: "shared", noScore: true, topStrip: "below" },
 
   edit: openRocketRaceEditor,
 
@@ -415,7 +446,10 @@ const rocketRaceTemplate = {
     const qTimerBar = el("div", "aw-rr-qtimer-bar");
     qTimer.append(qTimerBar);
     const answersEl = el("div", "aw-rr-answers");
-    panel.append(turnChip, qBox, qTimer, answersEl);
+    // Đợt 355 — a FIGHT board is tiles first, the team chip UNDER them, and the
+    // question is not in the board at all: it lives on the shared question line.
+    if (fightCtl && scene && scene.qhalves) { panel.append(answersEl, turnChip); scene.qhalves[fightSide].replaceChildren(qBox); }
+    else panel.append(turnChip, qBox, qTimer, answersEl);
     // ⭐ Đợt 353 — FIGHT: the referee's TIME DELAY bar moves INTO this panel.
     // This stage covers the whole frame (`inset:0`), so the engine's bottom row —
     // where that bar normally lives — was hidden under it and a match showed no
@@ -516,7 +550,7 @@ const rocketRaceTemplate = {
     if (fightCtl) {
       fightCtl.attach(fightSide, {
         total: N,
-        goToIndex(i) { fightIndex = i; if (started) showQuestion(i); },
+        goToIndex(i) { fightIndex = i; fightRepaint(false); if (started) showQuestion(i); },
         lock(on) { fightBoardLock = !!on; syncFightLock(); },
         reveal: revealFightMarks,
         review: buildReview,
@@ -571,6 +605,7 @@ const rocketRaceTemplate = {
       rockets = scene ? scene.rockets : FIGHT_TEAMS.map((t, i) => mkRocket(i, t.name, t.pilot, t.hull, false));
       player = rockets[fightSide];
       player.p = 0; player.L = N; player.done = false; player.place = 0;
+      fightRepaint(false);   // Đợt 355: shared track length, both rockets
       const t = FIGHT_TEAMS[fightSide];
       turnChip.textContent = "";
       const b = el("span", "aw-rr-turnbadge", t.pilot);
@@ -762,6 +797,7 @@ const rocketRaceTemplate = {
       }
       firstQuestionSpoken = true;
       fitText(qBox, t);
+      if (fightCtl) syncQbar(scene);
 
       // answer tiles
       const answers = (opt.shuffleAnswers ? shuffle(q.answers) : [...q.answers]).filter(a => a && a.text != null);
@@ -899,7 +935,8 @@ const rocketRaceTemplate = {
       rrSound.correct();
       const mover = teamsMode ? currentTeam() : player;
       if (teamsMode) mover.queue.shift(); else if (!fightCtl) queue.shift();
-      mover.p = Math.min(mover.L, mover.p + 1);
+      if (fightCtl) { mover.p += 1; fightRepaint(true); }
+      else mover.p = Math.min(mover.L, mover.p + 1);
       fireRocket(mover);
       ui.setScore(scoreNow());
       if (fightCtl) {
@@ -950,7 +987,7 @@ const rocketRaceTemplate = {
         return;
       }
       stallRocket(mover);
-      if (fightCtl) { fightLoseLife(); return; }     // the referee decides what happens next
+      if (fightCtl) { fightRepaint(true); fightLoseLife(); return; }     // the referee decides what happens next
       if (loseLife()) return;   // game over ends everything
       later(nextQuestion, STALL_MS + 200);
     }
@@ -970,6 +1007,15 @@ const rocketRaceTemplate = {
       paintRocket(r);
       spawnPuff(r);
       if (r.p >= r.L) crossedLine(r);
+    }
+    // Đợt 355 — recompute the shared track length and repaint BOTH rockets (see
+    // fightTrackLength). `resolved` = the current round is settled by this move.
+    function fightRepaint(resolved) {
+      if (!fightCtl || !scene || !scene.rockets) return;
+      const remaining = Math.max(0, N - fightIndex - (resolved ? 1 : 0));
+      const len = fightTrackLength(scene, remaining);
+      scene.rockets.forEach(r => { r.L = len; paintRocket(r); });
+      if (remaining === 0) scene.rockets.forEach(r => { if (!r.done && r.p >= len && r.p > 0) crossedLine(r); });
     }
     // Đợt 354 — FIGHT + Points off: back up `n` segments (floor: the start line).
     function retreatRocket(r, n) {

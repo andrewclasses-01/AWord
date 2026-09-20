@@ -339,6 +339,8 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   //   sharedH — chiều cao vùng chung khi cả trận rộng 32 (mặc định 10.5)
   //   boardH  — chiều cao MỖI BÀN khi bàn rộng 16 (mặc định 10.5 = khung thường)
   //   noScore: true — ẩn 2 số điểm trên dải (Đợt 354; điểm vẫn tính ngầm)
+  //   topStrip: "below" — dải điểm/đồng hồ xuống DƯỚI hai bàn, đồng hồ sang dải nút
+  //               (Đợt 355); dải chỉ còn là băng mỏng giữ thanh Pick time / Miss wait
   //   boardTools: "shared" — ☰ Menu · ‹ › · 🔊 của bàn 0 dời lên dải nút chung
   //               (cạnh Options/Mode) thay vì nằm trong từng bàn; hàng nút dưới
   //               của cả hai bàn ẩn đi. Xem chỗ dời DOM ở cuối startFight.
@@ -407,8 +409,17 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   const boardEls = [el("div", "aw-fight-board"), el("div", "aw-fight-board")];
   boardsRow.append(boardEls[0], boardEls[1]);
   const sharedEl = sharedLayout ? el("div", "aw-fight-shared") : null;
-  if (sharedEl) { wrap.classList.add("is-shared-top"); wrap.append(top, sharedEl, boardsRow, controlsRow); }
-  else wrap.append(top, boardsRow, controlsRow);
+  // ⭐ Đợt 355 — `fightFrame.topStrip: "below"`: the score/clock strip goes UNDER
+  // the boards (thầy, 20/9/2026: "bỏ dải đồng hồ trên đầu, đưa toàn bộ game lên sát
+  // mép trên"). The strip itself stays — it is where the PICK TIME and MISS WAIT
+  // bars live, one over (now under) each team's own board — but with the scores
+  // collapsed (`.is-topbelow`, core/app.css) it is a thin band, and the clock is
+  // moved into the shared toolbar group below (see the boardTools block).
+  const topBelow = !!(frame && frame.topStrip === "below");
+  if (topBelow) wrap.classList.add("is-topbelow");
+  const order = topBelow ? [sharedEl, boardsRow, top, controlsRow] : [top, sharedEl, boardsRow, controlsRow];
+  if (sharedEl) wrap.classList.add("is-shared-top");
+  wrap.append(...order.filter(Boolean));
   // Đợt 353 — the template's frame sizes, as CSS numbers (core/app.css reads
   // `--aw-fsh` / `--aw-fbh` with the old 10.5 as its fallback in every rule).
   if (frame && Number.isFinite(frame.sharedH) && frame.sharedH > 0) wrap.style.setProperty("--aw-fsh", String(frame.sharedH));
@@ -2365,6 +2376,8 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
         const n = bar0.querySelector(sel);
         if (n) group.append(n);
       });
+      // Đợt 355 — the match clock rides along when the strip went below the boards.
+      if (topBelow) group.append(clockBox);
       centre.prepend(group);
       wrap.classList.add("is-boardtools-shared");
     }

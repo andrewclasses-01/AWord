@@ -4643,6 +4643,15 @@ body.aw-page-dragover::after {
    in the layout (`visibility`) so the strip's height, the pick/miss bars under
    each half and the "+N"/"−N" fly targets all keep their geometry. */
 .aw-fight.is-noscore .aw-fight-score { visibility: hidden; }
+/* Đợt 355 — `fightFrame.topStrip: "below"`: the strip sits UNDER the boards as a
+   thin band (its pick/miss bars are all that is left to see); the score keeps a
+   zero-height box so the halves still have their centre for the bars, and the
+   whole match starts at the top edge of the page. */
+.aw-fight.is-topbelow .aw-fight-score { height: 0; line-height: 0; overflow: hidden; visibility: hidden; }
+.aw-fight.is-topbelow .aw-fight-top { padding: 0; }
+.aw-fight.is-topbelow { padding-top: 6px; }
+.aw-fight-boardtools .aw-fight-clockbox { padding: 0; margin-left: 4px; }
+.aw-fight-boardtools .aw-fight-clock { font-size: 18px; line-height: 1; }
 .aw-fight-boardtools {
   --aw-u: 9px;
   display: flex; align-items: center; gap: 8px;
