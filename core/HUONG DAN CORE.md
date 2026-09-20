@@ -456,6 +456,21 @@ phần riêng của đội. Luật đi kèm:
 - Fullscreen trận: `.aw-fight.is-fs.is-shared-top` chia bề ngang theo cả bức 32:21 (`core/app.css`), vùng chung và
   hàng bàn cùng một `max-width` để luôn thẳng mép.
 - Bridge `onPause` cấp module của template phải chịu được **hai mount cùng lúc** (Set, không phải một biến).
+- ⭐ **Đợt 353 — `tpl.fightFrame = { sharedH, boardH, boardTools }`** (chỉ có nghĩa khi đã khai `fightLayout`): `sharedH` =
+  chiều cao vùng chung khi cả trận rộng 32; `boardH` = chiều cao MỖI BÀN khi bàn rộng 16 (core ghi `--aw-fsh`/`--aw-fbh`
+  lên `.aw-fight`, CSS đọc với fallback 10.5 — không khai thì y hệt Đợt 351). Rocket race: 7 + 7 ⇒ bức 32:14.
+  `boardTools: "shared"` ⇒ ☰ Menu · ‹ › · 🔊 của BÀN 0 được DỜI vào `.aw-fight-boardtools` đầu dải nút chung, hàng nút
+  dưới của cả hai bàn `visibility:hidden`. ⚠️ Chỉ được khai `boardTools` khi template CŨNG nhận nuôi thanh Time delay
+  (dưới) — `placeWaitBar()` của engine đo chính các node vừa dời đi.
+- ⭐ **Đợt 353 — `ui.hostFightWaitBar(host)`** (Fight only, trả false ngoài trận): template có sân phủ kín khung (`absolute
+  inset:0` như Rocket race) sẽ CHE hàng nút dưới, tức che luôn thanh Time delay của trọng tài. Gọi hàm này với một ổ
+  trong sân của mình ⇒ engine dời ĐÚNG node `.aw-waitbar` vào đó (thêm `.is-hosted`: relative, rộng 100%), vẫn tự điều
+  khiển như cũ. Kiểm `typeof ui.hostFightWaitBar === "function"` trước khi gọi (core cũ trong cache).
+- ⭐ **Đợt 354 — `fightFrame.noScore: true`** ⇒ `.aw-fight.is-noscore`, hai số điểm trên dải `visibility:hidden` (hình học
+  giữ nguyên). Điểm vẫn tính ngầm; template tự vẽ "điểm" theo cách của nó (Rocket race: vị trí tàu).
+- ⭐ **Đợt 354 — `ctl.forfeit(side)`**: bàn bỏ cuộc (Rocket race: hết mạng, tàu nổ). Đội KIA thắng bất kể điểm; trận kết
+  sau ROUND_HOLD_MS bằng hẹn giờ RIÊNG (⚠️ không dùng `later()` của trọng tài — ô hẹn giờ vòng bị `wordDone` gắn lại ngay
+  sau đó). Gọi `typeof fightCtl.forfeit === "function"` trước.
 
 **AI ĐANG BẬT IN TURNS (Đợt 202)**: **Type the answer** — 1/17, thầy chốt thử một game trước.
 

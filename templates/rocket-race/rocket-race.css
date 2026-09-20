@@ -110,6 +110,10 @@
 }
 .aw-rr-rocket.is-player { z-index: 3; transition: left .6s cubic-bezier(.2,.9,.25,1); }
 .aw-rr-stage.is-teams .aw-rr-rocket { transition: left .6s cubic-bezier(.2,.9,.25,1); }
+/* Đợt 353 — `.aw-rr-craft` = flame + hull + pilot as ONE moving box: the bob /
+   shake / lunge keyframes below sit on IT, so the flame travels with the hull
+   and the pilot's centring transform is never overwritten (see buildRocketEl). */
+.aw-rr-craft { position: relative; width: 100%; line-height: 0; }
 .aw-rr-body { position: relative; width: 100%; line-height: 0; }
 .aw-rr-body svg { width: 100%; height: auto; display: block; overflow: visible; }
 .aw-rr-hull { fill: var(--rc); stroke: var(--rd); stroke-width: 3; }
@@ -118,8 +122,11 @@
 .aw-rr-fin { fill: var(--rd); }
 .aw-rr-tail { fill: #52566b; stroke: #2b2e3d; stroke-width: 3; }
 .aw-rr-port { fill: #0d1a3a; stroke: #e8ecff; stroke-width: 4; }
+/* Đợt 354 — three crack lines drawn on every hull, invisible until a match's lives
+   run down (`.is-dmg-N` below). Solo/Teams never add those classes. */
+.aw-rr-crack { stroke: #1a1024; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
 /* gentle hover while flying (delay varies per rocket so they don't bob in step) */
-.aw-rr-rocket.is-flying .aw-rr-body { animation: aw-rr-bob 2.6s ease-in-out infinite; animation-delay: calc(-1 * var(--wob, 0s)); }
+.aw-rr-rocket.is-flying .aw-rr-craft { animation: aw-rr-bob 2.6s ease-in-out infinite; animation-delay: calc(-1 * var(--wob, 0s)); }
 @keyframes aw-rr-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(calc(-.5 * var(--aw-u))); } }
 
 .aw-rr-pilot {
@@ -127,7 +134,6 @@
   font-size: calc(min(13, 66 / var(--lanes, 5)) * var(--aw-u) * .155); line-height: 1;
   pointer-events: none;
 }
-.aw-rr-rocket.is-flying .aw-rr-pilot { animation: aw-rr-bob 2.6s ease-in-out infinite; animation-delay: calc(-1 * var(--wob, 0s)); }
 
 .aw-rr-flame {
   position: absolute; top: 50%; right: 88%; width: 34%; line-height: 0;
@@ -144,13 +150,14 @@
 .aw-rr-rocket.is-turbo .aw-rr-flame-out { fill: #4fd3ff; }
 .aw-rr-rocket.is-turbo .aw-rr-flame-in { fill: #eaffff; }
 .aw-rr-rocket.is-stall .aw-rr-flame { opacity: .25; width: 18%; }
-.aw-rr-rocket.is-stall .aw-rr-body { animation: aw-rr-shake .3s linear 3; }
+.aw-rr-rocket.is-stall .aw-rr-craft { animation: aw-rr-shake .3s linear 3; }
 @keyframes aw-rr-shake {
   0%,100% { transform: translate(0,0) rotate(0); } 25% { transform: translate(calc(-.4 * var(--aw-u)), calc(.3 * var(--aw-u))) rotate(-2deg); }
   75% { transform: translate(calc(.4 * var(--aw-u)), calc(-.3 * var(--aw-u))) rotate(2deg); }
 }
-.aw-rr-rocket.is-hit .aw-rr-body { animation: aw-rr-shake .3s linear 4; filter: brightness(1.6) saturate(.4); }
-.aw-rr-rocket.is-boost .aw-rr-body { animation: aw-rr-lunge .6s cubic-bezier(.2,.9,.25,1); }
+.aw-rr-rocket.is-hit .aw-rr-craft { animation: aw-rr-shake .3s linear 4; }
+.aw-rr-rocket.is-hit .aw-rr-body { filter: brightness(1.6) saturate(.4); }
+.aw-rr-rocket.is-boost .aw-rr-craft { animation: aw-rr-lunge .6s cubic-bezier(.2,.9,.25,1); }
 @keyframes aw-rr-lunge { 0% { transform: translateX(0) rotate(0); } 30% { transform: translateX(calc(.6 * var(--aw-u))) rotate(-4deg); } 100% { transform: translateX(0) rotate(0); } }
 .aw-rr-rocket.has-shield .aw-rr-body::after {
   content: ""; position: absolute; inset: -8% -4%; border-radius: 50%;
@@ -366,26 +373,117 @@
   background: radial-gradient(120% 90% at 70% 0%, #2a1a5e 0%, #160b3f 45%, #090520 100%);
   color: #fff; user-select: none; -webkit-user-select: none;
 }
-/* 32.8u tall instead of 65.6u: the strip and the track are re-cut to fit */
-.aw-rr-shared .aw-rr-minimap { top: calc(1.2 * var(--aw-u)); height: calc(1.8 * var(--aw-u)); }
-.aw-rr-shared .aw-rr-track { top: calc(4 * var(--aw-u)); height: calc(27 * var(--aw-u)); }
+/* ⭐ Đợt 353 — the strip is 32:7 = 21.875u tall (thầy, 20/9/2026: race = 2/3 of
+   the Đợt 351 32:10.5, which was mostly empty sky over two lanes). Two lanes of
+   8.5u hold a 13u-wide rocket (5.7u tall) with room for its bob; the minimap
+   stays, thinner, on the top edge; the big planet is dropped and the sun is
+   trimmed so the sky reads as a band, not a wall. Lane count is still `--lanes`
+   (2 today) — a 3-board match later only changes that number. */
+.aw-rr-shared .aw-rr-minimap { top: calc(1 * var(--aw-u)); height: calc(1.5 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-track { top: calc(3.4 * var(--aw-u)); height: calc(17 * var(--aw-u)); }
 .aw-rr-shared .aw-rr-rocket { width: calc(13 * var(--aw-u)); transition: left .6s cubic-bezier(.2,.9,.25,1); }
 .aw-rr-shared .aw-rr-pilot { font-size: calc(13 * var(--aw-u) * .155); }
 .aw-rr-shared .aw-rr-tag { font-size: calc(2 * var(--aw-u)); }
-.aw-rr-shared .aw-rr-planet.is-big { top: calc(6 * var(--aw-u)); }
-.aw-rr-shared .aw-rr-bannertxt { font-size: calc(7 * var(--aw-u)); }
-.aw-rr-shared .aw-rr-bannertxt.is-go { font-size: calc(9 * var(--aw-u)); }
-.aw-rr-shared .aw-rr-bannertxt.is-turbo { font-size: calc(6 * var(--aw-u)); }
-.aw-rr-shared .aw-rr-bannertxt.is-win { font-size: calc(6 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-planet.is-sun { width: calc(12 * var(--aw-u)); top: calc(-4 * var(--aw-u)); right: calc(8 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-planet.is-big { display: none; }
+.aw-rr-shared .aw-rr-planet.is-green { top: calc(2.5 * var(--aw-u)); width: calc(4 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-bannertxt { font-size: calc(5 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-bannertxt.is-go { font-size: calc(6.5 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-bannertxt.is-turbo { font-size: calc(4.5 * var(--aw-u)); }
+.aw-rr-shared .aw-rr-bannertxt.is-win { font-size: calc(4.5 * var(--aw-u)); }
 
-/* the board below: team chip + question + tiles filling the whole frame */
-.aw-rr-stage.is-fightboard .aw-rr-panel { top: calc(1.6 * var(--aw-u)); bottom: calc(1.6 * var(--aw-u)); gap: calc(1 * var(--aw-u)); }
-.aw-rr-stage.is-fightboard .aw-rr-turn { height: calc(5 * var(--aw-u)); font-size: calc(3.2 * var(--aw-u)); letter-spacing: .08em; }
-.aw-rr-stage.is-fightboard .aw-rr-turnbadge { width: calc(4.4 * var(--aw-u)); height: calc(4.4 * var(--aw-u)); font-size: calc(2.8 * var(--aw-u)); }
-.aw-rr-stage.is-fightboard .aw-rr-q { min-height: calc(12 * var(--aw-u)); max-height: calc(18 * var(--aw-u)); border-color: var(--rc, #7b5bd6); }
-.aw-rr-stage.is-fightboard .aw-rr-qtext { font-size: calc(4.4 * var(--aw-u) * var(--fit)); }
-.aw-rr-stage.is-fightboard .aw-rr-tiletext { font-size: calc(3.6 * var(--aw-u) * var(--tw, 1)); }
+/* the board below — a 16:7 frame (43.75u tall, `fightFrame.boardH`): team chip ·
+   question · ONE row of tiles (`--per-row` 4 for four answers, set in JS) ·
+   the referee's Time delay bar in `.aw-rr-waitslot` (Đợt 353). */
+.aw-rr-stage.is-fightboard .aw-rr-panel { top: calc(1.4 * var(--aw-u)); bottom: calc(1.2 * var(--aw-u)); gap: calc(.9 * var(--aw-u)); }
+.aw-rr-stage.is-fightboard .aw-rr-turn { height: calc(4.4 * var(--aw-u)); font-size: calc(2.8 * var(--aw-u)); letter-spacing: .08em; }
+.aw-rr-stage.is-fightboard .aw-rr-turnbadge { width: calc(3.8 * var(--aw-u)); height: calc(3.8 * var(--aw-u)); font-size: calc(2.4 * var(--aw-u)); }
+.aw-rr-stage.is-fightboard .aw-rr-q { min-height: calc(9 * var(--aw-u)); max-height: calc(14 * var(--aw-u)); border-color: var(--rc, #7b5bd6); }
+.aw-rr-stage.is-fightboard .aw-rr-qtext { font-size: calc(3.8 * var(--aw-u) * var(--fit)); }
+.aw-rr-stage.is-fightboard .aw-rr-tiletext { font-size: calc(3.2 * var(--aw-u) * var(--tw, 1)); }
 .aw-rr-stage.is-fightboard .aw-rr-answers { gap: calc(1.2 * var(--aw-u)); }
+/* the hosted wait bar: in flow, full width of the panel (core's `.is-hosted`
+   drops the bottom-row positioning; height stays core's 1.2u) */
+.aw-rr-waitslot { position: relative; flex: 0 0 auto; height: calc(1.2 * var(--aw-u)); }
+
+/* ---- Đợt 354 (thầy, 20/9/2026) — no team tag, a number on the nose; lives =
+   damage; the last life = explosion; Points off = the rocket backs up ---- */
+.aw-rr-shared .aw-rr-tag { display: none; }
+.aw-rr-num {
+  position: absolute; left: 87.5%; top: 50%; transform: translate(-50%, -50%);
+  font-size: calc(13 * var(--aw-u) * .19); font-weight: 900; line-height: 1;
+  color: #fff; text-shadow: 0 0 calc(.3 * var(--aw-u)) rgba(0,0,0,.7), 0 calc(.12 * var(--aw-u)) 0 rgba(0,0,0,.5);
+  pointer-events: none; z-index: 2;
+}
+/* hearts on the team chip (fight only; the top bar's own hearts are hidden in a match) */
+.aw-rr-turnlives { margin-left: calc(.9 * var(--aw-u)); color: #ff6b81; font-size: calc(2.4 * var(--aw-u)); letter-spacing: .04em; text-shadow: 0 1px 0 rgba(0,0,0,.5); }
+
+/* damage looks — cracks appear one by one, the hull dulls, smoke thickens */
+.aw-rr-rocket.is-dmg-1 .aw-rr-crack.is-c1 { opacity: .85; }
+.aw-rr-rocket.is-dmg-1 .aw-rr-hull-hi { opacity: .5; }
+.aw-rr-rocket.is-dmg-1 .aw-rr-body { filter: saturate(.85) brightness(.92); }
+.aw-rr-rocket.is-dmg-2 .aw-rr-crack.is-c1, .aw-rr-rocket.is-dmg-2 .aw-rr-crack.is-c2 { opacity: .9; }
+.aw-rr-rocket.is-dmg-2 .aw-rr-hull-hi { opacity: .25; }
+.aw-rr-rocket.is-dmg-2 .aw-rr-body { filter: saturate(.6) brightness(.8); }
+.aw-rr-rocket.is-dmg-2 .aw-rr-fin:first-of-type { opacity: .4; }
+.aw-rr-rocket.is-dmg-2 .aw-rr-port { stroke-dasharray: 7 4; }
+.aw-rr-rocket.is-dmg-3 .aw-rr-crack { opacity: 1; }
+.aw-rr-rocket.is-dmg-3 .aw-rr-hull-hi { opacity: 0; }
+.aw-rr-rocket.is-dmg-3 .aw-rr-body { filter: saturate(.3) brightness(.62) sepia(.35); }
+.aw-rr-rocket.is-dmg-3 .aw-rr-fin { opacity: .3; }
+.aw-rr-rocket.is-dmg-3 .aw-rr-port { stroke-dasharray: 5 5; }
+.aw-rr-rocket.is-dmg-3 .aw-rr-flame { opacity: .55; width: 24%; }
+/* a smoke plume leaking from the hull, bigger and darker per level */
+.aw-rr-dmgsmoke {
+  position: absolute; left: 30%; top: 12%; width: 18%; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(rgba(190,190,205,.95), rgba(110,110,130,.55) 60%, transparent 72%);
+  opacity: 0; pointer-events: none; z-index: 1;
+}
+.aw-rr-rocket.is-dmg-1 .aw-rr-dmgsmoke,
+.aw-rr-rocket.is-dmg-2 .aw-rr-dmgsmoke,
+.aw-rr-rocket.is-dmg-3 .aw-rr-dmgsmoke,
+.aw-rr-rocket.is-wreck .aw-rr-dmgsmoke { animation: aw-rr-leak 1.1s ease-out infinite; }
+.aw-rr-rocket.is-dmg-2 .aw-rr-dmgsmoke { width: 24%; animation-duration: .9s; }
+.aw-rr-rocket.is-dmg-3 .aw-rr-dmgsmoke, .aw-rr-rocket.is-wreck .aw-rr-dmgsmoke { width: 30%; left: 26%; animation-duration: .75s;
+  background: radial-gradient(rgba(90,80,100,.95), rgba(50,45,60,.6) 60%, transparent 72%); }
+@keyframes aw-rr-leak {
+  0%   { opacity: 0; transform: translate(0, 0) scale(.5); }
+  25%  { opacity: .9; }
+  100% { opacity: 0; transform: translate(-60%, -140%) scale(1.9); }
+}
+
+/* the explosion: the craft blows outward and vanishes; the wreck is what's left */
+.aw-rr-rocket.is-exploding .aw-rr-craft { animation: aw-rr-blast .9s cubic-bezier(.2,.8,.3,1) forwards; }
+.aw-rr-rocket.is-exploding .aw-rr-flame { opacity: 0; }
+@keyframes aw-rr-blast {
+  0%   { transform: scale(1) rotate(0); filter: brightness(1); }
+  18%  { transform: scale(1.25) rotate(-6deg); filter: brightness(2.2); }
+  60%  { transform: scale(1.05) rotate(8deg); filter: brightness(.7); opacity: .8; }
+  100% { transform: scale(.85) rotate(14deg); filter: brightness(.35); opacity: .45; }
+}
+.aw-rr-rocket.is-wreck .aw-rr-craft { opacity: .45; transform: rotate(14deg) scale(.85); }
+.aw-rr-rocket.is-wreck .aw-rr-body { filter: grayscale(1) brightness(.55); }
+.aw-rr-rocket.is-wreck .aw-rr-crack { opacity: 1; }
+.aw-rr-rocket.is-wreck .aw-rr-flame { opacity: 0; }
+.aw-rr-rocket.is-wreck .aw-rr-pilot { opacity: .35; filter: grayscale(1); }
+.aw-rr-rocket.is-wreck { filter: none; }
+.aw-rr-boom {
+  position: absolute; font-size: calc(9 * var(--aw-u)); line-height: 1; z-index: 9;
+  transform: translate(-50%, -50%) scale(.2); animation: aw-rr-boom 1.3s cubic-bezier(.2,.9,.3,1) forwards;
+}
+@keyframes aw-rr-boom {
+  0%   { transform: translate(-50%, -50%) scale(.2); opacity: 0; }
+  20%  { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+  60%  { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  100% { transform: translate(-50%, -60%) scale(1.5); opacity: 0; }
+}
+/* "−N" rising from the rocket when Points off backs it up */
+.aw-rr-neg {
+  position: absolute; font-size: calc(3.2 * var(--aw-u)); font-weight: 900; line-height: 1; color: #ff5a6a;
+  text-shadow: 0 0 calc(.6 * var(--aw-u)) rgba(0,0,0,.8); z-index: 8;
+  transform: translate(-50%, -100%); animation: aw-rr-neg 1.1s ease-out forwards;
+}
+@keyframes aw-rr-neg { 0% { opacity: 0; transform: translate(-50%, -60%); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -260%); } }
 
 /* "too slow" / result withheld: the tiles go grey (Quiz's rule) */
 .aw-rr-tile { --tile-eff: var(--tile); --tile-dark-eff: var(--tile-dark); background: var(--tile-eff); box-shadow: 0 calc(.6 * var(--aw-u)) 0 var(--tile-dark-eff); }

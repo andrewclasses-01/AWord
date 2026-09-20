@@ -111,6 +111,9 @@ const ROCKET_SVG = `<svg viewBox="0 0 160 70" xmlns="http://www.w3.org/2000/svg"
   <path class="aw-rr-nose" d="M128 14 C142 20 152 28 158 35 C152 42 142 50 128 56 Z"/>
   <ellipse class="aw-rr-tail" cx="26" cy="35" rx="7" ry="13"/>
   <circle class="aw-rr-port" cx="82" cy="35" r="16"/>
+  <path class="aw-rr-crack is-c1" d="M52 16 l5 9 l-4 5 l7 10 l-3 6" fill="none"/>
+  <path class="aw-rr-crack is-c2" d="M118 52 l-6 -8 l5 -6 l-7 -9" fill="none"/>
+  <path class="aw-rr-crack is-c3" d="M40 40 l8 -6 l3 8 l7 -4" fill="none"/>
 </svg>`;
 const FLAME_SVG = `<svg viewBox="0 0 90 50" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
   <path class="aw-rr-flame-out" d="M88 25 C70 4 30 4 2 25 C30 46 70 46 88 25 Z"/>
@@ -178,7 +181,15 @@ function buildScene(host) {
   host.append(sky, minimap, track, fxLayer, banner);
   return { host, sky, minimap, track, lanesEl, fxLayer, banner };
 }
-// One rocket's DOM (flame · hull · pilot · name tag) + its minimap dot.
+// One rocket's DOM (craft = flame · hull · pilot, then the name tag) + its minimap dot.
+// ⭐ Đợt 353 — `.aw-rr-craft` WRAPS flame + hull + pilot and is what bobs, shakes
+// and lunges (rocket-race.css). Before, those keyframes sat on `.aw-rr-body`
+// alone: the hull moved while the flame — a SIBLING — stood still (thầy: "phần
+// đuôi lửa đang đứng yên"), and the pilot's own copy of the bob animation
+// REPLACED its `translate(-50%,-50%)` centring transform, so the emoji sat half
+// a glyph down-right of the porthole (measured: +13px, +10px on a 128px rocket
+// — thầy: "icon cần được đưa vào trong cửa sổ"). One moving box, no per-child
+// transform fights.
 function buildRocketEl(scene, r, laneIdx, laneCount) {
   const lane = el("div", "aw-rr-lane");
   lane.style.setProperty("--lane", laneIdx);
@@ -193,7 +204,9 @@ function buildRocketEl(scene, r, laneIdx, laneCount) {
   const pilot = el("div", "aw-rr-pilot", r.pilot);
   const tag = el("div", "aw-rr-tag", "");
   tag.textContent = r.name;
-  rk.append(flame, body, pilot, tag);
+  const craft = el("div", "aw-rr-craft");
+  craft.append(flame, body, pilot);
+  rk.append(craft, tag);
   lane.append(rk);
   scene.lanesEl.append(lane);
   const dot = el("div", "aw-rr-dot" + (r.isPlayer ? " is-player" : ""));
@@ -220,6 +233,10 @@ function ensureFightScene(ctl) {
     const r = { id: i, name: t.name, pilot: t.pilot, hull: t.hull, isPlayer: false, p: 0, L: 1,
                 el: null, tag: null, dot: null, done: false, place: 0, wobble: i * 1.3 };
     buildRocketEl(scene, r, i, 2);
+    // Đợt 354 — no "TEAM n" tag in a match (CSS hides it): a big 1 / 2 sits on the
+    // nose instead, and a smoke node waits for the first lost life (see paintDamage).
+    const craft = r.el.querySelector(".aw-rr-craft");
+    craft.append(el("div", "aw-rr-num", String(i + 1)), el("div", "aw-rr-dmgsmoke"));
     return r;
   });
   const flag = el("div", "aw-rr-dot is-flag", "🏁");
@@ -261,6 +278,20 @@ const rocketRaceTemplate = {
   // race into. See the `_fight` branches in mount().
   fightMode: true,
   fightLayout: "shared-top",
+  // ⭐ Đợt 353 (thầy chốt 20/9/2026) — the match picture is 32:14, not 32:21:
+  //   sharedH 7 → the race strip is 32:7 (2 lanes need no more; the old 32:10.5
+  //                was two-thirds empty sky and height-capped the whole match in
+  //                fullscreen — 1432px wide with black bars on a 1920 screen);
+  //   boardH 7  → each question board is 16:7 (two-thirds of the normal frame:
+  //                chip · question · ONE row of tiles · Time delay bar);
+  //   boardTools "shared" → ☰ / ‹ › / 🔊 live on the shared toolbar next to
+  //                Options / Mode instead of a bottom row inside each board
+  //                (which this template's full-frame stage covered anyway).
+  // Read by core/fight.js; every number falls back to the Đợt 351 frame.
+  //   noScore → the strip's two big numbers are hidden (Đợt 354, thầy: "không tính
+  //                điểm nữa vì đã tính vị trí của tàu rồi"); the referee still counts
+  //                points underneath (winner, end panel), the rockets show them.
+  fightFrame: { sharedH: 7, boardH: 7, boardTools: "shared", noScore: true },
 
   edit: openRocketRaceEditor,
 
@@ -286,7 +317,6 @@ const rocketRaceTemplate = {
   // place of Question time, no crates) — so the cells are simply not built,
   // which is the rule against dead switches. `draft` is left untouched.
   buildExtraOptions({ panel, draft, mkCell, mkSeg, mkSliderCell, addCheck, inFight }) {
-    if (inFight) return;
     const cur = Number.isInteger(draft.lives) ? Math.min(MAX_LIVES, Math.max(0, draft.lives)) : 0;
     const lives = mkSliderCell({
       label: "Lives", min: 0, max: MAX_LIVES, step: 1, value: cur, tone: "green", offAt: 0,
@@ -294,6 +324,9 @@ const rocketRaceTemplate = {
       onInput: v => { draft.lives = v; }        // 0 stored = unlimited
     });
     lives.cell.title = "0 = unlimited lives";
+    // Đợt 354 — a match keeps ONLY Lives (thầy: each lost life wrecks the rocket a
+    // little, the last one blows it up); rivals/teams/question time stay solo-only.
+    if (inFight) { panel.append(lives.cell); return; }
 
     const mode = mkCell({ label: "Mode" });
     mode.ctl.append(mkSeg(
@@ -383,6 +416,17 @@ const rocketRaceTemplate = {
     qTimer.append(qTimerBar);
     const answersEl = el("div", "aw-rr-answers");
     panel.append(turnChip, qBox, qTimer, answersEl);
+    // ⭐ Đợt 353 — FIGHT: the referee's TIME DELAY bar moves INTO this panel.
+    // This stage covers the whole frame (`inset:0`), so the engine's bottom row —
+    // where that bar normally lives — was hidden under it and a match showed no
+    // wait bar at all. The engine keeps driving the very same node; only its home
+    // changes (`ui.hostFightWaitBar`, core/engine.js Đợt 353). The slot is built
+    // even if the call is refused (older core) — an empty 1.2u strip costs nothing.
+    if (fightCtl) {
+      const waitSlot = el("div", "aw-rr-waitslot");
+      panel.append(waitSlot);
+      if (typeof ui.hostFightWaitBar === "function") ui.hostFightWaitBar(waitSlot);
+    }
     stage.append(panel);
     root.append(stage);
 
@@ -404,7 +448,9 @@ const rocketRaceTemplate = {
     let tickTimer = null, last = 0;
     const timers = new Set();
     const later = (fn, ms) => { const id = setTimeout(() => { timers.delete(id); if (!dead) fn(); }, ms); timers.add(id); return id; };
-    let livesLeft = fightCtl ? null : normLives(opt.lives);
+    let livesLeft = normLives(opt.lives);   // Đợt 354: a match has lives too (rocket damage)
+    const livesStart = livesLeft;
+    let exploded = false;                   // fight: this team's rocket is gone — board is dead
     const tilePalette = shuffle(PALETTE);
     const voicePlayer = createVoicePlayer({
       // FIGHT voice contract: the speaking board mirrors its glow to the other one.
@@ -532,6 +578,7 @@ const rocketRaceTemplate = {
       turnChip.append(b, document.createTextNode(t.name));
       turnChip.classList.add("is-on");
       stage.style.setProperty("--rc", t.hull.c);
+      renderChipLives();   // Đợt 354
     }
     // Deal the (already shuffled) questions round-robin — every team gets the
     // same number ±1, and a team's track is exactly as long as its hand.
@@ -721,7 +768,13 @@ const rocketRaceTemplate = {
       answersEl.innerHTML = "";
       answersEl.classList.remove("is-fightlost");
       fightPendingReveal = false;
-      answersEl.style.setProperty("--per-row", answers.length <= 3 ? answers.length : answers.length === 4 ? 2 : 3);
+      // Đợt 353 — a 16:7 FIGHT board is too short for a 2×2 block: up to four
+      // answers sit in ONE row (thầy: "các ô câu trả lời có thể xếp theo 1 hàng 4
+      // ô"), five or six fall back to rows of three. Solo / Teams keep 2×2.
+      answersEl.style.setProperty("--per-row",
+        answers.length <= 3 ? answers.length
+        : answers.length === 4 ? (fightCtl ? 4 : 2)
+        : 3);
       tiles = answers.map((a, i) => {
         const tile = el("button", "aw-rr-tile");
         tile.type = "button";
@@ -796,7 +849,7 @@ const rocketRaceTemplate = {
     }
 
     function choose(i) {
-      if (locked || finished || dead || fightLocked()) return;
+      if (locked || finished || dead || exploded || fightLocked()) return;
       const q = items[curItem];
       const st = state[curItem];
       const a = tiles[i].ans;
@@ -877,7 +930,16 @@ const rocketRaceTemplate = {
       const mover = teamsMode ? currentTeam() : player;
       if (teamsMode) { mover.queue.shift(); mover.pupilPtr++; teamPtr = (teamPtr + 1) % rockets.length; }
       else if (!fightCtl) { queue.push(queue.shift()); }      // ask it again later
-      if (pointsOff) ui.flyPenalty?.(tileEl, pointsOff, () => { penalty += pointsOff; return scoreNow(); });
+      if (pointsOff && fightCtl) {
+        // Đợt 354 — in a match the rocket IS the score: the penalty is applied at
+        // once (no flight to a hidden number) and the rocket backs up N segments,
+        // never past the start line. The referee's points may go negative; the
+        // track cannot — the track is the class's reading, the points are the
+        // referee's (winner, end panel). "−N" floats up from the rocket itself.
+        penalty += pointsOff;
+        ui.setScore(scoreNow());
+        retreatRocket(mover, pointsOff);
+      } else if (pointsOff) ui.flyPenalty?.(tileEl, pointsOff, () => { penalty += pointsOff; return scoreNow(); });
 
       if (shield && !teamsMode && !fightCtl) {
         shield = false;
@@ -888,7 +950,7 @@ const rocketRaceTemplate = {
         return;
       }
       stallRocket(mover);
-      if (fightCtl) return;     // the referee decides what happens next
+      if (fightCtl) { fightLoseLife(); return; }     // the referee decides what happens next
       if (loseLife()) return;   // game over ends everything
       later(nextQuestion, STALL_MS + 200);
     }
@@ -908,6 +970,19 @@ const rocketRaceTemplate = {
       paintRocket(r);
       spawnPuff(r);
       if (r.p >= r.L) crossedLine(r);
+    }
+    // Đợt 354 — FIGHT + Points off: back up `n` segments (floor: the start line).
+    function retreatRocket(r, n) {
+      if (!r.el) return;
+      r.p = Math.max(0, r.p - n);
+      paintRocket(r);
+      if (scene) {
+        const rect = relRect(r.el, scene.fxLayer);
+        const neg = el("div", "aw-rr-neg", "−" + n);
+        neg.style.left = (rect.x + rect.w * 0.5) + "px"; neg.style.top = rect.y + "px";
+        scene.fxLayer.append(neg);
+        later(() => neg.remove(), 1100);
+      }
     }
     function stallRocket(r) {
       rrSound.stall();
@@ -1103,6 +1178,54 @@ const rocketRaceTemplate = {
         return true;
       }
       return false;
+    }
+    // ---- Đợt 354: FIGHT lives = rocket damage; the last one is an explosion ----
+    // Damage has 3 looks (cracks · smoke · darkening, rocket-race.css `.is-dmg-N`),
+    // spread over however many lives the match has: 1 life = straight to the boom,
+    // 3 lives = one look per life, 10 lives = a look every 3–4.
+    function paintDamage(r) {
+      if (!r.el || livesStart == null) return;
+      const lost = livesStart - livesLeft;
+      const stage = Math.min(3, Math.ceil(3 * lost / livesStart));
+      r.el.classList.remove("is-dmg-1", "is-dmg-2", "is-dmg-3");
+      if (stage > 0 && livesLeft > 0) r.el.classList.add("is-dmg-" + stage);
+    }
+    function renderChipLives() {
+      let s = turnChip.querySelector(".aw-rr-turnlives");
+      if (livesLeft == null) { if (s) s.remove(); return; }
+      if (!s) { s = el("span", "aw-rr-turnlives"); turnChip.append(s); }
+      s.textContent = livesLeft <= 5 ? "♥".repeat(livesLeft) : livesLeft + "♥";
+    }
+    function fightLoseLife() {
+      if (livesLeft == null || exploded) return;
+      livesLeft = Math.max(0, livesLeft - 1);
+      rrSound.lifeLost();
+      renderChipLives();
+      if (livesLeft > 0) { paintDamage(player); return; }
+      explodeRocket(player);
+    }
+    function explodeRocket(r) {
+      exploded = true;
+      locked = true;
+      tiles.forEach(t => (t.tile.disabled = true));
+      answersEl.classList.add("is-fightlost");
+      rrSound.lose();
+      if (r.el) {
+        r.el.classList.remove("is-dmg-1", "is-dmg-2", "is-dmg-3", "is-boost", "is-stall");
+        r.el.classList.add("is-exploding");
+        if (scene) {
+          const rect = relRect(r.el, scene.fxLayer);
+          const boom = el("div", "aw-rr-boom", "💥");
+          boom.style.left = (rect.x + rect.w * 0.5) + "px"; boom.style.top = (rect.y + rect.h * 0.5) + "px";
+          scene.fxLayer.append(boom);
+          later(() => boom.remove(), 1400);
+          for (let i = 0; i < 6; i++) later(() => spawnSmoke(r), i * 120);
+        }
+        later(() => { r.el.classList.remove("is-exploding"); r.el.classList.add("is-wreck"); }, 900);
+      }
+      showBanner(r.name + " IS DOWN!", "is-stall", 1300);
+      // the referee ends the match after its hold — the OTHER team wins (core/fight.js)
+      if (fightCtl && typeof fightCtl.forfeit === "function") fightCtl.forfeit(fightSide);
     }
     function renderLives() {
       const slot = ui.livesSlot;

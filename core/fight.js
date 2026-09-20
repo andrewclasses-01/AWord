@@ -334,6 +334,16 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // template through `ctl.sharedRoot()`; null for every other template, and the
   // frame is byte-identical to before when the flag is absent.
   const sharedLayout = getTemplate(activity.type)?.fightLayout === "shared-top";
+  // ⭐ Đợt 353 (20/9/2026, thầy chốt tỉ lệ Rocket race) — `tpl.fightFrame`: KÍCH
+  // THƯỚC của khung shared-top do template khai, core chỉ đổ vào biến CSS:
+  //   sharedH — chiều cao vùng chung khi cả trận rộng 32 (mặc định 10.5)
+  //   boardH  — chiều cao MỖI BÀN khi bàn rộng 16 (mặc định 10.5 = khung thường)
+  //   noScore: true — ẩn 2 số điểm trên dải (Đợt 354; điểm vẫn tính ngầm)
+  //   boardTools: "shared" — ☰ Menu · ‹ › · 🔊 của bàn 0 dời lên dải nút chung
+  //               (cạnh Options/Mode) thay vì nằm trong từng bàn; hàng nút dưới
+  //               của cả hai bàn ẩn đi. Xem chỗ dời DOM ở cuối startFight.
+  // Không khai ⇒ mọi số y hệt Đợt 351 (32:10.5 + 16:10.5, nút trong bàn).
+  const frame = (sharedLayout && getTemplate(activity.type)?.fightFrame) || null;
 
   // ----- shell -----
   const wrap = el("div", "aw-fight");
@@ -399,6 +409,15 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   const sharedEl = sharedLayout ? el("div", "aw-fight-shared") : null;
   if (sharedEl) { wrap.classList.add("is-shared-top"); wrap.append(top, sharedEl, boardsRow, controlsRow); }
   else wrap.append(top, boardsRow, controlsRow);
+  // Đợt 353 — the template's frame sizes, as CSS numbers (core/app.css reads
+  // `--aw-fsh` / `--aw-fbh` with the old 10.5 as its fallback in every rule).
+  if (frame && Number.isFinite(frame.sharedH) && frame.sharedH > 0) wrap.style.setProperty("--aw-fsh", String(frame.sharedH));
+  if (frame && Number.isFinite(frame.boardH) && frame.boardH > 0) wrap.style.setProperty("--aw-fbh", String(frame.boardH));
+  // Đợt 354 — `fightFrame.noScore`: the two big numbers on the strip are hidden
+  // (visibility, so the strip's height and the fly targets keep their geometry).
+  // Rocket race: the rockets' positions ARE the score (thầy, 20/9/2026). The referee
+  // still counts points underneath — they decide the winner and the end panel.
+  if (frame && frame.noScore) wrap.classList.add("is-noscore");
   root.append(wrap);
 
   function makeTeam(side) {
@@ -870,6 +889,9 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   let roundDone = [false, false];
   let roundTimer = null;
   let matchOver = false;
+  // Đợt 354 (Rocket race, thầy 20/9/2026: "hết mạng thì nổ tung") — a board that
+  // FORFEITED (ctl.forfeit) has lost whatever the points say; showResult reads this.
+  const forfeited = [false, false];
   let torndown = false;
   let playRelaying = false;             // guards the "one PLAY starts both" relay
   // Đợt 134 — a running snapshot of the speaking board's voice state, merged
@@ -1821,6 +1843,21 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       const m = Math.floor(s / 60);
       clockEl.textContent = `${String(m).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
     },
+    // ⭐ Đợt 354 — `ctl.forfeit(side)`: this board gives the match up (Rocket race:
+    // its rocket ran out of lives and exploded). The OTHER side wins regardless of
+    // the points — a match lost by losing your ship must not be won on the score —
+    // and the match ends after the usual hold so the template's own ending
+    // animation is seen. Idempotent; ignored once the match is over.
+    forfeit(side) {
+      if (matchOver || torndown || (side !== 0 && side !== 1)) return;
+      forfeited[side] = true;
+      // ⚠️ NOT `later()` — that is the ONE round slot, and the template's own
+      // wordDone(correct:false) report (which follows this call in the same
+      // click) re-arms it for the other team's Miss wait, silently dropping
+      // the end. Measured on the bench: no result panel ever came. A plain
+      // timer, guarded by torndown/matchOver inside endMatch, cannot be stolen.
+      setTimeout(() => { if (!torndown) endMatch(); }, ROUND_HOLD_MS);
+    },
     onFinish(side) {
       // One board ran out of words/lives on its own — the match is over for
       // both, and the winner is simply whoever has more points.
@@ -1926,13 +1963,16 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // always the LEFT board and side 1 always RIGHT (their team name labels
     // were dropped back in Đợt 125 — see the comment on .aw-fight-team below
     // — so position is the only thing left distinguishing them on screen).
-    const winner = a === b ? "IT'S A DRAW" : (a > b ? "TEAM LEFT WINS" : "TEAM RIGHT WINS");
+    // Đợt 354 — a forfeit (ctl.forfeit) outranks the points: the side that gave up lost.
+    const gaveUp = forfeited[0] !== forfeited[1] ? (forfeited[0] ? 0 : 1) : null;
+    const winner = gaveUp !== null ? (gaveUp === 0 ? "TEAM RIGHT WINS" : "TEAM LEFT WINS")
+      : a === b ? "IT'S A DRAW" : (a > b ? "TEAM LEFT WINS" : "TEAM RIGHT WINS");
     panel.append(el("div", "aw-fight-result-title", winner));
     const rowEl = el("div", "aw-fight-result-scores");
     rowEl.append(
-      el("div", "aw-fight-result-score" + (a >= b ? " is-top" : ""), String(a)),
+      el("div", "aw-fight-result-score" + ((gaveUp !== null ? gaveUp === 1 : a >= b) ? " is-top" : ""), String(a)),
       el("div", "aw-fight-result-vs", "—"),
-      el("div", "aw-fight-result-score" + (b >= a ? " is-top" : ""), String(b))
+      el("div", "aw-fight-result-score" + ((gaveUp !== null ? gaveUp === 0 : b >= a) ? " is-top" : ""), String(b))
     );
     panel.append(rowEl);
     const btnRow = el("div", "aw-fight-result-btns");
@@ -2305,6 +2345,30 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   if (below1) below1.remove();
   // Assignment strips belong under a single act, not under a match.
   boardEls.forEach(b => b.querySelectorAll(".aw-as-bars").forEach(x => x.remove()));
+  // ⭐ Đợt 353 — `tpl.fightFrame.boardTools === "shared"` (thầy, 20/9/2026: "bỏ
+  // cụm next-back của cả 2 đội trong màn hình đi, đưa chúng + nút menu về các
+  // nút rời ở dải nút Options, Mode"). SAME move as the toolbar right above:
+  // board 0's real Menu / ‹ › / Sound nodes are MOVED (not copied) into one
+  // group at the head of the shared toolbar's centre, so every engine handler
+  // and every gate (`paintNavGate`, `syncNavGates`, the menu's pause relay) keeps
+  // working on the very same elements. Board 1's copies stay where they are,
+  // hidden with both bottom rows by `.aw-fight.is-boardtools-shared` (core/app.css).
+  // ⚠️ Only safe because such a template also re-homes the TIME DELAY bar
+  // (`ui.hostFightWaitBar`) — the engine's placeWaitBar measures those very nodes
+  // inside the bottom row, and would measure garbage once they had left it.
+  if (frame && frame.boardTools === "shared" && below0) {
+    const centre = below0.querySelector(".aw-below-center");
+    const bar0 = boardEls[0].querySelector(".aw-bottombar");
+    if (centre && bar0) {
+      const group = el("div", "aw-fight-boardtools");
+      [".aw-bottombar-left", ".aw-nav", ".aw-tools"].forEach(sel => {
+        const n = bar0.querySelector(sel);
+        if (n) group.append(n);
+      });
+      centre.prepend(group);
+      wrap.classList.add("is-boardtools-shared");
+    }
+  }
 
   paintScore(0); paintScore(1);
 

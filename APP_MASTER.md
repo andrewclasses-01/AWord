@@ -8,7 +8,25 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/9/2026 (Đợt 352 — FIND THE GAP · FIGHT: câu nhiều ô, đúng CHƯA HẾT vẫn ăn Time delay
+> Cập nhật lần cuối: **20/9/2026 tối (Đợt 354 — ROCKET RACE · FIGHT, ngay sau Đợt 353, 3 ý thầy: (1) BỎ ĐIỂM trên dải
+> (`fightFrame.noScore`, điểm vẫn tính ngầm), sai + Points off ⇒ TÀU LÙI N nấc kèm "−N" bay từ tàu; (2) bỏ thẻ TEAM 1/2,
+> in SỐ 1/2 lên mũi tàu; (3) LIVES vào Options trận: mỗi mạng mất tàu NÁT DẦN (3 mức: nứt · xỉn · khói, chia theo tỉ lệ mạng),
+> hết mạng NỔ 💥 + xác xám + "TEAM n IS DOWN!" và bàn khoá; core `fight.js` thêm `ctl.forfeit(side)` ⇒ ĐỘI KIA THẮNG bất kể
+> điểm (bắt + sửa lỗi tự tạo: `later(endMatch)` bị `wordDone` cướp ô hẹn giờ vòng ⇒ dùng setTimeout riêng). Đo bàn thử: Lives 2
+> + Points off 1: lùi 13.1→5, ♥♥→♥, `is-dmg-2`; sai 2 → 💥 → `is-wreck`; Lives 1: nổ → "TEAM RIGHT WINS −2 — 0". Xem
+> `templates/rocket-race/GHI CHU ROCKET-RACE.md` mục 11. 🟢 CHỜ THẦY DUYỆT · ⛔ CHƯA COMMIT — gộp cùng Đợt 353)**.
+> Trước đó: **20/9/2026 tối (Đợt 353 — ROCKET RACE · FIGHT: TỈ LỆ + BỐ CỤC LẠI, thầy thảo luận trước rồi chốt:
+> đua **32:7** + bàn **16:7** (cả hai = 2/3 Đợt 351; bức 32:14 kín bề ngang màn 16:9 fullscreen, bàn to bằng Quiz, trước đó
+> bức 32:21 bị khoá cao còn 1432/1920 px), phi công VÀO cửa sổ + lửa BÁM thân (gốc: keyframe transform đè `translate(-50%,
+> -50%)` của phi công; lửa là anh em của thân nên không đi theo — chữa bằng khung bọc `.aw-rr-craft`, ăn cả Solo/Teams),
+> ô đáp án 1 hàng 4, ☰/‹ ›/🔊 của bàn 0 DỜI lên dải nút chung cạnh Options/Mode (`fightFrame.boardTools:"shared"`), và
+> **lỗi ngầm từ Đợt 351**: sân Rocket race phủ kín khung nên thanh Time delay của trọng tài bị che — nay `ui.hostFightWaitBar()`
+> cho template nhận nuôi thanh ấy vào đáy panel. Core: `fight.js` (+`tpl.fightFrame` → `--aw-fsh/--aw-fbh`, dời node bàn 0),
+> `engine.js` (+`ui.hostFightWaitBar`, `placeWaitBar` bỏ đo khi hosted), `app.css` (tỉ lệ theo biến, fallback 10.5 = y hệt cũ;
+> Quiz Fight đo lại không đổi). Đo thật bàn thử: 32:7 ✓ 16:7 ✓, tâm phi công lệch < 0.3 px, thanh chờ `.is-hosted.is-on`
+> 330 px trọn panel, giả lập 1920×1080 `.is-fs`: đua 1900×416, bàn 941×413 ×2, đáy 1024. Xem `templates/rocket-race/GHI CHU
+> ROCKET-RACE.md` mục 10. 🟢 CHỜ THẦY DUYỆT · ⛔ CHƯA COMMIT. Thầy nói "tối đa 3 đội" = muốn Fight 3 bàn sau này → VIỆC ĐANG CHỜ)**.
+> Trước đó: **20/9/2026 (Đợt 352 — FIND THE GAP · FIGHT: câu nhiều ô, đúng CHƯA HẾT vẫn ăn Time delay
 > thay vì Miss wait — thầy báo bug "câu 3 ô, đội 1 đúng 1/3 mà đội 2 bị khoá gần như ngay lập tức". Gốc:
 > `settleLine()` báo trọng tài `wordDone({correct: có ≥1 ô đúng})` nên câu chưa xong hết cũng đi nhánh ĐÚNG
 > (Time delay ngắn) của trọng tài giống hệt câu xong hết. Sửa 1 dòng trong
@@ -7424,7 +7442,19 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐⭐⭐⭐ **MỚI NHẤT (Đợt 351, 20/9/2026 chiều) — ROCKET RACE ▸ FIGHT: ⬜ ĐÃ BUILD + TỰ KIỂM BẰNG MÁY, CHƯA BẤM TAY, CHƯA COMMIT.**
+> ⭐⭐⭐⭐⭐ **MỚI NHẤT (Đợt 353 + 354, 20/9/2026 tối) — ROCKET RACE ▸ FIGHT TỈ LỆ MỚI 32:7 + 16:7, KHÔNG ĐIỂM, SỐ MŨI TÀU, LIVES = NÁT → NỔ: ⬜ ĐÃ BUILD + TỰ KIỂM BẰNG MÁY, CHƯA BẤM TAY, CHƯA COMMIT.**
+> 0. ⬜ (354) Dải trên chỉ còn đồng hồ; mũi tàu số 1/2; Options trận → Lives 3 + Points off 1 → sai: tàu lùi 1 nấc + "−1", chip ♥ bớt, tàu nứt/xỉn/khói dần; hết mạng: 💥, xác xám, "TEAM n IS DOWN!", 2 s sau bảng đội KIA thắng. Bảng cuối vẫn in điểm — thầy có muốn ẩn không? Speed bonus nên tắt với Rocket race (điểm ≠ tàu).
+> 1. ⬜ MODE → Fight → Start: dải đua mỏng (2 làn) trên, 2 bàn thấp (chip · câu · 1 hàng 4 ô · thanh Time delay mỏng ở đáy) dưới; dải nút = [☰][‹ n of N ›][🔊] | [Options][Mode].
+> 2. ⬜ Fullscreen thật trên màn 16:9: cả bức phải kín bề ngang, không dải đen hai bên, hàng nút không bị cắt.
+> 3. ⬜ Nhìn tên lửa: phi công 🐱/🦊 nằm TRONG cửa sổ; lửa đi theo thân khi nhấp nhô / lao tới (đúng) / rung (sai). Kiểm cả Solo.
+> 4. ⬜ ☰ từ dải chung: popup Menu hiện ở góc dưới-trái BÀN 0 (engine append vào bàn) — thầy quyết có cần dời popup lên dải không.
+> 5. ⬜ ‹ › từ dải chung giữa vòng: cả hai bàn cùng sang câu (đường `boardMoved` cũ).
+> 6. ⬜ **FIGHT 3 BÀN / 3 TÊN LỬA** (thầy: "tối đa 3 đội") — ĐỢT RIÊNG: trọng tài core cứng 2 bàn (`roundDone=[false,false]`, `boardEls` ×2, dải điểm 2 nửa); vùng đua đã sẵn `--lanes`.
+> ✅ Thầy duyệt → commit "Dot 353" (đúng 5 file code + 4 file hồ sơ, không -A) → push.
+>
+> ---
+
+> ⭐⭐⭐⭐⭐ **(Đợt 351, 20/9/2026 chiều) — ROCKET RACE ▸ FIGHT: ✅ COMMIT `cb95795`, ⬜ CHƯA BẤM TAY TRANG THẬT.**
 > 1. ⬜ Mở act Rocket race → nút MODE → Fight → Start fight: nửa trên là đường đua chung 2 tên lửa (TEAM 1 xanh trái · TEAM 2 đỏ phải), nửa dưới 2 bàn câu hỏi.
 > 2. ⬜ PLAY một bàn → cả hai cùng đếm 3-2-1; hai đội chạm cùng lúc trên TOMKO: đội đúng trước → tên lửa bay + điểm trên dải; đội kia xám (Time delay 0,1s) hoặc còn được làm (delay lớn hơn).
 > 3. ⬜ Sai → tên lửa khựng, câu mất, "−N" bay về điểm nếu bật Points off; hết câu → bảng WINS + Show answers 2 cột.

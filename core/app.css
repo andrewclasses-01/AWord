@@ -4608,17 +4608,53 @@ body.aw-page-dragover::after {
    area the full width of the match, above the two boards. Its aspect is
    32:10.5 = exactly as tall as the two 16:10.5 boards beside each other, so the
    match reads as one 32:21 picture: the race on top, the two question boards
-   below. Inert for every other template (core/fight.js only builds it on the flag). */
+   below. Inert for every other template (core/fight.js only builds it on the flag).
+   ⭐ Đợt 353 — the two heights are now NUMBERS the template hands core/fight.js
+   through `tpl.fightFrame` ({sharedH, boardH}), written on `.aw-fight` as
+   `--aw-fsh` / `--aw-fbh`; both fall back to 10.5 so a template that only sets
+   `fightLayout` still gets the Đợt 351 picture. Rocket race asks for 7 + 7
+   (thầy, 20/9/2026: race = 2/3 of before, boards = 2/3 of before): the race is
+   exactly as tall as the boards and the whole 32:14 picture fits a 16:9 screen
+   full-width in fullscreen instead of being height-capped with black bars. */
 .aw-fight-shared {
   position: relative;
   width: 100%;
-  aspect-ratio: 32 / 10.5;
+  aspect-ratio: 32 / var(--aw-fsh, 10.5);
   min-width: 0;
   border-radius: 14px;
   overflow: hidden;
   background: #0b0620;
   box-shadow: 0 6px 18px rgba(0,0,0,.18);
 }
+/* The board frame's height comes from `.aw-stage::before { padding-top: var(--ti-le) }`
+   (Đợt 273, top of this file — ⛔ the 65.625% there is NOT touched): inside a
+   shared-top match the stage just reads a different `--ti-le`, derived from the
+   template's `boardH` (7 → 43.75% = 16:7). Every `--aw-u` size is width-based
+   and stays the same; only the frame is shorter. */
+.aw-fight.is-shared-top .aw-fight-board .aw-stage { --ti-le: calc(var(--aw-fbh, 10.5) / 16 * 100%); }
+/* ⭐ Đợt 353 — `fightFrame.boardTools: "shared"`: board 0's Menu / ‹ › / Sound
+   were MOVED by core/fight.js into this group at the head of the shared
+   toolbar. They are engine nodes sized in `--aw-u`, which is undefined outside a
+   stage — so the group defines its own unit, chosen to make `.aw-iconbtn`
+   (4u) the same 36px as the `.aw-toolbtn`s beside it. Both boards' bottom rows
+   are hidden (visibility, not display: the row still holds its seat in the
+   frame's flex column, so the play area's height is unchanged). */
+/* Đợt 354 — `fightFrame.noScore` (Rocket race: the rockets are the score). Kept
+   in the layout (`visibility`) so the strip's height, the pick/miss bars under
+   each half and the "+N"/"−N" fly targets all keep their geometry. */
+.aw-fight.is-noscore .aw-fight-score { visibility: hidden; }
+.aw-fight-boardtools {
+  --aw-u: 9px;
+  display: flex; align-items: center; gap: 8px;
+  margin-right: 6px; padding-right: 10px;
+  border-right: 1px solid rgba(38,48,60,.14);
+}
+.aw-fight-boardtools .aw-nav { display: flex; align-items: center; gap: 6px; }
+.aw-fight-boardtools .aw-nav-label { min-width: 52px; text-align: center; }
+.aw-fight.is-boardtools-shared .aw-fight-board .aw-bottombar { visibility: hidden; }
+/* The Time delay bar a template re-homed with `ui.hostFightWaitBar()` (Đợt 353):
+   in flow inside the template's own slot, full width, no bottom-row geometry. */
+.aw-waitbar.is-hosted { position: relative; top: auto; left: auto; width: 100%; transform: none; }
 
 /* --- the two boards --- */
 .aw-fight-boards {
@@ -4840,12 +4876,14 @@ body.aw-page-dragover::after {
 }
 /* ⭐ Đợt 351 — with a shared area on top the picture is 32:21 (shared 32:10.5 +
    boards 32:10.5, plus the 8px gap between them), so the width cap is derived
-   from the WHOLE height, and both rows share the same cap so they stay flush. */
+   from the WHOLE height, and both rows share the same cap so they stay flush.
+   Đợt 353 — the 21 is now `sharedH + boardH` from `tpl.fightFrame` (fallback
+   10.5 + 10.5 = 21, the Đợt 351 picture); Rocket race's 7 + 7 gives 32:14. */
 .aw-fight.is-fs.is-shared-top .aw-fight-boards,
 .aw-fight.is-fs.is-shared-top .aw-fight-shared {
   flex: 0 1 auto;
   width: 100%;
-  max-width: calc((100dvh - var(--aw-fight-chrome) - 8px) * 32 / 21);
+  max-width: calc((100dvh - var(--aw-fight-chrome) - 8px) * 32 / (var(--aw-fsh, 10.5) + var(--aw-fbh, 10.5)));
   margin: 0 auto;
 }
 /* Undo the single-mode fullscreen page/stage rules for the boards INSIDE a

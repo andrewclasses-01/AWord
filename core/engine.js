@@ -1385,7 +1385,17 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // TUỲ CHỌN, cùng lý do với ba dòng trên.
     if (fight.ctl.registerVoiceBusy) fight.ctl.registerVoiceBusy(fight.side, () => !!(voiceGuard && voiceGuard()));
   }
+  // ⭐ Đợt 353 (20/9/2026, Rocket race) — THANH TIME DELAY Ở NHÀ KHÁC. Một template
+  // phủ kín cả khung bằng sân riêng của nó (Rocket race: `.aw-rr-stage` absolute
+  // inset:0) thì hàng nút dưới — và thanh chờ nằm trong đó — bị che kín, trận không
+  // còn thanh Time delay nào nhìn thấy được. `ui.hostFightWaitBar(host)` cho template
+  // NHẬN NUÔI đúng node thanh chờ (engine vẫn giữ tham chiếu, runWaitBar vẫn điều
+  // khiển y hệt); khi đã nhận nuôi thì placeWaitBar bỏ qua phép đo hình học của hàng
+  // nút (CSS `.aw-waitbar.is-hosted` cho nó rộng hết ổ mới). Tuỳ chọn: không gọi
+  // thì thanh nằm chỗ cũ, không đổi gì.
+  let waitBarHosted = false;
   function placeWaitBar() {
+    if (waitBarHosted) { waitBar.style.left = ""; waitBar.style.width = ""; return true; }
     const rowW = bottombar.clientWidth;
     if (!rowW) return false;
     const GAP = Math.max(6, Math.round(rowW * 0.015));
@@ -5682,6 +5692,16 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     sloganSlot,  // null unless tpl.hasSloganSlot is true — a centered span between timer and score (Anagram)
     scoreEl,     // the score element itself (read-only) — for effects that fly toward the score
     startTimer: startTimerNow,   // start the clock now (only meaningful with tpl.manualTimerStart)
+    // ⭐ Đợt 353 — FIGHT ONLY: nhận nuôi thanh Time delay vào một ổ trong sân của
+    // template (xem chú thích tại `placeWaitBar`). Trả false ngoài trận / thiếu ổ.
+    hostFightWaitBar(host) {
+      if (!waitBar || !host) return false;
+      host.append(waitBar);
+      waitBar.classList.add("is-hosted");
+      waitBar.style.left = ""; waitBar.style.width = "";
+      waitBarHosted = true;
+      return true;
+    },
     // ⭐ Đợt 190 — WHICH ACT A TEMPLATE'S OWN SAVE SHOULD LAND ON.
     // Running word and Running team save a "set" — one printed numbering plus
     // the class roll it was played with — onto the activity, because a teacher
