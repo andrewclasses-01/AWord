@@ -322,7 +322,12 @@ const rocketRaceTemplate = {
   //   Đợt 355 (thầy, 20/9/2026 tối): shared = ONE question line (4u) + a shorter race
   //   (no minimap) = 32:5.75; boards 16:5 hold only the tiles + the team chip; the
   //   score/clock strip goes below the boards and the clock into the toolbar.
-  fightFrame: { sharedH: 5.75, boardH: 5, boardTools: "shared", noScore: true, topStrip: "below" },
+  //   Đợt 356: the READY cover no longer fits a 16:5 board — act info goes to the
+  //   shared area, each board keeps icon + team name + Play (core draws it).
+  fightFrame: {
+    sharedH: 5.75, boardH: 5, boardTools: "shared", noScore: true, topStrip: "below",
+    readyShared: true, teams: FIGHT_TEAMS.map(t => ({ name: t.name, icon: t.pilot, color: t.hull.c }))
+  },
 
   edit: openRocketRaceEditor,
 

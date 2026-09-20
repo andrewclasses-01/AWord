@@ -12,7 +12,9 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **⭐⭐ Đợt 355** (20/9/2026 tối, ROCKET RACE — **FIGHT bố cục gọn**: câu hỏi 1 dòng trên cùng, bỏ minimap, đua
+> Mới nhất: **⭐⭐ Đợt 356** (20/9/2026 tối, ROCKET RACE — **màn START Fight**: bìa READY bị cắt trong bàn 16:5 → thông tin act
+> lên vùng chung, bàn chỉ còn icon + TEAM n + ▶; core `fightFrame.readyShared` + `teams`). Xem mục **Đợt 356**.
+> Trước đó: **⭐⭐ Đợt 355** (20/9/2026 tối, ROCKET RACE — **FIGHT bố cục gọn**: câu hỏi 1 dòng trên cùng, bỏ minimap, đua
 > 32:5.75, bàn 16:5 nền màu tàu + chip dưới ô, dải điểm xuống dưới bàn + đồng hồ vào dải nút (core `fightFrame.topStrip`),
 > ĐƯỜNG ĐUA CO GIÃN để câu cuối tàu chạm đích). Xem mục **Đợt 355**.
 > Trước đó: **⭐⭐ Đợt 354** (20/9/2026 tối, ROCKET RACE — **FIGHT không điểm, số mũi tàu, lùi tàu khi Points off, Lives =
@@ -526,6 +528,21 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 356 (20/9/2026 tối, ROCKET RACE — FIGHT màn START: thông tin act lên vùng chơi, bàn chỉ còn icon + tên đội + ▶) · ⬜ CHƯA BẤM TAY
+
+**Bối cảnh.** Thầy gửi ảnh: bìa READY (engine dựng cho 16:10.5) bị cắt trong bàn 16:5, vùng chung trống. Chốt: thông tin
+(slogan, tên act, template) ở vùng chơi; 2 ô đội chỉ 1 nút Start giữa + tên team + icon.
+
+**Đã làm.** `core/fight.js` `fightFrame.readyShared` + `teams`: chép 3 dòng chữ bìa bàn 0 vào `.aw-fight-readyinfo` trong
+vùng chung (template xoá khi mount ở PLAY), thêm `.aw-fight-readyteam` (icon tròn màu đội + tên) trước nút Play mỗi bàn, lớp
+`is-readyshared`; `core/app.css` ẩn 3 dòng trong bàn + kiểu chữ; `rocket-race.js` khai `readyShared: true, teams` từ
+`FIGHT_TEAMS`. Lỗi tự tạo: `info.append(...).textContent` (append trả undefined) → engine nuốt thành `[warn] fight mode failed
+to load`, MODE → Fight bấm không vào — sửa ngay. Đo: READY đúng bố cục, PLAY → readyinfo mất, trận chạy, 0 lỗi.
+
+**VIỆC ĐANG CHỜ.** ⬜ Thầy bấm tay trang thật (kể cả Start again). Các mục 354/355 còn treo.
 
 ---
 

@@ -4652,6 +4652,28 @@ body.aw-page-dragover::after {
 .aw-fight.is-topbelow { padding-top: 6px; }
 .aw-fight-boardtools .aw-fight-clockbox { padding: 0; margin-left: 4px; }
 .aw-fight-boardtools .aw-fight-clock { font-size: 18px; line-height: 1; }
+/* Đợt 356 — `fightFrame.readyShared`: the READY info lives in the shared area,
+   each board's cover keeps only its team line + the Play button. */
+.aw-fight.is-readyshared .aw-fight-board .aw-ready-type,
+.aw-fight.is-readyshared .aw-fight-board .aw-ready-title,
+.aw-fight.is-readyshared .aw-fight-board .aw-ready-game { display: none; }
+.aw-fight-readyinfo {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: clamp(4px, .6vw, 10px); color: #fff; text-align: center; padding: 0 4%;
+  font-family: "Baloo 2", system-ui, sans-serif;
+}
+.aw-fight-readyinfo .aw-ready-type { font-size: clamp(9px, .8vw, 12px); letter-spacing: .28em; opacity: .55; }
+.aw-fight-readyinfo .aw-ready-title { font-size: clamp(18px, 2.2vw, 36px); font-weight: 800; }
+.aw-fight-readyinfo .aw-ready-game { font-size: clamp(11px, 1.1vw, 17px); font-weight: 800; letter-spacing: .14em; opacity: .85; }
+.aw-fight-readyteam {
+  display: flex; align-items: center; gap: .4em; margin-bottom: clamp(4px, .6vw, 10px);
+  font-family: "Baloo 2", system-ui, sans-serif; font-weight: 800; letter-spacing: .12em;
+  font-size: clamp(14px, 1.5vw, 24px); color: #fff;
+}
+.aw-fight-readyteam-ic {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.7em; height: 1.7em; border-radius: 50%; background: var(--rc, #7b5bd6); font-size: .95em;
+}
 .aw-fight-boardtools {
   --aw-u: 9px;
   display: flex; align-items: center; gap: 8px;

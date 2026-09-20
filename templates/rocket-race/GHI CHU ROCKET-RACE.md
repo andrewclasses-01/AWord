@@ -243,3 +243,17 @@ trừ thì tàu nát đi một tí, hết thì nổ tung".
    đường lùi `var(--rd)` cho trình duyệt không có `color-mix`; `--rc/--rd` đã được `buildFight` đặt lên stage từ Đợt 351.
    Bàn **16:5** (`boardH: 5`) — bàn chỉ còn ô + chip nên 16:7 làm ô thành cột dọc.
 Bức cả trận nay 32:10.75 (≈ Quiz 32:10.5). ⬜ Chưa kiểm: TOMKO, Fight content = Different (2 nửa câu hỏi), câu hỏi rất dài.
+
+## 13. FIGHT — MÀN START: thông tin act lên vùng chơi, bàn chỉ còn icon + tên đội + ▶ (Đợt 356, 20/9/2026 tối)
+Thầy gửi ảnh: bìa READY (engine dựng cho khung 16:10.5) bị cắt chữ "ROCKET RACE" trong bàn 16:5, vùng chung trống.
+Chốt: "để thông tin (slogan, tên act, template…) ở vùng chơi, ở 2 ô đội chỉ để 1 nút Start ở chính giữa và tên team + icon".
+- Core `fight.js`: `fightFrame.readyShared: true` + `fightFrame.teams: [{name, icon, color}]` — sau `startGame` hai bàn, chép
+  chữ `.aw-ready-type/.aw-ready-title/.aw-ready-game` của bàn 0 vào `.aw-fight-readyinfo` đặt trong vùng chung (template
+  `host.innerHTML = ""` lúc mount ở PLAY nên tự biến mất); mỗi bàn được `prepend` dòng `.aw-fight-readyteam` (icon tròn màu
+  đội + tên) vào `.aw-ready-center`; lớp `is-readyshared` (app.css ẩn 3 dòng chữ trong bàn). Template khai `teams` từ
+  `FIGHT_TEAMS` (🐱 TEAM 1 xanh · 🦊 TEAM 2 đỏ).
+- Lỗi tự tạo bắt ngay: `info.append(...)` trả `undefined` ⇒ `.textContent` ném TypeError, bị `engine.js` nuốt thành
+  `[warn] fight mode failed to load` (không phải console.error!) — MODE → Fight bấm không vào trận, không lỗi đỏ. Sửa: tạo
+  node trước rồi append. Bài học: kiểm `read_console_messages` cả mức warn khi "bấm không ăn".
+- Đo bàn thử: READY = vùng chung "ANDREW CLASSES / SPACE RACE / ROCKET RACE", bàn = "🐱 TEAM 1" + ▶; PLAY → readyinfo mất,
+  2 tên lửa + qbar hiện, 0 lỗi.

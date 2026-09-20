@@ -340,6 +340,8 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   //   boardH  — chiều cao MỖI BÀN khi bàn rộng 16 (mặc định 10.5 = khung thường)
   //   noScore: true — ẩn 2 số điểm trên dải (Đợt 354; điểm vẫn tính ngầm)
   //   topStrip: "below" — dải điểm/đồng hồ xuống DƯỚI hai bàn, đồng hồ sang dải nút
+  //   readyShared: true + teams: [{name, icon, color}] — màn READY: thông tin act lên
+  //               vùng chung, bìa mỗi bàn chỉ còn icon + tên đội + nút Play (Đợt 356)
   //               (Đợt 355); dải chỉ còn là băng mỏng giữ thanh Pick time / Miss wait
   //   boardTools: "shared" — ☰ Menu · ‹ › · 🔊 của bàn 0 dời lên dải nút chung
   //               (cạnh Options/Mode) thay vì nằm trong từng bàn; hàng nút dưới
@@ -2381,6 +2383,37 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       centre.prepend(group);
       wrap.classList.add("is-boardtools-shared");
     }
+  }
+
+  // ⭐ Đợt 356 — `fightFrame.readyShared` (thầy, 20/9/2026: "ở màn Start, để thông tin
+  // (slogan, tên act, template…) ở vùng chơi, ở 2 ô đội chỉ để 1 nút Start ở chính
+  // giữa và tên team + icon thôi"). The engine's READY cover was drawn for a
+  // 16:10.5 board; a 16:5 one cuts it off. So: the brand / title / game name of
+  // board 0's cover are COPIED into the (still empty) shared area, both covers
+  // hide those lines (`.is-readyshared`, core/app.css) and each gets its team's
+  // icon + name from `fightFrame.teams[side]` above the Play button. The
+  // template wipes the shared area when it mounts on Play, so nothing lingers.
+  if (frame && frame.readyShared && sharedEl) {
+    const src = boardEls[0];
+    const info = el("div", "aw-fight-readyinfo");
+    [".aw-ready-type", ".aw-ready-title", ".aw-ready-game"].forEach(sel => {
+      const n = src.querySelector(sel);
+      if (n && n.textContent) { const line = el("div", "aw-fight-readyinfo-line " + sel.slice(1), ""); line.textContent = n.textContent; info.append(line); }
+    });
+    sharedEl.append(info);
+    const teams = Array.isArray(frame.teams) ? frame.teams : [];
+    boardEls.forEach((b, side) => {
+      const centre = b.querySelector(".aw-ready-center");
+      const t = teams[side];
+      if (!centre || !t) return;
+      const line = el("div", "aw-fight-readyteam");
+      if (t.color) line.style.setProperty("--rc", t.color);
+      line.append(el("span", "aw-fight-readyteam-ic", ""), el("span", "aw-fight-readyteam-name", ""));
+      line.firstChild.textContent = t.icon || "";
+      line.lastChild.textContent = t.name || ("TEAM " + (side + 1));
+      centre.prepend(line);
+    });
+    wrap.classList.add("is-readyshared");
   }
 
   paintScore(0); paintScore(1);

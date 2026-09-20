@@ -474,6 +474,9 @@ phần riêng của đội. Luật đi kèm:
 - ⭐ **Đợt 355 — `fightFrame.topStrip: "below"`**: dải điểm/đồng hồ xếp DƯỚI hàng hai bàn (`.aw-fight.is-topbelow`: số điểm
   cao 0, dải thành băng mỏng giữ Pick time / Miss wait), trận bắt đầu sát mép trên; kèm `boardTools: "shared"` thì `clockBox`
   được dời vào `.aw-fight-boardtools`. Không khai → thứ tự `[top, shared?, boards, controls]` như cũ.
+- ⭐ **Đợt 356 — `fightFrame.readyShared: true` + `teams: [{name, icon, color}]`**: màn READY, core chép brand/tên act/tên
+  template của bìa bàn 0 vào `.aw-fight-readyinfo` trong vùng chung và ẩn chúng ở hai bàn (`.is-readyshared`); mỗi bàn được
+  thêm dòng icon + tên đội trên nút Play. Template phải xoá vùng chung khi mount (Rocket race `host.innerHTML = ""`).
 
 **AI ĐANG BẬT IN TURNS (Đợt 202)**: **Type the answer** — 1/17, thầy chốt thử một game trước.
 
