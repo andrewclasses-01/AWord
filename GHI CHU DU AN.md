@@ -13,11 +13,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
 > Mới nhất: **⭐⭐ Đợt 354** (20/9/2026 tối, ROCKET RACE — **FIGHT không điểm, số mũi tàu, lùi tàu khi Points off, Lives =
-> tàu nát dần → nổ 💥**; core thêm `ctl.forfeit(side)` — đội nổ tung thua bất kể điểm; `fightFrame.noScore`). 🟢 CHỜ THẦY DUYỆT ·
-> ⛔ CHƯA COMMIT (gộp cùng Đợt 353). Xem mục **Đợt 354**.
+> tàu nát dần → nổ 💥**; core thêm `ctl.forfeit(side)` — đội nổ tung thua bất kể điểm; `fightFrame.noScore`). ✅ THẦY DUYỆT →
+> COMMIT + PUSH `f5fd42e` (gộp 353+354). Xem mục **Đợt 354**.
 > Trước đó: **⭐⭐ Đợt 353** (20/9/2026 tối, ROCKET RACE — **FIGHT tỉ lệ + bố cục lại**: đua 32:7 + bàn 16:7 thay 32:21;
 > phi công vào cửa sổ, lửa bám thân (`.aw-rr-craft`); 1 hàng 4 ô; ☰/‹ ›/🔊 lên dải nút chung; vá lỗi ngầm thanh Time delay
-> bị sân che từ Đợt 351 (`ui.hostFightWaitBar`); core đọc `tpl.fightFrame`, fallback y hệt cũ). 🟢 CHỜ THẦY DUYỆT · ⛔ CHƯA COMMIT.
+> bị sân che từ Đợt 351 (`ui.hostFightWaitBar`); core đọc `tpl.fightFrame`, fallback y hệt cũ). ✅ COMMIT + PUSH `f5fd42e`.
 > Xem mục **Đợt 353**.
 > Trước đó: **⭐⭐ Đợt 351** (20/9/2026 chiều, ROCKET RACE — **FIGHT bố cục riêng**: cả cuộc đua ở nửa trên, 2 bàn
 > hỏi–đáp ở nửa dưới; trọng tài Fight của core giữ nguyên, core chỉ thêm cờ `tpl.fightLayout: "shared-top"` +
@@ -526,7 +526,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 354 (20/9/2026 tối, ROCKET RACE — FIGHT: KHÔNG ĐIỂM trên dải, SỐ 1/2 ở mũi tàu, Points off = LÙI TÀU, LIVES = tàu nát dần → NỔ; core `ctl.forfeit`) · 🟢 CHỜ THẦY DUYỆT · ⛔ CHƯA COMMIT
+## Đợt 354 (20/9/2026 tối, ROCKET RACE — FIGHT: KHÔNG ĐIỂM trên dải, SỐ 1/2 ở mũi tàu, Points off = LÙI TÀU, LIVES = tàu nát dần → NỔ; core `ctl.forfeit`) · ✅ COMMIT + PUSH `f5fd42e` (cùng Đợt 353) · ⬜ CHƯA BẤM TAY
 
 **Yêu cầu thầy (3 ý, ngay sau khi xem Đợt 353).** Bỏ điểm trên dải vì vị trí tàu đã là điểm, sai bị trừ point thì tàu lùi;
 bỏ chữ TEAM 1/2 ở mũi, chỉ in số 1/2 vào mũi tàu; Lives vào Options, mỗi mạng mất tàu nát một tí, hết thì nổ tung.
@@ -550,7 +550,7 @@ làm điểm ≠ tàu — tắt/ẩn cho Rocket race? ⬜ Fight 3 bàn (đợt r
 
 ---
 
-## Đợt 353 (20/9/2026 tối, ROCKET RACE — FIGHT: TỈ LỆ 32:7 + 16:7, phi công vào cửa sổ, lửa bám thân, ☰/‹ › lên dải chung, vá thanh Time delay bị che) · 🟢 CHỜ THẦY DUYỆT · ⛔ CHƯA COMMIT
+## Đợt 353 (20/9/2026 tối, ROCKET RACE — FIGHT: TỈ LỆ 32:7 + 16:7, phi công vào cửa sổ, lửa bám thân, ☰/‹ › lên dải chung, vá thanh Time delay bị che) · ✅ COMMIT + PUSH `f5fd42e` (cùng Đợt 354) · ⬜ CHƯA BẤM TAY
 
 **Bối cảnh / yêu cầu.** Thầy gửi 2 ảnh: Quiz Fight "dài" (32:10.5) vs Rocket race Fight "vuông, cao" (32:21) — "muốn điều
 chỉnh về tỉ lệ màn hình và bố cục của Rocket race; cùng thảo luận và thiết kế trước khi build". Sau vòng 1 thầy thêm 4 ý:
