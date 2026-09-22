@@ -482,6 +482,58 @@ này biết gửi là dùng lại được ngay.
 Đã kiểm bằng cách dựng đúng cấu trúc `.aw-appbar-right` với CSS thật: nút **46×46 px bằng đúng nút Settings**,
 cách 10 px, icon SVG vào đúng chỗ.
 
+## 21. Đợt 370 (22/9/2026) — 5 việc thầy giao một lượt
+✅ `23427d9` · `fc3d8ba` · `1961d39` · `5b8504d`. ⬜ thầy chưa bấm tay.
+
+**(1) Nút QUESTION SCREEN rời bảng Options, ra dải nút giữa Options và Mode.**
+Công tắc này đã đi **ba đợt nhà**: ô tích (368) → ô `wide` trong panel (368c) → **nút riêng** (370). Bài học
+lặp lại đủ ba lần: *thứ gì phải tìm trong một bảng thì vẫn là thứ dễ bỏ sót; một nút SÁNG nói "đang bật" mà
+không ai phải mở gì cả.*
+- Khoá `rrTwoDevice` (riêng Rocket race) → **`fightScreen` (option của CORE)**. Template khai `fightScreen: true`
+  ⇒ `core/engine.js` vẽ nút (chỉ trong trận, chỉ bàn 0 vì toolbar bàn 1 bị `fight.js` bỏ).
+- Bấm → hộp xác nhận → `ctl.applyOptions({fightScreen})` (có sẵn, làm đúng cả ba: ghi lên act thật, lưu, dựng
+  lại CẢ HAI bàn về màn READY). **Restart không phải cho đẹp**: cờ được đọc MỘT LẦN lúc mount, và cả vòng đời
+  đường nối chốt ở đó.
+- Đo: dải nút `[☰][‹][›][🔊][Options][Question screen][Mode]`, đúng một nút; bật → 2 bàn về màn START + nút sáng.
+
+**(2) Different + màn iPad ⇒ HAI BÀN CHẠY ĐỘC LẬP; Time delay & Miss wait bị khoá.** (`core/fight.js`)
+Phạm vi thầy chốt: *"mọi game có và bật chế độ ipad"* ⇒ **cổng là TÍNH NĂNG, không phải tên template**.
+**Ba cổng** (đúng khuôn `turnsMode`): template khai `fightScreen` + act đang BẬT `fightScreen` + `fightContent
+=== "different"`; cách ly khỏi pick-turn và In turns.
+- Mỗi bàn một `boardIdx` riêng + **một ô hẹn giờ riêng**. ⚠️ **KHÔNG dùng `later()`** — đó là ô hẹn giờ vòng
+  DUY NHẤT của cả trận, hai bàn dùng chung sẽ huỷ câu tiếp của nhau (đúng bẫy `ctl.forfeit` đã phải né ở Đợt 354).
+- `wordDone` rẽ nhánh **SỚM**, trước toàn bộ bộ máy vòng chung: không cửa sổ hoà, không `roundWinner`, không khoá
+  đội kia, không che bài (hai bàn cầm hai câu khác nhau thì chẳng có gì để nhìn trộm).
+- ⚠️ **Kết trận khi CẢ HAI hết câu, không phải khi bàn đầu tiên hết.** Kết ở bàn đầu sẽ trao chiến thắng cho ai
+  bấm nhanh nhất — mà bấm SAI không tốn thời gian nào, nên cách "thắng" nhanh nhất hoá ra là trả lời sai thật
+  nhanh. Chơi hết cả hai chồng thì ai đúng nhiều hơn thắng, trên template này cũng là tàu ai đi xa hơn.
+- Options: `syncSolo()` khoá Time delay + Miss wait + Speed bonus bằng `setLocked`/`.is-locked` có sẵn.
+- 🐞 **Lỗi tự bắt trong chính đợt này**: khoá `cDelay` rồi để `syncDelay` mở lại ⇒ KHÔNG chạy (`syncDelay` chỉ
+  quản Speed bonus), đổi về Same words thì Time delay kẹt cứng. **Hàm nào đóng cái gì thì phải tự mở được cái đó.**
+- Đo: hai bàn hai câu khác nhau, bàn 0 trả lời ⇒ bàn 0 sang câu mới, **bàn 1 giữ nguyên**. Khoá: Different ⇒
+  [Time delay · Speed bonus · Miss wait]; về Same ⇒ chỉ [Speed bonus]; qua lại 2 vòng vẫn đúng.
+- **Hồi quy**: Same words y hệt cũ (cùng câu, bàn 0 trả lời ⇒ bàn 1 khoá ngay, cả hai cùng sang câu).
+  **QUIZ không đổi một chút nào**: không có nút Question screen, Different chỉ khoá Speed bonus.
+
+**(3) Chống double-tap** — `TAP_GUARD_MS = 400`: câu mới hiện thì ô đáp án CHẾT 0,4 s. Ô được dựng lại **đúng
+chỗ ngón tay vừa bấm**, nên cú thứ hai của một cú double-tap trả lời luôn câu chưa ai kịp đọc.
+⚠️ Phép đo đầu tiên SAI: tôi đo `tile.disabled`, nhưng ở Solo cú bấm bị chặn **trong mã** chứ ô không disabled.
+Đo lại bằng HÀNH VI: câu mới hiện ở 827 ms, bấm NGAY ⇒ câu không đổi; đối chứng ngược bấm sau guard ⇒ đổi bình thường.
+
+**(4) iPad hiện TỪ (đáp án đúng), không phải câu gợi ý.** `rrLinkText` → `rrLinkWord`. `voiceOnly` đổi nghĩa:
+không còn là "câu chỉ có tiếng" mà là "đáp án không có chữ" ⇒ iPad hiện `—`.
+⚠️ **iPad nay đang hiện ĐÁP ÁN** — thầy chọn có ý sau khi được cảnh báo, nên đó là màn để ĐỌC TO, không phải
+màn quay về phía lớp khi các em còn đang chọn.
+
+**(5) Nhạc nền vui nhộn thay tiếng động cơ ỉ ảm.** `rrSound.hum` → `rrSound.music` (10 chỗ).
+Vòng nhạc giọng TRƯỞNG I–vi–IV–V, bè chính `square` trên bè trầm `triangle`, 132 BPM. **Vẫn 100 % tổng hợp** —
+không mp3 phải xin phép, học sinh không tải thêm gì, giữ nguyên luật "không dùng file âm thanh" của template.
+⚠️ **Lên lịch theo ĐỒNG HỒ ÂM THANH, không phải `setTimeout`**: độ lệch của timer là vài chục ms, nghe ra ngay
+thành nhịp khập khiễng. Một ticker 40 ms chỉ NHÌN TRƯỚC và đặt nốt tại đúng mốc `AudioContext.currentTime`
+(khuôn *lookahead scheduler*). Turbo làm nhạc **nhanh lên** (rate 1,28) thay vì chỉ to hơn.
+Đo (spy `createOscillator` trên context thật): 6 nốt trong 2 giây đúng nhịp tính toán, có cả triangle 87/98 Hz
+lẫn square 587–1047 Hz, tần số khớp thang trưởng. ⚠️ **Claude không nghe được** — thầy phải tự nghe.
+
 ### ĐỀ XUẤT SỬA CORE (chờ thầy duyệt trước khi commit)
 `core/store.js` — `APP_DATA_KINDS` thêm **3 chuỗi**, không đổi một dòng logic nào:
 `"rocketrace-link"`, `"rocketrace-view"` (hai doc mới ở trên) và **`"showdown-session"`**.

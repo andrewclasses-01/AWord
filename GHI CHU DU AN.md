@@ -12,7 +12,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **⭐⭐⭐ Đợt 368 + 368b** (22/9/2026, ROCKET RACE — **FIGHT TRÊN HAI MÁY**: câu hỏi sang iPad qua `source.html`, máy chơi giữ đường đua + ô đáp án; một chiều, 2 tài liệu mỗi cái 1 người ghi, KHÔNG đụng `core/fight.js`, KHÔNG phải đăng luật Firestore mới; ✅ COMMIT + PUSH `0b5e4f1` + LIVE 7/7 mã băm, ⬜⬜ đường mạng hai máy thật chưa chạy — xem mục **Đợt 368**). Trước đó: **Đợt 362** (phi công chỉ lên xuống ±1,2 %, bỏ dịch ngang). Trước đó: **Đợt 361** (phi công nhấp ±6 % theo pha thân tàu, ép lùi khi boost, rung khi khựng). Trước đó: **Đợt 360** (khói/nhấp trong Fight quá nhỏ + bị cắt mép → làn lùi 7 %, khói to đậm). Trước đó: **Đợt 359** (phi công chỉ nhấp lên xuống; khói trắng mờ sau lửa). Trước đó: **Đợt 358** (phi công cắt tròn trong cửa sổ + lắc lư, bỏ đường kẻ làn). Trước đó: **Đợt 357** (20/9/2026 tối, chỉ rocket-race.css — căn giữa chip TEAM X/tim và vạch đích theo ảnh thầy). Trước đó: **⭐⭐ Đợt 356** (20/9/2026 tối, ROCKET RACE — **màn START Fight**: bìa READY bị cắt trong bàn 16:5 → thông tin act
+> Mới nhất: **⭐⭐⭐ Đợt 370** (22/9/2026, ROCKET RACE — 5 việc: nút QUESTION SCREEN ra dải nút · Different+iPad ⇒ HAI BÀN ĐỘC LẬP (khoá Time delay/Miss wait) · chống double-tap · iPad hiện TỪ · nhạc nền vui thay tiếng động cơ; ✅ đã push, ⬜ chưa bấm tay — xem mục **Đợt 370**). Trước đó: **⭐⭐⭐ Đợt 368 + 368b** (22/9/2026, ROCKET RACE — **FIGHT TRÊN HAI MÁY**: câu hỏi sang iPad qua `source.html`, máy chơi giữ đường đua + ô đáp án; một chiều, 2 tài liệu mỗi cái 1 người ghi, KHÔNG đụng `core/fight.js`, KHÔNG phải đăng luật Firestore mới; ✅ COMMIT + PUSH `0b5e4f1` + LIVE 7/7 mã băm, ⬜⬜ đường mạng hai máy thật chưa chạy — xem mục **Đợt 368**). Trước đó: **Đợt 362** (phi công chỉ lên xuống ±1,2 %, bỏ dịch ngang). Trước đó: **Đợt 361** (phi công nhấp ±6 % theo pha thân tàu, ép lùi khi boost, rung khi khựng). Trước đó: **Đợt 360** (khói/nhấp trong Fight quá nhỏ + bị cắt mép → làn lùi 7 %, khói to đậm). Trước đó: **Đợt 359** (phi công chỉ nhấp lên xuống; khói trắng mờ sau lửa). Trước đó: **Đợt 358** (phi công cắt tròn trong cửa sổ + lắc lư, bỏ đường kẻ làn). Trước đó: **Đợt 357** (20/9/2026 tối, chỉ rocket-race.css — căn giữa chip TEAM X/tim và vạch đích theo ảnh thầy). Trước đó: **⭐⭐ Đợt 356** (20/9/2026 tối, ROCKET RACE — **màn START Fight**: bìa READY bị cắt trong bàn 16:5 → thông tin act
 > lên vùng chung, bàn chỉ còn icon + TEAM n + ▶; core `fightFrame.readyShared` + `teams`). Xem mục **Đợt 356**.
 > Trước đó: **⭐⭐ Đợt 355** (20/9/2026 tối, ROCKET RACE — **FIGHT bố cục gọn**: câu hỏi 1 dòng trên cùng, bỏ minimap, đua
 > 32:5.75, bàn 16:5 nền màu tàu + chip dưới ô, dải điểm xuống dưới bàn + đồng hồ vào dải nút (core `fightFrame.topStrip`),
@@ -528,6 +528,36 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 370 (22/9/2026, ROCKET RACE — 5 việc thầy giao một lượt) · ✅ `23427d9`+`fc3d8ba`+`1961d39`+`5b8504d` · ⬜ CHƯA BẤM TAY
+
+**(1) Nút QUESTION SCREEN rời bảng Options ra dải nút** (giữa Options và Mode). Công tắc này đi **ba đợt nhà**:
+ô tích (368) → ô `wide` (368c) → **nút riêng** (370). *Thứ phải TÌM trong một bảng vẫn là thứ dễ bỏ sót; một nút
+SÁNG nói "đang bật" mà không ai phải mở gì.* Khoá `rrTwoDevice` → **`fightScreen` (option của CORE)**; bấm → hỏi
+xác nhận → `ctl.applyOptions` (ghi act thật + lưu + dựng lại cả hai bàn về READY). Restart là **bắt buộc**: cờ
+được đọc MỘT LẦN lúc mount.
+
+**(2) Different + màn iPad ⇒ HAI BÀN CHẠY ĐỘC LẬP** (`core/fight.js`). Phạm vi thầy chốt *"mọi game có và bật
+chế độ ipad"* ⇒ **cổng là TÍNH NĂNG, không phải tên template**. Ba cổng theo khuôn `turnsMode`. Mỗi bàn một
+`boardIdx` + **ô hẹn giờ riêng** (⚠️ KHÔNG `later()` — ô hẹn giờ vòng DUY NHẤT, hai bàn dùng chung sẽ huỷ câu tiếp
+của nhau). `wordDone` rẽ nhánh SỚM trước cả bộ máy vòng chung. Time delay + Miss wait + Speed bonus khoá mờ.
+⚠️ **Kết trận khi CẢ HAI hết câu**: kết ở bàn đầu tiên sẽ trao chiến thắng cho ai bấm nhanh nhất — mà bấm SAI
+không tốn thời gian, nên cách "thắng" nhanh nhất hoá ra là trả lời sai thật nhanh.
+🐞 Lỗi tự bắt: khoá `cDelay` rồi để `syncDelay` mở lại ⇒ không chạy ⇒ Time delay kẹt cứng khi về Same words.
+**Hàm nào đóng cái gì thì phải tự mở được cái đó.**
+
+**(3) `TAP_GUARD_MS` 400 ms chống double-tap** — ô dựng lại ĐÚNG CHỖ ngón tay vừa bấm. ⚠️ Phép đo đầu SAI (đo
+`disabled` trong khi Solo chặn trong mã); đo lại bằng HÀNH VI.
+
+**(4) iPad hiện TỪ** (đáp án đúng) thay câu gợi ý. ⚠️ iPad nay hiện ĐÁP ÁN — màn để ĐỌC TO, không quay về phía lớp.
+
+**(5) Nhạc nền vui** thay tiếng động cơ 55 Hz (`hum`→`music`): I–vi–IV–V, square trên triangle, 132 BPM, **vẫn
+100 % tổng hợp**. ⚠️ Lên lịch theo ĐỒNG HỒ ÂM THANH (lookahead 40 ms), không `setTimeout`. ⚠️ Claude không nghe
+được — thầy phải tự nghe.
+
+**Hồi quy đo thật**: Same words y hệt cũ; **QUIZ không đổi một chút nào**.
 
 ---
 
