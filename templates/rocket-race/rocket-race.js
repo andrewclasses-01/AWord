@@ -688,7 +688,7 @@ const rocketRaceTemplate = {
       wasRunning = !!tickTimer;
       if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
       pausedAt = performance.now();
-      if (speaks()) rrSound.hum.stop();
+      if (speaks()) rrSound.music.stop();
     }
     function resumeGame() {
       if (finished || dead) return;
@@ -699,7 +699,7 @@ const rocketRaceTemplate = {
         rockets.forEach(r => { if (r.stunUntil) r.stunUntil += gap; });
         pausedAt = 0;
       }
-      if (wasRunning) { last = performance.now(); tickTimer = setInterval(tick, TICK_MS); if (running && speaks()) rrSound.hum.start(); }
+      if (wasRunning) { last = performance.now(); tickTimer = setInterval(tick, TICK_MS); if (running && speaks()) rrSound.music.start(); }
       wasRunning = false;
     }
     const pauseHandler = { pause: pauseGame, resume: resumeGame };
@@ -911,7 +911,7 @@ const rocketRaceTemplate = {
           n--;
           later(step, 800);
         } else {
-          if (speaks()) { showBanner("GO!", "is-go"); rrSound.go(); rrSound.hum.start(); }
+          if (speaks()) { showBanner("GO!", "is-go"); rrSound.go(); rrSound.music.start(); }
           ui.startTimer?.();
           // Đợt 368 — the match clock's zero. The packet carries "how long the
           // match has been running", and the iPad counts on from it by itself:
@@ -1266,7 +1266,7 @@ const rocketRaceTemplate = {
       turboUntil = performance.now() + TURBO_MS;
       player.el && player.el.classList.add("is-turbo");
       sceneRoot.classList.add("is-turbo");
-      rrSound.turbo(); if (speaks()) rrSound.hum.rev(true);
+      rrSound.turbo(); if (speaks()) rrSound.music.rev(true);
       showBanner(label, "is-turbo", 1000);
     }
     function endTurbo() {
@@ -1274,7 +1274,7 @@ const rocketRaceTemplate = {
       player.el && player.el.classList.remove("is-turbo");
       // FIGHT: the shared scene's star-speed belongs to whichever board is in turbo
       if (!fightCtl || !rockets.some(r => r !== player && r.el && r.el.classList.contains("is-turbo"))) sceneRoot.classList.remove("is-turbo");
-      if (speaks()) rrSound.hum.rev(false);
+      if (speaks()) rrSound.music.rev(false);
     }
 
     function spawnCrate() {
@@ -1380,7 +1380,7 @@ const rocketRaceTemplate = {
     // =========================================================
     function endSolo(place) {
       running = false;
-      rrSound.hum.stop();
+      rrSound.music.stop();
       endTurbo();
       if (place === 1) rrSound.win(); else rrSound.correct();
       endTitle = (MEDAL[place - 1] ? MEDAL[place - 1] + " " : "") + placeWord(place) + " place!";
@@ -1390,7 +1390,7 @@ const rocketRaceTemplate = {
     function endTeams() {
       if (finished) return;
       running = false;
-      rrSound.hum.stop();
+      rrSound.music.stop();
       // rank: over the line first, then furthest along
       const order = rockets.slice().sort((a, b) => (a.done && b.done) ? a.place - b.place : a.done ? -1 : b.done ? 1 : (b.p / b.L) - (a.p / a.L));
       order.forEach((r, i) => { if (!r.done) { r.place = i + 1; const m = el("div", "aw-rr-medal", MEDAL[i] || placeWord(i + 1)); r.el.append(m); } });
@@ -1419,7 +1419,7 @@ const rocketRaceTemplate = {
       } else renderLives();
       if (livesLeft <= 0) {
         running = false;
-        rrSound.hum.stop();
+        rrSound.music.stop();
         endTurbo();
         rrSound.lose();
         endTitle = "Game over";
@@ -1515,7 +1515,7 @@ const rocketRaceTemplate = {
       ui.flushPenalties?.();
       running = false;
       if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
-      if (speaks()) rrSound.hum.stop();
+      if (speaks()) rrSound.music.stop();
       voicePlayer.stop();
       locked = true;
       const perQuestion = state.map((s, i) => ({ q: i, correct: s.correct === true }));
@@ -1543,7 +1543,7 @@ const rocketRaceTemplate = {
       window.removeEventListener("keydown", onKey);
       if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
       timers.forEach(id => clearTimeout(id)); timers.clear();
-      if (speaks()) rrSound.hum.stop();
+      if (speaks()) rrSound.music.stop();
       voicePlayer.stop();
       if (ui.livesSlot) ui.livesSlot.innerHTML = "";
     };

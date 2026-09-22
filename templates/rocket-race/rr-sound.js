@@ -22,7 +22,7 @@
 //   rivalFinish() a rival crossed the line before you
 //   win()         you crossed the line (any place) — bright fanfare
 //   lose()        game over (no lives left)
-//   hum.start()/hum.stop()  the low engine drone while the race is on
+//   music.start()/music.stop()/music.rev(up)  the backing loop while the race is on
 // =============================================================
 
 import { sound as coreSound } from "../../core/sound.js";
@@ -86,52 +86,106 @@ function bell({ root = 660, gain = 0.15, dur = 1500, delay = 0 }) {
   });
 }
 
-// ---- the engine drone: two detuned saws through a low-pass, very quiet ----
-// Started at GO, stopped at the finish / on Menu pause / in cleanup. Kept as a
-// single module-level instance: AWord mounts one activity at a time, and a
-// second start() while running is a no-op so a resume can never stack two.
-let humNodes = null;
-const hum = {
+// ---- the backing music (Đợt 370) ------------------------------------------
+// ⛔ WAS: a 55 Hz detuned-saw engine drone through a low-pass. Thầy, 22/9/2026:
+// *"đổi một âm thanh vui nhộn … âm hiện tại ảm đạm quá"* — and he was right, a
+// held 55 Hz saw is the sound of a fridge, not of a race.
+// ⭐ NOW: a short major-key loop (I–vi–IV–V, the friendliest progression there
+// is) played on a square lead over a triangle bass. Still 100 % synthesised —
+// no mp3 to license, nothing extra for a pupil's phone to download, and it
+// keeps this template's "no audio files" rule intact.
+//
+// ⚠️ SCHEDULED AGAINST THE AUDIO CLOCK, NOT setTimeout. A timer's jitter is tens
+// of milliseconds, which is audible as a limp; so a 40 ms ticker only looks
+// AHEAD and books notes at exact `AudioContext.currentTime` offsets. This is the
+// standard Web-Audio "lookahead scheduler" and the reason the loop stays tight
+// even when the main thread is busy animating rockets.
+// ⚠️ Kept as ONE module-level instance, like the drone before it: AWord plays one
+// activity at a time, and start() while running is a no-op so a resume after a
+// Menu pause can never stack two loops.
+
+const BPM = 132;
+const STEP_S = 60 / BPM / 2;          // one eighth note
+const LOOKAHEAD_S = 0.18;             // how far ahead notes are booked
+// MIDI note -> Hz (A4 = 69 = 440 Hz)
+const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+// Four bars of eight steps. `null` = rest. Lead sits an octave above the bass.
+const LEAD = [
+  72, null, 76, 79, null, 76, 72, null,   // C
+  72, null, 76, 81, null, 79, 76, null,   // Am
+  77, null, 81, 84, null, 81, 77, null,   // F
+  74, null, 79, 83, null, 79, 74, null    // G
+];
+const BASS = [48, 45, 41, 43];        // C3 · A2 · F2 · G2, one per bar
+const STEPS = LEAD.length;
+
+let music = null;
+
+function bookNote(a, out, midi, at, dur, type, gain) {
+  const osc = a.createOscillator();
+  const g = a.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(hz(midi), at);
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(gain, at + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  osc.connect(g); g.connect(out);
+  osc.start(at);
+  osc.stop(at + dur + 0.02);
+}
+
+const musicLoop = {
   start() {
-    if (humNodes || coreSound.isMuted()) return;
+    if (music || coreSound.isMuted()) return;
     try {
       const a = ac();
-      const g = a.createGain();
-      g.gain.setValueAtTime(0.0001, a.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.035, a.currentTime + 0.6);
+      const out = a.createGain();
+      out.gain.setValueAtTime(0.0001, a.currentTime);
+      out.gain.exponentialRampToValueAtTime(0.16, a.currentTime + 0.8);   // fade in
+      // A gentle low-pass keeps the square lead from sounding harsh over speech.
       const filt = a.createBiquadFilter();
-      filt.type = "lowpass"; filt.frequency.value = 220; filt.Q.value = 0.7;
-      const o1 = a.createOscillator(); o1.type = "sawtooth"; o1.frequency.value = 55;
-      const o2 = a.createOscillator(); o2.type = "sawtooth"; o2.frequency.value = 55.7;
-      o1.connect(filt); o2.connect(filt); filt.connect(g); g.connect(a.destination);
-      o1.start(); o2.start();
-      humNodes = { g, o1, o2, a };
-    } catch { humNodes = null; }
+      filt.type = "lowpass"; filt.frequency.value = 2600; filt.Q.value = 0.6;
+      out.connect(filt); filt.connect(a.destination);
+      music = { a, out, step: 0, nextAt: a.currentTime + 0.1, rate: 1, timer: null };
+      music.timer = setInterval(() => {
+        const m = music;
+        if (!m) return;
+        try {
+          while (m.nextAt < m.a.currentTime + LOOKAHEAD_S) {
+            const i = m.step % STEPS;
+            const dur = STEP_S / m.rate;
+            if (i % 8 === 0) bookNote(m.a, m.out, BASS[(i / 8) | 0], m.nextAt, dur * 3.4, "triangle", 0.30);
+            const n = LEAD[i];
+            if (n != null) bookNote(m.a, m.out, n, m.nextAt, dur * 0.85, "square", 0.085);
+            m.nextAt += dur;
+            m.step++;
+          }
+        } catch { /* context died — the next stop() clears the timer */ }
+      }, 40);
+    } catch { music = null; }
   },
-  // A turbo makes the drone climb; back() eases it down again.
+  // Turbo: the loop picks up speed instead of just getting louder.
   rev(up) {
-    if (!humNodes) return;
-    try {
-      const t = humNodes.a.currentTime;
-      humNodes.o1.frequency.exponentialRampToValueAtTime(up ? 82 : 55, t + 0.35);
-      humNodes.o2.frequency.exponentialRampToValueAtTime(up ? 83 : 55.7, t + 0.35);
-    } catch { /* ignore */ }
+    if (!music) return;
+    music.rate = up ? 1.28 : 1;
   },
   stop() {
-    if (!humNodes) return;
-    const h = humNodes; humNodes = null;
+    if (!music) return;
+    const m = music; music = null;
+    if (m.timer) clearInterval(m.timer);
     try {
-      const t = h.a.currentTime;
-      h.g.gain.cancelScheduledValues(t);
-      h.g.gain.setValueAtTime(Math.max(0.0001, h.g.gain.value), t);
-      h.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
-      h.o1.stop(t + 0.35); h.o2.stop(t + 0.35);
+      const t = m.a.currentTime;
+      m.out.gain.cancelScheduledValues(t);
+      m.out.gain.setValueAtTime(Math.max(0.0001, m.out.gain.value), t);
+      m.out.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
     } catch { /* ignore */ }
   }
 };
 
 export const rrSound = {
-  hum,
+  // Đợt 370 — was `hum` (the engine drone); renamed with it so no caller is left
+  // saying "hum" while a tune plays. Same three methods, same lifecycle.
+  music: musicLoop,
 
   count(n) {
     const last = n <= 1;
