@@ -608,8 +608,32 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // The Options panel greys all three while In turns is ticked (see buildOptions),
   // so nothing on screen claims to decide something these lines have already
   // settled — the dead-control trap of Đợt 143.
+  // ⭐⭐⭐ Đợt 370 (thầy, 22/9/2026) — HAI BÀN CHẠY HOÀN TOÀN ĐỘC LẬP.
+  // *"khi chọn different, thì thanh time delay và miss wait bị vô hiệu hóa …
+  // lúc này 2 bên hoàn toàn độc lập với nhau, bên nào về đích trước thì thắng"*.
+  // Each board walks its OWN pile at its OWN pace: answer, next question, no
+  // waiting for the other team and no locking it out. The match ends the moment
+  // one board runs out of questions — that board got there first, so it wins.
+  //
+  // ⚠️ THREE GATES, exactly the shape `turnsMode` uses one screen above — and for
+  // the same reason. `different` is live on eight other templates today; changing
+  // what it means at this level would change every act ever saved behind the
+  // teacher's back. So it takes ALL of:
+  //   · the template opting in (`tpl.fightScreen` — Rocket race alone today),
+  //   · the QUESTION SCREEN actually being on for this act, and
+  //   · Fight content = Different.
+  // Thầy's own words for the scope: *"mọi game có và bật chế độ ipad"* — the gate
+  // is the FEATURE, not the template's name, so a game that learns the second
+  // screen later inherits this with one flag and no further work here.
+  // ⚠️ Sealed off from pick-turn and In turns: both already define "which item is
+  // open" their own way, and a third round model on top of either is how this
+  // file gets its next silent bug.
+  const soloTpl = !!getTemplate(activity.type)?.fightScreen && !pickMode;
+  const soloBoards = soloTpl && !turnsMode &&
+    fo.fightContent === "different" && (activity.options || {}).fightScreen === true;
+
   const tieMs = (pickMode || turnsMode) ? TIE_WINDOW_MS : tieWindowMsOf(fo);
-  const tieUnlimited = !pickMode && !turnsMode && fo.fightTieWindow === 0;
+  const tieUnlimited = !pickMode && !turnsMode && !soloBoards && fo.fightTieWindow === 0;
   // ⭐⭐ Đợt 276 — MISS WAIT, decoded ONCE for the whole match, same as every
   // other option above. Applies in EVERY round model (ordinary, pick-turn, In
   // turns) because the branch it governs — one side already wrong, nobody has
@@ -621,20 +645,23 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // through the three pick-turn games one by one: "open the box không cần …
   // crossword không cần … find the match có cần" — and Find the match is an
   // ordinary-round game (it has no `fightPick`), so `!pickMode` is the whole test.
-  const waitBarMs = (!pickMode && !turnsMode && tieMs >= WAIT_BAR_MIN_MS) ? tieMs : 0;
+  // Đợt 370 — independent boards have no shared round to wait out, so no bar.
+  const waitBarMs = (!pickMode && !turnsMode && !soloBoards && tieMs >= WAIT_BAR_MIN_MS) ? tieMs : 0;
   // The bonus is off entirely at 0.1s — see speedBonusApplies(). Resolved once
   // here so the two award sites can not disagree about it.
   // In a pick-turn game the bonus is untouched by all this — it keeps the plain
   // "reward whoever got there first" meaning it has had since Đợt 124, because
   // the control that would have switched it off (TIME DELAY) is not offered there.
-  const speedBonus = turnsMode ? 0
+  const speedBonus = (turnsMode || soloBoards) ? 0
     : ((pickMode || speedBonusApplies(fo)) ? fo.fightSpeedBonus : 0);
   // ⭐⭐⭐ Đợt 223 — CHỈ CÒN ĐỌC TIME DELAY. Đúng nấc "không delay" (0.1s, nấc
   // thấp nhất trên thanh trượt) mới khoá đội chậm; mọi nấc khác — kể cả ∞ —
   // không khoá. ∞ vốn đã không còn ai để khoá vào lúc vòng chốt (xem nhánh ∞
   // trong wordDone: cả hai bàn đều đã xong trước khi có một người thắng), nên
   // giá trị ở đây không đổi gì trên màn hình dù là gì.
-  const lockLoser = () => (turnsMode ? false
+  // Đợt 370 — nobody can be "the slower team" when the two are not racing for the
+  // same question, so independent boards never lock each other out.
+  const lockLoser = () => ((turnsMode || soloBoards) ? false
     : (pickMode ? pickMode === "lock" : fo.fightTieWindow === 0.1));
   // Does a team that finishes correctly AFTER the round is won keep what it
   // earned? The teacher's pick rules say no ("đội sau chọn đúng thì … không có
@@ -861,6 +888,9 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // hai mũi tên nằm mờ suốt cả nhịp giữ, chờ một đội không bao giờ bấm nữa.
   function nobodyElseIsPlaying(side) {
     if (matchOver || torndown) return true;      // hết trận thì không còn gì để bảo vệ
+    // ⭐ Đợt 370 — bàn độc lập không bao giờ phải chờ bàn kia: hai bên cầm hai câu
+    // khác nhau nên chẳng có gì để nhìn trộm, và cũng không có vòng chung để rời.
+    if (soloBoards) return true;
     const other = side === 0 ? 1 : 0;
     if (!boards[other]) return true;             // bàn kia chưa mount / đã bị dỡ
     return roundDone[other] || (roundWinner !== null && lockLoser());
@@ -906,6 +936,19 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // FORFEITED (ctl.forfeit) has lost whatever the points say; showResult reads this.
   const forfeited = [false, false];
   let torndown = false;
+  // ⭐⭐⭐ Đợt 370 — INDEPENDENT BOARDS (see `soloBoards`). Each board keeps its own
+  // place in its own pile and its own "next question" timer; `roundIndex` and the
+  // whole shared-round machine below are simply not used in this mode.
+  // ⚠️ SEPARATE TIMERS, not `later()`. `later()` is the ONE round slot for the
+  // whole match (cancelRound() then arms it again), so two boards sharing it
+  // would cancel each other's next question — the same trap `ctl.forfeit` had to
+  // dodge at Đợt 354.
+  const boardIdx = [0, 0];
+  const boardOver = [false, false];      // this board has run out of questions
+  const soloTimers = [null, null];
+  function clearSoloTimers() {
+    soloTimers.forEach((t, i) => { if (t) { clearTimeout(t); soloTimers[i] = null; } });
+  }
   let playRelaying = false;             // guards the "one PLAY starts both" relay
   // Đợt 134 — a running snapshot of the speaking board's voice state, merged
   // field-by-field (playing / levels are reported separately, at different
@@ -1310,6 +1353,29 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   }
 
   // ----- the round: both boards hold the SAME word index -----
+  // ⭐⭐ Đợt 370 — ONE board moves on, alone. The other board is not consulted,
+  // not locked, not revealed and not waited for — that is the whole point.
+  function advanceBoard(side) {
+    if (matchOver || torndown || boardOver[side]) return;
+    const b = boards[side];
+    if (!b) return;
+    boardIdx[side]++;
+    if (boardIdx[side] >= (b.total || 0)) {
+      boardOver[side] = true;
+      try { b.lock(true); } catch { /* board already gone */ }
+      // ⚠️ The match ends when BOTH piles are finished, not when the first one
+      // is. Ending on the first would hand the win to whoever tapped fastest —
+      // and a WRONG tap costs no time at all, so the fastest way to "win" would
+      // be to answer everything wrong as quickly as possible. With both piles
+      // played out the winner is whoever got MORE right, which on this template
+      // is also whoever's rocket travelled further: the two say the same thing.
+      if (boardOver[0] && boardOver[1]) endMatch();
+      return;
+    }
+    try { b.lock(false); } catch { /* board already gone */ }
+    try { b.goToIndex(boardIdx[side]); } catch { /* board already gone */ }
+  }
+
   function advanceRound() {
     if (matchOver || torndown) return;
     // ⭐⭐ Đợt 219 — GỠ CHE Ở ĐÂY, không ở `revealBoards()` nữa (xem chú thích dài
@@ -1371,6 +1437,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   function endMatch() {
     if (matchOver) return;
     matchOver = true;
+    clearSoloTimers();   // Đợt 370 — the two independent "next question" timers
     // ⭐ Đợt 297 — CHỐT SỔ BONUS TRƯỚC KHI ĐỌC BẢNG ĐIỂM: showResult() dưới đây
     // đọc thẳng totalOf(), và một con số "+N" còn đang bay là một phép cộng
     // CHƯA áp — cùng lý do finish() của template phải gọi ui.flushPenalties().
@@ -1530,6 +1597,10 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
         // bounded — this is not a repaint path.
         openPickClock();
       }
+      // Đợt 370 — an independent board catches up to ITS OWN place, never to the
+      // other board's (board 1 always mounts late, and in this mode the two are
+      // not on the same question by design).
+      else if (soloBoards) { if (boardIdx[side] > 0) api.goToIndex(boardIdx[side]); }
       else if (roundIndex > 0) api.goToIndex(roundIndex);
       if (ctl.isLocked(side)) api.lock(true);
     },
@@ -1603,6 +1674,25 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // set), which is exactly what lets it still tie if it's that close.
     wordDone(side, info) {
       if (matchOver || torndown) return;
+      // ⭐⭐⭐ Đợt 370 — INDEPENDENT BOARDS leave here before the shared-round
+      // machine gets a look in. No tie window, no winner, no lock-out, no
+      // concealing: the two boards are holding different questions, so there is
+      // nothing to arbitrate and nothing to hide from each other.
+      if (soloBoards) {
+        if (info && info.index !== boardIdx[side]) return;   // stale report from this board
+        if (soloTimers[side]) return;                        // its next question is already booked
+        // Show this board its own ✓/✗ at once — same reasoning as In turns
+        // (fight.js's `turnsMode` branch below): the rule that withholds the mark
+        // exists so the other team cannot read the answer off this board, and the
+        // other team is looking at a different question entirely.
+        try { boards[side] && boards[side].reveal && boards[side].reveal(); } catch { /* gone */ }
+        try { boards[side] && boards[side].lock(true); } catch { /* gone */ }
+        soloTimers[side] = setTimeout(() => {
+          soloTimers[side] = null;
+          advanceBoard(side);
+        }, ROUND_HOLD_MS);
+        return;
+      }
       if (info && info.index !== roundIndex) return;    // a stale word (teacher used Next) — ignore
       if (roundDone[side]) return;                      // this side already had its go this round
       roundDone[side] = true;
@@ -1806,6 +1896,17 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // The teacher pressed Next/Previous on either board: both boards move, and
     // the round follows the board that was pressed.
     boardMoved(side, index) {
+      // ⭐ Đợt 370 — độc lập: ‹ › chỉ dời CHÍNH bàn bấm. Đường cũ bên dưới kéo bàn
+      // kia về cùng chỉ số, đúng thứ phải không xảy ra ở chế độ này.
+      if (soloBoards) {
+        if (matchOver || torndown || index === boardIdx[side]) return;
+        boardIdx[side] = index;
+        if (soloTimers[side]) { clearTimeout(soloTimers[side]); soloTimers[side] = null; }
+        boardOver[side] = false;
+        try { boards[side] && boards[side].lock(false); } catch { /* gone */ }
+        syncNavGates();
+        return;
+      }
       if (index === roundIndex || matchOver || torndown) return;
       paintWaitBar(0);
       // ⚠️ Đợt 219 — CÂU MỚI THÌ KHÔNG BÀN NÀO CÒN BỊ CHE. Lỗ này có từ Đợt 217 (lúc
@@ -2082,7 +2183,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       { value: "scramble", label: "Same words", title: "Same words, mix letters" },
       { value: "different", label: "Different", title: "Different words" }
     ], cur.fightContent === "different" ? "different" : "scramble",
-      v => { draft.fightContent = v; }));
+      v => { draft.fightContent = v; syncSolo(v); }));
 
     // ⭐⭐⭐ Đợt 223 (thầy, 21/8/2026) — "ROUND RULE" (First wins/Both finish) VÀ
     // "SLOWER TEAM KEEPS POINTS" BỊ BỎ HẲN, không còn ô nào ở đây nữa. Thầy:
@@ -2286,9 +2387,37 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // syncDelay() there would hide the bonus (or zero it) off a value the teacher
     // has no control on screen to put back.
     if (!pickMode) syncDelay(cur.fightTieWindow);
+    // ⭐⭐ Đợt 370 — Different + Question screen ⇒ the two boards run independently
+    // (see `soloBoards`), and then TIME DELAY and MISS WAIT have nothing left to
+    // govern: both describe how long one team waits for the OTHER on the SAME
+    // question, and there is no such question any more. Thầy asked for them to be
+    // "vô hiệu hóa và tối màu như các thanh đang không dùng được khác" — which is
+    // exactly `setLocked`, the same greying In turns already uses.
+    // ⚠️ Only ever LOCKS here. Unlocking is left to syncDelay/syncTurns, because
+    // In turns may be holding the very same cell shut — two functions both free to
+    // unlock one control is how a dead control comes back to life by accident.
+    function syncSolo(contentVal) {
+      const screenOn = (draft.fightScreen === undefined ? (activity.options || {}).fightScreen : draft.fightScreen) === true;
+      const turnsOn = (draft.fightTurns === undefined ? cur.fightTurns : draft.fightTurns) === true;
+      const on = soloTpl && screenOn && !turnsOn && contentVal === "different";
+      setLocked(cWrongWait.cell, on);
+      if (on) { setLocked(cDelay.cell, true); setLocked(cBonus.cell, true); }
+      else if (!pickMode && !turnsOn) {
+        // ⚠️ MEASURED BUG in this very đợt: locking `cDelay` here but leaving it
+        // to `syncDelay` to reopen does NOT work — syncDelay only ever governs
+        // Speed bonus. Switching back from Different left Time delay greyed out
+        // with nothing able to restore it. Whatever this function shuts, it must
+        // be able to open again itself.
+        setLocked(cDelay.cell, false);
+        syncDelay(draft.fightTieWindow === undefined ? cur.fightTieWindow : draft.fightTieWindow);
+      }
+    }
+
     // … and In turns has the last word: it locks all three, on top of whatever
     // syncDelay just decided. Order matters, this line must stay after it.
     if (turnsTpl && cur.fightTurns === true) syncTurns(true);
+    // Đợt 370 — after In turns, because this one only ever tightens.
+    syncSolo(cur.fightContent === "different" ? "different" : "scramble");
   }
 
   // ----- build the two plays -----
@@ -2464,6 +2593,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // which is exactly where a stray throw comes from.
   function teardown() {
     torndown = true;
+    clearSoloTimers();   // Đợt 370 — own timers, outside later()/cancelRound()
     paintWaitBar(0);
     clearMissBandTimers();   // Đợt 281 — 2 setTimeout riêng của thanh MISS WAIT, `later()`/
                               // cancelRound() bên dưới không biết tới chúng
