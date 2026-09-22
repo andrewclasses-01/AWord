@@ -446,14 +446,24 @@ const rocketRaceTemplate = {
     // Đợt 354 — a match keeps ONLY Lives (thầy: each lost life wrecks the rocket a
     // little, the last one blows it up); rivals/teams/question time stay solo-only.
     if (inFight) {
-      panel.append(lives.cell);
       // ⭐ Đợt 368 — TWO DEVICES (thầy, 22/9/2026): the questions move to a second
       // screen (an iPad on `source.html`) and this one keeps the race + the tiles.
       // Only offered inside a match, because outside one there is no second half
       // to send anywhere. Safe to leave on with no iPad present: the question line
       // simply stays here until one actually checks in (see rr-link.js).
-      addCheck("Question screen", draft.rrTwoDevice === true, v => draft.rrTwoDevice = v,
-        { key: "rrTwoDevice", title: "Show the questions on a second device (open source.html there, signed in as the teacher) and keep only the race + answer tiles here" });
+      // ⚠️ Đợt 368c — WAS A TICK-BOX AND THẦY COULD NOT FIND IT ("tôi có thấy nút
+      // bấm gì khác cũ đâu" — with the box right there on his own screenshot).
+      // It sat in the row of Shuffle / Show answers ticks, which are all about
+      // RANDOMISING, so the eye files it as one of those and slides past. A
+      // full-width labelled cell with an Off / iPad switch cannot be missed, and
+      // the label now says what it DOES instead of what it is called.
+      const qScreen = mkCell({ label: "Question screen", sub: "show questions on an iPad", wide: true });
+      qScreen.ctl.append(mkSeg(
+        [{ value: "off", label: "Off", title: "Questions stay on this screen, as usual" },
+         { value: "on", label: "On iPad", title: "Open source.html on the iPad (signed in as the teacher): the questions move there and this screen keeps the race + the answer tiles" }],
+        draft.rrTwoDevice === true ? "on" : "off",
+        v => { draft.rrTwoDevice = (v === "on"); }));
+      panel.append(lives.cell, qScreen.cell);
       return;
     }
 

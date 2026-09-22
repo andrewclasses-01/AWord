@@ -405,6 +405,20 @@ mọi cỡ viết theo `--u` = 1 % bề rộng nên chỉ phóng to 33 %), nhưn
 - Đo cuối ở 1366×1024, hai nửa: chia đều **683/684**, trái 129 px + phải 210 px, `clipped:false` cả hai,
   không cuộn ngang/dọc, console sạch.
 
+### 20c. Ô tích bị thầy nhìn không ra → thành DẢI RIÊNG (Đợt 368c, 22/9/2026)
+Thầy gửi ảnh bảng Options của trận kèm: *"Tôi có thấy nút bấm gì khác cũ đâu"* — trong khi ô **Question
+screen** nằm ngay trên chính ảnh đó, góc dưới phải, chưa tích.
+**Gốc**: nó được dựng bằng `addCheck`, nên rơi vào hàng ô tích cùng **Shuffle questions · Shuffle answers ·
+Show answers at end** — cả hàng đó đều là chuyện XÁO TRỘN/HIỂN THỊ CUỐI VÁN, nên mắt xếp nó vào nhóm ấy rồi
+lướt qua. Cộng thêm cái tên "Question screen" tự nó không nói được dùng để làm gì.
+**Sửa**: `mkCell({ label: "Question screen", sub: "show questions on an iPad", wide: true })` + `mkSeg`
+hai nấc **Off | On iPad** ⇒ một DẢI TRỌN CHIỀU NGANG nằm ngay dưới LIVES, trên TIME DELAY, có nhãn phụ nói
+rõ công dụng. Hàng ô tích trở lại đúng 3 ô cũ.
+**Bài học**: một tính năng mới đặt lẫn vào một nhóm CÓ SẴN thì thừa hưởng luôn ý nghĩa của nhóm đó — người
+dùng không đọc từng ô, họ đọc CỤM. Ô tích mới giữa ba ô tích cũ là một ô tích vô hình.
+Đo: `.aw-optc-wide` ✓, nhãn "Question screenshow questions on an iPad" ✓, bấm **On iPad** → `is-on` ✓,
+Apply → dựng lại trận → PLAY: 2 tên lửa, 8 ô, câu hỏi VẪN HIỆN (chưa có iPad), console sạch.
+
 ### ĐỀ XUẤT SỬA CORE (chờ thầy duyệt trước khi commit)
 `core/store.js` — `APP_DATA_KINDS` thêm **3 chuỗi**, không đổi một dòng logic nào:
 `"rocketrace-link"`, `"rocketrace-view"` (hai doc mới ở trên) và **`"showdown-session"`**.
