@@ -67,6 +67,12 @@ const TICK_MS = 50;                  // one physics step
 const MAX_LIVES = 10;
 const MAX_ROCKETS = 6;               // lanes on the track (1 player + up to 5 rivals, or up to 6 teams)
 const STALL_MS = 1100;               // engine sputter after a wrong answer
+// ⭐ Đợt 370 (thầy, 22/9/2026) — "sau khi xong 1 câu trước, phải có 1 khoảng delay
+// nhỏ để khi double tab, không bị nhảy quá nhanh để chọn cả câu trước và câu sau".
+// A tile sits under the finger; the next question rebuilds tiles in the SAME
+// place, so the second tap of a double-tap lands on a brand-new question the
+// class has not even read. Same idea as the engine's own START_GUARD_MS.
+const TAP_GUARD_MS = 400;
 const ANSWER_HOLD_MS = 800;          // pause on a resolved question before the next one
 const TURBO_MS = 4500;               // afterburner window
 const TURBO_STREAK = 3;              // right answers in a row that light the afterburner
@@ -316,8 +322,13 @@ const rrPauseHandlers = new Set();
 // the writing, one packet per round, after a short coalesce window that lets
 // BOTH boards land first (advanceRound loops the boards synchronously, so the
 // two calls are the same tick apart — 80 ms is many times over).
-const rrLinkText = ["", ""];        // latest question text, per side
-const rrLinkVoiceOnly = [false, false];
+// ⭐ Đợt 370 (thầy, 22/9/2026) — "phần text ở trên ipad được chuyển thành TỪ,
+// chỉ cần từ thôi": the second screen shows the ANSWER WORD, not the clue.
+// ⚠️ That means the iPad is showing the answer, which thầy chose knowingly after
+// being told — so it is a screen for reading the word aloud, NOT something to
+// point at the class while they are still choosing.
+const rrLinkWord = ["", ""];        // the correct answer's text, per side
+const rrLinkVoiceOnly = [false, false];   // no usable text at all (word missing)
 // Đợt 368d — each side's OWN question number / total (In turns can deal 41 vs 40,
 // so a single shared count was never quite honest). 0 = that board has not
 // reported yet, and the screen shows nothing rather than "1 / 0".
@@ -364,9 +375,9 @@ function rrLinkQueueWrite(own) {
     const t = own.meta.teams || [];
     publishStage({
       matchId: own.matchId, actTitle: own.meta.actTitle || "", phase: "playing",
-      round: own.round, same: rrLinkText[0] === rrLinkText[1],
+      round: own.round, same: rrLinkWord[0] === rrLinkWord[1],
       clockMs: own.goAt ? Date.now() - own.goAt : 0,
-      q0: rrLinkText[0], q1: rrLinkText[1],
+      q0: rrLinkWord[0], q1: rrLinkWord[1],
       vo0: rrLinkVoiceOnly[0], vo1: rrLinkVoiceOnly[1],
       qn0: rrLinkNum[0], qt0: rrLinkTotal[0],
       qn1: rrLinkNum[1], qt1: rrLinkTotal[1],
@@ -384,7 +395,7 @@ function rrLinkStop() {
   if (own.writeTimer) { clearTimeout(own.writeTimer); own.writeTimer = null; }
   if (own.poll) { clearInterval(own.poll); own.poll = null; }
   if (own.unsub) { try { own.unsub(); } catch { /* already gone */ } }
-  rrLinkText[0] = rrLinkText[1] = "";
+  rrLinkWord[0] = rrLinkWord[1] = "";
   rrLinkVoiceOnly[0] = rrLinkVoiceOnly[1] = false;
   rrLinkNum[0] = rrLinkNum[1] = 0;
   rrLinkTotal[0] = rrLinkTotal[1] = 0;
@@ -774,12 +785,17 @@ const rocketRaceTemplate = {
       if (scene.qbar) scene.qbar.classList.toggle("is-remote", !!alive);
       if (scene.host) scene.host.classList.toggle("is-noq", !!alive);
     }
-    // Hand this board's question to the link. Both boards call it; only board 0
+    // Hand this board's WORD to the link. Both boards call it; only board 0
     // actually writes (rrLinkQueueWrite coalesces the two into one packet).
-    function reportLink(idx, q, hideText) {
+    function reportLink(idx, q) {
       if (!twoDevice || !rrLinkOwner) return;
-      rrLinkText[fightSide] = hideText ? "" : (q.question || "");
-      rrLinkVoiceOnly[fightSide] = !!hideText;
+      // Đợt 370 — the WORD (the correct answer), not the clue. A voice-only act
+      // still has a written answer, so `hideText` no longer matters here; the
+      // only fallback left is an act whose right answer carries no text at all.
+      const right = (q.answers || []).find(a => a && a.correct);
+      const word = (right && right.text) || "";
+      rrLinkWord[fightSide] = word;
+      rrLinkVoiceOnly[fightSide] = !word;
       // This board's OWN place in its OWN pile (Đợt 368d) — `N` is this board's
       // question count, which In turns can make differ from the other board's.
       rrLinkNum[fightSide] = Math.min(idx + 1, N);
@@ -976,7 +992,7 @@ const rocketRaceTemplate = {
       firstQuestionSpoken = true;
       fitText(qBox, t);
       if (fightCtl) syncQbar(scene);
-      reportLink(idx, q, vv.hideText);   // Đợt 368 — send it to the second screen
+      reportLink(idx, q);   // Đợt 368/370 — send this board's WORD to the second screen
 
       // answer tiles
       const answers = (opt.shuffleAnswers ? shuffle(q.answers) : [...q.answers]).filter(a => a && a.text != null);
@@ -1018,8 +1034,17 @@ const rocketRaceTemplate = {
 
       const mover = teamsMode ? currentTeam() : player;
       ui.setNav({ index: fightCtl ? idx + 1 : Math.min(mover.p + 1, mover.L), total: fightCtl ? N : mover.L });
-      locked = false;
+      // ⭐ Đợt 370 — the new question's tiles are DEAD for a moment. Without this
+      // the second tap of a double-tap answers a question nobody has read: the
+      // tiles are rebuilt under the finger in the same spot. Re-check `curItem`
+      // on the way out — a nav jump or a new round may have moved on already.
+      locked = true;
       if (fightCtl) syncFightLock();
+      later(() => {
+        if (dead || finished || curItem !== idx) return;
+        locked = false;
+        if (fightCtl) syncFightLock();
+      }, TAP_GUARD_MS);
     }
 
     function paintTurnChip() {

@@ -116,8 +116,11 @@ function paintStage(s) {
     // a half that has not started yet says nothing instead of "1 / 0".
     els.num[i].textContent = (side.num && side.total) ? (side.num + " / " + side.total) : "";
     const q = els.q[i];
+    // Đợt 370 — `side.text` is now the answer WORD. `voiceOnly` no longer means
+    // "a listening question": it means this act's right answer carries no text
+    // at all, so there is simply nothing to put up.
     q.classList.toggle("is-voice", side.voiceOnly);
-    q.textContent = side.voiceOnly ? "🔊" : side.text;
+    q.textContent = side.voiceOnly ? "—" : side.text;
     // Long questions shrink to fit rather than being cut off. One-shot per
     // question: the box only changes size when the iPad is rotated, and that
     // fires the refit below.
