@@ -1,8 +1,10 @@
 # GHI CHÚ — ROCKET RACE (đua tên lửa)
 
-🆕 **Đợt 368 (22/9/2026) — FIGHT TRÊN HAI MÁY: câu hỏi sang iPad, máy chơi giữ đường đua + ô đáp án.** Xem **mục 20**
-(có ĐỀ XUẤT SỬA CORE `core/store.js` chờ duyệt, và checklist ⬜ **thầy phải bấm tay** — đường mạng thật chưa chạy
-lần nào vì Claude không đăng nhập được tài khoản thầy). Chưa commit.
+🆕 **Đợt 368 + 368b (22/9/2026) — FIGHT TRÊN HAI MÁY: câu hỏi sang iPad, máy chơi giữ đường đua + ô đáp án.**
+✅ **COMMIT + PUSH `0b5e4f1` + LIVE** (7/7 mã băm SHA-256 khớp sau 220 s; `source.html` trên bản live mở ra đúng
+màn "Sign in to link this screen", 0 lỗi console). Thầy đã duyệt gộp luôn sửa core `core/store.js`.
+Xem **mục 20** (+ **20b** cho iPad 12.9" ngang) và checklist ⬜ **thầy bấm tay 7 bước** — đường mạng hai máy
+vẫn CHƯA chạy lần nào vì Claude không đăng nhập được tài khoản thầy.
 
 Trạng thái: ✅ Đợt 350 `f55aa2d` · ✅ Đợt 351 `cb95795` (Fight) COMMIT + PUSH · 🟢 **Đợt 353 + 354 (Fight: tỉ lệ 32:7 + 16:7, phi công vào cửa sổ, lửa bám thân, ☰/‹ › lên dải chung; ẩn điểm, số mũi tàu, lùi tàu khi Points off, Lives = tàu nát dần → nổ) ✅ COMMIT + PUSH `f5fd42e`; **Đợt 355** (câu hỏi 1 dòng trên cùng, đua 32:5.75 không minimap, bàn 16:5 nền màu tàu, chip xuống dưới, dải điểm xuống dưới bàn + đồng hồ vào dải nút, ĐƯỜNG ĐUA CO GIÃN để câu cuối tàu chạm đích) — xem mục 10 + 11 + 12.
 Kế hoạch gốc + lý do từng quyết định: `KE HOACH ROCKET-RACE.md` cùng thư mục. Thầy đã chốt 20/9:

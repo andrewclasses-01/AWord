@@ -12,7 +12,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **⭐⭐⭐ Đợt 368** (22/9/2026, ROCKET RACE — **FIGHT TRÊN HAI MÁY**: câu hỏi sang iPad qua `source.html`, máy chơi giữ đường đua + ô đáp án; một chiều, 2 tài liệu mỗi cái 1 người ghi, KHÔNG đụng `core/fight.js`, KHÔNG phải đăng luật Firestore mới; ⬜ CHƯA COMMIT, ⬜⬜ đường mạng thật chưa chạy — xem mục **Đợt 368**). Trước đó: **Đợt 362** (phi công chỉ lên xuống ±1,2 %, bỏ dịch ngang). Trước đó: **Đợt 361** (phi công nhấp ±6 % theo pha thân tàu, ép lùi khi boost, rung khi khựng). Trước đó: **Đợt 360** (khói/nhấp trong Fight quá nhỏ + bị cắt mép → làn lùi 7 %, khói to đậm). Trước đó: **Đợt 359** (phi công chỉ nhấp lên xuống; khói trắng mờ sau lửa). Trước đó: **Đợt 358** (phi công cắt tròn trong cửa sổ + lắc lư, bỏ đường kẻ làn). Trước đó: **Đợt 357** (20/9/2026 tối, chỉ rocket-race.css — căn giữa chip TEAM X/tim và vạch đích theo ảnh thầy). Trước đó: **⭐⭐ Đợt 356** (20/9/2026 tối, ROCKET RACE — **màn START Fight**: bìa READY bị cắt trong bàn 16:5 → thông tin act
+> Mới nhất: **⭐⭐⭐ Đợt 368 + 368b** (22/9/2026, ROCKET RACE — **FIGHT TRÊN HAI MÁY**: câu hỏi sang iPad qua `source.html`, máy chơi giữ đường đua + ô đáp án; một chiều, 2 tài liệu mỗi cái 1 người ghi, KHÔNG đụng `core/fight.js`, KHÔNG phải đăng luật Firestore mới; ✅ COMMIT + PUSH `0b5e4f1` + LIVE 7/7 mã băm, ⬜⬜ đường mạng hai máy thật chưa chạy — xem mục **Đợt 368**). Trước đó: **Đợt 362** (phi công chỉ lên xuống ±1,2 %, bỏ dịch ngang). Trước đó: **Đợt 361** (phi công nhấp ±6 % theo pha thân tàu, ép lùi khi boost, rung khi khựng). Trước đó: **Đợt 360** (khói/nhấp trong Fight quá nhỏ + bị cắt mép → làn lùi 7 %, khói to đậm). Trước đó: **Đợt 359** (phi công chỉ nhấp lên xuống; khói trắng mờ sau lửa). Trước đó: **Đợt 358** (phi công cắt tròn trong cửa sổ + lắc lư, bỏ đường kẻ làn). Trước đó: **Đợt 357** (20/9/2026 tối, chỉ rocket-race.css — căn giữa chip TEAM X/tim và vạch đích theo ảnh thầy). Trước đó: **⭐⭐ Đợt 356** (20/9/2026 tối, ROCKET RACE — **màn START Fight**: bìa READY bị cắt trong bàn 16:5 → thông tin act
 > lên vùng chung, bàn chỉ còn icon + TEAM n + ▶; core `fightFrame.readyShared` + `teams`). Xem mục **Đợt 356**.
 > Trước đó: **⭐⭐ Đợt 355** (20/9/2026 tối, ROCKET RACE — **FIGHT bố cục gọn**: câu hỏi 1 dòng trên cùng, bỏ minimap, đua
 > 32:5.75, bàn 16:5 nền màu tàu + chip dưới ô, dải điểm xuống dưới bàn + đồng hồ vào dải nút (core `fightFrame.topStrip`),
@@ -531,7 +531,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 368 (22/9/2026, ROCKET RACE — **FIGHT TRÊN HAI MÁY**: câu hỏi sang iPad, máy chơi giữ đường đua + ô đáp án) · ⬜ CHƯA COMMIT · ⬜⬜ ĐƯỜNG MẠNG THẬT CHƯA CHẠY
+## Đợt 368 + 368b (22/9/2026, ROCKET RACE — **FIGHT TRÊN HAI MÁY**: câu hỏi sang iPad, máy chơi giữ đường đua + ô đáp án) · ✅ COMMIT + PUSH `0b5e4f1` + LIVE (7/7 mã băm khớp sau 220 s) · ⬜⬜ ĐƯỜNG MẠNG THẬT CHƯA CHẠY
 
 **Yêu cầu của thầy** (nguyên văn): *"Ngoài màn hình chính hiển thị trò chơi, với câu hỏi, race và 2 đội, bây giờ tôi
 muốn kết nối với 1 ipad… Máy tomko sẽ không hiển thị câu hỏi nữa mà chỉ hiển thị race và khung chọn kết quả của 2
