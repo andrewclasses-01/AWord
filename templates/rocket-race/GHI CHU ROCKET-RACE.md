@@ -534,6 +534,36 @@ thành nhịp khập khiễng. Một ticker 40 ms chỉ NHÌN TRƯỚC và đặ
 Đo (spy `createOscillator` trên context thật): 6 nốt trong 2 giây đúng nhịp tính toán, có cả triangle 87/98 Hz
 lẫn square 587–1047 Hz, tần số khớp thang trưởng. ⚠️ **Claude không nghe được** — thầy phải tự nghe.
 
+## 22. Đợt 371 (22/9/2026) — chữ iPad bé lại, MỘT TỪ KHÔNG BAO GIỜ TÁCH HAI HÀNG
+Thầy: *"chữ trên ipad quá to (một cách không cần thiết vì màn hình ipad 12.9 và hs đứng gần)"* · *"có những chữ
+bị nhảy xuống 2 hàng, ví dụ chữ PENNY thì PENN hàng trên, Y hàng dưới ⇒ cần cho chữ bé lại và 1 từ không bao
+giờ được tách làm 2 hàng. Lấy size của cỡ chữ bé hơn, 2 bên phải có size bằng nhau, chỉ xuống dòng nếu có cụm
+có dấu cách, không xuống giữa 1 từ"*.
+
+**⛔ Gốc của "PENN / Y": `overflow-wrap: break-word` trên `.rrs-q`** — và đây ĐÚNG là cái bẫy dự án đã ghi một
+lần rồi (Đợt 222, Find the match): *bẻ giữa từ xong thì ô HẾT TRÀN, nên bộ thu chữ tưởng đã vừa và không co
+nữa.* Gỡ luật đó ⇒ mặc định chỉ xuống dòng ở DẤU CÁCH, và một từ rộng hơn ô trở lại thành một cú tràn THẬT mà
+phép đo nhìn thấy được và trả lời bằng cách thu nhỏ chữ.
+
+**⛔ Bỏ `fitOnce`, tự đo bằng `Range.getClientRects()`.** `fitOnce` hỏi `scrollWidth`, mà `scrollWidth` chỉ đếm
+phần tràn qua mép CUỐI. Chữ ở đây **căn giữa**, nên một từ quá rộng thò đều RA CẢ HAI BÊN và `scrollWidth` báo
+thiếu — đúng lời nói dối mà dự án đã ghi cho hộp flex căn giữa ở Find the match, và cách chữa ở đó cũng chính
+là `Range.getClientRects()`. Nay đo **bề rộng DÒNG DÀI NHẤT** + tổng cao từ chính các line box.
+
+**Chữ bé lại**: base `7u → 5.5u` (hai nửa) và `9u → 7u` (khi gộp một dòng), **và bỏ hẳn phóng to** (`max` 2.2 →
+**1**). Đợt 368b cho phép nở là đúng lúc đó — khi ấy iPad hiện CÂU HỎI dài; từ Đợt 370 nó hiện một TỪ, nên
+không còn gì để lấp đầy màn và cũng không có lý do để cố.
+
+**Hai nửa luôn cùng cỡ**: fit từng nửa rồi lấy **min** áp cho cả hai (`layoutText`). Hai cỡ chữ khác nhau đứng
+cạnh nhau đọc ra thành "từ của đội này quan trọng hơn".
+
+**Đo thật (1366×1024)**: "PENNY" vs "MARS" ⇒ **1 dòng**, 75 px, hai bên **cùng cỡ** · "EXTRAORDINARILY" (15 ký
+tự) ⇒ co còn 68 px, vẫn **1 dòng**, rộng 583 ≤ 583 · "Milky Way Galaxy Cluster" ⇒ **2 dòng, cắt ở dấu cách**,
+vừa bề ngang · tiếng Việt "người/đường" ⇒ 1 dòng · gộp một dòng ("Armstrong") ⇒ 96 px, nửa phải ẩn · từ cực
+đoan 45 ký tự ⇒ fit .29, vẫn 1 dòng và vẫn vừa khung (không cắt chữ).
+⚠️ Một phép đo của chính tôi tự sai trong lúc thử: đọc `fontSize` ở cuối, tức SAU khi ca thử sau đã đổi `--fit`
+⇒ báo 22 px cho một ca lẽ ra 96 px. Đo lại từng ca ngay sau khi dựng mới ra số đúng.
+
 ### ĐỀ XUẤT SỬA CORE (chờ thầy duyệt trước khi commit)
 `core/store.js` — `APP_DATA_KINDS` thêm **3 chuỗi**, không đổi một dòng logic nào:
 `"rocketrace-link"`, `"rocketrace-view"` (hai doc mới ở trên) và **`"showdown-session"`**.

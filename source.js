@@ -15,7 +15,6 @@
 // =============================================================
 
 import { onUser, signIn } from "./core/firebase.js";
-import { fitOnce } from "./core/fit.js";
 import { subscribeStage, touchViewer, VIEWER_BEAT_MS } from "./templates/rocket-race/rr-link.js";
 
 const $ = id => document.getElementById(id);
@@ -75,27 +74,64 @@ function setOnline(on) {
   else if (stage) { clockRunning = true; paintClock(); }
 }
 
-// ⭐ The fit is allowed to GROW the text, not only shrink it (Đợt 368b, thầy
-// dùng iPad Pro 12.9" nằm ngang = 1366×1024). `fitOnce`'s default ceiling of 1
-// meant a short answer-question like "Mars" sat at its base 96px and used 15 %
-// of an 824px-tall box — tiny, on the largest screen in the room. Measured at
-// 1366×1024: a long question and a Vietnamese one are capped by HEIGHT long
-// before this ceiling (63px / 88px whatever the ceiling is), so raising it
-// changes nothing for them and only lets the short ones fill the space:
-// "Mars" 96 → 210px, and a shared single-line question 172 → 211px.
-// ⚠️ `slack` SCALES WITH THE SCREEN, and `contentBox` must stay OFF (both
-// measured, both wrong on the first try):
-//   · a FIXED slack cannot work — the Vietnamese marks that spill past the line
-//     box grow with the type, so 10px cleared them at 66px type and clipped them
-//     at 88px. 2u ≈ 27px on this iPad, ~20px on a smaller one.
-//   · `contentBox:true` looks like the tidy fix and silently breaks everything:
-//     it subtracts the box's padding from the width it compares against, but the
-//     text block is `width:100%` of that same content box — so the two cancel and
-//     EVERY question reads as overflowing. Measured: all five test questions
-//     collapsed to the 0.25 floor (24px).
-function fitOpts() {
-  const u = parseFloat(getComputedStyle(rrs).getPropertyValue("--u")) || 10;
-  return { min: 0.25, max: 2.2, slack: Math.round(u * 2) };
+// ---- fitting the word (Đợt 371) -------------------------------------------
+// ⛔ `fitOnce` is NOT used here any more, and the reason matters. It asks
+// `content.scrollWidth`, and scrollWidth only counts overflow past the END edge.
+// This text is CENTRED, so a word too wide for its box spills equally off BOTH
+// sides and scrollWidth under-reports it — the same lie this project already
+// documented for a centred flex box in Find the match, where the answer was to
+// measure with `Range.getClientRects()` instead. Anything that measures the text
+// honestly has to look at the line boxes themselves.
+//
+// ⭐ And the fit no longer GROWS the text (max is 1). Thầy, 22/9/2026: *"chữ trên
+// ipad quá to (một cách không cần thiết vì màn hình ipad 12.9 và hs đứng gần)"* —
+// the words are short now (Đợt 370 put the ANSWER there, not the clue), so there
+// is nothing to fill the screen with and no reason to try.
+
+// Widest LINE and total height of the text — measured off the real line boxes,
+// so a centred overflow cannot hide from it.
+function measureText(q) {
+  const r = document.createRange();
+  r.selectNodeContents(q);
+  const rects = Array.from(r.getClientRects());
+  if (!rects.length) return { w: 0, h: 0 };
+  let w = 0, top = Infinity, bottom = -Infinity;
+  for (const x of rects) {
+    if (x.width > w) w = x.width;
+    if (x.top < top) top = x.top;
+    if (x.bottom > bottom) bottom = x.bottom;
+  }
+  return { w, h: bottom - top };
+}
+
+// Largest `--fit` (≤ 1) at which this half's text fits its box. Returns it
+// WITHOUT committing, so the caller can make both halves agree first.
+function fitOne(box, q) {
+  const cs = getComputedStyle(box);
+  const availW = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const availH = box.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const set = v => q.style.setProperty("--fit", v);
+  const fits = () => { const m = measureText(q); return m.w <= availW && m.h <= availH; };
+  set(1);
+  if (fits()) return 1;
+  let lo = 0.2, hi = 1, best = 0.2;
+  for (let i = 0; i < 14; i++) {
+    const mid = (lo + hi) / 2;
+    set(mid);
+    if (fits()) { best = mid; lo = mid; } else hi = mid;
+  }
+  return best;
+}
+
+// ⭐ BOTH HALVES END UP THE SAME SIZE, at whichever half needed to be smaller
+// (thầy: *"2 bên phải có size bằng nhau"* + *"lấy size của cỡ chữ bé hơn"*).
+// Two different sizes side by side read as one team's word mattering more.
+function layoutText(sides) {
+  const active = sides.length > 1 && !rrs.classList.contains("is-same") ? [0, 1] : [0];
+  const vals = active.map(i => (sides[i] && sides[i].voiceOnly) ? 1 : fitOne(els.box[i], els.q[i]));
+  const one = Math.min(1, ...vals);
+  active.forEach(i => els.q[i].style.setProperty("--fit", one));
+  return one;
 }
 
 // ---- drawing a question ----
@@ -121,23 +157,18 @@ function paintStage(s) {
     // at all, so there is simply nothing to put up.
     q.classList.toggle("is-voice", side.voiceOnly);
     q.textContent = side.voiceOnly ? "—" : side.text;
-    // Long questions shrink to fit rather than being cut off. One-shot per
-    // question: the box only changes size when the iPad is rotated, and that
-    // fires the refit below.
     q.style.setProperty("--fit", "1");
-    if (!side.voiceOnly) fitOnce(els.box[i], q, v => q.style.setProperty("--fit", v), fitOpts());
   });
+  // A word too wide for its half shrinks rather than being cut or split; both
+  // halves then settle on the smaller of the two sizes.
+  layoutText(s.sides);
   hideNote();
 }
 
 function refit() {
   if (!stage) return;
-  stage.sides.forEach((side, i) => {
-    if (side.voiceOnly) return;
-    const q = els.q[i];
-    q.style.setProperty("--fit", "1");
-    fitOnce(els.box[i], q, v => q.style.setProperty("--fit", v), fitOpts());
-  });
+  stage.sides.forEach((side, i) => { if (!side.voiceOnly) els.q[i].style.setProperty("--fit", "1"); });
+  layoutText(stage.sides);
 }
 window.addEventListener("resize", () => setTimeout(refit, 150));
 window.addEventListener("orientationchange", () => setTimeout(refit, 300));
