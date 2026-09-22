@@ -303,13 +303,18 @@ const rrPauseHandlers = new Set();
 // two calls are the same tick apart — 80 ms is many times over).
 const rrLinkText = ["", ""];        // latest question text, per side
 const rrLinkVoiceOnly = [false, false];
+// Đợt 368d — each side's OWN question number / total (In turns can deal 41 vs 40,
+// so a single shared count was never quite honest). 0 = that board has not
+// reported yet, and the screen shows nothing rather than "1 / 0".
+const rrLinkNum = [0, 0];
+const rrLinkTotal = [0, 0];
 let rrLinkOwner = null;             // board 0's controller while the link is on
 
 function rrLinkStart(meta) {
   rrLinkStop();                      // a rebuilt match (Start again / Apply) starts a new one
   const own = {
     matchId: mintMatchId(),
-    meta,                            // { actTitle, total, teams:[{name,color},…] }
+    meta,                            // { actTitle, teams:[{name,color},…] }
     round: 0, same: true, goAt: 0, over: false,
     viewerAt: 0, alive: false,
     writeTimer: null, poll: null, unsub: null,
@@ -344,10 +349,12 @@ function rrLinkQueueWrite(own) {
     const t = own.meta.teams || [];
     publishStage({
       matchId: own.matchId, actTitle: own.meta.actTitle || "", phase: "playing",
-      round: own.round, total: own.meta.total || 0, same: rrLinkText[0] === rrLinkText[1],
+      round: own.round, same: rrLinkText[0] === rrLinkText[1],
       clockMs: own.goAt ? Date.now() - own.goAt : 0,
       q0: rrLinkText[0], q1: rrLinkText[1],
       vo0: rrLinkVoiceOnly[0], vo1: rrLinkVoiceOnly[1],
+      qn0: rrLinkNum[0], qt0: rrLinkTotal[0],
+      qn1: rrLinkNum[1], qt1: rrLinkTotal[1],
       t0name: t[0]?.name || "TEAM 1", t0color: t[0]?.color || "",
       t1name: t[1]?.name || "TEAM 2", t1color: t[1]?.color || ""
     }).catch(() => { /* offline / signed out — the guard puts the question back */ });
@@ -364,6 +371,8 @@ function rrLinkStop() {
   if (own.unsub) { try { own.unsub(); } catch { /* already gone */ } }
   rrLinkText[0] = rrLinkText[1] = "";
   rrLinkVoiceOnly[0] = rrLinkVoiceOnly[1] = false;
+  rrLinkNum[0] = rrLinkNum[1] = 0;
+  rrLinkTotal[0] = rrLinkTotal[1] = 0;
   // Drop the document so an iPad opened tomorrow never reads today's match.
   clearStage().catch(() => { /* offline — it carries `matchId`, so it is ignorable anyway */ });
 }
@@ -636,7 +645,6 @@ const rocketRaceTemplate = {
     if (twoDevice && fightSide === 0) {
       const own = rrLinkStart({
         actTitle: activity.title || "",
-        total: N,
         teams: FIGHT_TEAMS.map(t => ({ name: t.name, color: t.hull.c }))
       });
       own.onAlive = paintLink;
@@ -757,6 +765,10 @@ const rocketRaceTemplate = {
       if (!twoDevice || !rrLinkOwner) return;
       rrLinkText[fightSide] = hideText ? "" : (q.question || "");
       rrLinkVoiceOnly[fightSide] = !!hideText;
+      // This board's OWN place in its OWN pile (Đợt 368d) — `N` is this board's
+      // question count, which In turns can make differ from the other board's.
+      rrLinkNum[fightSide] = Math.min(idx + 1, N);
+      rrLinkTotal[fightSide] = N;
       rrLinkOwner.round = idx;
       rrLinkQueueWrite(rrLinkOwner);
     }

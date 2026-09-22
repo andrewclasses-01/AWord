@@ -22,8 +22,9 @@ const $ = id => document.getElementById(id);
 const rrs = $("rrs");
 const note = $("rrs-note");
 const els = {
-  act: $("rrs-act"), count: $("rrs-count"), clock: $("rrs-clock"),
+  act: $("rrs-act"), clock: $("rrs-clock"),
   q: [$("rrs-q0"), $("rrs-q1")], box: [$("rrs-box0"), $("rrs-box1")],
+  num: [$("rrs-num0"), $("rrs-num1")],
   name: [$("rrs-name0"), $("rrs-name1")], dot: [$("rrs-dot0"), $("rrs-dot1")],
   noteIc: $("rrs-note-ic"), noteTitle: $("rrs-note-title"),
   noteSub: $("rrs-note-sub"), noteBtn: $("rrs-note-btn")
@@ -104,7 +105,6 @@ function paintStage(s) {
   stage = s;
   rrs.classList.toggle("is-same", !!s.same);
   els.act.textContent = s.actTitle || "";
-  els.count.textContent = s.total ? (Math.min(s.round + 1, s.total) + " / " + s.total) : "";
   clockBase = s.clockMs; clockFrom = Date.now();
   clockRunning = s.phase !== "over" && online;
   paintClock();
@@ -112,6 +112,9 @@ function paintStage(s) {
   s.sides.forEach((side, i) => {
     els.name[i].textContent = side.team.name;
     els.dot[i].style.setProperty("--rc", side.team.color || "#4fc3f7");
+    // Each team's own place in its own pile. Blank until that board reports, so
+    // a half that has not started yet says nothing instead of "1 / 0".
+    els.num[i].textContent = (side.num && side.total) ? (side.num + " / " + side.total) : "";
     const q = els.q[i];
     q.classList.toggle("is-voice", side.voiceOnly);
     q.textContent = side.voiceOnly ? "🔊" : side.text;
@@ -179,7 +182,8 @@ document.addEventListener("visibilitychange", () => {
 // ---- wiring ----
 function waitingForGame() {
   stage = null; lastAt = 0; clockRunning = false;
-  els.clock.textContent = ""; els.count.textContent = ""; els.act.textContent = "";
+  els.clock.textContent = ""; els.act.textContent = "";
+  els.num.forEach(n => { n.textContent = ""; });
   showNote("🚀", "Waiting for the game",
     "Start a Rocket race match on the classroom screen with “Question screen” ticked in Options, and the questions will appear here.");
 }

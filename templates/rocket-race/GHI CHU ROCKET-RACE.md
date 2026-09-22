@@ -419,6 +419,36 @@ dùng không đọc từng ô, họ đọc CỤM. Ô tích mới giữa ba ô t�
 Đo: `.aw-optc-wide` ✓, nhãn "Question screenshow questions on an iPad" ✓, bấm **On iPad** → `is-on` ✓,
 Apply → dựng lại trận → PLAY: 2 tên lửa, 8 ô, câu hỏi VẪN HIỆN (chưa có iPad), console sạch.
 
+### 20d. Số câu mỗi đội một số, nằm DƯỚI khung của đội đó (Đợt 368d, 22/9/2026)
+Thầy: *"Khi fight content … là Different, thì 2 ô hiển thị câu hỏi trên ipad sẽ độc lập… Hiển thị số câu
+của 2 bên cũng độc lập trong trường hợp này, mỗi cái hiện ở 1 bên khung (để ở dưới)."*
+
+**⚠️ Phần "độc lập" của LUẬT CHƠI: thầy chốt KHÔNG sửa** — *"Tùy vào time delay như các act khác"*.
+Đã tra trọng tài trước khi hỏi, và đây là điều cần biết cho phiên sau:
+- `lockLoser()` (`core/fight.js:637`) **chỉ true ở đúng nấc Time delay = 0,1s**. Ở nấc đó đội chậm bị
+  KHOÁ ngay khi đội kia trả lời đúng ⇒ mất câu. Từ **0,2s trở lên và ở ∞** thì đội chậm **KHÔNG bị khoá,
+  giữ nguyên câu và chơi tiếp tới khi tự xong** — tức là nửa yêu cầu của thầy VỐN ĐÃ CÓ, chỉ là thanh
+  Time delay trong ảnh thầy gửi đang để 0,1s.
+- Nửa còn lại ("đội 1 sang câu mới NGAY, không chờ") thì **chưa có và không làm**: trọng tài quản một
+  `roundIndex` CHUNG, `advanceRound()` chuyển CẢ HAI bàn cùng lúc; hai bàn chỉ khác NỘI DUNG câu
+  (`actFor(side)` trả orderA/orderB khi `fightContent==="different"`), không khác CHỈ SỐ. Muốn độc lập
+  thật phải bỏ khái niệm vòng chung trong `core/fight.js` ⇒ đổi luôn luật thắng thua (Time delay /
+  Speed bonus / Miss wait thành vô nghĩa). Thầy đã cân nhắc và **giữ nguyên**.
+
+**Đã làm — chỉ phần hiển thị**: số câu nay **LUÔN** nằm dưới mỗi nửa (thầy chọn "luôn để dưới mỗi khung",
+kể cả khi Same words), bỏ hẳn số chung trên thanh đầu. Thanh đầu còn tên act + đồng hồ trận.
+- Gói mang `qn0/qt0` và `qn1/qt1` thay cho một cặp `round/total` chung. ⚠️ Không thừa dù hai bàn hiện luôn
+  cùng vòng: **In turns chia 81 câu thành 41/40**, nên một con số chung vốn đã có thể nói sai.
+- Mỗi bàn tự khai chỗ đứng của MÌNH trong chồng câu của MÌNH (`reportLink`: `rrLinkNum[fightSide]`,
+  `rrLinkTotal[fightSide] = N`); bàn chưa khai thì để **trống**, không in "1 / 0".
+- 🐞 **Lỗi tự bắt**: bỏ `#rrs-count` khỏi HTML nhưng `waitingForGame()` còn một dòng `els.count.textContent`
+  ⇒ TypeError NGAY khi iPad quay về màn chờ (hết trận / Start again) — tức đúng lúc không ai đang nhìn máy
+  chơi để thấy. Bắt bằng grep tham chiếu cũ sau khi đổi DOM, không phải bằng mắt.
+- Đo 1366×1024: `3 / 20` tâm x=341 (giữa nửa trái), `5 / 20` tâm x=1025 (giữa nửa phải), cùng y=956, không
+  cắt chữ, console sạch. `is-same` ⇒ số vẫn hiện, căn giữa màn (x=683). Một bên chưa khai ⇒ để trống ✓.
+- Máy chơi với **Fight content = Different**: hai nửa thanh câu hỏi ra hai câu khác nhau ✓ ("Our galaxy is
+  called the …" vs "The Sun is a …"), 2 tên lửa, 7 ô, console sạch.
+
 ### ĐỀ XUẤT SỬA CORE (chờ thầy duyệt trước khi commit)
 `core/store.js` — `APP_DATA_KINDS` thêm **3 chuỗi**, không đổi một dòng logic nào:
 `"rocketrace-link"`, `"rocketrace-view"` (hai doc mới ở trên) và **`"showdown-session"`**.

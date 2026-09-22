@@ -59,7 +59,16 @@
       color: rgba(255,255,255,.62); border-bottom: 1px solid rgba(255,255,255,.12);
     }
     .rrs-act { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: .06em; }
-    .rrs-count, .rrs-clock { flex: 0 0 auto; font-weight: 800; color: rgba(255,255,255,.85); font-variant-numeric: tabular-nums; }
+    .rrs-clock { flex: 0 0 auto; font-weight: 800; color: rgba(255,255,255,.85); font-variant-numeric: tabular-nums; }
+    /* ⭐ Đợt 368d — the question number belongs UNDER ITS OWN half, one per team
+       (thầy: "mỗi cái hiện ở 1 bên khung (để ở dưới)"), not as one shared number
+       in the top bar. Always, whether the two teams share a question or not. */
+    .rrs-num {
+      flex: 0 0 auto; text-align: center; margin-top: calc(1.2 * var(--u));
+      font-size: calc(2.4 * var(--u)); font-weight: 800; line-height: 1;
+      color: rgba(255,255,255,.5); font-variant-numeric: tabular-nums; letter-spacing: .06em;
+      min-height: calc(2.4 * var(--u));
+    }
     /* Losing the network never blanks the question — it says so, in the one
        corner nobody is reading the question from. */
     .rrs-clock.is-bad { color: #ff6b81; letter-spacing: .04em; }
@@ -150,17 +159,18 @@
   <div class="rrs" id="rrs">
     <div class="rrs-bar">
       <div class="rrs-act" id="rrs-act"></div>
-      <div class="rrs-count" id="rrs-count"></div>
       <div class="rrs-clock" id="rrs-clock"></div>
     </div>
     <div class="rrs-body">
       <div class="rrs-half">
         <div class="rrs-team"><span class="rrs-dot" id="rrs-dot0"></span><span id="rrs-name0">TEAM 1</span></div>
         <div class="rrs-qbox" id="rrs-box0"><div class="rrs-q" id="rrs-q0"></div></div>
+        <div class="rrs-num" id="rrs-num0"></div>
       </div>
       <div class="rrs-half">
         <div class="rrs-team"><span class="rrs-dot" id="rrs-dot1"></span><span id="rrs-name1">TEAM 2</span></div>
         <div class="rrs-qbox" id="rrs-box1"><div class="rrs-q" id="rrs-q1"></div></div>
+        <div class="rrs-num" id="rrs-num1"></div>
       </div>
     </div>
     <div class="rrs-note" id="rrs-note">

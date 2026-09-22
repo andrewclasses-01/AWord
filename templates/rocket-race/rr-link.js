@@ -106,9 +106,16 @@ export function mintMatchId() {
 // ---- read side: tolerant, because a half-written or older-build document must
 // never break the screen that is drawing it (core rule) ----
 function normStage(raw) {
+  // ⭐ Đợt 368d — the question NUMBER is per side, not one number for the match
+  // (thầy, 22/9/2026: "hiển thị số câu của 2 bên cũng độc lập … mỗi cái hiện ở
+  // 1 bên khung"). Even under the current referee — where both boards sit on the
+  // same round — the two totals can genuinely differ (In turns deals 81 questions
+  // as 41/40), so one shared "n / N" was already capable of lying.
   const side = i => ({
     text: String(raw?.["q" + i] ?? ""),
     voiceOnly: !!raw?.["vo" + i],
+    num: Number(raw?.["qn" + i]) || 0,       // 1-based; 0 = not reported yet
+    total: Number(raw?.["qt" + i]) || 0,
     team: {
       name: String(raw?.["t" + i + "name"] ?? ("TEAM " + (i + 1))),
       color: String(raw?.["t" + i + "color"] ?? "")
@@ -119,7 +126,6 @@ function normStage(raw) {
     actTitle: String(raw?.actTitle ?? ""),
     phase: raw?.phase === "ready" || raw?.phase === "over" ? raw.phase : "playing",
     round: Number(raw?.round) || 0,
-    total: Number(raw?.total) || 0,
     same: !!raw?.same,
     clockMs: Number(raw?.clockMs) || 0,
     sides: [side(0), side(1)],
