@@ -449,6 +449,39 @@ kể cả khi Same words), bỏ hẳn số chung trên thanh đầu. Thanh đầ
 - Máy chơi với **Fight content = Different**: hai nửa thanh câu hỏi ra hai câu khác nhau ✓ ("Our galaxy is
   called the …" vs "The Sun is a …"), 2 tên lửa, 7 ô, console sạch.
 
+### 20e. Tàu sát mép lúc xuất phát · mũi tàu chạm vạch là thắng · nút mở màn nguồn (Đợt 368e+f, 22/9/2026)
+Thầy 3 ý: *"khi khởi động, đưa con tàu về sát mép màn hình hơn, chỉ đủ nhìn thấy đuôi lửa và một chút xíu
+khói"* · *"ở vị trí kết thúc race, chỉ cần mũi tàu chạm vạch là thắng luôn"* · *"thêm 1 nút (only icon) vào
+cạnh nút cài đặt … để dùng trên ipad khi cần, có thể dùng cho các act khác trong tương lai nữa"*.
+
+**(1) Vạch xuất phát.** `TRACK_START` 5 → **3**, và **BỎ `.aw-rr-shared .aw-rr-lanes { left: 7% }`** —
+tức đảo lại đúng thứ Đợt 360 đã thêm (hồi đó lùi làn vào để khói có chỗ; nay thầy muốn ngược lại và khói
+trôi khỏi mép TRÁI chính là cái "chút xíu" thầy cần). Đo Fight trước/sau: tàu 11,65u → **3u**; lửa bắt đầu
+8,94u → **0,28u**; khói 7,91u → **−0,74u** (thò ra ngoài, bị cắt một phần — đúng ý). Solo: tàu 3u, lửa
+−0,15u, khói −1,42u.
+
+**(2) Mũi tàu chạm vạch.** ⚠️ Gốc của việc mũi VƯỢT vạch **3,78u**: `--x` định vị **MÉP TRÁI** của tàu, mà
+vạch đích lại được đặt bằng một con số CHÉP TAY khác (`finishEl.style.left = TRACK_END + 7`). Hai con số
+cho cùng một chỗ ⇒ sai là đương nhiên.
+Sửa bằng cách **suy ra thay vì chép**: bề rộng tàu nay là **một nguồn duy nhất** `--rw` (trên `.aw-rr-track`),
+thân tàu + phi công + số mũi + vạch đích đều đọc nó; vạch đích đứng ở `calc((var(--track-end) + var(--rw)) * 1%)`
+= đúng một thân tàu sau mép trái = **đúng chỗ mũi tàu dừng**. JS chỉ còn ghi `--track-end` (= `TRACK_END`, nay **82**).
+⚠️ `--lanes` phải chuyển từ `.aw-rr-lanes` lên **`.aw-rr-track`**: vạch đích là ANH EM của khối làn, không
+phải con, nên nó không kế thừa được từ chỗ cũ.
+Đo: **Fight mũi 93,00u vs tâm vạch 93,00u (lệch 0,00)** · **Solo mũi 94,92u vs vạch 94,91u (lệch 0,01)** —
+hai chế độ tàu rộng khác nhau (11u/13u) mà vẫn tự khớp, vì cùng đọc `--rw`.
+⚠️ Bỏ `lanes left: 7%` còn một lợi ích kín: 1 % của làn nay **bằng đúng 1u**, nên phép tính vạch đích ở trên
+mới cộng được `%` với `u` mà không sai.
+
+**(3) Nút mở màn nguồn** (`main.js`, KHÔNG thuộc `core/`): icon-only cạnh nút Settings ở thanh trên, dùng
+`icons.follow` (hình máy tính bảng), mở thẳng `source.html` **cùng tab** (Safari iPad có thể nuốt popup;
+một cú điều hướng thì không bao giờ hỏng im lặng như popup bị chặn). ⚠️ Cố ý **không gắn với Rocket race**:
+`source.html` không chứa act cũng không chứa luật chơi — nó chỉ vẽ thứ được gửi tới — nên template khác sau
+này biết gửi là dùng lại được ngay.
+⚠️ Chưa kiểm được trên trang thật vì thanh nút chỉ dựng SAU khi đăng nhập (Claude không đăng nhập được).
+Đã kiểm bằng cách dựng đúng cấu trúc `.aw-appbar-right` với CSS thật: nút **46×46 px bằng đúng nút Settings**,
+cách 10 px, icon SVG vào đúng chỗ.
+
 ### ĐỀ XUẤT SỬA CORE (chờ thầy duyệt trước khi commit)
 `core/store.js` — `APP_DATA_KINDS` thêm **3 chuỗi**, không đổi một dòng logic nào:
 `"rocketrace-link"`, `"rocketrace-view"` (hai doc mới ở trên) và **`"showdown-session"`**.

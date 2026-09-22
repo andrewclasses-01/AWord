@@ -73,8 +73,17 @@ const TURBO_STREAK = 3;              // right answers in a row that light the af
 const CRATE_EVERY = 4;               // a crate every N right answers (first one after 3)
 const RIVAL_SLOW_TURBO = 0.72;       // rivals' speed while the player is in turbo
 const FINISH_BANNER_MS = 1700;       // "1ST PLACE!" on screen before the end panel
-const TRACK_START = 5;               // rocket x (% of track width) at the start line
-const TRACK_END = 86;                // rocket x at the finish line
+// ⭐ Đợt 368e (thầy, 22/9/2026) — "đưa con tàu về sát mép màn hình hơn, chỉ đủ
+// nhìn thấy đuôi lửa và một chút xíu khói". These two are the rocket's LEFT edge
+// as a % of the lane; the flame reaches ~0.25 rocket-widths further left and the
+// exhaust ~0.34, so 3 leaves the flame just inside the frame and lets the smoke
+// trail off the edge — which is the "chút xíu" asked for.
+const TRACK_START = 3;
+// ⭐ …and "chỉ cần mũi tàu chạm vạch là thắng luôn": this is still the rocket's
+// LEFT edge, so the finish line is drawn at TRACK_END + one rocket width (see
+// `--track-end` / `--rw` in rocket-race.css). 82 + 11 = 93 % in a match, 82 + 13
+// = 95 % solo — both land the flag clear of the right edge.
+const TRACK_END = 82;
 // Seconds a rival "needs" per segment — what Rival speed means in plain terms.
 const RIVAL_SECS = { slow: 10, normal: 7, fast: 5 };
 
@@ -175,7 +184,11 @@ function buildScene(host) {
   const track = el("div", "aw-rr-track");
   const lanesEl = el("div", "aw-rr-lanes");
   const finishEl = el("div", "aw-rr-finish");
-  finishEl.style.left = (TRACK_END + 7) + "%";
+  // Đợt 368e — the flag's position is DERIVED, not typed twice: CSS puts it at
+  // `--track-end + --rw` (one rocket width past the rocket's left edge), which
+  // is exactly where the nose lands. Hard-coding it here as `TRACK_END + 7` is
+  // what had the nose overshooting the flag by 3.8u — measured.
+  track.style.setProperty("--track-end", String(TRACK_END));
   track.append(finishEl, lanesEl);
   const fxLayer = el("div", "aw-rr-fx");
   const banner = el("div", "aw-rr-banner");
@@ -242,7 +255,9 @@ function ensureFightScene(ctl) {
   qbar.append(scene.qhalves[0], scene.qhalves[1]);
   host.append(qbar);
   scene.qbar = qbar;
-  scene.lanesEl.style.setProperty("--lanes", 2);
+  // Đợt 368e — `--lanes` now sits on the TRACK, not on the lane box: the finish
+  // flag is a SIBLING of the lanes and needs it too (it derives `--rw` from it).
+  scene.track.style.setProperty("--lanes", 2);
   scene.rockets = FIGHT_TEAMS.map((t, i) => {
     const r = { id: i, name: t.name, pilot: t.pilot, hull: t.hull, isPlayer: false, p: 0, L: 1,
                 el: null, tag: null, dot: null, done: false, place: 0, wobble: i * 1.3 };
@@ -783,7 +798,7 @@ const rocketRaceTemplate = {
 
     function renderRockets() {
       scene.lanesEl.innerHTML = ""; scene.minimap.innerHTML = "";
-      scene.lanesEl.style.setProperty("--lanes", rockets.length);
+      scene.track.style.setProperty("--lanes", rockets.length);   // Đợt 368e — see ensureFightScene
       rockets.forEach((r, laneIdx) => buildRocketEl(scene, r, laneIdx, rockets.length));
       const flag = el("div", "aw-rr-dot is-flag", "🏁");
       flag.style.setProperty("--x", TRACK_END);

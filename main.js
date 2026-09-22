@@ -2790,6 +2790,22 @@ function topbar(showNav) {
   } else {
     sdHomeBtnSetAnalyse = null;
   }
+  // ⭐ Đợt 368f (thầy, 22/9/2026) — QUESTION SCREEN, icon only, beside the gear:
+  // *"thêm 1 nút (only icon) vào cạnh nút cài đặt … để dùng trên ipad khi cần,
+  // có thể dùng cho các act khác trong tương lai nữa"*. It is simply the door to
+  // `source.html`, so the iPad never has to be handed a typed-out URL.
+  // ⚠️ Deliberately NOT Rocket-race-specific: that page is a generic second
+  // screen (it holds no act and no game logic — it draws whatever a match
+  // publishes), so any template that learns to publish can reuse it as-is.
+  // ⚠️ SAME TAB, not window.open(): on the iPad this page IS the job for the
+  // rest of the lesson, and Safari is free to swallow a popup — a navigation
+  // never fails the way a blocked popup does, silently.
+  const qscreen = el("button", "aw-appbtn aw-qscreen-btn", icons.follow);
+  qscreen.type = "button"; qscreen.title = "Question screen (second device)";
+  qscreen.setAttribute("aria-label", "Question screen");
+  qscreen.onclick = () => { location.href = "source.html"; };
+  right.append(qscreen);
+
   const gear = el("button", "aw-appbtn aw-settings-btn", icons.settings);
   gear.type = "button"; gear.title = "Settings"; gear.setAttribute("aria-label", "Settings");
   gear.onclick = openSettingsFlow;

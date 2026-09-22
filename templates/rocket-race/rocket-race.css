@@ -78,10 +78,16 @@
 .aw-rr-track {
   position: absolute; top: calc(5 * var(--aw-u)); left: 0; right: 0; height: calc(30.5 * var(--aw-u));
   z-index: 3;
+  /* ⭐ Đợt 368e — ONE SOURCE for the rocket's width, in `u`. The hull uses it,
+     and so does the finish flag (which must stand exactly one rocket-width past
+     `--track-end`, because `--x` positions the rocket's LEFT edge). Writing the
+     number in both places is how the nose came to overshoot the flag by 3.8u. */
+  --rw: min(13, 66 / var(--lanes, 5));
 }
 .aw-rr-finish {
   position: absolute; top: calc(-1 * var(--aw-u)); bottom: calc(-1 * var(--aw-u)); width: calc(2.4 * var(--aw-u));
-  left: 93%; transform: translateX(-50%);
+  /* the nose at TRACK_END = left edge + one rocket width ⇒ the flag sits there */
+  left: calc((var(--track-end, 82) + var(--rw)) * 1%); transform: translateX(-50%);
   background:
     repeating-conic-gradient(#fff 0 25%, #1b1b2a 0 50%) 0 0 / calc(1.2 * var(--aw-u)) calc(1.2 * var(--aw-u));
   border: calc(.25 * var(--aw-u)) solid #cfd3e6; border-radius: calc(.4 * var(--aw-u));
@@ -98,8 +104,9 @@
 /* ---- one rocket: flame · hull · pilot · name tag ---- */
 .aw-rr-rocket {
   position: absolute; top: 50%; left: calc(var(--x, 5) * 1%);
-  /* wide when there are few lanes, narrower when six rockets share the track */
-  width: calc(min(13, 66 / var(--lanes, 5)) * var(--aw-u));
+  /* wide when there are few lanes, narrower when six rockets share the track —
+     the number itself lives on `.aw-rr-track` as `--rw` (Đợt 368e) */
+  width: calc(var(--rw) * var(--aw-u));
   transform: translateY(-50%);
   z-index: 2;
   filter: drop-shadow(0 calc(.5 * var(--aw-u)) calc(.5 * var(--aw-u)) rgba(0,0,0,.45));
@@ -135,7 +142,7 @@
   position: absolute; left: 51.25%; top: 50%; transform: translate(-50%, -50%);
   width: 17.5%; aspect-ratio: 1; border-radius: 50%; overflow: hidden;
   display: flex; align-items: center; justify-content: center;
-  font-size: calc(min(13, 66 / var(--lanes, 5)) * var(--aw-u) * .13); line-height: 1;
+  font-size: calc(var(--rw) * var(--aw-u) * .13); line-height: 1;
   pointer-events: none;
 }
 .aw-rr-face { display: block; line-height: 1; }
@@ -446,11 +453,17 @@
    flame for the exhaust (before, the flame tail already touched the clipped left edge
    and the smoke was born off-screen — thầy: "trong fight chưa thấy"). The flag stays at
    93 % of the track; a finished rocket (x = 86 % of the lane) now sits at 87 %. */
-.aw-rr-shared .aw-rr-lanes { left: 7%; }
+/* ⛔ Đợt 368e — the 7 % lane inset of Đợt 360 is GONE (thầy: "đưa con tàu về sát
+   mép màn hình hơn, chỉ đủ nhìn thấy đuôi lửa và một chút xíu khói"). Đợt 360 had
+   pushed the lanes in so the exhaust had room behind the flame at the start line;
+   thầy has now asked for the opposite, and the smoke trailing off the left edge is
+   the intended look. Dropping it also makes 1 % of a lane equal 1u exactly, which
+   is what lets the finish flag be derived from `--track-end` + `--rw`. */
 .aw-rr-shared .aw-rr-finish { top: calc(-.5 * var(--aw-u)); bottom: calc(-.5 * var(--aw-u)); }
-.aw-rr-shared .aw-rr-rocket { width: calc(11 * var(--aw-u)); transition: left .6s cubic-bezier(.2,.9,.25,1); }
-.aw-rr-shared .aw-rr-pilot { font-size: calc(11 * var(--aw-u) * .125); }
-.aw-rr-shared .aw-rr-num { font-size: calc(11 * var(--aw-u) * .12); }
+.aw-rr-shared .aw-rr-track { --rw: 11; }
+.aw-rr-shared .aw-rr-rocket { transition: left .6s cubic-bezier(.2,.9,.25,1); }
+.aw-rr-shared .aw-rr-pilot { font-size: calc(var(--rw) * var(--aw-u) * .125); }
+.aw-rr-shared .aw-rr-num { font-size: calc(var(--rw) * var(--aw-u) * .12); }
 .aw-rr-shared .aw-rr-tag { display: none; }
 .aw-rr-shared .aw-rr-planet.is-sun { width: calc(9 * var(--aw-u)); top: calc(1 * var(--aw-u)); right: calc(9 * var(--aw-u)); }
 .aw-rr-shared .aw-rr-planet.is-big { display: none; }
@@ -589,9 +602,10 @@
    ============================================================= */
 @media (max-width: 700px) {
   .aw-rr-minimap { top: calc(1 * var(--aw-u)); height: calc(2 * var(--aw-u)); }
-  .aw-rr-track { top: calc(4.2 * var(--aw-u)); height: calc(19 * var(--aw-u)); }
-  .aw-rr-rocket { width: calc(min(9, 44 / var(--lanes, 5)) * var(--aw-u)); }
-  .aw-rr-pilot { font-size: calc(min(9, 44 / var(--lanes, 5)) * var(--aw-u) * .125); }
+  /* smaller rockets on a phone — one number again (Đợt 368e), and the finish
+     flag follows it automatically because it reads the same `--rw` */
+  .aw-rr-track { top: calc(4.2 * var(--aw-u)); height: calc(19 * var(--aw-u)); --rw: min(9, 44 / var(--lanes, 5)); }
+  .aw-rr-pilot { font-size: calc(var(--rw) * var(--aw-u) * .125); }
   /* a 6px name is noise on a phone: rivals keep only their pilot face, the
      pupil's own tag stays (bigger) so "which one is me" is never in doubt */
   .aw-rr-tag { display: none; }
