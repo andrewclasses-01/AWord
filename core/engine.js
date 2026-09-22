@@ -1720,8 +1720,20 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // also CHANGES ICON with the mode (see `modeIcon` above) a fixed seat is what
   // keeps it findable. Do not restore the centre seat without checking with the
   // teacher — it was their call both times.
+  // ⭐⭐ Đợt 370 (thầy, 22/9/2026) — QUESTION SCREEN, its own button between
+  // Options and Mode: *"hiện thêm một nút bật/tắt ipad được chèn vào giữa nút
+  // options và nút mode. Bấm 1 lần để bật/tắt"*. It replaces the switch that
+  // used to live inside the Options panel, where thầy could not find it.
+  // ⚠️ Only in a MATCH, only on board 0 (board 1's toolbar is dropped by
+  // fight.js), and only for a template that declares `fightScreen` — today
+  // Rocket race alone. `is-active` is the same "something is on" glow the Mode
+  // button uses, so a lit button means the same thing everywhere on this row.
+  const qScreenTpl = !!modeTpl.fightScreen;
+  const qScreenBtn = (fight && fight.side === 0 && qScreenTpl) ? toolBtn(icons.follow, "Question screen") : null;
+  if (qScreenBtn && activity.options && activity.options.fightScreen === true) qScreenBtn.classList.add("is-active");
   // Đợt 192 — THREE buttons now, not four: Style folded into Template above.
-  belowCenter.append(optionsBtn, modeBtn);
+  if (qScreenBtn) belowCenter.append(optionsBtn, qScreenBtn, modeBtn);
+  else belowCenter.append(optionsBtn, modeBtn);
   // The other half of the Fight → Showdown handover (see `openShowdownOnMount`).
   // Read-and-clear FIRST, so a board that cannot honour it (no button, or we
   // somehow landed back in a match) still consumes the flag instead of leaving
@@ -4145,6 +4157,40 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // tap must reach the question. A hold here would be a gesture with nothing
     // behind it.
     modeBtn.onclick = () => openToolPanelFor(modeBtn, buildHomeConfirmPanel);
+  }
+  // Đợt 370 — plain tap only: this button has ONE job, so a hold would be a
+  // gesture with nothing behind it (same reasoning as the Home-only Mode button
+  // just above).
+  if (qScreenBtn) qScreenBtn.onclick = () => openToolPanelFor(qScreenBtn, buildQScreenConfirmPanel);
+
+  // ⭐ Đợt 370 — thầy: *"khi chuyển từ bật thành tắt hoặc từ tắt thành bật, nó
+  // sẽ hỏi xác nhận lại 1 lần, nếu ok chuyển thì restart lại game về màn start"*.
+  // The restart is not a nicety: the flag is read ONCE per mount (`twoDevice` in
+  // rocket-race.js), and the link's whole lifecycle — who owns it, whether the
+  // question bar is hosted here or on the iPad — is decided at mount time. Ask
+  // first, because a restart in the middle of a match costs the class the round.
+  // `ctl.applyOptions` already does all three right things: write the flag onto
+  // the real act, save it, and rebuild BOTH boards back to the READY screen.
+  function buildQScreenConfirmPanel(panel) {
+    const on = !!(activity.options && activity.options.fightScreen === true);
+    panel.append(el("div", "aw-tool-panel-head", on ? "Turn the question screen off?" : "Turn the question screen on?"));
+    panel.append(el("div", "aw-mode-confirm-text", on
+      ? "Questions come back to this screen. The match restarts from the start screen."
+      : "Questions move to the iPad (open source.html there). This screen keeps the race and the answer tiles. The match restarts from the start screen."));
+    const row = el("div", "aw-mode-confirm-row");
+    const cancelBtn = el("button", "aw-btn aw-mode-confirm-btn", "Cancel");
+    cancelBtn.type = "button";
+    cancelBtn.onclick = () => { sound.click(); closeToolPanel(false); };
+    row.append(cancelBtn);
+    const goBtn = el("button", "aw-btn aw-btn-primary aw-mode-confirm-btn", on ? "Turn off" : "Turn on");
+    goBtn.type = "button";
+    goBtn.onclick = () => {
+      sound.click();
+      closeToolPanel(false);
+      if (fight) fight.ctl.applyOptions({ fightScreen: !on });
+    };
+    row.append(goBtn);
+    panel.append(row);
   }
 
   /**

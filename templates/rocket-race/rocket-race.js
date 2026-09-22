@@ -423,6 +423,12 @@ const rocketRaceTemplate = {
   // frame with a shared area on top (`fightLayout`) that this module draws the
   // race into. See the `_fight` branches in mount().
   fightMode: true,
+  // ⭐ Đợt 370 — "this template can put its questions on a SECOND SCREEN". Two
+  // things read it: core/engine.js draws the Question screen button on the match
+  // toolbar, and core/fight.js uses `options.fightScreen` as one of the two gates
+  // for independent boards (see `soloBoards` there). Opt-in exactly like
+  // `fightTurns`/`fightPick`, so no other template changes behaviour.
+  fightScreen: true,
   fightLayout: "shared-top",
   // ⭐ Đợt 353 (thầy chốt 20/9/2026) — the match picture is 32:14, not 32:21:
   //   sharedH 7 → the race strip is 32:7 (2 lanes need no more; the old 32:10.5
@@ -480,27 +486,12 @@ const rocketRaceTemplate = {
     lives.cell.title = "0 = unlimited lives";
     // Đợt 354 — a match keeps ONLY Lives (thầy: each lost life wrecks the rocket a
     // little, the last one blows it up); rivals/teams/question time stay solo-only.
-    if (inFight) {
-      // ⭐ Đợt 368 — TWO DEVICES (thầy, 22/9/2026): the questions move to a second
-      // screen (an iPad on `source.html`) and this one keeps the race + the tiles.
-      // Only offered inside a match, because outside one there is no second half
-      // to send anywhere. Safe to leave on with no iPad present: the question line
-      // simply stays here until one actually checks in (see rr-link.js).
-      // ⚠️ Đợt 368c — WAS A TICK-BOX AND THẦY COULD NOT FIND IT ("tôi có thấy nút
-      // bấm gì khác cũ đâu" — with the box right there on his own screenshot).
-      // It sat in the row of Shuffle / Show answers ticks, which are all about
-      // RANDOMISING, so the eye files it as one of those and slides past. A
-      // full-width labelled cell with an Off / iPad switch cannot be missed, and
-      // the label now says what it DOES instead of what it is called.
-      const qScreen = mkCell({ label: "Question screen", sub: "show questions on an iPad", wide: true });
-      qScreen.ctl.append(mkSeg(
-        [{ value: "off", label: "Off", title: "Questions stay on this screen, as usual" },
-         { value: "on", label: "On iPad", title: "Open source.html on the iPad (signed in as the teacher): the questions move there and this screen keeps the race + the answer tiles" }],
-        draft.rrTwoDevice === true ? "on" : "off",
-        v => { draft.rrTwoDevice = (v === "on"); }));
-      panel.append(lives.cell, qScreen.cell);
-      return;
-    }
+    // ⛔ Đợt 370 — the QUESTION SCREEN switch is NOT in this panel any more. It
+    // was a tick-box (368), then a full-width cell (368c), and thầy still had to
+    // go looking for it. It is now its OWN button on the toolbar row between
+    // Options and Mode (declared by `fightScreen` below, drawn by core/engine.js),
+    // where a lit button says "on" without anyone opening a panel at all.
+    if (inFight) { panel.append(lives.cell); return; }
 
     const mode = mkCell({ label: "Mode" });
     mode.ctl.append(mkSeg(
@@ -575,7 +566,10 @@ const rocketRaceTemplate = {
     const questionMs = fightCtl ? 0 : clampInt(opt.rrQuestionSeconds, 0, 60, 0) * 1000;   // 0 = untimed
     // ⭐ Đợt 368 — the questions live on a second device. A match only; see the
     // link manager above for why board 0 alone owns the writing.
-    const twoDevice = !!fightCtl && opt.rrTwoDevice === true;
+    // Đợt 370 — the flag is now a CORE option (`fightScreen`), set by the toolbar
+    // button, not a Rocket-race-only one. Read once per mount, which is why
+    // flipping it restarts the match.
+    const twoDevice = !!fightCtl && opt.fightScreen === true;
 
     // ---- scene ----
     root.innerHTML = "";
