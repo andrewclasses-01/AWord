@@ -612,6 +612,35 @@ trí hai đội trên máy chơi**.
 khung 1366 vào 800), số đo DOM đúng. Suýt đi sửa một lỗi không tồn tại.
 Đo cuối 1366×1024 hai nửa: chia đều **683/684**, trái 129 px + phải 210 px, không cắt, không cuộn, console sạch.
 
+### Đợt 368c — ô tích bị thầy nhìn không ra → thành DẢI RIÊNG
+Thầy gửi ảnh bảng Options kèm *"Tôi có thấy nút bấm gì khác cũ đâu"* — trong khi ô **Question screen** nằm
+ngay trên chính ảnh đó. Gốc: dựng bằng `addCheck` nên rơi vào hàng ô tích cùng **Shuffle questions / Shuffle
+answers / Show answers at end** — cả hàng đó đều là chuyện XÁO TRỘN, nên mắt xếp nó vào nhóm ấy rồi lướt qua.
+Sửa: `mkCell(wide)` + `mkSeg` hai nấc **[Off | On iPad]** ⇒ dải trọn chiều ngang ngay dưới LIVES, nhãn phụ
+"show questions on an iPad". **Bài học: tính năng mới đặt lẫn vào một nhóm CÓ SẴN thì thừa hưởng luôn ý
+nghĩa của nhóm đó — người dùng không đọc từng ô, họ đọc CỤM.**
+
+### Đợt 368d — số câu mỗi đội một số, nằm DƯỚI khung của đội đó
+Thầy chốt **LUÔN** để dưới mỗi khung (kể cả Same words) ⇒ bỏ số chung trên thanh đầu. Gói mang `qn0/qt0` và
+`qn1/qt1` riêng — không thừa dù hai bàn hiện luôn cùng vòng, vì **In turns chia 81 câu thành 41/40**.
+⚠️ Phần "độc lập" của LUẬT CHƠI: thầy chốt **KHÔNG sửa** (*"Tùy vào time delay như các act khác"*). Đã tra
+trọng tài trước khi hỏi: `lockLoser()` (`core/fight.js:637`) **chỉ true ở đúng nấc Time delay 0,1s**; từ 0,2s
+trở lên và ở ∞ thì đội chậm KHÔNG bị khoá, giữ nguyên câu và chơi tiếp — tức nửa yêu cầu của thầy VỐN ĐÃ CÓ.
+🐞 Lỗi tự bắt: bỏ `#rrs-count` khỏi HTML nhưng `waitingForGame()` còn một dòng `els.count.textContent` ⇒
+TypeError đúng lúc iPad quay về màn chờ (hết trận / Start again), lúc không ai nhìn máy chơi để thấy.
+
+### Đợt 368e+f — tàu sát mép lúc xuất phát · mũi tàu chạm vạch · nút mở màn nguồn
+1. `TRACK_START` 5→3 và **bỏ `.aw-rr-shared .aw-rr-lanes{left:7%}`** (đảo lại Đợt 360). Đo Fight: tàu
+   11,65u→**3u**, lửa 8,94u→**0,28u**, khói 7,91u→**−0,74u**.
+2. ⚠️ Mũi tàu vượt vạch **3,78u** vì `--x` định vị **MÉP TRÁI** còn vạch đích đặt bằng một con số **chép tay
+   khác** (`TRACK_END + 7`) — hai con số cho cùng một chỗ. Sửa bằng **suy ra thay vì chép**: bề rộng tàu thành
+   **một nguồn** `--rw` trên `.aw-rr-track` (thân + phi công + số mũi + vạch đích đều đọc), vạch ở
+   `calc((var(--track-end) + var(--rw)) * 1%)`. `--lanes` phải dời từ `.aw-rr-lanes` lên `.aw-rr-track` vì vạch
+   đích là ANH EM chứ không phải con. Đo: Fight lệch **0,00u**, Solo lệch **0,01u** (tàu 11u/13u vẫn tự khớp).
+3. `main.js`: nút icon-only cạnh Settings (`icons.follow`) mở `source.html` **cùng tab**. Cố ý không gắn với
+   Rocket race. ⚠️ Chưa xem được trên trang thật (thanh nút chỉ dựng sau khi đăng nhập); đã đo bằng cấu trúc
+   `.aw-appbar-right` thật: 46×46 px bằng đúng nút Settings.
+
 ### VIỆC ĐANG CHỜ
 - ⬜ **Thầy duyệt ĐỀ XUẤT SỬA CORE** `core/store.js` (+3 chuỗi `APP_DATA_KINDS`, gồm vá `showdown-session` thiếu từ
   Đợt 269 — chính file đó cảnh báo "ADD ANY FUTURE kind OF APP DATA HERE", thiếu là ăn mất một số link `?a=`).
