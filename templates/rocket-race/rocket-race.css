@@ -461,6 +461,18 @@
 .aw-rr-shared .aw-rr-bannertxt.is-win { font-size: calc(3.8 * var(--aw-u)); }
 .aw-rr-shared .aw-rr-banner { top: calc(4 * var(--aw-u)); }
 
+/* ⭐ Đợt 368 — QUESTIONS ON A SECOND DEVICE (thầy, 22/9/2026: "ipad sẽ là nơi
+   hiển thị câu hỏi … máy tomko sẽ không hiển thị câu hỏi nữa mà chỉ hiển thị
+   race và khung chọn kết quả của 2 đội"). The 4u question line goes away and
+   the race spreads into the whole 17.97u strip (track 2u→16u, so the finish
+   flag's ±.5u overhang still clears both edges and the lanes stay centred on
+   the strip's middle — same sum Đợt 357 did for the 4u→17.97u band).
+   ⚠️ Only ever applied while the iPad has actually checked in — rocket-race.js
+   `paintLink()`. A match with no second screen is byte-identical to today. */
+.aw-rr-qbar.is-remote { display: none; }
+.aw-rr-shared.is-noq .aw-rr-track { top: calc(2 * var(--aw-u)); height: calc(14 * var(--aw-u)); }
+.aw-rr-shared.is-noq .aw-rr-banner { top: 0; }
+
 /* the board below — a 16:5 frame (31.25u, `fightFrame.boardH`): tiles fill it,
    the team chip sits UNDER them, the referee's Time delay bar at the very foot.
    Its background is the team's own hull colour (thầy: "nền của mỗi khung câu trả

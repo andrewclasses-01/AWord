@@ -195,7 +195,12 @@ function nextNum(map) {
 // itself was missing here from Đợt 197 until Đợt 236 caught the same gap —
 // harmless so far only because nobody had over ~50 items yet to collide a link
 // number with. "showdown-history-index" is Đợt 236's own new kind.)
-const APP_DATA_KINDS = new Set(["class", "showdown", "showdown-results", "showdown-history", "showdown-history-index"]);
+// (Đợt 368 adds three: "rocketrace-link" / "rocketrace-view" are the two-device
+// Fight's wire — see templates/rocket-race/rr-link.js — and "showdown-session"
+// was missing here from Đợt 269, exactly the gap this warning describes: it is
+// app data, it has been eating a link number ever since.)
+const APP_DATA_KINDS = new Set(["class", "showdown", "showdown-results", "showdown-history", "showdown-history-index",
+                                "showdown-session", "rocketrace-link", "rocketrace-view"]);
 function isAppData(n) { return APP_DATA_KINDS.has(n.kind); }
 
 export async function ensureNumbers() {

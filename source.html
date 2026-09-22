@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- ⚠️ `user-scalable=no` on purpose: this screen is furniture in a classroom,
+       not a document. A stray two-finger touch that zooms it 3× mid-match is a
+       thing nobody can fix from the other side of the room. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>AWord — Question screen</title>
+
+  <link rel="icon" href="core/assets/icons/favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="core/assets/icons/favicon-180.png" />
+
+  <!-- ⚠️ app.css is loaded for ONE reason: its @font-face block. Baloo 2 ships as
+       FOUR latin files + a separate Vietnamese file, each with an explicit
+       `unicode-range`, and app.css carries a long warning about what happens when
+       that is copied by hand (Chrome trusts the DECLARED range, finds no glyph for
+       ă/đ/ơ/ư, and silently falls back to another family mid-word). Linking the
+       real sheet is how this page never gets to repeat that. -->
+  <link rel="stylesheet" href="core/app.css" />
+
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://firestore.googleapis.com" />
+  <link rel="preload" href="core/assets/fonts/baloo-2-800.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="core/assets/fonts/baloo-2-vi.woff2" as="font" type="font/woff2" crossorigin />
+
+  <style>
+    /* ⚠️ AFTER app.css so these win. Every size is written in `--u` (1% of the
+       viewport width, set by source.js with a ResizeObserver) — the same trick
+       ensureFightScene() uses for the shared race area, and for the same reason
+       the project bans `cqw` outright: Safari 15 on an older iPad throws away a
+       whole declaration it cannot parse, and this page's whole job is to be
+       readable on an iPad. */
+    html, body {
+      margin: 0; padding: 0; height: 100%; overflow: hidden;
+      background: #090520; color: #fff;
+      font-family: "Baloo 2", system-ui, sans-serif;
+      -webkit-user-select: none; user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+      /* ⚠️ iOS Safari has IGNORED `user-scalable=no` since iOS 10, so the meta
+         tag above does not stop a double-tap or pinch from zooming this screen
+         mid-lesson. `touch-action: manipulation` is what actually kills the
+         double-tap zoom, and there is nothing here to pinch into anyway. */
+      touch-action: manipulation;
+    }
+    .rrs {
+      position: fixed; inset: 0; display: flex; flex-direction: column;
+      background: radial-gradient(120% 90% at 70% 0%, #2a1a5e 0%, #160b3f 45%, #090520 100%);
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    /* ---- thin header: act name · question number · match clock ---- */
+    .rrs-bar {
+      flex: 0 0 auto; display: flex; align-items: center; gap: calc(2 * var(--u));
+      padding: calc(1.2 * var(--u)) calc(2.4 * var(--u));
+      font-size: calc(2.2 * var(--u)); font-weight: 700; line-height: 1;
+      color: rgba(255,255,255,.62); border-bottom: 1px solid rgba(255,255,255,.12);
+    }
+    .rrs-act { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: .06em; }
+    .rrs-count, .rrs-clock { flex: 0 0 auto; font-weight: 800; color: rgba(255,255,255,.85); font-variant-numeric: tabular-nums; }
+    /* Losing the network never blanks the question — it says so, in the one
+       corner nobody is reading the question from. */
+    .rrs-clock.is-bad { color: #ff6b81; letter-spacing: .04em; }
+
+    /* ---- the two halves ---- */
+    .rrs-body { flex: 1 1 auto; min-height: 0; display: flex; }
+    .rrs-half {
+      flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
+      padding: calc(2 * var(--u)) calc(2.2 * var(--u)) calc(2.6 * var(--u));
+    }
+    .rrs-half + .rrs-half { border-left: 1px solid rgba(255,255,255,.14); }
+    /* Both teams on the same question ⇒ ONE line across the whole screen, the
+       same rule the in-game question bar already follows (`is-same`). */
+    .rrs.is-same .rrs-half + .rrs-half { display: none; }
+    .rrs.is-same .rrs-team { display: none; }
+
+    .rrs-team {
+      flex: 0 0 auto; display: flex; align-items: center; gap: calc(1.1 * var(--u));
+      margin-bottom: calc(1.6 * var(--u));
+      font-size: calc(2.4 * var(--u)); font-weight: 800; letter-spacing: .1em;
+      color: rgba(255,255,255,.9);
+    }
+    .rrs-dot {
+      width: calc(2.4 * var(--u)); height: calc(2.4 * var(--u)); border-radius: 50%;
+      background: var(--rc, #4fc3f7); flex: 0 0 auto;
+      box-shadow: 0 0 calc(1.4 * var(--u)) var(--rc, #4fc3f7);
+    }
+    /* ⚠️ THE PADDING IS LOAD-BEARING, not decoration (measured, Đợt 368).
+       `fitOnce` compares the text's scrollWidth against the BOX's clientWidth,
+       which INCLUDES padding, minus a 1-2px slack. A block that is exactly as
+       wide as its box therefore always reads as "overflowing", and the search
+       walks straight down to its floor — a 72px question came out at 18px.
+       The padding is what makes the text narrower than the thing it is measured
+       against. Every other template's question box does the same (see
+       `.aw-rr-q` in rocket-race.css). */
+    /* ⚠️ THE VERTICAL PADDING IS LOAD-BEARING TOO (measured on a 12.9" iPad,
+       1366×1024). Vietnamese stacks a mark ABOVE and a dot BELOW the letter
+       (ộ, ệ, ậ), and those reach past the line box — so the taller the text,
+       the further they spill. A FIXED 10px slack was enough at 66px type and
+       clipped the lower dots at 88px. Padding scales with `--u`, so the
+       breathing room grows with the type instead of being outgrown by it;
+       `fitOnce({contentBox:true})` is what makes the fit subtract it. */
+    .rrs-qbox {
+      flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center;
+      overflow: hidden; padding: calc(1.2 * var(--u)) calc(1.4 * var(--u));
+    }
+    .rrs-q {
+      --fit: 1;
+      /* ⚠️ MEASURED (Đợt 368): without this the block is a flex item with no
+         width of its own, so the text never wraps — `fitOnce` then sees one
+         enormous `scrollWidth`, calls it an overflow, and shrinks a 72px
+         question to 29px inside a 617px-tall box. Pinning the width to the box
+         makes it wrap, and the fit only has to solve for HEIGHT. */
+      width: 100%;
+      font-size: calc(7 * var(--u) * var(--fit)); font-weight: 800; line-height: 1.3;
+      text-align: center; letter-spacing: .005em;
+      text-shadow: 0 calc(.3 * var(--u)) 0 rgba(0,0,0,.45);
+      overflow-wrap: break-word;
+    }
+    /* One half only ⇒ the text may grow into the room the other half left. */
+    .rrs.is-same .rrs-q { font-size: calc(9 * var(--u) * var(--fit)); }
+    /* A voice-only question has no text to show at all (the clip is played on
+       MÁY CHƠI — thầy chose that): say so instead of showing a blank half. */
+    .rrs-q.is-voice { font-size: calc(12 * var(--u)); opacity: .55; }
+
+    /* ---- the states that are not "a question" ---- */
+    .rrs-note {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: calc(2.4 * var(--u));
+      padding: calc(5 * var(--u)); text-align: center;
+      background: radial-gradient(120% 90% at 70% 0%, #2a1a5e 0%, #160b3f 45%, #090520 100%);
+    }
+    .rrs-note[hidden] { display: none; }
+    .rrs-note-ic { font-size: calc(11 * var(--u)); line-height: 1; }
+    .rrs-note-title { font-size: calc(4.4 * var(--u)); font-weight: 800; letter-spacing: .04em; }
+    .rrs-note-sub { font-size: calc(2.5 * var(--u)); font-weight: 600; line-height: 1.5; color: rgba(255,255,255,.62); max-width: calc(70 * var(--u)); }
+    .rrs-note.is-bad .rrs-note-title { color: #ff6b81; }
+    .rrs-btn {
+      font: inherit; font-size: calc(3 * var(--u)); font-weight: 800; letter-spacing: .06em;
+      color: #2a1a00; background: linear-gradient(#ffe37a, #ffb728); border: 0;
+      border-radius: calc(2 * var(--u)); padding: calc(1.4 * var(--u)) calc(5 * var(--u));
+      box-shadow: 0 calc(.7 * var(--u)) 0 #b07a08; cursor: pointer;
+    }
+    .rrs-btn:active { transform: translateY(calc(.4 * var(--u))); box-shadow: 0 calc(.3 * var(--u)) 0 #b07a08; }
+  </style>
+</head>
+<body>
+  <div class="rrs" id="rrs">
+    <div class="rrs-bar">
+      <div class="rrs-act" id="rrs-act"></div>
+      <div class="rrs-count" id="rrs-count"></div>
+      <div class="rrs-clock" id="rrs-clock"></div>
+    </div>
+    <div class="rrs-body">
+      <div class="rrs-half">
+        <div class="rrs-team"><span class="rrs-dot" id="rrs-dot0"></span><span id="rrs-name0">TEAM 1</span></div>
+        <div class="rrs-qbox" id="rrs-box0"><div class="rrs-q" id="rrs-q0"></div></div>
+      </div>
+      <div class="rrs-half">
+        <div class="rrs-team"><span class="rrs-dot" id="rrs-dot1"></span><span id="rrs-name1">TEAM 2</span></div>
+        <div class="rrs-qbox" id="rrs-box1"><div class="rrs-q" id="rrs-q1"></div></div>
+      </div>
+    </div>
+    <div class="rrs-note" id="rrs-note">
+      <div class="rrs-note-ic" id="rrs-note-ic">🚀</div>
+      <div class="rrs-note-title" id="rrs-note-title">Loading…</div>
+      <div class="rrs-note-sub" id="rrs-note-sub"></div>
+      <button class="rrs-btn" id="rrs-note-btn" type="button" hidden>Sign in</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import("./core/firebase.js").then(m => m.db()).catch(() => {});
+  </script>
+  <script type="module" src="source.js"></script>
+</body>
+</html>

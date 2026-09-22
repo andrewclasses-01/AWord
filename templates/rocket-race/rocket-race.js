@@ -52,6 +52,7 @@ import { fitOnce } from "../../core/fit.js";
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { rrSound } from "./rr-sound.js";
 import { openRocketRaceEditor } from "./rocket-race-editor.js";
+import { publishStage, clearStage, subscribeViewer, mintMatchId, VIEWER_STALE_MS } from "./rr-link.js";
 
 function imgUrl(name) { return new URL(`./img/${name}`, import.meta.url).href; }
 
@@ -289,6 +290,84 @@ function fightTrackLength(scene, remaining) {
 // Menu pause (Đợt 91) bridge — one handler per live mount (a match has TWO).
 const rrPauseHandlers = new Set();
 
+// ---- TWO-DEVICE LINK (Đợt 368, thầy 22/9/2026) ----------------------------
+// "Máy chơi" keeps the race + both answer boards; an iPad ("máy nguồn") shows
+// the questions. See rr-link.js for the wire itself and why it is one-way.
+//
+// ⚠️ BOARD 0 OWNS THE LINK. A match is TWO mounts in ONE page, and both call
+// showQuestion() for the same round — two independent writers of one Firestore
+// document is exactly what the core rule says needs a transaction. So board 1
+// only drops its question text into the module slot below and board 0 does all
+// the writing, one packet per round, after a short coalesce window that lets
+// BOTH boards land first (advanceRound loops the boards synchronously, so the
+// two calls are the same tick apart — 80 ms is many times over).
+const rrLinkText = ["", ""];        // latest question text, per side
+const rrLinkVoiceOnly = [false, false];
+let rrLinkOwner = null;             // board 0's controller while the link is on
+
+function rrLinkStart(meta) {
+  rrLinkStop();                      // a rebuilt match (Start again / Apply) starts a new one
+  const own = {
+    matchId: mintMatchId(),
+    meta,                            // { actTitle, total, teams:[{name,color},…] }
+    round: 0, same: true, goAt: 0, over: false,
+    viewerAt: 0, alive: false,
+    writeTimer: null, poll: null, unsub: null,
+    onAlive: null                    // set by the mount: repaint when the iPad comes/goes
+  };
+  own.unsub = subscribeViewer(at => {
+    if (rrLinkOwner !== own) return;
+    own.viewerAt = at;
+    rrLinkSyncAlive(own);
+  });
+  // The beat can only go STALE with time passing, never with an event, so it
+  // needs its own slow clock. 5 s is far finer than VIEWER_STALE_MS needs.
+  own.poll = setInterval(() => { if (rrLinkOwner === own) rrLinkSyncAlive(own); }, 5000);
+  rrLinkOwner = own;
+  return own;
+}
+
+function rrLinkSyncAlive(own) {
+  const alive = own.viewerAt > 0 && (Date.now() - own.viewerAt) < VIEWER_STALE_MS;
+  if (alive === own.alive) return;
+  own.alive = alive;
+  if (own.onAlive) { try { own.onAlive(alive); } catch { /* mount gone */ } }
+}
+
+// Coalesce: both boards report in the same tick, one packet goes out.
+function rrLinkQueueWrite(own) {
+  if (!own || own.over) return;
+  if (own.writeTimer) return;
+  own.writeTimer = setTimeout(() => {
+    own.writeTimer = null;
+    if (rrLinkOwner !== own || own.over) return;
+    const t = own.meta.teams || [];
+    publishStage({
+      matchId: own.matchId, actTitle: own.meta.actTitle || "", phase: "playing",
+      round: own.round, total: own.meta.total || 0, same: rrLinkText[0] === rrLinkText[1],
+      clockMs: own.goAt ? Date.now() - own.goAt : 0,
+      q0: rrLinkText[0], q1: rrLinkText[1],
+      vo0: rrLinkVoiceOnly[0], vo1: rrLinkVoiceOnly[1],
+      t0name: t[0]?.name || "TEAM 1", t0color: t[0]?.color || "",
+      t1name: t[1]?.name || "TEAM 2", t1color: t[1]?.color || ""
+    }).catch(() => { /* offline / signed out — the guard puts the question back */ });
+  }, 80);
+}
+
+function rrLinkStop() {
+  const own = rrLinkOwner;
+  if (!own) return;
+  rrLinkOwner = null;
+  own.over = true;
+  if (own.writeTimer) { clearTimeout(own.writeTimer); own.writeTimer = null; }
+  if (own.poll) { clearInterval(own.poll); own.poll = null; }
+  if (own.unsub) { try { own.unsub(); } catch { /* already gone */ } }
+  rrLinkText[0] = rrLinkText[1] = "";
+  rrLinkVoiceOnly[0] = rrLinkVoiceOnly[1] = false;
+  // Drop the document so an iPad opened tomorrow never reads today's match.
+  clearStage().catch(() => { /* offline — it carries `matchId`, so it is ignorable anyway */ });
+}
+
 const rocketRaceTemplate = {
   type: "rocket_race",
   scorable: true,
@@ -366,7 +445,17 @@ const rocketRaceTemplate = {
     lives.cell.title = "0 = unlimited lives";
     // Đợt 354 — a match keeps ONLY Lives (thầy: each lost life wrecks the rocket a
     // little, the last one blows it up); rivals/teams/question time stay solo-only.
-    if (inFight) { panel.append(lives.cell); return; }
+    if (inFight) {
+      panel.append(lives.cell);
+      // ⭐ Đợt 368 — TWO DEVICES (thầy, 22/9/2026): the questions move to a second
+      // screen (an iPad on `source.html`) and this one keeps the race + the tiles.
+      // Only offered inside a match, because outside one there is no second half
+      // to send anywhere. Safe to leave on with no iPad present: the question line
+      // simply stays here until one actually checks in (see rr-link.js).
+      addCheck("Question screen", draft.rrTwoDevice === true, v => draft.rrTwoDevice = v,
+        { key: "rrTwoDevice", title: "Show the questions on a second device (open source.html there, signed in as the teacher) and keep only the race + answer tiles here" });
+      return;
+    }
 
     const mode = mkCell({ label: "Mode" });
     mode.ctl.append(mkSeg(
@@ -439,6 +528,9 @@ const rocketRaceTemplate = {
     const rivalSecs = RIVAL_SECS[opt.rrSpeed] || RIVAL_SECS.normal;
     const powerups = opt.rrPowerups !== false && !teamsMode && !fightCtl;
     const questionMs = fightCtl ? 0 : clampInt(opt.rrQuestionSeconds, 0, 60, 0) * 1000;   // 0 = untimed
+    // ⭐ Đợt 368 — the questions live on a second device. A match only; see the
+    // link manager above for why board 0 alone owns the writing.
+    const twoDevice = !!fightCtl && opt.rrTwoDevice === true;
 
     // ---- scene ----
     root.innerHTML = "";
@@ -525,6 +617,21 @@ const rocketRaceTemplate = {
 
     if (fightCtl) buildFight(); else if (teamsMode) buildTeams(); else buildSolo();
     if (!fightCtl) renderRockets();
+    // ⭐ Đợt 368 — board 0 opens the link for the whole match. Board 1 mounts
+    // later and only feeds its own question text into the module slot.
+    // ⚠️ `paintLink(false)` runs FIRST and on purpose: until an iPad actually
+    // checks in, this screen keeps showing the question exactly as it does
+    // today. Hiding it on hope would leave the class with the question on NO
+    // screen (see rr-link.js, the "cả lớp đứng hình" guard).
+    if (twoDevice && fightSide === 0) {
+      const own = rrLinkStart({
+        actTitle: activity.title || "",
+        total: N,
+        teams: FIGHT_TEAMS.map(t => ({ name: t.name, color: t.hull.c }))
+      });
+      own.onAlive = paintLink;
+    }
+    if (twoDevice) paintLink(false);
     renderLives();
     ui.setScore(0);
     ui.onSubmit(finish, () => state.filter(s => s.attempts > 0).length);
@@ -624,6 +731,26 @@ const rocketRaceTemplate = {
       stage.style.setProperty("--rc", t.hull.c);
       renderChipLives();   // Đợt 354
     }
+    // ⭐ Đợt 368 — the second screen came or went. `is-remote` hides the shared
+    // question line here; `is-noq` lets the race take the room it leaves behind
+    // (rocket-race.css). Called with `false` at mount, then by the link's own
+    // beat watcher, so the question line is only ever hidden while an iPad is
+    // provably showing it.
+    function paintLink(alive) {
+      if (dead || !scene) return;
+      if (scene.qbar) scene.qbar.classList.toggle("is-remote", !!alive);
+      if (scene.host) scene.host.classList.toggle("is-noq", !!alive);
+    }
+    // Hand this board's question to the link. Both boards call it; only board 0
+    // actually writes (rrLinkQueueWrite coalesces the two into one packet).
+    function reportLink(idx, q, hideText) {
+      if (!twoDevice || !rrLinkOwner) return;
+      rrLinkText[fightSide] = hideText ? "" : (q.question || "");
+      rrLinkVoiceOnly[fightSide] = !!hideText;
+      rrLinkOwner.round = idx;
+      rrLinkQueueWrite(rrLinkOwner);
+    }
+
     // Deal the (already shuffled) questions round-robin — every team gets the
     // same number ±1, and a team's track is exactly as long as its hand.
     function dealTeams() {
@@ -733,6 +860,11 @@ const rocketRaceTemplate = {
         } else {
           if (speaks()) { showBanner("GO!", "is-go"); rrSound.go(); rrSound.hum.start(); }
           ui.startTimer?.();
+          // Đợt 368 — the match clock's zero. The packet carries "how long the
+          // match has been running", and the iPad counts on from it by itself:
+          // no per-second writes, and no dependence on the two devices' clocks
+          // agreeing (only on the elapsed time, which both measure the same).
+          if (twoDevice && fightSide === 0 && rrLinkOwner) rrLinkOwner.goAt = Date.now();
           running = true;
           started = true;
           last = performance.now();
@@ -807,6 +939,7 @@ const rocketRaceTemplate = {
       firstQuestionSpoken = true;
       fitText(qBox, t);
       if (fightCtl) syncQbar(scene);
+      reportLink(idx, q, vv.hideText);   // Đợt 368 — send it to the second screen
 
       // answer tiles
       const answers = (opt.shuffleAnswers ? shuffle(q.answers) : [...q.answers]).filter(a => a && a.text != null);
@@ -1342,6 +1475,9 @@ const rocketRaceTemplate = {
       dead = true;            // MUST come first — the only brake on bare callbacks
       finished = true;
       rrPauseHandlers.delete(pauseHandler);
+      // Đợt 368 — board 0 opened the link, board 0 closes it (and drops the
+      // document, so tomorrow's iPad never reads today's match).
+      if (twoDevice && fightSide === 0) rrLinkStop();
       window.removeEventListener("keydown", onKey);
       if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
       timers.forEach(id => clearTimeout(id)); timers.clear();

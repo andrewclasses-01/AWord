@@ -25,5 +25,5 @@ export const TPL_FILES = {
   "running_team": ["templates/running-team/running-team.css", "templates/running-team/running-team.js", "templates/running-team/running-team-editor.js", "templates/running-team/rt-sound.js", "templates/running-team/rt-print.js", "templates/running-team/rt-sets.js"],
   "speaking": ["templates/speaking/speaking.css", "templates/speaking/speaking.js", "templates/speaking/speaking-editor.js", "templates/speaking/speaking-sound.js"],
   "find_the_gap": ["templates/find-the-gap/find-the-gap.css", "templates/find-the-gap/find-the-gap.js", "templates/find-the-gap/find-the-gap-editor.js", "templates/find-the-gap/ftg-sound.js", "templates/find-the-gap/ftg-audio.js", "templates/find-the-gap/ftg-range.js", "templates/find-the-gap/ftg-shared.js"],
-  "rocket_race": ["templates/rocket-race/rocket-race.css", "templates/rocket-race/rocket-race.js", "templates/rocket-race/rr-sound.js", "templates/rocket-race/rocket-race-editor.js", "templates/quiz/quiz-editor.js"],
+  "rocket_race": ["templates/rocket-race/rocket-race.css", "templates/rocket-race/rocket-race.js", "templates/rocket-race/rr-sound.js", "templates/rocket-race/rocket-race-editor.js", "templates/rocket-race/rr-link.js", "templates/quiz/quiz-editor.js"],
 };

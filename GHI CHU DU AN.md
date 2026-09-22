@@ -12,7 +12,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 362** (phi công chỉ lên xuống ±1,2 %, bỏ dịch ngang). Trước đó: **Đợt 361** (phi công nhấp ±6 % theo pha thân tàu, ép lùi khi boost, rung khi khựng). Trước đó: **Đợt 360** (khói/nhấp trong Fight quá nhỏ + bị cắt mép → làn lùi 7 %, khói to đậm). Trước đó: **Đợt 359** (phi công chỉ nhấp lên xuống; khói trắng mờ sau lửa). Trước đó: **Đợt 358** (phi công cắt tròn trong cửa sổ + lắc lư, bỏ đường kẻ làn). Trước đó: **Đợt 357** (20/9/2026 tối, chỉ rocket-race.css — căn giữa chip TEAM X/tim và vạch đích theo ảnh thầy). Trước đó: **⭐⭐ Đợt 356** (20/9/2026 tối, ROCKET RACE — **màn START Fight**: bìa READY bị cắt trong bàn 16:5 → thông tin act
+> Mới nhất: **⭐⭐⭐ Đợt 368** (22/9/2026, ROCKET RACE — **FIGHT TRÊN HAI MÁY**: câu hỏi sang iPad qua `source.html`, máy chơi giữ đường đua + ô đáp án; một chiều, 2 tài liệu mỗi cái 1 người ghi, KHÔNG đụng `core/fight.js`, KHÔNG phải đăng luật Firestore mới; ⬜ CHƯA COMMIT, ⬜⬜ đường mạng thật chưa chạy — xem mục **Đợt 368**). Trước đó: **Đợt 362** (phi công chỉ lên xuống ±1,2 %, bỏ dịch ngang). Trước đó: **Đợt 361** (phi công nhấp ±6 % theo pha thân tàu, ép lùi khi boost, rung khi khựng). Trước đó: **Đợt 360** (khói/nhấp trong Fight quá nhỏ + bị cắt mép → làn lùi 7 %, khói to đậm). Trước đó: **Đợt 359** (phi công chỉ nhấp lên xuống; khói trắng mờ sau lửa). Trước đó: **Đợt 358** (phi công cắt tròn trong cửa sổ + lắc lư, bỏ đường kẻ làn). Trước đó: **Đợt 357** (20/9/2026 tối, chỉ rocket-race.css — căn giữa chip TEAM X/tim và vạch đích theo ảnh thầy). Trước đó: **⭐⭐ Đợt 356** (20/9/2026 tối, ROCKET RACE — **màn START Fight**: bìa READY bị cắt trong bàn 16:5 → thông tin act
 > lên vùng chung, bàn chỉ còn icon + TEAM n + ▶; core `fightFrame.readyShared` + `teams`). Xem mục **Đợt 356**.
 > Trước đó: **⭐⭐ Đợt 355** (20/9/2026 tối, ROCKET RACE — **FIGHT bố cục gọn**: câu hỏi 1 dòng trên cùng, bỏ minimap, đua
 > 32:5.75, bàn 16:5 nền màu tàu + chip dưới ô, dải điểm xuống dưới bàn + đồng hồ vào dải nút (core `fightFrame.topStrip`),
@@ -528,6 +528,98 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 368 (22/9/2026, ROCKET RACE — **FIGHT TRÊN HAI MÁY**: câu hỏi sang iPad, máy chơi giữ đường đua + ô đáp án) · ⬜ CHƯA COMMIT · ⬜⬜ ĐƯỜNG MẠNG THẬT CHƯA CHẠY
+
+**Yêu cầu của thầy** (nguyên văn): *"Ngoài màn hình chính hiển thị trò chơi, với câu hỏi, race và 2 đội, bây giờ tôi
+muốn kết nối với 1 ipad… Máy tomko sẽ không hiển thị câu hỏi nữa mà chỉ hiển thị race và khung chọn kết quả của 2
+đội. Ipad sẽ là nơi hiển thị câu hỏi… chia đôi màn hình, mỗi bên hiển thị câu hỏi cho 1 đội. Các câu hỏi có thể
+giống hoặc khác nhau tùy mode."*
+
+**Thầy chốt qua AskUserQuestion**: iPad **đăng nhập Google của thầy** (⇒ không phải đăng luật Firestore mới) · iPad
+hiện **chữ câu hỏi là chính + tên/màu đội + số câu + đồng hồ** · **tiếng đọc vẫn ở máy chơi** · **chỉ Rocket race trước**.
+
+### Nghiên cứu trước khi code (3 nhóm chạy song song + tự đọc `core/fight.js`)
+- Việc này CHÍNH LÀ biến thể "chặng 3" đã vạch trong `KE HOACH ROCKET-RACE.md` (thầy chưa duyệt trước đó → đã hỏi và thầy duyệt).
+- **Phát hiện quyết định**: từ Đợt 355 câu hỏi ĐÃ tách khỏi ô đáp án (`.aw-rr-qbar` 2 nửa, tự gộp khi cùng chữ).
+  Nên "máy chơi bỏ câu hỏi" = ẩn một thanh ⇒ **KHÔNG đụng `core/fight.js` một dòng nào**.
+- AWord đã có "Share/Follow live session" (`sd_session`, Đợt 269-272) nhưng nó chỉ đồng bộ **cấu hình** (template/
+  options/style/mode), KHÔNG mang act đang mở hay câu hiện tại. Dùng lại được **cách ghép nối** (đăng nhập tài khoản
+  thầy, khỏi mã phòng) và **chỗ đặt dữ liệu** (`users/{uid}/items` — đường DUY NHẤT luật hiện hành mở).
+- Đã kiểm chứng một luật nghe như chặn hẳn thiết kế — *"KHÔNG dựng tài liệu Firestore mới, KHÔNG thêm listener nào"*
+  (`HUONG DAN CORE.md:1293`) — **hoá ra là luật RIÊNG của Đợt 260**, không phải cấm toàn cục.
+
+### Thiết kế: một chiều, hai tài liệu, mỗi tài liệu MỘT người ghi
+iPad **không chơi, không tính điểm, không quyết vòng** — nó là MÀN HÌNH, không phải người chơi thứ ba ⇒ không có
+trạng thái chung phải thống nhất. Nhờ vậy luật *"nhiều bên cùng ghi một tài liệu ⇒ GIAO DỊCH"* được **né** chứ không
+phải trả giá (đúng nếp `sd_session`: "một người viết, KHÔNG transaction"):
+- `rr_link` — máy chơi GHI, iPad NGHE (trường PHẲNG: `q0/q1`, `t0name/t0color`… vì `update()` không gộp sâu)
+- `rr_view` — iPad GHI nhịp tim, máy chơi NGHE
+
+Giá: **1 lượt ghi mỗi câu** (20 câu ≈ 22 ghi + 22 đọc) + nhịp tim 20 s.
+
+### ⭐ Cái giữ cho lớp không đứng hình
+Ẩn câu hỏi ở máy chơi **chỉ an toàn khi iPad thật sự đang hiện nó**. iPad ngủ / rớt wifi / hết pin ⇒ câu hỏi không
+còn trên MÀN NÀO, giữa giờ dạy. Nên iPad đập nhịp 20 s và máy chơi **tự hiện lại** thanh câu hỏi khi nhịp quá 55 s;
+mặc định lúc mount là **HIỆN** — không bao giờ ẩn vì hy vọng.
+
+### Bàn 0 làm chủ đường ghi
+Một trận là HAI mount trong MỘT trang, cả hai cùng gọi `showQuestion()` — hai người ghi một tài liệu chính là ca cần
+transaction. Nên bàn 1 chỉ thả chữ vào ô cấp module, **bàn 0 ghi**, gom 80 ms rồi bắn MỘT gói.
+
+### Đồng hồ: chở MỐC, không chở từng giây
+Gói mang `clockMs`; iPad chỉnh theo rồi tự đếm tiếp ⇒ 0 lượt ghi thêm, không phụ thuộc giờ hai máy khớp nhau.
+⛔ **KHÔNG** đưa thanh Time delay / Miss wait lên iPad: chúng chạy 0,1–3 s mà mạng trễ 0,2–0,5 s ⇒ luôn sai.
+
+### File
+MỚI `templates/rocket-race/rr-link.js` · MỚI `source.html` + `source.js` (gốc `web/`, độc lập, KHÔNG nạp engine/
+template) · `rocket-race.js` · `rocket-race.css` · `core/store.js` **(ĐỀ XUẤT SỬA CORE)** · `core/tpl-files.js` sinh lại.
+
+### Ba lỗi tự bắt được ở bàn thử (đo bằng số, không đoán)
+1. Chữ iPad co còn **41 %** (72→29 px trong hộp cao 617 px): khối chữ là flex item không có bề rộng riêng ⇒ không
+   xuống dòng ⇒ `fitOnce` thấy `scrollWidth` khổng lồ, tưởng tràn. Chữa `width:100%`.
+2. Rồi chạm **SÀN 25 %** (18 px): `fitOnce` so `scrollWidth` của chữ với `clientWidth` của HỘP — **gồm cả padding** —
+   trừ slack. Chữ rộng đúng bằng hộp thì LUÔN bị đọc là tràn ⇒ **padding hộp chữ là CHỊU LỰC**, không phải trang trí.
+3. Tràn 4 px với dấu tiếng Việt (cắt dấu dưới) ⇒ `slack` 2 → 10.
+
+### Đã tự kiểm bằng máy (0 lỗi / 0 warn console — nhớ bài học Đợt 356: engine nuốt lỗi thành `[warn]`)
+iPad ngang 1024×768: câu thường **72 px**, câu rất dài **47 px**, câu Việt có dấu **66 px** không cắt; dọc 768×1024:
+64/72 px, không cuộn ngang; hai đội cùng câu ⇒ nửa phải ẩn, chữ **92 px** trải hết màn. Chưa đăng nhập ⇒ màn Sign in.
+Máy chơi: ô **Question screen** hiện đúng trong Options CỦA TRẬN. Giả lập iPad đã nối ⇒ thanh câu hỏi `display:none`,
+đường đua **138,2 → 175,8 px (+27 %)**, tâm đua 113,0 vs tâm dải 112,8 (lệch **0,2 px**).
+⭐ **Phép thử an toàn**: bật ô tích mà KHÔNG có iPad và KHÔNG đăng nhập ⇒ trận chạy y như thường, câu hỏi VẪN HIỆN,
+console sạch (`publishStage` bị từ chối, `.catch()` nuốt đúng chỗ).
+
+### Đợt 368b — chỉnh riêng cho iPad Pro 12.9" M1 NẰM NGANG (1366×1024)
+Thầy: *"ở ipad tôi luôn sử dụng chiều ngang trên ipad M1 12.9 inch, hãy thiết kế cho hợp lý."*
+Bố cục vốn đã đúng tỉ lệ (bàn thử 1024×768 cũng là 4:3, mọi cỡ theo `--u`), nhưng khổ lớn làm lộ 3 việc:
+1. ⭐ **Chữ nay NỞ được, không chỉ co**: `fitOnce` mặc định `max:1` ⇒ câu ngắn "Mars" giữ 96 px, lấp
+   **15 %** hộp cao 824 px. Nâng `max:2.2` ⇒ **96 → 210 px**; câu dài (63 px) và câu Việt (86 px)
+   **không đổi một px** vì vốn đã bị chặn bởi CHIỀU CAO ⇒ nâng trần an toàn tuyệt đối.
+2. ⛔ **Dấu tiếng Việt lại bị cắt ở khổ lớn**: phần dấu vượt line box tỉ lệ theo cỡ chữ ⇒ `slack` px CỐ
+   ĐỊNH không thể đúng cho mọi màn (10 px sạch ở chữ 66 px, CẮT ở chữ 88 px). Chữa: `slack = 2 × u`.
+3. ⛔ **`contentBox:true` là bẫy trông gọn**: trừ padding khỏi bề rộng đem so, mà khối chữ lại `width:100%`
+   của đúng content box đó ⇒ triệt tiêu, **cả 5 câu thử tụt về sàn 24 px**. Đã bỏ.
+Thêm: **`wakeLock`** giữ màn hình không tự tắt (iPad khoá sau ~2 phút mà màn này cả trận không ai chạm;
+lock bị nhả khi trang ẩn ⇒ lấy lại ở `visibilitychange`) · **`touch-action: manipulation`** (iOS Safari
+BỎ QUA `user-scalable=no` từ iOS 10) · khuyên thầy "Add to Home Screen" để chạy toàn màn hình.
+Chia TRÁI/PHẢI là cố ý: trên/dưới cho chữ to hơn chút (152 vs 140 px) nhưng trái/phải **ánh xạ đúng vị
+trí hai đội trên máy chơi**.
+⚠️ **BẪY THƯỚC ĐO suýt cắn**: ảnh chụp bàn thử trông như trang chỉ chiếm góc trên-trái — nhưng
+`elementFromPoint(1360,1018)` trả `.rrs-half`, `.rrs` đo đúng 1366×1024. **Ảnh nói dối** (pane thu nhỏ
+khung 1366 vào 800), số đo DOM đúng. Suýt đi sửa một lỗi không tồn tại.
+Đo cuối 1366×1024 hai nửa: chia đều **683/684**, trái 129 px + phải 210 px, không cắt, không cuộn, console sạch.
+
+### VIỆC ĐANG CHỜ
+- ⬜ **Thầy duyệt ĐỀ XUẤT SỬA CORE** `core/store.js` (+3 chuỗi `APP_DATA_KINDS`, gồm vá `showdown-session` thiếu từ
+  Đợt 269 — chính file đó cảnh báo "ADD ANY FUTURE kind OF APP DATA HERE", thiếu là ăn mất một số link `?a=`).
+- ⬜⬜ **Thầy bấm tay 7 bước** nối hai máy thật — Claude KHÔNG đăng nhập được tài khoản thầy nên đường mạng chưa
+  chạy lần nào. Danh sách ở `templates/rocket-race/GHI CHU ROCKET-RACE.md` mục 20.
+- ⬜ Safari iPad: nút Sign in dùng popup — nếu bị chặn phải đổi `signInWithRedirect`.
+- ⬜ TOMKO thật; ⬜ In turns; ⬜ câu chỉ có tiếng (iPad hiện 🔊).
+- ⬜ Sau khi chạy thật ổn: có mở cho các template Fight khác không.
 
 ---
 
