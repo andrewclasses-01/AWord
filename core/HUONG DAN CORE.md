@@ -34,6 +34,11 @@ người sửa engine thì phải nhớ:
 | `session.attemptId()` | mã lượt — in trên bảng "HÃY CHỤP LẠI MÀN HÌNH" |
 | `session.meta` | `{assignmentTitle, code}` — cũng cho bảng đó |
 | `session.entries()` | bảng xếp hạng lớp (Promise) — **TẤT CẢ** học sinh, lượt tốt nhất mỗi em |
+| `session.playLog` | (Đợt 366) `{start({mode,again,mistakes}), beat({timeMs}), end({score,total,timeMs}), leave({timeMs})}` — nhật ký LƯỢT CHƠI vào kho `practiceLog` (dashboard myLesson đo tổng phút luyện). Engine gọi: `enterGame` → start + nhịp 1 phút; `finish` → end (SAU `submit()` để có attemptId); `cleanupAll` → leave. `null` với HS đặc biệt. Template KHÔNG cần biết. |
+
+⭐ **Đợt 366 — `startGame(root, act, { …, hwPreset })`:** `"practice"`/`"submit"` = chế độ đã chọn sẵn ⇒ màn READY chờ cổng
+chuẩn bị xong rồi TỰ bấm START (không hỏi PRACTICE/SUBMIT). Dùng bởi `restartAs()` cho các nút **Submit again · Practice
+again · Start submitting** (+ Start with mistakes ở chế độ HS). ☰ Menu trong ván vẫn "Start again" cũ (về READY).
 
 ⭐⭐⭐ **Đợt 246 — HAI CHẾ ĐỘ (`hwMode`, chọn lại MỖI lượt trên màn READY):**
 - **PRACTICE** (nút tạ vàng, trái): không gửi gì, dữ liệu chỉ trong trang. Menu cuối: Show answers

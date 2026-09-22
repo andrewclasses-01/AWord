@@ -233,6 +233,26 @@ service cloud.firestore {
                     && request.resource.data.createdAt is int;
       allow update, delete: if isTeacher();
     }
+
+    // (22/9/2026, Đợt 366) KHO LƯỢT LUYỆN cho dashboard myLesson đo tổng thời gian
+    // luyện: MỘT tài liệu = MỘT lượt chơi (PRACTICE / SUBMIT / *again, kể cả bỏ dở),
+    // ghi đè nhiều lần (start · mỗi 1 phút · xong · rời ván). Ai cũng ghi, CHỈ THẦY đọc
+    // (laThay = Google của thầy HOẶC phiên ký bởi app myLesson). Không đụng scores/results.
+    match /practiceLog/{code}/entries/{entryId} {
+      allow read: if laThay();
+      allow create, update: if request.resource.data.keys().hasOnly(
+          ['name','mode','again','mistakes','score','total','timeMs','done','attemptId','createdAt','updatedAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() <= 40
+        && request.resource.data.mode in ['practice','submit']
+        && request.resource.data.again is bool && request.resource.data.mistakes is bool
+        && request.resource.data.score is int && request.resource.data.total is int
+        && request.resource.data.timeMs is int && request.resource.data.timeMs >= 0
+        && request.resource.data.timeMs <= 43200000
+        && request.resource.data.done is bool
+        && request.resource.data.attemptId is string && request.resource.data.attemptId.size() <= 40
+        && request.resource.data.createdAt is int && request.resource.data.updatedAt is int;
+      allow delete: if false;
+    }
   }
 }
 ```
@@ -297,6 +317,13 @@ specialAttempts/{code}/entries/{id}  ← (09/9/2026) myLesson "HỌC SINH ĐẶC
                                  — không ai khác trong hệ (kể cả bảng xếp hạng của chính bài
                                  đó) chạm tới collection này. core/assignments.js
                                  (sendSpecialAttempt).
+
+practiceLog/{code}/entries/{id}  ← (22/9/2026, Đợt 366) KHO LƯỢT LUYỆN: một tài liệu = một
+                                 lượt chơi của HS (mode practice|submit, again, mistakes,
+                                 score/total, timeMs, done, attemptId, createdAt, updatedAt),
+                                 ghi đè mỗi phút bằng REST PATCH — dashboard myLesson cộng
+                                 thành TỔNG THỜI GIAN LUYỆN TẬP. CHỈ THẦY đọc (laThay).
+                                 core/assignments.js (beatPlayLog), play.js (session.playLog).
 ```
 
 **Vì sao tách `assignments` ra khỏi thư viện?** Để thư viện của thầy luôn riêng tư — HS chỉ

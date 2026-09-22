@@ -255,7 +255,10 @@ const WORD_POOL_MAX_LEN = 24;
 // myActivity bridge seat and out of the assignment strips, and (b) reports
 // score / clock / finish to the match controller so the shared strip on top can
 // show them. A play without it behaves exactly as it always has.
-export function startGame(root, libAct, { onExit, session = null, base = null, fight = null } = {}) {
+// ⭐ Đợt 366 — `hwPreset` ("practice" | "submit"): chế độ HS đã CHỌN SẴN từ màn kết thúc
+// (SUBMIT AGAIN · PRACTICE AGAIN · START SUBMITTING · START WITH MISTAKES) ⇒ màn READY tự
+// bấm START, không hỏi lại PRACTICE/SUBMIT (thầy chốt 22/09/2026). Chỉ có nghĩa khi có `session`.
+export function startGame(root, libAct, { onExit, session = null, base = null, fight = null, hwPreset = null } = {}) {
   root.innerHTML = "";
   // ⭐ Đợt 274 — the "meme" wrong-sound override (core/wrong-sound.js) must
   // never reach a pupil's assignment; `session` truthy is exactly that mode.
@@ -2833,6 +2836,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
    */
   function enterGame() {
     playStarted = true;
+    // ⭐ Đợt 366 — nhật ký lượt chơi cho dashboard myLesson (xem play.js `playLog`):
+    // ghi lúc vào ván, rồi MỖI PHÚT một nhịp (kể cả em bỏ dở), xong ván ghi `end` ở finish().
+    if (session && session.playLog) {
+      try { session.playLog.start({ mode: hwMode, again: !!hwPreset, mistakes: !!activity._mistakes }); } catch (e) {}
+      playLogTimer = setInterval(() => {
+        if (torndown || playLogDone) return;
+        try { session.playLog.beat({ timeMs: Math.round(performance.now() - startedAt) }); } catch (e) {}
+      }, PLAYLOG_BEAT_MS);
+    }
     // ⭐⭐ Đợt 216 (thầy, 20/8/2026) — THE OVERLAY STAYS A SHIELD FOR HALF A SECOND.
     // "ngay khi start đã bấm được ngay nội dung rồi nên một số pha vừa bấm start
     // xong bấm nhầm ngay nội dung bên dưới". Two things made that unavoidable:
@@ -2859,6 +2871,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   press(bigPlay, startPressed);
   if (practiceBtn) press(practiceBtn, () => { hwMode = "practice"; startPressed(); });
   if (submitStartBtn) press(submitStartBtn, () => { hwMode = "submit"; startPressed(); });
+  // ⭐ Đợt 366 — chế độ chọn sẵn: chờ cổng chuẩn bị (Đợt 122) xong rồi tự START. Ván
+  // "with mistakes" chỉ có PRACTICE nên `submit` rơi về practice.
+  if (session && hwPreset) {
+    const mode = (hwPreset === "submit" && !activity._mistakes) ? "submit" : "practice";
+    Promise.resolve(prepDoneP).catch(() => {}).then(() => {
+      if (torndown || playStarted) return;
+      hwMode = mode; startPressed();
+    });
+  }
 
   // =============================================================
   // ⭐⭐⭐ PHÒNG CHỜ (Đợt 261, thầy 25/8/2026) — CẢ LỚP CÙNG BẮT ĐẦU MỘT LƯỢT
@@ -2893,6 +2914,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // thì không. ⇒ Luật: hàm nào có thể bị gọi ĐỒNG BỘ trong thân startGame() thì mọi biến
   // `let` nó đọc phải khai TRƯỚC nó, đừng tin câu "chỉ chạy sau khi mount xong".
   let torndown = false;   // cleanupAll() bật: ván này đã xong, không gì được khởi động lại
+  // ⭐ Đợt 366 — nhật ký lượt chơi (practiceLog): nhịp 1 phút + cờ "đã ghi end".
+  const PLAYLOG_BEAT_MS = 60000;
+  let playLogTimer = null, playLogDone = false;
 
   // ⚠️ `sdLobbyOn` + `sdMod` nay khai Ở TRÊN, cạnh `sdCanPublish` — xem ghi chú ở đó.
   // Ba lần là đủ để biết "kéo chuẩn về" không hội tụ. Mỗi lần là một cú dựng lại ván,
@@ -5445,6 +5469,17 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // at the FIRST one however many rounds deep you go), so this is the one
   // documented way back to everything — along with reloading the page and
   // switching template and back.
+  // ⭐ Đợt 366 (thầy chốt 22/09/2026) — START AGAIN tách thành hai lối vào thẳng ván, không
+  // hỏi lại PRACTICE/SUBMIT: SUBMIT AGAIN · PRACTICE AGAIN (màn kết thúc SUBMIT) và
+  // PRACTICE AGAIN · START SUBMITTING (màn kết thúc PRACTICE). Cùng đường với restart(),
+  // chỉ thêm `hwPreset` cho ván mới. Chỉ dùng ở chế độ học sinh (có `session`).
+  function restartAs(mode) {
+    if (!session) return restart();
+    tpl.sounds?.restart?.();
+    cleanupAll();
+    const target = activity._mistakes ? activity._mistakesBase : libAct;
+    startGame(root, target, { onExit, session, base: originAct, hwPreset: mode });
+  }
   function restart() {
     if (!fight || fight.side === 0) tpl.sounds?.restart?.();   // optional per-template restart sound, layered on the menu/button's own click (one board's copy is enough — see the Play chime above)
     // FIGHT MODE: "Start again" belongs to the MATCH, not to one board. Left to
@@ -5524,7 +5559,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     cleanupAll();
     // base stays originAct: "Change template" still converts from the ORIGINAL
     // full act, which is the teacher's other documented way back to everything.
-    startGame(root, next, { onExit, session, base: originAct });
+    // Đợt 366 — chế độ HS: ván lỗi vào thẳng PRACTICE (nó vốn chỉ có nút đó).
+    startGame(root, next, { onExit, session, base: originAct, hwPreset: session ? "practice" : null });
   }
   // Order matters (Đợt 112): `torndown` first so the closeMenu() below can't
   // revive the clock (see resumeClockForMenu), and stopTimer AFTER closeMenu so
@@ -5544,6 +5580,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   function cleanupAll() {
     if (torndown) return;
     torndown = true;
+    // ⭐ Đợt 366 — rời ván GIỮA CHỪNG (Home / Start again / đổi template) ⇒ ghi nhịp cuối.
+    if (playLogTimer) { clearInterval(playLogTimer); playLogTimer = null; }
+    if (session && session.playLog && playStarted && !playLogDone) {
+      playLogDone = true;
+      try { session.playLog.leave({ timeMs: Math.round(performance.now() - startedAt) }); } catch (e) {}
+    }
     stopWatchVanRoiTrang();        // ⭐ Đợt 295 — ván tự dọn rồi thì gỡ luôn lưới an toàn
     stopShowdownReview();          // ⭐ Đợt 196 — never leave the live listener behind
     stopSdClaimWatch();            // ⭐ Đợt 217 — và bộ nghe "đội có bị giành không"
@@ -5985,6 +6027,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
           }).then(r => (hwSendState = r || { ok: false }))
             .catch(e => { console.warn("AWord: submit failed", e); return (hwSendState = { ok: false }); });
         }
+        // ⭐ Đợt 366 — nhật ký lượt: điểm + thời gian, `done:true`. Đặt SAU session.submit()
+        // để lượt SUBMIT mang đúng `attemptId` (play.js đọc `attempt` đã có ngay).
+        if (session.playLog && !playLogDone) {
+          playLogDone = true;
+          if (playLogTimer) { clearInterval(playLogTimer); playLogTimer = null; }
+          try { session.playLog.end({ score: result.score, total: result.items ?? result.total, timeMs }); } catch (e) {}
+        }
         celebrate(result, null);
         return;
       }
@@ -6239,8 +6288,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       if (end.showAnswers !== false && reviewData.length) {
         items.append(panelItem("Show answers", () => showReview(result, entryId)));
       }
-      items.append(panelItem("Start again", restart));
+      // ⭐ Đợt 366 (thầy chốt) — PRACTICE AGAIN · START WITH MISTAKES · START SUBMITTING,
+      // mỗi nút vào thẳng ván ở đúng chế độ (không quay lại màn chọn PRACTICE/SUBMIT).
+      items.append(panelItem("Practice again", () => restartAs("practice")));
       if (mistakesAvailable()) items.append(panelItem("Start with mistakes", startWithMistakes));
+      if (!activity._mistakes) items.append(panelItem("Start submitting", () => restartAs("submit")));
     } else {
       // ⭐ Đợt 208 — no Leaderboard row in Showdown (thầy — see the note on the
       // rank line above). ⚠️ The leaderboard itself is NOT switched off: finish()
@@ -6412,7 +6464,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     if (end.showAnswers !== false && reviewData.length) {
       items.append(panelItem("Show answers", () => showReview(result, null)));
     }
-    items.append(panelItem("Start again", restart));
+    // ⭐ Đợt 366 (thầy chốt) — SUBMIT AGAIN · PRACTICE AGAIN thay "Start again": vào thẳng
+    // ván ở đúng chế độ. Lượt SUBMIT AGAIN vẫn là một lượt nộp thật (leaderboard lấy tốt nhất).
+    items.append(panelItem("Submit again", () => restartAs("submit")));
+    items.append(panelItem("Practice again", () => restartAs("practice")));
     menuPanel.append(items);
 
     duo.append(lbPanel, menuPanel);

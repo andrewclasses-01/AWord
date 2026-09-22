@@ -531,6 +531,34 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 366 (22/9/2026, KHO LƯỢT LUYỆN `practiceLog` + START AGAIN tách đôi — cho hộp quản lý bài myLesson đo TỔNG THỜI GIAN LUYỆN TẬP) · ⬜ CHƯA BẤM TAY
+
+Thầy chốt (qua AskUserQuestion, phiên myLesson đợt 2): dashboard cần tổng phút luyện của từng em = video + nghe + MỌI lượt
+AWord (nộp · luyện · again · kể cả BỎ DỞ). PRACTICE vốn "không gửi gì" (Đợt 246) ⇒ thêm kho RIÊNG:
+
+- **`practiceLog/{code}/entries/{id}`** — chép khuôn `specialAttempts`: ai cũng create/update (không auth, hasOnly 11 trường
+  `name·mode·again·mistakes·score·total·timeMs·done·attemptId·createdAt·updatedAt` + kiểu, `timeMs ≤ 12 h`), CHỈ THẦY đọc
+  (`laThay()` — phiên 🔐 dashboard myLesson đọc được), không ai xoá. Luật ĐÃ ĐĂNG bằng
+  `myLesson/app/tools/dang-luat-practice-log.js` (--xem/--dang/--kiem 7/7 ✓/--don/--lui): ruleset mới `7c630edf-603f-…`,
+  lùi về `fba064e2-60f5-…`.
+- **MỘT tài liệu = MỘT lượt chơi**, id cố định lúc START (`newPlayLogId`), REST PATCH `updateMask` ghi ĐÈ: lúc vào ván ·
+  mỗi **1 phút** (`PLAYLOG_BEAT_MS`, engine `enterGame`) · Game Complete (`done:true` + điểm, đặt SAU `session.submit()` để
+  lượt SUBMIT mang `attemptId` = id dòng scores ⇒ dashboard không cộng đôi) · rời ván giữa chừng (`cleanupAll` → `leave`) ·
+  đóng tab (`pagehide` + `fetch keepalive`, tự tính giờ theo `batDau`). `core/assignments.js beatPlayLog` không bao giờ
+  reject; HS đặc biệt (&db=1) `playLog = null`.
+- **Menu kết thúc**: SUBMIT = SUBMIT HOMEWORK · Show answers · **Submit again** · **Practice again**; PRACTICE = **Practice
+  again** · Start with mistakes · **Start submitting**. `restartAs(mode)` = `restart()` + `hwPreset`; `startGame({hwPreset})`
+  chờ `prepDoneP` rồi tự `startPressed()` (ván `_mistakes` luôn practice). Start with mistakes ở chế độ HS cũng vào thẳng.
+  ☰ Menu trong ván giữ "Start again" cũ (về READY chọn lại).
+- Đo thật trên devserver worktree (act QUIZ 8te49v, tên ZTEST EM, đã dọn): start ghi ngay · nhịp 60 001 ms · xong 5/30 ·
+  231 s `done:true` · "Start submitting" vào thẳng ván SUBMIT (`again:true`) · đóng tab ghi 19 245 ms.
+- ⛔ BẪY đã cắn: `createdAt | 0` — mốc ms ~1,79e12 tràn 32-bit thành SỐ ÂM; dùng `|| 0`. `timeMs` an toàn (< 2^31).
+
+**VIỆC ĐANG CHỜ.** ⬜ Thầy bấm tay trang thật: chơi PRACTICE → 3 nút mới; SUBMIT → 4 nút. ⬜ myLesson web đợt 2 đọc kho
+này (hộp quản lý 3 tab, mẫu `D:\OTHERS\CLAUDE\myLesson - thiet ke hop quan ly\mau-v2.html`).
+
+---
+
 ## Đợt 365 (20/9/2026 tối, FIND THE GAP — Fight khoét cùng từ · ô đã bấm giấu chữ · thanh GAPS hai nút min–max) · ✅ COMMIT + PUSH `09f470e` · ⬜ CHƯA BẤM TAY
 
 Thầy gửi ảnh Fight FIND 2 bàn + 3 ý. (1) Random gaps trong Fight: hai bàn khoét KHÁC từ — gốc là sổ chung

@@ -611,6 +611,64 @@ export async function sendSpecialAttempt({ code, studentName, score, total, time
   return { ok: false };
 }
 
+// ═══════════ KHO LƯỢT LUYỆN `practiceLog` (Đợt 366, thầy Andrew chốt 22/09/2026) ═══════════
+// myLesson dashboard đo "TỔNG THỜI GIAN LUYỆN TẬP" của từng em: video + nghe + MỌI lượt
+// AWord (nộp · luyện · again · kể cả BỎ DỞ). Lượt SUBMIT vốn đã có `timeMs` ở scores, nhưng
+// PRACTICE "không gửi gì" (Đợt 246) và lượt bỏ dở không ai biết ⇒ kho này:
+//
+//   practiceLog/{code}/entries/{id}   AI CŨNG GHI ĐƯỢC (create + update, không auth — cùng mức
+//                                     tin cậy như scores), CHỈ THẦY ĐỌC (`laThay()` — phiên
+//                                     🔐 của dashboard myLesson đọc được). KHÔNG app nào khác
+//                                     đọc, KHÔNG đụng leaderboard/results/submitCount.
+//
+// MỘT tài liệu = MỘT lượt chơi (id cố định lúc bấm START), ghi ĐÈ nhiều lần bằng REST PATCH:
+// lúc start · mỗi 1 phút (nhịp) · lúc Game Complete (`done:true`, kèm điểm) · lúc rời ván
+// giữa chừng (cleanupAll / pagehide, `keepalive:true` để trình duyệt vẫn gửi khi đóng tab).
+// Ghi thừa vô hại: mọi trường là giá trị TUYỆT ĐỐI của lượt đó (timeMs = đã chơi bao lâu).
+// Lượt SUBMIT mang `attemptId` = id dòng scores ⇒ dashboard không cộng đôi thời gian.
+// ⛔ CỐ Ý KHÔNG dùng SDK/outbox: `pagehide` không chờ được SDK; REST + keepalive là đường
+// duy nhất gửi kịp lúc đóng tab, và mất một nhịp cũng chỉ lệch ≤ 1 phút.
+// ⛔ Khoá của tài liệu CỐ ĐỊNH BỞI LUẬT (name, mode, again, mistakes, score, total, timeMs,
+// done, attemptId, createdAt, updatedAt) — thêm trường là mọi lượt ghi bị 403.
+const LOG_FIELDS = ["name", "mode", "again", "mistakes", "score", "total", "timeMs", "done", "attemptId", "createdAt", "updatedAt"];
+export function newPlayLogId() {
+  return `pl${now()}x${Array.from(crypto.getRandomValues(new Uint8Array(4)),
+    b => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("")}`;
+}
+function restUrlPlayLog(code, id) {
+  const pid = firebaseConfig && firebaseConfig.projectId, key = firebaseConfig && firebaseConfig.apiKey;
+  if (!pid || !key || !code || !id) return "";
+  const mask = LOG_FIELDS.map(f => "updateMask.fieldPaths=" + f).join("&");
+  return `https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents/practiceLog/` +
+    `${encodeURIComponent(String(code))}/entries/${encodeURIComponent(id)}?key=${encodeURIComponent(key)}&${mask}`;
+}
+// Ghi (tạo/đè) một lượt. Trả Promise<boolean>, KHÔNG BAO GIỜ reject. `keepalive` cho pagehide.
+export function beatPlayLog({ code, id, name, mode, again, mistakes, score, total, timeMs, done, attemptId, createdAt },
+                            { keepalive = false } = {}) {
+  const url = restUrlPlayLog(code, id);
+  if (!url) return Promise.resolve(false);
+  const nm = String(name || "Player").trim().replace(/\s+/g, " ").slice(0, 40) || "Player";
+  const fields = {
+    name: { stringValue: nm },
+    mode: { stringValue: mode === "submit" ? "submit" : "practice" },
+    again: { booleanValue: !!again },
+    mistakes: { booleanValue: !!mistakes },
+    score: { integerValue: String(Math.round(score) | 0) },
+    total: { integerValue: String(Math.round(total) | 0) },
+    timeMs: { integerValue: String(Math.max(0, Math.round(timeMs) | 0)) },
+    done: { booleanValue: !!done },
+    attemptId: { stringValue: String(attemptId || "") },
+    // ⛔ KHÔNG `| 0`: mốc mili giây (~1,79e12) vượt 32-bit, `| 0` cho ra số ÂM (đo thật 22/09).
+    createdAt: { integerValue: String(Math.round(createdAt) || 0) },
+    updatedAt: { integerValue: String(now()) }
+  };
+  try {
+    return fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ fields }), keepalive })
+      .then(r => !!r.ok).catch(() => false);
+  } catch (e) { return Promise.resolve(false); }
+}
+
 // Deliver whatever previous visits still owe — run on every play.html load,
 // in the background, never blocking anything. Sequential on purpose: these are
 // leftovers on a possibly-bad connection, not a race.

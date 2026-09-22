@@ -19,7 +19,8 @@ import { el } from "./core/utils.js";
 import {
   getAssignment, queueAttempt, sendAttempt, flushOutbox,
   listScores, isLate, nameKey, prettiestName, rankCompare,
-  sendSpecialAttempt   // myLesson "HỌC SINH ĐẶC BIỆT" — kho điểm RIÊNG, xem assignments.js
+  sendSpecialAttempt,  // myLesson "HỌC SINH ĐẶC BIỆT" — kho điểm RIÊNG, xem assignments.js
+  newPlayLogId, beatPlayLog   // Đợt 366 — kho LƯỢT LUYỆN practiceLog (thời gian mọi lượt, cả bỏ dở)
 } from "./core/assignments.js";
 import { ensureTemplate } from "./core/registry.js";
 // No template is imported here on purpose. ensureTemplate() fetches the ONE
@@ -190,6 +191,15 @@ async function play(assignment, studentName, className) {
   // attempt (same fixed id — a re-send can never create a second row). Both
   // resolve {ok:boolean} and never reject; see core/assignments.js.
   let attempt = null;
+  // Đợt 366 — lượt chơi ĐANG ghi nhật ký (null = chưa vào ván / đã rời ván).
+  let playLog = null;
+  // ⛔ Đóng tab/đổi trang: engine KHÔNG kịp gọi leave(), nên tự tính "đã chơi bao lâu" theo
+  // đồng hồ tường từ mốc `batDau` (đo thật 22/09: gửi lại gói cũ thì thiếu cả phút cuối).
+  window.addEventListener("pagehide", () => {
+    if (!playLog || playLog.done) return;
+    playLog.timeMs = Math.max(playLog.timeMs, Date.now() - playLog.batDau);
+    beatPlayLog(playLog, { keepalive: true });
+  });
   // Đợt 257 — xem chú thích ở `submit` bên dưới. Trả lại NGUYÊN promise gốc:
   // đường nộp/nộp lại không đổi một li nào, tin báo chỉ là người đứng nghe.
   const baoNopChoTrangMe = (giao) => {
@@ -241,6 +251,36 @@ async function play(assignment, studentName, className) {
         return attempt ? baoNopChoTrangMe(sendAttempt(attempt)) : Promise.resolve({ ok: false });
       },
       attemptId: () => attempt ? attempt.attemptId : "",
+
+      // ⭐⭐ Đợt 366 (thầy chốt 22/09/2026) — NHẬT KÝ LƯỢT CHƠI cho dashboard myLesson đo
+      // tổng thời gian luyện: engine gọi start() lúc vào ván, beat() mỗi phút, end() lúc
+      // Game Complete, leave() khi rời ván dở. Mỗi lượt một tài liệu, ghi đè — xem
+      // `beatPlayLog` (core/assignments.js). HS ĐẶC BIỆT (phụ huynh) KHÔNG ghi — kho đó
+      // đo lớp, không đo phụ huynh. `pagehide` bên dưới gửi nhịp cuối bằng keepalive.
+      playLog: dacBiet ? null : {
+        start: ({ mode, again, mistakes }) => {
+          playLog = { code: assignment.code, id: newPlayLogId(), name: studentName, mode,
+                      again: !!again, mistakes: !!mistakes, score: 0, total: 0, timeMs: 0,
+                      done: false, attemptId: "", createdAt: Date.now(), batDau: Date.now() };
+          beatPlayLog(playLog);
+        },
+        beat: ({ timeMs }) => {
+          if (!playLog || playLog.done) return;
+          playLog.timeMs = timeMs; beatPlayLog(playLog);
+        },
+        end: ({ score, total, timeMs }) => {
+          if (!playLog) return;
+          playLog.score = score; playLog.total = total; playLog.timeMs = timeMs; playLog.done = true;
+          playLog.attemptId = (playLog.mode === "submit" && attempt) ? attempt.attemptId : "";
+          beatPlayLog(playLog);
+        },
+        leave: ({ timeMs }) => {
+          if (!playLog || playLog.done) return;
+          playLog.timeMs = Math.max(playLog.timeMs, timeMs | 0);
+          beatPlayLog(playLog, { keepalive: true });
+          playLog = null;
+        }
+      },
 
       // The class ranking: each student's BEST attempt, best score first and,
       // on a tie, the faster time (the teacher's rule).
