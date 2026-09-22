@@ -531,6 +531,24 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 367 (22/9/2026 tối, MÃ HỌC SINH `ma` đi kèm điểm — đổi tên em bên myStudent không làm điểm lạc) · ⬜ CHƯA BẤM TAY
+
+Bối cảnh (phiên myLesson "bịt kín 4 việc, không ID lớp", việc 1): điểm `assignments/{code}/scores`, `results`, `practiceLog`
+đều chỉ có TÊN; myLesson khớp theo tên nên thầy đổi tên em (giữ mã) ⇒ điểm cũ "mất", STAGE chặn cả lớp. Web myLesson v1.134.0
+gửi thêm `&ma=<mã myStudent>` (đã có `&n=`, `&lop=`) và khớp theo mã trước, tên (kể cả tên cũ) sau.
+- `play.js`: đọc `?ma=` (lọc `[A-Za-z0-9_.-]`, ≤ 60) → `play(assignment, name, lop, ma)` → `queueAttempt({…, ma})` + `playLog.ma`.
+- `core/assignments.js`: `queueAttempt` giữ `entry.ma` (chỉ khi có — outbox/tài liệu đời cũ y hệt); `sendAttempt` ghi `ma` vào
+  scoreData + resultData khi có; `beatPlayLog` LUÔN ghi `ma` (rỗng khi chơi tự do), `LOG_FIELDS` thêm `ma` (updateMask).
+- Luật Firestore: 3 khối nhận `ma` TUỲ CHỌN (`string ≤ 60`), đăng bằng script myLesson `app/tools/dang-luat-ma-hs.js`
+  (`--xem/--dang/--kiem/--don/--lui`): ruleset **`a648c2ea-8725-4d42-b24e-fb45f679672b`** (lùi: `7c630edf…`), --kiem 15/15
+  (có ma 200 · không ma 200 · sai kiểu 403 · quá dài 403 · trường lạ 403) ở cả 3 khối. `docs/08-FIREBASE-SETUP.md` cập nhật.
+- Đo thật (devserver 5567, worktree): `queueAttempt`+`sendAttempt` với `ma` ⇒ scores/results có `ma`; không `ma` ⇒ tài liệu
+  KHÔNG có trường (y đời cũ); `beatPlayLog` ⇒ practiceLog có `ma`. Rác ZTEST đã dọn. HS đặc biệt (`db=1`) không đổi.
+- ⬜ Thầy bấm tay: mở bài từ myLesson (link có `&ma=`), nộp một lượt, dashboard THỜI LƯỢNG vẫn đúng; sau đó đổi tên em thử
+  bên myStudent → 🌐 → điểm vẫn theo em. ⛔ Không cache-busting: Ctrl+Shift+R.
+
+---
+
 ## Đợt 366 (22/9/2026, KHO LƯỢT LUYỆN `practiceLog` + START AGAIN tách đôi — cho hộp quản lý bài myLesson đo TỔNG THỜI GIAN LUYỆN TẬP) · ⬜ CHƯA BẤM TAY
 
 Thầy chốt (qua AskUserQuestion, phiên myLesson đợt 2): dashboard cần tổng phút luyện của từng em = video + nghe + MỌI lượt

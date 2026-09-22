@@ -181,7 +181,7 @@ service cloud.firestore {
       match /scores/{scoreId} {
         allow read: if true;
         allow create: if request.resource.data.keys().hasOnly(
-                          ['name','score','total','timeMs','createdAt'])
+                          ['name','score','total','timeMs','createdAt','ma'])   // Đợt 367: ma tuỳ chọn (string ≤ 60)
                       && request.resource.data.name is string
                       && request.resource.data.name.size() <= 40
                       && request.resource.data.score is int
@@ -198,7 +198,7 @@ service cloud.firestore {
       // quyền này để dọn sạch cả điểm của bài giao đã bỏ.
       allow read, delete: if isTeacher();
       allow create: if request.resource.data.keys().hasOnly(
-                        ['assignmentId','studentName','score','total','timeMs','review','createdAt'])
+                        ['assignmentId','studentName','score','total','timeMs','review','createdAt','ma'])   // Đợt 367: ma tuỳ chọn
                     && request.resource.data.studentName is string
                     && request.resource.data.studentName.size() <= 40
                     && request.resource.data.score is int
@@ -241,7 +241,7 @@ service cloud.firestore {
     match /practiceLog/{code}/entries/{entryId} {
       allow read: if laThay();
       allow create, update: if request.resource.data.keys().hasOnly(
-          ['name','mode','again','mistakes','score','total','timeMs','done','attemptId','createdAt','updatedAt'])
+          ['name','mode','again','mistakes','score','total','timeMs','done','attemptId','createdAt','updatedAt','ma'])   // Đợt 367: ma tuỳ chọn
         && request.resource.data.name is string && request.resource.data.name.size() <= 40
         && request.resource.data.mode in ['practice','submit']
         && request.resource.data.again is bool && request.resource.data.mistakes is bool

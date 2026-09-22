@@ -460,10 +460,12 @@ function dropOutboxEntry(entry) {
 // id, name, numbers, review, createdAt — is decided HERE, once; every send and
 // re-send afterwards only reads it. `createdAt` doubles as the teacher-side
 // de-duplication key (loadReport merges results and scores on name+createdAt).
-export function queueAttempt({ code, studentName, score, total, timeMs, review }) {
+export function queueAttempt({ code, studentName, ma, score, total, timeMs, review }) {
   // Collapse runs of spaces too (play.js does the same at the name screen) so
   // the stored spelling always matches what nameKey() groups by.
   const name = String(studentName || "Player").trim().replace(/\s+/g, " ").slice(0, 40) || "Player";
+  // Đợt 367 — mã học sinh (myLesson `&ma=`); rỗng = không ghi trường này (tài liệu y hệt đời cũ).
+  const maHs = String(ma || "").slice(0, 60);
   const createdAt = now();
   const rand = Array.from(crypto.getRandomValues(new Uint8Array(4)),
     b => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("");
@@ -471,6 +473,7 @@ export function queueAttempt({ code, studentName, score, total, timeMs, review }
     attemptId: `hw${createdAt}x${rand}`,
     code: String(code),
     name,
+    ...(maHs ? { ma: maHs } : {}),
     score: Math.round(score) | 0,
     total: Math.round(total) | 0,
     timeMs: Math.round(timeMs) | 0,
@@ -511,14 +514,16 @@ export async function sendAttempt(entry, { tries = 3, tryTimeoutMs = 6000 } = {}
   const scoreRef = doc(d, "assignments", entry.code, "scores", entry.attemptId);
   const resultRef = doc(d, "results", entry.attemptId);
   // EXACTLY the keys the security rules allow, in both documents.
+  // Đợt 367 — `ma` (mã học sinh) đi kèm khi có; luật Firestore nhận tuỳ chọn (ruleset a648c2ea…).
+  const maHs = entry.ma ? { ma: String(entry.ma).slice(0, 60) } : {};
   const scoreData = {
     name: entry.name, score: entry.score, total: entry.total,
-    timeMs: entry.timeMs, createdAt: entry.createdAt
+    timeMs: entry.timeMs, createdAt: entry.createdAt, ...maHs
   };
   const resultData = clean({
     assignmentId: entry.code, studentName: entry.name,
     score: entry.score, total: entry.total, timeMs: entry.timeMs,
-    review: entry.review || [], createdAt: entry.createdAt
+    review: entry.review || [], createdAt: entry.createdAt, ...maHs
   });
 
   for (let round = 0; round < tries; round++) {
@@ -630,7 +635,7 @@ export async function sendSpecialAttempt({ code, studentName, score, total, time
 // duy nhất gửi kịp lúc đóng tab, và mất một nhịp cũng chỉ lệch ≤ 1 phút.
 // ⛔ Khoá của tài liệu CỐ ĐỊNH BỞI LUẬT (name, mode, again, mistakes, score, total, timeMs,
 // done, attemptId, createdAt, updatedAt) — thêm trường là mọi lượt ghi bị 403.
-const LOG_FIELDS = ["name", "mode", "again", "mistakes", "score", "total", "timeMs", "done", "attemptId", "createdAt", "updatedAt"];
+const LOG_FIELDS = ["name", "mode", "again", "mistakes", "score", "total", "timeMs", "done", "attemptId", "createdAt", "updatedAt", "ma"];
 export function newPlayLogId() {
   return `pl${now()}x${Array.from(crypto.getRandomValues(new Uint8Array(4)),
     b => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("")}`;
@@ -643,13 +648,14 @@ function restUrlPlayLog(code, id) {
     `${encodeURIComponent(String(code))}/entries/${encodeURIComponent(id)}?key=${encodeURIComponent(key)}&${mask}`;
 }
 // Ghi (tạo/đè) một lượt. Trả Promise<boolean>, KHÔNG BAO GIỜ reject. `keepalive` cho pagehide.
-export function beatPlayLog({ code, id, name, mode, again, mistakes, score, total, timeMs, done, attemptId, createdAt },
+export function beatPlayLog({ code, id, name, ma, mode, again, mistakes, score, total, timeMs, done, attemptId, createdAt },
                             { keepalive = false } = {}) {
   const url = restUrlPlayLog(code, id);
   if (!url) return Promise.resolve(false);
   const nm = String(name || "Player").trim().replace(/\s+/g, " ").slice(0, 40) || "Player";
   const fields = {
     name: { stringValue: nm },
+    ma: { stringValue: String(ma || "").slice(0, 60) },   // Đợt 367 — mã học sinh (rỗng khi chơi tự do)
     mode: { stringValue: mode === "submit" ? "submit" : "practice" },
     again: { booleanValue: !!again },
     mistakes: { booleanValue: !!mistakes },

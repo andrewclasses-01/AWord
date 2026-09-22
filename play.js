@@ -80,9 +80,13 @@ async function start() {
   // say "TUẤN KHANG - A1A". Old links without it still work: the READY screen
   // then shows the name alone.
   const lop = (q.get("lop") || "").trim().replace(/\s+/g, " ").slice(0, 12);
+  // ⭐ Đợt 367 (22/9/2026) — MÃ học sinh myStudent (`&ma=`, myLesson web v1.134.0) đi kèm tên.
+  // Ghi vào scores / results / practiceLog để đổi TÊN em bên myStudent không làm điểm cũ "lạc":
+  // myLesson khớp theo mã trước, tên sau. Link không có `ma` (chơi tự do) ⇒ chuỗi rỗng, không ghi.
+  const ma = (q.get("ma") || "").trim().replace(/[^A-Za-z0-9_.-]/g, "").slice(0, 60);
   if (handed.length >= 2) {
     try { localStorage.setItem(REMEMBER_KEY, handed); } catch (e) { /* private mode: fine */ }
-    return play(assignment, handed.slice(0, 40), lop);
+    return play(assignment, handed.slice(0, 40), lop, ma);
   }
   showNameScreen(assignment);
 }
@@ -164,7 +168,8 @@ function showNameScreen(assignment) {
 }
 
 // ---------------- the game ----------------
-async function play(assignment, studentName, className) {
+async function play(assignment, studentName, className, studentMa) {
+  const ma = String(studentMa || "");   // Đợt 367 — mã em, rỗng khi không qua myLesson
   // A fresh copy each time so a replay never inherits the previous play's state.
   const activity = JSON.parse(JSON.stringify(assignment.activity));
 
@@ -239,7 +244,7 @@ async function play(assignment, studentName, className) {
           return sendSpecialAttempt({ code: assignment.code, studentName,
                                       score, total, timeMs });
         }
-        attempt = queueAttempt({ code: assignment.code, studentName, score, total, timeMs, review });
+        attempt = queueAttempt({ code: assignment.code, studentName, ma, score, total, timeMs, review });
         return baoNopChoTrangMe(sendAttempt(attempt));
       },
       retrySubmit: () => {
@@ -259,7 +264,7 @@ async function play(assignment, studentName, className) {
       // đo lớp, không đo phụ huynh. `pagehide` bên dưới gửi nhịp cuối bằng keepalive.
       playLog: dacBiet ? null : {
         start: ({ mode, again, mistakes }) => {
-          playLog = { code: assignment.code, id: newPlayLogId(), name: studentName, mode,
+          playLog = { code: assignment.code, id: newPlayLogId(), name: studentName, ma, mode,
                       again: !!again, mistakes: !!mistakes, score: 0, total: 0, timeMs: 0,
                       done: false, attemptId: "", createdAt: Date.now(), batDau: Date.now() };
           beatPlayLog(playLog);
