@@ -49,7 +49,23 @@ Dùng:
   • Đo 19/9 trên LSB1-S3.T2.P3-4: Parakeet trên mp3 kho ra 587/587 chữ giống hệt bản đo từ mp4 gốc, lệch mốc
     0,000 s — vì đường cũ cũng rút mp4 → mp3 64k mono bằng đúng tham số ffmpeg đó rồi mới nghe. Tải 1,79 MB: 2,9 s.
 
-⛔ CHỈ ĐỌC nguyên liệu gốc (trừ file cache .pk.json nói trên và bản mp3 tải từ kho vào AUDIO\); wav tạm ghi vào %TEMP%.
+Đợt 369 (22/9/2026 — thầy báo "nghe không đủ, lệch chỗ" trên LSA2-S3.T3.P1-2):
+  • GỐC LỖI là Parakeet NGHE SÓT: băng 176,6 s nghe cả file ra 369 chữ nhưng bỏ trắng 157,4→162,5 s
+    ("She's been ill. That man in the big hat is her husband, James.") và 170,5→172,6 s ("How people
+    change!") — mất 18 chữ. ffmpeg silencedetect xác nhận hai chỗ đó CÓ TIẾNG, không phải im lặng.
+  • `khe_im_lang()` + `do_sot()` + `nghe_va()` + `va_asr()`: dò vùng CÓ TIẾNG mà KHÔNG CÓ CHỮ ≥1,2 s,
+    ghép mọi vùng đó thành MỘT wav vá rồi gọi Parakeet thêm ĐÚNG MỘT LƯỢT → cứu đủ 18 chữ. Băng sạch
+    không tốn gì. Vá xong ghi đè cache .pk.json; vùng nghe lại vẫn không ra chữ thì ghi sổ `<audio>.va.json`
+    để lần sau khỏi nạp model vô ích. Tắt bằng `--no-va`.
+  • `khop_toan_cuc()` thay `align()` ở đường mốc giây: nối TOÀN BỘ câu hỏi thành một chuỗi rồi căn một lần
+    bằng quy hoạch động dải hẹp. align() cũ khớp từng dòng tham lam nên dòng không có chỗ khớp vẫn CHỘP ĐẠI
+    một cửa sổ và ghi mốc (câu "She's been ill." bị gán vào chỗ phát "Oh. Isn't that", khớp 0,00).
+  • `suy_ra_va_cat()` thay đệm cứng −0,15/+0,25 s: cắt đầu/cuối tại KHE NGHỈ thật (≤0,7 s), hai câu chạm
+    nhau thì cắt tại điểm giữa khe; câu không có trong băng được suy vị trí theo số chữ + cờ `suyra`.
+  • Đo lại trên chính bài của thầy: câu khớp đúng 47/50 → 50/50 · sai chỗ hẳn 2 → 0 · mất mốc 1 → 0 ·
+    chồng lấn 11 → 0. `align()` cũ GIỮ NGUYÊN cho đường tạo gói .ftg.json.
+
+⛔ CHỈ ĐỌC nguyên liệu gốc (trừ cache .pk.json, sổ .va.json và bản mp3 tải từ kho vào AUDIO\); wav tạm ghi vào %TEMP%.
    Không đụng .xlsm/.txt/.mp4.
 Yêu cầu: Python 3 + openpyxl (đọc .xlsm), ffmpeg (dò), Parakeet venv E:\LAP TRINH APP\MODEL\_parakeet_venv (GPU).
 """
@@ -304,17 +320,23 @@ def run_parakeet(audio_path, tmpdir):
     wav = os.path.join(tmpdir, "ftg.wav")
     log(f">> ffmpeg → wav 16 kHz: {audio_path}")
     subprocess.run([need_ffmpeg(), "-v", "error", "-y", "-i", audio_path, "-ac", "1", "-ar", "16000", wav], check=True)
-    if not os.path.exists(PK_PY) or not os.path.exists(PK_SCRIPT):
-        raise SystemExit(f"Không thấy Parakeet ({PK_PY} / {PK_SCRIPT}) — máy này chưa dựng kho MODEL")
     # Đợt 346: thời lượng băng (wav 16 kHz mono 16-bit = 32.000 byte/giây) → app ước lượng % nhận dạng
     try:
         dur = max(0.0, (os.path.getsize(wav) - 44) / 32000.0)
     except Exception:
         dur = 0.0
     log("@@TD " + json.dumps({"dur": round(dur, 1)}))
+    return goi_parakeet(wav, tmpdir, "ftg_pk")
+
+def goi_parakeet(wav, tmpdir, ten):
+    """Đợt 369 — TÁCH khỏi run_parakeet() để bước NGHE VÁ gọi lại được trên wav vá, không phải dựng lại
+    ffmpeg/env/vòng đọc log. Nhận wav 16 kHz mono đã sẵn sàng, trả [{word,start,end}]."""
+    tmpdir = os.path.realpath(tmpdir)
+    if not os.path.exists(PK_PY) or not os.path.exists(PK_SCRIPT):
+        raise SystemExit(f"Không thấy Parakeet ({PK_PY} / {PK_SCRIPT}) — máy này chưa dựng kho MODEL")
     log(">> Parakeet (GPU)…")
     t0 = time.time()
-    base = os.path.join(tmpdir, "ftg_pk")
+    base = os.path.join(tmpdir, ten)
     env = dict(os.environ, HF_HOME=os.path.join(MODEL_DIR, "_cache"), PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
     # Đợt 346: Popen + đọc từng dòng để chuyển tiếp `[pk] nap model…` / `[pk] nhan dang…` NGAY (myWord vẽ tiến trình);
     # bản cũ capture_output gom hết tới cuối nên app đứng im 40 s không biết máy đang làm gì. Đuôi log giữ để in khi lỗi.
@@ -366,6 +388,203 @@ def extract_audio(mp4, tmpdir):
     subprocess.run([need_ffmpeg(), "-v", "error", "-y", "-i", mp4, "-vn", "-ac", "1", "-ar", "44100", "-b:a", "64k", mp3], check=True)
     return mp3
 
+# ------------------------------------------- Đợt 369: khe nghỉ + đoạn băng Parakeet NGHE SÓT
+# Đo 22/9/2026 trên LSA2-S3.T3.P1-2 (băng 176,6 s): nghe cả file ra 369 chữ nhưng BỎ TRẮNG hai đoạn có
+# tiếng thật — 157,4→162,5 s ("She's been ill. That man in the big hat is her husband, James.") và
+# 170,5→172,6 s ("How people change!"), mất 18 chữ. Cắt riêng hai đoạn đó nghe lại thì ra ĐỦ.
+# ⛔ Đừng tin "ASR im lặng = băng im lặng": phải hỏi ffmpeg xem chỗ đó có tiếng không.
+
+def khe_im_lang(audio_path, nguong_db=-40, toi_thieu=0.25):
+    """[(đầu, cuối)] các khoảng IM LẶNG + thời lượng băng (ffmpeg silencedetect, ~0,3 s).
+    Dùng cho hai việc: cắt câu tại khe nghỉ thật, và biết chỗ nào CÓ TIẾNG mà máy không nghe ra chữ.
+    Hỏng thì trả rỗng — mọi bước sau đều chịu được ([] = không biết khe nào, cứ dùng mốc chữ)."""
+    try:
+        p = subprocess.run([need_ffmpeg(), "-hide_banner", "-nostats", "-i", audio_path,
+                            "-af", "silencedetect=noise=%ddB:d=%s" % (nguong_db, toi_thieu), "-f", "null", "-"],
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
+    except Exception as e:
+        log(f"   ⚠ không đo được khe nghỉ ({e}) — bỏ bước cắt theo khe")
+        return [], 0.0
+    err = p.stderr or ""
+    dur = 0.0
+    m = re.search(r"Duration: (\d+):(\d\d):(\d\d(?:\.\d+)?)", err)
+    if m:
+        dur = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + float(m.group(3))
+    khe, dau = [], None
+    for m in re.finditer(r"silence_(start|end): (-?[\d.]+)", err):
+        if m.group(1) == "start":
+            dau = float(m.group(2))
+        elif dau is not None:
+            khe.append((dau, float(m.group(2))))
+            dau = None
+    if dau is not None:                       # băng kết bằng im lặng → khe cuối chạy tới hết
+        khe.append((dau, dur or dau))
+    return khe, dur
+
+def giay_co_tieng(s, e, khe):
+    """Số giây CÓ TIẾNG trong [s, e] = độ dài trừ phần chồng với các khoảng im lặng."""
+    con = e - s
+    for a, b in khe:
+        con -= max(0.0, min(e, b) - max(s, a))
+    return max(0.0, con)
+
+def do_sot(asr, khe, dur, toi_thieu=1.2):
+    """Vùng CÓ TIẾNG mà KHÔNG CÓ CHỮ nào ≥ toi_thieu giây → [(đầu, cuối, giây_có_tiếng)]."""
+    if dur <= 0:
+        return []
+    moc = sorted((float(w["start"]), float(w["end"])) for w in asr
+                 if isinstance(w, dict) and w.get("start") is not None)
+    trong, truoc = [], 0.0
+    for s, e in moc:
+        if s - truoc > 0.05:
+            trong.append((truoc, s))
+        truoc = max(truoc, e)
+    if dur - truoc > 0.05:
+        trong.append((truoc, dur))
+    sot = []
+    for s, e in trong:
+        t = giay_co_tieng(s, e, khe)
+        if t < toi_thieu:
+            continue
+        # Gọt hai đầu cho sát phần CÓ TIẾNG: vùng sót cuối băng hay ôm cả đuôi im lặng, cắt nguyên vào wav vá
+        # thì Parakeet đẻ chữ ma ("Ugh" từ 4 s im lặng cuối LSA2-S3.T3.P1-2). Lặp tới khi hai mép hết đổi —
+        # mép vùng thường lệch khe vài phần mười giây (đuôi chữ trước còn kêu), nên phải chừa dung sai 0,25 s.
+        for _ in range(8):
+            s0, e0 = s, e
+            for a, b in khe:
+                if a <= s + 0.25 and s < b < e:
+                    s = b
+                if b >= e - 0.25 and s < a < e:
+                    e = a
+            if (s, e) == (s0, e0):
+                break
+        if e - s > 0.3 and giay_co_tieng(s, e, khe) >= toi_thieu:
+            sot.append((round(s, 2), round(e, 2), round(t, 2)))
+    return sot
+
+def va_path(audio_path):
+    """Sổ ghi các đoạn ĐÃ THỬ nghe vá mà không ra chữ (nhạc nền, tiếng động) — để lần sau khỏi thử lại."""
+    base, _ = os.path.splitext(audio_path)
+    return base + ".va.json"
+
+def _dau_wav(so_byte, sr=16000):
+    import struct
+    return (b"RIFF" + struct.pack("<I", 36 + so_byte) + b"WAVEfmt "
+            + struct.pack("<IHHIIHH", 16, 1, 1, sr, sr * 2, 2, 16)
+            + b"data" + struct.pack("<I", so_byte))
+
+def nghe_va(audio_path, sot, tmpdir, dur, no_go=0.8, ngan=1.0):
+    """Ghép MỌI đoạn sót thành MỘT wav vá (nới ±no_go giây để không cụt đầu/đuôi, chèn `ngan` giây im lặng
+    ngăn giữa các đoạn) rồi gọi Parakeet ĐÚNG MỘT LẦN nữa → chỉ tốn thêm một lượt nạp model (~35 s), và chỉ
+    khi băng thật sự có đoạn sót. Trả [{word,start,end}] đã dịch về mốc băng GỐC."""
+    SR = 16000
+    tmpdir = os.path.realpath(tmpdir)
+    im = b"\x00" * int(SR * 2 * ngan)
+    vung, pcm, moc_va = [], [], 0.0
+    for k, (s, e, _t) in enumerate(sot):
+        s2 = max(0.0, s - no_go)
+        e2 = min(dur, e + no_go) if dur > 0 else e + no_go
+        if e2 - s2 < 0.3:
+            continue
+        raw = os.path.join(tmpdir, "va_%d.raw" % k)
+        try:
+            subprocess.run([need_ffmpeg(), "-v", "error", "-y", "-ss", "%.3f" % s2, "-i", audio_path,
+                            "-t", "%.3f" % (e2 - s2), "-ac", "1", "-ar", str(SR), "-f", "s16le", raw], check=True)
+            b = io.open(raw, "rb").read()
+        except Exception as ex:
+            log(f"   ⚠ không cắt được đoạn {s2:.1f}–{e2:.1f}s ({ex}) — bỏ qua")
+            continue
+        if not b:
+            continue
+        pcm.append(im)
+        moc_va += ngan                         # im lặng ngăn đứng TRƯỚC mỗi đoạn (kể cả đoạn đầu)
+        vung.append({"goc": s2, "va": moc_va, "dai": len(b) / (SR * 2.0)})
+        pcm.append(b)
+        moc_va += len(b) / (SR * 2.0)
+    if not vung:
+        return []
+    pcm.append(im)
+    data = b"".join(pcm)
+    wav = os.path.join(tmpdir, "ftg_va.wav")
+    with io.open(wav, "wb") as f:
+        f.write(_dau_wav(len(data)))
+        f.write(data)
+    log(f">> nghe vá {len(vung)} đoạn băng bị sót ({sum(v['dai'] for v in vung):.1f} s)…")
+    try:
+        chu = goi_parakeet(wav, tmpdir, "ftg_va_pk")
+    except SystemExit as ex:                   # vá hỏng thì THÔI, không giết cả lượt đo mốc giây
+        log(f"   ⚠ nghe vá không xong ({ex}) — dùng bản nghe lần đầu")
+        return []
+    ra = []
+    for x in chu:
+        try:
+            t0 = float(x.get("start")); t1 = float(x.get("end"))
+        except (TypeError, ValueError):
+            continue
+        v = next((v for v in vung if v["va"] - 0.3 <= t0 < v["va"] + v["dai"] + 0.3), None)
+        if not v:
+            continue
+        ra.append({"word": x.get("word"), "start": round(v["goc"] + (t0 - v["va"]), 2),
+                   "end": round(v["goc"] + (t1 - v["va"]), 2)})
+    return ra
+
+def va_asr(asr, audio_path, tmpdir, cache_for=None, khe=None, dur=0.0):
+    """Dò đoạn sót → nghe vá → trộn vào asr (chỉ nhận chữ rơi ĐÚNG trong vùng sót, phần nới ±0,8 s là chữ
+    đã biết rồi) → ghi đè cache .pk.json để lần sau khỏi tốn, và ghi sổ .va.json các đoạn thử mà không ra chữ.
+    Trả (asr_mới, [(s,e,giây)] đoạn đã vá, số chữ vá được). Băng sạch ⇒ trả nguyên, không tốn gì."""
+    goc = cache_for or audio_path
+    if khe is None:
+        khe, d2 = khe_im_lang(audio_path)
+        dur = dur or d2
+    sot = do_sot(asr, khe, dur)
+    da_thu = []
+    try:
+        if os.path.exists(va_path(goc)):
+            da_thu = [tuple(x) for x in (json.load(io.open(va_path(goc), encoding="utf-8")) or {}).get("da_thu", [])]
+    except Exception:
+        da_thu = []
+    con = [x for x in sot if not any(abs(x[0] - a) < 0.5 and abs(x[1] - b) < 0.5 for a, b in da_thu)]
+    if not con:
+        if sot:
+            log(f">> {len(sot)} đoạn băng máy không nghe ra chữ — đã thử vá lần trước, không ra, bỏ qua")
+        return asr, [], 0
+    log(f">> băng có {len(con)} đoạn CÓ TIẾNG mà máy không nghe ra chữ "
+        + " · ".join(f"{s:.1f}–{e:.1f}s" for s, e, _ in con))
+    them = nghe_va(audio_path, con, tmpdir, dur)
+    # Phần nới ±0,8 s khi cắt là chữ ĐÃ BIẾT → bỏ chữ vá nào chồng giờ với một chữ sẵn có, kẻo chuỗi
+    # băng có hai bản của cùng một chữ ("her." · "Oh") làm loãng phép căn.
+    cu = [(float(w["start"]), float(w["end"])) for w in asr
+          if isinstance(w, dict) and w.get("start") is not None]
+    them = [w for w in them
+            if not any(min(w["end"], b) - max(w["start"], a) > 0.02 for a, b in cu)]
+    nhan, va_duoc = [], []
+    for s, e, _t in con:
+        trong = [w for w in them if s - 0.35 <= w["start"] <= e + 0.35]
+        if trong:
+            nhan += trong
+            va_duoc.append((s, e, _t))
+            log(f"   ✓ {s:.1f}–{e:.1f}s vá được {len(trong)} chữ: " + " ".join(str(w["word"]) for w in trong)[:90])
+        else:
+            da_thu.append((s, e))
+            log(f"   · {s:.1f}–{e:.1f}s nghe lại vẫn không ra chữ (nhạc nền / tiếng động?)")
+    try:                                        # sổ đoạn thử hỏng — lần sau khỏi nạp model lại vô ích
+        io.open(va_path(goc), "w", encoding="utf-8").write(
+            json.dumps({"da_thu": [[round(a, 2), round(b, 2)] for a, b in da_thu]}, ensure_ascii=False))
+    except Exception:
+        pass
+    if not nhan:
+        return asr, [], 0
+    moi = sorted(list(asr) + nhan, key=lambda w: float(w.get("start") or 0))
+    try:                                        # vá luôn cache: lần sau (và bước CLI sửa chữ) hưởng ngay
+        cp = cache_path(goc)
+        tmp = cp + ".tmp"
+        io.open(tmp, "w", encoding="utf-8").write(json.dumps(moi, ensure_ascii=False))
+        os.replace(tmp, cp)
+        log(f"   đã vá cache: {cp} ({len(asr)} → {len(moi)} chữ)")
+    except Exception as e:
+        log(f"   ⚠ không ghi được cache đã vá ({e}) — bỏ qua")
+    return moi, va_duoc, len(nhan)
+
 # ---------------------------------------------------------------- khớp
 def align(lines, asr, whole=False):
     """whole=True: mỗi dòng dò trên TOÀN BỘ phần băng còn lại (sheet FILLGAP chỉ chọn vài câu rải rác);
@@ -403,6 +622,161 @@ def align(lines, asr, whole=False):
         if r >= 0.6:
             pos = e
     return lines
+
+# ------------------------------------------- Đợt 369: khớp TOÀN CỤC (thay align() ở đường mốc giây)
+# ⛔ align() ở trên khớp TỪNG DÒNG một cách tham lam: dòng nào không có chỗ để khớp thì nó VẪN chộp đại
+#    một cửa sổ rồi ghi mốc giây vào Excel. Đo 22/9 trên LSA2-S3.T3.P1-2: câu "She's been ill." bị gán
+#    vào chỗ phát "Oh. Isn't that" (khớp 0,00), câu kế đè ngược lên nó, câu cuối mất mốc — 11/50 câu
+#    chồng lấn nhau. Cách mới: nối TOÀN BỘ câu hỏi thành một chuỗi chữ, căn MỘT LẦN với chuỗi chữ băng
+#    bằng quy hoạch động ⇒ không dòng nào chộp được chỗ của dòng khác, không dồn lệch dây chuyền, và
+#    dòng thật sự không có trong băng thì NÓI THẲNG thay vì bịa mốc.
+#    align() cũ GIỮ NGUYÊN cho đường tạo gói .ftg.json — không đụng luồng khác.
+
+def _dp_bang(S, A, bang):
+    """Needleman–Wunsch trên DẢI HẸP quanh đường chéo (kịch bản và băng gần như song song nên không cần
+    cả ma trận): O(n × dải) thay vì O(n × m). Trả map_i[i] = chỉ số chữ băng mà chữ kịch bản i khớp vào,
+    None nếu không khớp. `ptr` để bytearray — băng 10 phút vẫn chỉ vài MB."""
+    n, m = len(S), len(A)
+    MATCH, MIS, GAP = 2, -1, -1
+    AM = -10 ** 9
+    truoc = [AM] * (m + 1)
+    truoc[0] = 0
+    for j in range(1, min(m, bang) + 1):
+        truoc[j] = j * GAP
+    ptr = []
+    for i in range(1, n + 1):
+        lo, hi = max(1, i - bang), min(m, i + bang)
+        cur = [AM] * (m + 1)
+        if lo == 1:
+            cur[0] = i * GAP
+        pr = bytearray(m + 1)
+        si = S[i - 1]
+        for j in range(lo, hi + 1):
+            d = truoc[j - 1] + (MATCH if si == A[j - 1] else MIS)
+            u = truoc[j] + GAP
+            l = cur[j - 1] + GAP
+            if d >= u and d >= l:
+                cur[j] = d
+                pr[j] = 0
+            elif u >= l:
+                cur[j] = u
+                pr[j] = 1
+            else:
+                cur[j] = l
+                pr[j] = 2
+        ptr.append(pr)
+        truoc = cur
+    map_i = [None] * n
+    i, j = n, m
+    while i > 0 and j > 0:
+        p = ptr[i - 1][j]
+        if p == 0:
+            if S[i - 1] == A[j - 1]:
+                map_i[i - 1] = j - 1
+            i -= 1
+            j -= 1
+        elif p == 1:
+            i -= 1
+        else:
+            j -= 1
+    return map_i
+
+def khop_toan_cuc(lines, asr):
+    """Gán start/end/ratio/heard cho từng dòng. Dòng không neo được → start=None để suy_ra_va_cat() lo."""
+    asr = [a for a in asr if isinstance(a, dict) and a.get("start") is not None]
+    flat = [(t, i) for i, a in enumerate(asr) for t in asr_tokens(str(a.get("word", "")))]
+    A = [t for t, _ in flat]
+    S, chu = [], []
+    for li, L in enumerate(lines):
+        for t in L["words"]:
+            S.append(t)
+            chu.append(li)
+    if not S or not A:
+        for L in lines:
+            L.update(start=None, end=None, ratio=0.0, heard="")
+        return lines
+    map_i = _dp_bang(S, A, max(250, abs(len(S) - len(A)) + 150))
+    gom = {}
+    for k, j in enumerate(map_i):
+        if j is not None:
+            gom.setdefault(chu[k], []).append(j)
+    for li, L in enumerate(lines):
+        n = len(L["words"])
+        idx = gom.get(li) or []
+        ty = (len(idx) / n) if n else 0.0
+        # dòng 1–2 chữ ("One." / "Two.") chỉ có thể neo bằng 1 chữ — đòi 2 chữ là đẩy chúng vào diện suy ra
+        if not (ty >= 0.5 and (len(idx) >= 2 or n <= 2)):
+            L.update(start=None, end=None, ratio=round(ty, 2), heard="")
+            continue
+        a0, a1 = flat[min(idx)][1], flat[max(idx)][1]
+        L["start"] = round(float(asr[a0]["start"]), 2)
+        L["end"] = round(float(asr[a1]["end"]), 2)
+        L["ratio"] = round(ty, 2)
+        L["heard"] = " ".join(str(asr[k]["word"]) for k in range(a0, a1 + 1))
+    return lines
+
+def suy_ra_va_cat(lines, khe, dur):
+    """① Dòng không neo được → suy vị trí từ hàng xóm, chia theo SỐ CHỮ, gắn cờ `suyra` (không im lặng bịa).
+    ② Cắt đầu/cuối tại KHE NGHỈ thật (≤0,7 s) thay cho đệm cứng −0,15/+0,25 s — đây là chỗ sinh ra
+       'nghe không đủ' (cụt đuôi câu) và 11/50 câu chồng lấn ở bản cũ.
+    ③ Hai câu vẫn chạm nhau → cắt đúng điểm giữa khe THẬT giữa chúng.
+    Trả danh sách [{start, end, ratio, heard, weak, suyra}] cùng thứ tự với `lines`."""
+    het_tieng = max((s for s, _ in khe if dur <= 0 or s < dur - 0.5), default=(dur or 0.0)) or (dur or 0.0)
+
+    def cat_dau(t, toi_da=0.7):
+        tot = t
+        for s, e in khe:
+            if e <= t + 0.05 and t - e <= toi_da:
+                tot = min(tot, (s + e) / 2 + 0.05)
+        return max(0.0, tot)
+
+    def cat_duoi(t, toi_da=0.7):
+        tot = t
+        for s, e in khe:
+            if s >= t - 0.05 and s - t <= toi_da:
+                tot = max(tot, (s + e) / 2 - 0.05)
+        return min(tot, dur) if dur > 0 else tot
+
+    M = [{"s": L.get("start"), "e": L.get("end"), "ratio": L.get("ratio") or 0.0,
+          "heard": L.get("heard") or "", "neo": L.get("start") is not None} for L in lines]
+    for k, m in enumerate(M):
+        if m["neo"]:
+            continue
+        truoc = next((M[x] for x in range(k - 1, -1, -1) if M[x]["neo"]), None)
+        sau = next((M[x] for x in range(k + 1, len(M)) if M[x]["neo"]), None)
+        lo = truoc["e"] if truoc else 0.0
+        hi = sau["s"] if sau else het_tieng
+        if hi <= lo:
+            hi = lo + 0.5 * max(1, len(lines[k]["words"]))
+        a = k
+        while a - 1 >= 0 and not M[a - 1]["neo"]:
+            a -= 1
+        b = k
+        while b + 1 < len(M) and not M[b + 1]["neo"]:
+            b += 1
+        tong = sum(len(lines[x]["words"]) for x in range(a, b + 1)) or 1
+        da = sum(len(lines[x]["words"]) for x in range(a, k))
+        w = len(lines[k]["words"])
+        m["s"] = round(lo + (hi - lo) * da / tong, 2)
+        m["e"] = round(lo + (hi - lo) * (da + w) / tong, 2)
+        m["suyra"] = True
+    for m in M:
+        m["sf"] = round(cat_dau(m["s"] - 0.10), 2)
+        m["ef"] = round(cat_duoi(m["e"] + 0.10), 2)
+    for k in range(1, len(M)):
+        a, b = M[k - 1], M[k]
+        if b["sf"] < a["ef"] - 0.01:
+            giua = round((a["e"] + b["s"]) / 2, 2)
+            a["ef"] = max(a["e"], min(a["ef"], giua))
+            b["sf"] = min(b["s"], max(b["sf"], giua))
+    ra = []
+    for m in M:
+        s = round(max(0.0, m["sf"]), 2)
+        e = round(max(m["ef"], s + 0.4), 2)
+        yeu = (not m["neo"]) or m["ratio"] < 0.6
+        ra.append({"start": s, "end": e, "ratio": round(m["ratio"], 2), "weak": yeu,
+                   "suyra": bool(m.get("suyra")), "heard": m["heard"] if yeu else ""})
+    return ra
 
 # ---------------------------------------------------------------- từ vựng
 def read_vocab(xlsm):
@@ -462,7 +836,9 @@ def lines_from_json(path):
 
 def align_only(a, mats, code):
     """Đợt 343 — myWord gọi ngay sau khi CLI khoét xong: chỉ trả mốc giây từng câu hỏi (JSON), không đụng .xlsm,
-    không tạo gói. Cache Parakeet dùng chung với đường gói. Dòng cuối stdout: @@KQ {"n","weak","cache"}."""
+    không tạo gói. Cache Parakeet dùng chung với đường gói.
+    ⭐ Đợt 369: nghe vá đoạn sót → khớp TOÀN CỤC → cắt tại khe nghỉ (thay align() tham lam + đệm cứng).
+    Dòng cuối stdout: @@KQ {"n","weak","suyra","cache","sot_doan","sot_giay","va_chu"}."""
     lines = lines_from_json(a.align_json)
     if not lines:
         raise SystemExit("--align-json rỗng")
@@ -470,6 +846,7 @@ def align_only(a, mats, code):
     if not src:
         raise SystemExit(f"Không thấy file nghe của {code}: kho myLesson-audio chưa có bài này, ổ D cũng không có AUDIO\\{code}.mp3 hay {code}.mp4")
     log(f">> {len(lines)} câu hỏi cần mốc giây · audio: {src}")
+    va_doan, va_chu = [], 0
     with tempfile.TemporaryDirectory(prefix="ftg_") as tmp:
         if a.pk:
             asr, from_cache = json.load(io.open(a.pk, encoding="utf-8")), True
@@ -478,24 +855,27 @@ def align_only(a, mats, code):
             audio = src if (not a.no_cache and os.path.exists(cp)) else (mats["audio"] or extract_audio(mats["mp4"], tmp))
             asr, from_cache = load_or_run_parakeet(audio, tmp, use_cache=not a.no_cache, cache_for=src)
         log(f"   ASR: {len(asr)} chữ")
-        align(lines, asr, whole=True)
-    out, weak = [], 0
-    for L in lines:
-        if L["start"] is None:
-            weak += 1
-            out.append({"start": 0.0, "end": 0.0, "ratio": 0.0, "heard": "", "weak": True})
-            log(f"   ⚠ không khớp: {L['text'][:60]}")
-            continue
-        w = L["ratio"] < 0.6
-        if w:
-            weak += 1
-            log(f"   ⚠ khớp yếu {L['ratio']:.2f}: {L['text'][:50]}  ←  máy nghe: {L['heard'][:50]}")
-        out.append({"start": max(0.0, round(L["start"] - 0.15, 2)), "end": round(L["end"] + 0.25, 2), "ratio": L["ratio"], "heard": L["heard"] if w else "", "weak": w})
+        khe, dur = khe_im_lang(src)
+        if not a.no_va and not a.pk:
+            asr, va_doan, va_chu = va_asr(asr, src, tmp, cache_for=src, khe=khe, dur=dur)
+        khop_toan_cuc(lines, asr)
+    out = suy_ra_va_cat(lines, khe, dur)
+    weak = sum(1 for x in out if x["weak"])
+    suyra = sum(1 for x in out if x["suyra"])
+    for L, x in zip(lines, out):
+        if x["suyra"]:
+            log(f"   ⚠ không có trong băng, suy ra {x['start']:.2f}–{x['end']:.2f}s: {L['text'][:55]}")
+        elif x["weak"]:
+            log(f"   ⚠ khớp yếu {x['ratio']:.2f}: {L['text'][:50]}  ←  máy nghe: {x['heard'][:50]}")
     tmp_out = a.align_out + ".tmp"
     io.open(tmp_out, "w", encoding="utf-8").write(json.dumps(out, ensure_ascii=False))
     os.replace(tmp_out, a.align_out)
-    log(f"XONG: {len(out)} mốc giây · {weak} câu cần thầy xem → {a.align_out}")
-    log("@@KQ " + json.dumps({"n": len(out), "weak": weak, "cache": from_cache}, ensure_ascii=False))
+    log(f"XONG: {len(out)} mốc giây · {weak} câu cần thầy xem ({suyra} câu suy ra)"
+        + (f" · đã vá {va_chu} chữ ở {len(va_doan)} đoạn băng sót" if va_chu else "")
+        + f" → {a.align_out}")
+    log("@@KQ " + json.dumps({"n": len(out), "weak": weak, "suyra": suyra, "cache": from_cache,
+                              "sot_doan": len(va_doan), "sot_giay": round(sum(x[2] for x in va_doan), 1),
+                              "va_chu": va_chu}, ensure_ascii=False))
 
 def asr_only(a, mats, code):
     """Đợt 346 — myWord v2.7.0 gọi ĐẦU TIÊN khi "Bắt đầu tạo": chỉ nghe băng (Parakeet, cache cạnh audio) rồi ghi
@@ -505,10 +885,15 @@ def asr_only(a, mats, code):
     if not src:
         raise SystemExit(f"Không thấy file nghe của {code}: kho myLesson-audio chưa có bài này, ổ D cũng không có AUDIO\\{code}.mp3 hay {code}.mp4")
     log(f">> nghe băng: {src}")
+    va_doan, va_chu = [], 0
     with tempfile.TemporaryDirectory(prefix="ftg_") as tmp:
         cp = cache_path(src)
         audio = src if (not a.no_cache and os.path.exists(cp)) else (mats["audio"] or extract_audio(mats["mp4"], tmp))
         asr, from_cache = load_or_run_parakeet(audio, tmp, use_cache=not a.no_cache, cache_for=src)
+        # ⭐ Đợt 369: vá NGAY ở bước này — bản `text` trả về là BẢN CHUẨN để CLI sửa chữ câu hỏi theo băng,
+        # nên thiếu chữ ở đây là sai từ gốc. Vá xong ghi đè cache ⇒ bước mốc giây sau đó khỏi vá lại.
+        if not a.no_va:
+            asr, va_doan, va_chu = va_asr(asr, src, tmp, cache_for=src)
     words = [w for w in asr if isinstance(w, dict) and w.get("start") is not None]
     dur = round(float(words[-1].get("end") or 0), 1) if words else 0.0
     out = {"words": words, "text": " ".join(str(w.get("word", "")).strip() for w in words if str(w.get("word", "")).strip()),
@@ -516,8 +901,11 @@ def asr_only(a, mats, code):
     tmp_out = a.asr_out + ".tmp"
     io.open(tmp_out, "w", encoding="utf-8").write(json.dumps(out, ensure_ascii=False))
     os.replace(tmp_out, a.asr_out)
-    log(f"XONG: {len(words)} chữ · {dur:.1f} s băng{' (cache)' if from_cache else ''} → {a.asr_out}")
-    log("@@KQ " + json.dumps({"n": len(words), "cache": from_cache, "dur": dur}, ensure_ascii=False))
+    log(f"XONG: {len(words)} chữ · {dur:.1f} s băng{' (cache)' if from_cache else ''}"
+        + (f" · đã vá {va_chu} chữ ở {len(va_doan)} đoạn sót" if va_chu else "") + f" → {a.asr_out}")
+    log("@@KQ " + json.dumps({"n": len(words), "cache": from_cache, "dur": dur,
+                              "sot_doan": len(va_doan), "sot_giay": round(sum(x[2] for x in va_doan), 1),
+                              "va_chu": va_chu}, ensure_ascii=False))
 
 def main():
     ap = argparse.ArgumentParser(description="Chuẩn bị act Find the gap từ một bài nghe")
@@ -526,6 +914,7 @@ def main():
     ap.add_argument("--out"); ap.add_argument("--pk", help="file _pk.json Parakeet đã có")
     ap.add_argument("--no-gaps", action="store_true"); ap.add_argument("--keep-narrator", action="store_true")
     ap.add_argument("--no-cache", action="store_true", help="nghe lại băng dù đã có <audio>.pk.json")
+    ap.add_argument("--no-va", action="store_true", help="Đợt 369: KHÔNG nghe vá các đoạn băng Parakeet bỏ sót (để so với cách cũ)")
     ap.add_argument("--require-fillgap", action="store_true", help="myWord: file .xlsm PHẢI có sheet FILLGAP, không thì dừng (không rơi về gợi ý máy từ .txt)")
     ap.add_argument("--align-json", help="Đợt 343 (myWord v2.6.0): CHỈ lấy mốc giây — đọc [{speaker,text có [ngoặc]}] từ file JSON này, ghi [{start,end,ratio,heard}] ra --align-out, không tạo gói")
     ap.add_argument("--align-out")
