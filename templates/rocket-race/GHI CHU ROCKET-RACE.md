@@ -497,6 +497,7 @@ không ai phải mở gì cả.*
 - Đo: dải nút `[☰][‹][›][🔊][Options][Question screen][Mode]`, đúng một nút; bật → 2 bàn về màn START + nút sáng.
 
 **(2) Different + màn iPad ⇒ HAI BÀN CHẠY ĐỘC LẬP; Time delay & Miss wait bị khoá.** (`core/fight.js`)
+⚠️ **Đợt 378 đã BỎ cổng "act BẬT fightScreen"** — nay chỉ cần Different, không cần iPad (xem mục 23).
 Phạm vi thầy chốt: *"mọi game có và bật chế độ ipad"* ⇒ **cổng là TÍNH NĂNG, không phải tên template**.
 **Ba cổng** (đúng khuôn `turnsMode`): template khai `fightScreen` + act đang BẬT `fightScreen` + `fightContent
 === "different"`; cách ly khỏi pick-turn và In turns.
@@ -571,6 +572,15 @@ Vì sao BẮT BUỘC: chính file đó cảnh báo *"⚠️ ADD ANY FUTURE `kind
 eaten link number and, worse, a `?a=57` that resolves to a settings document."* Tài liệu không có trong Set này sẽ
 được `ensureNumbers()` cấp số link và `?a=N` có thể trỏ trúng nó.
 ⚠️ `"showdown-session"` **đang thiếu từ Đợt 269** — đúng cái bẫy lời cảnh báo mô tả; vá luôn vì cùng một dòng.
+
+## 23. Đợt 378 (23/9/2026) — Different khoá Time delay + Miss wait KỂ CẢ KHI KHÔNG BẬT iPad
+Thầy thấy "hôm qua khoá, hôm nay không khoá" — code không mất, chỉ vì nút Question screen đang TẮT (cổng thứ 2 của mục 21(2);
+cờ `fightScreen` lưu theo act). Thầy: *"ok đổi, ko bật ipad cũng khóa"*.
+- `core/fight.js`: bỏ cổng `fightScreen === true` ở **cả** `soloBoards` lẫn `syncSolo()` — còn 2 cổng: template khai `fightScreen`
+  + `fightContent === "different"` (vẫn cách ly pick-turn/In turns).
+- Không iPad vẫn chạy độc lập được vì mỗi bàn có nửa dòng câu hỏi riêng (`scene.qhalves[side]`).
+- Đo (`scratch/dot378-rr-solo.html`): khoá đúng [Time delay · Speed bonus · Miss wait], Same ⇒ chỉ Speed bonus; bàn 0 trả lời ⇒
+  bàn 1 giữ câu, 0/4 ô khoá; hồi quy Same words y cũ. ⬜ thầy bấm tay.
 
 ## 19. Phi công: chỉ lên xuống, biên độ 1/5 (Đợt 362, 20/9/2026 tối, mọi mode)
 Bỏ `aw-rr-facepush` (ép lùi ngang khi boost); `aw-rr-jiggle` ±1,2 % (1/5 của ±6 %); `aw-rr-facerattle` khi khựng/va chỉ dọc

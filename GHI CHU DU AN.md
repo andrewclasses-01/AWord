@@ -531,6 +531,27 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 378 (23/9/2026, ROCKET RACE ▸ FIGHT: Different KHOÁ Time delay + Miss wait KỂ CẢ KHI KHÔNG BẬT iPad) · ✅ THẦY "ok đổi" → COMMIT + PUSH · ⬜ CHƯA BẤM TAY
+
+Thầy báo: *"hôm qua đã build chọn Different thì khoá Time Delay và Miss wait để 2 bên chạy độc lập rồi mà hôm nay lại không còn nữa"*.
+**Điều tra: code KHÔNG mất** — `5b8504d` (Đợt 370 4/n) còn nguyên, bản live cũng có. Không khoá vì nút **Question screen (iPad) đang
+TẮT** trong ảnh thầy chụp (nút trắng, không sáng xanh), mà Đợt 370 cài BA cổng: template khai `fightScreen` + act BẬT `fightScreen`
++ `fightContent === "different"` (phạm vi thầy chốt hôm qua: *"mọi game có và bật chế độ ipad"*). Cờ `fightScreen` lưu THEO ACT
+⇒ đổi act/đổi máy/tắt nút là mất khoá. Thầy đổi phạm vi: *"ok đổi, ko bật ipad cũng khóa"*.
+- `core/fight.js`: BỎ cổng Question screen ở cả hai nơi — `soloBoards` (luật chơi: mỗi bàn `boardIdx` + ô hẹn giờ riêng) và
+  `syncSolo()` (khoá thanh trong Options). Hai nơi PHẢI cùng điều kiện, lệch nhau là thanh khoá mà trận vẫn chờ nhau (hoặc ngược lại).
+- Vì sao không cần iPad: không bật iPad thì mỗi bàn vẫn có NỬA dòng câu hỏi riêng (`scene.qhalves[side]` trong rocket-race.js,
+  Đợt 355) ⇒ hai câu khác nhau hiện song song, không ai phải nhìn chung một câu.
+- Cổng còn lại: template khai `fightScreen` (hôm nay chỉ Rocket race) + Different; vẫn cách ly pick-turn/In turns. 8 template khác
+  dùng `different` KHÔNG đổi gì (cổng template giữ nguyên).
+Đo dev (bàn thử MỚI `scratch/dot378-rr-solo.html`, act mẫu Rocket race, xoá hẳn `fightScreen`, nút Question screen không sáng):
+Options Different ⇒ khoá [Time delay · Speed bonus · Miss wait]; Same words ⇒ chỉ [Speed bonus]; qua lại 2 vòng vẫn đúng.
+Chơi Different: hai bàn hai câu khác nhau, bàn 0 trả lời đúng ⇒ bàn 0 sang câu mới, **bàn 1 giữ nguyên câu, 0/4 ô bị khoá**.
+Hồi quy Same words: cùng câu, bàn 0 đúng ⇒ bàn 1 khoá 4/4 ngay, cả hai cùng sang câu. 0 lỗi console.
+
+**⬜ VIỆC ĐANG CHỜ:** thầy `Ctrl+Shift+R` (~10 phút sau push) → act Rocket race ▸ Fight, KHÔNG bật iPad → Options ▸ Different:
+Time delay + Miss wait phải xám; chơi thử hai đội xem đội này trả lời không làm đội kia bị khoá/đổi câu.
+
 ## Đợt 377 (23/9/2026, KHÔNG ZOOM TRONG MỌI TÌNH HUỐNG) · ✅ THẦY "ok build" → COMMIT + PUSH · ✅ THẦY XÁC NHẬN OK
 
 Thầy (sau khi cài PWA Đợt 376 trên iPad): chạm đúp vài chỗ bị zoom, muốn KHÔNG zoom bất kỳ đâu. Gốc: `manipulation` chỉ có trên

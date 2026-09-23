@@ -620,7 +620,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // what it means at this level would change every act ever saved behind the
   // teacher's back. So it takes ALL of:
   //   · the template opting in (`tpl.fightScreen` — Rocket race alone today),
-  //   · the QUESTION SCREEN actually being on for this act, and
+  //   · (Đợt 370 only — dropped Đợt 378, see below) the QUESTION SCREEN being on, and
   //   · Fight content = Different.
   // Thầy's own words for the scope: *"mọi game có và bật chế độ ipad"* — the gate
   // is the FEATURE, not the template's name, so a game that learns the second
@@ -629,8 +629,12 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // open" their own way, and a third round model on top of either is how this
   // file gets its next silent bug.
   const soloTpl = !!getTemplate(activity.type)?.fightScreen && !pickMode;
-  const soloBoards = soloTpl && !turnsMode &&
-    fo.fightContent === "different" && (activity.options || {}).fightScreen === true;
+  // ⭐ Đợt 378 (thầy, 23/9/2026): *"ko bật ipad cũng khóa"* — the QUESTION SCREEN
+  // gate is DROPPED. Without the iPad each board still has its OWN half of the
+  // shared question line (`scene.qhalves[side]` in rocket-race.js), so two boards
+  // on two different questions need no second device. Gates left: the template
+  // declaring `fightScreen` + Fight content = Different.
+  const soloBoards = soloTpl && !turnsMode && fo.fightContent === "different";
 
   const tieMs = (pickMode || turnsMode) ? TIE_WINDOW_MS : tieWindowMsOf(fo);
   const tieUnlimited = !pickMode && !turnsMode && !soloBoards && fo.fightTieWindow === 0;
@@ -2396,10 +2400,10 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // ⚠️ Only ever LOCKS here. Unlocking is left to syncDelay/syncTurns, because
     // In turns may be holding the very same cell shut — two functions both free to
     // unlock one control is how a dead control comes back to life by accident.
+    // Đợt 378 — the Question screen is no longer a gate here (see `soloBoards`).
     function syncSolo(contentVal) {
-      const screenOn = (draft.fightScreen === undefined ? (activity.options || {}).fightScreen : draft.fightScreen) === true;
       const turnsOn = (draft.fightTurns === undefined ? cur.fightTurns : draft.fightTurns) === true;
-      const on = soloTpl && screenOn && !turnsOn && contentVal === "different";
+      const on = soloTpl && !turnsOn && contentVal === "different";
       setLocked(cWrongWait.cell, on);
       if (on) { setLocked(cDelay.cell, true); setLocked(cBonus.cell, true); }
       else if (!pickMode && !turnsOn) {
