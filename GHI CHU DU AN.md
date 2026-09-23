@@ -531,7 +531,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 377 (23/9/2026, KHÔNG ZOOM TRONG MỌI TÌNH HUỐNG) · ✅ THẦY "ok build" → COMMIT + PUSH · ⬜ CHƯA BẤM TAY iPad
+## Đợt 377 (23/9/2026, KHÔNG ZOOM TRONG MỌI TÌNH HUỐNG) · ✅ THẦY "ok build" → COMMIT + PUSH · ✅ THẦY XÁC NHẬN OK
 
 Thầy (sau khi cài PWA Đợt 376 trên iPad): chạm đúp vài chỗ bị zoom, muốn KHÔNG zoom bất kỳ đâu. Gốc: `manipulation` chỉ có trên
 .aw-stage/.aw-zoomed/vài template ⇒ thư viện, thanh nút, Settings, STATS, Showdown vẫn zoom chạm đúp; zoom hai ngón CỐ Ý để mở
@@ -549,7 +549,7 @@ từ 5/8 ("lối thoát") — ⛔ Đợt này ĐẢO NGƯỢC điều đó theo 
 **⬜ VIỆC ĐANG CHỜ:** thầy vuốt TẮT HẲN app AWord trên iPad rồi mở lại (sau ~10 phút cache Pages) → chạm đúp khắp nơi + chụm 2 ngón.
 Nếu iPad vẫn zoom chạm đúp ở chỗ nào: chụp chỗ đó — nghi đầu tiên là phần tử có `touch-action` riêng khác `manipulation`/`none`.
 
-## Đợt 376 (23/9/2026, PWA — ICON + CÀI ĐẶT NHƯ APP) · ✅ THẦY "ok build" → COMMIT + PUSH · ⬜ CHƯA BẤM TAY
+## Đợt 376 (23/9/2026, PWA — ICON + CÀI ĐẶT NHƯ APP) · ✅ THẦY "ok build" → COMMIT + PUSH · ✅ THẦY ĐÃ CÀI OK (máy tính + iPad; iPad phải BẬT công tắc "Mở dưới dạng ứng dụng web" lúc Thêm vào MH chính)
 
 Thầy chốt 3 điểm: mở app vào **trang thư viện** (`start_url "/"`), icon Android **giữ chữ "in ANDREW CLASSES", thu nhỏ cả
 logo**, cửa sổ **standalone** (không thanh địa chỉ). Thêm `manifest.webmanifest` (⛔ khác hẳn `manifest.js` = danh sách template)
