@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Werewolf — test</title>
+  <link rel="stylesheet" href="../../core/app.css" />
+  <link rel="stylesheet" href="werewolf.css" />
+</head>
+<body>
+  <!-- Standalone test page: demo class rolls, no sign-in, nothing written to
+       Firestore (seating kept in memory, music in this browser's IndexedDB). -->
+  <div id="app"></div>
+  <script type="module">
+    import { mountWerewolf } from "./werewolf.js";
+    import { listTracks, addTrack, removeTrack } from "./ww-store.js";
+    const host = document.createElement("div");
+    document.getElementById("app").append(host);
+    window.__ww = mountWerewolf(host, {
+      data: { seats: {} },
+      saveSeats: (c, order) => console.log("saveSeats", c, order.length),
+      listTracks, addTrack, removeTrack,
+      onExit: () => alert("Home → back to the GAMES tree")
+    });
+  </script>
+</body>
+</html>

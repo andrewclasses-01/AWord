@@ -67,6 +67,11 @@ import {
   // ⭐ Đợt 253 — đường ?giao= mở thẳng form Set assignment (cửa cho myLesson).
   openAssignmentSetup
 } from "./core/assignment-ui.js";
+// ⭐ Đợt 373 — the FIXED games of the GAMES tree (Werewolf…): a tiny list; each
+// game's own module is fetched only when it is opened.
+import { FIXED_GAMES, fixedGame, loadGameCss } from "./games/games.js";
+import { loadGameData, saveSeats as saveGameSeats, listTracks as listGameTracks,
+         addTrack as addGameTrack, removeTrack as removeGameTrack } from "./games/werewolf/ww-store.js";
 // NOTE: no template is imported here. Each game (and its stylesheet) is fetched
 // the first time it is actually played or edited — see ensureTemplate() in
 // core/registry.js, which reads the one list in core/catalog.js.
@@ -145,7 +150,8 @@ function applyChosenSort(items) {
 }
 
 const state = {
-  view: "top",          // "top" | "folder" | "search" | "trash" | "showdown-home"
+  view: "top",          // "top" | "folder" | "search" | "trash" | "showdown-home" | "game"
+  gameId: "",           // ⭐ Đợt 373 — which FIXED game (games/games.js) view "game" shows
   root: null,           // one of store.ROOTS: "activities" | "results" | "courses" | "games"
   folderId: null,       // current folder (null = root of the tree)
   mode: localStorage.getItem("aword-view") || "grid",   // "grid" | "list"
@@ -159,6 +165,8 @@ const state = {
 // straight away rather than only via that file's own MutationObserver
 // fallback (belt-and-braces, same posture as core/showdown-setup.js's panel).
 let showdownHomeHandle = null;
+// ⭐ Đợt 373 — dispose() of the fixed game on screen (Werewolf), same idea.
+let fixedGameDispose = null;
 // ⭐ Đợt 237 — set by topbar() whenever it builds the gold Showdown icon, so
 // core/showdown-home.js can morph THAT SAME button into the ANALYSE pill
 // instead of owning a second one on its own toolbar. null on any page that
@@ -494,6 +502,7 @@ async function routeFromLocation() {
     }
   }
   if (p.get("sd")) return openShowdownHome({ fromUrl: true, classId: p.get("c") || "" });
+  if (p.get("g")) return openFixedGame(p.get("g"), opts);   // ⭐ Đợt 373 — ?g=werewolf
   if (p.get("f")) {
     const node = await getByNum(p.get("f"));
     if (node && node.kind === "folder") return enterFolder(node.root, node.id, opts);
@@ -519,6 +528,7 @@ async function syncUrl(replace) {
     return setUrl(`${baseUrl()}?${p.toString()}`, replace);
   }
   if (state.view === "top") return setUrl(baseUrl(), replace);
+  if (state.view === "game") return setUrl(`${baseUrl()}?g=${encodeURIComponent(state.gameId)}`, replace);
   if (state.folderId) {
     const node = await getItem(state.folderId);
     if (node) return setUrl(await linkFor(node), replace);
@@ -621,10 +631,12 @@ async function render() {
   // later regardless (core/showdown-home.js's watchForClose), but there is no
   // reason to wait for that when we are the ones doing the removing.
   if (showdownHomeHandle) { showdownHomeHandle.dispose(); showdownHomeHandle = null; }
+  if (fixedGameDispose) { try { fixedGameDispose(); } catch { /* already gone */ } fixedGameDispose = null; }
   app.innerHTML = "";
   updatePageTitle();   // ⭐ Đợt 325 — fire-and-forget: don't hold up the paint
                         // for a Firestore round trip just to rename the tab.
   if (state.view === "showdown-home") return renderShowdownHome();
+  if (state.view === "game") return renderFixedGame();
   if (state.view === "top") return renderTop();
   return renderInside();
 }
@@ -636,6 +648,7 @@ async function render() {
 // (14/9/2026) — the rest is the same idea applied consistently, at no cost.
 async function updatePageTitle() {
   try {
+    if (state.view === "game") { document.title = fixedGame(state.gameId)?.label || PAGE_TITLE_BASE; return; }
     if (state.view === "folder" && state.folderId) {
       const node = await getItem(state.folderId);
       document.title = (node && itemName(node)) || PAGE_TITLE_BASE;
@@ -685,6 +698,57 @@ function renderShowdownHome() {
     },
     onChoosingChange: (on) => { sdHomeBtnSetAnalyse?.(on); }
   });
+}
+
+// ---------------- ⭐ Đợt 373 — a FIXED game (GAMES tree), full page ----------------
+function openFixedGame(id, opts = {}) {
+  if (!fixedGame(id)) return openRoot("games", opts);
+  state.view = "game"; state.gameId = id;
+  state.root = "games"; state.folderId = null; state.query = "";
+  if (!opts.fromUrl) syncUrl();
+  render();
+}
+async function renderFixedGame() {
+  const g = fixedGame(state.gameId);
+  const host = el("div");
+  app.append(host);
+  let mount, classes = {}, data = { seats: {} };
+  try {
+    [mount] = await Promise.all([g.load(), loadGameCss(g.css)]);
+    const rolls = await listClasses().catch(() => []);
+    rolls.forEach(c => { if (c.name && c.students?.length) classes[c.name] = c.students.map(s => ({ id: s.id, name: s.name })); });
+    data = await loadGameData();
+  } catch (e) {
+    toast(`${g.label} — could not load`);
+    return openRoot("games");
+  }
+  // The teacher may have left while this was loading.
+  if (state.view !== "game" || state.gameId !== g.id || !host.isConnected) return;
+  fixedGameDispose = mount(host, {
+    classes, data,
+    saveSeats: saveGameSeats,
+    listTracks: listGameTracks, addTrack: addGameTrack, removeTrack: removeGameTrack,
+    onExit: () => openRoot("games")
+  });
+}
+function fixedGameCard(g) {
+  const card = el("div", "aw-card aw-card-act aw-card-game");
+  card.onclick = () => openFixedGame(g.id);
+  const preview = el("div", "aw-cp");
+  preview.style.cssText = "background:radial-gradient(110% 85% at 50% 40%,#2B3A6E 0%,#172247 100%);display:flex;align-items:center;justify-content:center";
+  preview.append(el("div", null,
+    '<svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="#F4C95D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>'));
+  const playBtn = el("button", "aw-cp-play", icons.playBig);
+  playBtn.type = "button"; playBtn.title = "Play";
+  playBtn.onclick = e => { e.stopPropagation(); openFixedGame(g.id); };
+  preview.append(playBtn);
+  card.append(preview);
+  const foot = el("div", "aw-card-foot");
+  const info = el("div", "aw-card-info");
+  info.append(el("div", "aw-card-name", escapeText(g.label)), el("span", "aw-card-type", escapeText(g.kind || "Game")));
+  foot.append(info);
+  card.append(foot);
+  return card;
 }
 
 // ---------------- top level: two fixed roots ----------------
@@ -752,7 +816,10 @@ async function renderInside() {
   // nothing else), so it takes the Results path here.
   const assignments = holdsAssignments(state.root) ? await assignmentsForView() : await loadAssignmentsForDots();
 
-  if (!items.length && !assignments.length) {
+  // ⭐ Đợt 373 — the fixed games sit at the top of the GAMES tree, before its folders.
+  const fixedHere = (state.root === "games" && state.view === "folder" && !state.folderId) ? FIXED_GAMES : [];
+
+  if (!items.length && !assignments.length && !fixedHere.length) {
     // ⭐ Đợt 325 — the dedicated "Drag a lesson file here" box is gone (thầy
     // 14/9/2026: dropping ANYWHERE on the page now does the same job — see
     // installGlobalDrop()). An empty folder is back to being a plain fact, the
@@ -776,6 +843,7 @@ async function renderInside() {
   const resultFolders = holdsAssignments(state.root) ? await listFolders(state.root) : [];
 
   const list = el("div", state.mode === "grid" ? "aw-fm-grid" : "aw-fm-list");
+  fixedHere.forEach(g => list.append(fixedGameCard(g)));
   for (const node of items) {
     let card;
     if (state.view === "trash") card = trashCard(node);

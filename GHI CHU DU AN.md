@@ -12,7 +12,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **⭐⭐⭐ Đợt 371** (22/9/2026, màn iPad — chữ bé lại, MỘT TỪ không bao giờ tách hai hàng; gỡ `overflow-wrap:break-word` + tự đo bằng `Range.getClientRects()`; hai nửa cùng cỡ. ✅ `95582f6` LIVE). Trước đó: **⭐⭐⭐ Đợt 370** (22/9/2026, ROCKET RACE — 5 việc: nút QUESTION SCREEN ra dải nút · Different+iPad ⇒ HAI BÀN ĐỘC LẬP (khoá Time delay/Miss wait) · chống double-tap · iPad hiện TỪ · nhạc nền vui thay tiếng động cơ; ✅ đã push, ⬜ chưa bấm tay — xem mục **Đợt 370**). Trước đó: **⭐⭐⭐ Đợt 368 + 368b** (22/9/2026, ROCKET RACE — **FIGHT TRÊN HAI MÁY**: câu hỏi sang iPad qua `source.html`, máy chơi giữ đường đua + ô đáp án; một chiều, 2 tài liệu mỗi cái 1 người ghi, KHÔNG đụng `core/fight.js`, KHÔNG phải đăng luật Firestore mới; ✅ COMMIT + PUSH `0b5e4f1` + LIVE 7/7 mã băm, ⬜⬜ đường mạng hai máy thật chưa chạy — xem mục **Đợt 368**). Trước đó: **Đợt 362** (phi công chỉ lên xuống ±1,2 %, bỏ dịch ngang). Trước đó: **Đợt 361** (phi công nhấp ±6 % theo pha thân tàu, ép lùi khi boost, rung khi khựng). Trước đó: **Đợt 360** (khói/nhấp trong Fight quá nhỏ + bị cắt mép → làn lùi 7 %, khói to đậm). Trước đó: **Đợt 359** (phi công chỉ nhấp lên xuống; khói trắng mờ sau lửa). Trước đó: **Đợt 358** (phi công cắt tròn trong cửa sổ + lắc lư, bỏ đường kẻ làn). Trước đó: **Đợt 357** (20/9/2026 tối, chỉ rocket-race.css — căn giữa chip TEAM X/tim và vạch đích theo ảnh thầy). Trước đó: **⭐⭐ Đợt 356** (20/9/2026 tối, ROCKET RACE — **màn START Fight**: bìa READY bị cắt trong bàn 16:5 → thông tin act
+> Mới nhất: **⭐⭐⭐ Đợt 373** (23/9/2026, GAME CỐ ĐỊNH ĐẦU TIÊN — **WEREWOLF** ở gốc GAMES, link `?g=werewolf`; `games/` mới, không qua catalog; xem mục **Đợt 373** + `games/werewolf/GHI CHU WEREWOLF.md`). Trước đó: **⭐⭐⭐ Đợt 371** (22/9/2026, màn iPad — chữ bé lại, MỘT TỪ không bao giờ tách hai hàng; gỡ `overflow-wrap:break-word` + tự đo bằng `Range.getClientRects()`; hai nửa cùng cỡ. ✅ `95582f6` LIVE). Trước đó: **⭐⭐⭐ Đợt 370** (22/9/2026, ROCKET RACE — 5 việc: nút QUESTION SCREEN ra dải nút · Different+iPad ⇒ HAI BÀN ĐỘC LẬP (khoá Time delay/Miss wait) · chống double-tap · iPad hiện TỪ · nhạc nền vui thay tiếng động cơ; ✅ đã push, ⬜ chưa bấm tay — xem mục **Đợt 370**). Trước đó: **⭐⭐⭐ Đợt 368 + 368b** (22/9/2026, ROCKET RACE — **FIGHT TRÊN HAI MÁY**: câu hỏi sang iPad qua `source.html`, máy chơi giữ đường đua + ô đáp án; một chiều, 2 tài liệu mỗi cái 1 người ghi, KHÔNG đụng `core/fight.js`, KHÔNG phải đăng luật Firestore mới; ✅ COMMIT + PUSH `0b5e4f1` + LIVE 7/7 mã băm, ⬜⬜ đường mạng hai máy thật chưa chạy — xem mục **Đợt 368**). Trước đó: **Đợt 362** (phi công chỉ lên xuống ±1,2 %, bỏ dịch ngang). Trước đó: **Đợt 361** (phi công nhấp ±6 % theo pha thân tàu, ép lùi khi boost, rung khi khựng). Trước đó: **Đợt 360** (khói/nhấp trong Fight quá nhỏ + bị cắt mép → làn lùi 7 %, khói to đậm). Trước đó: **Đợt 359** (phi công chỉ nhấp lên xuống; khói trắng mờ sau lửa). Trước đó: **Đợt 358** (phi công cắt tròn trong cửa sổ + lắc lư, bỏ đường kẻ làn). Trước đó: **Đợt 357** (20/9/2026 tối, chỉ rocket-race.css — căn giữa chip TEAM X/tim và vạch đích theo ảnh thầy). Trước đó: **⭐⭐ Đợt 356** (20/9/2026 tối, ROCKET RACE — **màn START Fight**: bìa READY bị cắt trong bàn 16:5 → thông tin act
 > lên vùng chung, bàn chỉ còn icon + TEAM n + ▶; core `fightFrame.readyShared` + `teams`). Xem mục **Đợt 356**.
 > Trước đó: **⭐⭐ Đợt 355** (20/9/2026 tối, ROCKET RACE — **FIGHT bố cục gọn**: câu hỏi 1 dòng trên cùng, bỏ minimap, đua
 > 32:5.75, bàn 16:5 nền màu tàu + chip dưới ô, dải điểm xuống dưới bàn + đồng hồ vào dải nút (core `fightFrame.topStrip`),
@@ -530,6 +530,32 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
+
+## Đợt 373 (23/9/2026, GAME CỐ ĐỊNH ĐẦU TIÊN — WEREWOLF / ma sói ở gốc GAMES) · ✅ THẦY DUYỆT → COMMIT + PUSH · ⬜ CHƯA BẤM TAY
+
+Thầy mô tả trò ma sói lớp mình chơi trực tiếp, cần màn quản trò trên iPad ngang + điều khiển nhạc. Thiết kế qua
+**5 vòng mẫu** (`D:\OTHERS\CLAUDE\AWord - thiet ke Werewolf\werewolf-v1…v5.html`, mỗi vòng một artifact), thầy chốt
+toàn bộ tiếng Anh, rồi "Cho phép cứu và độc cùng một đêm, ok build, commit + push".
+
+- **Không phải template.** GAMES = game Claude tạo, không edit/không tạo mới ⇒ không đi qua `core/catalog.js` /
+  engine. File mới `games/games.js` (`FIXED_GAMES`) + `games/werewolf/` (werewolf.js · werewolf.css · ww-store.js ·
+  test.html · GHI CHU WEREWOLF.md). `main.js`: thẻ game đầu gốc GAMES, view `"game"`, link **`?g=werewolf`**,
+  `renderFixedGame()` (nạp lớp từ Settings ▸ Classes + chỗ ngồi), dispose khi rời trang.
+- `core/store.js`: `"werewolf"` vào `APP_DATA_KINDS` (tài liệu `users/{uid}/items/aw-werewolf` giữ chỗ ngồi theo lớp —
+  không được ăn số link). KHÔNG cần đăng luật Firestore (đi đường `items` như `aw-settings`).
+- Nhạc thầy thêm lưu **IndexedDB trên máy đó**; ván đang chơi tự lưu `localStorage` + hỏi *Continue* khi mở lại.
+- `tools/sinh-preload.py --write`: `index.html` thêm 2 module tĩnh (games.js, ww-store.js).
+- Luật đầy đủ + bẫy: `games/werewolf/GHI CHU WEREWOLF.md`.
+
+**Đã kiểm (máy, `games/werewolf/test.html` trên devserver 5591, 1180×820):** trọn đêm 1 5 vai — cứu Phương Vy + độc
+Đăng Khoa CÙNG ĐÊM ⇒ sáng 1 người chết (Poison) ✔ · Bodyguard bấm Done không chọn ⇒ hỏi *Protect nobody tonight?* ✔ ·
+thẻ bay vào OUT, vòng còn 17 ✔ · đồng hồ giữa vòng lúc Discussion ✔ · vuốt phiếu bằng PointerEvent đủ 17/17 ⇒ nền xanh +
+Confirm bật ⇒ *Tuấn Kiệt is out* ⇒ *Sleep → Night 2* ✔ · tải lại trang ⇒ *Continue the game in progress? Class A1C ·
+Night 2* ⇒ khôi phục đúng 16 thẻ + 2 OUT ✔ · trang chủ `?g=werewolf` khi chưa đăng nhập ⇒ màn Sign in, 0 lỗi console ✔.
+⚠️ Chưa chạy được đường ĐÃ ĐĂNG NHẬP (thẻ trong GAMES + lớp thật) — Browser pane không đăng nhập Google được.
+
+**⬜ VIỆC ĐANG CHỜ:** thầy mở AWord ▸ Game ▸ Werewolf trên iPad (Ctrl+Shift+R / tải lại), chọn lớp thật, kéo xếp chỗ,
+thêm mp3, chơi thử một đêm.
 
 ## Đợt 372 (23/9/2026, `tools/sinh-preload.py` — PHÉP ĐO TỰ NÓI DỐI: `--check` báo LỆCH đời đời vì CRLF ≠ LF) · ✅ COMMIT + PUSH
 

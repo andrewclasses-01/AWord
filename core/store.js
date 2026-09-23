@@ -200,7 +200,9 @@ function nextNum(map) {
 // was missing here from Đợt 269, exactly the gap this warning describes: it is
 // app data, it has been eating a link number ever since.)
 const APP_DATA_KINDS = new Set(["class", "showdown", "showdown-results", "showdown-history", "showdown-history-index",
-                                "showdown-session", "rocketrace-link", "rocketrace-view"]);
+                                "showdown-session", "rocketrace-link", "rocketrace-view",
+                                // Đợt 373 — the Werewolf fixed game's seating doc (games/werewolf/ww-store.js)
+                                "werewolf"]);
 function isAppData(n) { return APP_DATA_KINDS.has(n.kind); }
 
 export async function ensureNumbers() {
