@@ -3094,6 +3094,15 @@ nối đuôi (đo live: 2,8s trắng lúc lạnh, 2,4s ngay cả khi cache còn 
   template đó chỉ tải chậm, không hỏng); (2) `sfx.prime()` fetch() cả bộ tiếng trước khi hàng đợi
   <audio> chạy; (3) `play.html` gọi `warmUpAssignment(?g)` (core/assignments.js) ngay đầu —
   `getAssignment()` lấy promise đó **một lần rồi xoá**, trang thầy gọi lại vẫn đọc mới.
+- ⛔ **BẪY XUỐNG DÒNG (Đợt 372) — `--check` từng báo LỆCH ĐỜI ĐỜI.** Kho này `core.autocrlf=true`:
+  git cất **LF**, đĩa Windows là **CRLF**. Bản script cũ sinh khối bằng LF rồi **so chuỗi thô** ⇒
+  `"\r\n" != "\n"` ⇒ luôn LỆCH dù `--write` xong `git diff` **rỗng**; và nó ghép khối LF vào file
+  CRLF làm `index.html` **hỗn hợp** (112 CRLF + 40 LF thuần). Luật nay: **SO thì `norm()` chuẩn hoá
+  cả hai vế; GHI thì `write_atomic(path, text, nl)` theo kiểu ÁP ĐẢO của CHÍNH file đó** (file chưa
+  có ⇒ LF). ⛔ Ghi bằng `"wb"` + `.encode()`, **không** `open(p,"w")` — text mode Windows dịch `\n`
+  → `\r\n` **một lần nữa** ⇒ CRLF nhân đôi. Script in `⚠ … TRỘN xuống dòng` khi gặp file lai —
+  **không** tính là LỆCH, nhưng `--write` nắn lại. Cùng luật đã ghi ở Đợt 300 và Đợt 334: **mọi
+  script vá file trong kho này phải giữ kiểu xuống dòng của TỪNG file.**
 - Cùng đợt: màn chờ `.aw-boot` nằm sẵn trong `#app` (mọi đường vẽ đều `app.innerHTML = ""` nên
   tự mất — đừng đổi thói quen đó), và `store.warmUp()` được gọi từ một `<script type="module">`
   đứng TRƯỚC `main.js` để Firebase chạy song song với việc tải mã (`readAll()` nhớ lượt đọc đang

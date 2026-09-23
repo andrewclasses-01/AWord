@@ -531,6 +531,95 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 372 (23/9/2026, `tools/sinh-preload.py` — PHÉP ĐO TỰ NÓI DỐI: `--check` báo LỆCH đời đời vì CRLF ≠ LF) · ✅ COMMIT + PUSH
+
+Thầy giao: script `tools/sinh-preload.py` báo LỆCH sai. Triệu chứng đo được — `--check` luôn trả
+`index.html`/`play.html` **LỆCH**, nhưng chạy `--write` rồi `git diff --numstat` lại **RỖNG**:
+nội dung y hệt bản trong git. Tức là phép đo sai, không phải file sai.
+
+### Nguyên nhân (một dòng)
+
+`core.autocrlf=true` ⇒ git cất **LF**, đĩa Windows là **CRLF**. Script sinh khối
+`<!-- AW-PRELOAD:BEGIN/END -->` và `core/tpl-files.js` bằng **LF** rồi **so chuỗi thô**
+(`have == want`). `"\r\n" != "\n"` ⇒ LỆCH vĩnh viễn dù nội dung giống hệt.
+
+Tệ hơn: `--write` cũ ghép khối **LF** vào file **CRLF** (`html[:s] + "\n" + want + "\n" + html[e:]`)
+⇒ hai trang chính thành **HỖN HỢP**. Đo lại đúng con số thầy báo: `index.html` 112 CRLF + 40 LF thuần.
+Git kêu "LF will be replaced by CRLF" và phiên sau đi tìm một lỗi **không tồn tại**.
+
+⛔ Vì sao đáng sửa hơn là "kệ nó": phiên Claude sau chạy `--check` → thấy LỆCH → chạy `--write` →
+lần kiểm sau **vẫn LỆCH** → đi mò một lỗi ma, hoặc commit nhiễu xuống dòng vào 2 trang chính.
+Đúng nợ đã ghi trong APP_MASTER mục 4 ("việc lặt vặt còn treo") từ Đợt 299/300 — hoá ra không phải
+"ai đó quên chạy `--write`", mà là **script không bao giờ báo KHỚP được**.
+
+### Sửa gì (1 file — `tools/sinh-preload.py`)
+
+1. **SO thì chuẩn hoá cả hai vế** — `norm()` (`\r\n` → `\n`, `\r` trần → `\n`) dùng ở cả 3 đích:
+   `norm(have_tpl) == norm(want_tpl)`, `norm(have) == norm(want)`. `--check` nay chỉ báo LỆCH khi
+   **nội dung** thật sự khác.
+2. **GHI thì theo đúng kiểu ÁP ĐẢO của chính file đó** — `eol_of(text)` đếm CRLF vs LF thuần;
+   `write_atomic(path, text, nl)` nhận thêm kiểu xuống dòng. File chưa tồn tại ⇒ LF (kiểu git cất).
+   Cùng luật đã ghi ở **Đợt 300** (`content-view.js` LF ↔ `options-migrate.js` CRLF) và **Đợt 334**
+   ("script vá phải giữ kiểu của TỪNG file").
+3. ⛔ **`"wb"` + `.encode()`, KHÔNG `open(p,"w")`** — text mode trên Windows dịch `\n` → `\r\n`
+   **một lần nữa**, chuỗi đã sẵn CRLF thành **CRLF nhân đôi**. (Bản cũ né được nhờ `newline=""`,
+   nhưng nay chuỗi CHỦ ĐỘNG mang CRLF nên phải ghi nhị phân.) Vẫn ghi `.tmp` rồi `os.replace`.
+4. **Bắt file lai** — `la_tron()` + `canh_bao_tron()` in `⚠ … TRỘN xuống dòng: n CRLF + n LF thuần
+   + n CR trần`. **KHÔNG** tính là LỆCH (nội dung vẫn đúng, `--check` vẫn exit 0), nhưng `--write`
+   **nắn cả file về một kiểu** — đó là đường dọn di chứng bug cũ trên máy đã lỡ chạy `--write`.
+
+### Đo bằng SỐ (bench `scratch/dot372-eol.py` — 30/30 ĐẠT)
+
+| Phép | Kết quả |
+|---|---|
+| 1. Repo sạch: `--check` | **exit 0**, 0 dòng LỆCH (trước bản vá: exit 1, LỆCH cả 3) |
+| 2. Repo sạch: `--write` | `git diff` **rỗng**; 3 file vẫn **thuần CRLF** (152 · 132 · 29 CRLF, 0 LF thuần, 0 CR trần) |
+| 3. **Ép lệch thật** (xoá 1 dòng `modulepreload` ở cả 2 trang + đổi `"quiz"` → `"QUIZ_SAI"` trong tpl-files) | `--check` **exit 1**, LỆCH đủ 3; `--write` dựng lại ⇒ `git diff` **rỗng** + vẫn thuần CRLF + `--check` **exit 0** |
+| 4. **File hỗn hợp** (dựng lại đúng di chứng bug cũ: 112 CRLF + 40 LF) | `--check` **exit 0** + in cảnh báo TRỘN; `--write` nắn về **152 CRLF / 0 LF**, `git diff` **rỗng** |
+| 5. **Kho kiểu Linux** (ép cả 3 file về LF rồi ép lệch) | `--write` ghi **LF**, không ép CRLF; 3 file thuần LF; nội dung khớp **byte-đối-byte** với blob git (10262 · 8443 · 4624 byte) |
+| 6. Chốt lại | `git diff` rỗng · 3 file thuần CRLF · `--check` exit 0 |
+
+⭐ Phép 5 là phép quan trọng nhất: nó chứng minh bản vá **không** chỉ đổi từ "ép LF" thành "ép CRLF"
+— nó thật sự đi theo file.
+
+### Không đụng gì khác
+
+`core/` · `templates/` · HTML · JS **không đổi một byte** (`git diff` rỗng suốt bench). Chỉ
+`tools/sinh-preload.py` + hồ sơ. Không thêm/bớt `import` tĩnh nào ⇒ nội dung khối preload y nguyên.
+
+### Số đợt + rebase + một cú cắn ngay trong lúc commit
+
+- Phiên này làm xong dưới tên **"Đợt 368"**, nhưng lúc commit `origin/main` đã đi trước 15 commit —
+  **phiên khác đã dùng 368 → 371** (Rocket race hai máy, Find the gap Parakeet, màn iPad). Nhường số,
+  lấy **372** (cùng tiền lệ Đợt 277 / 300). Hồ sơ ghi LẠI trên nền mới thay vì rebase xung đột dòng đầu.
+- Rebase lên `29f4c3b` (phần code không đụng file nào của phiên kia), rồi **đo lại trên nền mới** —
+  phiên kia thêm `source.js`, `rr-link.js`, import mới trong `main.js`, sinh lại `core/tpl-files.js`:
+  `--check` **exit 0** KHỚP cả 3 (họ đã chạy `--write` đúng), bench **30/30** vẫn ĐẠT.
+- ⛔ **Cú cắn thật ngay lúc đổi số**: sửa một dòng bằng `sed -i` trên Git Bash ⇒ `sinh-preload.py`
+  từ 199 CRLF thành **199 LF thuần** — đúng cái bẫy của đợt này. Bắt được nhờ đếm byte, nắn lại bằng
+  Python `"wb"`. **Đừng dùng `sed -i` trên file của kho này.**
+
+### ⬜ VIỆC ĐANG CHỜ (Đợt 372)
+
+- ⬜ **Máy KIA của thầy**: `index.html`/`play.html` ở đó đang **hỗn hợp** (di chứng bug cũ). Chạy
+  `python tools/sinh-preload.py --write` một lần ⇒ nó tự nắn về thuần CRLF, `git diff` phải rỗng.
+- 💡 **ĐỀ XUẤT, CHƯA LÀM**: thêm `.gitattributes` cho kho AWord (các kho khác của thầy đã có).
+  **Cố ý không tự thêm** vì nó đổi cách git xử lý **toàn bộ** kho — lần checkout/commit kế tiếp có
+  thể chuẩn hoá hàng loạt file và đẻ ra một commit khổng lồ toàn xuống dòng, đè lên mọi nhánh đang
+  dở của phiên khác. Nếu thầy muốn, bản tối thiểu an toàn là:
+  ```
+  * text=auto
+  *.py text
+  *.js text
+  *.html text
+  *.css text
+  *.md text
+  ```
+  và phải làm ở **một đợt riêng, kho sạch, không phiên nào đang sửa dở**, kèm `git add --renormalize .`
+  để thấy trước nó đụng bao nhiêu file.
+
+---
+
 ## Đợt 371 (22/9/2026, ROCKET RACE ▸ màn iPad — chữ bé lại, MỘT TỪ không bao giờ tách hai hàng) · ✅ `95582f6` + LIVE · ⬜ CHƯA BẤM TAY
 
 Thầy: *"chữ trên ipad quá to"* · *"chữ PENNY thì PENN hàng trên, Y hàng dưới ⇒ 1 từ không bao giờ được tách làm 2 hàng.

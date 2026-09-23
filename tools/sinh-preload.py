@@ -33,6 +33,44 @@ BEGIN, END = "  <!-- AW-PRELOAD:BEGIN -->", "  <!-- AW-PRELOAD:END -->"
 TPL_OUT = "core/tpl-files.js"
 CATALOG = "core/catalog.js"
 
+# ---- XUỐNG DÒNG (Đợt 372) -----------------------------------------------
+# Kho này `core.autocrlf=true`: git cất LF, đĩa Windows là CRLF — mà script lại
+# sinh khối/`tpl-files.js` bằng LF. So chuỗi THÔ ⇒ CRLF != LF ⇒ `--check` báo
+# LỆCH ĐỜI ĐỜI dù nội dung y hệt, và `--write` cũ ghép khối LF vào file CRLF
+# làm file thành HỖN HỢP (git kêu "LF will be replaced by CRLF", phiên sau đi
+# tìm một lỗi không tồn tại). Luật: SO thì chuẩn hoá cả hai vế; GHI thì theo
+# đúng kiểu ÁP ĐẢO của chính file đó — cùng luật đã ghi ở GHI CHU DU AN Đợt 300
+# và Đợt 334 ("script vá phải giữ kiểu của TỪNG file").
+CRLF, LF = "\r\n", "\n"
+
+def norm(text):
+    """Bỏ khác biệt xuống dòng TRƯỚC KHI SO — chỉ so NỘI DUNG."""
+    return text.replace(CRLF, LF).replace("\r", LF)
+
+def eol_stats(text):
+    n = text.count(CRLF)
+    return n, text.count(LF) - n, text.count("\r") - n      # crlf, lf thuần, cr trần
+
+def eol_of(text, mac_dinh=LF):
+    """Kiểu xuống dòng ÁP ĐẢO của file (đọc bằng newline="" nên còn nguyên).
+    File chưa tồn tại ⇒ LF, đúng kiểu git cất."""
+    if not text: return mac_dinh
+    n, l, _ = eol_stats(text)
+    return CRLF if n > l else LF
+
+def ten_eol(nl): return "CRLF" if nl == CRLF else "LF"
+
+def la_tron(text):
+    """File lai hai/ba kiểu xuống dòng — di chứng bản script cũ (ghép khối LF vào
+    file CRLF). KHÔNG tính là LỆCH (nội dung vẫn đúng) nhưng `--write` nắn lại."""
+    return sum(1 for x in eol_stats(text) if x) > 1
+
+def canh_bao_tron(ten, text):
+    if la_tron(text):
+        n, l, r = eol_stats(text)
+        print(f"    \u26a0 {ten} TRỘN xuống dòng: {n} CRLF + {l} LF thuần + {r} CR trần"
+              f" \u2014 `--write` sẽ nắn cả file về {ten_eol(eol_of(text))}")
+
 IMP = re.compile(r'^\s*(?:import|export)\s[^;]*?from\s*["\']([^"\']+)["\']|^\s*import\s*["\']([^"\']+)["\']', re.M)
 
 def rel_join(base_rel, target):
@@ -111,9 +149,13 @@ def tpl_source(tf):
     lines.append("};")
     return "\n".join(lines) + "\n"
 
-def write_atomic(path, text):
+def write_atomic(path, text, nl=LF):
+    """Ghi `text` bằng đúng kiểu xuống dòng `nl`.
+    \u26d4 BẮT BUỘC "wb" + .encode(): `open(p,"w")` trên Windows dịch \\n -> \\r\\n
+    MỘT LẦN NỮA, chuỗi đã sẵn CRLF sẽ thành CRLF NHÂN ĐÔI (bài học cũ của kho)."""
+    data = norm(text).replace(LF, nl).encode("utf-8")
     tmp = path + ".tmp"
-    io.open(tmp, "w", encoding="utf-8", newline="").write(text)
+    with io.open(tmp, "wb") as f: f.write(data)
     os.replace(tmp, path)
 
 def main():
@@ -124,30 +166,33 @@ def main():
     want_tpl = tpl_source(tf)
     tpl_path = os.path.join(ROOT, TPL_OUT)
     have_tpl = io.open(tpl_path, encoding="utf-8", newline="").read() if os.path.exists(tpl_path) else ""
-    ok = have_tpl == want_tpl
+    tpl_nl = eol_of(have_tpl)
+    ok = norm(have_tpl) == norm(want_tpl)        # so NỘI DUNG, không so xuống dòng
     print(f"{TPL_OUT}: {len(tf)} template — {'KHỚP' if ok else 'LỆCH'}")
+    canh_bao_tron(TPL_OUT, have_tpl)
     if mode == "":
         for typ in tf: print(f"    {typ}: {len(tf[typ])} file")
-    if not ok:
-        bad += 1
-        if mode == "--write":
-            write_atomic(tpl_path, want_tpl)
-            print(f"    -> đã ghi {TPL_OUT}")
+    if not ok: bad += 1
+    if mode == "--write" and (not ok or la_tron(have_tpl)):
+        write_atomic(tpl_path, want_tpl, tpl_nl)
+        print(f"    -> đã ghi {TPL_OUT} ({ten_eol(tpl_nl)})")
     for page, entry in PAGES.items():
         path = os.path.join(ROOT, page)
         html = io.open(path, encoding="utf-8", newline="").read()
         mods, want = block_for(entry)
         s, e = current_block(html)
         have = html[s:e].strip("\r\n")
-        ok = have == want
+        page_nl = eol_of(html)
+        ok = norm(have) == norm(want)                # so NỘI DUNG, không so xuống dòng
         print(f"{page}: {len(mods)} module tĩnh từ {entry} — {'KHỚP' if ok else 'LỆCH'}")
+        canh_bao_tron(page, html)
         if mode == "":
             for m in mods: print("   ", m)
-        if not ok:
-            bad += 1
-            if mode == "--write":
-                write_atomic(path, html[:s] + "\n" + want + "\n" + html[e:])
-                print(f"    -> đã ghi lại khối trong {page}")
+        if not ok: bad += 1
+        # ghi cả khi KHỚP mà file lai: nắn về MỘT kiểu, hết cảnh báo git
+        if mode == "--write" and (not ok or la_tron(html)):
+            write_atomic(path, html[:s] + LF + want + LF + html[e:], page_nl)
+            print(f"    -> đã ghi lại khối trong {page} ({ten_eol(page_nl)})")
     if mode == "--check" and bad: sys.exit(1)
 
 if __name__ == "__main__":
