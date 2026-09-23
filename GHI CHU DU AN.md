@@ -531,6 +531,22 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 376 (23/9/2026, PWA — ICON + CÀI ĐẶT NHƯ APP) · ✅ THẦY "ok build" → COMMIT + PUSH · ⬜ CHƯA BẤM TAY
+
+Thầy chốt 3 điểm: mở app vào **trang thư viện** (`start_url "/"`), icon Android **giữ chữ "in ANDREW CLASSES", thu nhỏ cả
+logo**, cửa sổ **standalone** (không thanh địa chỉ). Thêm `manifest.webmanifest` (⛔ khác hẳn `manifest.js` = danh sách template)
++ 3 icon mới sinh từ `favicon-512.png`: `apple-touch-icon-180.png` (vuông tràn nền xanh `#37a8df` — bản cũ góc trong suốt ⇒
+iPhone tô ĐEN 4 góc), `maskable-192/512.png` (logo thu 72% vào giữa; điểm trắng xa tâm nhất 185px < 205px vùng an toàn).
+`<head>`: theme-color `#37a8df` + mobile-web-app-capable + apple title "AWord" ở cả 3 trang.
+⭐ **`<link rel="manifest">` CHỈ ở `index.html`**, CỐ Ý không gắn `play.html`/`source.html`: Android cài theo `start_url` của
+manifest, gắn ở play.html thì HS "thêm vào màn hình chính" từ link bài giao sẽ bị đưa về thư viện thầy thay vì bài của em.
+⛔ **KHÔNG service worker** (Chrome ≥ 112 không cần để cài) — cố ý, tránh máy HS kẹt bản code cũ (AWord không cache-busting).
+⚠️ iPhone/iPad dạng app: `signInWithPopup` có thể không bật — thầy soạn bài trên iPad dùng Safari thường.
+Backup `_backup/dot376/`. Đã đo dev: manifest 200 `application/manifest+json`, 5 icon đúng cỡ khai, 0 lỗi console.
+
+**⬜ VIỆC ĐANG CHỜ:** thầy `Ctrl+Shift+R` → Chrome/Edge máy tính: biểu tượng "Cài đặt" cuối thanh địa chỉ; Android: menu ⋮ →
+Cài đặt ứng dụng; iPhone: Safari → Chia sẻ → Thêm vào MH chính (xem hết góc đen).
+
 ## Đợt 375 (23/9/2026, THANH NÚT TRÊN CÙNG GIỐNG NHAU Ở MỌI TRANG) · ✅ THẦY GIAO → COMMIT + PUSH · ⬜ CHƯA BẤM TAY
 
 Thầy: trước đây trang chủ có Showdown ANALYSE + STATS + Question screen + Settings, còn trong thư mục / trang soạn act thì hai nút
