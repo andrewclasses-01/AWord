@@ -5171,3 +5171,14 @@ khớp nhau ở 13 em còn bảng thứ tư ngồi riêng với 5 em. Những lu
     chú tử tế luôn nhắc tên thứ vừa bỏ đi.
 24. **Bộ giả (fake) phải khớp hành vi THẬT.** Bộ Firestore giả từng gộp sâu ở `update()` và báo HỎNG
     oan cho một đoạn code thật ra đúng.
+
+## ⭐ STATS — THỐNG KÊ ĐIỂM LỚP (Đợt 374)
+
+- Trang `core/stats-home.js` (+ `core/stats.css`, nạp động). Dữ liệu: `users/{uid}/items/st_<LỚP>_<YYYYMM>` kind `stats-month`
+  = `{classId, ym, tests:{<id>: TEST}, guests:{<gid>:{name,note}}}`; TEST.values khoá `m:<MÃ>` (HS myStudent) / `g:<gid>` (người tạm).
+- Cột AWord là BẢN CHỤP: đọc lại `assignments/<code>/scores` chỉ khi `submitCount` đổi. ⛔ Đổi cách tính `submitCount` / khoá `scores`
+  (`name,score,total,timeMs,createdAt,ma`) là phải xem lại `syncAw()`.
+- Lớp của một bài giao = `classTokenOf(title)` chuẩn hoá `[^A-Za-z0-9]` bỏ + hoa, so với `maLop` trong `lessonWeb/lop`. ⛔ Đổi luật đặt tên
+  bài giao (`<LỚP>_<d.m>_…`) là STATS mất cột âm thầm.
+- ANALYSE dùng lại `buildAnalysisRows` + `renderChart` + `openAnalysisExportDialog`: một NGÀY = một "match" (right/total = %×1000/1000),
+  cờ `dayOnly` ở entry để `renderLegend` in ngày không in giờ.

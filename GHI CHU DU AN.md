@@ -12,7 +12,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **⭐⭐⭐ Đợt 373** (23/9/2026, GAME CỐ ĐỊNH ĐẦU TIÊN — **WEREWOLF** ở gốc GAMES, link `?g=werewolf`; `games/` mới, không qua catalog; xem mục **Đợt 373** + `games/werewolf/GHI CHU WEREWOLF.md`). Trước đó: **⭐⭐⭐ Đợt 371** (22/9/2026, màn iPad — chữ bé lại, MỘT TỪ không bao giờ tách hai hàng; gỡ `overflow-wrap:break-word` + tự đo bằng `Range.getClientRects()`; hai nửa cùng cỡ. ✅ `95582f6` LIVE). Trước đó: **⭐⭐⭐ Đợt 370** (22/9/2026, ROCKET RACE — 5 việc: nút QUESTION SCREEN ra dải nút · Different+iPad ⇒ HAI BÀN ĐỘC LẬP (khoá Time delay/Miss wait) · chống double-tap · iPad hiện TỪ · nhạc nền vui thay tiếng động cơ; ✅ đã push, ⬜ chưa bấm tay — xem mục **Đợt 370**). Trước đó: **⭐⭐⭐ Đợt 368 + 368b** (22/9/2026, ROCKET RACE — **FIGHT TRÊN HAI MÁY**: câu hỏi sang iPad qua `source.html`, máy chơi giữ đường đua + ô đáp án; một chiều, 2 tài liệu mỗi cái 1 người ghi, KHÔNG đụng `core/fight.js`, KHÔNG phải đăng luật Firestore mới; ✅ COMMIT + PUSH `0b5e4f1` + LIVE 7/7 mã băm, ⬜⬜ đường mạng hai máy thật chưa chạy — xem mục **Đợt 368**). Trước đó: **Đợt 362** (phi công chỉ lên xuống ±1,2 %, bỏ dịch ngang). Trước đó: **Đợt 361** (phi công nhấp ±6 % theo pha thân tàu, ép lùi khi boost, rung khi khựng). Trước đó: **Đợt 360** (khói/nhấp trong Fight quá nhỏ + bị cắt mép → làn lùi 7 %, khói to đậm). Trước đó: **Đợt 359** (phi công chỉ nhấp lên xuống; khói trắng mờ sau lửa). Trước đó: **Đợt 358** (phi công cắt tròn trong cửa sổ + lắc lư, bỏ đường kẻ làn). Trước đó: **Đợt 357** (20/9/2026 tối, chỉ rocket-race.css — căn giữa chip TEAM X/tim và vạch đích theo ảnh thầy). Trước đó: **⭐⭐ Đợt 356** (20/9/2026 tối, ROCKET RACE — **màn START Fight**: bìa READY bị cắt trong bàn 16:5 → thông tin act
+> Mới nhất: **⭐⭐⭐ Đợt 374** (23/9/2026, **STATS — thống kê điểm lớp, lưu dài hạn**: icon biểu đồ trên trang chủ, `?st=1&c=<lớp>`, `core/stats-home.js` + `core/stats.css`; xem mục **Đợt 374**). Trước đó: **⭐⭐⭐ Đợt 373** (23/9/2026, GAME CỐ ĐỊNH ĐẦU TIÊN — **WEREWOLF** ở gốc GAMES, link `?g=werewolf`; `games/` mới, không qua catalog; xem mục **Đợt 373** + `games/werewolf/GHI CHU WEREWOLF.md`). Trước đó: **⭐⭐⭐ Đợt 371** (22/9/2026, màn iPad — chữ bé lại, MỘT TỪ không bao giờ tách hai hàng; gỡ `overflow-wrap:break-word` + tự đo bằng `Range.getClientRects()`; hai nửa cùng cỡ. ✅ `95582f6` LIVE). Trước đó: **⭐⭐⭐ Đợt 370** (22/9/2026, ROCKET RACE — 5 việc: nút QUESTION SCREEN ra dải nút · Different+iPad ⇒ HAI BÀN ĐỘC LẬP (khoá Time delay/Miss wait) · chống double-tap · iPad hiện TỪ · nhạc nền vui thay tiếng động cơ; ✅ đã push, ⬜ chưa bấm tay — xem mục **Đợt 370**). Trước đó: **⭐⭐⭐ Đợt 368 + 368b** (22/9/2026, ROCKET RACE — **FIGHT TRÊN HAI MÁY**: câu hỏi sang iPad qua `source.html`, máy chơi giữ đường đua + ô đáp án; một chiều, 2 tài liệu mỗi cái 1 người ghi, KHÔNG đụng `core/fight.js`, KHÔNG phải đăng luật Firestore mới; ✅ COMMIT + PUSH `0b5e4f1` + LIVE 7/7 mã băm, ⬜⬜ đường mạng hai máy thật chưa chạy — xem mục **Đợt 368**). Trước đó: **Đợt 362** (phi công chỉ lên xuống ±1,2 %, bỏ dịch ngang). Trước đó: **Đợt 361** (phi công nhấp ±6 % theo pha thân tàu, ép lùi khi boost, rung khi khựng). Trước đó: **Đợt 360** (khói/nhấp trong Fight quá nhỏ + bị cắt mép → làn lùi 7 %, khói to đậm). Trước đó: **Đợt 359** (phi công chỉ nhấp lên xuống; khói trắng mờ sau lửa). Trước đó: **Đợt 358** (phi công cắt tròn trong cửa sổ + lắc lư, bỏ đường kẻ làn). Trước đó: **Đợt 357** (20/9/2026 tối, chỉ rocket-race.css — căn giữa chip TEAM X/tim và vạch đích theo ảnh thầy). Trước đó: **⭐⭐ Đợt 356** (20/9/2026 tối, ROCKET RACE — **màn START Fight**: bìa READY bị cắt trong bàn 16:5 → thông tin act
 > lên vùng chung, bàn chỉ còn icon + TEAM n + ▶; core `fightFrame.readyShared` + `teams`). Xem mục **Đợt 356**.
 > Trước đó: **⭐⭐ Đợt 355** (20/9/2026 tối, ROCKET RACE — **FIGHT bố cục gọn**: câu hỏi 1 dòng trên cùng, bỏ minimap, đua
 > 32:5.75, bàn 16:5 nền màu tàu + chip dưới ô, dải điểm xuống dưới bàn + đồng hồ vào dải nút (core `fightFrame.topStrip`),
@@ -530,6 +530,46 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
+
+## Đợt 374 (23/9/2026, ⭐⭐⭐ STATS — THỐNG KÊ ĐIỂM LỚP, LƯU DÀI HẠN) · ✅ THẦY "ok build" → COMMIT + PUSH · ⬜ CHƯA BẤM TAY
+
+Thầy muốn thay các file Excel điểm tay (mẫu `B1A.xlsx`: hàng HS × cột buổi, ô = SỐ LỖI, sheet CHART) bằng một trang
+trong AWord. Thiết kế qua **3 vòng mẫu** (`D:\OTHERS\CLAUDE\AWord - thiet ke Stats\stats-v1…v3.html`, artifact
+https://claude.ai/artifact/YEmV8wpaxjdpTFxgcK7rSD), thầy chốt v3 + *"một ngày vẫn có thể có 2 bài: 1 AWord, 1 nhập tay"* → ok build.
+
+**Luật thầy chốt:** nguồn = bài giao AWord (ô = ĐIỂM lượt SUBMIT TỐT NHẤT) + bài chấm tay (ô = SỐ LỖI thầy nhập), tô màu theo %
+· AWord chỉ tính từ **22/9/2026** (ngày điểm bắt đầu mang `ma`, Đợt 367) · MỖI BÀI MỘT CỘT, gom CỤM theo NGÀY · trang chính = 30 ngày
+gần nhất, cũ hơn vào cây Năm → Tháng → Ngày · hàng = danh sách lớp myStudent THEO MÃ · nhập tay chạm +1 / vuốt lên +5 / vuốt xuống −5
++ "Thêm người" tạm · 📊 Đánh giá từng bài · ANALYSE nhiều ngày (≤10) = biểu đồ Analyse của Showdown · Xuất Excel.
+
+- **File mới:** `core/stats-home.js` (trang, nạp ĐỘNG từ `main.js` ⇒ không cần `tools/sinh-preload.py`) + `core/stats.css`
+  (nạp bằng `<link>` khi mở trang — KHÔNG thêm vào cuối `app.css`, nơi có khối "phải đứng cuối").
+- `main.js`: icon biểu đồ cạnh icon Showdown (chỉ trang chủ), view `"stats"`, link **`?st=1&c=<lớp>`**, dispose khi rời trang.
+- `core/store.js`: `"stats-month"` vào `APP_DATA_KINDS`.
+- `core/showdown-setup.js` `renderLegend`: cờ tuỳ chọn `e.dayOnly` (chú thích chỉ in ngày, không in giờ trưa bịa) — Showdown không đặt ⇒ y cũ.
+- **Danh sách lớp** = `lessonWeb/lop` (bản công khai myLesson xuất, luật `read: if true`; = `data/lop.json`). ⛔ KHÔNG đọc
+  `mystudentRosterStudents`. Lớp nhận theo chữ đầu tên bài giao, chuẩn hoá `[^A-Za-z0-9]` bỏ + viết hoa (`B1-B` ⇔ `B1B`).
+- **Ghép điểm → em:** `ma` (bỏ dấu cách, viết hoa) trước; không có mã thì theo tên / tên cũ (`tenCu`, bỏ dấu) CHỈ khi tên đó của đúng
+  một em; còn lại = "lượt không nhận ra" (báo số trong popup Đánh giá, không tính). Em rời lớp vẫn hiện hàng "không còn trong lớp".
+  `vao` (vào lớp muộn) ⇒ ô trước ngày vào = sọc, không tính.
+- **Ngày của bài AWord** = ngày trong tên bài (`B1B_23.9_…` → 23/9, năm theo `createdAt`, gần nhất); không có thì ngày tạo.
+- **Lưu (chốt sổ):** `users/{uid}/items/st_<LỚP>_<YYYYMM>` kind `stats-month` — `tests.<id>` (bài chấm tay `h…` + bản chụp bài
+  AWord `aw_<code>`) + `guests.<gid>`. Mỗi lần mở lớp chỉ đọc lại `scores` của bài giao có `submitCount` đổi ⇒ rẻ; xoá hẳn bài giao
+  KHÔNG làm mất cột đã chụp. Không đụng luật nộp bài của HS, không cần đăng luật mới (đi đường `items` của thầy).
+- ⚠️ Giao diện trang bằng TIẾNG VIỆT (theo mẫu thầy duyệt) — khác phần còn lại của AWord (tiếng Anh).
+
+**Đã kiểm (máy, `scratch/dot374-stats.html` + `scratch/fake-firebase374.js`, devserver 5591):** lượt tốt nhất 18 thắng 15 ✔ · mã
+viết thường `cd34` khớp ✔ · khớp qua tên cũ ✔ · người lạ không mã bị loại (unmatched 1) ✔ · bài trước 22/9 + bài lớp khác bị loại ✔ ·
+em vào lớp 23/9 ⇒ ô 22/9 sọc ✔ · Đánh giá: 3/3 · TB 77% · phân loại · "accommodation 2/2 em sai" đọc từ `results.review` ✔ ·
+chạm/vuốt: 1+1+5=7, 5+5−5−1=4 ✔ · thêm người tạm lưu `guests` ✔ · ô ngày gõ `22/9/2026`, `22092026`, `5/10/2026` đúng, `31/06/2026`
+bị chặn ✔ · bài chấm tay 22/9 đứng CHUNG CỤM với bài AWord 22/9 ✔ · sửa đổi ngày sang tháng 8 ⇒ chuyển doc ✔ · xoá (bấm 2 lần) ✔ ·
+đường tiến bộ ✔ · % ✔ · đổi lớp qua lại không ghi thừa ✔ · ANALYSE 3 ngày = biểu đồ Showdown, chú thích "T3 · WORDS … · 22/9/2026",
+hộp tải PNG mở ✔ · Excel `STATS B1B 23-09-2026.xlsx` (sheet mỗi tháng + TONG HOP %) ✔ · 0 lỗi console.
+⚠️ Chưa chạy đường ĐÃ ĐĂNG NHẬP thật (icon trên thanh + Firestore thật) — Browser pane không đăng nhập Google được.
+
+**⬜ VIỆC ĐANG CHỜ:** thầy `Ctrl+Shift+R` trang chủ AWord → bấm icon biểu đồ (cạnh icon Showdown vàng) → chọn lớp có bài giao từ 22/9
+(tên bắt đầu bằng mã lớp, vd `B1B_23.9_…`) → xem cột AWord; thử "Thêm bài chấm tay" trên TOMKO/điện thoại (chạm/vuốt); Analyse; Xuất Excel.
+Lớp B1A chưa có trong myStudent/`lop.json` nên chưa hiện trong danh sách lớp.
 
 ## Đợt 373 (23/9/2026, GAME CỐ ĐỊNH ĐẦU TIÊN — WEREWOLF / ma sói ở gốc GAMES) · ✅ THẦY DUYỆT → COMMIT + PUSH · ⬜ CHƯA BẤM TAY
 

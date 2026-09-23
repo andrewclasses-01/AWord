@@ -202,7 +202,9 @@ function nextNum(map) {
 const APP_DATA_KINDS = new Set(["class", "showdown", "showdown-results", "showdown-history", "showdown-history-index",
                                 "showdown-session", "rocketrace-link", "rocketrace-view",
                                 // Đợt 373 — the Werewolf fixed game's seating doc (games/werewolf/ww-store.js)
-                                "werewolf"]);
+                                "werewolf",
+                                // Đợt 374 — STATS month docs (core/stats-home.js): st_<CLASS>_<YYYYMM>
+                                "stats-month"]);
 function isAppData(n) { return APP_DATA_KINDS.has(n.kind); }
 
 export async function ensureNumbers() {

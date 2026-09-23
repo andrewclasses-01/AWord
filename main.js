@@ -158,7 +158,8 @@ const state = {
   sort: localStorage.getItem("aword-sort") || "name-asc",   // ⭐ Đợt 325 — see SORT_OPTIONS
   query: "",
   user: null,           // the signed-in teacher (null = signed out)
-  showdownClassId: ""   // ⭐ Đợt 236 — which class "showdown-home" is open on
+  showdownClassId: "",  // ⭐ Đợt 236 — which class "showdown-home" is open on
+  statsClassId: ""      // ⭐ Đợt 374 — which class "stats" is open on (myStudent class code, e.g. "B1B")
 };
 // The live handle from mountShowdownHome() (core/showdown-home.js), so leaving
 // the page can tear down its class-picker listener/fullscreen bookkeeping
@@ -167,6 +168,8 @@ const state = {
 let showdownHomeHandle = null;
 // ⭐ Đợt 373 — dispose() of the fixed game on screen (Werewolf), same idea.
 let fixedGameDispose = null;
+// ⭐ Đợt 374 — the STATS page's handle (core/stats-home.js, loaded on demand).
+let statsHandle = null;
 // ⭐ Đợt 237 — set by topbar() whenever it builds the gold Showdown icon, so
 // core/showdown-home.js can morph THAT SAME button into the ANALYSE pill
 // instead of owning a second one on its own toolbar. null on any page that
@@ -502,6 +505,7 @@ async function routeFromLocation() {
     }
   }
   if (p.get("sd")) return openShowdownHome({ fromUrl: true, classId: p.get("c") || "" });
+  if (p.get("st")) return openStatsHome({ fromUrl: true, classId: p.get("c") || "" });   // ⭐ Đợt 374
   if (p.get("g")) return openFixedGame(p.get("g"), opts);   // ⭐ Đợt 373 — ?g=werewolf
   if (p.get("f")) {
     const node = await getByNum(p.get("f"));
@@ -525,6 +529,12 @@ async function syncUrl(replace) {
     const p = new URLSearchParams();
     p.set("sd", "1");
     if (state.showdownClassId) p.set("c", state.showdownClassId);
+    return setUrl(`${baseUrl()}?${p.toString()}`, replace);
+  }
+  if (state.view === "stats") {   // ⭐ Đợt 374 — ?st=1&c=<class>
+    const p = new URLSearchParams();
+    p.set("st", "1");
+    if (state.statsClassId) p.set("c", state.statsClassId);
     return setUrl(`${baseUrl()}?${p.toString()}`, replace);
   }
   if (state.view === "top") return setUrl(baseUrl(), replace);
@@ -632,10 +642,12 @@ async function render() {
   // reason to wait for that when we are the ones doing the removing.
   if (showdownHomeHandle) { showdownHomeHandle.dispose(); showdownHomeHandle = null; }
   if (fixedGameDispose) { try { fixedGameDispose(); } catch { /* already gone */ } fixedGameDispose = null; }
+  if (statsHandle) { try { statsHandle.dispose(); } catch { /* already gone */ } statsHandle = null; }
   app.innerHTML = "";
   updatePageTitle();   // ⭐ Đợt 325 — fire-and-forget: don't hold up the paint
                         // for a Firestore round trip just to rename the tab.
   if (state.view === "showdown-home") return renderShowdownHome();
+  if (state.view === "stats") return renderStatsHome();
   if (state.view === "game") return renderFixedGame();
   if (state.view === "top") return renderTop();
   return renderInside();
@@ -697,6 +709,40 @@ function renderShowdownHome() {
       syncUrl();
     },
     onChoosingChange: (on) => { sdHomeBtnSetAnalyse?.(on); }
+  });
+}
+
+// ---------------- ⭐⭐ Đợt 374 — STATS (class score statistics, kept for good) ----------------
+// Full page like Showdown's: topbar + core/stats-home.js + footer. The module
+// (and its own stylesheet core/stats.css) loads on demand, so the home page
+// pays nothing for it and tools/sinh-preload.py needs no new entry.
+function openStatsHome(opts = {}) {
+  state.view = "stats";
+  state.root = null; state.folderId = null; state.query = "";
+  if (opts.classId !== undefined) state.statsClassId = opts.classId;
+  if (!opts.fromUrl) syncUrl();
+  render();
+}
+async function renderStatsHome() {
+  const wrap = el("div", "aw-lib aw-st-page");
+  wrap.append(topbar(false));
+  const mount = el("div");
+  wrap.append(mount);
+  wrap.append(footer());
+  app.append(wrap);
+  requestAnimationFrame(() => sizeBrand(wrap));
+  let mod;
+  try { mod = await import("./core/stats-home.js"); }
+  catch (e) { console.warn("AWord: STATS failed to load", e); mount.append(el("div", "aw-empty", "STATS could not load — check the connection and try again.")); return; }
+  if (state.view !== "stats" || !mount.isConnected) return;   // left the page while it loaded
+  statsHandle = mod.mountStatsHome(mount, {
+    classId: state.statsClassId,
+    toast: toastMsg,
+    onClassChange: (classId) => {
+      if (state.statsClassId === classId) return;
+      state.statsClassId = classId;
+      syncUrl(true);
+    }
   });
 }
 
@@ -2855,6 +2901,12 @@ function topbar(showNav) {
     };
     sdHomeBtnSetAnalyse = on => { sd.classList.toggle("is-analyse", on); sd.title = on ? "Cancel analyse" : "Showdown results"; };
     right.append(sd);
+    // ⭐ Đợt 374 — STATS: class score statistics (core/stats-home.js). Home
+    // page only, same reasoning as the Showdown icon just above.
+    const st = el("button", "aw-appbtn aw-st-homebtn", icons.barChart);
+    st.type = "button"; st.title = "Class stats"; st.setAttribute("aria-label", "Class stats");
+    st.onclick = () => { if (state.view !== "stats") openStatsHome(); };
+    right.append(st);
   } else {
     sdHomeBtnSetAnalyse = null;
   }

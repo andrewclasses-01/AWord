@@ -1325,7 +1325,12 @@ export function renderLegend(entries) {
     const sw = el("span", "aw-sd-rec-legend-sw");
     sw.style.background = ANALYSE_COLORS[i % ANALYSE_COLORS.length];
     const tx = el("span", "aw-sd-rec-legend-txt");
-    tx.textContent = `${e.label} · ${when(e.at)}`;      // teacher's own text + a formatted time
+    // ⭐ Đợt 374 — STATS passes whole DAYS (`dayOnly`): a clock time there would be
+    // a made-up noon, so it shows the date alone (d/m/yyyy). Showdown never sets it.
+    const d = new Date(Number(e.at) || 0);
+    tx.textContent = e.dayOnly
+      ? `${e.label} · ${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`
+      : `${e.label} · ${when(e.at)}`;      // teacher's own text + a formatted time
     item.append(sw, tx);
     leg.append(item);
   });
