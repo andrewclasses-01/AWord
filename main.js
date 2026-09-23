@@ -2876,10 +2876,11 @@ function topbar(showNav) {
   bar.append(logo(showNav));
 
   const right = el("div", "aw-appbar-right");
-  if (showNav) {
-    // Đợt 287 — one button per tree, same order as the home page cards.
-    ROOTS.forEach(root => right.append(navBtn(ROOT_LABEL[root], root)));
-  }
+  // ⭐ Đợt 375 (thầy, 23/9/2026) — the right-hand buttons are now THE SAME on
+  // every page: Showdown ANALYSE · STATS · Question screen · Settings. The four
+  // folder shortcuts (Activity/Result/Course/Game, Đợt 287) are gone — the logo
+  // still goes home, and the home page cards open each tree. `showNav` now only
+  // picks the small logo for inner pages.
   // ⭐⭐⭐ Đợt 236 — SHOWDOWN, the full-page durable ledger. Icon only, gold,
   // glowing (thầy's own words) — same gold pulse as the in-game ANALYSE button
   // (`aw-sd-rec-analyseglow`, core/app.css), reused rather than a second
@@ -2887,7 +2888,8 @@ function topbar(showNav) {
   // specifically): the library/editor pages already carry Activities/Results/
   // Settings, and a fourth icon there would compete with those for no reason —
   // this is a destination you go TO, not a tool you reach for mid-browse.
-  if (!showNav) {
+  // (Đợt 375: no longer home-only — shown on every page, thầy's call.)
+  {
     const sd = el("button", "aw-appbtn aw-sdh-homebtn", icons.showdown);
     sd.type = "button"; sd.title = "Showdown results"; sd.setAttribute("aria-label", "Showdown results");
     sd.append(el("span", "aw-sdh-homebtn-word", "ANALYSE"));
@@ -2901,14 +2903,11 @@ function topbar(showNav) {
     };
     sdHomeBtnSetAnalyse = on => { sd.classList.toggle("is-analyse", on); sd.title = on ? "Cancel analyse" : "Showdown results"; };
     right.append(sd);
-    // ⭐ Đợt 374 — STATS: class score statistics (core/stats-home.js). Home
-    // page only, same reasoning as the Showdown icon just above.
+    // ⭐ Đợt 374 — STATS: class score statistics (core/stats-home.js).
     const st = el("button", "aw-appbtn aw-st-homebtn", icons.barChart);
     st.type = "button"; st.title = "Class stats"; st.setAttribute("aria-label", "Class stats");
     st.onclick = () => { if (state.view !== "stats") openStatsHome(); };
     right.append(st);
-  } else {
-    sdHomeBtnSetAnalyse = null;
   }
   // ⭐ Đợt 368f (thầy, 22/9/2026) — QUESTION SCREEN, icon only, beside the gear:
   // *"thêm 1 nút (only icon) vào cạnh nút cài đặt … để dùng trên ipad khi cần,
@@ -2983,13 +2982,6 @@ async function doSignOut() {
   renderLogin();
 }
 
-function navBtn(label, root) {
-  const b = el("button", "aw-appnav" + (state.view !== "top" && state.root === root ? " is-on" : ""));
-  b.type = "button";
-  b.append(el("span", "aw-appnav-ic", icons.folder), el("span", null, label));
-  b.onclick = () => openRoot(root);
-  return b;
-}
 
 // Space out the tagline so its total width equals the logo's width — WITHOUT
 // distorting the letters (only letter-spacing changes, glyph shapes are kept).
