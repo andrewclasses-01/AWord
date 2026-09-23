@@ -110,6 +110,17 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* ⭐ Đợt 377 (23/9/2026) — KHÔNG ZOOM CHẠM ĐÚP Ở BẤT KỲ ĐÂU (thầy chốt "không zoom
+   trong mọi tình huống"). Trước đợt này `manipulation` chỉ có trên .aw-stage /
+   .aw-zoomed / vài template, nên chạm đúp ở trang thư viện, thanh nút, Settings,
+   STATS, Showdown vẫn phóng to trên iPad. `:where()` = độ đặc hiệu 0 ⇒ mọi luật
+   `touch-action: none` của game kéo-thả (maze, hand box Fight…) VẪN THẮNG.
+   ⛔ Giữ MỘT giá trị cho mọi tầng — xem cảnh báo WebKit ở `core/no-zoom.js`.
+   Zoom hai ngón + zoom máy tính do `core/no-zoom.js` chặn. */
+:where(html, body, body *) {
+  touch-action: manipulation;
+}
+
 body {
   margin: 0;
   font-family: "Baloo 2", "Segoe UI", system-ui, Arial, sans-serif;

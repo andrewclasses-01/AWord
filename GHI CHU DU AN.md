@@ -531,6 +531,24 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 377 (23/9/2026, KHÔNG ZOOM TRONG MỌI TÌNH HUỐNG) · ✅ THẦY "ok build" → COMMIT + PUSH · ⬜ CHƯA BẤM TAY iPad
+
+Thầy (sau khi cài PWA Đợt 376 trên iPad): chạm đúp vài chỗ bị zoom, muốn KHÔNG zoom bất kỳ đâu. Gốc: `manipulation` chỉ có trên
+.aw-stage/.aw-zoomed/vài template ⇒ thư viện, thanh nút, Settings, STATS, Showdown vẫn zoom chạm đúp; zoom hai ngón CỐ Ý để mở
+từ 5/8 ("lối thoát") — ⛔ Đợt này ĐẢO NGƯỢC điều đó theo lệnh thầy.
+- `core/app.css`: `:where(html, body, body *) { touch-action: manipulation }` (đặc hiệu 0 ⇒ luật `none` của game kéo-thả vẫn thắng
+  — đo: `.aw-mc-dbtn`/`.aw-tstep-zone`/`.aw-sd-classify-handle` = none). ⛔ ĐỪNG đặt `pan-x pan-y` ở html + `manipulation` ở con:
+  WebKit giao hai tập ra rỗng ⇒ `none` ⇒ iPad hết cuộn.
+- `core/no-zoom.js` MỚI (script thường, nạp trong `<head>` 3 trang index/play/source): chặn gesturestart/change/end (Safari),
+  touchmove ≥2 ngón (TOMKO/Android), Ctrl/⌘+lăn (cả chụm touchpad), Ctrl/⌘ + = − 0 (cả bàn số) — thầy chốt chặn cả phím.
+- viewport index/play thêm `maximum-scale=1.0, user-scalable=no` (iOS: hết tự phóng khi bấm ô gõ chữ; Android: hết chụm).
+- ⚠️ Không chặn được: menu zoom của thanh công cụ trình duyệt; phần trang myLesson NGOÀI khung AWord (app khác).
+Đo dev: 12/12 phép (chặn: 2 ngón, Ctrl+lăn, Ctrl = − 0 NumpadAdd, gesturestart; KHÔNG chặn: 1 ngón, lăn thường, Ctrl+C, phím −),
+0 lỗi console. Backup `_backup/dot377/`.
+
+**⬜ VIỆC ĐANG CHỜ:** thầy vuốt TẮT HẲN app AWord trên iPad rồi mở lại (sau ~10 phút cache Pages) → chạm đúp khắp nơi + chụm 2 ngón.
+Nếu iPad vẫn zoom chạm đúp ở chỗ nào: chụp chỗ đó — nghi đầu tiên là phần tử có `touch-action` riêng khác `manipulation`/`none`.
+
 ## Đợt 376 (23/9/2026, PWA — ICON + CÀI ĐẶT NHƯ APP) · ✅ THẦY "ok build" → COMMIT + PUSH · ⬜ CHƯA BẤM TAY
 
 Thầy chốt 3 điểm: mở app vào **trang thư viện** (`start_url "/"`), icon Android **giữ chữ "in ANDREW CLASSES", thu nhỏ cả
