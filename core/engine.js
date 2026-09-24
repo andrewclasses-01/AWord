@@ -5923,6 +5923,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
      * fight.js thoát vì nó cầm act ĐÃ đông lạnh riêng cho từng bàn; ở đây là act thật.
      */
     keepItemOrder() { return sdDealMode !== "none"; },
+    /**
+     * ⭐ Đợt 381 — "ván này có phải SHOWDOWN không?" (thầy, 24/9/2026: bàn phím
+     * trong Showdown tắt nút Andrew ngay từ đầu, không cho dùng lần nào).
+     * Template có phím Andrew (Type the answer · Crossword) hỏi câu này trong
+     * `extraKey.isDisabled/getState` và chốt lại trong `useAndrew()`.
+     */
+    inShowdown() { return !!showdownPick; },
     setScore(n) {
       // Positive score = GREEN, negative = RED WITH a leading "-" (teacher,
       // 11/8/2026 — previously the chip dropped the sign and relied on

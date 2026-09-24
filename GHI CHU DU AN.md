@@ -531,6 +531,24 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 381 (24/9/2026 tối, SHOWDOWN TẮT NÚT ANDREW TỪ ĐẦU) · ✅ THẦY "ok build" → COMMIT + PUSH · ⬜ CHƯA BẤM TAY
+
+Thầy: *"bàn phím trong showdown sẽ tắt nút Andrew ngay từ đầu, ko cho dùng lần nào"*. Trước đó Andrew chỉ tắt trong FIGHT (Đợt 170,
+Type the answer); Showdown mỗi em một lần như chơi thường.
+- Phím Andrew (slot `extraKey` của `core/keyboard.js`) chỉ có ở 3 template: **Type the answer · Crossword** (cả hai `showdownMode: true`)
+  và Running word (là PLAY MODE, không có Showdown ⇒ không đụng).
+- `core/engine.js`: thêm vào object `ui` hàm **`inShowdown()`** = `!!showdownPick` (đúng cờ engine vẫn dùng để biết ván là Showdown;
+  `showdownPick` đã null với trang học sinh `session` và trận Fight).
+- Hai template: `extraKey.isDisabled` thêm `|| ui.inShowdown?.()`; `getState` trả **"used"** khi Showdown (phím tối, KHÔNG có chấm sáng
+  nhấp nháy — dáng "ready" mà khoá sẽ trông như còn dùng được); `useAndrew()` chốt thêm cùng điều kiện (phòng mọi đường khác). Dùng `?.`
+  để template vẫn chạy nếu ghép với engine cũ.
+- Bàn thử `scratch/andrew381-test.html` (mount THẬT template với `ui` giả, `inShowdown` true/false): TTA + CW Showdown ⇒ `disabled` từ
+  đầu, dáng `is-used`, ép bỏ `disabled` rồi bấm vẫn không bật; ca thường ⇒ `is-ready`, bấm ⇒ `is-glowing` (Crossword phải CHỌN MỘT TỪ
+  trước — lần đo đầu báo FAIL oan vì bàn thử chưa chọn ô). Ảnh chụp bàn thử ra trang trắng (CSS sân khấu) — chỉ đo hành vi.
+
+**⬜ VIỆC ĐANG CHỜ:** thầy `Ctrl+Shift+R` (~10 phút sau push), mở một act Type the answer / Crossword ở Showdown xem phím
+Andrew tối ngay từ đầu, và chơi thường vẫn dùng được 1 lần.
+
 ## Đợt 380b (24/9/2026 tối) — `beatPlayLog` kẹp `timeMs` ≤ 12 giờ · ✅ PUSH
 
 Lượt để qua đêm: `pagehide` tính `timeMs` theo đồng hồ tường ⇒ > 43 200 000 ⇒ luật practiceLog 403 ⇒ mất luôn lần ghi cuối (cả

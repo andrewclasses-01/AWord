@@ -487,7 +487,8 @@ const crosswordTemplate = {
       extraKey: {
         label: "Andrew",
         className: "aw-cw-key-andrew",
-        getState: () => !andrewUsed ? "ready" : (andrewGlowing ? "glowing" : "used"),
+        // Đợt 381 — SHOWDOWN: tắt từ đầu, hiện dáng "used" (tối, không chấm sáng).
+        getState: () => ui.inShowdown?.() ? "used" : (!andrewUsed ? "ready" : (andrewGlowing ? "glowing" : "used")),
         // The `curWord >= 0` guard was originally here because core/keyboard.js
         // never wired a key that was disabled at BUILD time (curWord is -1 then).
         // That core trap was FIXED 4/8/2026, so the guard is no longer load-
@@ -495,7 +496,7 @@ const crosswordTemplate = {
         // terms (no word selected yet == nothing to reveal, and useAndrew()
         // guards the board), and rewriting working Crossword behaviour just to
         // tidy a line isn't worth the risk.
-        isDisabled: () => andrewUsed || finished || (curWord >= 0 && wordState[curWord].done),
+        isDisabled: () => andrewUsed || finished || (curWord >= 0 && wordState[curWord].done) || !!ui.inShowdown?.(),
         onClick: useAndrew
       }
     });
@@ -1164,7 +1165,7 @@ const crosswordTemplate = {
     // Andrew help — gold hint letters inside the cells (still typed by hand)
     // -------------------------------------------------------------------
     function useAndrew() {
-      if (andrewUsed || finished || curWord < 0 || wordState[curWord].done) return;
+      if (andrewUsed || finished || curWord < 0 || wordState[curWord].done || ui.inShowdown?.()) return;
       andrewUsed = true;
       andrewGlowing = true;
       refreshActiveCells();   // gold hint letters take their final (glowing) state

@@ -517,13 +517,14 @@ const ttaTemplate = {
       extraKey: {
         label: "Andrew",
         className: "aw-tta-key-andrew",
-        getState: () => !andrewUsed ? "ready" : (andrewGlowing ? "glowing" : "used"),
+        // Đợt 381 — SHOWDOWN: tắt từ đầu, hiện dáng "used" (tối, không chấm sáng).
+        getState: () => ui.inShowdown?.() ? "used" : (!andrewUsed ? "ready" : (andrewGlowing ? "glowing" : "used")),
         // FIGHT MODE (Đợt 170): disabled for the WHOLE match, not just while
         // locked — "Andrew help" prints the correct spelling straight into
         // this board's input for the student to copy, and the two boards sit
         // side by side on one screen, so an early hint here is an early leak
         // to the other team too.
-        isDisabled: () => andrewUsed || state[index].graded || !!fightCtl,
+        isDisabled: () => andrewUsed || state[index].graded || !!fightCtl || !!ui.inShowdown?.(),
         onClick: useAndrew
       }
     });
@@ -1338,7 +1339,7 @@ const ttaTemplate = {
       // Đợt 170 — belt and braces: the keyboard's own key is already disabled
       // for the whole match (see createKeyboard's extraKey.isDisabled above),
       // this just makes sure nothing else can reach it either.
-      if (andrewUsed || st.graded || fightCtl) return;
+      if (andrewUsed || st.graded || fightCtl || ui.inShowdown?.()) return;
       andrewUsed = true;
       andrewGlowing = true;
       const it = items[index];
