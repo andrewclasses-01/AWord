@@ -51,6 +51,16 @@
 //     ctl.isLocked(side)                             refuse input while locked
 //     ctl.scoreTarget(side)                          where "+8" should fly to
 //     ctl.shareLetters / ctl.speaks(side)            keep the two boards fair
+//   ⭐ Đợt 382 (Rocket race: "thắng thua bằng về đích") — all optional:
+//     attach(… roundsOver(side))   questions ran out / a sudden-death round
+//        settled; return true = "the template takes it from here" (else the
+//        old ending by points). side = the independent board, null = shared.
+//     attach(… resultScore())      the number the result panel prints
+//        (both boards must have it).
+//     goToIndex(i, { replay:true }) a sudden-death question asked again.
+//     ctl.finishRace(winner, holdMs) decide NOW: freeze every clock, lock both
+//        boards, endMatch() after holdMs with `winner` on top.
+//     ctl.suddenDeath(sides)       tie: one random ALREADY-PLAYED question.
 //   A template that does none of this still works — it just runs twice with no
 //   round logic, which is why the flag is opt-in rather than automatic.
 //   ⚠️ Đợt 222 had also added an optional `timeUp()` (fight referee calls it
@@ -939,6 +949,27 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // Đợt 354 (Rocket race, thầy 20/9/2026: "hết mạng thì nổ tung") — a board that
   // FORFEITED (ctl.forfeit) has lost whatever the points say; showResult reads this.
   const forfeited = [false, false];
+  // ⭐ Đợt 382 (Rocket race, thầy 24/9/2026: "chạm vạch đích thì dừng game ngay") —
+  // `raceEnding`: ctl.finishRace() has decided the match; nothing may move any
+  // more while the template plays its ending, and endMatch() follows after the
+  // hold. `suddenDeath`: rounds ran out / time ran out on a TIE and the template
+  // asked for extra rounds (ctl.suddenDeath) — every settled round then goes back
+  // to the template's `roundsOver()` instead of on to the next index.
+  let raceEnding = false;
+  let suddenDeath = false;
+  // How many questions had been reached when sudden death began — pinned ONCE:
+  // each sudden-death round moves roundIndex/boardIdx to a random earlier
+  // question, so reading them again would shrink the pool round after round.
+  let sdReach = 0;
+  const sdReachSide = [0, 0];
+  // Đợt 382 — the template's say when the questions run out (optional board hook
+  // `roundsOver(side)`, side = null for the shared round). true = "I take it from
+  // here"; absent / false = the old ending by points.
+  function roundsOverHook(side) {
+    const b = boards.find(x => x && typeof x.roundsOver === "function");
+    if (!b) return false;
+    try { return !!b.roundsOver(side); } catch { return false; }
+  }
   let torndown = false;
   // ⭐⭐⭐ Đợt 370 — INDEPENDENT BOARDS (see `soloBoards`). Each board keeps its own
   // place in its own pile and its own "next question" timer; `roundIndex` and the
@@ -1360,9 +1391,17 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // ⭐⭐ Đợt 370 — ONE board moves on, alone. The other board is not consulted,
   // not locked, not revealed and not waited for — that is the whole point.
   function advanceBoard(side) {
-    if (matchOver || torndown || boardOver[side]) return;
+    if (matchOver || torndown || raceEnding || boardOver[side]) return;
     const b = boards[side];
     if (!b) return;
+    // Đợt 382 — a sudden-death question is a one-off: the template decides what
+    // comes next (a winner, or another random question for THIS board only).
+    if (suddenDeath) {
+      boardOver[side] = true;
+      try { b.lock(true); } catch { /* board already gone */ }
+      if (!roundsOverHook(side) && boardOver[0] && boardOver[1]) endMatch();
+      return;
+    }
     boardIdx[side]++;
     if (boardIdx[side] >= (b.total || 0)) {
       boardOver[side] = true;
@@ -1373,7 +1412,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       // be to answer everything wrong as quickly as possible. With both piles
       // played out the winner is whoever got MORE right, which on this template
       // is also whoever's rocket travelled further: the two say the same thing.
-      if (boardOver[0] && boardOver[1]) endMatch();
+      if (boardOver[0] && boardOver[1] && !roundsOverHook(null)) endMatch();
       return;
     }
     try { b.lock(false); } catch { /* board already gone */ }
@@ -1381,7 +1420,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   }
 
   function advanceRound() {
-    if (matchOver || torndown) return;
+    if (matchOver || torndown || raceEnding) return;
     // ⭐⭐ Đợt 219 — GỠ CHE Ở ĐÂY, không ở `revealBoards()` nữa (xem chú thích dài
     // trong hàm đó). Đặt trên cùng nên nó phủ CẢ HAI nhánh bên dưới — vòng thường và
     // pick mode — và nằm cùng một nhịp đồng bộ với `goToIndex()` phía dưới, nên
@@ -1416,7 +1455,9 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // the next word scores normally from the frozen total.
     frozenAt[0] = frozenAt[1] = null;
     const total = Math.max(boards[0]?.total || 0, boards[1]?.total || 0);
-    if (roundIndex + 1 >= total) { endMatch(); return; }
+    // Đợt 382 — out of questions (or a sudden-death round just settled): the
+    // template may take over (Rocket race decides by the rockets, not the points).
+    if (suddenDeath || roundIndex + 1 >= total) { if (!roundsOverHook(null)) endMatch(); return; }
     roundIndex++;
     snapRoundBase();   // Đợt 183 — what a "slower team" freeze will pin them to
     boards.forEach((b, i) => {
@@ -1471,7 +1512,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // Only board 0 is allowed to speak: both boards show the same word, and two
     // copies of one clip starting a few ms apart is an echo, not a reading.
     speaks(side) { return side === 0; },
-    isLocked(side) { return matchOver || (roundWinner !== null && roundWinner !== side && lockLoser()); },
+    isLocked(side) { return matchOver || raceEnding || (roundWinner !== null && roundWinner !== side && lockLoser()); },
     // The frames have no score chip in fight mode, so a template's "+N" flies
     // all the way out to this team's number on the strip above its board.
     scoreTarget(side) { return teams[side].value; },
@@ -1677,7 +1718,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // whole window (isLocked() only fires once `roundWinner` is actually
     // set), which is exactly what lets it still tie if it's that close.
     wordDone(side, info) {
-      if (matchOver || torndown) return;
+      if (matchOver || torndown || raceEnding) return;
       // ⭐⭐⭐ Đợt 370 — INDEPENDENT BOARDS leave here before the shared-round
       // machine gets a look in. No tie window, no winner, no lock-out, no
       // concealing: the two boards are holding different questions, so there is
@@ -1967,7 +2008,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // and the match ends after the usual hold so the template's own ending
     // animation is seen. Idempotent; ignored once the match is over.
     forfeit(side) {
-      if (matchOver || torndown || (side !== 0 && side !== 1)) return;
+      if (matchOver || torndown || raceEnding || (side !== 0 && side !== 1)) return;
       forfeited[side] = true;
       // ⚠️ NOT `later()` — that is the ONE round slot, and the template's own
       // wordDone(correct:false) report (which follows this call in the same
@@ -1975,6 +2016,85 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       // the end. Measured on the bench: no result panel ever came. A plain
       // timer, guarded by torndown/matchOver inside endMatch, cannot be stolen.
       setTimeout(() => { if (!torndown) endMatch(); }, ROUND_HOLD_MS);
+    },
+    // ⭐ Đợt 382 — `ctl.finishRace(winner, holdMs)`: the template has a winner NOW
+    // (Rocket race: a rocket touched the flag — thầy: "dừng game ngay và đội đó
+    // thắng"). Unlike forfeit() the match FREEZES at once: every round clock,
+    // tie window, miss bar and independent-board timer is cancelled and both
+    // boards lock, so no next question can slip in while the template plays its
+    // ending; endMatch() follows after `holdMs`. The winner outranks the points
+    // (same `forfeited` flag showResult already reads). Idempotent.
+    finishRace(winner, holdMs = ROUND_HOLD_MS) {
+      if (matchOver || torndown || raceEnding || (winner !== 0 && winner !== 1)) return;
+      raceEnding = true;
+      forfeited[winner === 0 ? 1 : 0] = true;
+      cancelRound();
+      cancelPending();
+      cancelPick();
+      clearSoloTimers();
+      stopMissBar();
+      paintWaitBar(0);
+      boards.forEach(b => { try { b && b.lock(true); } catch { /* board already gone */ } });
+      syncNavGates();
+      setTimeout(() => { if (!torndown) endMatch(); }, Math.max(0, Number(holdMs) || 0));
+    },
+    // ⭐ Đợt 382 — `ctl.suddenDeath(sides)`: a TIE when the questions / the time
+    // ran out (thầy: "tiếp tục 1 câu random trong các câu đã chơi trước đó").
+    // Deals one random, already-played question and marks the match as sudden
+    // death, so each settled round goes back to the template's `roundsOver()`.
+    //   • shared round: both boards get the SAME index (the round machine is
+    //     reset exactly like advanceRound() does);
+    //   • independent boards (Different): only the boards in `sides`, each a
+    //     random index of its OWN pile — a board still thinking keeps its question.
+    // Boards receive `goToIndex(i, { replay: true })` so a template can clear the
+    // "already answered" mark of a question it is asked a second time.
+    suddenDeath(sides = [0, 1]) {
+      if (matchOver || torndown || raceEnding) return false;
+      if (!suddenDeath) {
+        sdReach = roundIndex + 1;
+        sdReachSide[0] = boardIdx[0] + 1;
+        sdReachSide[1] = boardIdx[1] + 1;
+      }
+      suddenDeath = true;
+      const pick = n => Math.floor(Math.random() * Math.max(1, n));
+      if (soloBoards) {
+        sides.forEach(side => {
+          const b = boards[side];
+          if (!b) return;
+          if (soloTimers[side]) { clearTimeout(soloTimers[side]); soloTimers[side] = null; }
+          boardOver[side] = false;
+          // "trong các câu đã chơi": this board's pile up to the question it reached
+          boardIdx[side] = pick(Math.min(b.total || 0, sdReachSide[side]));
+          try { b.lock(false); } catch { /* gone */ }
+          try { b.goToIndex(boardIdx[side], { replay: true }); } catch { /* gone */ }
+        });
+        syncNavGates();
+        return true;
+      }
+      cancelRound();
+      cancelPending();
+      pendingWinner = null;
+      stopMissBar();
+      paintWaitBar(0);
+      unconcealAll();
+      clearSilentLose();
+      revealBoards();
+      roundWinner = null;
+      roundDone = [false, false];
+      teams.forEach(t => t.el.classList.remove("is-won"));
+      frozenAt[0] = frozenAt[1] = null;
+      const totals = [boards[0]?.total || 0, boards[1]?.total || 0];
+      // "trong các câu đã chơi trước đó" — only rounds already reached (the time
+      // can run out long before the last question)
+      roundIndex = pick(Math.min(turnsMode ? Math.min(...totals) : Math.max(...totals), sdReach));
+      snapRoundBase();
+      boards.forEach(b => {
+        if (!b) return;
+        try { b.lock(false); } catch { /* gone */ }
+        try { b.goToIndex(roundIndex, { replay: true }); } catch { /* gone */ }
+      });
+      syncNavGates();
+      return true;
     },
     onFinish(side) {
       // One board ran out of words/lives on its own — the match is over for
@@ -2074,7 +2194,12 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
 
   // ----- result -----
   function showResult() {
-    const a = totalOf(0), b = totalOf(1);
+    // Đợt 382 — a template whose race is not scored in points (Rocket race: "thắng
+    // thua bằng về đích") may hand the panel its own number via the optional board
+    // hook `resultScore()` — both boards must have it, or the points stay.
+    const own = boards.every(x => x && typeof x.resultScore === "function");
+    const a = own ? Number(boards[0].resultScore()) || 0 : totalOf(0);
+    const b = own ? Number(boards[1].resultScore()) || 0 : totalOf(1);
     const panel = el("div", "aw-fight-result");
     // Đợt 134 (teacher: "TEAM 1/2 WINS" -> "TEAM LEFT/RIGHT WINS", applies to
     // every fightMode template — currently Anagram and Quiz). Side 0 is

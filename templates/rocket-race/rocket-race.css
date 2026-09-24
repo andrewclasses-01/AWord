@@ -462,6 +462,9 @@
 .aw-rr-shared .aw-rr-finish { top: calc(-.5 * var(--aw-u)); bottom: calc(-.5 * var(--aw-u)); }
 .aw-rr-shared .aw-rr-track { --rw: 11; }
 .aw-rr-shared .aw-rr-rocket { transition: left .6s cubic-bezier(.2,.9,.25,1); }
+/* Đợt 382 — out of time / questions: the closer rocket's flight home is a
+   visible run, not a .6 s jump across half the track. */
+.aw-rr-shared .aw-rr-rocket.is-homerun { transition: left 1.1s cubic-bezier(.35,.1,.3,1); }
 .aw-rr-shared .aw-rr-pilot { font-size: calc(var(--rw) * var(--aw-u) * .125); }
 .aw-rr-shared .aw-rr-num { font-size: calc(var(--rw) * var(--aw-u) * .12); }
 .aw-rr-shared .aw-rr-tag { display: none; }

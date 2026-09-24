@@ -582,6 +582,42 @@ cờ `fightScreen` lưu theo act). Thầy: *"ok đổi, ko bật ipad cũng khó
 - Đo (`scratch/dot378-rr-solo.html`): khoá đúng [Time delay · Speed bonus · Miss wait], Same ⇒ chỉ Speed bonus; bàn 0 trả lời ⇒
   bàn 1 giữ câu, 0/4 ô khoá; hồi quy Same words y cũ. ⬜ thầy bấm tay.
 
+## 24. Đợt 382 (24/9/2026) — FIGHT THẮNG THUA BẰNG VỀ ĐÍCH
+Thầy: *"ngay khi 1 tàu chạm vào vạch đích thì dừng game ngay và đội đó thắng, thêm hiệu ứng tàu sau phát nổ trước khi
+chốt game"* · *"nếu đặt giới hạn thời gian, khi hết giờ tàu gần hơn sẽ chạy về đích và tàu về sau sẽ phát nổ"* · *"nếu
+trừ điểm thì mỗi điểm trừ tàu lùi 1 bậc… game này thắng thua bằng về đích"*. Thầy chốt qua AskUserQuestion: **đường
+đua CỐ ĐỊNH = nửa số câu (làm tròn lên)** · hoà lúc hết giờ/hết câu ⇒ **"tiếp tục 1 câu random trong các câu đã chơi"**.
+
+**⛔ BỎ đường đua co giãn của Đợt 355** (vạch = tàu dẫn đầu + số câu còn lại). Nó làm tàu chỉ chạm vạch ở câu CUỐI, và giấu
+luôn Points off của tàu dẫn đầu: lùi tàu dẫn đầu thì vạch lùi theo, trên màn nó gần như đứng yên còn tàu KIA trông như nhảy
+lên. Luật Đợt 355 ("không kết trận khi tàu ở giữa chừng") vẫn giữ bằng đường khác: hết câu/hết giờ thì tàu gần hơn BAY về đích.
+- `fightTrackLength(n) = ceil(n/2)`; `scene.L` = max của hai bàn (In turns chia 41/40 ⇒ 21). `fightRepaint()` chỉ còn gán L.
+- **Chạm vạch** (`fireRocket` → `crossedLine` → **`raceWon(w)`**): `fightCtl.finishRace(w.id, 2800)` đóng băng trọng tài NGAY,
+  huy chương + "TEAM n WINS!", tàu kia `blowUp()` sau 650 ms (💥 + khói → xác xám), bảng kết quả sau 2,8 s. `scene.decided`
+  cho chạy đúng một lần (hai bàn chung một cảnh).
+- **Hết giờ** (Timer = Count down, hoặc Menu ▸ Submit answers): `finish()` trong trận KHÔNG kết theo điểm nữa mà gọi
+  **`settleByPosition(null)`** (`scene.timeUp` cho lọt đúng lần đầu — mỗi bàn có đồng hồ riêng, cả hai cùng bắn).
+  Tàu `p` lớn hơn ⇒ `raceWon` ⇒ nó **bay về đích** (`is-homerun`, transition 1,1 s) và tàu kia nổ đúng lúc nó tới.
+- **Hết câu** (chưa ai về): trọng tài hỏi móc `roundsOver()` ⇒ cùng `settleByPosition`.
+- **Hoà** ⇒ banner "SUDDEN DEATH!" + `ctl.suddenDeath()`: một câu NGẪU NHIÊN trong các câu ĐÃ HIỆN (chốt `sdReach` một lần lúc
+  vào vòng phụ — ⚠️ đọc lại `roundIndex` mỗi lần là bể bốc co dần vì chính nó vừa bị gán số ngẫu nhiên). Mỗi vòng phụ xong lại
+  hỏi `roundsOver`: lệch vị trí ⇒ thắng, còn hoà ⇒ câu phụ khác. Different (bàn độc lập): chỉ bàn vừa xong câu phụ được chia
+  câu mới, bàn đang nghĩ giữ câu. `goToIndex(i, {replay:true})` xoá dấu "đã trả lời" của câu (`attempts = 0`).
+- **Hết mạng** (Lives): tàu nổ ⇒ tàu KIA bay về đích và thắng qua cùng `raceWon` (trước đây `forfeit()` để lọt vòng kế trong 2,1 s).
+- **Points off**: vẫn `retreatRocket(pointsOff)` như Đợt 354 — nay NHÌN THẤY được vì vạch đứng yên.
+- Bảng kết quả in **số bậc** mỗi tàu đi được (`resultScore()`), không in điểm (Speed bonus không còn làm lệch).
+
+**Core `fight.js`** (móc TUỲ CHỌN, template khác không đổi): `raceEnding` + `suddenDeath` (chặn `wordDone`/`advanceRound`/
+`advanceBoard`/`forfeit`, `isLocked` true) · `roundsOverHook()` ở 3 chỗ hết câu · `ctl.finishRace(winner, holdMs)` · `ctl.suddenDeath(sides)`
+· `showResult` đọc `resultScore()` nếu CẢ HAI bàn có.
+
+**Đo (`scratch/dot382-rr-finish.html`, 10 câu ⇒ 5 bậc, 0 lỗi console)**: trái đúng 5 câu ⇒ thắng ngay câu 5, tàu phải `is-wreck`,
+"TEAM LEFT WINS 5—0" · Points off 2 ⇒ lùi đúng 2 bậc (50,4→18,8), sàn ở vạch xuất phát · hết giờ 1–0 ⇒ tàu trái `is-homerun` về
+82, tàu phải `is-exploding` · hết giờ 0–0 ⇒ SUDDEN DEATH, câu phụ nằm trong câu đã chơi, phải đúng ⇒ "TEAM RIGHT WINS" · 4 câu,
+1–1 hết câu ⇒ vòng phụ 1 cả hai sai ⇒ vòng phụ 2 trái đúng ⇒ thắng · Different: trái 5 câu ⇒ thắng, bàn phải khoá · Lives 1: phải
+sai ⇒ nổ, trái bay về thắng · **hồi quy Quiz Fight kết theo điểm 2—0 như cũ**. ⚠️ Bàn thử phải gắn `act.optVer = 4`, không là
+bộ di trú nhân Points off ×20 (lần chạy đầu ra "−40"). ⬜ thầy bấm tay TOMKO.
+
 ## 19. Phi công: chỉ lên xuống, biên độ 1/5 (Đợt 362, 20/9/2026 tối, mọi mode)
 Bỏ `aw-rr-facepush` (ép lùi ngang khi boost); `aw-rr-jiggle` ±1,2 % (1/5 của ±6 %); `aw-rr-facerattle` khi khựng/va chỉ dọc
 ±1,2 %. Chu kỳ/pha vẫn bám thân tàu (Đợt 361). Đo: keyframes chỉ còn `translateY`, không `translateX`.

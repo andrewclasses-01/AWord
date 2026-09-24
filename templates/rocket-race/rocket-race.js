@@ -79,6 +79,10 @@ const TURBO_STREAK = 3;              // right answers in a row that light the af
 const CRATE_EVERY = 4;               // a crate every N right answers (first one after 3)
 const RIVAL_SLOW_TURBO = 0.72;       // rivals' speed while the player is in turbo
 const FINISH_BANNER_MS = 1700;       // "1ST PLACE!" on screen before the end panel
+// ⭐ Đợt 382 — FIGHT: winner over the line → the other rocket blows up → the
+// referee's result panel. The hold covers the flight + the explosion (.9 s).
+const RACE_END_HOLD_MS = 2800;
+const RACE_BLOWUP_DELAY_MS = 650;
 // ⭐ Đợt 368e (thầy, 22/9/2026) — "đưa con tàu về sát mép màn hình hơn, chỉ đủ
 // nhìn thấy đuôi lửa và một chút xíu khói". These two are the rocket's LEFT edge
 // as a % of the lane; the flame reaches ~0.25 rocket-widths further left and the
@@ -295,18 +299,18 @@ function syncQbar(scene) {
   const t = scene.qhalves.map(h => (h.textContent || "").trim());
   scene.qbar.classList.toggle("is-same", !!t[0] && t[0] === t[1]);
 }
-// Đợt 355 — THE TRACK IS AS LONG AS THE RACE CAN STILL GET (thầy: "khi kết thúc câu
-// cuối, tàu phải chạm đích; không được kết game khi tàu ở giữa chừng"). A match
-// deals every question to BOTH teams and only the first right answer scores, so
-// a fixed N-segment track was never finished by anyone. Instead the finish line
-// is always `leader + questions still open` segments away: after the last
-// question that is exactly the leader's own count, so the leading rocket touches
-// the flag at the very moment the match ends — and every unanswered round pulls
-// the flag one segment closer to both ships. Shared scene ⇒ one call repaints both.
-function fightTrackLength(scene, remaining) {
-  const lead = Math.max(0, ...scene.rockets.map(r => r.p));
-  return Math.max(1, lead + Math.max(0, remaining));
-}
+// ⭐⭐ Đợt 382 (thầy, 24/9/2026) — THE MATCH IS WON AT THE FLAG, AND THE TRACK IS
+// FIXED: HALF the questions (rounded up). "Ngay khi 1 tàu chạm vào vạch đích thì
+// dừng game ngay và đội đó thắng" + "game này thắng thua bằng về đích".
+// ⛔ This REPLACES the elastic track of Đợt 355 (flag = leader + questions still
+// open). That track made "touching the flag" happen only on the very last
+// question, and it hid Points off on the leader: backing the leader up pulled
+// the flag back with it, so it barely moved on screen while the OTHER rocket
+// seemed to jump forward. Đợt 355's own rule ("never end with a rocket in the
+// middle") still holds by another road: when the questions or the clock run out
+// the closer rocket FLIES to the flag and the other blows up (settleByPosition);
+// a tie plays random already-played questions (ctl.suddenDeath) until one leads.
+function fightTrackLength(n) { return Math.max(1, Math.ceil(n / 2)); }
 
 // Menu pause (Đợt 91) bridge — one handler per live mount (a match has TWO).
 const rrPauseHandlers = new Set();
@@ -704,7 +708,19 @@ const rocketRaceTemplate = {
     if (fightCtl) {
       fightCtl.attach(fightSide, {
         total: N,
-        goToIndex(i) { fightIndex = i; fightRepaint(false); if (started) showQuestion(i); },
+        goToIndex(i, info) {
+          fightIndex = i;
+          // Đợt 382 — a sudden-death question was played before: clear the
+          // "answered" mark or the new tiles would come up as already done.
+          if (info && info.replay && state[i]) { state[i].attempts = 0; state[i].answeredWith = null; }
+          fightRepaint(false);
+          if (started) showQuestion(i);
+        },
+        // Đợt 382 — the questions ran out (or a sudden-death round settled):
+        // the rockets decide, not the points. See settleByPosition.
+        roundsOver(side) { return settleByPosition(side); },
+        // …and the result panel prints how far each rocket got, not points.
+        resultScore() { return player ? Math.min(player.p, player.L) : 0; },
         lock(on) { fightBoardLock = !!on; syncFightLock(); },
         reveal: revealFightMarks,
         review: buildReview,
@@ -759,7 +775,10 @@ const rocketRaceTemplate = {
       rockets = scene ? scene.rockets : FIGHT_TEAMS.map((t, i) => mkRocket(i, t.name, t.pilot, t.hull, false));
       player = rockets[fightSide];
       player.p = 0; player.L = N; player.done = false; player.place = 0;
-      fightRepaint(false);   // Đợt 355: shared track length, both rockets
+      // Đợt 382 — one fixed track for the match. The two boards can hold a
+      // different count (In turns deals 81 as 41/40), so the longer one wins.
+      if (scene) scene.L = Math.max(scene.L || 0, fightTrackLength(N));
+      fightRepaint(false);
       const t = FIGHT_TEAMS[fightSide];
       turnChip.textContent = "";
       const b = el("span", "aw-rr-turnbadge", t.pilot);
@@ -1138,6 +1157,7 @@ const rocketRaceTemplate = {
       fireRocket(mover);
       ui.setScore(scoreNow());
       if (fightCtl) {
+        if (mover.done) return;   // Đợt 382 — over the line: raceWon owns the screen now
         // the referee turns the round over; turbo is the one flourish kept
         if (streak >= TURBO_STREAK && performance.now() >= turboUntil) startTurbo("TURBO!");
         return;
@@ -1206,14 +1226,12 @@ const rocketRaceTemplate = {
       spawnPuff(r);
       if (r.p >= r.L) crossedLine(r);
     }
-    // Đợt 355 — recompute the shared track length and repaint BOTH rockets (see
-    // fightTrackLength). `resolved` = the current round is settled by this move.
-    function fightRepaint(resolved) {
+    // Repaint BOTH rockets on the match's one fixed track (Đợt 382 — see
+    // fightTrackLength; the flag is reached through fireRocket → crossedLine).
+    function fightRepaint() {
       if (!fightCtl || !scene || !scene.rockets) return;
-      const remaining = Math.max(0, N - fightIndex - (resolved ? 1 : 0));
-      const len = fightTrackLength(scene, remaining);
+      const len = scene.L || fightTrackLength(N);
       scene.rockets.forEach(r => { r.L = len; paintRocket(r); });
-      if (remaining === 0) scene.rockets.forEach(r => { if (!r.done && r.p >= len && r.p > 0) crossedLine(r); });
     }
     // Đợt 354 — FIGHT + Points off: back up `n` segments (floor: the start line).
     function retreatRocket(r, n) {
@@ -1363,7 +1381,7 @@ const rocketRaceTemplate = {
       r.el.classList.remove("is-turn");
       const medal = el("div", "aw-rr-medal", MEDAL[r.place - 1] || placeWord(r.place));
       r.el.append(medal);
-      if (fightCtl) { if (r.place === 1) { rrSound.win(); showBanner(r.name + " FINISHED!", "is-win", FINISH_BANNER_MS); } return; }
+      if (fightCtl) { raceWon(r); return; }   // Đợt 382 — first over the line wins, at once
       if (r.isPlayer) endSolo(r.place);
       else if (!teamsMode) { rrSound.rivalFinish(); }
       else if (rockets.every(x => x.done)) endTeams();
@@ -1453,23 +1471,77 @@ const rocketRaceTemplate = {
       locked = true;
       tiles.forEach(t => (t.tile.disabled = true));
       answersEl.classList.add("is-fightlost");
-      rrSound.lose();
-      if (r.el) {
-        r.el.classList.remove("is-dmg-1", "is-dmg-2", "is-dmg-3", "is-boost", "is-stall");
-        r.el.classList.add("is-exploding");
-        if (scene) {
-          const rect = relRect(r.el, scene.fxLayer);
-          const boom = el("div", "aw-rr-boom", "💥");
-          boom.style.left = (rect.x + rect.w * 0.5) + "px"; boom.style.top = (rect.y + rect.h * 0.5) + "px";
-          scene.fxLayer.append(boom);
-          later(() => boom.remove(), 1400);
-          for (let i = 0; i < 6; i++) later(() => spawnSmoke(r), i * 120);
-        }
-        later(() => { r.el.classList.remove("is-exploding"); r.el.classList.add("is-wreck"); }, 900);
-      }
+      blowUp(r);
+      // Đợt 382 — out of lives = the OTHER rocket wins, and wins the same way as
+      // at the flag: it flies home while this one burns (raceWon freezes the
+      // referee at once — the old forfeit() let the next round slip in first).
+      const other = fightCtl && scene && scene.rockets ? scene.rockets.find(x => x !== r) : null;
+      if (other && typeof fightCtl.finishRace === "function") { raceWon(other, true); return; }
       showBanner(r.name + " IS DOWN!", "is-stall", 1300);
-      // the referee ends the match after its hold — the OTHER team wins (core/fight.js)
+      // older core: the referee ends the match after its hold — the OTHER team wins
       if (fightCtl && typeof fightCtl.forfeit === "function") fightCtl.forfeit(fightSide);
+    }
+    // The explosion itself (💥 + smoke, then a grey wreck) — lives run out, or
+    // (Đợt 382) the rocket that LOST the race.
+    function blowUp(r) {
+      rrSound.lose();
+      if (!r || !r.el) return;
+      r.el.classList.remove("is-dmg-1", "is-dmg-2", "is-dmg-3", "is-boost", "is-stall", "is-turbo");
+      r.el.classList.add("is-exploding");
+      if (scene) {
+        const rect = relRect(r.el, scene.fxLayer);
+        const boom = el("div", "aw-rr-boom", "💥");
+        boom.style.left = (rect.x + rect.w * 0.5) + "px"; boom.style.top = (rect.y + rect.h * 0.5) + "px";
+        scene.fxLayer.append(boom);
+        later(() => boom.remove(), 1400);
+        for (let i = 0; i < 6; i++) later(() => spawnSmoke(r), i * 120);
+      }
+      later(() => { r.el.classList.remove("is-exploding"); r.el.classList.add("is-wreck"); }, 900);
+    }
+
+    // ---- Đợt 382: FIGHT is won at the flag (thầy, 24/9/2026) ----
+    // `w` is over the line (or is sent there by settleByPosition): the referee
+    // freezes NOW, `w` gets its medal and the WINS banner, the other rocket blows
+    // up a beat later, and the result panel follows after RACE_END_HOLD_MS.
+    // Both boards share the scene, so `scene.decided` makes it happen once.
+    function raceWon(w, loserAlreadyDown) {
+      if (!fightCtl || !scene || !scene.rockets || scene.decided || dead) return;
+      scene.decided = true;
+      const loser = scene.rockets.find(r => r !== w);
+      if (typeof fightCtl.finishRace === "function") fightCtl.finishRace(w.id, RACE_END_HOLD_MS);
+      else if (loser && typeof fightCtl.forfeit === "function") fightCtl.forfeit(loser.id);
+      locked = true;
+      qDeadline = 0;
+      let homeRun = false;
+      if (w.p < w.L) {
+        // "tàu gần hơn sẽ chạy về đích" — the flight home
+        homeRun = true;
+        w.p = w.L;
+        if (w.el) { w.el.classList.remove("is-stall"); w.el.classList.add("is-boost", "is-homerun"); }
+        rrSound.boost();
+        paintRocket(w);
+        later(() => { if (w.el) w.el.classList.remove("is-boost"); }, 700);
+      }
+      if (!w.done) crossedLine(w);   // medal; re-enters here and returns (decided)
+      rrSound.win();
+      showBanner(w.name + " WINS!", "is-win", RACE_END_HOLD_MS);
+      // the loser goes up as the winner arrives (a home run takes 1.1 s — CSS)
+      if (loser && !loserAlreadyDown) later(() => blowUp(loser), homeRun ? 1100 : RACE_BLOWUP_DELAY_MS);
+    }
+    // Out of questions / out of time: the rocket CLOSER to the flag flies home and
+    // wins. Level ⇒ sudden death — one random question already played, again and
+    // again, until one rocket leads (thầy: "tiếp tục 1 câu random trong các câu đã
+    // chơi trước đó"). `side` = the board whose sudden-death question just ended
+    // (independent boards), null = both. Returns true = "handled, referee stand by".
+    function settleByPosition(side) {
+      if (!fightCtl || !scene || !scene.rockets || scene.rockets.length < 2) return false;
+      if (scene.decided) return true;
+      const [a, b] = scene.rockets;
+      if (a.p !== b.p) { raceWon(a.p > b.p ? a : b); return true; }
+      if (typeof fightCtl.suddenDeath !== "function") return false;
+      if (!scene.sudden || side == null) showBanner("SUDDEN DEATH!", "is-turbo", 1300);
+      scene.sudden = true;
+      return fightCtl.suddenDeath(side == null ? [0, 1] : [side]) !== false;
     }
     function renderLives() {
       const slot = ui.livesSlot;
@@ -1504,6 +1576,14 @@ const rocketRaceTemplate = {
 
     function finish() {
       if (finished || dead) return;
+      // ⭐ Đợt 382 — FIGHT: the only way here is the engine's submit (Timer = Count
+      // down reaching 0, or Menu ▸ Submit answers). A match is not ended on
+      // points any more: the rockets settle it (both boards' clocks fire —
+      // `scene.timeUp` lets the first one through).
+      if (fightCtl) {
+        if (scene && !scene.decided && !scene.timeUp) { scene.timeUp = true; settleByPosition(null); }
+        return;
+      }
       finished = true;
       // Chốt sổ TRƯỚC khi đọc điểm: một "−N" đang bay là một phép trừ chưa áp (Đợt 256).
       ui.flushPenalties?.();

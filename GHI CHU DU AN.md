@@ -531,6 +531,25 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 382 (24/9/2026 tối, ROCKET RACE ▸ FIGHT THẮNG THUA BẰNG VỀ ĐÍCH) · ✅ THẦY "ok build" → COMMIT + PUSH · ⬜ CHƯA BẤM TAY
+
+Thầy: chạm vạch đích ⇒ dừng ngay, đội đó thắng, tàu sau NỔ rồi mới chốt · hết giờ ⇒ tàu gần hơn chạy về đích, tàu kia nổ ·
+trừ điểm ⇒ mỗi điểm lùi 1 bậc · "thắng thua bằng về đích". Chốt qua AskUserQuestion: đường đua **cố định = nửa số câu (làm
+tròn lên)**; hoà ⇒ **thêm 1 câu ngẫu nhiên trong các câu đã chơi**, lặp tới khi lệch.
+- `templates/rocket-race/rocket-race.js`: BỎ đường co giãn Đợt 355 (nó chỉ cho chạm vạch ở câu cuối và giấu cú lùi của tàu dẫn
+  đầu); `raceWon` / `blowUp` / `settleByPosition`; `finish()` trong trận = hết giờ ⇒ xử theo vị trí; hết mạng ⇒ tàu kia bay về thắng;
+  móc `roundsOver`, `resultScore`, `goToIndex(i,{replay})`. `rocket-race.css`: `.is-homerun` bay 1,1 s.
+- `core/fight.js` (móc tuỳ chọn, template khác không đổi): `ctl.finishRace(winner, holdMs)` (đóng băng mọi đồng hồ + khoá hai bàn
+  NGAY, rồi `endMatch`), `ctl.suddenDeath(sides)` (câu ngẫu nhiên trong phạm vi đã chơi, chốt `sdReach` một lần), `roundsOverHook()`
+  ở 3 chỗ hết câu, `showResult` đọc `resultScore()`. Chú thích hợp đồng đầu file đã thêm.
+- Bàn thử `scratch/dot382-rr-finish.html`: 7 ca đạt (về đích sớm · lùi 2 bậc · hết giờ lệch · hết giờ hoà → vòng phụ · hết câu hoà
+  → 2 vòng phụ · Different · Lives) + hồi quy Quiz Fight theo điểm; 0 lỗi console. Chi tiết: `GHI CHU ROCKET-RACE.md` mục 24.
+- 🐞 Tự bắt: câu phụ bốc trúng câu CHƯA chơi (hết giờ khi mới ở câu 1) ⇒ giới hạn trong câu đã hiện; rồi bẫy thứ hai — đọc lại
+  `roundIndex` mỗi vòng phụ làm bể bốc co dần ⇒ chốt `sdReach` lúc vào vòng phụ.
+
+**⬜ VIỆC ĐANG CHỜ:** thầy `Ctrl+Shift+R` (~10 phút sau push) rồi bấm tay TOMKO: về đích sớm, hết giờ (Timer Count down), hoà → SUDDEN DEATH,
+Points off lùi tàu, Question screen iPad vẫn chạy.
+
 ## Đợt 381 (24/9/2026 tối, SHOWDOWN TẮT NÚT ANDREW TỪ ĐẦU) · ✅ THẦY "ok build" → COMMIT + PUSH · ⬜ CHƯA BẤM TAY
 
 Thầy: *"bàn phím trong showdown sẽ tắt nút Andrew ngay từ đầu, ko cho dùng lần nào"*. Trước đó Andrew chỉ tắt trong FIGHT (Đợt 170,
