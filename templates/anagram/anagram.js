@@ -1044,7 +1044,8 @@ const anagramTemplate = {
       let revealSlot = null;
       if (mode === "submit") {
         revealSlot = el("div", "aw-anagram-reveal");
-        revealSlot.textContent = st.correct === false ? (allCaps ? it.word.toUpperCase() : it.word) : "";
+        // ⭐ Đợt 383 — bài giao (`opt.anDapAn`): KHÔNG in chữ viết đúng (em chỉ biết mình sai).
+        revealSlot.textContent = st.correct === false && !opt.anDapAn ? (allCaps ? it.word.toUpperCase() : it.word) : "";
         card.append(revealSlot);
         revealSlotEl = revealSlot;
       }
@@ -1286,7 +1287,7 @@ const anagramTemplate = {
         if (pointsOff) ui.flyPenalty?.(null, pointsOff, () => { penalty += pointsOff; return scoreNow(); });
         // The answer line is this mode's own reveal — patched in place, exactly
         // as the wrong-word branch of doSubmit() does it.
-        if (revealSlotEl) revealSlotEl.textContent = allCaps ? it.word.toUpperCase() : it.word;
+        if (revealSlotEl && !opt.anDapAn) revealSlotEl.textContent = allCaps ? it.word.toUpperCase() : it.word;   // Đợt 383 — bài giao: không lộ
         updateSubmitButtonState();
       }
       const outOfLives = loseLife();
@@ -1748,7 +1749,8 @@ const anagramTemplate = {
         // Per-position colors/badges are ALREADY on the live tiles (the
         // staggered loop above applied them directly) — only the reveal
         // line's text is still outstanding, patch it in place.
-        if (revealSlotEl) revealSlotEl.textContent = allCorrect ? "" : (allCaps ? it.word.toUpperCase() : it.word);
+        // Đợt 383 — bài giao (`opt.anDapAn`): sai thì KHÔNG in chữ viết đúng.
+        if (revealSlotEl) revealSlotEl.textContent = (allCorrect || opt.anDapAn) ? "" : (allCaps ? it.word.toUpperCase() : it.word);
         if (allCorrect) {
           flyScoreGain(1, () => { st.points = 1; return scoreNow(); });
           anagramSound.submitWordCorrect();

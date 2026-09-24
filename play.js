@@ -6,12 +6,13 @@
 //     reached from here — a student only ever sees the one assigned act;
 //   * it never asks anyone to sign in. Open the link, type a name, play.
 //
-// Flow (Đợt 246):  link -> "Enter your name" -> PRACTICE or SUBMIT -> the game
-//   PRACTICE  nothing leaves this page — review + Start with mistakes only.
-//   SUBMIT    the play uploads in the background the moment the game ends
-//             (queueAttempt/sendAttempt below), and the big SUBMIT HOMEWORK
-//             button on the end screen waits for the server's confirmation.
-// Students may play as many times as they like; every SUBMIT attempt is recorded.
+// Flow (Đợt 383 — GỘP PRACTICE + SUBMIT, thầy chốt 24–25/09/2026):
+//   link -> name -> ONE START button -> the game. Every round with a score ≥ 1 is HANDED IN:
+//   · finished (incl. time up): uploads the moment the game ends (queueAttempt/sendAttempt below); the
+//     SUBMITTING screen runs by itself and waits for the server's confirmation.
+//   · left midway (Start again · reload · close tab): handed in as `doDang` — see `nopLuotDo` below.
+//   · a "Start with mistakes" round is practice: never handed in, only timed (practiceLog).
+// Students may play as many times as they like; every handed-in round is recorded.
 // =============================================================
 
 import { startGame } from "./core/engine.js";
@@ -20,7 +21,8 @@ import {
   getAssignment, queueAttempt, sendAttempt, flushOutbox,
   listScores, isLate, nameKey, prettiestName, rankCompare,
   sendSpecialAttempt,  // myLesson "HỌC SINH ĐẶC BIỆT" — kho điểm RIÊNG, xem assignments.js
-  newPlayLogId, beatPlayLog   // Đợt 366 — kho LƯỢT LUYỆN practiceLog (thời gian mọi lượt, cả bỏ dở)
+  newPlayLogId, beatPlayLog,  // Đợt 366 — kho LƯỢT LUYỆN practiceLog (thời gian mọi lượt, cả bỏ dở)
+  newAttemptId, saveDraft, dropDraft, queueAttemptKeepalive   // Đợt 383 — nộp lượt DỞ DANG
 } from "./core/assignments.js";
 import { ensureTemplate } from "./core/registry.js";
 // No template is imported here on purpose. ensureTemplate() fetches the ONE
@@ -265,8 +267,39 @@ async function play(assignment, studentName, className, studentMa) {
     if (!playLog || playLog.done) return;
     if (hoatDong) playLog.activeMs = hoatDong.doc();
     playLog.timeMs = Math.max(playLog.timeMs, Date.now() - playLog.batDau);
+    nopLuotDo({ gap: true });   // ⭐ Đợt 383 — tải lại / đóng tab giữa ván: nộp lượt dở (điểm ≥ 1)
     beatPlayLog(playLog, { keepalive: true });
   });
+  // ⭐⭐ Đợt 383 (thầy chốt 24/09) — NỘP LƯỢT DỞ DANG: em bỏ giữa ván (Start again · về trang bài · tải lại ·
+  // đóng tab) mà điểm ≥ 1 ⇒ lượt đó VẪN TÍNH, mang `doDang: true` (myLesson không lấy nó làm mẫu số chuẩn).
+  // Lượt Start with mistakes không bao giờ nộp. `gap` = đang pagehide: đẩy outbox + REST keepalive (không
+  // chờ được SDK). Chỉ nộp MỘT lần mỗi lượt (`daNopDo`) — trang quay lại từ bfcache rồi bấm Start again
+  // không nộp lượt ấy lần thứ hai. review rỗng: template chưa tới bước kết thúc của nó.
+  // ⚠️ Khai bằng `function` (không phải const) vì listener pagehide ở trên gọi nó.
+  function nopLuotDo({ gap = false, score = null, total = null, timeMs = null } = {}) {
+    if (!playLog || playLog.done || playLog.mistakes || playLog.daNopDo) return;
+    let d = { score, total, timeMs };
+    if (d.score == null && playLog.diemNay) { try { d = playLog.diemNay() || d; } catch (e) {} }
+    const diem = Math.round(Number(d.score)) || 0;
+    if (diem < 1) { dropDraft(playLog.nhapId); return; }   // 0 điểm (hay âm): không nộp — nháp cũ cũng bỏ
+    playLog.daNopDo = true;
+    playLog.score = diem;
+    const goi = { code: assignment.code, studentName, ma, score: diem, total: d.total || 0,
+                  timeMs: d.timeMs != null ? d.timeMs : playLog.timeMs, review: [], doDang: true };
+    if (dacBiet) {
+      sendSpecialAttempt(goi, { keepalive: gap }).catch(() => {});
+      return;
+    }
+    goi.attemptId = playLog.nhapId;
+    dropDraft(playLog.nhapId);
+    if (gap) {
+      playLog.attemptId = queueAttemptKeepalive(goi).attemptId;
+    } else {
+      const e = queueAttempt(goi);
+      playLog.attemptId = e.attemptId;
+      baoNopChoTrangMe(sendAttempt(e)).catch(() => {});
+    }
+  }
   // Đợt 257 — xem chú thích ở `submit` bên dưới. Trả lại NGUYÊN promise gốc:
   // đường nộp/nộp lại không đổi một li nào, tin báo chỉ là người đứng nghe.
   const baoNopChoTrangMe = (giao) => {
@@ -325,10 +358,14 @@ async function play(assignment, studentName, className, studentMa) {
       // `beatPlayLog` (core/assignments.js). HS ĐẶC BIỆT (phụ huynh) KHÔNG ghi — kho đó
       // đo lớp, không đo phụ huynh. `pagehide` bên dưới gửi nhịp cuối bằng keepalive.
       playLog: dacBiet ? null : {
-        start: ({ mode, again, mistakes }) => {
+        start: ({ mode, again, mistakes, diemNay }) => {
           playLog = { code: assignment.code, id: newPlayLogId(), name: studentName, ma, mode,
                       again: !!again, mistakes: !!mistakes, score: 0, total: 0, timeMs: 0,
-                      done: false, attemptId: "", createdAt: Date.now(), batDau: Date.now(), activeMs: 0 };
+                      done: false, attemptId: "", createdAt: Date.now(), batDau: Date.now(), activeMs: 0,
+                      // ⭐ Đợt 383 — mã lượt nếu lượt này phải nộp DỞ (nháp · keepalive · outbox dùng chung một mã)
+                      // + hàm hỏi engine "điểm tới lúc này" (pagehide không chờ engine được).
+                      nhapId: newAttemptId(), diemNay: typeof diemNay === "function" ? diemNay : null, daNopDo: false };
+          attempt = null;   // ⭐ Đợt 383 — `attempt` của lượt TRƯỚC không được dính sang nhật ký lượt này
           if (hoatDong) hoatDong.dung();
           hoatDong = taoDoHoatDong(choMs);
           beatPlayLog(playLog);
@@ -336,6 +373,14 @@ async function play(assignment, studentName, className, studentMa) {
         beat: ({ timeMs }) => {
           if (!playLog || playLog.done) return;
           playLog.timeMs = timeMs;
+          // ⭐ Đợt 383 — nháp lượt đang chơi (máy tắt ngang không kịp pagehide ⇒ lần mở sau gửi bù, xem assignments.js).
+          if (!dacBiet && !playLog.mistakes && playLog.diemNay) {
+            try {
+              const d = playLog.diemNay();
+              if (d && Number(d.score) >= 1) saveDraft({ code: assignment.code, studentName, ma, score: d.score, total: d.total,
+                                                         timeMs: d.timeMs, review: [], doDang: true, attemptId: playLog.nhapId });
+            } catch (e) { /* nháp chỉ là lưới an toàn */ }
+          }
           if (hoatDong) {
             playLog.activeMs = hoatDong.doc();
             if (hoatDong.treo()) return;   // Đợt 380 — treo > 10 phút: khỏi ghi, số đã có trên kho không đổi
@@ -344,18 +389,22 @@ async function play(assignment, studentName, className, studentMa) {
         },
         end: ({ score, total, timeMs }) => {
           if (!playLog) return;
+          dropDraft(playLog.nhapId);   // Đợt 383 — lượt đã tới đích, nháp hết việc
           playLog.score = score; playLog.total = total; playLog.timeMs = timeMs; playLog.done = true;
           if (hoatDong) { playLog.activeMs = hoatDong.doc(); hoatDong.dung(); hoatDong = null; }
           playLog.attemptId = (playLog.mode === "submit" && attempt) ? attempt.attemptId : "";
           beatPlayLog(playLog);
         },
-        leave: ({ timeMs, score }) => {
+        leave: ({ timeMs, score, total }) => {
           if (!playLog || playLog.done) return;
           playLog.timeMs = Math.max(playLog.timeMs, timeMs | 0);
           if (hoatDong) { playLog.activeMs = hoatDong.doc(); hoatDong.dung(); hoatDong = null; }
           // ⭐ Đợt 379 — START AGAIN giữa ván: engine gửi kèm "điểm tới lúc dừng" (total để 0 = lượt dở; dashboard lấy
-          // mẫu số là số câu của act). Các lối rời ván khác không gửi `score` ⇒ giữ 0 như cũ.
+          // mẫu số là số câu của act). Đợt 383: mọi lối rời ván đều gửi `score` (trừ ván Start with mistakes).
           if (score != null) playLog.score = Math.max(0, Math.round(score) | 0);
+          // ⭐ Đợt 383 — điểm ≥ 1 ⇒ NỘP lượt dở ngay (trang còn sống: SDK có thử lại) + gắn attemptId vào nhật ký.
+          if (score != null) nopLuotDo({ score, total, timeMs: timeMs | 0 });
+          else dropDraft(playLog.nhapId);
           beatPlayLog(playLog, { keepalive: true });
           playLog = null;
         }

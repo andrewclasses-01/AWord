@@ -309,7 +309,7 @@ export async function listResults(code) {
 // `review` is fetched per student when the row is opened — see `readResultReview()`.
 // Anything goes wrong (no token, REST refused, odd payload) → fall back to the full read, so
 // the popup never shows less than before.
-const RESULT_LIGHT_FIELDS = ["assignmentId", "studentName", "score", "total", "timeMs", "createdAt"];
+const RESULT_LIGHT_FIELDS = ["assignmentId", "studentName", "score", "total", "timeMs", "createdAt", "doDang"];   // Đợt 383 — + doDang (lượt dở)
 function fieldValue(v) {
   if (!v) return undefined;
   if ("stringValue" in v) return v.stringValue;
@@ -460,20 +460,35 @@ function dropOutboxEntry(entry) {
 // id, name, numbers, review, createdAt — is decided HERE, once; every send and
 // re-send afterwards only reads it. `createdAt` doubles as the teacher-side
 // de-duplication key (loadReport merges results and scores on name+createdAt).
-export function queueAttempt({ code, studentName, ma, score, total, timeMs, review }) {
+export function queueAttempt(args) {
+  const entry = makeAttempt(args);
+  saveOutboxEntry(entry);
+  return entry;
+}
+// A fresh attempt id — "hw<ms>x<rand4>". Exported so play.js can mint the id of a round it may later hand in
+// DỞ DANG (Đợt 383): the draft, the keepalive send and the outbox entry all share that one id.
+export function newAttemptId() {
+  const rand = Array.from(crypto.getRandomValues(new Uint8Array(4)),
+    b => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("");
+  return `hw${now()}x${rand}`;
+}
+// The frozen attempt, NOT yet in the outbox (queueAttempt saves it; the draft keeps it elsewhere).
+// ⭐ Đợt 383 — `doDang: true` = a round the student LEFT midway (Start again / reload / close tab) with a score
+// ≥ 1: the score is real but its denominator is only the round's item count, so myLesson never uses it as the
+// act's standard denominator (rules ruleset 3bf38eaa accept the optional bool). `attemptId` may be handed in.
+function makeAttempt({ code, studentName, ma, score, total, timeMs, review, doDang = false, attemptId = "" }) {
   // Collapse runs of spaces too (play.js does the same at the name screen) so
   // the stored spelling always matches what nameKey() groups by.
   const name = String(studentName || "Player").trim().replace(/\s+/g, " ").slice(0, 40) || "Player";
   // Đợt 367 — mã học sinh (myLesson `&ma=`); rỗng = không ghi trường này (tài liệu y hệt đời cũ).
   const maHs = String(ma || "").slice(0, 60);
   const createdAt = now();
-  const rand = Array.from(crypto.getRandomValues(new Uint8Array(4)),
-    b => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("");
-  const entry = {
-    attemptId: `hw${createdAt}x${rand}`,
+  return {
+    attemptId: attemptId || newAttemptId(),
     code: String(code),
     name,
     ...(maHs ? { ma: maHs } : {}),
+    ...(doDang ? { doDang: true } : {}),
     score: Math.round(score) | 0,
     total: Math.round(total) | 0,
     timeMs: Math.round(timeMs) | 0,
@@ -482,7 +497,74 @@ export function queueAttempt({ code, studentName, ma, score, total, timeMs, revi
     scoreOk: false, resultOk: false,
     mayExistScore: false, mayExistResult: false
   };
+}
+
+// ═══════════ Đợt 383 — NHÁP LƯỢT ĐANG CHƠI (lượt DỞ DANG phải được nộp) ═══════════
+// Thầy chốt 24/09: em bỏ giữa ván mà điểm ≥ 1 thì lượt đó VẪN TÍNH — kể cả tải lại trang / đóng tab.
+// Ba tầng, từ chắc tới hên:
+//   1. Start again / về trang bài: trang còn sống ⇒ play.js nộp ngay bằng sendAttempt (SDK, có thử lại).
+//   2. pagehide (tải lại / đóng tab): trình duyệt chỉ cho một khoảnh khắc ⇒ play.js ĐẨY lượt vào outbox
+//      (localStorage, đồng bộ — chắc chắn ghi được) rồi gửi GẤP bằng REST `keepalive` (sendAttemptKeepalive).
+//      Không kịp thì lần sau em mở BẤT KỲ bài AWord nào, flushOutbox() gửi bù (cùng mã lượt ⇒ không ghi đôi).
+//   3. Tab chết không kịp pagehide (máy tắt ngang): mỗi nhịp 1 phút play.js cất NHÁP lượt đang chơi ở đây;
+//      nháp không được làm mới quá DRAFT_STALE_MS ⇒ lần mở sau coi là lượt đã bỏ và đẩy sang outbox.
+// ⛔ Nháp KHÔNG nằm trong outbox: flushOutbox() chạy ở MỌI lần mở trang, kể cả khi một tab khác còn đang chơi
+//    đúng lượt đó — gửi nháp của một lượt còn sống là nộp một lượt dở không có thật.
+const DRAFT_KEY = "aword-hw-draft";
+const DRAFT_STALE_MS = 10 * 60 * 1000;
+function readDrafts() {
+  try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || "{}") || {}; } catch (e) { return {}; }
+}
+function writeDrafts(m) {
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(m)); } catch (e) { /* private mode: layer 3 simply off */ }
+}
+export function saveDraft(args) {
+  const e = makeAttempt(args);
+  const m = readDrafts();
+  m[e.attemptId] = Object.assign(e, { draftAt: now() });
+  writeDrafts(m);
+}
+export function dropDraft(attemptId) {
+  if (!attemptId) return;
+  const m = readDrafts();
+  if (m[attemptId]) { delete m[attemptId]; writeDrafts(m); }
+}
+// Stale drafts → outbox (layer 3). Run before flushOutbox delivers.
+function sweepDrafts() {
+  const m = readDrafts(), t = now();
+  let doi = false;
+  Object.keys(m).forEach(id => {
+    const e = m[id];
+    if (!e || t - (e.draftAt || 0) < DRAFT_STALE_MS) return;
+    delete e.draftAt;
+    if (e.score > 0) saveOutboxEntry(e);
+    delete m[id]; doi = true;
+  });
+  if (doi) writeDrafts(m);
+}
+// Layer 2: queue the round (sync) and fire both creates with `keepalive`. `mayExist*` are set BEFORE sending:
+// a keepalive answer is never read, so whatever flushOutbox() finds later must be allowed to mean "it landed"
+// (score: it LOOKS first; result: create-only rule ⇒ denied = exists). submitCount is bumped by that flush.
+export function queueAttemptKeepalive(args) {
+  const entry = makeAttempt(args);
+  entry.mayExistScore = true; entry.mayExistResult = true;
   saveOutboxEntry(entry);
+  const pid = firebaseConfig && firebaseConfig.projectId, key = firebaseConfig && firebaseConfig.apiKey;
+  if (!pid || !key) return entry;
+  const goc = `https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents`;
+  const I = n => ({ integerValue: String(Math.round(n) || 0) }), S = v => ({ stringValue: String(v) });
+  const chung = { score: I(entry.score), total: I(entry.total), timeMs: I(entry.timeMs), createdAt: I(entry.createdAt),
+                  ...(entry.ma ? { ma: S(entry.ma) } : {}), ...(entry.doDang ? { doDang: { booleanValue: true } } : {}) };
+  const gui = (url, fields) => {
+    try {
+      fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fields }), keepalive: true })
+        .catch(() => {});
+    } catch (e) { /* the outbox still owes it */ }
+  };
+  const k = `&key=${encodeURIComponent(key)}`, id = encodeURIComponent(entry.attemptId);
+  gui(`${goc}/assignments/${encodeURIComponent(entry.code)}/scores?documentId=${id}${k}`, { name: S(entry.name), ...chung });
+  // review of a dở round is always empty (the template never reached its own finish) — see play.js `leave`.
+  gui(`${goc}/results?documentId=${id}${k}`, { assignmentId: S(entry.code), studentName: S(entry.name), review: { arrayValue: {} }, ...chung });
   return entry;
 }
 
@@ -516,14 +598,16 @@ export async function sendAttempt(entry, { tries = 3, tryTimeoutMs = 6000 } = {}
   // EXACTLY the keys the security rules allow, in both documents.
   // Đợt 367 — `ma` (mã học sinh) đi kèm khi có; luật Firestore nhận tuỳ chọn (ruleset a648c2ea…).
   const maHs = entry.ma ? { ma: String(entry.ma).slice(0, 60) } : {};
+  // ⭐ Đợt 383 — lượt DỞ DANG mang `doDang: true` ở CẢ HAI tài liệu (luật ruleset 3bf38eaa nhận tuỳ chọn).
+  const dd = entry.doDang ? { doDang: true } : {};
   const scoreData = {
     name: entry.name, score: entry.score, total: entry.total,
-    timeMs: entry.timeMs, createdAt: entry.createdAt, ...maHs
+    timeMs: entry.timeMs, createdAt: entry.createdAt, ...maHs, ...dd
   };
   const resultData = clean({
     assignmentId: entry.code, studentName: entry.name,
     score: entry.score, total: entry.total, timeMs: entry.timeMs,
-    review: entry.review || [], createdAt: entry.createdAt, ...maHs
+    review: entry.review || [], createdAt: entry.createdAt, ...maHs, ...dd
   });
 
   for (let round = 0; round < tries; round++) {
@@ -596,8 +680,25 @@ export async function sendAttempt(entry, { tries = 3, tryTimeoutMs = 6000 } = {}
 // sớm muộn nó cũng bị gửi vào ĐÚNG chỗ ta đang cố tránh. Vì vậy hàm này không có
 // cơ chế thử lại giữa các lần tải trang — mất mạng thì mất đúng lượt đó, không
 // nguy hiểm bằng nguy cơ rò rỉ.
-export async function sendSpecialAttempt({ code, studentName, score, total, timeMs },
-                                          { tries = 2, tryTimeoutMs = 6000 } = {}) {
+export async function sendSpecialAttempt({ code, studentName, score, total, timeMs, doDang = false },
+                                          { tries = 2, tryTimeoutMs = 6000, keepalive = false } = {}) {
+  // ⭐ Đợt 383 — lượt dở của phụ huynh khi đóng tab: REST keepalive một phát, không outbox (xem ⛔ ở trên).
+  if (keepalive) {
+    const pid = firebaseConfig && firebaseConfig.projectId, key = firebaseConfig && firebaseConfig.apiKey;
+    if (!pid || !key) return { ok: false };
+    const nm = String(studentName || "Player").trim().replace(/\s+/g, " ").slice(0, 40) || "Player";
+    const I = n => ({ integerValue: String(Math.round(n) || 0) });
+    const id = `sp${now()}x${Array.from(crypto.getRandomValues(new Uint8Array(4)), b => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("")}`;
+    const fields = { name: { stringValue: nm }, score: I(score), total: I(total), timeMs: I(timeMs), createdAt: I(now()),
+                     ...(doDang ? { doDang: { booleanValue: true } } : {}) };
+    try {
+      fetch(`https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents/specialAttempts/` +
+            `${encodeURIComponent(String(code))}/entries?documentId=${id}&key=${encodeURIComponent(key)}`,
+            { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fields }), keepalive: true })
+        .catch(() => {});
+    } catch (e) { /* lost — same rule as below */ }
+    return { ok: true };
+  }
   let d, sdk;
   try { [d, sdk] = await Promise.all([db(), fs()]); }
   catch (e) { return { ok: false }; }
@@ -607,7 +708,7 @@ export async function sendSpecialAttempt({ code, studentName, score, total, time
     b => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("")}`;
   const ref = doc(d, "specialAttempts", String(code), "entries", id);
   const data = { name, score: Math.round(score) | 0, total: Math.round(total) | 0,
-                 timeMs: Math.round(timeMs) | 0, createdAt: now() };
+                 timeMs: Math.round(timeMs) | 0, createdAt: now(), ...(doDang ? { doDang: true } : {}) };
   for (let round = 0; round < tries; round++) {
     if (round) await new Promise(r => setTimeout(r, 700 * round));
     try { await withTimeout(setDoc(ref, data), tryTimeoutMs); return { ok: true }; }
@@ -685,6 +786,7 @@ export function beatPlayLog({ code, id, name, ma, mode, again, mistakes, score, 
 // in the background, never blocking anything. Sequential on purpose: these are
 // leftovers on a possibly-bad connection, not a race.
 export async function flushOutbox() {
+  sweepDrafts();   // ⭐ Đợt 383 — lượt dở của một tab đã chết (không kịp pagehide) ⇒ outbox
   for (const entry of readOutbox()) {
     try { await sendAttempt(entry, { tries: 2, tryTimeoutMs: 8000 }); }
     catch (e) { /* still owed — the outbox keeps it */ }

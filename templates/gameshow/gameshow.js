@@ -157,6 +157,9 @@ const gameshowTemplate = {
     const limitedLives = livesMax > 0;
     const bonusEvery = typeof opt.bonusEvery === "number" ? opt.bonusEvery : 3;
     const LL = Object.assign({ fifty: true, x2: true, time: true, cheat: true }, opt.lifelines || {});
+    // ⭐ Đợt 383 (thầy chốt 25/09) — BÀI GIAO (`opt.anDapAn`): tắt phao REVEAL (tô sáng đáp án TRƯỚC khi trả lời)
+    // và phao 50:50 (bỏ bớt 2 đáp án sai). x2 và thêm giờ không lộ gì nên giữ.
+    if (opt.anDapAn) { LL.cheat = false; LL.fifty = false; }
 
     // ----- questions (shuffle once so it's stable) -----
     let questions = [...(activity.content?.questions || [])]
@@ -466,6 +469,12 @@ const gameshowTemplate = {
       // mark tiles: correct tile always shows ✓; chosen-wrong shows ✗; others dim
       const correctIdx = q.answers.findIndex(a => a.correct);
       ts.forEach((t, i) => {
+        // ⭐ Đợt 383 — BÀI GIAO: chỉ đánh dấu ô EM CHỌN (✓ nếu đúng, ✗ nếu sai); ô đúng không được lộ khi em sai / hết giờ.
+        if (opt.anDapAn) {
+          if (i === chosen && correct) { t.classList.add("is-right"); t.append(badge(icons.markCheck)); }
+          else { t.classList.add("is-dim"); if (i === chosen) { t.classList.add("is-wrong"); t.append(badge(icons.markCross)); } }
+          return;
+        }
         if (i === correctIdx) { t.classList.add("is-right"); t.append(badge(icons.markCheck)); }
         else { t.classList.add("is-dim"); if (i === chosen) { t.classList.add("is-wrong"); t.append(badge(icons.markCross)); } }
       });

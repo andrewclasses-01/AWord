@@ -19,7 +19,38 @@ Firestore (project `aword-70dae`). Điều này ảnh hưởng tới mọi ngư�
 - Hướng dẫn + luật bảo vệ Firestore: `docs/08-FIREBASE-SETUP.md`.
 
 ## ⚠️ CHẾ ĐỘ HỌC SINH từ v0.8.0 — `startGame(root, activity, { session })`
-### (viết lại Đợt 246, 23/8/2026 — PRACTICE/SUBMIT + gửi bài chắc chắn)
+### (viết lại Đợt 246, 23/8/2026 — PRACTICE/SUBMIT + gửi bài chắc chắn · ⭐⭐⭐ Đợt 383, 25/9/2026 — GỘP LẠI MỘT CHẾ ĐỘ, đọc khối dưới TRƯỚC)
+
+⭐⭐⭐ **Đợt 383 (thầy chốt 24–25/9/2026, thiết kế `D:\OTHERS\CLAUDE\AWord - thiet ke gop practice submit\thiet-ke-v7.html`) —
+BỎ PRACTICE/SUBMIT, BÀI GIAO CHỈ CÒN MỘT CHẾ ĐỘ.** Học sinh nhỏ hay bấm nhầm PRACTICE (không được tính). Các khối Đợt 246/366
+bên dưới còn đúng về CƠ CHẾ GỬI, nhưng phần "hai chế độ / hai nút / hai màn cuối" đã THAY bằng:
+- **Màn READY = MỘT nút START**, hình bia phi tiêu `icons.practiceBig`. Lượt Start with mistakes: cùng nút + dòng chữ trắng
+  **MISTAKES ONLY** (không khung). `hwMode` còn giữ làm NHÃN nhật ký: `"submit"` = lượt thường, `"practice"` = lượt mistakes.
+- **Nộp khi nào** (`finish()` + play.js `nopLuotDo`):
+  | Lượt | Nộp? | Ghi chú |
+  |---|---|---|
+  | làm hết / hết giờ, điểm ≥ 1 | ✅ `session.submit` (như cũ) | mẫu số chuẩn `result.items ?? total` |
+  | điểm ≤ 0 | ❌ | chỉ nhật ký; màn cuối KHÔNG có màn nộp, KHÔNG dải SUBMITTED |
+  | rời giữa ván (Start again · về trang · tải lại · đóng tab), điểm ≥ 1 | ✅ **`doDang: true`** | điểm = `diemBoDo()`, total = `playItemCount()` (chỉ để hiện — myLesson KHÔNG lấy làm mẫu số) · review rỗng |
+  | Start with mistakes | ❌ | không bao giờ |
+  `doDang` là trường MỚI trong `scores` + `results` + `specialAttempts` (luật ruleset `3bf38eaa`, đăng bằng myLesson
+  `app/tools/dang-luat-do-dang.js`, được thiếu). Rời ván: `cleanupAll` gửi `leave({timeMs, score, total})` cho MỌI lối
+  (trừ ván mistakes/fight) ⇒ play.js nộp bằng SDK. pagehide: play.js hỏi `diemNay()` (engine đưa trong `playLog.start`),
+  đẩy lượt vào outbox (mayExist bật sẵn) + REST `keepalive` (`queueAttemptKeepalive`). Tab chết không kịp pagehide: nhịp 1
+  phút cất NHÁP `aword-hw-draft` (`saveDraft`), `flushOutbox()` đưa nháp cũ > 10 phút vào outbox.
+- **Màn cuối lượt thường** (`showHomeworkEnd`): BỎ nút vàng SUBMIT HOMEWORK. Có nộp ⇒ màn nộp **TỰ CHẠY** (`hwCeremonyOn`,
+  không chạy lại khi quay về từ My mistakes): chữ **SUBMITTING** + thanh tải XANH LÁ (90% trong `HW_SUBMIT_MIN_MS`, `fillBar()`
+  chạy nốt khi xác nhận) + ANDREW CLASSES nhỏ đứng yên. Xác nhận ⇒ dải **SUBMITTED** bo tròn, mảnh, xanh đặc (`.aw-hw-pill`,
+  ⛔ cần luật `[hidden]{display:none}` riêng). Lỗi: mất mạng ⇒ NGAY; chưa xác nhận sau **10 s** (`HW_SUBMIT_GIVEUP_MS`) ⇒ màn
+  GỬI LẠI / CHỤP ẢNH; xác nhận về muộn lúc màn lỗi đang hiện ⇒ tự chuyển SUBMITTED.
+- **Menu MỌI màn cuối** (`hwMenuItems`, cả bảng MISTAKES ROUND): **Start with mistakes** (vàng, `.aw-hw-first`) · **Show
+  mistakes** (theo ô Show answers, chỉ khi có câu sai) · **Start again** (vào thẳng ván). Menu ☰ trong ván: BỎ "Submit answers".
+- **Show mistakes = màn MY MISTAKES** (`showReview` nhánh `session`): CHỈ câu trả lời SAI + câu em trả lời; câu bỏ trống chỉ
+  đếm; câu 2 lựa chọn (`laCauHaiLuaChon`) chỉ ghi "Wrong". **KHÔNG BAO GIỜ hiện đáp án đúng.** Form Set assignment mặc định TÍCH.
+- **Trong lúc chơi không lộ đáp án:** engine gắn `activity.options = {…, showAnswerWhenWrong:false, anDapAn:true}` trước
+  `tpl.mount` khi có session. Template đọc `opt.anDapAn`: quiz · gameshow (+ tắt phao REVEAL và 50:50) · rocket-race ·
+  find-the-gap · anagram (On submit). ⛔ Nút **Andrew help** (TTA/Crossword) GIỮ — thầy chốt. Template MỚI có chỗ lộ đáp án
+  sau khi sai ⇒ PHẢI tôn trọng `opt.anDapAn`.
 
 `play.html` (trang HS) gọi engine với thêm một `session`. Template KHÔNG cần biết gì về nó, nhưng
 người sửa engine thì phải nhớ:

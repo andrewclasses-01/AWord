@@ -2335,25 +2335,25 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // button alone, and hwMode can never be "submit" while `_mistakes` is set.
   // ⚠️ `playControl` is what the Đợt 122 prep gate hides/reveals — in student
   // mode that must be the whole pair, not the (unmounted) bigPlay.
+  // ⭐⭐⭐ Đợt 383 (thầy chốt 24–25/09/2026) — GỘP PRACTICE + SUBMIT: học sinh nhỏ hay bấm nhầm
+  // PRACTICE (không được tính) ⇒ bài giao chỉ còn MỘT nút START, hình BIA PHI TIÊU (`practiceBig`,
+  // "nhắm mục tiêu, quyết tâm"). Lượt nào có điểm cũng NỘP. `hwMode` vẫn giữ làm nhãn nhật ký:
+  // "submit" = lượt thường, "practice" = lượt Start with mistakes (không bao giờ nộp).
+  // Lượt START WITH MISTAKES: cùng nút, thêm dòng chữ trắng MISTAKES ONLY bên dưới (không khung).
   let hwMode = null;                 // "practice" | "submit" | null (teacher/fight)
   let playControl = bigPlay;
   let practiceBtn = null, submitStartBtn = null;
   if (session) {
-    const mkStart = (cls, icon, label, title) => {
-      const b = el("button", "aw-startbtn " + cls);
-      b.type = "button"; b.title = title; b.setAttribute("aria-label", title);
-      b.append(el("span", "aw-startbtn-ic", icon), el("span", "aw-startbtn-label", label));
-      return b;
-    };
-    const duo = el("div", "aw-ready-duo");
-    practiceBtn = mkStart("is-practice", icons.practiceBig, "PRACTICE", "Practice — not sent to your teacher");
-    duo.append(practiceBtn);
-    if (!activity._mistakes) {
-      submitStartBtn = mkStart("is-submit", icons.submitBig, "SUBMIT", "Submit — sent to your teacher");
-      duo.append(submitStartBtn);
-    }
-    playControl = duo;
-    readyCenter.append(duo);
+    const wrap = el("div", "aw-ready-duo aw-ready-one");
+    const b = el("button", "aw-startbtn is-practice");
+    const title = activity._mistakes ? "Start — mistakes only" : "Start";
+    b.type = "button"; b.title = title; b.setAttribute("aria-label", title);
+    b.append(el("span", "aw-startbtn-ic", icons.practiceBig), el("span", "aw-startbtn-label", "START"));
+    wrap.append(b);
+    if (activity._mistakes) wrap.append(el("div", "aw-ready-mtag", "MISTAKES ONLY"));
+    practiceBtn = b;
+    playControl = wrap;
+    readyCenter.append(wrap);
   } else if (!showdownPick) {
     readyCenter.append(bigPlay);   // Showdown: appended into aw-sd-contentcol instead
   }
@@ -2851,7 +2851,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // ⭐ Đợt 366 — nhật ký lượt chơi cho dashboard myLesson (xem play.js `playLog`):
     // ghi lúc vào ván, rồi MỖI PHÚT một nhịp (kể cả em bỏ dở), xong ván ghi `end` ở finish().
     if (session && session.playLog) {
-      try { session.playLog.start({ mode: hwMode, again: !!hwPreset, mistakes: !!activity._mistakes }); } catch (e) {}
+      // ⭐ Đợt 383 — `diemNay`: play.js hỏi "điểm tới lúc này" để NỘP lượt DỞ khi em tải lại trang /
+      // đóng tab (pagehide không chờ engine được) và để ghi nháp mỗi phút. `total` = số câu của lượt
+      // chơi — chỉ để hiện; myLesson KHÔNG lấy mẫu số của lượt dở (`doDang`).
+      const diemNay = () => ({ score: diemBoDo(), total: playItemCount(), timeMs: Math.round(performance.now() - startedAt) });
+      try { session.playLog.start({ mode: hwMode, again: !!hwPreset, mistakes: !!activity._mistakes, diemNay }); } catch (e) {}
       playLogTimer = setInterval(() => {
         if (torndown || playLogDone) return;
         try { session.playLog.beat({ timeMs: Math.round(performance.now() - startedAt) }); } catch (e) {}
@@ -2881,15 +2885,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     begin();
   }
   press(bigPlay, startPressed);
-  if (practiceBtn) press(practiceBtn, () => { hwMode = "practice"; startPressed(); });
-  if (submitStartBtn) press(submitStartBtn, () => { hwMode = "submit"; startPressed(); });
-  // ⭐ Đợt 366 — chế độ chọn sẵn: chờ cổng chuẩn bị (Đợt 122) xong rồi tự START. Ván
-  // "with mistakes" chỉ có PRACTICE nên `submit` rơi về practice.
+  // ⭐ Đợt 383 — MỘT nút: chế độ do ván quyết, không do em chọn.
+  const hwModeCuaVan = () => activity._mistakes ? "practice" : "submit";
+  if (practiceBtn) press(practiceBtn, () => { hwMode = hwModeCuaVan(); startPressed(); });
+  // ⭐ Đợt 366 — lối vào thẳng ván (Start again · Start with mistakes trên màn kết thúc): chờ cổng
+  // chuẩn bị (Đợt 122) xong rồi tự START. Đợt 383: `hwPreset` chỉ còn nghĩa "tự bấm START".
   if (session && hwPreset) {
-    const mode = (hwPreset === "submit" && !activity._mistakes) ? "submit" : "practice";
     Promise.resolve(prepDoneP).catch(() => {}).then(() => {
       if (torndown || playStarted) return;
-      hwMode = mode; startPressed();
+      hwMode = hwModeCuaVan(); startPressed();
     });
   }
 
@@ -3676,6 +3680,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // for its first item, which is what opens round 1, so the watcher has to be
     // alive by then.
     startRoundWatch();
+    // ⭐⭐ Đợt 383 (thầy chốt 24/09) — BÀI GIAO KHÔNG BAO GIỜ HIỆN ĐÁP ÁN ĐÚNG TRONG LÚC CHƠI: em chỉ biết đúng/sai.
+    // Tắt "Show corrects" (`showAnswerWhenWrong`: Crossword · Type the answer · Unjumble) và gắn cờ ẩn `anDapAn`
+    // cho các chỗ template tự lộ đáp án (Quiz gắn ✓ ô đúng · Open the box in đáp án sau thẻ…). Chỉ trên BẢN CHƠI
+    // của học sinh (`activity` là bản sao play.js dựng mỗi lượt) — giáo viên chơi thử / trình chiếu y như cũ.
+    if (session) activity.options = Object.assign({}, activity.options, { showAnswerWhenWrong: false, anDapAn: true });
     cleanup = tpl.mount(playArea, activity, ui) || (() => {});
   }
   // ⚠️ Also kills the TIME COST watcher (Đợt 139). Every teardown path in this
@@ -5462,12 +5471,16 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   }
   function openMenu() {
     menuEl = el("div", "aw-menu");
-    menuEl.append(
+    // ⭐ Đợt 383 (thầy chốt 24/09) — BÀI GIAO bỏ hẳn "Submit answers": em nhỏ tưởng đó là chế độ SUBMIT.
+    // Muốn dừng thì bấm Start again — lượt đang dở vẫn được nộp (play.js `leave`). Giáo viên giữ nguyên.
+    if (!session) menuEl.append(
       menuItem("Submit answers", () => {
         closeMenu();
         if (answeredCounter && answeredCounter() === 0) { toast("Answer at least one question first."); return; }
         submitHandler?.();
-      }),
+      })
+    );
+    menuEl.append(
       menuItem("Start again", restart),
       menuItem("Resume", closeMenu)
     );
@@ -5549,7 +5562,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     if (fight) { cleanupAll(); fight.ctl.restartMatch(); return; }
     cleanupAll();
     const target = activity._mistakes ? activity._mistakesBase : libAct;
-    startGame(root, target, { onExit, session, base: originAct });
+    // ⭐ Đợt 383 — bài giao: Start again vào THẲNG ván mới (lượt dở vừa bỏ đã được nộp ngầm ở cleanupAll).
+    startGame(root, target, { onExit, session, base: originAct, hwPreset: session ? "submit" : null });
   }
 
   // Replay whatever is loaded RIGHT NOW, mistakes round included. Used by
@@ -5598,7 +5612,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // ⭐ Đợt 246 — PRACTICE may drill its mistakes (that is what the mode is
     // for); SUBMIT may not (a partial replay is not a bài tập). The mistakes
     // machinery is pure in-page (core/mistakes.js), so no library is touched.
-    if (session && hwMode !== "practice") return false;
+    // ⭐ Đợt 383 — một chế độ: lượt nào của bài giao cũng được luyện câu sai (lượt luyện thì không nộp).
     const kept = pickMistakes(activity, tpl, reviewData);
     return !!(kept && kept.length);
   }
@@ -5644,7 +5658,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     if (playLogTimer) { clearInterval(playLogTimer); playLogTimer = null; }
     if (session && session.playLog && playStarted && !playLogDone) {
       playLogDone = true;
-      try { session.playLog.leave({ timeMs: Math.round(performance.now() - startedAt), score: playLogDiemBoDo }); } catch (e) {}
+      // ⭐ Đợt 383 — MỌI lối rời ván giữa chừng (không riêng Start again như Đợt 379) mang "điểm tới lúc dừng":
+      // play.js NỘP lượt đó (`doDang`) nếu điểm ≥ 1 và không phải ván Start with mistakes. Đọc điểm TRƯỚC
+      // cleanup() bên dưới — template còn sống thì scoreNow() mới trả lời được.
+      const sc = playLogDiemBoDo != null ? playLogDiemBoDo : (activity._mistakes || fight ? null : diemBoDo());
+      try { session.playLog.leave({ timeMs: Math.round(performance.now() - startedAt), score: sc, total: playItemCount() }); } catch (e) {}
     }
     stopWatchVanRoiTrang();        // ⭐ Đợt 295 — ván tự dọn rồi thì gỡ luôn lưới an toàn
     stopShowdownReview();          // ⭐ Đợt 196 — never leave the live listener behind
@@ -6081,7 +6099,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         //             (thầy chốt qua AskUserQuestion). session.submit() never
         //             rejects and resolves {ok:boolean}; the play is also held
         //             in the outbox (core/assignments.js) until confirmed.
-        if (hwMode === "submit") {
+        // ⭐⭐⭐ Đợt 383 — MỘT CHẾ ĐỘ: lượt thường ("submit") làm xong là NỘP, miễn điểm ≥ 1 (thầy chốt:
+        // lượt 0 điểm — hay âm, khi có trừ điểm — không nộp, chỉ còn trong nhật ký thời gian). Lượt Start
+        // with mistakes ("practice") không bao giờ nộp. Lượt HẾT GIỜ đi đúng đường này (template tự finish)
+        // ⇒ mẫu số chuẩn, KHÔNG phải lượt dở.
+        if (hwMode === "submit" && Number(result.score) > 0) {
           hwFinishedAt = Date.now();
           // ⭐⭐ Đợt 294 — MẪU SỐ NỘP LÊN LÀ SỐ CÂU CỦA ĐỀ (`result.items`), KHÔNG PHẢI
           // SỐ LƯỢT (`result.total`). Xem ghi chú dài ở `items` trong core/scoring.js:
@@ -6266,6 +6288,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   let hwConfirmed = false;
   let hwFinishedAt = 0;
   let hwLbTable = null;  // the left board's rows — the fly-in needs to find "my" row
+  let hwCeremonyOn = false;   // ⭐ Đợt 383 — màn nộp đã TỰ CHẠY cho lượt này (quay lại từ My mistakes không chạy lại)
   // Optional per-finish title (e.g. Open the box's Questions mode passes
   // "Game over" on a timeout loss) — defaults to "Game complete" so every
   // other template's ui.finish() is unaffected. Kept in this shared
@@ -6287,7 +6310,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     if (session && hwMode === "submit") return showHomeworkEnd(result);
     const bd = openBackdrop();
     const panel = el("div", "aw-panel");
-    panel.append(el("div", "aw-panel-head", endTitle.toUpperCase()));
+    // ⭐ Đợt 383 — bài giao: bảng này chỉ còn cho lượt Start with mistakes (lượt thường đi showHomeworkEnd).
+    panel.append(el("div", "aw-panel-head", session ? "MISTAKES ROUND" : endTitle.toUpperCase()));
 
     // Opt-in: a template may REPLACE the whole summary body (stats + rank line +
     // action items) with its own. It gets the panel to fill, the computed
@@ -6351,16 +6375,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // Show answers (the ONE remaining tick on the Set assignment form) ·
       // Start again · Start with mistakes (mistakesAvailable() opens up for
       // practice — the whole point of the mode is to drill what went wrong).
-      const end = session.endOptions || {};
-      panel.append(el("div", "aw-panel-rank", "PRACTICE — NOT SENT TO YOUR TEACHER"));
-      if (end.showAnswers !== false && reviewData.length) {
-        items.append(panelItem("Show answers", () => showReview(result, entryId)));
-      }
-      // ⭐ Đợt 366 (thầy chốt) — PRACTICE AGAIN · START WITH MISTAKES · START SUBMITTING,
-      // mỗi nút vào thẳng ván ở đúng chế độ (không quay lại màn chọn PRACTICE/SUBMIT).
-      items.append(panelItem("Practice again", () => restartAs("practice")));
-      if (mistakesAvailable()) items.append(panelItem("Start with mistakes", startWithMistakes));
-      if (!activity._mistakes) items.append(panelItem("Start submitting", () => restartAs("submit")));
+      // ⭐⭐ Đợt 383 (thầy chốt 25/09) — hết lượt START WITH MISTAKES: không màn nộp, không dòng "not
+      // counted"; menu CÙNG THỨ TỰ màn kết thúc thường: Start with mistakes · Show mistakes · Start again.
+      hwMenuItems(items, result);
     } else {
       // ⭐ Đợt 208 — no Leaderboard row in Showdown (thầy — see the note on the
       // rank line above). ⚠️ The leaderboard itself is NOT switched off: finish()
@@ -6479,7 +6496,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     : hwPenalised() ? `${e.score}` : `${e.score}/${e.total}`;
 
   const HW_SUBMIT_MIN_MS = 2000;     // the SUBMITTING screen never blinks past faster than this
-  const HW_SUBMIT_GIVEUP_MS = 25000; // outer guard — past this the error screen shows no matter what hangs
+  // ⭐ Đợt 383 (thầy chốt 24/09) — 25 s → 10 s: quá 10 giây chưa có xác nhận là báo lỗi (mất mạng hẳn thì báo NGAY,
+  // xem startHomeworkSubmit). Bài vẫn tự gửi ngầm phía sau; về muộn thì màn lỗi tự chuyển sang SUBMITTED.
+  const HW_SUBMIT_GIVEUP_MS = 10000; // outer guard — past this the error screen shows no matter what hangs
 
   function hwWhen(ms) {
     const d = new Date(ms || Date.now());
@@ -6518,38 +6537,52 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       menuPanel.append(el("div", "aw-sum-total", `Total: ${result.correct}/${result.total}`));
     }
 
+    // ⭐⭐⭐ Đợt 383 (thầy chốt 24–25/09) — BỎ nút vàng SUBMIT HOMEWORK. Lượt có nộp (điểm ≥ 1): màn
+    // SUBMITTING TỰ CHẠY ngay lần đầu màn này hiện; server xác nhận thì hiện dải SUBMITTED bo tròn hai đầu,
+    // mảnh, tô xanh đặc — CHỈ ĐỂ BÁO, không bấm. Lượt 0 điểm (không nộp): không có dải.
+    const pill = el("div", "aw-hw-pill");
+    pill.append(el("span", "aw-hw-pill-ic", icons.check), el("span", null, "SUBMITTED"));
+    pill.hidden = !hwConfirmed;
+    menuPanel.append(pill);
     const items = el("div", "aw-panel-items");
-    const hwBtn = el("button", "aw-hw-submitbtn");
-    hwBtn.type = "button";
-    hwBtn.append(el("span", "aw-hw-submitbtn-ic", icons.assignment),
-                 el("span", null, "SUBMIT HOMEWORK"));
-    if (hwConfirmed) markHwDone(hwBtn);
-    else hwBtn.onclick = () => { sound.click(); startHomeworkSubmit(result, hwBtn); };
-    items.append(hwBtn);
-    // No "Leaderboard" row (the board is already on the left — thầy) and no
-    // "Start with mistakes" (SUBMIT is the real thing, not a drill).
-    const end = session.endOptions || {};
-    if (end.showAnswers !== false && reviewData.length) {
-      items.append(panelItem("Show answers", () => showReview(result, null)));
-    }
-    // ⭐ Đợt 366 (thầy chốt) — SUBMIT AGAIN · PRACTICE AGAIN thay "Start again": vào thẳng
-    // ván ở đúng chế độ. Lượt SUBMIT AGAIN vẫn là một lượt nộp thật (leaderboard lấy tốt nhất).
-    items.append(panelItem("Submit again", () => restartAs("submit")));
-    items.append(panelItem("Practice again", () => restartAs("practice")));
+    hwMenuItems(items, result);
     menuPanel.append(items);
 
     duo.append(lbPanel, menuPanel);
     bd.append(duo);
     hwRenderLeaderboard();
+    if (submission && !hwConfirmed && !hwCeremonyOn) { hwCeremonyOn = true; startHomeworkSubmit(result, pill); }
   }
 
-  function markHwDone(btn) {
-    btn.classList.add("is-done");
-    btn.disabled = true;
-    btn.onclick = null;
-    btn.innerHTML = "";
-    btn.append(el("span", "aw-hw-submitbtn-ic", icons.assignment),
-               el("span", null, `SUBMITTED — ${escapeText((session.playerName || "").toUpperCase())}`));
+  // ⭐⭐ Đợt 383 (thầy chốt 25/09) — menu MỌI màn kết thúc của bài giao, đúng thứ tự:
+  // START WITH MISTAKES (chữ vàng, lên đầu — chỉ khi còn câu sai) · SHOW MISTAKES (theo ô Show answers
+  // lúc giao bài, chỉ khi có câu sai) · START AGAIN (cả bài, vào thẳng ván — lượt được nộp).
+  function hwMenuItems(items, result) {
+    if (mistakesAvailable()) {
+      const m = panelItem("Start with mistakes", startWithMistakes);
+      m.classList.add("aw-hw-first");
+      items.append(m);
+    }
+    const end = session.endOptions || {};
+    if (end.showAnswers !== false && hwCauSai().length) items.append(panelItem("Show mistakes", () => showReview(result, null)));
+    items.append(panelItem("Start again", () => restartAs("submit")));
+  }
+  // Câu em TRẢ LỜI SAI (câu bỏ trống không tính — em chưa làm thì chưa có gì để phân tích).
+  function hwCauSai() { return reviewData.filter(r => r.answered && !r.yourCorrect); }
+  // Câu chỉ có HAI lựa chọn: biết em chọn sai là biết đáp án ⇒ My mistakes không ghi em chọn gì (Đợt 383).
+  // True/False luôn là; Quiz khi câu đó đúng 2 đáp án (`src` = câu gốc trong đề); dự phòng: cả hai chữ đều kiểu đúng/sai.
+  function laCauHaiLuaChon(r) {
+    if (activity.type === "true-false") return true;
+    const ds = r && r.src && Array.isArray(r.src.answers)
+      ? r.src.answers.filter(a => a != null && String(a.text != null ? a.text : a).trim()) : null;
+    if (ds && ds.length === 2) return true;
+    const kieuDungSai = /^(true|false|t|f|yes|no|right|wrong|đúng|sai)$/i;
+    return kieuDungSai.test(String(r.yourText || "").trim()) && kieuDungSai.test(String(r.correctText || "").trim());
+  }
+
+  function markHwDone(pill) {
+    pill.hidden = false;
+    pill.classList.add("is-in");
   }
 
   // Build/refresh the left board. Every student's BEST attempt (exactly what
@@ -6656,22 +6689,33 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // server confirmed BOTH documents ({ok:true} from core/assignments.js).
   // Anything else lands on the Vietnamese error screen with GỬI LẠI BÀI TẬP
   // and CHỤP ẢNH MÀN HÌNH.
-  function startHomeworkSubmit(result, hwBtn) {
+  function startHomeworkSubmit(result, pill) {
     const overlay = buildHwOverlay(result, () => doSend());
+    let thanhCong = false;
+    const xongTot = async () => {
+      if (thanhCong || !overlay.root.isConnected) return;
+      thanhCong = true;
+      hwConfirmed = true;
+      if (pill && pill.isConnected) markHwDone(pill);
+      await overlay.fillBar();
+      await hwFlyIn(overlay, result);
+    };
     async function doSend() {
       overlay.showSending();
+      const dangGui = ensureSubmission();
+      // ⭐ Đợt 383 — mất mạng HẲN (trình duyệt biết) ⇒ báo lỗi NGAY, không bắt em chờ 10 giây.
+      const matMang = new Promise(r => { if (navigator.onLine === false) r([{ ok: false }]); });
       const [sent] = await Promise.race([
-        Promise.all([ensureSubmission(), new Promise(r => setTimeout(r, HW_SUBMIT_MIN_MS))]),
-        new Promise(r => setTimeout(() => r([{ ok: false }]), HW_SUBMIT_GIVEUP_MS))
+        Promise.all([dangGui, new Promise(r => setTimeout(r, HW_SUBMIT_MIN_MS))]),
+        new Promise(r => setTimeout(() => r([{ ok: false }]), HW_SUBMIT_GIVEUP_MS)),
+        matMang
       ]);
       if (!overlay.root.isConnected) return;   // torn down (restart) while waiting
-      if (sent && sent.ok) {
-        hwConfirmed = true;
-        if (hwBtn && hwBtn.isConnected) markHwDone(hwBtn);
-        await hwFlyIn(overlay, result);
-      } else {
-        overlay.showError();
-      }
+      if (sent && sent.ok) { await xongTot(); return; }
+      overlay.showError();
+      // ⭐ Đợt 383 — lượt gửi vẫn chạy ngầm sau mốc 10 giây: nó về tới nơi trong lúc màn lỗi đang hiện
+      // thì tự chuyển sang SUBMITTED (em khỏi phải bấm GỬI LẠI). Cùng mã lượt ⇒ không bao giờ ghi đôi.
+      dangGui.then(r => { if (r && r.ok && overlay.face === "error") { overlay.showSending(); xongTot(); } }).catch(() => {});
     }
     doSend();
   }
@@ -6711,24 +6755,32 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   function buildHwOverlay(result, onRetry) {
     const root = el("div", "aw-hw-sub");
     inner.append(root);
-    const o = { root, cluster: null };
-    const swap = build => { root.innerHTML = ""; o.cluster = null; build(); };
+    const o = { root, cluster: null, face: "" };
+    const swap = (face, build) => { root.innerHTML = ""; o.cluster = null; o.bar = null; o.face = face; build(); };
 
-    o.showSending = () => swap(() => {
-      const box = el("div", "aw-hw-sub-center");
-      const title = el("div", "aw-hw-sub-title", "SUBMITTING HOMEWORK");
-      const brand = el("div", "aw-hw-sub-brand");
-      "ANDREW CLASSES".split("").forEach((ch, i) => {
-        const s = el("span", null, ch === " " ? "&nbsp;" : escapeText(ch));
-        s.style.setProperty("--i", i);
-        brand.append(s);
-      });
-      box.append(title, brand);
+    // ⭐⭐ Đợt 383 (thầy chốt 25/09, mẫu thiết kế v7 ②A) — SUBMITTING (bỏ chữ HOMEWORK) · ngay dưới là THANH
+    // TẢI XANH LÁ dài đúng bằng chữ, đầy dần · dưới cùng ANDREW CLASSES nhỏ, xám, ĐỨNG YÊN. Ba tầng sát
+    // nhau thành một khối. Thanh chạy tới ~90% trong HW_SUBMIT_MIN_MS (CSS), chờ xác nhận ở đó; có xác nhận
+    // thì `fillBar()` chạy nốt tới cuối rồi mới bay vào bảng xếp hạng.
+    o.showSending = () => swap("sending", () => {
+      const box = el("div", "aw-hw-sub-center aw-hw-sub-stack");
+      const title = el("div", "aw-hw-sub-title", "SUBMITTING");
+      const bar = el("div", "aw-hw-sub-bar");
+      const fill = el("i", null);
+      fill.style.setProperty("--hw-bar-ms", HW_SUBMIT_MIN_MS + "ms");
+      bar.append(fill);
+      box.append(title, bar, el("div", "aw-hw-sub-brand", "ANDREW CLASSES"));
       root.append(box);
       o.cluster = box;
+      o.bar = bar;
+    });
+    o.fillBar = () => new Promise(done => {
+      if (!o.bar || !o.bar.isConnected) return done();
+      o.bar.classList.add("is-full");
+      setTimeout(done, 320);   // ⚠️ setTimeout, không onfinish — tab ẩn làm đứng sự kiện hoạt ảnh (Đợt 216)
     });
 
-    o.showError = () => swap(() => {
+    o.showError = () => swap("error", () => {
       const box = el("div", "aw-hw-sub-center");
       box.append(el("div", "aw-hw-err-title", "GỬI BÀI CHƯA THÀNH CÔNG DO LỖI MẠNG"));
       box.append(el("div", "aw-hw-err-sub",
@@ -6745,7 +6797,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       root.append(box);
     });
 
-    o.showGuide = () => swap(() => {
+    o.showGuide = () => swap("guide", () => {
       const box = el("div", "aw-hw-sub-center");
       box.append(el("div", "aw-hw-guide-title", "CÁCH CHỤP ẢNH MÀN HÌNH"));
       const cards = el("div", "aw-hw-guide-cards");
@@ -6771,7 +6823,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       root.append(box);
     });
 
-    o.showBoard = () => swap(() => {
+    o.showBoard = () => swap("board", () => {
       const box = el("div", "aw-hw-sub-center");
       box.append(el("div", "aw-hw-board-title", "HÃY CHỤP LẠI MÀN HÌNH"));
       const card = el("div", "aw-hw-board-card");
@@ -6919,6 +6971,33 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     const head = el("div", "aw-rv-head");
     const closeBtn = iconBtn("aw-rv-close", icons.close, "Close");
     closeBtn.onclick = () => { stopShowdownReview(); rv.remove(); showSummary(result, entryId); };
+
+    // ⭐⭐⭐ Đợt 383 (thầy chốt 24–25/09) — BÀI GIAO: "MY MISTAKES", KHÔNG BAO GIỜ HIỆN ĐÁP ÁN ĐÚNG.
+    // Em chỉ thấy câu mình làm SAI và mình đã trả lời gì, tự phân tích rồi Start again tự mày mò câu đúng.
+    // Câu làm đúng không hiện; câu bỏ trống chỉ ghi SỐ LƯỢNG. Câu chỉ có 2 lựa chọn (True/False, Quiz 2
+    // đáp án): biết em chọn sai là suy ra đáp án ⇒ chỉ hiện đề + "Wrong". Giáo viên (không session) xem
+    // đủ đáp án như cũ; báo cáo của thầy vẫn có đủ `review` (dữ liệu nộp lên không đổi).
+    if (session) {
+      head.append(el("div", "aw-rv-title", "MY MISTAKES"), closeBtn);
+      rv.append(head);
+      const sai = hwCauSai(), boTrong = reviewData.filter(r => !r.answered).length;
+      const list = el("div", "aw-rv-list aw-rv-mine");
+      list.append(el("div", "aw-rv-mcount", sai.length === 1 ? "1 mistake" : `${sai.length} mistakes`));
+      sai.forEach(r => {
+        const rowEl = el("div", "aw-rv-row");
+        rowEl.append(cell("aw-rv-q", `${reviewData.indexOf(r) + 1}. ${r.question || ""}`, null));
+        rowEl.append(cell("aw-rv-a is-wrong", laCauHaiLuaChon(r) ? "Wrong" : (r.yourText || "Wrong"), icons.cross));
+        list.append(rowEl);
+      });
+      if (boTrong) list.append(el("div", "aw-rv-more", boTrong === 1 ? "+ 1 question not answered" : `+ ${boTrong} questions not answered`));
+      rv.append(list);
+      inner.append(rv);
+      rv.querySelectorAll(".aw-rv-a").forEach(box => {
+        const span = box.querySelector(".aw-rv-fit");
+        fitOnce(box, span, s => span.style.setProperty("--fit", s), { max: 1, min: 0.2, slack: 2, contentBox: true });
+      });
+      return;
+    }
     // ⭐ Đợt 177 — Showdown builds its OWN title, because there it is a control
     // and not a label: "SHOWDOWN A1C • TEAM 3", where the word SHOWDOWN carries
     // tap / double-tap / press-and-hold (this team ↔ the whole class · refresh

@@ -1084,6 +1084,13 @@ const rocketRaceTemplate = {
       answersEl.classList.toggle("is-fightlost", l && (!answered || fightPendingReveal));
     }
     function addBadges(t, k, st) {
+      // ⭐ Đợt 383 — BÀI GIAO (`opt.anDapAn`): em chọn SAI thì chỉ ✗ ô em chọn, mọi ô khác mờ như nhau — ô đúng
+      // không lộ (câu sai còn được HỎI LẠI sau, lộ đáp án là cho không điểm lần sau).
+      if (opt.anDapAn && !(st.chosenTile === k && t.ans.correct)) {
+        if (k === st.chosenTile) t.tile.append(el("span", "aw-tile-badge", icons.markCross));
+        t.tile.classList.add("is-dimmed");
+        return;
+      }
       if (t.ans.correct) t.tile.append(el("span", "aw-tile-badge", icons.markCheck));
       else {
         if (st.answeredWith === t.ans.text && k === st.chosenTile) t.tile.append(el("span", "aw-tile-badge", icons.markCross));
@@ -1141,7 +1148,8 @@ const rocketRaceTemplate = {
       st.attempts++;
       st.answeredWith = "";
       ui.roundDone?.();
-      tiles.forEach(t => { t.tile.disabled = true; if (t.ans.correct) t.tile.append(el("span", "aw-tile-badge", icons.markCheck)); else t.tile.classList.add("is-dimmed"); });
+      // ⭐ Đợt 383 — bài giao: hết giờ thì chỉ khoá + mờ, KHÔNG đánh dấu ô đúng.
+      tiles.forEach(t => { t.tile.disabled = true; if (t.ans.correct && !opt.anDapAn) t.tile.append(el("span", "aw-tile-badge", icons.markCheck)); else t.tile.classList.add("is-dimmed"); });
       showBanner("TIME'S UP", "is-stall", 900);
       onWrong(q, st, null);
     }

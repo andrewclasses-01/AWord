@@ -538,6 +538,10 @@ const ftgTemplate = {
       } else if (st.ok[k]) {
         g.classList.add("is-ok");
         g.textContent = right;
+      } else if (opt.anDapAn) {
+        // ⭐ Đợt 383 — BÀI GIAO: chỗ trống sai hiện CHỮ EM ĐÃ ĐIỀN (đỏ), không bao giờ hiện từ đúng.
+        g.classList.add("is-bad");
+        g.textContent = st.chosen[k] || st.typed?.[k] || "✗";
       } else {
         g.classList.add("is-bad");
         g.textContent = right;
@@ -594,6 +598,11 @@ const ftgTemplate = {
       if (st.settled && !(fightCtl && fightPendingReveal)) {
         const right = answersOf(it, it.gaps[k]);
         tiles.forEach(t => {
+          // ⭐ Đợt 383 — bài giao: không tô ô đúng khi em đã chọn sai; chỉ đánh dấu ô em chọn.
+          if (opt.anDapAn && !st.ok[k]) {
+            t.tile.classList.add(st.chosen[k] === t.text ? "is-wrongpick" : "is-dimmed");
+            return;
+          }
           if (right.some(a => a === t.text)) t.tile.classList.add("is-right");
           else if (st.chosen[k] === t.text && !st.ok[k]) t.tile.classList.add("is-wrongpick");
           else t.tile.classList.add("is-dimmed");
@@ -631,7 +640,8 @@ const ftgTemplate = {
         box.classList.toggle("is-bad", st.done[k] && !st.ok[k] && !hidden);
         box.classList.toggle("is-hidden", !!hidden);
         if (hidden) { txt.textContent = "•••"; mark.innerHTML = ""; }
-        else if (st.done[k] && !st.ok[k]) { txt.textContent = answersOf(it, it.gaps[k])[0]; mark.innerHTML = icons.markCross; }
+        // Đợt 383 — bài giao (`opt.anDapAn`): ô gõ sai giữ CHỮ EM GÕ + ✗, không thay bằng đáp án đúng.
+        else if (st.done[k] && !st.ok[k]) { txt.textContent = opt.anDapAn ? (st.typed[k] || "") : answersOf(it, it.gaps[k])[0]; mark.innerHTML = icons.markCross; }
         else { txt.textContent = st.typed[k]; mark.innerHTML = st.done[k] ? icons.markCheck : ""; }
       });
       kbd && kbd.refresh && kbd.refresh();
@@ -716,6 +726,8 @@ const ftgTemplate = {
         if (mode === "quiz") {
           const right = answersOf(it, it.gaps[k]);
           tiles.forEach(t => {
+            // ⭐ Đợt 383 — bài giao (`opt.anDapAn`): chọn SAI thì chỉ đánh dấu ô em chọn, ô đúng mờ như các ô khác.
+            if (opt.anDapAn && !ok) { t.tile.classList.add(t.tile === fromEl ? "is-wrongpick" : "is-dimmed"); return; }
             if (right.some(a => a === t.text)) t.tile.classList.add("is-right");
             else if (t.tile === fromEl && !ok) t.tile.classList.add("is-wrongpick");
             else t.tile.classList.add("is-dimmed");

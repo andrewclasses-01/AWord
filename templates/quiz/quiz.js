@@ -745,6 +745,13 @@ const quizTemplate = {
     // Small persistent marks after answering + dim every WRONG tile
     // (the correct tile always keeps its color)
     function addBadges(tile, ans, i, st) {
+      // ⭐ Đợt 383 — BÀI GIAO (`opt.anDapAn`, engine gắn khi có session): em chọn SAI thì KHÔNG đánh dấu ô
+      // đúng — chỉ ✗ lên ô em chọn, mọi ô khác mờ như nhau (không ô nào "giữ màu" để lộ đáp án).
+      if (opt.anDapAn && !st.correct) {
+        if (i === st.chosen) tile.append(el("span", "aw-tile-badge", icons.markCross));
+        else tile.classList.add("is-dimmed");
+        return;
+      }
       if (ans.correct) tile.append(el("span", "aw-tile-badge", icons.markCheck));
       else {
         if (i === st.chosen) tile.append(el("span", "aw-tile-badge", icons.markCross));

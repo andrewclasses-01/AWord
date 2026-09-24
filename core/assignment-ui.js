@@ -441,7 +441,11 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe, duoiMau } = {
     const titleHead = el("div", "aw-as-titlehead");
     titleHead.append(el("label", "aw-as-label", "Assignment title"));
     const answersWrap = el("label", "aw-as-check");
-    const cbAnswers = el("input"); cbAnswers.type = "checkbox"; cbAnswers.checked = false;
+    // ⭐ Đợt 383 (thầy chốt 24/09) — MẶC ĐỊNH TÍCH: "Show answers" của bài giao nay là màn MY MISTAKES (chỉ câu
+    // sai + câu em đã trả lời, KHÔNG BAO GIỜ đáp án đúng — core/engine.js showReview), nên bật sẵn cũng được.
+    // App myLesson mở chính form này (`?giao=`) nên hai bên cùng đổi. Nhãn giữ "Show answers" cho thầy quen.
+    const cbAnswers = el("input"); cbAnswers.type = "checkbox"; cbAnswers.checked = true;
+    answersWrap.title = "Students see only their mistakes and what they answered — never the correct answers";
     answersWrap.append(cbAnswers, document.createTextNode("Show answers"));
     titleHead.append(answersWrap);
     titleCell.append(titleHead);
@@ -1442,15 +1446,17 @@ async function loadReport(assignment) {
   const extra = scores
     .filter(s => !seen.has(`${nameKey(s.name)}|${s.createdAt}`))
     .map(s => ({ studentName: s.name, score: s.score, total: s.total, timeMs: s.timeMs,
-                 createdAt: s.createdAt, review: null }));
+                 createdAt: s.createdAt, review: null, doDang: s.doDang }));
 
+  // ⭐ Đợt 383 — lượt DỞ DANG (em bỏ giữa ván, `doDang:true`): ghi "· dở" cạnh tên; "Incorrect" để 0 vì
+  // total − score của lượt dở là số câu CHƯA LÀM, không phải số câu sai.
   return [...results, ...extra].map(r => ({
     id: r.id || null,                       // Đợt 296: results doc id, for the lazy `review` read
-    name: r.studentName || "Player",
+    name: (r.studentName || "Player") + (r.doDang === true ? " · dở" : ""),
     key: nameKey(r.studentName),
     score: r.score || 0,
     total: r.total || 0,
-    incorrect: Math.max(0, (r.total || 0) - (r.score || 0)),
+    incorrect: r.doDang === true ? 0 : Math.max(0, (r.total || 0) - (r.score || 0)),
     timeMs: r.timeMs || 0,
     createdAt: r.createdAt || 0,
     late: !!(assignment.deadline && r.createdAt > assignment.deadline),

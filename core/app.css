@@ -985,6 +985,10 @@ html.aw-nhung .aw-below { display: none; }
 .aw-startbtn.is-practice .aw-startbtn-ic { color: #fd646f; }
 .aw-startbtn.is-practice .aw-startbtn-ic svg { filter: drop-shadow(0 calc(0.6 * var(--aw-u)) calc(1.8 * var(--aw-u)) rgba(252,71,85,.32)); }
 .aw-startbtn-label { font-size: calc(2 * var(--aw-u)); font-weight: 800; letter-spacing: calc(0.25 * var(--aw-u)); }
+/* ⭐ Đợt 383 — GỘP PRACTICE + SUBMIT: một nút START (hình bia phi tiêu). Lượt Start with mistakes thêm
+   dòng MISTAKES ONLY chữ TRẮNG, đứng riêng dưới nút, KHÔNG khung (thầy chốt 25/09, mẫu v7 ④). */
+.aw-ready-one { flex-direction: column; align-items: center; gap: calc(1.2 * var(--aw-u)); }
+.aw-ready-mtag { font-size: calc(1.8 * var(--aw-u)); font-weight: 700; letter-spacing: calc(0.25 * var(--aw-u)); color: #fff; }
 
 /* SUBMIT's end screen: two boards, EQUAL IN EVERY SITUATION — both are
    `flex: 1 1 0` inside a fixed-size pair, so neither can outgrow the other no
@@ -1031,6 +1035,24 @@ html.aw-nhung .aw-below { display: none; }
   background: linear-gradient(180deg, #59d98c, #2fae63); color: #04250f;
   cursor: default; box-shadow: none; transform: none;
 }
+/* ⭐ Đợt 383 (thầy chốt 25/09, mẫu v7 ③B) — nút vàng SUBMIT HOMEWORK nhường chỗ cho dải SUBMITTED:
+   bo tròn HAI ĐẦU, MẢNH, tô xanh đặc — chỉ để báo, không bấm. Hiện khi server đã xác nhận. */
+.aw-hw-pill {
+  align-self: center; display: inline-flex; align-items: center; gap: calc(0.7 * var(--aw-u));
+  margin: calc(0.4 * var(--aw-u)) auto calc(0.8 * var(--aw-u));
+  padding: calc(0.45 * var(--aw-u)) calc(2 * var(--aw-u)) calc(0.45 * var(--aw-u)) calc(1.3 * var(--aw-u));
+  border-radius: 999px; font-size: calc(1.7 * var(--aw-u)); font-weight: 700; letter-spacing: calc(0.3 * var(--aw-u));
+  color: #0d2a17; background: linear-gradient(180deg, #8ae9ad, #45c776);
+  box-shadow: 0 calc(0.3 * var(--aw-u)) calc(1.1 * var(--aw-u)) rgba(34,197,94,.28);
+}
+.aw-hw-pill-ic { width: calc(1.8 * var(--aw-u)); height: calc(1.8 * var(--aw-u)); display: inline-block; }
+.aw-hw-pill-ic svg { width: 100%; height: 100%; display: block; }
+.aw-hw-pill.is-in { animation: aw-gc-pop .45s cubic-bezier(.2,1.3,.4,1) both; }
+/* ⛔ `display` ở trên ĐÈ luật `[hidden]` mặc định của trình duyệt ⇒ dải vẫn hiện khi chưa xác nhận (đo thật 25/09). */
+.aw-hw-pill[hidden] { display: none; }
+/* Start with mistakes đứng đầu menu, chữ vàng (mẫu v7). */
+.aw-panel-item.aw-hw-first { color: #ffd06a; }
+.aw-panel-item.aw-hw-first:hover { color: #ffe08f; }
 
 /* The SUBMITTING overlay and its four faces. z-index 15 > .aw-backdrop's 13.
    The dim+blur fades away while the cluster flies (.is-flying), so the
@@ -1079,6 +1101,29 @@ html.aw-nhung .aw-below { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .aw-hw-sub-title, .aw-hw-sub-brand span { animation: none; }
+}
+/* ⭐⭐ Đợt 383 (thầy chốt 25/09, mẫu v7 ②A) — SUBMITTING · thanh tải XANH LÁ đầy dần · ANDREW CLASSES nhỏ,
+   xám, ĐỨNG YÊN — ba tầng SÁT NHAU thành một khối (bản cũ: chữ brand to, cách xa, nhảy từng chữ).
+   Khối rộng đúng bằng chữ SUBMITTING (inline-grid) nên thanh dài đúng bằng chữ. Thanh chạy tới 90% trong
+   --hw-bar-ms (= HW_SUBMIT_MIN_MS), đứng đó chờ xác nhận; `.is-full` chạy nốt 90% → 100%. */
+.aw-hw-sub-stack { display: inline-grid; gap: calc(1.1 * var(--aw-u)); justify-items: stretch; }
+.aw-hw-sub-stack .aw-hw-sub-title { font-size: calc(4.2 * var(--aw-u)); letter-spacing: calc(0.45 * var(--aw-u)); line-height: 1; }
+.aw-hw-sub-bar { height: calc(0.75 * var(--aw-u)); border-radius: 999px; background: rgba(255,255,255,.12); overflow: hidden; }
+.aw-hw-sub-bar i {
+  display: block; height: 100%; width: 0; border-radius: 999px;
+  background: linear-gradient(90deg, #22c55e, #7be3a0);
+  animation: aw-hw-bar var(--hw-bar-ms, 2000ms) cubic-bezier(.35,.1,.25,1) forwards;
+}
+.aw-hw-sub-bar.is-full i { animation: aw-hw-bar-full .3s ease-out forwards; }
+@keyframes aw-hw-bar { from { width: 0; } to { width: 90%; } }
+@keyframes aw-hw-bar-full { from { width: 90%; } to { width: 100%; } }
+.aw-hw-sub-stack .aw-hw-sub-brand {
+  justify-content: center; font-size: calc(1.5 * var(--aw-u)); font-weight: 700;
+  letter-spacing: calc(0.75 * var(--aw-u)); padding-left: calc(0.75 * var(--aw-u)); color: #9aa0a8;
+}
+@media (prefers-reduced-motion: reduce) {
+  .aw-hw-sub-bar i { animation: none; width: 90%; }
+  .aw-hw-sub-bar.is-full i { width: 100%; }
 }
 
 /* error face (Vietnamese — thầy's exact flow) */
@@ -1227,6 +1272,10 @@ html.aw-nhung .aw-below { display: none; }
 .aw-rv-a.is-correct { background: #2ec27e; }
 .aw-rv-a.is-wrong { background: #3d4852; }
 .aw-rv-a.is-none { background: #eef1f5; color: #9aa5b1; font-weight: 600; }
+/* ⭐ Đợt 383 — MY MISTAKES của bài giao: 2 cột (đề | em trả lời sai), KHÔNG có cột đáp án đúng. */
+.aw-rv-mine .aw-rv-row { grid-template-columns: 6.8fr 2fr; }
+.aw-rv-mcount { font-size: calc(1.7 * var(--aw-u)); font-weight: 800; color: #d64550; letter-spacing: calc(0.08 * var(--aw-u)); }
+.aw-rv-more { font-size: calc(1.6 * var(--aw-u)); font-weight: 600; color: #7b8794; text-align: center; padding-top: calc(0.4 * var(--aw-u)); }
 .aw-rv-fit { --fit: 1; display: inline-flex; align-items: center; gap: calc(0.5 * var(--aw-u)); max-width: 100%; }
 .aw-rv-mark { flex: 0 0 auto; width: calc(calc(2.2 * var(--aw-u)) * var(--fit)); height: calc(calc(2.2 * var(--aw-u)) * var(--fit)); display: inline-flex; }
 .aw-rv-mark svg { width: 100%; height: 100%; }

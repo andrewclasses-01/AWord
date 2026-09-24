@@ -148,7 +148,8 @@ export function bestByPupil(rows, match) {
     const s = match(r);
     if (!s) { unmatched++; return; }
     const cur = best.get(s.key);
-    const cand = { score: Number(r.score) || 0, total: Number(r.total) || 0, timeMs: Number(r.timeMs) || 0, id: r.id, name: s.name, outside: !!s.outside };
+    const cand = { score: Number(r.score) || 0, total: Number(r.total) || 0, timeMs: Number(r.timeMs) || 0, id: r.id, name: s.name, outside: !!s.outside,
+                   doDang: r.doDang === true };   // Đợt 383 — lượt DỞ: mẫu số không chắc, không góp vào mẫu số chung (xem syncAw)
     if (better(cand, cur)) best.set(s.key, cand);
   });
   return { best, unmatched };
@@ -342,7 +343,7 @@ export function mountStatsHome(mount, opts = {}) {
       const { best, unmatched } = bestByPupil(rows, match);
       const values = {};
       const totals = [];
-      best.forEach((b, key) => { values[key] = { k: "n", v: b.score, id: b.id || "", name: b.name, t: b.timeMs }; if (b.total) totals.push(b.total); });
+      best.forEach((b, key) => { values[key] = { k: "n", v: b.score, id: b.id || "", name: b.name, t: b.timeMs }; if (b.total && !b.doDang) totals.push(b.total); });
       const total = totals.length ? mode_(totals) : (old ? old.total : 0);
       const test = {
         id, kind: "aw", code: a.code, date, fullTitle: a.title, title: shortTitle(a.title),
