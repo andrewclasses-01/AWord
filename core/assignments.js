@@ -635,7 +635,9 @@ export async function sendSpecialAttempt({ code, studentName, score, total, time
 // duy nhất gửi kịp lúc đóng tab, và mất một nhịp cũng chỉ lệch ≤ 1 phút.
 // ⛔ Khoá của tài liệu CỐ ĐỊNH BỞI LUẬT (name, mode, again, mistakes, score, total, timeMs,
 // done, attemptId, createdAt, updatedAt) — thêm trường là mọi lượt ghi bị 403.
-const LOG_FIELDS = ["name", "mode", "again", "mistakes", "score", "total", "timeMs", "done", "attemptId", "createdAt", "updatedAt", "ma"];
+// ⭐ Đợt 380 — thêm `activeMs` (thời gian HOẠT ĐỘNG thật, play.js `taoDoHoatDong`). Luật đã đăng TRƯỚC (myLesson
+// app `tools/dang-luat-active-ms.js`, ruleset d1bad78e…); gói không có `activeMs` vẫn hợp lệ.
+const LOG_FIELDS = ["name", "mode", "again", "mistakes", "score", "total", "timeMs", "done", "attemptId", "createdAt", "updatedAt", "ma", "activeMs"];
 export function newPlayLogId() {
   return `pl${now()}x${Array.from(crypto.getRandomValues(new Uint8Array(4)),
     b => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("")}`;
@@ -648,7 +650,7 @@ function restUrlPlayLog(code, id) {
     `${encodeURIComponent(String(code))}/entries/${encodeURIComponent(id)}?key=${encodeURIComponent(key)}&${mask}`;
 }
 // Ghi (tạo/đè) một lượt. Trả Promise<boolean>, KHÔNG BAO GIỜ reject. `keepalive` cho pagehide.
-export function beatPlayLog({ code, id, name, ma, mode, again, mistakes, score, total, timeMs, done, attemptId, createdAt },
+export function beatPlayLog({ code, id, name, ma, mode, again, mistakes, score, total, timeMs, done, attemptId, createdAt, activeMs },
                             { keepalive = false } = {}) {
   const url = restUrlPlayLog(code, id);
   if (!url) return Promise.resolve(false);
@@ -668,6 +670,8 @@ export function beatPlayLog({ code, id, name, ma, mode, again, mistakes, score, 
     createdAt: { integerValue: String(Math.round(createdAt) || 0) },
     updatedAt: { integerValue: String(now()) }
   };
+  // Không đo (lối gọi cũ) ⇒ bỏ trường; mask vẫn có tên nên kho cũng không giữ số cũ nào. Trần = timeMs (≤ 12 giờ, luật).
+  if (Number.isFinite(activeMs)) fields.activeMs = { integerValue: String(Math.min(43200000, Math.max(0, Math.round(activeMs)))) };
   try {
     return fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ fields }), keepalive })

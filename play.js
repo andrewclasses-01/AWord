@@ -30,6 +30,64 @@ import { ensureTemplate } from "./core/registry.js";
 const app = document.getElementById("app");
 const REMEMBER_KEY = "aword-student-name";
 
+// ⭐⭐ Đợt 380 (thầy chốt 24/09/2026, dashboard myLesson web đợt 44) — THỜI GIAN HOẠT ĐỘNG.
+// `timeMs` của practiceLog là ĐỒNG HỒ TƯỜNG từ lúc vào ván: em mở act rồi để treo tab, chuyển
+// tab khác, tắt màn hình… vẫn cộng — thầy thấy lượt bỏ dở 0 điểm mà 4 giờ 49 phút. Nay đo THÊM
+// `activeMs`: mỗi giây chỉ cộng khi (1) tab đang HIỆN và (2) em vừa chạm/gõ/cuộn trong
+// HD_CHO_MS (dạng ĐỌC — bài đọc dài — HD_CHO_DOC_MS vì em cần đọc) HOẶC một âm thanh KHÔNG LẶP
+// đang phát (giọng đọc, băng nghe; nhạc nền `loop` không tính). Treo quá HD_TREO_MS thì nhịp 1
+// phút KHÔNG ghi nữa (đỡ lượt ghi) — em quay lại là nhịp kế ghi tiếp. `timeMs` giữ nguyên nghĩa
+// cũ (dashboard dùng làm "mở tab bao lâu"). ⛔ Chỉ ở trang học sinh — KHÔNG đụng core/.
+const HD_CHO_MS = 60000, HD_CHO_DOC_MS = 180000, HD_TREO_MS = 600000;
+const HD_SU_KIEN = ["pointerdown", "touchstart", "keydown", "wheel", "input"];
+// Âm thanh đang phát: bắt mọi `play()` (kể cả `new Audio()` không nằm trong DOM), bỏ ra khi dừng.
+const AM_DANG_PHAT = new Set();
+(() => {
+  const goc = HTMLMediaElement.prototype.play;
+  const bo = (e) => AM_DANG_PHAT.delete(e.currentTarget);
+  HTMLMediaElement.prototype.play = function (...a) {
+    if (!AM_DANG_PHAT.has(this)) {
+      AM_DANG_PHAT.add(this);
+      this.addEventListener("pause", bo, { once: true });
+      this.addEventListener("ended", bo, { once: true });
+    }
+    return goc.apply(this, a);
+  };
+})();
+function coAmDangPhat() {
+  for (const a of AM_DANG_PHAT) if (!a.paused && !a.ended && !a.loop && !a.muted && a.volume > 0) return true;
+  return false;
+}
+// Dạng ĐỌC: tên bài giao myLesson đuôi /TF · /FILLING · /RD… , hoặc act có một đoạn chữ dài (bài đọc).
+function laDangDoc(assignment, activity) {
+  if (/\/(TF|FILLING|RD[A-Z]*)\b/i.test(String(assignment.title || ""))) return true;
+  let dai = false;
+  try { JSON.stringify(activity, (k, v) => { if (typeof v === "string" && v.length > 300 && !/^data:/.test(v)) dai = true; return v; }); } catch (e) {}
+  return dai;
+}
+function taoDoHoatDong(choMs) {
+  let activeMs = 0, lanCham = Date.now(), lucTick = Date.now(), timer = null;
+  const cham = () => { lanCham = Date.now(); };
+  const tick = () => {
+    if (!timer) return;   // đã dừng: số chốt, không cộng thêm
+    const t = Date.now(), d = t - lucTick; lucTick = t;
+    if (document.visibilityState !== "visible") return;
+    // trần 2 s/nhịp: tab vừa hiện lại / máy vừa thức dậy thì khoảng ngủ không lọt vào
+    if (t - lanCham <= choMs || coAmDangPhat()) activeMs += Math.min(Math.max(d, 0), 2000);
+  };
+  HD_SU_KIEN.forEach(e => document.addEventListener(e, cham, { capture: true, passive: true }));
+  timer = setInterval(tick, 1000);
+  return {
+    doc() { tick(); return Math.round(activeMs); },
+    treo() { return Date.now() - lanCham > HD_TREO_MS && !coAmDangPhat(); },
+    dung() {
+      if (!timer) return;
+      tick(); clearInterval(timer); timer = null;
+      HD_SU_KIEN.forEach(e => document.removeEventListener(e, cham, { capture: true }));
+    }
+  };
+}
+
 start();
 
 async function start() {
@@ -198,10 +256,14 @@ async function play(assignment, studentName, className, studentMa) {
   let attempt = null;
   // Đợt 366 — lượt chơi ĐANG ghi nhật ký (null = chưa vào ván / đã rời ván).
   let playLog = null;
+  // ⭐ Đợt 380 — bộ đo THỜI GIAN HOẠT ĐỘNG của lượt đang chơi (xem `taoDoHoatDong` đầu file).
+  let hoatDong = null;
+  const choMs = laDangDoc(assignment, activity) ? HD_CHO_DOC_MS : HD_CHO_MS;
   // ⛔ Đóng tab/đổi trang: engine KHÔNG kịp gọi leave(), nên tự tính "đã chơi bao lâu" theo
   // đồng hồ tường từ mốc `batDau` (đo thật 22/09: gửi lại gói cũ thì thiếu cả phút cuối).
   window.addEventListener("pagehide", () => {
     if (!playLog || playLog.done) return;
+    if (hoatDong) playLog.activeMs = hoatDong.doc();
     playLog.timeMs = Math.max(playLog.timeMs, Date.now() - playLog.batDau);
     beatPlayLog(playLog, { keepalive: true });
   });
@@ -266,22 +328,31 @@ async function play(assignment, studentName, className, studentMa) {
         start: ({ mode, again, mistakes }) => {
           playLog = { code: assignment.code, id: newPlayLogId(), name: studentName, ma, mode,
                       again: !!again, mistakes: !!mistakes, score: 0, total: 0, timeMs: 0,
-                      done: false, attemptId: "", createdAt: Date.now(), batDau: Date.now() };
+                      done: false, attemptId: "", createdAt: Date.now(), batDau: Date.now(), activeMs: 0 };
+          if (hoatDong) hoatDong.dung();
+          hoatDong = taoDoHoatDong(choMs);
           beatPlayLog(playLog);
         },
         beat: ({ timeMs }) => {
           if (!playLog || playLog.done) return;
-          playLog.timeMs = timeMs; beatPlayLog(playLog);
+          playLog.timeMs = timeMs;
+          if (hoatDong) {
+            playLog.activeMs = hoatDong.doc();
+            if (hoatDong.treo()) return;   // Đợt 380 — treo > 10 phút: khỏi ghi, số đã có trên kho không đổi
+          }
+          beatPlayLog(playLog);
         },
         end: ({ score, total, timeMs }) => {
           if (!playLog) return;
           playLog.score = score; playLog.total = total; playLog.timeMs = timeMs; playLog.done = true;
+          if (hoatDong) { playLog.activeMs = hoatDong.doc(); hoatDong.dung(); hoatDong = null; }
           playLog.attemptId = (playLog.mode === "submit" && attempt) ? attempt.attemptId : "";
           beatPlayLog(playLog);
         },
         leave: ({ timeMs, score }) => {
           if (!playLog || playLog.done) return;
           playLog.timeMs = Math.max(playLog.timeMs, timeMs | 0);
+          if (hoatDong) { playLog.activeMs = hoatDong.doc(); hoatDong.dung(); hoatDong = null; }
           // ⭐ Đợt 379 — START AGAIN giữa ván: engine gửi kèm "điểm tới lúc dừng" (total để 0 = lượt dở; dashboard lấy
           // mẫu số là số câu của act). Các lối rời ván khác không gửi `score` ⇒ giữ 0 như cũ.
           if (score != null) playLog.score = Math.max(0, Math.round(score) | 0);

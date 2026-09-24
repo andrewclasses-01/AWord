@@ -531,6 +531,24 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 380 (24/9/2026, THỜI GIAN HOẠT ĐỘNG `activeMs` trong practiceLog — cho myLesson web v1.144.0) · ✅ THẦY "ok build" → COMMIT + PUSH · ⬜ CHƯA BẤM TAY
+
+Thầy (dashboard myLesson, tab THỜI LƯỢNG): lượt bỏ dở / không điểm mà hàng giờ — em mở act rồi treo tab, chạy ẩn. Gốc: `timeMs` của
+practiceLog = `performance.now() - startedAt` = ĐỒNG HỒ TƯỜNG, nhịp 60 s ghi mãi khi tab còn mở. Thầy chốt: đếm khi tab HIỆN + chạm/gõ
+trong 60 s (dạng đọc 3 phút) hoặc đang phát âm; treo > 10 phút ngừng ghi.
+- `play.js` (CHỈ trang học sinh, KHÔNG đụng `core/engine.js`): `taoDoHoatDong(choMs)` — listener capture cấp document
+  (pointerdown/touchstart/keydown/wheel/input) + `setInterval` 1 s: cộng `min(d, 2 s)` khi `visibilityState==='visible'` và
+  (≤ choMs từ lần chạm cuối HOẶC `coAmDangPhat()`). `coAmDangPhat` soi tập `AM_DANG_PHAT` — `HTMLMediaElement.prototype.play` được bọc để
+  ghi mọi phần tử đã phát (kể cả `new Audio()` ngoài DOM), bỏ ra ở `pause`/`ended`; phần tử `loop` (nhạc nền Gameshow), `muted`,
+  `volume 0` không tính. `laDangDoc()`: tên bài giao đuôi `/TF` `/FILLING` `/RD…` hoặc act có chuỗi > 300 ký tự (không tính data:) ⇒ 180 s.
+  Nối vào playLog: start tạo bộ đo · beat ghi `activeMs`, `treo()` > 10 phút ⇒ BỎ lần ghi · end/leave chốt + `dung()` · pagehide ghi số.
+- `core/assignments.js` `beatPlayLog`: `LOG_FIELDS` + `activeMs` (mask), gửi khi `Number.isFinite`, trần 43 200 000.
+- **Luật** đăng TRƯỚC (kho myLesson `tools/dang-luat-active-ms.js`, ruleset `d1bad78e…`, lùi `9b03d9ed…`, --kiem 7/7): trường ĐƯỢC THIẾU
+  ⇒ bản cũ trong cache máy em vẫn ghi được.
+- Đo thật: devserver 5591, play.html thật tên `ZTEST THU` PRACTICE, act BT2 TYPE THE ANSWER, gõ 1 câu ở giây 9,6 rồi để yên: sau 3 phút `timeMs 180 015 · activeMs 69 001` (= 9,6 + 60 s chờ); giả tab ẨN (ghi đè `document.visibilityState`) rồi vẫn chạm: nhịp kế `timeMs 240 001 · activeMs 75 002` (chỉ +6 s lúc còn hiện); đổi trang (pagehide) ⇒ `timeMs 297 779 · activeMs 75 002`. Luật nhận mọi lần ghi (không 403). Lượt thử đã xoá.
+
+**⬜ VIỆC ĐANG CHỜ:** thầy chờ vài ngày rồi xem dashboard myLesson (lượt mới có `activeMs`); ngưỡng 60/180 s chỉnh ở đầu `play.js`.
+
 ## Đợt 379 (24/9/2026, ĐIỂM CỦA LƯỢT BỎ DỞ khi em bấm START AGAIN giữa ván — cho myLesson web v1.141.0) · ✅ THẦY "ok build" → COMMIT + PUSH · ⬜ CHƯA BẤM TAY
 
 Thầy (thiết kế pop-up chi tiết em ở dashboard myLesson, mẫu v19→v24): lượt BỎ DỞ trên đồ thị tiến triển phải có ĐIỂM; chỉ tính khi em
