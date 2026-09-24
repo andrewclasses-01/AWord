@@ -2929,6 +2929,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // ⭐ Đợt 366 — nhật ký lượt chơi (practiceLog): nhịp 1 phút + cờ "đã ghi end".
   const PLAYLOG_BEAT_MS = 60000;
   let playLogTimer = null, playLogDone = false;
+  let playLogDiemBoDo = null;   // Đợt 379 — điểm tới lúc dừng khi START AGAIN giữa ván (xem `diemBoDo()`); khai SỚM tránh TDZ
 
   // ⚠️ `sdLobbyOn` + `sdMod` nay khai Ở TRÊN, cạnh `sdCanPublish` — xem ghi chú ở đó.
   // Ba lần là đủ để biết "kéo chuẩn về" không hội tụ. Mỗi lần là một cú dựng lại ván,
@@ -3353,6 +3354,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   //      means "no charge" — the safe direction to fail in.
   let timeCostTotal = 0;        // points the idle clock has taken so far, this play
   let scoreProvider = null;     // template's own scoreNow(), via ui.setScoreProvider
+  // ⭐ Đợt 379 — số đang HIỆN trên chip điểm (ui.setScore). Dùng khi template KHÔNG khai `setScoreProvider`
+  // (Gameshow, Rocket race) để biết "điểm tới lúc này" của lượt bị bỏ dở — xem `diemBoDo()`.
+  let lastShownScore = null;
   let scorePainter = null;      // template's own score-chip writer, via ui.setScorePainter (Đợt 143)
   let idleGuard = null;         // template's "the student cannot act right now", via ui.setIdleGuard
   // ⭐⭐⭐ Đợt 266 — "CLIP ĐANG ĐỌC" TÁCH RA KHỎI `idleGuard`, và đây là CẢ LÝ DO.
@@ -5526,7 +5530,17 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     const target = activity._mistakes ? activity._mistakesBase : libAct;
     startGame(root, target, { onExit, session, base: originAct, hwPreset: mode });
   }
+  // ⭐⭐ Đợt 379 (thầy chốt 24/09/2026, cùng web myLesson v1.141.0) — ĐIỂM CỦA LƯỢT BỎ DỞ. Em bấm START AGAIN giữa ván ⇒
+  // nhịp cuối của nhật ký lượt chơi (`practiceLog`, xem play.js) mang theo "điểm tới lúc dừng" để dashboard vẽ lượt đó
+  // lên đồ thị tiến triển. CHỈ lối START AGAIN (thầy: Home / đổi game / đóng tab thì chỉ tính giờ như cũ), KHÔNG tính
+  // ván START WITH MISTAKES (mẫu số chỉ là số câu sai cũ). KHÔNG thêm lượt ghi nào: điểm đi chung lần ghi `leave` vốn có.
+  // Điểm = `scoreNow()` của template (15 game khai `setScoreProvider`) hoặc số đang hiện trên chip (Gameshow, Rocket race).
+  function diemBoDo() {
+    try { const v = scoreProvider ? scoreProvider() : lastShownScore; return (v == null || !isFinite(Number(v))) ? null : Math.max(0, Math.round(Number(v))); }
+    catch (e) { return null; }
+  }
   function restart() {
+    if (session && session.playLog && playStarted && !playLogDone && !fight && !activity._mistakes) playLogDiemBoDo = diemBoDo();
     if (!fight || fight.side === 0) tpl.sounds?.restart?.();   // optional per-template restart sound, layered on the menu/button's own click (one board's copy is enough — see the Play chime above)
     // FIGHT MODE: "Start again" belongs to the MATCH, not to one board. Left to
     // itself this re-entered startGame() with no `fight` option, so the board
@@ -5630,7 +5644,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     if (playLogTimer) { clearInterval(playLogTimer); playLogTimer = null; }
     if (session && session.playLog && playStarted && !playLogDone) {
       playLogDone = true;
-      try { session.playLog.leave({ timeMs: Math.round(performance.now() - startedAt) }); } catch (e) {}
+      try { session.playLog.leave({ timeMs: Math.round(performance.now() - startedAt), score: playLogDiemBoDo }); } catch (e) {}
     }
     stopWatchVanRoiTrang();        // ⭐ Đợt 295 — ván tự dọn rồi thì gỡ luôn lưới an toàn
     stopShowdownReview();          // ⭐ Đợt 196 — never leave the live listener behind
@@ -5914,6 +5928,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // 11/8/2026 — previously the chip dropped the sign and relied on
       // colour alone; now a wrong-heavy round reads "-3" in red, not "3").
       const v = Number(n) || 0;
+      lastShownScore = v;   // Đợt 379 — xem `diemBoDo()`
       scoreEl.innerHTML = `${icons.check} ${v}`;
       scoreEl.classList.toggle("is-pos", v > 0);
       scoreEl.classList.toggle("is-neg", v < 0);

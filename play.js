@@ -279,9 +279,12 @@ async function play(assignment, studentName, className, studentMa) {
           playLog.attemptId = (playLog.mode === "submit" && attempt) ? attempt.attemptId : "";
           beatPlayLog(playLog);
         },
-        leave: ({ timeMs }) => {
+        leave: ({ timeMs, score }) => {
           if (!playLog || playLog.done) return;
           playLog.timeMs = Math.max(playLog.timeMs, timeMs | 0);
+          // ⭐ Đợt 379 — START AGAIN giữa ván: engine gửi kèm "điểm tới lúc dừng" (total để 0 = lượt dở; dashboard lấy
+          // mẫu số là số câu của act). Các lối rời ván khác không gửi `score` ⇒ giữ 0 như cũ.
+          if (score != null) playLog.score = Math.max(0, Math.round(score) | 0);
           beatPlayLog(playLog, { keepalive: true });
           playLog = null;
         }

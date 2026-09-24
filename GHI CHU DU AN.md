@@ -531,6 +531,26 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 379 (24/9/2026, ĐIỂM CỦA LƯỢT BỎ DỞ khi em bấm START AGAIN giữa ván — cho myLesson web v1.141.0) · ✅ THẦY "ok build" → COMMIT + PUSH · ⬜ CHƯA BẤM TAY
+
+Thầy (thiết kế pop-up chi tiết em ở dashboard myLesson, mẫu v19→v24): lượt BỎ DỞ trên đồ thị tiến triển phải có ĐIỂM; chỉ tính khi em
+bấm **START AGAIN** giữa ván, **KHÔNG** tính ván **START WITH MISTAKES** (mẫu số chỉ là số câu sai cũ), vẫn cộng giờ; và **không tốn thêm
+lượt đọc/ghi Firestore**.
+- `core/engine.js`: `restart()` (nút Start again trong menu ☰ / bảng tạm dừng) chốt `playLogDiemBoDo = diemBoDo()` TRƯỚC `cleanupAll()`
+  — chỉ khi đang có nhật ký lượt (`session.playLog`), ván đã chạy, chưa ghi `end`, KHÔNG Fight, KHÔNG `activity._mistakes`.
+  `diemBoDo()` = `scoreProvider()` của template (15 game khai `setScoreProvider`) hoặc `lastShownScore` = số đang hiện trên chip
+  (`ui.setScore` nay nhớ lại — Gameshow, Rocket race). `cleanupAll()` gửi kèm `score` vào `playLog.leave(...)`.
+  `playLogDiemBoDo` khai cạnh `playLogTimer` (sớm, tránh bẫy TDZ Đợt 261).
+- `play.js` `leave({ timeMs, score })`: có `score` ⇒ `playLog.score = max(0, round(score))`; `total` GIỮ 0 (= lượt dở; dashboard lấy
+  mẫu số là số câu của act `CHUAN[ma].soCau`). Không lối nào khác gửi `score` ⇒ đóng tab / đổi trang vẫn chỉ ghi giờ như cũ.
+- **Không đổi luật Firestore** (trường `score` vốn có), **không thêm lượt ghi** (điểm đi chung lần ghi `leave` vốn có).
+Đo dev (bàn thử `web-wt-379`, cổng 5579, chặn MỌI lượt ghi Firestore bằng `fetch` giả — không đụng kho thật): act Quiz K9 `dm5sjy`,
+PRACTICE, trả lời đúng 1 câu (chip 1) → ☰ ▸ Start again ⇒ lần ghi cuối `score 1 · total 0 · done false · 18 s`. Chơi lại, đúng 1 câu,
+giả `pagehide` (đóng tab) ⇒ `score 0` (chỉ giờ) — đúng ý thầy. Menu ☰ của học sinh chỉ có Submit answers / Start again / Resume.
+
+**⬜ VIỆC ĐANG CHỜ:** thầy `Ctrl+Shift+R` → vào một act bằng link học sinh, làm vài câu, ☰ ▸ Start again → mở dashboard myLesson
+(🔐) ▸ hộp quản lý ▸ THỜI LƯỢNG ▸ đúp tên em ▸ CHI TIẾT: lượt đó hiện chấm VIỀN ĐỨT có điểm.
+
 ## Đợt 378 (23/9/2026, ROCKET RACE ▸ FIGHT: Different KHOÁ Time delay + Miss wait KỂ CẢ KHI KHÔNG BẬT iPad) · ✅ THẦY "ok đổi" → COMMIT + PUSH · ⬜ CHƯA BẤM TAY
 
 Thầy báo: *"hôm qua đã build chọn Different thì khoá Time Delay và Miss wait để 2 bên chạy độc lập rồi mà hôm nay lại không còn nữa"*.
