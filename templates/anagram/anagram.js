@@ -786,6 +786,8 @@ const anagramTemplate = {
     //                    all — `busy` alone does not cover that stretch)
     //  • a clip still sounding — you cannot spell a word you are still hearing
     ui.setScoreProvider?.(scoreNow);
+    // ⭐ Đợt 384 — bài làm TỚI LÚC NÀY cho lượt dở (dashboard myLesson xem từng câu); bọc hàm ⇒ lỗi chỉ rơi vào try của engine.
+    ui.setReviewProvider?.(() => buildReview());
     // ⭐⭐⭐ Đợt 266 — vế "clip còn đang đọc" ĐI RIÊNG qua ui.setVoiceGuard, không
     // nằm trong idleGuard nữa: trong Fight chỉ bàn 0 có <audio> thật (core/fight.js
     // `ctl.speaks`), nên để nguyên chỗ cũ là bàn PHẢI bị Time cost trừ suốt quãng cả

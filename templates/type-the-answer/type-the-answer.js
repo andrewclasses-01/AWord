@@ -581,6 +581,8 @@ const ttaTemplate = {
     // "7 / 20" chip straight into .aw-top-score, so the engine's count-down
     // would otherwise overwrite that whole chip with a bare number.
     ui.setScoreProvider?.(scoreNow);
+    // ⭐ Đợt 384 — bài làm TỚI LÚC NÀY cho lượt dở (dashboard myLesson xem từng câu); bọc hàm ⇒ lỗi chỉ rơi vào try của engine.
+    ui.setReviewProvider?.(() => buildReview());
     ui.setScorePainter?.(v => showScore(v));
     // ⭐⭐⭐ Đợt 266 — vế "clip còn đang đọc" ĐI RIÊNG qua ui.setVoiceGuard, không
     // nằm trong idleGuard nữa: trong Fight chỉ bàn 0 có <audio> thật (core/fight.js

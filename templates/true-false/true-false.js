@@ -316,6 +316,8 @@ const tfTemplate = {
     // source of truth for "can this be answered", and a parallel flag is exactly
     // the kind of thing that drifts out of step with them later.
     ui.setScoreProvider?.(liveScore);
+    // ⭐ Đợt 384 — bài làm TỚI LÚC NÀY cho lượt dở (dashboard myLesson xem từng câu); bọc hàm ⇒ lỗi chỉ rơi vào try của engine.
+    ui.setReviewProvider?.(() => buildReview());
     // ⭐⭐⭐ Đợt 265 — the per-round count down now has somebody to call. See roundTimeUp().
     ui.setRoundTimeout?.(roundTimeUp);
     // ⭐⭐⭐ Đợt 266 — vế "clip còn đang đọc" ĐI RIÊNG qua ui.setVoiceGuard, không

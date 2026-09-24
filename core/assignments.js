@@ -563,8 +563,8 @@ export function queueAttemptKeepalive(args) {
   };
   const k = `&key=${encodeURIComponent(key)}`, id = encodeURIComponent(entry.attemptId);
   gui(`${goc}/assignments/${encodeURIComponent(entry.code)}/scores?documentId=${id}${k}`, { name: S(entry.name), ...chung });
-  // review of a dở round is always empty (the template never reached its own finish) — see play.js `leave`.
-  gui(`${goc}/results?documentId=${id}${k}`, { assignmentId: S(entry.code), studentName: S(entry.name), review: { arrayValue: {} }, ...chung });
+  // ⭐ Đợt 384 — lượt dở nay mang BÀI LÀM TỚI LÚC DỪNG (engine `setReviewProvider`), gọn + kẹp 24 KB cho vừa keepalive.
+  gui(`${goc}/results?documentId=${id}${k}`, { assignmentId: S(entry.code), studentName: S(entry.name), review: fsGiaTri(gonReview(entry.review, 24000)), ...chung });
   return entry;
 }
 
@@ -743,17 +743,52 @@ export function newPlayLogId() {
   return `pl${now()}x${Array.from(crypto.getRandomValues(new Uint8Array(4)),
     b => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("")}`;
 }
-function restUrlPlayLog(code, id) {
+// ⭐ Đợt 384 — `coReview`: CHỈ lần ghi mang bài làm mới thêm `review` vào updateMask. Nhịp 1 phút (không mang review)
+// để mask như cũ ⇒ KHÔNG xoá mất bài làm đã ghi; luật practiceLog nhận `review` từ ruleset 25/09 (myLesson web v1.148.0).
+function restUrlPlayLog(code, id, coReview) {
   const pid = firebaseConfig && firebaseConfig.projectId, key = firebaseConfig && firebaseConfig.apiKey;
   if (!pid || !key || !code || !id) return "";
-  const mask = LOG_FIELDS.map(f => "updateMask.fieldPaths=" + f).join("&");
+  const mask = LOG_FIELDS.concat(coReview ? ["review"] : []).map(f => "updateMask.fieldPaths=" + f).join("&");
   return `https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents/practiceLog/` +
     `${encodeURIComponent(String(code))}/entries/${encodeURIComponent(id)}?key=${encodeURIComponent(key)}&${mask}`;
 }
 // Ghi (tạo/đè) một lượt. Trả Promise<boolean>, KHÔNG BAO GIỜ reject. `keepalive` cho pagehide.
-export function beatPlayLog({ code, id, name, ma, mode, again, mistakes, score, total, timeMs, done, attemptId, createdAt, activeMs },
+// ⭐⭐ Đợt 384 (thầy chốt 25/09) — BÀI LÀM TỪNG CÂU cho lượt KHÔNG nộp (Start with mistakes · bỏ dở 0 điểm): dashboard
+// myLesson đúp một dòng lượt ⇒ xem em làm từng câu thế nào. Lượt đã NỘP thì bài làm nằm ở results/{attemptId} (không ghi đôi).
+// Gọn trước khi gửi (`gonReview`): bỏ `src` (nặng), cắt chữ dài; lúc keepalive (pagehide) kẹp nhỏ hơn vì trình duyệt chỉ cho
+// ~64 KB cho mọi gói keepalive đang chờ.
+export function gonReview(review, tranBytes = 200000) {
+  if (!Array.isArray(review) || !review.length) return [];
+  const cat = (v, n) => v == null ? null : String(v).slice(0, n);
+  const mot = (r, du) => {
+    const o = { question: cat(r && r.question, 300) || "", answered: !!(r && r.answered), yourText: cat(r && r.yourText, 200),
+                yourCorrect: !!(r && r.yourCorrect), correctText: cat(r && r.correctText, 200) || "" };
+    if (r && Number.isFinite(r.roundMs)) o.roundMs = Math.max(0, Math.round(r.roundMs));
+    const src = r && r.src;
+    if (du && src && Array.isArray(src.answers)) {
+      const opts = src.answers.map(a => a && typeof a.text === "string" ? a.text.slice(0, 120) : null).filter(Boolean).slice(0, 8);
+      if (opts.length > 1) o.opts = opts;
+    }
+    if (du && src && typeof src.image === "string" && /^https?:/.test(src.image) && src.image.length <= 400) o.img = src.image;
+    return o;
+  };
+  let ra = review.slice(0, 300).map(r => mot(r, true));
+  if (JSON.stringify(ra).length > tranBytes) ra = review.slice(0, 300).map(r => mot(r, false));
+  return JSON.stringify(ra).length > tranBytes ? [] : ra;
+}
+// Giá trị JS thuần ⇒ dạng Value của Firestore REST.
+function fsGiaTri(v) {
+  if (v == null) return { nullValue: null };
+  if (typeof v === "boolean") return { booleanValue: v };
+  if (typeof v === "number") return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+  if (Array.isArray(v)) return { arrayValue: v.length ? { values: v.map(fsGiaTri) } : {} };
+  if (typeof v === "object") { const f = {}; Object.keys(v).forEach(k => { f[k] = fsGiaTri(v[k]); }); return { mapValue: { fields: f } }; }
+  return { stringValue: String(v) };
+}
+export function beatPlayLog({ code, id, name, ma, mode, again, mistakes, score, total, timeMs, done, attemptId, createdAt, activeMs, review },
                             { keepalive = false } = {}) {
-  const url = restUrlPlayLog(code, id);
+  const baiLam = Array.isArray(review) && review.length ? gonReview(review, keepalive ? 24000 : 200000) : [];   // Đợt 384
+  const url = restUrlPlayLog(code, id, baiLam.length > 0);
   if (!url) return Promise.resolve(false);
   const nm = String(name || "Player").trim().replace(/\s+/g, " ").slice(0, 40) || "Player";
   const fields = {
@@ -775,6 +810,7 @@ export function beatPlayLog({ code, id, name, ma, mode, again, mistakes, score, 
   };
   // Không đo (lối gọi cũ) ⇒ bỏ trường; mask vẫn có tên nên kho cũng không giữ số cũ nào. Trần = timeMs (≤ 12 giờ, luật).
   if (Number.isFinite(activeMs)) fields.activeMs = { integerValue: String(Math.min(43200000, Math.max(0, Math.round(activeMs)))) };
+  if (baiLam.length) fields.review = fsGiaTri(baiLam);   // Đợt 384 — mask có "review" chỉ khi có trường này
   try {
     return fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ fields }), keepalive })

@@ -387,6 +387,8 @@ const ftmTemplate = {
     // "can this be answered", and a parallel flag is the kind of thing that
     // drifts out of step with them later.
     ui.setScoreProvider?.(scoreNow);
+    // ⭐ Đợt 384 — bài làm TỚI LÚC NÀY cho lượt dở (dashboard myLesson xem từng câu); bọc hàm ⇒ lỗi chỉ rơi vào try của engine.
+    ui.setReviewProvider?.(() => buildReview());
     // ⭐⭐⭐ Đợt 266 — vế "clip còn đang đọc" ĐI RIÊNG qua ui.setVoiceGuard, không
     // nằm trong idleGuard nữa: trong Fight chỉ bàn 0 có <audio> thật (core/fight.js
     // `ctl.speaks`), nên để nguyên chỗ cũ là bàn PHẢI bị Time cost trừ suốt quãng cả

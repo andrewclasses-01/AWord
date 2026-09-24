@@ -466,6 +466,8 @@ const ftgTemplate = {
     ui.onSubmit(() => finish("complete"), () => state.filter(s => s.done.some(Boolean)).length);
     window.addEventListener("keydown", onKey);
     ui.setScoreProvider?.(scoreNow);
+    // ⭐ Đợt 384 — bài làm TỚI LÚC NÀY cho lượt dở (dashboard myLesson xem từng câu); bọc hàm ⇒ lỗi chỉ rơi vào try của engine.
+    ui.setReviewProvider?.(() => buildReview());
     ui.setVoiceGuard?.(() => !!(player && player.isPlaying()));
     ui.setIdleGuard?.(() => animating || ending || finished || fightLocked() || state[index].settled);
     ui.setRoundTimeout?.(roundTimeUp);

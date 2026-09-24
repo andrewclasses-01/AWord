@@ -2855,7 +2855,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // đóng tab (pagehide không chờ engine được) và để ghi nháp mỗi phút. `total` = số câu của lượt
       // chơi — chỉ để hiện; myLesson KHÔNG lấy mẫu số của lượt dở (`doDang`).
       const diemNay = () => ({ score: diemBoDo(), total: playItemCount(), timeMs: Math.round(performance.now() - startedAt) });
-      try { session.playLog.start({ mode: hwMode, again: !!hwPreset, mistakes: !!activity._mistakes, diemNay }); } catch (e) {}
+      // ⭐ Đợt 384 — `baiLamNay`: pagehide hỏi bài làm tới lúc này (engine không kịp leave()).
+      try { session.playLog.start({ mode: hwMode, again: !!hwPreset, mistakes: !!activity._mistakes, diemNay, baiLamNay: () => (fight ? null : baiLamNay()) }); } catch (e) {}
       playLogTimer = setInterval(() => {
         if (torndown || playLogDone) return;
         try { session.playLog.beat({ timeMs: Math.round(performance.now() - startedAt) }); } catch (e) {}
@@ -2934,6 +2935,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   const PLAYLOG_BEAT_MS = 60000;
   let playLogTimer = null, playLogDone = false;
   let playLogDiemBoDo = null;   // Đợt 379 — điểm tới lúc dừng khi START AGAIN giữa ván (xem `diemBoDo()`); khai SỚM tránh TDZ
+  let playLogBaiLamBoDo = null; // Đợt 384 — bài làm tới lúc dừng, chụp CÙNG lúc với điểm ở restart()
 
   // ⚠️ `sdLobbyOn` + `sdMod` nay khai Ở TRÊN, cạnh `sdCanPublish` — xem ghi chú ở đó.
   // Ba lần là đủ để biết "kéo chuẩn về" không hội tụ. Mỗi lần là một cú dựng lại ván,
@@ -3358,6 +3360,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   //      means "no charge" — the safe direction to fail in.
   let timeCostTotal = 0;        // points the idle clock has taken so far, this play
   let scoreProvider = null;     // template's own scoreNow(), via ui.setScoreProvider
+  let reviewProvider = null;    // ⭐ Đợt 384 — template's own buildReview(), via ui.setReviewProvider (bài làm GIỮA ván)
   // ⭐ Đợt 379 — số đang HIỆN trên chip điểm (ui.setScore). Dùng khi template KHÔNG khai `setScoreProvider`
   // (Gameshow, Rocket race) để biết "điểm tới lúc này" của lượt bị bỏ dở — xem `diemBoDo()`.
   let lastShownScore = null;
@@ -5548,12 +5551,18 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // lên đồ thị tiến triển. CHỈ lối START AGAIN (thầy: Home / đổi game / đóng tab thì chỉ tính giờ như cũ), KHÔNG tính
   // ván START WITH MISTAKES (mẫu số chỉ là số câu sai cũ). KHÔNG thêm lượt ghi nào: điểm đi chung lần ghi `leave` vốn có.
   // Điểm = `scoreNow()` của template (15 game khai `setScoreProvider`) hoặc số đang hiện trên chip (Gameshow, Rocket race).
+  // ⭐ Đợt 384 — bài làm tới lúc này (null khi template không khai / lỗi). Không bao giờ ném.
+  function baiLamNay() {
+    try { const r = reviewProvider ? reviewProvider() : null; return Array.isArray(r) && r.length ? r : null; }
+    catch (e) { return null; }
+  }
   function diemBoDo() {
     try { const v = scoreProvider ? scoreProvider() : lastShownScore; return (v == null || !isFinite(Number(v))) ? null : Math.max(0, Math.round(Number(v))); }
     catch (e) { return null; }
   }
   function restart() {
     if (session && session.playLog && playStarted && !playLogDone && !fight && !activity._mistakes) playLogDiemBoDo = diemBoDo();
+    if (session && session.playLog && playStarted && !playLogDone && !fight) playLogBaiLamBoDo = baiLamNay();   // Đợt 384 (cả ván Start with mistakes)
     if (!fight || fight.side === 0) tpl.sounds?.restart?.();   // optional per-template restart sound, layered on the menu/button's own click (one board's copy is enough — see the Play chime above)
     // FIGHT MODE: "Start again" belongs to the MATCH, not to one board. Left to
     // itself this re-entered startGame() with no `fight` option, so the board
@@ -5662,7 +5671,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // play.js NỘP lượt đó (`doDang`) nếu điểm ≥ 1 và không phải ván Start with mistakes. Đọc điểm TRƯỚC
       // cleanup() bên dưới — template còn sống thì scoreNow() mới trả lời được.
       const sc = playLogDiemBoDo != null ? playLogDiemBoDo : (activity._mistakes || fight ? null : diemBoDo());
-      try { session.playLog.leave({ timeMs: Math.round(performance.now() - startedAt), score: sc, total: playItemCount() }); } catch (e) {}
+      const rv = fight ? null : (playLogBaiLamBoDo || baiLamNay());   // ⭐ Đợt 384 — bài làm tới lúc dừng (đọc TRƯỚC cleanup)
+      try { session.playLog.leave({ timeMs: Math.round(performance.now() - startedAt), score: sc, total: playItemCount(), review: rv }); } catch (e) {}
     }
     stopWatchVanRoiTrang();        // ⭐ Đợt 295 — ván tự dọn rồi thì gỡ luôn lưới an toàn
     stopShowdownReview();          // ⭐ Đợt 196 — never leave the live listener behind
@@ -5903,6 +5913,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // Template nào không gọi thì y như trước (không có clip nào được miễn).
     setVoiceGuard(fn) { voiceGuard = typeof fn === "function" ? fn : null; },
     setScoreProvider(fn) { scoreProvider = typeof fn === "function" ? fn : null; },
+    // ⭐ Đợt 384 — bài làm TỚI LÚC NÀY (cùng dạng `review` lúc kết thúc). Template nào có `buildReview()` gọi được bất cứ lúc
+    // nào (vốn dùng cho Fight) thì khai ở đây ⇒ lượt DỞ (Start again / tải lại / đóng tab) mang theo bài làm cho dashboard myLesson.
+    setReviewProvider(fn) { reviewProvider = typeof fn === "function" ? fn : null; },
     // Đợt 143 — a template that DRAWS ITS OWN score chip supplies the painter
     // the Time cost count-down should use. Crossword and Type the answer write
     // `ui.scoreEl.innerHTML` themselves ("7 / 20", coloured by sign) instead of
@@ -6122,7 +6135,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         if (session.playLog && !playLogDone) {
           playLogDone = true;
           if (playLogTimer) { clearInterval(playLogTimer); playLogTimer = null; }
-          try { session.playLog.end({ score: result.score, total: result.items ?? result.total, timeMs }); } catch (e) {}
+          try { session.playLog.end({ score: result.score, total: result.items ?? result.total, timeMs, review: reviewData }); } catch (e) {}   // Đợt 384 — + bài làm
         }
         celebrate(result, null);
         return;
