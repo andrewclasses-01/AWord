@@ -21,6 +21,15 @@ Firestore (project `aword-70dae`). Điều này ảnh hưởng tới mọi ngư�
 ## ⚠️ CHẾ ĐỘ HỌC SINH từ v0.8.0 — `startGame(root, activity, { session })`
 ### (viết lại Đợt 246, 23/8/2026 — PRACTICE/SUBMIT + gửi bài chắc chắn · ⭐⭐⭐ Đợt 383, 25/9/2026 — GỘP LẠI MỘT CHẾ ĐỘ, đọc khối dưới TRƯỚC)
 
+⭐⭐ **Đợt 384 (25/9/2026, cho myLesson web v1.148.0 — đúp một dòng lượt ⇒ pop-up BÀI LÀM từng câu)** — HỢP ĐỒNG MỚI `ui.setReviewProvider(fn)`:
+template khai hàm trả bài làm TỚI LÚC NÀY (cùng dạng `review` lúc kết thúc: question/answered/yourText/yourCorrect/correctText/src/roundMs). Engine
+`baiLamNay()` (không bao giờ ném) được đọc ở `restart()` (cùng lúc `diemBoDo`), ở teardown trước `cleanup()`, và qua `playLog.start({baiLamNay})` cho
+pagehide. Đã nối: quiz, type-the-answer, anagram, true-false, find-the-match, find-the-gap (bọc `() => buildReview()` ⇒ lỗi chỉ rơi vào try của engine).
+⛔ CHƯA nối: gameshow, rocket-race, crossword, unjumble, group-sort… ⇒ lượt dở của chúng review rỗng như cũ. play.js: lượt ĐƯỢC NỘP (có attemptId) ⇒
+bài làm vào `results` (NỘP DỞ nay có review); lượt KHÔNG nộp (Start with mistakes, 0 điểm) ⇒ `practiceLog.review`. `beatPlayLog`: `gonReview` + mask
+"review" CHỈ khi gói mang review — ⛔ đừng thêm "review" vào `LOG_FIELDS`: nhịp 1 phút sẽ XOÁ bài làm đã ghi. Keepalive kẹp 24 KB (trình duyệt cho
+~64 KB tổng gói keepalive đang chờ). Luật practiceLog nhận `review` (list ≤ 300) từ ruleset `1436a49e`.
+
 ⭐⭐⭐ **Đợt 383 (thầy chốt 24–25/9/2026, thiết kế `D:\OTHERS\CLAUDE\AWord - thiet ke gop practice submit\thiet-ke-v7.html`) —
 BỎ PRACTICE/SUBMIT, BÀI GIAO CHỈ CÒN MỘT CHẾ ĐỘ.** Học sinh nhỏ hay bấm nhầm PRACTICE (không được tính). Các khối Đợt 246/366
 bên dưới còn đúng về CƠ CHẾ GỬI, nhưng phần "hai chế độ / hai nút / hai màn cuối" đã THAY bằng:
