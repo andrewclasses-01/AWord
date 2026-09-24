@@ -663,7 +663,9 @@ export function beatPlayLog({ code, id, name, ma, mode, again, mistakes, score, 
     mistakes: { booleanValue: !!mistakes },
     score: { integerValue: String(Math.round(score) | 0) },
     total: { integerValue: String(Math.round(total) | 0) },
-    timeMs: { integerValue: String(Math.max(0, Math.round(timeMs) | 0)) },
+    // Đợt 380b — kẹp 12 giờ (trần của luật): lượt để qua đêm, `pagehide` tính theo đồng hồ tường ra > 12 giờ ⇒ luật 403
+    // ⇒ mất luôn lần ghi cuối (cả `activeMs`).
+    timeMs: { integerValue: String(Math.min(43200000, Math.max(0, Math.round(timeMs) | 0))) },
     done: { booleanValue: !!done },
     attemptId: { stringValue: String(attemptId || "") },
     // ⛔ KHÔNG `| 0`: mốc mili giây (~1,79e12) vượt 32-bit, `| 0` cho ra số ÂM (đo thật 22/09).

@@ -531,6 +531,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 380b (24/9/2026 tối) — `beatPlayLog` kẹp `timeMs` ≤ 12 giờ · ✅ PUSH
+
+Lượt để qua đêm: `pagehide` tính `timeMs` theo đồng hồ tường ⇒ > 43 200 000 ⇒ luật practiceLog 403 ⇒ mất luôn lần ghi cuối (cả
+`activeMs`). Đọc kho thật thấy một lượt BT2 mở 22:09 tối 23/9 nhảy thành 66 phút lúc 17:52 hôm sau. Nay kẹp trong `core/assignments.js`.
+
 ## Đợt 380 (24/9/2026, THỜI GIAN HOẠT ĐỘNG `activeMs` trong practiceLog — cho myLesson web v1.144.0) · ✅ THẦY "ok build" → COMMIT + PUSH · ⬜ CHƯA BẤM TAY
 
 Thầy (dashboard myLesson, tab THỜI LƯỢNG): lượt bỏ dở / không điểm mà hàng giờ — em mở act rồi treo tab, chạy ẩn. Gốc: `timeMs` của
