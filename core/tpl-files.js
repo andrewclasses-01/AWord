@@ -26,4 +26,5 @@ export const TPL_FILES = {
   "speaking": ["templates/speaking/speaking.css", "templates/speaking/speaking.js", "templates/speaking/speaking-editor.js", "templates/speaking/speaking-sound.js"],
   "find_the_gap": ["templates/find-the-gap/find-the-gap.css", "templates/find-the-gap/find-the-gap.js", "templates/find-the-gap/find-the-gap-editor.js", "templates/find-the-gap/ftg-sound.js", "templates/find-the-gap/ftg-audio.js", "templates/find-the-gap/ftg-range.js", "templates/find-the-gap/ftg-shared.js"],
   "rocket_race": ["templates/rocket-race/rocket-race.css", "templates/rocket-race/rocket-race.js", "templates/rocket-race/rr-sound.js", "templates/rocket-race/rocket-race-editor.js", "templates/rocket-race/rr-link.js", "templates/quiz/quiz-editor.js"],
+  "wordshake": ["templates/wordshake/wordshake.css", "templates/wordshake/wordshake.js", "templates/wordshake/ws-lib.js", "templates/wordshake/wordshake-editor.js", "templates/anagram/anagram-editor.js"],
 };

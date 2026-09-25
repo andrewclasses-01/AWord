@@ -258,7 +258,7 @@ const TPL_SHORT = {
   flying_fruit: "FRUIT",   balloon_pop: "BALLOON", crossword: "CROSSWORD",
   unjumble: "UNJUMBLE",    speaking_cards: "SPCARDS",
   running_word: "RUNWORD", running_team: "RUNTEAM", speaking: "SPEAKING",
-  rocket_race: "ROCKET",
+  rocket_race: "ROCKET",   wordshake: "WORDSHAKE",
 };
 export function tplShortName(type) {
   return TPL_SHORT[type]

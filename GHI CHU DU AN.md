@@ -531,6 +531,10 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 386c (25/9/2026) — WORDSHAKE VÀO CATALOG (New activity · Template picker · play.html · Settings) · ✅ thầy chốt "đưa vào luôn"
+- `core/catalog.js` mục `wordshake` + `TEMPLATE_ICON.wordshake = fmtAnagram`; `core/assignment-ui.js` `TPL_SHORT.wordshake = WORDSHAKE`; `core/convert.js` thêm `wordshake` vào QA_TARGETS + nhánh đọc/ghi chung với Anagram; `tools/sinh-preload.py --write` (tpl-files).
+- Đo: đổi Anagram→Wordshake (6 từ, giữ clue/voice), Wordshake→Quiz (8 câu). ⬜ thầy bấm tay; thầy sẽ chỉnh tiếp ở phiên sau.
+
 ## Đợt 386 (25/9/2026, ⭐⭐⭐ WORDSHAKE — GAME CỐ ĐỊNH `?g=wordshake` + TEMPLATE #21 chơi đơn 3 mode) · ✅ THẦY "ok build" · ⬜ CHƯA BẤM TAY · ✅ FIGHT template (core `shared-middle` + `fightFrame.skin`)
 
 - Game tham khảo Wordshake (British Council); thiết kế duyệt 4 vòng `D:\OTHERS\CLAUDE\AWord - thiet ke Wordshake\wordshake-v1…v4.html`.
