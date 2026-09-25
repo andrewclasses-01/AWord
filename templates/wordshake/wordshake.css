@@ -1,0 +1,110 @@
+/* =============================================================
+   WORDSHAKE template — styles that belong ONLY to this template.
+   Class prefix: .aw-ws-*
+   Neon arcade skin (approved design v4). Thầy asked for a look of its own,
+   different from AWord's everyday games, so the colours here are FIXED
+   (not --aw-* theme vars) — same reasoning as Anagram's fixed tile palette.
+   The skin reaches the frame's own top/bottom bars only while a Wordshake
+   board is inside it (`.aw-stage:has(.aw-ws-root)`, the Crossword pattern).
+   Sizes: calc(N * var(--aw-u)), 1u = 1% of the stage width (core rule, Đợt 273).
+   ============================================================= */
+@import url("https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,700;0,800;1,700;1,800&family=Be+Vietnam+Pro:wght@500;600;700&display=swap");
+
+.aw-stage:has(.aw-ws-root) {
+  --ws-neon:#3DF58A; --ws-neon2:#9BFFC4; --ws-red:#FF4B5C; --ws-amber:#FFC23D; --ws-txt:#E6FFF1; --ws-dim:#7FA893;
+  background:radial-gradient(ellipse 75% 65% at 50% 42%,#0F4029 0%,#05170F 62%,#030D09 100%);
+  border-color:rgba(61,245,138,.38);
+}
+.aw-stage:has(.aw-ws-root) .aw-stage-inner{
+  background-image:linear-gradient(rgba(61,245,138,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(61,245,138,.07) 1px,transparent 1px);
+  background-size:calc(4.4 * var(--aw-u)) calc(4.4 * var(--aw-u));background-position:center;
+}
+.aw-stage:has(.aw-ws-root) .aw-top-timer{font-family:"Saira",sans-serif;font-style:italic;font-weight:800;color:#9BFFC4;text-shadow:0 0 calc(1.2 * var(--aw-u)) rgba(61,245,138,.6)}
+.aw-stage:has(.aw-ws-root) .aw-top-slogan{font-family:"Saira",sans-serif;color:rgba(155,255,196,.35)}
+.aw-stage:has(.aw-ws-root) .aw-top-score{font-family:"Saira",sans-serif;font-style:italic;color:#E6FFF1}
+.aw-stage:has(.aw-ws-root) .aw-top-score svg{color:#3DF58A}
+.aw-stage:has(.aw-ws-root) .aw-bottombar,
+.aw-stage:has(.aw-ws-root) .aw-iconbtn{color:#7FA893}
+.aw-stage:has(.aw-ws-root) .aw-nav-label{font-family:"Saira",sans-serif;font-style:italic;color:#9BFFC4}
+.aw-stage:has(.aw-ws-root) .aw-navbtn{background:rgba(61,245,138,.08);border:1px solid rgba(61,245,138,.3);color:#3DF58A;transform:skewX(-14deg);border-radius:4px}
+.aw-stage:has(.aw-ws-root) .aw-navbtn svg{transform:skewX(14deg)}
+
+.aw-ws-root{width:100%;height:100%;position:relative;color:#E6FFF1;user-select:none;-webkit-user-select:none;animation:aw-fadein .25s ease}
+/* :where() keeps this reset at element weight so every .aw-ws-* button rule wins */
+:where(.aw-ws-root) button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.aw-ws-empty{display:grid;place-items:center;height:100%;font-size:calc(2.4 * var(--aw-u));color:#7FA893}
+
+/* ---------- tiles ---------- */
+.aw-ws-t{width:calc(6.2 * var(--aw-u));height:calc(6.2 * var(--aw-u));border-radius:calc(.8 * var(--aw-u));
+  background:rgba(9,38,26,.88);border:2px solid rgba(61,245,138,.55);color:#9BFFC4;
+  font-family:"Saira",sans-serif;font-weight:800;font-size:calc(3.2 * var(--aw-u));line-height:1;display:grid;place-items:center;
+  text-shadow:0 0 calc(1 * var(--aw-u)) rgba(61,245,138,.75);box-shadow:inset 0 0 calc(1.4 * var(--aw-u)) rgba(61,245,138,.14);
+  transition:transform .1s,background-color .12s,box-shadow .12s}
+.aw-ws-t:active{transform:scale(.94)}
+.aw-ws-t.is-on{background:#3DF58A;border-color:#9BFFC4;color:#03150C;text-shadow:none;transform:scale(1.05);box-shadow:0 0 calc(2 * var(--aw-u)) rgba(61,245,138,.8)}
+.aw-ws-t.is-gone{background:transparent;border:2px dashed rgba(61,245,138,.18);color:transparent;text-shadow:none;box-shadow:none;pointer-events:none}
+
+/* ---------- clue ---------- */
+.aw-ws-clue{display:flex;align-items:center;justify-content:center;gap:calc(1 * var(--aw-u));font-family:"Be Vietnam Pro","Baloo 2",sans-serif;font-weight:600;line-height:1.35;color:#E6FFF1;font-size:calc(1.6 * var(--aw-u))}
+.aw-ws-clue.is-big{font-weight:700;font-size:calc(3 * var(--aw-u));text-align:center;text-wrap:balance;max-width:calc(86 * var(--aw-u));min-height:calc(9 * var(--aw-u))}
+.aw-ws-root .aw-voicebtn{color:#03150C;background:#3DF58A;box-shadow:0 0 calc(1.8 * var(--aw-u)) rgba(61,245,138,.7)}
+
+/* ---------- Mode 1 ---------- */
+.aw-ws-one{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(2.4 * var(--aw-u));padding-bottom:calc(3 * var(--aw-u));position:relative}
+.aw-ws-slots{--n:6;display:flex;gap:calc(1 * var(--aw-u))}
+.aw-ws-slot{--s:min(calc(6.2 * var(--aw-u)),calc((84 * var(--aw-u)) / var(--n) - 1 * var(--aw-u)));width:var(--s);height:var(--s);border-radius:calc(.8 * var(--aw-u));
+  border:2px dashed rgba(61,245,138,.35);background:rgba(0,0,0,.2);display:grid;place-items:center;font-family:"Saira",sans-serif;font-weight:800;font-size:calc(var(--s) * .52);color:#9BFFC4}
+.aw-ws-slot.is-full{border:2px solid #3DF58A;background:rgba(9,38,26,.9);text-shadow:0 0 calc(1 * var(--aw-u)) rgba(61,245,138,.75)}
+.aw-ws-slots.is-good .aw-ws-slot.is-full{background:#3DF58A;color:#03150C;text-shadow:none;box-shadow:0 0 calc(1.8 * var(--aw-u)) rgba(61,245,138,.8)}
+.aw-ws-slots.is-bad .aw-ws-slot.is-full{border-color:#FF4B5C;color:#FF4B5C;text-shadow:0 0 calc(1 * var(--aw-u)) rgba(255,75,92,.8)}
+.aw-ws-slots.is-bad{animation:aw-ws-shake .35s}
+@keyframes aw-ws-shake{0%,100%{transform:translateX(0)}25%,75%{transform:translateX(calc(-1 * var(--aw-u)))}50%{transform:translateX(var(--aw-u))}}
+.aw-ws-grid1{--cols:6;display:grid;grid-template-columns:repeat(var(--cols),auto);gap:calc(1 * var(--aw-u))}
+
+/* ---------- Mode 2 / 3: pad + list ---------- */
+.aw-ws-split{height:100%;display:grid;grid-template-columns:calc(44 * var(--aw-u)) 1fr;gap:calc(2 * var(--aw-u));padding:calc(1.2 * var(--aw-u)) calc(3 * var(--aw-u)) calc(1.2 * var(--aw-u)) calc(1 * var(--aw-u))}
+.aw-ws-pad{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(1.2 * var(--aw-u))}
+.aw-ws-pv{width:calc(27.2 * var(--aw-u));height:calc(5.2 * var(--aw-u));border-radius:calc(.6 * var(--aw-u));background:rgba(0,0,0,.35);border:1px solid rgba(61,245,138,.3);
+  display:flex;align-items:center;justify-content:center;font-family:"Saira",sans-serif;font-weight:800;font-size:calc(3.4 * var(--aw-u));letter-spacing:.12em;color:#E6FFF1;text-shadow:0 0 calc(1.2 * var(--aw-u)) rgba(61,245,138,.7)}
+.aw-ws-grid4{display:grid;grid-template-columns:repeat(4,auto);gap:calc(.8 * var(--aw-u))}
+.aw-ws-btns{display:grid;grid-template-columns:1fr 2fr;gap:calc(1.2 * var(--aw-u));width:calc(27.2 * var(--aw-u))}
+.aw-ws-btns.is-3{grid-template-columns:1fr 1fr 2fr}
+.aw-ws-b{height:calc(4.6 * var(--aw-u));border-radius:4px;transform:skewX(-14deg);display:grid;place-items:center;font-family:"Saira",sans-serif;font-style:italic;font-weight:800;font-size:calc(2 * var(--aw-u));text-transform:uppercase;letter-spacing:.06em}
+.aw-ws-b>span,.aw-ws-b>svg{transform:skewX(14deg)}
+.aw-ws-b:active{filter:brightness(1.2)}
+.aw-ws-b.is-ent{background:linear-gradient(180deg,#6BFFA8,#22CF6C);color:#03150C;box-shadow:0 0 calc(1.8 * var(--aw-u)) rgba(61,245,138,.45)}
+.aw-ws-b.is-clr{background:linear-gradient(180deg,#FF7482,#DE2F43);color:#fff;box-shadow:0 0 calc(1.4 * var(--aw-u)) rgba(255,75,92,.35)}
+.aw-ws-b.is-bk{background:rgba(61,245,138,.1);border:1px solid rgba(61,245,138,.45);color:#3DF58A;font-size:calc(2.4 * var(--aw-u))}
+
+.aw-ws-side{min-height:0;display:flex;flex-direction:column;gap:calc(1 * var(--aw-u))}
+.aw-ws-defs{display:flex;flex-direction:column;justify-content:center;gap:calc(.7 * var(--aw-u));min-height:0;overflow:auto;height:100%}
+.aw-ws-defs.is-short{height:auto;flex:none;justify-content:flex-start}
+.aw-ws-df{border-radius:calc(.6 * var(--aw-u));background:rgba(61,245,138,.06);border:1px solid rgba(61,245,138,.18);padding:calc(.7 * var(--aw-u)) calc(1.2 * var(--aw-u));display:flex;flex-direction:column;gap:calc(.3 * var(--aw-u))}
+.aw-ws-df .aw-ws-clue{justify-content:flex-start;font-size:calc(1.7 * var(--aw-u))}
+.aw-ws-bl{font-family:"Saira",sans-serif;font-weight:800;font-size:calc(1.9 * var(--aw-u));letter-spacing:.24em;color:rgba(61,245,138,.45)}
+.aw-ws-df.is-done{background:rgba(61,245,138,.15);border-color:rgba(61,245,138,.6)}
+.aw-ws-df.is-done .aw-ws-bl{color:#9BFFC4;letter-spacing:.05em;text-shadow:0 0 calc(1 * var(--aw-u)) rgba(61,245,138,.7)}
+.aw-ws-pts{font-family:"Saira",sans-serif;font-style:italic;font-weight:700;font-size:calc(1.3 * var(--aw-u));letter-spacing:.2em;color:#7FA893;text-align:right}
+.aw-ws-pts b{font-size:calc(2 * var(--aw-u));color:#FFC23D;letter-spacing:0;margin-left:calc(.4 * var(--aw-u))}
+.aw-ws-found{list-style:none;margin:0;padding:calc(.8 * var(--aw-u)) 0 0;border-top:1px solid rgba(61,245,138,.2);flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:calc(.3 * var(--aw-u))}
+.aw-ws-found li{display:flex;gap:calc(.7 * var(--aw-u));align-items:baseline;min-width:0}
+.aw-ws-found b{font-family:"Saira",sans-serif;font-style:italic;font-weight:800;font-size:calc(1.7 * var(--aw-u));color:#9BFFC4;flex:none}
+.aw-ws-found li.is-les b{color:#FFC23D}
+.aw-ws-found span{font-family:"Be Vietnam Pro",sans-serif;font-size:calc(1.3 * var(--aw-u));line-height:1.35;color:#8DB9A2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.aw-ws-found em{font-style:normal;font-family:"Saira",sans-serif;font-weight:800;font-size:calc(1.3 * var(--aw-u));color:#3DF58A}
+
+/* ---------- bubbles ---------- */
+.aw-ws-bubs{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:3}
+.aw-ws-bub{position:absolute;left:50%;top:40%;opacity:0;animation:aw-ws-rise 1.3s cubic-bezier(.22,.9,.3,1) forwards}
+.aw-ws-bub i{font-family:"Saira",sans-serif;font-style:italic;font-weight:800;font-size:calc(3.4 * var(--aw-u));min-width:calc(7.8 * var(--aw-u));height:calc(6.2 * var(--aw-u));padding:0 calc(1.8 * var(--aw-u));border-radius:4px;display:grid;place-items:center;transform:skewX(-14deg);color:#03150C}
+.aw-ws-bub.ok i{background:#3DF58A;box-shadow:0 0 calc(3 * var(--aw-u)) rgba(61,245,138,.9)}
+.aw-ws-bub.bad i{background:#FF4B5C;color:#fff;box-shadow:0 0 calc(3 * var(--aw-u)) rgba(255,75,92,.9)}
+.aw-ws-bub.dup i{background:#FFC23D;font-size:calc(2.4 * var(--aw-u));box-shadow:0 0 calc(3 * var(--aw-u)) rgba(255,194,61,.9)}
+/* positioning baked into every keyframe (CONG THUC MAU rule 5) */
+@keyframes aw-ws-rise{
+  0%{opacity:0;transform:translate(-50%,calc(1.8 * var(--aw-u))) scale(.7)}
+  15%{opacity:1;transform:translate(-50%,0) scale(1.08)}
+  25%{opacity:1;transform:translate(-50%,0) scale(1)}
+  75%{opacity:1;transform:translate(-50%,calc(-1 * var(--aw-u)))}
+  100%{opacity:0;transform:translate(-50%,calc(-4 * var(--aw-u)))}}
+@media (prefers-reduced-motion:reduce){.aw-ws-root *{animation-duration:.01ms!important;transition:none!important}}
