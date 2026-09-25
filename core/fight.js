@@ -344,6 +344,13 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // template through `ctl.sharedRoot()`; null for every other template, and the
   // frame is byte-identical to before when the flag is absent.
   const sharedLayout = getTemplate(activity.type)?.fightLayout === "shared-top";
+  // ⭐ Đợt 386 (25/9/2026, Wordshake) — `tpl.fightLayout: "shared-middle"`: the
+  // template-owned area sits BETWEEN the two boards, in the SAME row — [board 0]
+  // [shared][board 1] — and each board is narrower (Wordshake: the found words
+  // and the clues both teams race for live in the middle). Sizes come from
+  // `fightFrame {sideW, midW, h}` (fallback 392 | 440 | 408, the widths measured
+  // on the real 1280px match). Same `ctl.sharedRoot()` door as shared-top.
+  const middleLayout = getTemplate(activity.type)?.fightLayout === "shared-middle";
   // ⭐ Đợt 353 (20/9/2026, thầy chốt tỉ lệ Rocket race) — `tpl.fightFrame`: KÍCH
   // THƯỚC của khung shared-top do template khai, core chỉ đổ vào biến CSS:
   //   sharedH — chiều cao vùng chung khi cả trận rộng 32 (mặc định 10.5)
@@ -357,7 +364,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   //               (cạnh Options/Mode) thay vì nằm trong từng bàn; hàng nút dưới
   //               của cả hai bàn ẩn đi. Xem chỗ dời DOM ở cuối startFight.
   // Không khai ⇒ mọi số y hệt Đợt 351 (32:10.5 + 16:10.5, nút trong bàn).
-  const frame = (sharedLayout && getTemplate(activity.type)?.fightFrame) || null;
+  const frame = ((sharedLayout || middleLayout) && getTemplate(activity.type)?.fightFrame) || null;
 
   // ----- shell -----
   const wrap = el("div", "aw-fight");
@@ -420,7 +427,9 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
 
   const boardEls = [el("div", "aw-fight-board"), el("div", "aw-fight-board")];
   boardsRow.append(boardEls[0], boardEls[1]);
-  const sharedEl = sharedLayout ? el("div", "aw-fight-shared") : null;
+  const sharedEl = (sharedLayout || middleLayout) ? el("div", "aw-fight-shared") : null;
+  // Đợt 386 — shared-middle: the area is a cell of the boards row, not a row of its own.
+  if (middleLayout) boardsRow.insertBefore(sharedEl, boardEls[1]);
   // ⭐ Đợt 355 — `fightFrame.topStrip: "below"`: the score/clock strip goes UNDER
   // the boards (thầy, 20/9/2026: "bỏ dải đồng hồ trên đầu, đưa toàn bộ game lên sát
   // mép trên"). The strip itself stays — it is where the PICK TIME and MISS WAIT
@@ -429,8 +438,27 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // moved into the shared toolbar group below (see the boardTools block).
   const topBelow = !!(frame && frame.topStrip === "below");
   if (topBelow) wrap.classList.add("is-topbelow");
-  const order = topBelow ? [sharedEl, boardsRow, top, controlsRow] : [top, sharedEl, boardsRow, controlsRow];
-  if (sharedEl) wrap.classList.add("is-shared-top");
+  const rowShared = sharedLayout ? sharedEl : null;   // Đợt 386 — shared-middle already sits inside boardsRow
+  const order = topBelow ? [rowShared, boardsRow, top, controlsRow] : [top, rowShared, boardsRow, controlsRow];
+  if (sharedLayout) wrap.classList.add("is-shared-top");
+  if (middleLayout) {
+    wrap.classList.add("is-shared-middle");
+    const num = (v, d) => (Number.isFinite(v) && v > 0 ? v : d);
+    wrap.style.setProperty("--aw-fsw", String(num(frame && frame.sideW, 392)));
+    wrap.style.setProperty("--aw-fmw", String(num(frame && frame.midW, 440)));
+    wrap.style.setProperty("--aw-fmh", String(num(frame && frame.h, 408)));
+    // `fr` cannot be multiplied inside CSS calc(), so the column ratio is written
+    // here — the SAME for the boards row and the strip, so each team's number
+    // stays dead centre over its own (now narrower) board: half 1 moves to col 3.
+    const cols = `${num(frame && frame.sideW, 392)}fr ${num(frame && frame.midW, 440)}fr ${num(frame && frame.sideW, 392)}fr`;
+    boardsRow.style.gridTemplateColumns = cols;
+    top.style.gridTemplateColumns = cols;
+    half1.style.gridColumn = "3";
+  }
+  // ⭐ Đợt 386 — `fightFrame.skin: "<name>"` ⇒ `.aw-fight.is-skin-<name>`, so a
+  // template with a look of its own (Wordshake's neon arcade) can restyle the
+  // strip from ITS stylesheet. Core draws nothing different for any skin.
+  if (frame && typeof frame.skin === "string" && /^[a-z0-9-]+$/.test(frame.skin)) wrap.classList.add("is-skin-" + frame.skin);
   wrap.append(...order.filter(Boolean));
   // Đợt 353 — the template's frame sizes, as CSS numbers (core/app.css reads
   // `--aw-fsh` / `--aw-fbh` with the old 10.5 as its fallback in every rule).

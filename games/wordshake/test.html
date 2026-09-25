@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wordshake — test</title>
+  <link rel="stylesheet" href="../../core/app.css" />
+  <link rel="stylesheet" href="wordshake.css" />
+</head>
+<body>
+  <!-- Standalone test page: no sign-in, nothing written anywhere. -->
+  <div id="app"></div>
+  <script type="module">
+    import { mountWordshake } from "./wordshake.js";
+    const host = document.createElement("div");
+    document.getElementById("app").append(host);
+    window.__ws = mountWordshake(host, { onExit: () => console.log("Home → back to the GAMES tree") });
+  </script>
+</body>
+</html>

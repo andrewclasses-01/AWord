@@ -4692,6 +4692,17 @@ body.aw-page-dragover::after {
    template's `boardH` (7 → 43.75% = 16:7). Every `--aw-u` size is width-based
    and stays the same; only the frame is shorter. */
 .aw-fight.is-shared-top .aw-fight-board .aw-stage { --ti-le: calc(var(--aw-fbh, 10.5) / 16 * 100%); }
+/* ⭐ Đợt 386 (Wordshake) — `tpl.fightLayout: "shared-middle"`: [board][shared][board]
+   in ONE row. core/fight.js writes the column ratio (sideW midW sideW, as `fr`) on
+   the row and on the strip, plus `--aw-fsw/--aw-fmw/--aw-fmh`; every frame is as
+   tall as `h`, so the three cells line up top and bottom. The shared cell's look
+   is the template's own (it paints it). Inert without the flag. */
+.aw-fight.is-shared-middle .aw-fight-board .aw-stage { --ti-le: calc(var(--aw-fmh, 408) / var(--aw-fsw, 392) * 100%); }
+.aw-fight.is-shared-middle .aw-fight-shared {
+  aspect-ratio: var(--aw-fmw, 440) / var(--aw-fmh, 408);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(31,42,68,.12);
+}
 /* ⭐ Đợt 353 — `fightFrame.boardTools: "shared"`: board 0's Menu / ‹ › / Sound
    were MOVED by core/fight.js into this group at the head of the shared
    toolbar. They are engine nodes sized in `--aw-u`, which is undefined outside a
@@ -4976,6 +4987,10 @@ body.aw-page-dragover::after {
   width: 100%;
   max-width: calc((100dvh - var(--aw-fight-chrome) - 8px) * 32 / (var(--aw-fsh, 10.5) + var(--aw-fbh, 10.5)));
   margin: 0 auto;
+}
+/* ⭐ Đợt 386 — shared-middle: one row, as tall as `h` for a width of 2·sideW + midW. */
+.aw-fight.is-fs.is-shared-middle .aw-fight-boards {
+  max-width: calc((100dvh - var(--aw-fight-chrome)) * (var(--aw-fsw, 392) * 2 + var(--aw-fmw, 440)) / var(--aw-fmh, 408));
 }
 /* Undo the single-mode fullscreen page/stage rules for the boards INSIDE a
    match: each board's page is a cell of the match, not the screen. */

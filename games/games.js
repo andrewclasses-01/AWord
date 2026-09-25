@@ -22,7 +22,15 @@ export const FIXED_GAMES = [
     css: "games/mybeat/mybeat.css",
     card: { bg: "linear-gradient(135deg,#F0527A 0%,#9B4DDB 55%,#3346C9 100%)",
             icon: '<svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>' },
-    load: () => import("./mybeat/mybeat.js").then(m => m.mountMyBeat) }
+    load: () => import("./mybeat/mybeat.js").then(m => m.mountMyBeat) },
+  // ⭐ Đợt 386 — Wordshake: 16 letters, two teams, a word one team finds is taken
+  // (templates/wordshake/GHI CHU WORDSHAKE.md).
+  { id: "wordshake", label: "Wordshake", kind: "Team game",
+    blurb: "Two teams make words from the same 16 letters. A word one team finds is taken.",
+    css: "games/wordshake/wordshake.css",
+    card: { bg: "radial-gradient(110% 85% at 50% 40%,#0F4029 0%,#05170F 62%,#030D09 100%)",
+            icon: '<svg viewBox="0 0 64 64" width="64" height="64" fill="none" stroke="#3DF58A" stroke-width="2.4" stroke-linejoin="round"><rect x="6" y="6" width="22" height="22" rx="4"/><rect x="36" y="6" width="22" height="22" rx="4"/><rect x="6" y="36" width="22" height="22" rx="4"/><rect x="36" y="36" width="22" height="22" rx="4" fill="#3DF58A" fill-opacity=".85"/></svg>' },
+    load: () => import("./wordshake/wordshake.js").then(m => m.mountWordshake) }
 ];
 
 export function fixedGame(id) { return FIXED_GAMES.find(g => g.id === id) || null; }

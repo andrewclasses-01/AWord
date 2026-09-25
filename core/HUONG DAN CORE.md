@@ -523,6 +523,18 @@ phần riêng của đội. Luật đi kèm:
   template của bìa bàn 0 vào `.aw-fight-readyinfo` trong vùng chung và ẩn chúng ở hai bàn (`.is-readyshared`); mỗi bàn được
   thêm dòng icon + tên đội trên nút Play. Template phải xoá vùng chung khi mount (Rocket race `host.innerHTML = ""`).
 
+⭐ **Đợt 386 (25/9/2026, Wordshake) — `tpl.fightLayout: "shared-middle"` + `fightFrame.skin`.**
+- `"shared-middle"`: vùng chung nằm GIỮA hai bàn, CÙNG một hàng — `[bàn 0][.aw-fight-shared][bàn 1]` (core chèn
+  `sharedEl` vào `boardsRow`, KHÔNG thành một hàng riêng như shared-top). Cỡ từ `fightFrame {sideW, midW, h}`
+  (mặc định 392 | 440 | 408 = số đo khung 1280px): `fight.js` ghi tỉ lệ cột `sideW fr midW fr sideW fr` lên
+  CẢ hàng bàn LẪN dải điểm (và dời `half1` sang cột 3) để số điểm mỗi đội luôn nằm chính giữa bàn hẹp của nó;
+  `--aw-fsw/--aw-fmw/--aw-fmh` cho `app.css` (khung bàn `--ti-le = h/sideW`, vùng chung `aspect-ratio midW/h`).
+  ⚠️ `fr` không nhân được trong `calc()` ⇒ tỉ lệ cột PHẢI ghi bằng JS. Vẫn là `ctl.sharedRoot()` như shared-top.
+- `fightFrame.skin: "<tên>"` ⇒ `.aw-fight.is-skin-<tên>` — core KHÔNG vẽ gì khác; CSS của template tự vẽ lại dải
+  điểm. ⚠️ Đừng `transform` lên `.aw-fight-score` (core nảy nó bằng `aw-fight-pop`) — Wordshake vẽ ô nghiêng bằng
+  `::before` sau con số.
+- Không khai ⇒ khung y hệt cũ (đã đo lại: Anagram 620×408 hai bàn; Rocket race shared-top nguyên thứ tự khối).
+
 **AI ĐANG BẬT IN TURNS (Đợt 202)**: **Type the answer** — 1/17, thầy chốt thử một game trước.
 
 **AI ĐANG BẬT FIGHT (cập nhật Đợt 186)**: Anagram · Quiz · Type the answer · True/false · **Open the box**

@@ -1,0 +1,236 @@
+// =============================================================
+// WORDSHAKE — FIXED GAME of AWord's GAMES tree (Đợt 386, 25/9/2026).
+// Not a template (see games/games.js): opened with ?g=wordshake, always a
+// two-team FIGHT on the classroom touch screen.
+//
+// Rules (thầy, 25/9/2026, design v1…v4 in D:\OTHERS\CLAUDE\AWord - thiet ke Wordshake\):
+//   • both teams get the SAME 16 letters, each board shuffled differently;
+//   • any tile, any order (no adjacency), each tile once per word, 3–7 letters;
+//   • 3→1 · 4→2 · 5→3 · 6→4 · 7→5 points;
+//   • a word one team has found is TAKEN — the other team cannot score it;
+//   • the centre board shows the word just found, big, with its Vietnamese
+//     meaning, and both teams' words in two columns (left team left);
+//   • time's up → winner + the everyday words both teams missed.
+// Dictionary + dice + sound live in templates/wordshake/ws-lib.js (shared
+// with the activity template's Mode 3).
+//
+//   mountWordshake(root, ctx) -> dispose()      ctx.onExit()
+// =============================================================
+
+import { loadDict, lookup, points, rollBoard, wordsOn, shuffle, createSfx, escapeHtml as esc } from "../../templates/wordshake/ws-lib.js";
+
+const W = 1280, H = 566;                        // AWord fight geometry at 1280px
+const Y = 89, BH = 408;                          // boards row
+const L = { x: 12, w: 392 }, C = { x: 420, w: 440 }, R = { x: 876, w: 392 };
+const TIMES = [120, 180, 300];
+const PREF = "aword-wordshake-time";
+const FLICKER = "ABCDEEFGHIKLMNOOPRSTUWY";
+const ICON = {
+  home: '<svg class="i" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .7-1.53l7-6a2 2 0 0 1 2.6 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>',
+  again: '<svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>',
+  vol: '<svg class="i" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>',
+  mute: '<svg class="i" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></svg>'
+};
+
+export function mountWordshake(root, ctx = {}) {
+  root.classList.add("wsg");
+  root.innerHTML = `<div class="wsg-vp"><div class="wsg-cv"></div></div>`;
+  const vp = root.querySelector(".wsg-vp"), cv = root.querySelector(".wsg-cv");
+  const sfx = createSfx();
+  let dead = false, dict = null, dictErr = false;
+  let dur = readTime();
+  // phase: "ready" | "play" | "over"
+  const G = { phase: "ready", letters: [], sides: [], found: new Map(), log: [], last: null, left: dur, prev: [0, 0] };
+  let clock = null, shakeIv = null;
+
+  function readTime() { try { const v = +localStorage.getItem(PREF); return TIMES.includes(v) ? v : 180; } catch (e) { return 180; } }
+  function saveTime(v) { try { localStorage.setItem(PREF, String(v)); } catch (e) {} }
+
+  // ---------- fit the 1280x566 drawing into the page ----------
+  function fit() {
+    if (dead) return;
+    const top = vp.getBoundingClientRect().top;
+    const availH = Math.max(240, window.innerHeight - Math.max(0, top) - 8);
+    const availW = Math.max(240, root.clientWidth - 24);
+    const s = Math.min(availW / W, availH / H);
+    vp.style.width = W * s + "px"; vp.style.height = H * s + "px";
+    cv.style.transform = `scale(${s})`;
+  }
+  const ro = new ResizeObserver(fit); ro.observe(root);
+  window.addEventListener("resize", fit);
+
+  // ---------- game flow ----------
+  function newBoard() {
+    G.letters = rollBoard(dict);
+    G.sides = [0, 1].map(() => ({ order: shuffle([...Array(16).keys()]), sel: [], score: 0 }));
+    G.found = new Map(); G.log = []; G.last = null; G.left = dur; G.prev = [0, 0];
+  }
+  function start() {
+    if (!dict) return;
+    sfx.unlock();
+    newBoard(); G.phase = "play";
+    render(); shake();
+    clearInterval(clock); clock = setInterval(tick, 1000);
+  }
+  function shake() {
+    const tiles = [...cv.querySelectorAll(".wsg-t")], real = tiles.map(t => t.textContent);
+    let n = 0; root.classList.add("shaking"); sfx.shake();
+    clearInterval(shakeIv);
+    shakeIv = setInterval(() => {
+      tiles.forEach(t => { if (t.isConnected) t.textContent = FLICKER[Math.random() * FLICKER.length | 0]; });
+      if (++n >= 14) { clearInterval(shakeIv); root.classList.remove("shaking"); tiles.forEach((t, i) => { if (t.isConnected) t.textContent = real[i]; }); }
+    }, 50);
+  }
+  function tick() {
+    if (G.phase !== "play") return;
+    G.left--;
+    if (G.left <= 0) { G.left = 0; return finish(); }
+    const c = cv.querySelector(".wsg-clock");
+    if (c) { c.querySelector("span").textContent = fmt(G.left); if (G.left <= 10) { c.classList.add("warn"); sfx.tick(); } }
+  }
+  function finish() {
+    clearInterval(clock); G.phase = "over";
+    G.sides.forEach(s => s.sel = []);
+    render();
+    const [a, b] = G.sides.map(s => s.score);
+    sfx.timeup(); if (a !== b) sfx.win(b > a ? .65 : -.65);
+  }
+  const fmt = s => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+  const pan = side => side ? .65 : -.65;
+
+  function submit(side) {
+    const s = G.sides[side];
+    const w = s.sel.map(k => G.letters[s.order[k]]).join("").toLowerCase();
+    if (!w) return;
+    s.sel = [];
+    const hit = lookup(dict, w);
+    let bub;
+    if (!hit) { bub = ["bad", "?"]; sfx.bad(pan(side)); }
+    else if (G.found.has(w)) { bub = ["dup", G.found.get(w) === side ? "Found" : "Taken"]; sfx.dup(pan(side)); }
+    else {
+      const p = points(w.length);
+      G.found.set(w, side); s.score += p;
+      G.last = { w, side, m: hit.m, base: hit.base, p };
+      G.log.unshift(G.last);
+      bub = ["ok", "+" + p]; sfx.ok(pan(side), p);
+    }
+    render(); bubble(side, ...bub);
+  }
+
+  // ---------- drawing ----------
+  function render() {
+    if (dead) return;
+    const [a, b] = G.sides.length ? G.sides.map(s => s.score) : [0, 0];
+    const bump = [a > G.prev[0], b > G.prev[1]]; G.prev = [a, b];
+    const warn = G.phase === "play" && G.left <= 10;
+    cv.innerHTML =
+      `<div class="wsg-hudline"></div>` +
+      `<div class="wsg-score ${a > b ? "lead" : ""} ${bump[0] ? "bump" : ""}" style="left:${L.x + L.w / 2}px"><b>${a}</b></div>` +
+      `<div class="wsg-clock ${warn ? "warn" : ""}"><span>${fmt(G.phase === "ready" ? dur : G.left)}</span></div>` +
+      `<div class="wsg-score s1 ${b > a ? "lead" : ""} ${bump[1] ? "bump" : ""}" style="left:${R.x + R.w / 2}px"><b>${b}</b></div>` +
+      stage(L, sideHtml(0), 0) + stage(C, centreHtml(), null) + stage(R, sideHtml(1), 1) +
+      `<div class="wsg-tools" style="top:${Y + BH + 14}px">` +
+        `<button class="wsg-tool" data-do="home" title="Back to Games" aria-label="Back to Games">${ICON.home}</button>` +
+        `<button class="wsg-tool" data-do="restart" title="New game" aria-label="New game" ${dict ? "" : "disabled"}>${ICON.again}</button>` +
+        `<button class="wsg-tool ${sfx.on ? "" : "off"}" data-do="sound" title="Sound" aria-label="Sound">${sfx.on ? ICON.vol : ICON.mute}</button>` +
+      `</div>`;
+  }
+  const stage = (g, inner, side) =>
+    `<div class="wsg-stage" ${side != null ? `data-side="${side}"` : ""} style="left:${g.x}px;top:${Y}px;width:${g.w}px;height:${BH}px">${inner}</div>`;
+
+  function sideHtml(side) {
+    const live = G.phase === "play";
+    const s = G.sides[side];
+    const T = 58, gap = 8, gw = T * 4 + gap * 3;
+    const tiles = [...Array(16).keys()].map(k => {
+      const ch = s ? G.letters[s.order[k]] : "?";
+      const on = s && s.sel.includes(k);
+      return `<button class="wsg-t ${on ? "on" : ""} ${s ? "" : "idle"}" data-do="t" data-k="${k}" style="width:${T}px;height:${T}px;font-size:30px" ${live ? "" : "disabled"}>${ch}</button>`;
+    }).join("");
+    const word = s ? s.sel.map(k => G.letters[s.order[k]]).join("") : "";
+    return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;height:100%;padding-bottom:4px">
+      <div class="wsg-pv" style="width:${gw}px;height:44px;font-size:30px">${esc(word)}</div>
+      <div style="display:grid;grid-template-columns:repeat(4,${T}px);gap:${gap}px">${tiles}</div>
+      <div class="wsg-btn2" style="grid-template-columns:1fr 2fr;width:${gw}px">
+        <button class="wsg-b clr" data-do="clr" style="height:42px" ${live ? "" : "disabled"}><span>Clear</span></button>
+        <button class="wsg-b ent" data-do="ent" style="height:42px" ${live ? "" : "disabled"}><span>Enter</span></button>
+      </div></div><div class="wsg-bubs"></div>`;
+  }
+  const arrow = side => `<span class="wsg-arr ${side ? "r" : "l"}"></span>`;
+  function rows(side) {
+    return G.log.filter(f => f.side === side).map(f =>
+      `<li><b>${f.w.toUpperCase()}</b>${f.m ? `<span>${esc(f.m)}</span>` : ""}</li>`).join("");
+  }
+  function centreHtml() {
+    if (G.phase === "ready") {
+      const note = dictErr ? "Could not load the dictionary. Check the connection and reload."
+        : dict ? "Same 16 letters for both teams. A word one team finds is taken." : "Loading the dictionary…";
+      return `<div class="wsg-mid">
+        <div class="wsg-logo">WORD<span>SHAKE</span></div>
+        <div class="wsg-times">${TIMES.map(t => `<button data-do="time" data-t="${t}" class="${t === dur ? "on" : ""}"><span>${t / 60} min</span></button>`).join("")}</div>
+        <button class="wsg-play" data-do="play" ${dict ? "" : "disabled"}><span>Play</span></button>
+        <div class="wsg-note">${note}</div></div>`;
+    }
+    if (G.phase === "over") {
+      const [a, b] = G.sides.map(s => s.score);
+      const head = a === b ? "DRAW" : `${arrow(a > b ? 0 : 1)} WINS`;
+      const missed = wordsOn(dict, G.letters, 4).filter(w => !G.found.has(w) && !dict.get(w).base)
+        .sort((x, y) => y.length - x.length || dict.get(x).lv - dict.get(y).lv).slice(0, 10);
+      return `<div class="wsg-mid wsg-res"><h2>${head}</h2>
+        ${missed.length ? `<div class="wsg-lab">MISSED</div><div class="wsg-miss">${missed.map(w => `<div><b>${w.toUpperCase()}</b> <span>${esc(lookup(dict, w)?.m || "")}</span></div>`).join("")}</div>` : ""}
+        <button class="wsg-play" data-do="play"><span>Play again</span></button></div>`;
+    }
+    const f = G.last;
+    const last = f
+      ? `<div class="wsg-last wsg-pop sd${f.side}"><div class="w">${f.side === 0 ? arrow(0) : ""}${f.w.toUpperCase()}${f.side === 1 ? arrow(1) : ""}</div>${f.m ? `<div class="m">${esc(f.m)}</div>` : ""}${f.base ? `<div class="nt">form of ${esc(f.base.toUpperCase())}</div>` : ""}</div>`
+      : `<div class="wsg-last idle"><div class="w">· · ·</div></div>`;
+    return `<div class="wsg-cen">${last}<div class="wsg-cols"><ol class="c0">${rows(0)}</ol><ol class="c1">${rows(1)}</ol></div></div>`;
+  }
+  function renderSide(side) {
+    const el = cv.querySelector(`[data-side="${side}"]`); if (!el) return render();
+    const keep = el.querySelector(".wsg-bubs");
+    el.innerHTML = sideHtml(side);
+    if (keep) el.querySelector(".wsg-bubs").replaceWith(keep);
+  }
+  function bubble(side, kind, sym) {
+    const host = cv.querySelector(`[data-side="${side}"] .wsg-bubs`); if (!host) return;
+    const b = document.createElement("div"); b.className = "wsg-bub " + kind; b.innerHTML = `<i>${esc(sym)}</i>`;
+    host.append(b); setTimeout(() => b.remove(), 1300);
+  }
+
+  // ---------- input: pointerdown, so a redraw between down and up never eats a tap ----------
+  function onDown(e) {
+    const b = e.target.closest("[data-do]"); if (!b || b.disabled) return;
+    const d = b.dataset.do;
+    if (d === "home") { e.preventDefault(); return ctx.onExit && ctx.onExit(); }
+    if (d === "sound") { sfx.on = !sfx.on; if (sfx.on) sfx.next(); return render(); }
+    if (d === "time") { dur = +b.dataset.t; saveTime(dur); sfx.tap(0); return render(); }
+    if (d === "play") return start();
+    if (d === "restart") { clearInterval(clock); G.phase = "ready"; G.sides = []; G.left = dur; return render(); }
+    if (G.phase !== "play") return;
+    const sideEl = b.closest("[data-side]"); if (!sideEl) return;
+    const side = +sideEl.dataset.side, s = G.sides[side];
+    if (d === "t") {
+      const k = +b.dataset.k, i = s.sel.indexOf(k);
+      if (i >= 0) { s.sel.splice(i, 1); sfx.untap(pan(side)); } else { s.sel.push(k); sfx.tap(pan(side)); }
+      renderSide(side);
+    } else if (d === "clr") { if (s.sel.length) sfx.clear(pan(side)); s.sel = []; renderSide(side); }
+    else if (d === "ent") submit(side);
+  }
+  cv.addEventListener("pointerdown", onDown);
+
+  // ---------- boot ----------
+  render(); fit();
+  requestAnimationFrame(fit);
+  loadDict().then(d => { if (dead) return; dict = d; render(); })
+    .catch(() => { if (dead) return; dictErr = true; render(); });
+
+  return function dispose() {
+    dead = true;
+    clearInterval(clock); clearInterval(shakeIv);
+    ro.disconnect(); window.removeEventListener("resize", fit);
+    cv.removeEventListener("pointerdown", onDown);
+    sfx.dispose();
+    root.classList.remove("wsg", "shaking"); root.innerHTML = "";
+  };
+}

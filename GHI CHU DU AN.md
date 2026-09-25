@@ -531,6 +531,13 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 386 (25/9/2026, ⭐⭐⭐ WORDSHAKE — GAME CỐ ĐỊNH `?g=wordshake` + TEMPLATE #21 chơi đơn 3 mode) · ✅ THẦY "ok build" · ⬜ CHƯA BẤM TAY · ✅ FIGHT template (core `shared-middle` + `fightFrame.skin`)
+
+- Game tham khảo Wordshake (British Council); thiết kế duyệt 4 vòng `D:\OTHERS\CLAUDE\AWord - thiet ke Wordshake\wordshake-v1…v4.html`.
+- **GAME** `games/wordshake/` (không qua catalog, như Werewolf): FIGHT 2 đội cùng 16 chữ, từ đội này lấy thì đội kia "Taken", bảng giữa hiện từ + nghĩa, skin neon + dải điểm HUD + âm thanh tổng hợp Web Audio (đội trái loa trái, đội phải loa phải). `games/games.js` thêm mục + `card` (cơ chế hình card của Đợt 385).
+- **TEMPLATE** `templates/wordshake/` (🟢 chờ duyệt, CHƯA vào catalog): Mode 1 One word (chữ nhiễu 8/12/16) · Mode 2 Word list (bảng phím cố định) · Mode 3 Free words (từ điển, từ của bài ×2; ✓ = số từ của bài). Editor dùng lại Anagram.
+- **Từ điển** `templates/wordshake/ws-dict.txt`: 18.345 từ A1→C2, 3–7 chữ, bỏ -ing/-ed, nghĩa Việt ngắn nhiều nghĩa (" / "), 444 KB.
+- Chi tiết + đề xuất sửa core cho Fight: `templates/wordshake/GHI CHU WORDSHAKE.md`.
 ## Đợt 385 (25/9/2026, GAME CỐ ĐỊNH THỨ 2 CỦA GỐC GAMES: **MY BEAT** — nghe bài hát, điền lời) · ✅ THẦY "ok build" (thiết kế v3) · ⬜ CHƯA BẤM TAY TRANG THẬT
 
 **Thầy chốt (25/9, AskUserQuestion, 3 vòng thiết kế v1→v3 ở `D:\OTHERS\CLAUDE\AWord - thiet ke My Beat\`):**
