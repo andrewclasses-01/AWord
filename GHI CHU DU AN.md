@@ -551,7 +551,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 xung sáng + tia lửa, `flyPoint` = sao chổi; API giữ nguyên. Chú thích `k` ở `wordshake.js` (template + GAME) ghi "bị bỏ qua".
 **Quyết định**: mực cố định ⇒ bình không còn lộ đội dẫn (bản 390 dâng theo đường bão hoà vẫn nhìn ra được).
 **Đã đo**: xem GHI CHU WORDSHAKE mục Đợt 390b.
-**VIỆC ĐANG CHỜ**: ✅ commit + push (thầy lệnh 25/9/2026) · ⬜ thầy xem thật trên TOMKO (chơi đơn + Fight).
+**VIỆC ĐANG CHỜ**: ✅ commit + push `628088e` (thầy lệnh 25/9/2026) — Pages built đúng commit, 3/3 file khớp mã băm SHA-256 với bản live · ⬜ thầy xem thật trên TOMKO (chơi đơn + Fight).
 
 ## Đợt 390 (25/9/2026) — A SHOW SPEED: BÌNH NƯỚC ĐIỂM + mỗi lượt một bộ chữ khác · ✅ ĐÃ COMMIT + PUSH (thầy lệnh) · ⬜ CHƯA BẤM TAY
 **Bối cảnh**: thầy muốn điểm chưa hiện khi đang chơi — ô điểm là bình nước lấp lánh, điểm bay vào làm nước sóng sánh; hết giờ
