@@ -531,6 +531,7 @@ export function mountMyBeat(root, ctx = {}) {
   async function pollWatchJob(root, id, onProgress, cancelRef) {
     const outbox = await root.getDirectoryHandle("outbox", { create: true });
     const t0 = Date.now(), timeoutMs = 6 * 60 * 1000;
+    let hinted = false;
     while (Date.now() - t0 < timeoutMs) {
       if (cancelRef.cancelled) throw new Error("cancelled");
       const err = await readTextIfExists(outbox, id + ".error");
@@ -538,10 +539,14 @@ export function mountMyBeat(root, ctx = {}) {
       const pkgTxt = await readTextIfExists(outbox, id + ".beat.json");
       if (pkgTxt && await readTextIfExists(outbox, id + ".done") != null) return JSON.parse(pkgTxt);
       const prog = await readTextIfExists(outbox, id + ".progress");
-      if (prog && onProgress) onProgress(prog);
+      if (prog) { hinted = false; if (onProgress) onProgress(prog); }
+      else if (!hinted && Date.now() - t0 > 15000) {
+        hinted = true;
+        if (onProgress) onProgress("Still waiting… check that mybeat-watch.bat is running, and that you picked the MyBeatQueue folder on the Desktop (not another folder).");
+      }
       await new Promise(r => setTimeout(r, 1500));
     }
-    throw new Error("No answer after 6 minutes — is mybeat-watch.bat running on your computer?");
+    throw new Error("No answer after 6 minutes — is mybeat-watch.bat running, and did you pick the MyBeatQueue folder on the Desktop?");
   }
 
   // ============================================================ editor
@@ -595,11 +600,12 @@ export function mountMyBeat(root, ctx = {}) {
     const slug = (d.title || "song").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "song";
     const cmd = `py tools\\mybeat-prepare.py --audio "${slug}.mp3" --link "${link}" --desc "${slug}.txt" --lyrics "${slug}-lyrics.txt"`;
     const w = ed.watch;
+    const forgetLk = `<p class="note" style="margin:4px 0 0"><a href="#" data-a="ed-forgetfolder">Picked the wrong folder? Choose again</a></p>`;
     const auto = !watchSupported() ? `<p class="note">Automatic mode needs Chrome or Edge on this computer.</p>`
       : !w || w.status === "idle" ? `<button class="btn btn-b" data-a="ed-autofetch"${d.youtube ? "" : " disabled"}>${I.playI} Get lyrics &amp; timing automatically</button>
-          <p class="note" style="margin:6px 0 0">Double-click <b>mybeat-watch.bat</b> on this computer first, then press this button. Takes about a minute.</p>`
-      : w.status === "running" ? `<div class="msg info"><span class="mb-spin">●</span> ${esc(w.msg || "Working…")}</div><button class="btn btn-g btn-sm" style="margin-top:6px" data-a="ed-cancelfetch">Cancel</button>`
-      : `<div class="msg bad">${esc(w.msg)}</div><button class="btn btn-b btn-sm" style="margin-top:6px" data-a="ed-autofetch">Try again</button>`;
+          <p class="note" style="margin:6px 0 0">Double-click <b>mybeat-watch.bat</b> first, then press this button — it will ask you to pick the <b>MyBeatQueue</b> folder on your Desktop (once). Takes about a minute.</p>${forgetLk}`
+      : w.status === "running" ? `<div class="msg info"><span class="mb-spin">●</span> ${esc(w.msg || "Working…")}</div><button class="btn btn-g btn-sm" style="margin-top:6px" data-a="ed-cancelfetch">Cancel</button>${forgetLk}`
+      : `<div class="msg bad">${esc(w.msg)}</div><button class="btn btn-b btn-sm" style="margin-top:6px" data-a="ed-autofetch">Try again</button>${forgetLk}`;
     box.innerHTML = `<h3><span class="n">STEP 2</span> Lyrics &amp; timing ${d.lines.length ? `<span class="ok">${I.check}</span>` : ""}</h3>
       ${auto}
       <p class="note" style="margin:10px 0 0"><a href="#" data-a="ed-togglemanual">${ed.showManual ? "Hide the by-hand way" : "…or do it by hand"}</a></p>
@@ -636,6 +642,14 @@ export function mountMyBeat(root, ctx = {}) {
       ed.watch = { status: "error", msg: e.message || "Could not reach the My Beat Watcher folder." };
       edPaint2();
     }
+  }
+  async function edForgetQueueFolder() {
+    if (ed && ed.watch && ed.watch.cancelRef) ed.watch.cancelRef.cancelled = true;
+    await idbSet("queueDir", null);
+    if (!ed) return;
+    ed.watch = null;
+    toast("Folder forgotten — next time it will ask you to pick it again.");
+    edPaint2();
   }
   async function edImport(file) {
     try { await applyImportedPackage(JSON.parse(await file.text())); }
@@ -873,6 +887,7 @@ export function mountMyBeat(root, ctx = {}) {
       case "ed-check": return edCheck();
       case "ed-autofetch": return edAutoFetch();
       case "ed-cancelfetch": if (ed && ed.watch) ed.watch.cancelRef.cancelled = true; return;
+      case "ed-forgetfolder": e.preventDefault(); return edForgetQueueFolder();
       case "ed-togglemanual": e.preventDefault(); ed.showManual = !ed.showManual; edPaint2(); return;
       case "ed-copy": {
         const txt = $('[data-r="cmd"]').textContent;

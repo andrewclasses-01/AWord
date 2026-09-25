@@ -5,12 +5,14 @@ automatically. No manual command, no manual audio file.
 Run it by double-clicking mybeat-watch.bat next to this file. Leave the window open while
 you work in My Beat's "New song" screen; close it (Ctrl+C) when you are done for the day.
 
-How it talks to the browser: My Beat (running in Chrome/Edge) asks once for permission to
-remember the "mybeat-queue" folder below, then for every song it writes a small .job file
-into mybeat-queue\inbox and waits for a matching file to appear in mybeat-queue\outbox. This
-script is the other half: it watches inbox, downloads the song's audio from the YouTube link
-(yt-dlp), runs the exact same "listen twice + line up words" pipeline as mybeat-prepare.py,
-and drops the result (or an error message) into outbox.
+How it talks to the browser: this script keeps a folder called "MyBeatQueue" on the Desktop
+(it creates it the first time you run this). My Beat (running in Chrome/Edge) asks ONCE to
+remember that exact folder — pick "MyBeatQueue" on the Desktop when it asks, not any other
+folder, or the two sides never see each other's files. After that, for every song the page
+writes a small .job file into MyBeatQueue\inbox and waits for a matching file to appear in
+MyBeatQueue\outbox. This script is the other half: it watches inbox, downloads the song's
+audio from the YouTube link (yt-dlp), runs the exact same "listen twice + line up words"
+pipeline as mybeat-prepare.py, and drops the result (or an error message) into outbox.
 """
 import json, os, shutil, sys, tempfile, time, traceback
 
@@ -22,7 +24,9 @@ spec = importlib.util.spec_from_file_location("mybeat_prepare", os.path.join(HER
 prep = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(prep)
 
-QUEUE = os.path.join(HERE, "mybeat-queue")
+# On the Desktop, not inside the repo: the OS folder-choose window opens on the Desktop by
+# default, so there is no deep folder tree to get lost in when picking it in the browser.
+QUEUE = os.path.join(os.path.expanduser("~"), "Desktop", "MyBeatQueue")
 INBOX = os.path.join(QUEUE, "inbox")
 OUTBOX = os.path.join(QUEUE, "outbox")
 PROCESSED = os.path.join(QUEUE, "processed")
@@ -99,7 +103,8 @@ def main():
     for d in (INBOX, OUTBOX, PROCESSED):
         os.makedirs(d, exist_ok=True)
     log("My Beat Watcher is running.")
-    log(f"Watching: {INBOX}")
+    log(f"Folder ready: {QUEUE}")
+    log('In the browser, when it asks to remember a folder, pick "MyBeatQueue" on the Desktop.')
     log("Leave this window open. Go paste a YouTube link in My Beat > New song. Ctrl+C to stop.")
     while True:
         try:
