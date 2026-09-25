@@ -1,5 +1,7 @@
 // =============================================================
-// TEMPLATE: WORDSHAKE — Đợt 386, 25/9/2026. Template #21.
+// TEMPLATE: A SHOW SPEED (was "Wordshake" — renamed Đợt 387, only the words
+// people SEE; the type stays "wordshake" so saved acts/assignments still open)
+// — Đợt 386, 25/9/2026. Template #21.
 // Design approved in 4 rounds (D:\OTHERS\CLAUDE\AWord - thiet ke Wordshake\
 // wordshake-v1…v4.html): structure = v2, neon arcade skin + sounds = v4.
 // The FIXED two-team game lives in games/wordshake/ and shares
@@ -44,6 +46,11 @@ import { icons } from "../../core/icons.js";
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { loadDict, lookup, points, shuffle, countOf, createSfx, escapeHtml as esc } from "./ws-lib.js";
 import { openWordshakeEditor } from "./wordshake-editor.js";
+import { sound } from "../../core/sound.js";
+
+// Đợt 387 — the last-10-seconds bell (engine hook `sounds.countdownTick`, board 0
+// only in a Fight). One module-level player: the hook is not tied to one mount.
+const bell = createSfx();
 
 const MODES = ["one", "list", "free"];
 const TILE_CHOICES = [8, 12, 16];
@@ -166,8 +173,11 @@ const wordshakeTemplate = {
   type: "wordshake",
   scorable: true,
   itemsKey: "items",
-  name: "Wordshake",
+  name: "A Show Speed",
   hasSloganSlot: true,
+  sounds: {
+    countdownTick: left => { if (!sound.isMuted()) bell.countdown(left); }
+  },
   checkOrder: ["shuffle", "showAnswers"],
   edit: openWordshakeEditor,
   fightMode: true,
@@ -185,7 +195,7 @@ const wordshakeTemplate = {
 
   buildExtraOptions({ panel, draft }) {
     const cur = modeOf(draft);
-    const modeCell = mkCell({ label: "Wordshake mode", wide: true });
+    const modeCell = mkCell({ label: "A Show Speed mode", wide: true });
     const tilesCell = mkCell({ label: "Letters", sub: "Mode 1" });
     const sync = m => tilesCell.cell.classList.toggle("is-locked", m !== "one");
     modeCell.ctl.append(mkSeg([
@@ -200,7 +210,7 @@ const wordshakeTemplate = {
   optionsNeedRestart() { return true; },
 
   mount(root, activity, ui) {
-    if (ui.sloganSlot) ui.sloganSlot.textContent = "WORDSHAKE IN ANDREW CLASSES";
+    if (ui.sloganSlot) ui.sloganSlot.textContent = "A SHOW SPEED IN ANDREW CLASSES";
     const opt = activity.options || {};
     const mode = modeOf(opt);
     const fight = activity._fight || null;
@@ -219,7 +229,7 @@ const wordshakeTemplate = {
     root.innerHTML = "";
     const wrap = el("div", "aw-ws-root aw-ws-m-" + mode + (fctl ? " is-fight is-side-" + side : ""));
     root.append(wrap);
-    if (!total) { wrap.append(el("div", "aw-ws-empty", "This Wordshake has no words yet.")); return () => {}; }
+    if (!total) { wrap.append(el("div", "aw-ws-empty", "This activity has no words yet.")); return () => {}; }
 
     const st = items.map(() => ({ solved: false, tries: 0, typed: null }));
     const idxOf = up => items.findIndex(it => it.up === up);

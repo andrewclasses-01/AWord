@@ -151,6 +151,19 @@ export function createSfx() {
     dup(pan) { tone(784, .07, { vol: .05, pan: P(pan) }); tone(622, .1, { vol: .05, at: .1, pan: P(pan) }); },
     shake() { for (let i = 0; i < 12; i++) noise(.045, { at: i * .055, vol: .06, freq: 1200 + Math.random() * 3000 }); },
     tick: () => tone(1320, .035, { vol: .05 }),
+    // Đợt 387 (thầy: "10 giây cuối có chuông dồn dập") — call once per second
+    // with the seconds left (10…1): 2 bell strikes a second from 10 to 6, 4 a
+    // second from 5 to 1, pitch climbing as time runs out. Scheduled on the
+    // audio clock (`at`), so the strikes stay evenly spaced inside the second.
+    countdown(left) {
+      if (!(left > 0 && left <= 10)) return;
+      const n = left > 5 ? 2 : 4, f = 1320 * Math.pow(2, (10 - left) / 18);
+      for (let i = 0; i < n; i++) {
+        const at = i / n;
+        tone(f, .22, { type: "sine", vol: .09, at });
+        tone(f * 2.76, .12, { type: "sine", vol: .03, at });   // the metallic overtone of a bell
+      }
+    },
     next() { tone(660, .07, { type: "triangle", vol: .06 }); tone(990, .1, { type: "triangle", vol: .06, at: .07 }); },
     timeup() { tone(440, .35, { type: "sawtooth", vol: .07 }); tone(330, .6, { type: "sawtooth", vol: .07, at: .3 }); },
     win(pan) {

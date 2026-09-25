@@ -25,7 +25,7 @@ export const FIXED_GAMES = [
     load: () => import("./mybeat/mybeat.js").then(m => m.mountMyBeat) },
   // ⭐ Đợt 386 — Wordshake: 16 letters, two teams, a word one team finds is taken
   // (templates/wordshake/GHI CHU WORDSHAKE.md).
-  { id: "wordshake", label: "Wordshake", kind: "Team game",
+  { id: "wordshake", label: "A Show Speed", kind: "Team game",
     blurb: "Two teams make words from the same 16 letters. A word one team finds is taken.",
     css: "games/wordshake/wordshake.css",
     card: { bg: "radial-gradient(110% 85% at 50% 40%,#0F4029 0%,#05170F 62%,#030D09 100%)",

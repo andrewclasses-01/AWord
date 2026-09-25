@@ -175,13 +175,25 @@
 /* ---------- the score strip, neon (core adds `.is-skin-wordshake` from fightFrame.skin) ----------
    The slanted panel is a ::before BEHIND the number: core pops `.aw-fight-score`
    with a transform (aw-fight-pop), which would wipe any skew put on it. */
+/* Đợt 387 (thầy: the strip was too tall, the boards sat too low for the children):
+   boxes 49 → ~33px, numbers 3.12vw → 2.1vw, and the room above each box shrinks
+   from core's clamp(10px,1.35vw,18px) to just what the MISS WAIT bar needs (it
+   hangs at the top of `.aw-fight-half`, clamp(5px,.62vw,9px) tall).
+   ⛔ The clock box gets the SAME top padding as the halves — the grid centres
+   the middle cluster on the halves, so one without the other puts the clock
+   out of line with the scores (it sat 8px high before this). */
+.aw-fight.is-skin-wordshake{--ws-strip-pt:calc(clamp(5px,.62vw,9px) + 2px)}
+.aw-fight.is-skin-wordshake .aw-fight-half{padding-top:var(--ws-strip-pt)}
 .aw-fight.is-skin-wordshake .aw-fight-team,
-.aw-fight.is-skin-wordshake .aw-fight-clockbox{position:relative;isolation:isolate;padding:6px 64px}
+.aw-fight.is-skin-wordshake .aw-fight-clockbox{position:relative;isolation:isolate;padding:3px 56px}
+.aw-fight.is-skin-wordshake .aw-fight-score,
+.aw-fight.is-skin-wordshake .aw-fight-clock{font-size:clamp(16px,2.1vw,27px);line-height:1.12}
 .aw-fight.is-skin-wordshake .aw-fight-team::before,
 .aw-fight.is-skin-wordshake .aw-fight-clockbox::before{content:"";position:absolute;inset:0;z-index:-1;transform:skewX(-14deg);border-radius:4px;
   background:linear-gradient(180deg,#0C2E20,#04130C);border:2px solid #3DF58A;box-shadow:0 0 16px rgba(61,245,138,.4),inset 0 0 22px rgba(61,245,138,.16)}
 .aw-fight.is-skin-wordshake .aw-fight-team.side-1::before{background:linear-gradient(180deg,#0B2833,#04121A);border-color:#37D7FF;box-shadow:0 0 16px rgba(55,215,255,.4),inset 0 0 22px rgba(55,215,255,.16)}
-.aw-fight.is-skin-wordshake .aw-fight-clockbox{padding:6px 40px}
+.aw-fight.is-skin-wordshake .aw-fight-clockbox{padding:3px 34px}
+.aw-fight.is-skin-wordshake .aw-fight-middle .aw-fight-clockbox{margin-top:var(--ws-strip-pt)}
 .aw-fight.is-skin-wordshake .aw-fight-clockbox::before{background:linear-gradient(180deg,#10261D,#030D09);border-color:rgba(230,255,241,.4);box-shadow:0 0 14px rgba(3,17,11,.35)}
 .aw-fight.is-skin-wordshake .aw-fight-score{font-family:"Saira",sans-serif;font-style:italic;font-weight:800;color:#9BFFC4;text-shadow:0 0 14px rgba(61,245,138,.9)}
 .aw-fight.is-skin-wordshake .aw-fight-team.side-1 .aw-fight-score{color:#B4F0FF;text-shadow:0 0 14px rgba(55,215,255,.9)}

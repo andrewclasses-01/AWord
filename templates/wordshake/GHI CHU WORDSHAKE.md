@@ -1,5 +1,18 @@
 # GHI CHÚ WORDSHAKE — template #21 + game cố định trong GAMES
 
+## ⭐ Đợt 387 (25/9/2026) — TÊN MỚI "A SHOW SPEED" + dải điểm thấp + Home mới + chuông 10 s
+- **Tên hiển thị = A SHOW SPEED** (thầy chọn): logo GAME, thẻ GAMES, catalog, editor, slogan, đuôi bài giao `SHOWSPEED`.
+  ⛔ MÃ NỘI BỘ GIỮ `wordshake` (type, `?g=wordshake`, tên file/thư mục, class `.is-skin-wordshake`) — act/bài giao/link cũ vẫn mở.
+- GAME: dải điểm ô 62→40px, bàn chơi y 89→56, hàng nút 44→29px (2/3) ⇒ bản vẽ 1280×**508** (cũ 566). Bỏ dòng luật
+  "Same 16 letters…" (chỉ còn dòng Loading/lỗi từ điển). Bỏ nút New game. Home + Sound vẽ lại kiểu game (ô vát neon).
+- Home: đang chơi ⇒ hộp "End this game?" (NO/YES, đồng hồ đứng) ⇒ YES về màn chờ; màn kết quả ⇒ về màn chờ; ở màn chờ ⇒
+  ra cây GAMES (`ctx.onExit`) — ⛔ trang game KHÔNG có thanh trên AWord, đây là lối ra duy nhất ngoài nút Back.
+- Chuông 10 s cuối `sfx.countdown(left)` (ws-lib): giây 10–6 hai tiếng/giây, 5–1 bốn tiếng/giây, cao dần; thay tiếng tích cũ.
+- FIGHT template: skin dải điểm ô ~49→~33px, chữ 2.1vw, khoảng trên chỉ đủ thanh MISS WAIT ⇒ dải 69→44px ở màn 1024.
+  Vá luôn lỗi có sẵn: ô đồng hồ cao hơn 2 ô điểm 8px (skin ghi đè padding-top của clockbox) — nay `margin-top` = của halves.
+  Chuông: HOOK CORE MỚI `tpl.sounds.countdownTick(left)` (engine, đồng hồ đếm ngược, 1 lần/giây ở 10…1, bàn 0 trong Fight);
+  template gọi `bell.countdown` (tôn trọng nút tắt tiếng chung `sound.isMuted()`). Áp cả chơi đơn khi đặt Count down.
+
 **TRẠNG THÁI: ✅ ĐÃ VÀO CATALOG** (Đợt 386c, 25/9/2026 — thầy: "đưa template vào catalog New activity luôn", sẽ chỉnh tiếp ở phiên sau) — GAME + template chơi đơn 3 mode chạy được;
 FIGHT của template ĐÃ NỐI (core `shared-middle` + skin, xem mục FIGHT). Đã có trong `core/catalog.js` + `TEMPLATE_ICON` (fmtAnagram) + `TPL_SHORT` (WORDSHAKE) + `convert.js` (đổi qua lại như Anagram) + `tpl-files.js`.
 

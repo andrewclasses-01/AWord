@@ -488,6 +488,7 @@ Mọi thứ vươn RA NGOÀI một ván mới là chỗ phải vá — nhớ dan
 | `window.__awordBridge` (1 chỗ ngồi) | chỉ bàn 0 ngồi |
 | Giọng đọc | chỉ bàn 0 đọc (`ctl.speaks(side)`) |
 | Nhạc lifecycle (`tpl.sounds.play/restart/timeWarning`) | engine chỉ phát ở bàn 0 |
+| ⭐ Đợt 387 `tpl.sounds.countdownTick(left)` — đếm ngược, gọi 1 lần/giây ở 10…1 (tuỳ chọn, A Show Speed rung chuông) | engine chỉ gọi ở bàn 0 |
 
 ⭐ **`tpl.fightLayout: "shared-top"` — VÙNG CHUNG TRÊN HAI BÀN (Đợt 351, 20/9/2026, Rocket race).** Template
 khai cờ này thì `startFight()` dựng thêm **`.aw-fight-shared`** (rộng bằng cả trận, `aspect-ratio: 32/10.5` = đúng

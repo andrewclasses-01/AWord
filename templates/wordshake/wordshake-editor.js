@@ -20,5 +20,5 @@ export function openWordshakeEditor(container, activity, opts = {}) {
     }
   });
   const badge = container.querySelector(".aw-ed-typebadge");
-  if (badge) badge.textContent = "WORDSHAKE";
+  if (badge) badge.textContent = "A SHOW SPEED";
 }

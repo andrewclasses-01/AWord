@@ -3287,6 +3287,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // Count down auto-submits the game when it reaches 0.
   let timerId = null, startedAt = 0, cleanup = () => {};
   let timeWarned = false;   // fires the "5 seconds left" hook (below) once per play
+  let countdownSec = -1;    // Đợt 387 — last whole second handed to `tpl.sounds.countdownTick`
   // `tpl.hideTimerCountUp` (Đợt 92) — a game that already shows its own
   // elapsed/remaining time (Open the box's per-box clock/bar) never falls
   // back to "Count up" on a fresh act; see the same flag in options-panel.js.
@@ -3316,6 +3317,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // Optional per-template hook — no default sound, so templates that
       // don't opt in (e.g. Quiz) behave exactly as before.
       if (remaining <= 5 && remaining > 0 && !timeWarned) { timeWarned = true; if (!fight || fight.side === 0) tpl.sounds?.timeWarning?.(); }
+      // ⭐ Đợt 387 — optional hook, ONCE per whole second for the last 10 s
+      // (the ticker runs every 500ms, hence `countdownSec`): A Show Speed rings
+      // its bell here. Board 0 only in a Fight, like timeWarning — one bell, not two.
+      if (remaining <= 10 && remaining > 0 && remaining !== countdownSec) {
+        countdownSec = remaining;
+        if (!fight || fight.side === 0) tpl.sounds?.countdownTick?.(remaining);
+      }
       if (remaining <= 0) { stopTimer(); submitHandler?.(); }
     } else {
       timerEl.textContent = formatTime(elapsed);
@@ -3626,7 +3634,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     if (torndown) return;
     timerStarted = true;
     startedAt = performance.now();
-    timeWarned = false;
+    timeWarned = false; countdownSec = -1;
     timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
     if (timerMode() !== "none") {
       // show the correct value immediately (don't wait for the first 500ms tick)

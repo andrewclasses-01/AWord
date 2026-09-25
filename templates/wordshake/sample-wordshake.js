@@ -7,7 +7,7 @@ export const activity = {
   id: "act_sample_wordshake",
   schemaVersion: 1,
   type: "wordshake",
-  title: "WEATHER — Wordshake",
+  title: "WEATHER — A Show Speed",
   instruction: "Make the word from the letters.",
   theme: "classic",
   options: {

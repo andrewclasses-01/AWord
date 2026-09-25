@@ -151,7 +151,7 @@ export const TEMPLATES = [
   // ⭐ Đợt 386 (25/9/2026) — make the lesson's words from shaken letter tiles,
   // three modes (One word · Word list · Free words), Fight with a centre board.
   // See templates/wordshake/GHI CHU WORDSHAKE.md.
-  { type: "wordshake",       label: "Wordshake",       built: true,
+  { type: "wordshake",       label: "A Show Speed",    built: true,
     blurb: "Shake the letters and make the words — one at a time, from a word list, or any word you can find.",
     css: "templates/wordshake/wordshake.css",
     load: () => import("../templates/wordshake/wordshake.js"),
