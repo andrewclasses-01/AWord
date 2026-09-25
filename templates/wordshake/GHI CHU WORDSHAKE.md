@@ -18,8 +18,7 @@
 | `templates/wordshake/wordshake-editor.js` | DÙNG LẠI editor Anagram (cùng dạng `{word, clue}`), đóng lại `type:"wordshake"` |
 | `templates/wordshake/test.html?mode=one\|list\|free` | trang thử template |
 | `games/wordshake/wordshake.js/.css` + `test.html` | GAME cố định (`?g=wordshake`), `mountWordshake(root, ctx)` |
-| `games/games.js` | mục `wordshake` (+ `art` = hình card riêng) |
-| `main.js` `fixedGameCard` | đọc `g.art` (không có thì giữ mặt trăng Werewolf) |
+| `games/games.js` | mục `wordshake` (+ `card` = hình card riêng, cơ chế Đợt 385) |
 
 ## GAME (gốc GAMES)
 - Luôn FIGHT 2 đội trên một màn cảm ứng: cùng 16 chữ, mỗi bên xáo vị trí; từ đội này lấy ⇒ đội kia bấm ra "Taken".

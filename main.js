@@ -763,7 +763,8 @@ async function renderFixedGame() {
     [mount] = await Promise.all([g.load(), loadGameCss(g.css)]);
     const rolls = await listClasses().catch(() => []);
     rolls.forEach(c => { if (c.name && c.students?.length) classes[c.name] = c.students.map(s => ({ id: s.id, name: s.name })); });
-    data = await loadGameData();
+    // Đợt 385 — the seating doc belongs to Werewolf only; My Beat loads its own songs
+    if (g.id === "werewolf") data = await loadGameData();
   } catch (e) {
     toast(`${g.label} — could not load`);
     return openRoot("games");
@@ -781,14 +782,10 @@ function fixedGameCard(g) {
   const card = el("div", "aw-card aw-card-act aw-card-game");
   card.onclick = () => openFixedGame(g.id);
   const preview = el("div", "aw-cp");
-  // ⭐ Đợt 386 — each fixed game may bring its own card art (games/games.js `art`);
-  // without it the card keeps Werewolf's moon, the look it has had since Đợt 373.
-  const art = g.art || {
-    bg: "radial-gradient(110% 85% at 50% 40%,#2B3A6E 0%,#172247 100%)",
-    svg: '<svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="#F4C95D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>'
-  };
-  preview.style.cssText = `background:${art.bg};display:flex;align-items:center;justify-content:center`;
-  preview.append(el("div", null, art.svg));
+  // Đợt 385 — a game may bring its own card look (games.js `card`); Werewolf keeps the night sky + moon
+  preview.style.cssText = `background:${g.card?.bg || "radial-gradient(110% 85% at 50% 40%,#2B3A6E 0%,#172247 100%)"};display:flex;align-items:center;justify-content:center`;
+  preview.append(el("div", null, g.card?.icon ||
+    '<svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="#F4C95D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>'));
   const playBtn = el("button", "aw-cp-play", icons.playBig);
   playBtn.type = "button"; playBtn.title = "Play";
   playBtn.onclick = e => { e.stopPropagation(); openFixedGame(g.id); };
