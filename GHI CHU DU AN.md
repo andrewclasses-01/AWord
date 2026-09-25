@@ -563,7 +563,7 @@ Với Count down, hết câu cũng vòng lại (chứ không kết ngay) — h�
 **Đã đo** (`scratch/dot382-rr-finish.html`, 4 câu ⇒ 2 bậc, 0 lỗi console): sai 10 lần liền mỗi bàn ⇒ vẫn nhận câu, vòng 2-3 là hoán
 vị đủ 4 câu · trái đúng 2 câu ở vòng lại ⇒ TEAM LEFT WINS, phải nổ · Count down 22 s ⇒ trái (1 bậc) `is-homerun`, phải nổ · Count
 down hoà ⇒ SUDDEN DEATH ⇒ trái đúng ⇒ thắng · hồi quy Same 1–0 hết câu ⇒ trái bay về. Chi tiết GHI CHU ROCKET-RACE mục 25.
-**VIỆC ĐANG CHỜ**: ⬜ thầy bấm tay TOMKO (Fight Different, không giờ + Count down).
+**VIỆC ĐANG CHỜ**: ✅ commit + push `9f8e5d4` (thầy lệnh 25/9/2026) — Pages built đúng commit, 2/2 file khớp mã băm SHA-256 với bản live · ⬜ thầy bấm tay TOMKO (Fight Different, không giờ + Count down).
 
 ## Đợt 390b (25/9/2026) — BÌNH ĐIỂM: MẪU 4 (năng lượng neon + sao chổi), mức cố định · ✅ ĐÃ COMMIT + PUSH (thầy lệnh)
 **Bối cảnh**: thầy: hiệu ứng sóng nước + số bay vào "xấu quá", muốn vài bản để chọn ⇒ trang 5 mẫu
