@@ -2743,6 +2743,33 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     wrap.classList.add("is-readyshared");
   }
 
+  // ⭐ Đợt 392 (26/9/2026, Rocket race 3D) — `fightFrame.fullscene: true`: vùng chung
+  // (shared-top) là CẢ KHUNG GAME, hai bàn vẫn được mount đầy đủ (engine vẫn chạy đồng hồ,
+  // Menu, Options, trọng tài vẫn lái 2 bàn logic) nhưng ẨN hẳn (`.is-fullscene`, core/app.css).
+  // Template vẽ MỌI THỨ vào `sharedRoot()` — ở đây là một cảnh WebGL — và được gọi SỚM qua
+  // `tpl.fightScene({ root, ctl, title, play })` ngay khi khung dựng xong (trước màn READY),
+  // để tự vẽ màn mở đầu + nút START của nó. `play()` bấm hộ nút Play của bàn 0 (trọng tài
+  // tự chuyển tiếp sang bàn 1). Handle trả về có `destroy()` ⇒ gọi trong teardown (mỗi lần
+  // Start again / Apply dựng khung mới — không huỷ là rò WebGL context).
+  // Template không khai ⇒ không có gì thay đổi.
+  let sceneHandle = null;
+  if (frame && frame.fullscene && sharedEl) {
+    wrap.classList.add("is-fullscene");
+    const tplScene = getTemplate(activity.type);
+    if (tplScene && typeof tplScene.fightScene === "function") {
+      try {
+        sceneHandle = tplScene.fightScene({
+          root: sharedEl, ctl, title: playAct.title || "",
+          play() {
+            const btn = boardEls[0] && boardEls[0].querySelector(".aw-play-overlay button");
+            if (btn && !btn.disabled) { btn.click(); return true; }
+            return false;
+          }
+        }) || null;
+      } catch (e) { console.warn("[fight] fightScene failed", e); sceneHandle = null; }
+    }
+  }
+
   paintScore(0); paintScore(1);
 
   // ----- FULLSCREEN (teacher, 12/8/2026 fourth pass) -----
@@ -2812,5 +2839,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // (cleanupAll() is idempotent, see core/engine.js) and safe when a board
     // never finished mounting (cleanupFns[side] stays null, guarded below).
     cleanupFns.forEach(fn => { try { fn && fn(); } catch { /* board already gone */ } });
+    // Đợt 392 — cảnh WebGL của `fightFrame.fullscene` (xem chỗ dựng ở trên)
+    try { sceneHandle && sceneHandle.destroy && sceneHandle.destroy(); } catch { /* ignore */ }
   }
 }

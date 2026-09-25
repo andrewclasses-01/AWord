@@ -512,6 +512,7 @@ phần riêng của đội. Luật đi kèm:
   inset:0` như Rocket race) sẽ CHE hàng nút dưới, tức che luôn thanh Time delay của trọng tài. Gọi hàm này với một ổ
   trong sân của mình ⇒ engine dời ĐÚNG node `.aw-waitbar` vào đó (thêm `.is-hosted`: relative, rộng 100%), vẫn tự điều
   khiển như cũ. Kiểm `typeof ui.hostFightWaitBar === "function"` trước khi gọi (core cũ trong cache).
+- ⭐⭐ **Đợt 392 — `fightFrame.fullscene: true` + `tpl.fightScene({ root, ctl, title, play })`** (Rocket race 3D): vùng chung là CẢ khung (`.aw-fight.is-fullscene`, `core/app.css`: cao = min(nửa bề rộng qua `100cqw`, `100dvh − --aw-scene-chrome`)), hai bàn vẫn mount nhưng `visibility:hidden`, không nhận chạm (⛔ KHÔNG `display:none` — engine còn đo bên trong). Core gọi `fightScene` ngay sau khi khung dựng, TRƯỚC màn READY; `play()` bấm Play của bàn 0 (trọng tài tự chuyển sang bàn 1). Handle trả về PHẢI có `destroy()` — `teardown()` gọi mỗi lần Start again/Apply/thoát (không huỷ ⇒ rò WebGL context, trình duyệt giới hạn ~16). Template không khai ⇒ không đổi gì.
 - ⭐ **Đợt 354 — `fightFrame.noScore: true`** ⇒ `.aw-fight.is-noscore`, hai số điểm trên dải `visibility:hidden` (hình học
   giữ nguyên). Điểm vẫn tính ngầm; template tự vẽ "điểm" theo cách của nó (Rocket race: vị trí tàu).
 - ⭐ **Đợt 354 — `ctl.forfeit(side)`**: bàn bỏ cuộc (Rocket race: hết mạng, tàu nổ). Đội KIA thắng bất kể điểm; trận kết

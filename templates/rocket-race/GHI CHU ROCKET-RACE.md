@@ -1,5 +1,7 @@
 # GHI CHÚ — ROCKET RACE (đua tên lửa)
 
+🆕 **Đợt 392 (26/9/2026) — FIGHT 3D (WebGL)**, xem **mục 26**. ⬜ thầy chưa bấm tay TOMKO.
+
 🆕 **Đợt 368 + 368b (22/9/2026) — FIGHT TRÊN HAI MÁY: câu hỏi sang iPad, máy chơi giữ đường đua + ô đáp án.**
 ✅ **COMMIT + PUSH `0b5e4f1` + LIVE** (7/7 mã băm SHA-256 khớp sau 220 s; `source.html` trên bản live mở ra đúng
 màn "Sign in to link this screen", 0 lỗi console). Thầy đã duyệt gộp luôn sửa core `core/store.js`.
@@ -639,3 +641,18 @@ lại nổ tàu vũ trụ như tính năng cũ"*.
 ## 19. Phi công: chỉ lên xuống, biên độ 1/5 (Đợt 362, 20/9/2026 tối, mọi mode)
 Bỏ `aw-rr-facepush` (ép lùi ngang khi boost); `aw-rr-jiggle` ±1,2 % (1/5 của ±6 %); `aw-rr-facerattle` khi khựng/va chỉ dọc
 ±1,2 %. Chu kỳ/pha vẫn bám thân tàu (Đợt 361). Đo: keyframes chỉ còn `translateY`, không `translateX`.
+
+## 26. Đợt 392 (26/9/2026) — FIGHT 3D: một cảnh WebGL thay Fight 2D
+Thầy thiết kế cùng Claude qua 13 bản mẫu ở kho **myGame** (`E:\LAP TRINH APP\myGame\rocket-race`, live https://andrewclasses-01.github.io/myGame/rocket-race/), chốt **mẫu 2i** rồi "ok build".
+
+**Kiến trúc** — KHÔNG viết lại luật chơi:
+- Core: `fightFrame.fullscene` ⇒ `.aw-fight.is-fullscene`: vùng chung (shared-top, `sharedH 16`) cao = min(nửa bề rộng, màn − `--aw-scene-chrome` 84px), hai bàn vẫn mount (engine/trọng tài chạy đủ) nhưng `visibility:hidden` + không nhận chạm. Core gọi `tpl.fightScene({root, ctl, title, play})` ngay khi khung dựng (trước READY); `play()` bấm hộ Play của bàn 0; handle trả về có `destroy()` gọi trong `teardown` (Start again / Apply không rò WebGL context).
+- `rocket-race.js`: `rr3dScene()` dựng `.aw-rr3d-canvas` (cảnh 3D) + `.aw-rr3d-hidden2d` (ổ 2D ẨN). `ensureFightScene` vẽ cảnh 2D cũ vào ổ ẩn ⇒ MỌI dòng Fight cũ chạy nguyên; mỗi sự kiện được PHẢN CHIẾU qua `v3(fn)` (xếp hàng tới khi view sẵn sàng): câu/đáp án (`setQuestion/setAnswers`), màu ô (`paint3dTiles`: ô đúng CHỈ XANH, đội thua lượt xám cả bàn, sai đỏ ✗, không lộ ô đúng), tàu (`move up/back`, `stall`, `damage`, `explode`, `turbo`), 3-2-1 (`countStep/go`), kết trận (`win` ⇒ trả số ms, `finishRace(w, ms)` chờ đúng hết cảnh), iPad (`setQuestionHidden`), Menu (`pause`). Chạm ô 3D ⇒ `rr3d.boards[side].choose(k)` = đúng `choose()` cũ.
+- `rr3d-view.js` (≈1.6k dòng, chép từ `myGame/rocket-race/core/rr3d-core.js` rồi bỏ luật chơi) — VIEW thụ động. `RR3D_CFG()` trong rocket-race.js = cấu hình mẫu 2i (camera đuổi; toàn cảnh khi chênh ≥ 3 nấc HOẶC có tàu vào 3 nấc cuối, đổi góc 3,2 s; cỡ ô theo cm thật màn 86").
+- `rr3d-sfx.js` + `sfx/*.mp3` (21 file ~1,1 MB, CC0 — `sfx/NGUON AM THANH.md`); `rrSound.quiet` tắt tiếng tổng hợp cũ trong trận 3D. Tiếng lặp (động cơ, nền, cháy) tự tắt/bật theo nút 🔊.
+- `rocket-race.css`: `.is-skin-rr3d` = hàng nút kiểu game (kính tối, viền xanh), ẩn ‹ ›; `.aw-menu` của engine (nằm trong bàn 0 đang ẩn) được cho nổi trên hàng nút.
+- WebGL/import hỏng ⇒ `rr3dFallback()` gỡ `is-fullscene`, trả `--aw-fsh` 5.75, hiện ổ 2D ⇒ Fight 2D như Đợt 391.
+
+**Bẫy đã cắn (dự án myGame)**: điểm ảnh NaN bị bloom loang thành mảng đen (pass gột NaN trước bloom) · "nhún" góc nhìn khi trả lời đúng làm CẢ MÀN co giãn vì bảng gắn camera (`fovKick 0`; rung chỉ rung cảnh — `steadyUI`) · khói bay về camera phủ màn ở góc đuổi (mờ hạt gần camera) · RoomEnvironment trắng làm ô kim loại nhạt màu (hạ envMapIntensity).
+
+**⬜ Chưa kiểm / thầy bấm tay**: trang thật + TOMKO (2 đội chạm cùng lúc, 60 fps 4K) · âm lượng từng tiếng · Count down hết giờ (đường `settleByPosition` → `win` homeRun) · Sudden death · In turns · voice-only (cảnh hiện 🔊 thay câu) · màn iPad.

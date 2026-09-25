@@ -12,7 +12,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 391** (25/9/2026, ROCKET RACE ▸ FIGHT Different: đội hết câu mà chưa ai về đích ⇒ DÙNG LẠI câu cũ
+> Mới nhất: **Đợt 392** (26/9/2026, ROCKET RACE ▸ FIGHT 3D — xem chặng Đợt 392 bên dưới). Trước đó **Đợt 391** (25/9/2026, ROCKET RACE ▸ FIGHT Different: đội hết câu mà chưa ai về đích ⇒ DÙNG LẠI câu cũ
 > (xào lại) tới khi có tàu về đích; Count down hết giờ ⇒ tàu gần hơn bay về, tàu kia nổ như cũ). Chặng Đợt 391.
 > Trước đó: **Đợt 390b** (25/9/2026, bình điểm đổi sang MẪU 4 thầy chọn — dải năng lượng neon + sao chổi, mức CỐ ĐỊNH ngang
 > nhau mọi đội tới lúc đếm; trang chọn mẫu `D:\OTHERS\CLAUDE\AWord - thiet ke Wordshake\score-tank-mau.html`). Chặng Đợt 390b.
@@ -545,6 +545,14 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
+
+## Đợt 392 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D (WebGL) thay Fight 2D · ⬜ CHƯA BẤM TAY TOMKO
+
+Đợt 392 — ⭐⭐ ROCKET RACE ▸ FIGHT 3D (thầy duyệt mẫu 2i ở kho myGame, "ok build" 26/9): trận Fight là MỘT cảnh WebGL (three.js r170 chép vào `templates/rocket-race/vendor/three/`, import ĐỘNG chỉ trong trận) phủ cả khung — camera đuổi theo 2 tàu, cột đáp án 3D sát hai mép, hàng nút kiểu game (bỏ ‹ ›, nhãn "câu / tổng"), mở màn ANDREW CLASSES → ROCKET RACE → START, kết trận tàu thắng bay khỏi màn → cổng co lại → vệt sáng đánh tàu thua → cháy → nổ vỡ vụn; bộ tiếng THẬT CC0 (Kenney + OpenGameArt, `sfx/`, qua core/sfx.js). CORE (thêm, tương thích ngược): `fightFrame.fullscene` + `tpl.fightScene({root, ctl, title, play})` + `destroy()` trong teardown (`core/fight.js`), `.is-fullscene` (`core/app.css`). Luật chơi/trọng tài/Lives/Points off/Different/iPad/Sudden death GIỮ NGUYÊN — code 2D cũ vẫn chạy trong một ổ ẨN, mọi sự kiện được PHẢN CHIẾU sang cảnh 3D (`v3()`); WebGL hỏng ⇒ tự lùi về 2D. Chi tiết `templates/rocket-race/GHI CHU ROCKET-RACE.md` mục 26.
+
+- Đã kiểm (bàn thử `templates/rocket-race/test.html` + `startFight()` gọi thẳng, 0 lỗi console): START → 3-2-1 → câu + 3 đáp án hiện ĐÚNG trong cảnh, nhãn `1 / 10`, đồng hồ chạy · đội phải sai + đội trái đúng ⇒ ô trái xanh, còn lại xám; ô phải đỏ, còn lại xám; tàu trái +1 · chơi tới về đích ⇒ cảnh kết trận ~9 s rồi bảng "TEAM LEFT WINS 5 — 0" · Start again ⇒ cảnh cũ huỷ, chỉ còn 1 canvas · Different ⇒ 2 câu 2 nửa · Lives 2 + Points off 1 ⇒ sai 2 lần tàu phải nổ, trái thắng · ☰ Menu tạm dừng cảnh + nổi trên hàng nút · HỒI QUY: Solo 5 tàu 2D như cũ (0 canvas), Quiz Fight khung y cũ (không `is-fullscene`).
+- ⚠️ Bàn thử: nút MODE ▸ Fight trên `test.html` không vào trận (cả nhánh `main` cũng vậy — giới hạn trang thử, không phải lỗi mới); khung xem trước ẩn thì rAF dừng ⇒ lái bằng `__rr3d.view.step(n)` + `snap()`.
+- ⬜ Thầy bấm tay: trang thật + TOMKO (cảm ứng 2 đội, 60 fps, cỡ ô 14×5,5 cm), âm thanh, màn iPad, Count down hết giờ.
 
 ## Đợt 391 (25/9/2026) — ROCKET RACE ▸ FIGHT Different: hết câu ⇒ dùng lại câu cũ tới khi về đích
 **Bối cảnh**: thầy: *"Khi 1 đội đã hết câu (khi chọn different) mà chưa có đội nào về đích, các câu cũ tiếp tục được sử dụng

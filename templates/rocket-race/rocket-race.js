@@ -249,7 +249,8 @@ function buildRocketEl(scene, r, laneIdx, laneCount) {
 // runs one match at a time). Rebuilt whenever the match hands us a new root.
 let rrFightScene = null;
 function ensureFightScene(ctl) {
-  const host = ctl.sharedRoot && ctl.sharedRoot();
+  // Đợt 392 — trận 3D: cảnh 2D cũ vẽ vào ổ ẨN (mọi logic cũ chạy y nguyên, cảnh 3D phản chiếu)
+  const host = (rr3d && rr3d.ctl === ctl) ? rr3d.host2d : (ctl.sharedRoot && ctl.sharedRoot());
   if (!host) return null;
   if (rrFightScene && rrFightScene.host === host) return rrFightScene;
   if (rrFightScene && rrFightScene.ro) { try { rrFightScene.ro.disconnect(); } catch { /* ignore */ } }
@@ -314,6 +315,130 @@ function fightTrackLength(n) { return Math.max(1, Math.ceil(n / 2)); }
 
 // Menu pause (Đợt 91) bridge — one handler per live mount (a match has TWO).
 const rrPauseHandlers = new Set();
+
+// ⭐⭐ Đợt 392 (thầy, 26/9/2026) — FIGHT 3D. Trận dựng `fightFrame.fullscene` ⇒ core/fight.js
+// gọi `tpl.fightScene()` ngay khi khung dựng xong (trước READY): ở đây ta dựng một cảnh
+// WebGL (rr3d-view.js, import ĐỘNG) phủ CẢ khung + một ổ 2D ẨN mà toàn bộ code Fight 2D cũ
+// vẫn vẽ vào như trước. Luật chơi, trọng tài, Lives, Points off, Different, iPad, Sudden
+// death… GIỮ NGUYÊN 100%; mỗi sự kiện chỉ được PHẢN CHIẾU sang cảnh 3D qua `v3(fn)`.
+// WebGL hỏng / import lỗi ⇒ tự lùi về Fight 2D (bỏ `is-fullscene`, hiện ổ 2D).
+let rr3d = null;   // { root, host2d, ctl, view, sfx, boards:[..], q:["",""], pending:[], dead }
+function v3(fn) {
+  const st = rr3d;
+  if (!st || st.dead || st.failed) return;
+  if (st.view) { try { fn(st.view); } catch (e) { console.warn("[rocket-race 3D]", e); } }
+  else st.pending.push(fn);
+}
+function rr3dFallback(st, err) {
+  console.warn("[rocket-race] 3D scene failed — back to 2D", err);
+  st.failed = true;
+  rrSound.quiet = false;
+  const wrap = st.root.closest(".aw-fight");
+  if (wrap) { wrap.classList.remove("is-fullscene", "is-skin-rr3d"); wrap.style.setProperty("--aw-fsh", "5.75"); }
+  st.root.classList.remove("aw-rr3d-root");
+  st.host2d.classList.remove("aw-rr3d-hidden2d");
+}
+function rr3dScene({ root, ctl, title, play }) {
+  root.innerHTML = "";
+  root.classList.add("aw-rr3d-root");
+  const host3d = el("div", "aw-rr3d-canvas");
+  const host2d = el("div", "aw-rr3d-hidden2d");
+  root.append(host3d, host2d);
+  const st = { root, host2d, ctl, view: null, sfx: null, boards: [null, null], q: ["", ""], pending: [], dead: false, failed: false };
+  rr3d = st;
+  rrSound.quiet = true;                       // tiếng tổng hợp cũ im — bộ mp3 thật thay
+  Promise.all([import("./rr3d-view.js"), import("./rr3d-sfx.js")]).then(([V, S]) => {
+    if (st.dead) return null;
+    st.sfx = S.createRr3dSound();
+    return V.createView({ ...RR3D_CFG(V), container: host3d, title: title || "ROCKET RACE",
+      teams: V.DEFAULT_TEAMS,
+      onStart: () => { play(); },
+      onTap: (side, k) => { const b = st.boards[side]; if (b) b.choose(k); },
+      sfx: (n, v) => st.sfx && st.sfx.play(n, v),
+      loop: (n, on, v) => st.sfx && st.sfx.loop(n, on, v) });
+  }).then(view => {
+    if (!view) return;
+    if (st.dead) { view.destroy(); return; }
+    st.view = view;
+    window.__rr3d = st;                       // bàn thử: __rr3d.view.step()/snap() khi khung xem trước bị ẩn
+    const q = st.pending.splice(0);
+    q.forEach(fn => { try { fn(view); } catch (e) { console.warn("[rocket-race 3D]", e); } });
+  }).catch(e => { if (!st.dead) rr3dFallback(st, e); });
+  return {
+    destroy() {
+      st.dead = true;
+      try { st.view && st.view.destroy(); } catch { /* ignore */ }
+      try { st.sfx && st.sfx.stopAll(); } catch { /* ignore */ }
+      if (rr3d === st) { rr3d = null; rrSound.quiet = false; }
+    }
+  };
+}
+// Cấu hình cảnh = MẪU 2i thầy duyệt ở myGame (mau-2i-duoi-theo-tomko.html). Cm = cỡ THẬT trên TOMKO 86".
+function RR3D_CFG(V) {
+  const THREE = V.THREE;
+  const P = (x, y, z) => new THREE.Vector3(x, y, z);
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const Z0 = 0, Z1 = -64, NOSE = 2.9, GAP_HIGH = 3, LAST_STEPS = 3, CAM_SECS = 3.2;
+  const EDGE = 0.3, CON_W = 17.5, CON_H = 33;
+  let camK = 0, camLastT = 0;
+  return {
+    quality: "high", maxFps: 60, fov: 38, steps: 5, lives: 0, uiDepth: 9, rocketScale: 1.1, bannerY: 0.35, startY: 0.5, startCm: [22, 7],
+    maxTiles: 6,
+    introTitles: [{ text: "ANDREW CLASSES", at: 0.5, ms: 2300, size: 0.55 }, { text: "ROCKET RACE", at: 3.0, ms: 2300, size: 0.7 }], startAt: 5.4,
+    shatter: { pieces: 44 }, flyOut: true, skySpin: 0.006, turboLabel: "small",
+    winBanner: { size: 0.3, y: -1.05, ms: 7000 },
+    finale: { gateAfter: 1800, hits: 3, hitGap: 650, burnMs: 1800, strike: "streak" },
+    fovKick: 0, steadyUI: true,
+    exhaust: { fire: 0.3, smoke: 0.9, flame: 0.45, smokeBack: 3.4, smokeLife: 0.75, smokeSize: 0.55, smokeSizeEnd: 2.4, smokeAlpha: 0.16 },
+    nearFade: [7, 13], bloom: 0.6, ca: 0.0012,
+    hull: { color: "#a9b1bd", roughness: 0.48, clearcoat: 0.35, env: 0.55 }, engineLight: 0.3,
+    sunPos: P(-260, 150, -1300), sunScale: 300, rimPos: P(60, 40, 60),
+    nebula: { c1: "#1d0d4a", c2: "#0d3e73", c3: "#4f7dd6", bright: 0.9 },
+    planets: [
+      { type: "ice", radius: 330, pos: P(40, -372, -520), a: "#08214d", b: "#1c6aa6", c: "#3f7a45", atmo: "#62b4ff", atmoPow: 2.2, tilt: 0.2 },
+      { type: "gas", radius: 22, pos: P(170, 90, -700), a: "#b98a6a", b: "#e8d2b8", c: "#7a4a3a", atmo: "#ffd0a0", rings: true, ringColor: "#dcc8a8", tilt: 0.4 },
+      { type: "gas", radius: 14, pos: P(-340, 120, -1150), a: "#a2452e", b: "#d9825a", c: "#5c1f14", atmo: "#ff9a6a", tilt: 0.2 },
+      { type: "ice", radius: 9, pos: P(330, 210, -1250), a: "#6f93c9", b: "#cfe2f7", c: "#ffffff", atmo: "#a8d6ff", tilt: 0.1 },
+      { type: "gas", radius: 30, pos: P(-620, 260, -1500), a: "#5b4a8f", b: "#b7a3dd", c: "#2e2152", atmo: "#c4a8ff", rings: true, ringColor: "#b9a8e0", tilt: 0.55, ringTilt: 0.6 },
+      { type: "ice", radius: 5, pos: P(120, 150, -820), a: "#8a8a8a", b: "#c9c9c9", c: "#eeeeee", atmo: "#dddddd", tilt: 0.1 }
+    ],
+    gate: { pos: P(0, 0.2, Z1 - NOSE), normal: P(0, 0, 1), radius: 5.6, lamps: false },
+    travelDir: P(0, 0, -1),
+    dustBox: { c: P(0, 0, 0), s: P(56, 26, 90), follow: true },
+    track(i, t, time) {
+      const x = i === 0 ? -2.3 : 2.3;
+      return { pos: P(x + Math.sin(time * 0.6 + i * 2) * 0.25, Math.sin(time * 0.9 + i) * 0.15, lerp(Z0, Z1, t)), dir: P(Math.cos(time * 0.6 + i * 2) * 0.03, 0, -1) };
+    },
+    camera({ t, trail, rockets, L }) {
+      const dt = Math.max(0, Math.min(0.1, t - camLastT)); camLastT = t;
+      const zc = lerp(Z0, Z1, Math.min(1, trail));
+      const p0 = rockets[0].p, p1 = rockets[1].p;
+      const want = (Math.abs(p0 - p1) >= GAP_HIGH || Math.max(p0, p1) >= L - LAST_STEPS) ? 1 : 0;
+      camK += Math.max(-dt / CAM_SECS, Math.min(dt / CAM_SECS, want - camK));
+      const k = camK * camK * (3 - 2 * camK);
+      const chase = { pos: P(Math.sin(t * 0.21) * 0.6, 3.3 + Math.sin(t * 0.33) * 0.2, zc + 16.5), look: P(0, 0.1, zc - 14) };
+      const zA = zc + 5, zB = Z1 - 8, zMid = (zA + zB) / 2, D = (zA - zB) * 1.05 + 8;
+      const high = { pos: P(D * 0.8 + Math.sin(t * 0.15) * 1.2, D * 0.5, zMid), look: P(0, -1, zMid) };
+      return { pos: chase.pos.lerp(high.pos, k), look: chase.look.lerp(high.look, k), mode: camK < 0.02 ? "chase" : "high" };
+    },
+    introSecs: 3.6,
+    introCamera(k, cp) {
+      const a = lerp(0.1, Math.PI, k);
+      const pos = P(Math.sin(a) * 13 * (1 - k) + cp.pos.x * k, lerp(1.5, cp.pos.y, k), Math.cos(a) * -13 * (1 - k) + cp.pos.z * k);
+      return { pos, look: P(0, 0, 0).lerp(cp.look, k * k) };
+    },
+    layout(_s, _z, _a, U) {
+      const qW = 90, qH = 7, M = 2;
+      return {
+        question: { x: 0.5 - U.cw(qW) / 2, y: U.ch(M), w: U.cw(qW), h: U.ch(qH) },
+        consoles: [
+          { x: U.cw(EDGE), y: 0.5 - U.ch(CON_H) / 2, w: U.cw(CON_W), h: U.ch(CON_H), cols: 1, rows: 4, headerFrac: 0.11, rotY: 0.3, pivot: "outer", noPanel: true },
+          { x: 1 - U.cw(EDGE + CON_W), y: 0.5 - U.ch(CON_H) / 2, w: U.cw(CON_W), h: U.ch(CON_H), cols: 1, rows: 4, headerFrac: 0.11, rotY: -0.3, pivot: "outer", noPanel: true }
+        ]
+      };
+    }
+  };
+}
 
 // ---- TWO-DEVICE LINK (Đợt 368, thầy 22/9/2026) ----------------------------
 // "Máy chơi" keeps the race + both answer boards; an iPad ("máy nguồn") shows
@@ -452,10 +577,15 @@ const rocketRaceTemplate = {
   //   score/clock strip goes below the boards and the clock into the toolbar.
   //   Đợt 356: the READY cover no longer fits a 16:5 board — act info goes to the
   //   shared area, each board keeps icon + team name + Play (core draws it).
+  // ⭐⭐ Đợt 392 — FIGHT 3D: `fullscene` ⇒ vùng chung là CẢ khung (cao = nửa bề rộng, sharedH 16 / 32,
+  // hoặc chiều cao màn trừ dải nút), hai bàn ẩn; core gọi `fightScene` (dưới) để dựng cảnh WebGL.
+  // `skin: "rr3d"` ⇒ hàng nút trận theo style game (rocket-race.css). readyShared tắt: màn mở đầu +
+  // nút START nằm TRONG cảnh 3D. WebGL hỏng ⇒ rr3dFallback() gỡ `is-fullscene` và vẽ lại 2D như cũ.
   fightFrame: {
-    sharedH: 5.75, boardH: 5, boardTools: "shared", noScore: true, topStrip: "below",
-    readyShared: true, teams: FIGHT_TEAMS.map(t => ({ name: t.name, icon: t.pilot, color: t.hull.c }))
+    sharedH: 16, boardH: 5, boardTools: "shared", noScore: true, topStrip: "below",
+    fullscene: true, skin: "rr3d"
   },
+  fightScene(opts) { return rr3dScene(opts); },
 
   edit: openRocketRaceEditor,
 
@@ -659,6 +789,12 @@ const rocketRaceTemplate = {
     let setupEl = null, classes = null, classError = "", pickedClassId = "";
 
     if (fightCtl) buildFight(); else if (teamsMode) buildTeams(); else buildSolo();
+    // ⭐ Đợt 392 — trận 3D: bàn này nhận cú chạm ô từ cảnh 3D (raycast) qua đúng choose() cũ
+    const on3d = !!(fightCtl && rr3d && rr3d.ctl === fightCtl);
+    if (on3d) {
+      rr3d.boards[fightSide] = { choose: k => choose(k) };
+      v3(v => { v.setTrack(scene ? scene.L : fightTrackLength(N)); v.setLivesMax(livesStart || 0); });
+    }
     if (!fightCtl) renderRockets();
     // ⭐ Đợt 368 — board 0 opens the link for the whole match. Board 1 mounts
     // later and only feeds its own question text into the module slot.
@@ -800,6 +936,7 @@ const rocketRaceTemplate = {
     function paintLink(alive) {
       if (dead || !scene) return;
       if (scene.qbar) scene.qbar.classList.toggle("is-remote", !!alive);
+      if (on3d) v3(v => v.setQuestionHidden(!!alive));
       if (scene.host) scene.host.classList.toggle("is-noq", !!alive);
     }
     // Hand this board's WORD to the link. Both boards call it; only board 0
@@ -924,11 +1061,11 @@ const rocketRaceTemplate = {
       let n = 3;
       const step = () => {
         if (n > 0) {
-          if (speaks()) { showBanner(String(n), "is-count"); rrSound.count(n); }
+          if (speaks()) { showBanner(String(n), "is-count"); rrSound.count(n); if (on3d) { const lab = String(n); v3(v => v.countStep(lab)); } }
           n--;
           later(step, 800);
         } else {
-          if (speaks()) { showBanner("GO!", "is-go"); rrSound.go(); rrSound.music.start(); }
+          if (speaks()) { showBanner("GO!", "is-go"); rrSound.go(); rrSound.music.start(); if (on3d) v3(v => { v.countStep("GO!"); v.go(); }); }
           ui.startTimer?.();
           // Đợt 368 — the match clock's zero. The packet carries "how long the
           // match has been running", and the iPad counts on from it by itself:
@@ -947,6 +1084,13 @@ const rocketRaceTemplate = {
     }
 
     function showBanner(text, cls, ms = 700) {
+      if (on3d) {
+        if (/is-count|is-go|is-turbo/.test(cls || "") && !/SUDDEN/.test(text)) return;   // 3-2-1 & TURBO có đường riêng
+        if (/WINS!/.test(text)) return;                                                 // cảnh kết trận tự ghi
+        const kind = /is-stall/.test(cls || "") ? "red" : /is-win/.test(cls || "") ? "gold" : "cyan";
+        v3(v => v.banner(text, kind, Math.max(ms, 1200), 0.34, 0.9));
+        return;
+      }
       if (!scene) return;
       const b = el("div", "aw-rr-bannertxt " + (cls || ""), "");
       b.textContent = text;
@@ -1039,6 +1183,11 @@ const rocketRaceTemplate = {
         return { tile, txt, ans: a };
       });
       tiles.forEach(t2 => fitLabelWidth(t2.txt));
+      if (on3d) {
+        rr3d.q[fightSide] = vv.hideText ? "🔊" : (q.question || "");
+        const qs = rr3d.q.slice(), side = fightSide, texts = answers.map(a => String(a.text));
+        v3(v => { v.setQuestion(qs[0], qs[1]); v.setAnswers(side, texts); });
+      }
 
       // question clock
       if (questionMs > 0) {
@@ -1050,7 +1199,8 @@ const rocketRaceTemplate = {
       } else { qDeadline = 0; qTimer.classList.remove("is-on"); }
 
       const mover = teamsMode ? currentTeam() : player;
-      ui.setNav({ index: fightCtl ? idx + 1 : Math.min(mover.p + 1, mover.L), total: fightCtl ? N : mover.L });
+      ui.setNav({ index: fightCtl ? idx + 1 : Math.min(mover.p + 1, mover.L), total: fightCtl ? N : mover.L,
+                  label: on3d ? `${Math.min(idx + 1, N)} / ${N}` : null });   // Đợt 392: hàng nút game = "câu / tổng"
       // ⭐ Đợt 370 — the new question's tiles are DEAD for a moment. Without this
       // the second tap of a double-tap answers a question nobody has read: the
       // tiles are rebuilt under the finger in the same spot. Re-check `curItem`
@@ -1086,6 +1236,21 @@ const rocketRaceTemplate = {
       // grey while this board's go is over but its result is withheld (or it
       // never got to play — "too slow")
       answersEl.classList.toggle("is-fightlost", l && (!answered || fightPendingReveal));
+      paint3dTiles();
+    }
+    // ⭐ Đợt 392 — màu ô trong cảnh 3D (thầy, mẫu 2i): ô đúng được chọn chỉ XANH (không dấu tích);
+    // đội kia thua lượt ⇒ cả bàn MẤT MÀU tới câu mới; chọn sai ⇒ ô đó đỏ ✗, còn lại mất màu.
+    // KHÔNG bao giờ lộ ô đúng cho bàn không chọn được nó.
+    function paint3dTiles() {
+      if (!on3d || curItem < 0) return;
+      const st = state[curItem];
+      const pick = st && st.attempts > 0 ? st.chosenTile : -1;
+      let arr;
+      if (pick >= 0) arr = tiles.map((t, k) => k !== pick ? "dim" : fightPendingReveal ? "picked" : (t.ans.correct ? "correct" : "wrong"));
+      else if (exploded || fightLocked()) arr = tiles.map(() => "dim");
+      else arr = tiles.map(() => "idle");
+      const side = fightSide;
+      v3(v => v.tileStates(side, arr));
     }
     function addBadges(t, k, st) {
       // ⭐ Đợt 383 — BÀI GIAO (`opt.anDapAn`): em chọn SAI thì chỉ ✗ ô em chọn, mọi ô khác mờ như nhau — ô đúng
@@ -1110,6 +1275,7 @@ const rocketRaceTemplate = {
         addBadges(t, k, st);
       });
       syncFightLock();
+      paint3dTiles();
     }
 
     function choose(i) {
@@ -1126,6 +1292,7 @@ const rocketRaceTemplate = {
       ui.roundDone?.();
       tiles.forEach(t => (t.tile.disabled = true));
       const tile = tiles[i].tile;
+      if (on3d) { const side = fightSide; v3(v => v.pick(side, i)); }
       if (fightCtl) {
         // FIGHT: every visual that says WHICH answer was right is withheld until
         // the referee says the round is settled (the rocket moving says only
@@ -1164,14 +1331,14 @@ const rocketRaceTemplate = {
       rrSound.correct();
       const mover = teamsMode ? currentTeam() : player;
       if (teamsMode) mover.queue.shift(); else if (!fightCtl) queue.shift();
-      if (fightCtl) { mover.p += 1; fightRepaint(true); }
+      if (fightCtl) { mover.p += 1; fightRepaint(true); if (on3d) { const side = mover.id, p = mover.p; v3(v => v.move(side, p, "up")); } }
       else mover.p = Math.min(mover.L, mover.p + 1);
       fireRocket(mover);
       ui.setScore(scoreNow());
       if (fightCtl) {
         if (mover.done) return;   // Đợt 382 — over the line: raceWon owns the screen now
         // the referee turns the round over; turbo is the one flourish kept
-        if (streak >= TURBO_STREAK && performance.now() >= turboUntil) startTurbo("TURBO!");
+        if (streak >= TURBO_STREAK && performance.now() >= turboUntil) { startTurbo("TURBO!"); if (on3d) { const side = fightSide; v3(v => v.turbo(side)); } }
         return;
       }
       if (teamsMode) {
@@ -1206,6 +1373,7 @@ const rocketRaceTemplate = {
         penalty += pointsOff;
         ui.setScore(scoreNow());
         retreatRocket(mover, pointsOff);
+        if (on3d) { const side = mover.id, p = mover.p, n = pointsOff; v3(v => v.move(side, p, "back", n)); }
       } else if (pointsOff) ui.flyPenalty?.(tileEl, pointsOff, () => { penalty += pointsOff; return scoreNow(); });
 
       if (shield && !teamsMode && !fightCtl) {
@@ -1217,6 +1385,7 @@ const rocketRaceTemplate = {
         return;
       }
       stallRocket(mover);
+      if (on3d) { const side = mover.id; v3(v => v.stall(side)); }
       if (fightCtl) { fightRepaint(true); fightLoseLife(); return; }     // the referee decides what happens next
       if (loseLife()) return;   // game over ends everything
       later(nextQuestion, STALL_MS + 200);
@@ -1475,6 +1644,10 @@ const rocketRaceTemplate = {
       livesLeft = Math.max(0, livesLeft - 1);
       rrSound.lifeLost();
       renderChipLives();
+      if (on3d) {
+        const side = fightSide, n = livesLeft, lvl = livesLeft > 0 ? Math.min(3, Math.ceil(3 * (livesStart - livesLeft) / livesStart)) : 3;
+        v3(v => { v.setLives(side, n); v.damage(side, lvl); });
+      }
       if (livesLeft > 0) { paintDamage(player); return; }
       explodeRocket(player);
     }
@@ -1483,6 +1656,7 @@ const rocketRaceTemplate = {
       locked = true;
       tiles.forEach(t => (t.tile.disabled = true));
       answersEl.classList.add("is-fightlost");
+      if (on3d) { const side = r.id; v3(v => v.explode(side)); paint3dTiles(); }
       blowUp(r);
       // Đợt 382 — out of lives = the OTHER rocket wins, and wins the same way as
       // at the flag: it flies home while this one burns (raceWon freezes the
@@ -1520,7 +1694,11 @@ const rocketRaceTemplate = {
       if (!fightCtl || !scene || !scene.rockets || scene.decided || dead) return;
       scene.decided = true;
       const loser = scene.rockets.find(r => r !== w);
-      if (typeof fightCtl.finishRace === "function") fightCtl.finishRace(w.id, RACE_END_HOLD_MS);
+      // Đợt 392 — trận 3D: tàu thắng bay khỏi màn → cổng co lại → vệt sáng đánh tàu thua → cháy → nổ
+      // (~9 s); bảng kết quả của trọng tài chờ đúng hết cảnh đó.
+      let holdMs = RACE_END_HOLD_MS;
+      if (on3d && rr3d.view) { try { holdMs = Math.max(RACE_END_HOLD_MS, rr3d.view.win(w.id, { loserDown: !!loserAlreadyDown }) + 300); } catch (e) { console.warn(e); } }
+      if (typeof fightCtl.finishRace === "function") fightCtl.finishRace(w.id, holdMs);
       else if (loser && typeof fightCtl.forfeit === "function") fightCtl.forfeit(loser.id);
       locked = true;
       qDeadline = 0;
@@ -1639,6 +1817,7 @@ const rocketRaceTemplate = {
   // A match has two live mounts; each registered its own pair.
   onPause(paused) {
     rrPauseHandlers.forEach(h => { if (paused) h.pause(); else h.resume(); });
+    if (rr3d && rr3d.view) { rr3d.view.pause(!!paused); if (rr3d.sfx) rr3d.sfx.pause(!!paused); }
   }
 };
 

@@ -277,3 +277,16 @@ export const rrSound = {
     bell({ root: 247, gain: 0.2, dur: 2400, delay: 800 });
   }
 };
+
+// ⭐ Đợt 392 — FIGHT 3D dùng bộ tiếng THẬT (mp3 CC0, rr3d-sfx.js). Trong trận 3D,
+// rocket-race.js bật `rrSound.quiet` ⇒ mọi tiếng tổng hợp ở đây im (kể cả nhạc nền),
+// để không kêu chồng hai bộ tiếng. Solo / Teams / Fight 2D không đổi gì.
+rrSound.quiet = false;
+Object.keys(rrSound).forEach(k => {
+  const f = rrSound[k];
+  if (typeof f === "function") rrSound[k] = (...a) => (rrSound.quiet ? undefined : f(...a));
+});
+["start", "rev"].forEach(k => {
+  const f = musicLoop[k];
+  if (typeof f === "function") musicLoop[k] = (...a) => (rrSound.quiet ? undefined : f.apply(musicLoop, a));
+});

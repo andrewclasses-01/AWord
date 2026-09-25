@@ -624,3 +624,48 @@
   .aw-rr-tiletext { font-size: calc(3 * var(--aw-u) * var(--tw, 1)); }
   .aw-rr-bannertxt { font-size: calc(12 * var(--aw-u)); }
 }
+
+/* =============================================================
+   ⭐⭐ Đợt 392 — FIGHT 3D (fightFrame.fullscene + skin "rr3d")
+   Cảnh WebGL phủ cả vùng chung; ổ 2D cũ vẫn được vẽ nhưng ẨN (logic cũ chạy nguyên).
+   Hàng nút trận theo style game: kính tối, viền xanh phát sáng; bỏ ‹ ›, nhãn "câu / tổng".
+   Mọi luật đều bắt đầu bằng .is-skin-rr3d / .aw-rr3d-* ⇒ không đụng template khác.
+   ============================================================= */
+.aw-rr3d-root { position: relative; }
+.aw-rr3d-canvas { position: absolute; inset: 0; }
+.aw-rr3d-canvas canvas { display: block; touch-action: none; }
+.aw-rr3d-hidden2d { display: none; }
+.aw-fight.is-skin-rr3d { background: radial-gradient(ellipse at 50% 0%, #0c1530 0%, #04060e 65%); }
+.aw-fight.is-skin-rr3d .aw-fight-top { background: transparent; }
+.aw-fight.is-skin-rr3d .aw-below-left,
+.aw-fight.is-skin-rr3d .aw-below-right { color: #7f93bd; }
+.aw-fight.is-skin-rr3d .aw-below .aw-toolbtn,
+.aw-fight.is-skin-rr3d .aw-fight-boardtools .aw-iconbtn,
+.aw-fight.is-skin-rr3d .aw-fight-boardtools .aw-tools button,
+.aw-fight.is-skin-rr3d .aw-fight-boardtools .aw-nav-label,
+.aw-fight.is-skin-rr3d .aw-fight-boardtools .aw-fight-clockbox {
+  background: linear-gradient(180deg, rgba(40, 70, 130, .38), rgba(10, 18, 40, .8)) !important;
+  color: #cfe6ff !important;
+  border: 1px solid rgba(120, 190, 255, .38) !important;
+  box-shadow: 0 0 12px rgba(80, 170, 255, .2), inset 0 1px 0 rgba(255, 255, 255, .12) !important;
+  border-radius: 12px !important;
+  letter-spacing: .05em;
+}
+.aw-fight.is-skin-rr3d .aw-below .aw-toolbtn:hover,
+.aw-fight.is-skin-rr3d .aw-fight-boardtools .aw-iconbtn:hover,
+.aw-fight.is-skin-rr3d .aw-fight-boardtools .aw-tools button:hover {
+  border-color: rgba(140, 210, 255, .85) !important;
+  box-shadow: 0 0 18px rgba(80, 170, 255, .45), inset 0 1px 0 rgba(255, 255, 255, .18) !important;
+}
+.aw-fight.is-skin-rr3d .aw-below .aw-toolbtn.is-on,
+.aw-fight.is-skin-rr3d .aw-below .aw-toolbtn.is-active {
+  border-color: #ffcf4a !important; color: #ffe39a !important; box-shadow: 0 0 16px rgba(255, 200, 70, .45) !important;
+}
+/* ‹ › bỏ hẳn trong trận 3D — nhãn "câu / tổng" đứng một mình */
+.aw-fight.is-skin-rr3d .aw-fight-boardtools .aw-navbtn { display: none !important; }
+.aw-fight.is-skin-rr3d .aw-fight-boardtools .aw-nav-label { padding: 0 14px; min-height: 36px; display: inline-flex; align-items: center; font-variant-numeric: tabular-nums; font-weight: 800; }
+.aw-fight.is-skin-rr3d .aw-fight-boardtools .aw-fight-clockbox { padding: 0 12px; min-height: 36px; display: inline-flex; align-items: center; }
+.aw-fight.is-skin-rr3d .aw-fight-clock { color: #9ee7ff !important; font-variant-numeric: tabular-nums; }
+
+/* ☰ Menu của engine nằm TRONG bàn 0 (đang ẩn) — trong trận 3D cho nó hiện nổi ngay trên hàng nút chung */
+.aw-fight.is-fullscene .aw-fight-boards .aw-menu { visibility: visible; pointer-events: auto; position: fixed; left: 50%; margin-left: -320px; bottom: 72px; z-index: 40; }

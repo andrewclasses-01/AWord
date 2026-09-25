@@ -5009,6 +5009,25 @@ body.aw-page-dragover::after {
   max-width: calc((100dvh - var(--aw-fight-chrome) - 8px) * 32 / (var(--aw-fsh, 10.5) + var(--aw-fbh, 10.5)));
   margin: 0 auto;
 }
+/* ⭐ Đợt 392 (Rocket race 3D) — `fightFrame.fullscene`: vùng chung là CẢ KHUNG GAME
+   (một cảnh WebGL), rộng hết bề ngang trận, cao = min(nửa bề rộng, chiều cao màn trừ
+   dải nút `--aw-scene-chrome`) — thầy chốt "rộng hết màn, dính mép trên, chừa hàng nút".
+   Hai bàn vẫn mount (engine/trọng tài chạy bình thường) nhưng ẨN: KHÔNG display:none
+   (engine còn đo đạc bên trong), chỉ tàng hình + không nhận chạm, nằm sau cảnh. */
+.aw-fight.is-fullscene { position: relative; padding: 0 0 6px; gap: 4px; container-type: inline-size; }
+.aw-fight.is-fullscene .aw-fight-shared {
+  aspect-ratio: auto;
+  width: 100%;
+  height: min(calc(100cqw * var(--aw-fsh, 16) / 32), calc(100dvh - var(--aw-scene-chrome, 84px)));
+  border-radius: 0;
+  overflow: hidden;
+  background: #000;
+}
+.aw-fight.is-fullscene .aw-fight-boards {
+  position: absolute; left: 0; top: 0; width: 100%;
+  visibility: hidden; pointer-events: none; z-index: -1;
+}
+.aw-fight.is-fs.is-fullscene .aw-fight-shared { max-width: none; }
 /* ⭐ Đợt 386 — shared-middle: one row, as tall as `h` for a width of 2·sideW + midW. */
 .aw-fight.is-fs.is-shared-middle .aw-fight-boards {
   max-width: calc((100dvh - var(--aw-fight-chrome)) * (var(--aw-fsw, 392) * 2 + var(--aw-fmw, 440)) / var(--aw-fmh, 408));
