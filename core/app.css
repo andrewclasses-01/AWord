@@ -4753,6 +4753,27 @@ body.aw-page-dragover::after {
 }
 .aw-fight-boardtools .aw-nav { display: flex; align-items: center; gap: 6px; }
 .aw-fight-boardtools .aw-nav-label { min-width: 52px; text-align: center; }
+/* ⭐ Đợt 389 — `tpl.toolsBelow`: the SINGLE-play twin of the group above (engine.js
+   `placeBoardTools`). The frame's bottom row is then empty and gives its height back
+   to the play area; zoom / embed hand the buttons back to it (the row out here is
+   hidden in both). */
+.aw-below-boardtools {
+  --aw-u: 9px;
+  display: flex; align-items: center; gap: 8px;
+  margin-right: 6px; padding-right: 10px;
+  border-right: 1px solid rgba(38,48,60,.14);
+}
+.aw-below-boardtools .aw-bottombar-left,
+.aw-below-boardtools .aw-tools { display: flex; align-items: center; gap: 6px; }
+.aw-below-boardtools .aw-nav { display: flex; align-items: center; gap: 6px; }
+.aw-below-boardtools .aw-nav-label { min-width: 52px; text-align: center; }
+.aw-page.is-tools-below .aw-bottombar { display: none; }
+/* ⭐ Đợt 389 — `tpl.startScreen`: the template's own start screen fills the READY
+   overlay; the engine's lines (and its hidden PLAY, still clicked by api.play and by
+   Fight's relay) stay in the DOM, out of sight. */
+.aw-play-overlay.is-custom-start { padding: 0; }
+.aw-play-overlay.is-custom-start > :not(.aw-start-custom) { display: none; }
+.aw-start-custom { position: absolute; inset: 0; }
 .aw-fight.is-boardtools-shared .aw-fight-board .aw-bottombar { visibility: hidden; }
 /* The Time delay bar a template re-homed with `ui.hostFightWaitBar()` (Đợt 353):
    in flow inside the template's own slot, full width, no bottom-row geometry. */

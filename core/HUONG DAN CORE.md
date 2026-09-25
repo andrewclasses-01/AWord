@@ -536,6 +536,34 @@ phần riêng của đội. Luật đi kèm:
   `::before` sau con số.
 - Không khai ⇒ khung y hệt cũ (đã đo lại: Anagram 620×408 hai bàn; Rocket race shared-top nguyên thứ tự khối).
 
+⭐ **Đợt 389 (25/9/2026, A Show Speed — thầy cho sửa core, bằng CỜ TUỲ CHỌN) — ba móc mới trong `engine.js`.**
+Không khai cờ nào ⇒ engine y hệt cũ (đã đo Quiz: READY gốc, ☰ ‹ › 🔊 ⛶ vẫn trong khung, hàng ngoài chỉ Options · Mode).
+- **`tpl.startScreen(api)`** — template vẽ MÀN START RIÊNG thay READY của AWord. Engine gắn `.aw-start-custom` (inset 0)
+  vào `.aw-play-overlay` + lớp `.is-custom-start` (app.css ẩn mọi con khác của overlay). `api = { host, activity,
+  fight: {side, ctl}|null, play(), ready() }`: `play()` = bấm PLAY gốc (`startPressed`, nên Fight relay, cổng chuẩn
+  bị, chốt 0,5 s… giữ nguyên); `ready()` = lời hứa `prepDoneP` (tắt PLAY tới lúc nó xong). Trả về tuỳ chọn
+  `{ beforePlay(), dispose() }`: `beforePlay` chạy ĐẦU `startPressed()` trên MỖI bàn (bàn 1 tới qua cú click relay) —
+  chỗ để ghi lựa chọn (vd số phút) vào act của bàn đó; `dispose` chạy ở `enterGame()`.
+  ⚠️ `bigPlay` VẪN nằm trong overlay (ẩn) và ĐỨNG TRƯỚC `host`: `fight.js playPressed` relay bằng
+  `querySelector(".aw-play-overlay button")` — nút đầu tiên. Đừng chèn nút nào lên trước nó.
+  ⚠️ Chỉ thầy + Fight: `!session && !showdownPick` (nút START một-nút của học sinh Đợt 383 và READY Showdown có luật riêng).
+  ⚠️ `let customStart` khai ở ĐẦU khối READY (cạnh `playStarted`) vì `startPressed` được hoist lên trên chỗ gắn.
+- **`tpl.toolsBelow: true`** — chơi đơn: ☰ Menu · ‹ › · 🔊 · ⛶ (đúng các node cũ, DỜI chứ không chép) sang nhóm
+  `.aw-below-boardtools` đầu `.aw-below-center`, hàng nút trong khung ẩn (`.aw-page.is-tools-below .aw-bottombar
+  {display:none}`) ⇒ vùng chơi cao thêm. Anh em chơi-đơn của `fightFrame.boardTools: "shared"` (Đợt 353).
+  ⛔ **ZOOM + NHÚNG ẩn cả hàng ngoài** (`.aw-zoomed .aw-below`, `html.aw-nhung .aw-below`) — dời ra mà không trả về là
+  MẤT NÚT THOÁT ZOOM. `placeBoardTools()` trả ba cụm về khung (đúng thứ tự 3 con của lưới bottombar) khi một trong hai
+  đang bật; gọi lại trong `fsBtn.onclick` và `exitAnyFullscreen()` — **mọi chỗ mới gọi `setZoomed` phải gọi theo nó.**
+  Chỉ `!fight && !session && !showdownPick` (học sinh không có hàng ngoài; trận tự dời trong fight.js).
+- **`tpl.belowTools({ host, activity, fight })`** — template tự thêm nút vào `.aw-below-center` (sau Options/Mode). Chỉ
+  thầy. Trong trận CẢ HAI bàn được gọi, nhưng hàng của bàn 1 bị fight.js bỏ ⇒ chỉ nút của bàn 0 hiện.
+
+⭐ **Đợt 390 (25/9/2026, A Show Speed) — `tpl.fightReveal({ wrap, scores, scoreEls, activity })` trong `core/fight.js`.**
+Khoảnh khắc TUỲ CHỌN giữa điểm cuối cùng và bảng kết quả: `endMatch()` làm hết phần chốt sổ như cũ (bonus hạ cánh, khoá
+bàn…) rồi gọi hook; bảng `showResult()` CHỜ lời hứa nó trả về (tối đa 15 s; hook ném lỗi / trả `undefined` ⇒ bảng hiện
+ngay). `scores` = `totalOf()` hai đội ĐÃ chốt. A Show Speed dùng để cho hai "bình nước điểm" cạn dần trong khi số đếm lên.
+Không khai ⇒ y hệt cũ.
+
 **AI ĐANG BẬT IN TURNS (Đợt 202)**: **Type the answer** — 1/17, thầy chốt thử một game trước.
 
 **AI ĐANG BẬT FIGHT (cập nhật Đợt 186)**: Anagram · Quiz · Type the answer · True/false · **Open the box**

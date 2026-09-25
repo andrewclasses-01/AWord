@@ -1,5 +1,65 @@
 # GHI CHÚ WORDSHAKE — template #21 + game cố định trong GAMES
 
+## ⭐ Đợt 390 (25/9/2026) — BÌNH NƯỚC ĐIỂM + mỗi lượt một bộ chữ khác
+Thầy: (1) chưa hiện điểm khi đang chơi — ô điểm là bình nước lấp lánh, điểm bay vào làm nước sóng sánh; hết giờ nước cạn
+dần và thành số đếm lên cho HS hồi hộp; mọi mode; GAME luôn có, activity có ô tích trong Options. (2) PLAY AGAIN / mở lại
+game phải ra bộ chữ khác — "trùng nhau quá".
+- **`ws-lib.js`**: `createTank({side,k})` → `{el, hit(score), set, drain(final, ms, onStep), reset, stop, destroy}`
+  (CSS tự chèn 1 lần, `<style id="ws-tank-css">`, dùng được ở GAME lẫn template): sóng = 2 lớp mask SVG chạy ngang, bọt
+  nổi, vệt sáng lướt, `hit` = lắc `wst-slosh` + dâng; mực = `14% + 74%·(1−e^(−điểm/k))` — không tràn, không lộ đội nào hơn
+  nhiều. `drain` dùng **setInterval** (rAF treo khi pane ẩn), số đếm chậm dần cuối (ease 2,2), `flyPoint(from,to,"+N")` =
+  số bay `position:fixed` gắn vào `body` (tránh bẫy transform của `.wsg-cv`). Âm mới `splash/drip/land`.
+  ⚠️ Số trong bình là `<span>`: bản đầu dùng `<b>` và dính luật `.wsg-score b` của GAME (block + relative) ⇒ số dạt trái.
+- **GAME**: 2 bình dựng MỘT LẦN, gắn lại vào ô điểm sau mỗi `render()` (dựng mới là sóng chạy lại + đứt cú lắc). Pha mới
+  `"count"`: hết giờ ⇒ bàn khoá, `sfx.timeup`, hai bình cạn CÙNG TỐC ĐỘ (đội ít điểm dừng trước), `land`, 0,9 s sau mới
+  `"over"` (WINS + số thật + glow đội dẫn). Đang chơi không có glow `lead`/`bump` (lộ đội dẫn). `k = 28`.
+- **Template** — ô tích **Score tank** (`opt.wsTank`, mặc định BẬT = `!== false`, `checkOrder` giữa Shuffle và Show answers):
+  chơi đơn = bình ngồi chỗ ô ✓ trên khung (ANH EM của `.aw-top-score` vì `setScore` ghi đè innerHTML của nó; `.is-ws-tank`
+  trên `.aw-stage` ẩn ô gốc), `finish()` cho cạn xong mới `ui.finish` rồi trả ô ✓ về; Fight = bình trong mỗi
+  `.aw-fight-team`, MutationObserver theo số của core (có bonus/điểm trừ), cạn qua **hook core mới `tpl.fightReveal`**.
+  Cả hai được dựng ngay ở màn START (`TANKS` WeakMap theo khung/trận). `k`: từ = 6, Mode 3 trận (điểm chữ) = 20, Mode 3
+  đơn (✓ = số từ của bài, chỉ từ của bài đổ vào bình) = 3.
+- **Bộ chữ khác nhau** — đo (`scratchpad ws-overlap.mjs`, 150 bàn liên tiếp): bàn "easy" cũ luôn chọn bàn NHIỀU từ A1–A2
+  NHẤT ⇒ trôi về cùng chữ phổ biến: chung **10,1/16 chữ** với lượt trước (tối đa 13), 19 % từ dễ trùng. Nay: mọi bàn ≥ 55 %
+  số từ dễ của bàn tốt nhất là ứng viên, chọn bàn ÍT TRÙNG NHẤT với 8 bàn gần nhất (bàn ngay trước tính ×2) ⇒ **7,8/16**
+  (gieo ngẫu nhiên 7,6), 8 % từ trùng, vẫn ~174 từ A1–A2/bàn (ngẫu nhiên 109). GAME nhớ 8 bàn ở `localStorage
+  aword-wordshake-recent`. Template Mode 2/3: nhóm từ vào bảng từ `shuffle(items)` mỗi lượt (đo 3 lần mở: 3 bảng khác).
+- Đã đo: GAME từ ENGLISH ⇒ số bay + mực 14→26 %, số ẩn; hết giờ ảnh chụp giữa chừng "8 | 12" rồi WINS 9–17 · template đơn
+  2 từ ⇒ 14→25→35 %, giải hết 8 từ: lúc đếm "2" chưa có màn kết thúc, sau đó end screen + ✓ 8 · Fight Mode 2 ⇒ bình phải dâng,
+  hết giờ: đếm 0 → bảng "TEAM RIGHT WINS 0—1" sau 3,3 s, số thật hiện lại · tắt Score tank ⇒ không bình, ✓ như cũ · 0 lỗi.
+  ⬜ Thầy chưa xem/nghe thật (tiếng nước, tốc độ cạn, độ cao bình 40px GAME / 33px Fight).
+
+## ⭐ Đợt 389 (25/9/2026) — TEMPLATE mở bằng màn START của GAME, nút ra hàng ngoài kiểu game, ô tích NEXT
+Thầy giao (khi đổi template một act WORDS sang A Show Speed): (1) bỏ màn START gốc của AWord, dùng màn START của GAME;
+(2) Options + Mode theo phong cách game; (3) Menu · ‹ › · loa xuống hàng nút ngoài (hàng Options/Mode); (4) ô tích cho
+phép Next, MẶC ĐỊNH TẮT. Thầy chốt qua câu hỏi: **cả chơi đơn lẫn Fight** · **có ô 2/3/5 phút = đồng hồ ĐẾM NGƯỢC** ·
+**Next tắt = ẨN HẲN ›** · **cho sửa core bằng cờ tuỳ chọn** (3 móc mới, xem `core/HUONG DAN CORE.md` mục Đợt 389).
+- **Màn START** (`startScreen`, `mountStartPanel`): logo A SHOW SPEED · 3 ô giờ · PLAY, sao y GAME kể cả chạm đúp một ô
+  → chỉ còn ô đó, vuốt ▲▼ / lăn chuột ±1 phút (1–10), chạm đúp lại → 3 ô. Cỡ theo px của GAME qua `--p` (Fight:
+  `--ws-u/4.4` vì bảng giữa GAME rộng 440; chơi đơn: `.17 × --aw-u`). PLAY mờ + "Loading…" tới khi `api.ready()` xong.
+  Chơi đơn: phủ cả khung, đồng hồ trên khung hiện sẵn số phút. Fight: bàn 0 vẽ ở BẢNG GIỮA (`attachHost` sớm — lúc mount
+  `S.host === host` nên không xoá, `drawCentre` ghi đè), mỗi bàn phủ 16 ô "?" tối (`idleBoardHtml`); đồng hồ trận hiện số
+  phút qua `ctl.onTimer(0, v)`.
+- **Số phút**: `beforePlay` ghi `options.timer = "countDown"` + `timerTotalSeconds` lên act của MỖI bàn; giá trị lấy từ
+  biến module `liveTime` (giá trị vuốt ở chế độ một ô KHÔNG lưu, như GAME, nhưng bàn 1 vẫn nhận đúng). Lưu theo MÁY:
+  `localStorage aword-showspeed-act-time` (riêng với `aword-wordshake-time` của GAME). ⚠️ Ô Timer trong Options nay bị màn
+  START đè mỗi lượt chơi.
+- **Hàng ngoài**: chơi đơn `toolsBelow` (core dời ☰ ‹ › 🔊 ⛶ ra, zoom/nhúng thì trả về khung); Fight `fightFrame.boardTools:
+  "shared"` (cơ chế Rocket race) + thanh TIME DELAY dời vào từng bàn (`.aw-ws-waitslot`, anh em của `wrap` vì mỗi lần vẽ
+  `wrap` bị xoá). CSS kiểu nút GAME (ô nghiêng tối viền neon, 34px) cho MỌI nút hàng đó, kể cả Set assignment/Print
+  (nhỏ hơn, 30px) để hàng không lẫn hai kiểu. Nhóm `‹ ›` trong Fight ẩn hẳn (bảng giữa đã có "1 / 8").
+- **Ô tích NEXT** (`belowTools`): lưu theo MÁY `localStorage aword-showspeed-next` ("1" = cho), mặc định tắt; bật/tắt
+  SỐNG giữa ván (`nextSubs` → `onNextFlip`, chỉ vẽ lại ›, không dựng lại ván). Tắt: chơi đơn không có › (Mode 1 không bỏ
+  qua từ, Mode 2 không bỏ bảng — hết giờ thì nộp); Fight không đội nào nhường. Bật: chơi đơn hiện ›; Fight Mode 1 mỗi bàn có
+  nút **PASS ›** riêng (= `m1Pass` cũ). ‹ › bị tắt (disabled) thì ẩn bằng CSS, trước PLAY cũng ẩn (chưa nối dây).
+- ⚠️ Học sinh (bài giao) KHÔNG đổi: vẫn nút START một-nút của Đợt 383, nút trong khung; nhưng › cũng theo ô tích của máy em
+  (mặc định tắt).
+- Đã đo (bàn thử `test.html?mode=one|list`): START đúng + 3:00 trên khung · chọn 2 min → 1:58 sau 2 s · › ẩn, bật tích → hiện,
+  bấm › sang "2 of 8", tắt → ẩn · zoom: 3 cụm về khung, thu nhỏ: ra lại đúng thứ tự · Menu ▸ Start again → màn START mới, 1 ô
+  tích · Fight: START bảng giữa + 2 bàn "?" + đồng hồ 02:00 · PLAY → 2 bàn cùng vào, 1:57/1:57 · bật tích → 2 nút PASS, cả hai
+  PASS → "2 / 8", tắt → 0 · chạm đúp + lăn chuột → "1 min", đồng hồ 01:00, hai bàn 0:59 · hết giờ → DRAW · Quiz y như cũ ·
+  0 lỗi console. ⬜ Chưa bấm tay trên TOMKO, chưa thử đường thật (đăng nhập → act WORDS → đổi template).
+
 ## ⭐ Đợt 388 (25/9/2026) — từ to căn giữa + bay về cột, bộ chữ dễ, ô giờ chạm đúp
 - GAME: từ to (và WINS) ĐÚNG TÂM bảng giữa — chữ trong `.wt` inline-block, mũi tên `position:absolute` treo ngoài (lệch về đội ghi điểm).
 - GAME: từ đang to KHÔNG có trong danh sách; từ kế tiếp tới ⇒ từ cũ bay (`flyToList`, bản sao trong `.wsg-cv`, đo theo toạ độ 1280) lên

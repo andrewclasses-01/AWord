@@ -20,7 +20,7 @@
 // on the result screen → start screen; on the start screen → ctx.onExit (GAMES).
 // =============================================================
 
-import { loadDict, lookup, points, rollBoard, wordsOn, shuffle, createSfx, escapeHtml as esc } from "../../templates/wordshake/ws-lib.js";
+import { loadDict, lookup, points, rollBoard, wordsOn, shuffle, createSfx, createTank, flyPoint, escapeHtml as esc } from "../../templates/wordshake/ws-lib.js";
 
 // Đợt 387 (thầy, 25/9/2026): the score strip was too tall and pushed the boards
 // down, out of the children's reach — strip boxes 62 → 40px, boards row up from
@@ -30,6 +30,13 @@ const Y = 56, BH = 408;                          // boards row
 const L = { x: 12, w: 392 }, C = { x: 420, w: 440 }, R = { x: 876, w: 392 };
 const TIMES = [120, 180, 300];
 const PREF = "aword-wordshake-time";
+// Đợt 390 — the last boards played on this device (newest first), so PLAY AGAIN or a
+// reopened game never deals a board like the one the class just saw (ws-lib rollBoard).
+const RECENT = "aword-wordshake-recent";
+function readRecent() { try { const a = JSON.parse(localStorage.getItem(RECENT) || "[]"); return Array.isArray(a) ? a.filter(x => typeof x === "string" && x.length === 16).map(x => x.split("")) : []; } catch (e) { return []; } }
+function pushRecent(letters) { try { localStorage.setItem(RECENT, JSON.stringify([letters.join(""), ...readRecent().map(r => r.join(""))].slice(0, 8))); } catch (e) {} }
+// Đợt 390 — score tanks: how fast the water rises (a GAME team makes ~30–60 points)
+const TANK_K = 28;
 const FLICKER = "ABCDEEFGHIKLMNOOPRSTUWY";
 const ICON = {
   home: '<svg class="i" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .7-1.53l7-6a2 2 0 0 1 2.6 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>',
@@ -49,7 +56,11 @@ export function mountWordshake(root, ctx = {}) {
   // usual chips, with the chip first double-tapped chosen (`soloBase`).
   let solo = false, soloBase = dur, lastTap = { t: 0, at: 0 };
   const T_MIN = 60, T_MAX = 600, DOUBLE_MS = 380, SWIPE_PX = 26;
-  // phase: "ready" | "play" | "over"
+  // Đợt 390 — one tank per team, built ONCE and re-attached after every render()
+  // (a fresh node each redraw would restart its waves and cut a slosh short).
+  const tanks = [0, 1].map(side => createTank({ side, k: TANK_K, cls: "wsg-tank" }));
+  let dripAt = 0, dripN = 0;
+  // phase: "ready" | "play" | "count" (time's up, the tanks drain) | "over"
   // ask: the "End this game?" box is open (the clock stands still under it)
   const G = { phase: "ready", letters: [], sides: [], found: new Map(), log: [], last: null, left: dur, prev: [0, 0], ask: false };
   let clock = null, shakeIv = null;
@@ -72,7 +83,9 @@ export function mountWordshake(root, ctx = {}) {
 
   // ---------- game flow ----------
   function newBoard() {
-    G.letters = rollBoard(dict, { easy: true });
+    G.letters = rollBoard(dict, { easy: true, recent: readRecent() });
+    pushRecent(G.letters);
+    tanks.forEach(t => t.reset(0));
     G.sides = [0, 1].map(() => ({ order: shuffle([...Array(16).keys()]), sel: [], score: 0 }));
     G.found = new Map(); G.log = []; G.last = null; G.left = dur; G.prev = [0, 0];
   }
@@ -104,14 +117,30 @@ export function mountWordshake(root, ctx = {}) {
   function toReady() {
     clearInterval(clock); clearInterval(shakeIv); root.classList.remove("shaking");
     G.phase = "ready"; G.sides = []; G.left = dur; G.ask = false;
+    tanks.forEach(t => t.reset(0));
     render();
   }
+  // Đợt 390 — time's up: the boards stop, both tanks DRAIN while their numbers count
+  // up (the team with fewer points stops first), THEN the winner is shown.
   function finish() {
-    clearInterval(clock); G.phase = "over";
+    clearInterval(clock); G.phase = "count";
     G.sides.forEach(s => s.sel = []);
     render();
     const [a, b] = G.sides.map(s => s.score);
-    sfx.timeup(); if (a !== b) sfx.win(b > a ? .65 : -.65);
+    sfx.timeup();
+    const max = Math.max(a, b, 1), D = Math.min(5200, 2400 + max * 40);
+    const drip = () => { const now = performance.now(); if (now - dripAt > 38) { dripAt = now; sfx.drip(dripN++); } };
+    dripN = 0;
+    Promise.all([a, b].map((v, i) => tanks[i].drain(v, Math.max(700, D * Math.max(0, v) / max), drip)))
+      .then(() => {
+        if (dead || G.phase !== "count") return;
+        sfx.land();
+        setTimeout(() => {
+          if (dead || G.phase !== "count") return;
+          G.phase = "over"; render();
+          if (a !== b) sfx.win(b > a ? .65 : -.65);
+        }, 900);
+      });
   }
   const fmt = s => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
   const pan = side => side ? .65 : -.65;
@@ -128,6 +157,10 @@ export function mountWordshake(root, ctx = {}) {
     if (G.found.has(w)) { sfx.dup(pan(side)); renderSide(side); return bubble(side, "dup", G.found.get(w) === side ? "Found" : "Taken"); }
     const p = points(w.length);
     G.found.set(w, side); s.score += p;
+    // Đợt 390 — the points fly from this team's word box into its tank (measured
+    // before render() replaces the box — only its position is needed)
+    const pv = cv.querySelector(`[data-side="${side}"] .wsg-pv`), sc = s.score;
+    flyPoint(pv, tanks[side].el, "+" + p, side).then(() => { if (dead || G.phase !== "play") return; tanks[side].hit(sc); sfx.splash(pan(side)); });
     // The word on show stays OUT of the lists while it is big in the centre; the
     // next word found sends it flying to the top of its team's column.
     const prev = G.last, from = prev ? flyStart() : null;
@@ -183,14 +216,16 @@ export function mountWordshake(root, ctx = {}) {
   function render() {
     if (dead) return;
     const [a, b] = G.sides.length ? G.sides.map(s => s.score) : [0, 0];
-    const bump = [a > G.prev[0], b > G.prev[1]]; G.prev = [a, b];
+    // Đợt 390 — no number (and no "who leads" glow) until the tanks have drained
+    const over = G.phase === "over";
+    const bump = [over && a > G.prev[0], over && b > G.prev[1]]; G.prev = over ? [a, b] : [0, 0];
     const warn = G.phase === "play" && G.left <= 10;
     root.classList.toggle("asking", G.ask);
     cv.innerHTML =
       `<div class="wsg-hudline"></div>` +
-      `<div class="wsg-score ${a > b ? "lead" : ""} ${bump[0] ? "bump" : ""}" style="left:${L.x + L.w / 2}px"><b>${a}</b></div>` +
+      `<div class="wsg-score ${over && a > b ? "lead" : ""} ${bump[0] ? "bump" : ""} ${over ? "" : "tank"}" style="left:${L.x + L.w / 2}px"><b>${a}</b></div>` +
       `<div class="wsg-clock ${warn ? "warn" : ""}"><span>${fmt(G.phase === "ready" ? dur : G.left)}</span></div>` +
-      `<div class="wsg-score s1 ${b > a ? "lead" : ""} ${bump[1] ? "bump" : ""}" style="left:${R.x + R.w / 2}px"><b>${b}</b></div>` +
+      `<div class="wsg-score s1 ${over && b > a ? "lead" : ""} ${bump[1] ? "bump" : ""} ${over ? "" : "tank"}" style="left:${R.x + R.w / 2}px"><b>${b}</b></div>` +
       stage(L, sideHtml(0), 0) + stage(C, centreHtml(), null) + stage(R, sideHtml(1), 1) +
       `<div class="wsg-tools" style="top:${Y + BH + 10}px">` +
         `<button class="wsg-tool" data-do="home" title="${G.phase === "ready" ? "Back to Games" : "Start screen"}" aria-label="${G.phase === "ready" ? "Back to Games" : "Start screen"}"><span>${ICON.home}</span></button>` +
@@ -199,6 +234,9 @@ export function mountWordshake(root, ctx = {}) {
       (G.ask ? `<div class="wsg-ask"><div class="wsg-askbox"><div class="q">End this game?</div>` +
         `<div class="a"><button class="wsg-b clr" data-do="no"><span>No</span></button>` +
         `<button class="wsg-b ent" data-do="yes"><span>Yes</span></button></div></div></div>` : "");
+    // Đợt 390 — the tanks survive every redraw: back into the new score boxes
+    cv.querySelectorAll(".wsg-score").forEach((box, i) => box.prepend(tanks[i].el));
+    if (G.phase === "over") tanks.forEach(t => t.el.classList.remove("is-count"));
   }
   const stage = (g, inner, side) =>
     `<div class="wsg-stage" ${side != null ? `data-side="${side}"` : ""} style="left:${g.x}px;top:${Y}px;width:${g.w}px;height:${BH}px">${inner}</div>`;
@@ -364,6 +402,7 @@ export function mountWordshake(root, ctx = {}) {
     cv.removeEventListener("pointerdown", onDown);
     cv.removeEventListener("wheel", onWheel);
     sfx.dispose();
+    tanks.forEach(t => t.destroy());
     root.classList.remove("wsg", "shaking"); root.innerHTML = "";
   };
 }

@@ -12,7 +12,13 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **⭐ Đợt 388** (25/9/2026, A SHOW SPEED: từ to căn giữa + bay về cột đội, gõ sai không nhấp nháy bảng giữa, bộ chữ GAME dễ
+> Mới nhất: **⭐ Đợt 390** (25/9/2026, A SHOW SPEED: BÌNH NƯỚC ĐIỂM — điểm ẩn trong bình lấp lánh, điểm bay vào làm sóng sánh,
+> hết giờ nước cạn + số đếm lên rồi mới hiện kết quả; GAME luôn có, template ô tích "Score tank"; core hook mới
+> `tpl.fightReveal`. + mỗi lượt một bộ chữ khác: GAME nhớ 8 bàn gần nhất, chung chữ 10,1→7,8/16). Xem chặng Đợt 390.
+> Trước đó: **⭐ Đợt 389** (25/9/2026, A SHOW SPEED TEMPLATE: mở bằng màn START của GAME (logo · 2/3/5 phút = đếm ngược ·
+> PLAY; Fight: ở bảng giữa), ☰ ‹ › 🔊 ⛶ ra hàng ngoài cạnh Options/Mode, cả hàng kiểu nút game, ô tích NEXT mặc định tắt;
+> CORE thêm 3 cờ tuỳ chọn `tpl.startScreen` · `tpl.toolsBelow` · `tpl.belowTools`). Xem chặng Đợt 389 bên dưới + GHI CHU WORDSHAKE.
+> Trước đó: **⭐ Đợt 388** (25/9/2026, A SHOW SPEED: từ to căn giữa + bay về cột đội, gõ sai không nhấp nháy bảng giữa, bộ chữ GAME dễ
 > hơn (~250 từ A1–A2/bàn), ô giờ chạm đúp + vuốt ±1 phút; Fight template: cột từ trượt). Xem GHI CHU WORDSHAKE mục Đợt 388.
 > Trước đó: **⭐ Đợt 387** (25/9/2026, WORDSHAKE đổi tên hiển thị **A SHOW SPEED** — mã vẫn `wordshake`; GAME: dải điểm thấp,
 > bỏ dòng luật + New game, Home hỏi "End this game?" về màn chờ, nút kiểu game 2/3; chuông dồn dập 10 s cuối; FIGHT template
@@ -535,6 +541,73 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
+
+## Đợt 390 (25/9/2026) — A SHOW SPEED: BÌNH NƯỚC ĐIỂM + mỗi lượt một bộ chữ khác · ✅ ĐÃ COMMIT + PUSH (thầy lệnh) · ⬜ CHƯA BẤM TAY
+**Bối cảnh**: thầy muốn điểm chưa hiện khi đang chơi — ô điểm là bình nước lấp lánh, điểm bay vào làm nước sóng sánh; hết giờ
+nước cạn dần thành số đếm lên (hồi hộp); mọi mode; GAME mặc định, activity có ô tích trong Options. Và PLAY AGAIN / mở lại
+phải ra bộ chữ khác (lượt nào cũng na ná nhau).
+
+**Việc đã làm**
+- `templates/wordshake/ws-lib.js`: `createTank` · `flyPoint` · `tankLevel` · CSS tự chèn · âm `splash/drip/land`;
+  `rollBoard(…, {recent, pool:.55})` + `overlapOf`.
+- `games/wordshake/wordshake.js/.css`: 2 bình trong ô điểm, pha `"count"` trước `"over"`, lịch sử 8 bàn
+  `aword-wordshake-recent`, số bay từ ô chữ của đội vào bình.
+- `templates/wordshake/wordshake.js/.css`: ô tích **Score tank** (`opt.wsTank`, mặc định bật), bình chơi đơn (chỗ ô ✓) + Fight
+  (dải điểm), `pour()` khi ghi điểm, `finish()` chơi đơn cạn rồi mới `ui.finish`, `fightReveal`; Mode 2/3 nhóm từ theo
+  `shuffle(items)` mỗi lượt.
+- `core/fight.js` (+14): hook tuỳ chọn `tpl.fightReveal` trong `endMatch()` — bảng kết quả chờ tối đa 15 s.
+
+**Quyết định kỹ thuật**: mực nước dâng theo đường bão hoà (không tràn, khó so đội) · hai bình cạn CÙNG TỐC ĐỘ để đội ít điểm
+dừng trước (kịch tính) · `drain` dùng setInterval (rAF treo khi tab ẩn) · bộ chữ: đổi "bàn dễ nhất" thành "bàn dễ ít trùng
+lượt gần đây nhất" (số đo đủ trong GHI CHU WORDSHAKE Đợt 390).
+
+**Lỗi đã gặp**: script python sửa file CRLF khớp trượt chuỗi nhiều dòng MÀ KHÔNG BÁO (chú thích ws-lib không đổi) ⇒ mọi
+script sau chuẩn hoá `\r\n→\n`, `assert count==1`, ghi lại CRLF. Số trong bình là `<b>` dính luật `.wsg-score b` ⇒ dạt trái ⇒
+đổi `<span>`. Chờ trong bàn thử quá 45 s làm công cụ JS hết giờ ⇒ chia nhỏ lần chờ.
+
+**VIỆC ĐANG CHỜ**
+- ⬜ Thầy xem/nghe thật trên TOMKO: tiếng nước, tốc độ cạn (2,4–5,2 s), bình có quá thấp không (ô điểm 33–40px).
+- ✅ Commit + push Đợt 389 + 390 cùng một commit (thầy lệnh 25/9/2026).
+- ⬜ (còn từ 389) ẩn ô Timer trong Options? · NEXT theo act thay vì theo máy?
+
+## Đợt 389 (25/9/2026) — A SHOW SPEED TEMPLATE: màn START của GAME + nút ra hàng ngoài kiểu game + ô tích NEXT · ✅ ĐÃ COMMIT + PUSH (cùng Đợt 390) · ⬜ CHƯA BẤM TAY
+**Bối cảnh**: thầy đổi template một act WORDS sang A Show Speed và muốn nó trông/chơi như GAME: (1) bỏ màn START gốc
+AWord, dùng màn START của GAME; (2) Options + Mode theo phong cách game; (3) Menu · next-back · loa xuống hàng nút ngoài;
+(4) thêm ô tích cho phép Next, mặc định tắt. Chốt qua câu hỏi: cả chơi đơn + Fight · ô 2/3/5 phút = đếm ngược · tắt = ẩn
+hẳn › · cho sửa core bằng cờ tuỳ chọn.
+
+**Việc đã làm**
+- `core/engine.js` (+71 dòng) — 3 móc mới, không khai là y cũ:
+  - `tpl.startScreen(api)`: gắn `.aw-start-custom` vào overlay READY (`.is-custom-start` ẩn phần gốc); `api.play()` gọi
+    `startPressed` nên relay Fight/cổng chuẩn bị/chốt 0,5 s giữ nguyên; `beforePlay` chạy đầu `startPressed` mỗi bàn,
+    `dispose` ở `enterGame`. Chỉ thầy (không session, không Showdown).
+  - `tpl.toolsBelow`: chơi đơn dời ☰ ‹ › 🔊 ⛶ vào `.aw-below-boardtools`; `placeBoardTools()` trả về khung khi zoom/nhúng
+    (hai trạng thái đó ẩn cả hàng ngoài — không trả là mất nút thoát zoom); gọi lại ở `fsBtn.onclick` + `exitAnyFullscreen`.
+  - `tpl.belowTools({host})`: template thêm nút vào hàng ngoài (chỉ thầy).
+- `core/app.css` (+21): CSS cho 3 móc.
+- `templates/wordshake/wordshake.js` (+~200): `mountStartPanel` (sao y màn chờ GAME, cả chạm đúp/vuốt/lăn chuột),
+  `idleBoardHtml` (bàn "?" tối trong Fight), `startScreen` (chơi đơn phủ khung; Fight bảng giữa, `ctl.onTimer` hiện số
+  phút), `belowTools` (ô tích NEXT), `fightFrame.boardTools:"shared"` + dời thanh TIME DELAY vào bàn, `m1Nav/padNav` theo
+  ô tích, nút PASS mỗi bàn khi bật (Fight Mode 1), `nextSubs` bật/tắt sống.
+- `templates/wordshake/wordshake.css` (+76): màn START (`.aw-wss-*`, cỡ theo px GAME qua `--p`), bàn chờ, PASS, ô tích,
+  mọi nút hàng ngoài kiểu nút GAME (Đợt 387: ô nghiêng tối viền neon).
+
+**Quyết định kỹ thuật**
+- Số phút + ô tích lưu theo MÁY (`aword-showspeed-act-time`, `aword-showspeed-next`), không ghi vào act: là cách lớp chơi
+  hôm nay, không phải nội dung bài; tránh đường lưu Options phức tạp (act conv_/templateOptions/Fight applyOptions).
+- Fight dùng lại cơ chế `boardTools:"shared"` có sẵn của Rocket race thay vì viết cơ chế mới.
+- Giá trị phút đi qua biến module `liveTime` ⇒ bàn 1 (tới qua click relay) nhận đúng cả giá trị vuốt chưa lưu.
+
+**Lỗi đã gặp**: heredoc bash vỡ vì dấu nháy trong chú thích CSS → dùng Edit. Trước PLAY hai mũi tên ‹ › chưa nối dây nên
+chưa `disabled` ⇒ vẫn hiện — thêm luật CSS ẩn khi overlay còn.
+
+**Đã đo** (bàn thử, 0 lỗi console): xem GHI CHU WORDSHAKE mục Đợt 389 — gồm hết giờ trong Fight ⇒ DRAW, Quiz không đổi.
+
+**VIỆC ĐANG CHỜ**
+- ⬜ Thầy duyệt giao diện + bấm tay trên TOMKO (chơi đơn + Fight), đường thật: act WORDS → đổi template → A Show Speed.
+- ✅ Commit + push (cùng commit với Đợt 390).
+- ⬜ Ô Timer trong Options nay bị màn START đè — có muốn ẩn ô đó cho template này không.
+- ⬜ Muốn ô tích NEXT theo ACT (đi theo bài giao) thay vì theo máy thì phải chuyển sang options + đường lưu Apply.
 
 ## Đợt 386c (25/9/2026) — WORDSHAKE VÀO CATALOG (New activity · Template picker · play.html · Settings) · ✅ thầy chốt "đưa vào luôn"
 - `core/catalog.js` mục `wordshake` + `TEMPLATE_ICON.wordshake = fmtAnagram`; `core/assignment-ui.js` `TPL_SHORT.wordshake = WORDSHAKE`; `core/convert.js` thêm `wordshake` vào QA_TARGETS + nhánh đọc/ghi chung với Anagram; `tools/sinh-preload.py --write` (tpl-files).

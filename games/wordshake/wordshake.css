@@ -42,6 +42,11 @@
 .wsg-score.lead{box-shadow:0 0 30px rgba(61,245,138,.75),inset 0 0 26px rgba(61,245,138,.25)}
 .wsg-score.s1.lead{box-shadow:0 0 30px rgba(55,215,255,.75),inset 0 0 26px rgba(55,215,255,.25)}
 .wsg-score.bump b{animation:wsg-bump .55s cubic-bezier(.22,.9,.3,1)}
+/* Đợt 390 — score tank (ws-lib createTank): no number while playing, only the water;
+   the tank counts the number itself while it drains, then the real number returns */
+.wsg-score b{position:relative;z-index:1}
+.wsg-score.tank b{opacity:0}
+.wsg-tank .wst-num{font:italic 800 31px/1 var(--ws-gf);transform:skewX(14deg)}
 @keyframes wsg-bump{0%{transform:skewX(14deg) scale(1)}30%{transform:skewX(14deg) scale(1.4);color:#fff}100%{transform:skewX(14deg) scale(1)}}
 .wsg-clock{position:absolute;top:8px;height:40px;width:150px;left:640px;transform:translateX(-50%) skewX(-14deg);display:grid;place-items:center;border-radius:4px;
   background:linear-gradient(180deg,#10261D,#030D09);border:2px solid rgba(230,255,241,.4);box-shadow:0 0 14px rgba(3,17,11,.35)}

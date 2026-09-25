@@ -1529,6 +1529,20 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     revealBoards();   // never end a match with the last word's result still hidden
     boards.forEach(b => b && b.lock(true));
     syncNavGates();   // Đợt 220 — hết trận thì không còn gì để chặn
+    // ⭐ Đợt 390 (A Show Speed) — `tpl.fightReveal({ wrap, scores, scoreEls, activity })`:
+    // an OPTIONAL moment between the last point and the result panel (the score tanks
+    // drain while the numbers count up). Returns a promise; the panel waits for it,
+    // never longer than 15 s, and a template that throws just gets the panel at once.
+    const reveal = getTemplate(activity.type)?.fightReveal;
+    if (typeof reveal === "function") {
+      let shown = false;
+      const go = () => { if (shown || torndown) return; shown = true; showResult(); };
+      try {
+        Promise.resolve(reveal({ wrap, scores: [totalOf(0), totalOf(1)], scoreEls: [teams[0].value, teams[1].value], activity })).then(go, go);
+      } catch (e) { go(); }
+      setTimeout(go, 15000);
+      return;
+    }
     showResult();
   }
 

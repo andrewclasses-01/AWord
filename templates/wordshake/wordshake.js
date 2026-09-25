@@ -44,7 +44,7 @@ import { mkCell, mkSeg } from "../../core/options-panel.js";
 import { el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
-import { loadDict, lookup, points, shuffle, countOf, createSfx, escapeHtml as esc } from "./ws-lib.js";
+import { loadDict, lookup, points, shuffle, countOf, createSfx, createTank, flyPoint, escapeHtml as esc } from "./ws-lib.js";
 import { openWordshakeEditor } from "./wordshake-editor.js";
 import { sound } from "../../core/sound.js";
 
@@ -62,6 +62,162 @@ const modeOf = o => (MODES.includes(o && o.wsMode) ? o.wsMode : "one");
 const tilesOf = o => (TILE_CHOICES.includes(+(o && o.wsTiles)) ? +o.wsTiles : 12);
 const blanks = n => Array(n).fill("_").join(" ");
 const arrow = side => `<span class="aw-ws-arr ${side ? "is-r" : "is-l"}"></span>`;
+
+// ---------------- Đợt 389: start screen + "Next" tick (per device) ----------------
+// thầy 25/9/2026: the act opens on the GAME's own start screen (logo · 2/3/5 min ·
+// PLAY) instead of AWord's READY; the minutes ARE the play's clock (count down).
+// Both choices live on this device (like the GAME's `aword-wordshake-time`), not on
+// the act: they are how the class plays today, not part of the lesson.
+const TIMES = [120, 180, 300];
+const T_MIN = 60, T_MAX = 600, DOUBLE_MS = 380, SWIPE_PX = 26;
+const PREF_TIME = "aword-showspeed-act-time", PREF_NEXT = "aword-showspeed-next";
+function readTime() { try { const v = +localStorage.getItem(PREF_TIME); return TIMES.includes(v) ? v : 180; } catch (e) { return 180; } }
+function saveTime(v) { try { localStorage.setItem(PREF_TIME, String(v)); } catch (e) {} }
+// `liveTime` = what the start screen shows right now (a swiped solo value is not
+// saved, exactly like the GAME) — read by EVERY board's beforePlay, so in a match
+// board 1 starts with the minutes board 0's centre screen shows.
+let liveTime = null;
+// Next is OFF unless the teacher ticks it (thầy: "mặc định là tắt ko cho next").
+function allowNext() { try { return localStorage.getItem(PREF_NEXT) === "1"; } catch (e) { return false; } }
+function saveNext(on) { try { localStorage.setItem(PREF_NEXT, on ? "1" : "0"); } catch (e) {} }
+const nextSubs = new Set();        // mounted boards redraw their › when the tick flips
+const beep = k => { if (!sound.isMuted()) bell[k](0); };
+const TICK_SVG = '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+
+// The board a team sees before PLAY in a match: its 16 tiles still dark, like the GAME.
+function idleBoardHtml(side) {
+  const t = Array(16).fill('<button type="button" class="aw-ws-t" disabled>?</button>').join("");
+  return `<div class="aw-ws-root is-fight is-side-${side} aw-ws-idle"><div class="aw-ws-solo"><div class="aw-ws-pad">` +
+    `<div class="aw-ws-pv"></div><div class="aw-ws-grid4">${t}</div>` +
+    `<div class="aw-ws-btns"><button type="button" class="aw-ws-b is-clr" disabled><span>Clear</span></button><button type="button" class="aw-ws-b is-ent" disabled><span>Enter</span></button></div>` +
+    `</div></div></div>`;
+}
+
+// The start panel itself (logo · minute chips · PLAY), drawn into `box` — the whole
+// frame in single play, the centre board in a match. The chips work like the GAME's
+// (Đợt 387): tap = choose; double-tap = that chip alone, swipe ▲ +1 / ▼ −1 min
+// (1–10), mouse wheel too; double-tap again = the three chips back.
+function mountStartPanel(box, { play, ready, onTime }) {
+  let dur = readTime();
+  let solo = false, soloBase = dur, lastTap = { t: 0, at: 0 }, isReady = false, dead = false;
+  const offs = [];
+  const on = (t, ev, fn, o) => { t.addEventListener(ev, fn, o); offs.push(() => t.removeEventListener(ev, fn, o)); };
+  const setDur = v => { dur = liveTime = v; if (onTime) onTime(v); };
+  function draw() {
+    const chips = solo
+      ? `<div class="aw-wss-times is-solo"><div class="aw-wss-tsolo"><i class="up"></i><button type="button" data-do="time" data-t="${dur}" class="is-on"><span>${dur / 60} min</span></button><i class="dn"></i></div></div>`
+      : `<div class="aw-wss-times">${TIMES.map(t => `<button type="button" data-do="time" data-t="${t}" class="${t === dur ? "is-on" : ""}"><span>${t / 60} min</span></button>`).join("")}</div>`;
+    box.innerHTML = `<div class="aw-wss"><div class="aw-wss-logo">A SHOW <span>SPEED</span></div>${chips}` +
+      `<button type="button" class="aw-wss-play" data-do="play" aria-label="Play" ${isReady ? "" : "disabled"}><span>Play</span></button>` +
+      (isReady ? "" : `<div class="aw-wss-note">Loading…</div>`) + `</div>`;
+  }
+  function stepTime(n) {
+    const v = Math.max(T_MIN, Math.min(T_MAX, dur + n * 60));
+    const tbox = box.querySelector(".aw-wss-tsolo");
+    if (v === dur) { if (tbox) tbox.animate([{ translate: "0 0" }, { translate: `0 ${n > 0 ? -5 : 5}px` }, { translate: "0 0" }], { duration: 180 }); return; }
+    setDur(v); beep("tap");
+    // in place, no redraw: the finger is still on the chip
+    const btn = tbox && tbox.querySelector("button");
+    if (btn) {
+      btn.dataset.t = dur; btn.querySelector("span").textContent = `${dur / 60} min`;
+      btn.animate([{ translate: `0 ${n > 0 ? 10 : -10}px`, opacity: .3 }, { translate: "0 0", opacity: 1 }], { duration: 200, easing: "ease-out" });
+    }
+  }
+  function onDown(e) {
+    const b = e.target.closest("[data-do]"); if (!b || b.disabled || dead) return;
+    bell.unlock();
+    if (b.dataset.do === "play") { e.preventDefault(); play(); return; }
+    if (b.dataset.do !== "time") return;
+    const t = +b.dataset.t, now = performance.now();
+    const dbl = now - lastTap.at < DOUBLE_MS && (solo || lastTap.t === t);
+    lastTap = dbl ? { t: 0, at: 0 } : { t, at: now };
+    if (dbl) {
+      const r0 = b.getBoundingClientRect();
+      if (solo) { solo = false; setDur(soloBase); }
+      else { solo = true; soloBase = t; setDur(t); saveTime(t); }
+      beep("next"); draw();
+      // the chip glides from where it was to where it now is
+      const b2 = box.querySelector(`.aw-wss-times button[data-t="${dur}"]`);
+      if (b2) { const r = b2.getBoundingClientRect(); b2.animate([{ translate: `${r0.left - r.left}px ${r0.top - r.top}px` }, { translate: "0 0" }], { duration: 320, easing: "cubic-bezier(.22,.9,.3,1)" }); }
+      return;
+    }
+    if (!solo) { setDur(t); saveTime(t); beep("tap"); draw(); return; }
+    // solo: follow the finger for swipes (screen px — nothing here is scaled)
+    e.preventDefault();
+    let y0 = e.clientY;
+    const move = ev => {
+      const dy = ev.clientY - y0;
+      if (Math.abs(dy) < SWIPE_PX) return;
+      y0 = ev.clientY; lastTap = { t: 0, at: 0 };   // a swipe is not half of a double-tap
+      stepTime(dy < 0 ? 1 : -1);
+    };
+    const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up); };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up); window.addEventListener("pointercancel", up);
+  }
+  on(box, "pointerdown", onDown);
+  on(box, "wheel", e => {
+    if (!solo || dead || !e.target.closest(".aw-wss-tsolo")) return;
+    e.preventDefault(); stepTime(e.deltaY < 0 ? 1 : -1);
+  }, { passive: false });
+  setDur(dur); draw();
+  Promise.resolve(ready && ready()).then(() => { if (dead) return; isReady = true; draw(); });
+  return () => { dead = true; offs.forEach(f => f()); };
+}
+
+// ---------------- Đợt 390: score tank (Options ▸ Score tank, default ON) ----------------
+// The score is not shown while the game runs: its box holds a sparkling tank, points
+// fly in and slosh the water (ws-lib createTank/flyPoint). At the end the tank drains
+// while the number counts up — single play before ui.finish, a match through the
+// core hook `fightReveal` (before the result panel). One set of tanks per frame /
+// match, kept here so the start screen and mount() share them.
+const TANKS = new WeakMap();
+const tankOn = o => !(o && o.wsTank === false);
+// how fast the water rises: words (1 a word) fill faster than letter points (Mode 3 match)
+const tankK = (mode, fight) => mode === "free" ? (fight ? 20 : 3) : 6;
+function singleTank(inner, k) {
+  if (!inner) return null;
+  let t = TANKS.get(inner);
+  if (t) return t;
+  const scoreEl = inner.querySelector(".aw-top-score");
+  if (!scoreEl) return null;
+  const box = document.createElement("span");
+  box.className = "aw-ws-toptank";
+  t = createTank({ side: 0, k });
+  box.append(t.el);
+  scoreEl.after(box);                     // engine rewrites scoreEl's innerHTML — so a sibling
+  inner.closest(".aw-stage")?.classList.add("is-ws-tank");
+  t.box = box; t.inner = inner;
+  TANKS.set(inner, t);
+  return t;
+}
+function fightTanks(wrap, k) {
+  if (!wrap) return null;
+  let t = TANKS.get(wrap);
+  if (t) return t;
+  const teams = [0, 1].map(i => wrap.querySelector(".aw-fight-team.side-" + i));
+  if (!teams[0] || !teams[1]) return null;
+  t = teams.map((team, i) => {
+    const tk = createTank({ side: i, k });
+    team.append(tk.el);
+    // the strip's number is core's (bonus / penalties included): follow it for the level
+    const sc = team.querySelector(".aw-fight-score");
+    if (sc) new MutationObserver(() => tk.set(Number(sc.textContent) || 0)).observe(sc, { childList: true, characterData: true, subtree: true });
+    tk.scoreEl = sc;
+    return tk;
+  });
+  wrap.classList.add("is-ws-tank");
+  TANKS.set(wrap, t);
+  return t;
+}
+// Both (or the one) tank(s) drain together at ONE speed, so the lower score stops first.
+function drainTanks(tanks, scores) {
+  const max = Math.max(1, ...scores.map(v => Math.max(0, v)));
+  const D = Math.min(5200, 2400 + max * 60);
+  let at = 0, n = 0;
+  const drip = () => { const now = performance.now(); if (now - at > 38) { at = now; if (!sound.isMuted()) bell.drip(n++); } };
+  return Promise.all(tanks.map((t, i) => t.drain(scores[i], Math.max(700, D * Math.max(0, scores[i]) / max), drip)))
+    .then(() => { if (!sound.isMuted()) bell.land(); return new Promise(r => setTimeout(r, 850)); });
+}
 
 // ---------------- board plans (shared by single and fight) ----------------
 // Mode 2 — boards of ≤5 words whose letters fit in 16 DIFFERENT letters.
@@ -196,11 +352,79 @@ const wordshakeTemplate = {
   sounds: {
     countdownTick: left => { if (!sound.isMuted()) bell.countdown(left); }
   },
-  checkOrder: ["shuffle", "showAnswers"],
+  checkOrder: ["shuffle", "wsTank", "showAnswers"],
   edit: openWordshakeEditor,
   fightMode: true,
   fightLayout: "shared-middle",
-  fightFrame: { sideW: 392, midW: 440, h: 408, skin: "wordshake" },
+  // Đợt 389 — boardTools "shared": ☰ · ‹ › · 🔊 of board 0 go to the row under the
+  // match (beside Options / Mode), both boards' own bottom rows are hidden. The
+  // TIME DELAY bar is re-homed into each board in mount (`ui.hostFightWaitBar`).
+  fightFrame: { sideW: 392, midW: 440, h: 408, skin: "wordshake", boardTools: "shared" },
+  // Đợt 389 — single play: the same move, out of the frame (core `tpl.toolsBelow`).
+  toolsBelow: true,
+
+  // ⭐ Đợt 389 (thầy, 25/9/2026) — the GAME's start screen replaces AWord's READY
+  // (core `tpl.startScreen`). Single play: the whole frame. A match: board 0 draws
+  // it on the centre board, each board's cover shows its idle tiles.
+  startScreen({ host, activity, fight, play, ready }) {
+    const side = fight ? fight.side : 0;
+    const beforePlay = () => {
+      const o = activity.options || (activity.options = {});
+      o.timer = "countDown";
+      o.timerTotalSeconds = liveTime || readTime();
+    };
+    if (fight) {
+      host.innerHTML = idleBoardHtml(side);
+      if (side !== 0) return { beforePlay };
+      const S = sharedOf(fight.ctl);
+      attachHost(S, fight.ctl.sharedRoot());
+      if (tankOn(activity.options)) fightTanks(fight.ctl.sharedRoot()?.closest(".aw-fight"), tankK(modeOf(activity.options), true));
+      if (!S.host) return { beforePlay };
+      const off = mountStartPanel(S.host, { play, ready, onTime: v => fight.ctl.onTimer && fight.ctl.onTimer(0, v) });
+      return { beforePlay, dispose: off };
+    }
+    host.innerHTML = `<div class="aw-ws-root aw-wss-single"></div>`;
+    if (tankOn(activity.options)) singleTank(host.closest(".aw-stage-inner"), tankK(modeOf(activity.options), false));
+    // the frame's own clock shows the chosen minutes before PLAY (the engine writes
+    // its real value the moment the clock starts)
+    const clock = host.closest(".aw-stage-inner")?.querySelector(".aw-top-timer");
+    const onTime = v => { if (clock) { clock.textContent = Math.floor(v / 60) + ":" + String(v % 60).padStart(2, "0"); clock.style.visibility = "visible"; } };
+    const off = mountStartPanel(host.firstChild, { play, ready, onTime });
+    return { beforePlay, dispose: off };
+  },
+
+  // ⭐ Đợt 390 — core `tpl.fightReveal`: the match is over, the result panel waits
+  // for this. Both tanks drain as the numbers count up; then the real numbers return.
+  fightReveal({ wrap, scores, activity }) {
+    if (!tankOn(activity.options)) return;
+    const t = TANKS.get(wrap);
+    if (!t) return;
+    return drainTanks(t, scores).then(() => {
+      wrap.classList.remove("is-ws-tank");
+      t.forEach(x => x.el.classList.remove("is-count"));
+    });
+  },
+
+  // ⭐ Đợt 389 — the "Next" tick on the row under the frame (core `tpl.belowTools`).
+  // OFF = no › at all (Mode 1 cannot skip a word, Mode 2 cannot skip a board; in a
+  // match no team can pass). The choice is this device's and flips live.
+  belowTools({ host }) {
+    const b = el("button", "aw-ws-tick");
+    b.type = "button";
+    const paint = () => {
+      const on = allowNext();
+      b.classList.toggle("is-on", on);
+      b.title = on ? "Next is allowed — tap to turn it off" : "Next is off — tap to allow it";
+      b.setAttribute("aria-pressed", String(on));
+    };
+    b.innerHTML = `<span class="aw-ws-tickbox">${TICK_SVG}</span><span class="aw-ws-ticklab">NEXT</span>`;
+    b.addEventListener("click", () => {
+      saveNext(!allowNext()); paint();
+      nextSubs.forEach(fn => { try { fn(); } catch (e) { console.error(e); } });
+    });
+    paint();
+    host.append(b);
+  },
 
   // Mode 3 checks free words against the dictionary — load it while READY is on screen.
   prepare(activity) {
@@ -211,7 +435,7 @@ const wordshakeTemplate = {
     return (activity.content?.items || []).map(it => ({ clue: it.clue || "", answer: it.word || "" }));
   },
 
-  buildExtraOptions({ panel, draft }) {
+  buildExtraOptions({ panel, draft, addCheck }) {
     const cur = modeOf(draft);
     const modeCell = mkCell({ label: "A Show Speed mode", wide: true });
     const tilesCell = mkCell({ label: "Letters", sub: "Mode 1" });
@@ -224,6 +448,9 @@ const wordshakeTemplate = {
     tilesCell.ctl.append(mkSeg(TILE_CHOICES.map(n => ({ value: n, label: String(n) })), tilesOf(draft), v => { draft.wsTiles = v; }));
     sync(cur);
     panel.append(modeCell.cell, tilesCell.cell);
+    // Đợt 390 — the score tank (thầy: the GAME always has it, an activity may switch it off)
+    if (addCheck) addCheck("Score tank", draft.wsTank !== false, v => { draft.wsTank = v; },
+      { key: "wsTank", title: "Hide the score in a water tank until the end, then count it up" });
   },
   optionsNeedRestart() { return true; },
 
@@ -247,6 +474,14 @@ const wordshakeTemplate = {
     root.innerHTML = "";
     const wrap = el("div", "aw-ws-root aw-ws-m-" + mode + (fctl ? " is-fight is-side-" + side : ""));
     root.append(wrap);
+    // Đợt 389 — fightFrame.boardTools "shared" hides the board's bottom row, where
+    // the referee's TIME DELAY bar lives: it moves into this board (a sibling of
+    // `wrap`, which every render empties).
+    if (fctl && typeof ui.hostFightWaitBar === "function") {
+      const waitSlot = el("div", "aw-ws-waitslot");
+      root.append(waitSlot);
+      ui.hostFightWaitBar(waitSlot);
+    }
     if (!total) { wrap.append(el("div", "aw-ws-empty", "This activity has no words yet.")); return () => {}; }
 
     const st = items.map(() => ({ solved: false, tries: 0, typed: null }));
@@ -260,9 +495,23 @@ const wordshakeTemplate = {
     if (S) {
       S.mode = mode;
       if (!S.items) { S.items = items; S.activity = activity; }
-      if (!S.plan && mode === "list") S.plan = planList(items);
-      if (!S.plan && mode === "free") S.plan = planFree(items);
+      // Đợt 390 — a new grouping every play ⇒ new boards (thầy: "play again trùng nhau quá")
+      if (!S.plan && mode === "list") S.plan = planList(shuffle(items));
+      if (!S.plan && mode === "free") S.plan = planFree(shuffle(items));
       attachHost(S, fctl.sharedRoot());
+    }
+    // Đợt 390 — score tanks (see singleTank / fightTanks)
+    const topTank = !fctl && tankOn(opt) ? singleTank(root.closest(".aw-stage-inner"), tankK(mode, false)) : null;
+    const fTanks = fctl && tankOn(opt) ? fightTanks(root.closest(".aw-fight"), tankK(mode, true)) : null;
+    if (topTank) topTank.reset(0);
+    function pour(fromEl, text) {
+      const T = topTank || (fTanks && fTanks[side]);
+      if (!T) return;
+      flyPoint(fromEl, T.el, text, side).then(() => {
+        if (!T.el.isConnected || T.el.classList.contains("is-count")) return;
+        T.hit(fTanks ? (Number(T.scoreEl && T.scoreEl.textContent) || 0) : score);
+        if (!sound.isMuted()) bell.splash(pan);
+      });
     }
     const sub = { side, r: 0, refresh: done => refreshFromShared(done) };
     if (S) S.subs.add(sub);
@@ -334,11 +583,22 @@ const wordshakeTemplate = {
       const grid = el("div", "aw-ws-grid1");
       grid.style.setProperty("--cols", String(fctl ? 4 : Math.min(8, Math.ceil(M1.board.length / 2))));
       grid.innerHTML = grid1Html();
-      body.append(slots, grid, el("div", "aw-ws-bubs"));
+      body.append(slots, grid);
+      // Đợt 389 — a match has no › of its own any more (the row under the match is
+      // board 0's alone); with Next allowed each team gets PASS on its own board.
+      if (fctl && allowNext()) body.append(el("button", "aw-ws-b aw-ws-pass", "<span>Pass ›</span>"));
+      body.append(el("div", "aw-ws-bubs"));
+      const pass = body.querySelector(".aw-ws-pass");
+      if (pass) { pass.type = "button"; pass.dataset.do = "pass"; }
       wrap.append(body);
       ui.setScore(score);
-      if (fctl) { S.i = M1.i; drawCentre(S); ui.setNav({ index: M1.i + 1, total, onPrev: null, onNext: m1Pass }); }
-      else { ui.setNav({ index: M1.i + 1, total, onPrev: null, onNext: m1Skip, nextLabel: M1.i + 1 >= total ? icons.check : undefined }); autoPlay(it, c); }
+      if (fctl) { S.i = M1.i; drawCentre(S); }
+      else autoPlay(it, c);
+      m1Nav();
+    }
+    function m1Nav() {
+      if (fctl) ui.setNav({ index: M1.i + 1, total, onPrev: null, onNext: null });
+      else ui.setNav({ index: M1.i + 1, total, onPrev: null, onNext: allowNext() ? m1Skip : null, nextLabel: M1.i + 1 >= total ? icons.check : undefined });
     }
     function m1Patch() {
       const slots = wrap.querySelector(".aw-ws-slots"), grid = wrap.querySelector(".aw-ws-grid1");
@@ -353,7 +613,7 @@ const wordshakeTemplate = {
       locked = true; s.tries++; s.typed = guess;
       if (guess === it.up) {
         s.solved = true; score++; M1.state = "is-good"; m1Patch(); ui.setScore(score);
-        say("ok", 2); bubble("ok", "+1");
+        say("ok", 2); bubble("ok", "+1"); pour(wrap.querySelector(".aw-ws-slots"), "+1");
         if (fctl) {
           S.log.unshift({ w: it.word, side, m: "" }); notify();
           fctl.wordDone(side, { index: M1.i, correct: true });   // the referee moves both boards on
@@ -374,7 +634,7 @@ const wordshakeTemplate = {
     // =============================================================
     // MODE 2 / MODE 3 — a pad of 16 letters
     // =============================================================
-    const plan = S ? S.plan : (mode === "list" ? planList(items) : mode === "free" ? planFree(items) : null);
+    const plan = S ? S.plan : (mode === "list" ? planList(shuffle(items)) : mode === "free" ? planFree(shuffle(items)) : null);
     let R = 0, order = [], input = "", sel = [], found3 = [], M3dict = null;
     const curPlan = () => plan[S ? S.r : R];
     function dealOrder() { order = shuffle([...Array(curPlan().letters.length).keys()]); input = ""; sel = []; }
@@ -416,9 +676,12 @@ const wordshakeTemplate = {
         const body = el("div", "aw-ws-split"); body.append(pad, right); wrap.append(body);
       }
       ui.setScore(fctl && mode === "free" ? pts : score);
-      const r = S ? S.r : R;
-      ui.setNav({ label: `${r + 1} of ${plan.length}`, onPrev: null, onNext: fctl ? null : nextBoard, nextLabel: r + 1 >= plan.length ? icons.check : undefined });
+      padNav();
       if (S) drawCentre(S);
+    }
+    function padNav() {
+      const r = S ? S.r : R;
+      ui.setNav({ label: `${r + 1} of ${plan.length}`, onPrev: null, onNext: fctl || !allowNext() ? null : nextBoard, nextLabel: r + 1 >= plan.length ? icons.check : undefined });
     }
     function patchPad() {
       const pad = wrap.querySelector(".aw-ws-pad"); if (!pad) return padRender();
@@ -474,6 +737,8 @@ const wordshakeTemplate = {
         P.words.forEach(up => { const j = idxOf(up); if (j >= 0 && !st[j].solved) st[j].tries++; });
       }
       say(kind, kind === "ok" ? parseInt(sym.slice(1), 10) || 1 : 0);
+      // single Mode 3: the tank holds lesson WORDS (the ✓ score), so only those pour
+      if (kind === "ok" && (fctl || lesson)) pour(wrap.querySelector(".aw-ws-pv"), fctl ? sym : "+1");
       if (kind === "ok") { padRender(); notify(); afterFind(); } else patchPad();
       bubble(kind, sym);
     }
@@ -498,6 +763,7 @@ const wordshakeTemplate = {
       sfx.unlock();
       if (mode === "one") {
         if (locked) return;
+        if (d === "pass") return m1Pass();
         if (d === "t1") {
           const k = +b.dataset.k, j = M1.slots.indexOf(null);
           if (j < 0 || M1.board[k].used) return;
@@ -536,8 +802,33 @@ const wordshakeTemplate = {
       const review = buildReview();
       const perQuestion = review.map((r, i) => ({ q: i, correct: r.yourCorrect === true }));
       const correct = perQuestion.filter(p => p.correct).length;
-      ui.finish({ correct, incorrect: total - correct, total, items: total, perQuestion, review, answered: review.filter(r => r.answered).length });
+      const result = { correct, incorrect: total - correct, total, items: total, perQuestion, review, answered: review.filter(r => r.answered).length };
+      // Đợt 390 — single play: the tank drains while the score counts up, THEN the
+      // engine's end screen. (A match drains through `fightReveal` instead.)
+      if (!topTank || !topTank.el.isConnected) return ui.finish(result);
+      drainTanks([topTank], [score]).then(() => {
+        if (dead) return;
+        topTank.inner.closest(".aw-stage")?.classList.remove("is-ws-tank");
+        topTank.box.remove(); TANKS.delete(topTank.inner);
+        ui.finish(result);
+      });
     }
+
+    // Đợt 389 — the Next tick flipped under the frame: only the › (or PASS) changes.
+    const onNextFlip = () => {
+      if (dead || finished) return;
+      if (mode !== "one") return padNav();
+      if (!fctl) return m1Nav();
+      const body = wrap.querySelector(".aw-ws-one"), cur = body && body.querySelector(".aw-ws-pass");
+      if (!body || !!cur === allowNext()) return;
+      if (cur) cur.remove();
+      else {
+        const p = el("button", "aw-ws-b aw-ws-pass", "<span>Pass ›</span>");
+        p.type = "button"; p.dataset.do = "pass";
+        body.insertBefore(p, body.querySelector(".aw-ws-bubs"));
+      }
+    };
+    nextSubs.add(onNextFlip);
 
     // ---------------- start ----------------
     if (mode === "one") { m1Deal(); m1Render(); }
@@ -560,6 +851,7 @@ const wordshakeTemplate = {
 
     return function cleanup() {
       dead = true;
+      nextSubs.delete(onNextFlip);
       timers.forEach(clearTimeout); timers.clear();
       voicePlayer.stop();
       if (S) { S.subs.delete(sub); if (!S.subs.size) { S.voice.stop(); if (S.ro) S.ro.disconnect(); } }

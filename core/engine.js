@@ -1734,6 +1734,37 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // Đợt 192 — THREE buttons now, not four: Style folded into Template above.
   if (qScreenBtn) belowCenter.append(optionsBtn, qScreenBtn, modeBtn);
   else belowCenter.append(optionsBtn, modeBtn);
+  // ⭐ Đợt 389 (thầy, 25/9/2026, A Show Speed) — `tpl.toolsBelow`: the frame's own
+  // bottom row (☰ Menu · ‹ › · 🔊 · ⛶) moves OUT of the frame, to the head of this
+  // row, beside Options / Mode — the single-play twin of Fight's
+  // `fightFrame.boardTools: "shared"` (Đợt 353). The very same nodes are MOVED, so
+  // every handler and gate keeps working on them.
+  // ⚠️ Teacher, single play only: a pupil has no row out here (see `session` below),
+  // a match does its own move in core/fight.js.
+  // ⚠️ ZOOM and EMBED hide this whole row (`.aw-zoomed .aw-below`,
+  // `html.aw-nhung .aw-below`) — the Fullscreen button would then be unreachable,
+  // i.e. no way back out of zoom. So `placeBoardTools()` puts them BACK in the frame
+  // while either is on, and is called again every time zoom flips.
+  const boardToolsBelow = (tpl.toolsBelow && !fight && !session && !showdownPick)
+    ? el("div", "aw-below-boardtools") : null;
+  if (boardToolsBelow) belowCenter.prepend(boardToolsBelow);
+  function placeBoardTools() {
+    if (!boardToolsBelow) return;
+    const out = !root.classList.contains("aw-zoomed") && !document.documentElement.classList.contains("aw-nhung");
+    // bottombar's grid keeps exactly its 3 children in their old order when they return
+    if (out) boardToolsBelow.append(leftGroup, navHost, rightTools);
+    else bottombar.prepend(leftGroup, navHost, rightTools);
+    boardToolsBelow.style.display = out ? "" : "none";
+    page.classList.toggle("is-tools-below", out);
+  }
+  placeBoardTools();
+  // ⭐ Đợt 389 — `tpl.belowTools({ host, activity, fight })`: a template may add its
+  // OWN buttons to this row (A Show Speed: the "Next" tick). Teacher only. In a
+  // match both boards are asked; board 1's row is dropped by fight.js, so only
+  // board 0's buttons are ever seen.
+  if (!session && typeof tpl.belowTools === "function") {
+    try { tpl.belowTools({ host: belowCenter, activity, fight }); } catch (e) { console.error("belowTools", e); }
+  }
   // The other half of the Fight → Showdown handover (see `openShowdownOnMount`).
   // Read-and-clear FIRST, so a board that cannot honour it (no button, or we
   // somehow landed back in a match) still consumes the flag instead of leaving
@@ -2298,6 +2329,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // after the game had already mounted. The one reader (Options ▸ Apply, far
   // below) means the first, so it now asks for the first.
   let playStarted = false;
+  // ⭐ Đợt 389 — the template's own start screen (`tpl.startScreen`, see where it
+  // is mounted, right after `press(bigPlay, startPressed)`). Declared up here, not
+  // there, because startPressed() reads it and is hoisted above that line.
+  let customStart = null;
   // ⭐⭐⭐ Đợt 280 (thầy, 28/8/2026) — SHOWDOWN READY: bố cục riêng, không dùng
   // khung căn-giữa-một-cột cũ. Cột tên học sinh chiếm 1/3 trái (to, dễ đọc từ xa),
   // phần còn lại (template · PLAY · số câu) dồn sang 2/3 phải, ô tích sẵn sàng lên
@@ -2816,6 +2851,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // which set `hwMode` first). Everything inside is byte-for-byte the old
   // handler apart from disabling all start buttons together.
   function startPressed() {
+    // Đợt 389 — the custom start screen settles what it chose (A Show Speed: the
+    // minutes) on THIS board's act before anything reads it. In a match board 1
+    // arrives here through the relay click, so both boards take the same value.
+    if (customStart && customStart.beforePlay) { try { customStart.beforePlay(); } catch (e) { console.error(e); } }
     bigPlay.disabled = true;
     if (practiceBtn) practiceBtn.disabled = true;
     if (submitStartBtn) submitStartBtn.disabled = true;
@@ -2883,9 +2922,38 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     const removeOverlay = () => { if (removed) return; removed = true; playOverlay.remove(); };
     playOverlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, easing: "ease", fill: "forwards" });
     setTimeout(removeOverlay, START_GUARD_MS);
+    if (customStart && customStart.dispose) { try { customStart.dispose(); } catch (e) { /* its DOM is going anyway */ } }
     begin();
   }
   press(bigPlay, startPressed);
+  // ⭐⭐ Đợt 389 (thầy, 25/9/2026: "bỏ màn START gốc của AWord, đổi hẳn sang màn START
+  // của game A Show Speed") — `tpl.startScreen(api)`: the template draws its OWN start
+  // screen and the engine's READY lines are hidden (`.is-custom-start`, core/app.css).
+  //   api.host      a box filling the READY overlay (the overlay still is the shield)
+  //   api.play()    = pressing the engine's PLAY (so the Fight relay, the prep gate,
+  //                   the 0.5 s guard… all stay exactly as they are)
+  //   api.ready()   the prep promise — keep PLAY off until it settles
+  //   api.fight     { side, ctl } in a match, else null
+  // It may return { beforePlay(), dispose() }. Teacher/Fight only: a pupil's START
+  // (Đợt 383's one button) and Showdown's READY carry rules of their own.
+  // ⚠️ The engine's bigPlay stays in the overlay (hidden) and FIRST in it: fight.js's
+  // playPressed relays by clicking `.aw-play-overlay button` on the other board.
+  if (typeof tpl.startScreen === "function" && !session && !showdownPick) {
+    const host = el("div", "aw-start-custom");
+    playOverlay.classList.add("is-custom-start");
+    playOverlay.append(host);
+    try {
+      customStart = tpl.startScreen({
+        host, activity,
+        fight: fight ? { side: fight.side, ctl: fight.ctl } : null,
+        play: () => { if (!bigPlay.disabled && !playStarted) startPressed(); },
+        ready: () => Promise.resolve(prepDoneP).catch(() => {})
+      }) || null;
+    } catch (e) {
+      console.error("startScreen", e);
+      playOverlay.classList.remove("is-custom-start"); host.remove();   // fall back to the usual READY
+    }
+  }
   // ⭐ Đợt 383 — MỘT nút: chế độ do ván quyết, không do em chọn.
   const hwModeCuaVan = () => activity._mistakes ? "practice" : "submit";
   if (practiceBtn) press(practiceBtn, () => { hwMode = hwModeCuaVan(); startPressed(); });
@@ -3767,11 +3835,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // trận Fight bật, hoặc do một bản cũ còn mở trong tab.
   fsBtn.onclick = () => {
     setZoomed(root, fsBtn, !root.classList.contains("aw-zoomed"));
+    placeBoardTools();   // Đợt 389 — zoom hides the row outside the frame
   };
   // Leaving the game (Home / Edit) must drop BOTH kinds of fullscreen.
   function exitAnyFullscreen() {
     if (fsElement()) exitFs();
-    if (root.classList.contains("aw-zoomed")) setZoomed(root, fsBtn, false);
+    if (root.classList.contains("aw-zoomed")) { setZoomed(root, fsBtn, false); placeBoardTools(); }
   }
 
   // =============================================================
