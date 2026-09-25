@@ -30,7 +30,8 @@ const QA_TARGETS = [
   "anagram", "flying_fruit", "crossword", "find_the_match", "balloon_pop",
   "quiz", "gameshow", "maze_chase", "open_the_box", "type_the_answer",
   "whack_a_mole", "speaking_cards", "running_team", "running_word",
-  "rocket_race"   // Đợt 350 — same question shape as Quiz / Maze chase
+  "rocket_race",  // Đợt 350 — same question shape as Quiz / Maze chase
+  "wordshake"     // Đợt 386 — same {word, clue} shape as Anagram
 ];
 // Running team needs SIX words to fill a round (one answer + five look-alike
 // decoys). Hardcoded rather than imported from templates/running-team/rt-sets.js
@@ -70,7 +71,8 @@ export function toRecords(activityIn) {
 
   switch (type) {
     case "anagram":
-    case "flying_fruit": {
+    case "flying_fruit":
+    case "wordshake": {
       const items = c.items || [];
       return { kind: "qa", records: items.map(i => qaRec(i.word, i.clue, i)) };
     }
@@ -340,6 +342,7 @@ function buildContent(targetType, kind, records, style) {
   switch (targetType) {
     case "anagram":
     case "flying_fruit":
+    case "wordshake":
       return {
         withClues: records.some(r => clueOf(r, kind).trim()),
         items: records.map(r => ({

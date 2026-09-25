@@ -1,7 +1,7 @@
 # GHI CHÚ WORDSHAKE — template #21 + game cố định trong GAMES
 
-**TRẠNG THÁI: 🟢 CHỜ THẦY DUYỆT** (Đợt 386, 25/9/2026) — GAME + template chơi đơn 3 mode chạy được;
-FIGHT của template ĐÃ NỐI (core `shared-middle` + skin, xem mục FIGHT). Chưa có trong `core/catalog.js` (đúng luật: chỉ thêm khi ✅).
+**TRẠNG THÁI: ✅ ĐÃ VÀO CATALOG** (Đợt 386c, 25/9/2026 — thầy: "đưa template vào catalog New activity luôn", sẽ chỉnh tiếp ở phiên sau) — GAME + template chơi đơn 3 mode chạy được;
+FIGHT của template ĐÃ NỐI (core `shared-middle` + skin, xem mục FIGHT). Đã có trong `core/catalog.js` + `TEMPLATE_ICON` (fmtAnagram) + `TPL_SHORT` (WORDSHAKE) + `convert.js` (đổi qua lại như Anagram) + `tpl-files.js`.
 
 ## Nguồn gốc
 - Game tham khảo: **Wordshake** của British Council (Claude chơi thử + đọc mã 25/9/2026): 16 chữ, 3 phút,
@@ -67,3 +67,8 @@ FIGHT của template ĐÃ NỐI (core `shared-middle` + skin, xem mục FIGHT). 
 2. `fightFrame.skin: "wordshake"` ⇒ `.aw-fight.is-skin-wordshake` để CSS của template vẽ dải điểm HUD neon.
 3. Vòng đấu "một bảng, hết giờ là hết" cho Mode 2/3 (từ bên này lấy thì bên kia mất) — cần luật trọng tài mới;
    Mode 1 đi vòng thường như Anagram (cùng định nghĩa, ai đúng trước ăn).
+
+## Nhật ký
+- Đợt 386 `1647ded` GAME · `a8b9425` template chơi đơn · `b124d7a` FIGHT (core shared-middle) · Đợt 386c vào catalog.
+- Đã đo đổi template: Anagram (6 từ) → Wordshake giữ word/clue/voice; Wordshake → Quiz 8 câu; Wordshake có trong `switchTargets(anagram)`.
+- ⬜ Thầy chưa bấm tay: TOMKO, âm thanh, hết giờ giữa trận Fight; nút ‹ › trong bàn Fight hơi nhỏ.

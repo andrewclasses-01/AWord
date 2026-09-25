@@ -146,7 +146,16 @@ export const TEMPLATES = [
     blurb: "Answer to fire your rocket — race the rivals (or the class's teams) to the finish line.",
     css: "templates/rocket-race/rocket-race.css",
     load: () => import("../templates/rocket-race/rocket-race.js"),
-    sample: () => import("../templates/rocket-race/sample-rocket-race.js") }
+    sample: () => import("../templates/rocket-race/sample-rocket-race.js") },
+
+  // ⭐ Đợt 386 (25/9/2026) — make the lesson's words from shaken letter tiles,
+  // three modes (One word · Word list · Free words), Fight with a centre board.
+  // See templates/wordshake/GHI CHU WORDSHAKE.md.
+  { type: "wordshake",       label: "Wordshake",       built: true,
+    blurb: "Shake the letters and make the words — one at a time, from a word list, or any word you can find.",
+    css: "templates/wordshake/wordshake.css",
+    load: () => import("../templates/wordshake/wordshake.js"),
+    sample: () => import("../templates/wordshake/sample-wordshake.js") }
 ];
 
 export function templateEntry(type) {
@@ -176,7 +185,8 @@ export const TEMPLATE_ICON = {
   true_false: "check",
   speaking_cards: "mic", speaking: "mic",
   running_word: "fmtRace", running_team: "fmtRace", rocket_race: "fmtRace",
-  find_the_gap: "fmtWord"
+  find_the_gap: "fmtWord",
+  wordshake: "fmtAnagram"   // Đợt 386 — makes words from letters, like Anagram
 };
 
 // The icon MARKUP for a type. `icons` is passed in rather than imported so this
