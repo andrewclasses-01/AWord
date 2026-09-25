@@ -480,9 +480,10 @@ export function mountMyBeat(root, ctx = {}) {
   let ed = null;   // editor state while view === "edit"
   function startEditor() {
     const src = S.editId ? songById(S.editId) : null;
-    const draft = src ? JSON.parse(JSON.stringify(src)) : { title: "", artist: "", channel: "", youtube: "", link: "", source: "", licence: "", credit: "",
+    const draft = src ? JSON.parse(JSON.stringify(src)) : { title: "", artist: "", channel: "", youtube: "", link: "", source: "own", licence: "", credit: "",
       level: "", lists: [], draft: true, duration: 0, sections: [], lines: [] };
     delete draft.board;
+    if (draft.source !== "cc") draft.source = "own";   // all songs are Andrew Classes' own — no need to ask
     ed = { d: draft, isNew: !src, sel: 0, info: null, msg: "", importMsg: "", player: null, playerId: "", stopAt: 0, tap: false, split: false, editLine: -1, dirty: false };
     viewEl.innerHTML = `<div class="ed">
       <div class="ed-h"><button class="back" data-a="ed-cancel">${I.back}${src ? "Song" : "Songs"}</button><h2>${src ? "Edit song" : "New song"}</h2></div>
@@ -511,13 +512,12 @@ export function mountMyBeat(root, ctx = {}) {
       ${ed.msg ? `<div class="msg ${ed.msgKind || "bad"}">${ed.msg}</div>` : ""}
       <div class="two">
         <label class="lab">Song title<input data-f="title" value="${esc(d.title)}"></label>
-        <label class="lab">Artist<input data-f="artist" value="${esc(d.artist)}" placeholder="${d.source === "own" ? "Andrew Classes" : "Who sings it"}"></label>
+        <label class="lab">Artist<input data-f="artist" value="${esc(d.artist)}" placeholder="Andrew Classes"></label>
       </div>
-      <div class="two">
-        <label class="lab${!d.source ? " bad" : ""}">Whose music?<select data-f="source"><option value=""${!d.source ? " selected" : ""}>Choose…</option><option value="own"${d.source === "own" ? " selected" : ""}>Andrew Classes original (my song)</option><option value="cc"${d.source === "cc" ? " selected" : ""}>Free music from another channel (credit needed)</option></select></label>
-        ${d.source === "cc" ? `<label class="lab${!d.licence ? " bad" : ""}">Licence<select data-f="licpick"><option value=""${!d.licence ? " selected" : ""}>Choose…</option>${LICENCES.map(l => `<option${l === lic ? " selected" : ""}>${esc(l)}</option>`).join("")}<option value="__other"${lic === "__other" ? " selected" : ""}>Other…</option></select></label>` : "<span></span>"}
+      ${d.source === "cc" ? `<div class="two">
+        <label class="lab${!d.licence ? " bad" : ""}">Licence<select data-f="licpick"><option value=""${!d.licence ? " selected" : ""}>Choose…</option>${LICENCES.map(l => `<option${l === lic ? " selected" : ""}>${esc(l)}</option>`).join("")}<option value="__other"${lic === "__other" ? " selected" : ""}>Other…</option></select></label>
+        ${lic === "__other" ? `<label class="lab">Licence (as written by the channel)<input data-f="licence" value="${esc(d.licence)}"></label>` : "<span></span>"}
       </div>
-      ${d.source === "cc" ? `${lic === "__other" ? `<label class="lab">Licence (as written by the channel)<input data-f="licence" value="${esc(d.licence)}"></label>` : ""}
         <label class="lab${!d.credit ? " bad" : ""}">Credit — shown on the song page and under the video<input data-f="credit" value="${esc(d.credit)}" placeholder="Copy the credit lines from the video description"></label>
         ${nc ? `<div class="msg bad">“NC” means non-commercial use only. Paid classes may not be allowed — check with the artist first.</div>` : ""}` : ""}`;
   }
@@ -675,7 +675,6 @@ export function mountMyBeat(root, ctx = {}) {
     if (!d.title.trim()) p.push("song title");
     if (!forPublish) return p;
     if (!d.youtube) p.push("YouTube link");
-    if (!d.source) p.push("whose music");
     if (d.source === "cc" && !d.licence.trim()) p.push("licence");
     if (d.source === "cc" && !d.credit.trim()) p.push("credit");
     if (!d.lines.length) p.push("lyrics (.beat.json)");
