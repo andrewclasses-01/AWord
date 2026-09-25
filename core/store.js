@@ -204,7 +204,9 @@ const APP_DATA_KINDS = new Set(["class", "showdown", "showdown-results", "showdo
                                 // Đợt 373 — the Werewolf fixed game's seating doc (games/werewolf/ww-store.js)
                                 "werewolf",
                                 // Đợt 374 — STATS month docs (core/stats-home.js): st_<CLASS>_<YYYYMM>
-                                "stats-month"]);
+                                "stats-month",
+                                // Đợt 385 — My Beat (games/mybeat/mb-store.js): lists doc + one doc per song
+                                "mybeat", "mybeat-song"]);
 function isAppData(n) { return APP_DATA_KINDS.has(n.kind); }
 
 export async function ensureNumbers() {

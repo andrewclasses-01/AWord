@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Beat — test</title>
+  <link rel="stylesheet" href="../../core/app.css" />
+  <link rel="stylesheet" href="mybeat.css" />
+</head>
+<body>
+  <!-- Standalone test page: no sign-in, nothing written to Firestore (songs,
+       lists and scores live in memory until the page reloads).
+       ?seed=<url of a .beat.json>  adds that package as a published song
+       (e.g. ?seed=../../scratch/mybeat/lie2you.beat.json — scratch/ is not in git). -->
+  <div id="app"></div>
+  <script type="module">
+    import { mountMyBeat } from "./mybeat.js";
+    import { makeMemoryStore } from "./mb-store.js";
+    import { fromPackage, suggestLevel } from "./mb-core.js";
+    const songs = [];
+    const seed = new URLSearchParams(location.search).get("seed");
+    if (seed) {
+      try {
+        const pkg = await (await fetch(seed)).json();
+        const s = { ...fromPackage(pkg), id: "seed1", draft: false, lists: ["l_demo"], createdAt: Date.now(), board: {} };
+        s.level = suggestLevel(s);
+        songs.push(s);
+      } catch (e) { console.warn("seed failed", e); }
+    }
+    const store = makeMemoryStore(songs, [{ id: "l_demo", name: "Pop songs (free music)" }]);
+    const host = document.createElement("div");
+    document.getElementById("app").append(host);
+    window.__mb = { store, dispose: mountMyBeat(host, {
+      store,
+      classes: { A1C: [{ id: "1", name: "Bảo Ngọc" }, { id: "2", name: "Gia Huy" }, { id: "3", name: "Minh Anh" }], A2B: [{ id: "4", name: "Hà My" }] },
+      onExit: () => console.log("exit → GAMES tree")
+    }) };
+  </script>
+</body>
+</html>

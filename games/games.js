@@ -8,13 +8,21 @@
 //
 //   load()   -> the module; it exports mount(root, ctx) -> dispose()
 //   css      -> stylesheet, relative to the web root (index.html)
+//   card     -> (optional, Đợt 385) { bg: CSS background, icon: SVG } of the card preview
 // =============================================================
 
 export const FIXED_GAMES = [
   { id: "werewolf", label: "Werewolf", kind: "Game master",
     blurb: "Run a live Werewolf game: night calls, music, votes.",
     css: "games/werewolf/werewolf.css",
-    load: () => import("./werewolf/werewolf.js").then(m => m.mountWerewolf) }
+    load: () => import("./werewolf/werewolf.js").then(m => m.mountWerewolf) },
+  // Đợt 385 — listen to a song on YouTube, fill the missing lyrics (games/mybeat/GHI CHU MY BEAT.md)
+  { id: "mybeat", label: "My Beat", kind: "Song game",
+    blurb: "Listen to a song and fill the missing words of the lyrics.",
+    css: "games/mybeat/mybeat.css",
+    card: { bg: "linear-gradient(135deg,#F0527A 0%,#9B4DDB 55%,#3346C9 100%)",
+            icon: '<svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>' },
+    load: () => import("./mybeat/mybeat.js").then(m => m.mountMyBeat) }
 ];
 
 export function fixedGame(id) { return FIXED_GAMES.find(g => g.id === id) || null; }
