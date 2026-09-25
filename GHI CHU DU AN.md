@@ -567,7 +567,7 @@ script sau chuẩn hoá `\r\n→\n`, `assert count==1`, ghi lại CRLF. Số tro
 
 **VIỆC ĐANG CHỜ**
 - ⬜ Thầy xem/nghe thật trên TOMKO: tiếng nước, tốc độ cạn (2,4–5,2 s), bình có quá thấp không (ô điểm 33–40px).
-- ✅ Commit + push Đợt 389 + 390 cùng một commit (thầy lệnh 25/9/2026).
+- ✅ Commit + push Đợt 389 + 390 cùng một commit `5eddfef` (thầy lệnh 25/9/2026) — Pages built đúng commit, 8/8 file code khớp mã băm SHA-256 với bản live, trang thử live `templates/wordshake/test.html` hiện màn START + bình + ô NEXT + nút ở hàng ngoài, 0 lỗi console.
 - ⬜ (còn từ 389) ẩn ô Timer trong Options? · NEXT theo act thay vì theo máy?
 
 ## Đợt 389 (25/9/2026) — A SHOW SPEED TEMPLATE: màn START của GAME + nút ra hàng ngoài kiểu game + ô tích NEXT · ✅ ĐÃ COMMIT + PUSH (cùng Đợt 390) · ⬜ CHƯA BẤM TAY
