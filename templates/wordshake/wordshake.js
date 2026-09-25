@@ -172,7 +172,7 @@ function mountStartPanel(box, { play, ready, onTime }) {
 // match, kept here so the start screen and mount() share them.
 const TANKS = new WeakMap();
 const tankOn = o => !(o && o.wsTank === false);
-// how fast the water rises: words (1 a word) fill faster than letter points (Mode 3 match)
+// (Đợt 390b: ignored — the tank level is FIXED, the same for every team; kept for the old call shape)
 const tankK = (mode, fight) => mode === "free" ? (fight ? 20 : 3) : 6;
 function singleTank(inner, k) {
   if (!inner) return null;

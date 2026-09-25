@@ -205,121 +205,191 @@ export function createSfx() {
 
 // ---------------------------------------------------------------
 // ⭐ Đợt 390 (thầy, 25/9/2026) — SCORE TANK. While a game runs a score box shows no
-// number, only a sparkling tank of water; a point FLIES in (`flyPoint`) and the water
-// sloshes and rises a little (`hit`). When time is up the tank DRAINS while its number
-// counts up from 0 (`drain`) — the class holds its breath until the last drop.
+// number, only a tank; a point FLIES in (`flyPoint`) and the tank reacts (`hit`).
+// When time is up the tank DRAINS while its number counts up from 0 (`drain`) — the
+// class holds its breath until the last drop.
+// ⭐ Đợt 390b (thầy chọn mẫu 4 trong `D:\OTHERS\CLAUDE\AWord - thiet ke Wordshake\
+// score-tank-mau.html`): an ENERGY BAR, not water — bright bands running across,
+// scanlines, a neon top line that trembles; a point is a COMET with a tail, and when it
+// lands a pulse sweeps both ways + sparks fly. ⛔ The level is the SAME for every team
+// and every score (`FIXED`, thầy: "lượng nước luôn ở mức tương đương để không đoán được
+// đội nào hơn cho đến khi chạy điểm") — only the drain tells the scores apart.
 // Used by the GAME (always) and the template (Options ▸ Score tank). Self-contained:
-// its CSS is injected once, so it looks the same wherever it is dropped.
-//   createTank({ side, k, cls }) -> { el, hit(score), set(score), drain(final, ms, onStep), stop(), level }
-//   flyPoint(fromEl, toEl, text, side) -> Promise (resolves when it lands)
-// `k` = how fast the water rises: level = 14 % + 74 % · (1 − e^(−score/k)), so it
-// never shows who leads by much and never overflows.
+// its CSS is injected once; drawn on a <canvas>, one shared rAF loop for all tanks.
+//   createTank({ side, cls }) -> { el, hit(), set(), drain(final, ms, onStep), reset(), stop(), destroy(), level }
+//   flyPoint(fromEl, toEl, text, side) -> Promise (resolves when the comet lands)
 // ---------------------------------------------------------------
-const WAVE = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 8'%3E%3Cpath d='M0 5 Q6 0 12 5 T24 5 V8 H0Z'/%3E%3C/svg%3E\")";
+const FIXED = .62;
+const TEAM_C = [
+  { c1: [125, 255, 178], c2: [14, 122, 67], glow: "61,245,138" },
+  { c1: [143, 235, 255], c2: [12, 93, 134], glow: "55,215,255" }
+];
+const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
 const TANK_CSS = `
-.wst{position:absolute;inset:3px;overflow:hidden;border-radius:3px;pointer-events:none;z-index:0;--wc1:#6BFFA8;--wc2:#118A4C;--wglow:rgba(61,245,138,.55)}
-.wst.wst-s1{--wc1:#8AE9FF;--wc2:#10658F;--wglow:rgba(55,215,255,.55)}
-.wst-water{position:absolute;left:-12%;right:-12%;bottom:0;height:14%;transform-origin:50% 100%;
-  background:linear-gradient(180deg,var(--wc1),var(--wc2));opacity:.82;box-shadow:inset 0 0 14px var(--wglow);
-  transition:height .75s cubic-bezier(.3,1.45,.5,1)}
-.wst.is-draining .wst-water{transition:none}
-.wst-wv{position:absolute;left:0;width:200%;height:7px;top:-6px;background:var(--wc1);
-  -webkit-mask:${WAVE} repeat-x 0 0/24px 7px;mask:${WAVE} repeat-x 0 0/24px 7px;animation:wst-flow 1.7s linear infinite}
-.wst-wv.b{top:-4px;opacity:.55;animation-duration:2.6s;animation-direction:reverse}
-@keyframes wst-flow{from{transform:translateX(0)}to{transform:translateX(-24px)}}
-.wst-bb{position:absolute;bottom:0;width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,.85);box-shadow:0 0 4px #fff;opacity:0;animation:wst-rise 2.4s ease-in infinite}
-.wst-bb:nth-child(3){left:22%;animation-delay:.3s}.wst-bb:nth-child(4){left:48%;animation-delay:1.2s;width:2px;height:2px}
-.wst-bb:nth-child(5){left:70%;animation-delay:.8s}.wst-bb:nth-child(6){left:85%;animation-delay:1.9s;width:2px;height:2px}
-@keyframes wst-rise{0%{transform:translateY(0);opacity:0}15%{opacity:.9}100%{transform:translateY(-300%);opacity:0}}
-.wst::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.38) 50%,transparent 62%);
-  transform:translateX(-130%);animation:wst-glint 3.2s ease-in-out infinite}
-@keyframes wst-glint{0%,55%{transform:translateX(-130%)}100%{transform:translateX(130%)}}
-.wst.is-slosh .wst-water{animation:wst-slosh 1s cubic-bezier(.3,.6,.4,1)}
-.wst.is-slosh .wst-wv{animation-duration:.45s}
-@keyframes wst-slosh{0%{transform:rotate(0)}15%{transform:rotate(-8deg) scaleY(1.12)}35%{transform:rotate(6deg)}55%{transform:rotate(-3.5deg)}75%{transform:rotate(1.5deg)}100%{transform:rotate(0)}}
+.wst{position:absolute;inset:3px;overflow:hidden;border-radius:3px;pointer-events:none;z-index:0}
+.wst canvas{position:absolute;left:-12px;top:0;width:calc(100% + 24px);height:100%;display:block}
 .wst-num{position:absolute;inset:0;display:grid;place-items:center;font:inherit;line-height:1;color:#fff;opacity:0;z-index:2;
-  text-shadow:0 0 10px var(--wglow),0 0 2px #000;font-variant-numeric:tabular-nums}
+  text-shadow:0 0 10px rgba(61,245,138,.9),0 0 2px #000;font-variant-numeric:tabular-nums}
+.wst.wst-s1 .wst-num{text-shadow:0 0 10px rgba(55,215,255,.9),0 0 2px #000}
 .wst.is-count .wst-num{opacity:1}
-.wst.is-count::after{animation:none;opacity:0}
-.wst-num.is-land{animation:wst-land .5s cubic-bezier(.22,.9,.3,1)}
-@keyframes wst-land{0%{scale:1}35%{scale:1.45}100%{scale:1}}
-.wst-fly{position:fixed;z-index:9999;pointer-events:none;left:0;top:0;font:italic 800 22px/1 "Saira",sans-serif;color:#03150C;
-  padding:4px 9px;border-radius:4px;background:#3DF58A;box-shadow:0 0 18px rgba(61,245,138,.9)}
-.wst-fly.s1{background:#37D7FF;box-shadow:0 0 18px rgba(55,215,255,.9)}
-@media (prefers-reduced-motion:reduce){.wst *,.wst::after{animation:none!important}}
+.wst-num.is-land{animation:wst-land .55s cubic-bezier(.22,.9,.3,1)}
+@keyframes wst-land{0%{scale:1}35%{scale:1.5}100%{scale:1}}
+.wst-fly{position:fixed;z-index:9999;pointer-events:none;left:0;top:0;border-radius:50%;will-change:transform}
+.wst-fly.is-head{width:10px;height:10px;margin:-5px 0 0 -5px;background:#fff;box-shadow:0 0 10px 3px rgba(61,245,138,.95),0 0 26px 8px rgba(61,245,138,.5)}
+.wst-fly.is-head.s1{box-shadow:0 0 10px 3px rgba(55,215,255,.95),0 0 26px 8px rgba(55,215,255,.5)}
+.wst-fly.is-tail{width:7px;height:7px;margin:-3.5px 0 0 -3.5px;background:rgba(155,255,196,.8);box-shadow:0 0 8px rgba(61,245,138,.8)}
+.wst-fly.is-tail.s1{background:rgba(180,240,255,.8);box-shadow:0 0 8px rgba(55,215,255,.8)}
 `;
 function ensureTankCss() {
   if (typeof document === "undefined" || document.getElementById("ws-tank-css")) return;
   const st = document.createElement("style"); st.id = "ws-tank-css"; st.textContent = TANK_CSS;
   document.head.append(st);
 }
-export function tankLevel(score, k = 10) { return .14 + .74 * (1 - Math.exp(-Math.max(0, score) / k)); }
-export function createTank({ side = 0, k = 10, cls = "" } = {}) {
+/** Kept for older callers: the level no longer depends on the score. */
+export function tankLevel() { return FIXED; }
+
+const LIVE = new Set();
+let rafOn = false, rafLast = 0;
+function loop(now) {
+  const dt = Math.min(.05, (now - rafLast) / 1000 || .016); rafLast = now;
+  LIVE.forEach(t => { if (!t.el.isConnected) return; t.frame(dt); });
+  if (LIVE.size) requestAnimationFrame(loop); else rafOn = false;
+}
+function wake() { if (!rafOn) { rafOn = true; rafLast = performance.now(); requestAnimationFrame(loop); } }
+
+export function createTank({ side = 0, cls = "" } = {}) {
   ensureTankCss();
+  const C = TEAM_C[side ? 1 : 0];
   const el = document.createElement("div");
   el.className = `wst wst-s${side ? 1 : 0} ${cls}`.trim();
-  el.innerHTML = `<div class="wst-water"><i class="wst-wv a"></i><i class="wst-wv b"></i></div><i class="wst-bb"></i><i class="wst-bb"></i><i class="wst-bb"></i><i class="wst-bb"></i><span class="wst-num"></span>`;
-  const water = el.firstChild, num = el.querySelector(".wst-num");
-  let lv = tankLevel(0, k), iv = null, slosh = null;
-  const paint = v => { lv = v; water.style.height = (v * 100).toFixed(1) + "%"; };
-  paint(lv);
+  const cv = document.createElement("canvas");
+  const num = document.createElement("span"); num.className = "wst-num";
+  el.append(cv, num);
+  const ctx = cv.getContext("2d");
+  let level = FIXED, energy = 0, time = Math.random() * 10, iv = null, W = 0, H = 0, dpr = 1;
+  let pulses = [], sparks = [];
+  function fit() {
+    const w = cv.clientWidth, h = cv.clientHeight, d = window.devicePixelRatio || 1;
+    if (!w || !h) return false;
+    if (w !== W || h !== H || d !== dpr) {
+      W = w; H = h; dpr = d;
+      cv.width = Math.round(w * d); cv.height = Math.round(h * d);
+      ctx.setTransform(d, 0, 0, d, 0, 0);
+    }
+    return true;
+  }
+  function frame(dt) {
+    time += dt; energy *= Math.pow(.18, dt);
+    if (!fit()) return;
+    const w = W, h = H;
+    ctx.clearRect(0, 0, w, h);
+    if (level <= .003) { sparks = []; pulses = []; return; }
+    const base = h * (1 - level);
+    const yAt = x => base + Math.sin(x * .09 + time * 9) * (.3 + energy * 1.8);
+    const path = () => { ctx.beginPath(); ctx.moveTo(0, h); for (let x = 0; x <= w; x += 2) ctx.lineTo(x, yAt(x)); ctx.lineTo(w, h); ctx.closePath(); };
+    const g0 = ctx.createLinearGradient(0, base, 0, h);
+    g0.addColorStop(0, rgba(C.c1, .83)); g0.addColorStop(1, rgba(C.c2, .86));
+    ctx.fillStyle = g0; path(); ctx.fill();
+    ctx.save(); path(); ctx.clip();
+    for (let k = 0; k < 6; k++) {                       // bright bands running across
+      const x = ((time * 55 + k * 47) % (w + 40)) - 20;
+      const g = ctx.createLinearGradient(x - 14, 0, x + 14, 0);
+      g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(.5, `rgba(255,255,255,${.12 + (k % 2) * .08})`); g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = g; ctx.fillRect(x - 14, 0, 28, h);
+    }
+    ctx.fillStyle = "rgba(0,0,0,.14)";                  // scanlines
+    for (let y = Math.floor(base); y < h; y += 3) ctx.fillRect(0, y, w, 1);
+    pulses.forEach(p => {                               // the pulse a point sends both ways
+      [-1, 1].forEach(dir => {
+        const x = p.x + dir * p.r, g = ctx.createLinearGradient(x - 18, 0, x + 18, 0);
+        g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(.5, `rgba(255,255,255,${p.a})`); g.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = g; ctx.fillRect(x - 18, 0, 36, h);
+      });
+      p.r += 420 * dt; p.a *= Math.pow(.15, dt);
+    });
+    pulses = pulses.filter(p => p.a > .03);
+    ctx.restore();
+    ctx.save(); ctx.beginPath();                        // the neon top line
+    for (let x = 0; x <= w; x += 2) x ? ctx.lineTo(x, yAt(x)) : ctx.moveTo(x, yAt(x));
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.8; ctx.shadowColor = "#fff"; ctx.shadowBlur = 10; ctx.stroke(); ctx.restore();
+    sparks.forEach(s => { s.vy += 140 * dt; s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt * 1.6; });
+    sparks = sparks.filter(s => s.life > 0);
+    ctx.save(); ctx.shadowColor = rgba(C.c1, 1); ctx.shadowBlur = 8;
+    sparks.forEach(s => { ctx.fillStyle = `rgba(255,255,255,${s.life})`; ctx.fillRect(s.x, s.y, 1.6, 1.6); });
+    ctx.restore();
+  }
   const T = {
-    el,
-    get level() { return lv; },
-    /** a point just landed: slosh, and rise to the new score's level */
-    hit(score) {
-      paint(tankLevel(score, k));
-      el.classList.remove("is-slosh"); void el.offsetWidth; el.classList.add("is-slosh");
-      clearTimeout(slosh); slosh = setTimeout(() => el.classList.remove("is-slosh"), 1050);
+    el, frame,
+    get level() { return level; },
+    /** a point just landed: a pulse sweeps both ways + sparks (the level does NOT move) */
+    hit() {
+      if (el.classList.contains("is-count")) return;
+      energy = 1;
+      const x = (W || 100) / 2, y = (H || 40) * (1 - level);
+      pulses.push({ x, r: 0, a: .75 });
+      for (let k = 0; k < 10; k++) sparks.push({ x, y, vx: (Math.random() - .5) * 180, vy: -30 - Math.random() * 80, life: 1 });
     },
-    set(score) { paint(tankLevel(score, k)); },
+    set() {},
     /** drain to empty over `ms` while the number counts 0 → final; onStep(n) per new number */
     drain(final, ms, onStep) {
       T.stop();
       final = Math.round(Number(final) || 0);
-      el.classList.add("is-count", "is-draining");
+      el.classList.add("is-count");
       num.textContent = "0";
-      const from = lv, t0 = performance.now(), dur = Math.max(300, ms);
+      const from = level, t0 = performance.now(), dur = Math.max(300, ms);
       let shown = 0;
       return new Promise(res => {
-        const end = () => { clearInterval(iv); iv = null; el.classList.remove("is-draining"); paint(0); num.textContent = String(final); num.classList.add("is-land"); res(final); };
+        const end = () => { clearInterval(iv); iv = null; level = 0; num.textContent = String(final); num.classList.remove("is-land"); void num.offsetWidth; num.classList.add("is-land"); res(final); };
         if (final <= 0) { num.textContent = String(final); return setTimeout(end, 300); }
-        // setInterval, not rAF: a hidden pane freezes rAF and the class would wait forever
+        // setInterval, not rAF: a hidden pane freezes rAF and the count would never end
         iv = setInterval(() => {
           const t = Math.min(1, (performance.now() - t0) / dur);
           const e = 1 - Math.pow(1 - t, 2.2);          // slows down near the end — the suspense
-          paint(from * (1 - e));
+          level = from * (1 - e);
           const n = Math.min(final, Math.floor(final * e + 1e-6));
           if (n !== shown) { shown = n; num.textContent = String(n); if (onStep) onStep(n); }
           if (t >= 1) end();
         }, 30);
       });
     },
-    stop() { if (iv) { clearInterval(iv); iv = null; } el.classList.remove("is-draining"); },
-    reset(score = 0) { T.stop(); el.classList.remove("is-count"); num.classList.remove("is-land"); paint(tankLevel(score, k)); },
-    destroy() { T.stop(); clearTimeout(slosh); el.remove(); }
+    stop() { if (iv) { clearInterval(iv); iv = null; } },
+    reset() { T.stop(); el.classList.remove("is-count"); num.classList.remove("is-land"); level = FIXED; energy = 0; pulses = []; sparks = []; },
+    destroy() { T.stop(); LIVE.delete(T); el.remove(); }
   };
+  LIVE.add(T); wake();
   return T;
 }
+
+// The comet: a bright head with five ghosts behind it, on a gentle arc into the tank.
 export function flyPoint(fromEl, toEl, text, side = 0) {
   ensureTankCss();
   return new Promise(res => {
     if (!fromEl || !toEl || !fromEl.isConnected || !toEl.isConnected) return res();
-    const a = fromEl.getBoundingClientRect(), b = toEl.getBoundingClientRect();
-    const f = document.createElement("div");
-    f.className = "wst-fly" + (side ? " s1" : ""); f.textContent = text;
-    document.body.append(f);
-    const w = f.offsetWidth, h = f.offsetHeight;
-    const x0 = a.left + a.width / 2 - w / 2, y0 = a.top + a.height / 2 - h / 2;
-    const x1 = b.left + b.width / 2 - w / 2, y1 = b.top + b.height / 2 - h / 2;
-    let done = false;
-    const fin = () => { if (done) return; done = true; f.remove(); res(); };
-    const an = f.animate([
-      { transform: `translate(${x0}px,${y0}px) scale(.6)`, opacity: 0 },
-      { transform: `translate(${x0}px,${y0 - 30}px) scale(1.15)`, opacity: 1, offset: .2 },
-      { transform: `translate(${x1}px,${y1}px) scale(.45)`, opacity: .9 }
-    ], { duration: 620, easing: "cubic-bezier(.5,0,.4,1)", fill: "forwards" });
-    an.onfinish = fin; setTimeout(fin, 800);   // a hidden tab may never finish the animation
+    const a0 = fromEl.getBoundingClientRect(), b0 = toEl.getBoundingClientRect();
+    const a = [a0.left + a0.width / 2, a0.top + a0.height / 2], b = [b0.left + b0.width / 2, b0.top + b0.height * (1 - FIXED * .6)];
+    const c = [(a[0] + b[0]) / 2, Math.min(a[1], b[1]) - 40];
+    const frames = [];
+    for (let i = 0; i <= 14; i++) {
+      const u = i / 14, v = 1 - u;
+      frames.push({ transform: `translate(${v * v * a[0] + 2 * v * u * c[0] + u * u * b[0]}px,${v * v * a[1] + 2 * v * u * c[1] + u * u * b[1]}px)` });
+    }
+    const opts = { duration: 480, easing: "cubic-bezier(.5,0,.8,.6)", fill: "forwards" };
+    const s = side ? " s1" : "";
+    const fly = (cls, delay, op, sc) => {
+      const e = document.createElement("div"); e.className = "wst-fly " + cls + s;
+      if (op != null) { e.style.opacity = String(op); e.style.scale = String(sc); }
+      e.style.transform = frames[0].transform;
+      document.body.append(e);
+      return new Promise(r => {
+        setTimeout(() => {
+          const an = e.animate(frames, opts); let d = false;
+          const fin = () => { if (d) return; d = true; e.remove(); r(); };
+          an.onfinish = fin; setTimeout(fin, 700);   // a hidden tab may never finish it
+        }, delay);
+      });
+    };
+    for (let i = 1; i <= 5; i++) fly("is-tail", i * 28, 1 - i * .16, 1 - i * .12);
+    fly("is-head", 0).then(res);
   });
 }
 

@@ -12,7 +12,9 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **⭐ Đợt 390** (25/9/2026, A SHOW SPEED: BÌNH NƯỚC ĐIỂM — điểm ẩn trong bình lấp lánh, điểm bay vào làm sóng sánh,
+> Mới nhất: **Đợt 390b** (25/9/2026, bình điểm đổi sang MẪU 4 thầy chọn — dải năng lượng neon + sao chổi, mức CỐ ĐỊNH ngang
+> nhau mọi đội tới lúc đếm; trang chọn mẫu `D:\OTHERS\CLAUDE\AWord - thiet ke Wordshake\score-tank-mau.html`). Chặng Đợt 390b.
+> Trước đó: **⭐ Đợt 390** (25/9/2026, A SHOW SPEED: BÌNH NƯỚC ĐIỂM — điểm ẩn trong bình lấp lánh, điểm bay vào làm sóng sánh,
 > hết giờ nước cạn + số đếm lên rồi mới hiện kết quả; GAME luôn có, template ô tích "Score tank"; core hook mới
 > `tpl.fightReveal`. + mỗi lượt một bộ chữ khác: GAME nhớ 8 bàn gần nhất, chung chữ 10,1→7,8/16). Xem chặng Đợt 390.
 > Trước đó: **⭐ Đợt 389** (25/9/2026, A SHOW SPEED TEMPLATE: mở bằng màn START của GAME (logo · 2/3/5 phút = đếm ngược ·
@@ -541,6 +543,15 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
+
+## Đợt 390b (25/9/2026) — BÌNH ĐIỂM: MẪU 4 (năng lượng neon + sao chổi), mức cố định · ✅ ĐÃ COMMIT + PUSH (thầy lệnh)
+**Bối cảnh**: thầy: hiệu ứng sóng nước + số bay vào "xấu quá", muốn vài bản để chọn ⇒ trang 5 mẫu
+(`D:\OTHERS\CLAUDE\AWord - thiet ke Wordshake\score-tank-mau.html`); thầy chọn **mẫu 4**, và mức nước phải LUÔN NGANG NHAU.
+**Việc đã làm**: `templates/wordshake/ws-lib.js` — phần SCORE TANK viết lại bằng canvas (mẫu 4), `FIXED = .62`, `hit()` chỉ
+xung sáng + tia lửa, `flyPoint` = sao chổi; API giữ nguyên. Chú thích `k` ở `wordshake.js` (template + GAME) ghi "bị bỏ qua".
+**Quyết định**: mực cố định ⇒ bình không còn lộ đội dẫn (bản 390 dâng theo đường bão hoà vẫn nhìn ra được).
+**Đã đo**: xem GHI CHU WORDSHAKE mục Đợt 390b.
+**VIỆC ĐANG CHỜ**: ✅ commit + push (thầy lệnh 25/9/2026) · ⬜ thầy xem thật trên TOMKO (chơi đơn + Fight).
 
 ## Đợt 390 (25/9/2026) — A SHOW SPEED: BÌNH NƯỚC ĐIỂM + mỗi lượt một bộ chữ khác · ✅ ĐÃ COMMIT + PUSH (thầy lệnh) · ⬜ CHƯA BẤM TAY
 **Bối cảnh**: thầy muốn điểm chưa hiện khi đang chơi — ô điểm là bình nước lấp lánh, điểm bay vào làm nước sóng sánh; hết giờ

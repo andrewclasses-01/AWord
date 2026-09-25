@@ -35,7 +35,7 @@ const PREF = "aword-wordshake-time";
 const RECENT = "aword-wordshake-recent";
 function readRecent() { try { const a = JSON.parse(localStorage.getItem(RECENT) || "[]"); return Array.isArray(a) ? a.filter(x => typeof x === "string" && x.length === 16).map(x => x.split("")) : []; } catch (e) { return []; } }
 function pushRecent(letters) { try { localStorage.setItem(RECENT, JSON.stringify([letters.join(""), ...readRecent().map(r => r.join(""))].slice(0, 8))); } catch (e) {} }
-// Đợt 390 — score tanks: how fast the water rises (a GAME team makes ~30–60 points)
+// Đợt 390 — score tanks (390b: `k` is ignored, every tank sits at the same fixed level)
 const TANK_K = 28;
 const FLICKER = "ABCDEEFGHIKLMNOOPRSTUWY";
 const ICON = {

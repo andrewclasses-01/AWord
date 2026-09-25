@@ -1,5 +1,18 @@
 # GHI CHÚ WORDSHAKE — template #21 + game cố định trong GAMES
 
+## ⭐ Đợt 390b (25/9/2026) — thầy chê bình nước bản đầu "xấu quá" ⇒ 5 mẫu, thầy chọn MẪU 4 + mức CỐ ĐỊNH
+- Trang chọn mẫu: `D:\OTHERS\CLAUDE\AWord - thiet ke Wordshake\score-tank-mau.html` (5 mẫu canvas đúng cỡ ô 220×40, tự chạy
+  ghi điểm → cạn + đếm; xem bằng server `ws-tank-mau` trong `D:\OTHERS\CLAUDE\.claude\launch.json`, cổng 5596).
+  1 Mặt nước êm/giọt · 2 Sóng vật lý lò xo/rơi thẳng · 3 Bọt sủi/bong bóng · **4 Năng lượng neon/sao chổi** · 5 Tối giản/tia sáng.
+- Thầy chọn **mẫu 4**, thêm luật: **mức năng lượng LUÔN NGANG NHAU** ("không đoán được đội nào hơn cho đến khi chạy điểm").
+- `ws-lib.js`: thay trọn phần bình (CSS cũ sóng mask/bọt/vệt sáng bỏ hết) bằng canvas: dải sáng chạy ngang, scanline, vạch neon
+  trắng rung nhẹ trên mặt; `hit()` = xung sáng quét hai phía + 10 tia lửa, **mực KHÔNG đổi** (`FIXED = .62` cho mọi đội mọi
+  điểm; `set()` rỗng; `tankLevel()` trả `FIXED` cho người gọi cũ; tham số `k` bị bỏ qua). `flyPoint` = sao chổi đầu trắng + 5
+  bóng đuôi trễ 28 ms, vòng cung 480 ms. Một vòng rAF chung (`LIVE`), canvas tự đo lại khi đổi cỡ; `drain` vẫn setInterval.
+  API giữ nguyên ⇒ GAME + template không đổi dòng logic nào (chỉ sửa chú thích).
+- Đã đo: GAME đội trái 3 từ / đội phải 0 ⇒ hai canvas cùng tỉ lệ tô 0,67; sao chổi 1 đầu + đuôi; template đơn giải hết 8 từ:
+  lúc đếm "4" chưa có màn kết thúc, sau đó end screen + ✓ 8; 0 lỗi console. ⬜ Thầy xem thật trên TOMKO.
+
 ## ⭐ Đợt 390 (25/9/2026) — BÌNH NƯỚC ĐIỂM + mỗi lượt một bộ chữ khác
 Thầy: (1) chưa hiện điểm khi đang chơi — ô điểm là bình nước lấp lánh, điểm bay vào làm nước sóng sánh; hết giờ nước cạn
 dần và thành số đếm lên cho HS hồi hộp; mọi mode; GAME luôn có, activity có ô tích trong Options. (2) PLAY AGAIN / mở lại
