@@ -44,6 +44,11 @@ export function mountWordshake(root, ctx = {}) {
   const sfx = createSfx();
   let dead = false, dict = null, dictErr = false;
   let dur = readTime();
+  // Đợt 387 — double-tap a time chip: only that chip, in the centre; swipe up
+  // +1 min, down −1 min (1…10), mouse wheel too. Double-tap again: the three
+  // usual chips, with the chip first double-tapped chosen (`soloBase`).
+  let solo = false, soloBase = dur, lastTap = { t: 0, at: 0 };
+  const T_MIN = 60, T_MAX = 600, DOUBLE_MS = 380, SWIPE_PX = 26;
   // phase: "ready" | "play" | "over"
   // ask: the "End this game?" box is open (the clock stands still under it)
   const G = { phase: "ready", letters: [], sides: [], found: new Map(), log: [], last: null, left: dur, prev: [0, 0], ask: false };
@@ -67,7 +72,7 @@ export function mountWordshake(root, ctx = {}) {
 
   // ---------- game flow ----------
   function newBoard() {
-    G.letters = rollBoard(dict);
+    G.letters = rollBoard(dict, { easy: true });
     G.sides = [0, 1].map(() => ({ order: shuffle([...Array(16).keys()]), sel: [], score: 0 }));
     G.found = new Map(); G.log = []; G.last = null; G.left = dur; G.prev = [0, 0];
   }
@@ -117,17 +122,61 @@ export function mountWordshake(root, ctx = {}) {
     if (!w) return;
     s.sel = [];
     const hit = lookup(dict, w);
-    let bub;
-    if (!hit) { bub = ["bad", "?"]; sfx.bad(pan(side)); }
-    else if (G.found.has(w)) { bub = ["dup", G.found.get(w) === side ? "Found" : "Taken"]; sfx.dup(pan(side)); }
-    else {
-      const p = points(w.length);
-      G.found.set(w, side); s.score += p;
-      G.last = { w, side, m: hit.m, base: hit.base, p };
-      G.log.unshift(G.last);
-      bub = ["ok", "+" + p]; sfx.ok(pan(side), p);
-    }
-    render(); bubble(side, ...bub);
+    // Đợt 387 — a wrong / already-found word touches ONLY this team's board (its
+    // "?" / Taken bubble): redrawing everything replayed the centre word's pop.
+    if (!hit) { sfx.bad(pan(side)); renderSide(side); return bubble(side, "bad", "?"); }
+    if (G.found.has(w)) { sfx.dup(pan(side)); renderSide(side); return bubble(side, "dup", G.found.get(w) === side ? "Found" : "Taken"); }
+    const p = points(w.length);
+    G.found.set(w, side); s.score += p;
+    // The word on show stays OUT of the lists while it is big in the centre; the
+    // next word found sends it flying to the top of its team's column.
+    const prev = G.last, from = prev ? flyStart() : null;
+    if (prev) G.log.unshift(prev);
+    G.last = { w, side, m: hit.m, base: hit.base, p };
+    G.pop = true;
+    sfx.ok(pan(side), p);
+    render(); bubble(side, "ok", "+" + p);
+    if (prev) flyToList(prev, from);
+  }
+
+  // ---------- Đợt 387: the old centre word flies into its team's column ----------
+  // Positions in the 1280-wide drawing (cv is scaled by fit()).
+  function cvRect(elm) {
+    const c = cv.getBoundingClientRect(), r = elm.getBoundingClientRect(), s = c.width / W || 1;
+    return { x: (r.left - c.left) / s, y: (r.top - c.top) / s, w: r.width / s, h: r.height / s };
+  }
+  // Taken BEFORE the redraw: where the big word is, and where every listed word sits.
+  function flyStart() {
+    const big = cv.querySelector(".wsg-last .wt");
+    const tops = new Map();
+    cv.querySelectorAll(".wsg-cols li[data-w]").forEach(li => tops.set(li.dataset.w, cvRect(li).y));
+    return { big: big ? cvRect(big) : null, fs: big ? parseFloat(getComputedStyle(big).fontSize) : 52, tops };
+  }
+  function flyToList(f, from) {
+    const li = cv.querySelector(`.wsg-cols .c${f.side} li[data-w="${f.w}"]`);
+    if (!li || !from || !from.big) return;
+    // the words already listed slide down to make room
+    cv.querySelectorAll(`.wsg-cols .c${f.side} li[data-w]`).forEach(o => {
+      if (o === li || !from.tops.has(o.dataset.w)) return;
+      const dy = from.tops.get(o.dataset.w) - cvRect(o).y;
+      if (dy) o.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: 420, easing: "cubic-bezier(.22,.9,.3,1)" });
+    });
+    // the word itself: a copy flies from the centre down onto its row, then the row shows
+    // Both ends measured as glyph boxes (line-height 1): the big word is drawn
+    // with line-height 1, the row's word is centred in its taller line.
+    const b = li.querySelector("b"), to = cvRect(b), a = from.big;
+    const fsTo = parseFloat(getComputedStyle(b).fontSize), k = fsTo / from.fs;
+    const ty = to.y + (to.h - fsTo) / 2;
+    const fly = document.createElement("div");
+    fly.className = "wsg-fly sd" + f.side; fly.textContent = f.w.toUpperCase();
+    fly.style.cssText = `left:${a.x}px;top:${a.y + (a.h - from.fs) / 2}px;font-size:${from.fs}px`;
+    cv.append(fly);
+    li.classList.add("landing");
+    const anim = fly.animate([
+      { transform: "none" },
+      { transform: `translate(${to.x - a.x}px,${ty - (a.y + (a.h - from.fs) / 2)}px) scale(${k})` }
+    ], { duration: 520, easing: "cubic-bezier(.5,0,.3,1)", fill: "forwards" });
+    anim.onfinish = () => { fly.remove(); li.classList.remove("landing"); };
   }
 
   // ---------- drawing ----------
@@ -173,9 +222,12 @@ export function mountWordshake(root, ctx = {}) {
       </div></div><div class="wsg-bubs"></div>`;
   }
   const arrow = side => `<span class="wsg-arr ${side ? "r" : "l"}"></span>`;
+  // Đợt 387 — the WORD is centred; its arrow hangs outside it on the scoring
+  // team's side (absolute), so it never pushes the word off centre.
+  const centred = (txt, side) => `<span class="wt">${side === 0 ? arrow(0) : ""}${txt}${side === 1 ? arrow(1) : ""}</span>`;
   function rows(side) {
     return G.log.filter(f => f.side === side).map(f =>
-      `<li><b>${f.w.toUpperCase()}</b>${f.m ? `<span>${esc(f.m)}</span>` : ""}</li>`).join("");
+      `<li data-w="${f.w}"><b>${f.w.toUpperCase()}</b>${f.m ? `<span>${esc(f.m)}</span>` : ""}</li>`).join("");
   }
   function centreHtml() {
     if (G.phase === "ready") {
@@ -184,13 +236,15 @@ export function mountWordshake(root, ctx = {}) {
         : dict ? "" : "Loading the dictionary…";
       return `<div class="wsg-mid">
         <div class="wsg-logo">A SHOW <span>SPEED</span></div>
-        <div class="wsg-times">${TIMES.map(t => `<button data-do="time" data-t="${t}" class="${t === dur ? "on" : ""}"><span>${t / 60} min</span></button>`).join("")}</div>
+        ${solo
+          ? `<div class="wsg-times solo"><div class="wsg-tsolo"><i class="up"></i><button data-do="time" data-t="${dur}" class="on"><span>${dur / 60} min</span></button><i class="dn"></i></div></div>`
+          : `<div class="wsg-times">${TIMES.map(t => `<button data-do="time" data-t="${t}" class="${t === dur ? "on" : ""}"><span>${t / 60} min</span></button>`).join("")}</div>`}
         <button class="wsg-play" data-do="play" ${dict ? "" : "disabled"}><span>Play</span></button>
         ${note ? `<div class="wsg-note">${note}</div>` : ""}</div>`;
     }
     if (G.phase === "over") {
       const [a, b] = G.sides.map(s => s.score);
-      const head = a === b ? "DRAW" : `${arrow(a > b ? 0 : 1)} WINS`;
+      const head = a === b ? "DRAW" : centred("WINS", a > b ? 0 : 1);
       const missed = wordsOn(dict, G.letters, 4).filter(w => !G.found.has(w) && !dict.get(w).base)
         .sort((x, y) => y.length - x.length || dict.get(x).lv - dict.get(y).lv).slice(0, 10);
       return `<div class="wsg-mid wsg-res"><h2>${head}</h2>
@@ -198,8 +252,11 @@ export function mountWordshake(root, ctx = {}) {
         <button class="wsg-play" data-do="play"><span>Play again</span></button></div>`;
     }
     const f = G.last;
+    // `wsg-pop` only on the redraw that brought this word in — a later redraw
+    // (Sound, Home box) must not pop it again.
+    const pop = G.pop ? "wsg-pop" : ""; G.pop = false;
     const last = f
-      ? `<div class="wsg-last wsg-pop sd${f.side}"><div class="w">${f.side === 0 ? arrow(0) : ""}${f.w.toUpperCase()}${f.side === 1 ? arrow(1) : ""}</div>${f.m ? `<div class="m">${esc(f.m)}</div>` : ""}${f.base ? `<div class="nt">form of ${esc(f.base.toUpperCase())}</div>` : ""}</div>`
+      ? `<div class="wsg-last ${pop} sd${f.side}"><div class="w">${centred(f.w.toUpperCase(), f.side)}</div>${f.m ? `<div class="m">${esc(f.m)}</div>` : ""}${f.base ? `<div class="nt">form of ${esc(f.base.toUpperCase())}</div>` : ""}</div>`
       : `<div class="wsg-last idle"><div class="w">· · ·</div></div>`;
     return `<div class="wsg-cen">${last}<div class="wsg-cols"><ol class="c0">${rows(0)}</ol><ol class="c1">${rows(1)}</ol></div></div>`;
   }
@@ -232,7 +289,7 @@ export function mountWordshake(root, ctx = {}) {
     if (d === "yes") { e.preventDefault(); return toReady(); }
     if (d === "no") { e.preventDefault(); G.ask = false; return render(); }
     if (d === "sound") { sfx.on = !sfx.on; if (sfx.on) sfx.next(); return render(); }
-    if (d === "time") { dur = +b.dataset.t; saveTime(dur); sfx.tap(0); return render(); }
+    if (d === "time") return timeDown(e, b);
     if (d === "play") return start();
     if (G.phase !== "play" || G.ask) return;
     const sideEl = b.closest("[data-side]"); if (!sideEl) return;
@@ -246,6 +303,54 @@ export function mountWordshake(root, ctx = {}) {
   }
   cv.addEventListener("pointerdown", onDown);
 
+  // ---------- time chips (Đợt 387) ----------
+  function timeDown(e, b) {
+    const t = +b.dataset.t, now = performance.now();
+    const dbl = now - lastTap.at < DOUBLE_MS && (solo || lastTap.t === t);
+    lastTap = dbl ? { t: 0, at: 0 } : { t, at: now };
+    if (dbl) {
+      const before = cvRect(b);
+      if (solo) { solo = false; dur = soloBase; }
+      else { solo = true; soloBase = dur = t; saveTime(t); }
+      sfx.next(); render();
+      // the chip glides from where it was to where it now is
+      const now2 = cv.querySelector(`.wsg-times button[data-t="${dur}"]`);
+      if (now2) { const r = cvRect(now2); now2.animate([{ translate: `${before.x - r.x}px ${before.y - r.y}px` }, { translate: "0 0" }], { duration: 320, easing: "cubic-bezier(.22,.9,.3,1)" }); }
+      return;
+    }
+    if (!solo) { dur = t; saveTime(dur); sfx.tap(0); return render(); }
+    // solo: follow the finger for swipes
+    e.preventDefault();
+    let y0 = e.clientY;
+    const move = ev => {
+      const s = cv.getBoundingClientRect().width / W || 1, dy = (ev.clientY - y0) / s;
+      if (Math.abs(dy) < SWIPE_PX) return;
+      y0 = ev.clientY; lastTap = { t: 0, at: 0 };   // a swipe is not half of a double-tap
+      stepTime(dy < 0 ? 1 : -1);
+    };
+    const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up); };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up); window.addEventListener("pointercancel", up);
+  }
+  function stepTime(n) {
+    const v = Math.max(T_MIN, Math.min(T_MAX, dur + n * 60));
+    const box = cv.querySelector(".wsg-tsolo");
+    if (v === dur) { if (box) box.animate([{ translate: "0 0" }, { translate: `0 ${n > 0 ? -5 : 5}px` }, { translate: "0 0" }], { duration: 180 }); return; }
+    dur = v; sfx.tap(0);
+    // update in place (no redraw: the finger is still on the chip)
+    const btn = box && box.querySelector("button");
+    if (btn) {
+      btn.dataset.t = dur; btn.querySelector("span").textContent = `${dur / 60} min`;
+      btn.animate([{ translate: `0 ${n > 0 ? 10 : -10}px`, opacity: .3 }, { translate: "0 0", opacity: 1 }], { duration: 200, easing: "ease-out" });
+    }
+    const c = cv.querySelector(".wsg-clock span"); if (c) c.textContent = fmt(dur);
+    G.left = dur;
+  }
+  function onWheel(e) {
+    if (!solo || G.phase !== "ready" || !e.target.closest(".wsg-tsolo")) return;
+    e.preventDefault(); stepTime(e.deltaY < 0 ? 1 : -1);
+  }
+  cv.addEventListener("wheel", onWheel, { passive: false });
+
   // ---------- boot ----------
   render(); fit();
   requestAnimationFrame(fit);
@@ -257,6 +362,7 @@ export function mountWordshake(root, ctx = {}) {
     clearInterval(clock); clearInterval(shakeIv);
     ro.disconnect(); window.removeEventListener("resize", fit);
     cv.removeEventListener("pointerdown", onDown);
+    cv.removeEventListener("wheel", onWheel);
     sfx.dispose();
     root.classList.remove("wsg", "shaking"); root.innerHTML = "";
   };

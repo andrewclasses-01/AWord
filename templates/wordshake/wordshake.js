@@ -138,7 +138,11 @@ function drawCentre(S) {
   const host = S.host; if (!host || !S.items) return;
   const byUp = up => S.items.find(x => x.up === up);
   const col = side => S.log.filter(f => f.side === side)
-    .map(f => `<li><b>${esc(f.w.toUpperCase())}</b>${f.m ? `<span>${esc(f.m)}</span>` : ""}</li>`).join("");
+    .map(f => `<li data-k="${esc(f.w.toLowerCase())}"><b>${esc(f.w.toUpperCase())}</b>${f.m ? `<span>${esc(f.m)}</span>` : ""}</li>`).join("");
+  // Đợt 387 — where every listed word sits BEFORE the redraw, so the columns
+  // can slide instead of jump (a new word drops in on top, the rest move down).
+  const before = new Map();
+  host.querySelectorAll(".aw-ws-ccols li[data-k]").forEach(li => before.set(li.parentNode.className + "|" + li.dataset.k, li.getBoundingClientRect().top));
   const cols = `<div class="aw-ws-ccols"><ol class="is-l">${col(0)}</ol><ol class="is-r">${col(1)}</ol></div>`;
   const defRow = up => {
     const it = byUp(up); if (!it) return "";
@@ -160,6 +164,20 @@ function drawCentre(S) {
       : `<div class="aw-ws-cen"><div class="aw-ws-cprog">${S.r + 1} / ${S.plan.length}</div><div class="aw-ws-cdefs is-short">${rows}</div>${cols}</div>`;
   }
   host.innerHTML = html;
+  if (before.size || S.log.length) {
+    const ease = "cubic-bezier(.22,.9,.3,1)";
+    host.querySelectorAll(".aw-ws-ccols li[data-k]").forEach(li => {
+      const was = before.get(li.parentNode.className + "|" + li.dataset.k);
+      if (was == null) {
+        // only the newest words (top of a column) are new; a first draw of a full list stays still
+        if (before.size || li === li.parentNode.firstElementChild)
+          li.animate([{ transform: "translateY(-120%)", opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 460, easing: ease });
+        return;
+      }
+      const dy = was - li.getBoundingClientRect().top;
+      if (Math.abs(dy) > .5) li.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: 420, easing: ease });
+    });
+  }
   // Mode 1: a NEW clue speaks once, from the centre (ONE player for the match).
   if (S.mode === "one" && S.lastClue !== S.i) {
     S.lastClue = S.i;

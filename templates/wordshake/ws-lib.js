@@ -83,15 +83,19 @@ const VOWELS = "AEIOU";
 // Roll until the board is worth playing: 4–7 vowels, no Q (a lone Q is dead
 // weight without U), and — once the dictionary is known — at least `minWords`
 // everyday words (A1–B2) on it. 40 tries is plenty (measured: most rolls pass).
-export function rollBoard(dict, { minWords = 45, tries = 40 } = {}) {
+// Đợt 387 — `easy` (thầy: "ưu tiên bộ chữ dễ … tránh bế tắc"): roll 60 boards
+// with 5–7 vowels and keep the one with the MOST A1–A2 words. Measured over
+// 100 boards: 109 → ~250 A1–A2 words a board, ~13 ms a board.
+export function rollBoard(dict, { minWords = 45, tries = 40, easy = false } = {}) {
   let best = null, bestN = -1;
+  if (easy) tries = 60;
   for (let t = 0; t < tries; t++) {
     const letters = shuffle(DICE).map(d => d[Math.random() * 6 | 0]);
     const v = letters.filter(c => VOWELS.includes(c)).length;
-    if (v < 4 || v > 7 || letters.includes("Q")) continue;
+    if (v < (easy ? 5 : 4) || v > 7 || letters.includes("Q")) continue;
     if (!dict) return letters;
-    const n = wordsOn(dict, letters, 4).length;
-    if (n >= minWords) return letters;
+    const n = wordsOn(dict, letters, easy ? 2 : 4).length;
+    if (!easy && n >= minWords) return letters;
     if (n > bestN) { best = letters; bestN = n; }
   }
   return best || "AEEIOSTRNLPCDMHU".split("");

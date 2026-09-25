@@ -1,5 +1,17 @@
 # GHI CHÚ WORDSHAKE — template #21 + game cố định trong GAMES
 
+## ⭐ Đợt 388 (25/9/2026) — từ to căn giữa + bay về cột, bộ chữ dễ, ô giờ chạm đúp
+- GAME: từ to (và WINS) ĐÚNG TÂM bảng giữa — chữ trong `.wt` inline-block, mũi tên `position:absolute` treo ngoài (lệch về đội ghi điểm).
+- GAME: từ đang to KHÔNG có trong danh sách; từ kế tiếp tới ⇒ từ cũ bay (`flyToList`, bản sao trong `.wsg-cv`, đo theo toạ độ 1280) lên
+  đầu cột đội đó, các từ cũ trượt xuống (FLIP). Đo: đáp lệch ≤2px. Hết giờ thì màn kết quả thay luôn (từ cuối không cần bay).
+- GAME: gõ sai/trùng chỉ `renderSide` + bong bóng — bảng giữa không vẽ lại (trước đó `render()` chạy lại `wsg-pop` = nhấp nháy);
+  `wsg-pop` chỉ gắn ở lần vẽ đưa từ mới vào (`G.pop`).
+- GAME: `rollBoard(dict,{easy:true})` gieo 60 bàn, 5–7 nguyên âm, chọn bàn NHIỀU từ A1–A2 nhất: 109 → ~250 từ A1–A2/bàn (đo 100 bàn).
+- GAME: chạm đúp ô giờ ⇒ chỉ còn ô đó (lướt ra giữa, ▲▼), vuốt lên +1 / xuống −1 phút (1–10), lăn chuột cũng được;
+  chạm đúp lại ⇒ 3 ô, ô đã chạm đúp được chọn (số chỉnh không lưu).
+- FIGHT template: bảng giữa không có "từ to" (Mode 1 = định nghĩa, Mode 2/3 = dòng định nghĩa, mũi tên cân 2 bên) và gõ sai
+  vốn không vẽ lại bảng giữa ⇒ chỉ thêm: cột từ Mode 1/3 trượt (từ mới rơi vào đầu, từ cũ trượt xuống) trong `drawCentre`.
+
 ## ⭐ Đợt 387 (25/9/2026) — TÊN MỚI "A SHOW SPEED" + dải điểm thấp + Home mới + chuông 10 s
 - **Tên hiển thị = A SHOW SPEED** (thầy chọn): logo GAME, thẻ GAMES, catalog, editor, slogan, đuôi bài giao `SHOWSPEED`.
   ⛔ MÃ NỘI BỘ GIỮ `wordshake` (type, `?g=wordshake`, tên file/thư mục, class `.is-skin-wordshake`) — act/bài giao/link cũ vẫn mở.
