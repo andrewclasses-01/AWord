@@ -476,6 +476,74 @@ export function mountMyBeat(root, ctx = {}) {
     } catch (e) { btn.disabled = false; toast("Could not save — " + (e.message || "check the connection")); }
   }
 
+  // ---------------------------------------------------------------- watcher bridge (auto lyrics & timing)
+  // Talks to tools/mybeat-watch.py running on the teacher's own computer: My Beat writes a
+  // small .job file into <folder>/inbox, the script downloads the song and drops the finished
+  // .beat.json (or an .error message) into <folder>/outbox. The folder handle is remembered in
+  // IndexedDB so the teacher only has to pick it once (Chrome/Edge only — no server involved).
+  const watchSupported = () => typeof window.showDirectoryPicker === "function";
+  function idbOpen() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open("mybeat-watch", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("kv");
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+  }
+  async function idbGet(key) {
+    const db = await idbOpen();
+    return new Promise((res, rej) => {
+      const rq = db.transaction("kv", "readonly").objectStore("kv").get(key);
+      rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error);
+    });
+  }
+  async function idbSet(key, val) {
+    const db = await idbOpen();
+    return new Promise((res, rej) => {
+      const rq = db.transaction("kv", "readwrite").objectStore("kv").put(val, key);
+      rq.onsuccess = () => res(); rq.onerror = () => rej(rq.error);
+    });
+  }
+  async function getQueueRoot() {
+    let handle = await idbGet("queueDir").catch(() => null);
+    if (handle) {
+      const perm = await handle.queryPermission({ mode: "readwrite" });
+      if (perm === "granted" || (await handle.requestPermission({ mode: "readwrite" })) === "granted") return handle;
+    }
+    handle = await window.showDirectoryPicker({ id: "mybeat-queue", mode: "readwrite" });
+    await idbSet("queueDir", handle);
+    return handle;
+  }
+  async function readTextIfExists(dir, name) {
+    try { const fh = await dir.getFileHandle(name); return await (await fh.getFile()).text(); } catch { return null; }
+  }
+  async function writeText(dir, name, text) {
+    const fh = await dir.getFileHandle(name, { create: true });
+    const w = await fh.createWritable();
+    await w.write(text); await w.close();
+  }
+  async function submitWatchJob(root, link, title) {
+    const inbox = await root.getDirectoryHandle("inbox", { create: true });
+    const id = crypto.randomUUID ? crypto.randomUUID() : "j" + Date.now() + Math.random().toString(36).slice(2);
+    await writeText(inbox, id + ".job", JSON.stringify({ id, link, title }));
+    return id;
+  }
+  async function pollWatchJob(root, id, onProgress, cancelRef) {
+    const outbox = await root.getDirectoryHandle("outbox", { create: true });
+    const t0 = Date.now(), timeoutMs = 6 * 60 * 1000;
+    while (Date.now() - t0 < timeoutMs) {
+      if (cancelRef.cancelled) throw new Error("cancelled");
+      const err = await readTextIfExists(outbox, id + ".error");
+      if (err) throw new Error(err);
+      const pkgTxt = await readTextIfExists(outbox, id + ".beat.json");
+      if (pkgTxt && await readTextIfExists(outbox, id + ".done") != null) return JSON.parse(pkgTxt);
+      const prog = await readTextIfExists(outbox, id + ".progress");
+      if (prog && onProgress) onProgress(prog);
+      await new Promise(r => setTimeout(r, 1500));
+    }
+    throw new Error("No answer after 6 minutes — is mybeat-watch.bat running on your computer?");
+  }
+
   // ============================================================ editor
   let ed = null;   // editor state while view === "edit"
   function startEditor() {
@@ -484,7 +552,7 @@ export function mountMyBeat(root, ctx = {}) {
       level: "", lists: [], draft: true, duration: 0, sections: [], lines: [] };
     delete draft.board;
     if (draft.source !== "cc") draft.source = "own";   // all songs are Andrew Classes' own — no need to ask
-    ed = { d: draft, isNew: !src, sel: 0, info: null, msg: "", importMsg: "", player: null, playerId: "", stopAt: 0, tap: false, split: false, editLine: -1, dirty: false };
+    ed = { d: draft, isNew: !src, sel: 0, info: null, msg: "", importMsg: "", player: null, playerId: "", stopAt: 0, tap: false, split: false, editLine: -1, dirty: false, watch: null, showManual: false };
     viewEl.innerHTML = `<div class="ed">
       <div class="ed-h"><button class="back" data-a="ed-cancel">${I.back}${src ? "Song" : "Songs"}</button><h2>${src ? "Edit song" : "New song"}</h2></div>
       <div class="sec" data-r="s1"></div>
@@ -526,34 +594,64 @@ export function mountMyBeat(root, ctx = {}) {
     const link = d.youtube ? `https://youtu.be/${d.youtube}` : "<YouTube link>";
     const slug = (d.title || "song").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "song";
     const cmd = `py tools\\mybeat-prepare.py --audio "${slug}.mp3" --link "${link}" --desc "${slug}.txt" --lyrics "${slug}-lyrics.txt"`;
+    const w = ed.watch;
+    const auto = !watchSupported() ? `<p class="note">Automatic mode needs Chrome or Edge on this computer.</p>`
+      : !w || w.status === "idle" ? `<button class="btn btn-b" data-a="ed-autofetch"${d.youtube ? "" : " disabled"}>${I.playI} Get lyrics &amp; timing automatically</button>
+          <p class="note" style="margin:6px 0 0">Double-click <b>mybeat-watch.bat</b> on this computer first, then press this button. Takes about a minute.</p>`
+      : w.status === "running" ? `<div class="msg info"><span class="mb-spin">●</span> ${esc(w.msg || "Working…")}</div><button class="btn btn-g btn-sm" style="margin-top:6px" data-a="ed-cancelfetch">Cancel</button>`
+      : `<div class="msg bad">${esc(w.msg)}</div><button class="btn btn-b btn-sm" style="margin-top:6px" data-a="ed-autofetch">Try again</button>`;
     box.innerHTML = `<h3><span class="n">STEP 2</span> Lyrics &amp; timing ${d.lines.length ? `<span class="ok">${I.check}</span>` : ""}</h3>
-      <div class="two">
+      ${auto}
+      <p class="note" style="margin:10px 0 0"><a href="#" data-a="ed-togglemanual">${ed.showManual ? "Hide the by-hand way" : "…or do it by hand"}</a></p>
+      ${ed.showManual ? `<div class="two" style="margin-top:8px">
         <label class="drop" data-r="drop"><span class="btn btn-g">${I.file} Choose .beat.json</span><span>${d.lines.length ? `<b>${d.lines.length} lines</b> · ${d.sections.length} sections · ${words(d)} words${ed.importMsg ? " · " + esc(ed.importMsg) : ""}` : "or drop the file from <b>My Beat Prep</b> here"}</span>
           <input type="file" accept=".json,application/json" data-r="pkg" hidden></label>
         <div><p class="note" style="margin:0 0 6px">No file yet? Run this in a command window on your computer (works offline, about 1 minute per song). <code>--desc</code> = the video description saved as .txt; <code>--lyrics</code> = the lyrics if you have them.</p>
           <div class="cmd" data-r="cmd">${esc(cmd)}</div>
           <button class="btn btn-g btn-sm" style="margin-top:6px" data-a="ed-copy">${I.copy} Copy command</button></div>
-      </div>`;
+      </div>` : ""}`;
+    if (!ed.showManual) return;
     const drop = box.querySelector('[data-r="drop"]'), inp = box.querySelector('[data-r="pkg"]');
     inp.onchange = () => inp.files[0] && edImport(inp.files[0]);
     drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
     drop.ondragleave = () => drop.classList.remove("over");
     drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); const f = e.dataTransfer.files[0]; if (f) edImport(f); };
   }
-  async function edImport(file) {
+  async function edAutoFetch() {
+    const d = ed.d;
+    if (!d.youtube) { toast("Add the YouTube link first (step 1)."); return; }
+    ed.watch = { status: "running", msg: "Asking for the My Beat Watcher folder…", cancelRef: { cancelled: false } };
+    edPaint2();
     try {
-      const pkg = JSON.parse(await file.text());
-      const song = fromPackage(pkg), d = ed.d;
-      if (d.lines.length && !(await confirmInline("Replace the lyrics you have now with this file?"))) return;
-      d.lines = song.lines; d.sections = song.sections; d.duration = song.duration || d.duration;
-      ["title", "artist", "channel", "licence", "credit", "source"].forEach(k => { if (!d[k] && song[k]) d[k] = song[k]; });
-      if (!d.youtube && song.youtube) { d.youtube = song.youtube; d.link = song.link || ""; }
-      const checks = d.lines.reduce((n, l) => n + (l.c || []).length, 0);
-      ed.importMsg = checks ? `${checks} words to check` : "all words heard the same twice";
-      ed.sel = 0; ed.dirty = true;
-      edPaintAll(); edEnsurePlayer();
-      toast(`Imported ${d.lines.length} lines`);
-    } catch (e) { toast(e.message || "This file could not be read."); }
+      const root = await getQueueRoot();
+      ed.watch.msg = "Sending the link…"; edPaint2();
+      const id = await submitWatchJob(root, d.link || `https://youtu.be/${d.youtube}`, d.title);
+      const pkg = await pollWatchJob(root, id, msg => { if (ed && ed.watch) { ed.watch.msg = msg; edPaint2(); } }, ed.watch.cancelRef);
+      if (!ed) return;
+      ed.watch = null;
+      await applyImportedPackage(pkg);
+    } catch (e) {
+      if (!ed) return;
+      if (e && e.name === "AbortError" || (e && e.message === "cancelled")) { ed.watch = null; edPaint2(); return; }
+      ed.watch = { status: "error", msg: e.message || "Could not reach the My Beat Watcher folder." };
+      edPaint2();
+    }
+  }
+  async function edImport(file) {
+    try { await applyImportedPackage(JSON.parse(await file.text())); }
+    catch (e) { toast(e.message || "This file could not be read."); }
+  }
+  async function applyImportedPackage(pkg) {
+    const song = fromPackage(pkg), d = ed.d;
+    if (d.lines.length && !(await confirmInline("Replace the lyrics you have now with this file?"))) return;
+    d.lines = song.lines; d.sections = song.sections; d.duration = song.duration || d.duration;
+    ["title", "artist", "channel", "licence", "credit", "source"].forEach(k => { if (!d[k] && song[k]) d[k] = song[k]; });
+    if (!d.youtube && song.youtube) { d.youtube = song.youtube; d.link = song.link || ""; }
+    const checks = d.lines.reduce((n, l) => n + (l.c || []).length, 0);
+    ed.importMsg = checks ? `${checks} words to check` : "all words heard the same twice";
+    ed.sel = 0; ed.dirty = true;
+    edPaintAll(); edEnsurePlayer();
+    toast(`Imported ${d.lines.length} lines`);
   }
   // tiny in-page confirm (the page must not use window.confirm)
   function confirmInline(text) {
@@ -773,6 +871,9 @@ export function mountMyBeat(root, ctx = {}) {
         return S.editId ? go("song") : go("home");
       }
       case "ed-check": return edCheck();
+      case "ed-autofetch": return edAutoFetch();
+      case "ed-cancelfetch": if (ed && ed.watch) ed.watch.cancelRef.cancelled = true; return;
+      case "ed-togglemanual": e.preventDefault(); ed.showManual = !ed.showManual; edPaint2(); return;
       case "ed-copy": {
         const txt = $('[data-r="cmd"]').textContent;
         (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast("Command copied")).catch(() => {

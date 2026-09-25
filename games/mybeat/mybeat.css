@@ -242,6 +242,7 @@ body.mb-open{overflow:hidden}
 .mb .msg.bad{background:#FCE3E3;color:var(--bad)}
 .mb .msg.ok{background:#DDF4E6;color:#17784A}
 .mb .msg.info{background:var(--primary-soft);color:var(--primary)}
+.mb .mb-spin{display:inline-block;animation:mb-blink .8s infinite}
 .mb .drop{border:2px dashed var(--line);border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer}
 .mb .drop.over{border-color:var(--primary);background:var(--primary-soft)}
 .mb .cmd{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;background:var(--night1);color:#CFE0FF;border-radius:9px;padding:8px 10px;overflow-x:auto;white-space:nowrap}

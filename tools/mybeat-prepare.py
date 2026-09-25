@@ -67,7 +67,7 @@ def run(cmd, what):
     p = subprocess.run(cmd, env=OFFLINE_ENV, capture_output=True, text=True, encoding="utf-8", errors="replace")
     if p.returncode != 0:
         tail = (p.stderr or p.stdout or "").strip().splitlines()[-12:]
-        raise SystemExit(f"\n[LOI] {what} failed (exit {p.returncode}).\n" + "\n".join(tail))
+        raise RuntimeError(f"{what} failed (exit {p.returncode}).\n" + "\n".join(tail))
     return time.time() - t0
 
 
@@ -191,7 +191,7 @@ def align_lyrics(lyr, heard):
     # fill holes by interpolation
     known = [i for i, t in enumerate(toks) if "start" in t]
     if not known:
-        raise SystemExit("[LOI] The lyrics do not match what was heard at all — is it the right song?")
+        raise RuntimeError("The lyrics do not match what was heard at all — is it the right song?")
     for i, t in enumerate(toks):
         if "start" in t:
             continue
@@ -243,7 +243,112 @@ def read_desc(path):
     return lic, credit[:500]
 
 
-# ------------------------------------------------------------------ main
+# ------------------------------------------------------------------ pipeline (shared by the CLI below and mybeat-watch.py)
+def check_tools():
+    for p, label in [(VENV_PY, "Parakeet python"), (PARAKEET, "parakeet_words.py"), (FFMPEG, "ffmpeg")]:
+        if not os.path.exists(p):
+            raise RuntimeError(f"Missing {label}: {p}")
+
+
+def run_pipeline(audio, link="", desc="", lyrics="", title="", artist="", own=False, no_check=False, on_progress=say):
+    """audio file -> .beat.json PACKAGE (dict, not written to disk). Raises RuntimeError on failure."""
+    check_tools()
+    if not os.path.exists(audio):
+        raise RuntimeError(f"Audio file not found: {audio}")
+    t_all = time.time()
+    name = os.path.splitext(os.path.basename(audio))[0]
+    tmp = tempfile.mkdtemp(prefix="mybeat_")
+    try:
+        on_progress(f"My Beat Prep - {name}")
+        wav = os.path.join(tmp, "mix16.wav")
+        to_wav16(audio, wav)
+        dur = duration_of(wav)
+        on_progress(f"  1/5 audio ready ({dur:.0f} s)")
+
+        heard, secs = listen(wav, os.path.join(tmp, "mix"))
+        on_progress(f"  2/5 heard {len(heard)} words ({secs:.0f} s)")
+
+        if not no_check:
+            t0 = time.time()
+            run([VENV_PY, "-m", "demucs", "--two-stems=vocals", "-n", "htdemucs", "-o", os.path.join(tmp, "sep"), wav], "Demucs")
+            voc = None
+            for root, _, files in os.walk(os.path.join(tmp, "sep")):
+                if "vocals.wav" in files:
+                    voc = os.path.join(root, "vocals.wav")
+            if not voc:
+                raise RuntimeError("Demucs finished but no vocals.wav was found.")
+            voc16 = os.path.join(tmp, "voc16.wav")
+            to_wav16(voc, voc16)
+            heard2, _ = listen(voc16, os.path.join(tmp, "voc"))
+            n_check = mark_checks(heard, heard2)
+            on_progress(f"  3/5 second listen: {n_check} words to check ({time.time() - t0:.0f} s)")
+        else:
+            for w in heard:
+                w["check"] = False
+            on_progress("  3/5 second listen skipped (--no-check)")
+
+        if lyrics:
+            lyr = read_lyrics(lyrics)
+            toks, matched = align_lyrics(lyr, heard)
+            lines = []
+            for li, (text, _, _) in enumerate(lyr):
+                ws = [t for t in toks if t["li"] == li]
+                lines.append(ws)
+            parts = []
+            for li, (_, tag, starts) in enumerate(lyr):
+                if starts or li == 0:
+                    parts.append((li, tag))
+            texts = [t for t, _, _ in lyr]
+            on_progress(f"  4/5 lyrics: {len(lyr)} lines, {matched}/{len(toks)} words matched the singing")
+            line_objs = []
+            for li, ws in enumerate(lines):
+                s = [round(w["start"], 2) for w in ws]
+                e = round(max(w["end"] for w in ws), 2)
+                c = [k for k, w in enumerate(ws) if w["check"]]
+                line_objs.append({"x": texts[li], "s": s, "e": e, "c": c, "n": []})
+        else:
+            groups = lines_from_pauses(heard)
+            parts = parts_from_pauses(groups)
+            texts = [" ".join(w["word"] for w in g) for g in groups]
+            line_objs = [{"x": texts[i], "s": [round(w["start"], 2) for w in g], "e": round(g[-1]["end"], 2),
+                          "c": [k for k, w in enumerate(g) if w.get("check")], "n": []} for i, g in enumerate(groups)]
+            on_progress(f"  4/5 no lyrics file: {len(line_objs)} lines from the pauses (words as heard)")
+        sections = name_parts(texts, parts)
+        # keep the timing monotonic inside every line
+        for l in line_objs:
+            for k in range(1, len(l["s"])):
+                if l["s"][k] < l["s"][k - 1]:
+                    l["s"][k] = l["s"][k - 1]
+            l["e"] = max(l["e"], l["s"][-1] + 0.2)
+
+        lic, credit = ("", "")
+        if desc and os.path.exists(desc):
+            lic, credit = read_desc(desc)
+        yt = ""
+        m = re.search(r"(?:youtu\.be/|[?&]v=|/embed/|/shorts/)([\w-]{11})", link or "")
+        if m:
+            yt = m.group(1)
+        pkg = {
+            "format": "mybeat/1", "made": time.strftime("%Y-%m-%d %H:%M"),
+            "title": title or name, "artist": artist,
+            "youtube": yt, "link": link,
+            "source": "own" if own else ("cc" if (lic or credit) else ""),
+            "licence": lic, "credit": credit,
+            "duration": round(dur, 2), "sections": sections, "lines": line_objs,
+        }
+        n_words = sum(len(l["x"].split()) for l in line_objs)
+        on_progress(f"  5/5 {len(line_objs)} lines | {len(sections)} parts | {n_words} words | {sum(len(l['c']) for l in line_objs)} to check")
+        if not yt:
+            on_progress("  !  no YouTube link given - add it in AWord (step 1)")
+        if not own and not credit:
+            on_progress("  !  no credit found - add --desc, or type the credit in AWord")
+        on_progress(f"DONE in {time.time() - t_all:.0f} s")
+        return pkg
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+# ------------------------------------------------------------------ main (CLI)
 def main():
     ap = argparse.ArgumentParser(description="My Beat Prep — song file -> .beat.json (offline)")
     ap.add_argument("--audio", required=True)
@@ -257,109 +362,21 @@ def main():
     ap.add_argument("--out", default="")
     a = ap.parse_args()
 
-    for p, label in [(VENV_PY, "Parakeet python"), (PARAKEET, "parakeet_words.py"), (FFMPEG, "ffmpeg")]:
-        if not os.path.exists(p):
-            raise SystemExit(f"[LOI] Missing {label}: {p}")
-    if not os.path.exists(a.audio):
-        raise SystemExit(f"[LOI] Audio file not found: {a.audio}")
-    t_all = time.time()
+    try:
+        pkg = run_pipeline(a.audio, link=a.link, desc=a.desc, lyrics=a.lyrics, title=a.title, artist=a.artist,
+                            own=a.own, no_check=a.no_check)
+    except RuntimeError as e:
+        raise SystemExit(f"\n[LOI] {e}")
+
     name = os.path.splitext(os.path.basename(a.audio))[0]
     out_dir = a.out or os.path.dirname(os.path.abspath(a.audio))
-    tmp = tempfile.mkdtemp(prefix="mybeat_")
-    try:
-        say(f"My Beat Prep - {name}  (offline)")
-        wav = os.path.join(tmp, "mix16.wav")
-        to_wav16(a.audio, wav)
-        dur = duration_of(wav)
-        say(f"  1/5 audio ready ({dur:.0f} s)")
-
-        heard, secs = listen(wav, os.path.join(tmp, "mix"))
-        say(f"  2/5 heard {len(heard)} words ({secs:.0f} s)")
-
-        n_check = 0
-        if not a.no_check:
-            t0 = time.time()
-            run([VENV_PY, "-m", "demucs", "--two-stems=vocals", "-n", "htdemucs", "-o", os.path.join(tmp, "sep"), wav], "Demucs")
-            voc = None
-            for root, _, files in os.walk(os.path.join(tmp, "sep")):
-                if "vocals.wav" in files:
-                    voc = os.path.join(root, "vocals.wav")
-            if not voc:
-                raise SystemExit("[LOI] Demucs finished but no vocals.wav was found.")
-            voc16 = os.path.join(tmp, "voc16.wav")
-            to_wav16(voc, voc16)
-            heard2, _ = listen(voc16, os.path.join(tmp, "voc"))
-            n_check = mark_checks(heard, heard2)
-            say(f"  3/5 second listen: {n_check} words to check ({time.time() - t0:.0f} s)")
-        else:
-            for w in heard:
-                w["check"] = False
-            say("  3/5 second listen skipped (--no-check)")
-
-        if a.lyrics:
-            lyr = read_lyrics(a.lyrics)
-            toks, matched = align_lyrics(lyr, heard)
-            lines = []
-            for li, (text, _, _) in enumerate(lyr):
-                ws = [t for t in toks if t["li"] == li]
-                lines.append(ws)
-            parts, i = [], 0
-            for li, (_, tag, starts) in enumerate(lyr):
-                if starts or li == 0:
-                    parts.append((li, tag))
-            texts = [t for t, _, _ in lyr]
-            say(f"  4/5 lyrics: {len(lyr)} lines, {matched}/{len(toks)} words matched the singing")
-            line_objs = []
-            for li, ws in enumerate(lines):
-                s = [round(w["start"], 2) for w in ws]
-                e = round(max(w["end"] for w in ws), 2)
-                c = [k for k, w in enumerate(ws) if w["check"]]
-                line_objs.append({"x": texts[li], "s": s, "e": e, "c": c, "n": []})
-        else:
-            groups = lines_from_pauses(heard)
-            parts = parts_from_pauses(groups)
-            texts = [" ".join(w["word"] for w in g) for g in groups]
-            line_objs = [{"x": texts[i], "s": [round(w["start"], 2) for w in g], "e": round(g[-1]["end"], 2),
-                          "c": [k for k, w in enumerate(g) if w.get("check")], "n": []} for i, g in enumerate(groups)]
-            say(f"  4/5 no lyrics file: {len(line_objs)} lines from the pauses (words as heard)")
-        sections = name_parts(texts, parts)
-        # keep the timing monotonic inside every line
-        for l in line_objs:
-            for k in range(1, len(l["s"])):
-                if l["s"][k] < l["s"][k - 1]:
-                    l["s"][k] = l["s"][k - 1]
-            l["e"] = max(l["e"], l["s"][-1] + 0.2)
-
-        lic, credit = ("", "")
-        if a.desc and os.path.exists(a.desc):
-            lic, credit = read_desc(a.desc)
-        yt = ""
-        m = re.search(r"(?:youtu\.be/|[?&]v=|/embed/|/shorts/)([\w-]{11})", a.link or "")
-        if m:
-            yt = m.group(1)
-        pkg = {
-            "format": "mybeat/1", "made": time.strftime("%Y-%m-%d %H:%M"),
-            "title": a.title or name, "artist": a.artist,
-            "youtube": yt, "link": a.link,
-            "source": "own" if a.own else ("cc" if (lic or credit) else ""),
-            "licence": lic, "credit": credit,
-            "duration": round(dur, 2), "sections": sections, "lines": line_objs,
-        }
-        os.makedirs(out_dir, exist_ok=True)
-        out = os.path.join(out_dir, re.sub(r"[^\w\- ]+", "", name).strip().replace(" ", "-").lower() + ".beat.json")
-        tmp_out = out + ".tmp"
-        with open(tmp_out, "w", encoding="utf-8") as f:
-            json.dump(pkg, f, ensure_ascii=False, indent=1)
-        os.replace(tmp_out, out)
-        n_words = sum(len(l["x"].split()) for l in line_objs)
-        say(f"  5/5 {len(line_objs)} lines | {len(sections)} parts | {n_words} words | {sum(len(l['c']) for l in line_objs)} to check")
-        if not yt:
-            say("  !  no YouTube link given - add it in AWord (step 1)")
-        if not a.own and not credit:
-            say("  !  no credit found - add --desc, or type the credit in AWord")
-        say(f"DONE in {time.time() - t_all:.0f} s -> {out}")
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
+    os.makedirs(out_dir, exist_ok=True)
+    out = os.path.join(out_dir, re.sub(r"[^\w\- ]+", "", name).strip().replace(" ", "-").lower() + ".beat.json")
+    tmp_out = out + ".tmp"
+    with open(tmp_out, "w", encoding="utf-8") as f:
+        json.dump(pkg, f, ensure_ascii=False, indent=1)
+    os.replace(tmp_out, out)
+    say(f"-> {out}")
 
 
 if __name__ == "__main__":

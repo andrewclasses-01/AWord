@@ -20,6 +20,9 @@ scratch/
 # Local backups before edits
 _backup/
 
+# My Beat Watcher runtime queue (job/result files, not source)
+tools/mybeat-queue/
+
 # 02/09/2026 - KHOA & MAT KHAU: khong bao gio len GitHub (dot bao mat, goi A2)
 firebase-admin.json
 push.json
