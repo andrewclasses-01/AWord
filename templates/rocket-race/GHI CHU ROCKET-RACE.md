@@ -618,6 +618,24 @@ lên. Luật Đợt 355 ("không kết trận khi tàu ở giữa chừng") vẫ
 sai ⇒ nổ, trái bay về thắng · **hồi quy Quiz Fight kết theo điểm 2—0 như cũ**. ⚠️ Bàn thử phải gắn `act.optVer = 4`, không là
 bộ di trú nhân Points off ×20 (lần chạy đầu ra "−40"). ⬜ thầy bấm tay TOMKO.
 
+## 25. Đợt 391 (25/9/2026) — DIFFERENT: HẾT CÂU MÀ CHƯA AI VỀ ĐÍCH ⇒ DÙNG LẠI CÂU CŨ
+Thầy: *"Khi 1 đội đã hết câu (khi chọn different) mà chưa có đội nào về đích, các câu cũ tiếp tục được sử dụng cho đến khi về
+đích thì thôi nếu không giới hạn thời gian. Khi giới hạn thời gian countdown thì đội gần hơn sẽ bay về vạch đích và thắng, đội còn
+lại nổ tàu vũ trụ như tính năng cũ"*.
+- Trước đây (Đợt 382): bàn Different hết chồng câu ⇒ KHOÁ, ngồi chờ bàn kia hết nốt ⇒ `roundsOver(null)` ⇒ xếp theo vị trí.
+- Nay: bàn hết câu **đi vòng lại chồng câu CỦA CHÍNH NÓ, xào lại mỗi vòng** (không bao giờ lặp liền một câu giữa hai vòng), mỗi câu
+  dùng lại được `goToIndex(i, {replay:true})` xoá dấu đã trả lời. Bàn kia vẫn đi tiếp chồng của nó, không bị kéo theo.
+  Trận chỉ kết khi **một tàu chạm vạch** (`raceWon`), hoặc **Count down hết giờ** ⇒ `settleByPosition(null)` như cũ (gần hơn bay
+  về, tàu kia nổ; hoà ⇒ SUDDEN DEATH). Không đặt giờ / Count up ⇒ chơi tới khi có tàu về đích.
+- Same (scramble) và In turns KHÔNG đổi (vẫn hết câu ⇒ xếp theo vị trí / sudden death) — thầy chỉ hỏi Different.
+- **Core `fight.js`** (cờ bàn TUỲ CHỌN `recycleWhenOut`, template khác không khai ⇒ y cũ): `recycleDeck[side]` + `nextRecycled(side)`
+  trong `advanceBoard`; ‹ › của thầy (`boardMoved`) xoá bộ bài vòng lại; `ctl.suddenDeath` coi bàn đang vòng lại là đã chơi HẾT
+  chồng (`sdReachSide = total`, vì `boardIdx` lúc đó là số ngẫu nhiên). Template: `recycleWhenOut: true` trong `fightCtl.attach`.
+- Đo (`scratch/dot382-rr-finish.html`, 4 câu ⇒ 2 bậc, 0 lỗi console): sai 10 lần liền mỗi bàn ⇒ 2 bàn vẫn nhận câu (vòng 2, 3 là
+  hoán vị đủ 4 câu, không trùng liền), không bàn nào khoá, không kết trận · trái đúng 2 câu ở vòng lại ⇒ "TEAM LEFT WINS", phải
+  `is-wreck` · Count down 22 s, bàn phải đã sang vòng 2, trái 1 bậc ⇒ hết giờ trái `is-homerun` về 82, phải nổ · Count down hoà
+  0–0 ⇒ "SUDDEN DEATH!" ⇒ trái đúng ⇒ thắng · hồi quy Same 1–0 hết câu ⇒ trái bay về thắng như cũ. ⬜ thầy bấm tay TOMKO.
+
 ## 19. Phi công: chỉ lên xuống, biên độ 1/5 (Đợt 362, 20/9/2026 tối, mọi mode)
 Bỏ `aw-rr-facepush` (ép lùi ngang khi boost); `aw-rr-jiggle` ±1,2 % (1/5 của ±6 %); `aw-rr-facerattle` khi khựng/va chỉ dọc
 ±1,2 %. Chu kỳ/pha vẫn bám thân tàu (Đợt 361). Đo: keyframes chỉ còn `translateY`, không `translateX`.

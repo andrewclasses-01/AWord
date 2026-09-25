@@ -719,6 +719,10 @@ const rocketRaceTemplate = {
         // Đợt 382 — the questions ran out (or a sudden-death round settled):
         // the rockets decide, not the points. See settleByPosition.
         roundsOver(side) { return settleByPosition(side); },
+        // Đợt 391 — Different: a team out of questions with nobody over the line
+        // plays its old questions again (reshuffled) — the race ends only at the
+        // flag, or when a Count down runs out (then the closer rocket flies home).
+        recycleWhenOut: true,
         // …and the result panel prints how far each rocket got, not points.
         resultScore() { return player ? Math.min(player.p, player.L) : 0; },
         lock(on) { fightBoardLock = !!on; syncFightLock(); },

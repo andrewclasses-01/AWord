@@ -1008,6 +1008,29 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // dodge at Đợt 354.
   const boardIdx = [0, 0];
   const boardOver = [false, false];      // this board has run out of questions
+  // ⭐ Đợt 391 (Rocket race, thầy 25/9/2026: "1 đội đã hết câu mà chưa có đội nào về
+  // đích, các câu cũ tiếp tục được sử dụng cho đến khi về đích") — optional board
+  // flag `recycleWhenOut`: an independent board that runs out of its pile does NOT
+  // stop and wait; it goes round its OWN pile again, reshuffled, until the
+  // template ends the match (ctl.finishRace) or the clock does. `null` = still on
+  // the first pass; an array = the rest of the current reshuffled pass.
+  const recycleDeck = [null, null];
+  function nextRecycled(side) {
+    const b = boards[side];
+    const n = b ? (b.total || 0) : 0;
+    if (!n) return;
+    if (!recycleDeck[side] || !recycleDeck[side].length) {
+      const d = shuffle([...Array(n).keys()]);
+      // never the same question twice in a row across two passes
+      if (n > 1 && d[0] === boardIdx[side]) d.push(d.shift());
+      recycleDeck[side] = d;
+    }
+    boardIdx[side] = recycleDeck[side].shift();
+    boardOver[side] = false;
+    try { b.lock(false); } catch { /* board already gone */ }
+    try { b.goToIndex(boardIdx[side], { replay: true }); } catch { /* board already gone */ }
+    syncNavGates();
+  }
   const soloTimers = [null, null];
   function clearSoloTimers() {
     soloTimers.forEach((t, i) => { if (t) { clearTimeout(t); soloTimers[i] = null; } });
@@ -1430,8 +1453,10 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       if (!roundsOverHook(side) && boardOver[0] && boardOver[1]) endMatch();
       return;
     }
+    if (recycleDeck[side]) { nextRecycled(side); return; }   // Đợt 391
     boardIdx[side]++;
     if (boardIdx[side] >= (b.total || 0)) {
+      if (b.recycleWhenOut && (b.total || 0) > 0) { nextRecycled(side); return; }   // Đợt 391
       boardOver[side] = true;
       try { b.lock(true); } catch { /* board already gone */ }
       // ⚠️ The match ends when BOTH piles are finished, not when the first one
@@ -1988,6 +2013,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       if (soloBoards) {
         if (matchOver || torndown || index === boardIdx[side]) return;
         boardIdx[side] = index;
+        recycleDeck[side] = null;   // Đợt 391 — the teacher's ‹ › puts it back on its first pass
         if (soloTimers[side]) { clearTimeout(soloTimers[side]); soloTimers[side] = null; }
         boardOver[side] = false;
         try { boards[side] && boards[side].lock(false); } catch { /* gone */ }
@@ -2094,8 +2120,9 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       if (matchOver || torndown || raceEnding) return false;
       if (!suddenDeath) {
         sdReach = roundIndex + 1;
-        sdReachSide[0] = boardIdx[0] + 1;
-        sdReachSide[1] = boardIdx[1] + 1;
+        // Đợt 391 — a board already going round again has played its whole pile
+        sdReachSide[0] = recycleDeck[0] ? (boards[0]?.total || 0) : boardIdx[0] + 1;
+        sdReachSide[1] = recycleDeck[1] ? (boards[1]?.total || 0) : boardIdx[1] + 1;
       }
       suddenDeath = true;
       const pick = n => Math.floor(Math.random() * Math.max(1, n));

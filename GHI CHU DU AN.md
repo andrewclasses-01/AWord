@@ -12,7 +12,9 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 390b** (25/9/2026, bình điểm đổi sang MẪU 4 thầy chọn — dải năng lượng neon + sao chổi, mức CỐ ĐỊNH ngang
+> Mới nhất: **Đợt 391** (25/9/2026, ROCKET RACE ▸ FIGHT Different: đội hết câu mà chưa ai về đích ⇒ DÙNG LẠI câu cũ
+> (xào lại) tới khi có tàu về đích; Count down hết giờ ⇒ tàu gần hơn bay về, tàu kia nổ như cũ). Chặng Đợt 391.
+> Trước đó: **Đợt 390b** (25/9/2026, bình điểm đổi sang MẪU 4 thầy chọn — dải năng lượng neon + sao chổi, mức CỐ ĐỊNH ngang
 > nhau mọi đội tới lúc đếm; trang chọn mẫu `D:\OTHERS\CLAUDE\AWord - thiet ke Wordshake\score-tank-mau.html`). Chặng Đợt 390b.
 > Trước đó: **⭐ Đợt 390** (25/9/2026, A SHOW SPEED: BÌNH NƯỚC ĐIỂM — điểm ẩn trong bình lấp lánh, điểm bay vào làm sóng sánh,
 > hết giờ nước cạn + số đếm lên rồi mới hiện kết quả; GAME luôn có, template ô tích "Score tank"; core hook mới
@@ -543,6 +545,25 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
+
+## Đợt 391 (25/9/2026) — ROCKET RACE ▸ FIGHT Different: hết câu ⇒ dùng lại câu cũ tới khi về đích
+**Bối cảnh**: thầy: *"Khi 1 đội đã hết câu (khi chọn different) mà chưa có đội nào về đích, các câu cũ tiếp tục được sử dụng
+cho đến khi về đích thì thôi nếu không giới hạn thời gian. Khi giới hạn thời gian countdown thì đội gần hơn sẽ bay về vạch đích và
+thắng, đội còn lại nổ tàu vũ trụ như tính năng cũ"*. Trước đây (Đợt 382) bàn Different hết câu thì KHOÁ chờ bàn kia hết nốt rồi
+xếp theo vị trí tàu.
+**Việc đã làm**:
+- `core/fight.js`: cờ bàn TUỲ CHỌN `recycleWhenOut` — `recycleDeck[side]` + `nextRecycled(side)`: bàn độc lập hết chồng câu thì
+  đi vòng lại chồng CỦA CHÍNH NÓ, xào lại mỗi vòng (không lặp liền một câu giữa 2 vòng), `goToIndex(i,{replay:true})`. Bàn kia
+  không bị kéo theo. ‹ › của thầy (`boardMoved`) xoá bộ vòng lại. `ctl.suddenDeath` coi bàn đang vòng lại là đã chơi HẾT chồng.
+- `templates/rocket-race/rocket-race.js`: khai `recycleWhenOut: true` trong `fightCtl.attach`.
+- Trận kết khi tàu chạm vạch (`raceWon`) hoặc Count down hết giờ (`settleByPosition` như cũ: gần hơn bay về, tàu kia nổ; hoà ⇒
+  SUDDEN DEATH). Không đặt giờ / Count up ⇒ chơi tới khi có tàu về đích.
+**Quyết định**: chỉ Different đổi (thầy chỉ hỏi Different); Same/In turns giữ luật Đợt 382. Template khác không khai cờ ⇒ y cũ.
+Với Count down, hết câu cũng vòng lại (chứ không kết ngay) — hết giờ mới phân thắng thua.
+**Đã đo** (`scratch/dot382-rr-finish.html`, 4 câu ⇒ 2 bậc, 0 lỗi console): sai 10 lần liền mỗi bàn ⇒ vẫn nhận câu, vòng 2-3 là hoán
+vị đủ 4 câu · trái đúng 2 câu ở vòng lại ⇒ TEAM LEFT WINS, phải nổ · Count down 22 s ⇒ trái (1 bậc) `is-homerun`, phải nổ · Count
+down hoà ⇒ SUDDEN DEATH ⇒ trái đúng ⇒ thắng · hồi quy Same 1–0 hết câu ⇒ trái bay về. Chi tiết GHI CHU ROCKET-RACE mục 25.
+**VIỆC ĐANG CHỜ**: ⬜ thầy bấm tay TOMKO (Fight Different, không giờ + Count down).
 
 ## Đợt 390b (25/9/2026) — BÌNH ĐIỂM: MẪU 4 (năng lượng neon + sao chổi), mức cố định · ✅ ĐÃ COMMIT + PUSH (thầy lệnh)
 **Bối cảnh**: thầy: hiệu ứng sóng nước + số bay vào "xấu quá", muốn vài bản để chọn ⇒ trang 5 mẫu
