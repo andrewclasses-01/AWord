@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 392 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D (WebGL) thay Fight 2D · ⬜ CHƯA BẤM TAY TOMKO
+## Đợt 392 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D (WebGL) thay Fight 2D · ✅ COMMIT + PUSH `f502b20`, LIVE 9/9 mã băm khớp · ⬜ CHƯA BẤM TAY TOMKO
 
 Đợt 392 — ⭐⭐ ROCKET RACE ▸ FIGHT 3D (thầy duyệt mẫu 2i ở kho myGame, "ok build" 26/9): trận Fight là MỘT cảnh WebGL (three.js r170 chép vào `templates/rocket-race/vendor/three/`, import ĐỘNG chỉ trong trận) phủ cả khung — camera đuổi theo 2 tàu, cột đáp án 3D sát hai mép, hàng nút kiểu game (bỏ ‹ ›, nhãn "câu / tổng"), mở màn ANDREW CLASSES → ROCKET RACE → START, kết trận tàu thắng bay khỏi màn → cổng co lại → vệt sáng đánh tàu thua → cháy → nổ vỡ vụn; bộ tiếng THẬT CC0 (Kenney + OpenGameArt, `sfx/`, qua core/sfx.js). CORE (thêm, tương thích ngược): `fightFrame.fullscene` + `tpl.fightScene({root, ctl, title, play})` + `destroy()` trong teardown (`core/fight.js`), `.is-fullscene` (`core/app.css`). Luật chơi/trọng tài/Lives/Points off/Different/iPad/Sudden death GIỮ NGUYÊN — code 2D cũ vẫn chạy trong một ổ ẨN, mọi sự kiện được PHẢN CHIẾU sang cảnh 3D (`v3()`); WebGL hỏng ⇒ tự lùi về 2D. Chi tiết `templates/rocket-race/GHI CHU ROCKET-RACE.md` mục 26.
 
