@@ -1,7 +1,7 @@
 # GHI CHÚ WORDSHAKE — template #21 + game cố định trong GAMES
 
 **TRẠNG THÁI: 🟢 CHỜ THẦY DUYỆT** (Đợt 386, 25/9/2026) — GAME + template chơi đơn 3 mode chạy được;
-⬜ FIGHT của template chưa nối (cần sửa core, xem cuối file). Chưa có trong `core/catalog.js` (đúng luật: chỉ thêm khi ✅).
+FIGHT của template ĐÃ NỐI (core `shared-middle` + skin, xem mục FIGHT). Chưa có trong `core/catalog.js` (đúng luật: chỉ thêm khi ✅).
 
 ## Nguồn gốc
 - Game tham khảo: **Wordshake** của British Council (Claude chơi thử + đọc mã 25/9/2026): 16 chữ, 3 phút,
@@ -53,7 +53,15 @@
 - Ảnh chụp khung thử KHÔNG vẽ bảng tổng kết (lớp phủ) — kiểm bằng `elementFromPoint`, đừng tin ảnh.
 - Skin neon chỉ bật khi `.aw-stage:has(.aw-ws-root)` ⇒ các game khác không đổi.
 
-## ĐỀ XUẤT SỬA CORE (để nối FIGHT cho template)
+## FIGHT (template) — ĐÃ LÀM (thầy "Làm Fight luôn", 25/9)
+- Core Đợt 386: `tpl.fightLayout:"shared-middle"` + `fightFrame {sideW:392, midW:440, h:408, skin:"wordshake"}` (xem HUONG DAN CORE mục FIGHT).
+- Mode 1: vòng thường của trọng tài (như Anagram) — cùng định nghĩa ở bảng giữa, cùng bộ chữ (`SHARED.letters`) nhưng mỗi bàn xáo riêng; đúng trước ⇒ `wordDone(correct:true)`; › = bỏ lượt (`correct:false`).
+- Mode 2/3: MỘT bảng chung mỗi vòng (`SHARED.plan/r`), từ đội này lấy ⇒ đội kia "Taken" (`SHARED.found` từ của bài, `SHARED.taken` từ tự do); tìm hết từ của bảng ⇒ cả hai cùng sang bảng mới; bảng cuối / hết giờ ⇒ `ui.finish` ⇒ `ctl.onFinish` ⇒ kết trận theo điểm. Mode 3 trong trận: dải điểm = điểm chữ.
+- `SHARED` = WeakMap theo `ctl` của trận (restartMatch dựng ctl mới ⇒ trận mới sạch). Bảng giữa `drawCentre()` (đơn vị `--ws-u` tự đo).
+- Đã đo: 392/440/392 × 408 đúng từng px; điểm tâm 208 & 1072; Mode 2 trọn trận "TEAM LEFT WINS 6 — 2"; Anagram & Rocket race Fight không đổi.
+
+## (cũ) ĐỀ XUẤT SỬA CORE — đã làm ở Đợt 386, giữ để tra
+
 1. `tpl.fightLayout: "shared-middle"` — hàng bàn thành `[bàn 0][vùng chung][bàn 1]` (392 | 440 | 392 ở 1280px),
    `ctl.sharedRoot()` trả vùng giữa (như shared-top của Rocket race).
 2. `fightFrame.skin: "wordshake"` ⇒ `.aw-fight.is-skin-wordshake` để CSS của template vẽ dải điểm HUD neon.

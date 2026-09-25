@@ -108,3 +108,82 @@
   75%{opacity:1;transform:translate(-50%,calc(-1 * var(--aw-u)))}
   100%{opacity:0;transform:translate(-50%,calc(-4 * var(--aw-u)))}}
 @media (prefers-reduced-motion:reduce){.aw-ws-root *{animation-duration:.01ms!important;transition:none!important}}
+
+/* =============================================================
+   FIGHT (core fightLayout "shared-middle", Đợt 386)
+   Inside a board --aw-u is 1% of the NARROW board (392px at 1280), so the
+   board's pieces use bigger multipliers; the frame is 392:408 (≈104u tall).
+   ============================================================= */
+.aw-ws-root.is-fight .aw-ws-t{width:calc(13.5 * var(--aw-u));height:calc(13.5 * var(--aw-u));font-size:calc(7 * var(--aw-u));border-radius:calc(1.8 * var(--aw-u))}
+.aw-ws-root.is-fight .aw-ws-one{gap:calc(5 * var(--aw-u));padding-bottom:calc(2 * var(--aw-u))}
+.aw-ws-root.is-fight .aw-ws-slots{gap:calc(1.6 * var(--aw-u))}
+.aw-ws-root.is-fight .aw-ws-slot{--s:min(calc(12 * var(--aw-u)),calc((88 * var(--aw-u)) / var(--n) - 1.6 * var(--aw-u)));border-radius:calc(1.6 * var(--aw-u))}
+.aw-ws-root.is-fight .aw-ws-grid1,.aw-ws-root.is-fight .aw-ws-grid4{gap:calc(2 * var(--aw-u))}
+.aw-ws-solo{height:100%;display:flex;align-items:center;justify-content:center}
+.aw-ws-root.is-fight .aw-ws-pad{gap:calc(3 * var(--aw-u))}
+.aw-ws-root.is-fight .aw-ws-pv{width:calc(60 * var(--aw-u));height:calc(10.5 * var(--aw-u));font-size:calc(7 * var(--aw-u));border-radius:calc(1.4 * var(--aw-u))}
+.aw-ws-root.is-fight .aw-ws-btns{width:calc(60 * var(--aw-u));gap:calc(3 * var(--aw-u))}
+.aw-ws-root.is-fight .aw-ws-b{height:calc(10 * var(--aw-u));font-size:calc(4.6 * var(--aw-u))}
+.aw-ws-root.is-fight .aw-ws-b.is-bk{font-size:calc(5.4 * var(--aw-u))}
+.aw-ws-root.is-fight .aw-ws-bub i{font-size:calc(7.5 * var(--aw-u));min-width:calc(17 * var(--aw-u));height:calc(13.5 * var(--aw-u));padding:0 calc(3.6 * var(--aw-u))}
+.aw-ws-root.is-fight .aw-ws-bub.dup i{font-size:calc(5.4 * var(--aw-u))}
+/* the right-hand team is cyan */
+.aw-ws-root.is-side-1 .aw-ws-t{border-color:rgba(55,215,255,.5);color:#B4F0FF;text-shadow:0 0 calc(2 * var(--aw-u)) rgba(55,215,255,.7);box-shadow:inset 0 0 calc(3 * var(--aw-u)) rgba(55,215,255,.12)}
+.aw-ws-root.is-side-1 .aw-ws-t.is-on{background:#37D7FF;border-color:#B4F0FF;color:#03150C;text-shadow:none;box-shadow:0 0 calc(4 * var(--aw-u)) rgba(55,215,255,.8)}
+.aw-ws-root.is-side-1 .aw-ws-t.is-gone{border-color:rgba(55,215,255,.18);box-shadow:none}
+.aw-ws-root.is-side-1 .aw-ws-slot{border-color:rgba(55,215,255,.35);color:#B4F0FF}
+.aw-ws-root.is-side-1 .aw-ws-slot.is-full{border-color:#37D7FF;text-shadow:0 0 calc(2 * var(--aw-u)) rgba(55,215,255,.75)}
+.aw-ws-root.is-side-1 .aw-ws-pv{border-color:rgba(55,215,255,.3);text-shadow:0 0 calc(2.4 * var(--aw-u)) rgba(55,215,255,.7)}
+.aw-ws-root.is-side-1 .aw-ws-b.is-ent{background:linear-gradient(180deg,#8AE9FF,#1FB5E3);box-shadow:0 0 calc(3.6 * var(--aw-u)) rgba(55,215,255,.45)}
+.aw-ws-root.is-side-1 .aw-ws-b.is-bk{background:rgba(55,215,255,.1);border-color:rgba(55,215,255,.45);color:#37D7FF}
+.aw-stage:has(.aw-ws-root.is-side-1) .aw-navbtn{background:rgba(55,215,255,.08);border-color:rgba(55,215,255,.3);color:#37D7FF}
+
+/* ---------- the centre board (template-owned, core `.aw-fight-shared`) ----------
+   Not a stage, so no --aw-u: attachHost() measures --ws-u = 1% of its width. */
+.aw-fight-shared.aw-ws-host{
+  background:radial-gradient(ellipse 75% 65% at 50% 42%,#0F4029 0%,#05170F 62%,#030D09 100%);
+  border:1px solid rgba(61,245,138,.38);color:#E6FFF1;
+}
+.aw-fight-shared.aw-ws-host::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(61,245,138,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(61,245,138,.07) 1px,transparent 1px);
+  background-size:calc(10.5 * var(--ws-u,4px)) calc(10.5 * var(--ws-u,4px));background-position:center}
+.aw-ws-cen{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;gap:calc(2.6 * var(--ws-u,4px));padding:calc(4 * var(--ws-u,4px)) calc(5 * var(--ws-u,4px)) calc(3 * var(--ws-u,4px))}
+.aw-ws-cclue{display:flex;align-items:center;justify-content:center;gap:calc(2 * var(--ws-u,4px));font-family:"Be Vietnam Pro","Baloo 2",sans-serif;font-weight:600;line-height:1.35;font-size:calc(3.4 * var(--ws-u,4px));color:#E6FFF1;text-align:left}
+.aw-ws-cclue.is-big{font-weight:700;font-size:calc(6 * var(--ws-u,4px));text-align:center;text-wrap:balance;min-height:calc(24 * var(--ws-u,4px))}
+.aw-ws-cclue .aw-voicebtn{color:#03150C;background:#3DF58A;box-shadow:0 0 calc(4 * var(--ws-u,4px)) rgba(61,245,138,.7)}
+.aw-ws-cprog{font-family:"Saira",sans-serif;font-style:italic;font-weight:800;font-size:calc(3.6 * var(--ws-u,4px));letter-spacing:.08em;color:#7FA893;text-align:center}
+.aw-ws-ccols{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;border-top:1px solid rgba(61,245,138,.2);position:relative}
+.aw-ws-ccols::before{content:"";position:absolute;left:50%;top:calc(2 * var(--ws-u,4px));bottom:0;border-left:1px dashed rgba(61,245,138,.2)}
+.aw-ws-ccols ol{list-style:none;margin:0;padding:calc(2 * var(--ws-u,4px)) calc(2.2 * var(--ws-u,4px)) 0;overflow:auto;display:flex;flex-direction:column;gap:calc(.7 * var(--ws-u,4px));scrollbar-width:thin;scrollbar-color:rgba(61,245,138,.3) transparent}
+.aw-ws-ccols li{display:flex;gap:calc(1.6 * var(--ws-u,4px));align-items:baseline;min-width:0}
+.aw-ws-ccols li b{font-family:"Saira",sans-serif;font-style:italic;font-weight:800;font-size:calc(3.9 * var(--ws-u,4px));letter-spacing:.03em;color:#9BFFC4;flex:none}
+.aw-ws-ccols ol.is-r li{flex-direction:row-reverse;text-align:right}
+.aw-ws-ccols ol.is-r li b{color:#B4F0FF}
+.aw-ws-ccols li span{font-family:"Be Vietnam Pro",sans-serif;font-size:calc(3 * var(--ws-u,4px));line-height:1.35;color:#8DB9A2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.aw-ws-cdefs{display:flex;flex-direction:column;gap:calc(1.6 * var(--ws-u,4px));min-height:0;overflow:auto;flex:1}
+.aw-ws-cdefs.is-short{flex:none;overflow:visible}
+.aw-ws-cdf{display:grid;grid-template-columns:calc(5 * var(--ws-u,4px)) 1fr calc(5 * var(--ws-u,4px));gap:calc(1.4 * var(--ws-u,4px));align-items:center;border-radius:calc(1.4 * var(--ws-u,4px));background:rgba(61,245,138,.06);border:1px solid rgba(61,245,138,.18);padding:calc(1.4 * var(--ws-u,4px)) calc(1.8 * var(--ws-u,4px))}
+.aw-ws-cdf .aw-ws-cclue{justify-content:flex-start}
+.aw-ws-cbl{font-family:"Saira",sans-serif;font-weight:800;font-size:calc(3.9 * var(--ws-u,4px));letter-spacing:.24em;color:rgba(61,245,138,.45)}
+.aw-ws-cdf.is-done{background:rgba(61,245,138,.15);border-color:rgba(61,245,138,.6)}
+.aw-ws-cdf.is-done .aw-ws-cbl{color:#9BFFC4;letter-spacing:.05em;text-shadow:0 0 calc(2 * var(--ws-u,4px)) rgba(61,245,138,.7)}
+.aw-ws-mk{display:grid;place-items:center}
+.aw-ws-arr{width:0;height:0;border-top:calc(2.4 * var(--ws-u,4px)) solid transparent;border-bottom:calc(2.4 * var(--ws-u,4px)) solid transparent}
+.aw-ws-arr.is-l{border-right:calc(3.4 * var(--ws-u,4px)) solid #3DF58A;filter:drop-shadow(0 0 4px rgba(61,245,138,.9))}
+.aw-ws-arr.is-r{border-left:calc(3.4 * var(--ws-u,4px)) solid #37D7FF;filter:drop-shadow(0 0 4px rgba(55,215,255,.9))}
+
+/* ---------- the score strip, neon (core adds `.is-skin-wordshake` from fightFrame.skin) ----------
+   The slanted panel is a ::before BEHIND the number: core pops `.aw-fight-score`
+   with a transform (aw-fight-pop), which would wipe any skew put on it. */
+.aw-fight.is-skin-wordshake .aw-fight-team,
+.aw-fight.is-skin-wordshake .aw-fight-clockbox{position:relative;isolation:isolate;padding:6px 64px}
+.aw-fight.is-skin-wordshake .aw-fight-team::before,
+.aw-fight.is-skin-wordshake .aw-fight-clockbox::before{content:"";position:absolute;inset:0;z-index:-1;transform:skewX(-14deg);border-radius:4px;
+  background:linear-gradient(180deg,#0C2E20,#04130C);border:2px solid #3DF58A;box-shadow:0 0 16px rgba(61,245,138,.4),inset 0 0 22px rgba(61,245,138,.16)}
+.aw-fight.is-skin-wordshake .aw-fight-team.side-1::before{background:linear-gradient(180deg,#0B2833,#04121A);border-color:#37D7FF;box-shadow:0 0 16px rgba(55,215,255,.4),inset 0 0 22px rgba(55,215,255,.16)}
+.aw-fight.is-skin-wordshake .aw-fight-clockbox{padding:6px 40px}
+.aw-fight.is-skin-wordshake .aw-fight-clockbox::before{background:linear-gradient(180deg,#10261D,#030D09);border-color:rgba(230,255,241,.4);box-shadow:0 0 14px rgba(3,17,11,.35)}
+.aw-fight.is-skin-wordshake .aw-fight-score{font-family:"Saira",sans-serif;font-style:italic;font-weight:800;color:#9BFFC4;text-shadow:0 0 14px rgba(61,245,138,.9)}
+.aw-fight.is-skin-wordshake .aw-fight-team.side-1 .aw-fight-score{color:#B4F0FF;text-shadow:0 0 14px rgba(55,215,255,.9)}
+.aw-fight.is-skin-wordshake .aw-fight-score.is-neg{color:#FF8A96;text-shadow:0 0 14px rgba(255,75,92,.9)}
+.aw-fight.is-skin-wordshake .aw-fight-clock{font-family:"Saira",sans-serif;font-style:italic;font-weight:800;color:#E6FFF1;text-shadow:0 0 12px rgba(230,255,241,.7);letter-spacing:.04em}

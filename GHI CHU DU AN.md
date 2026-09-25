@@ -531,7 +531,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 386 (25/9/2026, ⭐⭐⭐ WORDSHAKE — GAME CỐ ĐỊNH `?g=wordshake` + TEMPLATE #21 chơi đơn 3 mode) · ✅ THẦY "ok build" · ⬜ CHƯA BẤM TAY · ⬜ FIGHT của template
+## Đợt 386 (25/9/2026, ⭐⭐⭐ WORDSHAKE — GAME CỐ ĐỊNH `?g=wordshake` + TEMPLATE #21 chơi đơn 3 mode) · ✅ THẦY "ok build" · ⬜ CHƯA BẤM TAY · ✅ FIGHT template (core `shared-middle` + `fightFrame.skin`)
 
 - Game tham khảo Wordshake (British Council); thiết kế duyệt 4 vòng `D:\OTHERS\CLAUDE\AWord - thiet ke Wordshake\wordshake-v1…v4.html`.
 - **GAME** `games/wordshake/` (không qua catalog, như Werewolf): FIGHT 2 đội cùng 16 chữ, từ đội này lấy thì đội kia "Taken", bảng giữa hiện từ + nghĩa, skin neon + dải điểm HUD + âm thanh tổng hợp Web Audio (đội trái loa trái, đội phải loa phải). `games/games.js` thêm mục + `card` (cơ chế hình card của Đợt 385).
