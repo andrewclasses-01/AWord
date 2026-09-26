@@ -551,6 +551,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 Thầy (26/9): game 3D thường chạy trong myActivity — tìm phương án đồng bộ 2 bên cho hiệu suất/độ mượt/nhạy tối đa; duyệt MẪU 5c
 (`https://andrewclasses-01.github.io/myGame/rocket-race/mau-5c-muot.html`) + myActivity v2.23.x: *"ok, ghép bản 5c vào AWord. Push mọi thứ lên"*.
 Nhánh `dot399-rr3d-muot` (worktree `web-wt-dot398`). Backup `_backup/dot399/`. Hình + tiếng KHÔNG đổi.
+✅ **ĐÃ PUSH `da83b17` + LIVE**: Pages built đúng commit · **4/4 mã băm khớp** (rocket-race.js, rr3d-view.js, rr3d-launch.js, rr3d-autores.js; HTTP 200). Đi cùng myActivity v2.23.1 `3e8472d` + myGame mẫu 5c `e21945f` (đều đã push).
 - `rr3d-autores.js` MỚI (= myGame core/auto-res.js): đo nhịp khung thật; TB > 18,2 ms ⇒ hạ tỉ lệ điểm ảnh 0,1 (0,2 nếu > 24 ms);
   êm ~7 s ⇒ thử +0,05; thử mà rớt ⇒ chốt trần. Giả lập: máy khoẻ giữ nguyên · yếu dừng 1,15 · vừa 1,2 · rất yếu 0,8.
 - `rr3d-view.js`: tự giữ 60 khung, SÀN 1,0 (chữ ô đáp án/câu hỏi vẽ bằng WebGL — thấp hơn là mềm chữ); đổi độ nét qua `applyPR()`
