@@ -546,6 +546,31 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 395 (26/9/2026) — A SHOW SPEED (GAME): Options ▸ EASY/MEDIUM/HARD · đếm điểm hết giờ từng nấc song song + tiếng "tích" · ⬜ CHƯA BẤM TAY TOMKO
+
+**Bối cảnh (thầy 26/9):** (1) "Thêm nút options trong hàng nút (thiết kế theo game), chỉnh level EASY, MEDIUM, HARD. Điều chỉnh các chữ cái để xuất hiện nhiều từ dễ / trung bình / khó" · (2) "Giảm tốc độ đếm số câu khi hết giờ, 2 bên đếm từng nấc một bằng nhau (30 vs 20 ⇒ đếm song song 1→20 rồi bên nhiều hơn mới tiếp). Mỗi nhịp một tiếng Tích, càng về sau càng cao + càng to. Từ số đầu tiên của đội nhiều hơn thì to lên rồi đếm tiếp."
+
+**Việc đã làm:**
+- `templates/wordshake/ws-lib.js`:
+  - `rollBoard(dict, { level })` — `level:"medium"|"hard"` đi nhánh mới `rollLevel()`; `level:"easy"` = đúng nhánh `easy:true` cũ (không đổi hành vi). Xuất `LEVEL_IDS`.
+  - sfx `countTick(p)` (p 0→1: cao dần 1,5 quãng tám từ 900 Hz, to dần ~4×; click vuông + tiếng rít ngắn = "tích") · `swell(pan)` (tiếng vút lên khi ô đội dẫn phóng to).
+  - tank `countTo(n, final)` (hiện số n, mức năng lượng tụt theo tỉ lệ n/final, số nảy nhẹ `.is-tick`) · `landCount(final)`. `drain()` cũ GIỮ NGUYÊN cho template.
+- `games/wordshake/wordshake.js`:
+  - Nút **Options** thứ 3 trên hàng nút dưới bàn (icon Lucide sliders + tên level, cùng dáng nghiêng neon), chỉ bấm được GIỮA các ván (màn chờ / màn kết quả) — trong ván mờ đi (đổi level = đổi bàn chữ). Bảng Options kiểu hộp "End this game?": tiêu đề Options, LEVEL, 3 nút EASY/MEDIUM/HARD, dòng gợi ý, DONE. Nhớ theo máy `localStorage aword-wordshake-level` (mặc định easy).
+  - Màn kết quả MISSED lọc theo level: easy lv 1–4 (như cũ), medium 3–5, hard 4–6.
+  - `finish()` viết lại: chờ 0,9 s cho tiếng hết giờ → hai số đếm CÙNG NHỊP 1,2,3… (mỗi nhịp MỘT tiếng tích cho cả hai bên) → tới điểm bên thấp: số bên thấp đáp xuống, nghỉ 0,65 s, ô đội dẫn PHÓNG TO (scale 1,3 + sáng hơn, `.wsg-score.big`, tiếng swell) ở số đầu tiên vượt → đếm tiếp một mình tới điểm của mình → hạ số, 1 s sau hiện kết quả (ô đội thắng vẫn to). Nhịp đều `STEP = clamp(10000/điểm cao, 120, 340) ms` (≤ ~10 s cho cả lượt đếm; cũ là trượt liên tục ≤ 5,2 s). Hoà ⇒ không ô nào to. Điểm thấp = 0 ⇒ ô đội dẫn to ngay số 1.
+  - Chống hẹn giờ ma: `countRun` tăng ở `start()`/`toReady()`, mọi `setTimeout` của lượt đếm tự bỏ nếu không còn đúng lượt (Home giữa lúc đếm rồi Play lại).
+- `games/wordshake/wordshake.css`: `.wsg-score` transition + `.big` · `.wsg-tool.wide` · `.wsg-optbox`, `.wsg-levels`, `.wsg-lvhint`, `.a.one`.
+
+**Quyết định kỹ thuật — độ khó (đo 26/9 trên ws-dict.txt thật, Node + trình duyệt):**
+- ⛔ Từ điển 55 % là C1–C2 (lv6 = 8.245/18.345 từ) ⇒ bàn NÀO cũng nhiều từ khó hơn từ dễ, và "chọn bàn có NHIỀU từ mức X nhất" chỉ ra bàn nhiều mọi thứ (đã thử: tỉ lệ gần như không đổi 15/29/56). Thử cả cách "cài sẵn từ mức X vào bàn" — cũng không đổi tỉ lệ. Đòn bẩy đúng là **TỈ LỆ**: gieo 150 bàn, giữ bàn có tỉ lệ từ thuộc dải mức cao nhất trong số bàn đủ lớn để chơi (medium ≥ 600 từ, hard ≥ 250 từ), rồi trong nhóm gần-tốt-nhất (±2 %) chọn bàn ít giống 8 bàn gần nhất (luật Đợt 390).
+- Kết quả trung bình (A1–A2 / B1–B2 / C1–C2 mỗi bàn, trình duyệt 10 bàn): EASY 216/424/808 · MEDIUM 132/239/379 (tỉ lệ B cao nhất) · HARD 83/156/358 (tỉ lệ C 60 %, từ dễ chỉ còn ~⅓ EASY). Thang từ dễ 216 → 132 → 83 là thứ HS cảm thấy rõ nhất. Hard còn giới hạn 4–6 nguyên âm.
+- Tốc độ: easy ~13 ms, medium/hard ~130–160 ms một bàn (chạy lúc bấm PLAY, trước hiệu ứng lắc).
+
+**Đã kiểm (bàn thử `scratch/dot395.html`: đồng hồ ×50, tự nhập từ cho 2 đội, ghi mốc từng lần đổi số):** 7 vs 4 ⇒ hai bên 1–4 cùng mốc ms, nhịp 343 ms, nghỉ ~1,4 s rồi 5 hiện kèm `.big` trên ô trái, 6, 7; kết quả WINS, ô trái vẫn to · 3 vs 3 ⇒ 1–3 cùng nhịp, không ô nào to, DRAW · Options: chọn HARD ⇒ gợi ý đổi, nhãn nút "Hard", lưu `hard`; bấm PLAY ⇒ nút Options `disabled` · 0 lỗi console. ⚠️ Claude KHÔNG nghe được tiếng — độ cao/độ to tiếng tích cần thầy nghe thật.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy nghe + nhìn thật trên TOMKO: tiếng tích (cao/to đủ chưa), tốc độ đếm, độ to ô đội dẫn; chơi thử 3 level xem HARD có quá khó với lớp không (có thể nới `minTot`/dải). Template A Show Speed (activity) CHƯA có level — chỉ GAME.
+
 ## Đợt 394 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D: chữ ô đáp án +15% không co · MENU giữa màn · vào thẳng Fight · ⬜ CHƯA BẤM TAY TOMKO
 
 Đợt 394 — ROCKET RACE ▸ FIGHT 3D, 3 ý thầy (26/9): (1) chữ ô đáp án 3D CỐ ĐỊNH cỡ, to hơn 15% (0.45 → 0.5175 × cao ô chuẩn); nhiều chữ ⇒ xuống dòng ở dấu cách + Ô CAO LÊN, KHÔNG co chữ, các dòng căn giữa ô (chỉ một TỪ dài hơn bề ngang ô mới buộc co); cột ô dài quá khung thì bám mép trên và mọc xuống phần trống dưới bàn (tới 90% cao cảnh), vẫn không đủ mới co đều cả cột · (2) nút ☰ MENU trong trận 3D trước không hiện gì (menu engine dựng trong bàn 0 đang ẩn, bị canvas che, hoạt ảnh aw-pop đứng ở khung 0) ⇒ template bê phần tử menu sang lớp phủ riêng `.aw-rr3d-menuhost` căn GIỮA màn, áo kính tối viền xanh (tiêu đề MENU, Resume nút vàng), đóng/mở vẫn do engine · (3) mở act / chọn template Rocket race ⇒ VÀO THẲNG FIGHT (cờ template mới `fightByDefault`, core/engine.js); rời Fight bằng MODE → Back to single thì act đó ở lại single (Start again/Apply không tự nhảy lại).

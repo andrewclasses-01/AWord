@@ -98,7 +98,45 @@ export function overlapOf(a, b) {
   for (const c of b) if (m[c] > 0) { m[c]--; n++; }
   return n;
 }
-export function rollBoard(dict, { minWords = 45, tries = 40, easy = false, recent = [], pool: poolPct = .55 } = {}) {
+// ⭐ Đợt 395 (thầy: Options ▸ EASY / MEDIUM / HARD) — `level: "medium" | "hard"`.
+// Measured 26/9/2026 (words a board, A1–A2 / B1–B2 / C1–C2): the dictionary is 55 %
+// C-level, so EVERY board has more hard words than easy ones, and chasing a count only
+// finds boards with more of everything. The lever is the SHARE: out of 150 rolls keep
+// the board whose share of the level's band is highest, among boards big enough to
+// play. Averages over 30 boards:
+//   easy (unchanged)  218 / 348 / 659   A-share 18 %
+//   medium            123 / 226 / 341   B-share 33 %  (plain rolls 28 %)
+//   hard              ~70 / 130 / 290   C-share 58–60 %, and only ~70 easy words
+// ~0.3 ms a roll ⇒ ~50 ms a board.
+const LEVELS = {
+  medium: { band: [3, 4], vlo: 4, vhi: 7, minTot: 600 },
+  hard:   { band: [5, 6], vlo: 4, vhi: 6, minTot: 250 }
+};
+export const LEVEL_IDS = ["easy", "medium", "hard"];
+function rollLevel(dict, L, recent) {
+  const cands = [];
+  for (let t = 0; t < 150; t++) {
+    const letters = shuffle(DICE).map(d => d[Math.random() * 6 | 0]);
+    const v = letters.filter(c => VOWELS.includes(c)).length;
+    if (v < L.vlo || v > L.vhi || letters.includes("Q")) continue;
+    const ws = wordsOn(dict, letters, 6);
+    let inBand = 0;
+    for (const w of ws) { const lv = dict.get(w).lv; if (lv >= L.band[0] && lv <= L.band[1]) inBand++; }
+    cands.push({ letters, tot: ws.length, s: ws.length ? inBand / ws.length : 0 });
+  }
+  if (!cands.length) return "AEEIOSTRNLPCDMHU".split("");
+  const big = cands.filter(c => c.tot >= L.minTot);
+  const use = big.length ? big : cands;
+  const top = Math.max(...use.map(c => c.s));
+  const pool = use.filter(c => c.s >= top - .02);       // near-best, then the least like `recent`
+  const likeness = c => recent.slice(0, 8).reduce((s, r, i) => s + overlapOf(r, c.letters) * (i === 0 ? 2 : 1), 0);
+  pool.forEach(c => { c.like = likeness(c) + Math.random() * .5; });
+  pool.sort((a, b) => a.like - b.like);
+  return pool[0].letters;
+}
+export function rollBoard(dict, { minWords = 45, tries = 40, easy = false, level = "", recent = [], pool: poolPct = .55 } = {}) {
+  if (dict && LEVELS[level]) return rollLevel(dict, LEVELS[level], recent);
+  if (level === "easy") easy = true;
   let best = null, bestN = -1;
   if (easy) tries = 60;
   const cands = [];
@@ -198,6 +236,17 @@ export function createSfx() {
     // point while it drains (pitch climbs with the count) · the number lands.
     splash(pan) { noise(.16, { vol: .05, freq: 900, pan: P(pan) }); tone(380, .14, { type: "sine", vol: .06, slide: 950, pan: P(pan) }); },
     drip(i) { tone(620 + Math.min(i, 80) * 12, .05, { type: "sine", vol: .05 }); },
+    // Đợt 395 (thầy: "mỗi nhịp đếm số có 1 tiếng Tích, càng về sau âm càng cao và âm
+    // lượng càng lớn") — p = 0…1 through the count: pitch climbs an octave and a half,
+    // volume ~4×. A short square click + a bright noise tick on top = "tích".
+    countTick(p) {
+      p = Math.max(0, Math.min(1, p || 0));
+      const f = 900 * Math.pow(2, p * 1.5), vol = .035 + p * .11;
+      tone(f, .045, { type: "square", vol });
+      noise(.02, { vol: vol * .9, freq: 5200 + p * 2500 });
+    },
+    // the leading team's number grows — a short rising swell
+    swell(pan) { tone(330, .38, { type: "triangle", vol: .08, slide: 990, pan: P(pan) }); noise(.3, { vol: .04, freq: 3000, pan: P(pan) }); },
     land() { tone(1047, .3, { type: "triangle", vol: .09 }); tone(1568, .42, { type: "triangle", vol: .06, at: .08 }); },
     dispose() { try { ctx && ctx.close(); } catch (e) {} ctx = null; }
   };
@@ -234,6 +283,8 @@ const TANK_CSS = `
 .wst.is-count .wst-num{opacity:1}
 .wst-num.is-land{animation:wst-land .55s cubic-bezier(.22,.9,.3,1)}
 @keyframes wst-land{0%{scale:1}35%{scale:1.5}100%{scale:1}}
+.wst-num.is-tick{animation:wst-tick .16s ease-out}
+@keyframes wst-tick{0%{scale:1.18}100%{scale:1}}
 .wst-fly{position:fixed;z-index:9999;pointer-events:none;left:0;top:0;border-radius:50%;will-change:transform}
 .wst-fly.is-head{width:10px;height:10px;margin:-5px 0 0 -5px;background:#fff;box-shadow:0 0 10px 3px rgba(61,245,138,.95),0 0 26px 8px rgba(61,245,138,.5)}
 .wst-fly.is-head.s1{box-shadow:0 0 10px 3px rgba(55,215,255,.95),0 0 26px 8px rgba(55,215,255,.5)}
@@ -351,6 +402,21 @@ export function createTank({ side = 0, cls = "" } = {}) {
           if (t >= 1) end();
         }, 30);
       });
+    },
+    /** Đợt 395 — step-by-step count driven by the caller: show n, level falls in
+     *  proportion (empty at n === final). `landCount` then lands the number. */
+    countTo(n, final) {
+      T.stop();
+      el.classList.add("is-count");
+      num.textContent = String(n);
+      level = final > 0 ? FIXED * Math.max(0, 1 - n / final) : 0;
+      energy = Math.max(energy, .6);
+      num.classList.remove("is-tick"); void num.offsetWidth; num.classList.add("is-tick");
+    },
+    landCount(final) {
+      T.stop(); el.classList.add("is-count"); level = 0;
+      num.textContent = String(final);
+      num.classList.remove("is-land", "is-tick"); void num.offsetWidth; num.classList.add("is-land");
     },
     stop() { if (iv) { clearInterval(iv); iv = null; } },
     reset() { T.stop(); el.classList.remove("is-count"); num.classList.remove("is-land"); level = FIXED; energy = 0; pulses = []; sparks = []; },

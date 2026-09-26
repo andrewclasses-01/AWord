@@ -126,6 +126,7 @@ FIGHT của template ĐÃ NỐI (core `shared-middle` + skin, xem mục FIGHT). 
   thông dụng (A1–B2) hai đội bỏ lỡ, dài trước.
 - Dưới bàn: Home (về cây GAMES) · New game · Sound.
 - `rollBoard`: gieo 16 xúc xắc gốc, bỏ Q, 4–7 nguyên âm, ≥45 từ A1–B2 trên bàn (tối đa 40 lần gieo).
+- ⭐ Đợt 395: GAME có nút **Options ▸ LEVEL** EASY/MEDIUM/HARD (`aword-wordshake-level`) ⇒ `rollBoard({level})`: easy = nhánh `easy:true` cũ; medium/hard = `rollLevel()` chọn theo TỈ LỆ từ của dải (B1–B2 / C1–C2) trong 150 lần gieo. Hết giờ: hai số đếm cùng nhịp từng nấc + tiếng tích (`countTick`), ô đội dẫn phóng to ở số đầu tiên vượt (`tank.countTo/landCount`). Template chưa có level.
 
 ## Template (Activity) — 3 mode, `opt.wsMode`
 | Mode | Bảng | Chơi | Điểm (✓ = điểm nộp bài) |
@@ -170,3 +171,4 @@ FIGHT của template ĐÃ NỐI (core `shared-middle` + skin, xem mục FIGHT). 
 - Đợt 386 `1647ded` GAME · `a8b9425` template chơi đơn · `b124d7a` FIGHT (core shared-middle) · Đợt 386c vào catalog.
 - Đã đo đổi template: Anagram (6 từ) → Wordshake giữ word/clue/voice; Wordshake → Quiz 8 câu; Wordshake có trong `switchTargets(anagram)`.
 - ⬜ Thầy chưa bấm tay: TOMKO, âm thanh, hết giờ giữa trận Fight; nút ‹ › trong bàn Fight hơi nhỏ.
+- Đợt 395 GAME: Options level EASY/MEDIUM/HARD + đếm điểm hết giờ từng nấc song song (chi tiết `GHI CHU DU AN.md`). ⬜ thầy chưa nghe/bấm tay.

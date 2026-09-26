@@ -20,7 +20,7 @@
 // on the result screen → start screen; on the start screen → ctx.onExit (GAMES).
 // =============================================================
 
-import { loadDict, lookup, points, rollBoard, wordsOn, shuffle, createSfx, createTank, flyPoint, escapeHtml as esc } from "../../templates/wordshake/ws-lib.js";
+import { loadDict, lookup, points, rollBoard, wordsOn, shuffle, LEVEL_IDS, createSfx, createTank, flyPoint, escapeHtml as esc } from "../../templates/wordshake/ws-lib.js";
 
 // Đợt 387 (thầy, 25/9/2026): the score strip was too tall and pushed the boards
 // down, out of the children's reach — strip boxes 62 → 40px, boards row up from
@@ -33,6 +33,16 @@ const PREF = "aword-wordshake-time";
 // Đợt 390 — the last boards played on this device (newest first), so PLAY AGAIN or a
 // reopened game never deals a board like the one the class just saw (ws-lib rollBoard).
 const RECENT = "aword-wordshake-recent";
+// ⭐ Đợt 395 — Options ▸ LEVEL (thầy, 26/9/2026): EASY / MEDIUM / HARD picks the board
+// (ws-lib rollBoard `level`) and the words the result screen lists as MISSED.
+const LEVEL_PREF = "aword-wordshake-level";
+const LEVEL_INFO = {
+  easy:   { label: "Easy",   hint: "Lots of everyday A1–A2 words", miss: [1, 4] },
+  medium: { label: "Medium", hint: "More B1–B2 words, fewer easy ones", miss: [3, 5] },
+  hard:   { label: "Hard",   hint: "More C1–C2 words, few easy ones", miss: [4, 6] }
+};
+function readLevel() { try { const v = localStorage.getItem(LEVEL_PREF); return LEVEL_IDS.includes(v) ? v : "easy"; } catch (e) { return "easy"; } }
+function saveLevel(v) { try { localStorage.setItem(LEVEL_PREF, v); } catch (e) {} }
 function readRecent() { try { const a = JSON.parse(localStorage.getItem(RECENT) || "[]"); return Array.isArray(a) ? a.filter(x => typeof x === "string" && x.length === 16).map(x => x.split("")) : []; } catch (e) { return []; } }
 function pushRecent(letters) { try { localStorage.setItem(RECENT, JSON.stringify([letters.join(""), ...readRecent().map(r => r.join(""))].slice(0, 8))); } catch (e) {} }
 // Đợt 390 — score tanks (390b: `k` is ignored, every tank sits at the same fixed level)
@@ -41,6 +51,7 @@ const FLICKER = "ABCDEEFGHIKLMNOOPRSTUWY";
 const ICON = {
   home: '<svg class="i" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .7-1.53l7-6a2 2 0 0 1 2.6 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>',
   vol: '<svg class="i" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>',
+  opts: '<svg class="i" viewBox="0 0 24 24"><path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/></svg>',
   mute: '<svg class="i" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></svg>'
 };
 
@@ -50,7 +61,7 @@ export function mountWordshake(root, ctx = {}) {
   const vp = root.querySelector(".wsg-vp"), cv = root.querySelector(".wsg-cv");
   const sfx = createSfx();
   let dead = false, dict = null, dictErr = false;
-  let dur = readTime();
+  let dur = readTime(), level = readLevel();
   // Đợt 387 — double-tap a time chip: only that chip, in the centre; swipe up
   // +1 min, down −1 min (1…10), mouse wheel too. Double-tap again: the three
   // usual chips, with the chip first double-tapped chosen (`soloBase`).
@@ -62,8 +73,10 @@ export function mountWordshake(root, ctx = {}) {
   let dripAt = 0, dripN = 0;
   // phase: "ready" | "play" | "count" (time's up, the tanks drain) | "over"
   // ask: the "End this game?" box is open (the clock stands still under it)
-  const G = { phase: "ready", letters: [], sides: [], found: new Map(), log: [], last: null, left: dur, prev: [0, 0], ask: false };
-  let clock = null, shakeIv = null;
+  // opts: the Options box is open (only between games) · big: the side whose score
+  // box grew during the count (Đợt 395), kept big on the result screen
+  const G = { phase: "ready", letters: [], sides: [], found: new Map(), log: [], last: null, left: dur, prev: [0, 0], ask: false, opts: false, big: -1 };
+  let clock = null, shakeIv = null, countRun = 0;
 
   function readTime() { try { const v = +localStorage.getItem(PREF); return TIMES.includes(v) ? v : 180; } catch (e) { return 180; } }
   function saveTime(v) { try { localStorage.setItem(PREF, String(v)); } catch (e) {} }
@@ -83,15 +96,16 @@ export function mountWordshake(root, ctx = {}) {
 
   // ---------- game flow ----------
   function newBoard() {
-    G.letters = rollBoard(dict, { easy: true, recent: readRecent() });
+    G.letters = rollBoard(dict, { level, recent: readRecent() });
     pushRecent(G.letters);
     tanks.forEach(t => t.reset(0));
     G.sides = [0, 1].map(() => ({ order: shuffle([...Array(16).keys()]), sel: [], score: 0 }));
-    G.found = new Map(); G.log = []; G.last = null; G.left = dur; G.prev = [0, 0];
+    G.found = new Map(); G.log = []; G.last = null; G.left = dur; G.prev = [0, 0]; G.big = -1;
   }
   function start() {
     if (!dict) return;
     sfx.unlock();
+    countRun++; G.opts = false;
     newBoard(); G.phase = "play";
     render(); shake();
     clearInterval(clock); clock = setInterval(tick, 1000);
@@ -116,31 +130,61 @@ export function mountWordshake(root, ctx = {}) {
   // Home (Đợt 387): back to this game's own start screen, not to the GAMES tree.
   function toReady() {
     clearInterval(clock); clearInterval(shakeIv); root.classList.remove("shaking");
-    G.phase = "ready"; G.sides = []; G.left = dur; G.ask = false;
+    countRun++;
+    G.phase = "ready"; G.sides = []; G.left = dur; G.ask = false; G.opts = false; G.big = -1;
     tanks.forEach(t => t.reset(0));
     render();
   }
-  // Đợt 390 — time's up: the boards stop, both tanks DRAIN while their numbers count
-  // up (the team with fewer points stops first), THEN the winner is shown.
+  // ⭐ Đợt 395 (thầy, 26/9/2026) — time's up: both numbers count up TOGETHER, one
+  // step at a time, one "tích" a step (higher and louder as it goes). The team with
+  // fewer points stops (e.g. both 1…20); then the leader's box GROWS on its first
+  // number past that (21) and it counts on alone to its score. Slower than the old
+  // drain (Đợt 390): ~⅓ s a step, ~10 s for the whole count at most. The tanks fall
+  // step by step with their own number.
   function finish() {
     clearInterval(clock); G.phase = "count";
     G.sides.forEach(s => s.sel = []);
     render();
-    const [a, b] = G.sides.map(s => s.score);
+    const sc = G.sides.map(s => Math.max(0, s.score));
+    const lo = Math.min(...sc), hi = Math.max(...sc), lead = sc[0] === sc[1] ? -1 : (sc[0] > sc[1] ? 0 : 1);
+    const STEP = Math.round(Math.max(120, Math.min(340, 10000 / Math.max(1, hi))));
+    const run = ++countRun, alive = () => !dead && run === countRun && G.phase === "count";
+    const later = (fn, ms) => setTimeout(() => { if (alive()) fn(); }, ms);
     sfx.timeup();
-    const max = Math.max(a, b, 1), D = Math.min(5200, 2400 + max * 40);
-    const drip = () => { const now = performance.now(); if (now - dripAt > 38) { dripAt = now; sfx.drip(dripN++); } };
-    dripN = 0;
-    Promise.all([a, b].map((v, i) => tanks[i].drain(v, Math.max(700, D * Math.max(0, v) / max), drip)))
-      .then(() => {
-        if (dead || G.phase !== "count") return;
-        sfx.land();
-        setTimeout(() => {
-          if (dead || G.phase !== "count") return;
-          G.phase = "over"; render();
-          if (a !== b) sfx.win(b > a ? .65 : -.65);
-        }, 900);
-      });
+    tanks.forEach(t => t.countTo(0, 1));
+    let n = 0, grown = false;
+    const done = () => {
+      tanks.forEach((t, i) => t.landCount(sc[i]));
+      sfx.land();
+      later(() => {
+        G.phase = "over"; render();
+        if (lead >= 0) sfx.win(pan(lead));
+      }, 1000);
+    };
+    const tickOne = () => {
+      n++;
+      sc.forEach((v, i) => { if (n <= v) tanks[i].countTo(n, v); });
+      sfx.countTick(hi > 1 ? (n - 1) / (hi - 1) : 1);
+      later(step, n >= hi ? 450 : STEP);
+    };
+    const step = () => {
+      if (n >= hi) return done();
+      // the first number past the lower score: the lower number lands, the leader's
+      // box grows, a beat, then the count goes on
+      if (lead >= 0 && n === lo && !grown) {
+        grown = true;
+        if (lo > 0) tanks[1 - lead].landCount(lo);
+        return later(() => {
+          G.big = lead;
+          const box = cv.querySelectorAll(".wsg-score")[lead];
+          if (box) box.classList.add("big");
+          sfx.swell(pan(lead));
+          later(tickOne, 420);
+        }, lo > 0 ? 650 : 250);
+      }
+      tickOne();
+    };
+    later(step, 900);   // let the time-up sound finish first
   }
   const fmt = s => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
   const pan = side => side ? .65 : -.65;
@@ -220,17 +264,25 @@ export function mountWordshake(root, ctx = {}) {
     const over = G.phase === "over";
     const bump = [over && a > G.prev[0], over && b > G.prev[1]]; G.prev = over ? [a, b] : [0, 0];
     const warn = G.phase === "play" && G.left <= 10;
-    root.classList.toggle("asking", G.ask);
+    root.classList.toggle("asking", G.ask || G.opts);
+    // Options only between games: a new level means a new board
+    const between = G.phase === "ready" || G.phase === "over";
     cv.innerHTML =
       `<div class="wsg-hudline"></div>` +
-      `<div class="wsg-score ${over && a > b ? "lead" : ""} ${bump[0] ? "bump" : ""} ${over ? "" : "tank"}" style="left:${L.x + L.w / 2}px"><b>${a}</b></div>` +
+      `<div class="wsg-score ${over && a > b ? "lead" : ""} ${bump[0] ? "bump" : ""} ${over ? "" : "tank"} ${G.big === 0 ? "big" : ""}" style="left:${L.x + L.w / 2}px"><b>${a}</b></div>` +
       `<div class="wsg-clock ${warn ? "warn" : ""}"><span>${fmt(G.phase === "ready" ? dur : G.left)}</span></div>` +
-      `<div class="wsg-score s1 ${over && b > a ? "lead" : ""} ${bump[1] ? "bump" : ""} ${over ? "" : "tank"}" style="left:${R.x + R.w / 2}px"><b>${b}</b></div>` +
+      `<div class="wsg-score s1 ${over && b > a ? "lead" : ""} ${bump[1] ? "bump" : ""} ${over ? "" : "tank"} ${G.big === 1 ? "big" : ""}" style="left:${R.x + R.w / 2}px"><b>${b}</b></div>` +
       stage(L, sideHtml(0), 0) + stage(C, centreHtml(), null) + stage(R, sideHtml(1), 1) +
       `<div class="wsg-tools" style="top:${Y + BH + 10}px">` +
         `<button class="wsg-tool" data-do="home" title="${G.phase === "ready" ? "Back to Games" : "Start screen"}" aria-label="${G.phase === "ready" ? "Back to Games" : "Start screen"}"><span>${ICON.home}</span></button>` +
         `<button class="wsg-tool ${sfx.on ? "" : "off"}" data-do="sound" title="Sound" aria-label="Sound"><span>${sfx.on ? ICON.vol : ICON.mute}</span></button>` +
+        `<button class="wsg-tool wide" data-do="opts" title="${between ? "Options" : "Options — after this game"}" aria-label="Options" ${between ? "" : "disabled"}><span>${ICON.opts}<em>${LEVEL_INFO[level].label}</em></span></button>` +
       `</div>` +
+      (G.opts ? `<div class="wsg-ask"><div class="wsg-askbox wsg-optbox"><div class="q">Options</div>` +
+        `<div class="wsg-lab">LEVEL</div>` +
+        `<div class="wsg-levels">${LEVEL_IDS.map(id => `<button data-do="lvl" data-l="${id}" class="${id === level ? "on" : ""}"><span>${LEVEL_INFO[id].label}</span></button>`).join("")}</div>` +
+        `<div class="wsg-lvhint">${LEVEL_INFO[level].hint}</div>` +
+        `<div class="a one"><button class="wsg-b ent" data-do="optok"><span>Done</span></button></div></div></div>` : "") +
       (G.ask ? `<div class="wsg-ask"><div class="wsg-askbox"><div class="q">End this game?</div>` +
         `<div class="a"><button class="wsg-b clr" data-do="no"><span>No</span></button>` +
         `<button class="wsg-b ent" data-do="yes"><span>Yes</span></button></div></div></div>` : "");
@@ -283,7 +335,8 @@ export function mountWordshake(root, ctx = {}) {
     if (G.phase === "over") {
       const [a, b] = G.sides.map(s => s.score);
       const head = a === b ? "DRAW" : centred("WINS", a > b ? 0 : 1);
-      const missed = wordsOn(dict, G.letters, 4).filter(w => !G.found.has(w) && !dict.get(w).base)
+      const [mlo, mhi] = LEVEL_INFO[level].miss;
+      const missed = wordsOn(dict, G.letters, mhi).filter(w => !G.found.has(w) && !dict.get(w).base && dict.get(w).lv >= mlo)
         .sort((x, y) => y.length - x.length || dict.get(x).lv - dict.get(y).lv).slice(0, 10);
       return `<div class="wsg-mid wsg-res"><h2>${head}</h2>
         ${missed.length ? `<div class="wsg-lab">MISSED</div><div class="wsg-miss">${missed.map(w => `<div><b>${w.toUpperCase()}</b> <span>${esc(lookup(dict, w)?.m || "")}</span></div>`).join("")}</div>` : ""}
@@ -326,6 +379,14 @@ export function mountWordshake(root, ctx = {}) {
     }
     if (d === "yes") { e.preventDefault(); return toReady(); }
     if (d === "no") { e.preventDefault(); G.ask = false; return render(); }
+    if (d === "opts") { e.preventDefault(); G.opts = true; sfx.next(); return render(); }
+    if (d === "optok") { e.preventDefault(); G.opts = false; return render(); }
+    if (d === "lvl") {
+      e.preventDefault();
+      if (b.dataset.l !== level) { level = b.dataset.l; saveLevel(level); sfx.tap(0); }
+      return render();
+    }
+    if (G.opts) return;   // the Options box is on top
     if (d === "sound") { sfx.on = !sfx.on; if (sfx.on) sfx.next(); return render(); }
     if (d === "time") return timeDown(e, b);
     if (d === "play") return start();
