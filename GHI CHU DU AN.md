@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 406 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D: bỏ chữ LIFTOFF · Apply Options không chạy lại cảnh phóng · chạm ĐÚP để tua intro · ⬜ CHƯA PUSH · ⬜ CHƯA BẤM TAY TOMKO
+## Đợt 406 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D: bỏ chữ LIFTOFF · Apply Options không chạy lại cảnh phóng · chạm ĐÚP để tua intro · ✅ ĐÃ PUSH `5a56068` + LIVE 6/6 mã băm · ⬜ CHƯA BẤM TAY TOMKO
 
 **Yêu cầu thầy (26/9):** (1) bỏ chữ LIFT OFF khi phóng tàu; (2) mỗi lần chỉnh Options đều khởi động lại toàn bộ game khá lâu —
 làm nhanh hơn; (3) sau khi bấm START, click đúp bất kỳ đâu để bỏ intro, tới ngay chỗ hoạt ảnh ~3 s trước khi hiện câu hỏi/câu trả lời.
@@ -571,12 +571,12 @@ sau khi tua; tiếng intro done = launch, tuc0–2, ign, pass, warp. Chạy thư
 Bấm Apply THẬT trong bảng Options (đổi Shuffle answers): cảnh mới sau **392 ms**, không lớp cảnh phóng, phase `start`, tuỳ chọn đã lưu;
 bấm START 3D ⇒ câu hỏi sau 3,3 s. Start again ⇒ vẫn có cảnh phóng. 0 lỗi console.
 
-**Chưa làm / chờ:** ⬜ push + kiểm live · ⬜ thầy bấm tay TOMKO (chạm đúp bằng ngón tay; nếu tua gây khựng trên máy yếu thì giảm
+**Chưa làm / chờ:** ✅ push + kiểm live (Pages built `5a56068`, 6/6 file rocket-race khớp SHA-256) · ⬜ thầy bấm tay TOMKO (chạm đúp bằng ngón tay; nếu tua gây khựng trên máy yếu thì giảm
 bước tua) · ⬜ cân nhắc: Start again có muốn cũng bỏ cảnh phóng không (hiện CHƯA đổi).
 
 ---
 
-## Đợt 405 (26/9/2026) — ROCKET RACE: act VOICE nghe lại được (chạm thanh câu hỏi 3D) + tự TẮT nhạc nền, không cho bật · ⬜ CHƯA PUSH · ⬜ CHƯA BẤM TAY TOMKO
+## Đợt 405 (26/9/2026) — ROCKET RACE: act VOICE nghe lại được (chạm thanh câu hỏi 3D) + tự TẮT nhạc nền, không cho bật · ✅ ĐÃ PUSH `b73e96b` + LIVE (cùng lượt Đợt 406) · ⬜ CHƯA BẤM TAY TOMKO
 
 **Yêu cầu thầy (26/9):** (1) act dạng VOICE (VD ENG1 VOICE) phải bấm cái loa để nghe lại được — hiện bấm không ăn;
 (2) chọn act voice ⇒ tự tắt nhạc background và không cho bật khi act là dạng voice.
@@ -606,7 +606,7 @@ Solo/Teams 2D KHÔNG lỗi (đo: bấm nút loa ⇒ phát).
 chỗ khác không phát; menu 🔊 bấm BACKGROUND ⇒ vẫn tắt, `saved` vẫn `null`. Hồi quy: Fight act thường ⇒ `bgLocked:false`, `bg:true`;
 Solo act voice ⇒ nút loa 2D bấm phát được. 0 lỗi console.
 
-**Chưa làm / chờ:** ⬜ push + kiểm live · ⬜ thầy bấm tay TOMKO (chữ 🔊 trên thanh 3D hơi nhạt — nếu HS khó nhận ra chỗ chạm
+**Chưa làm / chờ:** ✅ push + kiểm live (cùng lượt Đợt 406) · ⬜ thầy bấm tay TOMKO (chữ 🔊 trên thanh 3D hơi nhạt — nếu HS khó nhận ra chỗ chạm
 thì có thể vẽ loa to/sáng hơn) · ⬜ chưa thử tay chế độ Different với act voice (2 nửa thanh).
 
 ---
