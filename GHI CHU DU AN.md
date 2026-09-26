@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 404 (26/9/2026) — A SHOW SPEED FIGHT Mode 1: bàn THUA hiện từ đúng của đội kia trong ô điền · ⬜ CHƯA BẤM TAY TOMKO
+## Đợt 404 (26/9/2026) — A SHOW SPEED FIGHT Mode 1: bàn THUA hiện từ đúng của đội kia trong ô điền · ✅ ĐÃ PUSH `6cabc7c` + LIVE 2/2 mã băm · ⬜ CHƯA BẤM TAY TOMKO
 
 **Yêu cầu thầy (26/9):** trong Fight ở activity, khi một bên tạo xong từ và bên kia bị mất màu (thua, không được điểm câu
 đó) thì trong ô điền của bên không được điểm cũng hiện từ đúng của bên kia cho bên đó học hỏi một chút trước khi chuyển câu
