@@ -12,7 +12,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 397** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: tia kết trận = vệt bụi từ mép màn, toàn cảnh lượn né đá, xác tàu cháy rụi bốc khói — xem chặng Đợt 397 bên dưới). Trước đó **Đợt 396** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: rời trang là dừng, vụ nổ hết khựng + đẹp, xác tàu thật — xem chặng Đợt 396 bên dưới). Trước đó **Đợt 394** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: chữ ô đáp án +15% không co, MENU giữa màn, vào thẳng Fight — xem chặng Đợt 394 bên dưới). Trước đó **Đợt 393** (26/9/2026, ROCKET RACE ▸ FIGHT 3D chỉnh 13 ý — xem chặng Đợt 393 bên dưới). Trước đó **Đợt 392** (26/9/2026, ROCKET RACE ▸ FIGHT 3D — xem chặng Đợt 392 bên dưới). Trước đó **Đợt 391** (25/9/2026, ROCKET RACE ▸ FIGHT Different: đội hết câu mà chưa ai về đích ⇒ DÙNG LẠI câu cũ
+> ⏸ **Intro mới của Rocket race Fight 3D đang THIẾT KẾ ở kho myGame (mẫu 4c, TẠM CHỐT 26/9/2026)** — xem chặng "Ghi chú: intro phóng từ mặt đất (myGame)" bên dưới. > Mới nhất: **Đợt 397** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: tia kết trận = vệt bụi từ mép màn, toàn cảnh lượn né đá, xác tàu cháy rụi bốc khói — xem chặng Đợt 397 bên dưới). Trước đó **Đợt 396** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: rời trang là dừng, vụ nổ hết khựng + đẹp, xác tàu thật — xem chặng Đợt 396 bên dưới). Trước đó **Đợt 394** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: chữ ô đáp án +15% không co, MENU giữa màn, vào thẳng Fight — xem chặng Đợt 394 bên dưới). Trước đó **Đợt 393** (26/9/2026, ROCKET RACE ▸ FIGHT 3D chỉnh 13 ý — xem chặng Đợt 393 bên dưới). Trước đó **Đợt 392** (26/9/2026, ROCKET RACE ▸ FIGHT 3D — xem chặng Đợt 392 bên dưới). Trước đó **Đợt 391** (25/9/2026, ROCKET RACE ▸ FIGHT Different: đội hết câu mà chưa ai về đích ⇒ DÙNG LẠI câu cũ
 > (xào lại) tới khi có tàu về đích; Count down hết giờ ⇒ tàu gần hơn bay về, tàu kia nổ như cũ). Chặng Đợt 391.
 > Trước đó: **Đợt 390b** (25/9/2026, bình điểm đổi sang MẪU 4 thầy chọn — dải năng lượng neon + sao chổi, mức CỐ ĐỊNH ngang
 > nhau mọi đội tới lúc đếm; trang chọn mẫu `D:\OTHERS\CLAUDE\AWord - thiet ke Wordshake\score-tank-mau.html`). Chặng Đợt 390b.
@@ -546,6 +546,9 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Ghi chú (26/9/2026): INTRO "PHÓNG TỪ MẶT ĐẤT" cho Rocket race Fight 3D — đang thiết kế ở myGame, TẠM CHỐT mẫu 4c, CHƯA ghép vào AWord
+Thầy thiết kế intro mới qua 4 mẫu ở `E:\LAP TRINH APP\myGame` (mẫu 4 → 4b → 4c), tạm chốt **mẫu 4c** (myGame commit `23d7bfe`, live https://andrewclasses-01.github.io/myGame/rocket-race/mau-4c-nha-xuong-nhay-toc-do.html): màn chờ = flycam nhìn qua nhà xưởng lớn chữ ANDREW STUDIO (thay ANDREW CLASSES) + bãi xe/bãi cỏ/ao hồ, 2 bệ phóng ở xa, biển; START ⇒ bay lại gần 2 tàu → 3-2-1 → đánh lửa, mây khói nâu cuồn cuộn → cất cánh vụt qua máy quay → đuổi đuôi, sao lốm đốm → NHẢY TỐC ĐỘ → vào thẳng câu hỏi. Mặt đất = ảnh địa hình sinh sẵn (`myGame/tools/tao-dia-hinh.py`). **Kế hoạch ghép 7 bước + việc chưa làm: `myGame/GHI CHU DU AN.md` Chặng 4.** AWord CHƯA có dòng code nào của intro này.
+
 ## Đợt 397 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D: tia kết trận = vệt bụi từ mép màn · toàn cảnh lượn né đá · xác tàu cháy rụi bốc khói · ⬜ CHƯA BẤM TAY
 
 Đợt 397 — ROCKET RACE ▸ FIGHT 3D, thầy 26/9: (1) tia sáng đánh tàu thua = ĐÚNG loại vệt sáng bụi tốc độ bay suốt trận (dùng chính `dust.material`, cùng công thức độ dài vệt), bay vào từ MÉP MÀN (lùi dọc hướng bay tới khi ra khỏi khung hình) · (2) góc TOÀN CẢNH: đá vụn nhỏ trôi ngược dọc làn, tàu lượn NÉ bằng lò xo (mũi chĩa theo hướng né, thân nghiêng), góc đuổi không đổi (`cfg.dodge`, `applyDodge`) · (3) xác tàu XƠ XÁC + CHÁY RỤI + BỐC KHÓI: tấm vỏ mép rách random-walk, lỗ thủng, mép quăn, móp; cánh răng cưa (1–2 cánh gãy), chóp mũi/loa phụt/bơm toác hở, khung sườn gãy, dải vỏ xoắn, 24 mảnh vụn; mọi vật liệu pha muội + `vertexColors` loang lổ (mép rách đen kịt), hết bóng sơn; mọi mảnh đủ lớn bốc khói 6–15 s kéo thành vệt.
@@ -560,7 +563,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 **Đã kiểm (bàn thử 1600×900):** tia ở góc cao xuất phát NDC x = 1,11 (ngay ngoài mép phải) → tàu, `sameMat: true` · né: góc đuổi lệch (0,0); góc cao `dodgeK` 1, lệch ngang tới ±1,15, 4–6 viên đá cùng lúc · xác tàu chụp 1,7 s / 4 s: mảnh sạm đen loang, rách thủng, vệt khói sau từng mảnh · khung nổ 17,5 ms (thường 3,5–4 ms, sau nổ TB 4,6 / max 9,4 ms) · 0 lỗi console.
 
-**VIỆC ĐANG CHỜ**: ⬜ commit + push (chờ thầy lệnh) · ⬜ thầy xem thật: tia kết trận có nhận ra được không (vệt bụi vốn mờ 0,16 — nếu khó thấy thì tăng độ đục RIÊNG vệt này?), độ lượn né ở toàn cảnh, xác tàu + khói, 60 fps TOMKO.
+**VIỆC ĐANG CHỜ**: ✅ commit + push `fa41729` (cùng Đợt 396, thầy lệnh 26/9/2026) — Pages built đúng commit, 3/3 file (core/fight.js, rocket-race.js, rr3d-view.js) khớp mã băm SHA-256 với bản live · ⬜ thầy xem thật: tia kết trận có nhận ra được không (vệt bụi vốn mờ 0,16 — nếu khó thấy thì tăng độ đục RIÊNG vệt này?), độ lượn né ở toàn cảnh, xác tàu + khói, 60 fps TOMKO.
 
 ## Đợt 396 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D: rời trang là dừng · vụ nổ hết khựng + đẹp · xác tàu thật · ⬜ CHƯA BẤM TAY
 
@@ -585,7 +588,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 - Đã kiểm (bàn thử `test.html` 1600×900, lái `__rr3d.view.step` + `readPixels` ép GPU xong): khung nổ ~11 ms (khung thường ~4 ms; trước sửa 95–435 ms) · kết trận `win(0)` chạy trọn ~9,5 s, không khung nào > ~15 ms/khung · chụp 0,2 s / 0,5 s / 1 s / 2,5 s: cầu lửa nhiều lớp, khói tỏa có khối, mảnh vỏ trắng cong, cánh đỏ, loa phụt, ống đồng, bồn, khung sườn trôi + khói · `#app.innerHTML = ""` ⇒ view `dead`, canvas gỡ, không còn khung trận · 0 lỗi console.
 - ⚠️ Tôi (Claude) không nghe được: tiếng dừng khi rời trang kiểm bằng cờ `dead` + `stopAll()`, thầy nghe thật.
 
-**VIỆC ĐANG CHỜ**: ⬜ commit + push (chờ thầy lệnh) · ⬜ thầy xem thật máy khác/TOMKO: bấm ◀ giữa trận (im hẳn), vụ nổ lúc kết trận (mượt? đẹp?), xác tàu, 60 fps trên 4K.
+**VIỆC ĐANG CHỜ**: ✅ commit + push `fa41729` (cùng Đợt 397) · ⬜ thầy xem thật máy khác/TOMKO: bấm ◀ giữa trận (im hẳn), vụ nổ lúc kết trận (mượt? đẹp?), xác tàu, 60 fps trên 4K.
 
 ## Đợt 395 (26/9/2026) — A SHOW SPEED (GAME): Options ▸ EASY/MEDIUM/HARD · đếm điểm hết giờ từng nấc song song + tiếng "tích" · ⬜ CHƯA BẤM TAY TOMKO
 

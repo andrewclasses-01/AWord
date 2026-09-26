@@ -690,3 +690,9 @@ Thầy thiết kế cùng Claude qua 13 bản mẫu ở kho **myGame** (`E:\LAP 
 - **Xác tàu xơ xác**: `vnoise/fbm3`, `crumple()` (trường nhiễu vị trí), `soot()` (màu đỉnh loang + mép rách đen), `shellPanel` rách/thủng/quăn/móp, `finShape()` răng cưa, lathe/cylinder/torus góc hở. Vật liệu pha muội, `vertexColors`. Khói mọi mảnh (accumulator `smokeRate`, 6–15 s, thưa dần, kéo vệt).
 - Bàn thử: `view.strike(side)`, `view.dodgeInfo()`.
 **⬜ Thầy xem thật**: tia kết trận, lượn né, xác tàu + khói, 60 fps TOMKO.
+
+## 31. (26/9/2026) INTRO "PHÓNG TỪ MẶT ĐẤT" — thiết kế ở myGame, TẠM CHỐT mẫu 4c, CHƯA ghép
+- Mẫu: `E:\LAP TRINH APP\myGame\rocket-race\mau-4c-nha-xuong-nhay-toc-do.html` + `core/launch-aerial-c.js` + `assets/` (ảnh địa hình từ `tools/tao-dia-hinh.py`, cần numpy/pillow/scipy). Live https://andrewclasses-01.github.io/myGame/rocket-race/mau-4c-nha-xuong-nhay-toc-do.html
+- Nội dung: flycam nhà xưởng ANDREW STUDIO (thay ANDREW CLASSES) → START bay lại gần 2 tàu → 3-2-1 trên bệ → đánh lửa + mây khói (hạt sắp xa→gần, ửng cam) → cất cánh vụt qua máy quay → đuổi đuôi, sao lốm đốm → nhảy tốc độ → vào thẳng câu hỏi (không đếm lần 2).
+- Ghép (khi thầy nói): 7 bước ở `myGame/GHI CHU DU AN.md` Chặng 4 — điểm khó: tàu phải dùng `makeRocket` CỦA AWord (rr3d-view.js), vendor three/Water, và nhịp 3-2-1 do `rocket-race.js` giữ (khớp đồng hồ trận/trọng tài) ⇒ quyết START của intro gọi `play()` lúc nào.
+- Bài học mang sang: `EffectComposer` phải có render target MSAA (`samples: 4`) nếu không vật mảnh nhấp nháy — rr3d-view.js ĐÃ có (`Q[quality].samples`), cảnh intro cũng phải có.
