@@ -36,8 +36,10 @@ let _appP = null, _authP = null, _dbP = null;
 async function app() {
   if (!_appP) {
     _appP = (async () => {
-      const { initializeApp } = await import(`${SDK}/firebase-app.js`);
-      return initializeApp(firebaseConfig);
+      // Đợt 408 — core/app-check.js (App Check) có thể đã tạo app mặc định cùng cấu hình ⇒ DÙNG LẠI,
+      // initializeApp lần hai là lỗi duplicate-app.
+      const { initializeApp, getApps, getApp } = await import(`${SDK}/firebase-app.js`);
+      return getApps().length ? getApp() : initializeApp(firebaseConfig);
     })();
   }
   return _appP;

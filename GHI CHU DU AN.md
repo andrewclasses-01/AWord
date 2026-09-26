@@ -546,6 +546,32 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 408 (27/9/2026) — FIREBASE APP CHECK (chỉ THEO DÕI, chưa ép buộc) · ⬜ CHƯA PUSH (ghi lúc commit)
+
+**Vì sao:** đêm 26/9 kẻ "Tr0ngX" bơm 141 điểm giả vào 34 bài (scores 9.999.999) bằng script gọi thẳng Firestore với khoá
+API công khai. Luật đã siết (score ≤ total, tên không link — ruleset `d30455f5`/`85d5bd65`, làm từ myLesson). Bước tiếp:
+App Check — mỗi lượt gọi kèm MÃ do reCAPTCHA cấp cho trình duyệt thật mở đúng trang. Hồ sơ đầy đủ ở kho riêng
+`myLesson-app` "HO SO BAO MAT.md" mục F.
+
+**Làm:**
+- `core/app-check.js` MỚI — ⛔ BẢN CHÉP y hệt myLesson web `js/app-check.js` (cùng một Firebase app
+  `1:399279049436:web:b9b34dcfb34732aa744219`, reCAPTCHA Enterprise site key `6Ldrp6…`, tên miền andrewclasses.com + con).
+  (1) BỌC `fetch`: REST tới firestore/firebasestorage.googleapis.com tự gắn `X-Firebase-AppCheck` nếu có mã còn hạn trong
+  localStorage `awc_ac` — phủ `sendAttempt` REST, `sendAttemptKeepalive`, `beatPlayLog`, outbox. Không có mã ⇒ gửi như cũ.
+  (keepalive đã có preflight sẵn vì `Content-Type: application/json` nên thêm header không đổi hành vi.)
+  (2) SDK App Check nạp lười SAU `load`, tự làm mới mã, cất mã vào `awc_ac`. Ẩn huy hiệu reCAPTCHA.
+- `index.html` / `play.html` / `source.html`: `<script src="core/app-check.js" defer>` ngay sau `no-zoom.js` (chạy trước module).
+- `core/firebase.js` `app()`: `getApps().length ? getApp() : initializeApp(...)` — app-check.js có thể tạo app mặc định trước.
+
+**Đã thử (máy 8844):** play.html?g=2dxssr tải bài, 1 app `[DEFAULT]` đúng appId, App Check khởi động, 0 lỗi console;
+index.html 0 lỗi. Phía myLesson đã đo: CHƯA ép buộc thì mã giả vẫn 200, CORS nhận header.
+
+**⬜ CHƯA:** ép buộc (Enforce) — chờ ≥ 1 tuần số liệu App Check + chuyển app Electron (myActivity nhúng AWord qua
+WebContentsView https — reCAPTCHA chạy được nhưng CHƯA thử) + thầy duyệt. Khi ép buộc: lượt keepalive lúc đóng tab mà
+máy chưa có mã sẽ bị từ chối ⇒ cần cho play.js chờ mã trước (việc của đợt ép buộc).
+
+---
+
 ## Đợt 407 (27/9/2026) — ROCKET RACE ▸ FIGHT 3D: TÊN LỬA TẤN CÔNG giữa 2 tàu + đội 2 CAM ĐẬM · ✅ ĐÃ PUSH `a7e4e99` + LIVE 9/9 mã băm · ⬜ CHƯA BẤM TAY TOMKO
 
 **Yêu cầu thầy (26–27/9):** thêm cơ chế tấn công lẫn nhau giữa 2 tàu; đội vàng khó nhìn ⇒ cam. Thiết kế qua 3 lượt AskUserQuestion +
