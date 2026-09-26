@@ -546,6 +546,42 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 402 (26/9/2026) — A SHOW SPEED TEMPLATE (activity): HẾT GIỜ GIỐNG GAME — bàn tối + mờ, ô điểm xuống giữa bàn, đếm kiểu Đợt 395, bảng kết quả Fight nằm ở BẢNG GIỮA · ⬜ CHƯA BẤM TAY TOMKO
+
+**Yêu cầu thầy (26/9):** "Sửa các chế độ khác của Game ở Activity cũng tương tự" — tức template `templates/wordshake/`
+(chơi đơn + Fight, cả 3 mode) làm giống GAME Đợt 401.
+
+**Việc đã làm (`templates/wordshake/wordshake.js` + `.css`, KHÔNG sửa core):**
+- Hàm mới `slideDown(box, target, scale)`: đo tâm ô → tâm đích bằng `getBoundingClientRect`, đổi ra px của đích
+  (`offsetWidth / rect.width` — khung bị zoom/scale vẫn đúng; lấy hệ số từ ĐÍCH vì ô tank có `skewX` làm rect rộng hơn
+  `offsetWidth`, còn tâm thì skew không đổi), ghi `--ws-dx/--ws-dy/--ws-k` + class `is-ws-down`, chờ 900 ms.
+- Hàm mới `countTanks(tanks, scores, grow)` = bê nguyên phép đếm của GAME Đợt 395 (hai số lên CÙNG NHỊP, mỗi nhịp một
+  tiếng `countTick`, đội thấp dừng, ô đội dẫn to lên `grow(side)` + `swell`, đếm tiếp; `land` cuối) — thay hẳn `drainTanks`
+  (cạn nước kiểu Đợt 390, đã XOÁ vì không còn chỗ gọi). Tiếng tôn trọng `sound.isMuted()`. Khung rời trang ⇒ tự resolve.
+- **Fight** (`fightReveal`): `.aw-fight.is-ws-ending` ⇒ `.aw-fight-board .aw-playarea>*` tối + blur 4 px; hai
+  `.aw-fight-team` trượt xuống giữa `.aw-fight-board` tương ứng (scale = min(1,5; 0,9 × rộng bàn / rộng ô), z 20), rồi
+  đếm (nếu Score tank bật; tắt thì chỉ trượt, ô hiện số thật của core). Đội dẫn `is-ws-big` = ×1,2 nữa, nhịp nảy .4 s.
+  ⭐ **Bảng kết quả core (vốn `position:fixed` phủ cả màn z 30) được BÊ VÀO BẢNG GIỮA** `.aw-fight-shared`:
+  MutationObserver trên `wrap` bắt `.aw-fight-result` lúc core `wrap.append(panel)`, thêm class `is-ws-mid`
+  (absolute inset 0, nền neon, chữ Saira, nút Start again xanh kiểu PLAY). Nút Show answers vẫn mở bảng ANSWERS toàn màn
+  của core, Close trả về đúng chỗ. Start again = core dựng lại cả trận nên không phải trả gì về.
+- **Chơi đơn** (`finish()`): `.aw-stage.is-ws-ending` ⇒ `.aw-playarea>*` tối + blur; ô tank `.aw-ws-toptank` (trên
+  thanh trên, góc phải) trượt xuống giữa `.aw-playarea`, ×2, rồi đếm; xong mới `ui.finish` như cũ (màn GAME COMPLETE
+  của engine; ô tank bị gỡ, ✓ trên khung hiện lại). ⚠️ `.aw-topbar` có `overflow:hidden` ⇒ lúc ending đổi thành
+  `visible` + z 6, không thì ô bị cắt ngay khi rời thanh.
+
+**Đã đo (`templates/wordshake/test.html`, đồng hồ tua nhanh bằng vá `performance.now`/`Date.now` ×20–25 trong bàn thử):**
+Fight Mode 3 (9 từ, trái 6 / phải 3): 00:00 ⇒ ô ở dải trên, 2,5 s sau ô đã ở giữa 2 bàn tối mờ, đếm 9|7 · xong: 17 (to) | 7
+ở giữa bàn, bảng giữa "TEAM LEFT WINS · 17 — 7 · SHOW ANSWERS · START AGAIN" · Show answers ⇒ bảng ANSWERS, Close ⇒ về
+lại · Start again ⇒ màn START, ô về dải trên, bàn sáng. Chơi đơn Mode 2 (6/8 từ): ô "5" giữa khung, nền tối mờ ⇒ GAME
+COMPLETE 5/8. 0 lỗi console.
+⚠️ Có sẵn từ trước (KHÔNG do đợt này): hàng nút dưới khung (`.aw-below-center` z 41) nổi TRÊN bảng ANSWERS (z 31).
+
+**Chưa làm / chờ:** ⬜ thầy bấm tay TOMKO (Fight + chơi đơn, cả Mode 1). ⬜ Chơi đơn: ô KHÔNG ở lại sau khi đếm — màn
+GAME COMPLETE của engine thay chỗ (đó là "chức năng hiện tại"); nếu thầy muốn ô vẫn nằm giữa sau popup thì báo.
+
+---
+
 ## Đợt 401 (26/9/2026) — A SHOW SPEED (GAME): HẾT GIỜ ⇒ HAI BÀN TỐI + MỜ, Ô ĐIỂM TRƯỢT XUỐNG GIỮA BÀN ĐỘI RỒI MỚI ĐẾM · ✅ ĐÃ PUSH `bfbe3ac` + LIVE 2/2 mã băm · ⬜ CHƯA BẤM TAY TOMKO
 
 **Yêu cầu thầy (26/9):** khi hết giờ, toàn bộ nội dung 2 ô của 2 đội tối đi và blur; 2 ô điểm di chuyển từ trên xuống chính

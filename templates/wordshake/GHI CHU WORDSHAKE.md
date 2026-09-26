@@ -1,5 +1,15 @@
 # GHI CHÚ WORDSHAKE — template #21 + game cố định trong GAMES
 
+## ⭐ Đợt 402 (26/9/2026) — TEMPLATE: hết giờ giống GAME (Đợt 401 + đếm Đợt 395)
+- `slideDown(box, target, scale)` (tâm→tâm, hệ số px lấy từ ĐÍCH vì ô tank bị skew) + `countTanks(tanks, scores, grow)`
+  (phép đếm GAME Đợt 395) — thay `drainTanks` (đã xoá).
+- Fight `fightReveal`: `.aw-fight.is-ws-ending` (playarea 2 bàn tối + blur), 2 `.aw-fight-team` → giữa `.aw-fight-board`
+  (×≤1,5, đội dẫn `is-ws-big` ×1,2), đếm nếu Score tank bật; bảng kết quả core bê vào `.aw-fight-shared` bằng
+  MutationObserver (`is-ws-mid`, nền neon). Show answers vẫn toàn màn. Start again dựng lại trận.
+- Chơi đơn `finish()`: `.aw-stage.is-ws-ending` (topbar `overflow:visible` + z 6), `.aw-ws-toptank` → giữa `.aw-playarea` ×2,
+  đếm, rồi `ui.finish` như cũ (ô gỡ, GAME COMPLETE).
+- Đã đo test.html (Fight Mode 3 + đơn Mode 2): đúng, 0 lỗi. ⬜ TOMKO.
+
 ## ⭐ Đợt 401 (26/9/2026) — GAME: hết giờ ⇒ bàn tối + mờ, ô điểm xuống giữa bàn đội rồi mới đếm
 - Chỉ `games/wordshake/` (template Fight không đổi). `finish()` vẽ pha `count` rồi 2 khung hình sau mới bật `G.down` ⇒ root
   `.ending` (con của 2 bàn đội `brightness(.35) saturate(.6) blur(4px)`) + ô `.wsg-score.down` (`translateY(232px) scale(1.4)`,

@@ -209,14 +209,54 @@ function fightTanks(wrap, k) {
   TANKS.set(wrap, t);
   return t;
 }
-// Both (or the one) tank(s) drain together at ONE speed, so the lower score stops first.
-function drainTanks(tanks, scores) {
-  const max = Math.max(1, ...scores.map(v => Math.max(0, v)));
-  const D = Math.min(5200, 2400 + max * 60);
-  let at = 0, n = 0;
-  const drip = () => { const now = performance.now(); if (now - at > 38) { at = now; if (!sound.isMuted()) bell.drip(n++); } };
-  return Promise.all(tanks.map((t, i) => t.drain(scores[i], Math.max(700, D * Math.max(0, scores[i]) / max), drip)))
-    .then(() => { if (!sound.isMuted()) bell.land(); return new Promise(r => setTimeout(r, 850)); });
+
+// ⭐ Đợt 402 (thầy, 26/9/2026) — "the other modes like the GAME" (Đợt 395 + 401): time's up
+// ⇒ the boards go dark + blurred, the score box(es) slide from the strip down to the middle
+// of their board, THEN both numbers count up together one step at a time (a tick a step);
+// the leader's box grows on its first number past the lower score and counts on alone.
+// `slideDown` measures in page px and converts to the target's own px (a zoomed / scaled
+// frame); the box's centre is unchanged by its skew, so centre-to-centre is exact.
+function slideDown(box, target, scale) {
+  if (!box || !target) return Promise.resolve();
+  const a = box.getBoundingClientRect(), b = target.getBoundingClientRect();
+  const k = target.offsetWidth / (b.width || 1) || 1;
+  box.style.setProperty("--ws-dx", ((b.left + b.width / 2) - (a.left + a.width / 2)) * k + "px");
+  box.style.setProperty("--ws-dy", ((b.top + b.height / 2) - (a.top + a.height / 2)) * k + "px");
+  box.style.setProperty("--ws-k", String(scale));
+  box.classList.add("is-ws-down");
+  return new Promise(r => setTimeout(r, 900));
+}
+// The GAME's count (Đợt 395) for 1 or 2 tanks. `grow(side)` makes the leader's box bigger.
+function countTanks(tanks, scores, grow) {
+  const say = (k, ...a) => { if (!sound.isMuted()) bell[k](...a); };
+  const sc = scores.map(v => Math.max(0, Number(v) || 0));
+  const lo = Math.min(...sc), hi = Math.max(...sc);
+  const lead = sc.length < 2 || sc[0] === sc[1] ? -1 : (sc[0] > sc[1] ? 0 : 1);
+  const STEP = Math.round(Math.max(120, Math.min(340, 10000 / Math.max(1, hi))));
+  const pan = i => sc.length < 2 ? 0 : (i ? .65 : -.65);
+  tanks.forEach(t => t.countTo(0, 1));
+  return new Promise(res => {
+    let n = 0, grown = false;
+    // a torn-down match / left page: stop counting, let the caller go on
+    const later = (fn, ms) => setTimeout(() => { if (tanks.every(t => t.el.isConnected)) fn(); else res(); }, ms);
+    const done = () => { tanks.forEach((t, i) => t.landCount(sc[i])); say("land"); later(res, 1000); };
+    const tickOne = () => {
+      n++;
+      sc.forEach((v, i) => { if (n <= v) tanks[i].countTo(n, v); });
+      say("countTick", hi > 1 ? (n - 1) / (hi - 1) : 1);
+      later(step, n >= hi ? 450 : STEP);
+    };
+    const step = () => {
+      if (n >= hi) return done();
+      if (lead >= 0 && n === lo && !grown) {
+        grown = true;
+        if (lo > 0) tanks[1 - lead].landCount(lo);
+        return later(() => { if (grow) grow(lead); say("swell", pan(lead)); later(tickOne, 420); }, lo > 0 ? 650 : 250);
+      }
+      tickOne();
+    };
+    step();
+  });
 }
 
 // ---------------- board plans (shared by single and fight) ----------------
@@ -395,14 +435,34 @@ const wordshakeTemplate = {
 
   // ⭐ Đợt 390 — core `tpl.fightReveal`: the match is over, the result panel waits
   // for this. Both tanks drain as the numbers count up; then the real numbers return.
+  // ⭐ Đợt 402 — first the two boards dim + blur and the two team boxes slide down to the
+  // middle of their boards (with or without tanks), then the count; they stay there, and
+  // the result panel lands in the SHARED MIDDLE board instead of over the whole screen
+  // (Start again rebuilds the match, so nothing needs putting back).
   fightReveal({ wrap, scores, activity }) {
-    if (!tankOn(activity.options)) return;
-    const t = TANKS.get(wrap);
-    if (!t) return;
-    return drainTanks(t, scores).then(() => {
-      wrap.classList.remove("is-ws-tank");
-      t.forEach(x => x.el.classList.remove("is-count"));
-    });
+    const teams = [0, 1].map(i => wrap.querySelector(".aw-fight-team.side-" + i));
+    const boards = [...wrap.querySelectorAll(".aw-fight-board")];
+    if (!teams[0] || !teams[1] || boards.length < 2) return;
+    const mid = wrap.querySelector(".aw-fight-shared");
+    if (mid) {
+      const mo = new MutationObserver(() => {
+        const p = wrap.querySelector(":scope > .aw-fight-result");
+        if (!p) return;
+        mo.disconnect(); p.classList.add("is-ws-mid"); mid.append(p);
+      });
+      mo.observe(wrap, { childList: true });
+      setTimeout(() => mo.disconnect(), 30000);
+    }
+    wrap.classList.add("is-ws-ending");
+    const k = Math.min(1.5, .9 * boards[0].offsetWidth / (teams[0].offsetWidth || 1));
+    const t = tankOn(activity.options) ? TANKS.get(wrap) : null;
+    return Promise.all(teams.map((x, i) => slideDown(x, boards[i], k)))
+      .then(() => t ? countTanks(t, scores, side => teams[side].classList.add("is-ws-big")) : null)
+      .then(() => {
+        if (!t) return;
+        wrap.classList.remove("is-ws-tank");
+        t.forEach(x => x.el.classList.remove("is-count"));
+      });
   },
 
   // ⭐ Đợt 389 — the "Next" tick on the row under the frame (core `tpl.belowTools`).
@@ -805,8 +865,14 @@ const wordshakeTemplate = {
       const result = { correct, incorrect: total - correct, total, items: total, perQuestion, review, answered: review.filter(r => r.answered).length };
       // Đợt 390 — single play: the tank drains while the score counts up, THEN the
       // engine's end screen. (A match drains through `fightReveal` instead.)
+      // ⭐ Đợt 402 — like the GAME: the play area dims + blurs, the tank box slides down
+      // to its middle, then the count.
       if (!topTank || !topTank.el.isConnected) return ui.finish(result);
-      drainTanks([topTank], [score]).then(() => {
+      const stageEl = topTank.inner.closest(".aw-stage");
+      stageEl?.classList.add("is-ws-ending");
+      slideDown(topTank.box, topTank.inner.querySelector(".aw-playarea"), 2)
+        .then(() => countTanks([topTank], [score])).then(() => {
+        stageEl?.classList.remove("is-ws-ending");
         if (dead) return;
         topTank.inner.closest(".aw-stage")?.classList.remove("is-ws-tank");
         topTank.box.remove(); TANKS.delete(topTank.inner);

@@ -289,3 +289,24 @@
 .aw-fight.is-skin-wordshake .aw-fight-score{position:relative;z-index:1}
 .aw-fight-team > .wst{inset:2px;transform:skewX(-14deg)}
 .aw-fight-team > .wst .wst-num{transform:skewX(14deg);font-family:"Saira",sans-serif;font-style:italic;font-weight:800;font-size:clamp(16px,2.1vw,27px)}
+/* ⭐ Đợt 402 — time's up, like the GAME (Đợt 401): the boards dim + blur, the score box(es)
+   slide down to the middle of their board (--ws-dx/--ws-dy/--ws-k set by slideDown), the
+   leader's box grows once more; a match's result panel sits in the shared middle board. */
+.aw-stage.is-ws-ending .aw-playarea>*,
+.aw-fight.is-ws-ending .aw-fight-board .aw-playarea>*{filter:brightness(.35) saturate(.6) blur(4px);transition:filter .6s ease}
+.aw-stage.is-ws-ending .aw-topbar{overflow:visible;z-index:6}
+.aw-ws-toptank{transition:transform .8s cubic-bezier(.22,1,.36,1)}
+.aw-ws-toptank.is-ws-down{z-index:6;transform:translate(var(--ws-dx),var(--ws-dy)) skewX(-14deg) scale(var(--ws-k))}
+.aw-fight.is-skin-wordshake .aw-fight-team{transition:transform .8s cubic-bezier(.22,1,.36,1)}
+.aw-fight.is-skin-wordshake .aw-fight-team.is-ws-down{z-index:20;transform:translate(var(--ws-dx),var(--ws-dy)) scale(var(--ws-k))}
+.aw-fight.is-skin-wordshake .aw-fight-team.is-ws-down.is-ws-big{transform:translate(var(--ws-dx),var(--ws-dy)) scale(calc(var(--ws-k) * 1.2));
+  transition:transform .4s cubic-bezier(.3,1.5,.5,1)}
+.aw-fight-shared>.aw-fight-result.is-ws-mid{position:absolute;inset:0;z-index:6;gap:clamp(8px,1.4vw,18px);padding:4%;text-align:center;
+  background:radial-gradient(ellipse 75% 65% at 50% 42%,#0F4029 0%,#05170F 62%,#030D09 100%);backdrop-filter:none;border-radius:inherit}
+.aw-fight-result.is-ws-mid .aw-fight-result-title{font:italic 800 clamp(20px,2.9vw,40px)/1.1 "Saira",sans-serif;color:#E6FFF1;text-shadow:0 0 22px rgba(61,245,138,.8);letter-spacing:.02em}
+.aw-fight-result.is-ws-mid .aw-fight-result-scores{font-family:"Saira",sans-serif;font-style:italic;color:#E6FFF1}
+.aw-fight-result.is-ws-mid .aw-fight-result-score{font-size:clamp(22px,3.2vw,44px)}
+.aw-fight-result.is-ws-mid .aw-fight-result-btns{flex-wrap:wrap;justify-content:center}
+.aw-fight-result.is-ws-mid .aw-btn{border:0;border-radius:4px;font:italic 800 clamp(13px,1.4vw,19px)/1 "Saira",sans-serif;
+  text-transform:uppercase;letter-spacing:.06em;padding:.7em 1.4em;background:rgba(61,245,138,.1);color:#9BFFC4;box-shadow:inset 0 0 0 1.5px rgba(61,245,138,.6)}
+.aw-fight-result.is-ws-mid .aw-btn-primary{background:linear-gradient(180deg,#6BFFA8,#22CF6C);color:#03150C;box-shadow:0 0 22px rgba(61,245,138,.6)}
