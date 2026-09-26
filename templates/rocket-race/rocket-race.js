@@ -360,6 +360,11 @@ function rr3dScene({ root, ctl, title, play }) {
   const st = { root, host2d, ctl, view: null, sfx: null, boards: [null, null], q: ["", ""], pending: [], dead: false, failed: false,
                prog: [{ done: 0, total: 0 }, { done: 0, total: 0 }], twoDevice: false, offs: [] };
   rr3d = st;
+  // ⭐ Đợt 405 — act VOICE biết NGAY lúc dựng cảnh (bàn chỉ mount sau START) ⇒ nền cảnh phóng cũng im.
+  try {
+    const a = ctl && ctl.matchAct && ctl.matchAct();
+    st.voiceAct = !!(a && (a.content?.questions || []).some(q => q && voiceView(a, q).hideText));
+  } catch { /* bàn sẽ tự báo khi mount */ }
   rrSound.quiet = true;                       // tiếng tổng hợp cũ im — bộ tiếng 3D thay
   console.log("MYACT:3D:ON");                // ⭐ Đợt 399: myActivity v2.23.0 tạm lặng hiệu ứng nền (sao lấp lánh) nhường card đồ hoạ
   const wrap = root.closest(".aw-fight");
@@ -367,10 +372,13 @@ function rr3dScene({ root, ctl, title, play }) {
   Promise.all([import("./rr3d-view.js"), import("./rr3d-sfx.js")]).then(([V, S]) => {
     if (st.dead) return null;
     st.sfx = S.createRr3dSound();
+    if (st.voiceAct) { st.sfx.lockBg(true); if (st.paintSoundBtn) st.paintSoundBtn(); }
     return V.createView({ ...RR3D_CFG(V), container: host3d, title: title || "ROCKET RACE",
       teams: V.DEFAULT_TEAMS,
       onStart: () => { play(); },
       onTap: (side, k) => { const b = st.boards[side]; if (b) b.choose(k); },
+      // Đợt 405 — chạm thanh câu hỏi = nghe lại voice (null = một câu chung ⇒ bàn 0 phát)
+      onQuestionTap: side => { const b = st.boards[side == null ? 0 : side]; if (b && b.replayVoice) b.replayVoice(); },
       sfx: (n, v) => st.sfx && st.sfx.play(n, v),
       loop: (n, on, v, f) => st.sfx && st.sfx.loop(n, on, v, f),
       swell: (n, a, b, u, d) => st.sfx && st.sfx.swell(n, a, b, u, d) });
@@ -518,9 +526,10 @@ function rr3dSoundMenu(st, wrap) {
       const sw = el("span", "aw-rr3d-switch");
       const txt = el("span", "aw-rr3d-sndlabel"); txt.textContent = label;
       row.append(txt, sw);
-      const paint = () => row.classList.toggle("is-on", !!prefs()[k]);
+      const locked = () => k === "bg" && !!st.voiceAct;   // Đợt 405 — act VOICE: nền tắt cứng
+      const paint = () => { row.classList.toggle("is-on", !!prefs()[k]); row.classList.toggle("is-locked", locked()); row.disabled = locked(); };
       paint();
-      press(row, e => { e.stopPropagation(); if (st.sfx) st.sfx.setPrefs({ [k]: !prefs()[k] }); paint(); paintBtn(); });
+      press(row, e => { e.stopPropagation(); if (locked()) return; if (st.sfx) st.sfx.setPrefs({ [k]: !prefs()[k] }); paint(); paintBtn(); });
       pop.append(row);
     });
     wrap.append(pop);
@@ -933,6 +942,10 @@ const rocketRaceTemplate = {
     const fightLocked = () => fightBoardLock || !!(fightCtl && fightCtl.isLocked(fightSide));
     let fightPendingReveal = false;        // answered, ✓/✗ withheld until the round settles
     const speaks = () => !fightCtl || fightCtl.speaks(fightSide);   // banners / shared sounds: board 0 only
+    // ⭐ Đợt 405 (thầy): "khi chọn act voice, tự động tắt nhạc background và không cho bật".
+    // Act VOICE = có câu giấu chữ chỉ còn loa (ENG1/ENG2 VOICE, hoặc Content = Voice) — giọng đọc phải nghe rõ.
+    let voiceAct = false;
+    const startMusic = () => { if (!voiceAct) rrSound.music.start(); };
 
     let items = (activity.content?.questions || [])
       .filter(q => q && Array.isArray(q.answers) && q.answers.some(a => a && a.correct) && q.answers.length >= 2);
@@ -940,6 +953,7 @@ const rocketRaceTemplate = {
     // question at the same index) — the match act already has shuffle forced off.
     if (opt.shuffleQuestions && !fightCtl) items = shuffle(items);
     const N = items.length;
+    voiceAct = items.some(q => voiceView(activity, q).hideText);
 
     // Teacher vs pupil device: the engine strips its toolbar under the frame in
     // student mode (same signal Running team relies on). Teams mode is a
@@ -1045,7 +1059,12 @@ const rocketRaceTemplate = {
     // ⭐ Đợt 392 — trận 3D: bàn này nhận cú chạm ô từ cảnh 3D (raycast) qua đúng choose() cũ
     const on3d = !!(fightCtl && rr3d && rr3d.ctl === fightCtl);
     if (on3d) {
-      rr3d.boards[fightSide] = { choose: k => choose(k), stopClock: () => ui.stopTimer?.() };
+      rr3d.boards[fightSide] = { choose: k => choose(k), stopClock: () => ui.stopTimer?.(), replayVoice: () => replayVoice() };
+      if (voiceAct && !rr3d.voiceAct) {
+        rr3d.voiceAct = true;
+        if (rr3d.sfx) rr3d.sfx.lockBg(true);
+        if (rr3d.paintSoundBtn) rr3d.paintSoundBtn();
+      }
       rr3d.trackLen = scene ? scene.L : fightTrackLength(N);
       rr3d.twoDevice = twoDevice;
       rr3d.prog[fightSide] = { done: 0, total: N };
@@ -1089,7 +1108,7 @@ const rocketRaceTemplate = {
         rockets.forEach(r => { if (r.stunUntil) r.stunUntil += gap; });
         pausedAt = 0;
       }
-      if (wasRunning) { last = performance.now(); tickTimer = setInterval(tick, TICK_MS); if (running && speaks()) rrSound.music.start(); }
+      if (wasRunning) { last = performance.now(); tickTimer = setInterval(tick, TICK_MS); if (running && speaks()) startMusic(); }
       wasRunning = false;
     }
     const pauseHandler = { pause: pauseGame, resume: resumeGame };
@@ -1330,8 +1349,8 @@ const rocketRaceTemplate = {
           later(step, 800);
         } else {
           if (speaks()) {
-            if (fromLaunch) { rrSound.music.start(); v3(v => v.go()); }
-            else { showBanner("GO!", "is-go"); rrSound.go(); rrSound.music.start(); if (on3d) v3(v => { v.countStep("GO!"); v.go(); }); }
+            if (fromLaunch) { startMusic(); v3(v => v.go()); }
+            else { showBanner("GO!", "is-go"); rrSound.go(); startMusic(); if (on3d) v3(v => { v.countStep("GO!"); v.go(); }); }
           }
           ui.startTimer?.();
           // Đợt 368 — the match clock's zero. The packet carries "how long the
@@ -1383,6 +1402,15 @@ const rocketRaceTemplate = {
         if (!queue.length) { finish(); return; }
         showQuestion(queue[0]);
       }
+    }
+
+    // ⭐ Đợt 405 — nghe lại voice câu đang hiện (cảnh 3D gọi khi chạm thanh câu hỏi; y như bấm nút loa 2D).
+    function replayVoice() {
+      if (finished || dead || curItem == null) return;
+      const q = items[curItem];
+      if (!q || !voiceView(activity, q).hasVoice) return;
+      if (fightCtl && !fightCtl.speaks(fightSide)) { fightCtl.requestVoiceToggle(q.voice); return; }
+      voicePlayer.toggle(q.voice, curVoiceBtn);
     }
 
     // Put question `idx` on the panel. Solo/Teams reach it through

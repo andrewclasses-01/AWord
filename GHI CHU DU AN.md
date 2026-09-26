@@ -546,6 +546,41 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 405 (26/9/2026) — ROCKET RACE: act VOICE nghe lại được (chạm thanh câu hỏi 3D) + tự TẮT nhạc nền, không cho bật · ⬜ CHƯA PUSH · ⬜ CHƯA BẤM TAY TOMKO
+
+**Yêu cầu thầy (26/9):** (1) act dạng VOICE (VD ENG1 VOICE) phải bấm cái loa để nghe lại được — hiện bấm không ăn;
+(2) chọn act voice ⇒ tự tắt nhạc background và không cho bật khi act là dạng voice.
+
+**Chẩn đoán (1):** từ Đợt 392 Fight là **cảnh 3D**; thanh câu hỏi là một tấm **canvas vẽ lên WebGL** (`rr3d-view.js`
+`paintQuestion`), act voice chỉ được vẽ chữ "🔊" (`rocket-race.js` `rr3d.q[side] = vv.hideText ? "🔊" : …`). Nút loa thật
+(`.aw-voicebtn`) vẫn nằm trong ổ 2D ẨN dưới canvas ⇒ không ai chạm được. Raycast `pointerdown` chỉ soi ô đáp án + nút START.
+Solo/Teams 2D KHÔNG lỗi (đo: bấm nút loa ⇒ phát).
+
+**Việc đã làm (chỉ `templates/rocket-race/`, KHÔNG sửa core):**
+- `rr3d-view.js`: raycast trượt ô đáp án ⇒ soi tiếp **mặt chữ thanh câu hỏi** (`questionPanel.tm`), chỉ khi `phase === "play"`,
+  không pause, thanh đang hiện (không bị iPad giấu). Different (2 nửa) ⇒ `uv.x` < 0,5 là bàn 0, ngược lại bàn 1; câu chung ⇒ `null`.
+  Gọi `cfg.onQuestionTap(side)`.
+- `rocket-race.js`: `onQuestionTap` ⇒ `st.boards[side ?? 0].replayVoice()`; bàn khai `replayVoice()` = ĐÚNG đường của nút loa 2D
+  (bàn không phát tiếng thì `fightCtl.requestVoiceToggle`, bàn 0 thì `voicePlayer.toggle`) ⇒ chạm lần nữa khi đang phát là dừng,
+  y như nút loa. Chạm được cả khi câu có chữ + voice (không chỉ act voice).
+- **Nhạc nền (2):** "act VOICE" = có câu `voiceView(act, q).hideText` (ENG1/ENG2 VOICE hoặc Options Content = Voice).
+  - 3D: `rr3d-sfx.js` thêm `lockBg(on)` — ép kênh BACKGROUND về 0 **không ghi đè lựa chọn đã nhớ** (`aw-rr3d-sound`); `setPrefs`
+    bỏ qua `bg` khi khoá; `prefs` trả `bg:false` khi khoá ⇒ tiếng nền cảnh phóng (`rr3d-intro-sound`, đọc `st.sfx.prefs`) cũng im.
+    Menu 🔊: dòng BACKGROUND `is-locked` (mờ, `disabled`, bấm không làm gì); nút 🔊 hiện nửa (`is-half`).
+  - ⚠️ Bàn chỉ mount SAU nút START của cảnh phóng ⇒ biết act voice từ bàn là QUÁ MUỘN (nền cảnh phóng đã kêu). Nên
+    `rr3dScene` tự hỏi `ctl.matchAct()` ngay lúc dựng cảnh; bàn mount xong báo lại lần nữa (lưới an toàn).
+  - 2D (Solo/Teams/Fight lùi 2D): `startMusic()` không gọi `rrSound.music.start()` khi act voice (2D không có công tắc nhạc riêng).
+
+**Đã đo (`scratch/dot405-rr-voice.html`, đếm `HTMLMediaElement.play`):** Fight 3D act voice: `voiceAct:true`, `bgLocked:true`,
+`prefs.bg:false`, localStorage KHÔNG bị ghi; quét dọc giữa màn, chạm thanh câu hỏi ⇒ phát–dừng–phát (y 0,02 / 0,04 / 0,06), chạm
+chỗ khác không phát; menu 🔊 bấm BACKGROUND ⇒ vẫn tắt, `saved` vẫn `null`. Hồi quy: Fight act thường ⇒ `bgLocked:false`, `bg:true`;
+Solo act voice ⇒ nút loa 2D bấm phát được. 0 lỗi console.
+
+**Chưa làm / chờ:** ⬜ push + kiểm live · ⬜ thầy bấm tay TOMKO (chữ 🔊 trên thanh 3D hơi nhạt — nếu HS khó nhận ra chỗ chạm
+thì có thể vẽ loa to/sáng hơn) · ⬜ chưa thử tay chế độ Different với act voice (2 nửa thanh).
+
+---
+
 ## Đợt 404 (26/9/2026) — A SHOW SPEED FIGHT Mode 1: bàn THUA hiện từ đúng của đội kia trong ô điền · ✅ ĐÃ PUSH `6cabc7c` + LIVE 2/2 mã băm · ⬜ CHƯA BẤM TAY TOMKO
 
 **Yêu cầu thầy (26/9):** trong Fight ở activity, khi một bên tạo xong từ và bên kia bị mất màu (thua, không được điểm câu

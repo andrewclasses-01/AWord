@@ -100,17 +100,27 @@ export function createRr3dSound() {
     g.linearRampToValueAtTime(Math.min(1.5, k * peak), now + upSec);
     g.setTargetAtTime(Math.min(1.5, k * back), now + upSec, downSec / 3);   // tắt dần theo hàm mũ
   }
-  function setPrefs(p) {
-    Object.assign(prefs, p); savePrefs(prefs);
+  // ⭐ Đợt 405 (thầy): act VOICE ⇒ nhạc nền TẮT và không bật được (giọng đọc phải nghe rõ).
+  // Khoá chỉ ép kênh nền về 0 cho trận này — KHÔNG ghi đè lựa chọn đã nhớ của máy.
+  let bgLocked = false;
+  function applyBus(fadeSec) {
     const now = ctx.currentTime;
     [["fx", bus.fx], ["bg", bus.bg]].forEach(([k, gn]) => {
+      const on = prefs[k] && !(k === "bg" && bgLocked);
       gn.gain.cancelScheduledValues(now); gn.gain.setValueAtTime(gn.gain.value, now);
-      gn.gain.linearRampToValueAtTime(prefs[k] ? 1 : 0, now + 0.5);
+      gn.gain.linearRampToValueAtTime(on ? 1 : 0, now + fadeSec);
     });
   }
+  function setPrefs(p) {
+    if (bgLocked && "bg" in p) { p = { ...p }; delete p.bg; }
+    Object.assign(prefs, p); savePrefs(prefs);
+    applyBus(0.5);
+  }
+  function lockBg(on) { bgLocked = !!on; applyBus(0.3); }
   return {
-    play, loop, swell, setPrefs,
-    get prefs() { return { ...prefs }; },
+    play, loop, swell, setPrefs, lockBg,
+    get prefs() { return { ...prefs, bg: prefs.bg && !bgLocked }; },
+    get bgLocked() { return bgLocked; },
     get state() { return ctx.state; },
     pause(on) {
       paused = !!on;
@@ -139,5 +149,5 @@ function bounds(buf) {
 
 function dummy() {
   const noop = () => {};
-  return { play: noop, loop: noop, swell: noop, setPrefs: noop, prefs: { fx: true, bg: true }, state: "none", pause: noop, stopAll: noop };
+  return { play: noop, loop: noop, swell: noop, setPrefs: noop, lockBg: noop, prefs: { fx: true, bg: true }, bgLocked: false, state: "none", pause: noop, stopAll: noop };
 }

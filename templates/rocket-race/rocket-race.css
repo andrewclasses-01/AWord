@@ -769,6 +769,8 @@
 }
 .aw-rr3d-sndrow.is-on .aw-rr3d-switch { background: linear-gradient(90deg, #1d6fd6, #37c3ff); border-color: #7fd6ff; box-shadow: 0 0 12px rgba(80, 190, 255, .55); }
 .aw-rr3d-sndrow.is-on .aw-rr3d-switch::after { transform: translateX(22px); background: #fff; }
+/* Đợt 405 — act VOICE: BACKGROUND tắt cứng, không bật được */
+.aw-rr3d-sndrow.is-locked { opacity: .4; cursor: not-allowed; }
 
 /* ---- màn kết trận ---- */
 .aw-rr3d-result {

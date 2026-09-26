@@ -1943,7 +1943,13 @@ export async function createView(cfg) {
     ray.setFromCamera(ndc, camera);
     const vis = hitList.filter(m => { let o = m; while (o) { if (!o.visible) return false; o = o.parent; } return true; });
     const hit = ray.intersectObjects(vis, false)[0];
-    if (hit) onTap(hit.object.userData.tile);
+    if (hit) { onTap(hit.object.userData.tile); return; }
+    // ⭐ Đợt 405 (thầy): act VOICE — chạm thanh câu hỏi (chữ 🔊) = nghe lại. Different: nửa trái/phải = bàn 0/1.
+    if (!cfg.onQuestionTap || !questionPanel || !questionPanel.g.visible || G.qHidden || G.phase !== "play" || G.paused) return;
+    const qh = ray.intersectObject(questionPanel.tm, false)[0];
+    if (!qh) return;
+    const side = (G.qSame || !G.qTexts[1]) ? null : (qh.uv && qh.uv.x >= 0.5 ? 1 : 0);
+    cfg.onQuestionTap(side);
   });
 
   // =========================================================
