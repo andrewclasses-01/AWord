@@ -551,6 +551,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 Thầy (26/9/2026) duyệt MẪU 5b ở kho myGame (`https://andrewclasses-01.github.io/myGame/rocket-race/mau-5b-lien-mach.html`):
 *"ok, ghép bản 5b vào AWord thay cho bản cũ"*; hỏi thêm (AskUserQuestion): **Start again / Apply cũng chạy lại cảnh phóng mỗi ván**.
 Nhánh `dot398-rr3d-intro`, worktree `web-wt-dot398`. Backup `_backup/dot398/`.
+✅ **ĐÃ PUSH `040b509` + LIVE**: Pages built đúng commit · **10/10 mã băm khớp** (rocket-race.js, rr3d-view.js, rr3d-launch.js, rr3d-intro-sound.js, rocket-race.css, sfx/stall.mp3, launch/site-albedo.jpg, launch/layout.json, sfx-intro/startboom.ogg, sfx-intro/warp.ogg; HTTP 200) · chạy thử NGAY TRÊN bản live (`/templates/rocket-race/test.html` + `startFight()`): cảnh phóng dựng xong, 11/11 tiếng intro tải, nền gió/nhà máy/chim đang phát.
 
 **Làm gì** (chỉ `templates/rocket-race/`, KHÔNG đụng core):
 - `rr3d-launch.js` MỚI (≈ myGame `core/launch-aerial-5b.js`, import về `./vendor/three`): khu phóng như ảnh SpaceX 39A (nhà xưởng
