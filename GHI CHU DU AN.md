@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 403 (26/9/2026) — A SHOW SPEED: 11 mục rà lại sau Đợt 401–402 (thầy chốt qua hỏi–đáp) · ⬜ CHƯA BẤM TAY TOMKO
+## Đợt 403 (26/9/2026) — A SHOW SPEED: 11 mục rà lại sau Đợt 401–402 (thầy chốt qua hỏi–đáp) · ✅ ĐÃ PUSH `904e1b8` + LIVE 5/5 mã băm · ⬜ CHƯA BẤM TAY TOMKO
 
 **Bối cảnh:** thầy bảo liệt kê mọi vấn đề thấy được trong Đợt 401–402 rồi hỏi dần từng mục. Thầy chốt:
 
