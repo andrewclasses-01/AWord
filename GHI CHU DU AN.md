@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 407 (27/9/2026) — ROCKET RACE ▸ FIGHT 3D: TÊN LỬA TẤN CÔNG giữa 2 tàu + đội 2 CAM ĐẬM · ⬜ CHƯA PUSH (ghi lúc commit) · ⬜ CHƯA BẤM TAY TOMKO
+## Đợt 407 (27/9/2026) — ROCKET RACE ▸ FIGHT 3D: TÊN LỬA TẤN CÔNG giữa 2 tàu + đội 2 CAM ĐẬM · ✅ ĐÃ PUSH `a7e4e99` + LIVE 9/9 mã băm · ⬜ CHƯA BẤM TAY TOMKO
 
 **Yêu cầu thầy (26–27/9):** thêm cơ chế tấn công lẫn nhau giữa 2 tàu; đội vàng khó nhìn ⇒ cam. Thiết kế qua 3 lượt AskUserQuestion +
 4 bản mẫu ở kho myGame (mẫu 6 → 6b → 6c, `E:\LAP TRINH APP\myGame\rocket-race\`, GHI CHU myGame Chặng 15–17). Thầy test 6c:
@@ -584,7 +584,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 null, không dựng · Options trận có thanh MISSILE · `sinh-preload --check` KHỚP · 0 lỗi console.
 ⚠️ Bàn thử: khung trình duyệt bị ẨN thì WebGL báo `getProgramInfoLog(...).trim` null (cả cảnh phóng cũ cũng vậy) — phải cho khung hiện.
 
-**Chưa làm / chờ:** ⬜ thầy bấm tay TOMKO (chạm tên lửa / BOOST bằng ngón tay, nghe 5 tiếng mới, 2 đội bắn cùng lúc, Same words + Sudden death).
+**Chưa làm / chờ:** ✅ push (Pages built `a7e4e99`, 9/9 file rocket-race khớp SHA-256) · ⬜ thầy bấm tay TOMKO (chạm tên lửa / BOOST bằng ngón tay, nghe 5 tiếng mới, 2 đội bắn cùng lúc, Same words + Sudden death).
 
 ---
 
