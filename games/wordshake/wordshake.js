@@ -37,9 +37,9 @@ const RECENT = "aword-wordshake-recent";
 // (ws-lib rollBoard `level`) and the words the result screen lists as MISSED.
 const LEVEL_PREF = "aword-wordshake-level";
 const LEVEL_INFO = {
-  easy:   { label: "Easy",   hint: "Lots of everyday A1–A2 words", miss: [1, 4] },
-  medium: { label: "Medium", hint: "More B1–B2 words, fewer easy ones", miss: [3, 5] },
-  hard:   { label: "Hard",   hint: "More C1–C2 words, few easy ones", miss: [4, 6] }
+  easy:   { label: "Easy",   miss: [1, 4] },     // lots of everyday A1–A2 words
+  medium: { label: "Medium", miss: [3, 5] },     // more B1–B2, fewer easy ones
+  hard:   { label: "Hard",   miss: [4, 6] }      // more C1–C2, few easy ones
 };
 function readLevel() { try { const v = localStorage.getItem(LEVEL_PREF); return LEVEL_IDS.includes(v) ? v : "easy"; } catch (e) { return "easy"; } }
 function saveLevel(v) { try { localStorage.setItem(LEVEL_PREF, v); } catch (e) {} }
@@ -262,16 +262,17 @@ export function mountWordshake(root, ctx = {}) {
     const [a, b] = G.sides.length ? G.sides.map(s => s.score) : [0, 0];
     // Đợt 390 — no number (and no "who leads" glow) until the tanks have drained
     const over = G.phase === "over";
-    const bump = [over && a > G.prev[0], over && b > G.prev[1]]; G.prev = over ? [a, b] : [0, 0];
+    // Đợt 395b (thầy): no number pops on the result screen either — only the
+    // leader's box grew once, during the count
     const warn = G.phase === "play" && G.left <= 10;
     root.classList.toggle("asking", G.ask || G.opts);
     // Options only between games: a new level means a new board
     const between = G.phase === "ready" || G.phase === "over";
     cv.innerHTML =
       `<div class="wsg-hudline"></div>` +
-      `<div class="wsg-score ${over && a > b ? "lead" : ""} ${bump[0] ? "bump" : ""} ${over ? "" : "tank"} ${G.big === 0 ? "big" : ""}" style="left:${L.x + L.w / 2}px"><b>${a}</b></div>` +
+      `<div class="wsg-score ${over && a > b ? "lead" : ""} ${over ? "" : "tank"} ${G.big === 0 ? "big" : ""}" style="left:${L.x + L.w / 2}px"><b>${a}</b></div>` +
       `<div class="wsg-clock ${warn ? "warn" : ""}"><span>${fmt(G.phase === "ready" ? dur : G.left)}</span></div>` +
-      `<div class="wsg-score s1 ${over && b > a ? "lead" : ""} ${bump[1] ? "bump" : ""} ${over ? "" : "tank"} ${G.big === 1 ? "big" : ""}" style="left:${R.x + R.w / 2}px"><b>${b}</b></div>` +
+      `<div class="wsg-score s1 ${over && b > a ? "lead" : ""} ${over ? "" : "tank"} ${G.big === 1 ? "big" : ""}" style="left:${R.x + R.w / 2}px"><b>${b}</b></div>` +
       stage(L, sideHtml(0), 0) + stage(C, centreHtml(), null) + stage(R, sideHtml(1), 1) +
       `<div class="wsg-tools" style="top:${Y + BH + 10}px">` +
         `<button class="wsg-tool" data-do="home" title="${G.phase === "ready" ? "Back to Games" : "Start screen"}" aria-label="${G.phase === "ready" ? "Back to Games" : "Start screen"}"><span>${ICON.home}</span></button>` +
@@ -280,8 +281,8 @@ export function mountWordshake(root, ctx = {}) {
       `</div>` +
       (G.opts ? `<div class="wsg-ask"><div class="wsg-askbox wsg-optbox"><div class="q">Options</div>` +
         `<div class="wsg-lab">LEVEL</div>` +
-        `<div class="wsg-levels">${LEVEL_IDS.map(id => `<button data-do="lvl" data-l="${id}" class="${id === level ? "on" : ""}"><span>${LEVEL_INFO[id].label}</span></button>`).join("")}</div>` +
-        `<div class="wsg-lvhint">${LEVEL_INFO[level].hint}</div>` +
+        // Đợt 395b — a pill slides behind the chosen level (no hint line, thầy)
+        `<div class="wsg-levels" style="--i:${LEVEL_IDS.indexOf(level)}"><i class="wsg-lvpill"></i>${LEVEL_IDS.map(id => `<button data-do="lvl" data-l="${id}" class="${id === level ? "on" : ""}"><span>${LEVEL_INFO[id].label}</span></button>`).join("")}</div>` +
         `<div class="a one"><button class="wsg-b ent" data-do="optok"><span>Done</span></button></div></div></div>` : "") +
       (G.ask ? `<div class="wsg-ask"><div class="wsg-askbox"><div class="q">End this game?</div>` +
         `<div class="a"><button class="wsg-b clr" data-do="no"><span>No</span></button>` +
@@ -383,8 +384,16 @@ export function mountWordshake(root, ctx = {}) {
     if (d === "optok") { e.preventDefault(); G.opts = false; return render(); }
     if (d === "lvl") {
       e.preventDefault();
-      if (b.dataset.l !== level) { level = b.dataset.l; saveLevel(level); sfx.tap(0); }
-      return render();
+      // Đợt 395b (thầy): update in place — a redraw replayed the box's pop-in
+      if (b.dataset.l === level) return;
+      level = b.dataset.l; saveLevel(level); sfx.tap(0);
+      const box = cv.querySelector(".wsg-levels");
+      if (box) {
+        box.style.setProperty("--i", LEVEL_IDS.indexOf(level));
+        box.querySelectorAll("button").forEach(x => x.classList.toggle("on", x.dataset.l === level));
+      }
+      const lab = cv.querySelector('[data-do="opts"] em'); if (lab) lab.textContent = LEVEL_INFO[level].label;
+      return;
     }
     if (G.opts) return;   // the Options box is on top
     if (d === "sound") { sfx.on = !sfx.on; if (sfx.on) sfx.next(); return render(); }

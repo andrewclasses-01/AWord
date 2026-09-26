@@ -75,12 +75,14 @@
 .wsg-tool.wide em{font:italic 800 13px/1 var(--ws-gf);letter-spacing:.08em;text-transform:uppercase}
 .wsg-optbox{width:430px}
 .wsg-optbox .wsg-lab{margin-bottom:10px}
-.wsg-levels{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.wsg-levels button{height:46px;border:1px solid rgba(61,245,138,.45);color:var(--ws-neon2);font:italic 800 19px/1 var(--ws-gf);text-transform:uppercase;letter-spacing:.06em;
-  border-radius:4px;transform:skewX(-14deg);background:rgba(61,245,138,.06)}
+.wsg-levels{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
+.wsg-levels button{position:relative;z-index:1;height:46px;border:1px solid rgba(61,245,138,.45);color:var(--ws-neon2);font:italic 800 19px/1 var(--ws-gf);text-transform:uppercase;letter-spacing:.06em;
+  border-radius:4px;transform:skewX(-14deg);background:rgba(61,245,138,.06);transition:color .25s}
 .wsg-levels button span{display:block;transform:skewX(14deg)}
-.wsg-levels button.on{background:var(--ws-neon);color:#03150C;box-shadow:0 0 14px rgba(61,245,138,.6)}
-.wsg-lvhint{font:500 14px/1.35 var(--ws-vf);color:var(--ws-dim);margin:12px 0 18px;min-height:19px}
+.wsg-levels button.on{color:#03150C;background:transparent}
+/* Đợt 395b — the chosen level's pill slides between the buttons (--i = 0/1/2) */
+.wsg-lvpill{position:absolute;left:0;top:0;height:46px;width:calc((100% - 20px) / 3);border-radius:4px;background:var(--ws-neon);box-shadow:0 0 14px rgba(61,245,138,.6);
+  transform:translateX(calc(var(--i, 0) * (100% + 10px))) skewX(-14deg);transition:transform .32s cubic-bezier(.3,1.25,.5,1)}
 .wsg-askbox .a.one{grid-template-columns:1fr;width:60%;margin:0 auto}
 
 /* ---------- "End this game?" (Home while playing) ---------- */

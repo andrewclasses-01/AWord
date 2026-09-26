@@ -282,10 +282,7 @@ const TANK_CSS = `
 .wst.wst-s1 .wst-num{text-shadow:0 0 10px rgba(55,215,255,.9),0 0 2px #000}
 .wst.is-count .wst-num{opacity:1}
 .wst-num.is-land{animation:wst-land .55s cubic-bezier(.22,.9,.3,1)}
-@keyframes wst-land{0%{scale:1}35%{scale:1.5}100%{scale:1}}
-.wst-num.is-tick{animation:wst-tick .16s ease-out}
-@keyframes wst-tick{0%{scale:1.18}100%{scale:1}}
-.wst-fly{position:fixed;z-index:9999;pointer-events:none;left:0;top:0;border-radius:50%;will-change:transform}
+@keyframes wst-land{0%{scale:1}35%{scale:1.5}100%{scale:1}}.wst-fly{position:fixed;z-index:9999;pointer-events:none;left:0;top:0;border-radius:50%;will-change:transform}
 .wst-fly.is-head{width:10px;height:10px;margin:-5px 0 0 -5px;background:#fff;box-shadow:0 0 10px 3px rgba(61,245,138,.95),0 0 26px 8px rgba(61,245,138,.5)}
 .wst-fly.is-head.s1{box-shadow:0 0 10px 3px rgba(55,215,255,.95),0 0 26px 8px rgba(55,215,255,.5)}
 .wst-fly.is-tail{width:7px;height:7px;margin:-3.5px 0 0 -3.5px;background:rgba(155,255,196,.8);box-shadow:0 0 8px rgba(61,245,138,.8)}
@@ -411,12 +408,12 @@ export function createTank({ side = 0, cls = "" } = {}) {
       num.textContent = String(n);
       level = final > 0 ? FIXED * Math.max(0, 1 - n / final) : 0;
       energy = Math.max(energy, .6);
-      num.classList.remove("is-tick"); void num.offsetWidth; num.classList.add("is-tick");
     },
+    // Đợt 395b (thầy): the number never pops (no scale up-and-down) while counting
+    // or when it lands — only the leader's box grows, once (the game does that).
     landCount(final) {
       T.stop(); el.classList.add("is-count"); level = 0;
       num.textContent = String(final);
-      num.classList.remove("is-land", "is-tick"); void num.offsetWidth; num.classList.add("is-land");
     },
     stop() { if (iv) { clearInterval(iv); iv = null; } },
     reset() { T.stop(); el.classList.remove("is-count"); num.classList.remove("is-land"); level = FIXED; energy = 0; pulses = []; sparks = []; },
