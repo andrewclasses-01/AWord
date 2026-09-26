@@ -12,6 +12,8 @@
 // false — tàu vẫn lượn né) · tàu thắng BIẾN MẤT khi chui qua cổng + LOÉ SÁNG (cfg.portalVanish) · lửa ẩn theo tàu · tàu ĐẶT
 // THẲNG hướng bay ngay khung đầu (r.qInit — nối liền với intro) · kết trận nhanh (cfg.finale.hitsAfter) + máy quay XOAY ĐỀU
 // quanh tàu thua từ lúc về đích (startOrbit) · `export makeRocket` cho cảnh phóng rr3d-launch.js dựng CÙNG một con tàu.
+// ⭐ Đợt 399 (thầy 26/9/2026 duyệt MẪU 5c): TỰ GIỮ 60 KHUNG — rr3d-autores.js đo nhịp khung thật, hạ/nâng tỉ lệ điểm ảnh
+// (sàn 1,0: chữ ô đáp án vẽ bằng WebGL); đổi độ nét chỉ cấp lại bộ đệm (`applyPR`), không dựng lại bảng.
 // =============================================================
 import * as THREE from "./vendor/three/three.module.min.js";
 import { EffectComposer } from "./vendor/three/addons/EffectComposer.js";
@@ -24,6 +26,7 @@ import { RoundedBoxGeometry } from "./vendor/three/addons/RoundedBoxGeometry.js"
 import { FontLoader } from "./vendor/three/addons/FontLoader.js";
 import { TextGeometry } from "./vendor/three/addons/TextGeometry.js";
 export { THREE };
+import { makeAutoRes } from "./rr3d-autores.js";
 
 const V3 = THREE.Vector3;
 const TAU = Math.PI * 2;
@@ -1951,7 +1954,9 @@ export async function createView(cfg) {
     // khung bị ẩn / gỡ khỏi trang (0 px) ⇒ bỏ qua: tỉ lệ 0/0 = NaN làm hỏng hình học của bảng
     if (!container.clientWidth || !container.clientHeight) return;
     W = container.clientWidth; H = container.clientHeight;
-    const pr = Math.min(window.devicePixelRatio || 1, Q[quality].pr);
+    const prMax = Math.min(window.devicePixelRatio || 1, Q[quality].pr);
+    if (autoRes) autoRes.setMax(prMax);
+    const pr = autoRes ? Math.min(prMax, autoRes.pr) : prMax;
     renderer.setPixelRatio(pr);
     renderer.setSize(W, H, false);
     renderer.domElement.style.width = W + "px"; renderer.domElement.style.height = H + "px";
@@ -1963,6 +1968,17 @@ export async function createView(cfg) {
     fire.mat.uniforms.uScale.value = s; smoke.mat.uniforms.uScale.value = s;
     buildUI();
   }
+  // 5c: đổi độ nét giữa trận — chỉ cấp lại bộ đệm vẽ (KHÔNG buildUI: bảng/ô chữ giữ nguyên)
+  function applyPR(pr) {
+    if (!W || !H) return;
+    renderer.setPixelRatio(pr); renderer.setSize(W, H, false);
+    renderer.domElement.style.width = W + "px"; renderer.domElement.style.height = H + "px";
+    composer.setPixelRatio(pr); composer.setSize(W, H);
+    grade.uniforms.uRes.value.set(W * pr, H * pr);
+    stars.material.uniforms.uPR.value = pr;
+    const s = (H * pr) / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
+    fire.mat.uniforms.uScale.value = s; smoke.mat.uniforms.uScale.value = s;
+  }
   let rsT = 0;
   const onWinResize = () => { clearTimeout(rsT); rsT = setTimeout(() => { if (!destroyed) resize(); }, 120); };
   window.addEventListener("resize", onWinResize);
@@ -1970,7 +1986,9 @@ export async function createView(cfg) {
   let lastWH = "";
   const ro = new ResizeObserver(() => { const k = container.clientWidth + "x" + container.clientHeight; if (k !== lastWH) { lastWH = k; onWinResize(); } });
   ro.observe(container);
+  var autoRes = null;
   resize();
+  autoRes = makeAutoRes({ max: renderer.getPixelRatio(), min: Math.min(1, renderer.getPixelRatio()), apply: applyPR });   // sàn 1,0: chữ ô đáp án vẫn nét
 
   function setQuality(qn) {
     quality = qn;
@@ -1992,6 +2010,7 @@ export async function createView(cfg) {
     rafId = requestAnimationFrame(frame);
     if (cfg.maxFps && now - lastFrame < 1000 / cfg.maxFps - 2) return;
     lastFrame = now;
+    if (!manual) autoRes.frame(now);
     const dt = Math.min(0.05, clock.getDelta());
     // Menu ☰ tạm dừng: cảnh ĐỨNG HÌNH (dt = 0) nhưng vẫn vẽ ⇒ không bị đen khung
     if (!manual) tick(G.paused ? 0 : dt);
@@ -2275,7 +2294,8 @@ export async function createView(cfg) {
     step(n = 1, dt = 1 / 60) { manual = true; for (let i = 0; i < n; i++) tick(dt); },
     strike(side) { meteorStrike(rockets[side], 1, 3); const m = meteors[meteors.length - 1]; const f = v => { const q = v.clone().project(camera); return [+q.x.toFixed(2), +q.y.toFixed(2)]; }; return { start: f(m.start), target: f(new V3().setFromMatrixPosition(rockets[side].ship.matrixWorld)), sameMat: m.line.material === dust.material }; },   // bàn thử Đợt 397: một nhát tia sáng kết trận
     dodgeInfo() { return { k: +dodgeK.toFixed(2), rocks: dodgeRocks.length, cam: camMode, dg: rockets.map(r => r.dg ? [+r.dg.x.toFixed(2), +r.dg.y.toFixed(2)] : null) }; },   // bàn thử Đợt 397
-    resume() { manual = false; clock.getDelta(); },
+    resume() { manual = false; clock.getDelta(); autoRes.pause(); },
+    get res() { return autoRes.info; },
     snap() {
       let img = document.getElementById("__snap");
       if (!img) { img = document.createElement("img"); img.id = "__snap"; img.style.cssText = "position:fixed;left:0;top:0;width:100%;z-index:99999;pointer-events:none"; document.body.append(img); }

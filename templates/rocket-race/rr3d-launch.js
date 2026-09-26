@@ -6,6 +6,8 @@
 //   START ⇒ máy quay bay tới bệ, 3-2-1 (trang giữ chữ), đánh lửa, mây khói, cất cánh, vút qua máy quay, đuổi đuôi,
 //   vũ trụ, NHẢY TỐC ĐỘ ⇒ onHandoff() đúng ĐỈNH chớp sáng: rocket-race.js cắt tức thì sang cảnh đua (rr3d-view.js).
 //   2 tàu dựng bằng makeRocket + DEFAULT_TEAMS của rr3d-view.js ⇒ CÙNG một con tàu, cùng chỗ, cùng góc nhìn lúc cắt.
+//   ⭐ Đợt 399 (mẫu 5c): giới hạn 60 khung · tự giữ 60 khung (rr3d-autores.js, sàn 0,8) · bóng đổ vẽ lại CHỈ khi vật đổ bóng
+//   di chuyển · mây sắp xếp 2 khung/lần · dịch sẵn shader lửa + vệt nhảy tốc độ ở màn chờ (hết khựng lúc đánh lửa).
 //   Ảnh mặt đất ở ./launch/ (sinh bằng myGame tools/tao-dia-hinh-4d.py; bố cục chung ./launch/layout.json).
 // =============================================================
 import * as THREE from "./vendor/three/three.module.min.js";
@@ -14,6 +16,7 @@ import { RenderPass } from "./vendor/three/addons/RenderPass.js";
 import { UnrealBloomPass } from "./vendor/three/addons/UnrealBloomPass.js";
 import { OutputPass } from "./vendor/three/addons/OutputPass.js";
 import { makeRocket, DEFAULT_TEAMS as TEAMS } from "./rr3d-view.js";   // CÙNG mô hình tàu với cảnh đua
+import { makeAutoRes } from "./rr3d-autores.js";   // mẫu 5: tàu giống hệt game (bản rẽ nhánh)   // tàu giống hệt game mới nhất
 
 const V3 = THREE.Vector3;
 const TAU = Math.PI * 2;
@@ -178,6 +181,7 @@ class Particles {
   }
   update(dt, cam) {
     let n = 0;
+    const doSort = this.sorted && ((this.nf = (this.nf || 0) + 1) % 2 === 0);   /* 5c: sắp xa→gần 2 khung/lần (mây trôi chậm, mắt không thấy) */
     for (let i = 0; i < this.max; i++) {
       if (this.life[i] <= 0) { if (this.alpha[i] !== 0) { this.alpha[i] = 0; this.size[i] = 0; } continue; }
       this.life[i] -= dt;
@@ -188,9 +192,9 @@ class Particles {
       for (let j = 0; j < 3; j++) this.col[i3 + j] = lerp(this.c0[i3 + j], this.c1[i3 + j], k);
       this.alpha[i] = this.a0[i] * (k < 0.08 ? k / 0.08 : 1 - Math.pow((k - 0.08) / 0.92, 2));
       if (this.life[i] <= 0) { this.alpha[i] = 0; this.size[i] = 0; continue; }
-      if (this.sorted) { const dx = this.pos[i3] - cam.x, dy = this.pos[i3 + 1] - cam.y, dz = this.pos[i3 + 2] - cam.z; this.key[i] = dx * dx + dy * dy + dz * dz; this.order[n++] = i; }
+      if (doSort) { const dx = this.pos[i3] - cam.x, dy = this.pos[i3 + 1] - cam.y, dz = this.pos[i3 + 2] - cam.z; this.key[i] = dx * dx + dy * dy + dz * dz; this.order[n++] = i; }
     }
-    if (this.sorted) {                          // vẽ XA → GẦN: búi mây che nhau đúng thứ tự
+    if (doSort) {                               // vẽ XA → GẦN: búi mây che nhau đúng thứ tự
       const ord = this.order.subarray(0, n), key = this.key;
       ord.sort((a, b) => key[b] - key[a]);
       this.geo.index.needsUpdate = true; this.geo.setDrawRange(0, n);
@@ -981,7 +985,7 @@ export async function createLaunch(cfg) {
     const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
     const mat = new THREE.LineBasicMaterial({ color: new THREE.Color(0.75, 0.88, 1.6), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, fog: false });
     const L = new THREE.LineSegments(g, mat); L.frustumCulled = false; L.renderOrder = 20; camera.add(L);
-    return { set(w, dt) {
+    return { line: L, set(w, dt) {
       mat.opacity = Math.min(1, w * 1.4); L.visible = w > 0.002;
       if (!L.visible) return;
       const v = 40 + w * 900, len = 0.5 + w * 70;
@@ -1116,6 +1120,7 @@ export async function createLaunch(cfg) {
       // trời tối dần thành vũ trụ
       const alt = mid.y;
       const dk = G.passT ? Math.max(smooth(60, 420, alt), smooth(G.passT + 0.6, T.warp, t)) : 0;
+      G.dk = dk;
       spaceMat.opacity = dk; stars.material.opacity = smooth(0.35, 0.95, dk);
       clouds2.forEach(c2 => { c2.mat.uniforms.uOp.value = c2.op * (1 - smooth(0.05, 0.4, dk)); });
       // vài ngôi sao SÁNG lốm đốm ngay khi đuổi đuôi (trời còn xanh thẫm)
@@ -1139,6 +1144,11 @@ export async function createLaunch(cfg) {
     if (G.shake > 0) camera.position.add(new V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(0.07 * G.shake));
     camera.lookAt(camBase.look);
     space.position.copy(camera.position); stars.position.copy(camera.position); brightStars.position.copy(camera.position);
+    // 5c: BÓNG ĐỔ chỉ vẽ lại khi có vật đổ bóng ĐANG DI CHUYỂN (tay kẹp mở + tàu cất cánh) — màn chờ/đuổi đuôi/nhảy tốc độ
+    // cảnh đứng yên nên dùng lại bản bóng cũ (trước đây vẽ lại bóng của ~20 nghìn cây MỖI khung). Hình không đổi.
+    // (Đã thử ẨN mặt đất lúc trời tối: lộ mất dải chân trời xanh dưới vệt sao ⇒ bỏ, xem GHI CHU Chặng 14.)
+    const moving = G.phase !== "idle" && t >= T.ign - 0.6 && !(G.passT && t > G.passT + 1);
+    if (moving || !shadowDone) { renderer.shadowMap.needsUpdate = true; shadowDone = true; }
     steam.update(dt, camera.position); clouds.update(dt, camera.position); fire.update(dt, camera.position);
     cfg.onTick && cfg.onTick({ phase: G.phase, t, T, passT: G.passT, handed: G.handed });   /* 4i: nhịp cho tiếng intro */
     composer.render(dt);
@@ -1159,11 +1169,23 @@ export async function createLaunch(cfg) {
   const c0 = idleCam(0); camBase.pos.copy(c0.pos); camBase.look.copy(c0.look);
   camera.fov = IDLE_FOV; camera.updateProjectionMatrix(); resize();
 
+  renderer.shadowMap.autoUpdate = false; let shadowDone = false;   // 5c: bóng vẽ lại theo nhu cầu (xem tick)
+  // 5c: DỊCH SẴN shader của những thứ đang ẨN (lửa tàu, quầng loa, vệt nhảy tốc độ) — trước đây dịch lần đầu ĐÚNG lúc đánh lửa/nhảy ⇒ khựng
+  rockets.forEach(r => { r.flameGroup.visible = true; r.nozzleGlow.visible = true; });
+  warp.line.visible = true;
+  try { renderer.compile(scene, camera); } catch (e) { /* máy không hỗ trợ — bỏ qua */ }
+  rockets.forEach(r => { r.flameGroup.visible = false; r.nozzleGlow.visible = false; });
+  warp.line.visible = false;
   const clock = new THREE.Clock();
-  let raf = 0, manual = false, dead = false, fN = 0, fT = 0;
-  function frame() {
+  let raf = 0, manual = false, dead = false, fN = 0, fT = 0, lastFrame = 0;
+  // 5c: tự giữ 60 khung — hạ/nâng độ nét (chỉ cấp lại bộ đệm vẽ, không dựng lại cảnh)
+  const autoRes = makeAutoRes({ max: renderer.getPixelRatio(), min: 0.8, apply: pr => { renderer.setPixelRatio(pr); composer.setPixelRatio(pr); resize(); } });
+  function frame(now) {
     if (dead) return;
     raf = requestAnimationFrame(frame);
+    if (now - lastFrame < 1000 / 60 - 2) return;            // 5c: 60 khung như cảnh đua (màn 120 Hz không vẽ gấp đôi)
+    lastFrame = now;
+    if (!manual) autoRes.frame(now);
     const dt = Math.min(0.05, clock.getDelta());
     fN++; fT += dt; if (fT >= 0.5) { cfg.onFps && cfg.onFps(Math.round(fN / fT)); fN = 0; fT = 0; }
     if (!manual) tick(dt);
@@ -1174,7 +1196,8 @@ export async function createLaunch(cfg) {
     start() { if (G.phase !== "idle") return false; G.phase = "launch"; G.tl = 0; return true; },
     get phase() { return G.phase; }, get t() { return G.tl; }, T,
     step(n = 1, dt = 1 / 60) { manual = true; for (let i = 0; i < n; i++) tick(dt); },
-    resume() { manual = false; clock.getDelta(); },
+    resume() { manual = false; clock.getDelta(); autoRes.pause(); },
+    get res() { return autoRes.info; },
     stop() { dead = true; cancelAnimationFrame(raf); },
     destroy() { dead = true; cancelAnimationFrame(raf); renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove(); },
     renderer, scene, camera, rockets, G, clouds, steam, fire

@@ -361,6 +361,7 @@ function rr3dScene({ root, ctl, title, play }) {
                prog: [{ done: 0, total: 0 }, { done: 0, total: 0 }], twoDevice: false, offs: [] };
   rr3d = st;
   rrSound.quiet = true;                       // tiếng tổng hợp cũ im — bộ tiếng 3D thay
+  console.log("MYACT:3D:ON");                // ⭐ Đợt 399: myActivity v2.23.0 tạm lặng hiệu ứng nền (sao lấp lánh) nhường card đồ hoạ
   const wrap = root.closest(".aw-fight");
   if (wrap) { rr3dSoundMenu(st, wrap); rr3dMenuHost(st, wrap); }
   Promise.all([import("./rr3d-view.js"), import("./rr3d-sfx.js")]).then(([V, S]) => {
@@ -390,6 +391,7 @@ function rr3dScene({ root, ctl, title, play }) {
       st.offs.forEach(f => { try { f(); } catch { /* ignore */ } });
       try { st.launch && st.launch.destroy(); } catch { /* ignore */ }      // Đợt 398: rời trận giữa cảnh phóng
       try { st.isnd && st.isnd.end(); } catch { /* ignore */ }
+      console.log("MYACT:3D:OFF");
       try { st.view && st.view.destroy(); } catch { /* ignore */ }
       try { st.sfx && st.sfx.stopAll(); } catch { /* ignore */ }
       if (rr3d === st) { rr3d = null; rrSound.quiet = false; }

@@ -12,7 +12,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 398** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: GHÉP MẪU 5b — cảnh phóng từ mặt đất + ván đua liền mạch — xem chặng Đợt 398 bên dưới). Trước đó **Đợt 397** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: tia kết trận = vệt bụi từ mép màn, toàn cảnh lượn né đá, xác tàu cháy rụi bốc khói — xem chặng Đợt 397 bên dưới). Trước đó **Đợt 396** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: rời trang là dừng, vụ nổ hết khựng + đẹp, xác tàu thật — xem chặng Đợt 396 bên dưới). Trước đó **Đợt 394** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: chữ ô đáp án +15% không co, MENU giữa màn, vào thẳng Fight — xem chặng Đợt 394 bên dưới). Trước đó **Đợt 393** (26/9/2026, ROCKET RACE ▸ FIGHT 3D chỉnh 13 ý — xem chặng Đợt 393 bên dưới). Trước đó **Đợt 392** (26/9/2026, ROCKET RACE ▸ FIGHT 3D — xem chặng Đợt 392 bên dưới). Trước đó **Đợt 391** (25/9/2026, ROCKET RACE ▸ FIGHT Different: đội hết câu mà chưa ai về đích ⇒ DÙNG LẠI câu cũ
+> Mới nhất: **Đợt 399** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: GHÉP MẪU 5c — tự giữ 60 khung + nhường card đồ hoạ trong myActivity — xem chặng Đợt 399). Trước đó **Đợt 398** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: GHÉP MẪU 5b — cảnh phóng từ mặt đất + ván đua liền mạch — xem chặng Đợt 398 bên dưới). Trước đó **Đợt 397** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: tia kết trận = vệt bụi từ mép màn, toàn cảnh lượn né đá, xác tàu cháy rụi bốc khói — xem chặng Đợt 397 bên dưới). Trước đó **Đợt 396** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: rời trang là dừng, vụ nổ hết khựng + đẹp, xác tàu thật — xem chặng Đợt 396 bên dưới). Trước đó **Đợt 394** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: chữ ô đáp án +15% không co, MENU giữa màn, vào thẳng Fight — xem chặng Đợt 394 bên dưới). Trước đó **Đợt 393** (26/9/2026, ROCKET RACE ▸ FIGHT 3D chỉnh 13 ý — xem chặng Đợt 393 bên dưới). Trước đó **Đợt 392** (26/9/2026, ROCKET RACE ▸ FIGHT 3D — xem chặng Đợt 392 bên dưới). Trước đó **Đợt 391** (25/9/2026, ROCKET RACE ▸ FIGHT Different: đội hết câu mà chưa ai về đích ⇒ DÙNG LẠI câu cũ
 > (xào lại) tới khi có tàu về đích; Count down hết giờ ⇒ tàu gần hơn bay về, tàu kia nổ như cũ). Chặng Đợt 391.
 > Trước đó: **Đợt 390b** (25/9/2026, bình điểm đổi sang MẪU 4 thầy chọn — dải năng lượng neon + sao chổi, mức CỐ ĐỊNH ngang
 > nhau mọi đội tới lúc đếm; trang chọn mẫu `D:\OTHERS\CLAUDE\AWord - thiet ke Wordshake\score-tank-mau.html`). Chặng Đợt 390b.
@@ -545,6 +545,26 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
+
+## Đợt 399 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D: GHÉP MẪU 5c (myGame) — TỰ GIỮ 60 KHUNG/GIÂY + nhường card đồ hoạ trong myActivity · ⬜ CHƯA TEST TOMKO
+
+Thầy (26/9): game 3D thường chạy trong myActivity — tìm phương án đồng bộ 2 bên cho hiệu suất/độ mượt/nhạy tối đa; duyệt MẪU 5c
+(`https://andrewclasses-01.github.io/myGame/rocket-race/mau-5c-muot.html`) + myActivity v2.23.x: *"ok, ghép bản 5c vào AWord. Push mọi thứ lên"*.
+Nhánh `dot399-rr3d-muot` (worktree `web-wt-dot398`). Backup `_backup/dot399/`. Hình + tiếng KHÔNG đổi.
+- `rr3d-autores.js` MỚI (= myGame core/auto-res.js): đo nhịp khung thật; TB > 18,2 ms ⇒ hạ tỉ lệ điểm ảnh 0,1 (0,2 nếu > 24 ms);
+  êm ~7 s ⇒ thử +0,05; thử mà rớt ⇒ chốt trần. Giả lập: máy khoẻ giữ nguyên · yếu dừng 1,15 · vừa 1,2 · rất yếu 0,8.
+- `rr3d-view.js`: tự giữ 60 khung, SÀN 1,0 (chữ ô đáp án/câu hỏi vẽ bằng WebGL — thấp hơn là mềm chữ); đổi độ nét qua `applyPR()`
+  (KHÔNG `buildUI`); `view.res` cho bàn thử.
+- `rr3d-launch.js`: giới hạn 60 khung · tự giữ 60 khung (sàn 0,8) · bóng đổ vẽ lại CHỈ khi vật đổ bóng di chuyển (`shadowMap.autoUpdate
+  false`; đo myGame: màn chờ 0 lần, cả đoạn phóng 304/743 khung — trước là MỌI khung, ~20 nghìn cây thẻ lá) · mây sắp xếp 2 khung/lần ·
+  `renderer.compile` với lửa + quầng loa + vệt nhảy tốc độ bật tạm (hết dịch shader giữa lúc đánh lửa/nhảy). ⛔ Đã thử ẩn mặt đất lúc
+  trời tối: mất dải chân trời xanh dưới vệt sao ⇒ bỏ.
+- `rocket-race.js`: rr3dScene phát `MYACT:3D:ON` lúc dựng, `MYACT:3D:OFF` trong `destroy()` ⇒ myActivity v2.23.1 (`body.is-3d-live`, ĐẾM
+  theo cột) tạm dừng quầng sao lấp lánh; v2.23.0 còn: cờ Chromium `force_high_performance_gpu` + `ignore-gpu-blocklist`, sao lấp lánh
+  đổi opacity thay `filter: drop-shadow` (trước vẽ lại mỗi khung, tranh card với WebGL).
+- Đo ở phía myActivity (bơm nguyên AWORD_CSS/AWORD_JS vào trang thử 1600×900): KHÔNG bóp khung 3D; vòng theo dõi ≤ 0,1 ms.
+Đã kiểm (`test.html` + `startFight()`, lái khung bằng tay vì khung xem trước bị che): cảnh phóng → hoà cảnh → pha `play`, câu có sẵn,
+`view.res` hoạt động, marker ON/OFF phát đúng. ⬜ TOMKO: độ nét tự chọn (`__rr3d.view.res` trong Console) + nhìn độ mượt.
 
 ## Đợt 398 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D: GHÉP MẪU 5b (myGame) — CẢNH PHÓNG TỪ MẶT ĐẤT + ván đua liền mạch · ⬜ CHƯA BẤM TAY TOMKO
 

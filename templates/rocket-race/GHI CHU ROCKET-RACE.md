@@ -709,3 +709,9 @@ Thầy thiết kế cùng Claude qua 13 bản mẫu ở kho **myGame** (`E:\LAP 
 - Nguồn gốc/lịch sử thiết kế: myGame `GHI CHU DU AN.md` Chặng 4–12 (mẫu 4 → 5b). Sửa cảnh phóng về sau: sửa ở myGame trước, thầy OK
   rồi chép sang (đổi import three về `./vendor/three/...`, `makeRocket` từ `./rr3d-view.js`, ảnh `./launch/`, tiếng `./sfx-intro/`).
 - ⚠️ Bàn thử: khung xem trước bị che ⇒ rAF không chạy ⇒ lái bằng `__rr3d.launch.step(n)` / `__rr3d.view.step(n)`.
+
+## 33. Đợt 399 (26/9/2026) — GHÉP MẪU 5c: TỰ GIỮ 60 KHUNG/GIÂY (hình + tiếng không đổi)
+- `rr3d-autores.js` (đo nhịp khung, hạ/nâng tỉ lệ điểm ảnh) dùng ở CẢ cảnh đua (sàn 1,0 — chữ ô vẽ bằng WebGL) lẫn cảnh phóng (sàn 0,8).
+- Cảnh phóng: 60 khung · bóng đổ theo nhu cầu · mây sắp 2 khung/lần · dịch sẵn shader lửa/nhảy tốc độ.
+- `MYACT:3D:ON/OFF` cho myActivity v2.23.1 (nhường card đồ hoạ). Bàn thử: `__rr3d.view.res` = { pr, cap, max, drops }.
+- Nguồn: myGame mẫu 5c (`core/auto-res.js`, `core/launch-aerial-5c.js`, `game5c/`) — GHI CHU myGame Chặng 14.
