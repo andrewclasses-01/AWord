@@ -546,6 +546,37 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 401 (26/9/2026) — A SHOW SPEED (GAME): HẾT GIỜ ⇒ HAI BÀN TỐI + MỜ, Ô ĐIỂM TRƯỢT XUỐNG GIỮA BÀN ĐỘI RỒI MỚI ĐẾM · ⬜ CHƯA BẤM TAY TOMKO
+
+**Yêu cầu thầy (26/9):** khi hết giờ, toàn bộ nội dung 2 ô của 2 đội tối đi và blur; 2 ô điểm di chuyển từ trên xuống chính
+giữa ô của mỗi đội rồi mới bắt đầu đếm. Đếm xong vẫn nằm đó; ô giữa vẫn hiện như cũ (WINS/DRAW + MISSED + PLAY AGAIN);
+play again bình thường.
+
+**Phạm vi:** CHỈ GAME cố định `games/wordshake/` (`?g=wordshake`) — template Fight (`templates/wordshake/`) KHÔNG đổi.
+
+**Việc đã làm:**
+- `games/wordshake/wordshake.js`: cờ mới `G.down` (false ở `newBoard()` + `toReady()`). `render()` bật class `ending` trên
+  root theo `G.down` và thêm class `down` cho 2 ô `.wsg-score` ⇒ màn kết quả (render lại toàn bộ `innerHTML`) vẫn giữ ô ở giữa
+  bàn + bàn tối. `finish()`: sau `render()` pha `count`, **đợi 2 khung hình** (rAF lồng rAF) rồi mới đặt `G.down=true` + thêm
+  class — nếu để `render()` vẽ thẳng `down` thì ô sinh ra đã ở dưới, KHÔNG có chuyển động. Mốc bắt đầu đếm 900 → **1400 ms**
+  (tiếng hết giờ + ô trượt 0,8 s xong mới đếm). Chốt `alive()` cũ chặn nếu thầy bấm Home giữa lúc trượt.
+- `games/wordshake/wordshake.css`: `.wsg-score.down` = `translateY(232px)` (tâm ô y 28 → tâm bàn y 56+408/2 = 260) + `scale(1.4)`,
+  `z-index:4` (trên bàn và bong bóng z 3; bàn không có z-index nên không tạo stacking context), chuyển động .8 s
+  ease-out; `.down.big` (đội dẫn to lên lúc vượt số bên thấp, Đợt 395) = `scale(1.7)` với nhịp nảy .4 s cũ (bề ngang
+  220×1,7 + nghiêng ≈ 391 px < bàn 392 px). `.wsg.ending .wsg-stage[data-side]>*` = `brightness(.35) saturate(.6) blur(4px)`,
+  lưới nền `::before` mờ còn .3; chỉ 2 bàn đội — bàn giữa không đổi.
+
+**Quyết định kỹ thuật:** ô điểm to lên 1,4 khi xuống giữa bàn để dễ nhìn từ cuối lớp; canvas bình năng lượng không vẽ lại
+theo scale (đo bằng `clientWidth`) nên hơi mềm khi phóng, chấp nhận vì lúc đếm bình đã cạn dần, chủ yếu thấy SỐ.
+
+**Đã đo (trang `games/wordshake/test.html`, đồng hồ tua nhanh bằng vá `setInterval` trong bàn thử, 9 từ trái 6 / phải 3):**
+00:00 ⇒ hai bàn tối + mờ, hai ô nằm giữa bàn, số đếm 7|7 rồi ô trái to lên đếm tiếp 11… · màn kết quả: ô vẫn ở giữa bàn
+(22 to | 7), bàn giữa WINS + MISSED + PLAY AGAIN · bấm PLAY AGAIN ⇒ ô về dải trên, bàn sáng lại, chơi bình thường · 0 lỗi console.
+
+**Chưa làm / chờ:** ⬜ thầy bấm tay trên TOMKO (xem nhịp trượt 0,8 s + độ mờ 4 px có vừa mắt không).
+
+---
+
 ## Đợt 400 (26/9/2026) — NÚT CHUYỂN ACT (giữ nguyên mode) + NHỚ TEMPLATE CHƠI CUỐI · ✅ ĐÃ PUSH `468a2a2` + LIVE · ⬜ CHƯA BẤM TAY
 
 **Yêu cầu thầy (26/9):** Single — thêm nút cạnh trái tên act, cỡ bằng nút In, mở pop-up nhỏ các act cùng thư mục để chuyển

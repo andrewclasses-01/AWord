@@ -46,6 +46,15 @@
 .wsg-score{transition:transform .4s cubic-bezier(.3,1.5,.5,1),box-shadow .4s}
 .wsg-score.big{transform:translateX(-50%) skewX(-14deg) scale(1.3);z-index:3;box-shadow:0 0 34px rgba(61,245,138,.85),inset 0 0 26px rgba(61,245,138,.3)}
 .wsg-score.s1.big{box-shadow:0 0 34px rgba(55,215,255,.85),inset 0 0 26px rgba(55,215,255,.3)}
+/* ⭐ Đợt 401 — time's up: the score boxes slide from the strip (centre y 28) down to the
+   middle of their team's board (y 56 + 408/2 = 260), a little bigger, over the dimmed
+   board; the leader's box grows further there. They stay down on the result screen. */
+.wsg-score.down{z-index:4;transform:translateX(-50%) translateY(232px) skewX(-14deg) scale(1.4);
+  transition:transform .8s cubic-bezier(.22,1,.36,1),box-shadow .4s}
+.wsg-score.down.big{transform:translateX(-50%) translateY(232px) skewX(-14deg) scale(1.7);
+  transition:transform .4s cubic-bezier(.3,1.5,.5,1),box-shadow .4s}
+.wsg.ending .wsg-stage[data-side]>*{filter:brightness(.35) saturate(.6) blur(4px);transition:filter .6s ease}
+.wsg.ending .wsg-stage[data-side]::before{opacity:.3;transition:opacity .6s ease}
 /* Đợt 390 — score tank (ws-lib createTank): no number while playing, only the water;
    the tank counts the number itself while it drains, then the real number returns */
 .wsg-score b{position:relative;z-index:1}

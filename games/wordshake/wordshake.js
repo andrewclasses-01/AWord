@@ -75,7 +75,9 @@ export function mountWordshake(root, ctx = {}) {
   // ask: the "End this game?" box is open (the clock stands still under it)
   // opts: the Options box is open (only between games) · big: the side whose score
   // box grew during the count (Đợt 395), kept big on the result screen
-  const G = { phase: "ready", letters: [], sides: [], found: new Map(), log: [], last: null, left: dur, prev: [0, 0], ask: false, opts: false, big: -1 };
+  // down: time's up — both team boards dim + blur, the score boxes have slid down to
+  // the middle of their team's board (Đợt 401), and stay there on the result screen
+  const G = { phase: "ready", letters: [], sides: [], found: new Map(), log: [], last: null, left: dur, prev: [0, 0], ask: false, opts: false, big: -1, down: false };
   let clock = null, shakeIv = null, countRun = 0;
 
   function readTime() { try { const v = +localStorage.getItem(PREF); return TIMES.includes(v) ? v : 180; } catch (e) { return 180; } }
@@ -100,7 +102,7 @@ export function mountWordshake(root, ctx = {}) {
     pushRecent(G.letters);
     tanks.forEach(t => t.reset(0));
     G.sides = [0, 1].map(() => ({ order: shuffle([...Array(16).keys()]), sel: [], score: 0 }));
-    G.found = new Map(); G.log = []; G.last = null; G.left = dur; G.prev = [0, 0]; G.big = -1;
+    G.found = new Map(); G.log = []; G.last = null; G.left = dur; G.prev = [0, 0]; G.big = -1; G.down = false;
   }
   function start() {
     if (!dict) return;
@@ -131,7 +133,7 @@ export function mountWordshake(root, ctx = {}) {
   function toReady() {
     clearInterval(clock); clearInterval(shakeIv); root.classList.remove("shaking");
     countRun++;
-    G.phase = "ready"; G.sides = []; G.left = dur; G.ask = false; G.opts = false; G.big = -1;
+    G.phase = "ready"; G.sides = []; G.left = dur; G.ask = false; G.opts = false; G.big = -1; G.down = false;
     tanks.forEach(t => t.reset(0));
     render();
   }
@@ -152,6 +154,15 @@ export function mountWordshake(root, ctx = {}) {
     const later = (fn, ms) => setTimeout(() => { if (alive()) fn(); }, ms);
     sfx.timeup();
     tanks.forEach(t => t.countTo(0, 1));
+    // ⭐ Đợt 401 (thầy, 26/9/2026) — first the two team boards go dark + blurred and
+    // both score boxes slide from the strip down to the middle of their team's board;
+    // only then does the count start. Two frames after render() so the move animates
+    // (render() alone would draw the boxes already down).
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (!alive()) return;
+      G.down = true; root.classList.add("ending");
+      cv.querySelectorAll(".wsg-score").forEach(b => b.classList.add("down"));
+    }));
     let n = 0, grown = false;
     const done = () => {
       tanks.forEach((t, i) => t.landCount(sc[i]));
@@ -184,7 +195,7 @@ export function mountWordshake(root, ctx = {}) {
       }
       tickOne();
     };
-    later(step, 900);   // let the time-up sound finish first
+    later(step, 1400);   // the time-up sound + the boxes' slide (.8 s) first
   }
   const fmt = s => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
   const pan = side => side ? .65 : -.65;
@@ -266,13 +277,15 @@ export function mountWordshake(root, ctx = {}) {
     // leader's box grew once, during the count
     const warn = G.phase === "play" && G.left <= 10;
     root.classList.toggle("asking", G.ask || G.opts);
+    root.classList.toggle("ending", G.down);
+    const down = G.down ? "down" : "";
     // Options only between games: a new level means a new board
     const between = G.phase === "ready" || G.phase === "over";
     cv.innerHTML =
       `<div class="wsg-hudline"></div>` +
-      `<div class="wsg-score ${over && a > b ? "lead" : ""} ${over ? "" : "tank"} ${G.big === 0 ? "big" : ""}" style="left:${L.x + L.w / 2}px"><b>${a}</b></div>` +
+      `<div class="wsg-score ${over && a > b ? "lead" : ""} ${over ? "" : "tank"} ${G.big === 0 ? "big" : ""} ${down}" style="left:${L.x + L.w / 2}px"><b>${a}</b></div>` +
       `<div class="wsg-clock ${warn ? "warn" : ""}"><span>${fmt(G.phase === "ready" ? dur : G.left)}</span></div>` +
-      `<div class="wsg-score s1 ${over && b > a ? "lead" : ""} ${over ? "" : "tank"} ${G.big === 1 ? "big" : ""}" style="left:${R.x + R.w / 2}px"><b>${b}</b></div>` +
+      `<div class="wsg-score s1 ${over && b > a ? "lead" : ""} ${over ? "" : "tank"} ${G.big === 1 ? "big" : ""} ${down}" style="left:${R.x + R.w / 2}px"><b>${b}</b></div>` +
       stage(L, sideHtml(0), 0) + stage(C, centreHtml(), null) + stage(R, sideHtml(1), 1) +
       `<div class="wsg-tools" style="top:${Y + BH + 10}px">` +
         `<button class="wsg-tool" data-do="home" title="${G.phase === "ready" ? "Back to Games" : "Start screen"}" aria-label="${G.phase === "ready" ? "Back to Games" : "Start screen"}"><span>${ICON.home}</span></button>` +

@@ -1,5 +1,12 @@
 # GHI CHÚ WORDSHAKE — template #21 + game cố định trong GAMES
 
+## ⭐ Đợt 401 (26/9/2026) — GAME: hết giờ ⇒ bàn tối + mờ, ô điểm xuống giữa bàn đội rồi mới đếm
+- Chỉ `games/wordshake/` (template Fight không đổi). `finish()` vẽ pha `count` rồi 2 khung hình sau mới bật `G.down` ⇒ root
+  `.ending` (con của 2 bàn đội `brightness(.35) saturate(.6) blur(4px)`) + ô `.wsg-score.down` (`translateY(232px) scale(1.4)`,
+  z 4, .8 s); đội dẫn `.down.big` scale 1.7. Đếm bắt đầu ở 1400 ms (cũ 900). `render()` giữ `down`/`ending` theo `G.down` nên
+  màn kết quả để ô ở giữa bàn; `newBoard()`/`toReady()` đặt lại `G.down=false` ⇒ PLAY AGAIN/Home như cũ.
+- Đã đo test.html (đồng hồ tua nhanh): trượt + mờ đúng, 22|7 ở giữa bàn trên màn kết quả, PLAY AGAIN sáng lại, 0 lỗi. ⬜ TOMKO.
+
 ## ⭐ Đợt 390b (25/9/2026) — thầy chê bình nước bản đầu "xấu quá" ⇒ 5 mẫu, thầy chọn MẪU 4 + mức CỐ ĐỊNH
 - Trang chọn mẫu: `D:\OTHERS\CLAUDE\AWord - thiet ke Wordshake\score-tank-mau.html` (5 mẫu canvas đúng cỡ ô 220×40, tự chạy
   ghi điểm → cạn + đếm; xem bằng server `ws-tank-mau` trong `D:\OTHERS\CLAUDE\.claude\launch.json`, cổng 5596).

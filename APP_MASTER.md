@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ⭐ **26/9/2026 Đợt 401 — A SHOW SPEED (GAME `games/wordshake`): hết giờ ⇒ hai bàn đội tối + blur, hai ô điểm trượt từ dải trên xuống GIỮA bàn đội (to ×1,4, đội dẫn ×1,7) rồi mới đếm; màn kết quả giữ nguyên vị trí đó, PLAY AGAIN trả về như cũ** (cờ `G.down`, class `ending`/`down`; ⬜ chưa bấm tay TOMKO). Chi tiết chặng Đợt 401.
 > ⭐ **26/9/2026 Đợt 400 — NÚT CHUYỂN ACT + NHỚ TEMPLATE CHƠI CUỐI** (✅ ĐÃ PUSH `468a2a2` + LIVE 6/6 mã băm; ⬜ chưa bấm tay): Single nút cạnh trái tên act, Fight đầu cụm nút giữa; pop-up act cùng thư mục + thư mục con; chuyển act GIỮ mode (Showdown chỉ khi không giữa lượt). Act mang thêm `lastTpl` (Firebase, không bump `updatedAt`) — `startGame()` mở act thư viện "từ đầu" ⇒ tự chuyển từ bản gốc sang template chơi cuối; `type`/`content` gốc KHÔNG đổi. Chi tiết chặng Đợt 400.
 > ✅ **26/9/2026 Đợt 399 — ghép MẪU 5c: Fight 3D tự giữ 60 khung/giây (`templates/rocket-race/rr3d-autores.js`), cảnh phóng nhẹ hơn, báo myActivity `MYACT:3D:ON/OFF`** — chi tiết chặng Đợt 399.
 > ✅ **26/9/2026 Đợt 398 — ĐÃ GHÉP cảnh phóng từ mặt đất (MẪU 5b myGame) vào Rocket race Fight 3D** — file mới `templates/rocket-race/rr3d-launch.js` + `rr3d-intro-sound.js` + `launch/` + `sfx-intro/`; chi tiết `GHI CHU DU AN.md` chặng Đợt 398 + `templates/rocket-race/GHI CHU ROCKET-RACE.md` mục 32. ⬜ thầy bấm tay/nghe trên TOMKO.
@@ -7478,6 +7479,8 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
+> ⭐ **(Đợt 401, 26/9/2026) — A SHOW SPEED GAME: ô điểm trượt xuống giữa bàn lúc hết giờ.** ⬜ thầy bấm tay TOMKO (nhịp trượt 0,8 s, độ mờ 4 px).
+>
 > ⭐ **(Đợt 400, 26/9/2026) — NÚT CHUYỂN ACT + NHỚ TEMPLATE CHƠI CUỐI: ✅ ĐÃ PUSH `468a2a2` + LIVE 6/6 mã băm.** ⬜ bấm tay tài khoản thật/TOMKO (Claude chỉ chạy Firebase giả `scratch/dot400/`) · ⬜ myLesson/myActivity chưa đọc marker `ACT`.
 >
 > ---
