@@ -567,7 +567,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 - Đã kiểm (bàn thử `test.html` 1600×900, lái `__rr3d.view.step`): mở trang ⇒ tự vào Fight (`MYACT:AW:FIGHT:on`) · MENU hiện giữa màn 288×295 ở (655,312), phần tử trên cùng = nút menu, Resume đóng + gỡ lớp phủ, bấm nền mờ cũng đóng · ô "a very warm and heavy winter coat" 5 dòng / "Big Dipper", "Milky Way" 2 dòng, ô cao lên, chữ cùng cỡ ô 1 dòng · 6 đáp án vẫn cùng cỡ chữ, cột mọc xuống · chạm (raycast) trúng ô cao ⇒ chọn đúng, câu sau lật ô về cỡ mới · MODE → Back to single ⇒ ở single, Start again vẫn single · 0 lỗi console.
 - ⚠️ Một TỪ rất dài (vd "extraordinarily") vẫn phải co cho vừa bề ngang ô — không bẻ giữa từ.
 
-**VIỆC ĐANG CHỜ**: ⬜ commit + push (chờ thầy lệnh) · ⬜ thầy bấm tay TOMKO: cỡ chữ ô, câu trả lời dài, MENU (Start again / Change template / Submit từ trong trận 3D), mở act Rocket race từ thư viện + Change template sang Rocket race ⇒ vào thẳng Fight.
+**VIỆC ĐANG CHỜ**: ✅ commit + push `4ae4e25` (thầy lệnh 26/9/2026) — Pages built đúng commit, 5/5 file code khớp mã băm SHA-256 với bản live · ⬜ thầy bấm tay (máy khác/TOMKO): cỡ chữ ô, câu trả lời dài, MENU (Start again / Change template / Submit từ trong trận 3D), mở act Rocket race từ thư viện + Change template sang Rocket race ⇒ vào thẳng Fight.
 
 ## Đợt 393 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D: tiếng điện ảnh, bảng 🔊, iPad chỉ từ, màn kết riêng · ⬜ CHƯA BẤM TAY TOMKO
 
