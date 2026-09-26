@@ -1,6 +1,7 @@
 # GHI CHÚ — ROCKET RACE (đua tên lửa)
 
-🆕 **Đợt 392 (26/9/2026) — FIGHT 3D (WebGL)**, xem **mục 26**. ⬜ thầy chưa bấm tay TOMKO.
+🆕 **Đợt 393 (26/9/2026) — FIGHT 3D chỉnh 13 ý thầy** (tiếng điện ảnh, bảng 🔊, iPad chỉ từ, màn kết riêng…), xem **mục 27**.
+**Đợt 392 (26/9/2026) — FIGHT 3D (WebGL)**, xem **mục 26**. ⬜ thầy chưa bấm tay TOMKO.
 
 🆕 **Đợt 368 + 368b (22/9/2026) — FIGHT TRÊN HAI MÁY: câu hỏi sang iPad, máy chơi giữ đường đua + ô đáp án.**
 ✅ **COMMIT + PUSH `0b5e4f1` + LIVE** (7/7 mã băm SHA-256 khớp sau 220 s; `source.html` trên bản live mở ra đúng
@@ -656,3 +657,16 @@ Thầy thiết kế cùng Claude qua 13 bản mẫu ở kho **myGame** (`E:\LAP 
 **Bẫy đã cắn (dự án myGame)**: điểm ảnh NaN bị bloom loang thành mảng đen (pass gột NaN trước bloom) · "nhún" góc nhìn khi trả lời đúng làm CẢ MÀN co giãn vì bảng gắn camera (`fovKick 0`; rung chỉ rung cảnh — `steadyUI`) · khói bay về camera phủ màn ở góc đuổi (mờ hạt gần camera) · RoomEnvironment trắng làm ô kim loại nhạt màu (hạ envMapIntensity).
 
 **⬜ Chưa kiểm / thầy bấm tay**: trang thật + TOMKO (2 đội chạm cùng lúc, 60 fps 4K) · âm lượng từng tiếng · Count down hết giờ (đường `settleByPosition` → `win` homeRun) · Sudden death · In turns · voice-only (cảnh hiện 🔊 thay câu) · màn iPad.
+
+## 27. Đợt 393 (26/9/2026) — FIGHT 3D chỉnh theo 13 ý thầy
+- **Tiếng** (`rr3d-sfx.js` viết lại): Web Audio thay `<audio>`/core/sfx.js — `loop()` nối liền (cắt khoảng lặng mp3 bằng `bounds()`), tắt = trượt nhỏ dần (`fade`), `swell(name, peak, back, up, down)` cho động cơ gầm lên rồi LẮNG theo hàm mũ; 2 bus `fx` / `bg` (chỉ `ambient` là bg). Menu ☰ = `ctx.suspend()`. File tiếng tự tổng hợp: `tools/rr3d-tao-am-thanh.py` (nguồn: `sfx/NGUON AM THANH.md`). ⛔ Bỏ hẳn giọng đọc (v3/v2/v1/vgo/vwin đã xoá); 3-2-1 = `ting`, GO = `tinggo`.
+- **Bảng 🔊** (`rr3dSoundMenu`): chặn cú bấm nút Sound của hàng nút trận ở pha CAPTURE trên `.aw-fight` (cả pointerdown) ⇒ onclick của engine (tắt tiếng CHUNG) không chạy; nút tắt tiếng chung không bị đụng tới (giọng đọc câu hỏi vẫn theo nó).
+- **iPad**: `paintLink()` — `twoDevice` ⇒ luôn ẩn thanh chữ (thầy chọn, bỏ luật "chỉ ẩn khi iPad có mặt" của Đợt 368). `source.html` ẩn tên act, đồng hồ, tên đội, số câu — chỉ còn TỪ.
+- **Kết trận mọi kiểu**: hết mạng trong trận 3D KHÔNG `explode` ngay — `raceWon(other, false)` ⇒ `view.win()` chạy đủ vệt sáng đánh → cháy → nổ.
+- **Màn kết riêng**: core `showResult()` hỏi `sceneHandle.showResult({winner, scores, reviews, again})` trước (xem HUONG DAN CORE); `rr3dResult()` vẽ lớp HUD `.aw-rr3d-result` + SHOW ANSWERS hai cột `.aw-rr3d-review`; `view.resultView()` cất bảng đáp án/câu hỏi, máy quay trôi quanh TÂM đám mảnh vỡ (mảnh vẫn trôi), bụi sao chậm lại.
+- **Nhãn %**: `rr3d.prog[side] = {done: turnNo−1, total: N}`; nhãn = Σdone / Σtotal; bàn 1 sửa thẳng `.aw-nav-label` (nhãn là của bàn 0).
+- **Khói đen khi sai**: `r.blackSmoke` 1,9 s — khói phụt ra chậm rồi bung LÊN + dạt ngang (⚠️ phụt thẳng về sau là bay vào camera đuổi ⇒ bị `nearFade` nuốt, đã thử). Lửa khi khựng 0,55–0,95 (trước 0,25–0,6 + làm tròn số hạt về 0 = mất lửa).
+- **Thanh câu hỏi co giãn**: `questionWidth()` đo chữ ở cỡ chuẩn ⇒ dựng lại thanh (`buildQuestion`) khi bề ngang cần đổi > 0,4%; canvas đúng tỉ lệ mặt chữ; tối đa `questionMaxCm` 176; quá nữa thì co chữ / 2 dòng.
+- **Đồng hồ**: engine `ui.stopTimer()` (mới) — `raceWon` gọi cho cả hai bàn trong trận 3D.
+- `resize()` bỏ qua khung 0 px (tỉ lệ 0/0 = NaN làm hỏng hình học bảng — gặp khi khung bị gỡ khỏi trang).
+**⬜ Thầy nghe/bấm tay**: cả bộ tiếng trên TOMKO (Claude không nghe được — chỉ kiểm phổ âm), iPad thật, Count down, Sudden death.

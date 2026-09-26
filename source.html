@@ -144,6 +144,10 @@
     /* A voice-only question has no text to show at all (the clip is played on
        MÁY CHƠI — thầy chose that): say so instead of showing a blank half. */
     .rrs-q.is-voice { font-size: calc(12 * var(--u)); opacity: .55; }
+    /* ⭐ Đợt 393 (thầy): "hiển thị ở ipad mặc định là TỪ ĐƠN, không hiển thị bất kỳ cái gì khác
+       ngoài từ đơn" — ẩn tên act, đồng hồ, tên đội, số câu. Hai nửa vẫn cách nhau một vạch mảnh
+       (nửa trái = đội trái). Các màn chờ / đăng nhập (.rrs-note) giữ nguyên. */
+    .rrs-bar, .rrs-team, .rrs-num { display: none !important; }
 
     /* ---- the states that are not "a question" ---- */
     .rrs-note {

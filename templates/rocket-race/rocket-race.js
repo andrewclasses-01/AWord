@@ -329,6 +329,19 @@ function v3(fn) {
   if (st.view) { try { fn(st.view); } catch (e) { console.warn("[rocket-race 3D]", e); } }
   else st.pending.push(fn);
 }
+function rr3dProgressLabel() {
+  if (!rr3d) return "";
+  const [a, b] = rr3d.prog;
+  const tot = (a.total || 0) + (b.total || 0);
+  return tot ? Math.round(100 * Math.min(1, ((a.done || 0) + (b.done || 0)) / tot)) + "%" : "0%";
+}
+// Nhãn ở hàng nút là của bàn 0 — bàn 1 (Different / In turns) sang câu thì tự sửa nhãn ở đây.
+function rr3dPaintProgress() {
+  if (!rr3d) return;
+  const wrap = rr3d.root.closest(".aw-fight");
+  const lab = wrap && wrap.querySelector(".aw-fight-boardtools .aw-nav-label");
+  if (lab) lab.textContent = rr3dProgressLabel();
+}
 function rr3dFallback(st, err) {
   console.warn("[rocket-race] 3D scene failed — back to 2D", err);
   st.failed = true;
@@ -344,9 +357,12 @@ function rr3dScene({ root, ctl, title, play }) {
   const host3d = el("div", "aw-rr3d-canvas");
   const host2d = el("div", "aw-rr3d-hidden2d");
   root.append(host3d, host2d);
-  const st = { root, host2d, ctl, view: null, sfx: null, boards: [null, null], q: ["", ""], pending: [], dead: false, failed: false };
+  const st = { root, host2d, ctl, view: null, sfx: null, boards: [null, null], q: ["", ""], pending: [], dead: false, failed: false,
+               prog: [{ done: 0, total: 0 }, { done: 0, total: 0 }], twoDevice: false, offs: [] };
   rr3d = st;
-  rrSound.quiet = true;                       // tiếng tổng hợp cũ im — bộ mp3 thật thay
+  rrSound.quiet = true;                       // tiếng tổng hợp cũ im — bộ tiếng 3D thay
+  const wrap = root.closest(".aw-fight");
+  if (wrap) rr3dSoundMenu(st, wrap);
   Promise.all([import("./rr3d-view.js"), import("./rr3d-sfx.js")]).then(([V, S]) => {
     if (st.dead) return null;
     st.sfx = S.createRr3dSound();
@@ -355,7 +371,8 @@ function rr3dScene({ root, ctl, title, play }) {
       onStart: () => { play(); },
       onTap: (side, k) => { const b = st.boards[side]; if (b) b.choose(k); },
       sfx: (n, v) => st.sfx && st.sfx.play(n, v),
-      loop: (n, on, v) => st.sfx && st.sfx.loop(n, on, v) });
+      loop: (n, on, v, f) => st.sfx && st.sfx.loop(n, on, v, f),
+      swell: (n, a, b, u, d) => st.sfx && st.sfx.swell(n, a, b, u, d) });
   }).then(view => {
     if (!view) return;
     if (st.dead) { view.destroy(); return; }
@@ -365,13 +382,146 @@ function rr3dScene({ root, ctl, title, play }) {
     q.forEach(fn => { try { fn(view); } catch (e) { console.warn("[rocket-race 3D]", e); } });
   }).catch(e => { if (!st.dead) rr3dFallback(st, e); });
   return {
+    // ⭐ Đợt 393 — core/fight.js hỏi template vẽ bảng kết quả RIÊNG (nổi trên cảnh 3D còn đang chạy)
+    showResult(info) { if (st.dead || st.failed || !st.view) return false; rr3dResult(st, info); return true; },
     destroy() {
       st.dead = true;
+      st.offs.forEach(f => { try { f(); } catch { /* ignore */ } });
       try { st.view && st.view.destroy(); } catch { /* ignore */ }
       try { st.sfx && st.sfx.stopAll(); } catch { /* ignore */ }
       if (rr3d === st) { rr3d = null; rrSound.quiet = false; }
     }
   };
+}
+
+// ⭐ Đợt 393 (thầy): "bấm vào nút loa sẽ hiện lên 2 menu để bật tắt gồm Effect và Background".
+// Nút 🔊 của hàng nút trận vẫn là nút của engine — trong trận 3D ta chặn cú bấm (bắt ở pha CAPTURE
+// trên khung trận, chạy trước onclick của nút) và mở bảng nhỏ ngay trên nút. Lựa chọn nhớ theo máy.
+function rr3dSoundMenu(st, wrap) {
+  let pop = null;
+  const findBtn = () => wrap.querySelector('.aw-fight-boardtools button[aria-label="Sound"]');
+  const prefs = () => (st.sfx ? st.sfx.prefs : { fx: true, bg: true });
+  const paintBtn = () => {
+    const b = findBtn(); if (!b) return;
+    const p = prefs(), off = !p.fx && !p.bg;
+    b.innerHTML = off ? icons.soundOff : icons.soundOn;
+    b.classList.toggle("is-off", off);
+    b.classList.toggle("is-half", !off && (!p.fx || !p.bg));
+  };
+  const close = () => { if (pop) { pop.remove(); pop = null; } };
+  const open = btn => {
+    close();
+    pop = el("div", "aw-rr3d-sndmenu");
+    [["fx", "EFFECTS"], ["bg", "BACKGROUND"]].forEach(([k, label]) => {
+      const row = el("button", "aw-rr3d-sndrow");
+      row.type = "button";
+      const sw = el("span", "aw-rr3d-switch");
+      const txt = el("span", "aw-rr3d-sndlabel"); txt.textContent = label;
+      row.append(txt, sw);
+      const paint = () => row.classList.toggle("is-on", !!prefs()[k]);
+      paint();
+      press(row, e => { e.stopPropagation(); if (st.sfx) st.sfx.setPrefs({ [k]: !prefs()[k] }); paint(); paintBtn(); });
+      pop.append(row);
+    });
+    wrap.append(pop);
+    const wr = wrap.getBoundingClientRect(), br = btn.getBoundingClientRect();
+    const pw = pop.offsetWidth, ph = pop.offsetHeight;
+    pop.style.left = Math.max(8, Math.min(wr.width - pw - 8, br.left - wr.left + br.width / 2 - pw / 2)) + "px";
+    pop.style.top = Math.max(8, br.top - wr.top - ph - 10) + "px";
+  };
+  const onClick = e => {
+    const b = e.target.closest && e.target.closest('.aw-fight-boardtools button[aria-label="Sound"]');
+    if (b && wrap.contains(b) && !st.failed) {
+      e.stopPropagation(); e.preventDefault();
+      if (pop) close(); else open(b);
+      return;
+    }
+    if (pop && !pop.contains(e.target)) close();
+  };
+  // pointerdown của core/press.js có thể kích nút trước click — chặn cả hai
+  const onDown = e => {
+    const b = e.target.closest && e.target.closest('.aw-fight-boardtools button[aria-label="Sound"]');
+    if (b && wrap.contains(b) && !st.failed) { e.stopPropagation(); }
+  };
+  wrap.addEventListener("click", onClick, true);
+  wrap.addEventListener("pointerdown", onDown, true);
+  st.offs.push(() => { wrap.removeEventListener("click", onClick, true); wrap.removeEventListener("pointerdown", onDown, true); close(); });
+  // icon theo lựa chọn đã nhớ (nút có thể được engine dựng sau một nhịp)
+  const t = setTimeout(paintBtn, 300); st.offs.push(() => clearTimeout(t));
+  st.paintSoundBtn = paintBtn;
+}
+
+// ⭐ Đợt 393 (thầy): "thiết kế màn TEAM X WIN, SHOW ANSWERS và START AGAIN riêng (khác Fight thông
+// thường) và hiển thị trong khi vẫn còn nền là tàu vỡ và vũ trụ bao la của lượt game vừa rồi".
+// Một lớp HUD kính mỏng nổi TRÊN canvas (cảnh 3D vẫn chạy phía sau: mảnh vỡ trôi, sao, tinh vân).
+function rr3dResult(st, { winner, scores, reviews, again }) {
+  const old = st.root.querySelector(".aw-rr3d-result"); if (old) old.remove();
+  if (st.view) { try { st.view.resultView(); } catch { /* ignore */ } }
+  const TEAM = ["TEAM LEFT", "TEAM RIGHT"];
+  const COL = ["#3b8cff", "#ff4757"];
+  const hud = el("div", "aw-rr3d-result");
+  const card = el("div", "aw-rr3d-rescard");
+  const title = el("div", "aw-rr3d-restitle");
+  title.textContent = winner === 0 || winner === 1 ? TEAM[winner] + " WINS" : "IT'S A DRAW";
+  if (winner === 0 || winner === 1) card.style.setProperty("--tc", COL[winner]);
+  const sub = el("div", "aw-rr3d-ressub");
+  const L = Math.max(1, st.trackLen || 1);
+  [0, 1].forEach(i => {
+    const lane = el("div", "aw-rr3d-reslane" + (i === winner ? " is-win" : ""));
+    lane.style.setProperty("--tc", COL[i]);
+    const name = el("span", "aw-rr3d-resname"); name.textContent = TEAM[i];
+    const bar = el("span", "aw-rr3d-resbar");
+    const fill = el("i"); fill.style.width = Math.round(100 * Math.min(1, (scores[i] || 0) / L)) + "%";
+    bar.append(fill);
+    const num = el("span", "aw-rr3d-resnum"); num.textContent = (scores[i] || 0) + " / " + L;
+    lane.append(name, bar, num);
+    sub.append(lane);
+  });
+  const btns = el("div", "aw-rr3d-resbtns");
+  const hasRv = (reviews[0] && reviews[0].length) || (reviews[1] && reviews[1].length);
+  if (hasRv) {
+    const show = el("button", "aw-rr3d-btn"); show.type = "button"; show.textContent = "SHOW ANSWERS";
+    press(show, () => { if (st.sfx) st.sfx.play("tap"); openAnswers(); });
+    btns.append(show);
+  }
+  const ag = el("button", "aw-rr3d-btn is-primary"); ag.type = "button"; ag.textContent = "START AGAIN";
+  press(ag, () => { if (st.sfx) st.sfx.play("tap"); again(); });
+  btns.append(ag);
+  card.append(title, sub, btns);
+  hud.append(card);
+  st.root.append(hud);
+  requestAnimationFrame(() => hud.classList.add("is-in"));
+
+  function openAnswers() {
+    card.classList.add("is-away");
+    const rv = el("div", "aw-rr3d-review");
+    const head = el("div", "aw-rr3d-rvhead");
+    const t = el("div", "aw-rr3d-rvtitle"); t.textContent = "ANSWERS";
+    const x = el("button", "aw-rr3d-rvclose", icons.close); x.type = "button"; x.setAttribute("aria-label", "Close");
+    press(x, () => { if (st.sfx) st.sfx.play("tap"); rv.remove(); card.classList.remove("is-away"); });
+    head.append(t, x);
+    const cols = el("div", "aw-rr3d-rvcols");
+    [0, 1].forEach(i => {
+      const col = el("div", "aw-rr3d-rvcol"); col.style.setProperty("--tc", COL[i]);
+      const ct = el("div", "aw-rr3d-rvcoltitle"); ct.textContent = TEAM[i]; col.append(ct);
+      const list = el("div", "aw-rr3d-rvlist");
+      const rows = (reviews[i] || []).filter(r => r.answered);
+      if (!rows.length) { const e0 = el("div", "aw-rr3d-rvempty"); e0.textContent = "No answers yet"; list.append(e0); }
+      rows.forEach((r, k) => {
+        const row = el("div", "aw-rr3d-rvrow");
+        const q = el("div", "aw-rr3d-rvq"); q.textContent = (k + 1) + ". " + (r.question || "");
+        row.append(q);
+        const a = el("div", "aw-rr3d-rva " + (r.yourCorrect ? "is-ok" : "is-bad")); a.textContent = r.yourCorrect ? r.correctText : (r.yourText || "—");
+        row.append(a);
+        if (!r.yourCorrect) { const c = el("div", "aw-rr3d-rva is-ok"); c.textContent = r.correctText; row.append(c); }
+        list.append(row);
+      });
+      col.append(list);
+      cols.append(col);
+    });
+    rv.append(head, cols);
+    hud.append(rv);
+  }
 }
 // Cấu hình cảnh = MẪU 2i thầy duyệt ở myGame (mau-2i-duoi-theo-tomko.html). Cm = cỡ THẬT trên TOMKO 86".
 function RR3D_CFG(V) {
@@ -384,7 +534,9 @@ function RR3D_CFG(V) {
   return {
     quality: "high", maxFps: 60, fov: 38, steps: 5, lives: 0, uiDepth: 9, rocketScale: 1.1, bannerY: 0.35, startY: 0.5, startCm: [22, 7],
     maxTiles: 6,
-    introTitles: [{ text: "ANDREW CLASSES", at: 0.5, ms: 2300, size: 0.55 }, { text: "ROCKET RACE", at: 3.0, ms: 2300, size: 0.7 }], startAt: 5.4,
+    // Đợt 393 (thầy): chữ mở màn "bị to và lố quá" ⇒ nhỏ lại còn ~½ (0.55/0.7 → 0.26/0.34)
+    introTitles: [{ text: "ANDREW CLASSES", at: 0.5, ms: 2300, size: 0.26 }, { text: "ROCKET RACE", at: 3.0, ms: 2300, size: 0.34 }], startAt: 5.4,
+    questionMaxCm: 176,                       // Đợt 393: thanh câu hỏi dãn tới đây khi câu dài
     shatter: { pieces: 44 }, flyOut: true, skySpin: 0.006, turboLabel: "small",
     winBanner: { size: 0.3, y: -1.05, ms: 7000 },
     finale: { gateAfter: 1800, hits: 3, hitGap: 650, burnMs: 1800, strike: "streak" },
@@ -792,7 +944,10 @@ const rocketRaceTemplate = {
     // ⭐ Đợt 392 — trận 3D: bàn này nhận cú chạm ô từ cảnh 3D (raycast) qua đúng choose() cũ
     const on3d = !!(fightCtl && rr3d && rr3d.ctl === fightCtl);
     if (on3d) {
-      rr3d.boards[fightSide] = { choose: k => choose(k) };
+      rr3d.boards[fightSide] = { choose: k => choose(k), stopClock: () => ui.stopTimer?.() };
+      rr3d.trackLen = scene ? scene.L : fightTrackLength(N);
+      rr3d.twoDevice = twoDevice;
+      rr3d.prog[fightSide] = { done: 0, total: N };
       v3(v => { v.setTrack(scene ? scene.L : fightTrackLength(N)); v.setLivesMax(livesStart || 0); });
     }
     if (!fightCtl) renderRockets();
@@ -935,6 +1090,10 @@ const rocketRaceTemplate = {
     // provably showing it.
     function paintLink(alive) {
       if (dead || !scene) return;
+      // ⭐ Đợt 393 (thầy): "trong mọi tình huống, bật ipad thì sẽ không hiển thị text trên màn hình nữa
+      // mà chỉ hiện ở ipad … ẩn luôn khung hiển thị text". Thầy chọn điều này — kể cả khi iPad chưa
+      // báo có mặt (thay luật "chỉ ẩn khi iPad chắc chắn đang hiện" của Đợt 368).
+      if (twoDevice) alive = true;
       if (scene.qbar) scene.qbar.classList.toggle("is-remote", !!alive);
       if (on3d) v3(v => v.setQuestionHidden(!!alive));
       if (scene.host) scene.host.classList.toggle("is-noq", !!alive);
@@ -1199,8 +1358,12 @@ const rocketRaceTemplate = {
       } else { qDeadline = 0; qTimer.classList.remove("is-on"); }
 
       const mover = teamsMode ? currentTeam() : player;
+      // Đợt 392: hàng nút game = "câu / tổng" → ⭐ Đợt 393 (thầy): "% câu hỏi tổng thể mà 2 bên đã vượt
+      // qua (để biết sắp hết chặng chưa)" — số câu ĐÃ QUA của cả hai bàn ÷ tổng câu của cả hai bàn.
+      if (on3d) rr3d.prog[fightSide] = { done: Math.min(N, Math.max(rr3d.prog[fightSide].done, turnNo - 1)), total: N };
       ui.setNav({ index: fightCtl ? idx + 1 : Math.min(mover.p + 1, mover.L), total: fightCtl ? N : mover.L,
-                  label: on3d ? `${Math.min(idx + 1, N)} / ${N}` : null });   // Đợt 392: hàng nút game = "câu / tổng"
+                  label: on3d ? rr3dProgressLabel() : null });
+      if (on3d) rr3dPaintProgress();
       // ⭐ Đợt 370 — the new question's tiles are DEAD for a moment. Without this
       // the second tap of a double-tap answers a question nobody has read: the
       // tiles are rebuilt under the finger in the same spot. Re-check `curItem`
@@ -1656,13 +1819,17 @@ const rocketRaceTemplate = {
       locked = true;
       tiles.forEach(t => (t.tile.disabled = true));
       answersEl.classList.add("is-fightlost");
-      if (on3d) { const side = r.id; v3(v => v.explode(side)); paint3dTiles(); }
-      blowUp(r);
+      // ⭐ Đợt 393 (thầy): "khi kết thúc game trong mọi tình huống đều chạy tàu thắng qua đích và tàu thua
+      // bị ánh sáng va chạm và phát nổ như bình thường" — trận 3D: hết mạng KHÔNG nổ ngay; tàu này chỉ
+      // tàn tạ (khói, lửa yếu) còn cảnh kết trận (win) lo phần vệt sáng đánh + cháy + nổ.
+      if (on3d) paint3dTiles();
+      else blowUp(r);
       // Đợt 382 — out of lives = the OTHER rocket wins, and wins the same way as
       // at the flag: it flies home while this one burns (raceWon freezes the
       // referee at once — the old forfeit() let the next round slip in first).
       const other = fightCtl && scene && scene.rockets ? scene.rockets.find(x => x !== r) : null;
-      if (other && typeof fightCtl.finishRace === "function") { raceWon(other, true); return; }
+      if (other && typeof fightCtl.finishRace === "function") { raceWon(other, !on3d); return; }
+      if (on3d) { const side = r.id; v3(v => v.explode(side)); blowUp(r); }
       showBanner(r.name + " IS DOWN!", "is-stall", 1300);
       // older core: the referee ends the match after its hold — the OTHER team wins
       if (fightCtl && typeof fightCtl.forfeit === "function") fightCtl.forfeit(fightSide);
@@ -1698,6 +1865,8 @@ const rocketRaceTemplate = {
       // (~9 s); bảng kết quả của trọng tài chờ đúng hết cảnh đó.
       let holdMs = RACE_END_HOLD_MS;
       if (on3d && rr3d.view) { try { holdMs = Math.max(RACE_END_HOLD_MS, rr3d.view.win(w.id, { loserDown: !!loserAlreadyDown }) + 300); } catch (e) { console.warn(e); } }
+      // Đợt 393 — trận đã phân thắng thua: đồng hồ trận dừng (trước đây vẫn chạy trên bảng kết quả)
+      if (on3d) rr3d.boards.forEach(b => { try { b && b.stopClock && b.stopClock(); } catch { /* ignore */ } });
       if (typeof fightCtl.finishRace === "function") fightCtl.finishRace(w.id, holdMs);
       else if (loser && typeof fightCtl.forfeit === "function") fightCtl.forfeit(loser.id);
       locked = true;

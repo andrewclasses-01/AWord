@@ -5899,6 +5899,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     sloganSlot,  // null unless tpl.hasSloganSlot is true — a centered span between timer and score (Anagram)
     scoreEl,     // the score element itself (read-only) — for effects that fly toward the score
     startTimer: startTimerNow,   // start the clock now (only meaningful with tpl.manualTimerStart)
+    // Đợt 393 — dừng đồng hồ khi template đã tự phân thắng thua (Rocket race 3D: bảng kết quả riêng)
+    stopTimer: () => stopTimer(),
     // ⭐ Đợt 353 — FIGHT ONLY: nhận nuôi thanh Time delay vào một ổ trong sân của
     // template (xem chú thích tại `placeWaitBar`). Trả false ngoài trận / thiếu ổ.
     hostFightWaitBar(host) {

@@ -2269,6 +2269,17 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     const own = boards.every(x => x && typeof x.resultScore === "function");
     const a = own ? Number(boards[0].resultScore()) || 0 : totalOf(0);
     const b = own ? Number(boards[1].resultScore()) || 0 : totalOf(1);
+    // ⭐ Đợt 393 — khung `fullscene` (Rocket race 3D): handle của `tpl.fightScene` có thể có
+    // `showResult({ winner, scores, reviews, again })` để vẽ bảng kết quả RIÊNG trong cảnh (cảnh vẫn
+    // chạy phía sau). Trả true = đã vẽ; false / lỗi ⇒ bảng mặc định dưới đây như cũ.
+    if (sceneHandle && typeof sceneHandle.showResult === "function") {
+      const lost = forfeited[0] !== forfeited[1] ? (forfeited[0] ? 0 : 1) : null;
+      const win = lost !== null ? 1 - lost : (a === b ? null : (a > b ? 0 : 1));
+      const reviews = [0, 1].map(i => (boards[i] && typeof boards[i].review === "function" ? (boards[i].review() || []) : []));
+      try {
+        if (sceneHandle.showResult({ winner: win, scores: [a, b], reviews, again() { ctl.restartMatch(); } }) === true) return;
+      } catch (e) { console.warn("[fight] scene showResult failed", e); }
+    }
     const panel = el("div", "aw-fight-result");
     // Đợt 134 (teacher: "TEAM 1/2 WINS" -> "TEAM LEFT/RIGHT WINS", applies to
     // every fightMode template — currently Anagram and Quiz). Side 0 is

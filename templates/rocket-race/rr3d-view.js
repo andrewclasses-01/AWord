@@ -742,24 +742,12 @@ export async function createView(cfg) {
     const U = { cw: cm => cm * pxPerCm() / W, ch: cm => cm * pxPerCm() / H };
     const L0 = cfg.layout(screenToLocal, screenSize, camera.aspect, U);
 
-    // thanh câu hỏi
-    {
-      const r = L0.question;
-      const p = screenToLocal(r.x + r.w / 2, r.y + r.h / 2, r.depth ?? UID);
-      const s = screenSize(r.w, r.h, r.depth ?? UID);
-      const g = new THREE.Group();
-      const panel = glassPanel(s.w, s.h, new THREE.Color("#8fd3ff"), 0.8);
-      const cv = document.createElement("canvas"); cv.width = 2048; cv.height = Math.round(2048 * s.h / s.w);
-      const tex = canvasTex(cv);
-      const tm = new THREE.Mesh(new THREE.PlaneGeometry(s.w * 0.96, s.h * 0.9), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
-      tm.position.z = 0.04;
-      g.add(panel, tm); g.position.copy(p);
-      g.visible = !(cfg.introTitles && G.phase === "intro");
-      if (r.rotX) g.rotation.x = r.rotX;
-      ui.add(g);
-      questionPanel = { g, cv, tex, tm, text: "" };
-      paintQuestion();
-    }
+    // thanh câu hỏi — Đợt 393: bề ngang CO GIÃN theo độ dài câu (xem questionWidth / paintQuestion)
+    qRect = L0.question;
+    qMaxW = Math.max(qRect.w, Math.min(0.98, U.cw(cfg.questionMaxCm ?? 176)));
+    questionPanel = null;
+    buildQuestion(questionWidth());
+    paintQuestion();
     // 2 bàn đáp án
     L0.consoles.forEach((c, side) => {
       const team = TEAMS[side];
@@ -878,10 +866,13 @@ export async function createView(cfg) {
     if (r.hidden || r.wreck || r.exploding > 0) return;
     const f = forwardWorld(r, tmpV2);
     const n = nozzleWorld(r, tmpV);
-    const power = r.stall > 0 ? 0.15 : 1 + r.boost * 1.8;
+    // ⭐ Đợt 393 (thầy): "không bao giờ được ngắt hoàn toàn phần lửa hoặc khói ở đuôi tàu" — khi khựng
+    // lửa chỉ YẾU + chập chờn, không về 0; số hạt làm tròn NGẪU NHIÊN (làm tròn thường ra 0 = mất lửa).
+    const power = r.stall > 0 ? 0.55 + Math.random() * 0.35 : 1 + r.boost * 1.8;
     const turbo = r.turbo > 0;
     const EX = cfg.exhaust || {};
-    const count = Math.round((turbo ? 60 : 40) * power * dt * 60 / 6 * (EX.fire ?? 1));
+    const want = (turbo ? 60 : 40) * power * dt * 60 / 6 * (EX.fire ?? 1);
+    const count = Math.floor(want) + (Math.random() < want % 1 ? 1 : 0);
     for (let i = 0; i < count; i++) {
       const sp = rand(7, 12) * (0.6 + power * 0.4);
       fire.emit({
@@ -897,6 +888,24 @@ export async function createView(cfg) {
         pos: n.clone().addScaledVector(f, -(EX.smokeBack ?? 1.6)).add(new V3(rand(-0.15, 0.15), rand(-0.15, 0.15), rand(-0.15, 0.15))), vel: f.clone().multiplyScalar(-rand(2.5, 4)).add(new V3(rand(-0.3, 0.3), rand(-0.1, 0.4), rand(-0.3, 0.3))),
         life: rand(1.2, 2.0) * (EX.smokeLife ?? 1), size: EX.smokeSize ?? 0.9, sizeEnd: EX.smokeSizeEnd ?? 3.2, color: new THREE.Color(0.55, 0.58, 0.66), alpha: EX.smokeAlpha ?? 0.22, drag: 0.8
       });
+    }
+    // ⭐ Đợt 393 — trả lời SAI: đuôi tàu XỊT RA KHÓI ĐEN từng đợt trong lúc tàu giật
+    if (r.blackSmoke > 0) {
+      const puff = Math.sin(G.t * 23 + r.idx) > -0.2;          // phụt từng đợt như động cơ hụt hơi
+      const rate = puff ? 80 : 14;
+      // ⚠️ khói bay THẲNG về sau là bay về phía camera đuổi ⇒ bị mờ-gần-camera (nearFade) nuốt mất.
+      // Cho khói phụt ra chậm rồi bung LÊN + dạt ngang, cuộn lại sau đuôi — nhìn rõ từ góc đuổi.
+      const side = new V3().crossVectors(f, new V3(0, 1, 0)).normalize();
+      for (let k = 0; k < 3; k++) if (Math.random() < dt * rate) {
+        const age = r.blackSmoke;
+        smoke.emit({
+          pos: n.clone().addScaledVector(f, -rand(0.1, 0.6)).add(new V3(rand(-0.2, 0.2), rand(-0.1, 0.3), rand(-0.2, 0.2))),
+          vel: f.clone().multiplyScalar(-rand(1.2, 2.6)).addScaledVector(side, rand(-1.6, 1.6)).add(new V3(0, rand(0.9, 2.2), 0)),
+          life: rand(1.3, 2.1), size: rand(0.5, 0.8), sizeEnd: rand(2.4, 3.3),
+          color: new THREE.Color(0.03, 0.028, 0.03), colorEnd: new THREE.Color(0.08, 0.08, 0.09),
+          alpha: 0.75 * Math.min(1, age / 0.5), drag: 1.3
+        });
+      }
     }
   }
   function damageFx(r, dt) {
@@ -1112,12 +1121,59 @@ export async function createView(cfg) {
   // LỆNH TỪ rocket-race.js (view KHÔNG giữ luật chơi)
   // =========================================================
   const sfx = (name, vol) => { try { cfg.sfx && cfg.sfx(name, vol); } catch { /* ignore */ } };
-  const loop = (name, on, vol) => { try { cfg.loop && cfg.loop(name, on, vol); } catch { /* ignore */ } };
+  const loop = (name, on, vol, fade) => { try { cfg.loop && cfg.loop(name, on, vol, fade); } catch { /* ignore */ } };
+  const swell = (name, peak, back, up, down) => { try { cfg.swell && cfg.swell(name, peak, back, up, down); } catch { /* ignore */ } };
+  // ---- Đợt 393 (thầy): "tăng chiều rộng ngang của phần text nếu câu hướng dẫn bị dài" ----
+  // Thanh câu hỏi giữ bề ngang mặc định (layout: 90 cm) cho câu ngắn; câu dài thì thanh DÃN RA
+  // (tối đa `questionMaxCm`, mặc định 176 cm ≈ gần hết bề ngang TOMKO) để chữ giữ nguyên cỡ.
+  // Hết chỗ mới co chữ / xuống 2 dòng.
+  let qRect = null, qMaxW = 0;
+  const measureCv = document.createElement("canvas").getContext("2d");
+  function textRatio(txt, pxFrac) {       // bề rộng chữ ÷ chiều cao mặt chữ khi cỡ chữ = pxFrac × chiều cao
+    measureCv.font = `800 ${Math.round(pxFrac * 200)}px ${FONT_UI}`;
+    return measureCv.measureText(String(txt || "")).width / 200;
+  }
+  function questionWidth() {
+    if (!qRect || !W || !H) return qRect ? qRect.w : 0.5;
+    const planeH = qRect.h * H * 0.9;                     // px màn hình của mặt chữ
+    let need;
+    if (G.qSame || !G.qTexts[1]) need = textRatio(G.qTexts[0] || cfg.title || "", 0.62) * planeH / 0.86;
+    else need = 2 * Math.max(textRatio(G.qTexts[0], 0.5), textRatio(G.qTexts[1], 0.5)) * planeH / 0.86;
+    const frac = (need / 0.96 + planeH * 0.5) / W;          // + lề hai bên
+    return Math.max(qRect.w, Math.min(qMaxW, frac));
+  }
+  function buildQuestion(wFrac) {
+    const keepVis = questionPanel ? questionPanel.g.visible : !(cfg.introTitles && G.phase === "intro");
+    if (questionPanel) {
+      ui.remove(questionPanel.g);
+      questionPanel.g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
+    }
+    const r = qRect;
+    const x = 0.5 - wFrac / 2;
+    const p = screenToLocal(x + wFrac / 2, r.y + r.h / 2, r.depth ?? UID);
+    const s = screenSize(wFrac, r.h, r.depth ?? UID);
+    const g = new THREE.Group();
+    const panel = glassPanel(s.w, s.h, new THREE.Color("#8fd3ff"), 0.8);
+    // canvas đúng TỈ LỆ mặt chữ (không kéo méo chữ khi thanh dãn), cao ~180 px, rộng tối đa 4096
+    const aspect = (s.w * 0.96) / (s.h * 0.9);
+    const cvH = Math.min(180, Math.floor(4096 / aspect));
+    const cv = document.createElement("canvas"); cv.height = cvH; cv.width = Math.round(cvH * aspect);
+    const tex = canvasTex(cv);
+    const tm = new THREE.Mesh(new THREE.PlaneGeometry(s.w * 0.96, s.h * 0.9), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
+    tm.position.z = 0.04;
+    g.add(panel, tm); g.position.copy(p);
+    g.visible = keepVis;
+    if (r.rotX) g.rotation.x = r.rotX;
+    ui.add(g);
+    questionPanel = { g, cv, tex, tm, text: "", wFrac };
+  }
   function paintQuestion() {
     if (!questionPanel) return;
+    const want = questionWidth();
+    if (qRect && Math.abs(want - questionPanel.wFrac) > 0.004) buildQuestion(want);
     const cv = questionPanel.cv;
     if (G.qSame || !G.qTexts[1]) {
-      drawTextCanvas(cv, G.qTexts[0] || cfg.title || "", { lines: 1, maxPx: Math.floor(cv.height * 0.62), weight: 800 });
+      drawTextCanvas(cv, G.qTexts[0] || cfg.title || "", { lines: 2, maxPx: Math.floor(cv.height * 0.62), weight: 800 });
     } else {
       // Different: hai nửa, mỗi đội một câu, CÙNG cỡ chữ (lấy cỡ nhỏ hơn)
       const half = document.createElement("canvas"); half.width = cv.width / 2; half.height = cv.height;
@@ -1154,7 +1210,10 @@ export async function createView(cfg) {
     r.boost = 1;
     const n0 = nozzleWorld(r, new V3());
     burst(n0, { n: 60, speed: 6, color: new THREE.Color(2, 2.6, 4), colorEnd: new THREE.Color(0.4, 0.6, 2), size: 0.25, life: 0.6 });
-    sfx("boost", 0.7);
+    // Đợt 393 (thầy): tiếng lửa to lên khi tăng tốc rồi GIẢM DẦN THẬT CHẬM — file boost tự tắt dần ~6 s,
+    // tiếng động cơ nền cũng gầm lên rồi lắng lại theo hàm mũ (không cắt).
+    sfx("boost", 0.85);
+    swell("engine", 2.2, 1, 0.3, 6);
   }
   function retreatFx(r, n) {
     const c = new V3().setFromMatrixPosition(r.ship.matrixWorld);
@@ -1162,16 +1221,19 @@ export async function createView(cfg) {
     burst(c, { n: 30, speed: 5, size: 0.12, life: 0.5, color: new THREE.Color(3, 0.6, 0.5), colorEnd: new THREE.Color(1, 0.1, 0.1) });
   }
   function stallRocket(r) {
-    r.stall = 1.1;
+    r.stall = 1.3;
+    r.blackSmoke = 1.9;                        // Đợt 393: khói đen xịt ra ở đuôi trong lúc giật
     trauma = Math.min(1, trauma + 0.35);
-    const c = new V3().setFromMatrixPosition(r.ship.matrixWorld);
-    burst(c, { n: 50, speed: 7, size: 0.14, life: 0.5 });
-    for (let i = 0; i < 8; i++) smoke.emit({ pos: c.clone(), vel: new V3(rand(-2, 1), rand(0, 2), rand(-1, 1)), life: 1.4, size: 0.6, sizeEnd: 2.5, color: new THREE.Color(0.25, 0.25, 0.27), alpha: 0.5, drag: 1 });
-    sfx("stall", 0.8);
-  }  function blowUp(r) {
+    const n0 = nozzleWorld(r, new V3());
+    burst(n0, { n: 45, speed: 6, size: 0.13, life: 0.45 });
+    for (let i = 0; i < 10; i++) smoke.emit({ pos: n0.clone(), vel: new V3(rand(-2, 1), rand(0, 2), rand(-1, 1)), life: 1.5, size: 0.7, sizeEnd: 3, color: new THREE.Color(0.04, 0.04, 0.045), alpha: 0.6, drag: 1 });
+    sfx("stall", 1);
+    swell("engine", 0.45, 1, 0.08, 2.5);      // động cơ hụt hơi rồi hồi lại
+  }
+  function blowUp(r) {
     if (r.wreck || r.exploding > 0) return;
     r.exploding = 0.001;
-    r.burning = false; loop("fire", false);
+    r.burning = false; loop("fire", false, 1, 0.8);
     sfx("boom", 0.9); sfx("boomlow", 1);
     explosion(new V3().setFromMatrixPosition(r.ship.matrixWorld));
     if (cfg.shatter) shatter(r);
@@ -1188,8 +1250,9 @@ export async function createView(cfg) {
     const cross = w.homeRun ? 1100 : 250;
     banner(w.team.name + " WINS!", "gold", WB.ms ?? 7000, WB.size ?? 0.3, WB.y);
     setQuestionText(w.team.pilot + "  " + w.team.name + " WINS!");
-    loop("engine", false);
-    later(() => { gate.userData.flash = 1; w.flyOut = true; sfx("portal", 0.9); sfx("win", 0.9); later(() => sfx("vwin", 1), 700); }, cross);
+    loop("engine", false, 1, 3.5);             // Đợt 393: lắng dần, không tắt phụt
+    // Đợt 393: bỏ giọng "You win" — chỉ còn tiếng xuyên cổng + hợp âm chiến thắng
+    later(() => { gate.userData.flash = 1; w.flyOut = true; sfx("portal", 0.9); sfx("win", 0.9); }, cross);
     later(() => { gate.userData.shrink = 0.0001; sfx("gate", 0.9); }, cross + (F.gateAfter ?? 1800));
     let tEnd = cross + (F.gateAfter ?? 1800) + 900;
     if (!loserDown) {
@@ -1257,7 +1320,15 @@ export async function createView(cfg) {
   const flareTex = radialTex([[0, "rgba(255,255,255,1)"], [0.2, "rgba(255,230,190,0.9)"], [0.5, "rgba(255,150,70,0.25)"], [1, "rgba(0,0,0,0)"]], 128);
   // TURBO: chữ NHỎ ngay trên con tàu (2g), thay banner to giữa màn
   const labels = [];
-  function turboCue(r) { sfx("turbo", 0.8); labelOn(r, "TURBO!", "#7fe6ff"); }
+  // Đợt 393 (thầy): "khi đạt turbo thì có tiếng bùng nổ dữ dội hơn nữa" — đốt sau + rền trầm + sóng xung kích
+  function turboCue(r) {
+    sfx("turbo", 1); sfx("boomlow", 0.55);
+    swell("engine", 3, 1, 0.1, 7);
+    const n0 = nozzleWorld(r, new V3());
+    burst(n0, { n: 170, speed: 13, color: new THREE.Color(1.2, 2.4, 5), colorEnd: new THREE.Color(0.2, 0.4, 1.6), size: 0.26, life: 0.7 });
+    trauma = Math.min(1, trauma + 0.45);
+    labelOn(r, "TURBO!", "#7fe6ff");
+  }
   function labelOn(r, text, color) {
     const cv = document.createElement("canvas"); cv.width = 512; cv.height = 128;
     const g = cv.getContext("2d");
@@ -1276,6 +1347,16 @@ export async function createView(cfg) {
       if (l.t > 1.7) { l.r.rig.remove(l.sp); labels.splice(i, 1); }
     }
   }
+  // Đợt 393 — màn kết quả riêng (rocket-race.js vẽ lớp HUD): cất bảng đáp án + thanh câu hỏi,
+  // máy quay chuyển sang trôi quanh đám mảnh vỡ.
+  let resultCam = null;
+  function resultView() {
+    resultCam = { a: 0, c: null };
+    G.qHidden = true;
+    consoles.forEach(c => { c.grp.visible = false; });
+    if (startBtn) startBtn.g.visible = false;
+    banners.forEach(b => { b.t = Math.max(b.t, b.ms - 0.35); });
+  }
   function win(side, opts = {}) {
     if (G.phase === "over") return 0;
     G.phase = "over"; G.winner = side;
@@ -1286,7 +1367,7 @@ export async function createView(cfg) {
   function countdown(onGo) {
     G.phase = "count"; if (startBtn) startBtn.g.visible = false;
     banners.forEach(b => { b.t = Math.max(b.t, b.ms - 0.35); });   // chữ tiêu đề nhường chỗ cho 3-2-1
-    const seq = ["3", "2", "1", "GO!"], voice = ["v3", "v2", "v1", "vgo"];
+    const seq = ["3", "2", "1", "GO!"], voice = ["ting", "ting", "ting", "tinggo"];   // Đợt 393: ting, không giọng đọc
     seq.forEach((s, i) => finTimersCD.push(setTimeout(() => { if (destroyed) return; banner(s, i === 3 ? "gold" : "white", 850, i === 3 ? 0.9 : 1.0); sfx(voice[i], 1); }, i * 900)));
     finTimersCD.push(setTimeout(() => {
       if (destroyed) return;
@@ -1316,6 +1397,8 @@ export async function createView(cfg) {
   // =========================================================
   let W = 0, H = 0;
   function resize() {
+    // khung bị ẩn / gỡ khỏi trang (0 px) ⇒ bỏ qua: tỉ lệ 0/0 = NaN làm hỏng hình học của bảng
+    if (!container.clientWidth || !container.clientHeight) return;
     W = container.clientWidth; H = container.clientHeight;
     const pr = Math.min(window.devicePixelRatio || 1, Q[quality].pr);
     renderer.setPixelRatio(pr);
@@ -1370,6 +1453,7 @@ export async function createView(cfg) {
     rockets.forEach((r, i) => {
       r.boost = Math.max(0, r.boost - dt * 1.4);
       r.stall = Math.max(0, r.stall - dt);
+      r.blackSmoke = Math.max(0, (r.blackSmoke || 0) - dt);
       r.turbo = Math.max(0, r.turbo - dt);
       const k = r.homeRun ? 2.2 : 3.0;
       r.vis += (r.p - r.vis) * Math.min(1, dt * k);
@@ -1390,7 +1474,8 @@ export async function createView(cfg) {
       if (r.exploding > 0) r.exploding += dt;
       // lửa
       const on = !r.wreck && r.exploding === 0;
-      const pow = r.stall > 0 ? 0.25 + Math.random() * 0.35 : 1 + r.boost * 1.6 + (r.turbo > 0 ? 0.6 : 0);
+      // Đợt 393: khựng thì lửa chập chờn YẾU (0,55–0,95) — không bao giờ tắt hẳn
+      const pow = r.stall > 0 ? 0.55 + Math.random() * 0.4 : 1 + r.boost * 1.6 + (r.turbo > 0 ? 0.6 : 0);
       r.flameGroup.visible = on;
       r.flameGroup.scale.set(1 + r.boost * 0.3, (0.9 + pow * 0.55) * (0.92 + Math.random() * 0.16), 1 + r.boost * 0.3);
       [r.flameOuter, r.flameInner].forEach(m => { m.material.uniforms.uTime.value = G.t + i; m.material.uniforms.uPow.value = pow * (cfg.exhaust?.flame ?? 1); });
@@ -1435,6 +1520,20 @@ export async function createView(cfg) {
         G.phase = "start"; startBtn.g.visible = true;
         banner("ROCKET RACE", "gold", 2400, 0.62);
       }
+    } else if (resultCam) {
+      // Đợt 393 — màn kết quả: máy quay trôi chậm quanh ĐÁM MẢNH VỠ (theo tâm đám, vì mảnh vẫn trôi),
+      // nhìn về phía mặt trời/hành tinh; tâm hình hơi cao để bảng kết quả (dưới) không che mảnh vỡ.
+      const c = new V3(); let n = 0;
+      wreckage.forEach(w => { c.add(w.mesh.position); n++; });
+      if (n) c.divideScalar(n); else c.copy(rockets[G.winner === 0 ? 1 : 0].rig.position);
+      resultCam.c = resultCam.c ? resultCam.c.lerp(c, Math.min(1, dt * 0.8)) : c.clone();
+      resultCam.a += dt * 0.06;
+      const a = Math.sin(resultCam.a) * 0.55;
+      const pos = resultCam.c.clone().add(new V3(Math.sin(a) * 15, 4.2, Math.cos(a) * 15));
+      const look = resultCam.c.clone().add(new V3(0, -2.4, 0));
+      camBase.pos.lerp(pos, Math.min(1, dt * 0.55));
+      camBase.look.lerp(look, Math.min(1, dt * 0.55));
+      camMode = "high";
     } else {
       camBase.pos.lerp(cp.pos, Math.min(1, dt * (cfg.camLerp ?? 1.8)));
       camBase.look.lerp(cp.look, Math.min(1, dt * (cfg.camLerp ?? 1.8)));
@@ -1469,7 +1568,7 @@ export async function createView(cfg) {
 
     // bụi tốc độ
     const travel = cfg.travelDir.clone().normalize();
-    const speed = 22 + Math.max(rockets[0].boost, rockets[1].boost) * 40 + (rockets.some(r => r.turbo > 0) ? 30 : 0);
+    const speed = resultCam ? 6 : 22 + Math.max(rockets[0].boost, rockets[1].boost) * 40 + (rockets.some(r => r.turbo > 0) ? 30 : 0);
     const len = 0.6 + speed * 0.03;
     const center = dustBox.follow ? camera.position : dustBox.c;
     for (let i = 0; i < DUST; i++) {
@@ -1568,7 +1667,7 @@ export async function createView(cfg) {
       banners.forEach(b => { b.t = Math.max(b.t, b.ms - 0.35); });
       const go = label === "GO!";
       banner(label, go ? "gold" : "white", 800, go ? 0.7 : 0.75);
-      sfx({ "3": "v3", "2": "v2", "1": "v1", "GO!": "vgo" }[label], 1);
+      sfx(go ? "tinggo" : "ting", 1);         // Đợt 393 (thầy): "đếm bằng tiếng ting ting ting", không giọng đọc
     },
     go() {
       G.phase = "play";
@@ -1594,6 +1693,7 @@ export async function createView(cfg) {
     explode(side) { blowUp(rockets[side]); },
     turbo(side) { const r = rockets[side]; if (r.turbo > 0) return; r.turbo = 4.5; turboCue(r); },
     win,
+    resultView,
     banner,
     pause(on) { G.paused = !!on; },
     destroy,

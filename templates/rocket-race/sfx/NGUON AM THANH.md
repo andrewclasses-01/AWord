@@ -1,22 +1,26 @@
-# Nguồn âm thanh — Rocket race FIGHT 3D (Đợt 392, 26/9/2026)
+# Nguồn âm thanh — Rocket race FIGHT 3D
 
-Tất cả là **CC0 (public domain)**: được dùng tự do, kể cả thương mại, không bắt buộc ghi công.
-File gốc `.ogg` đã đổi sang `.mp3` bằng ffmpeg (core/sfx.js chỉ phát `.mp3`).
+⭐ **Đợt 393 (26/9/2026)** — thầy: tiếng cũ "hơi hoạt hình và trẻ con" ⇒ thay TOÀN BỘ hiệu ứng bằng tiếng
+**tổng hợp kiểu điện ảnh** (gầm động cơ, nổ, va chạm kim loại, xì khói, hợp âm "braam", ting đếm ngược).
+Các file này do AWord tự tạo bằng `tools/rr3d-tao-am-thanh.py` (numpy/scipy → wav → ffmpeg mp3 128k) —
+**không có bản quyền của bên thứ ba**. Muốn chỉnh: sửa script, chạy lại, chép mp3 vào đây.
+Bỏ hẳn giọng đọc (3-2-1-GO, You win) — thầy: "bỏ giọng voice ở mọi tình huống".
 
-| File | Nguồn gốc | Gói / trang | Giấy phép |
-|---|---|---|---|
-| engine | spaceEngineLow_000 | Kenney · Sci-fi Sounds — https://kenney.nl/assets/sci-fi-sounds | CC0 |
-| boost | thrusterFire_000 | Kenney · Sci-fi Sounds | CC0 |
-| hit1–3 | impactMetal_000–002 | Kenney · Sci-fi Sounds | CC0 |
-| boom | explosionCrunch_004 | Kenney · Sci-fi Sounds | CC0 |
-| boomlow | lowFrequency_explosion_000 | Kenney · Sci-fi Sounds | CC0 |
-| portal | forceField_000 | Kenney · Sci-fi Sounds | CC0 |
-| stall | phaserDown3 | Kenney · Digital Audio — https://kenney.nl/assets/digital-audio | CC0 |
-| turbo | powerUp2 | Kenney · Digital Audio | CC0 |
-| tap | select_002 | Kenney · Interface Sounds — https://kenney.nl/assets/interface-sounds | CC0 |
-| gate | minimize_004 | Kenney · Interface Sounds | CC0 |
-| win | jingles_HIT00 | Kenney · Music Jingles — https://kenney.nl/assets/music-jingles | CC0 |
-| v3 · v2 · v1 · vgo · vwin | Male/3, 2, 1, go, you_win | Kenney · Voiceover Pack — https://kenney.nl/assets/voiceover-pack | CC0 |
-| ambient | outer_space_2.mp3 (96 kbps) | OpenGameArt · "Outer Space Loop" by wipics — https://opengameart.org/content/outer-space-loop | CC0 |
-| fire | fire-1_0.ogg | OpenGameArt · "Fire Crackling" by AntumDeluge — https://opengameart.org/content/fire-crackling | CC0 |
-| whoosh | swish-10.wav | OpenGameArt · "Swishes Sound Pack" by artisticdude — https://opengameart.org/content/swishes-sound-pack | CC0 |
+| File | Là tiếng gì | Nguồn |
+|---|---|---|
+| engine | gầm động cơ, lặp liền mạch 6 s | tổng hợp |
+| boost | bùng lửa khi trả lời đúng, tắt dần ~6 s | tổng hợp |
+| stall | động cơ hụt hơi + xì khói + va kim loại (trả lời sai) | tổng hợp |
+| turbo | đốt sau bùng nổ dữ dội | tổng hợp |
+| hit1–3 | vệt sáng đánh trúng tàu thua | tổng hợp |
+| boom · boomlow | nổ lớn + rền trầm | tổng hợp |
+| tap | chạm ô | tổng hợp |
+| gate | cổng đích co lại (hút ngược rồi sập) | tổng hợp |
+| portal | tàu thắng xuyên cổng | tổng hợp |
+| win | hợp âm chiến thắng | tổng hợp |
+| whoosh | chữ mở màn ANDREW CLASSES / ROCKET RACE | tổng hợp |
+| ting · tinggo | đếm 3-2-1 · GO | tổng hợp |
+| ambient | nền vũ trụ | OpenGameArt · "Outer Space Loop" by wipics — https://opengameart.org/content/outer-space-loop — **CC0** |
+| fire | lửa cháy (tàu thua bốc cháy) | OpenGameArt · "Fire Crackling" by AntumDeluge — https://opengameart.org/content/fire-crackling — **CC0** |
+
+Đợt 392 từng dùng Kenney (Sci-fi / Digital / Interface / Jingles / Voiceover, CC0) — đã gỡ hết ở Đợt 393.

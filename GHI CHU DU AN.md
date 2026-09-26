@@ -12,7 +12,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 392** (26/9/2026, ROCKET RACE ▸ FIGHT 3D — xem chặng Đợt 392 bên dưới). Trước đó **Đợt 391** (25/9/2026, ROCKET RACE ▸ FIGHT Different: đội hết câu mà chưa ai về đích ⇒ DÙNG LẠI câu cũ
+> Mới nhất: **Đợt 393** (26/9/2026, ROCKET RACE ▸ FIGHT 3D chỉnh 13 ý — xem chặng Đợt 393 bên dưới). Trước đó **Đợt 392** (26/9/2026, ROCKET RACE ▸ FIGHT 3D — xem chặng Đợt 392 bên dưới). Trước đó **Đợt 391** (25/9/2026, ROCKET RACE ▸ FIGHT Different: đội hết câu mà chưa ai về đích ⇒ DÙNG LẠI câu cũ
 > (xào lại) tới khi có tàu về đích; Count down hết giờ ⇒ tàu gần hơn bay về, tàu kia nổ như cũ). Chặng Đợt 391.
 > Trước đó: **Đợt 390b** (25/9/2026, bình điểm đổi sang MẪU 4 thầy chọn — dải năng lượng neon + sao chổi, mức CỐ ĐỊNH ngang
 > nhau mọi đội tới lúc đếm; trang chọn mẫu `D:\OTHERS\CLAUDE\AWord - thiet ke Wordshake\score-tank-mau.html`). Chặng Đợt 390b.
@@ -545,6 +545,14 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
+
+## Đợt 393 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D: tiếng điện ảnh, bảng 🔊, iPad chỉ từ, màn kết riêng · ⬜ CHƯA BẤM TAY TOMKO
+
+Đợt 393 — ROCKET RACE ▸ FIGHT 3D chỉnh theo 13 ý thầy (26/9): TIẾNG hiệu ứng thay TOÀN BỘ bằng tiếng tổng hợp kiểu điện ảnh (`tools/rr3d-tao-am-thanh.py`, bỏ hẳn giọng đọc; đếm 3-2-1 = ting) phát bằng WEB AUDIO (lặp không khựng, tắt/bật trượt âm lượng, tiếng tăng tốc lắng dần ~6 s) · nút 🔊 trong trận 3D mở bảng EFFECTS / BACKGROUND (nhớ theo máy) · iPad bật ⇒ màn chính ẨN hẳn thanh chữ (kể cả khi iPad chưa báo có mặt), iPad chỉ còn TỪ ĐƠN · mọi kiểu kết trận (về đích, hết mạng, hết câu/giờ) đều chạy đủ cảnh: tàu thắng xuyên cổng, vệt sáng đánh tàu thua, cháy, nổ · màn kết quả RIÊNG nổi trên cảnh 3D (máy quay trôi quanh đám mảnh vỡ) qua hook core mới `sceneHandle.showResult()` · chữ mở màn nhỏ còn ~½ · turbo nổ dữ dội · nhãn hàng nút = % câu cả 2 bàn đã qua · trả lời sai: đuôi tàu xịt khói đen, lửa chỉ yếu đi không tắt · thanh câu hỏi dãn ngang theo độ dài câu (tối đa 176 cm) · đồng hồ trận dừng khi đã phân thắng thua (`ui.stopTimer` mới). Chi tiết `templates/rocket-race/GHI CHU ROCKET-RACE.md` mục 27.
+
+- Đã kiểm (bàn thử `test.html` + `startFight()`, lái bằng `__rr3d.view.step/snap`): 18 file tiếng tải + giải mã được, AudioContext chạy · bảng 🔊 bật/tắt Background ghi `localStorage[aw-rr3d-sound]`, KHÔNG đụng nút tắt tiếng chung · trả lời sai ⇒ khói đen cuộn sau đuôi, lửa vẫn cháy · nhãn 0% → 10% … 50% · turbo kích hoạt · về đích ⇒ màn kết riêng, bảng cũ không hiện · Lives 1 + sai ⇒ tàu thua KHÔNG nổ ngay: tàu thắng về đích (giây 0–4) → cháy (giây 6) → nổ (giây 8) → màn kết; đồng hồ dừng ở 00:12 · SHOW ANSWERS hai cột + Close · START AGAIN ⇒ 1 canvas, đồng hồ 00:00 · Menu ⇒ AudioContext suspended/running · câu dài ⇒ thanh dãn ~93% bề ngang, 1 dòng · iPad bật ⇒ `qHidden` ngay từ đầu · HỒI QUY Solo 2D: 5 tàu, 0 canvas, 0 lỗi.
+- ⚠️ Tôi (Claude) KHÔNG NGHE được — tiếng mới chỉ kiểm bằng phổ âm (spectrogram), âm lượng tương quan để thầy nghe rồi chỉnh (`BASE` trong `rr3d-sfx.js`).
+- ⬜ Thầy bấm tay: TOMKO (nghe cả bộ tiếng, 60 fps), iPad thật (chỉ còn từ), Count down hết giờ, Sudden death.
 
 ## Đợt 392 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D (WebGL) thay Fight 2D · ✅ COMMIT + PUSH `f502b20`, LIVE 9/9 mã băm khớp · ⬜ CHƯA BẤM TAY TOMKO
 
