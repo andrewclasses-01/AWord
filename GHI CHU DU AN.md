@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 408 (27/9/2026) — FIREBASE APP CHECK (chỉ THEO DÕI, chưa ép buộc) · ⬜ CHƯA PUSH (ghi lúc commit)
+## Đợt 408 (27/9/2026) — FIREBASE APP CHECK (chỉ THEO DÕI, chưa ép buộc) · ✅ ĐÃ PUSH `1389b3f` + LIVE 5/5 mã băm + xin mã thật trên aword.andrewclasses.com (953 ký tự)
 
 **Vì sao:** đêm 26/9 kẻ "Tr0ngX" bơm 141 điểm giả vào 34 bài (scores 9.999.999) bằng script gọi thẳng Firestore với khoá
 API công khai. Luật đã siết (score ≤ total, tên không link — ruleset `d30455f5`/`85d5bd65`, làm từ myLesson). Bước tiếp:
