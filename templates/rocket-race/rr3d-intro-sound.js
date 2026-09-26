@@ -14,7 +14,7 @@ const AMB = { wind: 0.5, factory: 0.4, birds: 0.5 };
 
 export function createIntroSound(base = new URL("./sfx-intro/", import.meta.url).href, opts = {}) {
   const AC = window.AudioContext || window.webkitAudioContext;
-  if (!AC) return { update() {}, end() {}, setMuted() {}, get muted() { return true; } };
+  if (!AC) return { update() {}, end() {}, skip() {}, setMuted() {}, get muted() { return true; } };
   const ctx = new AC();
   // nén + chặn đỉnh ở cuối: gầm động cơ được đẩy thật to mà không vỡ tiếng
   const comp = ctx.createDynamicsCompressor();
@@ -64,6 +64,9 @@ export function createIntroSound(base = new URL("./sfx-intro/", import.meta.url)
     get muted() { return muted; },
     fx(name, vol = 1) { if (!ended) { unlock(); one(name, vol); } },          // tiếng một lần theo nút (bùm START)
     setMuted(m) { muted = !!m; master.gain.setTargetAtTime(muted ? 0 : 1, now(), 0.1); },
+    // Đợt 406 — cảnh vừa bị TUA qua đoạn 3-2-1/đánh lửa: đánh dấu đã phát (không dồn cả loạt tiếng một lúc);
+    // khung kế tiếp tự vào "pass" (vút qua + gầm xa) rồi "warp" đúng nhịp cảnh.
+    skip() { ["launch", "tuc0", "tuc1", "tuc2", "ign"].forEach(k => done.add(k)); loop("vent", 0, 0.3); },
     // gọi MỖI KHUNG HÌNH từ cảnh intro: { phase, t, T, passT, handed }
     update(s) {
       if (!started || ended) return;

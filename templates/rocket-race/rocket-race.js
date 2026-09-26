@@ -351,7 +351,19 @@ function rr3dFallback(st, err) {
   st.root.classList.remove("aw-rr3d-root");
   st.host2d.classList.remove("aw-rr3d-hidden2d");
 }
+// ⭐ Đợt 406 (thầy): "mỗi lần chỉnh Options đều khởi động lại toàn bộ game khá lâu". Apply = core dựng lại CẢ trận
+// (teardown + startFight ⇒ cảnh mới). Đo: cảnh đua ~0,4 s, nhưng cảnh phóng dựng lại ~2 s rồi thầy còn phải xem lại ~10 s.
+// ⇒ Trận dựng lại VÌ Apply Options thì BỎ cảnh phóng: cảnh đua hiện ngay với nút START 3D của nó (đếm 3-2-1).
+// Mở trận lần đầu / Start again vẫn có cảnh phóng như cũ. Cờ sống 4 s để không lọt sang một lần dựng khác.
+let rr3dQuickUntil = 0;
 function rr3dScene({ root, ctl, title, play }) {
+  const quick = performance.now() < rr3dQuickUntil;
+  rr3dQuickUntil = 0;
+  if (ctl && typeof ctl.applyOptions === "function" && !ctl.__rrQuickWrapped) {
+    const orig = ctl.applyOptions;
+    ctl.applyOptions = function (...a) { rr3dQuickUntil = performance.now() + 4000; return orig.apply(this, a); };
+    ctl.__rrQuickWrapped = true;
+  }
   root.innerHTML = "";
   root.classList.add("aw-rr3d-root");
   const host3d = el("div", "aw-rr3d-canvas");
@@ -389,7 +401,8 @@ function rr3dScene({ root, ctl, title, play }) {
     window.__rr3d = st;                       // bàn thử: __rr3d.view.step()/snap() khi khung xem trước bị ẩn
     const q = st.pending.splice(0);
     q.forEach(fn => { try { fn(view); } catch (e) { console.warn("[rocket-race 3D]", e); } });
-    rr3dLaunch(st, play);                     // ⭐ Đợt 398: cảnh phóng từ mặt đất phủ lên, hoà cảnh xong mới vào trận
+    if (quick) { try { view.resume(); view.showStart(); } catch { /* ignore */ } }   // Đợt 406: Apply Options ⇒ không cảnh phóng
+    else rr3dLaunch(st, play);                // ⭐ Đợt 398: cảnh phóng từ mặt đất phủ lên, hoà cảnh xong mới vào trận
   }).catch(e => { if (!st.dead) rr3dFallback(st, e); });
   return {
     // ⭐ Đợt 393 — core/fight.js hỏi template vẽ bảng kết quả RIÊNG (nổi trên cảnh 3D còn đang chạy)
@@ -453,10 +466,39 @@ function rr3dLaunch(st, play) {
     if (st.isnd) st.isnd.fx("startboom", 0.9);                // bấm START: tiếng nổ tăng tốc
     hud.classList.add("is-launch");
     const Lf = st.launch.T.lift;
-    [["3", Lf - 2.7], ["2", Lf - 1.8], ["1", Lf - 0.9], ["LIFTOFF!", Lf]].forEach(([t, at]) => after(() => pop(t), Math.max(0, at) * 1000));
+    // Đợt 406 (thầy): bỏ chữ LIFTOFF — chỉ còn 3-2-1; chữ "1" tự tắt sau ~0,9 s
+    [["3", Lf - 2.7], ["2", Lf - 1.8], ["1", Lf - 0.9]].forEach(([t, at]) => popTimers.push(setTimeout(() => { if (!st.dead) pop(t); }, Math.max(0, at) * 1000)));
+    popTimers.push(setTimeout(() => { if (!st.dead) count.textContent = ""; }, Math.max(0, Lf) * 1000));
+    armSkip();
   });
+  // ⭐ Đợt 406 (thầy): sau START, chạm ĐÚP bất kỳ đâu ⇒ bỏ intro, tới ~3 s trước lúc hiện câu hỏi. Tự dò 2 cú chạm
+  // (≤ 380 ms, ≤ 60 px) thay vì `dblclick` — màn cảm ứng TOMKO không chắc bắn dblclick.
+  const popTimers = [];
+  st.offs.push(() => popTimers.forEach(clearTimeout));
+  function armSkip() {
+    let lastT = 0, lastX = 0, lastY = 0;
+    const onDown = e => {
+      if (st.dead || !st.launch) return;
+      const now = performance.now();
+      if (now - lastT <= 380 && Math.hypot(e.clientX - lastX, e.clientY - lastY) <= 60) { lastT = 0; skipIntro(); return; }
+      lastT = now; lastX = e.clientX; lastY = e.clientY;
+    };
+    root.addEventListener("pointerdown", onDown, true);
+    const off = () => root.removeEventListener("pointerdown", onDown, true);
+    st.offs.push(off);
+    st.skipOff = off;
+  }
+  function skipIntro() {
+    if (!st.launch || !st.launch.skipTo) return;
+    if (!st.launch.skipTo(3)) return;
+    if (st.skipOff) { st.skipOff(); st.skipOff = null; }
+    popTimers.forEach(clearTimeout); popTimers.length = 0;
+    count.textContent = "";
+    if (st.isnd && st.isnd.skip) st.isnd.skip();
+  }
   function handoff() {
     if (st.dead) return;
+    if (st.skipOff) { st.skipOff(); st.skipOff = null; }   // Đợt 406
     if (st.isnd) st.isnd.end();
     st.skipCount = true;
     try { st.view.resume(); } catch { /* ignore */ }

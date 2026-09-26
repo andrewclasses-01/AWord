@@ -1034,7 +1034,7 @@ export async function createLaunch(cfg) {
   }
   function nozzle(r) { return new V3(-2.5, 0, 0).applyMatrix4(r.ship.matrixWorld); }
 
-  function tick(dt) {
+  function tick(dt, ff = false) {   // ff = tua nhanh (Đợt 406): chạy đủ logic, KHÔNG vẽ, không báo nhịp tiếng
     G.t += dt;
     const t = G.phase === "idle" ? 0 : (G.tl += dt);
     waterMat.uniforms.uTime.value = G.t;
@@ -1150,8 +1150,22 @@ export async function createLaunch(cfg) {
     const moving = G.phase !== "idle" && t >= T.ign - 0.6 && !(G.passT && t > G.passT + 1);
     if (moving || !shadowDone) { renderer.shadowMap.needsUpdate = true; shadowDone = true; }
     steam.update(dt, camera.position); clouds.update(dt, camera.position); fire.update(dt, camera.position);
+    if (ff) return;
     cfg.onTick && cfg.onTick({ phase: G.phase, t, T, passT: G.passT, handed: G.handed });   /* 4i: nhịp cho tiếng intro */
     composer.render(dt);
+  }
+  // ⭐ Đợt 406 (thầy): "sau khi bấm START, click đúp vào bất kỳ đâu để skip intro, tới chỗ hoạt ảnh trước khi hiện câu hỏi
+  // khoảng 3 s". Nhịp cảnh là MÔ PHỎNG theo dt (passT/fade chỉ biết khi tàu thật sự vụt qua máy quay) ⇒ không nhảy cóc được;
+  // tua bằng cách chạy tick() bước 0,05 s KHÔNG vẽ tới khi còn `lead` giây là hoà cảnh (onHandoff). Trả false nếu chưa START /
+  // đã quá điểm đó.
+  function skipTo(lead = 3) {
+    if (G.phase === "idle" || G.handed) return false;
+    const reached = () => G.passT && G.tl >= T.fade - lead;
+    if (reached()) return false;
+    for (let i = 0; i < 800 && !reached(); i++) tick(0.05, true);
+    shadowDone = false;
+    clock.getDelta();
+    return true;
   }
 
   // ----- khung hình -----
@@ -1194,6 +1208,7 @@ export async function createLaunch(cfg) {
 
   return {
     start() { if (G.phase !== "idle") return false; G.phase = "launch"; G.tl = 0; return true; },
+    skipTo,
     get phase() { return G.phase; }, get t() { return G.tl; }, T,
     step(n = 1, dt = 1 / 60) { manual = true; for (let i = 0; i < n; i++) tick(dt); },
     resume() { manual = false; clock.getDelta(); autoRes.pause(); },

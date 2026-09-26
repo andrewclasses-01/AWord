@@ -546,6 +546,36 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 406 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D: bỏ chữ LIFTOFF · Apply Options không chạy lại cảnh phóng · chạm ĐÚP để tua intro · ⬜ CHƯA PUSH · ⬜ CHƯA BẤM TAY TOMKO
+
+**Yêu cầu thầy (26/9):** (1) bỏ chữ LIFT OFF khi phóng tàu; (2) mỗi lần chỉnh Options đều khởi động lại toàn bộ game khá lâu —
+làm nhanh hơn; (3) sau khi bấm START, click đúp bất kỳ đâu để bỏ intro, tới ngay chỗ hoạt ảnh ~3 s trước khi hiện câu hỏi/câu trả lời.
+
+**Việc đã làm (chỉ `templates/rocket-race/`, KHÔNG sửa core):**
+- (1) `rocket-race.js` `rr3dLaunch`: chỉ đếm 3-2-1; chữ "1" tự tắt đúng lúc cất cánh (`T.lift`). Hẹn giờ đếm tách ra `popTimers`.
+- (2) **Đo trước khi sửa** (`scratch/dot405-rr-voice.html`): Apply = core `ctl.applyOptions` → `restartMatch` (teardown + startFight
+  ⇒ `fightScene` MỚI). Cảnh đua dựng lại ~0,4 s, **cảnh phóng dựng lại ~2 s** (20 nghìn cây, địa hình, `renderer.compile`) rồi thầy
+  còn phải xem lại ~10 s phóng mới vào trận. ⇒ `rr3dScene` bọc `ctl.applyOptions` (trên object ctl, không sửa file core — engine gọi
+  `fight.ctl.applyOptions` lúc bấm nên đi qua lớp bọc): đặt cờ `rr3dQuickUntil` (sống 4 s); cảnh dựng kế tiếp thấy cờ ⇒ **KHÔNG dựng
+  cảnh phóng**, gọi `view.showStart()` — cảnh đua hiện ngay với nút START 3D (đếm 3-2-1 như đường lùi cũ). Mở trận lần đầu / Start again
+  / đổi act vẫn có cảnh phóng (Đợt 398 thầy chọn thế) — chỉ Apply Options mới đi đường nhanh.
+- (3) Nhịp cảnh phóng là MÔ PHỎNG theo dt (`passT` chỉ biết khi tàu thật sự vụt qua máy quay; `T.fade = passT + 3,9`) ⇒ không
+  nhảy cóc được. `rr3d-launch.js`: `tick(dt, ff)` — `ff` chạy đủ logic + hạt, KHÔNG vẽ, không báo `onTick`; `skipTo(lead)` tua bước
+  0,05 s tới khi `G.tl >= T.fade - lead` (đã có `passT`), rồi vẽ lại bóng + đặt lại đồng hồ. `rocket-race.js`: sau START gắn bộ dò
+  **2 cú chạm ≤ 380 ms, ≤ 60 px** (pointerdown pha capture trên khung cảnh — không dùng `dblclick` vì màn cảm ứng TOMKO không chắc
+  bắn); tua `skipTo(3)`, huỷ hẹn giờ 3-2-1, gỡ bộ dò (và gỡ lúc hoà cảnh). `rr3d-intro-sound.js` thêm `skip()`: đánh dấu đã phát
+  launch/túc×3/đánh lửa (không dồn cả loạt tiếng một lúc) ⇒ khung kế tự vào "vút qua" + "nhảy tốc độ" đúng nhịp.
+
+**Đã đo:** chạm đúp ở giây 1,2 ⇒ cảnh nhảy tới 9,38 (fade 12,38) trong **17 ms**, **3,1 s** sau câu hỏi hiện; không hiện chữ đếm nào
+sau khi tua; tiếng intro done = launch, tuc0–2, ign, pass, warp. Chạy thường: chữ đếm = "3","2","1","" (không LIFTOFF).
+Bấm Apply THẬT trong bảng Options (đổi Shuffle answers): cảnh mới sau **392 ms**, không lớp cảnh phóng, phase `start`, tuỳ chọn đã lưu;
+bấm START 3D ⇒ câu hỏi sau 3,3 s. Start again ⇒ vẫn có cảnh phóng. 0 lỗi console.
+
+**Chưa làm / chờ:** ⬜ push + kiểm live · ⬜ thầy bấm tay TOMKO (chạm đúp bằng ngón tay; nếu tua gây khựng trên máy yếu thì giảm
+bước tua) · ⬜ cân nhắc: Start again có muốn cũng bỏ cảnh phóng không (hiện CHƯA đổi).
+
+---
+
 ## Đợt 405 (26/9/2026) — ROCKET RACE: act VOICE nghe lại được (chạm thanh câu hỏi 3D) + tự TẮT nhạc nền, không cho bật · ⬜ CHƯA PUSH · ⬜ CHƯA BẤM TAY TOMKO
 
 **Yêu cầu thầy (26/9):** (1) act dạng VOICE (VD ENG1 VOICE) phải bấm cái loa để nghe lại được — hiện bấm không ăn;
