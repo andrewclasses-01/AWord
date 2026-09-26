@@ -21,7 +21,7 @@
 //   still open, and are quietly upgraded to the short form.
 // =============================================================
 
-import { startGame } from "./core/engine.js";
+import { startGame, setActSwitchHandler } from "./core/engine.js";
 import { el, copyText } from "./core/utils.js";
 import { icons } from "./core/icons.js";
 import { ensureTemplate } from "./core/registry.js";
@@ -292,6 +292,13 @@ async function init() {
   }
 
   window.addEventListener("popstate", () => routeFromLocation());
+  // ⭐ Đợt 400 — nút chuyển act trong game: thanh địa chỉ + tiêu đề tab đi theo act mới
+  // (pushState, nên ◀ quay về act trước).
+  setActSwitchHandler(async node => {
+    state.view = "play";
+    setUrl(await linkFor(node));
+    document.title = node.title || PAGE_TITLE_BASE;
+  });
   // ⭐ Đợt 221 — NO resize listener any more. Đợt 218b needed one because the
   // panel's row span was a number this file computed and had to recompute when
   // myActivity changed its column count under it. The rail is plain flex now:
@@ -1629,7 +1636,7 @@ function actCard(node) {
   const foot = el("div", "aw-card-foot");
   const info = el("div", "aw-card-info");
   // name on TOP, template type BELOW it (matches the agreed card layout)
-  info.append(el("div", "aw-card-name", escapeText(itemName(node))), el("span", "aw-card-type", escapeText(templateLabel(node.type))));
+  info.append(el("div", "aw-card-name", escapeText(itemName(node))), el("span", "aw-card-type", escapeText(templateLabel(node.lastTpl || node.type))));   // ⭐ Đợt 400 — template chơi cuối
   foot.append(info, menuButton(node, actMenuItems));
   card.append(foot);
 

@@ -1391,6 +1391,33 @@ html.aw-nhung .aw-below { display: none; }
    keep looking like a matched set with the big ones rather than drifting apart. */
 .aw-toolbtn-sm svg { width: 58%; height: 58%; }
 
+/* ⭐ Đợt 400 — NÚT CHUYỂN ACT. Single: đứng bên trái tên act (cùng cỡ nút In); tên vẫn
+   tự cắt "…" nhờ min-width:0. Fight: đầu cụm nút giữa, cỡ như Options/Mode.
+   `[hidden]` phải nói rõ vì .aw-toolbtn đặt display riêng, thắng thuộc tính hidden. */
+.aw-toolbtn[hidden] { display: none; }
+.aw-below-left.has-actsw { display: flex; align-items: center; gap: 10px; }
+.aw-below-left.has-actsw .aw-below-title { min-width: 0; }
+.aw-actsw-btn { flex: none; }
+.aw-actsw-panel { min-width: 280px; max-width: min(94vw, 460px); }
+.aw-actsw-list { display: flex; flex-direction: column; gap: 4px; }
+.aw-actsw-group {
+  font-size: 11.5px; font-weight: 800; letter-spacing: .04em; color: #8b93a1;
+  text-transform: uppercase; margin: 10px 2px 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.aw-actsw-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 8px 10px; border: 1px solid transparent; border-radius: 10px;
+  background: #f4f7fb; color: #23303e; cursor: pointer; text-align: left;
+  font: inherit; font-size: 14.5px; font-weight: 700;
+}
+.aw-actsw-item:hover { border-color: #bcd6fb; color: #2f7bff; }
+.aw-actsw-item.is-current { background: #e6f0ff; border-color: #2f7bff; color: #2f7bff; cursor: default; }
+.aw-actsw-ico { flex: none; width: 22px; height: 22px; display: inline-flex; color: #6b7a90; }
+.aw-actsw-item.is-current .aw-actsw-ico, .aw-actsw-item:hover .aw-actsw-ico { color: inherit; }
+.aw-actsw-ico svg { width: 100%; height: 100%; }
+.aw-actsw-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 /* ---------- Popover system: dim the whole screen, panel centered under the cluster ---------- */
 .aw-tool-dim {
   position: fixed; inset: 0; z-index: 40;

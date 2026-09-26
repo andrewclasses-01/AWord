@@ -2251,6 +2251,15 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // must not let that CONVERTED act become the origin every later switch
     // converts from.
     exitFight() { teardown(); startGame(root, activity, { onExit, base: originAct, noAutoFight: true }); },   // Đợt 394: rời Fight có chủ ý ⇒ không tự vào lại (fightByDefault)
+    // ⭐ Đợt 400 — NÚT CHUYỂN ACT trong trận: dỡ cả hai bàn rồi mở trận MỚI với act khác
+    // (`nextBase` = act thư viện mới, để Change template trong trận chuyển từ đúng gốc).
+    // `single`: act mới không đấu được ⇒ về một bàn Single với act đó (mở "từ đầu", nên
+    // engine tự mở template chơi cuối của nó).
+    switchAct(next, nextBase, { single = false } = {}) {
+      teardown();
+      if (single) startGame(root, next, { onExit, noAutoFight: true });
+      else startFight(root, next, { onExit, base: nextBase || next });
+    },
     // Đợt 195 — STRAIGHT OUT TO THE LIBRARY, not back to a single board. The
     // engine's Home (now a press-and-hold on the MODE button) reaches this from
     // inside a match, and it must not simply call board 0's own `cleanupAll()` +

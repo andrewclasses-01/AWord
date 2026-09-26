@@ -261,8 +261,51 @@ const WORD_POOL_MAX_LEN = 24;
 // ⭐ Đợt 394 — act mà thầy đã chủ động rời Fight (Back to single) ⇒ không tự vào Fight lại
 // (Start again / Apply ở single vẫn là single). Mở act KHÁC thì luật `fightByDefault` chạy lại.
 let autoFightOffFor = "";
-export function startGame(root, libAct, { onExit, session = null, base = null, fight = null, hwPreset = null, noAutoFight = false } = {}) {
+
+// ⭐⭐ Đợt 400 (thầy, 26/9/2026) — NÚT CHUYỂN ACT (cạnh tên act ở Single, đầu cụm nút
+// giữa ở Fight). Engine không biết địa chỉ trang (`linkFor` sống trong main.js), nên
+// trang chủ đăng ký một hàm ở đây: mỗi lần chuyển act, engine gọi nó với act thư viện
+// mới để đổi thanh địa chỉ + tiêu đề tab. Không ai đăng ký (play.html) thì bỏ qua.
+let actSwitchHook = null;
+// Một dòng báo cho mount KẾ TIẾP (vd act mới không chơi được mode cũ ⇒ về Single).
+let toastOnMount = "";
+export function setActSwitchHandler(fn) { actSwitchHook = typeof fn === "function" ? fn : null; }
+
+// ⭐⭐ Đợt 400 — "TEMPLATE CHƠI CUỐI" (xem setLastTemplate trong core/store.js). Template
+// mà act THƯ VIỆN này phải mở ra, hoặc "" nếu là chính loại gốc / không chuyển được.
+// ⚠️ Chỉ act thư viện thật: bản chuyển (`_converted`), ván lỗi, bản mượn của mode
+// Running/IPA đều không mang `lastTpl` của riêng chúng.
+function rememberedTemplate(act) {
+  const t = act && act.lastTpl;
+  if (!t || t === act.type || act._converted || act._mistakes || act._mode) return "";
+  try { return switchTargets(act).some(x => x.type === t) ? t : ""; } catch { return ""; }
+}
+
+export function startGame(root, libAct, { onExit, session = null, base = null, fight = null, hwPreset = null, noAutoFight = false, noLastTpl = false } = {}) {
   root.innerHTML = "";
+  // ⭐⭐ Đợt 400 — MỞ ACT = MỞ TEMPLATE CHƠI CUỐI. Một chỗ duy nhất cho MỌI đường mở act
+  // thư viện (thư viện, link ?a=, nút chuyển act, quay về sau Edit): act chưa có `base`
+  // tức là đang được mở "từ đầu" ⇒ chuyển từ bản gốc sang template đã nhớ rồi mount bản
+  // chuyển với `base` = act gốc — đúng khuôn Change template, nên Options theo template,
+  // đường về loại gốc, Edit… chạy y như cũ. Học sinh (`session`) và bàn Fight không vào.
+  // ⚠️ Chạy bất đồng bộ (nạp module + chuyển nội dung) ⇒ đặt một ô giữ chỗ; nếu trang đã
+  // đi chỗ khác trước khi xong (◀, về thư viện) thì ô đó rời trang và KHÔNG mount đè.
+  const lastTpl = (!base && !session && !fight && !noLastTpl) ? rememberedTemplate(libAct) : "";
+  if (lastTpl) {
+    const holder = el("div", "aw-lasttpl-wait");
+    root.append(holder);
+    (async () => {
+      let conv = null;
+      try {
+        await ensureTemplate(lastTpl);
+        conv = await convertActivity(libAct, lastTpl);
+      } catch (e) { console.warn("AWord: could not open the last-played template", e); }
+      if (!holder.isConnected) return;
+      if (conv) startGame(root, conv, { onExit, base: libAct, hwPreset, noAutoFight });
+      else startGame(root, libAct, { onExit, hwPreset, noAutoFight, noLastTpl: true });
+    })();
+    return;
+  }
   // ⭐ Đợt 274 — the "meme" wrong-sound override (core/wrong-sound.js) must
   // never reach a pupil's assignment; `session` truthy is exactly that mode.
   // Set fresh on every launch, since one page can host both a normal play and
@@ -373,6 +416,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
 
   const tpl = getTemplate(activity.type);
   const { page, stage, inner, below } = buildStage(activity.theme || "classic");
+  if (toastOnMount && !fight) { const m = toastOnMount; toastOnMount = ""; setTimeout(() => toast(m), 250); }   // ⭐ Đợt 400
   // Activity-type class on the stage, present from the very first paint (READY
   // screen included) — before tpl.mount() ever runs. A template stylesheet can
   // key off `.aw-stage.act-<type>` for anything that must look right BEFORE the
@@ -982,7 +1026,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       try {
         if (target === "single") {
           if (fight) { fight.ctl.exitFight(); return true; }
-          if (playMode) { doSwitchTemplate(originAct.type); return true; }
+          if (playMode) { doSwitchTemplate(homeType()); return true; }
           dropShowdown();
           replayCurrent();
           return true;
@@ -993,7 +1037,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
           // Phải THOÁT trước, màn Showdown tự mở lại sau — cùng cơ chế một-lần-
           // dùng `openShowdownOnMount` mà buildToShowdownConfirmPanel đang dùng.
           openShowdownOnMount = true;
-          if (playMode) doSwitchTemplate(originAct.type); else fight.ctl.exitFight();
+          if (playMode) doSwitchTemplate(homeType()); else fight.ctl.exitFight();
           return true;
         }
         if (!modeBtn.isConnected) return false;
@@ -2038,7 +2082,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // ⭐ Đợt 191b — the same flag serves both exits. Leaving a play mode is a
       // template switch back to the origin (`doSwitchTemplate`), which lands on a
       // board that CAN read a pick; leaving a match is `exitFight()`.
-      if (playMode) { doSwitchTemplate(originAct.type); return; }
+      if (playMode) { doSwitchTemplate(homeType()); return; }
       fight.ctl.exitFight();
       awEmit("FIGHT", "off");
     };
@@ -2107,7 +2151,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         // instead of converting the conversion. `replayCurrent()` would restart
         // the throwaway copy — still Running word, still marked, so the mode
         // would look like it had refused to close.
-        if (playMode) { doSwitchTemplate(originAct.type); awEmit("MODE", "single"); return; }
+        if (playMode) { doSwitchTemplate(homeType()); awEmit("MODE", "single"); return; }
         // Leaving Showdown: the restart re-reads an empty pick and the board
         // comes back as an ordinary single play (same path as the Showdown
         // panel's own "Single mode" button).
@@ -2137,8 +2181,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         // ⚠️ `ensureTemplate` first: that module was loaded when the origin was
         // played, but startFight() calls startGame() on both boards immediately
         // and getTemplate() throws for anything not registered.
-        const matchAct = playMode ? originAct : libAct;
-        if (playMode) await ensureTemplate(originAct.type);
+        // ⭐ Đợt 400 — từ mode thì trận đấu bằng template "nhà" (template chơi cuối), vẫn
+        // chuyển từ act gốc.
+        let matchAct = libAct;
+        if (playMode) {
+          let home = homeType();
+          await ensureTemplate(home);
+          if (!getTemplate(home).fightMode) { home = originAct.type; await ensureTemplate(home); }
+          matchAct = home === originAct.type ? originAct : await convertActivity(originAct, home);
+        }
         const { startFight } = await import("./fight.js");
         // `base` travels into the match so a Change-template DURING the fight
         // still converts from the teacher's original act, exactly as it does
@@ -2258,6 +2309,126 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // just flattened away on the first arg. See core/print.js file header.
   printBtn.onclick = () => { sound.click(); openPrintPopup(resolveActivity(libAct), libAct); };
 
+  // ⭐⭐ Đợt 400 (thầy, 26/9/2026) — NÚT CHUYỂN ACT. Single: bên trái tên act, cùng cỡ nút
+  // In. Fight: đầu cụm nút giữa (tên act bị giấu trong trận). Pop-up nhỏ liệt kê các act
+  // cùng thư mục (kể cả thư mục con); bấm là chuyển NGAY, GIỮ NGUYÊN mode đang chơi.
+  // Chỉ act thư viện thật mới có nút (học sinh, mẫu, game cố định ?g= thì không); nút
+  // dựng sẵn nhưng ẩn cho tới khi thư viện xác nhận act này có trong đó.
+  const actSwitchBtn = (!session && (!fight || fight.side === 0) && libraryOrigin())
+    ? toolBtn(icons.actSwitch, "Switch activity", !fight) : null;   // Fight: cỡ của cụm giữa
+  let actSwitchData = null;
+  if (actSwitchBtn) {
+    actSwitchBtn.classList.add("aw-actsw-btn");
+    actSwitchBtn.hidden = true;
+    if (fight) belowCenter.prepend(actSwitchBtn);
+    else { belowLeft.classList.add("has-actsw"); belowLeft.prepend(actSwitchBtn); }
+    import("./store.js").then(m => m.listSwitchActs(libraryOrigin().id))
+      .then(d => { if (d) actSwitchBtn.hidden = false; })
+      .catch(() => { /* chưa đăng nhập / mất mạng: không có nút */ });
+    actSwitchBtn.onclick = async () => {
+      if (activeToolBtn === actSwitchBtn) { closeToolPanel(true); return; }
+      try {
+        const m = await import("./store.js");
+        actSwitchData = await m.listSwitchActs(libraryOrigin().id);
+      } catch { actSwitchData = null; }
+      if (!actSwitchData) { toast("Could not load the folder"); return; }
+      openToolPanelFor(actSwitchBtn, buildActSwitchPanel);
+      // Ở Single nút nằm tận bên trái nên pop-up mọc ngay trên nút, không phải giữa hàng
+      // (bảng vẫn là con của `.aw-below-center` — hợp đồng xếp lớp popup, chỉ dời `left`).
+      if (!fight && toolPanelEl) {
+        const c = belowCenter.getBoundingClientRect(), b = actSwitchBtn.getBoundingClientRect();
+        const half = toolPanelEl.offsetWidth / 2;
+        const cx = Math.min(Math.max(b.left + b.width / 2, half + 8), window.innerWidth - half - 8);
+        toolPanelEl.style.left = (cx - c.left) + "px";
+        toolPanelEl.style.transformOrigin = "left bottom";
+      }
+    };
+  }
+
+  function buildActSwitchPanel(panel) {
+    const data = actSwitchData || { groups: [] };
+    panel.classList.add("aw-actsw-panel");
+    panel.append(el("div", "aw-tool-panel-head", escapeText(data.folderName || "Library")));
+    const curId = libraryOrigin()?.id;
+    const list = el("div", "aw-actsw-list");
+    data.groups.forEach(g => {
+      if (g.path) list.append(el("div", "aw-actsw-group", escapeText(g.path)));
+      g.acts.forEach(a => {
+        const type = rememberedTemplate(a) || a.type;
+        const row = el("button", "aw-actsw-item" + (a.id === curId ? " is-current" : ""));
+        row.type = "button";
+        row.title = templateLabel(type);
+        row.append(el("span", "aw-actsw-ico", templateIcon(icons, type)),
+          el("span", "aw-actsw-name", escapeText(a.title || "Untitled")));
+        if (a.id === curId) row.disabled = true;
+        else row.onclick = () => { sound.click(); closeToolPanel(false); switchToAct(a.id); };
+        list.append(row);
+      });
+    });
+    panel.append(list);
+    // act đang mở nằm trong tầm mắt ngay khi bảng mọc lên
+    requestAnimationFrame(() => list.querySelector(".is-current")?.scrollIntoView({ block: "nearest" }));
+  }
+
+  // Chuyển sang act thư viện `id`, giữ nguyên mode. Act mới không chơi được mode đó ⇒ về
+  // Single kèm một dòng báo (thầy chốt). Showdown chỉ chuyển được khi KHÔNG giữa lượt.
+  async function switchToAct(id) {
+    const mode = fight ? "fight" : (showdownPick ? "showdown" : (playMode || "single"));
+    if (mode === "showdown" && (lobbyEl || (playStarted && !playEnded))) {
+      toast("Finish this round first");
+      return;
+    }
+    let next = null;
+    try { next = await (await import("./store.js")).getItem(id); } catch { next = null; }
+    if (!next || next.kind !== "act" || next.trashed) { toast("Activity not found"); return; }
+    try {
+      await ensureTemplate(next.type);
+      const last = rememberedTemplate(next);
+      if (last) await ensureTemplate(last);
+      let target = null, tbase = null, note = "";
+      if (mode === "fight") {
+        const home = last || next.type;
+        if (getTemplate(home).fightMode) target = last ? await convertActivity(next, last) : next;
+        else if (getTemplate(next.type).fightMode) target = next;
+        if (target) tbase = next;
+        else note = "Fight is not available for this activity";
+      } else if (mode === "running" || mode === "ipa") {
+        const tType = mode === "ipa" ? "speaking_cards" : activity.type;
+        let ok;
+        if (mode === "ipa") {
+          const items = resolveActivity(next).content?.items;
+          ok = Array.isArray(items) && items.some(it => it && it.ipa);
+        } else {
+          const terms = toRecords(next).records.map(r => (r.term || "").trim()).filter(Boolean);
+          ok = switchTargets(next).some(t => t.type === tType) && terms.length > 0 &&
+            terms.filter(t => t.length <= WORD_POOL_MAX_LEN).length / terms.length >= 0.8;
+        }
+        if (ok) {
+          await ensureTemplate(tType);
+          target = await convertActivity(next, tType, mode === "ipa" ? { style: "ipa" } : {});
+          target._mode = mode;
+          tbase = next;
+        } else note = (mode === "ipa" ? "IPA" : "Running") + " mode is not available for this activity";
+      }
+      if (mode === "showdown" && !lobbyEl) {
+        sdMod().then(m => m.leaveRound()).catch(() => { /* mất mạng: hàng cũ tự hết hạn theo TTL */ });
+      }
+      awEmit("ACT", JSON.stringify({ id: next.id, num: next.num, title: next.title || "" }));
+      try { actSwitchHook?.(next); } catch (e) { console.warn("AWord: act switch hook failed", e); }
+      if (note) toastOnMount = note;
+      // Trong trận: trận tự dỡ CẢ HAI bàn rồi dựng lại (bàn này không tự dọn được bàn kia).
+      if (fight) { fight.ctl.switchAct(target || next, tbase, { single: !target }); return; }
+      cleanupAll();
+      // Single / Showdown: mở act "từ đầu" — startGame tự mở template chơi cuối, và bảng
+      // đội Showdown (sessionStorage) tự được đọc lại. Running/IPA: bản mượn + `base`.
+      if (target) startGame(root, target, { onExit, base: tbase });
+      else startGame(root, next, { onExit });
+    } catch (e) {
+      console.warn("AWord: act switch failed", e);
+      toast("Could not open that activity");
+    }
+  }
+
   below.append(belowLeft, belowCenter, belowRight);
 
   // Students never see the teacher's toolbar.
@@ -2347,6 +2518,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // after the game had already mounted. The one reader (Options ▸ Apply, far
   // below) means the first, so it now asks for the first.
   let playStarted = false;
+  // ⭐ Đợt 400 — ván đã tới finish() (màn tổng kết). Showdown cho chuyển act lúc này.
+  let playEnded = false;
   // ⭐ Đợt 389 — the template's own start screen (`tpl.startScreen`, see where it
   // is mounted, right after `press(bigPlay, startPressed)`). Declared up here, not
   // there, because startPressed() reads it and is hoisted above that line.
@@ -5341,6 +5514,27 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // ⚠️ Stays at THIS scope (a sibling of buildOptionsPanel), not nested inside
   // it: runTargets()/openSwitchPicker() further up and down this file call it
   // too — moving it into buildOptionsPanel would take it away from both.
+  // ⭐ Đợt 400 — act THƯ VIỆN đứng sau ván này (trong trận thì hỏi trận: mỗi bàn chỉ
+  // cầm một bản sao đông cứng). null nếu không phải act thư viện (mẫu, gói chưa lưu…).
+  function libraryOrigin() {
+    const o = fight ? fight.ctl.sourceActivity() : originAct;
+    return (o && o.kind === "act" && !o._converted && o.id) ? o : null;
+  }
+  function rememberTemplate(type) {
+    const o = libraryOrigin();
+    if (!o || (o.lastTpl || o.type) === type) return;
+    // ⚠️ KHÔNG tự ghi `o.lastTpl` trước: `o` thường CHÍNH LÀ object trong bộ nhớ đệm của
+    // store, ghi trước thì setLastTemplate thấy "đã đúng rồi" và bỏ qua lượt lưu Firebase
+    // (bàn thử bắt được). Store ghi lên object đệm; `o` là bản sao khác thì chép theo.
+    const apply = () => { if (type === o.type) delete o.lastTpl; else o.lastTpl = type; };
+    import("./store.js").then(m => m.setLastTemplate(o.id, type))
+      .then(n => { if (n !== o) apply(); })
+      .catch(e => { apply(); console.warn("AWord: could not remember the template", e); });
+  }
+  // Template "nhà" của act — nơi rời mode Running/IPA quay về. Trước Đợt 400 luôn là
+  // loại gốc; nay là template chơi cuối (Running/IPA không tính là template — thầy chốt).
+  function homeType() { return rememberedTemplate(originAct) || originAct.type; }
+
   function switchList() {
     const list = switchTargets(originAct);
     if (activity.type !== originAct.type) {
@@ -5835,6 +6029,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // `viaLobbyPull: true` để tắt nhánh này — nó phải NHẬP VÀO lượt, không phải rời nó.
   async function doSwitchTemplate(targetType, { viaLobbyPull = false } = {}) {
     awEmit("TPL", targetType);   // mirror the Template switch to other myActivity panes
+    // ⭐ Đợt 400 — đổi template = ghi "template chơi cuối" lên act thư viện (thầy chốt:
+    // ghi NGAY khi đổi, chưa cần bấm Play). Cú kéo chuẩn của phòng chờ Showdown không phải
+    // thầy chọn nên không ghi.
+    if (!viaLobbyPull && !session) rememberTemplate(targetType);
     if (showdownPick && !viaLobbyPull && !lobbyEl) {
       sdMod().then(m => m.leaveRound()).catch(() => { /* mất mạng: hàng cũ tự hết hạn theo TTL */ });
     }
@@ -6137,6 +6335,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // protects ALL of them, including any template written later.
       if (torndown) return;
       stopTimer();
+      playEnded = true;   // ⭐ Đợt 400
       // FIGHT MODE: a board running out of words (or lives) ends the MATCH —
       // the winner comes from the two scoreboards, so this play doesn't draw
       // its own summary panel or write a single-player row to the leaderboard.

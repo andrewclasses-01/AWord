@@ -309,6 +309,46 @@ export async function listChildren(root, parentId = null) {
     .sort(byName);
 }
 
+// ⭐ Đợt 400 (thầy, 26/9/2026) — "TEMPLATE CHƠI CUỐI" CỦA MỘT ACT. Thầy: *"lượt chơi
+// cuối cùng với template nào thì lần sau mở sẽ ra template đó, sẽ không có cái nào là
+// cái chính, cái nào là cái tạm nữa"*. Nội dung gốc (`type` + `content`) KHÔNG đổi — mỗi
+// lần mở vẫn chuyển từ bản gốc (core/engine.js startGame) nên nội dung không mòn dần
+// qua các lần đổi; act chỉ mang thêm `lastTpl`. Về đúng loại gốc ⇒ xoá trường đi.
+// ⚠️ KHÔNG bump `updatedAt`: đổi game không phải sửa nội dung, không được đẩy act lên
+// đầu các danh sách xếp theo "sửa gần đây".
+export async function setLastTemplate(id, type) {
+  if (!id || !type) return null;
+  const map = await readAll();
+  const n = map[id];
+  if (!n || n.kind !== "act") return null;   // mẫu / gói nhập chưa lưu: không có gì để ghi
+  if ((n.lastTpl || n.type) === type) return n;
+  if (type === n.type) delete n.lastTpl; else n.lastTpl = type;
+  await persist([n]);
+  return n;
+}
+
+// ⭐ Đợt 400 — các act để CHUYỂN NHANH từ nút cạnh tên act: mọi act trong thư mục của
+// act `id` và cả các thư mục con, nhóm theo thư mục (đường dẫn tương đối, "" = chính
+// thư mục đó). ⚠️ Act nằm ở GỐC thư viện thì KHÔNG đi xuống thư mục con — không thì
+// pop-up là nguyên cả thư viện. null = act không nằm trong thư viện (mẫu, bài giao…).
+export async function listSwitchActs(id) {
+  const map = await readAll();
+  const me = map[id];
+  if (!me || me.kind !== "act" || me.trashed) return null;
+  const live = n => n && !n.trashed && n.root === me.root;
+  const kidsOf = pid => Object.values(map).filter(n => live(n) && (n.parentId ?? null) === (pid ?? null)).sort(byName);
+  const groups = [];
+  const walk = (pid, path, deep) => {
+    const kids = kidsOf(pid);
+    const acts = kids.filter(n => n.kind === "act");
+    if (acts.length) groups.push({ path, acts });
+    if (deep) kids.filter(n => n.kind === "folder").forEach(f => walk(f.id, path ? path + " / " + itemName(f) : itemName(f), true));
+  };
+  const home = me.parentId ?? null;
+  walk(home, "", home !== null);
+  return { folderName: home ? itemName(map[home] || {}) : "", groups };
+}
+
 // The breadcrumb chain from the root down to `folderId` (inclusive). [] at root.
 export async function pathTo(folderId) {
   const map = await readAll();
