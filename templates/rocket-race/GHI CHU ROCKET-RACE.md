@@ -676,3 +676,17 @@ Thầy thiết kế cùng Claude qua 13 bản mẫu ở kho **myGame** (`E:\LAP 
 - **MENU** (`rocket-race.js` `rr3dMenuHost`, CSS `.aw-rr3d-menuhost/.aw-rr3d-menu`): menu engine dựng trong bàn 0 ẩn dưới canvas ⇒ không bao giờ hiện (đo: opacity 0, elementFromPoint = CANVAS). Observer bê phần tử sang lớp phủ căn giữa màn, áo kính tối viền xanh, tiêu đề MENU, Resume vàng; engine vẫn điều khiển mở/đóng. Luật `position:fixed` cũ đã xoá.
 - **Vào thẳng Fight**: cờ `fightByDefault: true` + core `enterFight()` / `noAutoFight` (xem HUONG DAN CORE). MODE → Back to single ⇒ act đó ở lại single.
 **⬜ Thầy bấm tay TOMKO**: cỡ chữ, đáp án dài, MENU (Start again / Change template / Submit trong trận 3D), mở từ thư viện + Change template ⇒ vào thẳng Fight.
+
+## 29. Đợt 396 (26/9/2026) — rời trang là dừng · vụ nổ hết khựng + đẹp · xác tàu thật
+- **Rời trang**: core/fight.js `watchRoiTrang` ⇒ teardown() ⇒ `destroy()` của rr3dScene (view + sfx). Trước đó nút ◀ chỉ gỡ DOM, cảnh WebGL + tiếng lặp sống tiếp.
+- **Hết khựng** (đo: khung nổ 95–435 ms → ~11 ms): vụ nổ + xác tàu dựng SẴN, `boomLight` luôn trong cảnh, `warmBoom()` = `renderer.compile()` với `composer.readBuffer` (⛔ compile với RT null = biến thể màn hình có tone mapping ⇒ vô ích).
+- **Vụ nổ nhiều lớp**: chớp → 8 cầu lửa nhiễu (bể 16) lệch chỗ/nhịp → lửa cuộn → tia lửa + than hồng → 2 vòng sóng mảnh → 12 nguồn khói tỏa ra nhả khói (ám cam → xám), hạt xoay góc riêng (`aRot`), `smokeTex` mới.
+- **Xác tàu** (`makeWreckKit`): tấm vỏ cong mép rách trên đúng biên dạng tàu (mặt trong cháy đen ửng đỏ), đai màu đội, mũi 3 mảnh + chóp, 4 cánh (1 gãy), loa phụt, vòng buồng lái, kính vỡ, bồn, khung sườn, ống đồng, bó dây, 14 mảnh vụn. Gắn ẩn trong `r.model`, `shatter()` `scene.attach` ⇒ tách ra đúng chỗ; không văng về máy quay; mảnh `burn` còn cháy.
+**⬜ Thầy xem thật**: ◀ giữa trận, vụ nổ kết trận, xác tàu, 60 fps TOMKO.
+
+## 30. Đợt 397 (26/9/2026) — tia kết trận = vệt bụi từ mép màn · toàn cảnh lượn né đá · xác tàu cháy rụi bốc khói
+- **Tia đánh tàu thua**: `LineSegments(…, dust.material)` — đúng vật liệu + công thức độ dài vệt của bụi tốc độ; xuất phát ngoài mép màn (dò `project(camera)` dọc +travelDir), bay 0,85 s. ⚠️ Bụi vốn mờ (0,16): nếu thầy thấy khó nhận ra, chỉ tăng độ đục của RIÊNG vệt này.
+- **Né đá (góc cao)**: `cfg.dodge` + `applyDodge()` (lò xo, kẹp làn trong 0,8 / ngoài 1,4, mũi chĩa + thân nghiêng), đá vụn `spawnDodgeRock` trôi ngược dọc làn. Góc đuổi và luật "nấc" không đổi.
+- **Xác tàu xơ xác**: `vnoise/fbm3`, `crumple()` (trường nhiễu vị trí), `soot()` (màu đỉnh loang + mép rách đen), `shellPanel` rách/thủng/quăn/móp, `finShape()` răng cưa, lathe/cylinder/torus góc hở. Vật liệu pha muội, `vertexColors`. Khói mọi mảnh (accumulator `smokeRate`, 6–15 s, thưa dần, kéo vệt).
+- Bàn thử: `view.strike(side)`, `view.dodgeInfo()`.
+**⬜ Thầy xem thật**: tia kết trận, lượn né, xác tàu + khói, 60 fps TOMKO.

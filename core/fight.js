@@ -2781,6 +2781,20 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     }
   }
 
+  // ⭐ Đợt 396 (thầy 26/9/2026: "back về trang trước rồi mà game vẫn chạy, âm thanh vẫn lên") — LƯỚI
+  // AN TOÀN của trận, cùng khuôn `watchVanRoiTrang()` (Đợt 295) của core/engine.js. Nút ◀ của trình
+  // duyệt / myActivity gỡ DOM (`app.innerHTML = ""`) mà không ai gọi teardown(): mỗi bàn tự dọn
+  // engine của nó, nhưng cảnh WebGL + Web Audio của `fightScene` (Rocket race 3D) và đồng hồ trọng
+  // tài sống ngoài DOM ⇒ chạy mãi. Khung trận rời trang ⇒ teardown() (một lần).
+  let wrapDaTrenTrang = wrap.isConnected;   // chỉ tính "rời" sau khi đã thật sự nằm trên trang
+  const watchRoiTrang = new MutationObserver(() => {
+    if (wrap.isConnected) { wrapDaTrenTrang = true; return; }
+    if (!wrapDaTrenTrang) return;
+    watchRoiTrang.disconnect();
+    if (!torndown) teardown();
+  });
+  watchRoiTrang.observe(document.body, { childList: true, subtree: true });
+
   paintScore(0); paintScore(1);
 
   // ----- FULLSCREEN (teacher, 12/8/2026 fourth pass) -----
@@ -2829,6 +2843,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // which is exactly where a stray throw comes from.
   function teardown() {
     torndown = true;
+    try { watchRoiTrang.disconnect(); } catch { /* ignore */ }   // Đợt 396
     clearSoloTimers();   // Đợt 370 — own timers, outside later()/cancelRound()
     paintWaitBar(0);
     clearMissBandTimers();   // Đợt 281 — 2 setTimeout riêng của thanh MISS WAIT, `later()`/

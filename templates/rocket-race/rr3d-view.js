@@ -62,15 +62,17 @@ function radialTex(stops, size = 128) {
   g.fillStyle = gr; g.fillRect(0, 0, size, size);
   const t = new THREE.CanvasTexture(c); return t;
 }
+// Đợt 396: cụm mây nhiều lớp (búi to mờ + búi nhỏ rõ) ⇒ khói có kết cấu cuộn, mép tơi, không tròn vo
 function smokeTex() {
-  const s = 128, c = document.createElement("canvas"); c.width = c.height = s;
+  const s = 256, c = document.createElement("canvas"); c.width = c.height = s;
   const g = c.getContext("2d");
-  for (let i = 0; i < 18; i++) {
-    const x = s / 2 + rand(-22, 22), y = s / 2 + rand(-22, 22), r = rand(18, 40);
-    const gr = g.createRadialGradient(x, y, 0, x, y, r);
-    gr.addColorStop(0, "rgba(255,255,255,0.22)"); gr.addColorStop(1, "rgba(255,255,255,0)");
-    g.fillStyle = gr; g.fillRect(0, 0, s, s);
-  }
+  const blob = (x, y, r, a) => { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(255,255,255,${a})`); gr.addColorStop(0.6, `rgba(255,255,255,${a * 0.35})`); gr.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gr; g.fillRect(0, 0, s, s); };
+  for (let i = 0; i < 14; i++) { const a = rand(0, TAU), d = rand(0, 46); blob(s / 2 + Math.cos(a) * d, s / 2 + Math.sin(a) * d, rand(46, 78), 0.13); }
+  for (let i = 0; i < 40; i++) { const a = rand(0, TAU), d = Math.sqrt(Math.random()) * 70; blob(s / 2 + Math.cos(a) * d, s / 2 + Math.sin(a) * d, rand(12, 30), rand(0.08, 0.2)); }
+  // mặt nạ tròn mềm: không bao giờ lộ mép vuông của ô hạt
+  g.globalCompositeOperation = "destination-in";
+  const m = g.createRadialGradient(s / 2, s / 2, s * 0.18, s / 2, s / 2, s / 2); m.addColorStop(0, "rgba(0,0,0,1)"); m.addColorStop(1, "rgba(0,0,0,0)");
+  g.fillStyle = m; g.fillRect(0, 0, s, s);
   return new THREE.CanvasTexture(c);
 }
 
@@ -139,14 +141,18 @@ class Particles {
     geo.setAttribute("aColor", new THREE.BufferAttribute(this.col, 3).setUsage(THREE.DynamicDrawUsage));
     geo.setAttribute("aSize", new THREE.BufferAttribute(this.size, 1).setUsage(THREE.DynamicDrawUsage));
     geo.setAttribute("aAlpha", new THREE.BufferAttribute(this.alpha, 1).setUsage(THREE.DynamicDrawUsage));
+    // Đợt 396: mỗi hạt xoay một góc riêng ⇒ khói không còn là các "cục" giống hệt nhau
+    this.rot = new Float32Array(max);
+    geo.setAttribute("aRot", new THREE.BufferAttribute(this.rot, 1).setUsage(THREE.DynamicDrawUsage));
     this.mat = new THREE.ShaderMaterial({
       uniforms: { uMap: { value: map }, uScale: { value: 800 }, uNear: { value: new THREE.Vector2(3, 11) } },
-      vertexShader: `attribute vec3 aColor; attribute float aSize; attribute float aAlpha;
+      vertexShader: `attribute vec3 aColor; attribute float aSize; attribute float aAlpha; attribute float aRot; varying float vR;
         uniform float uScale; uniform vec2 uNear; varying vec3 vC; varying float vA;
         void main(){ vec4 mv = modelViewMatrix*vec4(position,1.0); gl_Position = projectionMatrix*mv;
-          gl_PointSize = aSize*uScale/max(0.1,-mv.z); vC = aColor; vA = aAlpha*smoothstep(uNear.x, uNear.y, -mv.z); }`,
-      fragmentShader: `uniform sampler2D uMap; varying vec3 vC; varying float vA;
-        void main(){ vec4 t = texture2D(uMap, gl_PointCoord); if (vA <= 0.001) discard; gl_FragColor = vec4(vC*t.rgb, t.a*vA); }`,
+          gl_PointSize = aSize*uScale/max(0.1,-mv.z); vC = aColor; vR = aRot; vA = aAlpha*smoothstep(uNear.x, uNear.y, -mv.z); }`,
+      fragmentShader: `uniform sampler2D uMap; varying vec3 vC; varying float vA; varying float vR;
+        void main(){ vec2 q = gl_PointCoord - 0.5; float cs = cos(vR), sn = sin(vR); q = vec2(cs*q.x - sn*q.y, sn*q.x + cs*q.y) + 0.5;
+          vec4 t = texture2D(uMap, clamp(q, 0.0, 1.0)); if (vA <= 0.001) discard; gl_FragColor = vec4(vC*t.rgb, t.a*vA); }`,
       transparent: true, depthWrite: false,
       blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending
     });
@@ -165,6 +171,7 @@ class Particles {
     this.c0[i3] = c0.r; this.c0[i3 + 1] = c0.g; this.c0[i3 + 2] = c0.b;
     this.c1[i3] = c1.r; this.c1[i3 + 1] = c1.g; this.c1[i3 + 2] = c1.b;
     this.a0[i] = p.alpha ?? 1; this.drag[i] = p.drag ?? 0;
+    this.rot[i] = p.rot ?? Math.random() * 6.2832;
   }
   update(dt) {
     for (let i = 0; i < this.max; i++) {
@@ -180,7 +187,7 @@ class Particles {
       if (this.life[i] <= 0) { this.alpha[i] = 0; this.size[i] = 0; }
     }
     const a = this.geo.attributes;
-    a.position.needsUpdate = a.aColor.needsUpdate = a.aSize.needsUpdate = a.aAlpha.needsUpdate = true;
+    a.position.needsUpdate = a.aColor.needsUpdate = a.aSize.needsUpdate = a.aAlpha.needsUpdate = a.aRot.needsUpdate = true;
   }
 }
 
@@ -993,66 +1000,147 @@ export async function createView(cfg) {
       fire.emit({ pos: pos.clone(), vel: d, life: life * rand(0.5, 1), size, sizeEnd: size * 0.2, color, colorEnd, drag: 1.4 });
     }
   }
-  // quả cầu lửa nổ
+  // =========================================================
+  // ⭐ Đợt 396 (thầy 26/9/2026) — VỤ NỔ + XÁC TÀU viết lại
+  //   "nổ bị lag, khựng mất 1 nhịp, khói nổ trông như một cục" · "mảnh tàu chỉ là hình linh tinh,
+  //   cần như một con tàu thật bị nổ".
+  // ⛔ GỐC CÚ KHỰNG: bản cũ tạo MỌI THỨ đúng lúc nổ — một PointLight mới (SỐ ĐÈN ĐỔI ⇒ three.js biên
+  //   dịch lại TẤT CẢ vật liệu có ánh sáng trong cảnh), ShaderMaterial quả cầu lửa, MeshStandardMaterial
+  //   mảnh vụn, vật liệu tàu clone sang DoubleSide (biến thể shader mới), Icosahedron 12.500 mặt…
+  //   ⇒ cả chục shader biên dịch trong MỘT khung hình. Nay mọi thứ dựng SẴN + `renderer.compile()` lúc
+  //   tạo cảnh; đèn chớp nổ luôn nằm trong cảnh (cường độ 0) ⇒ số đèn không bao giờ đổi.
+  // Vụ nổ = nhiều lớp lệch nhịp thay vì một quả cầu: chớp trắng → 8 quả cầu lửa nhiễu nở lệch nhau →
+  //   lửa cuộn (hạt to, hãm mạnh) → tia lửa + than hồng → sóng xung kích → KHÓI bốc dần từ 12 nguồn
+  //   bay tỏa ra (ám cam lúc đầu, nguội dần thành xám), mỗi hạt xoay một góc ⇒ không còn "một cục".
+  // Xác tàu = CHÍNH CÁC BỘ PHẬN của tàu (bộ dựng sẵn gắn ẩn trong mô hình, trùng khít vị trí thật): vỏ
+  //   thân cắt thành tấm cong mép rách (mặt trong cháy đen, rực đỏ rồi nguội), đai màu đội, mũi tách
+  //   mảnh + chóp nguyên, 4 cánh, loa phụt, vòng buồng lái, kính vỡ, bồn nhiên liệu, khung sườn,
+  //   ống đồng, bó dây, mảnh vụn. Lúc nổ mỗi mảnh `scene.attach` (giữ nguyên chỗ) rồi văng theo pháp
+  //   tuyến của nó, mảnh nhỏ xoay nhanh, mảnh lớn xoay chậm, vài mảnh lớn còn cháy + kéo khói.
+  // =========================================================
   const booms = [];
+  const boomGeo = new THREE.IcosahedronGeometry(1, 10);
+  const boomMatBase = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    uniforms: { uAge: { value: 0 }, uTime: { value: 0 }, uSeed: { value: 0 } },
+    vertexShader: GLSL_NOISE + `uniform float uAge, uTime, uSeed; varying float vN; varying vec3 vNorm;
+      void main(){ float n = fbm(normal*1.7 + vec3(uSeed) + vec3(0.0, uTime*1.1, uTime*0.6)); vN = n;
+        vNorm = normalize(normalMatrix*normal);
+        vec3 p = position + normal*(n*0.95 - 0.25)*(0.6 + uAge*0.7);
+        gl_Position = projectionMatrix*modelViewMatrix*vec4(p,1.0); }`,
+    fragmentShader: `uniform float uAge; varying float vN; varying vec3 vNorm;
+      void main(){ float heat = clamp(1.2 - uAge*1.45 + (vN - 0.5)*1.1, 0.0, 1.0);
+        vec3 c = mix(vec3(0.16,0.03,0.01), vec3(0.75,0.17,0.03), smoothstep(0.05,0.4,heat));
+        c = mix(c, vec3(1.45,0.6,0.15), smoothstep(0.35,0.75,heat));
+        c = mix(c, vec3(1.9,1.5,1.0), smoothstep(0.88,1.0,heat));
+        float rim = pow(abs(vNorm.z), 0.9);                    // mép cầu mờ dần ⇒ không thấy viền "quả bóng"
+        float a = smoothstep(0.0, 0.3, heat)*rim*(1.0 - smoothstep(0.55, 1.0, uAge))*0.6;
+        gl_FragColor = vec4(c*a, a); }`
+  });
+  const boomBalls = [];
+  for (let i = 0; i < 16; i++) {
+    const m = new THREE.Mesh(boomGeo, boomMatBase.clone());
+    m.visible = false; m.frustumCulled = false; m.renderOrder = 2;
+    scene.add(m); boomBalls.push(m);
+  }
+  const ringGeo = new THREE.RingGeometry(0.975, 1.0, 128);
+  const boomRings = [0, 1, 2, 3].map(() => {
+    const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(1.0, 0.8, 0.55), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    m.visible = false; scene.add(m); return m;
+  });
+  // đèn chớp nổ: LUÔN nằm trong cảnh (cường độ 0 khi rảnh) — thêm/bớt đèn = biên dịch lại mọi shader
+  const boomLight = new THREE.PointLight(0xffa860, 0, 70, 2);
+  scene.add(boomLight);
+  const cSmokeHot = new THREE.Color(), cSmokeCold = new THREE.Color();
   function explosion(pos) {
-    const mat = new THREE.ShaderMaterial({
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-      uniforms: { uAge: { value: 0 }, uTime: { value: 0 } },
-      vertexShader: GLSL_NOISE + `uniform float uAge, uTime; varying float vN; varying vec3 vNorm;
-        void main(){ float n = fbm(normal*2.2 + uTime*1.8); vN = n; vNorm = normalize(normalMatrix*normal);
-          vec3 p = position + normal*n*0.7; gl_Position = projectionMatrix*modelViewMatrix*vec4(p,1.0); }`,
-      fragmentShader: `uniform float uAge; varying float vN; varying vec3 vNorm;
-        void main(){ float heat = clamp(1.3 - uAge*1.6 + vN*0.6, 0.0, 1.0);
-          vec3 c = mix(vec3(0.35,0.05,0.01), vec3(1.6,0.7,0.15), smoothstep(0.2,0.7,heat)); c = mix(c, vec3(2.4,2.0,1.5), smoothstep(0.85,1.0,heat));
-          float f = pow(abs(vNorm.z), 0.6);
-          float a = (1.0 - smoothstep(0.55, 1.0, uAge))*f*0.75;
-          gl_FragColor = vec4(c*a, a); }`
-    });
-    const ball = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 24), mat);
-    ball.position.copy(pos);
-    const ringMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.2, 0.9, 0.6), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-    const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.0, 96), ringMat);
-    ring.position.copy(pos);
-    const flash = new THREE.PointLight(0xffb070, 90, 40, 2);
-    flash.position.copy(pos);
-    scene.add(ball, ring, flash);
-    // mảnh vỡ
-    const debris = [];
-    for (let i = 0; i < 16; i++) {
-      const m = new THREE.Mesh(new THREE.TetrahedronGeometry(rand(0.08, 0.22)), new THREE.MeshStandardMaterial({ color: "#6d6660", metalness: 0.8, roughness: 0.4, emissive: new THREE.Color(3, 1, 0.2), emissiveIntensity: 1 }));
-      m.position.copy(pos);
-      m.userData.v = new V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).normalize().multiplyScalar(rand(4, 11));
-      m.userData.s = new V3(rand(-8, 8), rand(-8, 8), rand(-8, 8));
-      scene.add(m); debris.push(m);
+    const b = { pos: pos.clone(), t: 0, balls: [], rings: [], emitters: [] };
+    // chớp trắng (vài hạt khổng lồ, sống 0,2 s)
+    for (let i = 0; i < 2; i++) fire.emit({ pos: pos.clone(), vel: new V3(), life: 0.12 + i * 0.05, size: 2.2 + i * 1.2, sizeEnd: 4.5 + i * 1.5, color: new THREE.Color(2.6, 2.2, 1.7), colorEnd: new THREE.Color(1.4, 0.6, 0.2), alpha: 0.9 });
+    // các quả cầu lửa: lệch chỗ, lệch nhịp, to nhỏ khác nhau
+    const freeBalls = boomBalls.filter(m => !m.visible && !m.userData.busy);
+    for (let i = 0; i < 8 && i < freeBalls.length; i++) {
+      const m = freeBalls[i]; m.userData.busy = true;
+      const dir = new V3(rand(-1, 1), rand(-0.7, 1), rand(-1, 1)).normalize();
+      b.balls.push({ m, delay: i === 0 ? 0 : rand(0.02, 0.28), off: dir.clone().multiplyScalar(i === 0 ? 0 : rand(0.4, 1.3)),
+        vel: dir.clone().multiplyScalar(rand(0.8, 2.6)).add(new V3(0, rand(0.2, 0.8), 0)),
+        rMax: i === 0 ? 1.9 : rand(0.8, 1.55), life: rand(1.1, 1.7), seed: rand(0, 50) });
     }
-    burst(pos, { n: 160, speed: 16, size: 0.2, life: 1.1, color: new THREE.Color(2.4, 1.4, 0.5), colorEnd: new THREE.Color(1, 0.15, 0) });
-    for (let i = 0; i < 40; i++) smoke.emit({ pos: pos.clone().add(new V3(rand(-0.6, 0.6), rand(-0.6, 0.6), rand(-0.6, 0.6))), vel: new V3(rand(-3, 3), rand(-2, 3), rand(-3, 3)),
-      life: rand(1.6, 3), size: 1.2, sizeEnd: 5.5, color: new THREE.Color(0.14, 0.12, 0.12), alpha: 0.6, drag: 1.2 });
-    booms.push({ ball, mat, ring, ringMat, flash, debris, t: 0 });
+    // lửa cuộn: hạt to, bung nhanh rồi hãm mạnh ⇒ đám lửa có khối, không phải chùm tia
+    for (let i = 0; i < 180; i++) {
+      const d = new V3(rand(-1, 1), rand(-0.8, 1), rand(-1, 1)).normalize().multiplyScalar(1.5 + 10 * Math.pow(Math.random(), 1.8));
+      const s = rand(0.35, 0.85);
+      fire.emit({ pos: pos.clone().add(new V3(rand(-0.3, 0.3), rand(-0.3, 0.3), rand(-0.3, 0.3))), vel: d, life: rand(0.45, 1.15), size: s, sizeEnd: s * rand(1.8, 3),
+        color: new THREE.Color(2.1, 1.25, 0.5), colorEnd: new THREE.Color(0.45, 0.06, 0.01), drag: 2.6, alpha: 0.7 });
+    }
+    // tia lửa nhanh + than hồng chậm, sống lâu
+    for (let i = 0; i < 140; i++) {
+      const d = new V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).normalize().multiplyScalar(rand(14, 30));
+      fire.emit({ pos: pos.clone(), vel: d, life: rand(0.5, 1.2), size: rand(0.05, 0.1), sizeEnd: 0.02, color: new THREE.Color(3.2, 2.2, 0.9), colorEnd: new THREE.Color(1.2, 0.25, 0), drag: 0.9 });
+    }
+    for (let i = 0; i < 70; i++) {
+      const d = new V3(rand(-1, 1), rand(-0.6, 1), rand(-1, 1)).normalize().multiplyScalar(rand(2, 7));
+      fire.emit({ pos: pos.clone(), vel: d, life: rand(1.6, 3.2), size: rand(0.05, 0.1), sizeEnd: 0.03, color: new THREE.Color(3, 1.3, 0.3), colorEnd: new THREE.Color(0.8, 0.1, 0), drag: 0.7 });
+    }
+    // sóng xung kích: 2 vòng, vòng sau mờ và chậm hơn
+    boomRings.filter(m => !m.visible).slice(0, 2).forEach((m, k) => { m.visible = true; m.position.copy(pos); b.rings.push({ m, k }); });
+    // nguồn KHÓI: bay tỏa ra rồi chậm lại, vừa bay vừa nhả khói ⇒ khói có hình, có chiều sâu
+    for (let i = 0; i < 12; i++) {
+      const d = new V3(rand(-1, 1), rand(-0.5, 1), rand(-1, 1)).normalize();
+      b.emitters.push({ p: pos.clone().addScaledVector(d, rand(0.2, 0.8)), v: d.multiplyScalar(rand(3, 8)), life: rand(0.9, 1.6), acc: 0, rate: rand(14, 22) });
+    }
+    boomLight.position.copy(pos);
+    booms.push(b);
     trauma = Math.min(1, trauma + 0.9);
   }
+  function smokePuff(p, v, heat) {
+    const g = rand(0.55, 1);
+    cSmokeHot.setRGB(0.62 * g, 0.34 * g, 0.16 * g).lerp(new THREE.Color(0.12, 0.11, 0.1), 1 - heat);
+    cSmokeCold.setRGB(0.1 * g, 0.095 * g, 0.09 * g);
+    const s = rand(0.8, 1.5);
+    smoke.emit({ pos: p.clone().add(new V3(rand(-0.3, 0.3), rand(-0.3, 0.3), rand(-0.3, 0.3))),
+      vel: v.clone().multiplyScalar(0.25).add(new V3(rand(-0.5, 0.5), rand(0.3, 1.1), rand(-0.5, 0.5))),
+      life: rand(2.2, 3.9), size: s, sizeEnd: s * rand(3, 4.4), color: cSmokeHot.clone(), colorEnd: cSmokeCold.clone(), alpha: rand(0.32, 0.5), drag: 0.9 });
+  }
   function updateBooms(dt) {
+    let light = 0;
     for (let i = booms.length - 1; i >= 0; i--) {
       const b = booms[i]; b.t += dt;
-      const k = b.t / 1.6;
-      b.mat.uniforms.uAge.value = k; b.mat.uniforms.uTime.value += dt;
-      b.ball.scale.setScalar(0.4 + easeOutBack(Math.min(1, b.t / 0.5)) * 3.2 + b.t * 0.6);
-      b.ring.scale.setScalar(1 + b.t * 16);
-      b.ring.quaternion.copy(camera.quaternion);
-      b.ringMat.opacity = Math.max(0, 1 - b.t * 1.8);
-      b.flash.intensity = Math.max(0, 90 * (1 - b.t * 2.2));
-      b.debris.forEach(d => {
-        d.position.addScaledVector(d.userData.v, dt); d.userData.v.multiplyScalar(1 - dt * 0.6);
-        d.rotation.x += d.userData.s.x * dt; d.rotation.y += d.userData.s.y * dt;
-        d.material.emissiveIntensity = Math.max(0, 1 - b.t * 0.5);
-        if (Math.random() < dt * 20) smoke.emit({ pos: d.position.clone(), vel: new V3(0, 0.3, 0), life: 0.9, size: 0.25, sizeEnd: 1, color: new THREE.Color(0.2, 0.2, 0.2), alpha: 0.4 });
+      b.balls.forEach(o => {
+        const tt = b.t - o.delay;
+        if (tt < 0) return;
+        const m = o.m, k = tt / o.life;
+        if (k >= 1) { m.visible = false; return; }
+        m.visible = true;
+        o.off.addScaledVector(o.vel, dt); o.vel.multiplyScalar(1 - Math.min(1, dt * 1.6));
+        m.position.copy(b.pos).add(o.off);
+        const grow = 1 - Math.pow(1 - Math.min(1, tt / 0.42), 3);          // bung nhanh rồi nở chậm
+        m.scale.setScalar(o.rMax * (0.25 + 0.75 * grow) * (1 + k * 0.45));
+        const u = m.material.uniforms; u.uAge.value = k; u.uTime.value = tt; u.uSeed.value = o.seed;
       });
-      if (b.t > 3.5) {
-        scene.remove(b.ball, b.ring, b.flash); b.debris.forEach(d => scene.remove(d));
+      b.rings.forEach(({ m, k }) => {
+        const tt = b.t - k * 0.09;
+        m.quaternion.copy(camera.quaternion);
+        m.scale.setScalar(0.6 + Math.max(0, tt) * (k ? 11 : 16));
+        m.material.opacity = tt < 0 ? 0 : Math.max(0, (k ? 0.22 : 0.5) * (1 - tt / (k ? 0.75 : 0.55)));
+        if (tt > 0.8) m.visible = false;
+      });
+      b.emitters.forEach(e => {
+        if (e.life <= 0) return;
+        e.life -= dt;
+        e.p.addScaledVector(e.v, dt); e.v.multiplyScalar(1 - Math.min(1, dt * 2.2));
+        e.acc += dt * e.rate;
+        const heat = clamp(1 - b.t / 1.1, 0, 1);
+        while (e.acc >= 1) { e.acc -= 1; smokePuff(e.p, e.v, heat); }
+      });
+      // đèn chớp: đỉnh ngay khung đầu, tắt dần theo hàm mũ, chập chờn như lửa
+      light = Math.max(light, 90 * Math.exp(-b.t * 4.2) * (0.85 + 0.15 * Math.sin(b.t * 47)));
+      if (b.t > 4.5) {
+        b.balls.forEach(o => { o.m.visible = false; o.m.userData.busy = false; });
+        b.rings.forEach(({ m }) => { m.visible = false; });
         booms.splice(i, 1);
       }
     }
+    boomLight.intensity = light;
   }
   function fireworks(pos) {
     const palette = [[4, 1.2, 0.6], [0.6, 2.4, 4], [3.6, 3.2, 0.6], [0.8, 4, 1.4], [3.6, 0.8, 3.6]];
@@ -1066,51 +1154,393 @@ export async function createView(cfg) {
   }
 
   // =========================================================
-  // 2f — TÀU VỠ VỤN: mảnh vỏ/cánh/khung bung ra mọi hướng, rồi TẤT CẢ chầm chậm trôi về phía sau
+  // 2f — XÁC TÀU (Đợt 396): bộ mảnh dựng SẴN từ đúng hình học con tàu, gắn ẩn trong mô hình
   // =========================================================
   const wreckage = [];
   let camMode = "chase";
+  // biên dạng vỏ — PHẢI khớp makeRocket (thân lathe + mũi ogive)
+  const ogiveR = y => Math.max(0.001, 0.58 * Math.pow(Math.max(0, 1 - Math.pow((y - 0.5) / 1.75, 2)), 0.62));
+  const bodyR = y => {
+    const P = [[-1.9, 0.42], [-1.6, 0.5], [-1.2, 0.56], [-0.6, 0.58], [0.5, 0.58]];
+    if (y >= 0.5) return ogiveR(y);
+    if (y <= -1.9) return 0.42;
+    for (let i = 1; i < P.length; i++) if (y <= P[i][0]) { const k = (y - P[i - 1][0]) / (P[i][0] - P[i - 1][0]); return lerp(P[i - 1][1], P[i][1], k); }
+    return 0.58;
+  };
+  // ⭐ Đợt 397 (thầy: "mảnh vỡ còn rất nguyên vẹn, cần xơ xác hơn · màu quá tươi, tối đi như bị cháy rụi ·
+  //   cần có khói bốc ra từ các mảnh"): nhiễu giá trị 3D (JS) ⇒ móp méo + vệt muội, mép rách + lỗ thủng,
+  //   mép tấm quăn lên, mọi vật liệu cháy sạm (màu gốc pha muội + `vertexColors` loang lổ, mép rách đen nhất).
+  const nHash = (x, y, z) => { const s = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return s - Math.floor(s); };
+  function vnoise(x, y, z) {
+    const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+    const xf = x - xi, yf = y - yi, zf = z - zi;
+    const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf), w = zf * zf * (3 - 2 * zf);
+    const c = (a, b, d) => nHash(xi + a, yi + b, zi + d);
+    return lerp(lerp(lerp(c(0, 0, 0), c(1, 0, 0), u), lerp(c(0, 1, 0), c(1, 1, 0), u), v),
+                lerp(lerp(c(0, 0, 1), c(1, 0, 1), u), lerp(c(0, 1, 1), c(1, 1, 1), u), v), w);
+  }
+  const fbm3 = (x, y, z) => vnoise(x, y, z) * 0.55 + vnoise(x * 2.1 + 5, y * 2.1, z * 2.1) * 0.3 + vnoise(x * 4.3, y * 4.3 + 9, z * 4.3) * 0.15;
+  const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+  // móp méo theo TRƯỜNG nhiễu vị trí (không theo pháp tuyến) ⇒ đỉnh trùng nhau của hình không-chỉ-số dịch
+  // y hệt nhau, không nứt đường ghép
+  function crumple(geo, amp, f = 6, sd = rand(0, 99)) {
+    const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+      p.setXYZ(i, x + amp * (vnoise(x * f + sd, y * f, z * f) - 0.5) * 2,
+                  y + amp * (vnoise(x * f, y * f + sd, z * f + 3) - 0.5) * 2,
+                  z + amp * (vnoise(x * f + 7, y * f, z * f + sd) - 0.5) * 2);
+    }
+    geo.computeVertexNormals();
+    return geo;
+  }
+  // vệt muội: màu đỉnh 0,12–0,8 loang theo nhiễu; mép rách (geo.userData.edge = 0 ở mép) đen kịt
+  function soot(geo, sd = rand(0, 99)) {
+    const p = geo.attributes.position, n = p.count, col = new Float32Array(n * 3), E = geo.userData.edge;
+    for (let i = 0; i < n; i++) {
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+      let c = 0.12 + 0.68 * smooth(0.32, 0.72, fbm3(x * 4.5 + sd, y * 4.5, z * 4.5));
+      if (E) c *= lerp(0.18, 1, smooth(0, 0.45, E[i]));
+      const warm = 1 + 0.08 * vnoise(x * 9, y * 9 + sd, z * 9);   // chỗ nám hơi nâu
+      col[i * 3] = c * warm; col[i * 3 + 1] = c; col[i * 3 + 2] = c * 0.95;
+    }
+    geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    return geo;
+  }
+  // Tấm vỏ cong: lưới (góc × chiều cao) trên đúng mặt tàu. Mép rách = biên bước ngẫu nhiên (random walk),
+  // lỗ thủng sát mép + vài lỗ giữa, mép quăn (curl), móp (dent). `full` = mảnh nguyên (đai sơn, chóp).
+  function shellPanel(y0, y1, t0, t1, { jag = 0.22, grow = 0, full = false, ny = 9, nt = 12, holes = 0.42, curl = 0.09, dent = 0.07 } = {}) {
+    const pos = [], edge = [], idx = [];
+    const walk = (n, amp) => { const a = []; let v = 0; for (let k = 0; k <= n; k++) { v = clamp(v + rand(-1, 1) * amp * 0.6, -amp, amp); a.push(full ? 0 : v); } return a; };
+    const jt0 = walk(ny, jag), jt1 = walk(ny, jag), jy0 = walk(nt, jag * 0.5), jy1 = walk(nt, jag * 0.5);
+    const sd = rand(0, 99), curlS = Math.random() < 0.7 ? 1 : -1;
+    for (let j = 0; j <= ny; j++) {
+      const a0 = t0 + jt0[j] * (t1 - t0), a1 = t1 + jt1[j] * (t1 - t0);
+      for (let i = 0; i <= nt; i++) {
+        let y = lerp(y0, y1, j / ny);
+        if (j === 0) y += jy0[i] * (y1 - y0); else if (j === ny) y += jy1[i] * (y1 - y0);
+        const e = Math.min(i, nt - i, j, ny - j) / Math.max(1, Math.min(nt, ny) / 2);
+        let r = bodyR(y) + grow;
+        if (!full) r += dent * (vnoise(i * 0.55 + sd, j * 0.55, sd) - 0.5) + curl * curlS * Math.pow(1 - Math.min(1, e * 1.8), 2);
+        const a = lerp(a0, a1, i / nt);
+        pos.push(r * Math.sin(a), y, r * Math.cos(a));
+        edge.push(full ? 1 : e);
+      }
+    }
+    const W = nt + 1;
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nt; i++) {
+      const a = j * W + i, b = a + 1, c = a + W, d = c + 1;
+      if (!full) {
+        const eq = Math.min(edge[a], edge[b], edge[c], edge[d]);
+        if ((eq === 0 && Math.random() < holes) || Math.random() < holes * 0.1) continue;   // rách/thủng
+      }
+      idx.push(a, b, d, a, d, c);                     // chiều quấn này ⇒ pháp tuyến hướng RA ngoài
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx); g.computeVertexNormals();
+    g.userData.edge = edge;
+    return g;
+  }
+  function centered(geo) {
+    geo.computeBoundingBox();
+    const c = geo.boundingBox.getCenter(new V3());
+    geo.translate(-c.x, -c.y, -c.z);
+    geo.computeBoundingSphere();
+    return c;
+  }
+  // cánh răng cưa: viền cánh chia nhỏ, mỗi điểm bị "cắn" vào trong; `cut` ⇒ gãy mất phần ngọn
+  function finShape(cut) {
+    const P = [[0, 0], [0.62, -0.55], [0.66, -1.05], [0, -0.8]];
+    const pts = [];
+    for (let k = 0; k < 4; k++) {
+      const [ax, ay] = P[k], [bx, by] = P[(k + 1) % 4];
+      for (let s = 0; s < 6; s++) {
+        const u = s / 6; let x = lerp(ax, bx, u), y = lerp(ay, by, u);
+        if (k !== 3 || s === 0) { x -= rand(0, 0.06) * (x > 0.05 ? 1 : 0); y += rand(-0.04, 0.04); }
+        if (cut && x > 0.38) { x = 0.38 + (x - 0.38) * 0.15 + rand(-0.04, 0.04); }
+        pts.push(new THREE.Vector2(x, y));
+      }
+    }
+    return new THREE.Shape(pts);
+  }
+  function makeWreckKit(r) {
+    const kit = new THREE.Group(); kit.visible = false;
+    const SOOT = new THREE.Color("#1c1815");
+    // vật liệu CHÁY SẠM: màu gốc pha muội, hết bóng sơn, vertexColors ⇒ loang lổ
+    const hullW = r.hullMat.clone(), teamW = r.teamMat.clone();
+    hullW.color.lerp(SOOT, 0.55); hullW.roughness = 0.82; hullW.metalness = 0.4; hullW.clearcoat = 0.04; hullW.envMapIntensity = 0.35;
+    teamW.color.lerp(SOOT, 0.5); teamW.roughness = 0.78; teamW.metalness = 0.3; teamW.clearcoat = 0.04; teamW.envMapIntensity = 0.3;
+    [hullW, teamW].forEach(m => { m.vertexColors = true; m.emissive = new THREE.Color(1, 0.35, 0.08); m.emissiveIntensity = 0; });
+    const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, vertexColors: true, emissive: new THREE.Color(1, 0.3, 0.05), emissiveIntensity: 0, ...o });
+    const darkW = std("#1b1d21", { metalness: 0.7, roughness: 0.7, side: THREE.DoubleSide });
+    const innerW = std("#0e0c0b", { metalness: 0.2, roughness: 0.95, side: THREE.BackSide, emissive: new THREE.Color(1.5, 0.28, 0.04) });
+    const metalW = std("#3b3e43", { metalness: 0.75, roughness: 0.62, side: THREE.DoubleSide });
+    const copperW = std("#5e3b22", { metalness: 0.7, roughness: 0.7 });
+    const wireW = [std("#3a1612", { roughness: 0.85 }), std("#4a3c14", { roughness: 0.85 })];
+    const glassW = new THREE.MeshPhysicalMaterial({ color: "#3d4650", metalness: 0, roughness: 0.25, transparent: true, opacity: 0.4, side: THREE.DoubleSide, envMapIntensity: 1 });
+    const hot = [hullW, teamW, darkW, innerW, metalW];
+    const pieces = [];
+    const add = (geo, mat, o = {}) => {
+      if (o.crumple) crumple(geo, o.crumple, o.freq ?? 6);
+      if (mat.vertexColors) soot(geo);
+      const c = centered(geo);
+      const m = new THREE.Mesh(geo, mat);
+      m.position.copy(c);
+      if (o.inner) m.add(new THREE.Mesh(geo, innerW));
+      (o.children || []).forEach(ch => m.add(ch(c)));
+      kit.add(m);
+      pieces.push({ m, size: geo.boundingSphere.radius, burn: !!o.burn, heavy: !!o.heavy, noSmoke: !!o.noSmoke });
+      return m;
+    };
+    // vỏ thân: 5 vành × 3–5 tấm, góc bắt đầu ngẫu nhiên
+    const bands = [[-1.9, -1.32], [-1.32, -0.68], [-0.68, -0.02], [-0.02, 0.58], [0.58, 1.1]];
+    bands.forEach(([y0, y1]) => {
+      const n = 3 + Math.floor(rand(0, 3));
+      let a = rand(0, TAU); const cuts = [];
+      for (let k = 0; k < n; k++) cuts.push(rand(0.6, 1.4));
+      const sum = cuts.reduce((s, v) => s + v, 0);
+      cuts.forEach(w => {
+        const t0 = a, t1 = a + w / sum * TAU; a = t1;
+        const deco = [];
+        // đai màu đội (y −1.08…−0.82) + viền tối (0.52…0.58) sơn lên đúng tấm đi qua chúng — cũng rách, cũng sạm
+        [[-1.08, -0.82, teamW, 0.006], [0.52, 0.58, darkW, 0.006]].forEach(([b0, b1, mat, gr]) => {
+          if (b1 <= y0 || b0 >= y1) return;
+          deco.push(c => {
+            const g = shellPanel(Math.max(b0, y0 + 0.03), Math.min(b1, y1 - 0.03), t0 + (t1 - t0) * 0.14, t1 - (t1 - t0) * 0.14, { grow: gr, ny: 2, nt: 8, jag: 0.1, holes: 0.25, curl: 0, dent: 0 });
+            soot(g); g.translate(-c.x, -c.y, -c.z); return new THREE.Mesh(g, mat);
+          });
+        });
+        add(shellPanel(y0, y1, t0, t1), hullW, { inner: true, children: deco, burn: Math.random() < 0.3, crumple: 0.02, freq: 7 });
+      });
+    });
+    // mũi: 3 tấm màu đội rách + chóp móp, toác một bên
+    { let a = rand(0, TAU); for (let k = 0; k < 3; k++) { add(shellPanel(1.1, 1.72, a, a + TAU / 3, { jag: 0.2 }), teamW, { inner: true, crumple: 0.02 }); a += TAU / 3; } }
+    {
+      const pts = []; for (let i = 0; i <= 12; i++) { const y = 1.72 + i / 12 * 0.53; pts.push(new THREE.Vector2(ogiveR(y), y)); }
+      const g = new THREE.LatheGeometry(pts, 28, rand(0, TAU), rand(4.0, 5.4));
+      add(g, teamW, { heavy: true, inner: true, crumple: 0.035 });
+    }
+    // 4 cánh răng cưa, 1–2 cánh gãy, cong vênh
+    const brokenA = Math.floor(rand(0, 4)), brokenB = Math.random() < 0.5 ? (brokenA + 2) % 4 : -1;
+    for (let k = 0; k < 4; k++) {
+      const cut = k === brokenA || k === brokenB;
+      const g = new THREE.ExtrudeGeometry(finShape(cut), { depth: 0.06, bevelEnabled: false });
+      g.translate(0, 0, -0.03);
+      const a = k * Math.PI / 2 + Math.PI / 4;
+      g.applyMatrix4(new THREE.Matrix4().makeRotationY(-a));
+      g.translate(Math.cos(a) * 0.5, -1.0, Math.sin(a) * 0.5);
+      add(g, teamW, { burn: cut, crumple: 0.035, freq: 5 });
+    }
+    // loa phụt: toác một mảng, móp méo (nặng — văng chậm, cháy lâu)
+    {
+      const pts = [[0.26, -1.9], [0.3, -2.05], [0.4, -2.35], [0.46, -2.5], [0.43, -2.52], [0.36, -2.36], [0.24, -2.05]].map(([x, y]) => new THREE.Vector2(x, y));
+      add(new THREE.LatheGeometry(pts, 36, rand(0, TAU), rand(3.8, 5.3)), darkW, { heavy: true, burn: true, crumple: 0.04 });
+    }
+    // vòng buồng lái (gãy cong) + mảnh kính ám khói
+    { const g = new THREE.TorusGeometry(0.24, 0.045, 10, 30, rand(3.2, 5)); g.translate(0, 0.75, 0.56); add(g, darkW, { crumple: 0.03 }); }
+    for (let k = 0; k < 6; k++) {
+      const s = rand(0.05, 0.12), g = new THREE.BufferGeometry();
+      g.setAttribute("position", new THREE.Float32BufferAttribute([0, 0, 0, s, rand(-0.3, 0.3) * s, 0, rand(0.1, 0.9) * s, s * rand(0.6, 1.1), 0], 3));
+      g.computeVertexNormals(); g.translate(rand(-0.15, 0.15), 0.75 + rand(-0.15, 0.15), 0.6);
+      add(g, glassW, { noSmoke: true });
+    }
+    // ruột tàu: bồn nhiên liệu móp, khung sườn gãy, bơm, ống đồng cháy, bó dây cháy
+    { const g = new THREE.CapsuleGeometry(0.2, 0.62, 6, 18); g.translate(0, -0.25, 0); add(g, metalW, { heavy: true, burn: true, crumple: 0.06, freq: 5 }); }
+    [-1.5, -0.95, -0.4, 0.5].forEach(y => { const g = new THREE.TorusGeometry(bodyR(y) - 0.04, 0.026, 6, 30, rand(1.8, 3.8)); g.rotateX(Math.PI / 2); g.rotateY(rand(0, TAU)); g.translate(0, y, 0); add(g, darkW, { crumple: 0.05, freq: 4 }); });
+    { const g = new THREE.CylinderGeometry(0.17, 0.22, 0.38, 14, 2, true, 0, rand(3.5, 5.5)); g.translate(0, -1.55, 0); add(g, darkW, { heavy: true, crumple: 0.03 }); }
+    for (let k = 0; k < 3; k++) {
+      const a = rand(0, TAU), y0 = rand(-1.7, -0.6);
+      const pts = [0, 1, 2, 3].map(i => new V3(Math.cos(a + i * 0.35) * rand(0.18, 0.42), y0 + i * rand(0.2, 0.35), Math.sin(a + i * 0.35) * rand(0.18, 0.42)));
+      add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.026, 6), copperW, { crumple: 0.02 });
+    }
+    for (let k = 0; k < 3; k++) {
+      const a = rand(0, TAU), y0 = rand(-1.2, 0.3);
+      const pts = [0, 1, 2, 3, 4].map(i => new V3(Math.cos(a + i * 0.5) * 0.35 + rand(-0.1, 0.1), y0 + i * 0.16, Math.sin(a + i * 0.5) * 0.35 + rand(-0.1, 0.1)));
+      add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 20, 0.013, 5), wireW[k % 2]);
+    }
+    // mảnh vụn rách từ khắp thân + dải vỏ xoắn (xé dọc)
+    for (let k = 0; k < 24; k++) {
+      const y = rand(-1.8, 1.0), a = rand(0, TAU), h = rand(0.08, 0.24), w = rand(0.16, 0.5);
+      add(shellPanel(y, y + h, a, a + w, { jag: 0.35, ny: 4, nt: 5, holes: 0.3, curl: 0.05, dent: 0.05 }), Math.random() < 0.72 ? hullW : teamW, { inner: true, crumple: 0.03, freq: 9 });
+    }
+    for (let k = 0; k < 6; k++) {
+      const y = rand(-1.7, 0.4), a = rand(0, TAU);
+      add(shellPanel(y, y + rand(0.45, 0.85), a, a + rand(0.12, 0.22), { jag: 0.3, ny: 10, nt: 2, holes: 0.15, curl: 0.03, dent: 0.03 }), hullW, { inner: true, crumple: 0.09, freq: 3 });
+    }
+    r.model.add(kit);
+    return { kit, pieces, hot, used: false };
+  }
+  const wreckKits = rockets.map(r => makeWreckKit(r));
+  // ⭐ biên dịch SẴN mọi shader (quả cầu lửa, vòng sóng, vật liệu xác tàu) lúc dựng cảnh ⇒ lúc nổ không khựng
+  // ⚠️ biên dịch với ĐÚNG render target của composer: cảnh thật vẽ vào RT (không tone mapping, không
+  //    sRGB) ⇒ biến thể shader khác hẳn bản "vẽ ra màn hình" — compile() với RT null là biên dịch phí,
+  //    lúc nổ vẫn khựng ~100 ms (đã đo).
+  function warmBoom() {
+    try {
+      const prev = renderer.getRenderTarget();
+      renderer.setRenderTarget(composer.readBuffer);
+      renderer.compile(scene, camera);
+      renderer.setRenderTarget(prev);
+    } catch { /* ignore */ }
+  }
+  warmBoom();
+
   function shatter(r) {
     r.hidden = true;
+    const K = wreckKits[r.idx]; if (!K || K.used) return;
+    K.used = true;
+    r.model.updateWorldMatrix(true, true);
     const c = new V3().setFromMatrixPosition(r.ship.matrixWorld);
     const back = cfg.travelDir.clone().normalize().multiplyScalar(-1);
     const sc = cfg.rocketScale ?? 1;
-    const mats = [r.hullMat, r.teamMat, new THREE.MeshStandardMaterial({ color: "#2a2f38", metalness: 0.9, roughness: 0.4 })];
-    const N = cfg.shatter.pieces ?? 44;
-    for (let i = 0; i < N; i++) {
-      const kind = i % 4;
-      const s = sc * rand(0.12, 0.42);
-      const geo = kind === 0 ? new THREE.BoxGeometry(s * 2.2, s * 0.08 + 0.02, s * 1.4)          // mảnh vỏ mỏng
-        : kind === 1 ? new THREE.TetrahedronGeometry(s * 0.8)                                        // mảnh vụn
-        : kind === 2 ? new THREE.CylinderGeometry(s * 0.5, s * 0.6, s * 1.4, 10, 1, true, 0, rand(1, 2.5)) // mảnh thân cong
-        : new THREE.BoxGeometry(s * 0.5, s * 0.5, s * 0.5);                                           // khối máy
-      const m = mats[i % 3].clone();
-      m.side = THREE.DoubleSide; m.emissive = new THREE.Color(2.2, 0.7, 0.15); m.emissiveIntensity = rand(0.5, 1.2);
-      const mesh = new THREE.Mesh(geo, m);
-      mesh.position.copy(c).add(new V3(rand(-0.6, 0.6), rand(-0.4, 0.4), rand(-0.6, 0.6)).multiplyScalar(sc));
-      const out = new V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).normalize().multiplyScalar(rand(4, 13));
-      scene.add(mesh);
-      wreckage.push({ mesh, v: out, spin: new V3(rand(-6, 6), rand(-6, 6), rand(-6, 6)), drift: back.clone().multiplyScalar(rand(1.6, 3.2)).add(new V3(rand(-0.4, 0.4), rand(-0.3, 0.3), rand(-0.4, 0.4))), t: 0, smoky: Math.random() < 0.35 });
-    }
+    const toCam = camera.getWorldPosition(new V3()).sub(c).normalize();
+    // mảnh mới ra lò: mặt trong ửng đỏ rồi nguội dần (updateWreckage)
+    K.hot.forEach(m => { m.emissiveIntensity = m.side === THREE.BackSide ? 0.5 : 0.1; });
+    K.cool = 0;
+    K.pieces.forEach(P => {
+      const m = P.m;
+      scene.attach(m);                                   // giữ nguyên chỗ/góc/cỡ trên thế giới
+      m.visible = true;
+      const p = m.getWorldPosition(new V3());
+      const out = p.clone().sub(c);
+      if (out.lengthSq() < 1e-4) out.set(rand(-1, 1), rand(-1, 1), rand(-1, 1));
+      out.normalize().add(new V3(rand(-0.35, 0.35), rand(-0.25, 0.45), rand(-0.35, 0.35))).normalize();
+      // không văng thẳng vào máy quay (mảnh sát ống kính to che cả bảng đáp án)
+      const dotCam = out.dot(toCam); if (dotCam > 0) out.addScaledVector(toCam, -dotCam * 1.3).normalize();
+      const sz = Math.max(0.05, P.size / sc);
+      const speed = (P.heavy ? rand(2, 4) : rand(3.5, 8.5)) / Math.sqrt(0.4 + sz);
+      const spinK = (P.heavy ? 0.8 : 2.6) / (0.25 + sz);
+      // KHÓI (Đợt 397): mọi mảnh đủ lớn đều bốc khói, mảnh nặng/đang cháy khói dày và lâu nhất
+      const smokeRate = P.noSmoke || sz < 0.06 ? 0 : (P.heavy || P.burn ? rand(16, 22) : Math.min(15, 5 + sz * 26));
+      wreckage.push({ mesh: m, v: out.multiplyScalar(speed * sc), spin: new V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(spinK),
+        drift: back.clone().multiplyScalar(rand(1.4, 3)).add(new V3(rand(-0.4, 0.4), rand(-0.3, 0.3), rand(-0.4, 0.4))),
+        t: 0, sz: sz * sc, smokeRate, smokeDur: P.heavy || P.burn ? rand(11, 15) : rand(6, 10), acc: rand(0, 1),
+        burn: P.burn ? rand(3, 6) : 0, kit: K });
+    });
   }
+  const cSmk0 = new THREE.Color(), cSmk1 = new THREE.Color();
   function updateWreckage(dt) {
+    wreckKits.forEach(K => {
+      if (!K.used) return;
+      K.cool += dt;
+      K.hot.forEach(m => { m.emissiveIntensity = m.side === THREE.BackSide ? 0.5 * Math.exp(-K.cool / 1.1) : 0.1 * Math.exp(-K.cool / 1.2); });
+    });
     for (let i = wreckage.length - 1; i >= 0; i--) {
       const w = wreckage[i]; w.t += dt;
-      // nổ bung ra rồi chậm dần, hoà vào dòng trôi chầm chậm về phía sau
-      w.v.lerp(w.drift, Math.min(1, dt * 0.9));
+      // bung ra rồi chậm dần, hoà vào dòng trôi chầm chậm về phía sau
+      w.v.lerp(w.drift, Math.min(1, dt * 0.8));
       w.mesh.position.addScaledVector(w.v, dt);
-      w.spin.multiplyScalar(1 - Math.min(1, dt * 0.35));
-      w.mesh.rotation.x += w.spin.x * dt + dt * 0.3; w.mesh.rotation.y += w.spin.y * dt; w.mesh.rotation.z += w.spin.z * dt;
-      w.mesh.material.emissiveIntensity = Math.max(0, w.mesh.material.emissiveIntensity - dt * 0.35);
-      if (w.smoky && w.t < 4 && Math.random() < dt * 14) smoke.emit({ pos: w.mesh.position.clone(), vel: new V3(0, 0.25, 0), life: 1.3, size: 0.25, sizeEnd: 1.3, color: new THREE.Color(0.22, 0.22, 0.24), alpha: 0.4, drag: 0.5 });
-      if (w.mesh.position.distanceTo(camera.position) > 260) { scene.remove(w.mesh); w.mesh.geometry.dispose(); wreckage.splice(i, 1); }
+      w.spin.multiplyScalar(1 - Math.min(1, dt * 0.3));
+      w.mesh.rotation.x += w.spin.x * dt; w.mesh.rotation.y += w.spin.y * dt; w.mesh.rotation.z += w.spin.z * dt;
+      if (w.burn > 0 && w.t < w.burn) {                   // mảnh còn cháy: lửa nhỏ liếm
+        const f = 1 - w.t / w.burn;
+        if (Math.random() < dt * 40 * f) fire.emit({ pos: w.mesh.position.clone().add(new V3(rand(-0.12, 0.12), rand(-0.12, 0.12), rand(-0.12, 0.12))), vel: new V3(rand(-0.4, 0.4), rand(0.3, 1.2), rand(-0.4, 0.4)),
+          life: rand(0.25, 0.55), size: rand(0.18, 0.34) * f + 0.08, sizeEnd: 0.05, color: new THREE.Color(2.4, 1.3, 0.4), colorEnd: new THREE.Color(0.8, 0.1, 0.02), drag: 1.5 });
+      }
+      // khói: dày lúc đầu, thưa dần thành sợi mảnh; kéo thành vệt sau mảnh đang bay
+      if (w.smokeRate > 0 && w.t < w.smokeDur) {
+        const f = 1 - w.t / w.smokeDur;
+        w.acc += dt * w.smokeRate * (0.25 + 0.75 * f);
+        while (w.acc >= 1) {
+          w.acc -= 1;
+          const s = rand(0.16, 0.3) * (0.7 + Math.min(1.2, w.sz * 2.2));
+          const g = rand(0.8, 1.15);
+          cSmk0.setRGB(0.13 * g, 0.12 * g, 0.115 * g); cSmk1.setRGB(0.07 * g, 0.068 * g, 0.07 * g);
+          if (w.burn > 0 && w.t < w.burn) cSmk0.setRGB(0.3, 0.17, 0.08);   // khói sát lửa ám cam
+          smoke.emit({ pos: w.mesh.position.clone().add(new V3(rand(-0.08, 0.08), rand(-0.08, 0.08), rand(-0.08, 0.08))),
+            vel: w.v.clone().multiplyScalar(-0.12).add(new V3(rand(-0.15, 0.15), rand(0.3, 0.65), rand(-0.15, 0.15))),
+            life: rand(1.8, 3.2), size: s, sizeEnd: s * rand(4.5, 6.5), color: cSmk0.clone(), colorEnd: cSmk1.clone(),
+            alpha: rand(0.3, 0.46) * (0.45 + 0.55 * f), drag: 0.6 });
+        }
+      }
+      if (w.mesh.position.distanceTo(camera.position) > 260) { scene.remove(w.mesh); wreckage.splice(i, 1); }
     }
   }
-  function clearWreckage() { wreckage.forEach(w => { scene.remove(w.mesh); w.mesh.geometry.dispose(); }); wreckage.length = 0; }
+  function clearWreckage() { wreckage.forEach(w => scene.remove(w.mesh)); wreckage.length = 0; }
 
   // =========================================================
   // 2f — THIÊN THẠCH bay ngang qua; ở góc đuổi theo đôi khi lao THẲNG vào màn (có rung)
   // =========================================================
+  // =========================================================
+  // ⭐ Đợt 397 (thầy): "ở chế độ TOÀN CẢNH, đường di chuyển của các tàu năng động hơn một chút, thể hiện
+  // vừa bay vừa tránh các vật thể nhỏ trên đường đi". Chỉ bật khi máy quay ở góc cao (`dodgeK` trượt
+  // 0↔1 theo camMode): đá vụn nhỏ trôi ngược dọc làn mỗi tàu (cùng chiều bụi tốc độ), tàu lượn né
+  // bằng lò xo (mục tiêu = lượn nhẹ + lực đẩy khỏi viên đá sắp tới), mũi tàu chĩa theo hướng né và thân
+  // nghiêng (bank). Không phải luật chơi — vị trí "nấc" của tàu (cfg.track) giữ nguyên, né chỉ cộng thêm.
+  // =========================================================
+  const DG = cfg.dodge || null;
+  const UP = new V3(0, 1, 0);
+  const dodgeRocks = [];
+  let dodgeK = 0;
+  const dodgeGeos = [], dodgeMats = [];
+  if (DG) {
+    for (let k = 0; k < 4; k++) { const g = new THREE.IcosahedronGeometry(1, 1); crumple(g, 0.28, 1.6); g.scale(1 + k * 0.15, 1, 1 - k * 0.08); dodgeGeos.push(g); }
+    dodgeMats.push(new THREE.MeshStandardMaterial({ color: "#5d554d", roughness: 0.95, metalness: 0.05, flatShading: true }),
+                   new THREE.MeshStandardMaterial({ color: "#8fa3b8", roughness: 0.6, metalness: 0.1, flatShading: true }));
+    warmBoom();                                // đá né cũng biên dịch sẵn
+  }
+  function spawnDodgeRock(i, D, lanePos, tv, right) {
+    const sc = cfg.rocketScale ?? 1;
+    const size = rand(0.26, 0.5) * sc;
+    const mesh = new THREE.Mesh(dodgeGeos[Math.floor(Math.random() * dodgeGeos.length)], dodgeMats[Math.random() < 0.8 ? 0 : 1]);
+    mesh.position.copy(lanePos).addScaledVector(tv, rand(14, 20)).addScaledVector(right, D.x + rand(-0.45, 0.45)).addScaledVector(UP, D.y + rand(-0.3, 0.3));
+    mesh.scale.setScalar(0.001);
+    scene.add(mesh);
+    dodgeRocks.push({ mesh, lane: i, size, side: Math.random() < 0.5 ? -1 : 1, v: tv.clone().multiplyScalar(-rand(DG.speed[0], DG.speed[1])),
+      spin: new V3(rand(-2, 2), rand(-2, 2), rand(-2, 2)), t: 0 });
+  }
+  function updateDodgeRocks(dt) {
+    if (!DG) return;
+    dodgeK += clamp((camMode === "high" ? 1 : 0) - dodgeK, -dt * 0.7, dt * 0.7);
+    for (let i = dodgeRocks.length - 1; i >= 0; i--) {
+      const o = dodgeRocks[i]; o.t += dt;
+      o.mesh.position.addScaledVector(o.v, dt);
+      o.mesh.rotation.x += o.spin.x * dt; o.mesh.rotation.y += o.spin.y * dt; o.mesh.rotation.z += o.spin.z * dt;
+      o.mesh.scale.setScalar(o.size * Math.min(1, o.t / 0.35) * (o.t > 2.6 ? Math.max(0, 1 - (o.t - 2.6) / 0.4) : 1));
+      if (o.t > 3) { scene.remove(o.mesh); dodgeRocks.splice(i, 1); }
+    }
+  }
+  // trả về độ lệch né (dời vị trí ngay trong hàm) — gọi sau khi đặt rig theo cfg.track
+  function applyDodge(r, i, dt, pose) {
+    const D = r.dg || (r.dg = { x: 0, y: 0, vx: 0, vy: 0, t: rand(0.3, 1) });
+    const tv = cfg.travelDir.clone().normalize();
+    const right = new V3().crossVectors(tv, UP).normalize();
+    const alive = !r.hidden && !r.wreck && r.exploding === 0 && G.phase !== "over";
+    const on = alive ? dodgeK : 0;
+    if (on > 0.6 && G.phase === "play" && !G.paused) {
+      D.t -= dt;
+      if (D.t <= 0) { D.t = rand(DG.every[0], DG.every[1]); spawnDodgeRock(i, D, pose.pos, tv, right); }
+    }
+    // lượn nhẹ nền + đẩy khỏi viên đá sắp tới (càng gần càng mạnh)
+    let tx = on * (Math.sin(G.t * 0.95 + i * 2.1) * 0.35 + Math.sin(G.t * 2.1 + i) * 0.12);
+    let ty = on * Math.sin(G.t * 1.3 + i * 1.7) * 0.22;
+    if (on > 0) dodgeRocks.forEach(o => {
+      if (o.lane !== i) return;
+      const rel = o.mesh.position.clone().sub(pose.pos);
+      const along = rel.dot(tv);
+      if (along < -1.5 || along > 11) return;
+      const lx = rel.dot(right), ly = rel.dot(UP);
+      const clear = o.size + 0.95 * (cfg.rocketScale ?? 1);
+      const dx = D.x - lx;
+      if (Math.abs(dx) < clear) {
+        const w = smooth(11, 2.5, along) * on;
+        tx += Math.sign(dx || o.side) * (clear - Math.abs(dx)) * 1.7 * w;
+        ty += Math.sign((D.y - ly) || 1) * 0.3 * w;
+      }
+    });
+    // không lấn sang làn tàu kia: phía trong hẹp hơn phía ngoài
+    const inner = DG.maxIn ?? 0.8, outer = DG.maxOut ?? 1.4;
+    tx = i === 0 ? clamp(tx, -outer, inner) : clamp(tx, -inner, outer);
+    ty = clamp(ty, -0.6, 0.6);
+    const k = 11, damp = 5.2;
+    D.vx += ((tx - D.x) * k - D.vx * damp) * dt; D.vy += ((ty - D.y) * k - D.vy * damp) * dt;
+    D.x += D.vx * dt; D.y += D.vy * dt;
+    r.rig.position.addScaledVector(right, D.x).addScaledVector(UP, D.y);
+    pose.dir = pose.dir.clone().normalize().addScaledVector(right, D.vx * 0.09).addScaledVector(UP, D.vy * 0.09);
+    return D;
+  }
+
   const rocks = [];
   const rockGeos = [];
   if (cfg.asteroids) {
@@ -1345,14 +1775,26 @@ export async function createView(cfg) {
     const target = new V3().setFromMatrixPosition(r.ship.matrixWorld);
     const start = target.clone().add(new V3(rand(-10, 10), rand(14, 22), rand(-26, -12)));
     if (cfg.finale && cfg.finale.strike === "streak") {
-      // 2h: chính là một VỆT SÁNG như bụi tốc độ đang chạy trên màn (cùng màu, cùng hướng trôi) — nó lao vào trúng tàu
+      // ⭐ Đợt 397 (thầy): "tia sáng va vào tàu phải bay tới từ MÉP MÀN HÌNH, giống hệt các tia sáng bay trong
+      // suốt game, không dùng loại khác" ⇒ dùng CHÍNH vật liệu của bụi tốc độ (`dust.material`), cùng công thức
+      // độ dài vệt (0.6 + tốc độ × 0.03), bay dọc đúng hướng bụi trôi; điểm xuất phát = lùi dọc hướng bay tới
+      // khi ra khỏi khung hình. Góc đuổi (hướng bay chĩa vào tâm màn) không bao giờ ra mép ⇒ xuất phát từ xa.
       const tv = cfg.travelDir.clone().normalize();
-      const s2 = target.clone().addScaledVector(tv, rand(34, 44)).add(new V3(rand(-3, 3), rand(-1.5, 2.5), 0).applyQuaternion(r.rig.quaternion).projectOnPlane(tv));
+      camera.updateMatrixWorld();
+      let s2 = null;
+      const q = new V3();
+      for (let d = 2; d <= 400; d += 1) {
+        q.copy(target).addScaledVector(tv, d);
+        const ndc = q.clone().project(camera);
+        if (ndc.z > 1 || Math.abs(ndc.x) > 1.06 || Math.abs(ndc.y) > 1.06) { s2 = target.clone().addScaledVector(tv, d + 2); break; }
+      }
+      if (!s2) s2 = target.clone().addScaledVector(tv, 60);
       const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(6), 3));
-      const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: new THREE.Color(1.1, 1.5, 2.4), transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+      const line = new THREE.LineSegments(geo, dust.material);
       line.frustumCulled = false;
       scene.add(line);
-      meteors.push({ line, tv, start: s2, r, n, total, t: 0, dur: s2.distanceTo(target) / 48 });
+      const dur = 0.85, len = 0.6 + (s2.distanceTo(target) / dur) * 0.03;
+      meteors.push({ line, tv, start: s2, r, n, total, t: 0, dur, len });
       return;
     }
     const head = new THREE.Sprite(new THREE.SpriteMaterial({ map: flareTex, color: new THREE.Color(5, 4, 3), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
@@ -1370,7 +1812,7 @@ export async function createView(cfg) {
         const head = new V3().lerpVectors(m.start, target, k);
         const a = m.line.geometry.attributes.position;
         a.setXYZ(0, head.x, head.y, head.z);
-        const tail = head.clone().addScaledVector(m.tv, 2.4);
+        const tail = head.clone().addScaledVector(m.tv, m.len ?? 2.4);
         a.setXYZ(1, tail.x, tail.y, tail.z); a.needsUpdate = true;
       } else {
         m.head.position.lerpVectors(m.start, target, k * k);
@@ -1534,6 +1976,7 @@ export async function createView(cfg) {
       const t01 = r.vis / L;
       const pose = cfg.track(i, t01, G.t);
       r.rig.position.copy(pose.pos);
+      if (DG) applyDodge(r, i, dt, pose);        // Đợt 397: toàn cảnh ⇒ lượn né đá vụn
       tmpQ.setFromUnitVectors(new V3(1, 0, 0), pose.dir.clone().normalize());
       r.rig.quaternion.slerp(tmpQ, Math.min(1, dt * 6));
       // nhấp nhô + lắc
@@ -1542,6 +1985,7 @@ export async function createView(cfg) {
       r.ship.position.set(r.boost * 0.5 + rand(-jit, jit), bob + rand(-jit, jit), rand(-jit, jit));
       if (r.wreck) { r.ship.rotation.x += dt * 0.6; r.ship.rotation.z += dt * 0.25; r.ship.position.y -= 0.3; }
       else { r.ship.rotation.x = Math.sin(G.t * 1.3 + r.wob) * 0.18 + (r.stall > 0 ? Math.sin(G.t * 40) * 0.08 : 0); r.ship.rotation.z = Math.sin(G.t * 2.4 + r.wob + 0.5) * 0.03; }
+      if (DG && r.dg && !r.wreck) r.ship.rotation.x += clamp(-r.dg.vx * 0.28, -0.6, 0.6);   // Đợt 397: nghiêng thân khi né
       r.model.visible = !r.hidden && !(r.exploding > 0 && r.exploding < 0.3);
       // 2f: tàu thắng bay xuyên cổng rồi lao tiếp ra khỏi màn hình
       if (r.flyOut) { r.flyV = (r.flyV || 1.2) + dt * 2.5; r.p += r.flyV * dt; r.boost = Math.max(r.boost, 0.8); if (r.p > L * 4) { r.flyOut = false; r.hidden = true; } }
@@ -1636,6 +2080,7 @@ export async function createView(cfg) {
     nebula.position.copy(camera.position); stars.position.copy(camera.position);
     if (cfg.skySpin) { nebula.rotation.y += dt * cfg.skySpin; stars.rotation.y += dt * cfg.skySpin * 1.25; stars.rotation.x += dt * cfg.skySpin * 0.3; }
     updateAsteroids(dt);
+    updateDodgeRocks(dt);
     updateWreckage(dt);
     nebula.material.uniforms.uTime.value = G.t; stars.material.uniforms.uTime.value = G.t;
     planets.forEach(p => { p.userData.mat.uniforms.uTime.value = G.t; p.children[0].rotation.y += dt * 0.01; });
@@ -1778,6 +2223,8 @@ export async function createView(cfg) {
     tapStart() { if (startBtn) onTap(startBtn); },
     tap(side, k) { const c = consoles[side]; if (c && c.tiles[k]) onTap(c.tiles[k]); },
     step(n = 1, dt = 1 / 60) { manual = true; for (let i = 0; i < n; i++) tick(dt); },
+    strike(side) { meteorStrike(rockets[side], 1, 3); const m = meteors[meteors.length - 1]; const f = v => { const q = v.clone().project(camera); return [+q.x.toFixed(2), +q.y.toFixed(2)]; }; return { start: f(m.start), target: f(new V3().setFromMatrixPosition(rockets[side].ship.matrixWorld)), sameMat: m.line.material === dust.material }; },   // bàn thử Đợt 397: một nhát tia sáng kết trận
+    dodgeInfo() { return { k: +dodgeK.toFixed(2), rocks: dodgeRocks.length, cam: camMode, dg: rockets.map(r => r.dg ? [+r.dg.x.toFixed(2), +r.dg.y.toFixed(2)] : null) }; },   // bàn thử Đợt 397
     resume() { manual = false; clock.getDelta(); },
     snap() {
       let img = document.getElementById("__snap");

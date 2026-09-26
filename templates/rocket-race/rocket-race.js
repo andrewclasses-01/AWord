@@ -567,6 +567,8 @@ function RR3D_CFG(V) {
   return {
     quality: "high", maxFps: 60, fov: 38, steps: 5, lives: 0, uiDepth: 9, rocketScale: 1.1, bannerY: 0.35, startY: 0.5, startCm: [22, 7],
     maxTiles: 6,
+    // Đợt 397 (thầy): toàn cảnh ⇒ tàu lượn né đá vụn trôi ngược dọc làn (rr3d-view.js applyDodge)
+    dodge: { every: [0.8, 1.7], speed: [9, 13], maxIn: 0.8, maxOut: 1.4 },
     // Đợt 393 (thầy): chữ mở màn "bị to và lố quá" ⇒ nhỏ lại còn ~½ (0.55/0.7 → 0.26/0.34)
     introTitles: [{ text: "ANDREW CLASSES", at: 0.5, ms: 2300, size: 0.26 }, { text: "ROCKET RACE", at: 3.0, ms: 2300, size: 0.34 }], startAt: 5.4,
     questionMaxCm: 176,                       // Đợt 393: thanh câu hỏi dãn tới đây khi câu dài
