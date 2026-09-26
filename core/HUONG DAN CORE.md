@@ -5041,6 +5041,7 @@ cả 3 cùng nằm ở gốc:
 | `.aw-tool-dim` (tấm che tối cả màn) | **40** | con **TRỰC TIẾP của `body`** |
 | `.aw-below-center` (cụm nút công cụ) | **41** | trong `.aw-below` |
 | `.aw-tool-panel` (panel Options/Template/Style/MODE) | **42** | append vào `.aw-below-center` |
+| `.aw-fight-review` (bảng ANSWERS cuối trận Fight, toàn màn) | **44** | con của `.aw-fight` — Đợt 403: từ 31 lên 44 vì hàng nút (41) đè lên nó; chỉ mở từ bảng kết quả nên không panel công cụ nào mở dưới nó |
 
 Bọc 41 + 42 vào một phần tử **đẻ ra STACKING CONTEXT** mà phần tử đó lại `z-index:auto` ⇒ cả 41 lẫn
 42 bị **nhốt** vào trong, hộp đó xếp ở mức 0 tại gốc ⇒ **tấm che (40) leo lên TRÊN cả panel lẫn cụm

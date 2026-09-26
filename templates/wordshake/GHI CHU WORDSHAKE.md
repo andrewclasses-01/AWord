@@ -1,5 +1,12 @@
 # GHI CHÚ WORDSHAKE — template #21 + game cố định trong GAMES
 
+## ⭐ Đợt 403 (26/9/2026) — rà 11 mục (chi tiết bảng ở GHI CHU DU AN.md chặng Đợt 403)
+- **Chơi đơn KHÔNG còn bình** (thầy: ✓ ở góc là đủ): `singleTank`/`.aw-ws-toptank` xoá; Score tank = chỉ Fight.
+- Fight: `placeDown` đo lại qua `ResizeObserver` (⛶/xoay iPad), `downScale` ≤ 75 % bàn; bảng kết quả giữa ẩn hàng số, thêm
+  MISSED (`missedHtml(S)`, `WRAP_S`); ANSWERS skin tối; `bell.timeup()` khi đồng hồ 00:00; `countTanks` đếm điểm âm xuống.
+- `ws-lib` `fit()`: canvas bình vẽ theo cỡ TRÊN MÀN (bậc ¼, trần 4) — hết nhoè khi ô phóng.
+- GAME: bỏ 2 rAF trước khi trượt (khung ẩn ⇒ không bao giờ trượt) → `void cv.offsetWidth` rồi gắn `down`.
+
 ## ⭐ Đợt 402 (26/9/2026) — TEMPLATE: hết giờ giống GAME (Đợt 401 + đếm Đợt 395)
 - `slideDown(box, target, scale)` (tâm→tâm, hệ số px lấy từ ĐÍCH vì ô tank bị skew) + `countTanks(tanks, scores, grow)`
   (phép đếm GAME Đợt 395) — thay `drainTanks` (đã xoá).

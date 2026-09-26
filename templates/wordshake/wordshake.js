@@ -44,7 +44,7 @@ import { mkCell, mkSeg } from "../../core/options-panel.js";
 import { el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
-import { loadDict, lookup, points, shuffle, countOf, createSfx, createTank, flyPoint, escapeHtml as esc } from "./ws-lib.js";
+import { loadDict, lookup, points, shuffle, countOf, wordsOn, createSfx, createTank, flyPoint, escapeHtml as esc } from "./ws-lib.js";
 import { openWordshakeEditor } from "./wordshake-editor.js";
 import { sound } from "../../core/sound.js";
 
@@ -166,30 +166,18 @@ function mountStartPanel(box, { play, ready, onTime }) {
 
 // ---------------- Đợt 390: score tank (Options ▸ Score tank, default ON) ----------------
 // The score is not shown while the game runs: its box holds a sparkling tank, points
-// fly in and slosh the water (ws-lib createTank/flyPoint). At the end the tank drains
-// while the number counts up — single play before ui.finish, a match through the
-// core hook `fightReveal` (before the result panel). One set of tanks per frame /
-// match, kept here so the start screen and mount() share them.
+// fly in and slosh the water (ws-lib createTank/flyPoint). At the end the numbers
+// count up through the core hook `fightReveal` (before the result panel). One set of
+// tanks per match, kept here so the start screen and mount() share them.
+// ⭐ Đợt 403 (thầy, 26/9/2026): FIGHT ONLY — single play shows its ✓ score in the
+// frame's top-right corner the normal way, no tank, no count (singleTank removed).
 const TANKS = new WeakMap();
+// Đợt 403 — the match's shared state by its `.aw-fight` wrap, for the MISSED list
+// the result panel shows (fightReveal only gets the wrap).
+const WRAP_S = new WeakMap();
 const tankOn = o => !(o && o.wsTank === false);
 // (Đợt 390b: ignored — the tank level is FIXED, the same for every team; kept for the old call shape)
 const tankK = (mode, fight) => mode === "free" ? (fight ? 20 : 3) : 6;
-function singleTank(inner, k) {
-  if (!inner) return null;
-  let t = TANKS.get(inner);
-  if (t) return t;
-  const scoreEl = inner.querySelector(".aw-top-score");
-  if (!scoreEl) return null;
-  const box = document.createElement("span");
-  box.className = "aw-ws-toptank";
-  t = createTank({ side: 0, k });
-  box.append(t.el);
-  scoreEl.after(box);                     // engine rewrites scoreEl's innerHTML — so a sibling
-  inner.closest(".aw-stage")?.classList.add("is-ws-tank");
-  t.box = box; t.inner = inner;
-  TANKS.set(inner, t);
-  return t;
-}
 function fightTanks(wrap, k) {
   if (!wrap) return null;
   let t = TANKS.get(wrap);
@@ -214,41 +202,66 @@ function fightTanks(wrap, k) {
 // ⇒ the boards go dark + blurred, the score box(es) slide from the strip down to the middle
 // of their board, THEN both numbers count up together one step at a time (a tick a step);
 // the leader's box grows on its first number past the lower score and counts on alone.
-// `slideDown` measures in page px and converts to the target's own px (a zoomed / scaled
-// frame); the box's centre is unchanged by its skew, so centre-to-centre is exact.
-function slideDown(box, target, scale) {
-  if (!box || !target) return Promise.resolve();
+// `placeDown` measures in page px and converts to the target's own px (a zoomed / scaled
+// frame); the box's centre is unchanged by its skew / scale, so centre-to-centre is exact.
+// ⭐ Đợt 403 — measured with the box's own transform switched off for the moment, so it can
+// run again whenever the size changes (⛶ fullscreen, iPad turned): `snap` = no animation.
+function placeDown(box, target, scale, snap) {
+  if (!box || !target) return;
+  if (snap) box.style.transition = "none";
+  box.style.transform = "none";
   const a = box.getBoundingClientRect(), b = target.getBoundingClientRect();
+  box.style.transform = "";
   const k = target.offsetWidth / (b.width || 1) || 1;
   box.style.setProperty("--ws-dx", ((b.left + b.width / 2) - (a.left + a.width / 2)) * k + "px");
   box.style.setProperty("--ws-dy", ((b.top + b.height / 2) - (a.top + a.height / 2)) * k + "px");
   box.style.setProperty("--ws-k", String(scale));
   box.classList.add("is-ws-down");
+  if (snap) { void box.offsetWidth; box.style.transition = ""; }
+}
+// The team box grows to at most 1.5×, and never wider than 75 % of its board — the
+// leader's box grows ×1.2 more during the count (Đợt 403: ≤ 90 %, it spilled at 0.9 × 1.2).
+const downScale = (team, board) => Math.min(1.5, .75 * board.offsetWidth / (team.offsetWidth || 1));
+function slideDown(box, target, scale) {
+  if (!box || !target) return Promise.resolve();
+  placeDown(box, target, scale, false);
   return new Promise(r => setTimeout(r, 900));
 }
 // The GAME's count (Đợt 395) for 1 or 2 tanks. `grow(side)` makes the leader's box bigger.
+// ⭐ Đợt 403 — a NEGATIVE score (penalties) counts DOWN from 0 to its value, step for step
+// with the other number (the steps run on |score|); with a negative score in the match
+// the leader grows once at the end instead of halfway.
 function countTanks(tanks, scores, grow) {
   const say = (k, ...a) => { if (!sound.isMuted()) bell[k](...a); };
-  const sc = scores.map(v => Math.max(0, Number(v) || 0));
+  const real = scores.map(v => Math.round(Number(v) || 0));
+  const sc = real.map(v => Math.abs(v)), neg = real.some(v => v < 0);
   const lo = Math.min(...sc), hi = Math.max(...sc);
-  const lead = sc.length < 2 || sc[0] === sc[1] ? -1 : (sc[0] > sc[1] ? 0 : 1);
+  const lead = real.length < 2 || real[0] === real[1] ? -1 : (real[0] > real[1] ? 0 : 1);
   const STEP = Math.round(Math.max(120, Math.min(340, 10000 / Math.max(1, hi))));
   const pan = i => sc.length < 2 ? 0 : (i ? .65 : -.65);
+  const show = (i, n) => {
+    tanks[i].countTo(n, sc[i]);
+    if (real[i] < 0) { const num = tanks[i].el.querySelector(".wst-num"); if (num) num.textContent = String(-n); }
+  };
   tanks.forEach(t => t.countTo(0, 1));
   return new Promise(res => {
     let n = 0, grown = false;
     // a torn-down match / left page: stop counting, let the caller go on
     const later = (fn, ms) => setTimeout(() => { if (tanks.every(t => t.el.isConnected)) fn(); else res(); }, ms);
-    const done = () => { tanks.forEach((t, i) => t.landCount(sc[i])); say("land"); later(res, 1000); };
+    const done = () => {
+      tanks.forEach((t, i) => t.landCount(real[i]));
+      if (neg && lead >= 0 && grow) grow(lead);
+      say("land"); later(res, 1000);
+    };
     const tickOne = () => {
       n++;
-      sc.forEach((v, i) => { if (n <= v) tanks[i].countTo(n, v); });
+      sc.forEach((v, i) => { if (n <= v) show(i, n); });
       say("countTick", hi > 1 ? (n - 1) / (hi - 1) : 1);
       later(step, n >= hi ? 450 : STEP);
     };
     const step = () => {
       if (n >= hi) return done();
-      if (lead >= 0 && n === lo && !grown) {
+      if (!neg && lead >= 0 && n === lo && !grown) {
         grown = true;
         if (lo > 0) tanks[1 - lead].landCount(lo);
         return later(() => { if (grow) grow(lead); say("swell", pan(lead)); later(tickOne, 420); }, lo > 0 ? 650 : 250);
@@ -257,6 +270,34 @@ function countTanks(tanks, scores, grow) {
     };
     step();
   });
+}
+
+// ⭐ Đợt 403 (thầy, 26/9/2026) — MISSED on the match's result panel, like the GAME.
+// Mode 1/2: the lesson's words neither team made (+ meaning). Mode 3: the lesson words of
+// the last board nobody made, then the everyday words (A1–B1, not a form of another word)
+// on that board that nobody found — longest first, 10 at most.
+function missedHtml(S) {
+  const done = new Set(S.log.map(f => String(f.w).toLowerCase()));
+  S.found.forEach((_, up) => done.add(String(up).toLowerCase()));
+  S.taken.forEach((_, w) => done.add(String(w).toLowerCase()));
+  const row = (w, m) => `<div><b>${esc(w.toUpperCase())}</b> <span>${esc(m || "")}</span></div>`;
+  const wrapUp = rows => rows.length ? `<div class="aw-ws-mlab">MISSED</div><div class="aw-ws-mlist">${rows.join("")}</div>` : "";
+  const items = S.items || [];
+  if (S.mode !== "free") {
+    return Promise.resolve(wrapUp(items.filter(it => !done.has(it.word.toLowerCase()) && !done.has(it.up.toLowerCase()))
+      .slice(0, 10).map(it => row(it.word, it.clue))));
+  }
+  const P = S.plan && S.plan[Math.min(S.r, S.plan.length - 1)];
+  if (!P) return Promise.resolve("");
+  const lesson = P.words.map(up => items.find(x => x.up === up)).filter(it => it && !done.has(it.up.toLowerCase()));
+  return loadDict().then(dict => {
+    const extra = wordsOn(dict, P.letters, 4)
+      .filter(w => !done.has(w) && !dict.get(w).base && !lesson.some(it => it.up.toLowerCase() === w))
+      .sort((x, y) => y.length - x.length || dict.get(x).lv - dict.get(y).lv);
+    const rows = lesson.map(it => row(it.word, it.clue))
+      .concat(extra.map(w => row(w, (lookup(dict, w) || {}).m)));
+    return wrapUp(rows.slice(0, 10));
+  }).catch(() => wrapUp(lesson.map(it => row(it.word, it.clue))));
 }
 
 // ---------------- board plans (shared by single and fight) ----------------
@@ -424,7 +465,6 @@ const wordshakeTemplate = {
       return { beforePlay, dispose: off };
     }
     host.innerHTML = `<div class="aw-ws-root aw-wss-single"></div>`;
-    if (tankOn(activity.options)) singleTank(host.closest(".aw-stage-inner"), tankK(modeOf(activity.options), false));
     // the frame's own clock shows the chosen minutes before PLAY (the engine writes
     // its real value the moment the clock starts)
     const clock = host.closest(".aw-stage-inner")?.querySelector(".aw-top-timer");
@@ -444,19 +484,43 @@ const wordshakeTemplate = {
     const boards = [...wrap.querySelectorAll(".aw-fight-board")];
     if (!teams[0] || !teams[1] || boards.length < 2) return;
     const mid = wrap.querySelector(".aw-fight-shared");
+    const S = WRAP_S.get(wrap);
+    // Đợt 403 — the missed words, worked out now (the dictionary is already loaded in Mode 3)
+    const missed = S ? missedHtml(S) : Promise.resolve("");
     if (mid) {
       const mo = new MutationObserver(() => {
         const p = wrap.querySelector(":scope > .aw-fight-result");
         if (!p) return;
         mo.disconnect(); p.classList.add("is-ws-mid"); mid.append(p);
+        missed.then(html => {
+          if (!html || !p.isConnected) return;
+          const box = document.createElement("div"); box.className = "aw-ws-missed"; box.innerHTML = html;
+          const btns = p.querySelector(".aw-fight-result-btns");
+          btns ? p.insertBefore(box, btns) : p.append(box);
+        });
       });
       mo.observe(wrap, { childList: true });
       setTimeout(() => mo.disconnect(), 30000);
     }
+    // Đợt 403 — the time-up sound of the GAME, only when the clock ran out (not when the
+    // words ran out first — the look is the same, thầy chose it for both)
+    const clk = wrap.querySelector(".aw-fight-clock");
+    if (clk && /^0?0:00$/.test(clk.textContent.trim()) && !sound.isMuted()) bell.timeup();
     wrap.classList.add("is-ws-ending");
-    const k = Math.min(1.5, .9 * boards[0].offsetWidth / (teams[0].offsetWidth || 1));
+    const k = downScale(teams[0], boards[0]);
+    // ⭐ Đợt 403 — ⛶ fullscreen / turning the iPad / a new window size: measure again, so
+    // the boxes stay in the middle of their boards (until Start again rebuilds the match)
+    let settled = false;
+    const again = () => {
+      if (!wrap.isConnected) { ro.disconnect(); return; }
+      if (!settled) return;
+      teams.forEach((x, i) => placeDown(x, boards[i], downScale(teams[0], boards[0]), true));
+    };
+    const ro = new ResizeObserver(() => requestAnimationFrame(again));
+    ro.observe(wrap); boards.forEach(b => ro.observe(b));
     const t = tankOn(activity.options) ? TANKS.get(wrap) : null;
     return Promise.all(teams.map((x, i) => slideDown(x, boards[i], k)))
+      .then(() => { settled = true; again(); })
       .then(() => t ? countTanks(t, scores, side => teams[side].classList.add("is-ws-big")) : null)
       .then(() => {
         if (!t) return;
@@ -510,7 +574,7 @@ const wordshakeTemplate = {
     panel.append(modeCell.cell, tilesCell.cell);
     // Đợt 390 — the score tank (thầy: the GAME always has it, an activity may switch it off)
     if (addCheck) addCheck("Score tank", draft.wsTank !== false, v => { draft.wsTank = v; },
-      { key: "wsTank", title: "Hide the score in a water tank until the end, then count it up" });
+      { key: "wsTank", title: "Fight: hide the score in a tank until the end, then count it up" });
   },
   optionsNeedRestart() { return true; },
 
@@ -560,16 +624,15 @@ const wordshakeTemplate = {
       if (!S.plan && mode === "free") S.plan = planFree(shuffle(items));
       attachHost(S, fctl.sharedRoot());
     }
-    // Đợt 390 — score tanks (see singleTank / fightTanks)
-    const topTank = !fctl && tankOn(opt) ? singleTank(root.closest(".aw-stage-inner"), tankK(mode, false)) : null;
+    // Đợt 390 — score tanks (see fightTanks) — Đợt 403: a match only
     const fTanks = fctl && tankOn(opt) ? fightTanks(root.closest(".aw-fight"), tankK(mode, true)) : null;
-    if (topTank) topTank.reset(0);
+    if (fctl && S) { const fw = root.closest(".aw-fight"); if (fw) WRAP_S.set(fw, S); }
     function pour(fromEl, text) {
-      const T = topTank || (fTanks && fTanks[side]);
+      const T = fTanks && fTanks[side];
       if (!T) return;
       flyPoint(fromEl, T.el, text, side).then(() => {
         if (!T.el.isConnected || T.el.classList.contains("is-count")) return;
-        T.hit(fTanks ? (Number(T.scoreEl && T.scoreEl.textContent) || 0) : score);
+        T.hit(Number(T.scoreEl && T.scoreEl.textContent) || 0);
         if (!sound.isMuted()) bell.splash(pan);
       });
     }
@@ -863,21 +926,9 @@ const wordshakeTemplate = {
       const perQuestion = review.map((r, i) => ({ q: i, correct: r.yourCorrect === true }));
       const correct = perQuestion.filter(p => p.correct).length;
       const result = { correct, incorrect: total - correct, total, items: total, perQuestion, review, answered: review.filter(r => r.answered).length };
-      // Đợt 390 — single play: the tank drains while the score counts up, THEN the
-      // engine's end screen. (A match drains through `fightReveal` instead.)
-      // ⭐ Đợt 402 — like the GAME: the play area dims + blurs, the tank box slides down
-      // to its middle, then the count.
-      if (!topTank || !topTank.el.isConnected) return ui.finish(result);
-      const stageEl = topTank.inner.closest(".aw-stage");
-      stageEl?.classList.add("is-ws-ending");
-      slideDown(topTank.box, topTank.inner.querySelector(".aw-playarea"), 2)
-        .then(() => countTanks([topTank], [score])).then(() => {
-        stageEl?.classList.remove("is-ws-ending");
-        if (dead) return;
-        topTank.inner.closest(".aw-stage")?.classList.remove("is-ws-tank");
-        topTank.box.remove(); TANKS.delete(topTank.inner);
-        ui.finish(result);
-      });
+      // Đợt 403 (thầy) — single play: no tank, no count; the ✓ in the frame's corner
+      // already shows the score. A match counts through `fightReveal`.
+      ui.finish(result);
     }
 
     // Đợt 389 — the Next tick flipped under the frame: only the › (or PASS) changes.

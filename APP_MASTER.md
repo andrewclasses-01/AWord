@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ⭐ **26/9/2026 Đợt 403 — A SHOW SPEED rà 11 mục: chơi đơn BỎ HẲN bình (✓ ở góc là đủ) · Fight: ô đo lại khi đổi cỡ, ≤ 75 % bàn, bảng kết quả bỏ hàng số + thêm MISSED, bảng ANSWERS tối neon, tiếng hết giờ, điểm âm đếm xuống · bình vẽ nét theo cỡ trên màn (ws-lib) · CORE: `.aw-fight-review` z 31→44 (hàng nút không đè nữa, mọi Fight) · GAME: bỏ cổng rAF (khung ẩn thì ô không bao giờ trượt)** (⬜ chưa bấm tay TOMKO). Chi tiết chặng Đợt 403.
 > ⭐ **26/9/2026 Đợt 402 — A SHOW SPEED TEMPLATE (activity) hết giờ giống GAME: bàn tối + blur, ô điểm trượt xuống giữa bàn (chơi đơn: giữa khung) rồi đếm kiểu Đợt 395; Fight: bảng kết quả core được bê vào BẢNG GIỮA** (`slideDown`/`countTanks` trong `templates/wordshake/wordshake.js`, bỏ `drainTanks`; không sửa core; ✅ ĐÃ PUSH `6c95f89` + LIVE 2/2 mã băm; ⬜ chưa bấm tay TOMKO). Chi tiết chặng Đợt 402.
 > ⭐ **26/9/2026 Đợt 401 — A SHOW SPEED (GAME `games/wordshake`): hết giờ ⇒ hai bàn đội tối + blur, hai ô điểm trượt từ dải trên xuống GIỮA bàn đội (to ×1,4, đội dẫn ×1,7) rồi mới đếm; màn kết quả giữ nguyên vị trí đó, PLAY AGAIN trả về như cũ** (cờ `G.down`, class `ending`/`down`; ✅ ĐÃ PUSH `bfbe3ac` + LIVE 2/2 mã băm; ⬜ chưa bấm tay TOMKO). Chi tiết chặng Đợt 401.
 > ⭐ **26/9/2026 Đợt 400 — NÚT CHUYỂN ACT + NHỚ TEMPLATE CHƠI CUỐI** (✅ ĐÃ PUSH `468a2a2` + LIVE 6/6 mã băm; ⬜ chưa bấm tay): Single nút cạnh trái tên act, Fight đầu cụm nút giữa; pop-up act cùng thư mục + thư mục con; chuyển act GIỮ mode (Showdown chỉ khi không giữa lượt). Act mang thêm `lastTpl` (Firebase, không bump `updatedAt`) — `startGame()` mở act thư viện "từ đầu" ⇒ tự chuyển từ bản gốc sang template chơi cuối; `type`/`content` gốc KHÔNG đổi. Chi tiết chặng Đợt 400.
@@ -7480,7 +7481,9 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐ **(Đợt 402, 26/9/2026) — A SHOW SPEED TEMPLATE: hết giờ giống GAME (Fight + chơi đơn).** ⬜ thầy bấm tay TOMKO; ⬜ chơi đơn ô không ở lại sau popup GAME COMPLETE — hỏi thầy nếu cần.
+> ⭐ **(Đợt 403, 26/9/2026) — A SHOW SPEED rà 11 mục (thầy chốt từng mục).** ⬜ thầy bấm tay TOMKO: Fight 3 mode, chơi đơn (không còn bình), ⛶ thật, nghe tiếng hết giờ, bảng ANSWERS ở các game Fight khác (z mới 44).
+>
+> ⭐ **(Đợt 402, 26/9/2026) — A SHOW SPEED TEMPLATE: hết giờ giống GAME (Fight + chơi đơn).** ✅ chơi đơn đã chốt ở Đợt 403 (bỏ bình).
 >
 > ⭐ **(Đợt 401, 26/9/2026) — A SHOW SPEED GAME: ô điểm trượt xuống giữa bàn lúc hết giờ.** ⬜ thầy bấm tay TOMKO (nhịp trượt 0,8 s, độ mờ 4 px).
 >

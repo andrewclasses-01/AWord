@@ -546,6 +546,42 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 403 (26/9/2026) — A SHOW SPEED: 11 mục rà lại sau Đợt 401–402 (thầy chốt qua hỏi–đáp) · ⬜ CHƯA BẤM TAY TOMKO
+
+**Bối cảnh:** thầy bảo liệt kê mọi vấn đề thấy được trong Đợt 401–402 rồi hỏi dần từng mục. Thầy chốt:
+
+| # | Vấn đề | Thầy chốt | Đã làm |
+|---|---|---|---|
+| 1 | Chơi đơn: ô điểm bị gỡ khi GAME COMPLETE hiện | *"Chơi đơn đã hiện số ở góc phải rồi, không cần ô đếm riêng"* ⇒ **bỏ hẳn bình ở chơi đơn** | Xoá `singleTank` + CSS `.aw-ws-toptank`/`.aw-stage.is-ws-tank`; `finish()` gọi `ui.finish` luôn; ô tích Score tank nay chỉ tác dụng trong Fight (title ghi "Fight: …") |
+| 2 | Đổi cỡ màn sau khi đếm ⇒ ô lệch | Sửa | `placeDown(box, target, scale, snap)`: đo khi TẮT tạm transform của ô (inline `transform:none`), snap = tắt transition; `ResizeObserver` trên wrap + 2 bàn ⇒ đo lại (sau khi trượt xong) |
+| 3 | Ô đội dẫn có thể tràn mép bàn | Sửa | `downScale` = min(1,5; **0,75** × rộng bàn / rộng ô) ⇒ đội dẫn ×1,2 ≤ 90 % bàn |
+| 4 | Bình nhoè khi phóng | Sửa | `ws-lib` `fit()`: canvas vẽ theo cỡ TRÊN MÀN (tỉ lệ `getBoundingClientRect().height / clientHeight` — skewX không đổi chiều cao), bậc ¼, trần 4 |
+| 5 | Hết từ sớm cũng chạy hiệu ứng | Giữ (chạy cả khi hết từ) | — (tiếng hết giờ thì chỉ khi đồng hồ về 00:00, xem mục 10) |
+| 6 | Hàng "17 — 7" trùng số ở bàn | Bỏ hàng số + thêm MISSED | CSS ẩn `.aw-fight-result-scores`; `missedHtml(S)`: Mode 1/2 = từ của bài chưa đội nào làm (+ nghĩa); Mode 3 = từ bài của bàn cuối chưa ai làm + từ thường (lv ≤ 4, không phải biến thể) trên bàn đó chưa ai tìm, dài trước, tối đa 10. `WRAP_S` (WeakMap wrap → S) vì `fightReveal` chỉ nhận wrap |
+| 7 | Bảng ANSWERS nền trắng | Đổi sang tối neon | CSS `.aw-fight.is-skin-wordshake .aw-fight-review …` (chỉ skin này) |
+| 8 | Hàng nút (z 41) đè bảng ANSWERS (z 31) — lỗi có từ trước | **Sửa ở core (mọi Fight)** | `core/app.css` `.aw-fight-review` z 31 → **44** (trên 40/41/42 của hệ popup; bảng chỉ mở từ bảng kết quả nên không có panel công cụ nào mở dưới nó). Ghi vào bảng luật xếp lớp `core/HUONG DAN CORE.md` |
+| 9 | Chưa kiểm Mode 1, tắt tank, ⛶/đổi cỡ, điểm âm | Kiểm hết | xem "Đã đo" |
+| 10 | Template không có tiếng hết giờ | Thêm | `fightReveal` gọi `bell.timeup()` khi `.aw-fight-clock` là 00:00 |
+| — | Điểm âm: số dừng ở 0 rồi nhảy âm | Sửa | `countTanks`: bước chạy trên \|điểm\|, điểm âm đếm XUỐNG −1, −2…; có điểm âm thì đội dẫn to lên ở CUỐI |
+
+**🐞 Lỗi thật bắt được khi kiểm (GAME Đợt 401):** ô chỉ bắt đầu trượt sau HAI `requestAnimationFrame` — khung Browser bị ẩn/che thì
+rAF không chạy ⇒ **ô không bao giờ trượt xuống, bàn không tối** (màn kết quả hiện với ô vẫn ở dải trên). Sửa: `void cv.offsetWidth`
+(ép tính lại bố cục với ô đang ở trên) rồi gắn `down` ngay — không phụ thuộc rAF. Đo lại khi khung ĐANG ẨN: `DE 00:00` ✓.
+Bài học: *hiệu ứng mở đầu bằng rAF là cổng có thể không bao giờ mở* (cùng họ [[electron-test-throttle]]).
+
+**Đã đo (`templates/wordshake/test.html` + `games/wordshake/test.html`, đồng hồ tua nhanh trong bàn thử):**
+chơi đơn Mode 2: không có `.wst`, ✓5 hiện ở góc, hết giờ ⇒ GAME COMPLETE ngay · Fight Mode 1 (1–1): "IT'S A DRAW" + MISSED 6 từ
+kèm nghĩa, không hàng số · đổi cỡ 1024 → 768: tâm ô = tâm bàn (128,178 / 640,178), rộng ô 174 = 75 % bàn 232 · ANSWERS:
+`elementFromPoint` giữa hàng nút ra `aw-fight-rv-list` (bảng nằm trên), nền neon · điểm −3 | 5: chuỗi số "−1|1 −2|2 −3|3 −3|4 −3|5",
+đội phải `is-ws-big` · tắt tank: trượt 0,9 s, không đếm · canvas GAME: ô 30 css/40 trên màn ⇒ canvas 38 px (cũ 30) · GAME
+PLAY AGAIN: hết `down`/`ending` · 0 lỗi console. ⚠️ Claude KHÔNG nghe được tiếng hết giờ; ⛶ thật cần cú bấm người nên chỉ đo
+qua đổi cỡ cửa sổ (cùng đường `ResizeObserver`).
+
+**Chưa làm / chờ:** ⬜ thầy bấm tay TOMKO (Fight 3 mode + chơi đơn + ⛶ thật + nghe tiếng hết giờ). ⬜ Bài giao HS (chơi đơn) nay
+cũng không còn bình — đúng theo mục 1.
+
+---
+
 ## Đợt 402 (26/9/2026) — A SHOW SPEED TEMPLATE (activity): HẾT GIỜ GIỐNG GAME — bàn tối + mờ, ô điểm xuống giữa bàn, đếm kiểu Đợt 395, bảng kết quả Fight nằm ở BẢNG GIỮA · ✅ ĐÃ PUSH `6c95f89` + LIVE 2/2 mã băm · ⬜ CHƯA BẤM TAY TOMKO
 
 **Yêu cầu thầy (26/9):** "Sửa các chế độ khác của Game ở Activity cũng tương tự" — tức template `templates/wordshake/`

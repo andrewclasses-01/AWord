@@ -316,9 +316,15 @@ export function createTank({ side = 0, cls = "" } = {}) {
   const ctx = cv.getContext("2d");
   let level = FIXED, energy = 0, time = Math.random() * 10, iv = null, W = 0, H = 0, dpr = 1;
   let pulses = [], sparks = [];
+  // ⭐ Đợt 403 — the canvas is drawn at its ON-SCREEN size: a box scaled up by a transform
+  // (the score boxes grow ×1.4–1.8 at the end) or a drawing scaled by fit() would stretch a
+  // canvas sized from clientWidth and blur it. Height ratio (a skewX does not change it),
+  // in ¼ steps so a growing box re-sizes the canvas a few times, not every frame.
   function fit() {
-    const w = cv.clientWidth, h = cv.clientHeight, d = window.devicePixelRatio || 1;
+    const w = cv.clientWidth, h = cv.clientHeight;
     if (!w || !h) return false;
+    const onScreen = cv.getBoundingClientRect().height / h || 1;
+    const d = Math.min(4, Math.max(1, Math.round((window.devicePixelRatio || 1) * onScreen * 4) / 4));
     if (w !== W || h !== H || d !== dpr) {
       W = w; H = h; dpr = d;
       cv.width = Math.round(w * d); cv.height = Math.round(h * d);

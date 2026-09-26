@@ -156,13 +156,13 @@ export function mountWordshake(root, ctx = {}) {
     tanks.forEach(t => t.countTo(0, 1));
     // ⭐ Đợt 401 (thầy, 26/9/2026) — first the two team boards go dark + blurred and
     // both score boxes slide from the strip down to the middle of their team's board;
-    // only then does the count start. Two frames after render() so the move animates
-    // (render() alone would draw the boxes already down).
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      if (!alive()) return;
-      G.down = true; root.classList.add("ending");
-      cv.querySelectorAll(".wsg-score").forEach(b => b.classList.add("down"));
-    }));
+    // only then does the count start. render() draws the boxes up top, a forced reflow
+    // fixes that as the starting point, THEN they get `down` — so the move animates.
+    // (Đợt 403: was two requestAnimationFrame — a hidden / covered window never runs
+    // them, and the boxes then never came down at all.)
+    void cv.offsetWidth;
+    G.down = true; root.classList.add("ending");
+    cv.querySelectorAll(".wsg-score").forEach(b => b.classList.add("down"));
     let n = 0, grown = false;
     const done = () => {
       tanks.forEach((t, i) => t.landCount(sc[i]));

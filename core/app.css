@@ -4947,7 +4947,10 @@ body.aw-page-dragover::after {
    `boards[side].review()` của từng bàn. Cùng bảng màu is-correct/is-wrong
    với màn Show answers một-người-chơi (.aw-rv-a ở trên) để hai màn nhất quán. */
 .aw-fight-review {
-  position: fixed; inset: 0; z-index: 31; display: flex; flex-direction: column;
+  /* Đợt 403 — 31 → 44: the tool row under the match (`.aw-below-center`, 41) floated ON
+     TOP of this full-screen panel. Above 40/41/42 of the popup system; the panel is only
+     opened from the result panel, so no tool panel can be open under it. */
+  position: fixed; inset: 0; z-index: 44; display: flex; flex-direction: column;
   background: #f4f7fb; animation: aw-fadein .18s ease;
 }
 .aw-fight-rv-head {
