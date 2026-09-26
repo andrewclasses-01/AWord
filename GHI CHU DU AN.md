@@ -571,7 +571,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 **Đợt 395b (26/9, thầy chỉnh tiếp 3 ý):** (1) số điểm KHÔNG nảy to-nhỏ nữa — bỏ `.is-tick` mỗi nhịp và `.is-land` lúc hạ số (ws-lib `countTo`/`landCount`), bỏ `bump` ở màn kết quả; chỉ còn ô đội dẫn to lên MỘT lần · (2) bấm EASY/MEDIUM/HARD không dựng lại bảng nữa (render() cũ chạy lại hoạt ảnh `wsg-pop` của hộp ⇒ "nhảy lại bảng") — nay sửa tại chỗ: đổi `--i` + `.on` + nhãn nút Options; một viên sáng `.wsg-lvpill` TRƯỢT giữa 3 nút (transition .32s) · (3) bỏ dòng gợi ý "More C1–C2…" (`.wsg-lvhint`, trường `hint`). Đã kiểm: hộp Options giữ nguyên phần tử khi đổi level, pill có transition `running`; lượt đếm 6 vs 3 không có hoạt ảnh nào trên số, `.big` 1 ô, 0 lỗi.
 
-**VIỆC ĐANG CHỜ:** ⬜ thầy nghe + nhìn thật trên TOMKO: tiếng tích (cao/to đủ chưa), tốc độ đếm, độ to ô đội dẫn; chơi thử 3 level xem HARD có quá khó với lớp không (có thể nới `minTot`/dải). Template A Show Speed (activity) CHƯA có level — chỉ GAME.
+**VIỆC ĐANG CHỜ:** ✅ push `c921d47`+`d678cb7` (thầy lệnh 26/9/2026) — Pages built đúng commit, 3/3 file code khớp mã băm SHA-256 với bản live · ⬜ thầy nghe + nhìn thật trên TOMKO: tiếng tích (cao/to đủ chưa), tốc độ đếm, độ to ô đội dẫn; chơi thử 3 level xem HARD có quá khó với lớp không (có thể nới `minTot`/dải). Template A Show Speed (activity) CHƯA có level — chỉ GAME.
 
 ## Đợt 394 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D: chữ ô đáp án +15% không co · MENU giữa màn · vào thẳng Fight · ⬜ CHƯA BẤM TAY TOMKO
 
