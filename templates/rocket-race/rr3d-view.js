@@ -681,7 +681,7 @@ export async function createView(cfg) {
     const mark = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false, opacity: 0 }));
     mark.scale.set(h * 0.7, h * 0.7, 1); mark.position.set(w * 0.5 - h * 0.28, h * 0.3, 0.2);
     g.add(rim, body, text, mark);
-    const tile = { g, body, bodyMat, rim, rimMat, text, cv, tex, mark, team, w, h, press: 0, flip: 0, pendingText: null, state: "idle", shake: 0, pulse: 0, label: "" };
+    const tile = { g, body, bodyMat, rim, rimMat, text, cv, tex, mark, team, w, h, h0: h, press: 0, flip: 0, pendingText: null, next: null, state: "idle", shake: 0, pulse: 0, label: "" };
     body.userData.tile = tile;
     return tile;
   }
@@ -689,6 +689,59 @@ export async function createView(cfg) {
     tile.label = txt;
     drawTextCanvas(tile.cv, txt, { lines: 2, maxPx: Math.floor(tile.cv.height * 0.5) });
     tile.tex.needsUpdate = true;
+  }
+  // ---------------------------------------------------------
+  // Đợt 394 (thầy): chữ ô đáp án CỐ ĐỊNH CỠ, to hơn 15% so với cỡ trần cũ (0.45 × cao ô chuẩn).
+  // Nhiều chữ ⇒ xuống dòng (chỉ ở dấu cách) + Ô CAO LÊN — KHÔNG co chữ. Duy nhất một TỪ dài hơn
+  // cả bề ngang ô mới buộc co (không bao giờ bẻ giữa từ). Các dòng luôn căn giữa ô cả hai chiều.
+  // ---------------------------------------------------------
+  const ANS_FONT = 0.45 * 1.15, ANS_LH = 1.12, ANS_PADY = 0.6, TILE_CVW = 768;
+  const measureCtx = document.createElement("canvas").getContext("2d");
+  function answerLayout(t, txt, baseTh, fs) {
+    const pxPerWorld = TILE_CVW / (t.w * 0.94);               // mặt chữ = 0.94 bề ngang ô
+    const maxW = TILE_CVW * 0.9;
+    const words = String(txt).split(/\s+/).filter(Boolean);
+    let px = Math.round(ANS_FONT * baseTh * fs * pxPerWorld);
+    measureCtx.font = `800 ${px}px ${FONT_UI}`;
+    const widest = words.reduce((m, w) => Math.max(m, measureCtx.measureText(w).width), 0);
+    if (widest > maxW) { px = Math.max(18, Math.floor(px * maxW / widest)); measureCtx.font = `800 ${px}px ${FONT_UI}`; }
+    const lines = []; let cur = "";
+    for (const w of words) {
+      const s = cur ? cur + " " + w : w;
+      if (!cur || measureCtx.measureText(s).width <= maxW) cur = s; else { lines.push(cur); cur = w; }
+    }
+    if (cur) lines.push(cur);
+    const L = Math.max(1, lines.length);
+    const h = ((L * ANS_LH + ANS_PADY) * px / pxPerWorld) / 0.9;   // mặt chữ = 0.9 chiều cao ô
+    return { txt, lines, px, h };
+  }
+  function sizeTile(t, h) {
+    if (Math.abs(h - t.h) < 1e-4) return;
+    t.h = h;
+    const r = Math.min(t.w, t.h0) * 0.18;
+    t.body.geometry.dispose(); t.body.geometry = new RoundedBoxGeometry(t.w, h, 0.1, 5, r);
+    t.rim.geometry.dispose(); t.rim.geometry = new RoundedBoxGeometry(t.w + 0.05, h + 0.05, 0.08, 4, r * 1.05);
+    t.text.geometry.dispose(); t.text.geometry = new THREE.PlaneGeometry(t.w * 0.94, h * 0.9);
+    // canvas mới đúng tỉ lệ mặt chữ (texture đã cấp phát thì không đổi cỡ được ⇒ tạo texture mới)
+    const cv = document.createElement("canvas"); cv.width = TILE_CVW; cv.height = Math.max(8, Math.round(TILE_CVW * (h * 0.9) / (t.w * 0.94)));
+    t.tex.dispose(); t.cv = cv; t.tex = canvasTex(cv);
+    t.text.material.map = t.tex; t.text.material.needsUpdate = true;
+    t.mark.position.set(t.w * 0.5 - t.h0 * 0.28, h * 0.5 - t.h0 * 0.2, 0.2);
+  }
+  function paintAnswer(t, lay) {
+    sizeTile(t, lay.h);
+    t.label = lay.txt;
+    const g = t.cv.getContext("2d"), W = t.cv.width, H = t.cv.height, px = lay.px;
+    g.clearRect(0, 0, W, H);
+    g.font = `800 ${px}px ${FONT_UI}`;
+    g.textAlign = "center"; g.textBaseline = "middle";
+    const lh = px * ANS_LH, y0 = H / 2 - (lay.lines.length - 1) * lh / 2 + px * 0.04;
+    lay.lines.forEach((ln, i) => {
+      g.shadowColor = "rgba(0,0,0,0.65)"; g.shadowBlur = px * 0.18; g.shadowOffsetY = px * 0.06;
+      g.fillStyle = "#ffffff";
+      g.fillText(ln, W / 2, y0 + i * lh);
+    });
+    t.tex.needsUpdate = true;
   }
   const markTex = { ok: null, bad: null };
   function mkMark(sym, col) {
@@ -797,8 +850,11 @@ export async function createView(cfg) {
         const cur = G.answers[side][k];
         setTileText(t, cur != null ? cur : "");
       }
+      // Đợt 394: phần trống DƯỚI khung ô tới 90% chiều cao cảnh — cột ô chữ dài được mọc xuống đó
+      const bandH = rows * th + (rows - 1) * gap;
+      const extra = Math.max(0, (y0 - bandH) + s.h / 2 + Math.max(0, 0.9 - (c.y + c.h)) * s.h / c.h);
       const con = { grp, tiles, header: hd, side,
-        area: { x: -areaW / 2 + tw / 2, cy: y0 - (rows * th + (rows - 1) * gap) / 2, th, gap, rows } };
+        area: { x: -areaW / 2 + tw / 2, cy: y0 - bandH / 2, th, gap, rows, areaH: bandH, extra } };
       consoles.push(con);
       relayout(con, G.answers[side].length);
       ui.add(grp);
@@ -1187,18 +1243,36 @@ export async function createView(cfg) {
     questionPanel.tex.needsUpdate = true;
   }
   function setQuestionText(txt) { G.qTexts = [txt, ""]; G.qSame = true; paintQuestion(); }
-  // Xếp n ô của một bàn thành cột, căn giữa theo chiều dọc; > 4 ô thì ô thấp lại cho vừa.
+  // Xếp n ô của một bàn thành cột, căn giữa theo chiều dọc. Đợt 394: mỗi ô cao ĐÚNG theo số dòng
+  // chữ của nó (chữ cố định cỡ); cột vừa khung ⇒ căn giữa khung, dài hơn ⇒ bám mép trên khung và
+  // dài xuống phần trống dưới bàn (`A.extra`). Chỉ khi vẫn không đủ chỗ mới co đều cả cột.
+  // Ô đang lật (setAnswers) ⇒ cỡ/vị trí/chữ mới chờ tới NỬA vòng lật (mép ô quay về máy quay) mới đổi.
   function relayout(c, n) {
     const A = c.area;
     const s = n > A.rows ? A.rows / n : 1;
-    const th = A.th * s, gap = A.gap * s;
-    const total = n * th + (n - 1) * gap;
-    let y = A.cy + total / 2 - th / 2;
+    const gap = A.gap * s, room = A.areaH + A.extra;
+    let fs = 1, lays = [], total = 0;
+    for (let pass = 0; pass < 4; pass++) {
+      lays = c.tiles.map((t, k) => k < n ? answerLayout(t, G.answers[c.side][k] ?? "", A.th, fs) : null);
+      lays.forEach(l => { if (l) l.h = Math.max(A.th * s * fs, l.h); });
+      total = lays.reduce((m, l) => m + (l ? l.h : 0), 0) + Math.max(0, n - 1) * gap;
+      if (total <= room * 1.001) break;
+      fs *= room / total;
+    }
+    let top = total <= A.areaH ? A.cy + total / 2 : A.cy + A.areaH / 2;
     c.tiles.forEach((t, k) => {
-      t.sy = s;
-      t.home.set(A.x, y - k * (th + gap), t.home.z);
+      t.sy = 1;
+      const lay = lays[k];
+      let y = t.home.y;
+      if (lay) { y = top - lay.h / 2; top -= lay.h + gap; }
+      const nx = { lay, y };
+      if (t.pendingText != null) t.next = nx; else applyNext(t, nx);
       t.g.visible = G.phase === "play" && k < n;
     });
+  }
+  function applyNext(t, nx) {
+    if (nx.lay) paintAnswer(t, nx.lay); else setTileText(t, "");
+    t.home.set(t.home.x, nx.y, t.home.z);
   }
   function onTap(tile) {
     if (tile.isStart) { if (G.phase === "start" && cfg.onStart) { sfx("tap"); cfg.onStart(); } return; }
@@ -1602,7 +1676,10 @@ export async function createView(cfg) {
     if (t.flip > 0) {
       const before = t.flip;
       t.flip = Math.max(0, t.flip - dt * 2.6);
-      if (before > 0.5 && t.flip <= 0.5 && t.pendingText != null) { setTileText(t, t.pendingText); t.pendingText = null; }
+      if (before > 0.5 && t.flip <= 0.5 && t.pendingText != null) {
+        if (t.next) applyNext(t, t.next); else setTileText(t, t.pendingText);
+        t.pendingText = null; t.next = null;
+      }
       rotX = (1 - t.flip) * Math.PI * 2 * 0.5;   // nửa vòng đầu: lật đi, nửa sau: lật về
       rotX = t.flip > 0.5 ? (1 - t.flip) * Math.PI : -t.flip * Math.PI;
     }
@@ -1681,8 +1758,8 @@ export async function createView(cfg) {
     setAnswers(side, texts) {
       const c = consoles[side]; if (!c) return;
       G.answers[side] = texts.slice(0, c.tiles.length);
-      relayout(c, G.answers[side].length);
       c.tiles.forEach((t, k) => { t.pendingText = k < texts.length ? texts[k] : ""; t.flip = 1; t.state = "idle"; t.mark.material.opacity = 0; t.shake = 0; t.shook = false; });
+      relayout(c, G.answers[side].length);   // sau pendingText ⇒ cỡ/vị trí mới chờ nửa vòng lật
     },
     tileStates,
     pick(side, k) { const t = consoles[side] && consoles[side].tiles[k]; if (t) { t.press = 1; t.state = "picked"; sfx("tap", 0.6); } },

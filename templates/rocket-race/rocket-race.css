@@ -667,8 +667,50 @@
 .aw-fight.is-skin-rr3d .aw-fight-boardtools .aw-fight-clockbox { padding: 0 12px; min-height: 36px; display: inline-flex; align-items: center; }
 .aw-fight.is-skin-rr3d .aw-fight-clock { color: #9ee7ff !important; font-variant-numeric: tabular-nums; }
 
-/* ☰ Menu của engine nằm TRONG bàn 0 (đang ẩn) — trong trận 3D cho nó hiện nổi ngay trên hàng nút chung */
-.aw-fight.is-fullscene .aw-fight-boards .aw-menu { visibility: visible; pointer-events: auto; position: fixed; left: 50%; margin-left: -320px; bottom: 72px; z-index: 40; }
+/* ⭐ Đợt 394 — ☰ Menu trong trận 3D: engine dựng menu trong bàn 0 (ẩn, dưới canvas) ⇒ rocket-race.js
+   `rr3dMenuHost` bê nó sang lớp phủ này — căn GIỮA màn như Options, áo kính tối viền xanh của trận 3D.
+   ⚠️ Căn giữa bằng FLEX của lớp phủ, KHÔNG translate(-50%) trên chính menu: closeMenu() của engine
+   animate `transform` của menu lúc đóng ⇒ sẽ xoá translate làm menu nhảy lệch (bẫy keyframe transform). */
+.aw-rr3d-menuhost {
+  position: absolute; inset: 0; z-index: 70;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse 55% 60% at 50% 50%, rgba(2, 6, 18, .55), rgba(2, 4, 12, .35));
+  backdrop-filter: blur(3px);
+  animation: aw-fadein .15s ease;
+}
+.aw-rr3d-menuhost .aw-menu.aw-rr3d-menu {
+  position: relative; left: auto; bottom: auto; z-index: auto;
+  min-width: clamp(280px, 19vw, 560px); padding: clamp(12px, .9vw, 26px);
+  display: flex; flex-direction: column; gap: clamp(8px, .55vw, 16px);
+  background: linear-gradient(180deg, rgba(22, 40, 78, .94), rgba(6, 10, 24, .96));
+  border: 1px solid rgba(120, 190, 255, .5); border-radius: clamp(16px, 1.1vw, 30px);
+  box-shadow: 0 0 34px rgba(60, 150, 255, .32), 0 18px 44px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .12);
+  font-family: "Baloo 2", system-ui, sans-serif;
+  animation: awRr3dMenuIn .22s cubic-bezier(.22, .9, .3, 1);
+  transform-origin: center;
+}
+@keyframes awRr3dMenuIn { from { opacity: 0; transform: translateY(10px) scale(.95); } to { opacity: 1; transform: none; } }
+.aw-rr3d-menutitle {
+  text-align: center; font-weight: 800; letter-spacing: .22em;
+  font-size: clamp(15px, 1vw, 30px); color: #9ee7ff; text-shadow: 0 0 14px rgba(80, 180, 255, .7);
+  padding: 2px 0 clamp(4px, .35vw, 10px); border-bottom: 1px solid rgba(120, 190, 255, .22); margin-bottom: 2px;
+}
+.aw-rr3d-menuhost .aw-rr3d-menu .aw-menu-item {
+  width: 100%; text-align: center; font-family: inherit; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+  font-size: clamp(16px, 1.1vw, 34px); color: #e8f4ff;
+  padding: clamp(10px, .7vw, 20px) clamp(16px, 1.2vw, 34px); border-radius: clamp(11px, .75vw, 20px);
+  background: rgba(255, 255, 255, .05); border: 1px solid rgba(120, 190, 255, .28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+  transition: border-color .15s, box-shadow .15s, background .15s, color .15s;
+}
+.aw-rr3d-menuhost .aw-rr3d-menu .aw-menu-item:hover,
+.aw-rr3d-menuhost .aw-rr3d-menu .aw-menu-item:focus-visible {
+  background: rgba(80, 170, 255, .16); border-color: rgba(140, 210, 255, .9); color: #fff; outline: none;
+  box-shadow: 0 0 18px rgba(80, 170, 255, .45), inset 0 1px 0 rgba(255, 255, 255, .18);
+}
+/* Resume = lối chính ⇒ nút vàng như viền nút đang bật của hàng nút trận */
+.aw-rr3d-menuhost .aw-rr3d-menu .aw-menu-item.is-resume { color: #ffe39a; border-color: rgba(255, 207, 74, .75); background: rgba(255, 200, 70, .1); }
+.aw-rr3d-menuhost .aw-rr3d-menu .aw-menu-item.is-resume:hover { box-shadow: 0 0 18px rgba(255, 200, 70, .45); border-color: #ffcf4a; }
 
 /* =============================================================
    ⭐ Đợt 393 — Rocket race 3D: bảng 🔊 (Effects / Background) + màn KẾT TRẬN riêng

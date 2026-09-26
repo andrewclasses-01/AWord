@@ -258,7 +258,10 @@ const WORD_POOL_MAX_LEN = 24;
 // ⭐ Đợt 366 — `hwPreset` ("practice" | "submit"): chế độ HS đã CHỌN SẴN từ màn kết thúc
 // (SUBMIT AGAIN · PRACTICE AGAIN · START SUBMITTING · START WITH MISTAKES) ⇒ màn READY tự
 // bấm START, không hỏi lại PRACTICE/SUBMIT (thầy chốt 22/09/2026). Chỉ có nghĩa khi có `session`.
-export function startGame(root, libAct, { onExit, session = null, base = null, fight = null, hwPreset = null } = {}) {
+// ⭐ Đợt 394 — act mà thầy đã chủ động rời Fight (Back to single) ⇒ không tự vào Fight lại
+// (Start again / Apply ở single vẫn là single). Mở act KHÁC thì luật `fightByDefault` chạy lại.
+let autoFightOffFor = "";
+export function startGame(root, libAct, { onExit, session = null, base = null, fight = null, hwPreset = null, noAutoFight = false } = {}) {
   root.innerHTML = "";
   // ⭐ Đợt 274 — the "meme" wrong-sound override (core/wrong-sound.js) must
   // never reach a pupil's assignment; `session` truthy is exactly that mode.
@@ -1616,6 +1619,17 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     ? getTemplate(originAct.type)
     : tpl;
   const canFight = !!modeTpl.fightMode && !session;
+  // ⭐ Đợt 394 (thầy 26/9/2026) — template khai `fightByDefault` (Rocket race): mở act / chọn
+  // template ⇒ vào thẳng Fight, như bấm MODE → Fight → Start fight. Hoãn một nhịp để cả khung
+  // single dựng xong (enterFight dùng cleanupAll…), rồi chỉ chạy nếu khung này vẫn còn trên trang.
+  {
+    const originId = String(originAct?.id || activity.id || "");
+    if (noAutoFight) autoFightOffFor = originId;
+    else if (autoFightOffFor && autoFightOffFor !== originId) autoFightOffFor = "";
+    if (canFight && modeTpl.fightByDefault && !fight && !playMode && !showdownPick && autoFightOffFor !== originId) {
+      setTimeout(() => { if (stage.isConnected && root.contains(stage)) enterFight(); }, 0);
+    }
+  }
   const canShowdown = !!modeTpl.showdownMode && !session;
   // ⭐ Đợt 190 — RUNNING and IPA are offered by CONTENT, not by a template flag:
   // they are somewhere this act's words can GO, so the question is whether the
@@ -2102,6 +2116,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         awEmit("MODE", "single");
         return;
       }
+      await enterFight();
+    };
+    row.append(goBtn);
+    panel.append(row);
+  }
+  // ⭐ Đợt 394 — tách khỏi goBtn để Rocket race (`tpl.fightByDefault`) vào thẳng Fight lúc mở act.
+  async function enterFight() {
       exitAnyFullscreen();
       dropShowdown();
       cleanupAll();
@@ -2135,11 +2156,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         awEmit("FIGHT", "on");
       } catch (e) {
         console.warn("AWord: fight mode failed to load", e);
-        startGame(root, libAct, { onExit, base });
+        startGame(root, libAct, { onExit, base, noAutoFight: true });
       }
-    };
-    row.append(goBtn);
-    panel.append(row);
   }
   // ⛔ Đợt 188 — THE MATCH'S OWN FULLSCREEN BUTTON IS GONE (teacher, 18/8/2026).
   // Đợt 124 put one here, in the shared row beside Options/Template/Style/MODE,

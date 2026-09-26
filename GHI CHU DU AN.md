@@ -12,7 +12,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 393** (26/9/2026, ROCKET RACE ▸ FIGHT 3D chỉnh 13 ý — xem chặng Đợt 393 bên dưới). Trước đó **Đợt 392** (26/9/2026, ROCKET RACE ▸ FIGHT 3D — xem chặng Đợt 392 bên dưới). Trước đó **Đợt 391** (25/9/2026, ROCKET RACE ▸ FIGHT Different: đội hết câu mà chưa ai về đích ⇒ DÙNG LẠI câu cũ
+> Mới nhất: **Đợt 394** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: chữ ô đáp án +15% không co, MENU giữa màn, vào thẳng Fight — xem chặng Đợt 394 bên dưới). Trước đó **Đợt 393** (26/9/2026, ROCKET RACE ▸ FIGHT 3D chỉnh 13 ý — xem chặng Đợt 393 bên dưới). Trước đó **Đợt 392** (26/9/2026, ROCKET RACE ▸ FIGHT 3D — xem chặng Đợt 392 bên dưới). Trước đó **Đợt 391** (25/9/2026, ROCKET RACE ▸ FIGHT Different: đội hết câu mà chưa ai về đích ⇒ DÙNG LẠI câu cũ
 > (xào lại) tới khi có tàu về đích; Count down hết giờ ⇒ tàu gần hơn bay về, tàu kia nổ như cũ). Chặng Đợt 391.
 > Trước đó: **Đợt 390b** (25/9/2026, bình điểm đổi sang MẪU 4 thầy chọn — dải năng lượng neon + sao chổi, mức CỐ ĐỊNH ngang
 > nhau mọi đội tới lúc đếm; trang chọn mẫu `D:\OTHERS\CLAUDE\AWord - thiet ke Wordshake\score-tank-mau.html`). Chặng Đợt 390b.
@@ -545,6 +545,29 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
+
+## Đợt 394 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D: chữ ô đáp án +15% không co · MENU giữa màn · vào thẳng Fight · ⬜ CHƯA BẤM TAY TOMKO
+
+Đợt 394 — ROCKET RACE ▸ FIGHT 3D, 3 ý thầy (26/9): (1) chữ ô đáp án 3D CỐ ĐỊNH cỡ, to hơn 15% (0.45 → 0.5175 × cao ô chuẩn); nhiều chữ ⇒ xuống dòng ở dấu cách + Ô CAO LÊN, KHÔNG co chữ, các dòng căn giữa ô (chỉ một TỪ dài hơn bề ngang ô mới buộc co); cột ô dài quá khung thì bám mép trên và mọc xuống phần trống dưới bàn (tới 90% cao cảnh), vẫn không đủ mới co đều cả cột · (2) nút ☰ MENU trong trận 3D trước không hiện gì (menu engine dựng trong bàn 0 đang ẩn, bị canvas che, hoạt ảnh aw-pop đứng ở khung 0) ⇒ template bê phần tử menu sang lớp phủ riêng `.aw-rr3d-menuhost` căn GIỮA màn, áo kính tối viền xanh (tiêu đề MENU, Resume nút vàng), đóng/mở vẫn do engine · (3) mở act / chọn template Rocket race ⇒ VÀO THẲNG FIGHT (cờ template mới `fightByDefault`, core/engine.js); rời Fight bằng MODE → Back to single thì act đó ở lại single (Start again/Apply không tự nhảy lại).
+
+**Bối cảnh (thầy 26/9):** "Tăng size phần câu trả lời 15%. Nhiều chữ thì tăng chiều cao ô và xuống dòng nhưng không giảm size chữ, text cân đối ở trung tâm ô" · "Bấm nút MENU không hiển thị gì — cho hiển thị, ở chính giữa màn hình (giống vị trí options), đồng bộ phong cách game" · "Chọn Rocket Race là mặc định chuyển sang Fight luôn".
+
+**Việc đã làm:**
+- `templates/rocket-race/rr3d-view.js`: `answerLayout()` (đo chữ ở cỡ cố định `ANS_FONT = 0.45×1.15` × cao ô chuẩn, bẻ dòng CHỈ ở dấu cách, tính chiều cao ô theo số dòng) · `sizeTile()` (dựng lại RoundedBox thân/viền + mặt chữ + canvas/texture MỚI đúng tỉ lệ — texture đã cấp phát không đổi cỡ được) · `paintAnswer()` (vẽ các dòng căn giữa cả hai chiều) · `relayout()` viết lại: mỗi ô cao theo chữ của nó; cột vừa khung ⇒ căn giữa khung, dài hơn ⇒ bám mép trên, mọc xuống `area.extra` (phần trống dưới bàn tới 90% cao cảnh); vẫn không đủ ⇒ co đều (vòng lặp `fs`). Ô đang lật (`setAnswers`) ⇒ cỡ/vị trí/chữ mới lưu ở `t.next`, áp đúng NỬA vòng lật (`applyNext`) — không lộ ô đổi cỡ khi mặt chữ cũ còn hiện. `t.sy` (bóp dẹt cả ô khi >4 đáp án) bỏ — chữ không bao giờ bị bóp.
+- `templates/rocket-race/rocket-race.js`: `rr3dMenuHost(st, wrap)` — MutationObserver trên `.aw-fight-boards`: `.aw-menu` vừa được engine thêm vào ⇒ bê sang `.aw-rr3d-menuhost` (lớp phủ absolute inset 0 trong `.aw-fight`, flex căn giữa, nền tối mờ + blur), thêm tiêu đề MENU, đánh dấu Resume `.is-resume`. Engine vẫn tự đóng (Resume / pointerdown ra ngoài — bấm nền mờ cũng đóng / `.remove()`), observer thứ hai trên lớp phủ gỡ lớp phủ theo. Cờ template `fightByDefault: true`.
+- `templates/rocket-race/rocket-race.css`: bỏ luật `position:fixed` cũ của `.aw-menu` (Đợt 392 — chưa bao giờ hiện được); thêm `.aw-rr3d-menuhost`, `.aw-rr3d-menu`, `.aw-rr3d-menutitle` (kính tối viền xanh như bảng 🔊, cỡ `clamp(px, vw, px)` để màn 4K không bé).
+- CORE (thêm, tương thích ngược): `core/engine.js` — tách thân nút "Start fight" thành `enterFight()`; `startGame(…, { noAutoFight })` + biến mô-đun `autoFightOffFor`; `tpl.fightByDefault && canFight && !fight && !playMode && !showdownPick` ⇒ `setTimeout(enterFight, 0)` (chỉ khi khung còn trên trang). `core/fight.js` `exitFight()` truyền `noAutoFight: true`; nhánh lỗi tải Fight cũng vậy (không lặp vô tận).
+
+**Quyết định kỹ thuật:**
+- Menu: KHÔNG sửa core (menu engine vẫn dựng trong bàn 0) — template chỉ BÊ phần tử; onclick/closeMenu/onMenuOutside của engine chạy nguyên vì chúng giữ tham chiếu phần tử chứ không phải vị trí. Căn giữa bằng FLEX của lớp phủ, không `translate(-50%)` trên menu (closeMenu animate `transform` ⇒ bẫy keyframe đè transform).
+- Rời Fight có chủ ý = nhớ theo id act gốc (`autoFightOffFor`); mở act KHÁC thì luật chạy lại. Học sinh (`session`), Showdown, play mode (Running/IPA) không bao giờ tự vào Fight.
+
+**Lỗi đã gặp:** `.aw-menu` đo được `opacity 0` + `elementFromPoint` = CANVAS: menu cũ nằm dưới canvas và hoạt ảnh `aw-pop` đứng ở currentTime 0 ⇒ "bấm không thấy gì".
+
+- Đã kiểm (bàn thử `test.html` 1600×900, lái `__rr3d.view.step`): mở trang ⇒ tự vào Fight (`MYACT:AW:FIGHT:on`) · MENU hiện giữa màn 288×295 ở (655,312), phần tử trên cùng = nút menu, Resume đóng + gỡ lớp phủ, bấm nền mờ cũng đóng · ô "a very warm and heavy winter coat" 5 dòng / "Big Dipper", "Milky Way" 2 dòng, ô cao lên, chữ cùng cỡ ô 1 dòng · 6 đáp án vẫn cùng cỡ chữ, cột mọc xuống · chạm (raycast) trúng ô cao ⇒ chọn đúng, câu sau lật ô về cỡ mới · MODE → Back to single ⇒ ở single, Start again vẫn single · 0 lỗi console.
+- ⚠️ Một TỪ rất dài (vd "extraordinarily") vẫn phải co cho vừa bề ngang ô — không bẻ giữa từ.
+
+**VIỆC ĐANG CHỜ**: ⬜ commit + push (chờ thầy lệnh) · ⬜ thầy bấm tay TOMKO: cỡ chữ ô, câu trả lời dài, MENU (Start again / Change template / Submit từ trong trận 3D), mở act Rocket race từ thư viện + Change template sang Rocket race ⇒ vào thẳng Fight.
 
 ## Đợt 393 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D: tiếng điện ảnh, bảng 🔊, iPad chỉ từ, màn kết riêng · ⬜ CHƯA BẤM TAY TOMKO
 

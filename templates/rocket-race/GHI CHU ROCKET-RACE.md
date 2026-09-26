@@ -670,3 +670,9 @@ Thầy thiết kế cùng Claude qua 13 bản mẫu ở kho **myGame** (`E:\LAP 
 - **Đồng hồ**: engine `ui.stopTimer()` (mới) — `raceWon` gọi cho cả hai bàn trong trận 3D.
 - `resize()` bỏ qua khung 0 px (tỉ lệ 0/0 = NaN làm hỏng hình học bảng — gặp khi khung bị gỡ khỏi trang).
 **⬜ Thầy nghe/bấm tay**: cả bộ tiếng trên TOMKO (Claude không nghe được — chỉ kiểm phổ âm), iPad thật, Count down, Sudden death.
+
+## 28. Đợt 394 (26/9/2026) — chữ ô đáp án +15% không co · MENU giữa màn · vào thẳng Fight
+- **Chữ ô đáp án 3D** (`rr3d-view.js`): cỡ CỐ ĐỊNH `ANS_FONT = 0.45 × 1.15` × cao ô chuẩn (4 ô) — trước là "tối đa 0.45, co khi dài". `answerLayout()` bẻ dòng chỉ ở dấu cách, ô cao theo số dòng (`(L×1.12 + 0.6)×cỡ / 0.9`); `sizeTile()` dựng lại hình ô + canvas/texture mới; `paintAnswer()` căn giữa cả hai chiều. `relayout()`: cột vừa khung ⇒ căn giữa, dài hơn ⇒ bám mép trên + mọc xuống `area.extra` (tới 90% cao cảnh), vẫn thiếu ⇒ co đều. Ô đang lật ⇒ đổi cỡ/vị trí/chữ đúng nửa vòng lật (`t.next` → `applyNext`). Bỏ `t.sy` (bóp dẹt). ⚠️ Một từ dài hơn bề ngang ô vẫn phải co (không bẻ giữa từ).
+- **MENU** (`rocket-race.js` `rr3dMenuHost`, CSS `.aw-rr3d-menuhost/.aw-rr3d-menu`): menu engine dựng trong bàn 0 ẩn dưới canvas ⇒ không bao giờ hiện (đo: opacity 0, elementFromPoint = CANVAS). Observer bê phần tử sang lớp phủ căn giữa màn, áo kính tối viền xanh, tiêu đề MENU, Resume vàng; engine vẫn điều khiển mở/đóng. Luật `position:fixed` cũ đã xoá.
+- **Vào thẳng Fight**: cờ `fightByDefault: true` + core `enterFight()` / `noAutoFight` (xem HUONG DAN CORE). MODE → Back to single ⇒ act đó ở lại single.
+**⬜ Thầy bấm tay TOMKO**: cỡ chữ, đáp án dài, MENU (Start again / Change template / Submit trong trận 3D), mở từ thư viện + Change template ⇒ vào thẳng Fight.

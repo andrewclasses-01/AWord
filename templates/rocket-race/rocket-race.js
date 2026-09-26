@@ -362,7 +362,7 @@ function rr3dScene({ root, ctl, title, play }) {
   rr3d = st;
   rrSound.quiet = true;                       // tiếng tổng hợp cũ im — bộ tiếng 3D thay
   const wrap = root.closest(".aw-fight");
-  if (wrap) rr3dSoundMenu(st, wrap);
+  if (wrap) { rr3dSoundMenu(st, wrap); rr3dMenuHost(st, wrap); }
   Promise.all([import("./rr3d-view.js"), import("./rr3d-sfx.js")]).then(([V, S]) => {
     if (st.dead) return null;
     st.sfx = S.createRr3dSound();
@@ -392,6 +392,39 @@ function rr3dScene({ root, ctl, title, play }) {
       if (rr3d === st) { rr3d = null; rrSound.quiet = false; }
     }
   };
+}
+
+// ⭐ Đợt 394 (thầy): "bấm nút MENU không hiển thị gì" — ☰ Menu của engine được dựng TRONG bàn 0,
+// mà trong trận 3D bàn 0 là `visibility:hidden` nằm DƯỚI canvas (cả CSS `position:fixed` cũ cũng không
+// cứu được: bị canvas che, hoạt ảnh aw-pop đứng ở khung 0 ⇒ opacity 0). Cách chữa không đụng core:
+// menu vừa xuất hiện trong bàn ẩn ⇒ BÊ nguyên phần tử (nút + onclick của engine giữ nguyên) sang một
+// lớp phủ riêng nổi trên cảnh, căn GIỮA màn như Options, khoác áo kính tối viền xanh của trận 3D.
+// Engine vẫn tự đóng (Resume / bấm ra ngoài / closeMenu gọi .remove()) ⇒ lớp phủ tự gỡ theo.
+function rr3dMenuHost(st, wrap) {
+  let host = null, hostObs = null;
+  const drop = () => { if (hostObs) { hostObs.disconnect(); hostObs = null; } if (host) { host.remove(); host = null; } };
+  const adopt = menu => {
+    if (st.failed || menu.closest(".aw-rr3d-menuhost")) return;
+    drop();
+    host = el("div", "aw-rr3d-menuhost");
+    const head = el("div", "aw-rr3d-menutitle"); head.textContent = "MENU";
+    menu.classList.add("aw-rr3d-menu");
+    menu.prepend(head);
+    menu.querySelectorAll(".aw-menu-item").forEach(b => { if (/^resume$/i.test(b.textContent.trim())) b.classList.add("is-resume"); });
+    host.append(menu);
+    wrap.append(host);
+    // menu bị engine gỡ (đóng) ⇒ gỡ lớp phủ; đợi hết hoạt ảnh đóng của engine (~140 ms) là chuyện của nó
+    hostObs = new MutationObserver(() => { if (host && !host.contains(menu)) drop(); });
+    hostObs.observe(host, { childList: true });
+  };
+  const boards = wrap.querySelector(".aw-fight-boards") || wrap;
+  const obs = new MutationObserver(recs => {
+    for (const r of recs) for (const n of r.addedNodes) {
+      if (n.nodeType === 1 && n.classList.contains("aw-menu")) adopt(n);
+    }
+  });
+  obs.observe(boards, { childList: true, subtree: true });
+  st.offs.push(() => { obs.disconnect(); drop(); });
 }
 
 // ⭐ Đợt 393 (thầy): "bấm vào nút loa sẽ hiện lên 2 menu để bật tắt gồm Effect và Background".
@@ -704,6 +737,7 @@ const rocketRaceTemplate = {
   // frame with a shared area on top (`fightLayout`) that this module draws the
   // race into. See the `_fight` branches in mount().
   fightMode: true,
+  fightByDefault: true,   // Đợt 394 (thầy): chọn/mở Rocket race ⇒ vào thẳng Fight (core/engine.js)
   // ⭐ Đợt 370 — "this template can put its questions on a SECOND SCREEN". Two
   // things read it: core/engine.js draws the Question screen button on the match
   // toolbar, and core/fight.js uses `options.fightScreen` as one of the two gates
