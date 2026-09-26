@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 409 (27/9/2026) — ROCKET RACE ▸ FIGHT 3D: NẠP TÊN LỬA BẰNG TAY + VẾT CHÁY + CHUÔNG BÁO ĐỘNG + MISS WAIT GIỮA MÀN · ⬜ CHƯA PUSH
+## Đợt 409 (27/9/2026) — ROCKET RACE ▸ FIGHT 3D: NẠP TÊN LỬA BẰNG TAY + VẾT CHÁY + CHUÔNG BÁO ĐỘNG + MISS WAIT GIỮA MÀN · ✅ ĐÃ PUSH `567cf99` + LIVE 8/8 mã băm · ⬜ CHƯA BẤM TAY TOMKO
 Thầy duyệt MẪU 6d ở myGame (`cf08621`), chọn chuông kiểu **b**: "ok, dùng chuông b, ghép vào AWord, commit + push". Chỉ `templates/rocket-race/` (core KHÔNG đổi).
 - Đủ 3 câu liên tiếp ⇒ +1 quả NHỎ ở hàng dự phòng (tối đa 3), KHÔNG tự lên nòng. HS chạm hàng quả nhỏ (`msLoadTap`, view `onLoad`) ⇒ quả sang ô to
   + tay robot đưa quả lên thân tàu. Chạm ô to khi chưa nạp mà còn quả nhỏ ⇒ cũng nạp. Bắn xong KHÔNG tự nạp quả kế (`msFire`).
