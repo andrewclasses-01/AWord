@@ -546,6 +546,23 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 409 (27/9/2026) — ROCKET RACE ▸ FIGHT 3D: NẠP TÊN LỬA BẰNG TAY + VẾT CHÁY + CHUÔNG BÁO ĐỘNG + MISS WAIT GIỮA MÀN · ⬜ CHƯA PUSH
+Thầy duyệt MẪU 6d ở myGame (`cf08621`), chọn chuông kiểu **b**: "ok, dùng chuông b, ghép vào AWord, commit + push". Chỉ `templates/rocket-race/` (core KHÔNG đổi).
+- Đủ 3 câu liên tiếp ⇒ +1 quả NHỎ ở hàng dự phòng (tối đa 3), KHÔNG tự lên nòng. HS chạm hàng quả nhỏ (`msLoadTap`, view `onLoad`) ⇒ quả sang ô to
+  + tay robot đưa quả lên thân tàu. Chạm ô to khi chưa nạp mà còn quả nhỏ ⇒ cũng nạp. Bắn xong KHÔNG tự nạp quả kế (`msFire`).
+- Chạm quả to ⇒ quả lùi ra khỏi màn (0,32 s) rồi tên lửa mới rời bệ (`rr3d-missile.js` `launch` → `liftoff`).
+- Chuông báo động kiểu b (còi báo động đỏ) thay tiếng bíp `mwarn`: `sfx/malarm_b.mp3` (nhịp thường) + `malarmf_b.mp3` (1,5 s cuối).
+- Trúng ⇒ mảng cháy đen + than hồng + lửa nhỏ trên thân tàu bị trúng (tối đa 6 mảng), lửa tắt sau 8 s không bị trúng thêm, vết đen ở lại.
+- Thanh MISS WAIT: vẽ 3D GIỮA màn dưới câu hỏi (`rr3d-misswait.js`, `view.setMissWait`). Đồng hồ vẫn của trọng tài `core/fight.js`:
+  CSS skin rr3d ẩn `.aw-fight-missbar` bằng `visibility:hidden` (transition vẫn chạy), `rr3dMissWait` trong rocket-race.js đọc `.is-on` + bề rộng
+  fill mỗi khung, tổng thời gian suy từ `transition: width <ms>ms` ÷ tỉ lệ lúc đó (đúng cả sau ☰ tạm dừng). 2D dự phòng (WebGL hỏng) gỡ skin ⇒ thanh cũ hiện lại.
+- File: `rr3d-missile.js` (chép NGUYÊN myGame `game6d/`, chuông mặc định "b") · `rr3d-misswait.js` (mới) · `rr3d-view.js` (móc MW + onLoad) ·
+  `rr3d-sfx.js` · `rocket-race.js` · `rocket-race.css` · `sfx/malarm_b.mp3`, `sfx/malarmf_b.mp3`, `sfx/NGUON AM THANH.md`.
+- Tự kiểm (localhost, test.html): đội 1 sai ⇒ thanh giữa màn đếm 19 → 1 màu cam đội 2, ≤ 25 % đỏ, hết giờ tắt + sang câu mới · chạm ô to khi trống
+  ⇒ nạp (reserve 2→1) · chạm quả nhỏ khi đã nạp ⇒ từ chối · tay robot rise 1 · bắn ⇒ 0,3 s sau mới có quả bay · trúng ⇒ 1 mảng cháy, lửa 7,45 s ·
+  không tự nạp lại · `malarm_b` / `malarmf_b` 200 OK · 0 lỗi Console.
+- ⬜ Thầy bấm tay TOMKO: chạm quả nhỏ / quả to, nghe còi báo động, nhìn vết cháy, thanh MISS WAIT giữa màn.
+
 ## Đợt 408 (27/9/2026) — FIREBASE APP CHECK (chỉ THEO DÕI, chưa ép buộc) · ✅ ĐÃ PUSH `1389b3f` + LIVE 5/5 mã băm + xin mã thật trên aword.andrewclasses.com (953 ký tự)
 
 **Vì sao:** đêm 26/9 kẻ "Tr0ngX" bơm 141 điểm giả vào 34 bài (scores 9.999.999) bằng script gọi thẳng Firestore với khoá

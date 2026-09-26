@@ -724,3 +724,12 @@ Thầy thiết kế cùng Claude qua 13 bản mẫu ở kho **myGame** (`E:\LAP 
 - Trạng thái kho ở `rr3d.ms[side]` = { reserve, loaded, ms (chuỗi → tên lửa), bs (chuỗi → BOOST), boost }; khoá = `rrFightScene.decided || .sudden`.
 - Bàn thử: `__rr3d.view.missileTap(side, "fire"|"boost")`, `__rr3d.view.missile.flights / arsenal / wide`, `setArsenal(side, {...})`.
 - ⚠️ Khung trình duyệt bị ẨN ⇒ WebGL lỗi `getProgramInfoLog(...).trim` (cả cảnh phóng cũ) — không phải lỗi code.
+
+## 35. Đợt 409 (27/9/2026) — NẠP TAY + VẾT CHÁY + CÒI BÁO ĐỘNG + MISS WAIT GIỮA MÀN (ghép MẪU 6d của myGame)
+- Luật + việc đã làm: `GHI CHU DU AN.md` chặng Đợt 409. Thiết kế: myGame `GHI CHU DU AN.md` Chặng 19.
+- `rr3d-missile.js` = chép NGUYÊN myGame `game6d/rr3d-missile.js` (chỉ đổi `alarm: "b"`); `rr3d-misswait.js` = chép NGUYÊN `game6d/rr3d-misswait.js`.
+  Sửa về sau: myGame trước (bản rẽ mới) → thầy OK → chép sang.
+- Vùng chạm tên lửa giờ có 3 loại: `load` (hàng quả nhỏ) · `fire` (ô to) · `boost`. Bàn thử: `__rr3d.view.missileTap(side, "load"|"fire"|"boost")`,
+  `__rr3d.view.missile.scorches`, `.scorch(side)` (thêm vết cháy thử).
+- MISS WAIT: KHÔNG sửa `core/fight.js` — `rr3dMissWait(st, wrap)` đọc thanh DOM `.aw-fight-missbar` (thứ tự = đội 0, đội 1) rồi `view.setMissWait`.
+  ⚠️ Ẩn thanh DOM phải bằng `visibility:hidden` (KHÔNG `display:none` — transition bề rộng dừng ⇒ đọc sai).

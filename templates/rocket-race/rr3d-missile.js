@@ -1,7 +1,13 @@
-// ⭐ Đợt 407 (thầy 27/9/2026): chép NGUYÊN từ kho myGame `rocket-race/game6c/rr3d-missile.js` (MẪU 6c thầy duyệt, cam đậm).
+// ⭐ Đợt 409 (thầy 27/9/2026): chép NGUYÊN từ kho myGame `rocket-race/game6d/rr3d-missile.js` (MẪU 6d thầy duyệt), chuông báo động kiểu b.
 // Sửa mô-đun này: làm ở myGame trước → thầy OK → chép sang (như cảnh phóng, GHI CHU ROCKET-RACE mục 32).
 // =============================================================
-// ROCKET RACE 3D — TÊN LỬA TẤN CÔNG giữa 2 tàu (MẪU 6c, thầy 27/9/2026 — sửa từ 6b: bỏ khung ô tên lửa + BOOST; sai-bị-lùi đúng lúc cũng né)
+// ROCKET RACE 3D — TÊN LỬA TẤN CÔNG giữa 2 tàu (MẪU 6d, thầy 27/9/2026 — sửa từ 6c:
+//   · đủ 3 câu liên tiếp ⇒ +1 quả NHỎ ở hàng dự phòng (tối đa 3); CHƯA lên nòng, trên tàu chưa có gì
+//   · CHẠM quả nhỏ ⇒ quả chuyển sang ô to (sẵn sàng) + tay robot đưa quả lên thân tàu (X.onLoad → trang game gọi loadFx)
+//   · CHẠM quả to ⇒ quả to LÙI ra khỏi màn (mang đi lắp vào chỗ bắn) rồi tên lửa mới phóng từ tàu
+//   · chuông BÁO ĐỘNG khẩn cấp kiểu điện ảnh (3 kiểu thử: cfg.missiles.alarm = a|b|c) thay tiếng bíp
+//   · trúng ⇒ thân tàu thêm MẢNG CHÁY ĐEN + lửa nhỏ ở đúng chỗ, lửa tắt sau ~8 s không bị bắn nữa (vết đen ở lại)
+// (6c, thầy 27/9/2026 — sửa từ 6b: bỏ khung ô tên lửa + BOOST; sai-bị-lùi đúng lúc cũng né)
 // (6b, thầy 26/9/2026 — sửa từ mẫu 6)
 // Luật (do trang game / rocket-race.js giữ — mô-đun này CHỈ VẼ):
 //   · đúng 3 câu LIÊN TIẾP = +1 tên lửa (tối đa 3 quả) — hiệu ứng nạp ngầu
@@ -23,7 +29,7 @@ export function createMissiles(X) {
   const rand = (a, b) => a + Math.random() * (b - a);
   const smooth = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
   const easeOutBack = t => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
-  const MC = Object.assign({ dur: 3.8, window: 1.5, ammoCm: 8.5, boostCm: 2.6, gapCm: 0.7 }, cfg.missiles || {});
+  const MC = Object.assign({ dur: 3.8, window: 1.5, ammoCm: 8.5, boostCm: 2.6, gapCm: 0.7, alarm: "b", burnSecs: 8, carry: 0.32 }, cfg.missiles || {});
   const TRAVEL = cfg.travelDir.clone().normalize(), UP = new V3(0, 1, 0);
   const RS = cfg.rocketScale ?? 1;
 
@@ -144,6 +150,86 @@ export function createMissiles(X) {
     m.arms.forEach(arm => { arm.sh.visible = arm.claw.visible = armOn; poseArm(arm, y - M_R - 0.05); });
   }
 
+  // ---------------------------------------------------------------- 6d: VẾT CHÁY ĐEN + LỬA NHỎ trên thân tàu bị trúng
+  // Mảng cháy là LÁT CẮT vỏ (cùng biên dạng HULL_PTS, nhô 1,8 %) dán texture muội đen vẽ bằng canvas; nằm 2 bên sườn trên
+  // (tránh khe cửa khoang). Mỗi quả trúng thêm 1 mảng (tối đa 6, cũ nhất nhường chỗ). Lửa + khói nhỏ phụt ra ở mọi mảng,
+  // tắt dần khi đã burnSecs giây không bị trúng thêm; vết đen ở lại tới hết trận.
+  function scorchCanvas(seed, ember) {
+    let s = seed * 9301 + 49297; const rnd = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+    const n = 256, cv = document.createElement("canvas"); cv.width = cv.height = n; const g = cv.getContext("2d");
+    if (ember) { g.fillStyle = "#000"; g.fillRect(0, 0, n, n); }
+    for (let i = 0; i < (ember ? 14 : 90); i++) {
+      const a = rnd() * Math.PI * 2, d = Math.pow(rnd(), ember ? 1.6 : 0.75) * n * (ember ? 0.16 : 0.34);
+      const x = n / 2 + Math.cos(a) * d, y = n / 2 + Math.sin(a) * d * 0.85, r = (ember ? 3 + rnd() * 6 : 18 + rnd() * 38) * (1 - d / n);
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      if (ember) { gr.addColorStop(0, "rgba(255,190,90,1)"); gr.addColorStop(0.5, "rgba(255,80,10,0.6)"); gr.addColorStop(1, "rgba(0,0,0,0)"); }
+      else { const k = 0.5 + rnd() * 0.45; gr.addColorStop(0, "rgba(10,8,7," + k + ")"); gr.addColorStop(0.6, "rgba(22,16,12," + (k * 0.6) + ")"); gr.addColorStop(1, "rgba(30,22,16,0)"); }
+      g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+    }
+    if (!ember) {                                     // lõi đen đặc + vệt muội toả ra
+      const c = g.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n * 0.3); c.addColorStop(0, "rgba(3,2,2,1)"); c.addColorStop(0.6, "rgba(6,4,3,0.85)"); c.addColorStop(1, "rgba(6,4,3,0)");
+      g.fillStyle = c; g.fillRect(0, 0, n, n);
+      g.strokeStyle = "rgba(12,9,8,0.35)"; g.lineCap = "round";
+      for (let i = 0; i < 18; i++) { const a = rnd() * Math.PI * 2, r0 = n * 0.1, r1 = n * (0.28 + rnd() * 0.18); g.lineWidth = 2 + rnd() * 6; g.beginPath(); g.moveTo(n / 2 + Math.cos(a) * r0, n / 2 + Math.sin(a) * r0); g.lineTo(n / 2 + Math.cos(a) * r1, n / 2 + Math.sin(a) * r1); g.stroke(); }
+    }
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = ember ? THREE.NoColorSpace : THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+  }
+  const SC_MAPS = [1, 2, 3].map(sd => ({ map: scorchCanvas(sd, false), em: scorchCanvas(sd + 7, true) }));
+  const SC_MAX = 6, SC_DPHI = 0.62, SC_HY = 0.44;
+  const emberFlare = radialTex([[0, "rgba(255,255,255,1)"], [0.3, "rgba(255,200,120,0.6)"], [1, "rgba(0,0,0,0)"]], 64);
+  function burnKit(r) {                              // dựng SẴN vật liệu cho từng tàu (trước warmBoom ⇒ shader biên dịch sẵn)
+    const mats = SC_MAPS.map(t => new THREE.MeshStandardMaterial({ map: t.map, emissiveMap: t.em, emissive: new THREE.Color(1, 0.35, 0.06), emissiveIntensity: 0,
+      transparent: true, depthWrite: false, roughness: 0.95, metalness: 0.05, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+    const glowMat = new THREE.SpriteMaterial({ map: emberFlare, color: new THREE.Color(3, 1.1, 0.25), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 });
+    const warm = new THREE.Mesh(sliceGeo(1.018, TOP + 0.9, 0.2), mats[0]); warm.visible = false; r.model.add(warm);   // để warmBoom biên dịch
+    const warmS = new THREE.Sprite(glowMat); warmS.visible = false; r.model.add(warmS);
+    r.burn = { mats, glowMat, spots: [], t: 0, acc: 0, n: 0, warm: [warm, warmS] };
+  }
+  function scorch(r) {
+    if (!r || !r.burn) return;
+    const B = r.burn;
+    B.warm.forEach(o => { if (o.parent) o.parent.remove(o); });
+    if (B.spots.length >= SC_MAX) { const o = B.spots.shift(); r.model.remove(o.mesh, o.glow); o.mesh.geometry.dispose(); }
+    // chỗ mới: xen kẽ 2 bên sườn trên, trải dọc thân, không trùng chỗ cũ
+    let phi, y, tries = 0;
+    do {
+      const sd = (B.n + tries) % 2 ? 1 : -1;
+      phi = TOP + sd * rand(0.62, 1.25); y = rand(-1.35, 0.35); tries++;
+    } while (tries < 12 && B.spots.some(o => Math.abs(o.y - y) < 0.4 && Math.abs(o.phi - phi) < 0.5));
+    B.n++;
+    const pts = []; for (let i = 0; i <= 8; i++) { const yy = y - SC_HY + (i / 8) * SC_HY * 2; pts.push(new THREE.Vector2(hullR(yy) * 1.018, yy)); }
+    const mesh = new THREE.Mesh(new THREE.LatheGeometry(pts, 10, phi - SC_DPHI, SC_DPHI * 2), B.mats[B.n % B.mats.length]);
+    const R0 = hullR(y) * 1.06, glow = new THREE.Sprite(B.glowMat);
+    glow.position.set(Math.sin(phi) * R0, y, Math.cos(phi) * R0); glow.scale.setScalar(0.4);
+    r.model.add(mesh, glow);
+    B.spots.push({ mesh, glow, phi, y, local: glow.position.clone(), nrm: new V3(Math.sin(phi), 0, Math.cos(phi)) });
+    B.t = MC.burnSecs;                               // bị trúng ⇒ lửa MỌI mảng cháy lại từ đầu
+  }
+  const _p = new V3(), _n = new V3();
+  function burnTick(r, dt) {
+    const B = r.burn; if (!B || !B.spots.length) return;
+    const alive = r.model.visible && !r.hidden && !r.wreck;
+    B.t = Math.max(0, B.t - dt);
+    const k = alive ? Math.min(1, B.t / 2) : 0;       // 2 s cuối lửa lụi dần
+    const flick = 0.75 + 0.25 * Math.sin(G.t * 23 + r.idx) * Math.sin(G.t * 13.7);
+    B.mats.forEach(m => { m.emissiveIntensity = (0.12 + 0.7 * k) * flick * (k > 0 ? 1 : 0.2); });   // than hồng còn âm ỉ chút ít sau khi tắt lửa
+    B.glowMat.opacity = k * 0.3 * flick;
+    if (k <= 0) return;
+    r.model.updateWorldMatrix(true, false);
+    B.acc += dt * 26 * k;
+    while (B.acc >= 1) {
+      B.acc -= 1;
+      const o = B.spots[Math.floor(Math.random() * B.spots.length)];
+      _p.copy(o.local); r.model.localToWorld(_p);
+      _n.copy(o.nrm).transformDirection(r.model.matrixWorld);
+      const vel = _n.clone().multiplyScalar(rand(0.3, 0.8)).addScaledVector(UP, rand(0.8, 1.6)).addScaledVector(TRAVEL, -rand(1.2, 2.4)).add(new V3(rand(-0.2, 0.2), 0, rand(-0.2, 0.2)));
+      fire.emit({ pos: _p.clone().add(new V3(rand(-0.08, 0.08), rand(-0.05, 0.05), rand(-0.08, 0.08))), vel, life: rand(0.22, 0.42), size: rand(0.22, 0.34) * RS, sizeEnd: 0.05,
+        color: new THREE.Color(4, 1.5, 0.35), colorEnd: new THREE.Color(1.6, 0.22, 0.04), drag: 1.2 });
+      if (Math.random() < 0.3) smoke.emit({ pos: _p.clone(), vel: vel.clone().multiplyScalar(0.7).addScaledVector(UP, 0.4), life: rand(1.1, 1.7), size: 0.28 * RS, sizeEnd: 1.3 * RS,
+        color: new THREE.Color(0.08, 0.075, 0.07), alpha: 0.4, drag: 0.8 });
+    }
+  }
+
   // ---------------------------------------------------------------- trạng thái kho (do trang game đặt)
   const A = [0, 1].map(() => ({ reserve: 0, loaded: false, pips: 0, pipsMax: 3, full: false, boost: false, boostPips: 0, boostMax: 5, locked: false, on: true }));
   const UI = [null, null];
@@ -165,6 +251,7 @@ export function createMissiles(X) {
     return new THREE.ShapeGeometry(sh, 16);
   }
   const fat = (g, k) => g.scale.set(k, k * 1.35, k * 1.35);       // quả trong bảng: mập hơn cho dễ nhìn
+  const MINI_Y = [0.3, 0, -0.3];                                  // 6d: 3 quả nhỏ xếp dọc (quả chưa nạp)
   function ghostOf() {
     const m = makeMissile();
     m.g.traverse(o => { if (o.isMesh && o !== m.flame) o.material = mGhost; });
@@ -178,17 +265,19 @@ export function createMissiles(X) {
     const yAmmo = -s.h / 2 - gap - ammoH / 2, yBoost = yAmmo - ammoH / 2 - gap - boostH / 2;
     const inSign = side === 0 ? 1 : -1;                       // phía TRONG (giữa màn) = quả to; phía ngoài = quả dự phòng
     const am = new THREE.Group(); am.position.set(0, yAmmo, 0.05); inner.add(am);
-    const bigW = areaW * 0.66, spW = areaW * 0.28;
+    const bigW = areaW * 0.6, spW = areaW * 0.36;                // 6d: hàng quả nhỏ rộng hơn (giờ là chỗ CHẠM để nạp)
     const bigX = inSign * (areaW / 2 - bigW / 2), spX = -inSign * (areaW / 2 - spW / 2);
     const miniS = spW * 0.95 / 2.3, bigS = bigW * 0.95 / 2.3;
     const rotY = inSign > 0 ? 0 : Math.PI;                    // mũi chĩa về phía tàu địch
-    const minis = [0.2, -0.2].map(fy => { const m = makeMissile(); m.g.position.set(spX, fy * ammoH, 0.14); m.g.rotation.y = rotY; m.g.visible = false; am.add(m.g); return m; });
+    const minis = MINI_Y.map(fy => { const m = makeMissile(); m.g.position.set(spX, fy * ammoH, 0.14); m.g.rotation.y = rotY; m.g.visible = false; am.add(m.g); return m; });   // 6d: 3 quả
     const big = makeMissile(); big.g.position.set(bigX, 0, 0.18); big.g.rotation.y = rotY; big.g.visible = false; am.add(big.g);
     const ghost = ghostOf(); ghost.g.position.set(bigX, 0, 0.12); ghost.g.rotation.y = rotY; fat(ghost.g, bigS); am.add(ghost.g);
     const glowSp = new THREE.Sprite(new THREE.SpriteMaterial({ map: flareTex, color: new THREE.Color(4, 0.5, 0.35), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
     glowSp.scale.set(bigW * 1.3, ammoH * 1.1, 1); glowSp.position.set(bigX, -ammoH * 0.05, 0.06); am.add(glowSp);
     const shuttle = makeMissile(); shuttle.g.visible = false; shuttle.g.rotation.y = rotY; am.add(shuttle.g);
-    const hitAm = new THREE.Mesh(new THREE.PlaneGeometry(areaW * 1.05, ammoH * 1.1), mHit); hitAm.position.z = 0.3; am.add(hitAm);
+    // 6d: HAI vùng chạm — hàng quả nhỏ (nạp) · ô quả to (bắn)
+    const hitSp = new THREE.Mesh(new THREE.PlaneGeometry(spW * 1.2, ammoH * 1.1), mHit); hitSp.position.set(spX - inSign * spW * 0.08, 0, 0.3); am.add(hitSp);
+    const hitAm = new THREE.Mesh(new THREE.PlaneGeometry(bigW * 1.08, ammoH * 1.1), mHit); hitAm.position.set(bigX + inSign * bigW * 0.02, 0, 0.3); am.add(hitAm);
     // BOOST: rãnh mờ + dải cyan (gốc ở mép NGOÀI, dài vào giữa màn) + quầng cyan khi đầy
     const bst = new THREE.Group(); bst.position.set(0, yBoost, 0.05); inner.add(bst);
     const barH = boostH * 0.5, x0 = -inSign * areaW / 2;
@@ -204,26 +293,27 @@ export function createMissiles(X) {
     const warnMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 0.35, 0.3), transparent: true, opacity: 0, depthWrite: false });
     const warn = new THREE.Mesh(frameGeo(fw, fh, Math.min(fw, fh) * 0.06, Math.min(fw, fh) * 0.014), warnMat);
     warn.position.set(0, (top + bot) / 2, 0.02); warn.visible = false; inner.add(warn);
-    [[hitAm, "fire"], [hitB, "boost"]].forEach(([m, kind]) => { m.userData.ammo = { side, kind }; hitList.push(m); });
+    [[hitSp, "load"], [hitAm, "fire"], [hitB, "boost"]].forEach(([m, kind]) => { m.userData.ammo = { side, kind }; hitList.push(m); });
     UI[side] = { am, bst, minis, big, ghost, glowSp, shuttle, fill, fillMat, bGlow, x0, areaW, barH, warn, warnMat, inSign, miniS, bigS, bigX, spX, ammoH,
-      press: { fire: 0, boost: 0 }, pop: [0, 0], popBig: 0, load: null, fireK: 0, shakeK: 0, flash: 0, fillK: 0, fillW: -1 };
+      press: { fire: 0, boost: 0, load: 0 }, pop: [0, 0, 0], popBig: 0, load: null, fireK: 0, shakeK: 0, flash: 0, fillK: 0, fillW: -1 };
   }
   function tickUI(side, dt) {
     const U = UI[side]; if (!U) return;
     const a = A[side], inc = incoming(side), win = inc <= MC.window;
-    const shown = a.on ? Math.min(2, a.reserve) : 0;
+    const shown = a.on ? Math.min(3, a.reserve) : 0;   // 6d: quả chưa nạp nằm hết ở hàng nhỏ (tối đa 3)
     U.minis.forEach((m, i) => {
       const vis = i < shown;
       if (vis && !m.g.visible) U.pop[i] = 1;
       m.g.visible = vis;
       U.pop[i] = Math.max(0, U.pop[i] - dt / 0.55);
       fat(m.g, U.miniS * Math.max(0.01, U.pop[i] > 0 ? easeOutBack(1 - U.pop[i]) : 1));
-      m.g.position.y = [0.2, -0.2][i] * U.ammoH + Math.sin(G.t * 2 + i * 1.7) * 0.008;
+      m.g.position.y = MINI_Y[i] * U.ammoH + Math.sin(G.t * 2 + i * 1.7) * 0.008;
+      m.g.position.x = U.spX - U.inSign * U.press.load * 0.02;
     });
     if (U.load) {                          // nạp: quả nhỏ bay sang chỗ quả to, lớn dần
       U.load.t += dt; const k = smooth(U.load.t / 0.5);
       U.shuttle.g.visible = true;
-      U.shuttle.g.position.set(lerp(U.spX, U.bigX, k), lerp(0.2 * U.ammoH, 0, k), 0.16 + Math.sin(k * Math.PI) * 0.3);
+      U.shuttle.g.position.set(lerp(U.spX, U.bigX, k), lerp(U.load.fy * U.ammoH, 0, k), 0.16 + Math.sin(k * Math.PI) * 0.3);
       fat(U.shuttle.g, lerp(U.miniS, U.bigS, k));
       if (U.load.t >= 0.5) { U.load = null; U.shuttle.g.visible = false; U.popBig = 1; U.flash = 1; }
     }
@@ -231,11 +321,13 @@ export function createMissiles(X) {
     U.big.g.visible = bigVis || U.fireK > 0;
     U.ghost.g.visible = a.on && !U.big.g.visible && !U.load;
     U.popBig = Math.max(0, U.popBig - dt / 0.5);
-    if (U.fireK > 0) {                     // bắn: quả to vút về phía giữa màn rồi mất
-      U.fireK = Math.max(0, U.fireK - dt / 0.3); const k = 1 - U.fireK;
-      U.big.g.position.x = U.bigX + U.inSign * k * k * U.areaW * 0.9; fat(U.big.g, U.bigS * (1 + k * 0.4));
-      U.big.flame.visible = U.big.flare.visible = true;
-      if (U.fireK <= 0) { U.big.g.position.x = U.bigX; U.big.flame.visible = U.big.flare.visible = false; }
+    if (U.fireK > 0) {                     // 6d: bắn ⇒ quả to LÙI (đuôi đi trước) ra khỏi MÉP NGOÀI màn — mang đi lắp vào chỗ bắn
+      U.fireK = Math.max(0, U.fireK - dt / MC.carry); const k = 1 - U.fireK;
+      const back = k < 0.18 ? -Math.sin(k / 0.18 * Math.PI) * 0.06 : Math.pow((k - 0.18) / 0.82, 2) * 3.2;   // nhún tới một chút rồi kéo lùi
+      U.big.g.position.x = U.bigX - U.inSign * back * U.areaW;
+      U.big.g.position.y = -k * k * U.ammoH * 0.15;
+      fat(U.big.g, U.bigS * (1 - k * 0.25));
+      if (U.fireK <= 0) { U.big.g.position.set(U.bigX, 0, 0.18); }
     } else {
       fat(U.big.g, U.bigS * Math.max(0.01, U.popBig > 0 ? easeOutBack(1 - U.popBig) : 1));
       U.big.g.position.y = Math.sin(G.t * 2.2) * 0.012;
@@ -255,7 +347,7 @@ export function createMissiles(X) {
     const full = a.boost && !a.locked;
     U.fillMat.color.setRGB(0, 0.55, 0.78).multiplyScalar(full ? (win ? 1.1 + 1.0 * pul : 1.25 + 0.2 * pul) : 1);   /* ACES làm nhạt màu sáng ⇒ cường độ thấp cho ra CYAN đậm */
     U.bGlow.material.opacity = full ? (win ? 0.35 + 0.45 * pul : 0.14 + 0.08 * pul) : 0;
-    ["fire", "boost"].forEach(k => { U.press[k] = Math.max(0, U.press[k] - dt * 4); });
+    ["fire", "boost", "load"].forEach(k => { U.press[k] = Math.max(0, U.press[k] - dt * 4); });
     U.am.scale.setScalar(1 - U.press.fire * 0.05);
     U.shakeK = Math.max(0, U.shakeK - dt * 3);
     U.bst.scale.setScalar(1 - U.press.boost * 0.05);
@@ -278,7 +370,15 @@ export function createMissiles(X) {
     const H = 9 + Math.abs(T.z - f.p0.z) * 0.18;
     return { p1: f.p0.clone().addScaledVector(UP, H), p2: T.clone().addScaledVector(UP, H) };
   }
+  let gen = 0;                                     // clearAll() tăng ⇒ lần phóng đang chờ bị huỷ
   function launch(from, to) {
+    const r = rockets[from]; if (!r.mis) return 0;
+    if (UI[from]) UI[from].fireK = 1;               // 6d: quả to trong bảng lùi ra khỏi màn trước…
+    const g0 = gen;
+    later(MC.carry * 0.85, () => { if (g0 === gen) liftoff(from, to); });   // …rồi tên lửa trên tàu mới rời bệ
+    return 1;
+  }
+  function liftoff(from, to) {
     const r = rockets[from], m = pool.find(p => !p.g.visible); if (!m || !r.mis) return 0;
     const src = r.mis.ms.g;
     const p0 = new V3(), q0 = new THREE.Quaternion();
@@ -292,9 +392,17 @@ export function createMissiles(X) {
     for (let i = 0; i < 16; i++) smoke.emit({ pos: p0.clone().add(new V3(rand(-0.4, 0.4), rand(-0.2, 0.2), rand(-0.4, 0.4))), vel: new V3(rand(-1.5, 1.5), rand(0.5, 2), rand(-1.5, 1.5)), life: rand(1.2, 1.9), size: 0.5, sizeEnd: 2.4, color: new THREE.Color(0.75, 0.75, 0.8), alpha: 0.4, drag: 1.2 });
     burst(p0, { n: 50, speed: 6, color: new THREE.Color(5, 2.2, 0.8), colorEnd: new THREE.Color(1.5, 0.2, 0.05), size: 0.18, life: 0.5 });
     sfx("mlaunch", 1);
+    alarm(f, true);                                  // 6d: chuông báo động bên bị bắn
     shake(0.2);
-    if (UI[from]) UI[from].fireK = 1;
     return f.id;
+  }
+  // 6d: CHUÔNG BÁO ĐỘNG khẩn cấp (thay tiếng bíp) — 3 kiểu thử: a = còi tàu ngầm (klaxon), b = còi báo động đỏ, c = chuông điện
+  // mỗi kiểu 2 file: nhịp thường (lúc tên lửa đang bay) + nhịp GẤP (1,5 s cuối)
+  const ALARM = { a: [1.05, 0.42], b: [0.95, 0.4], c: [1.0, 0.5] };   // AWord Đợt 409: chỉ mang file kiểu b (thầy chọn) — sfx/malarm_b + malarmf_b
+  function alarm(f, first, left = f.dur) {
+    const v = ALARM[MC.alarm] ? MC.alarm : "a", fast = left <= MC.window + 0.05;
+    sfx((fast ? "malarmf_" : "malarm_") + v, fast ? 1 : first ? 0.95 : 0.8);
+    f.beepT = ALARM[v][fast ? 1 : 0];
   }
   function timeLeft(f) { return f.passed || f.dodged ? Infinity : Math.max(0, f.dur - f.t); }
   function incoming(side) { let m = Infinity; flights.forEach(f => { if (f.to === side) m = Math.min(m, timeLeft(f)); }); return m; }
@@ -340,6 +448,7 @@ export function createMissiles(X) {
             flights.splice(i, 1); m.g.visible = false; m.flame.visible = m.flare.visible = false;
             explosion(T.clone(), 0.75); sfx("hit2", 1); sfx("boom", 0.7);
             stall(rockets[f.to]);
+            scorch(rockets[f.to]);                            // 6d: mảng cháy đen + lửa nhỏ
             X.onEnd && X.onEnd(f.to, "hit", f.from);
             continue;
           }
@@ -366,7 +475,7 @@ export function createMissiles(X) {
       m.flame.scale.set(1, 0.85 + Math.random() * 0.3, 1);
       f.prev.copy(pos);
       const left = f.dur - f.t;
-      if (!f.passed && !f.dodged) { f.beepT -= dt; if (f.beepT <= 0) { sfx("mwarn", left <= MC.window ? 0.9 : 0.5); f.beepT = left <= MC.window ? 0.16 : 0.5; } }
+      if (!f.passed && !f.dodged) { f.beepT -= dt; if (f.beepT <= 0) alarm(f, false, left); }
     }
   }
 
@@ -402,17 +511,18 @@ export function createMissiles(X) {
   function loadFx(side) {
     const r = rockets[side]; if (!r.mis) return;
     r.mis.has = true; r.mis.wantRise = 1; r.mis.rise = 0;
-    if (UI[side]) UI[side].load = { t: 0 };
+    if (UI[side]) UI[side].load = { t: 0, fy: MINI_Y[clamp(A[side].reserve, 0, 2)] };   // quả nhỏ ở chỗ vừa trống bay sang ô to
     sfx("mload", 1);
   }
   function clearAll() {
+    gen++;
     for (let i = flights.length - 1; i >= 0; i--) { const f = flights[i]; const p = f.m.g.position.clone(); f.m.g.visible = false; f.m.flame.visible = f.m.flare.visible = false; airburst(p, 0.5); }
     flights.length = 0;
   }
 
   function tick(dt) {
     for (let i = pending.length - 1; i >= 0; i--) { const p = pending[i]; p.t -= dt; if (p.t <= 0) { pending.splice(i, 1); p.fn(); } }
-    rockets.forEach(r => poseMount(r, dt));
+    rockets.forEach(r => { poseMount(r, dt); burnTick(r, dt); });
     stepFlights(dt); stepRings(dt);
     mGlow.color.setRGB(4.2 * (0.75 + 0.25 * Math.sin(G.t * 6)), 0.35, 0.25);
     UI.forEach((u, side) => tickUI(side, dt));
@@ -420,11 +530,12 @@ export function createMissiles(X) {
   function tap(info) {
     const U = UI[info.side]; if (!U) return;
     if (info.kind === "fire") { U.press.fire = 1; if (X.onFire) X.onFire(info.side); }
+    else if (info.kind === "load") { U.press.load = 1; if (X.onLoad) X.onLoad(info.side); }
     else { U.press.boost = 1; if (X.onBoost) X.onBoost(info.side); }
   }
-  function refuse(side, kind) { const U = UI[side]; if (!U) return; if (kind === "boost") U.shakeK = 1; else U.press.fire = 1; }
+  function refuse(side, kind) { const U = UI[side]; if (!U) return; if (kind === "boost") U.shakeK = 1; else if (kind === "load") U.press.load = 1; else U.press.fire = 1; }
 
-  rockets.forEach(attach);
+  rockets.forEach(r => { attach(r); burnKit(r); });
   return {
     buildConsole, poseRocket, tick, tap,
     api: {
@@ -436,6 +547,8 @@ export function createMissiles(X) {
       get busy() { return flights.length > 0; },
       get flights() { return flights.map(f => ({ id: f.id, from: f.from, to: f.to, t: +f.t.toFixed(2), left: +(f.dur - f.t).toFixed(2), dodged: f.dodged, passed: f.passed })); },
       get arsenal() { return A.map(a => ({ ...a })); },
+      get scorches() { return rockets.map(r => r.burn ? { spots: r.burn.spots.length, burning: +r.burn.t.toFixed(2) } : null); },   // bàn thử 6d
+      scorch: side => scorch(rockets[side]),                                                                                 // bàn thử 6d
       windowSecs: MC.window
     }
   };

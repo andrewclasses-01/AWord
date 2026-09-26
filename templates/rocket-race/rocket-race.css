@@ -662,6 +662,8 @@
 .aw-rr3d-flash.off { opacity: 0; transition: opacity .75s cubic-bezier(.2, .7, .3, 1); }
 .aw-fight.is-skin-rr3d { background: radial-gradient(ellipse at 50% 0%, #0c1530 0%, #04060e 65%); }
 .aw-fight.is-skin-rr3d .aw-fight-top { background: transparent; }
+/* ⭐ Đợt 409 — thanh MISS WAIT của trọng tài ẩn (visibility ⇒ transition bề rộng VẪN chạy để rocket-race.js đọc), bản 3D giữa màn thay */
+.aw-fight.is-skin-rr3d .aw-fight-missbar { visibility: hidden !important; }
 .aw-fight.is-skin-rr3d .aw-below-left,
 .aw-fight.is-skin-rr3d .aw-below-right { color: #7f93bd; }
 .aw-fight.is-skin-rr3d .aw-below .aw-toolbtn,

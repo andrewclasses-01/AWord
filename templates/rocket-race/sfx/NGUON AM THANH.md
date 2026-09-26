@@ -25,6 +25,8 @@ Bỏ hẳn giọng đọc (3-2-1-GO, You win) — thầy: "bỏ giọng voice �
 | mlaunch | Đợt 407 — phóng tên lửa (nổ mồi, gầm, vút xa) | tổng hợp — myGame `tools/tao-am-thanh-6.py` |
 | mwarn | Đợt 407 — còi khoá mục tiêu (bíp) | tổng hợp — myGame `tools/tao-am-thanh-6.py` |
 | mdodge | Đợt 407 — né tên lửa (vút + đốt sau) | tổng hợp — myGame `tools/tao-am-thanh-6.py` |
+| malarm_b | Đợt 409 — còi báo động đỏ khi tên lửa bay tới (whoop qua loa phát thanh, vang hội trường) | tổng hợp — myGame `tools/tao-am-thanh-6d.py` |
+| malarmf_b | Đợt 409 — còi báo động nhịp GẤP (1,5 s cuối) | tổng hợp — myGame `tools/tao-am-thanh-6d.py` |
 | ambient | nền vũ trụ | OpenGameArt · "Outer Space Loop" by wipics — https://opengameart.org/content/outer-space-loop — **CC0** |
 | fire | lửa cháy (tàu thua bốc cháy) | OpenGameArt · "Fire Crackling" by AntumDeluge — https://opengameart.org/content/fire-crackling — **CC0** |
 

@@ -369,6 +369,11 @@ let rr3dQuickUntil = 0;
 //   · góc rộng tắt ở câu trả lời KẾ TIẾP sau khi tên lửa đánh xong (trúng/hụt), rồi luật camera cũ tự xét.
 // Vị trí tàu (nấc) đổi vì tên lửa — KHÔNG đổi điểm của trọng tài (Fight thắng bằng về đích, điểm ẩn).
 // =========================================================
+// ⭐⭐ Đợt 409 (thầy 27/9/2026, duyệt MẪU 6d ở myGame):
+//   · đủ 3 câu liên tiếp ⇒ +1 quả NHỎ (hàng dự phòng, tối đa 3) — KHÔNG tự lên nòng nữa. HS CHẠM quả nhỏ (msLoadTap) ⇒
+//     quả sang ô to + tay robot đưa quả lên thân tàu. Chạm ô to khi chưa nạp mà còn quả nhỏ ⇒ cũng nạp. Bắn xong không tự nạp quả kế.
+//   · chạm quả to ⇒ quả lùi ra khỏi màn rồi tên lửa mới phóng (rr3d-missile.js) · chuông báo động kiểu b · trúng ⇒ vết cháy + lửa nhỏ.
+//   · thanh MISS WAIT vẽ 3D GIỮA màn dưới câu hỏi: rr3dMissWait (dưới) đọc thanh DOM của trọng tài — core/fight.js KHÔNG đổi.
 const MS_WINDOW = 1.5, MS_STREAK = 3, MS_BOOST_STREAK = 5, MS_MAX = 3, MS_DEFAULT = 2, MS_INF = 11;
 function missilePushOf(opt) {
   const v = opt ? opt.rrMissile : undefined;
@@ -402,7 +407,7 @@ function msCorrect(side) {
     if (++a.ms >= MS_STREAK) {
       a.ms = 0; a.reserve++;
       msLater(st, () => { if (!msLocked()) v3(v => v.missile.chargeFx(side)); }, 450);   // sau nhịp TURBO ⇒ không chồng hiệu ứng
-      if (!a.loaded) msLater(st, () => msLoad(st, side), 1500);
+      // Đợt 409: KHÔNG tự lên nòng — quả nằm ở hàng nhỏ, HS chạm vào mới nạp (msLoadTap)
     }
   } else a.ms = 0;
   if (!a.boost) { if (++a.bs >= MS_BOOST_STREAK) { a.bs = 0; a.boost = true; } } else a.bs = 0;
@@ -421,14 +426,21 @@ function msAnswered() {
   if (!st || !st.ms || !v || !v.missile || !st.msWideReady) return;
   if (v.missile.wide && v.missile.flights.every(f => f.passed || f.dodged)) { v.missile.setWide(false); st.msWideReady = false; }
 }
+// Đợt 409: chạm hàng quả NHỎ ⇒ lên nòng (đã có quả to / hết quả / khoá ⇒ lắc từ chối)
+function msLoadTap(side) {
+  const st = rr3d; if (!st || !st.ms) return;
+  const a = st.ms[side], v = st.view;
+  if (!v || !v.missile || msLocked() || a.loaded || a.reserve <= 0 || v.phase !== "play") { if (v && v.missile) v.missile.refuse(side, "load"); return; }
+  msLoad(st, side);
+}
 function msFire(side) {
   const st = rr3d; if (!st || !st.ms) return;
   const a = st.ms[side], v = st.view;
+  if (v && v.missile && !msLocked() && !a.loaded && a.reserve > 0 && v.phase === "play") return msLoad(st, side);   // Đợt 409: ô to trống mà còn quả nhỏ ⇒ nạp
   if (!v || !v.missile || msLocked() || !a.loaded || v.phase !== "play") { if (v && v.missile) v.missile.refuse(side, "fire"); return; }
   a.loaded = false; msSync(st, side);
-  v.missile.launch(side, 1 - side);
+  v.missile.launch(side, 1 - side);          // Đợt 409: quả to lùi khỏi màn rồi mới phóng; KHÔNG tự nạp quả kế
   st.msWideReady = false;
-  if (a.reserve > 0) msLater(st, () => msLoad(st, side), 900);
 }
 function msBoost(side) {
   const st = rr3d; if (!st || !st.ms) return;
@@ -448,6 +460,39 @@ function msOver(keepWide) {
   const st = rr3d; if (!st || !st.ms) return;
   [0, 1].forEach(side => msSync(st, side));
   v3(v => { if (!v.missile) return; v.missile.clearAll(); if (!keepWide) v.missile.setWide(false); });
+}
+
+// ⭐ Đợt 409 — THANH MISS WAIT GIỮA MÀN. Đồng hồ + thanh DOM `.aw-fight-missbar` (mỗi nửa một cái, half0 = đội 0) là của trọng tài
+// core/fight.js (KHÔNG sửa). Skin rr3d ẩn thanh đó bằng `visibility:hidden` (rocket-race.css — transition bề rộng VẪN chạy), còn đây
+// đọc mỗi khung: bàn nào `.is-on`, tỉ lệ bề rộng fill / thanh, tổng thời gian suy từ `transition: width <ms>ms` lúc trọng tài (khởi)
+// chạy thanh (ms còn lại ÷ tỉ lệ lúc đó ⇒ đúng cả khi chạy tiếp sau ☰ tạm dừng), rồi view.setMissWait vẽ bản 3D.
+function rr3dMissWait(st, wrap) {
+  let bars = null, raf = 0;
+  const total = [0, 0], lastTr = ["", ""];
+  const step = () => {
+    if (st.dead) return;
+    raf = requestAnimationFrame(step);
+    const v = st.view; if (!v || !v.setMissWait) return;
+    if (!bars || !bars.length) bars = [...wrap.querySelectorAll(".aw-fight-missbar")];
+    let info = null;
+    bars.forEach((b, side) => {
+      if (side > 1) return;
+      if (!b.classList.contains("is-on")) { total[side] = 0; lastTr[side] = ""; return; }
+      const bw = b.getBoundingClientRect().width; if (!(bw > 0)) return;
+      const frac = Math.max(0, Math.min(1, b.firstElementChild.getBoundingClientRect().width / bw));
+      const tr = b.firstElementChild.style.transition || "";
+      if (tr !== lastTr[side]) {
+        lastTr[side] = tr;
+        const m = /width\s+([\d.]+)ms/.exec(tr);
+        if (m) total[side] = +m[1] / Math.max(frac, 1e-3);
+      }
+      if (!total[side]) total[side] = Infinity;            // nấc ∞ (không có đồng hồ) ⇒ huy hiệu ghi ∞
+      info = { side, frac, secs: total[side] === Infinity ? Infinity : frac * total[side] / 1000 };
+    });
+    v.setMissWait(info);
+  };
+  raf = requestAnimationFrame(step);
+  st.offs.push(() => cancelAnimationFrame(raf));
 }
 
 function rr3dScene({ root, ctl, title, play }) {
@@ -478,7 +523,7 @@ function rr3dScene({ root, ctl, title, play }) {
   rrSound.quiet = true;                       // tiếng tổng hợp cũ im — bộ tiếng 3D thay
   console.log("MYACT:3D:ON");                // ⭐ Đợt 399: myActivity v2.23.0 tạm lặng hiệu ứng nền (sao lấp lánh) nhường card đồ hoạ
   const wrap = root.closest(".aw-fight");
-  if (wrap) { rr3dSoundMenu(st, wrap); rr3dMenuHost(st, wrap); }
+  if (wrap) { rr3dSoundMenu(st, wrap); rr3dMenuHost(st, wrap); rr3dMissWait(st, wrap); }
   Promise.all([import("./rr3d-view.js"), import("./rr3d-sfx.js")]).then(([V, S]) => {
     if (st.dead) return null;
     st.sfx = S.createRr3dSound();
@@ -492,6 +537,7 @@ function rr3dScene({ root, ctl, title, play }) {
       // ⭐ Đợt 407 — tên lửa: Off ⇒ view không dựng gì (bố cục như cũ)
       missiles: st.ms ? { window: MS_WINDOW, dur: 3.8 } : false,
       onFire: side => msFire(side), onBoost: side => msBoost(side), onMissileEnd: (to, res) => msEnd(to, res),
+      onLoad: side => msLoadTap(side),        // Đợt 409: chạm quả nhỏ = nạp
       sfx: (n, v) => st.sfx && st.sfx.play(n, v),
       loop: (n, on, v, f) => st.sfx && st.sfx.loop(n, on, v, f),
       swell: (n, a, b, u, d) => st.sfx && st.sfx.swell(n, a, b, u, d) });

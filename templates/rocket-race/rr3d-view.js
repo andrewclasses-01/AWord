@@ -32,6 +32,7 @@ import { TextGeometry } from "./vendor/three/addons/TextGeometry.js";
 export { THREE };
 import { makeAutoRes } from "./rr3d-autores.js";
 import { createMissiles } from "./rr3d-missile.js";   // Đợt 407
+import { createMissWait } from "./rr3d-misswait.js";  // Đợt 409: thanh MISS WAIT 3D giữa màn
 
 const V3 = THREE.Vector3;
 const TAU = Math.PI * 2;
@@ -820,6 +821,7 @@ export async function createView(cfg) {
     questionPanel = null;
     buildQuestion(questionWidth());
     paintQuestion();
+    MW.build(U, qRect.y + qRect.h);            // Đợt 409: thanh MISS WAIT ngay dưới câu hỏi
     // 2 bàn đáp án
     L0.consoles.forEach((c, side) => {
       const team = TEAMS[side];
@@ -1403,8 +1405,10 @@ export async function createView(cfg) {
     THREE, scene, camera, rockets, cfg, fire, smoke, burst, explosion, labelOn, hitList, frameGeo, RoundedBoxGeometry, canvasTex, radialTex, FONT_UI, G,
     sfx: (n, v) => sfx(n, v), stall: r => stallRocket(r), shake: k => { trauma = Math.min(1, trauma + k); },
     onFire: side => cfg.onFire && cfg.onFire(side), onBoost: side => cfg.onBoost && cfg.onBoost(side),
-    onEnd: (to, res, from) => cfg.onMissileEnd && cfg.onMissileEnd(to, res, from)
+    onEnd: (to, res, from) => cfg.onMissileEnd && cfg.onMissileEnd(to, res, from),
+    onLoad: side => cfg.onLoad && cfg.onLoad(side)                 // Đợt 409: chạm quả nhỏ = nạp
   });
+  const MW = createMissWait({ THREE, ui, screenToLocal, screenSize, frameGeo, canvasTex, radialTex, FONT_UI, TEAMS, G, UID });   // Đợt 409
   warmBoom();
 
   function shatter(r) {
@@ -2103,6 +2107,7 @@ export async function createView(cfg) {
     }
     updateMeteors(dt); updateLabels(dt);
     if (MS) MS.tick(dt);                       // Đợt 407: tên lửa
+    MW.tick(dt);                               // Đợt 409: thanh MISS WAIT
 
     // camera
     const lead = Math.max(rockets[0].vis, rockets[1].vis) / L, trail = Math.min(rockets[0].vis, rockets[1].vis) / L;
@@ -2329,6 +2334,7 @@ export async function createView(cfg) {
     },
     unsnap() { document.getElementById("__snap")?.remove(); },
     rockets, camera,
+    setMissWait(v) { MW.set(v); },            // Đợt 409: { side, frac 0..1, secs } | null — thanh MISS WAIT giữa màn
     missile: MS ? MS.api : null,               // Đợt 407: setArsenal/chargeFx/loadFx/launch/dodge/incoming/clearAll/refuse/setWide
     get state() { return G; }
   };
