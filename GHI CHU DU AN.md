@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 401 (26/9/2026) — A SHOW SPEED (GAME): HẾT GIỜ ⇒ HAI BÀN TỐI + MỜ, Ô ĐIỂM TRƯỢT XUỐNG GIỮA BÀN ĐỘI RỒI MỚI ĐẾM · ⬜ CHƯA BẤM TAY TOMKO
+## Đợt 401 (26/9/2026) — A SHOW SPEED (GAME): HẾT GIỜ ⇒ HAI BÀN TỐI + MỜ, Ô ĐIỂM TRƯỢT XUỐNG GIỮA BÀN ĐỘI RỒI MỚI ĐẾM · ✅ ĐÃ PUSH `bfbe3ac` + LIVE 2/2 mã băm · ⬜ CHƯA BẤM TAY TOMKO
 
 **Yêu cầu thầy (26/9):** khi hết giờ, toàn bộ nội dung 2 ô của 2 đội tối đi và blur; 2 ô điểm di chuyển từ trên xuống chính
 giữa ô của mỗi đội rồi mới bắt đầu đếm. Đếm xong vẫn nằm đó; ô giữa vẫn hiện như cũ (WINS/DRAW + MISSED + PLAY AGAIN);
