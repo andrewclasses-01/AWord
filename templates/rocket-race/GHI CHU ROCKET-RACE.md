@@ -715,3 +715,12 @@ Thầy thiết kế cùng Claude qua 13 bản mẫu ở kho **myGame** (`E:\LAP 
 - Cảnh phóng: 60 khung · bóng đổ theo nhu cầu · mây sắp 2 khung/lần · dịch sẵn shader lửa/nhảy tốc độ.
 - `MYACT:3D:ON/OFF` cho myActivity v2.23.1 (nhường card đồ hoạ). Bàn thử: `__rr3d.view.res` = { pr, cap, max, drops }.
 - Nguồn: myGame mẫu 5c (`core/auto-res.js`, `core/launch-aerial-5c.js`, `game5c/`) — GHI CHU myGame Chặng 14.
+
+## 34. Đợt 407 (27/9/2026) — TÊN LỬA TẤN CÔNG giữa 2 tàu + đội 2 CAM ĐẬM (ghép MẪU 6c của myGame)
+- Luật + việc đã làm: `GHI CHU DU AN.md` chặng Đợt 407. Thiết kế + lịch sử mẫu: myGame `GHI CHU DU AN.md` Chặng 15–17.
+- File: `rr3d-missile.js` (chép NGUYÊN myGame `game6c/rr3d-missile.js` — sửa ở myGame trước, thầy OK rồi chép sang) · `rr3d-view.js`
+  (móc `MS`, góc rộng, `explosion(pos, sc)`, đội 2 `#ff7a00`) · `rocket-race.js` (khối `ms*`, Options "Missile" `rrMissile`: 0 Off · 1–10 · 11 = ∞,
+  chưa chỉnh = 2) · 5 tiếng `sfx/m*.mp3`.
+- Trạng thái kho ở `rr3d.ms[side]` = { reserve, loaded, ms (chuỗi → tên lửa), bs (chuỗi → BOOST), boost }; khoá = `rrFightScene.decided || .sudden`.
+- Bàn thử: `__rr3d.view.missileTap(side, "fire"|"boost")`, `__rr3d.view.missile.flights / arsenal / wide`, `setArsenal(side, {...})`.
+- ⚠️ Khung trình duyệt bị ẨN ⇒ WebGL lỗi `getProgramInfoLog(...).trim` (cả cảnh phóng cũ) — không phải lỗi code.

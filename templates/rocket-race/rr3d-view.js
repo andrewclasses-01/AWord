@@ -12,6 +12,10 @@
 // false — tàu vẫn lượn né) · tàu thắng BIẾN MẤT khi chui qua cổng + LOÉ SÁNG (cfg.portalVanish) · lửa ẩn theo tàu · tàu ĐẶT
 // THẲNG hướng bay ngay khung đầu (r.qInit — nối liền với intro) · kết trận nhanh (cfg.finale.hitsAfter) + máy quay XOAY ĐỀU
 // quanh tàu thua từ lúc về đích (startOrbit) · `export makeRocket` cho cảnh phóng rr3d-launch.js dựng CÙNG một con tàu.
+// ⭐ Đợt 407 (thầy 27/9/2026 duyệt MẪU 6c ở myGame): TÊN LỬA tấn công giữa 2 tàu (./rr3d-missile.js — tay robot đưa quả
+// ra gắn trên thân tàu, bay vòng lên rồi lao thẳng xuống, né trong 1,5 s cuối; ô tên lửa + thanh BOOST không khung dưới cột
+// đáp án) · bắn ⇒ góc nhìn RỘNG (`G.wideCam` → `cfg.camera({ wide })`) · `explosion(pos, sc)` có hệ số cỡ · đội 2 VÀNG → CAM ĐẬM.
+// Luật (nạp, bắn, lùi, né, khoá) nằm ở rocket-race.js; `cfg.missiles === false` (Options Missile = Off) ⇒ không dựng gì.
 // ⭐ Đợt 399 (thầy 26/9/2026 duyệt MẪU 5c): TỰ GIỮ 60 KHUNG — rr3d-autores.js đo nhịp khung thật, hạ/nâng tỉ lệ điểm ảnh
 // (sàn 1,0: chữ ô đáp án vẽ bằng WebGL); đổi độ nét chỉ cấp lại bộ đệm (`applyPR`), không dựng lại bảng.
 // =============================================================
@@ -27,6 +31,7 @@ import { FontLoader } from "./vendor/three/addons/FontLoader.js";
 import { TextGeometry } from "./vendor/three/addons/TextGeometry.js";
 export { THREE };
 import { makeAutoRes } from "./rr3d-autores.js";
+import { createMissiles } from "./rr3d-missile.js";   // Đợt 407
 
 const V3 = THREE.Vector3;
 const TAU = Math.PI * 2;
@@ -42,7 +47,7 @@ const FONT_URL = new URL("./vendor/three/helvetiker_bold.typeface.json", import.
 
 export const DEFAULT_TEAMS = [
   { name: "TEAM 1", pilot: "🐱", color: new THREE.Color("#3b8cff"), css: "#3b8cff" },
-  { name: "TEAM 2", pilot: "🦊", color: new THREE.Color("#ffc21a"), css: "#ffc21a" }   // mẫu 5: VÀNG (đỏ dễ nhầm với ô sai)
+  { name: "TEAM 2", pilot: "🦊", color: new THREE.Color("#ff7a00"), css: "#ff7a00" }   // Đợt 407 (thầy): VÀNG khó nhìn ⇒ CAM ĐẬM (Đợt 398: đỏ dễ nhầm với ô sai)
 ];
 
 // ---------- GLSL: nhiễu 3D + fbm (dùng cho tinh vân, hành tinh, lửa, quả cầu nổ) ----------
@@ -866,10 +871,12 @@ export async function createView(cfg) {
       }
       // Đợt 394: phần trống DƯỚI khung ô tới 90% chiều cao cảnh — cột ô chữ dài được mọc xuống đó
       const bandH = rows * th + (rows - 1) * gap;
-      const extra = Math.max(0, (y0 - bandH) + s.h / 2 + Math.max(0, 0.9 - (c.y + c.h)) * s.h / c.h);
+      // Đợt 407: dưới cột đáp án là tên lửa + BOOST ⇒ ô chữ dài KHÔNG mọc xuống nữa (co chữ vừa khung)
+      const extra = MS ? 0 : Math.max(0, (y0 - bandH) + s.h / 2 + Math.max(0, 0.9 - (c.y + c.h)) * s.h / c.h);
       const con = { grp, tiles, header: hd, side,
         area: { x: -areaW / 2 + tw / 2, cy: y0 - bandH / 2, th, gap, rows, areaH: bandH, extra } };
       consoles.push(con);
+      if (MS) MS.buildConsole(con, inner, s, pad, s.h / (c.h * H / pxPerCm()));   // Đợt 407: 1 cm thật = s.h ÷ số cm của bàn
       relayout(con, G.answers[side].length);
       ui.add(grp);
     });
@@ -1059,7 +1066,7 @@ export async function createView(cfg) {
   const boomLight = new THREE.PointLight(0xffa860, 0, 70, 2);
   scene.add(boomLight);
   const cSmokeHot = new THREE.Color(), cSmokeCold = new THREE.Color();
-  function explosion(pos) {
+  function explosion(pos, sc = 1) {   // Đợt 407: sc = hệ số cỡ (tên lửa nổ nhỏ hơn tàu nổ)
     const b = { pos: pos.clone(), t: 0, balls: [], rings: [], emitters: [] };
     // chớp trắng (vài hạt khổng lồ, sống 0,2 s)
     for (let i = 0; i < 2; i++) fire.emit({ pos: pos.clone(), vel: new V3(), life: 0.12 + i * 0.05, size: 2.2 + i * 1.2, sizeEnd: 4.5 + i * 1.5, color: new THREE.Color(2.6, 2.2, 1.7), colorEnd: new THREE.Color(1.4, 0.6, 0.2), alpha: 0.9 });
@@ -1068,14 +1075,14 @@ export async function createView(cfg) {
     for (let i = 0; i < 8 && i < freeBalls.length; i++) {
       const m = freeBalls[i]; m.userData.busy = true;
       const dir = new V3(rand(-1, 1), rand(-0.7, 1), rand(-1, 1)).normalize();
-      b.balls.push({ m, delay: i === 0 ? 0 : rand(0.02, 0.28), off: dir.clone().multiplyScalar(i === 0 ? 0 : rand(0.4, 1.3)),
-        vel: dir.clone().multiplyScalar(rand(0.8, 2.6)).add(new V3(0, rand(0.2, 0.8), 0)),
-        rMax: i === 0 ? 1.9 : rand(0.8, 1.55), life: rand(1.1, 1.7), seed: rand(0, 50) });
+      b.balls.push({ m, delay: i === 0 ? 0 : rand(0.02, 0.28), off: dir.clone().multiplyScalar((i === 0 ? 0 : rand(0.4, 1.3)) * sc),
+        vel: dir.clone().multiplyScalar(rand(0.8, 2.6) * sc).add(new V3(0, rand(0.2, 0.8), 0)),
+        rMax: (i === 0 ? 1.9 : rand(0.8, 1.55)) * sc, life: rand(1.1, 1.7), seed: rand(0, 50) });
     }
     // lửa cuộn: hạt to, bung nhanh rồi hãm mạnh ⇒ đám lửa có khối, không phải chùm tia
-    for (let i = 0; i < 180; i++) {
-      const d = new V3(rand(-1, 1), rand(-0.8, 1), rand(-1, 1)).normalize().multiplyScalar(1.5 + 10 * Math.pow(Math.random(), 1.8));
-      const s = rand(0.35, 0.85);
+    for (let i = 0; i < 180 * sc; i++) {
+      const d = new V3(rand(-1, 1), rand(-0.8, 1), rand(-1, 1)).normalize().multiplyScalar((1.5 + 10 * Math.pow(Math.random(), 1.8)) * sc);
+      const s = rand(0.35, 0.85) * sc;
       fire.emit({ pos: pos.clone().add(new V3(rand(-0.3, 0.3), rand(-0.3, 0.3), rand(-0.3, 0.3))), vel: d, life: rand(0.45, 1.15), size: s, sizeEnd: s * rand(1.8, 3),
         color: new THREE.Color(2.1, 1.25, 0.5), colorEnd: new THREE.Color(0.45, 0.06, 0.01), drag: 2.6, alpha: 0.7 });
     }
@@ -1091,13 +1098,13 @@ export async function createView(cfg) {
     // sóng xung kích: 2 vòng, vòng sau mờ và chậm hơn
     boomRings.filter(m => !m.visible).slice(0, 2).forEach((m, k) => { m.visible = true; m.position.copy(pos); b.rings.push({ m, k }); });
     // nguồn KHÓI: bay tỏa ra rồi chậm lại, vừa bay vừa nhả khói ⇒ khói có hình, có chiều sâu
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < Math.round(12 * sc); i++) {
       const d = new V3(rand(-1, 1), rand(-0.5, 1), rand(-1, 1)).normalize();
       b.emitters.push({ p: pos.clone().addScaledVector(d, rand(0.2, 0.8)), v: d.multiplyScalar(rand(3, 8)), life: rand(0.9, 1.6), acc: 0, rate: rand(14, 22) });
     }
     boomLight.position.copy(pos);
     booms.push(b);
-    trauma = Math.min(1, trauma + 0.9);
+    trauma = Math.min(1, trauma + 0.9 * sc);
   }
   function smokePuff(p, v, heat) {
     const g = rand(0.55, 1);
@@ -1391,6 +1398,13 @@ export async function createView(cfg) {
       renderer.setRenderTarget(prev);
     } catch { /* ignore */ }
   }
+  // ⭐ Đợt 407: TÊN LỬA — dựng SẴN mọi thứ (tên lửa, khoang, tay robot, vòng sáng) TRƯỚC warmBoom ⇒ shader biên dịch sẵn
+  const MS = cfg.missiles === false ? null : createMissiles({
+    THREE, scene, camera, rockets, cfg, fire, smoke, burst, explosion, labelOn, hitList, frameGeo, RoundedBoxGeometry, canvasTex, radialTex, FONT_UI, G,
+    sfx: (n, v) => sfx(n, v), stall: r => stallRocket(r), shake: k => { trauma = Math.min(1, trauma + k); },
+    onFire: side => cfg.onFire && cfg.onFire(side), onBoost: side => cfg.onBoost && cfg.onBoost(side),
+    onEnd: (to, res, from) => cfg.onMissileEnd && cfg.onMissileEnd(to, res, from)
+  });
   warmBoom();
 
   function shatter(r) {
@@ -1943,6 +1957,7 @@ export async function createView(cfg) {
     ray.setFromCamera(ndc, camera);
     const vis = hitList.filter(m => { let o = m; while (o) { if (!o.visible) return false; o = o.parent; } return true; });
     const hit = ray.intersectObjects(vis, false)[0];
+    if (hit && hit.object.userData.ammo) { if (G.phase === "play" && !G.paused && MS) MS.tap(hit.object.userData.ammo); return; }   // Đợt 407: tên lửa / BOOST
     if (hit) { onTap(hit.object.userData.tile); return; }
     // ⭐ Đợt 405 (thầy): act VOICE — chạm thanh câu hỏi (chữ 🔊) = nghe lại. Different: nửa trái/phải = bàn 0/1.
     if (!cfg.onQuestionTap || !questionPanel || !questionPanel.g.visible || G.qHidden || G.phase !== "play" || G.paused) return;
@@ -2037,6 +2052,7 @@ export async function createView(cfg) {
       const pose = cfg.track(i, t01, G.t);
       r.rig.position.copy(pose.pos);
       if (DG) applyDodge(r, i, dt, pose);        // Đợt 397: toàn cảnh ⇒ lượn né đá vụn
+      if (MS) MS.poseRocket(r, i, dt);           // Đợt 407: vọt lên / giật lùi né tên lửa
       tmpQ.setFromUnitVectors(new V3(1, 0, 0), pose.dir.clone().normalize());
       if (!r.qInit) { r.rig.quaternion.copy(tmpQ); r.qInit = true; }   // 5b: khung đầu ĐẶT THẲNG (mô hình dựng nằm ngang ⇒ trước đây mất ~0,5 s xoay)
       else r.rig.quaternion.slerp(tmpQ, Math.min(1, dt * 6));
@@ -2086,10 +2102,11 @@ export async function createView(cfg) {
       if (k >= 1) { gate.visible = false; gate.userData.shrink = 0; }
     }
     updateMeteors(dt); updateLabels(dt);
+    if (MS) MS.tick(dt);                       // Đợt 407: tên lửa
 
     // camera
     const lead = Math.max(rockets[0].vis, rockets[1].vis) / L, trail = Math.min(rockets[0].vis, rockets[1].vis) / L;
-    const cp = cfg.camera({ t: G.t, lead, trail, phase: G.phase, rockets, L });
+    const cp = cfg.camera({ t: G.t, lead, trail, phase: G.phase, rockets, L, wide: !!G.wideCam });   // Đợt 407: wide = đang/vừa bắn tên lửa
     if (G.phase === "intro") {
       introT += dt;
       const k = easeInOut(Math.min(1, introT / (cfg.introSecs ?? 3.2)));
@@ -2297,6 +2314,7 @@ export async function createView(cfg) {
     // --- bàn thử ---
     tapStart() { if (startBtn) onTap(startBtn); },
     tap(side, k) { const c = consoles[side]; if (c && c.tiles[k]) onTap(c.tiles[k]); },
+    missileTap(side, kind = "fire") { if (MS && G.phase === "play" && !G.paused) MS.tap({ side, kind }); },   // bàn thử Đợt 407: chạm tên lửa / BOOST
     step(n = 1, dt = 1 / 60) { manual = true; for (let i = 0; i < n; i++) tick(dt); },
     strike(side) { meteorStrike(rockets[side], 1, 3); const m = meteors[meteors.length - 1]; const f = v => { const q = v.clone().project(camera); return [+q.x.toFixed(2), +q.y.toFixed(2)]; }; return { start: f(m.start), target: f(new V3().setFromMatrixPosition(rockets[side].ship.matrixWorld)), sameMat: m.line.material === dust.material }; },   // bàn thử Đợt 397: một nhát tia sáng kết trận
     dodgeInfo() { return { k: +dodgeK.toFixed(2), rocks: dodgeRocks.length, cam: camMode, dg: rockets.map(r => r.dg ? [+r.dg.x.toFixed(2), +r.dg.y.toFixed(2)] : null) }; },   // bàn thử Đợt 397
@@ -2311,6 +2329,7 @@ export async function createView(cfg) {
     },
     unsnap() { document.getElementById("__snap")?.remove(); },
     rockets, camera,
+    missile: MS ? MS.api : null,               // Đợt 407: setArsenal/chargeFx/loadFx/launch/dodge/incoming/clearAll/refuse/setWide
     get state() { return G; }
   };
 }

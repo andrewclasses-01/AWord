@@ -356,6 +356,100 @@ function rr3dFallback(st, err) {
 // ⇒ Trận dựng lại VÌ Apply Options thì BỎ cảnh phóng: cảnh đua hiện ngay với nút START 3D của nó (đếm 3-2-1).
 // Mở trận lần đầu / Start again vẫn có cảnh phóng như cũ. Cờ sống 4 s để không lọt sang một lần dựng khác.
 let rr3dQuickUntil = 0;
+
+// =========================================================
+// ⭐⭐ Đợt 407 (thầy 27/9/2026, duyệt MẪU 6c ở myGame) — TÊN LỬA TẤN CÔNG giữa 2 tàu (chỉ trận 3D; 2D dự phòng không có).
+//   · đúng 3 câu LIÊN TIẾP = +1 tên lửa (cả kho tối đa 3; đủ 3 thì không tích) · quả đầu tự LÊN NÒNG (tay robot đưa ra nóc tàu)
+//   · CHẠM tên lửa dưới cột đáp án = bắn ⇒ góc nhìn rộng, quả vòng lên rồi lao thẳng xuống tàu địch (~3,8 s)
+//   · trúng ⇒ tàu địch lùi N nấc — Options "Missile": Off (không dựng gì) · 1–10 · ∞ (về vạch xuất phát). Mặc định 2.
+//   · NÉ trong 1,5 s cuối: trả lời ĐÚNG (vọt lên) · bấm BOOST (vọt lên, không cộng nấc) · trả lời SAI mà Points off
+//     làm tàu LÙI thật (giật lùi). BOOST: 5 câu liên tiếp, giữ tối đa 1, dùng xong phải đủ 5 câu liên tiếp nữa.
+//   · chỉ câu SAI làm đứt chuỗi (bị đội kia giành câu trước không tính) · TURBO trang trí giữ nguyên.
+//   · KHOÁ khi Sudden death hoặc đã phân thắng thua; quả đang bay nổ giữa đường.
+//   · góc rộng tắt ở câu trả lời KẾ TIẾP sau khi tên lửa đánh xong (trúng/hụt), rồi luật camera cũ tự xét.
+// Vị trí tàu (nấc) đổi vì tên lửa — KHÔNG đổi điểm của trọng tài (Fight thắng bằng về đích, điểm ẩn).
+// =========================================================
+const MS_WINDOW = 1.5, MS_STREAK = 3, MS_BOOST_STREAK = 5, MS_MAX = 3, MS_DEFAULT = 2, MS_INF = 11;
+function missilePushOf(opt) {
+  const v = opt ? opt.rrMissile : undefined;
+  if (v == null || v === "") return MS_DEFAULT;
+  const n = Math.round(Number(v));
+  if (!Number.isFinite(n)) return MS_DEFAULT;
+  return n >= MS_INF ? Infinity : Math.max(0, Math.min(10, n));
+}
+function msLocked() { const sc = rrFightScene; return !!(sc && (sc.decided || sc.sudden)); }
+function msLater(st, fn, ms) { const t = setTimeout(() => { if (!st.dead && rr3d === st) fn(); }, ms); st.offs.push(() => clearTimeout(t)); }
+function msTotal(a) { return a.reserve + (a.loaded ? 1 : 0); }
+function msSync(st, side) {
+  if (!st.ms) return;
+  const a = st.ms[side], locked = msLocked();
+  v3(v => v.missile && v.missile.setArsenal(side, { on: true, reserve: a.reserve, loaded: a.loaded, pips: a.ms, pipsMax: MS_STREAK,
+    full: msTotal(a) >= MS_MAX, boost: a.boost, boostPips: a.bs, boostMax: MS_BOOST_STREAK, locked }));
+}
+function msIncoming(side) { const v = rr3d && rr3d.view; return v && v.missile ? v.missile.incoming(side) : Infinity; }
+function msLoad(st, side) {
+  const a = st.ms[side];
+  if (a.loaded || a.reserve <= 0 || msLocked()) return;
+  a.reserve--; a.loaded = true; msSync(st, side);
+  v3(v => v.missile && v.missile.loadFx(side));
+}
+// bàn `side` vừa trả lời ĐÚNG (sau khi tàu đã tiến)
+function msCorrect(side) {
+  const st = rr3d; if (!st || !st.ms || msLocked()) return;
+  if (msIncoming(side) <= MS_WINDOW) v3(v => v.missile.dodge(side));
+  const a = st.ms[side];
+  if (msTotal(a) < MS_MAX) {
+    if (++a.ms >= MS_STREAK) {
+      a.ms = 0; a.reserve++;
+      msLater(st, () => { if (!msLocked()) v3(v => v.missile.chargeFx(side)); }, 450);   // sau nhịp TURBO ⇒ không chồng hiệu ứng
+      if (!a.loaded) msLater(st, () => msLoad(st, side), 1500);
+    }
+  } else a.ms = 0;
+  if (!a.boost) { if (++a.bs >= MS_BOOST_STREAK) { a.bs = 0; a.boost = true; } } else a.bs = 0;
+  msSync(st, side);
+}
+// bàn `side` vừa trả lời SAI; `retreated` = Points off làm tàu lùi THẬT
+function msWrong(side, retreated) {
+  const st = rr3d; if (!st || !st.ms) return;
+  const a = st.ms[side];
+  a.ms = 0; a.bs = 0; msSync(st, side);
+  if (retreated && !msLocked() && msIncoming(side) <= MS_WINDOW) v3(v => v.missile.dodge(side, { back: true }));
+}
+// mỗi câu trả lời (bất kỳ bàn): đã đánh xong ⇒ trả máy quay về góc cũ
+function msAnswered() {
+  const st = rr3d, v = st && st.view;
+  if (!st || !st.ms || !v || !v.missile || !st.msWideReady) return;
+  if (v.missile.wide && v.missile.flights.every(f => f.passed || f.dodged)) { v.missile.setWide(false); st.msWideReady = false; }
+}
+function msFire(side) {
+  const st = rr3d; if (!st || !st.ms) return;
+  const a = st.ms[side], v = st.view;
+  if (!v || !v.missile || msLocked() || !a.loaded || v.phase !== "play") { if (v && v.missile) v.missile.refuse(side, "fire"); return; }
+  a.loaded = false; msSync(st, side);
+  v.missile.launch(side, 1 - side);
+  st.msWideReady = false;
+  if (a.reserve > 0) msLater(st, () => msLoad(st, side), 900);
+}
+function msBoost(side) {
+  const st = rr3d; if (!st || !st.ms) return;
+  const a = st.ms[side], v = st.view;
+  if (!v || !v.missile || msLocked() || !a.boost || !(msIncoming(side) <= MS_WINDOW)) { if (v && v.missile) v.missile.refuse(side, "boost"); return; }
+  if (v.missile.dodge(side)) { a.boost = false; msSync(st, side); }
+}
+function msEnd(to, res) {
+  const st = rr3d; if (!st || !st.ms) return;
+  st.msWideReady = true;
+  if (res !== "hit" || msLocked()) return;
+  const b = st.boards[to];
+  if (b && b.missileHit) b.missileHit(st.msPush);
+}
+// Sudden death / phân thắng thua ⇒ khoá ô bắn + BOOST, quả đang bay nổ giữa đường
+function msOver(keepWide) {
+  const st = rr3d; if (!st || !st.ms) return;
+  [0, 1].forEach(side => msSync(st, side));
+  v3(v => { if (!v.missile) return; v.missile.clearAll(); if (!keepWide) v.missile.setWide(false); });
+}
+
 function rr3dScene({ root, ctl, title, play }) {
   const quick = performance.now() < rr3dQuickUntil;
   rr3dQuickUntil = 0;
@@ -376,7 +470,11 @@ function rr3dScene({ root, ctl, title, play }) {
   try {
     const a = ctl && ctl.matchAct && ctl.matchAct();
     st.voiceAct = !!(a && (a.content?.questions || []).some(q => q && voiceView(a, q).hideText));
+    st.msPush = missilePushOf(a && a.options);       // ⭐ Đợt 407 — Options "Missile" (Off = không dựng tên lửa)
   } catch { /* bàn sẽ tự báo khi mount */ }
+  if (st.msPush == null) st.msPush = MS_DEFAULT;
+  st.ms = st.msPush > 0 ? [0, 1].map(() => ({ reserve: 0, loaded: false, ms: 0, bs: 0, boost: false })) : null;
+  st.msWideReady = false;
   rrSound.quiet = true;                       // tiếng tổng hợp cũ im — bộ tiếng 3D thay
   console.log("MYACT:3D:ON");                // ⭐ Đợt 399: myActivity v2.23.0 tạm lặng hiệu ứng nền (sao lấp lánh) nhường card đồ hoạ
   const wrap = root.closest(".aw-fight");
@@ -391,6 +489,9 @@ function rr3dScene({ root, ctl, title, play }) {
       onTap: (side, k) => { const b = st.boards[side]; if (b) b.choose(k); },
       // Đợt 405 — chạm thanh câu hỏi = nghe lại voice (null = một câu chung ⇒ bàn 0 phát)
       onQuestionTap: side => { const b = st.boards[side == null ? 0 : side]; if (b && b.replayVoice) b.replayVoice(); },
+      // ⭐ Đợt 407 — tên lửa: Off ⇒ view không dựng gì (bố cục như cũ)
+      missiles: st.ms ? { window: MS_WINDOW, dur: 3.8 } : false,
+      onFire: side => msFire(side), onBoost: side => msBoost(side), onMissileEnd: (to, res) => msEnd(to, res),
       sfx: (n, v) => st.sfx && st.sfx.play(n, v),
       loop: (n, on, v, f) => st.sfx && st.sfx.loop(n, on, v, f),
       swell: (n, a, b, u, d) => st.sfx && st.sfx.swell(n, a, b, u, d) });
@@ -398,7 +499,8 @@ function rr3dScene({ root, ctl, title, play }) {
     if (!view) return;
     if (st.dead) { view.destroy(); return; }
     st.view = view;
-    window.__rr3d = st;                       // bàn thử: __rr3d.view.step()/snap() khi khung xem trước bị ẩn
+    window.__rr3d = st;
+    if (st.ms) [0, 1].forEach(side => msSync(st, side));   // Đợt 407                       // bàn thử: __rr3d.view.step()/snap() khi khung xem trước bị ẩn
     const q = st.pending.splice(0);
     q.forEach(fn => { try { fn(view); } catch (e) { console.warn("[rocket-race 3D]", e); } });
     if (quick) { try { view.resume(); view.showStart(); } catch { /* ignore */ } }   // Đợt 406: Apply Options ⇒ không cảnh phóng
@@ -609,7 +711,7 @@ function rr3dResult(st, { winner, scores, reviews, again }) {
   const old = st.root.querySelector(".aw-rr3d-result"); if (old) old.remove();
   if (st.view) { try { st.view.resultView(); } catch { /* ignore */ } }
   const TEAM = ["TEAM LEFT", "TEAM RIGHT"];
-  const COL = ["#3b8cff", "#ffc21a"];   // Đợt 398: đội 2 VÀNG (đỏ dễ nhầm với ô sai)
+  const COL = ["#3b8cff", "#ff7a00"];   // Đợt 407 (thầy): đội 2 CAM ĐẬM (vàng khó nhìn; Đợt 398: đỏ dễ nhầm với ô sai)
   const hud = el("div", "aw-rr3d-result");
   const card = el("div", "aw-rr3d-rescard");
   const title = el("div", "aw-rr3d-restitle");
@@ -682,7 +784,7 @@ function RR3D_CFG(V) {
   const lerp = (a, b, t) => a + (b - a) * t;
   const Z0 = 0, Z1 = -64, NOSE = 2.9, GAP_HIGH = 3, LAST_STEPS = 3, CAM_SECS = 3.2;
   const EDGE = 0.3, CON_W = 17.5, CON_H = 33;
-  let camK = 0, camLastT = 0;
+  let camK = 0, camLastT = 0, wideK = 0;
   return {
     quality: "high", maxFps: 60, fov: 38, steps: 5, lives: 0, uiDepth: 9, rocketScale: 1.1, bannerY: 0.35, startY: 0.5, startCm: [22, 7],
     maxTiles: 6,
@@ -718,16 +820,30 @@ function RR3D_CFG(V) {
       const x = i === 0 ? -2.3 : 2.3;
       return { pos: P(x + Math.sin(time * 0.6 + i * 2) * 0.25, Math.sin(time * 0.9 + i) * 0.15, lerp(Z0, Z1, t)), dir: P(Math.cos(time * 0.6 + i * 2) * 0.03, 0, -1) };
     },
-    camera({ t, trail, rockets, L }) {
+    camera({ t, trail, rockets, L, wide }) {
       const dt = Math.max(0, Math.min(0.1, t - camLastT)); camLastT = t;
       const zc = lerp(Z0, Z1, Math.min(1, trail));
       const p0 = rockets[0].p, p1 = rockets[1].p;
-      const want = (Math.abs(p0 - p1) >= GAP_HIGH || Math.max(p0, p1) >= L - LAST_STEPS) ? 1 : 0;
-      camK += Math.max(-dt / CAM_SECS, Math.min(dt / CAM_SECS, want - camK));
+      // Đợt 407: bắn tên lửa ⇒ góc RỘNG (chuyển nhanh 1,1 s để kịp thấy quả vòng lên + lao xuống)
+      const want = (wide || Math.abs(p0 - p1) >= GAP_HIGH || Math.max(p0, p1) >= L - LAST_STEPS) ? 1 : 0;
+      const secs = wide && want > camK ? 1.1 : CAM_SECS;
+      camK += Math.max(-dt / secs, Math.min(dt / secs, want - camK));
       const k = camK * camK * (3 - 2 * camK);
       const chase = { pos: P(Math.sin(t * 0.21) * 0.6, 3.3 + Math.sin(t * 0.33) * 0.2, zc + 16.5), look: P(0, 0.1, zc - 14) };
       const zA = zc + 5, zB = Z1 - 8, zMid = (zA + zB) / 2, D = (zA - zB) * 1.05 + 8;
       const high = { pos: P(D * 0.8 + Math.sin(t * 0.15) * 1.2, D * 0.5, zMid), look: P(0, -1, zMid) };
+      // Đợt 407: góc RỘNG của tên lửa — vừa khít 2 tàu + đỉnh vòng bay, nhìn chéo từ trên cao phía sau-bên (2 làn tách rõ).
+      // ⛔ Dùng toàn cảnh cũ thì tàu nhỏ xíu, nằm sau bàn đáp án bên trái (đã thử ở myGame mẫu 6b).
+      wideK += Math.max(-dt / 1.1, Math.min(dt / 1.1, (wide ? 1 : 0) - wideK));
+      if (wideK > 0.001) {
+        const z0 = lerp(Z0, Z1, Math.min(1, rockets[0].vis / L)), z1 = lerp(Z0, Z1, Math.min(1, rockets[1].vis / L));
+        const span = Math.abs(z0 - z1), Hm = 9 + span * 0.18, zm = (z0 + z1) / 2;
+        const Dw = 15 + span * 0.85 + Hm * 0.7;
+        const look = P(0, Hm * 0.32, zm - 1), dir = P(0.62, 0.55, 0.56).normalize();
+        const wpos = look.clone().addScaledVector(dir, Dw).add(P(Math.sin(t * 0.15) * 0.6, 0, 0));
+        const w = wideK * wideK * (3 - 2 * wideK);
+        high.pos.lerp(wpos, w); high.look.lerp(look, w);
+      }
       return { pos: chase.pos.lerp(high.pos, k), look: chase.look.lerp(high.look, k), mode: camK < 0.02 ? "chase" : "high" };
     },
     layout(_s, _z, _a, U) {
@@ -929,7 +1045,18 @@ const rocketRaceTemplate = {
     // go looking for it. It is now its OWN button on the toolbar row between
     // Options and Mode (declared by `fightScreen` below, drawn by core/engine.js),
     // where a lit button says "on" without anyone opening a panel at all.
-    if (inFight) { panel.append(lives.cell); return; }
+    if (inFight) {
+      // ⭐ Đợt 407 — tên lửa: trúng thì lùi mấy nấc. 0 = tắt hẳn, 11 = ∞ (về vạch xuất phát). Chưa chỉnh = 2.
+      const push = missilePushOf(draft);
+      const missile = mkSliderCell({
+        label: "Missile", min: 0, max: MS_INF, step: 1, value: push === Infinity ? MS_INF : push, tone: "red", offAt: 0,
+        fmt: v => (v === 0 ? "Off" : v >= MS_INF ? "∞" : "−" + v),
+        onInput: v => { draft.rrMissile = v; }
+      });
+      missile.cell.title = "3 correct in a row = 1 missile. A hit pushes the other rocket back (∞ = to the start line). 0 = off";
+      panel.append(lives.cell, missile.cell);
+      return;
+    }
 
     const mode = mkCell({ label: "Mode" });
     mode.ctl.append(mkSeg(
@@ -1101,7 +1228,15 @@ const rocketRaceTemplate = {
     // ⭐ Đợt 392 — trận 3D: bàn này nhận cú chạm ô từ cảnh 3D (raycast) qua đúng choose() cũ
     const on3d = !!(fightCtl && rr3d && rr3d.ctl === fightCtl);
     if (on3d) {
-      rr3d.boards[fightSide] = { choose: k => choose(k), stopClock: () => ui.stopTimer?.(), replayVoice: () => replayVoice() };
+      rr3d.boards[fightSide] = { choose: k => choose(k), stopClock: () => ui.stopTimer?.(), replayVoice: () => replayVoice(),
+        // ⭐ Đợt 407 — tàu bàn này trúng tên lửa: lùi N nấc (∞ = về vạch xuất phát), không đổi điểm trọng tài
+        missileHit: push => {
+          if (dead || !scene || scene.decided || !player) return;
+          const n = push === Infinity ? player.p : Math.min(push, player.p);
+          if (n <= 0) return;
+          retreatRocket(player, n); fightRepaint();
+          const side = fightSide, p = player.p; v3(v => v.move(side, p, "back", n));
+        } };
       if (voiceAct && !rr3d.voiceAct) {
         rr3d.voiceAct = true;
         if (rr3d.sfx) rr3d.sfx.lockBg(true);
@@ -1633,7 +1768,7 @@ const rocketRaceTemplate = {
       ui.roundDone?.();
       tiles.forEach(t => (t.tile.disabled = true));
       const tile = tiles[i].tile;
-      if (on3d) { const side = fightSide; v3(v => v.pick(side, i)); }
+      if (on3d) { const side = fightSide; v3(v => v.pick(side, i)); msAnswered(); }   // Đợt 407: câu kế tiếp sau khi tên lửa đánh xong ⇒ về góc cũ
       if (fightCtl) {
         // FIGHT: every visual that says WHICH answer was right is withheld until
         // the referee says the round is settled (the rocket moving says only
@@ -1680,6 +1815,7 @@ const rocketRaceTemplate = {
         if (mover.done) return;   // Đợt 382 — over the line: raceWon owns the screen now
         // the referee turns the round over; turbo is the one flourish kept
         if (streak >= TURBO_STREAK && performance.now() >= turboUntil) { startTurbo("TURBO!"); if (on3d) { const side = fightSide; v3(v => v.turbo(side)); } }
+        if (on3d) msCorrect(fightSide);     // Đợt 407: né (1,5 s cuối) + chuỗi nạp tên lửa / BOOST
         return;
       }
       if (teamsMode) {
@@ -1699,6 +1835,7 @@ const rocketRaceTemplate = {
     }
 
     function onWrong(q, st, tileEl) {
+      let wrongRetreated = false;
       st.wrong.push(st.answeredWith || "");
       streak = 0;
       rrSound.wrong();
@@ -1713,8 +1850,10 @@ const rocketRaceTemplate = {
         // referee's (winner, end panel). "−N" floats up from the rocket itself.
         penalty += pointsOff;
         ui.setScore(scoreNow());
+        const pBefore = mover.p;
         retreatRocket(mover, pointsOff);
         if (on3d) { const side = mover.id, p = mover.p, n = pointsOff; v3(v => v.move(side, p, "back", n)); }
+        wrongRetreated = mover.p < pBefore;   // Đợt 407: lùi THẬT ⇒ có thể né tên lửa
       } else if (pointsOff) ui.flyPenalty?.(tileEl, pointsOff, () => { penalty += pointsOff; return scoreNow(); });
 
       if (shield && !teamsMode && !fightCtl) {
@@ -1727,6 +1866,7 @@ const rocketRaceTemplate = {
       }
       stallRocket(mover);
       if (on3d) { const side = mover.id; v3(v => v.stall(side)); }
+      if (on3d) msWrong(fightSide, wrongRetreated);   // Đợt 407: đứt chuỗi; sai-bị-lùi trong 1,5 s cuối ⇒ né
       if (fightCtl) { fightRepaint(true); fightLoseLife(); return; }     // the referee decides what happens next
       if (loseLife()) return;   // game over ends everything
       later(nextQuestion, STALL_MS + 200);
@@ -2045,6 +2185,7 @@ const rocketRaceTemplate = {
       if (on3d && rr3d.view) { try { holdMs = Math.max(RACE_END_HOLD_MS, rr3d.view.win(w.id, { loserDown: !!loserAlreadyDown }) + 300); } catch (e) { console.warn(e); } }
       // Đợt 393 — trận đã phân thắng thua: đồng hồ trận dừng (trước đây vẫn chạy trên bảng kết quả)
       if (on3d) rr3d.boards.forEach(b => { try { b && b.stopClock && b.stopClock(); } catch { /* ignore */ } });
+      if (on3d) msOver(false);             // Đợt 407: khoá tên lửa, quả đang bay nổ giữa đường
       if (typeof fightCtl.finishRace === "function") fightCtl.finishRace(w.id, holdMs);
       else if (loser && typeof fightCtl.forfeit === "function") fightCtl.forfeit(loser.id);
       locked = true;
@@ -2078,6 +2219,7 @@ const rocketRaceTemplate = {
       if (typeof fightCtl.suddenDeath !== "function") return false;
       if (!scene.sudden || side == null) showBanner("SUDDEN DEATH!", "is-turbo", 1300);
       scene.sudden = true;
+      if (on3d) msOver(true);              // Đợt 407: Sudden death ⇒ khoá tên lửa
       return fightCtl.suddenDeath(side == null ? [0, 1] : [side]) !== false;
     }
     function renderLives() {

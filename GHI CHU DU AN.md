@@ -546,6 +546,48 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 407 (27/9/2026) — ROCKET RACE ▸ FIGHT 3D: TÊN LỬA TẤN CÔNG giữa 2 tàu + đội 2 CAM ĐẬM · ⬜ CHƯA PUSH (ghi lúc commit) · ⬜ CHƯA BẤM TAY TOMKO
+
+**Yêu cầu thầy (26–27/9):** thêm cơ chế tấn công lẫn nhau giữa 2 tàu; đội vàng khó nhìn ⇒ cam. Thiết kế qua 3 lượt AskUserQuestion +
+4 bản mẫu ở kho myGame (mẫu 6 → 6b → 6c, `E:\LAP TRINH APP\myGame\rocket-race\`, GHI CHU myGame Chặng 15–17). Thầy test 6c:
+"ok, dùng cam đậm, ghép vào AWord".
+
+**Luật (chỉ trận 3D; 2D dự phòng không có):**
+- đúng 3 câu LIÊN TIẾP = +1 tên lửa (cả kho tối đa 3; đủ 3 thì chuỗi không tích) — năng lượng đỏ hút vào tàu, bùng, chữ MISSILE +1.
+- quả đầu tự LÊN NÒNG: cửa khoang (cắt theo đúng vỏ tàu) mở, 2 cánh tay robot đưa quả đỏ lên gắn sát + song song nóc tàu, cửa đóng lại.
+- dưới cột đáp án (KHÔNG khung): quả to đã lên nòng + ≤ 2 quả nhỏ dự phòng; chưa có ⇒ bóng mờ. CHẠM vùng đó = bắn.
+- bắn ⇒ góc nhìn RỘNG (vừa 2 tàu + đỉnh vòng), quả vòng LÊN rồi lao THẲNG XUỐNG tàu địch (~3,8 s), còi bíp dồn dập 1,5 s cuối,
+  khung đỏ nhấp nháy quanh cột đáp án đội bị bắn. Góc rộng tắt ở câu trả lời KẾ TIẾP sau khi tên lửa đánh xong, rồi luật camera cũ tự xét.
+- trúng ⇒ tàu địch lùi N nấc. **Options "Missile"** (mới, chỉ trong trận, đỏ): Off (không dựng gì, bố cục như cũ) · 1–10 · ∞ (về vạch xuất phát). Chưa chỉnh = 2.
+- NÉ trong 1,5 s cuối: trả lời ĐÚNG (vọt lên) · bấm BOOST (vọt lên rồi về chỗ, KHÔNG cộng nấc) · trả lời SAI mà Points off làm tàu LÙI THẬT (giật lùi).
+  Tàu ở vạch xuất phát không lùi được ⇒ không né. Né ⇒ quả lao hụt thêm ~0,8 s rồi nổ.
+- BOOST = dải cyan bo tròn (không khung, không chữ) dài dần theo số câu đúng liên tiếp; đủ 5 ⇒ đầy = có BOOST (giữ tối đa 1; dùng xong phải đủ 5 câu nữa).
+- chỉ câu SAI làm đứt chuỗi (bị đội kia giành câu trước KHÔNG tính) · TURBO trang trí giữ nguyên (hiệu ứng nạp chạy sau TURBO 0,45 s).
+- KHOÁ khi Sudden death hoặc đã phân thắng thua; quả đang bay nổ giữa đường.
+- Tên lửa đổi VỊ TRÍ tàu (nấc), KHÔNG đổi điểm của trọng tài (Fight thắng bằng về đích, điểm ẩn).
+
+**Việc đã làm (chỉ `templates/rocket-race/`, KHÔNG sửa core):**
+- `rr3d-missile.js` MỚI = chép nguyên myGame `game6c/rr3d-missile.js` (không import gì; THREE + particles + explosion lấy từ view).
+- `rr3d-view.js`: `createMissiles(ctx)` dựng sẵn trước `warmBoom` (shader biên dịch sẵn) · `cfg.missiles === false` ⇒ không dựng ·
+  bàn: tên lửa + BOOST dưới cột, ô chữ dài không mọc xuống nữa (co chữ) · chạm `userData.ammo` ⇒ `MS.tap` · `poseRocket` (vọt/giật né) ·
+  `cfg.camera({ wide })` · `explosion(pos, sc)` · `view.missile` API (setArsenal/chargeFx/loadFx/launch/dodge/incoming/clearAll/refuse/setWide) ·
+  bàn thử `view.missileTap(side, "fire"|"boost")` · đội 2 `#ff7a00`.
+- `rocket-race.js`: khối luật `ms*` (module, trạng thái ở `rr3d.ms`) · `rr3dScene` đọc `matchAct().options.rrMissile` · `RR3D_CFG.camera`
+  góc rộng riêng (`wideK`; ⛔ toàn cảnh cũ làm tàu nhỏ xíu nằm sau bàn trái) · bàn đăng ký `missileHit` (retreatRocket + move back) ·
+  `onCorrect` → `msCorrect`, `onWrong` → `msWrong(retreated)`, `choose` → `msAnswered`, `raceWon` / Sudden death → `msOver` ·
+  `buildExtraOptions` inFight thêm thanh Missile · màn kết đội 2 cam đậm.
+- Tiếng: `sfx/mcharge|mload|mlaunch|mwarn|mdodge.mp3` (tự tổng hợp — myGame `tools/tao-am-thanh-6.py`) + `rr3d-sfx.js` NAMES/BASE + `sfx/NGUON AM THANH.md`.
+
+**Đã kiểm (bàn thử `templates/rocket-race/test.html` + `startFight`, cảnh phóng thật → skipTo → trận, 1280×720, Different, Points off 1):**
+đúng 3 câu ⇒ quả lên nòng · `missileTap(0)` ⇒ bay, góc rộng bật · trúng ⇒ đội 2 lùi 2 → 0 · câu trả lời kế tiếp ⇒ góc rộng tắt ·
+đội 2 bắn, đội 1 trả lời đúng khi còn 0,89 s ⇒ né, không bị lùi · về đích ⇒ khoá cả 2 kho, không bắn được nữa · Missile = 0 ⇒ `view.missile`
+null, không dựng · Options trận có thanh MISSILE · `sinh-preload --check` KHỚP · 0 lỗi console.
+⚠️ Bàn thử: khung trình duyệt bị ẨN thì WebGL báo `getProgramInfoLog(...).trim` null (cả cảnh phóng cũ cũng vậy) — phải cho khung hiện.
+
+**Chưa làm / chờ:** ⬜ thầy bấm tay TOMKO (chạm tên lửa / BOOST bằng ngón tay, nghe 5 tiếng mới, 2 đội bắn cùng lúc, Same words + Sudden death).
+
+---
+
 ## Đợt 406 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D: bỏ chữ LIFTOFF · Apply Options không chạy lại cảnh phóng · chạm ĐÚP để tua intro · ✅ ĐÃ PUSH `5a56068` + LIVE 6/6 mã băm · ⬜ CHƯA BẤM TAY TOMKO
 
 **Yêu cầu thầy (26/9):** (1) bỏ chữ LIFT OFF khi phóng tàu; (2) mỗi lần chỉnh Options đều khởi động lại toàn bộ game khá lâu —

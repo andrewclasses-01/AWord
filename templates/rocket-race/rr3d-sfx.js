@@ -12,11 +12,13 @@
 // =============================================================
 
 const NAMES = ["ambient", "engine", "fire", "boost", "stall", "hit1", "hit2", "hit3", "boom", "boomlow",
-  "turbo", "tap", "gate", "portal", "win", "whoosh", "ting", "tinggo"];
+  "turbo", "tap", "gate", "portal", "win", "whoosh", "ting", "tinggo",
+  "mcharge", "mload", "mlaunch", "mwarn", "mdodge"];     // Đợt 407: tên lửa (myGame tools/tao-am-thanh-6.py)
 const BG = new Set(["ambient"]);                 // còn lại đều là Effect
 // Âm lượng gốc từng tiếng (chỉnh tương quan với nhau)
 const BASE = { ambient: 0.45, engine: 0.32, fire: 0.55, boost: 0.8, stall: 0.85, hit1: 0.95, hit2: 0.95, hit3: 0.95,
-  boom: 1, boomlow: 0.8, turbo: 1, tap: 0.45, gate: 0.8, portal: 0.75, win: 0.8, whoosh: 0.75, ting: 0.6, tinggo: 0.7 };
+  boom: 1, boomlow: 0.8, turbo: 1, tap: 0.45, gate: 0.8, portal: 0.75, win: 0.8, whoosh: 0.75, ting: 0.6, tinggo: 0.7,
+  mcharge: 0.9, mload: 0.75, mlaunch: 0.95, mwarn: 0.45, mdodge: 0.9 };
 const KEY = "aw-rr3d-sound";
 
 export function readSoundPrefs() {
