@@ -1,5 +1,10 @@
 # GHI CHÚ WORDSHAKE — template #21 + game cố định trong GAMES
 
+## ⭐ Đợt 404 (26/9/2026) — Fight Mode 1: bàn thua hiện từ đúng của đội kia
+- Móc core `reveal()` (gọi cả 2 bàn khi vòng ngã ngũ) → `m1Reveal()`: bàn chưa giải + đội kia có từ trong `S.log` ⇒ `M1.given`,
+  ô `.is-given` chữ TRẮNG (bàn thua bị core `grayscale`), rơi từng chữ 70 ms; hẹn giờ xoá-sau-sai thoát nếu đã điền. Không ai
+  giải / hoà ⇒ không lộ. Đo: SUNNY/WINDY hiện đúng trên bàn thua, câu mới ô trống lại, 0 lỗi. ⬜ TOMKO.
+
 ## ⭐ Đợt 403 (26/9/2026) — rà 11 mục (chi tiết bảng ở GHI CHU DU AN.md chặng Đợt 403)
 - **Chơi đơn KHÔNG còn bình** (thầy: ✓ ở góc là đủ): `singleTank`/`.aw-ws-toptank` xoá; Score tank = chỉ Fight.
 - Fight: `placeDown` đo lại qua `ResizeObserver` (⛶/xoay iPad), `downScale` ≤ 75 % bàn; bảng kết quả giữa ẩn hàng số, thêm

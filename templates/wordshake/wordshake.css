@@ -58,6 +58,13 @@
 .aw-ws-slots.is-good .aw-ws-slot.is-full{background:#3DF58A;color:#03150C;text-shadow:none;box-shadow:0 0 calc(1.8 * var(--aw-u)) rgba(61,245,138,.8)}
 .aw-ws-slots.is-bad .aw-ws-slot.is-full{border-color:#FF4B5C;color:#FF4B5C;text-shadow:0 0 calc(1 * var(--aw-u)) rgba(255,75,92,.8)}
 .aw-ws-slots.is-bad{animation:aw-ws-shake .35s}
+/* ⭐ Đợt 404 — Fight Mode 1: the word the OTHER team made, shown on the board that lost it.
+   White (the core greys the losing board — white stays the brightest thing on it), each
+   letter dropping in a beat after the one before. */
+.aw-ws-slot.is-given,.aw-ws-root.is-side-1 .aw-ws-slot.is-given{border:2px solid #fff;background:rgba(255,255,255,.14);color:#fff;
+  text-shadow:0 0 calc(1.4 * var(--aw-u)) rgba(255,255,255,.9);box-shadow:0 0 calc(1.6 * var(--aw-u)) rgba(255,255,255,.45);
+  animation:aw-ws-given .42s cubic-bezier(.3,1.4,.5,1) var(--d,0ms) both}
+@keyframes aw-ws-given{0%{opacity:0;transform:translateY(-40%) scale(.6)}100%{opacity:1;transform:none}}
 @keyframes aw-ws-shake{0%,100%{transform:translateX(0)}25%,75%{transform:translateX(calc(-1 * var(--aw-u)))}50%{transform:translateX(var(--aw-u))}}
 .aw-ws-grid1{--cols:6;display:grid;grid-template-columns:repeat(var(--cols),auto);gap:calc(1 * var(--aw-u))}
 

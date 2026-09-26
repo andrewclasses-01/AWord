@@ -675,7 +675,8 @@ const wordshakeTemplate = {
     // =============================================================
     // MODE 1 — one word at a time
     // =============================================================
-    const M1 = { i: 0, board: [], slots: [], state: "" };
+    // given: the index of the word the OTHER team made that this board now shows (Đợt 404)
+    const M1 = { i: 0, board: [], slots: [], state: "", given: -1 };
     function m1Deal() {
       const it = items[M1.i];
       let L;
@@ -688,9 +689,11 @@ const wordshakeTemplate = {
       }
       M1.board = shuffle(L).map(ch => ({ ch, used: false }));
       M1.slots = Array(it.up.length).fill(null);
-      M1.state = "";
+      M1.state = ""; M1.given = -1;
     }
-    const slotsHtml = () => M1.slots.map((k, j) => k == null ? `<div class="aw-ws-slot"></div>`
+    const slotsHtml = () => M1.given === M1.i
+      ? items[M1.i].up.split("").map((ch, j) => `<div class="aw-ws-slot is-full is-given" style="--d:${j * 70}ms">${esc(ch)}</div>`).join("")
+      : M1.slots.map((k, j) => k == null ? `<div class="aw-ws-slot"></div>`
       : `<button type="button" class="aw-ws-slot is-full" data-do="slot" data-j="${j}">${esc(M1.board[k].ch)}</button>`).join("");
     const grid1Html = () => M1.board.map((b, k) => tile(b.ch, `data-do="t1" data-k="${k}"`, b.used ? "is-gone" : "")).join("");
     function m1Render() {
@@ -726,7 +729,7 @@ const wordshakeTemplate = {
     function m1Patch() {
       const slots = wrap.querySelector(".aw-ws-slots"), grid = wrap.querySelector(".aw-ws-grid1");
       if (!slots || !grid) return m1Render();
-      slots.className = "aw-ws-slots " + M1.state;
+      slots.className = "aw-ws-slots " + (M1.given === M1.i ? "is-given" : M1.state);
       slots.innerHTML = slotsHtml();
       grid.innerHTML = grid1Html();
     }
@@ -743,10 +746,22 @@ const wordshakeTemplate = {
         } else later(m1Next, 850);
       } else {
         M1.state = "is-bad"; m1Patch(); say("bad");
-        later(() => { M1.board.forEach(b => b.used = false); M1.slots.fill(null); M1.state = ""; locked = false; m1Patch(); }, 650);
+        later(() => { if (M1.given === M1.i) return; M1.board.forEach(b => b.used = false); M1.slots.fill(null); M1.state = ""; locked = false; m1Patch(); }, 650);
       }
     }
     function m1Next() { if (M1.i + 1 >= total) return finish(); M1.i++; m1Deal(); locked = false; m1Render(); sfx.next(); }
+    // ⭐ Đợt 404 (thầy, 26/9/2026) — FIGHT Mode 1: the round is decided (core `reveal()`, called on
+    // BOTH boards) and the OTHER team made the word ⇒ this board's slots show that word, letter
+    // by letter, so the team that lost it can learn it during the hold before the next word
+    // ("2 bên cùng hiện kết quả, 1 bên do điền, 1 bên bị điền"). Nobody made it / a tie ⇒ nothing.
+    function m1Reveal() {
+      if (mode !== "one" || !fctl || !S || dead) return;
+      const it = items[M1.i], s = st[M1.i];
+      if (!it || !s || s.solved || M1.given === M1.i) return;
+      if (!S.log.some(f => f.side !== side && f.w === it.word)) return;
+      M1.given = M1.i; locked = true;
+      m1Patch();
+    }
     function m1Skip() { if (locked) return; m1Next(); }
     function m1Pass() {                      // fight: this team gives the word up
       if (locked || refLocked || !fctl || fctl.isLocked(side)) return;
@@ -962,6 +977,7 @@ const wordshakeTemplate = {
           M1.i = Math.max(0, Math.min(total - 1, i)); m1Deal(); locked = false; m1Render();
         },
         lock(on) { refLocked = !!on; },
+        reveal: () => m1Reveal(),
         review: () => buildReview()
       });
     }

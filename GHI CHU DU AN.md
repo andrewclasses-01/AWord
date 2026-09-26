@@ -546,6 +546,31 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 404 (26/9/2026) — A SHOW SPEED FIGHT Mode 1: bàn THUA hiện từ đúng của đội kia trong ô điền · ⬜ CHƯA BẤM TAY TOMKO
+
+**Yêu cầu thầy (26/9):** trong Fight ở activity, khi một bên tạo xong từ và bên kia bị mất màu (thua, không được điểm câu
+đó) thì trong ô điền của bên không được điểm cũng hiện từ đúng của bên kia cho bên đó học hỏi một chút trước khi chuyển câu
+mới — *"2 bên cùng hiện kết quả, 1 bên do điền, 1 bên bị điền"*.
+
+**Việc đã làm (chỉ `templates/wordshake/`, KHÔNG sửa core):**
+- Dùng móc **`reveal()`** có sẵn trong hợp đồng bàn của core (`revealBoards()` gọi trên CẢ HAI bàn đúng lúc vòng ngã ngũ —
+  sau `silentLose` + khoá bàn thua) — template trước giờ chưa khai móc này. `fctl.attach(side, { …, reveal: () => m1Reveal() })`.
+- `m1Reveal()`: chỉ Mode 1, trong trận; bỏ qua nếu bàn này đã giải được (thắng / hoà) hoặc ĐỘI KIA không có từ này trong `S.log`
+  (không ai làm được ⇒ không lộ gì). Đặt `M1.given = M1.i`, `locked = true`, `m1Patch()`.
+- `slotsHtml()` vẽ từ đúng khi `M1.given === M1.i` (ô `.is-given`, mỗi chữ trễ 70 ms rơi xuống); `m1Patch` giữ class `is-given`;
+  hẹn giờ "xoá ô sau khi sai" (650 ms) thoát sớm nếu từ đã được điền — không thì đội vừa gõ sai ngay trước lúc thua sẽ bị xoá mất từ
+  vừa hiện. `m1Deal()` đặt lại `given = -1` cho câu mới.
+- CSS `.aw-ws-slot.is-given`: viền + chữ TRẮNG phát sáng — core làm bàn thua `grayscale(1)` (không thoát được bộ lọc của cha), nên
+  trắng là màu còn nổi nhất trên bàn xám.
+
+**Đã đo (`templates/wordshake/test.html?mode=one`, Fight):** bàn phải gõ dở 2 chữ, bàn trái giải SUNNY ⇒ bàn trái `is-good`
+SUNNY, bàn phải `is-fight-silentlost` + ô `is-given` SUNNY (2 chữ dở bị thay); đổi chiều: bàn phải giải WINDY ⇒ ảnh chụp bàn trái
+xám với WINDY trắng trong ô điền, bàn phải WINDY xanh; sang câu mới ô trống lại. 0 lỗi console.
+
+**Chưa làm / chờ:** ⬜ thầy bấm tay TOMKO (xem chữ trắng trên bàn xám có đủ rõ, nhịp giữ 2,1 s của core có đủ để HS đọc).
+
+---
+
 ## Đợt 403 (26/9/2026) — A SHOW SPEED: 11 mục rà lại sau Đợt 401–402 (thầy chốt qua hỏi–đáp) · ✅ ĐÃ PUSH `904e1b8` + LIVE 5/5 mã băm · ⬜ CHƯA BẤM TAY TOMKO
 
 **Bối cảnh:** thầy bảo liệt kê mọi vấn đề thấy được trong Đợt 401–402 rồi hỏi dần từng mục. Thầy chốt:
