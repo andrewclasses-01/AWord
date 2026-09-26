@@ -380,6 +380,7 @@ function rr3dScene({ root, ctl, title, play }) {
     window.__rr3d = st;                       // bàn thử: __rr3d.view.step()/snap() khi khung xem trước bị ẩn
     const q = st.pending.splice(0);
     q.forEach(fn => { try { fn(view); } catch (e) { console.warn("[rocket-race 3D]", e); } });
+    rr3dLaunch(st, play);                     // ⭐ Đợt 398: cảnh phóng từ mặt đất phủ lên, hoà cảnh xong mới vào trận
   }).catch(e => { if (!st.dead) rr3dFallback(st, e); });
   return {
     // ⭐ Đợt 393 — core/fight.js hỏi template vẽ bảng kết quả RIÊNG (nổi trên cảnh 3D còn đang chạy)
@@ -387,11 +388,75 @@ function rr3dScene({ root, ctl, title, play }) {
     destroy() {
       st.dead = true;
       st.offs.forEach(f => { try { f(); } catch { /* ignore */ } });
+      try { st.launch && st.launch.destroy(); } catch { /* ignore */ }      // Đợt 398: rời trận giữa cảnh phóng
+      try { st.isnd && st.isnd.end(); } catch { /* ignore */ }
       try { st.view && st.view.destroy(); } catch { /* ignore */ }
       try { st.sfx && st.sfx.stopAll(); } catch { /* ignore */ }
       if (rr3d === st) { rr3d = null; rrSound.quiet = false; }
     }
   };
+}
+
+// =========================================================
+// ⭐ Đợt 398 (thầy 26/9/2026 duyệt MẪU 5b ở myGame: "ghép bản 5b vào AWord thay cho bản cũ") — CẢNH PHÓNG TỪ MẶT ĐẤT
+// phủ lên cảnh đua ở MỌI ván (thầy chọn: Start again / Apply cũng chạy lại). Màn chờ ROCKET RACE + START → tiếng nổ,
+// máy quay bay tới bệ, 3-2-1 (chữ + "túc"), phóng, vút qua, nhảy tốc độ → ĐÚNG đỉnh chớp sáng: cắt tức thì sang cảnh đua
+// (cùng con tàu, cùng chỗ, cùng góc nhìn), gọi play() với `skipCount` ⇒ trận vào THẲNG GO (không đếm lại).
+// Cảnh phóng/tiếng hỏng ⇒ lùi về nút START 3D cũ của cảnh đua (đếm 3-2-1 như trước).
+// =========================================================
+function rr3dLaunch(st, play) {
+  const root = st.root;
+  if (!document.getElementById("aw-rr3d-exo2")) {             // chữ ANDREW STUDIO / ROCKET RACE (mất mạng ⇒ Bahnschrift)
+    const lk = document.createElement("link"); lk.id = "aw-rr3d-exo2"; lk.rel = "stylesheet";
+    lk.href = "https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,800;0,900;1,900&display=swap"; document.head.append(lk);
+  }
+  const layer = el("div", "aw-rr3d-launch"), hud = el("div", "aw-rr3d-lhud"), flash = el("div", "aw-rr3d-flash");
+  const ttl = el("div", "aw-rr3d-ltitle"); ttl.textContent = "ROCKET RACE";
+  const go = el("button", "aw-rr3d-lstart"); go.type = "button"; go.innerHTML = "&#9654;&nbsp; START";
+  const count = el("div", "aw-rr3d-lcount");
+  hud.append(ttl, go, count);
+  root.append(layer, hud, flash);
+  const timers = [];
+  const after = (fn, ms) => timers.push(setTimeout(() => { if (!st.dead) fn(); }, ms));
+  st.offs.push(() => { timers.forEach(clearTimeout); layer.remove(); hud.remove(); flash.remove(); });
+  try { st.view.step(1); } catch { /* ignore */ }             // đóng băng cảnh đua (nằm dưới) tới lúc hoà cảnh
+  const fallback = err => {                                   // không dựng được cảnh phóng ⇒ về START 3D cũ
+    if (st.dead) return;
+    console.warn("[rocket-race] launch scene failed — plain 3D start", err);
+    try { st.launch && st.launch.destroy(); } catch { /* ignore */ }
+    st.launch = null; layer.remove(); hud.remove();
+    try { st.view.resume(); st.view.showStart(); } catch { /* ignore */ }
+  };
+  Promise.all([import("./rr3d-launch.js"), import("./rr3d-intro-sound.js")]).then(async ([L, S]) => {
+    if (st.dead) return;
+    st.isnd = S.createIntroSound(undefined, { prefs: () => (st.sfx ? st.sfx.prefs : { fx: true, bg: true }) });
+    const launch = await L.createLaunch({ container: layer, hull: RR3D_HULL, rocketScale: 1.1, fov: 38,
+      onHandoff: handoff, onTick: s => { if (st.isnd) st.isnd.update(s); } });
+    if (st.dead) { launch.destroy(); return; }
+    st.launch = launch;
+    after(() => ttl.classList.add("on"), 700);
+    after(() => go.classList.add("on"), 1800);
+  }).catch(fallback);
+  const pop = txt => { count.textContent = txt; count.classList.remove("pop"); void count.offsetWidth; count.classList.add("pop"); };
+  press(go, () => {
+    if (!st.launch || !st.launch.start()) return;
+    if (st.isnd) st.isnd.fx("startboom", 0.9);                // bấm START: tiếng nổ tăng tốc
+    hud.classList.add("is-launch");
+    const Lf = st.launch.T.lift;
+    [["3", Lf - 2.7], ["2", Lf - 1.8], ["1", Lf - 0.9], ["LIFTOFF!", Lf]].forEach(([t, at]) => after(() => pop(t), Math.max(0, at) * 1000));
+  });
+  function handoff() {
+    if (st.dead) return;
+    if (st.isnd) st.isnd.end();
+    st.skipCount = true;
+    try { st.view.resume(); } catch { /* ignore */ }
+    const ok = play();                                        // bấm hộ Play bàn 0 ⇒ trận vào thẳng GO
+    if (!ok) { st.skipCount = false; try { st.view.showStart(); } catch { /* ignore */ } }
+    // cắt ngay ĐỈNH chớp sáng: lớp trắng che chỗ nối rồi tan ⇒ tàu cảnh phóng và tàu cảnh đua là MỘT
+    flash.className = "aw-rr3d-flash on"; void flash.offsetWidth; flash.className = "aw-rr3d-flash off";
+    layer.style.display = "none"; hud.remove();
+    after(() => { try { st.launch && st.launch.destroy(); } catch { /* ignore */ } st.launch = null; layer.remove(); }, 300);
+  }
 }
 
 // ⭐ Đợt 394 (thầy): "bấm nút MENU không hiển thị gì" — ☰ Menu của engine được dựng TRONG bàn 0,
@@ -491,7 +556,7 @@ function rr3dResult(st, { winner, scores, reviews, again }) {
   const old = st.root.querySelector(".aw-rr3d-result"); if (old) old.remove();
   if (st.view) { try { st.view.resultView(); } catch { /* ignore */ } }
   const TEAM = ["TEAM LEFT", "TEAM RIGHT"];
-  const COL = ["#3b8cff", "#ff4757"];
+  const COL = ["#3b8cff", "#ffc21a"];   // Đợt 398: đội 2 VÀNG (đỏ dễ nhầm với ô sai)
   const hud = el("div", "aw-rr3d-result");
   const card = el("div", "aw-rr3d-rescard");
   const title = el("div", "aw-rr3d-restitle");
@@ -557,6 +622,7 @@ function rr3dResult(st, { winner, scores, reviews, again }) {
   }
 }
 // Cấu hình cảnh = MẪU 2i thầy duyệt ở myGame (mau-2i-duoi-theo-tomko.html). Cm = cỡ THẬT trên TOMKO 86".
+const RR3D_HULL = { color: "#a9b1bd", roughness: 0.48, clearcoat: 0.35, env: 0.55 };   // chung cho cảnh đua + cảnh phóng (cùng một con tàu)
 function RR3D_CFG(V) {
   const THREE = V.THREE;
   const P = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -568,17 +634,20 @@ function RR3D_CFG(V) {
     quality: "high", maxFps: 60, fov: 38, steps: 5, lives: 0, uiDepth: 9, rocketScale: 1.1, bannerY: 0.35, startY: 0.5, startCm: [22, 7],
     maxTiles: 6,
     // Đợt 397 (thầy): toàn cảnh ⇒ tàu lượn né đá vụn trôi ngược dọc làn (rr3d-view.js applyDodge)
-    dodge: { every: [0.8, 1.7], speed: [9, 13], maxIn: 0.8, maxOut: 1.4 },
+    dodge: { every: [0.8, 1.7], speed: [9, 13], maxIn: 0.8, maxOut: 1.4, rocks: false },   // Đợt 398: bỏ đá, tàu vẫn lượn né
+    portalVanish: true,                       // Đợt 398: tàu thắng biến mất trong cổng đích + loé sáng
     // Đợt 393 (thầy): chữ mở màn "bị to và lố quá" ⇒ nhỏ lại còn ~½ (0.55/0.7 → 0.26/0.34)
-    introTitles: [{ text: "ANDREW CLASSES", at: 0.5, ms: 2300, size: 0.26 }, { text: "ROCKET RACE", at: 3.0, ms: 2300, size: 0.34 }], startAt: 5.4,
+    // Đợt 398: mở màn là CẢNH PHÓNG (rr3d-launch.js) ⇒ cảnh đua vào thẳng pha "wait", không chữ, không START thứ hai,
+    // và đứng sẵn ĐÚNG góc đuổi sau đuôi (introCamera null — góc bay vòng cũ đứng TRƯỚC mũi tàu làm 2 đội đảo trái/phải lúc nối)
+    introTitles: [], startAt: 0, startHidden: true, introCamera: null,
     questionMaxCm: 176,                       // Đợt 393: thanh câu hỏi dãn tới đây khi câu dài
     shatter: { pieces: 44 }, flyOut: true, skySpin: 0.006, turboLabel: "small",
     winBanner: { size: 0.3, y: -1.05, ms: 7000 },
-    finale: { gateAfter: 1800, hits: 3, hitGap: 650, burnMs: 1800, strike: "streak" },
+    finale: { gateAfter: 1200, hits: 3, hitGap: 320, burnMs: 550, hitsAfter: 1300, strike: "streak" },   // Đợt 398: đánh + nổ nhanh (~3 s)
     fovKick: 0, steadyUI: true,
     exhaust: { fire: 0.3, smoke: 0.9, flame: 0.45, smokeBack: 3.4, smokeLife: 0.75, smokeSize: 0.55, smokeSizeEnd: 2.4, smokeAlpha: 0.16 },
     nearFade: [7, 13], bloom: 0.6, ca: 0.0012,
-    hull: { color: "#a9b1bd", roughness: 0.48, clearcoat: 0.35, env: 0.55 }, engineLight: 0.3,
+    hull: RR3D_HULL, engineLight: 0.3,
     sunPos: P(-260, 150, -1300), sunScale: 300, rimPos: P(60, 40, 60),
     nebula: { c1: "#1d0d4a", c2: "#0d3e73", c3: "#4f7dd6", bright: 0.9 },
     planets: [
@@ -607,12 +676,6 @@ function RR3D_CFG(V) {
       const zA = zc + 5, zB = Z1 - 8, zMid = (zA + zB) / 2, D = (zA - zB) * 1.05 + 8;
       const high = { pos: P(D * 0.8 + Math.sin(t * 0.15) * 1.2, D * 0.5, zMid), look: P(0, -1, zMid) };
       return { pos: chase.pos.lerp(high.pos, k), look: chase.look.lerp(high.look, k), mode: camK < 0.02 ? "chase" : "high" };
-    },
-    introSecs: 3.6,
-    introCamera(k, cp) {
-      const a = lerp(0.1, Math.PI, k);
-      const pos = P(Math.sin(a) * 13 * (1 - k) + cp.pos.x * k, lerp(1.5, cp.pos.y, k), Math.cos(a) * -13 * (1 - k) + cp.pos.z * k);
-      return { pos, look: P(0, 0, 0).lerp(cp.look, k * k) };
     },
     layout(_s, _z, _a, U) {
       const qW = 90, qH = 7, M = 2;
@@ -1254,13 +1317,20 @@ const rocketRaceTemplate = {
     function startCountdown() {
       locked = true;
       let n = 3;
+      // ⭐ Đợt 398: trận 3D vào từ CẢNH PHÓNG — 3-2-1 đã đếm lúc tàu trên bệ, play() được gọi đúng lúc nhảy tốc độ xong
+      // ⇒ vào THẲNG GO (đồng hồ trận + câu hỏi bắt đầu ngay khi cảnh đua hiện ra), không đếm lại.
+      const fromLaunch = on3d && rr3d && rr3d.skipCount;
+      if (fromLaunch) n = 0;
       const step = () => {
         if (n > 0) {
           if (speaks()) { showBanner(String(n), "is-count"); rrSound.count(n); if (on3d) { const lab = String(n); v3(v => v.countStep(lab)); } }
           n--;
           later(step, 800);
         } else {
-          if (speaks()) { showBanner("GO!", "is-go"); rrSound.go(); rrSound.music.start(); if (on3d) v3(v => { v.countStep("GO!"); v.go(); }); }
+          if (speaks()) {
+            if (fromLaunch) { rrSound.music.start(); v3(v => v.go()); }
+            else { showBanner("GO!", "is-go"); rrSound.go(); rrSound.music.start(); if (on3d) v3(v => { v.countStep("GO!"); v.go(); }); }
+          }
           ui.startTimer?.();
           // Đợt 368 — the match clock's zero. The packet carries "how long the
           // match has been running", and the iPad counts on from it by itself:
@@ -1272,10 +1342,10 @@ const rocketRaceTemplate = {
           last = performance.now();
           tickTimer = setInterval(tick, TICK_MS);
           rockets.forEach(r => r.el && r.el.classList.add("is-flying"));
-          later(() => { if (fightCtl) showQuestion(fightIndex); else nextQuestion(); }, 500);
+          later(() => { if (fightCtl) showQuestion(fightIndex); else nextQuestion(); }, fromLaunch ? 0 : 500);
         }
       };
-      later(step, 300);
+      if (fromLaunch) step(); else later(step, 300);
     }
 
     function showBanner(text, cls, ms = 700) {

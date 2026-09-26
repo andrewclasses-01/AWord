@@ -8,6 +8,10 @@
 // Chỉ được nạp bằng import() ĐỘNG trong nhánh Fight (≈800 KB three.js) — Solo/Teams và
 // máy học sinh không bao giờ tải file này.
 // Thư viện: three.js r170 chép vào ./vendor/three (addon đã đổi import về đường tương đối).
+// ⭐ Đợt 398 (thầy 26/9/2026, duyệt MẪU 5b ở kho myGame): đội 2 ĐỎ → VÀNG · bỏ dấu ✗ ô sai · đá né KHÔNG hiện (cfg.dodge.rocks
+// false — tàu vẫn lượn né) · tàu thắng BIẾN MẤT khi chui qua cổng + LOÉ SÁNG (cfg.portalVanish) · lửa ẩn theo tàu · tàu ĐẶT
+// THẲNG hướng bay ngay khung đầu (r.qInit — nối liền với intro) · kết trận nhanh (cfg.finale.hitsAfter) + máy quay XOAY ĐỀU
+// quanh tàu thua từ lúc về đích (startOrbit) · `export makeRocket` cho cảnh phóng rr3d-launch.js dựng CÙNG một con tàu.
 // =============================================================
 import * as THREE from "./vendor/three/three.module.min.js";
 import { EffectComposer } from "./vendor/three/addons/EffectComposer.js";
@@ -35,7 +39,7 @@ const FONT_URL = new URL("./vendor/three/helvetiker_bold.typeface.json", import.
 
 export const DEFAULT_TEAMS = [
   { name: "TEAM 1", pilot: "🐱", color: new THREE.Color("#3b8cff"), css: "#3b8cff" },
-  { name: "TEAM 2", pilot: "🦊", color: new THREE.Color("#ff4757"), css: "#ff4757" }
+  { name: "TEAM 2", pilot: "🦊", color: new THREE.Color("#ffc21a"), css: "#ffc21a" }   // mẫu 5: VÀNG (đỏ dễ nhầm với ô sai)
 ];
 
 // ---------- GLSL: nhiễu 3D + fbm (dùng cho tinh vân, hành tinh, lửa, quả cầu nổ) ----------
@@ -345,7 +349,7 @@ function makeSun(pos, scale = 220) {
 // =============================================================
 function lathe(points, segs = 64) { return new THREE.LatheGeometry(points.map(([r, y]) => new THREE.Vector2(r, y)), segs); }
 
-function makeRocket(team, idx, H = {}) {
+export function makeRocket(team, idx, H = {}) {
   const rig = new THREE.Group();        // vị trí + hướng bay
   const ship = new THREE.Group();       // nhấp nhô, lắc, xoay
   rig.add(ship);
@@ -1486,7 +1490,7 @@ export async function createView(cfg) {
     const mesh = new THREE.Mesh(dodgeGeos[Math.floor(Math.random() * dodgeGeos.length)], dodgeMats[Math.random() < 0.8 ? 0 : 1]);
     mesh.position.copy(lanePos).addScaledVector(tv, rand(14, 20)).addScaledVector(right, D.x + rand(-0.45, 0.45)).addScaledVector(UP, D.y + rand(-0.3, 0.3));
     mesh.scale.setScalar(0.001);
-    scene.add(mesh);
+    if (DG.rocks !== false) scene.add(mesh);   // mẫu 5: đá KHÔNG hiện — vẫn giữ để tàu lượn né (quỹ đạo chao đảo)
     dodgeRocks.push({ mesh, lane: i, size, side: Math.random() < 0.5 ? -1 : 1, v: tv.clone().multiplyScalar(-rand(DG.speed[0], DG.speed[1])),
       spin: new V3(rand(-2, 2), rand(-2, 2), rand(-2, 2)), t: 0 });
   }
@@ -1734,6 +1738,32 @@ export async function createView(cfg) {
     sfx("stall", 1);
     swell("engine", 0.45, 1, 0.08, 2.5);      // động cơ hụt hơi rồi hồi lại
   }
+  // mẫu 5: LOÉ SÁNG CỔNG KHÔNG GIAN khi tàu thắng chui qua — quả cầu sáng nở rồi tắt, vòng sóng sáng loang ra theo mặt cổng,
+  // đèn chớp rọi cả cảnh, cổng loé, camera rung nhẹ
+  const portalFx = [];
+  const portalTex = radialTex([[0, "rgba(255,255,255,1)"], [0.18, "rgba(235,245,255,0.95)"], [0.45, "rgba(150,200,255,0.35)"], [1, "rgba(80,120,255,0)"]], 256);
+  function portalFlash() {
+    const c = gate.position.clone(), R = (cfg.gate && cfg.gate.radius) || 5;
+    const core = new THREE.Sprite(new THREE.SpriteMaterial({ map: portalTex, color: new THREE.Color(6, 6.5, 8), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+    core.position.copy(c); scene.add(core);
+    const ringG = new THREE.RingGeometry(0.9, 1.0, 96), ring = new THREE.Mesh(ringG, new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 4.5, 7), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+    ring.position.copy(c); ring.lookAt(c.clone().add(cfg.gate.normal || new V3(0, 0, 1))); scene.add(ring);
+    const light = new THREE.PointLight(0xcfe4ff, 900, R * 12, 1.6); light.position.copy(c); scene.add(light);
+    portalFx.push({ core, ring, light, t: 0, R });
+    gate.userData.flash = 1.4; trauma = Math.min(1, trauma + 0.35);
+    burst(c, { n: 120, speed: 14, color: new THREE.Color(4, 5, 7), colorEnd: new THREE.Color(0.6, 1.2, 3), size: 0.22, life: 0.9 });
+    sfx("portal", 1); sfx("boomlow", 0.5);
+  }
+  function updatePortalFlashes(dt) {
+    for (let i = portalFx.length - 1; i >= 0; i--) {
+      const f = portalFx[i]; f.t += dt; const k = f.t;
+      const s = f.R * (0.6 + 3.2 * (1 - Math.exp(-k * 7)));
+      f.core.scale.set(s, s, 1); f.core.material.opacity = Math.max(0, 1 - Math.max(0, k - 0.12) / 0.75);
+      const rs = f.R * (1 + k * 6); f.ring.scale.set(rs, rs, rs); f.ring.material.opacity = Math.max(0, 1 - k / 0.9);
+      f.light.intensity = 900 * Math.exp(-k * 5);
+      if (k > 1.2) { [f.core, f.ring, f.light].forEach(o => scene.remove(o)); f.core.material.dispose(); f.ring.geometry.dispose(); f.ring.material.dispose(); portalFx.splice(i, 1); }
+    }
+  }
   function blowUp(r) {
     if (r.wreck || r.exploding > 0) return;
     r.exploding = 0.001;
@@ -1757,11 +1787,14 @@ export async function createView(cfg) {
     loop("engine", false, 1, 3.5);             // Đợt 393: lắng dần, không tắt phụt
     // Đợt 393: bỏ giọng "You win" — chỉ còn tiếng xuyên cổng + hợp âm chiến thắng
     later(() => { gate.userData.flash = 1; w.flyOut = true; sfx("portal", 0.9); sfx("win", 0.9); }, cross);
+    later(() => startOrbit(), cross);                                          // 5b: máy quay bắt đầu xoay ĐỀU ngay khi về đích — trước cả lúc đánh + nổ
     later(() => { gate.userData.shrink = 0.0001; sfx("gate", 0.9); }, cross + (F.gateAfter ?? 1800));
     let tEnd = cross + (F.gateAfter ?? 1800) + 900;
     if (!loserDown) {
       const hits = F.hits ?? 3, gap = F.hitGap ?? 600;
-      for (let i = 0; i < hits; i++) later(() => meteorStrike(loser, i + 1, hits), tEnd + 400 + i * gap);
+      const h0 = F.hitsAfter != null ? cross + F.hitsAfter : tEnd + 400;        // 5b: tia sáng đánh tới sớm hơn
+      for (let i = 0; i < hits; i++) later(() => meteorStrike(loser, i + 1, hits), h0 + i * gap);
+      tEnd = h0 - 400;
       const burnAt = tEnd + 400 + (hits - 1) * gap + 450;
       later(() => blowUp(loser), burnAt + (F.burnMs ?? 1800));
       tEnd = burnAt + (F.burnMs ?? 1800);
@@ -1866,8 +1899,10 @@ export async function createView(cfg) {
   // Đợt 393 — màn kết quả riêng (rocket-race.js vẽ lớp HUD): cất bảng đáp án + thanh câu hỏi,
   // máy quay chuyển sang trôi quanh đám mảnh vỡ.
   let resultCam = null;
+  // 5b: quỹ đạo máy quay kết trận — hoà dần từ góc đang có sang vòng quay quanh tàu thua (rồi đám mảnh vỡ), tốc độ ĐỀU
+  function startOrbit() { if (!resultCam) resultCam = { a: 0, c: null, w: 0, from: null, uniform: true }; }
   function resultView() {
-    resultCam = { a: 0, c: null };
+    if (!resultCam) resultCam = { a: 0, c: null, w: 0, from: null, uniform: true };   // 5b: đã xoay từ trước thì GIỮ nguyên nhịp
     G.qHidden = true;
     consoles.forEach(c => { c.grp.visible = false; });
     if (startBtn) startBtn.g.visible = false;
@@ -1978,7 +2013,8 @@ export async function createView(cfg) {
       r.rig.position.copy(pose.pos);
       if (DG) applyDodge(r, i, dt, pose);        // Đợt 397: toàn cảnh ⇒ lượn né đá vụn
       tmpQ.setFromUnitVectors(new V3(1, 0, 0), pose.dir.clone().normalize());
-      r.rig.quaternion.slerp(tmpQ, Math.min(1, dt * 6));
+      if (!r.qInit) { r.rig.quaternion.copy(tmpQ); r.qInit = true; }   // 5b: khung đầu ĐẶT THẲNG (mô hình dựng nằm ngang ⇒ trước đây mất ~0,5 s xoay)
+      else r.rig.quaternion.slerp(tmpQ, Math.min(1, dt * 6));
       // nhấp nhô + lắc
       const bob = Math.sin(G.t * 2.4 + r.wob) * 0.12;
       const jit = r.stall > 0 ? 0.08 : 0;
@@ -1988,13 +2024,16 @@ export async function createView(cfg) {
       if (DG && r.dg && !r.wreck) r.ship.rotation.x += clamp(-r.dg.vx * 0.28, -0.6, 0.6);   // Đợt 397: nghiêng thân khi né
       r.model.visible = !r.hidden && !(r.exploding > 0 && r.exploding < 0.3);
       // 2f: tàu thắng bay xuyên cổng rồi lao tiếp ra khỏi màn hình
-      if (r.flyOut) { r.flyV = (r.flyV || 1.2) + dt * 2.5; r.p += r.flyV * dt; r.boost = Math.max(r.boost, 0.8); if (r.p > L * 4) { r.flyOut = false; r.hidden = true; } }
+      if (r.flyOut) { r.flyV = (r.flyV || 1.2) + dt * 2.5; r.p += r.flyV * dt; r.boost = Math.max(r.boost, 0.8);
+        // mẫu 5: chui qua CỔNG ĐÍCH (tâm tàu vượt mặt cổng) ⇒ biến mất sang "thế giới khác" + loé sáng tại cổng
+        if (cfg.portalVanish && tmpV.copy(r.rig.position).sub(gate.position).dot(cfg.travelDir) > 0) { r.flyOut = false; r.hidden = true; portalFlash(); }
+        else if (r.p > L * 4) { r.flyOut = false; r.hidden = true; } }
       if (r.exploding > 0) r.exploding += dt;
       // lửa
       const on = !r.wreck && r.exploding === 0;
       // Đợt 393: khựng thì lửa chập chờn YẾU (0,55–0,95) — không bao giờ tắt hẳn
       const pow = r.stall > 0 ? 0.55 + Math.random() * 0.4 : 1 + r.boost * 1.6 + (r.turbo > 0 ? 0.6 : 0);
-      r.flameGroup.visible = on;
+      r.flameGroup.visible = on && !r.hidden;
       r.flameGroup.scale.set(1 + r.boost * 0.3, (0.9 + pow * 0.55) * (0.92 + Math.random() * 0.16), 1 + r.boost * 0.3);
       [r.flameOuter, r.flameInner].forEach(m => { m.material.uniforms.uTime.value = G.t + i; m.material.uniforms.uPow.value = pow * (cfg.exhaust?.flame ?? 1); });
       if (r.turbo > 0) { r.flameOuter.material.uniforms.uCol.value.setRGB(0.4, 1.6, 4); r.flameOuter.material.uniforms.uCore.value.setRGB(3, 5, 7); }
@@ -2008,6 +2047,7 @@ export async function createView(cfg) {
     rockets.forEach(r => { emitExhaust(r, dt); damageFx(r, dt); });
 
     // cổng
+    updatePortalFlashes(dt);
     gate.userData.film.material.uniforms.uTime.value = G.t;
     gate.userData.flash = Math.max(0, (gate.userData.flash || 0) - dt * 0.8);
     gate.userData.film.material.uniforms.uFlash.value = gate.userData.flash;
@@ -2045,12 +2085,22 @@ export async function createView(cfg) {
       wreckage.forEach(w => { c.add(w.mesh.position); n++; });
       if (n) c.divideScalar(n); else c.copy(rockets[G.winner === 0 ? 1 : 0].rig.position);
       resultCam.c = resultCam.c ? resultCam.c.lerp(c, Math.min(1, dt * 0.8)) : c.clone();
+      if (resultCam.uniform) {
+        // 5b: xoay ĐỀU quanh tâm (tàu thua → đám mảnh vỡ); góc & bán kính bắt đầu từ vị trí máy quay hiện tại ⇒ không nhảy
+        if (!resultCam.from) { const rel = camBase.pos.clone().sub(resultCam.c); resultCam.from = { a: Math.atan2(rel.x, rel.z), r: Math.hypot(rel.x, rel.z), y: rel.y, look: camBase.look.clone() }; resultCam.a = resultCam.from.a; }
+        resultCam.w = Math.min(1, resultCam.w + dt / 3.0); const w = resultCam.w * resultCam.w * (3 - 2 * resultCam.w);   // hoà chậm 3 s ⇒ không kéo vụt vào
+        resultCam.a += dt * 0.2 * (0.35 + 0.65 * w);                           // tốc độ góc lên đều rồi giữ nguyên
+        const R0 = lerp(resultCam.from.r, Math.max(20, resultCam.from.r * 0.4), w), Y0 = lerp(resultCam.from.y, Math.max(5, resultCam.from.y * 0.4), w);
+        camBase.pos.copy(resultCam.c).add(new V3(Math.sin(resultCam.a) * R0, Y0, Math.cos(resultCam.a) * R0));
+        camBase.look.copy(resultCam.from.look).lerp(resultCam.c.clone().add(new V3(0, -1.2, 0)), w);
+      } else {
       resultCam.a += dt * 0.06;
       const a = Math.sin(resultCam.a) * 0.55;
       const pos = resultCam.c.clone().add(new V3(Math.sin(a) * 15, 4.2, Math.cos(a) * 15));
       const look = resultCam.c.clone().add(new V3(0, -2.4, 0));
       camBase.pos.lerp(pos, Math.min(1, dt * 0.55));
       camBase.look.lerp(look, Math.min(1, dt * 0.55));
+      }
       camMode = "high";
     } else {
       camBase.pos.lerp(cp.pos, Math.min(1, dt * (cfg.camLerp ?? 1.8)));
@@ -2154,7 +2204,7 @@ export async function createView(cfg) {
     c.tiles.forEach((t, k) => {
       const s = states[k] || "idle";
       t.state = s;
-      if (s === "wrong") { t.mark.material.map = markTex.bad; t.mark.material.opacity = 1; t.mark.material.needsUpdate = true; if (!t.shook) { t.shake = 1; t.shook = true; } }
+      if (s === "wrong") { t.mark.material.opacity = 0; if (!t.shook) { t.shake = 1; t.shook = true; } }   // mẫu 5: bỏ dấu ✗ — ô sai chỉ đỏ + rung
       else { t.mark.material.opacity = 0; t.shook = false; }
       if (s === "correct" && !t.pulsed) { t.pulse = 1; t.pulsed = true; } else if (s !== "correct") t.pulsed = false;
     });

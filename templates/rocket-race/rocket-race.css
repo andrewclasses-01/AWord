@@ -635,6 +635,31 @@
 .aw-rr3d-canvas { position: absolute; inset: 0; }
 .aw-rr3d-canvas canvas { display: block; touch-action: none; }
 .aw-rr3d-hidden2d { display: none; }
+/* ⭐ Đợt 398 — CẢNH PHÓNG TỪ MẶT ĐẤT (rr3d-launch.js) phủ lên cảnh đua; chữ ROCKET RACE + START + 3-2-1; lớp chớp trắng
+   che chỗ cắt sang cảnh đua. Dưới kết quả (30) · menu âm thanh (60) · Menu (70). */
+.aw-rr3d-launch { position: absolute; inset: 0; z-index: 4; }
+.aw-rr3d-launch canvas { display: block; touch-action: none; }
+.aw-rr3d-lhud { position: absolute; inset: 0; z-index: 5; pointer-events: none; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; font-family: "Exo 2", "Bahnschrift", "Baloo 2", sans-serif; }
+.aw-rr3d-ltitle { font-weight: 900; font-size: clamp(34px, 4.6vw, 130px); letter-spacing: .08em; color: #ffe7b8;
+  text-shadow: 0 0 28px rgba(255, 170, 70, .55), 0 4px 18px rgba(0, 0, 0, .55); opacity: 0; transform: translateY(12px);
+  transition: opacity 1.2s, transform 1.2s; }
+.aw-rr3d-ltitle.on { opacity: 1; transform: none; }
+.aw-rr3d-lstart { pointer-events: auto; margin-top: 2.4%; padding: .5em 1.8em; font: 900 clamp(16px, 1.5vw, 44px) "Exo 2", "Bahnschrift", "Baloo 2", sans-serif;
+  letter-spacing: .12em; color: #ffe39a; cursor: pointer; background: linear-gradient(180deg, rgba(120, 76, 0, .75), rgba(60, 34, 0, .85));
+  border: 2px solid #ffcf4a; border-radius: 16px; box-shadow: 0 0 26px rgba(255, 190, 60, .55), inset 0 1px 0 rgba(255, 255, 255, .25);
+  opacity: 0; transition: opacity .8s, transform .12s; }
+.aw-rr3d-lstart.on { opacity: 1; }
+.aw-rr3d-lstart:active { transform: scale(.95); }
+.aw-rr3d-lhud.is-launch .aw-rr3d-ltitle, .aw-rr3d-lhud.is-launch .aw-rr3d-lstart { opacity: 0 !important; pointer-events: none; }
+.aw-rr3d-lcount { position: absolute; font: 900 clamp(60px, 9vw, 260px) "Exo 2", "Bahnschrift", "Baloo 2", sans-serif; color: #fff;
+  text-shadow: 0 0 40px rgba(255, 190, 90, .8), 0 6px 20px rgba(0, 0, 0, .5); opacity: 0; }
+.aw-rr3d-lcount.pop { animation: aw-rr3d-pop .9s ease-out forwards; }
+@keyframes aw-rr3d-pop { 0% { opacity: 0; transform: scale(1.6); } 15% { opacity: 1; transform: scale(1); } 70% { opacity: 1; } 100% { opacity: 0; transform: scale(.92); } }
+.aw-rr3d-flash { position: absolute; inset: 0; z-index: 6; pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse at 50% 50%, #fff 0%, #eaf3ff 55%, #cfe2ff 100%); }
+.aw-rr3d-flash.on { opacity: .92; }
+.aw-rr3d-flash.off { opacity: 0; transition: opacity .75s cubic-bezier(.2, .7, .3, 1); }
 .aw-fight.is-skin-rr3d { background: radial-gradient(ellipse at 50% 0%, #0c1530 0%, #04060e 65%); }
 .aw-fight.is-skin-rr3d .aw-fight-top { background: transparent; }
 .aw-fight.is-skin-rr3d .aw-below-left,

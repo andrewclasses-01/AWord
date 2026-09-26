@@ -12,7 +12,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> ⏸ **Intro mới của Rocket race Fight 3D đang THIẾT KẾ ở kho myGame (mẫu 4c, TẠM CHỐT 26/9/2026)** — xem chặng "Ghi chú: intro phóng từ mặt đất (myGame)" bên dưới. > Mới nhất: **Đợt 397** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: tia kết trận = vệt bụi từ mép màn, toàn cảnh lượn né đá, xác tàu cháy rụi bốc khói — xem chặng Đợt 397 bên dưới). Trước đó **Đợt 396** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: rời trang là dừng, vụ nổ hết khựng + đẹp, xác tàu thật — xem chặng Đợt 396 bên dưới). Trước đó **Đợt 394** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: chữ ô đáp án +15% không co, MENU giữa màn, vào thẳng Fight — xem chặng Đợt 394 bên dưới). Trước đó **Đợt 393** (26/9/2026, ROCKET RACE ▸ FIGHT 3D chỉnh 13 ý — xem chặng Đợt 393 bên dưới). Trước đó **Đợt 392** (26/9/2026, ROCKET RACE ▸ FIGHT 3D — xem chặng Đợt 392 bên dưới). Trước đó **Đợt 391** (25/9/2026, ROCKET RACE ▸ FIGHT Different: đội hết câu mà chưa ai về đích ⇒ DÙNG LẠI câu cũ
+> Mới nhất: **Đợt 398** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: GHÉP MẪU 5b — cảnh phóng từ mặt đất + ván đua liền mạch — xem chặng Đợt 398 bên dưới). Trước đó **Đợt 397** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: tia kết trận = vệt bụi từ mép màn, toàn cảnh lượn né đá, xác tàu cháy rụi bốc khói — xem chặng Đợt 397 bên dưới). Trước đó **Đợt 396** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: rời trang là dừng, vụ nổ hết khựng + đẹp, xác tàu thật — xem chặng Đợt 396 bên dưới). Trước đó **Đợt 394** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: chữ ô đáp án +15% không co, MENU giữa màn, vào thẳng Fight — xem chặng Đợt 394 bên dưới). Trước đó **Đợt 393** (26/9/2026, ROCKET RACE ▸ FIGHT 3D chỉnh 13 ý — xem chặng Đợt 393 bên dưới). Trước đó **Đợt 392** (26/9/2026, ROCKET RACE ▸ FIGHT 3D — xem chặng Đợt 392 bên dưới). Trước đó **Đợt 391** (25/9/2026, ROCKET RACE ▸ FIGHT Different: đội hết câu mà chưa ai về đích ⇒ DÙNG LẠI câu cũ
 > (xào lại) tới khi có tàu về đích; Count down hết giờ ⇒ tàu gần hơn bay về, tàu kia nổ như cũ). Chặng Đợt 391.
 > Trước đó: **Đợt 390b** (25/9/2026, bình điểm đổi sang MẪU 4 thầy chọn — dải năng lượng neon + sao chổi, mức CỐ ĐỊNH ngang
 > nhau mọi đội tới lúc đếm; trang chọn mẫu `D:\OTHERS\CLAUDE\AWord - thiet ke Wordshake\score-tank-mau.html`). Chặng Đợt 390b.
@@ -545,6 +545,39 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
+
+## Đợt 398 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D: GHÉP MẪU 5b (myGame) — CẢNH PHÓNG TỪ MẶT ĐẤT + ván đua liền mạch · ⬜ CHƯA BẤM TAY TOMKO
+
+Thầy (26/9/2026) duyệt MẪU 5b ở kho myGame (`https://andrewclasses-01.github.io/myGame/rocket-race/mau-5b-lien-mach.html`):
+*"ok, ghép bản 5b vào AWord thay cho bản cũ"*; hỏi thêm (AskUserQuestion): **Start again / Apply cũng chạy lại cảnh phóng mỗi ván**.
+Nhánh `dot398-rr3d-intro`, worktree `web-wt-dot398`. Backup `_backup/dot398/`.
+
+**Làm gì** (chỉ `templates/rocket-race/`, KHÔNG đụng core):
+- `rr3d-launch.js` MỚI (≈ myGame `core/launch-aerial-5b.js`, import về `./vendor/three`): khu phóng như ảnh SpaceX 39A (nhà xưởng
+  ANDREW STUDIO, bãi xe 5 mẫu xe, rừng Florida thẻ lá, đầm, biển, mây shader, chim), START ⇒ máy quay tới bệ (luôn trôi), 3-2-1,
+  đánh lửa + mây khói, vút qua, đuổi đuôi, NHẢY TỐC ĐỘ ⇒ `onHandoff()` ở ĐỈNH chớp sáng. Ảnh mặt đất `launch/` (5,2 MB).
+- `rr3d-intro-sound.js` MỚI + `sfx-intro/` (ogg + mp3, 4,3 MB, TỰ TỔNG HỢP — myGame `tools/tao-am-thanh-*.py`): nền gió/nhà máy/chim
+  (kênh BACKGROUND) · nổ START, túc ×3, xì hơi, đánh lửa, gầm, khói, vút qua, vượt ánh sáng (kênh EFFECTS) — theo nút 🔊 của trận.
+- `rocket-race.js`: `rr3dLaunch(st, play)` phủ cảnh phóng lên cảnh đua (đóng băng `view.step(1)`); hoà cảnh ⇒ `st.skipCount` + `play()`
+  ⇒ `startCountdown()` vào THẲNG GO (không đếm lại, câu hỏi hiện ngay, đồng hồ trận/iPad `goAt` tính từ đây) · cắt TỨC THÌ + lớp
+  `.aw-rr3d-flash` trắng tan 0,75 s · cảnh phóng hỏng ⇒ lùi về START 3D cũ (`view.showStart()`) · `destroy()` huỷ cả cảnh phóng + tiếng.
+  RR3D_CFG: `introTitles: [], startAt: 0, startHidden: true, introCamera: null` (⛔ góc bay vòng cũ đứng TRƯỚC mũi tàu ⇒ 2 đội ĐẢO
+  trái/phải lúc nối) · `dodge.rocks: false` · `portalVanish: true` · `finale.hitsAfter 1300 / hitGap 320 / burnMs 550` · `RR3D_HULL` chung.
+  Bảng kết: đội 2 `#ffc21a`.
+- `rr3d-view.js` (= game5b của myGame): đội 2 VÀNG · bỏ ✗ ô sai · đá không hiện (vẫn lượn né) · tàu thắng biến mất trong cổng +
+  `portalFlash()` · lửa ẩn theo tàu · `r.qInit` đặt thẳng hướng bay khung đầu (⛔ trước đây slerp từ mô hình NẰM NGANG ⇒ lúc nối
+  tàu xoay ngang→thẳng) · `startOrbit()` máy quay xoay ĐỀU quanh tàu thua từ lúc về đích · `export makeRocket`.
+- `sfx/stall.mp3` = động cơ nổ khục "giắt giắt" (bỏ tiếng kim loại nghe như chuông). `rocket-race.css`: `.aw-rr3d-launch/-lhud/-flash…`.
+- Chữ Exo 2 nạp từ Google Fonts lúc vào cảnh phóng (mất mạng ⇒ Bahnschrift).
+
+**Đã kiểm bằng máy** (`templates/rocket-race/test.html` + `startFight()`, 0 lỗi console; ⚠️ khung xem trước bị che ⇒ rAF = 0 ⇒ lái khung
+bằng `__rr3d.launch.step()` / `__rr3d.view.step()`): cảnh phóng hiện đúng khung + hàng nút trận · START ⇒ hoà cảnh ở 12,38 s: pha `play`
+ngay, không banner đếm, câu + đáp án có sẵn, đồng hồ 00:00 → 00:03 sau 3 s, lớp phóng gỡ · tự chơi trọn trận: tàu thắng biến mất,
+tàu thua nổ, bảng kết TEAM LEFT WINS, chấm/thanh đội phải VÀNG · Start again ⇒ trận cũ `dead`, cảnh phóng mới, 2 canvas (không rò)
+· ĐO lúc cắt: tàu intro (−0,191; −0,269) ↔ game (−0,199; −0,270), cùng cỡ 0,094, cùng hướng (0;0;−1), fov 38.
+
+**⬜ CHỜ THẦY (TOMKO):** nghe tiếng (độ to gầm/nổ START/vượt ánh sáng, cân bằng gió–máy–chim) · nhìn cú cắt cảnh · 60 fps với cảnh phóng
+(4.200 hạt mây + bóng 4096 + ~20k cây thẻ lá) · iPad 2 máy (goAt từ lúc hoà cảnh) · Sudden death / Count down / Lives như cũ.
 
 ## Ghi chú (26/9/2026): INTRO "PHÓNG TỪ MẶT ĐẤT" cho Rocket race Fight 3D — đang thiết kế ở myGame, TẠM CHỐT mẫu 4c, CHƯA ghép vào AWord
 Thầy thiết kế intro mới qua 4 mẫu ở `E:\LAP TRINH APP\myGame` (mẫu 4 → 4b → 4c), tạm chốt **mẫu 4c** (myGame commit `23d7bfe`, live https://andrewclasses-01.github.io/myGame/rocket-race/mau-4c-nha-xuong-nhay-toc-do.html): màn chờ = flycam nhìn qua nhà xưởng lớn chữ ANDREW STUDIO (thay ANDREW CLASSES) + bãi xe/bãi cỏ/ao hồ, 2 bệ phóng ở xa, biển; START ⇒ bay lại gần 2 tàu → 3-2-1 → đánh lửa, mây khói nâu cuồn cuộn → cất cánh vụt qua máy quay → đuổi đuôi, sao lốm đốm → NHẢY TỐC ĐỘ → vào thẳng câu hỏi. Mặt đất = ảnh địa hình sinh sẵn (`myGame/tools/tao-dia-hinh.py`). **Kế hoạch ghép 7 bước + việc chưa làm: `myGame/GHI CHU DU AN.md` Chặng 4.** AWord CHƯA có dòng code nào của intro này.

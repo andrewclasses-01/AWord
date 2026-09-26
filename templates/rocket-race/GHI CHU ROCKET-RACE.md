@@ -696,3 +696,16 @@ Thầy thiết kế cùng Claude qua 13 bản mẫu ở kho **myGame** (`E:\LAP 
 - Nội dung: flycam nhà xưởng ANDREW STUDIO (thay ANDREW CLASSES) → START bay lại gần 2 tàu → 3-2-1 trên bệ → đánh lửa + mây khói (hạt sắp xa→gần, ửng cam) → cất cánh vụt qua máy quay → đuổi đuôi, sao lốm đốm → nhảy tốc độ → vào thẳng câu hỏi (không đếm lần 2).
 - Ghép (khi thầy nói): 7 bước ở `myGame/GHI CHU DU AN.md` Chặng 4 — điểm khó: tàu phải dùng `makeRocket` CỦA AWord (rr3d-view.js), vendor three/Water, và nhịp 3-2-1 do `rocket-race.js` giữ (khớp đồng hồ trận/trọng tài) ⇒ quyết START của intro gọi `play()` lúc nào.
 - Bài học mang sang: `EffectComposer` phải có render target MSAA (`samples: 4`) nếu không vật mảnh nhấp nháy — rr3d-view.js ĐÃ có (`Q[quality].samples`), cảnh intro cũng phải có.
+
+## 32. Đợt 398 (26/9/2026) — GHÉP MẪU 5b: CẢNH PHÓNG TỪ MẶT ĐẤT + VÁN ĐUA LIỀN MẠCH (thay mở màn cũ)
+- Thầy duyệt mẫu 5b ở myGame ⇒ ghép. Mở màn cũ (chữ ANDREW CLASSES → ROCKET RACE → nút START 3D → đếm 3-2-1 trong cảnh đua) BỎ;
+  nay là cảnh phóng (`rr3d-launch.js`, ảnh `launch/`, tiếng `rr3d-intro-sound.js` + `sfx-intro/`) phủ lên cảnh đua MỖI VÁN (thầy chọn).
+- Nhịp: START (nổ) → 3-2-1 chữ + "túc" lúc tàu trên bệ → phóng → ~6,6 s sau LIFTOFF hoà cảnh ⇒ `play()` + `skipCount` ⇒ GO ngay.
+  Đồng hồ trận, trọng tài, iPad `goAt` tính từ lúc hoà cảnh (công bằng như cũ: 2 bàn cùng bắt đầu).
+- Cùng MỘT con tàu: cảnh phóng dựng bằng `makeRocket` + `DEFAULT_TEAMS` của `rr3d-view.js`; cảnh đua đứng sẵn góc đuổi
+  (`introCamera: null`), tàu đặt thẳng khung đầu (`r.qInit`); cảnh phóng trả fov 38 + cỡ lửa game trước lúc cắt.
+- Game: đội 2 VÀNG · ô sai không ✗ · tiếng sai = động cơ nổ khục · bỏ đá (vẫn lượn né) · tàu thắng biến mất trong cổng + loé ·
+  tàu thua nổ ~3 s · máy quay xoay đều từ lúc về đích.
+- Nguồn gốc/lịch sử thiết kế: myGame `GHI CHU DU AN.md` Chặng 4–12 (mẫu 4 → 5b). Sửa cảnh phóng về sau: sửa ở myGame trước, thầy OK
+  rồi chép sang (đổi import three về `./vendor/three/...`, `makeRocket` từ `./rr3d-view.js`, ảnh `./launch/`, tiếng `./sfx-intro/`).
+- ⚠️ Bàn thử: khung xem trước bị che ⇒ rAF không chạy ⇒ lái bằng `__rr3d.launch.step(n)` / `__rr3d.view.step(n)`.
