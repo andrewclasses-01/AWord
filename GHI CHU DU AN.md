@@ -12,7 +12,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 399** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: GHÉP MẪU 5c — tự giữ 60 khung + nhường card đồ hoạ trong myActivity — xem chặng Đợt 399). Trước đó **Đợt 398** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: GHÉP MẪU 5b — cảnh phóng từ mặt đất + ván đua liền mạch — xem chặng Đợt 398 bên dưới). Trước đó **Đợt 397** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: tia kết trận = vệt bụi từ mép màn, toàn cảnh lượn né đá, xác tàu cháy rụi bốc khói — xem chặng Đợt 397 bên dưới). Trước đó **Đợt 396** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: rời trang là dừng, vụ nổ hết khựng + đẹp, xác tàu thật — xem chặng Đợt 396 bên dưới). Trước đó **Đợt 394** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: chữ ô đáp án +15% không co, MENU giữa màn, vào thẳng Fight — xem chặng Đợt 394 bên dưới). Trước đó **Đợt 393** (26/9/2026, ROCKET RACE ▸ FIGHT 3D chỉnh 13 ý — xem chặng Đợt 393 bên dưới). Trước đó **Đợt 392** (26/9/2026, ROCKET RACE ▸ FIGHT 3D — xem chặng Đợt 392 bên dưới). Trước đó **Đợt 391** (25/9/2026, ROCKET RACE ▸ FIGHT Different: đội hết câu mà chưa ai về đích ⇒ DÙNG LẠI câu cũ
+> Mới nhất: **Đợt 400** (26/9/2026, NÚT CHUYỂN ACT cạnh tên act / đầu cụm nút Fight, giữ nguyên mode + NHỚ TEMPLATE CHƠI CUỐI theo act, đồng bộ Firebase — xem chặng Đợt 400). Trước đó **Đợt 399** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: GHÉP MẪU 5c — tự giữ 60 khung + nhường card đồ hoạ trong myActivity — xem chặng Đợt 399). Trước đó **Đợt 398** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: GHÉP MẪU 5b — cảnh phóng từ mặt đất + ván đua liền mạch — xem chặng Đợt 398 bên dưới). Trước đó **Đợt 397** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: tia kết trận = vệt bụi từ mép màn, toàn cảnh lượn né đá, xác tàu cháy rụi bốc khói — xem chặng Đợt 397 bên dưới). Trước đó **Đợt 396** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: rời trang là dừng, vụ nổ hết khựng + đẹp, xác tàu thật — xem chặng Đợt 396 bên dưới). Trước đó **Đợt 394** (26/9/2026, ROCKET RACE ▸ FIGHT 3D: chữ ô đáp án +15% không co, MENU giữa màn, vào thẳng Fight — xem chặng Đợt 394 bên dưới). Trước đó **Đợt 393** (26/9/2026, ROCKET RACE ▸ FIGHT 3D chỉnh 13 ý — xem chặng Đợt 393 bên dưới). Trước đó **Đợt 392** (26/9/2026, ROCKET RACE ▸ FIGHT 3D — xem chặng Đợt 392 bên dưới). Trước đó **Đợt 391** (25/9/2026, ROCKET RACE ▸ FIGHT Different: đội hết câu mà chưa ai về đích ⇒ DÙNG LẠI câu cũ
 > (xào lại) tới khi có tàu về đích; Count down hết giờ ⇒ tàu gần hơn bay về, tàu kia nổ như cũ). Chặng Đợt 391.
 > Trước đó: **Đợt 390b** (25/9/2026, bình điểm đổi sang MẪU 4 thầy chọn — dải năng lượng neon + sao chổi, mức CỐ ĐỊNH ngang
 > nhau mọi đội tới lúc đếm; trang chọn mẫu `D:\OTHERS\CLAUDE\AWord - thiet ke Wordshake\score-tank-mau.html`). Chặng Đợt 390b.
@@ -545,6 +545,61 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
+
+## Đợt 400 (26/9/2026) — NÚT CHUYỂN ACT (giữ nguyên mode) + NHỚ TEMPLATE CHƠI CUỐI · ✅ ĐÃ PUSH `468a2a2` + LIVE · ⬜ CHƯA BẤM TAY
+
+**Yêu cầu thầy (26/9):** Single — thêm nút cạnh trái tên act, cỡ bằng nút In, mở pop-up nhỏ các act cùng thư mục để chuyển
+nhanh. Fight — thêm nút đó vào đầu cụm 2 nút sẵn có. Đang ở mode nào mà chuyển act thì vẫn giữ mode đó. Thầy chốt qua hỏi–đáp:
+- Showdown: chỉ chuyển được khi **không giữa lượt** (READY; mình mở thêm màn tổng kết cuối lượt) — giữa lượt báo "Finish this round first".
+- Đang chơi / giữa trận Fight: **chuyển ngay**, không hỏi lại.
+- Danh sách: **thư mục của act + các thư mục con** (nhóm theo thư mục). ⚠️ Act ở GỐC thư viện thì chỉ liệt kê act ở gốc (không đi
+  xuống — nếu không là cả thư viện).
+- ⭐ **NHỚ TEMPLATE CHƠI CUỐI** (thầy: *"lượt chơi cuối cùng với template nào thì lần sau mở sẽ ra template đó, sẽ không có cái nào là
+  cái chính, cái nào là cái tạm nữa"*): theo act, **đồng bộ Firebase mọi máy**, ghi **ngay khi đổi template** (chưa cần Play),
+  Running/IPA **không tính** là template. Phát marker `ACT` cho myLesson/myActivity khi chuyển act.
+
+**Đã làm:**
+- `core/store.js`: `setLastTemplate(id, type)` — ghi trường `lastTpl` lên act (về đúng loại gốc ⇒ xoá trường), **không bump
+  `updatedAt`**. `listSwitchActs(id)` — `{ folderName, groups:[{path, acts}] }`, bỏ act trong thùng rác, xếp như thư viện.
+- `core/engine.js`:
+  - Đầu `startGame()`: act thư viện mở "từ đầu" (không `base`/`session`/`fight`, cờ mới `noLastTpl`) mà có `lastTpl` hợp lệ
+    (`rememberedTemplate()` — có trong `switchTargets`) ⇒ **chuyển từ bản gốc** sang template đó rồi mount bản chuyển với
+    `base` = act gốc. MỘT chỗ cho mọi đường mở (thư viện, `?a=`, nút chuyển act, quay về sau Edit). Bất đồng bộ ⇒ ô giữ chỗ
+    `.aw-lasttpl-wait`; trang đã đi chỗ khác thì không mount đè. Lỗi ⇒ mở loại gốc.
+  - `doSwitchTemplate()` gọi `rememberTemplate()` (trừ cú kéo chuẩn của phòng chờ Showdown `viaLobbyPull`, và học sinh).
+  - `homeType()` = template chơi cuối || loại gốc: 4 lối rời Running/IPA nay `doSwitchTemplate(homeType())` (trước: `originAct.type`);
+    `enterFight()` từ mode cũng đấu bằng template nhà (không có fightMode thì lùi về loại gốc).
+  - Nút `actSwitchBtn` (icon mới `icons.actSwitch` = Lucide folder-open): Single ⇒ `belowLeft` (class `has-actsw`, cỡ `-sm` = nút In,
+    38px); Fight ⇒ bàn 0 `belowCenter.prepend` (cỡ 44px như Options/Mode). Ẩn tới khi `listSwitchActs` xác nhận act có trong thư
+    viện (học sinh / mẫu / `?g=` không có nút). Pop-up qua `openToolPanelFor` (bảng vẫn là con `.aw-below-center` — hợp đồng xếp
+    lớp); ở Single dời `left` cho bảng mọc ngay trên nút.
+  - `switchToAct(id)`: Single/Showdown ⇒ `startGame(root, next)` (tự mở template chơi cuối; bảng đội Showdown đọc lại từ
+    sessionStorage; Showdown rời lượt cũ `leaveRound`). Fight ⇒ `fight.ctl.switchAct(act, base)`. Running/IPA ⇒ chuyển act mới
+    sang đúng game đó (kiểm như nút Mode: vốn từ ≥80% là TỪ; IPA cần `ipa`). Không chơi được mode cũ ⇒ về Single +
+    `toastOnMount` báo 1 dòng. Gọi `actSwitchHook` + `awEmit("ACT", {id,num,title})`.
+  - `playEnded` (bật ở `ui.finish`) để Showdown biết lượt đã xong.
+- `core/fight.js`: `ctl.switchAct(next, nextBase, {single})` — dỡ cả hai bàn rồi mở trận mới / về Single.
+- `main.js`: `setActSwitchHandler` ⇒ `setUrl(linkFor(node))` (pushState, ◀ về act trước) + tiêu đề tab; thẻ thư viện hiện
+  `templateLabel(node.lastTpl || node.type)`.
+- `core/app.css`: `.aw-toolbtn[hidden]`, `.aw-below-left.has-actsw`, `.aw-actsw-*`.
+
+**🐞 Lỗi tự gây, bàn thử bắt được:** `rememberTemplate` ghi `o.lastTpl` vào bộ nhớ TRƯỚC rồi mới gọi store — mà `o` CHÍNH LÀ object
+trong bộ nhớ đệm của store ⇒ `setLastTemplate` thấy "đã đúng rồi" và **không lưu Firebase** (máy khác, lần mở sau sẽ mất). Sửa: để
+store ghi lên object đệm, engine chỉ chép theo khi `o` là bản sao khác. Cùng họ [[xep-hang-ghi-de-object-dung-chung]].
+
+**Bàn thử** `scratch/dot400/` (không lên git): `fake-firebase.js` (Firestore trong bộ nhớ, đăng nhập sẵn) + `index.html` sinh
+bằng `make-bench.py` (import map `/core/firebase.js` ⇒ bản giả, chạy NGUYÊN main.js + engine thật). Đã kiểm: nút 38px = nút In,
+pop-up đúng nhóm + bỏ act thùng rác, `elementFromPoint` giữa bảng ra ruột bảng (không dính tấm che); Single chuyển ⇒ URL `?f=1&a=12`
++ tiêu đề; đổi template ⇒ 1 lượt ghi Firebase `lastTpl`, `type` gốc giữ, `updatedAt` không đổi; tải lại ⇒ mở ra template đã nhớ;
+về lại loại gốc ⇒ xoá `lastTpl`; Fight chuyển sang act thư mục con ⇒ vẫn Fight 2 bàn; IPA → act không phiên âm ⇒ Single + báo;
+Running → act khác ⇒ vẫn Running; rời Running ⇒ về template đã nhớ; Showdown READY chuyển ⇒ giữ đội; bấm Play (phòng chờ) rồi
+chuyển ⇒ "Finish this round first"; màn 420px không đè, không cuộn ngang; thẻ thư viện ghi template chơi cuối.
+
+**VIỆC ĐANG CHỜ (Đợt 400):**
+- ✅ Commit + push `468a2a2` (26/9): Pages built đúng commit, **6/6 mã băm SHA-256 khớp** bản live (engine.js, store.js, fight.js, icons.js, app.css, main.js).
+- ⬜ Bấm tay trên máy thật (tài khoản thật, nhiều thư mục, TOMKO cảm ứng) — Claude chỉ chạy trên Firebase giả.
+- ⬜ myLesson/myActivity chưa đọc marker `ACT` (chỉ mới phát ra) — nếu cần đồng bộ cột khác theo act mới thì làm bên đó.
+- ⬜ Thầy xem có muốn Showdown chặn cả màn tổng kết không (nay cho chuyển khi lượt đã xong).
 
 ## Đợt 399 (26/9/2026) — ROCKET RACE ▸ FIGHT 3D: GHÉP MẪU 5c (myGame) — TỰ GIỮ 60 KHUNG/GIÂY + nhường card đồ hoạ trong myActivity · ⬜ CHƯA TEST TOMKO
 

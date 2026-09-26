@@ -5267,3 +5267,14 @@ khớp nhau ở 13 em còn bảng thứ tư ngồi riêng với 5 em. Những lu
   bài giao (`<LỚP>_<d.m>_…`) là STATS mất cột âm thầm.
 - ANALYSE dùng lại `buildAnalysisRows` + `renderChart` + `openAnalysisExportDialog`: một NGÀY = một "match" (right/total = %×1000/1000),
   cờ `dayOnly` ở entry để `renderLegend` in ngày không in giờ.
+
+### ⭐ Đợt 400 — `lastTpl`: TEMPLATE CHƠI CUỐI CỦA ACT (luật cho mọi code mở act)
+
+- Act thư viện có thể mang `lastTpl` (template chơi cuối, đồng bộ Firebase qua `setLastTemplate` trong `core/store.js`). `type` +
+  `content` GỐC không bao giờ đổi — mỗi lần mở vẫn **chuyển từ bản gốc** (không mòn nội dung).
+- `startGame(root, act)` KHÔNG kèm `base`/`session`/`fight` = "mở act từ đầu" ⇒ engine TỰ chuyển sang `lastTpl` (bất đồng bộ, ô giữ
+  chỗ `.aw-lasttpl-wait`). Muốn mở đúng loại gốc: truyền `base` (như mọi lượt dựng lại trong engine) hoặc `noLastTpl: true`.
+- Đổi template (`doSwitchTemplate`) là GHI `lastTpl`; Running/IPA không ghi. Lối rời Running/IPA về `homeType()`, không về
+  `originAct.type`.
+- ⛔ Đừng ghi `lastTpl` lên act trong bộ nhớ trước khi gọi `setLastTemplate`: object đó thường chính là bản đệm của store ⇒ store
+  thấy "đã đúng" và bỏ lượt lưu Firebase.
