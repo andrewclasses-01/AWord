@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 402 (26/9/2026) — A SHOW SPEED TEMPLATE (activity): HẾT GIỜ GIỐNG GAME — bàn tối + mờ, ô điểm xuống giữa bàn, đếm kiểu Đợt 395, bảng kết quả Fight nằm ở BẢNG GIỮA · ⬜ CHƯA BẤM TAY TOMKO
+## Đợt 402 (26/9/2026) — A SHOW SPEED TEMPLATE (activity): HẾT GIỜ GIỐNG GAME — bàn tối + mờ, ô điểm xuống giữa bàn, đếm kiểu Đợt 395, bảng kết quả Fight nằm ở BẢNG GIỮA · ✅ ĐÃ PUSH `6c95f89` + LIVE 2/2 mã băm · ⬜ CHƯA BẤM TAY TOMKO
 
 **Yêu cầu thầy (26/9):** "Sửa các chế độ khác của Game ở Activity cũng tương tự" — tức template `templates/wordshake/`
 (chơi đơn + Fight, cả 3 mode) làm giống GAME Đợt 401.
