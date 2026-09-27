@@ -753,3 +753,15 @@ dừng lại"*. Chốt: Count down hết giờ vẫn kết theo giờ · Differe
   số, `goToIndex(i,{replay:true})`; `suddenDeath` coi vòng chung đang lặp là đã chơi hết chồng; ‹ › của thầy xoá bộ bài lặp.
 - Tắt ⇒ đúng luật Đợt 382 cho cả Same lẫn Different (hết câu ⇒ tàu gần hơn bay về, hoà ⇒ SUDDEN DEATH).
 - Bàn thử `scratch/dot416-rr-endless.html` (6 ca, xem GHI CHU DU AN.md Đợt 416). ⬜ thầy bấm tay TOMKO.
+
+## 38. Đợt 417 (28/9/2026) — ghép MẪU 7b + 7c + 7d từ myGame
+- `rr3d-missile.js` + `rr3d-sfx.js` = chép NGUYÊN myGame `rocket-race/game7d/` (chỉ đổi 2 dòng đầu). Sửa tên lửa về sau: chạy
+  `myGame/tools/chep-aword-sang-game.py gameN` (lấy nguyên bộ AWord ra thư mục mới) → làm mẫu → thầy OK → chép lại.
+- Luật: `MS_WINDOW` 1,25 · Options `rrMissile` 1–10/11 = ∞ (bỏ 0) · `rrMsStreak` 1–10 (mặc định 3) · `rrMsMax` 0–3 (mặc định 3; act cũ `rrMissile: 0` ⇒ 0).
+  Mô-đun tên lửa LUÔN dựng (BOOST trong đó); max 0 ⇒ `setArsenal({ on:false })`.
+- BOOST: `msBoost` ⇒ `board.boostStep()` tiến thật 1 nấc (+ né nếu tên lửa ở 1,25 s cuối). API missile mới: `boostFx`, `setNearWin` (AWord không dùng —
+  view tự xét trong `move`), `inSplash`, `lastClash`, `clashNear`; `armBoost` còn nhưng không làm gì.
+- Trúng lan (`hitShip`): missile gọi `onEnd(other, "hit", from, "splash")` ⇒ `msEnd` lùi bàn kia. Va chạm: `onEnd(to, "clash")` ⇒ chỉ bật `msWideReady`.
+- View: `r.nearWin` ⇒ lửa dài 1,5 + xanh; đặt trong `move()`, tắt trong `win()`.
+- Act voice: `sfx.setFxLevel(MS_VOICE_FX)` cạnh mọi `lockBg(true)`.
+- Bàn thử: `scratch/dot417-rr.html?t=rocket_race&dup=3` (+ `rrMissile/rrMsStreak/rrMsMax/voice`) — chi tiết `GHI CHU DU AN.md` Đợt 417.

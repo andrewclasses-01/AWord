@@ -8,6 +8,7 @@
 // Chỉ được nạp bằng import() ĐỘNG trong nhánh Fight (≈800 KB three.js) — Solo/Teams và
 // máy học sinh không bao giờ tải file này.
 // Thư viện: three.js r170 chép vào ./vendor/three (addon đã đổi import về đường tương đối).
+// ⭐ Đợt 417 (thầy 28/9/2026, duyệt MẪU 7d ở myGame): r.nearWin (tự xét trong move) ⇒ lửa đuôi DÀI 1,5 lần + XANH DƯƠNG khi còn 1 câu là thắng.
 // ⭐ Đợt 398 (thầy 26/9/2026, duyệt MẪU 5b ở kho myGame): đội 2 ĐỎ → VÀNG · bỏ dấu ✗ ô sai · đá né KHÔNG hiện (cfg.dodge.rocks
 // false — tàu vẫn lượn né) · tàu thắng BIẾN MẤT khi chui qua cổng + LOÉ SÁNG (cfg.portalVanish) · lửa ẩn theo tàu · tàu ĐẶT
 // THẲNG hướng bay ngay khung đầu (r.qInit — nối liền với intro) · kết trận nhanh (cfg.finale.hitsAfter) + máy quay XOAY ĐỀU
@@ -962,12 +963,12 @@ export async function createView(cfg) {
     // ⭐ Đợt 393 (thầy): "không bao giờ được ngắt hoàn toàn phần lửa hoặc khói ở đuôi tàu" — khi khựng
     // lửa chỉ YẾU + chập chờn, không về 0; số hạt làm tròn NGẪU NHIÊN (làm tròn thường ra 0 = mất lửa).
     const power = r.stall > 0 ? 0.55 + Math.random() * 0.35 : 1 + r.boost * 1.8;
-    const turbo = r.turbo > 0;
+    const turbo = r.turbo > 0 || !!r.nearWin;           // Đợt 417 (mẫu 7d): sắp thắng ⇒ hạt lửa xanh dương
     const EX = cfg.exhaust || {};
     const want = (turbo ? 60 : 40) * power * dt * 60 / 6 * (EX.fire ?? 1);
     const count = Math.floor(want) + (Math.random() < want % 1 ? 1 : 0);
     for (let i = 0; i < count; i++) {
-      const sp = rand(7, 12) * (0.6 + power * 0.4);
+      const sp = rand(7, 12) * (0.6 + power * 0.4) * (r.nearWin ? 1.5 : 1);   // Đợt 417: vệt hạt dài 1,5 lần
       fire.emit({
         pos: n.clone().add(new V3(rand(-0.12, 0.12), rand(-0.12, 0.12), rand(-0.12, 0.12))),
         vel: f.clone().multiplyScalar(-sp).add(new V3(rand(-0.6, 0.6), rand(-0.6, 0.6), rand(-0.6, 0.6))),
@@ -1944,6 +1945,7 @@ export async function createView(cfg) {
     banners.forEach(b => { b.t = Math.max(b.t, b.ms - 0.35); });
   }
   function win(side, opts = {}) {
+    rockets.forEach(x => { x.nearWin = false; });   // Đợt 417: phân thắng thua ⇒ hết lửa xanh
     if (G.phase === "over") return 0;
     G.phase = "over"; G.winner = side;
     const w = rockets[side], loser = rockets[1 - side];
@@ -2093,13 +2095,14 @@ export async function createView(cfg) {
       // Đợt 393: khựng thì lửa chập chờn YẾU (0,55–0,95) — không bao giờ tắt hẳn
       const pow = r.stall > 0 ? 0.55 + Math.random() * 0.4 : 1 + r.boost * 1.6 + (r.turbo > 0 ? 0.6 : 0);
       r.flameGroup.visible = on && !r.hidden;
-      r.flameGroup.scale.set(1 + r.boost * 0.3, (0.9 + pow * 0.55) * (0.92 + Math.random() * 0.16), 1 + r.boost * 0.3);
+      r.flameGroup.scale.set(1 + r.boost * 0.3, (0.9 + pow * 0.55) * (0.92 + Math.random() * 0.16) * (r.nearWin ? 1.5 : 1), 1 + r.boost * 0.3);   // Đợt 417: dài 1,5 lần
       [r.flameOuter, r.flameInner].forEach(m => { m.material.uniforms.uTime.value = G.t + i; m.material.uniforms.uPow.value = pow * (cfg.exhaust?.flame ?? 1); });
-      if (r.turbo > 0) { r.flameOuter.material.uniforms.uCol.value.setRGB(0.4, 1.6, 4); r.flameOuter.material.uniforms.uCore.value.setRGB(3, 5, 7); }
+      if (r.nearWin) { r.flameOuter.material.uniforms.uCol.value.setRGB(0.25, 0.8, 4.2); r.flameOuter.material.uniforms.uCore.value.setRGB(2.4, 3.8, 7); }   // Đợt 417: xanh dương
+      else if (r.turbo > 0) { r.flameOuter.material.uniforms.uCol.value.setRGB(0.4, 1.6, 4); r.flameOuter.material.uniforms.uCore.value.setRGB(3, 5, 7); }
       else { r.flameOuter.material.uniforms.uCol.value.setRGB(3.2, 0.9, 0.2); r.flameOuter.material.uniforms.uCore.value.setRGB(4, 3.2, 2); }
       r.nozzleGlow.visible = on;
       r.light.intensity = on ? (10 + r.boost * 30) * (cfg.engineLight ?? 1) * pow * (0.85 + Math.random() * 0.3) : 0;
-      r.light.color.set(r.turbo > 0 ? 0x6cc8ff : 0xff8a3d);
+      r.light.color.set(r.nearWin ? 0x4f8dff : r.turbo > 0 ? 0x6cc8ff : 0xff8a3d);
       r.shield.material.uniforms.uA.value = lerp(r.shield.material.uniforms.uA.value, r.turbo > 0 ? 0.9 : 0, dt * 5);
     });
     scene.updateMatrixWorld();
@@ -2334,7 +2337,8 @@ export async function createView(cfg) {
     tileInfo(side) { const c = consoles[side]; return c ? c.tiles.filter(t => t.g.visible).map(t => ({ label: t.label, state: t.state, border: +(t.border ?? 0.025).toFixed(3) })) : null; },   // bàn thử Đợt 413
     pick(side, k) { const t = consoles[side] && consoles[side].tiles[k]; if (t) { t.press = 1; t.state = "picked"; sfx("tap", 0.6); } },
     // --- tàu ---
-    move(side, p, kind, n = 1) { const r = rockets[side]; r.p = Math.max(0, p); if (kind === "up") advanceFx(r); else if (kind === "back") retreatFx(r, n); },
+    move(side, p, kind, n = 1) { const r = rockets[side]; r.p = Math.max(0, p); if (kind === "up") advanceFx(r); else if (kind === "back") retreatFx(r, n);
+      rockets.forEach(x => { x.nearWin = G.phase === "play" && L > 1 && x.p === L - 1; }); },   // ⭐ Đợt 417: còn 1 câu là thắng ⇒ lửa đuôi dài + xanh
     stall(side) { stallRocket(rockets[side]); },
     damage(side, level) { const r = rockets[side]; r.dmg = Math.max(0, Math.min(3, level | 0)); setDamageLook(r); },
     explode(side) { blowUp(rockets[side]); },

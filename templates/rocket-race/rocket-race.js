@@ -372,13 +372,35 @@ function rr3dFallback(st, err) {
 //     quả sang ô to + tay robot đưa quả lên thân tàu. Chạm ô to khi chưa nạp mà còn quả nhỏ ⇒ cũng nạp. Bắn xong không tự nạp quả kế.
 //   · chạm quả to ⇒ quả lùi ra khỏi màn rồi tên lửa mới phóng (rr3d-missile.js) · chuông báo động kiểu b · trúng ⇒ vết cháy + lửa nhỏ.
 //   · thanh MISS WAIT vẽ 3D GIỮA màn dưới câu hỏi: rr3dMissWait (dưới) đọc thanh DOM của trọng tài — core/fight.js KHÔNG đổi.
-const MS_WINDOW = 1.5, MS_STREAK = 3, MS_BOOST_STREAK = 5, MS_MAX = 3, MS_DEFAULT = 2, MS_INF = 11;
+// ⭐⭐ Đợt 417 (thầy 28/9/2026 "ok, ghép 7d vào AWord" — MẪU 7b + 7c + 7d ở myGame):
+//   · BOOST: MỘT nút to (6,5 cm) giữa dưới cột đáp án, thanh 5 đoạn trong nút đầy dần trái → phải (sai ⇒ về 0; nút đã đầy thì giữ).
+//     Đầy ⇒ bấm LÚC NÀO CŨNG ĐƯỢC: tàu tiến THẬT 1 nấc (board.boostStep — chạm vạch là thắng như câu đúng). Bỏ "giương sẵn" Đợt 413.
+//   · né: TỰ CANH — BOOST / trả lời đúng / sai-bị-lùi trong 1,25 s cuối (MS_WINDOW) ⇒ né, BOOST vẫn giữ nấc vừa tiến.
+//   · Options: "Missile" bỏ Off (1–10 · ∞) · "Missile streak" 1–10 câu liên tiếp = 1 tên lửa (mặc định 3) · "Missiles max" 0–3
+//     (mặc định 3; 0 = không tên lửa, BOOST vẫn còn). Act cũ lưu rrMissile = 0 (Off) ⇒ hiểu là Missiles max 0.
+//   · cột vạch năng lượng tên lửa (trắng, mỏng) sát mép màn · 2 tên lửa cùng bay HÚT nhau, va nổ giữa đường (nổ sát tàu ⇒ tính trúng)
+//     · TRÚNG LAN: 2 tàu cùng nấc / cách 1 nấc ⇒ tàu kia bị y hệt (rr3d-missile.js gọi onEnd(other,"hit") ⇒ msEnd lùi bàn đó)
+//   · còn 1 câu là thắng ⇒ lửa đuôi dài 1,5 lần + xanh dương (rr3d-view.js tự xét trong move)
+//   · act VOICE: mọi tiếng hiệu ứng nhỏ cố định cả trận (sfx.setFxLevel(MS_VOICE_FX)) + nhạc nền tắt như Đợt 405.
+const MS_WINDOW = 1.25, MS_BOOST_STREAK = 5, MS_DEFAULT = 2, MS_INF = 11, MS_STREAK_DEFAULT = 3, MS_MAX_DEFAULT = 3, MS_VOICE_FX = 0.35;
 function missilePushOf(opt) {
   const v = opt ? opt.rrMissile : undefined;
   if (v == null || v === "") return MS_DEFAULT;
   const n = Math.round(Number(v));
-  if (!Number.isFinite(n)) return MS_DEFAULT;
-  return n >= MS_INF ? Infinity : Math.max(0, Math.min(10, n));
+  if (!Number.isFinite(n) || n <= 0) return MS_DEFAULT;           // Đợt 417: bỏ Off (0 cũ ⇒ Missiles max 0, xem msMaxOf)
+  return n >= MS_INF ? Infinity : Math.min(10, n);
+}
+function msStreakOf(opt) {
+  const v = opt ? opt.rrMsStreak : undefined;
+  if (v == null || v === "") return MS_STREAK_DEFAULT;
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) ? Math.max(1, Math.min(10, n)) : MS_STREAK_DEFAULT;
+}
+function msMaxOf(opt) {
+  const v = opt ? opt.rrMsMax : undefined;
+  if (v == null || v === "") return opt && Number(opt.rrMissile) === 0 && opt.rrMissile !== "" && opt.rrMissile != null ? 0 : MS_MAX_DEFAULT;
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) ? Math.max(0, Math.min(3, n)) : MS_MAX_DEFAULT;
 }
 function msLocked() { const sc = rrFightScene; return !!(sc && (sc.decided || sc.sudden)); }
 function msLater(st, fn, ms) { const t = setTimeout(() => { if (!st.dead && rr3d === st) fn(); }, ms); st.offs.push(() => clearTimeout(t)); }
@@ -386,8 +408,8 @@ function msTotal(a) { return a.reserve + (a.loaded ? 1 : 0); }
 function msSync(st, side) {
   if (!st.ms) return;
   const a = st.ms[side], locked = msLocked();
-  v3(v => v.missile && v.missile.setArsenal(side, { on: true, reserve: a.reserve, loaded: a.loaded, pips: a.ms, pipsMax: MS_STREAK,
-    full: msTotal(a) >= MS_MAX, boost: a.boost, boostPips: a.bs, boostMax: MS_BOOST_STREAK, locked }));
+  v3(v => v.missile && v.missile.setArsenal(side, { on: st.msMax > 0, reserve: a.reserve, loaded: a.loaded, pips: a.ms, pipsMax: st.msStreak,
+    full: msTotal(a) >= st.msMax, boost: a.boost, boostPips: a.bs, boostMax: MS_BOOST_STREAK, locked }));
 }
 function msIncoming(side) { const v = rr3d && rr3d.view; return v && v.missile ? v.missile.incoming(side) : Infinity; }
 function msLoad(st, side) {
@@ -401,8 +423,8 @@ function msCorrect(side) {
   const st = rr3d; if (!st || !st.ms || msLocked()) return;
   if (msIncoming(side) <= MS_WINDOW) v3(v => v.missile.dodge(side));
   const a = st.ms[side];
-  if (msTotal(a) < MS_MAX) {
-    if (++a.ms >= MS_STREAK) {
+  if (st.msMax > 0 && msTotal(a) < st.msMax) {        // Đợt 417: 2 thanh Options (số câu liên tiếp / số quả tối đa)
+    if (++a.ms >= st.msStreak) {
       a.ms = 0; a.reserve++;
       msLater(st, () => { if (!msLocked()) v3(v => v.missile.chargeFx(side)); }, 450);   // sau nhịp TURBO ⇒ không chồng hiệu ứng
       // ⭐ Đợt 413 (thầy): "khi có tên lửa con, tên lửa con sẽ được nạp ngay để chuẩn bị bắn luôn, không cần thêm 1 lần bấm"
@@ -443,28 +465,16 @@ function msFire(side) {
   st.msWideReady = false;
   msLater(st, () => msLoad(st, side), 1100);   // ⭐ Đợt 413: còn quả dự phòng ⇒ tự lên nòng quả kế
 }
-// ⭐ Đợt 413 (thầy): nút BOOST nhấp nháy MẠNH suốt lúc có tên lửa địch đang bay tới ("hãy bấm đi") ⇒ bấm lúc nào trong
-// chuyến bay cũng phải ăn. Chưa tới 1,5 s cuối ⇒ BOOST được "giương sẵn" (tiêu luôn), tới đúng 1,5 s cuối thì tự né.
-// Tên lửa biến mất trước đó (trận khoá, quả nổ giữa đường) ⇒ trả lại BOOST.
+// ⭐ Đợt 417 (mẫu 7b): BOOST đầy ⇒ bấm LÚC NÀO CŨNG ĐƯỢC — tàu tiến THẬT 1 nấc (board.boostStep). Tên lửa địch đang ở 1,25 s cuối
+// ⇒ đồng thời NÉ (vẫn giữ nấc). Bấm sớm hơn ⇒ vẫn tiến nhưng tên lửa bám theo và trúng — HS tự canh (bỏ "giương sẵn" Đợt 413).
 function msBoost(side) {
   const st = rr3d; if (!st || !st.ms) return;
-  const a = st.ms[side], v = st.view;
-  const inc = msIncoming(side);
-  if (!v || !v.missile || msLocked() || !a.boost || !(inc < Infinity) || (st.msArmed && st.msArmed[side])) { if (v && v.missile) v.missile.refuse(side, "boost"); return; }
-  if (inc <= MS_WINDOW) { if (v.missile.dodge(side)) { a.boost = false; msSync(st, side); } return; }
-  a.boost = false; msSync(st, side);
-  if (!st.msArmed) st.msArmed = [false, false];
-  st.msArmed[side] = true;
-  v.missile.armBoost && v.missile.armBoost(side, true);
-  const poll = () => {
-    if (st.dead || rr3d !== st) return;
-    const left = msIncoming(side);
-    const done = ok => { st.msArmed[side] = false; v.missile.armBoost && v.missile.armBoost(side, false); if (!ok) { a.boost = true; msSync(st, side); } };
-    if (!(left < Infinity) || msLocked()) return done(false);
-    if (left <= MS_WINDOW) return done(v.missile.dodge(side));
-    msLater(st, poll, 60);
-  };
-  poll();
+  const a = st.ms[side], v = st.view, b = st.boards[side];
+  if (!v || !v.missile || msLocked() || !a.boost || v.phase !== "play" || !b || !b.boostStep) { if (v && v.missile) v.missile.refuse(side, "boost"); return; }
+  a.boost = false; a.bs = 0; msSync(st, side);
+  const dodged = msIncoming(side) <= MS_WINDOW && v.missile.dodge(side);
+  if (!dodged && v.missile.boostFx) v.missile.boostFx(side);
+  b.boostStep();
 }
 function msEnd(to, res) {
   const st = rr3d; if (!st || !st.ms) return;
@@ -526,10 +536,15 @@ function rr3dScene({ root, ctl, title, play }) {
   try {
     const a = ctl && ctl.matchAct && ctl.matchAct();
     st.voiceAct = !!(a && (a.content?.questions || []).some(q => q && voiceView(a, q).hideText));
-    st.msPush = missilePushOf(a && a.options);       // ⭐ Đợt 407 — Options "Missile" (Off = không dựng tên lửa)
+    st.msPush = missilePushOf(a && a.options);       // ⭐ Đợt 407 — Options "Missile" (trúng lùi mấy nấc)
+    st.msStreak = msStreakOf(a && a.options);        // ⭐ Đợt 417 — "Missile streak" / "Missiles max"
+    st.msMax = msMaxOf(a && a.options);
   } catch { /* bàn sẽ tự báo khi mount */ }
   if (st.msPush == null) st.msPush = MS_DEFAULT;
-  st.ms = st.msPush > 0 ? [0, 1].map(() => ({ reserve: 0, loaded: false, ms: 0, bs: 0, boost: false })) : null;
+  if (st.msStreak == null) st.msStreak = MS_STREAK_DEFAULT;
+  if (st.msMax == null) st.msMax = MS_MAX_DEFAULT;
+  // Đợt 417: LUÔN dựng (BOOST nằm trong mô-đun tên lửa) — Missiles max 0 chỉ ẩn phần tên lửa (setArsenal on:false)
+  st.ms = [0, 1].map(() => ({ reserve: 0, loaded: false, ms: 0, bs: 0, boost: false }));
   st.msWideReady = false;
   rrSound.quiet = true;                       // tiếng tổng hợp cũ im — bộ tiếng 3D thay
   console.log("MYACT:3D:ON");                // ⭐ Đợt 399: myActivity v2.23.0 tạm lặng hiệu ứng nền (sao lấp lánh) nhường card đồ hoạ
@@ -538,16 +553,15 @@ function rr3dScene({ root, ctl, title, play }) {
   Promise.all([import("./rr3d-view.js"), import("./rr3d-sfx.js")]).then(([V, S]) => {
     if (st.dead) return null;
     st.sfx = S.createRr3dSound();
-    if (st.voiceAct) { st.sfx.lockBg(true); if (st.paintSoundBtn) st.paintSoundBtn(); }
+    if (st.voiceAct) { st.sfx.lockBg(true); st.sfx.setFxLevel && st.sfx.setFxLevel(MS_VOICE_FX); if (st.paintSoundBtn) st.paintSoundBtn(); }   // Đợt 417: tiếng hiệu ứng nhỏ cả trận
     return V.createView({ ...RR3D_CFG(V), container: host3d, title: title || "ROCKET RACE",
       teams: V.DEFAULT_TEAMS,
       onStart: () => { play(); },
       onTap: (side, k) => { const b = st.boards[side]; if (b) b.choose(k); },
       // Đợt 405 — chạm thanh câu hỏi = nghe lại voice (null = một câu chung ⇒ bàn 0 phát)
       onQuestionTap: side => { const b = st.boards[side == null ? 0 : side]; if (b && b.replayVoice) b.replayVoice(); },
-      // ⭐ Đợt 407 — tên lửa: Off ⇒ view không dựng gì (bố cục như cũ)
-      // Đợt 413: boostCm = cạnh nút BOOST vuông; gapCm = khoảng cách tên lửa / BOOST tới cụm đáp án (xa hơn 0,7 cũ)
-      missiles: st.ms ? { window: MS_WINDOW, dur: 3.8, boostCm: 5.2, gapCm: 2 } : false,
+      // Đợt 413: gapCm = khoảng cách tên lửa / BOOST tới cụm đáp án · Đợt 417: BOOST to hơn (5,2 → 6,5 cm), né trong 1,25 s cuối
+      missiles: { window: MS_WINDOW, dur: 3.8, boostCm: 6.5, gapCm: 2 },
       onFire: side => msFire(side), onBoost: side => msBoost(side), onMissileEnd: (to, res) => msEnd(to, res),
       onLoad: side => msLoadTap(side),        // Đợt 409: chạm quả nhỏ = nạp
       sfx: (n, v) => st.sfx && st.sfx.play(n, v),
@@ -1110,15 +1124,28 @@ const rocketRaceTemplate = {
     // Options and Mode (declared by `fightScreen` below, drawn by core/engine.js),
     // where a lit button says "on" without anyone opening a panel at all.
     if (inFight) {
-      // ⭐ Đợt 407 — tên lửa: trúng thì lùi mấy nấc. 0 = tắt hẳn, 11 = ∞ (về vạch xuất phát). Chưa chỉnh = 2.
+      // ⭐ Đợt 407 — tên lửa: trúng thì lùi mấy nấc. 11 = ∞ (về vạch xuất phát). Chưa chỉnh = 2.
+      // ⭐ Đợt 417 (thầy) — bỏ Off ở thanh này (tắt tên lửa = "Missiles max" 0) + 2 thanh mới.
       const push = missilePushOf(draft);
       const missile = mkSliderCell({
-        label: "Missile", min: 0, max: MS_INF, step: 1, value: push === Infinity ? MS_INF : push, tone: "red", offAt: 0,
-        fmt: v => (v === 0 ? "Off" : v >= MS_INF ? "∞" : "−" + v),
+        label: "Missile", min: 1, max: MS_INF, step: 1, value: push === Infinity ? MS_INF : push, tone: "red",
+        fmt: v => (v >= MS_INF ? "∞" : "−" + v),
         onInput: v => { draft.rrMissile = v; }
       });
-      missile.cell.title = "3 correct in a row = 1 missile. A hit pushes the other rocket back (∞ = to the start line). 0 = off";
-      panel.append(lives.cell, missile.cell);
+      missile.cell.title = "A missile hit pushes the other rocket back this many steps (∞ = to the start line)";
+      const msStreak = mkSliderCell({
+        label: "Missile streak", min: 1, max: 10, step: 1, value: msStreakOf(draft), tone: "red",
+        fmt: v => String(v),
+        onInput: v => { draft.rrMsStreak = v; }
+      });
+      msStreak.cell.title = "Correct answers in a row that make 1 missile";
+      const msMax = mkSliderCell({
+        label: "Missiles max", min: 0, max: 3, step: 1, value: msMaxOf(draft), tone: "red", offAt: 0,
+        fmt: v => (v === 0 ? "Off" : String(v)),
+        onInput: v => { draft.rrMsMax = v; if (draft.rrMissile === 0) draft.rrMissile = MS_DEFAULT; }
+      });
+      msMax.cell.title = "Most missiles a team can hold. 0 = no missiles (BOOST still works)";
+      panel.append(lives.cell, missile.cell, msStreak.cell, msMax.cell);
       // ⭐ Đợt 416 (thầy 27/9/2026) — hết câu mà chưa tàu nào về đích ⇒ bốc lại câu cũ
       // (xào lại) tới khi có tàu chạm vạch. Mọi chế độ (Same / In turns / Different).
       // Count down hết giờ vẫn kết như cũ (tàu gần hơn bay về). MẶC ĐỊNH BẬT.
@@ -1307,10 +1334,18 @@ const rocketRaceTemplate = {
           if (n <= 0) return;
           retreatRocket(player, n); fightRepaint();
           const side = fightSide, p = player.p; v3(v => v.move(side, p, "back", n));
+        },
+        // ⭐ Đợt 417 — bấm BOOST: tàu bàn này tiến THẬT 1 nấc (như câu đúng, không đổi điểm trọng tài); chạm vạch ⇒ thắng
+        boostStep: () => {
+          if (dead || !scene || scene.decided || !player || player.done) return false;
+          player.p += 1; fightRepaint(true);
+          const side = fightSide, p = player.p; v3(v => v.move(side, p, "up"));
+          fireRocket(player);                  // r.p ≥ L ⇒ crossedLine → raceWon như câu đúng
+          return true;
         } };
       if (voiceAct && !rr3d.voiceAct) {
         rr3d.voiceAct = true;
-        if (rr3d.sfx) rr3d.sfx.lockBg(true);
+        if (rr3d.sfx) { rr3d.sfx.lockBg(true); rr3d.sfx.setFxLevel && rr3d.sfx.setFxLevel(MS_VOICE_FX); }   // Đợt 417
         if (rr3d.paintSoundBtn) rr3d.paintSoundBtn();
       }
       rr3d.trackLen = scene ? scene.L : fightTrackLength(N);
@@ -1902,7 +1937,7 @@ const rocketRaceTemplate = {
         if (mover.done) return;   // Đợt 382 — over the line: raceWon owns the screen now
         // the referee turns the round over; turbo is the one flourish kept
         if (streak >= TURBO_STREAK && performance.now() >= turboUntil) { startTurbo("TURBO!"); if (on3d) { const side = fightSide; v3(v => v.turbo(side)); } }
-        if (on3d) msCorrect(fightSide);     // Đợt 407: né (1,5 s cuối) + chuỗi nạp tên lửa / BOOST
+        if (on3d) msCorrect(fightSide);     // Đợt 407: né (Đợt 417: 1,25 s cuối) + chuỗi nạp tên lửa / BOOST
         return;
       }
       if (teamsMode) {

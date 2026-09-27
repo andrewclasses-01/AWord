@@ -1,3 +1,5 @@
+// ⭐ Đợt 417 (thầy 28/9/2026 "ok, ghép 7d vào AWord"): chép NGUYÊN từ kho myGame `rocket-race/game7d/` (MẪU 7b + 7c + 7d).
+// Sửa về sau: làm ở myGame (tools/chep-aword-sang-game.py lấy bản này ra thư mục game mới) → thầy OK → chép sang.
 // =============================================================
 // ROCKET RACE 3D — bộ tiếng của trận Fight 3D.
 // Đợt 392: mp3 CC0 (Kenney + OpenGameArt) qua core/sfx.js.
@@ -106,12 +108,15 @@ export function createRr3dSound() {
   // ⭐ Đợt 405 (thầy): act VOICE ⇒ nhạc nền TẮT và không bật được (giọng đọc phải nghe rõ).
   // Khoá chỉ ép kênh nền về 0 cho trận này — KHÔNG ghi đè lựa chọn đã nhớ của máy.
   let bgLocked = false;
+  // ⭐ MẪU 7b (thầy 27/9/2026): act VOICE ⇒ MỌI tiếng hiệu ứng (động cơ, tăng tốc, báo động, nổ…) nhỏ lại CẢ TRẬN ở một mức
+  // cố định để nghe rõ giọng đọc — không tăng giảm theo lúc voice phát. fxLevel 1 = bình thường; trận voice đặt ~0,35.
+  let fxLevel = 1;
   function applyBus(fadeSec) {
     const now = ctx.currentTime;
     [["fx", bus.fx], ["bg", bus.bg]].forEach(([k, gn]) => {
       const on = prefs[k] && !(k === "bg" && bgLocked);
       gn.gain.cancelScheduledValues(now); gn.gain.setValueAtTime(gn.gain.value, now);
-      gn.gain.linearRampToValueAtTime(on ? 1 : 0, now + fadeSec);
+      gn.gain.linearRampToValueAtTime(on ? (k === "fx" ? fxLevel : 1) : 0, now + fadeSec);
     });
   }
   function setPrefs(p) {
@@ -120,8 +125,10 @@ export function createRr3dSound() {
     applyBus(0.5);
   }
   function lockBg(on) { bgLocked = !!on; applyBus(0.3); }
+  function setFxLevel(k) { fxLevel = Math.max(0, Math.min(1, +k || 0)); applyBus(0.3); }
   return {
-    play, loop, swell, setPrefs, lockBg,
+    play, loop, swell, setPrefs, lockBg, setFxLevel,
+    get fxLevel() { return fxLevel; },
     get prefs() { return { ...prefs, bg: prefs.bg && !bgLocked }; },
     get bgLocked() { return bgLocked; },
     get state() { return ctx.state; },
@@ -152,5 +159,5 @@ function bounds(buf) {
 
 function dummy() {
   const noop = () => {};
-  return { play: noop, loop: noop, swell: noop, setPrefs: noop, lockBg: noop, prefs: { fx: true, bg: true }, bgLocked: false, state: "none", pause: noop, stopAll: noop };
+  return { play: noop, loop: noop, swell: noop, setPrefs: noop, lockBg: noop, setFxLevel: noop, fxLevel: 1, prefs: { fx: true, bg: true }, bgLocked: false, state: "none", pause: noop, stopAll: noop };
 }

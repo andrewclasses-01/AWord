@@ -546,6 +546,47 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 417 (28/9/2026) — ROCKET RACE ▸ FIGHT 3D: ghép MẪU 7b + 7c + 7d từ myGame (BOOST bấm tay +1 nấc, 2 Options tên lửa, tên lửa va nhau, trúng lan, lửa xanh sắp thắng, act voice nhỏ tiếng) · phiên máy MSI
+
+**Yêu cầu (thầy):** *"ok, ghép 7d vào AWord"* — sau 3 bản mẫu ở kho myGame (`rocket-race/mau-7b-boost-tay.html` → `mau-7c-va-cham.html` →
+`mau-7d-trung-lan.html`, myGame GHI CHU Chặng 22–24). Gốc các mẫu = `game7/` chép NGUYÊN AWord `d793bfa` (Đợt 416) bằng tool mới
+`myGame/tools/chep-aword-sang-game.py` ⇒ ghép lại không lệch.
+
+**Luật (thầy chốt qua AskUserQuestion ở 7b + chỉnh ở 7c/7d):**
+- BOOST: MỘT nút to hơn (5,2 → 6,5 cm) CHÍNH GIỮA dưới cột đáp án, bỏ vạch bên cạnh; thanh 5 đoạn BÊN TRONG nút đầy dần trái → phải (câu đúng liên
+  tiếp), SAI ⇒ về 0 (nút đã đầy thì giữ). Đầy ⇒ bấm LÚC NÀO CŨNG ĐƯỢC: tàu tiến THẬT 1 nấc (chạm vạch là thắng). Bỏ "giương sẵn rồi tự né" (Đợt 413).
+- Né: tự canh 1,25 s cuối (trước 1,5) — BOOST / trả lời đúng / sai-bị-lùi. BOOST né được vẫn giữ nấc vừa tiến; bấm sớm ⇒ tiến nhưng vẫn trúng.
+- Options trận: **Missile** bỏ Off (1–10 · ∞) · **Missile streak** 1–10 câu liên tiếp = 1 tên lửa (mặc định 3) · **Missiles max** 0–3 (mặc định 3;
+  0 = không tên lửa, BOOST vẫn còn). Act cũ lưu `rrMissile: 0` (Off) ⇒ hiểu là Missiles max 0 (Missile về mặc định 2).
+- Cột vạch năng lượng tên lửa (mỏng, trắng) sát mép màn mỗi bên; quả dự phòng nhỏ hơn. ⛔ Sửa lỗi "đầu trận BOOST đã có 3 vạch": các lớp nút trong
+  suốt chồng sát + cột nghiêng ⇒ xếp lớp theo khoảng cách từng vật, mặt nút đè ô trong ⇒ `renderOrder` cố định.
+- 2 tên lửa cùng bay ⇒ HÚT nhau, va + nổ giữa đường; nổ cách tàu < 3,4 × rocketScale ⇒ tàu đó như trúng.
+- TRÚNG LAN: 2 tàu cùng nấc / cách đúng 1 nấc (nấc thật lúc nổ) ⇒ tên lửa trúng tàu này thì tàu kia bị y hệt (lùi, khựng, cháy, chữ "HIT TOO!").
+  Khung đỏ + BOOST nhấp nháy báo cả tàu kề.
+- Còn 1 câu là thắng ⇒ lửa đuôi DÀI 1,5 lần + XANH DƯƠNG (thầy bỏ vầng sáng mũi tàu của 7c vì chói).
+- Act VOICE: mọi tiếng hiệu ứng (động cơ, tăng tốc, báo động, nổ…) nhỏ CỐ ĐỊNH 35 % cả trận + nhạc nền tắt (Đợt 405).
+
+**Làm:**
+- `rr3d-missile.js`, `rr3d-sfx.js` = chép NGUYÊN myGame `game7d/` (chỉ đổi 2 dòng đầu file). sfx thêm `setFxLevel(k)` (bus Effect × k).
+- `rr3d-view.js`: `r.nearWin` ⇒ lửa dài + xanh (flameGroup, uCol/uCore, đèn, hạt `emitExhaust`). KHÁC myGame: AWord tự xét `nearWin` ngay trong
+  `view.move()` (`G.phase === "play" && x.p === L − 1`) vì rocket-race.js đổi nấc qua nhiều đường; `win()` tắt.
+- `rocket-race.js`: `MS_WINDOW` 1,25 · `msStreakOf/msMaxOf` + `st.msStreak/msMax` (msSync `on: msMax > 0`, `pipsMax`, `full`) · mô-đun tên lửa LUÔN
+  dựng (`missiles` không còn `false`, vì BOOST nằm trong đó) · `msBoost` viết lại (tiêu BOOST, né nếu trong 1,25 s, `boostFx`, `board.boostStep()`) ·
+  bàn thêm `boostStep` (`player.p += 1` → `fightRepaint` → `v.move up` → `fireRocket` ⇒ chạm vạch thì `crossedLine → raceWon`) · 2 thanh Options mới
+  (`rrMsStreak`, `rrMsMax`) · act voice ⇒ `sfx.setFxLevel(MS_VOICE_FX = 0,35)` ở cả 2 chỗ `lockBg(true)`. Trúng lan: missile gọi
+  `onEnd(other, "hit")` ⇒ `msEnd` ⇒ `boards[other].missileHit` — không cần sửa thêm. Core KHÔNG đổi.
+
+**Đo (bàn thử `scratch/dot417-rr.html` = fight-bench Đợt 187 + tham số `dup` nhân bài, `rrMissile/rrMsStreak/rrMsMax`, `voice`; Fight 3D thật,
+khung Browser đang hiện, 30 câu ⇒ đường đua 15 nấc):**
+- BOOST chưa đầy bấm ⇒ từ chối · 5 đúng ⇒ đầy · bấm ⇒ +1 nấc (5 → 6), thanh về 0 · sai ⇒ thanh 4 → 0.
+- Trúng lan: 8 / 7 (cách 1 nấc), đội 2 bắn trúng đội 1 ⇒ 6 / 5, mỗi tàu +1 vết cháy.
+- Hai quả bắn gần cùng lúc ⇒ va giữa đường (cách tàu 9–10 đv) ⇒ không ai lùi.
+- Lửa xanh: chỉ bật ở 14/15, về đích ⇒ tắt.
+- `rrMissile=0` (act cũ) ⇒ msMax 0, phần tên lửa ẩn · `rrMsMax=0` ⇒ bắn không ra gì, BOOST vẫn +1 · `rrMsStreak=5` ⇒ cột 5 vạch.
+- Act voice (clip giả) ⇒ `sfx.fxLevel` 0,35 + nền khoá · Options trận hiện đủ Missile −2 · Missile streak 3 · Missiles max Off · Solo `test.html` vẫn chạy.
+- ⚠️ Bàn thử: bàn Fight có nhịp khoá giữa 2 câu mà ô vẫn "idle" ⇒ trợ lý phải bấm lại tới khi ô đổi trạng thái; act voice giấu chữ câu hỏi ⇒ trợ lý
+  không dò được ô đúng. ⬜ Thầy bấm tay TOMKO (nghe mức 35 % với act voice thật).
+
 ## Đợt 416 (27/9/2026 tối) — ROCKET RACE ▸ FIGHT: ô tích "Play until finish" — hết câu vẫn bốc câu cũ chơi tới khi về đích · ✅ COMMIT + PUSH `37db5bd` + LIVE (mã băm khớp) · phiên máy MSI
 
 **Yêu cầu (thầy):** *"Thêm một ô tích chức năng vào options: khi tích ô này, thì khi hết câu hỏi vẫn sẽ lấy random các câu hỏi cũ
