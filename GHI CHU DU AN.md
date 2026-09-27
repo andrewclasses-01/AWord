@@ -546,6 +546,13 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 414 (27/9/2026 tối) — rà XSS sau tấn công Tr0ngX: tiêu đề bài ở màn nhập tên (`play.js`) qua `escapeText` · phiên máy MSI
+Bối cảnh: myLesson `HO SO BAO MAT.md` mục 8 (bản đồ tấn công) + 8.5 (agent rà XSS 4 web). AWord: mọi tên/điểm ở leaderboard, bảng thầy,
+stats-home đều đã escape; chỗ DUY NHẤT còn nối thẳng chuỗi Firestore vào innerHTML là `play.js showNameScreen`
+(`el("div","aw-login-title", assignment.activityTitle)` — `core/utils.js el()` gán innerHTML). Nguồn chỉ thầy ghi (luật `assignments` create/update
+isTeacher) nên mức thấp, vá cho kín. Sửa đúng 1 dòng, bọc `escapeText` (hàm sẵn trong play.js:122). Không đụng core/, không đổi giao diện,
+không liên quan đăng nhập/điểm. ⚠ Lưu ý cho phiên sau: `el(tag, cls, html)` là SINK innerHTML — tham số thứ 3 luôn phải là chuỗi đã escape.
+
 ## Đợt 413 (27/9/2026 tối) — ROCKET RACE ▸ FIGHT 3D: 11 ý thầy (Options lưu + Apply về đầu, BOOST mới, tên lửa tự nạp, bố cục cột, Miss wait đáy màn, màu ô) + 413b không lộ ô đúng lúc chờ Time delay · ✅ COMMIT + PUSH (thầy lệnh) · ⬜ CHƯA BẤM TAY TOMKO
 **Yêu cầu thầy (27/9, sau khi test):**
 1. Mỗi lần chỉnh Options là chuyển hẳn về từ đầu, chấp nhận xem cả intro (đã có chạm đúp để bỏ qua).

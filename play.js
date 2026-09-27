@@ -193,7 +193,9 @@ function showMessage(title, sub) {
 function showNameScreen(assignment) {
   const wrap = shell();
   const card = el("div", "aw-login");
-  card.append(el("div", "aw-login-title", assignment.activityTitle || assignment.title || "Ready to play"));
+  // Đợt 414 (27/9/2026, rà XSS): `el()` gán innerHTML — tiêu đề bài từ Firestore phải escape (chỉ thầy ghi được, nhưng
+  // đây là chỗ DUY NHẤT tiêu đề đi thẳng vào HTML; các chỗ khác đã escapeText). Không đổi giao diện.
+  card.append(el("div", "aw-login-title", escapeText(assignment.activityTitle || assignment.title || "Ready to play")));
   card.append(el("div", "aw-login-sub", "Type your name, then press Start."));
 
   const form = el("form", "aw-stu-form");
