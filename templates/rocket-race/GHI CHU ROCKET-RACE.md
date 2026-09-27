@@ -743,3 +743,13 @@ Thầy thiết kế cùng Claude qua 13 bản mẫu ở kho **myGame** (`E:\LAP 
   cột hạ `CON_DY` 4 cm (RR3D_CFG); `headerHeartsOnly` ⇒ đầu cột chỉ tim.
 - Trạng thái ô 3D: `idle · picked · correct · pale · wrong · dim · reveal` (+ `t.border` viền dày). Cờ template `fightMissReveal` (core): hết Miss wait
   ⇒ chốt + lộ + giữ 2,1 s. Bàn thử: `scratch/dot413-rr.html` (`__bench.go/right/tap/tiles`, `view.tileInfo(side)`).
+
+## 37. Đợt 416 (27/9/2026) — Ô TÍCH "PLAY UNTIL FINISH": HẾT CÂU VẪN BỐC CÂU CŨ TỚI KHI VỀ ĐÍCH (MỌI CHẾ ĐỘ)
+Thầy: *"khi tích ô này, thì khi hết câu hỏi vẫn sẽ lấy random các câu hỏi cũ để chơi đến khi 1 đội về đích thì thôi, không bao giờ
+dừng lại"*. Chốt: Count down hết giờ vẫn kết theo giờ · Different cũng theo ô tích · mặc định BẬT.
+- Option `rrEndless` (undefined/true = bật). Options của trận (`inFight`): `addCheck("Play until finish", …, {key:"rrEndless"})`.
+- Cờ bàn `recycleWhenOut: opt.rrEndless !== false` (Đợt 391 là `true` cứng).
+- Core `fight.js`: vòng CHUNG (Same words) nay cũng đọc cờ đó — `sharedDeck`/`nextSharedIndex` trong `advanceRound`, hai bàn cùng chỉ
+  số, `goToIndex(i,{replay:true})`; `suddenDeath` coi vòng chung đang lặp là đã chơi hết chồng; ‹ › của thầy xoá bộ bài lặp.
+- Tắt ⇒ đúng luật Đợt 382 cho cả Same lẫn Different (hết câu ⇒ tàu gần hơn bay về, hoà ⇒ SUDDEN DEATH).
+- Bàn thử `scratch/dot416-rr-endless.html` (6 ca, xem GHI CHU DU AN.md Đợt 416). ⬜ thầy bấm tay TOMKO.

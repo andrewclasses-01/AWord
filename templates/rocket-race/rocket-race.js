@@ -1119,6 +1119,12 @@ const rocketRaceTemplate = {
       });
       missile.cell.title = "3 correct in a row = 1 missile. A hit pushes the other rocket back (∞ = to the start line). 0 = off";
       panel.append(lives.cell, missile.cell);
+      // ⭐ Đợt 416 (thầy 27/9/2026) — hết câu mà chưa tàu nào về đích ⇒ bốc lại câu cũ
+      // (xào lại) tới khi có tàu chạm vạch. Mọi chế độ (Same / In turns / Different).
+      // Count down hết giờ vẫn kết như cũ (tàu gần hơn bay về). MẶC ĐỊNH BẬT.
+      // Tắt ⇒ hết câu là xếp theo vị trí (Đợt 382), kể cả Different.
+      addCheck("Play until finish", draft.rrEndless !== false, v => { draft.rrEndless = v; },
+        { key: "rrEndless", title: "Out of questions and no rocket at the flag: old questions come back (reshuffled) until one rocket finishes. Count down still ends the race" });
       return;
     }
 
@@ -1375,7 +1381,9 @@ const rocketRaceTemplate = {
         // Đợt 391 — Different: a team out of questions with nobody over the line
         // plays its old questions again (reshuffled) — the race ends only at the
         // flag, or when a Count down runs out (then the closer rocket flies home).
-        recycleWhenOut: true,
+        // ⭐ Đợt 416 — now the Options tick "Play until finish" (default ON), and it
+        // covers Same words / In turns too (core: the shared round recycles as well).
+        recycleWhenOut: opt.rrEndless !== false,
         // …and the result panel prints how far each rocket got, not points.
         resultScore() { return player ? Math.min(player.p, player.L) : 0; },
         lock(on) { fightBoardLock = !!on; syncFightLock(); },

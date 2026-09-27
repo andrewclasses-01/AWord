@@ -57,7 +57,10 @@
 //        old ending by points). side = the independent board, null = shared.
 //     attach(… resultScore())      the number the result panel prints
 //        (both boards must have it).
-//     goToIndex(i, { replay:true }) a sudden-death question asked again.
+//     goToIndex(i, { replay:true }) a sudden-death / recycled question asked again.
+//     attach(… recycleWhenOut: true) out of questions ⇒ go round the pile again
+//        (reshuffled) instead of ending — independent boards (Đợt 391) AND the
+//        shared round (Đợt 416). Ends only by finishRace / the clock.
 //     ctl.finishRace(winner, holdMs) decide NOW: freeze every clock, lock both
 //        boards, endMatch() after holdMs with `winner` on top.
 //     ctl.suddenDeath(sides)       tie: one random ALREADY-PLAYED question.
@@ -1033,6 +1036,26 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     try { b.goToIndex(boardIdx[side], { replay: true }); } catch { /* board already gone */ }
     syncNavGates();
   }
+  // ⭐ Đợt 416 (Rocket race, thầy 27/9/2026: "khi hết câu hỏi vẫn sẽ lấy random các
+  // câu hỏi cũ để chơi đến khi 1 đội về đích") — the SAME `recycleWhenOut` flag on
+  // the shared round (Same words / In turns): past the last question the round
+  // goes round the pile again, reshuffled, both boards on the SAME index. In turns
+  // recycles only the indices BOTH piles have (41/40 ⇒ 40), or the short board
+  // would sit a random round out. `null` = still on the first pass.
+  let sharedDeck = null;
+  function sharedRecycleSize() {
+    if (!boards.some(b => b && b.recycleWhenOut)) return 0;
+    const totals = [boards[0]?.total || 0, boards[1]?.total || 0];
+    return turnsMode ? Math.min(...totals) : Math.max(...totals);
+  }
+  function nextSharedIndex(n) {
+    if (!sharedDeck || !sharedDeck.length) {
+      const d = shuffle([...Array(n).keys()]);
+      if (n > 1 && d[0] === roundIndex) d.push(d.shift());   // never the same question twice in a row
+      sharedDeck = d;
+    }
+    return sharedDeck.shift();
+  }
   const soloTimers = [null, null];
   function clearSoloTimers() {
     soloTimers.forEach((t, i) => { if (t) { clearTimeout(t); soloTimers[i] = null; } });
@@ -1512,8 +1535,11 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     const total = Math.max(boards[0]?.total || 0, boards[1]?.total || 0);
     // Đợt 382 — out of questions (or a sudden-death round just settled): the
     // template may take over (Rocket race decides by the rockets, not the points).
-    if (suddenDeath || roundIndex + 1 >= total) { if (!roundsOverHook(null)) endMatch(); return; }
-    roundIndex++;
+    const recycleN = suddenDeath ? 0 : sharedRecycleSize();   // Đợt 416
+    const recycled = recycleN > 0 && (!!sharedDeck || roundIndex + 1 >= total);
+    if (suddenDeath || (!recycled && roundIndex + 1 >= total)) { if (!roundsOverHook(null)) endMatch(); return; }
+    if (recycled) roundIndex = nextSharedIndex(recycleN);
+    else roundIndex++;
     snapRoundBase();   // Đợt 183 — what a "slower team" freeze will pin them to
     boards.forEach((b, i) => {
       if (!b) return;
@@ -1526,7 +1552,8 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       // team that has nothing left to answer.
       if (turnsMode && (b.total || 0) <= roundIndex) { roundDone[i] = true; b.lock(true); return; }
       b.lock(false);
-      b.goToIndex(roundIndex);
+      if (recycled) b.goToIndex(roundIndex, { replay: true });   // Đợt 416 — clear the old "answered" mark
+      else b.goToIndex(roundIndex);
     });
     // Đợt 220 — câu mới, vòng mở lại ⇒ hai mũi tên của CẢ HAI bàn phải mờ trở lại.
     // ⚠️ Đặt SAU `goToIndex` là cố ý: template sẽ gọi `ui.setNav` trong lúc dời câu, và
@@ -2042,6 +2069,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       unconcealAll();
       clearSilentLose();   // Đợt 223 — thầy bấm ‹ › giữa lúc mất màu cũng phải trả lại
       roundIndex = index;
+      sharedDeck = null;   // Đợt 416 — the teacher's ‹ › puts the round back on its first pass
       roundWinner = null;
       cancelPending();
       pendingWinner = null;
@@ -2132,7 +2160,8 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     suddenDeath(sides = [0, 1]) {
       if (matchOver || torndown || raceEnding) return false;
       if (!suddenDeath) {
-        sdReach = roundIndex + 1;
+        // Đợt 416 — a shared round already going round again has played the whole pile
+        sdReach = sharedDeck ? Math.max(boards[0]?.total || 0, boards[1]?.total || 0) : roundIndex + 1;
         // Đợt 391 — a board already going round again has played its whole pile
         sdReachSide[0] = recycleDeck[0] ? (boards[0]?.total || 0) : boardIdx[0] + 1;
         sdReachSide[1] = recycleDeck[1] ? (boards[1]?.total || 0) : boardIdx[1] + 1;

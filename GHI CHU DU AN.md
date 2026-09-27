@@ -546,6 +546,39 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 416 (27/9/2026 tối) — ROCKET RACE ▸ FIGHT: ô tích "Play until finish" — hết câu vẫn bốc câu cũ chơi tới khi về đích · ⬜ CHƯA COMMIT (chờ thầy duyệt) · phiên máy MSI
+
+**Yêu cầu (thầy):** *"Thêm một ô tích chức năng vào options: khi tích ô này, thì khi hết câu hỏi vẫn sẽ lấy random các câu hỏi cũ
+để chơi đến khi 1 đội về đích thì thôi, không bao giờ dừng lại"*. Thầy chốt qua AskUserQuestion: **Count down hết giờ vẫn kết theo
+giờ** (tàu gần hơn bay về) · **Different cũng theo ô tích** (bỏ tích ⇒ Different quay về luật Đợt 382) · **mặc định BẬT**.
+
+**Trước đợt này:** Different luôn dùng lại câu cũ (Đợt 391, cờ bàn `recycleWhenOut: true` cứng); Same words hết câu ⇒ xếp theo vị
+trí (tàu gần hơn bay về, hoà ⇒ SUDDEN DEATH). Rocket race KHÔNG có In turns (template không khai `fightTurns`).
+
+**Làm:**
+- `templates/rocket-race/rocket-race.js` — `buildExtraOptions` nhánh `inFight`: `addCheck("Play until finish", draft.rrEndless !== false, …,
+  { key: "rrEndless" })` (khoá không có trong `checkOrder` ⇒ xếp cuối khối ô tích, cạnh Show answers). `fightCtl.attach`:
+  `recycleWhenOut: opt.rrEndless !== false` (thay `true` cứng).
+- `core/fight.js` (móc TUỲ CHỌN, template khác không khai ⇒ y cũ): vòng CHUNG cũng đọc cờ `recycleWhenOut`.
+  `sharedDeck` + `sharedRecycleSize()` + `nextSharedIndex(n)`: trong `advanceRound`, đi quá câu cuối ⇒ `roundIndex` = câu kế trong
+  bộ bài xào lại (không trùng liền giữa hai vòng), hai bàn nhận CÙNG chỉ số với `goToIndex(i, { replay: true })` (xoá dấu "đã trả
+  lời"). In turns (nếu template nào có) chỉ vòng trong `min` hai chồng để bàn ngắn không bị ngồi ngoài. `ctl.suddenDeath`: vòng chung
+  đang lặp ⇒ `sdReach` = cả chồng. `boardMoved` (‹ › của thầy) ⇒ `sharedDeck = null` về vòng đầu. Ghi chú hợp đồng đầu file.
+- Hết giờ Count down: KHÔNG đổi gì — `finish()` ⇒ `settleByPosition(null)` như Đợt 382.
+
+**Đo** (`scratch/dot416-rr-endless.html` — chép từ bàn thử Đợt 413, Fight 3D thật, cắt còn 4 câu ⇒ đường đua 2 bậc; 0 lỗi console):
+- Same + bật (mặc định): cả hai sai liên tục ⇒ câu `0 1 2 3 | 0 2 3 1 | 0 2 …` (hoán vị đủ, không trùng liền), hai bàn luôn cùng câu,
+  KHÔNG banner SUDDEN DEATH, không kết trận.
+- Same + bật, trái đúng 2 câu ở vòng lặp ⇒ "TEAM LEFT WINS", tàu phải nổ.
+- Same + TẮT ⇒ hết 4 câu ⇒ "SUDDEN DEATH!" (luật Đợt 382 y cũ).
+- Different + bật ⇒ hai bàn độc lập tự vòng lại (y Đợt 391), không kết · Different + TẮT ⇒ hết hai chồng ⇒ "SUDDEN DEATH!".
+- Same + bật + Count down 25 s, trái đúng 1 câu ⇒ đã vòng lại câu cũ, hết giờ ⇒ "TEAM LEFT WINS 2/2 — 0/2" (tàu gần hơn bay về).
+- Options của trận: ô "Play until finish" hiện, mặc định tích; bỏ tích + Apply ⇒ `act.options.rrEndless = false`, mở lại vẫn bỏ tích.
+⚠ Bàn thử chạy chậm khi khung Browser bị ẩn (timer bị kìm) — mỗi ca 20–75 s, chạy nền rồi đọc `window.__res`.
+
+**VIỆC ĐANG CHỜ (Đợt 416):** ⬜ thầy duyệt ⇒ commit + push (2 file code + bàn thử + hồ sơ) · ⬜ bấm tay TOMKO: act ít câu, cả hai đội
+cố tình sai tới hết câu ⇒ xem câu cũ quay lại, rồi về đích ⇒ thắng; thử bỏ tích xem có quay về SUDDEN DEATH.
+
 ## Đợt 415 (27/9/2026 tối) — PRINT: chọn BỘ (ENG1/VI2…) TRƯỚC rồi mới chọn định dạng · ANAGRAM mỗi từ đúng 1 hàng, từ dài co ô · ⬜ CHƯA COMMIT (chờ thầy duyệt) · phiên máy MSI
 **Yêu cầu thầy:** (1) bấm Print ⇒ việc đầu tiên là chọn loại act (ENG1, VI2…), sau đó mới chọn Anagram/Quiz…; (2) Anagram: các ô của
 mỗi từ phải nằm trên DUY NHẤT 1 hàng — từ dài thì co nhỏ ô, không xuống dòng trong mọi tình huống.
