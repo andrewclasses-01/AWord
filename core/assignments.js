@@ -913,11 +913,19 @@ export function beatPlayLog({ code, id, name, ma, mode, again, mistakes, score, 
   // Không đo (lối gọi cũ) ⇒ bỏ trường; mask vẫn có tên nên kho cũng không giữ số cũ nào. Trần = timeMs (≤ 12 giờ, luật).
   if (Number.isFinite(activeMs)) fields.activeMs = { integerValue: String(Math.min(43200000, Math.max(0, Math.round(activeMs)))) };
   if (baiLam.length) fields.review = fsGiaTri(baiLam);   // Đợt 384 — mask có "review" chỉ khi có trường này
-  try {
-    return fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ fields }), keepalive })
-      .then(r => !!r.ok).catch(() => false);
-  } catch (e) { return Promise.resolve(false); }
+  // ⭐ Đợt 411 (27/9/2026) — luật practiceLog đòi VÉ đúng em (như scores/results, Đợt 410). keepalive (đóng tab) lấy vé
+  // ĐỒNG BỘ; nhịp thường chờ vé ≤ 3 s. Không vé (chơi ngoài myLesson / mẹ không cấp) ⇒ KHÔNG gửi (luật sẽ chặn).
+  const gui = (ve) => {
+    if (!ve) return Promise.resolve(false);
+    try {
+      return fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: "Bearer " + ve },
+                          body: JSON.stringify({ fields }), keepalive })
+        .then(r => !!r.ok).catch(() => false);
+    } catch (e) { return Promise.resolve(false); }
+  };
+  if (!ma) return Promise.resolve(false);
+  if (keepalive) return gui(veConHan(String(ma).slice(0, 60)));
+  return xinVe(String(ma).slice(0, 60), 3000).then(gui);
 }
 
 // Deliver whatever previous visits still owe — run on every play.html load,

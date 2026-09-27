@@ -546,6 +546,14 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 411 (27/9/2026 chiều) — practiceLog cũng đòi VÉ đăng nhập · phiên máy MSI
+Thầy "làm 1 và 2" (bài nộp + tiến độ giả). Chỉ `core/assignments.js` `beatPlayLog`: gửi kèm `Authorization: Bearer <vé>`
+(keepalive lấy `veConHan` đồng bộ; nhịp thường `xinVe(ma, 3000)`); không mã / không vé ⇒ KHÔNG gửi (luật chặn).
+Luật `emDung(ma)` cho practiceLog (myLesson `web/tools/dang-luat-tien-do.js`, cùng lượt với bài nộp ảnh + tiến độ video/audio +
+tích SP). Hệ quả: lượt luyện chơi ngoài myLesson không còn vào dashboard (đúng hướng thầy chốt ở Đợt 410).
+
+---
+
 ## Đợt 410 (27/9/2026 chiều) — ⭐⭐ ĐIỂM ĐÒI ĐĂNG NHẬP: "VÉ" từ trang mẹ myLesson (sau tấn công Tr0ngX đợt 4) · phiên máy MSI
 **Bối cảnh:** sáng 27/9 kẻ lạ bơm ~1,19 TRIỆU dòng điểm giả vào `assignments/*/scores` của cả 118 bài (tên "disc0rd … @Tr0ngX",
 không `ma`) — web myLesson đọc 300 dòng mới nhất/bài nên điểm thật bị đẩy khỏi màn hình. Đã dọn + luật tên sạch `f9b3036d`
