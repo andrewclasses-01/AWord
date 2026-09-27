@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 416 (27/9/2026 tối) — ROCKET RACE ▸ FIGHT: ô tích "Play until finish" — hết câu vẫn bốc câu cũ chơi tới khi về đích · ⬜ CHƯA COMMIT (chờ thầy duyệt) · phiên máy MSI
+## Đợt 416 (27/9/2026 tối) — ROCKET RACE ▸ FIGHT: ô tích "Play until finish" — hết câu vẫn bốc câu cũ chơi tới khi về đích · ✅ COMMIT + PUSH `37db5bd` + LIVE (mã băm khớp) · phiên máy MSI
 
 **Yêu cầu (thầy):** *"Thêm một ô tích chức năng vào options: khi tích ô này, thì khi hết câu hỏi vẫn sẽ lấy random các câu hỏi cũ
 để chơi đến khi 1 đội về đích thì thôi, không bao giờ dừng lại"*. Thầy chốt qua AskUserQuestion: **Count down hết giờ vẫn kết theo
@@ -576,7 +576,7 @@ trí (tàu gần hơn bay về, hoà ⇒ SUDDEN DEATH). Rocket race KHÔNG có I
 - Options của trận: ô "Play until finish" hiện, mặc định tích; bỏ tích + Apply ⇒ `act.options.rrEndless = false`, mở lại vẫn bỏ tích.
 ⚠ Bàn thử chạy chậm khi khung Browser bị ẩn (timer bị kìm) — mỗi ca 20–75 s, chạy nền rồi đọc `window.__res`.
 
-**VIỆC ĐANG CHỜ (Đợt 416):** ⬜ thầy duyệt ⇒ commit + push (2 file code + bàn thử + hồ sơ) · ⬜ bấm tay TOMKO: act ít câu, cả hai đội
+**VIỆC ĐANG CHỜ (Đợt 416):** ✅ push `37db5bd` (thầy lệnh), Pages built đúng commit, 2/2 file code khớp SHA-256 bản live · ⬜ bấm tay TOMKO: act ít câu, cả hai đội
 cố tình sai tới hết câu ⇒ xem câu cũ quay lại, rồi về đích ⇒ thắng; thử bỏ tích xem có quay về SUDDEN DEATH.
 
 ## Đợt 415 (27/9/2026 tối) — PRINT: chọn BỘ (ENG1/VI2…) TRƯỚC rồi mới chọn định dạng · ANAGRAM mỗi từ đúng 1 hàng, từ dài co ô · ⬜ CHƯA COMMIT (chờ thầy duyệt) · phiên máy MSI
