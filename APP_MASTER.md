@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> 🔐 **27/9/2026 Đợt 412 — tab mới (myLesson `rel="opener"`) xin vé qua `window.opener`; thiếu vé ⇒ màn lỗi "EM CẦN ĐĂNG NHẬP"** (`canVe`, không còn báo "lỗi mạng" sai). ⬜ chưa thử ca opener trên trình duyệt thật.
 > 🔐 **27/9/2026 Đợt 411 — practiceLog cũng gửi kèm VÉ** (`beatPlayLog`; không vé ⇒ không gửi). Luật `emDung` cho practiceLog.
 > 🔐⭐⭐ **27/9/2026 Đợt 410 — ĐIỂM ĐÒI ĐĂNG NHẬP (sau tấn công Tr0ngX: 1,19 triệu điểm giả)**: lượt mang `ma` chỉ gửi bằng
 > "VÉ" = Firebase ID token do trang mẹ myLesson cấp qua postMessage (`AWORD:XIN_VE` ↔ `AWORD:VE`, `core/assignments.js`

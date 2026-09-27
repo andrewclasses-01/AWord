@@ -546,6 +546,21 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 412 (27/9/2026 chiều) — mở bằng nút "TAB MỚI" của myLesson cũng xin được VÉ + màn lỗi nói đúng lý do · phiên máy MSI
+Thầy hỏi mở act bằng nút tab mới có ghi điểm không ⇒ KHÔNG (link `rel="noopener"` ⇒ tab AWord đứng một mình, không trang mẹ ⇒
+không vé ⇒ luật chặn, lượt nằm outbox, thấy "LỖI MẠNG" sai lý do). Thầy: "sửa để tab mới cũng ghi được nhưng vẫn đảm bảo an toàn".
+- `core/assignments.js` `nguonVe()`: khung nhúng ⇒ `window.parent`; không có ⇒ `window.opener` (tab bài học đã mở ta). An toàn
+  không đổi: vé chỉ NHẬN từ `VE_NGUON`, trang mẹ chỉ TRẢ đích danh origin AWord khi đăng nhập đúng em.
+- `guiBangVe`: không vé ⇒ `{ok:false, canVe:true}`; luật từ chối ⇒ `{ok:false, hard:true, canVe:true}`.
+- `core/engine.js` `showError(kq)`: `canVe` ⇒ "CHƯA GỬI ĐƯỢC — EM CẦN ĐĂNG NHẬP" + hướng dẫn giữ trang bài học mở / mở lại
+  bài từ trang bài học (hộp chờ tự gửi); không `canVe` ⇒ chữ "LỖI MẠNG" như cũ.
+- myLesson web v1.162.0 `bai.html`: nút "Mở ở tab mới" `rel="opener"` (Chrome mặc định cắt opener với `_blank`).
+**Kiểm:** ca KHÔNG trang mẹ (tab đứng một mình) ⇒ `{ok:false, canVe:true}` ✓ không gửi mù. ⚠ Ca CÓ opener KHÔNG thử được bằng
+trình duyệt dựng sẵn của app Claude (nó biến `_blank`/`window.open` thành chuyển trang tại chỗ) — đường nhận vé dùng lại y hệt
+đường khung nhúng đã kiểm Đợt 410, chỉ khác đích `postMessage`. ⬜ Thử thật trên Chrome/điện thoại khi có em đăng nhập.
+
+---
+
 ## Đợt 411 (27/9/2026 chiều) — practiceLog cũng đòi VÉ đăng nhập · phiên máy MSI
 Thầy "làm 1 và 2" (bài nộp + tiến độ giả). Chỉ `core/assignments.js` `beatPlayLog`: gửi kèm `Authorization: Bearer <vé>`
 (keepalive lấy `veConHan` đồng bộ; nhịp thường `xinVe(ma, 3000)`); không mã / không vé ⇒ KHÔNG gửi (luật chặn).

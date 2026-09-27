@@ -572,15 +572,25 @@ function veConHan(ma) {
   return _ve && _ve.ma === String(ma) && _ve.het - Date.now() > 90e3 ? _ve.token : null;
 }
 // Vé của em `ma`, hoặc null sau `ms` (không nhúng / trang mẹ không cấp). Không bao giờ reject.
+// ⭐ Đợt 412 — nguồn vé: khung NHÚNG ⇒ `window.parent`; mở bằng nút "tab mới" của myLesson (link `rel="opener"`) ⇒
+// `window.opener` = tab bài học đã mở ta. Không có cả hai ⇒ không vé. An toàn không đổi: vé chỉ được NHẬN từ VE_NGUON
+// (ngheVe), và trang mẹ chỉ TRẢ vé đích danh origin AWord khi đang đăng nhập đúng em.
+function nguonVe() {
+  if (typeof window === "undefined") return null;
+  if (window.parent && window.parent !== window) return window.parent;
+  try { if (window.opener && !window.opener.closed) return window.opener; } catch (e) { /* bị cắt quan hệ */ }
+  return null;
+}
 export function xinVe(ma, ms = 4000) {
   const co = veConHan(ma);
   if (co) return Promise.resolve(co);
-  if (typeof window === "undefined" || window.parent === window) return Promise.resolve(null);
+  const me = nguonVe();
+  if (!me) return Promise.resolve(null);
   ngheVe();
   return new Promise(res => {
     const t = setTimeout(() => res(veConHan(ma)), ms);
     _choVe.push(() => { const v = veConHan(ma); if (v) { clearTimeout(t); res(v); } });
-    try { window.parent.postMessage({ type: "AWORD:XIN_VE", ma: String(ma) }, "*"); } catch (e) { /* mẹ khó tính: không có vé */ }
+    try { me.postMessage({ type: "AWORD:XIN_VE", ma: String(ma) }, "*"); } catch (e) { /* mẹ khó tính: không có vé */ }
   });
 }
 // Trang nhúng xin vé NGAY khi mở (play.js) để lúc nộp — kể cả keepalive lúc đóng tab, không chờ được — đã có sẵn vé.
@@ -742,12 +752,14 @@ async function guiBangVe(entry, { tries = 3, tryTimeoutMs = 6000 } = {}) {
   for (let round = 0; round < tries; round++) {
     if (round) await new Promise(r => setTimeout(r, 700 * round));
     const ve = await xinVe(ma);
-    if (!ve) { saveOutboxEntry(entry); return { ok: false }; }   // không có vé đúng em ⇒ để dành, không gửi mù
+    // không có vé đúng em ⇒ để dành, không gửi mù. `canVe` (Đợt 412) ⇒ màn lỗi nói rõ "cần trang bài học / đăng nhập"
+    // thay vì "lỗi mạng" (engine `showError`).
+    if (!ve) { saveOutboxEntry(entry); return { ok: false, canVe: true }; }
     for (const [co, url, f] of [["scoreOk", urlScore, scoreF], ["resultOk", urlResult, resultF]]) {
       if (entry[co]) continue;
       try {
         if (await tao(url, f, ve)) entry[co] = true;
-        else { saveOutboxEntry(entry); return { ok: false, hard: true }; }
+        else { saveOutboxEntry(entry); return { ok: false, hard: true, canVe: true }; }
       } catch (e) { /* mạng: thử lại vòng sau */ }
       saveOutboxEntry(entry);
     }

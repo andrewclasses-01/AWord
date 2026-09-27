@@ -7021,7 +7021,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       ]);
       if (!overlay.root.isConnected) return;   // torn down (restart) while waiting
       if (sent && sent.ok) { await xongTot(); return; }
-      overlay.showError();
+      overlay.showError(sent);   // Đợt 412 — `canVe` ⇒ lỗi vì THIẾU VÉ đăng nhập, không phải lỗi mạng
       // ⭐ Đợt 383 — lượt gửi vẫn chạy ngầm sau mốc 10 giây: nó về tới nơi trong lúc màn lỗi đang hiện
       // thì tự chuyển sang SUBMITTED (em khỏi phải bấm GỬI LẠI). Cùng mã lượt ⇒ không bao giờ ghi đôi.
       dangGui.then(r => { if (r && r.ok && overlay.face === "error") { overlay.showSending(); xongTot(); } }).catch(() => {});
@@ -7089,11 +7089,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       setTimeout(done, 320);   // ⚠️ setTimeout, không onfinish — tab ẩn làm đứng sự kiện hoạt ảnh (Đợt 216)
     });
 
-    o.showError = () => swap("error", () => {
+    // ⭐ Đợt 412 (27/9/2026) — `kq.canVe` (core/assignments.js guiBangVe): luật đòi VÉ đăng nhập của em mà trang này
+    // không xin được (mở link ngoài myLesson, đã đóng tab bài học, chưa đăng nhập) ⇒ nói ĐÚNG lý do + cách sửa.
+    o.showError = (kq) => swap("error", () => {
       const box = el("div", "aw-hw-sub-center");
-      box.append(el("div", "aw-hw-err-title", "GỬI BÀI CHƯA THÀNH CÔNG DO LỖI MẠNG"));
-      box.append(el("div", "aw-hw-err-sub",
-        "Bài làm của em vẫn còn trên máy — chọn một trong hai cách dưới đây."));
+      const thieuVe = !!(kq && kq.canVe);
+      box.append(el("div", "aw-hw-err-title", thieuVe ? "CHƯA GỬI ĐƯỢC — EM CẦN ĐĂNG NHẬP" : "GỬI BÀI CHƯA THÀNH CÔNG DO LỖI MẠNG"));
+      box.append(el("div", "aw-hw-err-sub", thieuVe
+        ? "Bài làm của em vẫn còn trên máy. Em giữ trang bài học andrewclasses.com mở (đã đăng nhập bằng mật khẩu) rồi bấm GỬI LẠI BÀI TẬP — hoặc mở lại bài này từ trang bài học, bài sẽ tự gửi."
+        : "Bài làm của em vẫn còn trên máy — chọn một trong hai cách dưới đây."));
       const row = el("div", "aw-hw-err-btns");
       const retry = el("button", "aw-hw-bigbtn is-primary", "GỬI LẠI BÀI TẬP");
       retry.type = "button";
