@@ -365,6 +365,8 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   //               của cả hai bàn ẩn đi. Xem chỗ dời DOM ở cuối startFight.
   // Không khai ⇒ mọi số y hệt Đợt 351 (32:10.5 + 16:10.5, nút trong bàn).
   const frame = ((sharedLayout || middleLayout) && getTemplate(activity.type)?.fightFrame) || null;
+  // ⭐ Đợt 413 — hết Miss wait thì chốt vòng + lộ kết quả (xem nhánh Miss wait trong wordDone). Chỉ template khai.
+  const missReveal = getTemplate(activity.type)?.fightMissReveal === true;
 
   // ----- shell -----
   const wrap = el("div", "aw-fight");
@@ -1910,7 +1912,18 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
           // ngưỡng `WAIT_BAR_MIN_MS` (0s tức thì, chốt riêng của nấc này — xem
           // FIGHT_DEFAULTS.fightWrongWait) thì không vẽ gì, chỉ tổ nháy một khung.
           if (wrongWaitMs >= WAIT_BAR_MIN_MS) startMissBar(other, wrongWaitMs);
-          later(advanceRound, wrongWaitMs);
+          // ⭐ Đợt 413 (thầy, Rocket race) — cờ TUỲ CHỌN `tpl.fightMissReveal`: hết Miss wait mà bàn kia chưa
+          // chọn ⇒ chốt vòng ĐÚNG như hết Time delay (khoá im lặng bàn chậm, lộ kết quả cả hai bàn, giữ
+          // ROUND_HOLD_MS) để bàn chọn sai thấy ô ĐỎ và bàn hết giờ thấy ô ĐÚNG, rồi mới sang câu.
+          // Template không khai ⇒ y cũ: sang câu ngay, không lộ.
+          if (missReveal) later(() => {
+            if (!roundDone[other]) { roundDone[other] = true; silentLose(other); boards[other] && boards[other].lock(true); }
+            stopMissBar();
+            revealBoards();
+            later(advanceRound, ROUND_HOLD_MS);
+            syncNavGates();
+          }, wrongWaitMs);
+          else later(advanceRound, wrongWaitMs);
         }
         return;
       }
@@ -2215,6 +2228,17 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       const id = String(activity.id || "");
       if (id && !/^(conv|mist)_/.test(id)) {
         import("./store.js").then(m => m.saveActivity(activity)).catch(() => {});
+      } else if (/^conv_/.test(id) && originAct && originAct !== activity) {
+        // ⭐ Đợt 413 (thầy 27/9/2026: "apply rồi mà sau đó lại mất options, bị chuyển lại trước đó") —
+        // trận đang đấu một act CHUYỂN ĐỔI (Change template, hoặc act mở thẳng bằng template chơi cuối
+        // `lastTpl` — Đợt 400 ⇒ act Quiz mở ra đã là bản "conv_" Rocket race). Trước đây nhánh này
+        // KHÔNG lưu gì: options chỉ sống trong RAM, lần chuyển đổi sau (mở lại act, rời Fight, tải
+        // lại trang) lấy lại options mẫu. Đúng luật Apply một bàn (engine.js): nhớ theo (act gốc,
+        // template) ở `originAct.templateOptions[type]` — convert.js đọc đúng chỗ đó — rồi lưu act gốc.
+        if (!originAct.templateOptions) originAct.templateOptions = {};
+        originAct.templateOptions[activity.type] = { ...activity.options };
+        const oid = String(originAct.id || "");
+        if (oid && !/^(conv|mist)_/.test(oid)) import("./store.js").then(m => m.saveActivity(originAct)).catch(() => {});
       }
       ctl.restartMatch();
     },

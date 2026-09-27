@@ -1,5 +1,6 @@
 // ⭐ Đợt 409 (thầy 27/9/2026): chép NGUYÊN từ kho myGame `rocket-race/game6d/rr3d-missile.js` (MẪU 6d thầy duyệt), chuông báo động kiểu b.
-// Sửa mô-đun này: làm ở myGame trước → thầy OK → chép sang (như cảnh phóng, GHI CHU ROCKET-RACE mục 32).
+// ⚠️ Đợt 413 (thầy 27/9/2026) sửa THẲNG ở AWord (tự nạp, nút BOOST vuông + vạch nấc, tên lửa lên trên cột đáp án, BOOST giương sẵn)
+// ⇒ file này NAY KHÁC myGame game6d/. Làm mẫu mới ở myGame thì chép bản này ngược về trước.
 // =============================================================
 // ROCKET RACE 3D — TÊN LỬA TẤN CÔNG giữa 2 tàu (MẪU 6d, thầy 27/9/2026 — sửa từ 6c:
 //   · đủ 3 câu liên tiếp ⇒ +1 quả NHỎ ở hàng dự phòng (tối đa 3); CHƯA lên nòng, trên tàu chưa có gì
@@ -258,11 +259,35 @@ export function createMissiles(X) {
     m.flame.visible = m.flare.visible = false;
     return m;
   }
+  // ⭐ Đợt 413 (thầy 27/9/2026): hình chữ nhật bo góc (nút BOOST vuông + vạch nấc)
+  function roundRectGeo(w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    const x = -w / 2, y = -h / 2, sh = new THREE.Shape();
+    sh.moveTo(x + r, y); sh.lineTo(x + w - r, y); sh.quadraticCurveTo(x + w, y, x + w, y + r);
+    sh.lineTo(x + w, y + h - r); sh.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    sh.lineTo(x + r, y + h); sh.quadraticCurveTo(x, y + h, x, y + h - r);
+    sh.lineTo(x, y + r); sh.quadraticCurveTo(x, y, x + r, y);
+    return new THREE.ShapeGeometry(sh, 8);
+  }
+  // icon "boost tốc độ": 2 mũi tên kép chĩa LÊN (tàu lao về phía trước) + 3 vệt tốc độ — vẽ trắng, tô màu bằng material
+  let boostIconTex = null;
+  function boostIcon() {
+    if (boostIconTex) return boostIconTex;
+    const cv = document.createElement("canvas"); cv.width = cv.height = 256;
+    const g = cv.getContext("2d");
+    g.strokeStyle = "#fff"; g.lineCap = "round"; g.lineJoin = "round"; g.lineWidth = 30;
+    [[150, 0], [96, 1]].forEach(([y]) => { g.beginPath(); g.moveTo(66, y + 42); g.lineTo(128, y - 20); g.lineTo(190, y + 42); g.stroke(); });
+    g.lineWidth = 12; g.globalAlpha = 0.75;
+    [[92, 196, 214], [128, 206, 236], [164, 196, 214]].forEach(([x, y0, y1]) => { g.beginPath(); g.moveTo(x, y0); g.lineTo(x, y1); g.stroke(); });
+    boostIconTex = new THREE.CanvasTexture(cv); boostIconTex.colorSpace = THREE.SRGBColorSpace;
+    return boostIconTex;
+  }
   function buildConsole(con, inner, s, pad, cm) {
     const side = con.side;
     const areaW = s.w - pad * 2;
     const ammoH = MC.ammoCm * cm, boostH = MC.boostCm * cm, gap = MC.gapCm * cm;
-    const yAmmo = -s.h / 2 - gap - ammoH / 2, yBoost = yAmmo - ammoH / 2 - gap - boostH / 2;
+    // ⭐ Đợt 413 (thầy): TÊN LỬA LÊN TRÊN cụm đáp án, BOOST vẫn ở dưới; cả hai cách cụm đáp án xa hơn (gapCm)
+    const yAmmo = s.h / 2 + gap + ammoH / 2, yBoost = -s.h / 2 - gap - boostH / 2;
     const inSign = side === 0 ? 1 : -1;                       // phía TRONG (giữa màn) = quả to; phía ngoài = quả dự phòng
     const am = new THREE.Group(); am.position.set(0, yAmmo, 0.05); inner.add(am);
     const bigW = areaW * 0.6, spW = areaW * 0.36;                // 6d: hàng quả nhỏ rộng hơn (giờ là chỗ CHẠM để nạp)
@@ -278,24 +303,42 @@ export function createMissiles(X) {
     // 6d: HAI vùng chạm — hàng quả nhỏ (nạp) · ô quả to (bắn)
     const hitSp = new THREE.Mesh(new THREE.PlaneGeometry(spW * 1.2, ammoH * 1.1), mHit); hitSp.position.set(spX - inSign * spW * 0.08, 0, 0.3); am.add(hitSp);
     const hitAm = new THREE.Mesh(new THREE.PlaneGeometry(bigW * 1.08, ammoH * 1.1), mHit); hitAm.position.set(bigX + inSign * bigW * 0.02, 0, 0.3); am.add(hitAm);
-    // BOOST: rãnh mờ + dải cyan (gốc ở mép NGOÀI, dài vào giữa màn) + quầng cyan khi đầy
+    // ⭐ Đợt 413 (thầy): BOOST = NÚT VUÔNG bo góc có icon tăng tốc (phía TRONG, dưới quả to) + VẠCH CHIA NẤC rõ ràng
+    // (mỗi câu đúng liên tiếp = 1 nấc) nằm cạnh nút. Đủ nấc ⇒ nút sáng nổi bật, nhấp nháy NHẸ; có tên lửa địch đang bay
+    // tới ⇒ nhấp nháy MẠNH ("hãy bấm đi").
     const bst = new THREE.Group(); bst.position.set(0, yBoost, 0.05); inner.add(bst);
-    const barH = boostH * 0.5, x0 = -inSign * areaW / 2;
-    const track = new THREE.Mesh(capsuleGeo(-areaW / 2, areaW / 2, barH), new THREE.MeshBasicMaterial({ color: new THREE.Color("#0b1320"), transparent: true, opacity: 0.6, depthWrite: false }));
-    bst.add(track);
-    const fillMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0, 0.55, 0.78), transparent: true, opacity: 1, depthWrite: false });
-    const fill = new THREE.Mesh(capsuleGeo(x0, x0 + inSign * 1e-4, barH * 0.8), fillMat); fill.position.z = 0.01; fill.visible = false; bst.add(fill);
+    const btnS = boostH, btnX = inSign * (areaW / 2 - btnS / 2);
+    const btn = new THREE.Group(); btn.position.set(btnX, 0, 0.02); bst.add(btn);
+    const btnRimMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.2, 0.9, 1.2), transparent: true, opacity: 0.5, depthWrite: false });
+    const btnRim = new THREE.Mesh(roundRectGeo(btnS, btnS, btnS * 0.26), btnRimMat);
+    const btnFaceMat = new THREE.MeshBasicMaterial({ color: new THREE.Color("#0b1624"), transparent: true, opacity: 0.85, depthWrite: false });
+    const btnFace = new THREE.Mesh(roundRectGeo(btnS * 0.9, btnS * 0.9, btnS * 0.22), btnFaceMat); btnFace.position.z = 0.005;
+    const iconMat = new THREE.MeshBasicMaterial({ map: boostIcon(), color: new THREE.Color(0.35, 0.6, 0.75), transparent: true, opacity: 0.55, depthWrite: false });
+    const icon = new THREE.Mesh(new THREE.PlaneGeometry(btnS * 0.7, btnS * 0.7), iconMat); icon.position.z = 0.01;
+    btn.add(btnRim, btnFace, icon);
     const bGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: flareTex, color: new THREE.Color(0.2, 1.6, 2.2), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
-    bGlow.scale.set(areaW * 1.3, boostH * 2.2, 1); bGlow.position.z = -0.02; bst.add(bGlow);
-    const hitB = new THREE.Mesh(new THREE.PlaneGeometry(areaW * 1.05, boostH * 1.3), mHit); hitB.position.z = 0.3; bst.add(hitB);
+    bGlow.scale.set(btnS * 2.6, btnS * 2.6, 1); bGlow.position.set(btnX, 0, -0.02); bst.add(bGlow);
+    // vạch nấc: MS_BOOST_STREAK ô bo góc, cách nhau rõ, từ mép NGOÀI tới sát nút
+    const pipN = Math.max(1, A[side].boostMax || 5), pipsW = areaW - btnS - btnS * 0.3, pipH = btnS * 0.42, pipGap = pipsW * 0.05;
+    const pipW = (pipsW - pipGap * (pipN - 1)) / pipN, pipX0 = -inSign * (areaW / 2 - pipW / 2);
+    const pips = [];
+    for (let i = 0; i < pipN; i++) {
+      const x = pipX0 + inSign * i * (pipW + pipGap);
+      const back = new THREE.Mesh(roundRectGeo(pipW, pipH, pipH * 0.35), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.05, 0.2, 0.3), transparent: true, opacity: 0.9, depthWrite: false }));   // nấc trống vẫn thấy rõ (xanh thẫm)
+      back.position.set(x, 0, 0);
+      const fm = new THREE.MeshBasicMaterial({ color: new THREE.Color(0, 0.55, 0.78), transparent: true, opacity: 0, depthWrite: false });
+      const f = new THREE.Mesh(roundRectGeo(pipW * 0.86, pipH * 0.68, pipH * 0.25), fm); f.position.set(x, 0, 0.01);
+      bst.add(back, f); pips.push({ f, fm, k: 0 });
+    }
+    const hitB = new THREE.Mesh(new THREE.PlaneGeometry(areaW * 1.05, boostH * 1.25), mHit); hitB.position.z = 0.3; bst.add(hitB);
     // khung cảnh báo đỏ bao cả cột (chỉ hiện khi bị bắn)
-    const top = s.h / 2, bot = yBoost - boostH / 2, fh = top - bot + pad, fw = s.w + pad * 0.6;
+    const top = yAmmo + ammoH / 2, bot = yBoost - boostH / 2, fh = top - bot + pad, fw = s.w + pad * 0.6;
     const warnMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 0.35, 0.3), transparent: true, opacity: 0, depthWrite: false });
     const warn = new THREE.Mesh(frameGeo(fw, fh, Math.min(fw, fh) * 0.06, Math.min(fw, fh) * 0.014), warnMat);
     warn.position.set(0, (top + bot) / 2, 0.02); warn.visible = false; inner.add(warn);
     [[hitSp, "load"], [hitAm, "fire"], [hitB, "boost"]].forEach(([m, kind]) => { m.userData.ammo = { side, kind }; hitList.push(m); });
-    UI[side] = { am, bst, minis, big, ghost, glowSp, shuttle, fill, fillMat, bGlow, x0, areaW, barH, warn, warnMat, inSign, miniS, bigS, bigX, spX, ammoH,
-      press: { fire: 0, boost: 0, load: 0 }, pop: [0, 0, 0], popBig: 0, load: null, fireK: 0, shakeK: 0, flash: 0, fillK: 0, fillW: -1 };
+    UI[side] = { am, bst, minis, big, ghost, glowSp, shuttle, btn, btnRimMat, btnFaceMat, iconMat, pips, bGlow, areaW, warn, warnMat, inSign, miniS, bigS, bigX, spX, ammoH,
+      press: { fire: 0, boost: 0, load: 0 }, pop: [0, 0, 0], popBig: 0, load: null, fireK: 0, shakeK: 0, flash: 0, readyK: 0 };
   }
   function tickUI(side, dt) {
     const U = UI[side]; if (!U) return;
@@ -335,23 +378,35 @@ export function createMissiles(X) {
     U.flash = Math.max(0, U.flash - dt * 1.6);
     const ready = bigVis && !a.locked;
     U.glowSp.material.opacity = (ready ? 0.22 + 0.12 * Math.sin(G.t * 4) : 0) + U.flash * 0.8;
-    // BOOST: dải cyan dài theo số câu liên tiếp (đầy = có BOOST), trượt mượt; vẽ lại hình viên thuốc khi độ dài đổi
-    const want = a.boost ? 1 : clamp(a.boostPips / a.boostMax, 0, 1);
-    U.fillK += (want - U.fillK) * Math.min(1, dt * 6);
-    const w = U.fillK * U.areaW;
-    if (Math.abs(w - U.fillW) > U.areaW * 0.004) {
-      U.fillW = w; U.fill.visible = w > U.barH * 0.3;
-      if (U.fill.visible) { U.fill.geometry.dispose(); U.fill.geometry = capsuleGeo(U.x0 + U.inSign * U.barH * 0.1, U.x0 + U.inSign * Math.max(U.barH * 0.9, w - U.barH * 0.1), U.barH * 0.8); }
-    }
-    const pul = 0.5 + 0.5 * Math.sin(G.t * (win ? 16 : 5));
-    const full = a.boost && !a.locked;
-    U.fillMat.color.setRGB(0, 0.55, 0.78).multiplyScalar(full ? (win ? 1.1 + 1.0 * pul : 1.25 + 0.2 * pul) : 1);   /* ACES làm nhạt màu sáng ⇒ cường độ thấp cho ra CYAN đậm */
-    U.bGlow.material.opacity = full ? (win ? 0.35 + 0.45 * pul : 0.14 + 0.08 * pul) : 0;
+    // ⭐ Đợt 413 — BOOST: vạch nấc sáng dần theo số câu đúng liên tiếp; ĐỦ ⇒ nút sáng + nhịp thở nhẹ (~0,8 lần/s);
+    // có tên lửa địch đang bay tới ⇒ nhấp nháy MẠNH (6 lần/s, quầng to); đã "giương" (bấm sớm) ⇒ sáng đứng, trắng hơn.
+    const full = a.boost && !a.locked, armed = !!a.armed && !a.locked;
+    const lit = full || armed;
+    const nLit = lit ? U.pips.length : clamp(Math.round(a.boostPips), 0, U.pips.length);
+    const threat = inc < Infinity;
+    const soft = 0.5 + 0.5 * Math.sin(G.t * 5);                  // thở nhẹ
+    const hard = 0.5 + 0.5 * Math.sin(G.t * 38);                 // nhấp nháy mạnh
+    U.readyK += ((lit ? 1 : 0) - U.readyK) * Math.min(1, dt * 8);
+    U.pips.forEach((p, i) => {
+      p.k += ((i < nLit ? 1 : 0) - p.k) * Math.min(1, dt * 10);
+      p.fm.opacity = p.k;
+      const b = full ? (threat ? 1.1 + 1.1 * hard : 1.2 + 0.25 * soft) : armed ? 1.6 : 1;
+      p.fm.color.setRGB(0, 0.55, 0.78).multiplyScalar(b);   /* ACES làm nhạt màu sáng ⇒ cường độ thấp cho ra CYAN đậm */
+    });
+    let glow = 0, rimB = 0.35, iconB = 0.55, scl = 1;
+    if (armed) { glow = 0.45; rimB = 2.2; iconB = 1; }
+    else if (full && threat) { glow = 0.25 + 0.6 * hard; rimB = 1.2 + 2.2 * hard; iconB = 1; scl = 1 + 0.07 * hard; }
+    else if (full) { glow = 0.18 + 0.12 * soft; rimB = 1.3 + 0.5 * soft; iconB = 0.9 + 0.1 * soft; scl = 1 + 0.025 * soft; }
+    U.btnRimMat.color.setRGB(0.2, 0.9, 1.2).multiplyScalar(rimB / 1.2); U.btnRimMat.opacity = 0.45 + 0.55 * U.readyK;
+    U.btnFaceMat.color.set("#0b1624").lerp(new THREE.Color(0, 0.32, 0.46), U.readyK * (armed ? 1 : 0.6 + 0.4 * (threat && full ? hard : soft)));
+    U.iconMat.color.setRGB(0.35, 0.6, 0.75).lerp(new THREE.Color(1.6, 1.9, 2.1), U.readyK); U.iconMat.opacity = iconB;
+    U.bGlow.material.opacity = glow * U.readyK;
     ["fire", "boost", "load"].forEach(k => { U.press[k] = Math.max(0, U.press[k] - dt * 4); });
     U.am.scale.setScalar(1 - U.press.fire * 0.05);
     U.shakeK = Math.max(0, U.shakeK - dt * 3);
-    U.bst.scale.setScalar(1 - U.press.boost * 0.05);
+    U.btn.scale.setScalar(scl * (1 - U.press.boost * 0.08));
     U.bst.position.x = U.shakeK > 0 ? Math.sin(G.t * 60) * 0.03 * U.shakeK : 0;
+    const pul = 0.5 + 0.5 * Math.sin(G.t * (win ? 16 : 5));
     U.warn.visible = inc < Infinity;       // khung đỏ: chậm khi tên lửa đang bay, NHANH trong 1,5 s cuối
     U.warnMat.opacity = inc < Infinity ? (win ? 0.35 + 0.65 * pul : 0.15 + 0.3 * pul) : 0;
   }
@@ -540,6 +595,7 @@ export function createMissiles(X) {
     buildConsole, poseRocket, tick, tap,
     api: {
       setArsenal(side, st) { Object.assign(A[side], st); },
+      armBoost(side, on) { A[side].armed = !!on; },     // Đợt 413: BOOST bấm sớm — đợi 1,5 s cuối rồi tự né
       chargeFx, loadFx, launch, dodge, incoming, clearAll, refuse,
       // 6b: góc nhìn rộng — bật khi bắn; trang game tắt ở câu trả lời KẾ TIẾP khi không còn quả nào đang bay
       setWide(on) { G.wideCam = !!on; },

@@ -546,6 +546,61 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 413 (27/9/2026 tối) — ROCKET RACE ▸ FIGHT 3D: 11 ý thầy (Options lưu + Apply về đầu, BOOST mới, tên lửa tự nạp, bố cục cột, Miss wait đáy màn, màu ô) + 413b không lộ ô đúng lúc chờ Time delay · ✅ COMMIT + PUSH (thầy lệnh) · ⬜ CHƯA BẤM TAY TOMKO
+**Yêu cầu thầy (27/9, sau khi test):**
+1. Mỗi lần chỉnh Options là chuyển hẳn về từ đầu, chấp nhận xem cả intro (đã có chạm đúp để bỏ qua).
+2. Có lúc Apply rồi mà sau đó mất Options, bị chuyển lại như trước ⇒ cứ Apply là phải lưu; Apply xong về màn START.
+3. BOOST: vạch chia nấc rõ ràng; nút vuông hơn, bo góc, có icon tăng tốc; đủ vạch ⇒ sáng nổi bật + nhấp nháy nhẹ; có tên lửa địch đang bay ⇒ nhấp nháy mạnh ("hãy bấm đi").
+4. Có tên lửa con ⇒ nạp ngay, không cần bấm thêm.
+5. Bỏ chữ TEAM 1/TEAM 2 + icon.  6. Cụm ô đáp án thấp xuống một chút.
+7. Tên lửa lên TRÊN cụm đáp án, BOOST vẫn dưới; cân lại bố cục, cả hai cách cụm đáp án xa hơn.
+8. MISS WAIT xuống mép dưới màn, chỉ 1 thanh, ở giữa, rút cạn về phía đội của nó, không ô đếm giờ.
+9. Chọn SAI ⇒ ô đỏ, ô còn lại mất màu (cả 2 bên).  10. Chọn ĐÚNG ⇒ ô sáng + viền xanh lá, ô còn lại giữ màu nhưng nhạt.
+11. Một bên chọn trước, bên kia hết giờ ⇒ bên hết giờ mất màu mọi ô, ô đúng cũng mất màu nhưng có VIỀN SÁNG DÀY.
+
+**Việc đã làm:**
+- (2) ⭐ **Gốc lỗi mất Options**: act mở ra thành Rocket race thường là bản CHUYỂN ĐỔI `conv_` (Change template, hoặc Đợt 400 `lastTpl` — act Quiz mở thẳng template chơi cuối).
+  `core/fight.js` `applyOptions` chỉ lưu act KHÔNG phải `conv_/mist_` ⇒ với act chuyển đổi, Options chỉ sống trong RAM; lần chuyển đổi sau (mở lại act,
+  rời Fight, tải lại trang) `convert.js` lấy lại options mẫu. Một bàn thì engine đã nhớ vào `originAct.templateOptions[type]` — Fight bị sót.
+  Sửa (CORE, 1 nhánh thêm): act `conv_` ⇒ ghi `originAct.templateOptions[activity.type] = {...options}` + lưu act gốc (đúng luật Apply một bàn).
+- (1) Bỏ đường tắt Đợt 406 (`rr3dQuickUntil`, bọc `ctl.applyOptions`): Apply ⇒ core dựng lại trận ⇒ cảnh phóng + màn START như mở lần đầu.
+- (4) `msCorrect`: đủ 3 câu ⇒ +1 quả, `msLoad` tự chạy sau 1 s (sau hiệu ứng MISSILE +1). `msFire`: bắn xong 1,1 s còn quả dự phòng ⇒ tự lên nòng quả kế.
+  Chạm hàng quả nhỏ vẫn nạp được (vô hại).
+- (3) BOOST (`rr3d-missile.js` buildConsole/tickUI): nút vuông bo góc (`roundRectGeo`) + icon 2 mũi tên kép chĩa lên + vệt tốc độ (canvas) ở phía TRONG;
+  5 vạch nấc bo góc (xanh thẫm khi trống, cyan khi có) ở phía ngoài. Đủ ⇒ nút + vạch sáng, "thở" ~0,8 lần/s, phóng nhẹ 2,5 %; có tên lửa địch ĐANG BAY
+  (bất kỳ lúc nào, không chỉ 1,5 s cuối) ⇒ nhấp nháy mạnh ~6 lần/s + quầng to + phóng 7 %.
+  ⭐ Vì nút giục bấm suốt chuyến bay nên bấm lúc nào cũng phải ăn: `msBoost` — trong 1,5 s cuối ⇒ né ngay như cũ; sớm hơn ⇒ BOOST được "giương"
+  (tiêu luôn, nút sáng đứng — `missile.armBoost`), tới 1,5 s cuối tự né; tên lửa biến mất trước đó (khoá trận…) ⇒ trả lại BOOST.
+- (5) `rr3d-view.js` `drawHeader`: cờ cfg `headerHeartsOnly` ⇒ đầu cột chỉ còn TIM (khi có Lives), không Lives ⇒ không chừa chỗ (`setLivesMax` dựng lại UI khi có/không).
+- (6)(7) `RR3D_CFG.layout`: cột đáp án hạ `CON_DY` 4 cm; `buildConsole`: hàng tên lửa đặt TRÊN mép trên cột, BOOST dưới mép dưới, `gapCm` 0,7 → 2,
+  nút BOOST cạnh 5,2 cm (`boostCm`). Khung đỏ cảnh báo bao từ đỉnh hàng tên lửa tới đáy BOOST. Đo 1600×900: cả cột cân giữa đáy thanh câu hỏi và đáy cảnh.
+- (8) `rr3d-misswait.js` viết lại: 1 viên thuốc kính tối rộng 70 cm sát mép dưới cảnh (trên hàng nút), dải màu đội còn được trả lời neo ở đầu phía đội đó,
+  co về phía ấy; ≤ 25 % đỏ nhấp nháy; bỏ huy hiệu số + mũi tên. Đồng hồ vẫn của trọng tài (rr3dMissWait đọc thanh DOM, không đổi).
+- (9–11) Trạng thái ô 3D (`paint3dTiles` + `updateTile`): `correct` = màu đội sáng + viền xanh lá dày · `pale` = màu đội nhạt · `wrong` = đỏ · `dim` = mất màu ·
+  `reveal` = mất màu + viền trắng sáng dày (rim phóng ra mượt theo `t.border`). Cờ `fightRevealed` đặt ở `revealFightMarks`.
+  ⭐ **413b (thầy hỏi "time delay dài, đội nhanh chọn đúng thì ô hiện thế nào?")**: trước đây (từ Đợt 392) trong lúc chờ trọng tài chốt, ô đã chọn
+  viền TRẮNG còn 3 ô kia tắt + tàu tiến lên ngay ⇒ đội chậm nhìn sang là biết ĐÚNG Ô đáp án suốt Time delay (Same words cùng thứ tự ô) — trái luật
+  Đợt 217. Nay chờ chốt ⇒ CẢ BÀN `dim` đều, không đánh dấu ô nào; tàu tiến chỉ nói "đội này đúng". Chốt xong mới `correct/pale` như trên.
+  Đo: trái đúng, Time delay 3 s ⇒ trái `dim×4` suốt ~3 s (tàu p=1), rồi `correct,pale,pale,pale` | phải `reveal,dim,dim,dim`.
+  ⭐ Hết MISS WAIT trước đây trọng tài SANG CÂU NGAY (không reveal, không giữ nhịp) ⇒ ô đỏ / viền ô đúng không kịp hiện. CORE thêm cờ TUỲ CHỌN
+  `tpl.fightMissReveal`: hết Miss wait ⇒ khoá im lặng bàn chậm + `revealBoards()` + giữ `ROUND_HOLD_MS` rồi mới sang câu (y như hết Time delay).
+  Chỉ Rocket race khai — Quiz và template khác không đổi.
+- ⚠️ `rr3d-missile.js` / `rr3d-misswait.js` nay KHÁC bản myGame `game6d/` (trước là chép nguyên). Sửa tiếp: làm thẳng ở AWord, hoặc chép 2 file này ngược
+  về myGame trước khi dựng mẫu mới.
+
+**Đã kiểm (`scratch/dot413-rr.html`, 1600×900, cảnh phóng thật → tua → trận, khung trình duyệt ẩn nên lái bằng `view.step`):**
+đầu cột không còn TEAM/icon, Lives 3 ⇒ 3 tim căn giữa · trái đúng, phải hết Time delay ⇒ trái `correct,pale,pale,pale`, phải `reveal,dim,dim,dim`
+(viền 0,075 / 0,09) · phải chọn sai, trái để hết Miss wait 5 s ⇒ phải `dim,wrong,dim,dim`, trái `reveal,dim,…` giữ ~2 s rồi sang câu · câu đúng thứ 3 ⇒
+`loaded:true` không cần chạm · BOOST bấm khi tên lửa còn 3,4 s ⇒ giương, tới 1,32 s tự né (`dodged:true`) · thanh Miss wait 1 thanh xanh ở đáy rút về trái ·
+act `conv_` + Apply ⇒ `origin.templateOptions.rocket_race` có `rrMissile 5 / lives 3 / fightWrongWait 6`, trận dựng lại về màn START cảnh phóng ·
+`sinh-preload --check` KHỚP · 0 lỗi console.
+
+**Chưa làm / chờ:** ✅ commit + push (thầy lệnh 27/9) · ⬜ thầy bấm tay TOMKO: nhịp nhấp nháy BOOST (nhẹ/mạnh) có đúng ý, độ sáng ô đúng/viền dày, vị trí cột
++ thanh Miss wait trên màn 86", Apply ⇒ tải lại trang ⇒ Options còn nguyên · ⬜ ô SAI đang chờ trọng tài chốt mới đỏ (không đỏ ngay lúc bấm) — nếu thầy
+muốn đỏ NGAY thì đội kia sẽ thấy "ô này sai" khi cùng câu (Same words); hỏi thầy.
+
+---
+
 ## Đợt 412 (27/9/2026 chiều) — mở bằng nút "TAB MỚI" của myLesson cũng xin được VÉ + màn lỗi nói đúng lý do · phiên máy MSI
 Thầy hỏi mở act bằng nút tab mới có ghi điểm không ⇒ KHÔNG (link `rel="noopener"` ⇒ tab AWord đứng một mình, không trang mẹ ⇒
 không vé ⇒ luật chặn, lượt nằm outbox, thấy "LỖI MẠNG" sai lý do). Thầy: "sửa để tab mới cũng ghi được nhưng vẫn đảm bảo an toàn".

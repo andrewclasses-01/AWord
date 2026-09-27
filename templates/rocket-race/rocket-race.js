@@ -351,11 +351,9 @@ function rr3dFallback(st, err) {
   st.root.classList.remove("aw-rr3d-root");
   st.host2d.classList.remove("aw-rr3d-hidden2d");
 }
-// ⭐ Đợt 406 (thầy): "mỗi lần chỉnh Options đều khởi động lại toàn bộ game khá lâu". Apply = core dựng lại CẢ trận
-// (teardown + startFight ⇒ cảnh mới). Đo: cảnh đua ~0,4 s, nhưng cảnh phóng dựng lại ~2 s rồi thầy còn phải xem lại ~10 s.
-// ⇒ Trận dựng lại VÌ Apply Options thì BỎ cảnh phóng: cảnh đua hiện ngay với nút START 3D của nó (đếm 3-2-1).
-// Mở trận lần đầu / Start again vẫn có cảnh phóng như cũ. Cờ sống 4 s để không lọt sang một lần dựng khác.
-let rr3dQuickUntil = 0;
+// ⛔ Đợt 413 (thầy 27/9/2026): BỎ đường tắt của Đợt 406 (Apply Options ⇒ không cảnh phóng). Thầy: "mỗi lần chỉnh options
+// là chuyển hẳn về từ đầu, chấp nhận xem cả intro — đã có click đúp để bỏ qua". Apply ⇒ core dựng lại cả trận ⇒ về màn START
+// của cảnh phóng, y như mở trận lần đầu.
 
 // =========================================================
 // ⭐⭐ Đợt 407 (thầy 27/9/2026, duyệt MẪU 6c ở myGame) — TÊN LỬA TẤN CÔNG giữa 2 tàu (chỉ trận 3D; 2D dự phòng không có).
@@ -407,7 +405,9 @@ function msCorrect(side) {
     if (++a.ms >= MS_STREAK) {
       a.ms = 0; a.reserve++;
       msLater(st, () => { if (!msLocked()) v3(v => v.missile.chargeFx(side)); }, 450);   // sau nhịp TURBO ⇒ không chồng hiệu ứng
-      // Đợt 409: KHÔNG tự lên nòng — quả nằm ở hàng nhỏ, HS chạm vào mới nạp (msLoadTap)
+      // ⭐ Đợt 413 (thầy): "khi có tên lửa con, tên lửa con sẽ được nạp ngay để chuẩn bị bắn luôn, không cần thêm 1 lần bấm"
+      // ⇒ nạp tự động ngay sau hiệu ứng MISSILE +1 (bỏ nạp tay của Đợt 409; chạm hàng quả nhỏ vẫn nạp được, vô hại).
+      msLater(st, () => msLoad(st, side), 1000);
     }
   } else a.ms = 0;
   if (!a.boost) { if (++a.bs >= MS_BOOST_STREAK) { a.bs = 0; a.boost = true; } } else a.bs = 0;
@@ -439,14 +439,32 @@ function msFire(side) {
   if (v && v.missile && !msLocked() && !a.loaded && a.reserve > 0 && v.phase === "play") return msLoad(st, side);   // Đợt 409: ô to trống mà còn quả nhỏ ⇒ nạp
   if (!v || !v.missile || msLocked() || !a.loaded || v.phase !== "play") { if (v && v.missile) v.missile.refuse(side, "fire"); return; }
   a.loaded = false; msSync(st, side);
-  v.missile.launch(side, 1 - side);          // Đợt 409: quả to lùi khỏi màn rồi mới phóng; KHÔNG tự nạp quả kế
+  v.missile.launch(side, 1 - side);          // Đợt 409: quả to lùi khỏi màn rồi mới phóng
   st.msWideReady = false;
+  msLater(st, () => msLoad(st, side), 1100);   // ⭐ Đợt 413: còn quả dự phòng ⇒ tự lên nòng quả kế
 }
+// ⭐ Đợt 413 (thầy): nút BOOST nhấp nháy MẠNH suốt lúc có tên lửa địch đang bay tới ("hãy bấm đi") ⇒ bấm lúc nào trong
+// chuyến bay cũng phải ăn. Chưa tới 1,5 s cuối ⇒ BOOST được "giương sẵn" (tiêu luôn), tới đúng 1,5 s cuối thì tự né.
+// Tên lửa biến mất trước đó (trận khoá, quả nổ giữa đường) ⇒ trả lại BOOST.
 function msBoost(side) {
   const st = rr3d; if (!st || !st.ms) return;
   const a = st.ms[side], v = st.view;
-  if (!v || !v.missile || msLocked() || !a.boost || !(msIncoming(side) <= MS_WINDOW)) { if (v && v.missile) v.missile.refuse(side, "boost"); return; }
-  if (v.missile.dodge(side)) { a.boost = false; msSync(st, side); }
+  const inc = msIncoming(side);
+  if (!v || !v.missile || msLocked() || !a.boost || !(inc < Infinity) || (st.msArmed && st.msArmed[side])) { if (v && v.missile) v.missile.refuse(side, "boost"); return; }
+  if (inc <= MS_WINDOW) { if (v.missile.dodge(side)) { a.boost = false; msSync(st, side); } return; }
+  a.boost = false; msSync(st, side);
+  if (!st.msArmed) st.msArmed = [false, false];
+  st.msArmed[side] = true;
+  v.missile.armBoost && v.missile.armBoost(side, true);
+  const poll = () => {
+    if (st.dead || rr3d !== st) return;
+    const left = msIncoming(side);
+    const done = ok => { st.msArmed[side] = false; v.missile.armBoost && v.missile.armBoost(side, false); if (!ok) { a.boost = true; msSync(st, side); } };
+    if (!(left < Infinity) || msLocked()) return done(false);
+    if (left <= MS_WINDOW) return done(v.missile.dodge(side));
+    msLater(st, poll, 60);
+  };
+  poll();
 }
 function msEnd(to, res) {
   const st = rr3d; if (!st || !st.ms) return;
@@ -496,13 +514,6 @@ function rr3dMissWait(st, wrap) {
 }
 
 function rr3dScene({ root, ctl, title, play }) {
-  const quick = performance.now() < rr3dQuickUntil;
-  rr3dQuickUntil = 0;
-  if (ctl && typeof ctl.applyOptions === "function" && !ctl.__rrQuickWrapped) {
-    const orig = ctl.applyOptions;
-    ctl.applyOptions = function (...a) { rr3dQuickUntil = performance.now() + 4000; return orig.apply(this, a); };
-    ctl.__rrQuickWrapped = true;
-  }
   root.innerHTML = "";
   root.classList.add("aw-rr3d-root");
   const host3d = el("div", "aw-rr3d-canvas");
@@ -535,7 +546,8 @@ function rr3dScene({ root, ctl, title, play }) {
       // Đợt 405 — chạm thanh câu hỏi = nghe lại voice (null = một câu chung ⇒ bàn 0 phát)
       onQuestionTap: side => { const b = st.boards[side == null ? 0 : side]; if (b && b.replayVoice) b.replayVoice(); },
       // ⭐ Đợt 407 — tên lửa: Off ⇒ view không dựng gì (bố cục như cũ)
-      missiles: st.ms ? { window: MS_WINDOW, dur: 3.8 } : false,
+      // Đợt 413: boostCm = cạnh nút BOOST vuông; gapCm = khoảng cách tên lửa / BOOST tới cụm đáp án (xa hơn 0,7 cũ)
+      missiles: st.ms ? { window: MS_WINDOW, dur: 3.8, boostCm: 5.2, gapCm: 2 } : false,
       onFire: side => msFire(side), onBoost: side => msBoost(side), onMissileEnd: (to, res) => msEnd(to, res),
       onLoad: side => msLoadTap(side),        // Đợt 409: chạm quả nhỏ = nạp
       sfx: (n, v) => st.sfx && st.sfx.play(n, v),
@@ -549,8 +561,7 @@ function rr3dScene({ root, ctl, title, play }) {
     if (st.ms) [0, 1].forEach(side => msSync(st, side));   // Đợt 407                       // bàn thử: __rr3d.view.step()/snap() khi khung xem trước bị ẩn
     const q = st.pending.splice(0);
     q.forEach(fn => { try { fn(view); } catch (e) { console.warn("[rocket-race 3D]", e); } });
-    if (quick) { try { view.resume(); view.showStart(); } catch { /* ignore */ } }   // Đợt 406: Apply Options ⇒ không cảnh phóng
-    else rr3dLaunch(st, play);                // ⭐ Đợt 398: cảnh phóng từ mặt đất phủ lên, hoà cảnh xong mới vào trận
+    rr3dLaunch(st, play);                     // ⭐ Đợt 398: cảnh phóng từ mặt đất phủ lên, hoà cảnh xong mới vào trận (Đợt 413: cả khi Apply)
   }).catch(e => { if (!st.dead) rr3dFallback(st, e); });
   return {
     // ⭐ Đợt 393 — core/fight.js hỏi template vẽ bảng kết quả RIÊNG (nổi trên cảnh 3D còn đang chạy)
@@ -829,7 +840,7 @@ function RR3D_CFG(V) {
   const P = (x, y, z) => new THREE.Vector3(x, y, z);
   const lerp = (a, b, t) => a + (b - a) * t;
   const Z0 = 0, Z1 = -64, NOSE = 2.9, GAP_HIGH = 3, LAST_STEPS = 3, CAM_SECS = 3.2;
-  const EDGE = 0.3, CON_W = 17.5, CON_H = 33;
+  const EDGE = 0.3, CON_W = 17.5, CON_H = 33, CON_DY = 4;
   let camK = 0, camLastT = 0, wideK = 0;
   return {
     quality: "high", maxFps: 60, fov: 38, steps: 5, lives: 0, uiDepth: 9, rocketScale: 1.1, bannerY: 0.35, startY: 0.5, startCm: [22, 7],
@@ -892,13 +903,17 @@ function RR3D_CFG(V) {
       }
       return { pos: chase.pos.lerp(high.pos, k), look: chase.look.lerp(high.look, k), mode: camK < 0.02 ? "chase" : "high" };
     },
+    // ⭐ Đợt 413 (thầy): bỏ chữ TEAM + icon đầu cột (chỉ còn tim khi có Lives) · cụm đáp án THẤP xuống (CON_DY cm)
+    // · tên lửa TRÊN cụm đáp án, BOOST dưới (rr3d-missile.js buildConsole), cả cột cân giữa thanh câu hỏi và mép dưới
+    headerHeartsOnly: true,
     layout(_s, _z, _a, U) {
       const qW = 90, qH = 7, M = 2;
+      const y = 0.5 + U.ch(CON_DY) - U.ch(CON_H) / 2;
       return {
         question: { x: 0.5 - U.cw(qW) / 2, y: U.ch(M), w: U.cw(qW), h: U.ch(qH) },
         consoles: [
-          { x: U.cw(EDGE), y: 0.5 - U.ch(CON_H) / 2, w: U.cw(CON_W), h: U.ch(CON_H), cols: 1, rows: 4, headerFrac: 0.11, rotY: 0.3, pivot: "outer", noPanel: true },
-          { x: 1 - U.cw(EDGE + CON_W), y: 0.5 - U.ch(CON_H) / 2, w: U.cw(CON_W), h: U.ch(CON_H), cols: 1, rows: 4, headerFrac: 0.11, rotY: -0.3, pivot: "outer", noPanel: true }
+          { x: U.cw(EDGE), y, w: U.cw(CON_W), h: U.ch(CON_H), cols: 1, rows: 4, headerFrac: 0.11, rotY: 0.3, pivot: "outer", noPanel: true },
+          { x: 1 - U.cw(EDGE + CON_W), y, w: U.cw(CON_W), h: U.ch(CON_H), cols: 1, rows: 4, headerFrac: 0.11, rotY: -0.3, pivot: "outer", noPanel: true }
         ]
       };
     }
@@ -1024,6 +1039,9 @@ const rocketRaceTemplate = {
   // for independent boards (see `soloBoards` there). Opt-in exactly like
   // `fightTurns`/`fightPick`, so no other template changes behaviour.
   fightScreen: true,
+  // ⭐ Đợt 413 — hết MISS WAIT ⇒ trọng tài chốt vòng + lộ kết quả, giữ 2,1 s (core/fight.js): bàn chọn sai thấy ô ĐỎ,
+  // bàn hết giờ thấy ô ĐÚNG viền sáng dày — thay vì nhảy thẳng sang câu kế.
+  fightMissReveal: true,
   fightLayout: "shared-top",
   // ⭐ Đợt 353 (thầy chốt 20/9/2026) — the match picture is 32:14, not 32:21:
   //   sharedH 7 → the race strip is 32:7 (2 lanes need no more; the old 32:10.5
@@ -1156,6 +1174,7 @@ const rocketRaceTemplate = {
     let fightBoardLock = false;            // set by the referee between rounds
     const fightLocked = () => fightBoardLock || !!(fightCtl && fightCtl.isLocked(fightSide));
     let fightPendingReveal = false;        // answered, ✓/✗ withheld until the round settles
+    let fightRevealed = false;             // Đợt 413: the referee settled this round (reveal ran)
     const speaks = () => !fightCtl || fightCtl.speaks(fightSide);   // banners / shared sounds: board 0 only
     // ⭐ Đợt 405 (thầy): "khi chọn act voice, tự động tắt nhạc background và không cho bật".
     // Act VOICE = có câu giấu chữ chỉ còn loa (ENG1/ENG2 VOICE, hoặc Content = Voice) — giọng đọc phải nghe rõ.
@@ -1678,6 +1697,7 @@ const rocketRaceTemplate = {
       answersEl.innerHTML = "";
       answersEl.classList.remove("is-fightlost");
       fightPendingReveal = false;
+      fightRevealed = false;
       // Đợt 353 — a 16:7 FIGHT board is too short for a 2×2 block: up to four
       // answers sit in ONE row (thầy: "các ô câu trả lời có thể xếp theo 1 hàng 4
       // ô"), five or six fall back to rows of three. Solo / Teams keep 2×2.
@@ -1763,12 +1783,24 @@ const rocketRaceTemplate = {
     // ⭐ Đợt 392 — màu ô trong cảnh 3D (thầy, mẫu 2i): ô đúng được chọn chỉ XANH (không dấu tích);
     // đội kia thua lượt ⇒ cả bàn MẤT MÀU tới câu mới; chọn sai ⇒ ô đó đỏ ✗, còn lại mất màu.
     // KHÔNG bao giờ lộ ô đúng cho bàn không chọn được nó.
+    // ⭐ Đợt 413 (thầy 27/9/2026) — sau khi vòng được chốt (reveal):
+    //   · chọn SAI  ⇒ ô đó ĐỎ, các ô còn lại MẤT MÀU ("dim")
+    //   · chọn ĐÚNG ⇒ ô đó sáng lên + viền xanh lá ("correct"), các ô còn lại giữ màu nhưng NHẠT ("pale")
+    //   · không kịp chọn (đội kia chọn trước, bàn này hết giờ) ⇒ mọi ô mất màu, riêng ô đúng mất màu nhưng có
+    //     VIỀN SÁNG DÀY ("reveal") — thầy chọn cho lộ đáp án đúng sau khi vòng đã chốt.
+    // Trước khi chốt: CẢ BÀN mờ đều ("dim"), KHÔNG đánh dấu ô đã chọn — Đợt 413b (thầy): viền trắng ô đã chọn + tàu tiến lên
+    // ngay = lộ đúng ô đáp án cho đội đang nghĩ cùng câu suốt Time delay (trái luật Đợt 217). Tàu tiến chỉ nói "đội này đúng".
     function paint3dTiles() {
       if (!on3d || curItem < 0) return;
       const st = state[curItem];
       const pick = st && st.attempts > 0 ? st.chosenTile : -1;
       let arr;
-      if (pick >= 0) arr = tiles.map((t, k) => k !== pick ? "dim" : fightPendingReveal ? "picked" : (t.ans.correct ? "correct" : "wrong"));
+      if (pick >= 0) {
+        const ok = tiles[pick] && tiles[pick].ans.correct;
+        arr = tiles.map((t, k) => fightPendingReveal ? "dim"
+          : k === pick ? (ok ? "correct" : "wrong") : (ok ? "pale" : "dim"));
+      }
+      else if (fightRevealed) arr = tiles.map(t => t.ans.correct ? "reveal" : "dim");
       else if (exploded || fightLocked()) arr = tiles.map(() => "dim");
       else arr = tiles.map(() => "idle");
       const side = fightSide;
@@ -1792,6 +1824,7 @@ const rocketRaceTemplate = {
       if (curItem < 0) return;
       const st = state[curItem];
       fightPendingReveal = false;
+      fightRevealed = true;                  // Đợt 413: bàn chưa chọn ⇒ lộ ô đúng bằng viền sáng dày
       tiles.forEach((t, k) => {
         if (t.tile.querySelector(".aw-tile-badge")) return;
         addBadges(t, k, st);

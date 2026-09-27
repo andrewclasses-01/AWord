@@ -733,3 +733,13 @@ Thầy thiết kế cùng Claude qua 13 bản mẫu ở kho **myGame** (`E:\LAP 
   `__rr3d.view.missile.scorches`, `.scorch(side)` (thêm vết cháy thử).
 - MISS WAIT: KHÔNG sửa `core/fight.js` — `rr3dMissWait(st, wrap)` đọc thanh DOM `.aw-fight-missbar` (thứ tự = đội 0, đội 1) rồi `view.setMissWait`.
   ⚠️ Ẩn thanh DOM phải bằng `visibility:hidden` (KHÔNG `display:none` — transition bề rộng dừng ⇒ đọc sai).
+
+## 36. Đợt 413 (27/9/2026) — 11 ý thầy sau khi test: Options, BOOST, tự nạp, bố cục cột, Miss wait đáy màn, màu ô
+- Luật + việc đã làm: `GHI CHU DU AN.md` chặng Đợt 413. ⚠️ `rr3d-missile.js` + `rr3d-misswait.js` NAY KHÁC myGame `game6d/` — sửa thẳng ở đây
+  (hoặc chép ngược về myGame trước khi làm mẫu mới).
+- Apply = dựng lại từ đầu CÓ cảnh phóng (bỏ `rr3dQuickUntil` Đợt 406). Act `conv_` ⇒ core lưu `originAct.templateOptions.rocket_race`.
+- Tên lửa: tự lên nòng (`msCorrect`/`msFire` → `msLoad`). BOOST: `msBoost` bấm sớm ⇒ giương (`st.msArmed`, `missile.armBoost`) rồi tự né ở 1,5 s cuối.
+- Bố cục cột (`buildConsole`): hàng tên lửa TRÊN mép trên cột (y = s.h/2 + gap + ammoH/2), BOOST dưới (nút vuông `boostCm` 5,2 + 5 vạch), `gapCm` 2;
+  cột hạ `CON_DY` 4 cm (RR3D_CFG); `headerHeartsOnly` ⇒ đầu cột chỉ tim.
+- Trạng thái ô 3D: `idle · picked · correct · pale · wrong · dim · reveal` (+ `t.border` viền dày). Cờ template `fightMissReveal` (core): hết Miss wait
+  ⇒ chốt + lộ + giữ 2,1 s. Bàn thử: `scratch/dot413-rr.html` (`__bench.go/right/tap/tiles`, `view.tileInfo(side)`).

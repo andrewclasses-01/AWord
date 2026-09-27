@@ -785,6 +785,18 @@ export async function createView(cfg) {
   function drawHeader(hd, lives) {
     const g = hd.cv.getContext("2d"), W = hd.cv.width, H = hd.cv.height;
     g.clearRect(0, 0, W, H);
+    // ⭐ Đợt 413 (thầy): "bỏ chữ TEAM 1, TEAM 2 và icon đi" ⇒ đầu cột chỉ còn TIM (khi trận có Lives), căn giữa
+    if (cfg.headerHeartsOnly) {
+      if (LIVES_MAX > 0) {
+        const fs = Math.floor(H * 0.7);
+        g.font = `900 ${fs}px ${FONT_UI}`; g.textBaseline = "middle"; g.textAlign = "center";
+        g.shadowColor = "rgba(0,0,0,.6)"; g.shadowBlur = 10;
+        if (LIVES_MAX > 5) { g.fillStyle = "#ff5a7a"; g.fillText(lives + " ♥", W / 2, H / 2 + 2); }
+        else for (let i = 0; i < LIVES_MAX; i++) { g.fillStyle = i < lives ? "#ff5a7a" : "rgba(255,255,255,0.18)"; g.fillText("♥", W / 2 + (i - (LIVES_MAX - 1) / 2) * fs * 1.1, H / 2 + 2); }
+      }
+      hd.tex.needsUpdate = true;
+      return;
+    }
     const px = Math.floor(H * 0.62);
     g.font = `${px}px "Segoe UI Emoji", sans-serif`; g.textBaseline = "middle"; g.textAlign = "left";
     let x = W * 0.03;
@@ -844,9 +856,11 @@ export async function createView(cfg) {
         panel.position.z = -0.1;
         inner.add(panel);
       }
-      const headerH = s.h * (c.headerFrac ?? 0.2);
+      // Đợt 413: đầu cột chỉ còn tim ⇒ trận không có Lives thì không chừa chỗ đầu cột
+      const headerH = cfg.headerHeartsOnly && !(LIVES_MAX > 0) ? 0 : s.h * (c.headerFrac ?? 0.2);
       const pad = Math.min(s.w, s.h) * 0.07;
-      const hd = makeHeader(s.w - pad * 2, headerH, team);
+      const hd = makeHeader(s.w - pad * 2, headerH || s.h * 0.05, team);   // canvas 0 px cao ⇒ texture hỏng: dựng nhỏ rồi ẩn
+      if (!headerH) hd.m.visible = false;
       const headerOnTop = c.header !== "bottom";
       hd.m.position.set(0, headerOnTop ? s.h / 2 - pad * 0.6 - headerH / 2 : -s.h / 2 + pad * 0.6 + headerH / 2, 0.02);
       inner.add(hd.m);
@@ -2210,6 +2224,7 @@ export async function createView(cfg) {
     composer.render(dt);
   }
 
+  const RED_EM = new THREE.Color("#ff3b4e");
   function updateTile(t, dt) {
     t.press = Math.max(0, t.press - dt * 4);
     t.shake = Math.max(0, t.shake - dt * 2.2);
@@ -2232,16 +2247,23 @@ export async function createView(cfg) {
     const sc = 1 - t.press * 0.04 + t.pulse * 0.06 * Math.sin(G.t * 12);
     t.g.scale.set(sc, sc * (t.sy || 1), sc);
     const tc = t.team.color;
-    let body = tc.clone().multiplyScalar(0.42), rim = tc.clone().multiplyScalar(1.5), emis = 0.3, txtOp = 1;
+    let body = tc.clone().multiplyScalar(0.42), rim = tc.clone().multiplyScalar(1.5), emis = 0.3, txtOp = 1, border = 0.025, emisCol = tc;
+    // ⭐ Đợt 413 (thầy): ĐÚNG ⇒ ô giữ màu đội nhưng SÁNG lên + viền xanh lá dày; ô còn lại "pale" = giữ màu, nhạt hơn ·
+    // SAI ⇒ ô đỏ, ô còn lại "dim" (mất màu) · "reveal" = bàn không kịp chọn: mất màu nhưng viền SÁNG DÀY quanh ô đúng.
     if (t.state === "picked") { rim = new THREE.Color(3, 3, 3.4); emis = 0.35; }
-    else if (t.state === "correct") { body = new THREE.Color("#0f6b45"); rim = new THREE.Color(0.4, 3.6, 1.6); emis = 0.35 + t.pulse; }
-    else if (t.state === "wrong") { body = new THREE.Color("#6b0f1c"); rim = new THREE.Color(3.6, 0.4, 0.5); emis = 0.3; }
+    else if (t.state === "correct") { body = tc.clone().multiplyScalar(0.62); rim = new THREE.Color(0.25, 2.4, 0.8); emis = 0.42 + 0.4 * t.pulse; border = 0.075; }
+    else if (t.state === "wrong") { body = new THREE.Color("#6b0f1c"); rim = new THREE.Color(3.6, 0.4, 0.5); emis = 0.3; emisCol = RED_EM; }
+    else if (t.state === "pale") { body = tc.clone().multiplyScalar(0.3).lerp(new THREE.Color("#1b1f29"), 0.35); rim = tc.clone().multiplyScalar(0.7); emis = 0.1; txtOp = 0.7; }
+    else if (t.state === "reveal") { body = new THREE.Color("#1b1f29"); rim = new THREE.Color(1.5, 1.6, 1.8).multiplyScalar(0.85 + 0.15 * Math.sin(G.t * 5)); emis = 0.02; txtOp = 0.85; border = 0.09; }
     else if (t.state === "locked" || t.state === "dim") { body = new THREE.Color("#1b1f29"); rim = tc.clone().multiplyScalar(0.25); emis = 0.02; txtOp = 0.45; }
     t.bodyMat.color.lerp(body, Math.min(1, dt * 10));
     t.rimMat.color.lerp(rim, Math.min(1, dt * 10));
     t.bodyMat.emissiveIntensity = emis;
-    t.bodyMat.emissive.copy(t.state === "correct" ? new THREE.Color("#16c47f") : t.state === "wrong" ? new THREE.Color("#ff3b4e") : tc);
+    t.bodyMat.emissive.copy(emisCol);
     t.text.material.opacity = txtOp;
+    // viền = khối rim lớn hơn thân ô 0,025 mỗi phía; viền dày ⇒ phóng rim ra (mượt)
+    t.border = (t.border ?? 0.025) + (border - (t.border ?? 0.025)) * Math.min(1, dt * 12);
+    t.rim.scale.set((t.w + 2 * t.border) / (t.w + 0.05), (t.h + 2 * t.border) / (t.h + 0.05), 1);
   }
 
   rafId = requestAnimationFrame(frame);
@@ -2275,7 +2297,12 @@ export async function createView(cfg) {
   return {
     // --- dựng / nhịp trận ---
     setTrack(n) { L = Math.max(1, n | 0); },
-    setLivesMax(n) { LIVES_MAX = Math.max(0, n | 0); G.lives = [LIVES_MAX, LIVES_MAX]; consoles.forEach(c => drawHeader(c.header, G.lives[c.side])); },
+    setLivesMax(n) {
+      const had = LIVES_MAX > 0;
+      LIVES_MAX = Math.max(0, n | 0); G.lives = [LIVES_MAX, LIVES_MAX];
+      if (cfg.headerHeartsOnly && had !== LIVES_MAX > 0 && W && H) { buildUI(); return; }   // Đợt 413: chỗ đầu cột có/không
+      consoles.forEach(c => drawHeader(c.header, G.lives[c.side]));
+    },
     setLives(side, n) { G.lives[side] = n; if (consoles[side]) drawHeader(consoles[side].header, n); },
     showStart() { if (G.phase === "intro") { cfg.startHidden = false; return; } G.phase = "start"; startBtn.g.visible = true; },
     countdown,
@@ -2304,6 +2331,7 @@ export async function createView(cfg) {
       relayout(c, G.answers[side].length);   // sau pendingText ⇒ cỡ/vị trí mới chờ nửa vòng lật
     },
     tileStates,
+    tileInfo(side) { const c = consoles[side]; return c ? c.tiles.filter(t => t.g.visible).map(t => ({ label: t.label, state: t.state, border: +(t.border ?? 0.025).toFixed(3) })) : null; },   // bàn thử Đợt 413
     pick(side, k) { const t = consoles[side] && consoles[side].tiles[k]; if (t) { t.press = 1; t.state = "picked"; sfx("tap", 0.6); } },
     // --- tàu ---
     move(side, p, kind, n = 1) { const r = rockets[side]; r.p = Math.max(0, p); if (kind === "up") advanceFx(r); else if (kind === "back") retreatFx(r, n); },
