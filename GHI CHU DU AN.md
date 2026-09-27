@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 417 (28/9/2026) — ROCKET RACE ▸ FIGHT 3D: ghép MẪU 7b + 7c + 7d từ myGame (BOOST bấm tay +1 nấc, 2 Options tên lửa, tên lửa va nhau, trúng lan, lửa xanh sắp thắng, act voice nhỏ tiếng) · phiên máy MSI
+## Đợt 417 (28/9/2026) — ROCKET RACE ▸ FIGHT 3D: ghép MẪU 7b + 7c + 7d từ myGame (BOOST bấm tay +1 nấc, 2 Options tên lửa, tên lửa va nhau, trúng lan, lửa xanh sắp thắng, act voice nhỏ tiếng) · ✅ COMMIT + PUSH `8482a48` + LIVE (4/4 mã băm khớp) · phiên máy MSI
 
 **Yêu cầu (thầy):** *"ok, ghép 7d vào AWord"* — sau 3 bản mẫu ở kho myGame (`rocket-race/mau-7b-boost-tay.html` → `mau-7c-va-cham.html` →
 `mau-7d-trung-lan.html`, myGame GHI CHU Chặng 22–24). Gốc các mẫu = `game7/` chép NGUYÊN AWord `d793bfa` (Đợt 416) bằng tool mới
