@@ -4015,14 +4015,22 @@ body.aw-page-dragover::after {
 .aw-pf-cluetext { flex: 1; }
 
 /* ANAGRAM */
-.aw-pf-scramble { display: flex; flex-wrap: wrap; gap: calc(5px * var(--pf-scale, 1)); margin: calc(6px * var(--pf-scale, 1)) 0 calc(5px * var(--pf-scale, 1)) 20px; }
-.aw-pf-sbox {
-  min-width: calc(20px * var(--pf-scale, 1)); height: calc(22px * var(--pf-scale, 1)); padding: 0 3px; border-radius: 5px; background: #eef1f4;
-  display: inline-flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: calc(13px * var(--pf-scale, 1)); letter-spacing: .04em; color: #4a5560;
+/* ⭐ Đợt 415 — mỗi từ MỘT HÀNG trong mọi tình huống (thầy 27/9/2026): nowrap,
+   ô = min(cỡ thường × --pf-scale, --ag-max) — --ag-max do print.js
+   anagramCellMax(n) tính theo số chữ, khe co cùng tỉ lệ 5/26 nên n ô + khe
+   luôn lọt 1 cột. Chiều cao theo aspect-ratio nên ô co đều cả 2 chiều. */
+.aw-pf-anagram { --ag-cell: min(calc(26px * var(--pf-scale, 1)), var(--ag-max, 999px)); }
+.aw-pf-scramble, .aw-pf-blanks {
+  display: flex; flex-wrap: nowrap; align-items: flex-start;
+  gap: calc(var(--ag-cell) * 5 / 26); margin-left: 20px;
 }
-.aw-pf-blanks { display: flex; flex-wrap: wrap; gap: calc(5px * var(--pf-scale, 1)); margin-left: 20px; }
-.aw-pf-blank { width: calc(26px * var(--pf-scale, 1)); height: calc(30px * var(--pf-scale, 1)); border: 1.4px solid #9aa3ac; border-radius: 6px; }
+.aw-pf-scramble { margin-top: calc(6px * var(--pf-scale, 1)); margin-bottom: calc(5px * var(--pf-scale, 1)); }
+.aw-pf-sbox {
+  flex: none; width: var(--ag-cell); aspect-ratio: 26 / 22; padding: 0; border-radius: min(5px, 20%); background: #eef1f4;
+  display: inline-flex; align-items: center; justify-content: center; overflow: hidden;
+  font-weight: 700; font-size: min(calc(13px * var(--pf-scale, 1)), calc(var(--ag-cell) * 0.56)); line-height: 1; color: #4a5560;
+}
+.aw-pf-blank { flex: none; width: var(--ag-cell); aspect-ratio: 26 / 30; border: 1.4px solid #9aa3ac; border-radius: min(6px, 22%); }
 
 /* QUIZ */
 .aw-pf-options { display: grid; grid-template-columns: 1fr 1fr; gap: calc(5px * var(--pf-scale, 1)) 16px; margin: calc(7px * var(--pf-scale, 1)) 0 0 20px; }

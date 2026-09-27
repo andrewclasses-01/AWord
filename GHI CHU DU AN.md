@@ -546,6 +546,37 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 415 (27/9/2026 tối) — PRINT: chọn BỘ (ENG1/VI2…) TRƯỚC rồi mới chọn định dạng · ANAGRAM mỗi từ đúng 1 hàng, từ dài co ô · ⬜ CHƯA COMMIT (chờ thầy duyệt) · phiên máy MSI
+**Yêu cầu thầy:** (1) bấm Print ⇒ việc đầu tiên là chọn loại act (ENG1, VI2…), sau đó mới chọn Anagram/Quiz…; (2) Anagram: các ô của
+mỗi từ phải nằm trên DUY NHẤT 1 hàng — từ dài thì co nhỏ ô, không xuống dòng trong mọi tình huống.
+
+**Việc đã làm (CÓ SỬA CORE — `core/print.js`, `core/app.css`, `core/engine.js`):**
+- `openPrintPopup(activity, libAct, { variantAct, resolveVariant })` — act có bộ gợi ý (`variantsOf`) mở ở bước **"Print — which set?"**:
+  ALL (chỉ khi có Word) + các bộ của act (nhãn `variantLabel`, escape). Chọn 1 bộ ⇒ `resolveVariant(key)` nướng act về ĐÚNG bộ đó ⇒
+  bước định dạng (tiêu đề "Print — VI2", nút ‹ quay lại bước chọn bộ) ⇒ Anagram/Crossword/Quiz/Unjumble in bằng act vừa nướng.
+  Word ở bước 2 dùng luôn bộ đã chọn ⇒ thẳng bước chọn lớp. **ALL** chỉ có nghĩa với Word ⇒ bấm ALL đi thẳng bước chọn lớp.
+  Act KHÔNG có bộ gợi ý ⇒ vào thẳng bước định dạng như cũ. Bỏ bước "which clue set?" riêng của Word + bảng `WORD_VARIANTS`.
+- In bộ nào KHÔNG phụ thuộc bộ đang bật trong Options nữa và KHÔNG đổi options của act: `withVariant(act,key)` (export, print.js)
+  trả BẢN SAO options `{contentMode:"text", contentVariant:key}` (ép text để `activeVariant` không đọc `voiceVariant`).
+- `engine.js` nút Print: act thường ⇒ print.js tự `resolveActivity(withVariant(libAct,key))`. Act ĐÃ ĐỔI TEMPLATE (`base`, bản chơi
+  đã bị convert.js nướng phẳng còn 1 bộ) ⇒ truyền `variantAct: originAct` + `resolveVariant: key => convertActivity(withVariant(originAct,key), libAct.type)`.
+  Chế độ IPA (`_mode === "ipa"`) bỏ qua bước chọn bộ (gợi ý là phiên âm, bộ nào cũng như nhau).
+- Anagram 1 hàng: `.aw-pf-scramble`/`.aw-pf-blanks` `flex-wrap: nowrap`; mỗi ô rộng `--ag-cell = min(26px × --pf-scale, --ag-max)`,
+  cao theo `aspect-ratio` (ô chữ 26/22, ô trống 26/30), khe = 5/26 bề ô (co cùng tỉ lệ), cỡ chữ ô xáo `min(13px×scale, 0.56×ô)`.
+  `--ag-max` do `anagramCellMax(n)` (print.js, export, thuần) tính: bề ngang 1 cột thật (`PF_COL_W_MM`) − lề trái 20px − 3px an toàn,
+  chia cho `n + (n−1)×5/26`. ≤10 chữ giữ NGUYÊN cỡ cũ 26×30; PAGE-FIT giãn 1.15 cũng không tràn vì đã lấy min.
+
+**Kiểm chứng (Chrome thật, devserver :5591):** bàn thử mới `scratch/dot415-anagram-print-test.html` **30/30 ĐẠT** — bước 1 là chọn bộ
+(ALL,ENG1,ENG2,VI1,VI2), chưa hiện Anagram; chọn VI2 ⇒ tiêu đề "Print — VI2", Back về bước chọn bộ; tờ Anagram in đúng gợi ý VI2;
+options act gốc vẫn eng1; đo 3 mức `--pf-scale` 0.92/1/1.15 × 5 từ (3, 8, 9 "polar bear", 20, 45 chữ): cả ô xáo lẫn ô trống đều 1 hàng,
+mép phải ≤ mép cột (330.7px); 20 chữ ô 13×15px, 45 chữ 5.8×6.6px; ALL ⇒ bước chọn lớp; act thường giữ luồng cũ; `resolveVariant`
+tuỳ biến nhận đúng key. Ảnh chụp tờ 8 từ: mọi từ đúng 1 hàng. `import('/core/engine.js')` nạp không lỗi.
+⚠ Bàn thử cũ `scratch/print-word-dom-test.html` (Đợt 320) mô tả luồng CŨ (Word → chọn bộ) — nay lỗi thời, dùng bàn thử Đợt 415.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy mở 1 act WORDS thật (có ENG1/ENG2/VI1/VI2) bấm Print thử cả act thường lẫn act đã đổi template ·
+⬜ in giấy thật 1 tờ Anagram có từ dài xem ô co có dễ viết không (45 chữ thì ô chỉ ~1,5mm — đúng yêu cầu "không xuống dòng mọi tình huống")
+· ⬜ duyệt ⇒ commit + push.
+
 ## Đợt 414 (27/9/2026 tối) — rà XSS sau tấn công Tr0ngX: tiêu đề bài ở màn nhập tên (`play.js`) qua `escapeText` · phiên máy MSI
 Bối cảnh: myLesson `HO SO BAO MAT.md` mục 8 (bản đồ tấn công) + 8.5 (agent rà XSS 4 web). AWord: mọi tên/điểm ở leaderboard, bảng thầy,
 stats-home đều đã escape; chỗ DUY NHẤT còn nối thẳng chuỗi Firestore vào innerHTML là `play.js showNameScreen`

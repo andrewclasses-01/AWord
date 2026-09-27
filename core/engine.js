@@ -78,7 +78,7 @@ import { mountShowdownReview } from "./showdown-review.js";
 import { TEMPLATES, templateLabel, templateIcon } from "./catalog.js";
 import { fitOnce } from "./fit.js";
 import { THEMES, loadTheme } from "./themes/manifest.js";
-import { openPrintPopup } from "./print.js";
+import { openPrintPopup, withVariant } from "./print.js";
 // Đợt 143 — the Options panel's BODY lives here now, shared with Settings >
 // "Default activity options" so the teacher meets the same controls in both
 // places. This file keeps the other half: the draft model, Apply, and
@@ -2307,7 +2307,19 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // Second arg = the RAW library act, for the "Word" print format only — it
   // needs the clue-set variants (ENG1/ENG2/VI1/VI2) that resolveActivity()
   // just flattened away on the first arg. See core/print.js file header.
-  printBtn.onclick = () => { sound.click(); openPrintPopup(resolveActivity(libAct), libAct); };
+  // ⭐ Đợt 415 — popup Print hỏi BỘ (ENG1/VI2…) trước rồi mới tới định dạng.
+  // Act thường: print.js tự resolveActivity() đúng bộ đã chọn. Act ĐÃ ĐỔI
+  // TEMPLATE (`base`) thì bản đang chơi đã bị convert.js nướng phẳng còn 1 bộ
+  // ⇒ đưa act GỐC (còn đủ bộ) + cách nướng lại đúng bộ về đúng template này.
+  // Chế độ IPA bỏ qua: gợi ý của nó là phiên âm, bộ nào cũng như nhau.
+  printBtn.onclick = () => {
+    sound.click();
+    const fromOrigin = base && !variantsOf(libAct.content) && libAct._mode !== "ipa" && variantsOf(originAct.content);
+    openPrintPopup(resolveActivity(libAct), libAct, fromOrigin ? {
+      variantAct: originAct,
+      resolveVariant: key => convertActivity(withVariant(originAct, key), libAct.type)
+    } : {});
+  };
 
   // ⭐⭐ Đợt 400 (thầy, 26/9/2026) — NÚT CHUYỂN ACT. Single: bên trái tên act, cùng cỡ nút
   // In. Fight: đầu cụm nút giữa (tên act bị giấu trong trận). Pop-up nhỏ liệt kê các act

@@ -4788,6 +4788,9 @@ GIỮ NGUYÊN tự nhiên (không ép). `packPages()`/`resolveFitScale()` là h�
 sau này lỡ tay đưa nó về lại @media print thì mọi phép đo trước-khi-in sẽ câm lặng (không lỗi, chỉ đo
 sai — bẫy y hệt lỗi bàn thử tự bắt: clone rời cây DOM là MẤT custom property kế thừa từ `--pf-scale`).
 
+**⭐ CHỌN BỘ TRƯỚC (Đợt 415)** — act có bộ gợi ý (`variantsOf`) mở popup ở bước "which set?" (ALL chỉ khi có Word + các bộ của act); chọn bộ ⇒ `resolveVariant(key)` (mặc định `resolveActivity(withVariant(libAct,key))`; engine truyền `convertActivity(withVariant(originAct,key), libAct.type)` cho act đã đổi template) ⇒ bước định dạng in đúng bộ đó; ALL ⇒ thẳng bước chọn lớp (Word). `withVariant` chỉ tạo BẢN SAO options — Print không bao giờ đổi bộ đang chơi. Đoạn WORD dưới đây mô tả luồng Đợt 320 (Word → chọn bộ) — nay bước chọn bộ đã dời lên đầu popup.
+**ANAGRAM 1 HÀNG (Đợt 415)** — hàng ô `nowrap`; bề ô `min(26px×--pf-scale, --ag-max)`, `--ag-max = anagramCellMax(n)` tính theo bề 1 cột thật; khe co cùng tỉ lệ 5/26, cao theo aspect-ratio. Đổi lề/cột của tờ in thì phải sửa `AG_AVAIL_PX` cùng lúc.
+
 **WORD (Đợt 320)** — `openPrintPopup(activity, libAct)`: tham số THỨ HAI, mặc định = tham số đầu, là
 act GỐC CHƯA resolve. Lý do phải có: `resolveActivity(libAct)` (mà mọi Print button vẫn gọi trước khi
 đưa `activity` vào popup) làm PHẲNG 4 bộ gợi ý xuống còn đúng 1 `.clue` — đúng thứ Word cần lại là cái

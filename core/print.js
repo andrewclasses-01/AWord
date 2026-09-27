@@ -10,8 +10,8 @@
 //   • Unjumble — only "type-the-answer", any number of questions
 //   • Word     — only a "WORDS" act carrying clue-set variants (Đợt 145,
 //                core/content-view.js) — a plain vocabulary TABLE, not a game
-//                worksheet; picking it asks WHICH clue set (ALL/ENG1/ENG2/
-//                VI1/VI2) then WHICH CLASS (core/classes.js), then prints.
+//                worksheet; it prints the clue set picked in the popup's
+//                first step (Đợt 415), then asks WHICH CLASS (core/classes.js).
 // Formats that don't apply simply don't show an icon.
 //
 // A format renders a printable sheet from a NORMALISED item list
@@ -46,7 +46,7 @@ import { getTemplate } from "./registry.js";
 import { shuffle, el } from "./utils.js";
 import { icons } from "./icons.js";
 import { sound } from "./sound.js";
-import { variantsOf, clueOf } from "./content-view.js";
+import { variantsOf, clueOf, resolveActivity, activeVariant, variantLabel } from "./content-view.js";
 import { listClasses } from "./classes.js";
 
 const FORMAT_META = {
@@ -59,26 +59,34 @@ const FORMAT_META = {
 // Order shown in the popup (teacher's order): Anagram, Crossword, Quiz, Unjumble, Word.
 const FORMAT_ORDER = ["anagram", "crossword", "quiz", "unjumble", "word"];
 
-// The 5 clue-set choices Word's second step offers, teacher's fixed order.
-// "all" is the only one that is never filtered out by availability (below) —
-// it degrades gracefully (clueOf() falls back to the act's default clue for
-// whichever half a given word doesn't have) since it is inherently a
-// best-effort combination, not a claim that one specific set is showing.
-const WORD_VARIANTS = [
-  { key: "all",  label: "ALL" },
-  { key: "eng1", label: "ENG1" },
-  { key: "eng2", label: "ENG2" },
-  { key: "vi1",  label: "VI1" },
-  { key: "vi2",  label: "VI2" }
-];
+// Word's clue-set choice is now made in the popup's FIRST step (Đợt 415,
+// showVariantStep in openPrintPopup) — "all" = eng1 + vi2 side by side,
+// otherwise one of the act's own variant keys (variantsOf()).
 
 // ---------- public entry (called by core/engine.js Print button) ----------
 // `libAct` (optional, defaults to `activity`) is the RAW library act, needed
 // only by the Word format — see the file-header comment above. Every other
 // format keeps reading `activity` (already resolved to one clue set), so
 // they see zero change from this parameter existing.
-export function openPrintPopup(activity, libAct = activity) {
-  const formats = eligibleFormats(activity, libAct);
+//
+// ⭐ Đợt 415 (thầy, 27/9/2026) — CHỌN BỘ TRƯỚC, ĐỊNH DẠNG SAU. Act có bộ gợi ý
+// (ENG1/ENG2/VI1/VI2) mở popup ở bước "which set?" trước tiên; chọn xong mới
+// tới Anagram/Quiz/…, và định dạng đó in ĐÚNG bộ vừa chọn (không còn phụ thuộc
+// bộ đang bật trong Options). ALL chỉ có nghĩa với Word nên bấm ALL đi thẳng
+// sang bước chọn lớp. Act không có bộ gợi ý → vào thẳng bước định dạng như cũ.
+//   `variantAct`     — act mang các bộ gợi ý (mặc định `libAct`; engine truyền
+//                      act GỐC khi đang chơi bản đã đổi template, vì bản đổi
+//                      đó đã bị nướng phẳng còn 1 bộ).
+//   `resolveVariant` — key → (Promise) activity đã phẳng về đúng bộ đó, cùng
+//                      template với `activity` (mặc định: resolveActivity).
+export function openPrintPopup(activity, libAct = activity, { variantAct = null, resolveVariant = null } = {}) {
+  const vAct = variantAct || libAct;
+  const variants = variantsOf(vAct && vAct.content) || [];
+  const hasWord = variants.length > 0 && wordRowsOf(vAct).length > 0;
+  const resolveFor = resolveVariant || (key => resolveActivity(withVariant(libAct, key)));
+  let cur = activity;
+  let curKey = activeVariant(vAct);
+  let formats = eligibleFormats(cur, vAct);
 
   const overlay = el("div", "aw-print-pop-overlay");
   const box = el("div", "aw-print-pop");
@@ -90,12 +98,45 @@ export function openPrintPopup(activity, libAct = activity) {
   function onEsc(ev) { if (ev.key === "Escape") close(); }
   function close() { overlay.remove(); document.removeEventListener("keydown", onEsc); }
 
-  showFormatStep();
+  if (variants.length) showVariantStep(); else showFormatStep();
 
-  // ---- step 1: pick a FORMAT (unchanged look for the original 4) ----
+  // ---- step 1 (acts with clue sets): pick WHICH clue set ----
+  function showVariantStep() {
+    box.innerHTML = "";
+    box.append(el("div", "aw-print-pop-head", "Print — which set?"));
+    const row = el("div", "aw-print-pop-row");
+    const choices = (hasWord ? ["all"] : []).concat(variants);
+    choices.forEach(key => {
+      const label = key === "all" ? "ALL" : variantLabel(vAct.content, key);
+      const btn = el("button", "aw-print-pop-btn aw-print-pop-btn-text");
+      btn.type = "button";
+      btn.append(el("span", "aw-print-pop-label", escapeHtml(label)));
+      btn.onclick = () => { sound.click(); void pickVariant(key); };
+      row.append(btn);
+    });
+    box.append(row);
+    if (hasWord) box.append(el("div", "aw-print-pop-note", "<b>ALL</b> prints the vocabulary table (Word)."));
+  }
+
+  async function pickVariant(key) {
+    if (key === "all") { showClassStep("all", showVariantStep); return; }
+    box.innerHTML = "";
+    box.append(el("div", "aw-print-pop-loading", "Loading…"));
+    let next = null;
+    try { next = await resolveFor(key); } catch (e) { console.warn("AWord: print could not load that set", e); }
+    if (!overlay.isConnected) return;
+    if (!next) { showVariantStep(); return; }
+    cur = next;
+    curKey = key;
+    formats = eligibleFormats(cur, vAct);
+    showFormatStep();
+  }
+
+  // ---- step 2: pick a FORMAT (unchanged look for the original 4) ----
   function showFormatStep() {
     box.innerHTML = "";
-    box.append(el("div", "aw-print-pop-head", "Print"));
+    if (variants.length) box.append(backRow("Print — " + escapeHtml(variantLabel(vAct.content, curKey)), showVariantStep));
+    else box.append(el("div", "aw-print-pop-head", "Print"));
     if (formats.length === 0) {
       box.append(el("div", "aw-print-pop-empty", "Add some questions first, then you can print."));
       return;
@@ -112,43 +153,26 @@ export function openPrintPopup(activity, libAct = activity) {
       btn.onclick = () => {
         sound.click();
         if (meta.comingSoon) { note.innerHTML = `<b>${meta.label}</b> — coming soon.`; return; }
-        if (f === "word") { showWordVariantStep(); return; }
+        if (f === "word") { showClassStep(curKey, showFormatStep); return; }
         close();
-        void runPrint(activity, f);
+        void runPrint(cur, f);
       };
       row.append(btn);
     });
     box.append(row, note);
   }
 
-  // ---- step 2 (Word only): pick WHICH clue set(s) ----
-  function showWordVariantStep() {
-    const available = variantsOf(libAct && libAct.content) || [];
-    const choices = WORD_VARIANTS.filter(v => v.key === "all" || available.includes(v.key));
-    box.innerHTML = "";
-    box.append(backRow("Print — which clue set?", showFormatStep));
-    const row = el("div", "aw-print-pop-row");
-    choices.forEach(v => {
-      const btn = el("button", "aw-print-pop-btn aw-print-pop-btn-text");
-      btn.type = "button";
-      btn.append(el("span", "aw-print-pop-label", v.label));
-      btn.onclick = () => { sound.click(); showClassStep(v.key); };
-      row.append(btn);
-    });
-    box.append(row);
-  }
-
   // ---- step 3 (Word only): pick a CLASS to stamp on the header ----
-  function showClassStep(variantKey) {
+  function showClassStep(variantKey, onBack) {
     box.innerHTML = "";
-    box.append(backRow("Print — which class?", showWordVariantStep));
+    box.append(backRow("Print — which class?", onBack));
     const host = el("div", "aw-print-pop-list");
     host.append(el("div", "aw-print-pop-loading", "Loading…"));
     box.append(host);
 
     const skip = el("button", "aw-print-pop-listitem aw-print-pop-listitem-skip", "(No class)");
     skip.type = "button";
-    skip.onclick = () => { close(); void runPrintWord(libAct, variantKey, ""); };
+    skip.onclick = () => { close(); void runPrintWord(vAct, variantKey, ""); };
 
     listClasses().then(list => {
       if (!host.isConnected) return;
@@ -161,7 +185,7 @@ export function openPrintPopup(activity, libAct = activity) {
       list.forEach(c => {
         const b = el("button", "aw-print-pop-listitem", escapeHtml(c.name || ""));
         b.type = "button";
-        b.onclick = () => { close(); void runPrintWord(libAct, variantKey, c.name || ""); };
+        b.onclick = () => { close(); void runPrintWord(vAct, variantKey, c.name || ""); };
         host.append(b);
       });
     }).catch(() => {
@@ -179,6 +203,13 @@ export function openPrintPopup(activity, libAct = activity) {
     row.append(back, el("div", "aw-print-pop-head", title));
     return row;
   }
+}
+
+// A copy of `act` set to play clue set `key` in TEXT mode — what
+// resolveActivity() / convertActivity() need to flatten to exactly that set.
+// `options` is copied, never mutated: Print must not change what the act plays.
+export function withVariant(act, key) {
+  return { ...act, options: { ...(act.options || {}), contentMode: "text", contentVariant: key } };
 }
 
 // ---------- eligibility ----------
@@ -367,7 +398,7 @@ async function runPrint(activity, format) {
 }
 
 // ---------- Word format: a plain vocabulary TABLE, not a game worksheet ----
-// `variantKey` is one of WORD_VARIANTS's keys ("all"/"eng1"/"eng2"/"vi1"/"vi2");
+// `variantKey` is "all" or one of the act's variant keys ("eng1"/"eng2"/"vi1"/"vi2");
 // `className` is whatever showClassStep() got back from the picker ("" for
 // "(No class)"). Shares the exact same PAGE-FIT machinery as the other 3
 // flowing formats (measureFlow/resolveFitScale/packPages) by shaping each
@@ -494,6 +525,11 @@ function renderAnagram(items) {
     item.append(clueLine(i, it, true));
 
     const letters = String(it.answer || "").toUpperCase().replace(/[^A-Z0-9]/g, "").split("");
+    // ⭐ Đợt 415 — MỖI TỪ MỘT HÀNG, không bao giờ xuống dòng: hàng ô đã nowrap
+    // (app.css), ô co lại khi từ dài. `--ag-max` = bề rộng ô lớn nhất mà n ô +
+    // (n-1) khe (khe = 5/26 bề ô, co cùng tỉ lệ) vẫn lọt 1 cột; CSS lấy
+    // min(cỡ thường × --pf-scale, --ag-max) nên PAGE-FIT giãn cũng không tràn.
+    item.style.setProperty("--ag-max", anagramCellMax(letters.length).toFixed(2) + "px");
     const scr = el("div", "aw-pf-scramble");
     scrambled(letters).forEach(ch => scr.append(el("span", "aw-pf-sbox", escapeHtml(ch))));
     item.append(scr);
@@ -505,6 +541,16 @@ function renderAnagram(items) {
     body.append(item);
   });
   return body;
+}
+
+// Bề ngang dành cho hàng ô = 1 cột thật (PF_COL_W_MM) trừ lề trái 20px của
+// .aw-pf-scramble/.aw-pf-blanks, chừa 3px an toàn cho viền/làm tròn.
+// PURE + EXPORT — bàn thử: scratch/dot415-anagram-print-test.html.
+const AG_AVAIL_PX = PF_COL_W_MM * MM_PX - 20 - 3;
+const AG_GAP_RATIO = 5 / 26;     // khe 5px trên ô 26px — giữ đúng tỉ lệ khi co
+export function anagramCellMax(n) {
+  if (n <= 1) return AG_AVAIL_PX;
+  return AG_AVAIL_PX / (n + (n - 1) * AG_GAP_RATIO);
 }
 
 // ---------- QUIZ: clue + A/B/C/D options with checkboxes ----------

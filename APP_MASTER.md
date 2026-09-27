@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> 🖨 **27/9/2026 Đợt 415 — PRINT chọn BỘ (ENG1/VI2…) TRƯỚC rồi mới chọn định dạng; ANAGRAM mỗi từ đúng 1 hàng (ô co theo số chữ, `anagramCellMax`).** CÓ SỬA CORE (`print.js`/`app.css`/`engine.js`), bàn thử `scratch/dot415-anagram-print-test.html` 30/30. ⬜ chưa commit, chờ thầy duyệt.
 > 🔐 **27/9/2026 Đợt 414 — rà XSS: tiêu đề bài ở màn nhập tên (`play.js`) qua `escapeText`**; nhắc: `el(tag,cls,html)` là sink innerHTML.
 > ⭐ **27/9/2026 Đợt 413 — ROCKET RACE FIGHT 3D, 11 ý thầy: Apply lưu Options cả act CHUYỂN ĐỔI (core `fight.js` → `originAct.templateOptions`) + Apply luôn về cảnh phóng/START · tên lửa tự lên nòng · BOOST nút vuông có icon + 5 vạch nấc, nhấp nháy nhẹ/mạnh, bấm sớm = giương sẵn · bỏ TEAM/icon đầu cột · tên lửa TRÊN cột, BOOST dưới, cột hạ thấp · MISS WAIT 1 thanh đáy màn · màu ô đúng/sai/lộ đáp án · core cờ tuỳ chọn `tpl.fightMissReveal`** (hết Miss wait ⇒ chốt + lộ + giữ 2,1 s) · 413b: chờ Time delay cả bàn mờ đều, không lộ ô đã chọn. ✅ COMMIT + PUSH, ⬜ chưa bấm tay TOMKO. Chi tiết chặng Đợt 413 + GHI CHU ROCKET-RACE mục 36.
 > 🔐 **27/9/2026 Đợt 412 — tab mới (myLesson `rel="opener"`) xin vé qua `window.opener`; thiếu vé ⇒ màn lỗi "EM CẦN ĐĂNG NHẬP"** (`canVe`, không còn báo "lỗi mạng" sai). ⬜ chưa thử ca opener trên trình duyệt thật.
