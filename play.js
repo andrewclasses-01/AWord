@@ -22,7 +22,8 @@ import {
   listScores, isLate, nameKey, prettiestName, rankCompare,
   sendSpecialAttempt,  // myLesson "HỌC SINH ĐẶC BIỆT" — kho điểm RIÊNG, xem assignments.js
   newPlayLogId, beatPlayLog,  // Đợt 366 — kho LƯỢT LUYỆN practiceLog (thời gian mọi lượt, cả bỏ dở)
-  newAttemptId, saveDraft, dropDraft, queueAttemptKeepalive   // Đợt 383 — nộp lượt DỞ DANG
+  newAttemptId, saveDraft, dropDraft, queueAttemptKeepalive,  // Đợt 383 — nộp lượt DỞ DANG
+  sanVe   // Đợt 410 — VÉ đăng nhập của em do trang mẹ myLesson cấp (core/assignments.js)
 } from "./core/assignments.js";
 import { ensureTemplate } from "./core/registry.js";
 // No template is imported here on purpose. ensureTemplate() fetches the ONE
@@ -251,6 +252,8 @@ async function play(assignment, studentName, className, studentMa) {
   // vào leaderboard/kết quả của thầy) và màn kết thúc CHỈ được thấy đúng dòng của
   // CHÍNH mình — xem `submit`/`retrySubmit`/`entries` bên dưới.
   const dacBiet = new URLSearchParams(location.search).get("db") === "1";
+  // ⭐ Đợt 410 — xin VÉ đăng nhập ngay khi vào ván (keepalive lúc đóng tab KHÔNG chờ được vé). Phụ huynh không có mã.
+  if (ma && !dacBiet) sanVe(ma);
   // ⭐ Đợt 246 — one attempt at a time. `submit` freezes the play into the
   // outbox and starts delivering; `retrySubmit` re-runs delivery for the SAME
   // attempt (same fixed id — a re-send can never create a second row). Both

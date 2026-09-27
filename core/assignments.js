@@ -542,6 +542,50 @@ function sweepDrafts() {
   });
   if (doi) writeDrafts(m);
 }
+// ═══════════ ⭐⭐ Đợt 410 (27/09/2026, sau tấn công Tr0ngX đợt 4: ~1,19 triệu điểm giả) — VÉ ĐĂNG NHẬP CỦA HỌC SINH ═══════════
+// Luật Firestore (myLesson `web/tools/dang-luat-diem-dang-nhap.js`): scores + results CHỈ ghi được khi request mang Firebase
+// ID token của ĐÚNG em có `ma` đó (claim `ma`, tài khoản myNetwork/tools/tao-tai-khoan.mjs), hoặc thầy. AWord KHÔNG có phiên
+// của em (khác tên miền, Auth nhớ theo origin) ⇒ trang mẹ myLesson (andrewclasses.com, `js/nw-phien.js`) CẤP VÉ qua postMessage:
+//   AWord → mẹ : {type:'AWORD:XIN_VE', ma}             (không chứa bí mật ⇒ target '*')
+//   mẹ → AWord : {type:'AWORD:VE', ma, token, het}      (mẹ gửi ĐÍCH DANH origin AWord; ở đây CHỈ nhận từ VE_NGUON)
+// Lượt MANG MÃ ⇒ gửi bằng REST + `Authorization: Bearer <vé>` (SDK không nhận token rời). Chưa có vé đúng mã (mở ngoài
+// myLesson, mẹ không trả lời, vé của em khác) ⇒ KHÔNG gửi, lượt nằm lại outbox; lần mở sau có vé thì flushOutbox gửi bù.
+// Lượt KHÔNG mang mã (chơi tự do ngoài myLesson) đi SDK như cũ: thầy (Google) vẫn ghi được; người khác bị luật từ chối
+// ⇒ bỏ khỏi outbox (không bao giờ giao được — thầy chốt 27/09: chơi ngoài myLesson không lên bảng lớp nữa).
+// ⛔ Vé sống 1 giờ: đừng cất vào localStorage/outbox; chỉ giữ trong bộ nhớ trang (`_ve`).
+const VE_NGUON = ["https://andrewclasses.com", "http://localhost:8134", "http://127.0.0.1:8134"];
+let _ve = null;                 // { ma, token, het(ms) }
+const _choVe = [];
+let _ngheVe = false;
+function ngheVe() {
+  if (_ngheVe || typeof window === "undefined") return;
+  _ngheVe = true;
+  window.addEventListener("message", (e) => {
+    if (!VE_NGUON.includes(e.origin)) return;
+    const d = e.data;
+    if (!d || d.type !== "AWORD:VE" || !d.token || !d.ma) return;
+    _ve = { ma: String(d.ma), token: String(d.token), het: Number(d.het) || (Date.now() + 50 * 60e3) };
+    _choVe.splice(0).forEach(f => f());
+  });
+}
+function veConHan(ma) {
+  return _ve && _ve.ma === String(ma) && _ve.het - Date.now() > 90e3 ? _ve.token : null;
+}
+// Vé của em `ma`, hoặc null sau `ms` (không nhúng / trang mẹ không cấp). Không bao giờ reject.
+export function xinVe(ma, ms = 4000) {
+  const co = veConHan(ma);
+  if (co) return Promise.resolve(co);
+  if (typeof window === "undefined" || window.parent === window) return Promise.resolve(null);
+  ngheVe();
+  return new Promise(res => {
+    const t = setTimeout(() => res(veConHan(ma)), ms);
+    _choVe.push(() => { const v = veConHan(ma); if (v) { clearTimeout(t); res(v); } });
+    try { window.parent.postMessage({ type: "AWORD:XIN_VE", ma: String(ma) }, "*"); } catch (e) { /* mẹ khó tính: không có vé */ }
+  });
+}
+// Trang nhúng xin vé NGAY khi mở (play.js) để lúc nộp — kể cả keepalive lúc đóng tab, không chờ được — đã có sẵn vé.
+export function sanVe(ma) { if (ma) xinVe(ma).catch(() => {}); }
+
 // Layer 2: queue the round (sync) and fire both creates with `keepalive`. `mayExist*` are set BEFORE sending:
 // a keepalive answer is never read, so whatever flushOutbox() finds later must be allowed to mean "it landed"
 // (score: it LOOKS first; result: create-only rule ⇒ denied = exists). submitCount is bumped by that flush.
@@ -551,13 +595,17 @@ export function queueAttemptKeepalive(args) {
   saveOutboxEntry(entry);
   const pid = firebaseConfig && firebaseConfig.projectId, key = firebaseConfig && firebaseConfig.apiKey;
   if (!pid || !key) return entry;
+  // ⭐ Đợt 410 — lượt mang mã: cần VÉ đang còn hạn (lấy đồng bộ — pagehide không chờ được). Chưa có ⇒ để outbox gửi bù.
+  const ve = entry.ma ? veConHan(entry.ma) : null;
+  if (entry.ma && !ve) return entry;
   const goc = `https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents`;
   const I = n => ({ integerValue: String(Math.round(n) || 0) }), S = v => ({ stringValue: String(v) });
   const chung = { score: I(entry.score), total: I(entry.total), timeMs: I(entry.timeMs), createdAt: I(entry.createdAt),
                   ...(entry.ma ? { ma: S(entry.ma) } : {}), ...(entry.doDang ? { doDang: { booleanValue: true } } : {}) };
+  const tieuDe = { "Content-Type": "application/json", ...(ve ? { Authorization: "Bearer " + ve } : {}) };
   const gui = (url, fields) => {
     try {
-      fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fields }), keepalive: true })
+      fetch(url, { method: "POST", headers: tieuDe, body: JSON.stringify({ fields }), keepalive: true })
         .catch(() => {});
     } catch (e) { /* the outbox still owes it */ }
   };
@@ -588,6 +636,8 @@ const isDenied = e => e && e.code === "permission-denied";
  * that). NEVER throws, and never double-writes: see the header above.
  */
 export async function sendAttempt(entry, { tries = 3, tryTimeoutMs = 6000 } = {}) {
+  // ⭐ Đợt 410 — lượt MANG MÃ em chỉ đi bằng VÉ (xem khối VÉ ĐĂNG NHẬP ở trên).
+  if (entry.ma) return guiBangVe(entry, { tries, tryTimeoutMs });
   let d, sdk;
   try { [d, sdk] = await Promise.all([db(), fs()]); }
   catch (e) { return { ok: false }; }
@@ -628,7 +678,7 @@ export async function sendAttempt(entry, { tries = 3, tryTimeoutMs = 6000 } = {}
           // create-on-existing is an UPDATE, which students may not do — so with
           // an ambiguous earlier try this denial means "already there".
           if (entry.mayExistScore) entry.scoreOk = true;
-          else { saveOutboxEntry(entry); return { ok: false, hard: true }; }
+          else { dropOutboxEntry(entry); return { ok: false, hard: true }; }   // Đợt 410: lượt KHÔNG mã bị luật từ chối = không bao giờ giao được
         } else entry.mayExistScore = true;
       }
       saveOutboxEntry(entry);
@@ -641,7 +691,7 @@ export async function sendAttempt(entry, { tries = 3, tryTimeoutMs = 6000 } = {}
       } catch (e) {
         if (isDenied(e)) {
           if (entry.mayExistResult) entry.resultOk = true;   // create-only rule: denied = it exists
-          else { saveOutboxEntry(entry); return { ok: false, hard: true }; }
+          else { dropOutboxEntry(entry); return { ok: false, hard: true }; }   // Đợt 410: như trên
         } else entry.mayExistResult = true;
       }
       saveOutboxEntry(entry);
@@ -655,6 +705,58 @@ export async function sendAttempt(entry, { tries = 3, tryTimeoutMs = 6000 } = {}
         await updateDoc(doc(d, "assignments", entry.code), {
           lastSubmitAt: entry.createdAt, submitCount: increment(1)
         });
+      } catch (e) { /* a dot is not worth an error */ }
+      return { ok: true };
+    }
+  }
+  return { ok: false };
+}
+
+// ⭐ Đợt 410 — giao một lượt MANG MÃ bằng VÉ đăng nhập: REST createDocument (?documentId= mã lượt cố định).
+// 200 = ghi xong · 409 ALREADY_EXISTS = lần trước đã tới nơi (không bao giờ ghi đôi) · 401/403 = luật từ chối (vé sai
+// em/hết hạn) ⇒ {hard:true} nhưng GIỮ outbox (lần sau có vé đúng sẽ qua) · lỗi mạng ⇒ thử lại như sendAttempt.
+// Cùng khuôn tài liệu + cùng nghĩa scoreOk/resultOk với đường SDK — flushOutbox dùng chung.
+async function guiBangVe(entry, { tries = 3, tryTimeoutMs = 6000 } = {}) {
+  const pid = firebaseConfig && firebaseConfig.projectId, key = firebaseConfig && firebaseConfig.apiKey;
+  if (!pid || !key) { saveOutboxEntry(entry); return { ok: false }; }
+  const goc = `https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents`;
+  const id = encodeURIComponent(entry.attemptId), k = `&key=${encodeURIComponent(key)}`;
+  const ma = String(entry.ma).slice(0, 60);
+  const dd = entry.doDang ? { doDang: true } : {};
+  const truong = o => { const f = {}; Object.keys(o).forEach(x => { f[x] = fsGiaTri(o[x]); }); return f; };
+  const scoreF = truong({ name: entry.name, score: entry.score, total: entry.total, timeMs: entry.timeMs,
+                          createdAt: entry.createdAt, ma, ...dd });
+  const resultF = truong(clean({ assignmentId: entry.code, studentName: entry.name, score: entry.score, total: entry.total,
+                                 timeMs: entry.timeMs, review: entry.review || [], createdAt: entry.createdAt, ma, ...dd }));
+  const urlScore = `${goc}/assignments/${encodeURIComponent(entry.code)}/scores?documentId=${id}${k}`;
+  const urlResult = `${goc}/results?documentId=${id}${k}`;
+  // true = đã có trên máy chủ · false = luật từ chối · ném = mạng/khác (thử lại)
+  const tao = async (url, fields, ve) => {
+    const r = await withTimeout(fetch(url, { method: "POST", body: JSON.stringify({ fields }),
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + ve } }), tryTimeoutMs);
+    if (r.ok || r.status === 409) return true;
+    if (r.status === 401 || r.status === 403) return false;
+    throw Object.assign(new Error("http " + r.status), { code: "aw/http" });
+  };
+
+  for (let round = 0; round < tries; round++) {
+    if (round) await new Promise(r => setTimeout(r, 700 * round));
+    const ve = await xinVe(ma);
+    if (!ve) { saveOutboxEntry(entry); return { ok: false }; }   // không có vé đúng em ⇒ để dành, không gửi mù
+    for (const [co, url, f] of [["scoreOk", urlScore, scoreF], ["resultOk", urlResult, resultF]]) {
+      if (entry[co]) continue;
+      try {
+        if (await tao(url, f, ve)) entry[co] = true;
+        else { saveOutboxEntry(entry); return { ok: false, hard: true }; }
+      } catch (e) { /* mạng: thử lại vòng sau */ }
+      saveOutboxEntry(entry);
+    }
+    if (entry.scoreOk && entry.resultOk) {
+      dropOutboxEntry(entry);
+      // Chấm "CÓ BÀI MỚI" — như cũ, best-effort (luật assignments cho ai cũng bump 2 trường này).
+      try {
+        const [d, sdk] = await Promise.all([db(), fs()]);
+        await sdk.updateDoc(sdk.doc(d, "assignments", entry.code), { lastSubmitAt: entry.createdAt, submitCount: sdk.increment(1) });
       } catch (e) { /* a dot is not worth an error */ }
       return { ok: true };
     }

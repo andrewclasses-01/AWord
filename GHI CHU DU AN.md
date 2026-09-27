@@ -546,6 +546,29 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 410 (27/9/2026 chiều) — ⭐⭐ ĐIỂM ĐÒI ĐĂNG NHẬP: "VÉ" từ trang mẹ myLesson (sau tấn công Tr0ngX đợt 4) · phiên máy MSI
+**Bối cảnh:** sáng 27/9 kẻ lạ bơm ~1,19 TRIỆU dòng điểm giả vào `assignments/*/scores` của cả 118 bài (tên "disc0rd … @Tr0ngX",
+không `ma`) — web myLesson đọc 300 dòng mới nhất/bài nên điểm thật bị đẩy khỏi màn hình. Đã dọn + luật tên sạch `f9b3036d`
+(hồ sơ myLesson). Thầy chọn chặn tận gốc: **"Điểm chỉ nhận khi đăng nhập"** — chấp nhận chơi NGOÀI myLesson không lên bảng lớp.
+**Làm gì (chỉ `core/assignments.js` + `play.js`, không đụng template/engine):**
+- Khối **VÉ ĐĂNG NHẬP** (`xinVe(ma)`, `sanVe(ma)`, `veConHan`): khung AWord xin `{type:'AWORD:XIN_VE', ma}` lên `window.parent`;
+  trang mẹ myLesson web v1.159.0 (`js/nw-phien.js`) trả `{type:'AWORD:VE', ma, token, het}` = Firebase ID token của em (1 giờ),
+  CHỈ khi phiên đang mở là đúng em đó, gửi đích danh origin AWord. AWord CHỈ nhận từ `VE_NGUON` (andrewclasses.com + localhost:8134).
+  Vé chỉ ở bộ nhớ trang, không cất localStorage/outbox.
+- `sendAttempt`: lượt MANG MÃ ⇒ `guiBangVe` = REST createDocument `?documentId=<mã lượt>` + `Authorization: Bearer <vé>`
+  (200 = xong · 409 = đã có, không ghi đôi · 401/403 = luật từ chối ⇒ hard nhưng GIỮ outbox). Không có vé ⇒ không gửi, để outbox;
+  lần mở sau có vé thì `flushOutbox` gửi bù. Chấm "CÓ BÀI MỚI" (submitCount) vẫn qua SDK như cũ.
+- Lượt KHÔNG mã (chơi tự do) vẫn đi SDK: thầy (Google) ghi được; người khác bị luật từ chối ⇒ nay BỎ khỏi outbox (trước giữ mãi).
+- `queueAttemptKeepalive` (đóng tab): lượt mang mã chỉ gửi nếu ĐANG có vé còn hạn (đồng bộ), không thì để outbox.
+- `play.js`: vào ván là `sanVe(ma)` (trừ phụ huynh `db=1` — kho `specialAttempts` riêng, không đổi).
+**Luật** (myLesson `web/tools/dang-luat-diem-dang-nhap.js`): `diemDungNguoi(d)` = hsDung(ma) || isTeacher() || laThay() cho create
+scores + results. ⛔ ĐĂNG SAU khi Đợt 410 + web v1.159.0 live. practiceLog + specialAttempts KHÔNG đổi.
+**Đã kiểm (bàn thử `scratch/dot410-ve.html` + trang mẹ `myLesson Web/_thu410.html` KHÔNG commit, em thử ZTEST):** chưa đăng
+nhập ⇒ không vé ✓ · đăng nhập ⇒ vé 1049 ký tự ✓ · xin vé mã em khác ⇒ không ✓ · `sendAttempt` qua vé ⇒ `{ok:true}` ✓.
+`node --input-type=module --check` sạch 2 file; không thêm import tĩnh ⇒ `sinh-preload` không đổi.
+
+---
+
 ## Đợt 409 (27/9/2026) — ROCKET RACE ▸ FIGHT 3D: NẠP TÊN LỬA BẰNG TAY + VẾT CHÁY + CHUÔNG BÁO ĐỘNG + MISS WAIT GIỮA MÀN · ✅ ĐÃ PUSH `567cf99` + LIVE 8/8 mã băm · ⬜ CHƯA BẤM TAY TOMKO
 Thầy duyệt MẪU 6d ở myGame (`cf08621`), chọn chuông kiểu **b**: "ok, dùng chuông b, ghép vào AWord, commit + push". Chỉ `templates/rocket-race/` (core KHÔNG đổi).
 - Đủ 3 câu liên tiếp ⇒ +1 quả NHỎ ở hàng dự phòng (tối đa 3), KHÔNG tự lên nòng. HS chạm hàng quả nhỏ (`msLoadTap`, view `onLoad`) ⇒ quả sang ô to

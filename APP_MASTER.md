@@ -8,6 +8,11 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> 🔐⭐⭐ **27/9/2026 Đợt 410 — ĐIỂM ĐÒI ĐĂNG NHẬP (sau tấn công Tr0ngX: 1,19 triệu điểm giả)**: lượt mang `ma` chỉ gửi bằng
+> "VÉ" = Firebase ID token do trang mẹ myLesson cấp qua postMessage (`AWORD:XIN_VE` ↔ `AWORD:VE`, `core/assignments.js`
+> `xinVe`/`guiBangVe`, REST + Bearer); không vé ⇒ nằm outbox. Luật: scores/results create đòi đúng em (hoặc thầy) — chơi ngoài
+> myLesson KHÔNG lên bảng lớp (thầy chốt). ⛔ Đổi cách ghi scores/results/outbox là phải đọc khối VÉ trong `core/assignments.js`.
+> Hồ sơ bảo mật gốc: kho private myLesson-app `HO SO BAO MAT.md`. Chi tiết `GHI CHU DU AN.md` Đợt 410.
 > ⭐ **27/9/2026 Đợt 409 — ROCKET RACE FIGHT 3D: nạp tên lửa BẰNG TAY (3 câu liên tiếp = quả nhỏ, chạm mới lên nòng), chạm quả to ⇒ quả lùi khỏi màn rồi phóng, còi báo động đỏ (kiểu b), trúng ⇒ vết cháy đen + lửa nhỏ, thanh MISS WAIT vẽ 3D giữa màn dưới câu hỏi** (chỉ `templates/rocket-race/`, core không đổi; ghép MẪU 6d myGame `cf08621`). Chi tiết chặng Đợt 409 + GHI CHU ROCKET-RACE mục 35.
 > ⭐ **27/9/2026 Đợt 408 — FIREBASE APP CHECK (theo dõi, CHƯA ép buộc) sau tấn công Tr0ngX**: `core/app-check.js` (bản chép myLesson web) nạp `defer` ở index/play/source; `core/firebase.js` dùng `getApps()` (không initializeApp hai lần). Không đổi luồng chơi/nộp; ✅ ĐÃ PUSH `1389b3f` + LIVE 5/5 mã băm + xin mã thật OK. Chi tiết chặng Đợt 408.
 > ⭐ **27/9/2026 Đợt 407 — ROCKET RACE FIGHT 3D: TÊN LỬA TẤN CÔNG giữa 2 tàu (3 câu liên tiếp = 1 quả, tay robot đưa lên nóc tàu, chạm để bắn, vòng lên lao thẳng xuống, trúng lùi N nấc — Options "Missile" Off/1–10/∞; né 1,5 s cuối bằng trả lời đúng / BOOST (5 câu liên tiếp) / sai-bị-lùi) + đội 2 CAM ĐẬM** (chỉ `templates/rocket-race/`, mô-đun mới `rr3d-missile.js` chép từ myGame mẫu 6c; ✅ ĐÃ PUSH `a7e4e99` + LIVE 9/9 mã băm; ⬜ chưa bấm tay TOMKO). Chi tiết chặng Đợt 407 + GHI CHU ROCKET-RACE mục 34.

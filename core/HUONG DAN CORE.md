@@ -21,6 +21,11 @@ Firestore (project `aword-70dae`). Điều này ảnh hưởng tới mọi ngư�
 ## ⚠️ CHẾ ĐỘ HỌC SINH từ v0.8.0 — `startGame(root, activity, { session })`
 ### (viết lại Đợt 246, 23/8/2026 — PRACTICE/SUBMIT + gửi bài chắc chắn · ⭐⭐⭐ Đợt 383, 25/9/2026 — GỘP LẠI MỘT CHẾ ĐỘ, đọc khối dưới TRƯỚC)
 
+> 🔐 **Đợt 410 (27/9/2026) — NỘP ĐIỂM CẦN "VÉ" ĐĂNG NHẬP.** Luật Firestore chỉ nhận scores/results có `ma` khi request mang ID
+> token của đúng em đó (hoặc thầy). Lượt mang `ma` đi `guiBangVe` (REST + Bearer, vé do trang mẹ myLesson cấp qua
+> `AWORD:XIN_VE`/`AWORD:VE`); không có vé ⇒ nằm outbox, KHÔNG gửi mù. Template/engine KHÔNG phải biết gì — `session.submit`
+> giữ nguyên hợp đồng `{ok}`. ⛔ Thêm đường ghi điểm mới (nút nộp khác, kho khác) mà quên vé là bị luật từ chối im lặng.
+
 ⭐⭐ **Đợt 384 (25/9/2026, cho myLesson web v1.148.0 — đúp một dòng lượt ⇒ pop-up BÀI LÀM từng câu)** — HỢP ĐỒNG MỚI `ui.setReviewProvider(fn)`:
 template khai hàm trả bài làm TỚI LÚC NÀY (cùng dạng `review` lúc kết thúc: question/answered/yourText/yourCorrect/correctText/src/roundMs). Engine
 `baiLamNay()` (không bao giờ ném) được đọc ở `restart()` (cùng lúc `diemBoDo`), ở teardown trước `cleanup()`, và qua `playLog.start({baiLamNay})` cho
