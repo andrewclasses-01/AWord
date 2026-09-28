@@ -342,3 +342,34 @@
 .aw-fight-result.is-ws-mid .aw-btn{border:0;border-radius:4px;font:italic 800 clamp(13px,1.4vw,19px)/1 "Saira",sans-serif;
   text-transform:uppercase;letter-spacing:.06em;padding:.7em 1.4em;background:rgba(61,245,138,.1);color:#9BFFC4;box-shadow:inset 0 0 0 1.5px rgba(61,245,138,.6)}
 .aw-fight-result.is-ws-mid .aw-btn-primary{background:linear-gradient(180deg,#6BFFA8,#22CF6C);color:#03150C;box-shadow:0 0 22px rgba(61,245,138,.6)}
+
+/* ⭐ Đợt 425 — HINT BAR: a thin line of light on the top edge of the centre board (a match)
+   / of the play area (single). Fills over 15 s of no lesson word found; flashes when the
+   letter lands, rests, runs again. Width is animated from JS (WAAPI), the glowing head
+   rides the fill's right end. */
+.aw-ws-hint{position:absolute;left:8%;right:8%;top:0;height:3px;z-index:5;pointer-events:none;opacity:0;transition:opacity .4s ease}
+.aw-ws-hint.is-on,.aw-ws-hint.is-flash{opacity:1}
+.aw-ws-hint::before{content:"";position:absolute;inset:0;border-radius:0 0 3px 3px;background:linear-gradient(90deg,transparent,rgba(61,245,138,.16) 12%,rgba(61,245,138,.16) 88%,transparent)}
+.aw-ws-hint i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:0 0 3px 3px;
+  background:linear-gradient(90deg,rgba(61,245,138,0),rgba(61,245,138,.55) 35%,#3DF58A 80%,#E6FFF1);
+  box-shadow:0 0 6px rgba(61,245,138,.85),0 1px 12px rgba(61,245,138,.45)}
+/* the head: a small soft glow, not a dot — a blurred light the width of a few px, no hard edge */
+.aw-ws-hint i::after{content:"";position:absolute;right:-5px;top:50%;width:12px;height:4px;margin-top:-2px;border-radius:50%;
+  background:radial-gradient(ellipse at center,rgba(244,255,248,.95) 0%,rgba(155,255,196,.55) 45%,rgba(61,245,138,0) 75%);
+  filter:blur(1.5px);box-shadow:0 0 8px 1px rgba(61,245,138,.45)}
+.aw-ws-hint.is-flash i{animation:aw-ws-hintflash 1.3s ease-out forwards}
+.aw-ws-hint.is-flash i::after{opacity:0}
+@keyframes aw-ws-hintflash{0%{filter:brightness(2.2);box-shadow:0 0 10px rgba(155,255,196,1),0 0 26px rgba(61,245,138,.9)}100%{filter:none;opacity:0}}
+.aw-fight-shared.aw-ws-host > .aw-ws-hint{left:10%;right:10%}
+
+/* the hint letters: lit amber, the rest still blanks; a word the hints turned over = amber, dimmer */
+.aw-ws-hl{font-weight:800;color:#FFC23D;text-shadow:0 0 .5em rgba(255,194,61,.75)}
+.aw-ws-hl.is-new{animation:aw-ws-hlpop .5s cubic-bezier(.22,.9,.3,1)}
+@keyframes aw-ws-hlpop{from{opacity:0;transform:translateY(-.3em)}}
+.aw-ws-hl{display:inline-block}
+.aw-ws-hintline{min-height:1.4em;font-family:"Saira",sans-serif;font-weight:800;font-size:calc(2.6 * var(--aw-u));letter-spacing:.18em;color:rgba(61,245,138,.45);text-align:center}
+.aw-ws-hintline.is-given .aw-ws-hl,.aw-ws-chint.is-given .aw-ws-hl{color:#FFD98A}
+.aw-ws-chint{font-family:"Saira",sans-serif;font-weight:800;font-size:calc(4.4 * var(--ws-u,4px));letter-spacing:.2em;color:rgba(61,245,138,.45);text-align:center;margin-top:calc(-1 * var(--ws-u,4px))}
+.aw-ws-df.is-given,.aw-ws-cdf.is-given{background:rgba(255,194,61,.07);border-color:rgba(255,194,61,.45)}
+.aw-ws-df.is-given .aw-ws-bl,.aw-ws-cdf.is-given .aw-ws-cbl{letter-spacing:.05em}
+.aw-ws-df.is-given .aw-ws-hl,.aw-ws-cdf.is-given .aw-ws-hl{animation:none}

@@ -286,7 +286,8 @@ function countTanks(tanks, scores, grow) {
 // on that board that nobody found — longest first, 10 at most.
 function missedHtml(S) {
   const done = new Set(S.log.map(f => String(f.w).toLowerCase()));
-  S.found.forEach((_, up) => done.add(String(up).toLowerCase()));
+  // Đợt 425 — a word the hints turned over (-1) was MISSED, not made
+  S.found.forEach((who, up) => { if (who === 0 || who === 1) done.add(String(up).toLowerCase()); });
   S.taken.forEach((_, w) => done.add(String(w).toLowerCase()));
   const row = (w, m) => `<div><b>${esc(w.toUpperCase())}</b> <span>${esc(m || "")}</span></div>`;
   const wrapUp = rows => rows.length ? `<div class="aw-ws-mlab">MISSED</div><div class="aw-ws-mlist">${rows.join("")}</div>` : "";
@@ -333,6 +334,84 @@ const unitOf = (node, prop) => node ? parseFloat(getComputedStyle(node).getPrope
 function fitCentre(host) {
   const cen = host && host.querySelector(":scope > .aw-ws-cen");
   if (cen) fitUnit(cen, "--ws-u", host.clientWidth / 100, ".aw-ws-cdefs, .aw-ws-ccols ol");
+}
+
+// ---------------- Đợt 425: letter hints — nobody gets stuck ----------------
+// thầy (28/9/2026): when nobody can make the word, the class must not sit there until
+// time's up. Every 15 s with NO lesson word found, one more letter of the word shows
+// (left to right, "S _ _ _ _" → "S U _ _ _"); the last step turns the whole word over
+// (a miss, no point) and play moves on. A word made after some hints still scores in
+// full. A thin light bar at the top edge of the centre board fills over those 15 s, so
+// the class sees a hint coming; it flashes when the letter lands, rests a moment
+// (HINT_GAP_MS) and — still nothing found — runs again.
+// One clock per match (in SHARED: both teams see the same hint at the same moment) or
+// per single play. Driven by setTimeout, not rAF (a hidden pane freezes rAF).
+const HINT_MS = 15000, HINT_GAP_MS = 1400;
+const HINT_CLOCKS = new Set();
+let hintPaused = false;
+function createHintClock(onStep) {
+  const bar = el("div", "aw-ws-hint");
+  bar.innerHTML = "<i></i>";
+  const fill = bar.firstChild;
+  const c = { key: null, k: 0, full: false, phase: "off", left: 0, t0: 0, timer: null, anim: null, bar };
+  const clear = () => { clearTimeout(c.timer); c.timer = null; };
+  const elapsed = () => hintPaused ? 0 : performance.now() - c.t0;
+  function paint() {
+    if (c.anim) { try { c.anim.cancel(); } catch (e) {} c.anim = null; }
+    bar.classList.toggle("is-on", c.phase === "run");
+    bar.classList.toggle("is-flash", c.phase === "gap");
+    if (c.phase !== "run" || !bar.isConnected) { fill.style.width = c.phase === "gap" ? "100%" : "0%"; return; }
+    const left = Math.max(0, c.left - elapsed());
+    const from = (1 - left / HINT_MS) * 100;
+    fill.style.width = from + "%";
+    c.anim = fill.animate([{ width: from + "%" }, { width: "100%" }], { duration: Math.max(1, left), fill: "forwards" });
+    if (hintPaused) c.anim.pause();
+  }
+  function schedule() {
+    clear();
+    if (hintPaused || c.phase === "off") return;
+    c.t0 = performance.now();
+    c.timer = setTimeout(() => {
+      c.timer = null;
+      if (c.phase === "run") {
+        c.phase = "gap"; c.left = HINT_GAP_MS; paint();
+        try { onStep(c); } catch (e) { console.error("hint", e); }
+        if (c.phase === "gap") schedule();
+      } else if (c.phase === "gap") run();
+    }, c.left);
+  }
+  function run() { c.phase = "run"; c.left = HINT_MS; schedule(); paint(); }
+  c.ensure = key => {                      // the word the hints are for; a NEW one starts from nothing
+    if (key == null) return c.stop();
+    if (key === c.key) return;
+    c.key = key; c.k = 0; c.full = false; run();
+  };
+  c.bump = () => { if (c.key != null && !c.full) run(); };     // a lesson word was found: fresh 15 s
+  c.stop = () => { clear(); c.phase = "off"; paint(); };      // keeps `key`: the same word never restarts
+  c.pause = p => {
+    if (c.phase === "off") return;
+    if (p) { c.left = Math.max(0, c.left - (performance.now() - c.t0)); clear(); if (c.anim) c.anim.pause(); }
+    else { schedule(); if (c.anim) c.anim.play(); else paint(); }
+  };
+  c.attach = parent => { if (!parent) return; if (bar.parentNode !== parent) parent.append(bar); paint(); };
+  c.dispose = () => { c.stop(); bar.remove(); HINT_CLOCKS.delete(c); };
+  HINT_CLOCKS.add(c);
+  return c;
+}
+function pauseHints(p) {
+  if (hintPaused === !!p) return;
+  if (p) HINT_CLOCKS.forEach(c => c.pause(true));
+  hintPaused = !!p;
+  if (!p) HINT_CLOCKS.forEach(c => c.pause(false));
+}
+// "S U _ _ _" — the revealed letters lit, the rest still blanks
+function hintHtml(up, k, full) {
+  return up.split("").map((ch, j) => full || j < k ? `<b class="aw-ws-hl${!full && j === k - 1 ? " is-new" : ""}">${esc(ch)}</b>` : "_").join(" ");
+}
+// Mode 2/3: the hints go to the SHORTEST lesson word of the board nobody has made yet
+function hintTarget(words, isDone) {
+  const left = words.filter(up => !isDone(up));
+  return left.length ? left.reduce((a, b) => b.length < a.length ? b : a) : null;
 }
 
 // ---------------- board plans (shared by single and fight) ----------------
@@ -407,8 +486,30 @@ function clueHtml(S, it, big) {
   const text = vv.hasVoice && vv.hideText ? "" : `<span>${esc(it.clue || "")}</span>`;
   return `<div class="aw-ws-cclue${big ? " is-big" : ""}">${text}${btn}</div>`;
 }
+// ⭐ Đợt 425 — the match's hint clock: which word it is for, and what a step does.
+function matchHintKey(S) {
+  if (S.hintOff) return null;
+  if (S.mode === "one") return S.items && S.items[S.i] ? "m1:" + S.i : null;
+  const P = S.plan && S.plan[S.r];
+  return P ? hintTarget(P.words, up => S.found.has(up)) : null;
+}
+function matchHintStep(S, c) {
+  const subs = [...S.subs];
+  if (!c.key || S.hintOff || !subs.length || subs.every(x => x.busy())) return c.stop();   // round already decided
+  const up = S.mode === "one" ? (S.items[S.i] || {}).up : c.key;
+  if (!up) return c.stop();
+  if (c.k + 1 < up.length) { c.k++; drawCentre(S); return; }
+  // the last letter = the whole word: nobody's, and play moves on
+  c.full = true; c.stop();
+  if (S.mode === "one") { drawCentre(S); subs.forEach(x => x.give()); return; }
+  S.found.set(up, -1);
+  drawCentre(S);
+  subs.forEach(x => x.refresh());
+  subs[0].afterFind();
+}
 function drawCentre(S) {
   const host = S.host; if (!host || !S.items) return;
+  if (S.hint) S.hint.ensure(matchHintKey(S));
   const byUp = up => S.items.find(x => x.up === up);
   const col = side => S.log.filter(f => f.side === side)
     .map(f => `<li data-k="${esc(f.w.toLowerCase())}"><b>${esc(f.w.toUpperCase())}</b>${f.m ? `<span>${esc(f.m)}</span>` : ""}</li>`).join("");
@@ -417,18 +518,24 @@ function drawCentre(S) {
   const before = new Map();
   host.querySelectorAll(".aw-ws-ccols li[data-k]").forEach(li => before.set(li.parentNode.className + "|" + li.dataset.k, li.getBoundingClientRect().top));
   const cols = `<div class="aw-ws-ccols"><ol class="is-l">${col(0)}</ol><ol class="is-r">${col(1)}</ol></div>`;
+  const H = S.hint;
   const defRow = up => {
     const it = byUp(up); if (!it) return "";
     const who = S.found.get(up);
     const done = who === 0 || who === 1;
-    return `<div class="aw-ws-cdf${done ? " is-done" : ""}"><span class="aw-ws-mk">${done && who === 0 ? arrow(0) : ""}</span>` +
-      `<div>${clueHtml(S, it, false)}<div class="aw-ws-cbl">${done ? esc(it.word.toUpperCase()) : blanks(it.up.length)}</div></div>` +
+    const given = who === -1;             // Đợt 425 — turned over by the hints: nobody's
+    const bl = done ? esc(it.word.toUpperCase()) : given ? hintHtml(it.up, 0, true)
+      : H && H.key === up && H.k ? hintHtml(it.up, H.k) : blanks(it.up.length);
+    return `<div class="aw-ws-cdf${done ? " is-done" : given ? " is-given" : ""}"><span class="aw-ws-mk">${done && who === 0 ? arrow(0) : ""}</span>` +
+      `<div>${clueHtml(S, it, false)}<div class="aw-ws-cbl">${bl}</div></div>` +
       `<span class="aw-ws-mk">${done && who === 1 ? arrow(1) : ""}</span></div>`;
   };
   let html;
   if (S.mode === "one") {
     const it = S.items[S.i];
-    html = `<div class="aw-ws-cen">${it ? clueHtml(S, it, true) : ""}<div class="aw-ws-cprog">${Math.min(S.i + 1, S.items.length)} / ${S.items.length}</div>${cols}</div>`;
+    const hk = H && it && H.key === "m1:" + S.i && (H.k || H.full)
+      ? `<div class="aw-ws-chint${H.full ? " is-given" : ""}">${hintHtml(it.up, H.k, H.full)}</div>` : "";
+    html = `<div class="aw-ws-cen">${it ? clueHtml(S, it, true) : ""}${hk}<div class="aw-ws-cprog">${Math.min(S.i + 1, S.items.length)} / ${S.items.length}</div>${cols}</div>`;
   } else {
     const P = S.plan && S.plan[S.r];
     const rows = P ? P.words.map(defRow).join("") : "";
@@ -437,6 +544,7 @@ function drawCentre(S) {
       : `<div class="aw-ws-cen"><div class="aw-ws-cprog">${S.r + 1} / ${S.plan.length}</div><div class="aw-ws-cdefs is-short">${rows}</div>${cols}</div>`;
   }
   host.innerHTML = html;
+  if (H) H.attach(host);   // Đợt 425 — the bar lives on the board's top edge (innerHTML just took it off)
   fitCentre(host);   // Đợt 423 — before the slide below measures where the words landed
   if (before.size || S.log.length) {
     const ease = "cubic-bezier(.22,.9,.3,1)";
@@ -470,6 +578,8 @@ const wordshakeTemplate = {
   sounds: {
     countdownTick: left => { if (!sound.isMuted()) bell.countdown(left); }
   },
+  // Đợt 425 — Menu / a tool panel pauses the play: the hint bar waits too
+  onPause(p) { pauseHints(p); },
   checkOrder: ["shuffle", "wsTank", "showAnswers"],
   edit: openWordshakeEditor,
   fightMode: true,
@@ -629,6 +739,9 @@ const wordshakeTemplate = {
 
   mount(root, activity, ui) {
     if (ui.sloganSlot) ui.sloganSlot.textContent = "A SHOW SPEED IN ANDREW CLASSES";
+    // Đợt 425 — Start again from the Menu tears the play down WITHOUT onPause(false):
+    // a new play always starts unpaused, or its hints would stay frozen.
+    hintPaused = false;
     const opt = activity.options || {};
     const mode = modeOf(opt);
     const fight = activity._fight || null;
@@ -686,7 +799,17 @@ const wordshakeTemplate = {
         if (!sound.isMuted()) bell.splash(pan);
       });
     }
-    const sub = { side, r: 0, refresh: done => refreshFromShared(done) };
+    const sub = { side, r: 0, refresh: done => refreshFromShared(done),
+      // Đợt 425 — what the match's hint clock asks of every board
+      busy: () => dead || finished || refLocked || fctl.isLocked(side),
+      give: () => m1Give(), afterFind: () => afterFind() };
+    // Đợt 425 — letter hints: one clock for the match (SHARED), one for a single play
+    if (S && !S.hint) S.hint = createHintClock(c => matchHintStep(S, c));
+    const hint = S ? S.hint : createHintClock(c => singleHintStep(c));
+    if (!S) {
+      if (getComputedStyle(root).position === "static") root.style.position = "relative";
+      hint.attach(root);
+    }
     if (S) S.subs.add(sub);
     const notify = () => { if (!S) return; drawCentre(S); S.subs.forEach(x => { if (x !== sub) x.refresh(); }); };
 
@@ -752,7 +875,7 @@ const wordshakeTemplate = {
       wrap.innerHTML = "";
       const body = el("div", "aw-ws-one");
       let c = null;
-      if (!fctl) { c = clueNode(it, true); body.append(c.box); }
+      if (!fctl) { c = clueNode(it, true); body.append(c.box, el("div", "aw-ws-hintline")); }
       const slots = el("div", "aw-ws-slots " + M1.state);
       slots.style.setProperty("--n", String(M1.slots.length));
       slots.innerHTML = slotsHtml();
@@ -769,8 +892,46 @@ const wordshakeTemplate = {
       wrap.append(body);
       ui.setScore(score);
       if (fctl) { S.i = M1.i; drawCentre(S); }
-      else autoPlay(it, c);
+      else { autoPlay(it, c); hint.ensure("m1:" + M1.i); paintHintLine(); }
       m1Nav();
+    }
+    // Đợt 425 — single Mode 1: the hint letters under the clue
+    function paintHintLine() {
+      const hl = wrap.querySelector(".aw-ws-hintline"); if (!hl) return;
+      const on = hint.key === "m1:" + M1.i && (hint.k || hint.full);
+      hl.innerHTML = on ? hintHtml(items[M1.i].up, hint.k, hint.full) : "";
+      hl.classList.toggle("is-given", !!(on && hint.full));
+    }
+    // Đợt 425 — the hints turned the whole word over: nobody made it. Single: show it in
+    // the slots, then the next word. A match: every board shows it and passes the round
+    // (both passes ⇒ the referee's hold, then the next word) — the board's own wrong-answer
+    // shake (`locked` for 650 ms) must not swallow it, only the referee's lock may.
+    function m1Give() {
+      if (mode !== "one" || dead || finished) return;
+      const s = st[M1.i]; if (!s || s.solved) return;
+      M1.given = M1.i; locked = true; m1Patch();
+      if (fctl) { if (!fctl.isLocked(side)) fctl.wordDone(side, { index: M1.i, correct: false }); }
+      else later(m1Next, 2000);
+    }
+    function singleHintStep(c) {
+      if (dead || finished || !c.key) return c.stop();
+      if (mode === "one") {
+        const it = items[M1.i];
+        if (!it || st[M1.i].solved || M1.given === M1.i) return c.stop();
+        if (c.k + 1 < it.up.length) { c.k++; paintHintLine(); return; }
+        c.full = true; c.stop(); paintHintLine(); m1Give(); return;
+      }
+      const up = c.key, i = idxOf(up);
+      if (i < 0) return c.stop();
+      if (c.k + 1 < up.length) {
+        c.k++;
+        const bl = wrap.querySelector(`.aw-ws-df[data-up="${up}"] .aw-ws-bl`);
+        if (bl) bl.innerHTML = hintHtml(up, c.k);
+        return;
+      }
+      c.full = true; c.stop();
+      st[i].given = true;
+      padRender(); afterFind();
     }
     function m1Nav() {
       if (fctl) ui.setNav({ index: M1.i + 1, total, onPrev: null, onNext: null });
@@ -788,6 +949,7 @@ const wordshakeTemplate = {
       const guess = M1.slots.map(k => M1.board[k].ch).join("");
       locked = true; s.tries++; s.typed = guess;
       if (guess === it.up) {
+        hint.stop();   // Đợt 425 — the word is made (a match: the round is decided)
         s.solved = true; score++; M1.state = "is-good"; m1Patch(); ui.setScore(score);
         say("ok", 2); bubble("ok", "+1"); pour(wrap.querySelector(".aw-ws-slots"), "+1");
         if (fctl) {
@@ -838,9 +1000,13 @@ const wordshakeTemplate = {
     }
     function defRow(up) {
       const i = idxOf(up), it = items[i];
-      const done = st[i].solved;
-      const row = el("div", "aw-ws-df" + (done ? " is-done" : ""));
-      row.append(clueNode(it, false).box, el("div", "aw-ws-bl", done ? esc(it.word.toUpperCase()) : blanks(it.up.length)));
+      const done = st[i].solved, given = !done && st[i].given;
+      const row = el("div", "aw-ws-df" + (done ? " is-done" : given ? " is-given" : ""));
+      row.dataset.up = up;
+      // Đợt 425 — turned over by the hints / letters shown so far
+      const bl = done ? esc(it.word.toUpperCase()) : given ? hintHtml(up, 0, true)
+        : hint.key === up && hint.k ? hintHtml(up, hint.k) : blanks(it.up.length);
+      row.append(clueNode(it, false).box, el("div", "aw-ws-bl", bl));
       return row;
     }
     function padRender() {
@@ -866,7 +1032,8 @@ const wordshakeTemplate = {
       }
       ui.setScore(fctl && mode === "free" ? pts : score);
       padNav();
-      if (S) drawCentre(S);
+      if (S) drawCentre(S);   // (a match's hint clock picks its word in drawCentre)
+      else hint.ensure(finished ? null : hintTarget(curPlan().words, up => { const j = idxOf(up); return j < 0 || st[j].solved || st[j].given; }));
     }
     // Đợt 423 — single play's right panel (the clue list / Mode 3's found words) fits
     // without a scroll: see fitUnit. Also on every resize of the frame (the frame's
@@ -890,7 +1057,7 @@ const wordshakeTemplate = {
       pad.querySelector(".aw-ws-pv").textContent = mode === "list" ? input : sel.map(k => P.letters[order[k]]).join("");
       if (mode === "free") pad.querySelectorAll(".aw-ws-t").forEach(t => t.classList.toggle("is-on", sel.includes(+t.dataset.k)));
     }
-    function roundDone() { return curPlan().words.every(up => S ? S.found.has(up) : st[idxOf(up)].solved); }
+    function roundDone() { return curPlan().words.every(up => S ? S.found.has(up) : (st[idxOf(up)].solved || st[idxOf(up)].given)); }
     function afterFind() {
       if (!roundDone()) return;
       if (S) {
@@ -914,7 +1081,7 @@ const wordshakeTemplate = {
       let kind, sym;
       const owner = S ? (S.found.has(w) ? S.found.get(w) : S.taken.get(lw)) : undefined;
       if (S && owner !== undefined) { kind = "dup"; sym = owner === side ? "Found" : "Taken"; }
-      else if (!S && lesson && st[i].solved) { kind = "dup"; sym = "Found"; }
+      else if (!S && lesson && (st[i].solved || st[i].given)) { kind = "dup"; sym = "Found"; }
       else if (!S && mode === "free" && found3.some(f => f.w === lw)) { kind = "dup"; sym = "Found"; }
       else if (lesson) {
         const p = mode === "free" ? points(Math.min(7, Math.max(3, w.length))) * 2 : 1;
@@ -940,6 +1107,8 @@ const wordshakeTemplate = {
       say(kind, kind === "ok" ? parseInt(sym.slice(1), 10) || 1 : 0);
       // single Mode 3: the tank holds lesson WORDS (the ✓ score), so only those pour
       if (kind === "ok" && (fctl || lesson)) pour(wrap.querySelector(".aw-ws-pv"), fctl ? sym : "+1");
+      // Đợt 425 — a lesson word found = progress: the hint bar starts its 15 s again
+      if (kind === "ok" && lesson) hint.bump();
       if (kind === "ok") { padRender(); notify(); afterFind(); } else patchPad();
       bubble(kind, sym);
     }
@@ -998,6 +1167,8 @@ const wordshakeTemplate = {
     function finish() {
       if (finished) return;
       finished = true;
+      if (S) S.hintOff = true;   // Đợt 425 — no more hints once the play is over
+      hint.stop();
       timers.forEach(clearTimeout); timers.clear();
       voicePlayer.stop();
       const review = buildReview();
@@ -1051,7 +1222,8 @@ const wordshakeTemplate = {
       nextSubs.delete(onNextFlip);
       timers.forEach(clearTimeout); timers.clear();
       voicePlayer.stop();
-      if (S) { S.subs.delete(sub); if (!S.subs.size) { S.voice.stop(); if (S.ro) S.ro.disconnect(); } }
+      if (S) { S.subs.delete(sub); if (!S.subs.size) { S.voice.stop(); if (S.ro) S.ro.disconnect(); if (S.hint) S.hint.dispose(); } }
+      else hint.dispose();
       wrap.removeEventListener("pointerdown", onDown);
       sfx.dispose();
     };

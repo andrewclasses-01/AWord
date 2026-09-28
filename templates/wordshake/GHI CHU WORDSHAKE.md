@@ -1,5 +1,11 @@
 # GHI CHÚ WORDSHAKE — template #21 + game cố định trong GAMES
 
+## ⭐ Đợt 425 (28/9/2026) — gợi ý từng chữ + thanh sáng 15 s
+- `createHintClock` (1/trận trong SHARED, 1/lượt đơn): 15 s không có TỪ CỦA BÀI nào ⇒ hiện thêm 1 chữ (trái → phải) của từ đích
+  (Mode 1: từ đang hỏi; Mode 2/3: từ ngắn nhất chưa làm); nghỉ 1,4 s; chạy lại. Bước cuối = lật cả từ, tính bỏ lỡ, qua từ/bảng.
+- Làm được sau gợi ý vẫn đủ điểm. Fight Mode 2/3: `S.found` = −1 là từ bị lật. `onPause` ⇒ `pauseHints`; mount đặt lại `hintPaused`.
+- Chi tiết: GHI CHU DU AN.md chặng Đợt 425.
+
 ## ⭐ Đợt 423 (28/9/2026) — khoá Timer · Home · ô giữa không cuộn · Play again · ô ▲ đếm lên
 - Options: `lockTimerOption: true` (cờ core mới) ⇒ hàng None/Count up/Count down mờ, không bấm được.
 - Hàng nút: `belowTools({home})` ⇒ nút Home đầu hàng: đang/đã chơi ⇒ "Back to the start screen?" ⇒ màn START; ở màn START ⇒ "Go home?" ⇒ thư viện.

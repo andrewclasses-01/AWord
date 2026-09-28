@@ -546,6 +546,25 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 425 (28/9/2026) — A SHOW SPEED: GỢI Ý TỪNG CHỮ khi không ai làm được — thanh sáng 15 s ở mép trên ô giữa · phiên máy MSI
+
+**Bối cảnh:** thầy hỏi "không ai biết từ thì sao" — HS kẹt tới hết giờ (NEXT mặc định tắt; ▲ đếm lên thì kẹt mãi). Thầy chốt đề xuất bậc thang gợi ý: **cứ 15 s một chữ**, làm được sau gợi ý **vẫn đủ điểm**; một **thanh chạy 15 s** mảnh, dạng thanh ánh sáng cùng style, sát mép trên ô giữa; chạy hết ⇒ hiện chữ, nghỉ một chút, vẫn chưa có từ đúng ⇒ thanh chạy tiếp. (Số 424 đã bị một phiên song song dùng cho tấm "Em đã Start again quá sớm" — `c1f90a2`.)
+
+**Luật đã làm (chỉ `templates/wordshake/wordshake.js` + `.css`, không đụng core):**
+- `createHintClock(onStep)`: mỗi TRẬN một đồng hồ (trong `SHARED` — hai đội thấy cùng gợi ý cùng lúc), mỗi lượt chơi đơn một đồng hồ. Pha `run` 15 s (`HINT_MS`) → `onStep` → pha `gap` 1,4 s (`HINT_GAP_MS`, thanh loé rồi tắt) → `run` lại. setTimeout, KHÔNG rAF.
+- Gợi ý cho từ nào: Mode 1 = từ đang hỏi (khoá `m1:<i>`); Mode 2/3 = từ của bài NGẮN NHẤT trên bảng chưa ai làm (`hintTarget`). Chữ hiện TỪ TRÁI SANG (`hintHtml`: "S U _ _ _", chữ gợi ý vàng phát sáng, chữ mới nhất bật lên).
+- **Tiến triển = tìm được một TỪ CỦA BÀI** (từ tự do ở Free words không tính) ⇒ `bump()` thanh về 0 chạy lại, giữ các chữ đã hiện; từ đích được làm ⇒ `ensure()` chuyển sang từ đích mới, từ 0 chữ.
+- Bước cuối (chữ còn lại cuối cùng) = **LẬT CẢ TỪ**, tính BỎ LỠ (không điểm, vẫn vào MISSED): chơi đơn Mode 1 hiện từ trong ô rồi 2 s sau sang từ; Mode 2/3 `st.given` (hàng viền vàng) rồi `afterFind`; Fight Mode 1 `m1Give()` trên MỌI bàn ⇒ ô hiện từ + `wordDone(correct:false)` cả hai ⇒ trọng tài giữ 2,1 s rồi sang câu (⚠️ bỏ qua `locked` riêng của bàn — cú rung sai 650 ms không được nuốt lệnh); Fight Mode 2/3 `S.found.set(up, -1)` (−1 = không đội nào) ⇒ `missedHtml` chỉ coi 0/1 là "đã làm".
+- Dừng: từ được làm (`m1Check` đúng ⇒ `hint.stop()`), vòng đã ngã ngũ (mọi bàn `busy`), `finish()` (`S.hintOff`). Menu/bảng công cụ ⇒ `tpl.onPause` ⇒ `pauseHints` (thanh đứng im). ⚠️ Start again từ Menu dỡ ván KHÔNG gọi `onPause(false)` ⇒ `mount` luôn đặt lại `hintPaused = false`, không thì ván mới đứng hình gợi ý.
+- Thanh `.aw-ws-hint`: cao 3 px, rãnh xanh mờ tắt dần hai đầu, phần chạy gradient xanh → trắng + đầu là vệt sáng NHỎ MỜ (12×4 px, gradient tròn + `blur(1.5px)` — thầy chê bản chấm 7 px viền rõ "to và thô"); `width` chạy bằng WAAPI (vẽ lại được sau mỗi `drawCentre`, vì `innerHTML` gỡ nó ra). Fight: con của bảng giữa (lề 10 %); chơi đơn: mép trên vùng chơi.
+- Hiển thị: Fight Mode 1 dòng `.aw-ws-chint` dưới định nghĩa; Mode 2/3 thay dòng gạch dưới của từ đích; chơi đơn Mode 1 dòng `.aw-ws-hintline` dưới câu gợi ý.
+
+**Kiểm (bàn thử `test.html?mode=list` + `scratch/dot423-ws-fight.html?mode=one`):** đơn Word list: 8 s thanh ~70 %, 15 s "SUNNY: S _ _ _ _" (từ ngắn nhất); gõ WINDY (từ khác) ⇒ thanh 1026 → 21 px, SUNNY giữ "S U"; hết chữ ⇒ SUNNY `is-given` "S U N N Y", đích sang FOGGY "F _ _ _ _" · Fight One word (▲ đếm lên): mốc chữ 15,0 · 31,6 · 48,0 · 64,4 · 80,8 · 97,2 · 113,6 s (RAINBOW đủ chữ) ⇒ 115,6 s sang "2 / 8"; từ 2 FROST, từ 3 WINDY cùng nhịp · 0 lỗi console.
+
+**VIỆC ĐANG CHỜ:**
+- ⬜ Thầy bấm tay TOMKO: độ sáng/độ mảnh thanh trên màn 86", cỡ chữ gợi ý ở ô giữa, nhịp 15 s với từ dài (7 chữ ⇒ gần 2 phút mới lật).
+- ⬜ Chưa làm (thầy chưa chốt): "cả hai đội cùng PASS ⇒ qua ngay", "nhấn giữ NEXT để lật đáp án".
+
 ## Đợt 424 (28/9/2026) — TẤM "EM ĐÃ START AGAIN QUÁ SỚM": hướng dẫn cách học khi em bỏ cuộc giữa chừng nhiều lần · phiên máy MSI
 
 **Thầy:** nhiều em làm 1–2 câu rồi bấm Start again ngay, không bao giờ làm hết bài để học từ câu sai ⇒ mở hướng dẫn khi em bỏ cuộc nhiều lần liên tiếp; pop-up đẹp, hiển thị ổn trên điện thoại, đếm giây trước khi cho đóng.
