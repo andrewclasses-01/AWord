@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 423 (28/9/2026) — A SHOW SPEED: khoá Timer trong Options · nút Home · ô giữa không cuộn · Play again về màn chính · ô ▲ ĐẾM LÊN · phiên máy MSI · ⬜ CHƯA COMMIT (chờ thầy duyệt)
+## Đợt 423 (28/9/2026) — A SHOW SPEED: khoá Timer trong Options · nút Home · ô giữa không cuộn · Play again về màn chính · ô ▲ ĐẾM LÊN · phiên máy MSI · ✅ ĐÃ COMMIT + PUSH `61b0aaa` + LIVE 5/5 mã băm
 
 **Thầy giao 5 việc:** (1) Options: đóng băng None/Count up/Count down vì màn đầu game đã chọn giờ · (2) thêm nút Home vào dòng nút tính năng · (3) Word list + Free words: HS luôn thấy MỌI từ ở ô giữa, không kéo/cuộn · (4) Play again ⇒ về trang chủ (màn START) ở mọi dạng · (5) Activity: thêm ô COUNT UP (mũi tên lên) cạnh 2/3/5 min trên màn START — đồng hồ đếm lên, hết từ là hết game.
 
@@ -561,7 +561,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 **VIỆC ĐANG CHỜ:**
 - ⬜ Thầy duyệt + bấm tay TOMKO (cỡ chữ khi co nhiều ở ô giữa; vị trí nút Home ĐẦU hàng — trong Fight nó đứng sau cụm ☰ 🔊 do fight.js dời vào trước).
-- ⬜ COMMIT + PUSH khi thầy lệnh.
+- ✅ Thầy lệnh push: `61b0aaa`, Pages build xong, 5/5 file code khớp mã băm SHA-256 với bản live.
 - ⚠️ Count up + tắt NEXT: một từ không ai làm được thì ván không tự kết (không có đồng hồ cắt) — đường ra là bật NEXT (PASS ›) hoặc Home.
 - ⚠️ Bài giao cho học sinh KHÔNG có màn START (Đợt 389) ⇒ vẫn chạy theo `options.timer` đã lưu trên act (giá trị màn START ghi lần cuối); Options không còn chỉnh tay được ô này.
 
