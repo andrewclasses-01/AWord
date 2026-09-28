@@ -75,6 +75,10 @@ function taoDoHoatDong(choMs) {
     if (!timer) return;   // đã dừng: số chốt, không cộng thêm
     const t = Date.now(), d = t - lucTick; lucTick = t;
     if (document.visibilityState !== "visible") return;
+    // ⭐ Đợt 420 (28/09/2026) — ☰ Menu đang mở = ván TẠM DỪNG: đồng hồ game đứng (engine `pauseClockForMenu`)
+    // thì giờ hoạt động cũng đứng. Trước đây vẫn cộng (cú bấm mở menu là một lần chạm ⇒ +60 s, bài đọc 180 s,
+    // âm thanh đang phát) ⇒ 105/6.070 lượt có activeMs > timeMs (quét 28/9). Đọc DOM, không đụng core/.
+    if (document.querySelector(".aw-menu")) return;
     // trần 2 s/nhịp: tab vừa hiện lại / máy vừa thức dậy thì khoảng ngủ không lọt vào
     if (t - lanCham <= choMs || coAmDangPhat()) activeMs += Math.min(Math.max(d, 0), 2000);
   };
