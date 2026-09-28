@@ -97,6 +97,7 @@ import { flyTimeCost } from "./timecost.js";
 // template có trừ điểm. Cùng họ với timecost.js ngay trên: hiệu ứng nằm ở core,
 // template chỉ gọi một dòng `ui.flyPenalty()` (xem cuối file).
 import { flyPenalty as flyPenaltyFx } from "./flypenalty.js";
+import { gioChuan } from "./gio-chuan.js";   // Đợt 422 — giờ chuẩn theo máy chủ
 // NOTE: assignment-ui.js reaches into the teacher's library (core/store.js), so
 // it is imported LAZILY and only on teacher paths — that keeps the student page
 // (play.html) free of any code that can touch the library.
@@ -6425,7 +6426,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         // with mistakes ("practice") không bao giờ nộp. Lượt HẾT GIỜ đi đúng đường này (template tự finish)
         // ⇒ mẫu số chuẩn, KHÔNG phải lượt dở.
         if (hwMode === "submit" && Number(result.score) > 0) {
-          hwFinishedAt = Date.now();
+          hwFinishedAt = gioChuan();   // Đợt 422 — giờ chuẩn (máy chủ)
           // ⭐⭐ Đợt 294 — MẪU SỐ NỘP LÊN LÀ SỐ CÂU CỦA ĐỀ (`result.items`), KHÔNG PHẢI
           // SỐ LƯỢT (`result.total`). Xem ghi chú dài ở `items` trong core/scoring.js:
           // bốn template cho mở lại câu đã sai nộp `total` = số lượt đã tiêu, nên em làm

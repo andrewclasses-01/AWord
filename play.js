@@ -26,6 +26,7 @@ import {
   sanVe   // Đợt 410 — VÉ đăng nhập của em do trang mẹ myLesson cấp (core/assignments.js)
 } from "./core/assignments.js";
 import { ensureTemplate } from "./core/registry.js";
+import { gioChuan } from "./core/gio-chuan.js";   // Đợt 422 — mốc giờ theo máy chủ
 // No template is imported here on purpose. ensureTemplate() fetches the ONE
 // game this assignment uses, right before it starts — so a student on a phone
 // downloads one game, not the whole catalogue.
@@ -381,7 +382,7 @@ async function play(assignment, studentName, className, studentMa) {
         start: ({ mode, again, mistakes, diemNay, baiLamNay }) => {
           playLog = { code: assignment.code, id: newPlayLogId(), name: studentName, ma, mode,
                       again: !!again, mistakes: !!mistakes, score: 0, total: 0, timeMs: 0,
-                      done: false, attemptId: "", createdAt: Date.now(), batDau: Date.now(), activeMs: 0,
+                      done: false, attemptId: "", createdAt: gioChuan(), batDau: Date.now(), activeMs: 0,   // Đợt 422 — createdAt theo máy chủ, batDau đo thời lượng
                       // ⭐ Đợt 383 — mã lượt nếu lượt này phải nộp DỞ (nháp · keepalive · outbox dùng chung một mã)
                       // + hàm hỏi engine "điểm tới lúc này" (pagehide không chờ engine được).
                       nhapId: newAttemptId(), diemNay: typeof diemNay === "function" ? diemNay : null, daNopDo: false,

@@ -25,6 +25,7 @@ import { db, fs, auth, currentUser, firebaseConfig } from "./firebase.js";
 // reach the teacher's library — the ⛔ import boundary at the top of
 // core/engine.js stays intact.
 import { OPT_VER } from "./options-migrate.js";
+import { gioChuan } from "./gio-chuan.js";   // Đợt 422 — mốc giờ theo máy chủ, không theo đồng hồ máy em
 
 // No 0/O/1/I/l — teachers read these codes aloud and type them on phones.
 const CODE_ALPHABET = "23456789abcdefghjkmnpqrstuvwxyz";
@@ -35,7 +36,9 @@ function makeCode() {
   return Array.from(bytes, b => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("");
 }
 
-function now() { return Date.now(); }
+// ⭐ Đợt 422 — mọi MỐC GIỜ ghi lên kho (createdAt · mã lượt hw/sp/pl · updatedAt · hạn nộp) theo GIỜ CHUẨN (máy chủ).
+// Hạn sống NHÁP (`draftAt`, so trong cùng máy) vẫn dùng Date.now() — xem ⛔ trong gio-chuan.js.
+function now() { return gioChuan(); }
 
 // Firestore rejects `undefined` (same trap as store.js).
 function clean(value) {
@@ -521,7 +524,7 @@ function writeDrafts(m) {
 export function saveDraft(args) {
   const e = makeAttempt(args);
   const m = readDrafts();
-  m[e.attemptId] = Object.assign(e, { draftAt: now() });
+  m[e.attemptId] = Object.assign(e, { draftAt: Date.now() });   // Đợt 422 — đo hạn sống: đồng hồ máy
   writeDrafts(m);
 }
 export function dropDraft(attemptId) {
@@ -531,7 +534,7 @@ export function dropDraft(attemptId) {
 }
 // Stale drafts → outbox (layer 3). Run before flushOutbox delivers.
 function sweepDrafts() {
-  const m = readDrafts(), t = now();
+  const m = readDrafts(), t = Date.now();   // Đợt 422 — cùng hệ với draftAt
   let doi = false;
   Object.keys(m).forEach(id => {
     const e = m[id];
@@ -564,12 +567,14 @@ function ngheVe() {
     if (!VE_NGUON.includes(e.origin)) return;
     const d = e.data;
     if (!d || d.type !== "AWORD:VE" || !d.token || !d.ma) return;
-    _ve = { ma: String(d.ma), token: String(d.token), het: Number(d.het) || (Date.now() + 50 * 60e3) };
+    _ve = { ma: String(d.ma), token: String(d.token), het: Number(d.het) || (now() + 50 * 60e3) };
     _choVe.splice(0).forEach(f => f());
   });
 }
 function veConHan(ma) {
-  return _ve && _ve.ma === String(ma) && _ve.het - Date.now() > 90e3 ? _ve.token : null;
+  // Đợt 422 — `het` = hạn của token Firebase (giờ MÁY CHỦ) ⇒ so với giờ chuẩn; máy em chậm 1 ngày thì Date.now() coi vé
+  // hết hạn từ lâu vẫn còn ⇒ gửi vé chết, luật 403.
+  return _ve && _ve.ma === String(ma) && _ve.het - now() > 90e3 ? _ve.token : null;
 }
 // Vé của em `ma`, hoặc null sau `ms` (không nhúng / trang mẹ không cấp). Không bao giờ reject.
 // ⭐ Đợt 412 — nguồn vé: khung NHÚNG ⇒ `window.parent`; mở bằng nút "tab mới" của myLesson (link `rel="opener"`) ⇒

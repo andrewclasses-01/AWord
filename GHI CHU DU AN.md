@@ -546,6 +546,30 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 422 (28/9/2026) — GIỜ CHUẨN: mốc giờ ghi lên kho KHÔNG phụ thuộc đồng hồ máy học sinh · phiên máy 1
+
+**Thầy báo:** dashboard myLesson (pop-up em THANH PHƯƠNG A1A, STAGE LSB1-S1.T1.P2) ghi mọi lượt là 27/9, trong khi thầy nhìn tận mắt em làm 28/9. Vài em khác "cũng thế".
+
+**Điều tra (đo thật trên kho sống):** AWord ghi `createdAt` = `Date.now()` của MÁY EM; Firestore tự ghi `createTime` = giờ MÁY CHỦ. So hai giờ trong `assignments/*/scores` (119 act, 521 cặp em-lớp từ 14/9, đọc ĐỦ mọi trang):
+- THANH PHƯƠNG (`TRANTHANHPHUONG06072015`): máy chậm đúng **1 ngày 3 phút** ở cả 80 lượt (vd em 16:21 27/9 · máy chủ 16:23 28/9) ⇒ cả biểu đồ của em lùi 1 ngày (lượt "24/9" thật ra là tối 25/9).
+- Không em nào khác lệch cả ngày; lệch vài phút: TRÍ CÔNG (A1B) nhanh ~25 phút, TRUNG HẢI (NTK9) + MINH PHƯƠNG (A1A) nhanh 4–5 phút. Lượt "khác ngày" lẻ tẻ còn lại = nháp gửi bù lần mở sau (trễ dương), không phải đồng hồ.
+- ⛔ Bẫy lúc đo: script đầu dùng `orderBy=createdAt desc` + 1 trang 300 ⇒ lượt của THANH PHƯƠNG (createdAt CŨ hơn thật) rơi ra ngoài trang đầu, tưởng "không có". Phải đọc ĐỦ mọi trang.
+- `practiceLog` cần phiên thầy (403 với apiKey) nên chưa quét được.
+
+**Sửa (thầy chốt "gốc rễ, không phụ thuộc đồng hồ máy học sinh"):**
+- Lõi mới `core/gio-chuan.js`: `gioChuan()` = Date.now() + lệch. Lệch đo MỘT lần mỗi lần mở trang: `HEAD` chính file đó (cùng miền, `?dh=` + `cache:no-store`), lấy header `Date` (+500 ms vì header cắt xuống giây) trừ giữa lượt đi-về; thử 3 lần; lượt đi-về > 10 s thì không tin. Lệch < 2 phút ⇒ 0 (máy đúng giờ chạy y như cũ, mã `hw<ms>` và `createdAt` practiceLog vẫn khớp từng ms cho dashboard v1.171.1). Cất localStorage `lech-dong-ho` ⇒ lần mở sau có lệch ngay trước khi đo.
+- `core/assignments.js`: `now()` → `gioChuan()` (createdAt scores/results/specialAttempts, mã `hw`/`sp`/`pl`, `updatedAt` practiceLog, `isLate`). NGOẠI LỆ: `draftAt` + `sweepDrafts` vẫn Date.now() (hạn sống nháp so trong cùng máy — lệch áp giữa chừng sẽ làm nháp tươi thành "cũ 1 ngày" ⇒ nộp lượt dở của ván còn sống). Vé em (`_ve.het` = hạn token Firebase, giờ máy chủ) so với `now()` — trước đây máy chậm 1 ngày coi vé chết là còn hạn ⇒ 403.
+- `play.js`: `playLog.createdAt = gioChuan()`; `batDau` giữ Date.now() (đo thời lượng).
+- `core/engine.js`: "Nộp lúc" (`hwFinishedAt`) theo giờ chuẩn.
+- `core/app-check.js`: `het` của mã App Check (JWT exp = giờ máy chủ) cộng lệch đã cất.
+- ⛔ KHÔNG vá toàn cục `Date` — Firebase Auth đã cất hạn token theo đồng hồ máy cũ; đổi Date giữa chừng làm SDK dùng token hết hạn ⇒ 403. Thời lượng (timeMs, activeMs, nhịp, treo) giữ Date.now().
+
+**Kiểm:** `node --input-type=module --check` sạch 4 file. Bàn thử `scratch/dot422-gio-chuan.html` (bị ignore) giả máy chậm 1 ngày 3 phút TRƯỚC khi module nạp: 6/6 ĐẠT (lệch đo 86.579.919 ms · mã `hw` = giờ thật · isLate trễ/còn hạn đúng · nháp createdAt giờ thật, draftAt giờ máy); `?dung` (máy đúng) 6/6, lệch 0. Đo tay: máy lệch 30 s ⇒ 0; máy đã sửa giờ mà còn cache 1 ngày ⇒ đo xong về 0. `play.html` không lỗi console.
+
+**Đi cặp:** myLesson web v1.174.0 (`js/chung.js` `A.gioNay()` — bản chép cùng khoá `lech-dong-ho`).
+
+**Còn lại:** dữ liệu CŨ của THANH PHƯƠNG vẫn lùi 1 ngày (không sửa kho). Máy em vẫn nên bật "Đặt giờ tự động" (đồng hồ trên máy em, lịch khác… ngoài tầm AWord).
+
 ## Đợt 421 (28/9/2026) — vn-guard chịu được MÁY BẬN (trang vừa tải, máy yếu) · phiên máy 1
 
 **Phát hiện khi kiểm LIVE Đợt 419:** lần chạy đầu trên web thật Crossword `address` ⇒ `ADS`. Dựng lại bằng `STALL=1` (trang cứ 70 ms kẹt 60 ms): TTA ra `wwas`, `goood`, `cofffeee` — bộ đóng gói 30 ms (đồng hồ trang) chạy XEN GIỮA một gói UniKey ⇒ gói bị cắt đôi, mỗi mảnh chèn một chữ.

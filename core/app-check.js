@@ -39,7 +39,9 @@
           var url = typeof vao === 'string' ? vao : (vao && vao.url) || '';
           if (HOST_AC.test(url)) {
             var o = JSON.parse(localStorage.getItem('awc_ac') || 'null');
-            if (o && o.t && o.het > Date.now() + 60000) {
+            // Đợt 422 — `het` đọc từ JWT = giờ MÁY CHỦ ⇒ cộng lệch đồng hồ đã đo (core/gio-chuan.js cất `lech-dong-ho`).
+            var lechDH = Number(localStorage.getItem('lech-dong-ho')) || 0;
+            if (o && o.t && o.het > Date.now() + lechDH + 60000) {
               if (typeof vao === 'string') {
                 tuyChon = Object.assign({}, tuyChon || {});
                 var h = new Headers(tuyChon.headers || {});
