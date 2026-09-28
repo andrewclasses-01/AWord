@@ -43,6 +43,7 @@ import { shuffle, el } from "../../core/utils.js";
 import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { createKeyboard } from "../../core/keyboard.js";
+import { guardVnTyping, isEditableTarget } from "../../core/vn-guard.js";
 import { openFtgEditor } from "./find-the-gap-editor.js";
 import { ftgSound } from "./ftg-sound.js";
 import { loadAudio, createSegmentPlayer } from "./ftg-audio.js";
@@ -465,6 +466,13 @@ const ftgTemplate = {
 
     ui.onSubmit(() => finish("complete"), () => state.filter(s => s.done.some(Boolean)).length);
     window.addEventListener("keydown", onKey);
+    // ⭐ Đợt 419 — chế độ gõ + UniKey/EVKey bật: chặn gói "xoá + chữ có dấu", phát lại
+    // phím thật qua chính onKey (core/vn-guard.js). Chế độ chọn ô không cần.
+    const vnGuard = mode === "type" ? guardVnTyping({
+      accepts: e => !isEditableTarget(e.target) && !finished && !ending && !dead,
+      insert: ch => onKey({ key: ch, preventDefault() {} }),
+      backspace: () => onKey({ key: "Backspace", preventDefault() {} })
+    }) : null;
     ui.setScoreProvider?.(scoreNow);
     // ⭐ Đợt 384 — bài làm TỚI LÚC NÀY cho lượt dở (dashboard myLesson xem từng câu); bọc hàm ⇒ lỗi chỉ rơi vào try của engine.
     ui.setReviewProvider?.(() => buildReview());
@@ -1105,6 +1113,7 @@ const ftgTemplate = {
     return function cleanup() {
       dead = true;
       finished = true;
+      vnGuard?.dispose();
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("resize", onResize);
       cancelAnimationFrame(fitRaf);

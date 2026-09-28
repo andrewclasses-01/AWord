@@ -37,6 +37,7 @@ import { shuffle, el } from "../../core/utils.js";
 import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { createKeyboard } from "../../core/keyboard.js";
+import { guardVnTyping } from "../../core/vn-guard.js";
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { openTypeTheAnswerEditor } from "./type-the-answer-editor.js";
 import { ttaSound } from "./type-the-answer-sound.js";
@@ -483,6 +484,15 @@ const ttaTemplate = {
     });
     // Also strip on the OS keyboard's compose end (Vietnamese Telex/VNI etc.).
     input.addEventListener("compositionend", () => { filterEnglish(); syncSubmitEnabled(); });
+    // ⭐ Đợt 419 — UniKey/EVKey bật vẫn ra đúng phím tiếng Anh, không nháy mất chữ
+    // (core/vn-guard.js). filterEnglish ở trên giữ lại làm lưới cuối (dán chữ…).
+    const vnGuard = guardVnTyping({
+      accepts: e => e.target === input && !input.disabled,
+      insert: ch => { insertChar(input, ch); fitLayout(); },
+      backspace: () => { backspace(input); fitLayout(); },
+      input,
+      afterSet: () => { autoGrow(input); fitLayout(); syncSubmitEnabled(); }
+    });
     row.append(input);
     // ⭐⭐ Đợt 305 — LỚP CHỮ MÀU ĐÈ LÊN Ô NHẬP.
     // ⛔ Bên trong một `<textarea>` KHÔNG tô màu từng chữ được (giới hạn của trình
@@ -1507,6 +1517,7 @@ const ttaTemplate = {
 
     return function cleanup() {
       dead = true;   // Đợt 114 — MUST be first; see land() / showScore / pulseScoreTo
+      vnGuard.dispose();
       window.removeEventListener("resize", onResize);
       cancelAnimationFrame(rafFit);
       clearAutoTimer();

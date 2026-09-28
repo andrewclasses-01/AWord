@@ -546,6 +546,34 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 419 (28/9/2026) — GÕ TIẾNG ANH KHI MÁY BẬT UNIKEY/EVKEY: hết "nháy mất chữ" ở Type the answer, Running word, Crossword, Find the gap (chế độ gõ) · phiên máy 1 (ANDREW CLASSES)
+
+**Thầy báo:** bật tiếng Việt rồi gõ bằng bàn phím vật lý ⇒ chữ nháy rồi mất. Bài AWord toàn tiếng Anh ⇒ muốn gõ ra đúng tiếng Anh dù máy đang bật bộ gõ.
+
+**Đo thật (UniKey 4.6 RC2 Telex, Chrome, SendInput phím thật, 28/9):**
+- Phím KHÔNG biến đổi: keydown bình thường (`code=KeyB`).
+- Phím biến đổi (vd "o" thứ hai của "boo"): keydown bị NUỐT; UniKey bơm `·` (U+00B7, keyCode 231, code "") → Backspace ×(1+n) → chữ mới (`ô`, keyCode 231, code ""), các sự kiện cách nhau < 10 ms; **keyup của phím thật (`code=KeyO`) VẪN tới** sau đó.
+- "w" đứng một mình ⇒ bơm thẳng `ư`, không `·`, không xoá. Cài đặt máy 1: SpellCheck tắt ⇒ "bôk"+space KHÔNG tự trả lại "book".
+- Code cũ: `filterEnglish` xoá chữ có dấu SAU khi đã vào ô ⇒ "oo" mất cả 2 chữ, UniKey về sau xoá nhầm (nó tưởng màn hình còn "ô"). Crossword/Find the gap nhận Backspace của gói ⇒ xoá mất ô; Find the gap còn NHẬN luôn "ô", "đ".
+
+**Sửa — lõi mới `core/vn-guard.js`:**
+- Nghe `window` keydown/keyup pha capture (một bộ nghe chung cho mọi template đang mở, mỗi template một bộ trạng thái).
+- Sự kiện bơm vào (`keyCode 231`, hoặc code "" + 1 ký tự trên máy tính bàn — ⛔ KHÔNG áp trên điện thoại/iPad vì bàn phím ảo cũng code "") ⇒ chặn, gom thành GÓI; Backspace đi kèm gói (< 30 ms) cũng chặn.
+- Hết gói ⇒ `inferKey(trước, sau)` đoán phím theo Telex: thêm mũ ⇒ a/e/o · móc/trăng ⇒ w · đ ⇒ d · đổi dấu thanh ⇒ s f r x j · bỏ dấu ⇒ z · bớt dấu + dài thêm (gõ lặp bỏ dấu, UniKey trả từ) ⇒ chữ cuối. Chèn bằng CHÍNH hàm bàn phím ảo của template.
+- `mirror` = chữ UniKey đang tưởng trên màn hình (để đoán đúng khi UniKey xoá nhiều chữ). Bấm chuột/mũi tên/Enter ⇒ xoá mirror (UniKey cũng quên từ).
+- keyup của phím bị nuốt = bằng chứng: đoán sai chữ (VNI…) và chưa gõ gì thêm ⇒ sửa. ⛔ Không sửa khi chỉ lệch hoa/thường (nhả Shift trước ⇒ keyup báo chữ thường).
+- Hoa/thường: Shift/CapsLock trên sự kiện bơm, hoặc cả từ đang VIẾT HOA (≥ 2 chữ); "W" đứng một mình theo chữ `Ư`/`ư`. ⛔ Đừng theo chữ mang dấu ("Awesome" ⇒ "Ắe" mà phím "s" thường).
+- Backspace thật hoãn 30 ms (không thấy gói thì xoá thật); phím thật kế tiếp tới sớm hơn ⇒ xả trước để giữ thứ tự.
+- ⚠️ BẪY đã dính khi làm: keyup của Backspace từng "ăn" mất slot của phím bị nuốt ⇒ gõ dồn ra "adddess"/"DOOO". Nay mọi phím thật đã xuống đều vào `down`, và keyup không ra ký tự (Backspace, Shift…) bị bỏ qua TRƯỚC khi lấy slot.
+- Bộ gõ kiểu gạch chân (Windows/Mac có sẵn): lúc `compositionend` thay đoạn ghép bằng các phím thật (`e.code`). ⚠️ CHƯA đo máy thật (máy 1 chỉ có UniKey).
+
+**Gắn vào template:** TTA (`insertChar(input)`/`backspace(input)` + `fitLayout`), Running word (`insertChar`/`backspace`, accepts khi `canType()`), Crossword + Find the gap (`insert: ch => onKey({key: ch, …})`, FTG chỉ khi `mode === "type"`). `filterEnglish` GIỮ NGUYÊN làm lưới cuối (dán chữ). Mỗi cleanup gọi `vnGuard.dispose()`.
+
+**Thử:** `tools/vn-guard-test.html?t=tta|rw|cw|ftg` (mở template THẬT bằng bộ bài mẫu, cố định `Math.random`, không đăng nhập, không ghi gì) + `tools/unikey-replay.py <t> "câu" …` (Chrome ngầm + CDP phát lại đúng khuôn UniKey đã đo; `!câu` = không bộ gõ; `ROLL=1` = gõ dồn; `NOSHIFT=1` = sự kiện bơm không mang Shift; `VNBASE=` đổi máy chủ).
+- Code cũ: TTA `book was good dd feel too cat` ⇒ `a d l  cat` · RW `book` ⇒ `K` · Crossword `sweet` ⇒ `T` · FTG `address` ⇒ `ađes`.
+- Code mới: TTA 10/10 câu (chữ hoa, dấu câu, xoá giữa từ, `ooo dd ddd aaa www`) cả gõ thường + gõ dồn + không Shift; RW 4/4; Crossword 4/4; FTG 4/4. Không bộ gõ: 4/4 + gõ dồn; Enter vẫn nộp; bàn phím ảo vẫn chạy; console sạch.
+- ⬜ Chưa: gõ tay thật trên máy có UniKey (bàn thử gõ SendInput bị dừng vì máy đang có người dùng) · EVKey · bộ gõ Windows/Mac có sẵn.
+
 ## Đợt 417 (28/9/2026) — ROCKET RACE ▸ FIGHT 3D: ghép MẪU 7b + 7c + 7d từ myGame (BOOST bấm tay +1 nấc, 2 Options tên lửa, tên lửa va nhau, trúng lan, lửa xanh sắp thắng, act voice nhỏ tiếng) · ✅ COMMIT + PUSH `8482a48` + LIVE (4/4 mã băm khớp) · phiên máy MSI
 
 **Yêu cầu (thầy):** *"ok, ghép 7d vào AWord"* — sau 3 bản mẫu ở kho myGame (`rocket-race/mau-7b-boost-tay.html` → `mau-7c-va-cham.html` →

@@ -3,6 +3,25 @@
 > Đọc file này TRƯỚC khi build bất kỳ template nào. Đây là "hợp đồng" giữa **core** (lõi dùng chung)
 > và **template** (từng game riêng, vd Quiz, Anagram...).
 
+## ⌨️ Đợt 419 — template CÓ GÕ PHÍM VẬT LÝ: gắn `core/vn-guard.js`
+
+Máy học sinh hay để UniKey/EVKey bật. Chúng không gõ thẳng mà NUỐT phím rồi bơm gói "xoá + chữ có dấu" (keydown keyCode 231, code ""). Lọc ASCII sau khi chữ đã vào ô (kiểu `filterEnglish` cũ) làm MẤT chữ và làm UniKey xoá nhầm về sau. Template mới có ô gõ / nghe phím ở `window` phải gắn:
+
+```js
+import { guardVnTyping, isEditableTarget } from "../../core/vn-guard.js";
+const vnGuard = guardVnTyping({
+  accepts: e => e.target === input,          // hoặc !isEditableTarget(e.target) && đang chơi
+  insert: ch => insertChar(ch),               // đúng hàm bàn phím ảo đang dùng
+  backspace: () => backspace(),
+  input, afterSet: () => refresh()             // chỉ khi có <input>/<textarea>
+});
+// cleanup: vnGuard.dispose();
+```
+
+- Template nghe `window` keydown: truyền `insert: ch => onKey({ key: ch, preventDefault() {} })` — phát lại qua chính onKey.
+- ⛔ Đừng bỏ `filterEnglish` (vẫn là lưới cuối cho dán chữ). ⛔ Đừng chặn keyCode 229/code "" trên điện thoại — bàn phím ảo gửi y như vậy (`isInjected` đã loại MOBILE).
+- Thử: `tools/vn-guard-test.html?t=tta|rw|cw|ftg` + máy phát lại `tools/unikey-replay.py` (CDP) — xem mục Đợt 419 trong `GHI CHU DU AN.md`.
+
 ## ⚠️ ONLINE từ v0.7.4 — thư viện nằm trên Firestore, phải ĐĂNG NHẬP
 
 `core/store.js` không còn lưu vào máy nữa: thư viện của thầy ở **`users/{uid}/items/{id}`** trên

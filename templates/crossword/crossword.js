@@ -67,6 +67,7 @@ import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { createKeyboard } from "../../core/keyboard.js";
+import { guardVnTyping, isEditableTarget } from "../../core/vn-guard.js";
 import { createVoicePlayer, voiceView } from "../../core/voice-playback.js";
 import { openCrosswordEditor } from "./crossword-editor.js";
 import { crosswordSound } from "./crossword-sound.js";
@@ -449,6 +450,13 @@ const crosswordTemplate = {
 
     ui.onSubmit(finish, () => pageState.reduce((sum, ps) => sum + ps.wordState.filter(s => s.done).length, 0));
     window.addEventListener("keydown", onKey);
+    // ⭐ Đợt 419 — UniKey/EVKey bật: gói "xoá + chữ có dấu" không còn xoá mất ô chữ,
+    // phím thật bị nuốt được phát lại qua chính onKey (core/vn-guard.js).
+    const vnGuard = guardVnTyping({
+      accepts: e => !isEditableTarget(e.target) && !finished && curWord >= 0,
+      insert: ch => onKey({ key: ch, preventDefault() {} }),
+      backspace: () => onKey({ key: "Backspace", preventDefault() {} })
+    });
 
     // ----- static shell: clue bar + grid + keyboard + active strip -----
     root.innerHTML = "";
@@ -1611,6 +1619,7 @@ const crosswordTemplate = {
     }
 
     return function cleanup() {
+      vnGuard.dispose();
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("resize", relayout);
       if (navWrap) navWrap.style.visibility = "";

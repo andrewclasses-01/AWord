@@ -39,6 +39,7 @@ import { el } from "../../core/utils.js";
 import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { createKeyboard } from "../../core/keyboard.js";
+import { guardVnTyping } from "../../core/vn-guard.js";
 import { fitOnce } from "../../core/fit.js";
 // Dot 143 - the shared [-][value][+] control, so "Time each team" is the same
 // kind of thing as the countdown in the shared Timer option.
@@ -482,6 +483,14 @@ const rwTemplate = {
     });
     input.addEventListener("input", () => { filterEnglish(); refreshKeys(); });
     input.addEventListener("compositionend", () => { filterEnglish(); refreshKeys(); });
+    // ⭐ Đợt 419 — UniKey/EVKey bật vẫn ra đúng phím tiếng Anh (core/vn-guard.js)
+    const vnGuard = guardVnTyping({
+      accepts: e => e.target === input && canType(),
+      insert: ch => insertChar(ch),
+      backspace: () => backspace(),
+      input,
+      afterSet: () => refreshKeys()
+    });
 
     // The keyboard is built when "prep" starts (the match screen first shows),
     // not at mount(): during setup there is nothing to type into and every key
@@ -1477,6 +1486,7 @@ const rwTemplate = {
       rwPauseHandlers = null;
       rwEndData = null;   // Đợt 114 — module-level bridge, same rule as rwPauseHandlers:
                           // no summary of a discarded match may survive into the next mount
+      vnGuard.dispose();
       window.removeEventListener("keydown", onKey);
       boardRO.disconnect();
       if (tickId) clearInterval(tickId);
