@@ -559,7 +559,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 **VIỆC ĐANG CHỜ:** ⬜ thầy mở form giao bài trong myLesson nhìn nhãn mới (có thể cần Ctrl+F5 / khởi động lại myLesson để bỏ cache).
 
-## Đợt 425 (28/9/2026) — A SHOW SPEED: GỢI Ý TỪNG CHỮ khi không ai làm được — thanh sáng 15 s ở mép trên ô giữa · phiên máy MSI
+## Đợt 425 (28/9/2026) — A SHOW SPEED: GỢI Ý TỪNG CHỮ khi không ai làm được — thanh sáng 15 s ở mép trên ô giữa · phiên máy MSI · ✅ ĐÃ COMMIT + PUSH `30ecc6e` + LIVE 2/2 mã băm
 
 **Bối cảnh:** thầy hỏi "không ai biết từ thì sao" — HS kẹt tới hết giờ (NEXT mặc định tắt; ▲ đếm lên thì kẹt mãi). Thầy chốt đề xuất bậc thang gợi ý: **cứ 15 s một chữ**, làm được sau gợi ý **vẫn đủ điểm**; một **thanh chạy 15 s** mảnh, dạng thanh ánh sáng cùng style, sát mép trên ô giữa; chạy hết ⇒ hiện chữ, nghỉ một chút, vẫn chưa có từ đúng ⇒ thanh chạy tiếp. (Số 424 đã bị một phiên song song dùng cho tấm "Em đã Start again quá sớm" — `c1f90a2`.)
 
