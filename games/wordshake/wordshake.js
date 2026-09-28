@@ -411,7 +411,9 @@ export function mountWordshake(root, ctx = {}) {
     if (G.opts) return;   // the Options box is on top
     if (d === "sound") { sfx.on = !sfx.on; if (sfx.on) sfx.next(); return render(); }
     if (d === "time") return timeDown(e, b);
-    if (d === "play") return start();
+    // Đợt 423 (thầy) — PLAY AGAIN on the result screen goes back to the START screen
+    // (choose the minutes again), not straight into a new board.
+    if (d === "play") { e.preventDefault(); return G.phase === "over" ? toReady() : start(); }
     if (G.phase !== "play" || G.ask) return;
     const sideEl = b.closest("[data-side]"); if (!sideEl) return;
     const side = +sideEl.dataset.side, s = G.sides[side];

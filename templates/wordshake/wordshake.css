@@ -84,8 +84,18 @@
 .aw-ws-b.is-bk{background:rgba(61,245,138,.1);border:1px solid rgba(61,245,138,.45);color:#3DF58A;font-size:calc(2.4 * var(--aw-u))}
 
 .aw-ws-side{min-height:0;display:flex;flex-direction:column;gap:calc(1 * var(--aw-u))}
-.aw-ws-defs{display:flex;flex-direction:column;justify-content:center;gap:calc(.7 * var(--aw-u));min-height:0;overflow:auto;height:100%}
+/* Đợt 423 — no scrolling: the lists are cut, and fitUnit (wordshake.js) shrinks the
+   panel's --aw-u until everything fits. Centred by AUTO MARGINS, not
+   justify-content:center: a centred flex box that overflows spills past its TOP
+   too, and scrollHeight never counts that part — the fit would think it fits. */
+.aw-ws-split{grid-template-rows:minmax(0,1fr)}
+.aw-ws-defs{display:flex;flex-direction:column;justify-content:flex-start;gap:calc(.7 * var(--aw-u));min-height:0;overflow:hidden;height:100%}
+.aw-ws-defs > :first-child{margin-top:auto}
+.aw-ws-defs > :last-child{margin-bottom:auto}
 .aw-ws-defs.is-short{height:auto;flex:none;justify-content:flex-start}
+.aw-ws-side.is-ws-dense .aw-ws-found{display:grid;grid-template-columns:1fr 1fr;align-content:start;column-gap:calc(1.6 * var(--aw-u))}
+.aw-ws-side.is-ws-dense .aw-ws-found span{display:none}
+.aw-ws-side.is-ws-dense .aw-ws-found li{justify-content:space-between}
 .aw-ws-df{border-radius:calc(.6 * var(--aw-u));background:rgba(61,245,138,.06);border:1px solid rgba(61,245,138,.18);padding:calc(.7 * var(--aw-u)) calc(1.2 * var(--aw-u));display:flex;flex-direction:column;gap:calc(.3 * var(--aw-u))}
 .aw-ws-df .aw-ws-clue{justify-content:flex-start;font-size:calc(1.7 * var(--aw-u))}
 .aw-ws-bl{font-family:"Saira",sans-serif;font-weight:800;font-size:calc(1.9 * var(--aw-u));letter-spacing:.24em;color:rgba(61,245,138,.45)}
@@ -93,7 +103,7 @@
 .aw-ws-df.is-done .aw-ws-bl{color:#9BFFC4;letter-spacing:.05em;text-shadow:0 0 calc(1 * var(--aw-u)) rgba(61,245,138,.7)}
 .aw-ws-pts{font-family:"Saira",sans-serif;font-style:italic;font-weight:700;font-size:calc(1.3 * var(--aw-u));letter-spacing:.2em;color:#7FA893;text-align:right}
 .aw-ws-pts b{font-size:calc(2 * var(--aw-u));color:#FFC23D;letter-spacing:0;margin-left:calc(.4 * var(--aw-u))}
-.aw-ws-found{list-style:none;margin:0;padding:calc(.8 * var(--aw-u)) 0 0;border-top:1px solid rgba(61,245,138,.2);flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:calc(.3 * var(--aw-u))}
+.aw-ws-found{list-style:none;margin:0;padding:calc(.8 * var(--aw-u)) 0 0;border-top:1px solid rgba(61,245,138,.2);flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:calc(.3 * var(--aw-u))}
 .aw-ws-found li{display:flex;gap:calc(.7 * var(--aw-u));align-items:baseline;min-width:0}
 .aw-ws-found b{font-family:"Saira",sans-serif;font-style:italic;font-weight:800;font-size:calc(1.7 * var(--aw-u));color:#9BFFC4;flex:none}
 .aw-ws-found li.is-les b{color:#FFC23D}
@@ -159,15 +169,18 @@
 .aw-ws-cclue.is-big{font-weight:700;font-size:calc(6 * var(--ws-u,4px));text-align:center;text-wrap:balance;min-height:calc(24 * var(--ws-u,4px))}
 .aw-ws-cclue .aw-voicebtn{color:#03150C;background:#3DF58A;box-shadow:0 0 calc(4 * var(--ws-u,4px)) rgba(61,245,138,.7)}
 .aw-ws-cprog{font-family:"Saira",sans-serif;font-style:italic;font-weight:800;font-size:calc(3.6 * var(--ws-u,4px));letter-spacing:.08em;color:#7FA893;text-align:center}
-.aw-ws-ccols{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;border-top:1px solid rgba(61,245,138,.2);position:relative}
+.aw-ws-ccols{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr);border-top:1px solid rgba(61,245,138,.2);position:relative}
 .aw-ws-ccols::before{content:"";position:absolute;left:50%;top:calc(2 * var(--ws-u,4px));bottom:0;border-left:1px dashed rgba(61,245,138,.2)}
-.aw-ws-ccols ol{list-style:none;margin:0;padding:calc(2 * var(--ws-u,4px)) calc(2.2 * var(--ws-u,4px)) 0;overflow:auto;display:flex;flex-direction:column;gap:calc(.7 * var(--ws-u,4px));scrollbar-width:thin;scrollbar-color:rgba(61,245,138,.3) transparent}
+.aw-ws-ccols ol{list-style:none;margin:0;padding:calc(2 * var(--ws-u,4px)) calc(2.2 * var(--ws-u,4px)) 0;overflow:hidden;display:flex;flex-direction:column;gap:calc(.7 * var(--ws-u,4px))}
+/* Đợt 423 — too many found words even at 58 %: two columns a team, no meanings */
+.aw-ws-cen.is-ws-dense .aw-ws-ccols ol{display:grid;grid-template-columns:1fr 1fr;align-content:start;column-gap:calc(1.6 * var(--ws-u,4px))}
+.aw-ws-cen.is-ws-dense .aw-ws-ccols li span{display:none}
 .aw-ws-ccols li{display:flex;gap:calc(1.6 * var(--ws-u,4px));align-items:baseline;min-width:0}
 .aw-ws-ccols li b{font-family:"Saira",sans-serif;font-style:italic;font-weight:800;font-size:calc(3.9 * var(--ws-u,4px));letter-spacing:.03em;color:#9BFFC4;flex:none}
 .aw-ws-ccols ol.is-r li{flex-direction:row-reverse;text-align:right}
 .aw-ws-ccols ol.is-r li b{color:#B4F0FF}
 .aw-ws-ccols li span{font-family:"Be Vietnam Pro",sans-serif;font-size:calc(3 * var(--ws-u,4px));line-height:1.35;color:#8DB9A2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
-.aw-ws-cdefs{display:flex;flex-direction:column;gap:calc(1.6 * var(--ws-u,4px));min-height:0;overflow:auto;flex:1}
+.aw-ws-cdefs{display:flex;flex-direction:column;gap:calc(1.6 * var(--ws-u,4px));min-height:0;overflow:hidden;flex:1}
 .aw-ws-cdefs.is-short{flex:none;overflow:visible}
 .aw-ws-cdf{display:grid;grid-template-columns:calc(5 * var(--ws-u,4px)) 1fr calc(5 * var(--ws-u,4px));gap:calc(1.4 * var(--ws-u,4px));align-items:center;border-radius:calc(1.4 * var(--ws-u,4px));background:rgba(61,245,138,.06);border:1px solid rgba(61,245,138,.18);padding:calc(1.4 * var(--ws-u,4px)) calc(1.8 * var(--ws-u,4px))}
 .aw-ws-cdf .aw-ws-cclue{justify-content:flex-start}
@@ -230,6 +243,8 @@
 .aw-wss-times button{border:1px solid rgba(61,245,138,.35);color:#9BFFC4;font-family:"Saira",sans-serif;font-style:italic;font-weight:800;font-size:calc(17 * var(--p));line-height:1;
   padding:calc(8 * var(--p)) calc(14 * var(--p));border-radius:4px;transform:skewX(-14deg);background:rgba(61,245,138,.06)}
 .aw-wss-times button span{display:block;transform:skewX(14deg)}
+.aw-wss-times button.aw-wss-up{padding-left:calc(16 * var(--p));padding-right:calc(16 * var(--p))}
+.aw-wss-times button.aw-wss-up span{display:flex;align-items:center;justify-content:center}
 .aw-wss-times button.is-on{background:#3DF58A;color:#03150C;box-shadow:0 0 calc(14 * var(--p)) rgba(61,245,138,.6)}
 .aw-wss-times.is-solo{animation:aw-wss-fade .2s ease}
 .aw-wss-tsolo{display:flex;flex-direction:column;align-items:center;gap:calc(4 * var(--p));touch-action:none;cursor:ns-resize}

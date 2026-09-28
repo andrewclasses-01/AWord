@@ -609,6 +609,13 @@ export function buildOptionsBody(host, {
         v => { draft.timer = v; stepper.el.classList.toggle("is-dim", v !== "countDown"); }),
       stepper.el
     );
+    // ⭐ Đợt 423 — `tpl.lockTimerOption`: the template's own start screen chooses the
+    // clock every play (A Show Speed: 2/3/5 min · count up), so the row is shown
+    // FROZEN (dimmed, untappable) — seen, but never a second place to set it.
+    if (tpl.lockTimerOption) {
+      c.cell.classList.add("is-locked");
+      c.cell.title = "Timer — chosen on the start screen";
+    }
     grid.append(c.cell);
     topGroup = true;
   }

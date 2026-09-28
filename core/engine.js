@@ -1821,8 +1821,14 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // OWN buttons to this row (A Show Speed: the "Next" tick). Teacher only. In a
   // match both boards are asked; board 1's row is dropped by fight.js, so only
   // board 0's buttons are ever seen.
+  // ⭐ Đợt 423 (thầy, A Show Speed: "thêm nút home vào dòng các nút tính năng") —
+  // `home(btn)`: the template's own Home button on this row asks the engine's
+  // question. Game running (or over) ⇒ "Back to the start screen?" ⇒ restart()
+  // (a match: restartMatch — both boards back to the start screen); on the start
+  // screen itself ⇒ the usual "Go home?" ⇒ the library. Like the GAME's Home.
   if (!session && typeof tpl.belowTools === "function") {
-    try { tpl.belowTools({ host: belowCenter, activity, fight }); } catch (e) { console.error("belowTools", e); }
+    const home = btn => openToolPanelFor(btn, playStarted ? buildBackToStartPanel : buildHomeConfirmPanel);
+    try { tpl.belowTools({ host: belowCenter, activity, fight, home, icons }); } catch (e) { console.error("belowTools", e); }
   }
   // The other half of the Fight → Showdown handover (see `openShowdownOnMount`).
   // Read-and-clear FIRST, so a board that cannot honour it (no button, or we
@@ -4566,6 +4572,26 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     const goBtn = el("button", "aw-btn aw-btn-primary aw-mode-confirm-btn", "Home");
     goBtn.type = "button";
     goBtn.onclick = () => { sound.click(); closeToolPanel(false); goHome(); };
+    row.append(cancelBtn, goBtn);
+    panel.append(row);
+  }
+
+  /**
+   * ⭐ Đợt 423 — what a template's Home button (`belowTools` api `home`) asks once
+   * the game has started: back to the START screen, not the library (A Show Speed,
+   * like its GAME). A NAMED function for the same reason as the two above.
+   */
+  function buildBackToStartPanel(panel) {
+    panel.append(el("div", "aw-tool-panel-head", "Back to the start screen?"));
+    panel.append(el("div", "aw-mode-confirm-text",
+      fight ? "Ends the match and goes back to the start screen." : "Ends this game and goes back to the start screen."));
+    const row = el("div", "aw-mode-confirm-row");
+    const cancelBtn = el("button", "aw-btn aw-mode-confirm-btn", "Cancel");
+    cancelBtn.type = "button";
+    cancelBtn.onclick = () => { sound.click(); closeToolPanel(true); };
+    const goBtn = el("button", "aw-btn aw-btn-primary aw-mode-confirm-btn", "Start screen");
+    goBtn.type = "button";
+    goBtn.onclick = () => { sound.click(); closeToolPanel(false); restart(); };
     row.append(cancelBtn, goBtn);
     panel.append(row);
   }

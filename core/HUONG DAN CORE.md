@@ -586,6 +586,10 @@ Không khai cờ nào ⇒ engine y hệt cũ (đã đo Quiz: READY gốc, ☰ �
   Chỉ `!fight && !session && !showdownPick` (học sinh không có hàng ngoài; trận tự dời trong fight.js).
 - **`tpl.belowTools({ host, activity, fight })`** — template tự thêm nút vào `.aw-below-center` (sau Options/Mode). Chỉ
   thầy. Trong trận CẢ HAI bàn được gọi, nhưng hàng của bàn 1 bị fight.js bỏ ⇒ chỉ nút của bàn 0 hiện.
+  ⭐ Đợt 423: api thêm **`home(btn)`** (mở hộp hỏi neo vào `btn`: `playStarted` ⇒ `buildBackToStartPanel` "Back to the
+  start screen?" ⇒ `restart()` — Fight: `restartMatch`; chưa chơi ⇒ `buildHomeConfirmPanel` ⇒ thư viện) + **`icons`**.
+- ⭐ **Đợt 423 — `tpl.lockTimerOption: true`** (`options-panel.js`): hàng Timer vẫn hiện nhưng `.is-locked` (mờ, không bấm)
+  — cho template có màn START tự chọn đồng hồ mỗi lượt (A Show Speed). Khác `hideTimerOption` (giấu hẳn).
 
 ⭐ **Đợt 390 (25/9/2026, A Show Speed) — `tpl.fightReveal({ wrap, scores, scoreEls, activity })` trong `core/fight.js`.**
 Khoảnh khắc TUỲ CHỌN giữa điểm cuối cùng và bảng kết quả: `endMatch()` làm hết phần chốt sổ như cũ (bonus hạ cánh, khoá

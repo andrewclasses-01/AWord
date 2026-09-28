@@ -69,9 +69,14 @@ const arrow = side => `<span class="aw-ws-arr ${side ? "is-r" : "is-l"}"></span>
 // Both choices live on this device (like the GAME's `aword-wordshake-time`), not on
 // the act: they are how the class plays today, not part of the lesson.
 const TIMES = [120, 180, 300];
+// ⭐ Đợt 423 (thầy) — a 4th chip, ▲ = COUNT UP: the clock counts up from 0:00 and the
+// play ends when the words run out (single: the last word / board; a match: the
+// referee's last round / the last shared board). Stored as 0.
+const T_UP = 0;
 const T_MIN = 60, T_MAX = 600, DOUBLE_MS = 380, SWIPE_PX = 26;
 const PREF_TIME = "aword-showspeed-act-time", PREF_NEXT = "aword-showspeed-next";
-function readTime() { try { const v = +localStorage.getItem(PREF_TIME); return TIMES.includes(v) ? v : 180; } catch (e) { return 180; } }
+const UP_SVG = '<svg viewBox="0 0 24 24" width="1.15em" height="1.15em" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>';
+function readTime() { try { const s = localStorage.getItem(PREF_TIME), v = +s; return s === "0" ? T_UP : TIMES.includes(v) ? v : 180; } catch (e) { return 180; } }
 function saveTime(v) { try { localStorage.setItem(PREF_TIME, String(v)); } catch (e) {} }
 // `liveTime` = what the start screen shows right now (a swiped solo value is not
 // saved, exactly like the GAME) — read by EVERY board's beforePlay, so in a match
@@ -106,7 +111,8 @@ function mountStartPanel(box, { play, ready, onTime }) {
   function draw() {
     const chips = solo
       ? `<div class="aw-wss-times is-solo"><div class="aw-wss-tsolo"><i class="up"></i><button type="button" data-do="time" data-t="${dur}" class="is-on"><span>${dur / 60} min</span></button><i class="dn"></i></div></div>`
-      : `<div class="aw-wss-times">${TIMES.map(t => `<button type="button" data-do="time" data-t="${t}" class="${t === dur ? "is-on" : ""}"><span>${t / 60} min</span></button>`).join("")}</div>`;
+      : `<div class="aw-wss-times">${TIMES.map(t => `<button type="button" data-do="time" data-t="${t}" class="${t === dur ? "is-on" : ""}"><span>${t / 60} min</span></button>`).join("")}` +
+        `<button type="button" data-do="time" data-t="${T_UP}" class="aw-wss-up${dur === T_UP ? " is-on" : ""}" title="Count up — ends when the words run out" aria-label="Count up"><span>${UP_SVG}</span></button></div>`;
     box.innerHTML = `<div class="aw-wss"><div class="aw-wss-logo">A SHOW <span>SPEED</span></div>${chips}` +
       `<button type="button" class="aw-wss-play" data-do="play" aria-label="Play" ${isReady ? "" : "disabled"}><span>Play</span></button>` +
       (isReady ? "" : `<div class="aw-wss-note">Loading…</div>`) + `</div>`;
@@ -129,6 +135,8 @@ function mountStartPanel(box, { play, ready, onTime }) {
     if (b.dataset.do === "play") { e.preventDefault(); play(); return; }
     if (b.dataset.do !== "time") return;
     const t = +b.dataset.t, now = performance.now();
+    // Đợt 423 — count up has no minutes to swipe: a plain choice, never the solo chip
+    if (t === T_UP) { lastTap = { t: 0, at: 0 }; setDur(T_UP); saveTime(T_UP); beep("tap"); draw(); return; }
     const dbl = now - lastTap.at < DOUBLE_MS && (solo || lastTap.t === t);
     lastTap = dbl ? { t: 0, at: 0 } : { t, at: now };
     if (dbl) {
@@ -300,6 +308,33 @@ function missedHtml(S) {
   }).catch(() => wrapUp(lesson.map(it => row(it.word, it.clue))));
 }
 
+// ---------------- Đợt 423: every word in view, never a scroll ----------------
+// thầy: "ở Word list và Free words, học sinh luôn quan sát được mọi từ ở ô giữa và
+// không cần phải kéo, cuộn". The lists are `overflow:hidden` now; this shrinks the
+// box's own size unit (`--ws-u` of the match's centre, `--aw-u` of the single
+// frame's right panel — every size inside is a multiple of it) until nothing
+// inside overflows. Still too long at 58 % ⇒ `is-ws-dense`: the found-word
+// columns drop their meanings and flow in two columns, then shrink again (≥ 40 %).
+// `base` is the unit the box would have unshrunk — read from the PARENT, since the
+// box itself carries the override.
+function fitUnit(box, prop, base, inner) {
+  if (!box || !box.isConnected || !(base > 0) || !box.clientHeight) return;
+  const over = () => [box, ...box.querySelectorAll(inner)].some(n => n.scrollHeight > n.clientHeight + 1);
+  const set = k => box.style.setProperty(prop, (base * k).toFixed(3) + "px");
+  box.classList.remove("is-ws-dense");
+  let k = 1; set(k);
+  while (over() && k > .58) set(k -= .06);
+  if (!over()) return;
+  box.classList.add("is-ws-dense");
+  k = 1; set(k);
+  while (over() && k > .4) set(k -= .06);
+}
+const unitOf = (node, prop) => node ? parseFloat(getComputedStyle(node).getPropertyValue(prop)) || 0 : 0;
+function fitCentre(host) {
+  const cen = host && host.querySelector(":scope > .aw-ws-cen");
+  if (cen) fitUnit(cen, "--ws-u", host.clientWidth / 100, ".aw-ws-cdefs, .aw-ws-ccols ol");
+}
+
 // ---------------- board plans (shared by single and fight) ----------------
 // Mode 2 — boards of ≤5 words whose letters fit in 16 DIFFERENT letters.
 function planList(items) {
@@ -356,10 +391,11 @@ function attachHost(S, host) {
   host.innerHTML = "";
   host.classList.add("aw-ws-host");
   if (S.ro) S.ro.disconnect();
-  const unit = () => host.style.setProperty("--ws-u", (host.clientWidth / 100) + "px");
+  const unit = () => { host.style.setProperty("--ws-u", (host.clientWidth / 100) + "px"); fitCentre(host); };
   S.ro = new ResizeObserver(unit);
   S.ro.observe(host);
   unit();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (S.host === host) fitCentre(host); });
   host.addEventListener("click", e => {
     const b = e.target.closest("[data-voice]"); if (!b || !S.items) return;
     const it = S.items.find(x => x.up === b.dataset.voice); if (it) S.voice.toggle(it.voice, b);
@@ -401,6 +437,7 @@ function drawCentre(S) {
       : `<div class="aw-ws-cen"><div class="aw-ws-cprog">${S.r + 1} / ${S.plan.length}</div><div class="aw-ws-cdefs is-short">${rows}</div>${cols}</div>`;
   }
   host.innerHTML = html;
+  fitCentre(host);   // Đợt 423 — before the slide below measures where the words landed
   if (before.size || S.log.length) {
     const ease = "cubic-bezier(.22,.9,.3,1)";
     host.querySelectorAll(".aw-ws-ccols li[data-k]").forEach(li => {
@@ -443,6 +480,8 @@ const wordshakeTemplate = {
   fightFrame: { sideW: 392, midW: 440, h: 408, skin: "wordshake", boardTools: "shared" },
   // Đợt 389 — single play: the same move, out of the frame (core `tpl.toolsBelow`).
   toolsBelow: true,
+  // Đợt 423 — the start screen sets the clock every play ⇒ Options' Timer row is frozen
+  lockTimerOption: true,
 
   // ⭐ Đợt 389 (thầy, 25/9/2026) — the GAME's start screen replaces AWord's READY
   // (core `tpl.startScreen`). Single play: the whole frame. A match: board 0 draws
@@ -451,8 +490,10 @@ const wordshakeTemplate = {
     const side = fight ? fight.side : 0;
     const beforePlay = () => {
       const o = activity.options || (activity.options = {});
-      o.timer = "countDown";
-      o.timerTotalSeconds = liveTime || readTime();
+      const t = liveTime != null ? liveTime : readTime();
+      // Đợt 423 — ▲ count up: no limit, the play ends when the words run out
+      if (t === T_UP) o.timer = "countUp";
+      else { o.timer = "countDown"; o.timerTotalSeconds = t; }
     };
     if (fight) {
       host.innerHTML = idleBoardHtml(side);
@@ -532,7 +573,15 @@ const wordshakeTemplate = {
   // ⭐ Đợt 389 — the "Next" tick on the row under the frame (core `tpl.belowTools`).
   // OFF = no › at all (Mode 1 cannot skip a word, Mode 2 cannot skip a board; in a
   // match no team can pass). The choice is this device's and flips live.
-  belowTools({ host }) {
+  belowTools({ host, home, icons: ic }) {
+    // ⭐ Đợt 423 (thầy) — HOME on this row, first like the GAME's: playing / over ⇒
+    // "Back to the start screen?"; on the start screen ⇒ "Go home?" (library).
+    if (typeof home === "function") {
+      const h = el("button", "aw-toolbtn aw-ws-home", (ic || icons).home);
+      h.type = "button"; h.title = "Home"; h.setAttribute("aria-label", "Home");
+      h.addEventListener("click", () => home(h));
+      host.prepend(h);
+    }
     const b = el("button", "aw-ws-tick");
     b.type = "button";
     const paint = () => {
@@ -611,6 +660,7 @@ const wordshakeTemplate = {
     const st = items.map(() => ({ solved: false, tries: 0, typed: null }));
     const idxOf = up => items.findIndex(it => it.up === up);
     let score = 0, pts = 0, finished = false, dead = false, locked = false, refLocked = false, firstVoice = true;
+    let fitRO = null;   // Đợt 423 — single play's right panel refits on resize
     const timers = new Set();
     const later = (fn, ms) => { const t = setTimeout(() => { timers.delete(t); if (!dead) fn(); }, ms); timers.add(t); return t; };
 
@@ -812,10 +862,23 @@ const wordshakeTemplate = {
           right.append(list, el("div", "aw-ws-pts", `PTS <b>${pts}</b>`), fl);
         }
         const body = el("div", "aw-ws-split"); body.append(pad, right); wrap.append(body);
+        fitRight();
       }
       ui.setScore(fctl && mode === "free" ? pts : score);
       padNav();
       if (S) drawCentre(S);
+    }
+    // Đợt 423 — single play's right panel (the clue list / Mode 3's found words) fits
+    // without a scroll: see fitUnit. Also on every resize of the frame (the frame's
+    // `--aw-u` changes, the override would be stale) and once the web fonts are in.
+    function fitRight() {
+      const right = wrap.querySelector(".aw-ws-split > :is(.aw-ws-defs, .aw-ws-side)");
+      if (right) fitUnit(right, "--aw-u", unitOf(right.parentNode, "--aw-u"), ".aw-ws-defs, .aw-ws-found");
+    }
+    if (!fctl && mode !== "one") {
+      fitRO = new ResizeObserver(() => { if (!dead) fitRight(); });
+      fitRO.observe(wrap);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (!dead) fitRight(); });
     }
     function padNav() {
       const r = S ? S.r : R;
@@ -984,6 +1047,7 @@ const wordshakeTemplate = {
 
     return function cleanup() {
       dead = true;
+      if (fitRO) fitRO.disconnect();
       nextSubs.delete(onNextFlip);
       timers.forEach(clearTimeout); timers.clear();
       voicePlayer.stop();

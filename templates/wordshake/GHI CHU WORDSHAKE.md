@@ -1,5 +1,12 @@
 # GHI CHÚ WORDSHAKE — template #21 + game cố định trong GAMES
 
+## ⭐ Đợt 423 (28/9/2026) — khoá Timer · Home · ô giữa không cuộn · Play again · ô ▲ đếm lên
+- Options: `lockTimerOption: true` (cờ core mới) ⇒ hàng None/Count up/Count down mờ, không bấm được.
+- Hàng nút: `belowTools({home})` ⇒ nút Home đầu hàng: đang/đã chơi ⇒ "Back to the start screen?" ⇒ màn START; ở màn START ⇒ "Go home?" ⇒ thư viện.
+- `fitUnit()` co `--ws-u` (Fight, `.aw-ws-cen`) / `--aw-u` (đơn, bảng phải) tới khi không tràn; quá 58 % ⇒ `.is-ws-dense` (cột từ 2 cột, bỏ nghĩa) tới 40 %. Danh sách đều `overflow:hidden`.
+- Màn START: ô thứ 4 ▲ (`T_UP = 0`) ⇒ `timer:"countUp"`, hết từ là hết ván. GAME: PLAY AGAIN ⇒ `toReady()`.
+- Chi tiết + phép đo: GHI CHU DU AN.md chặng Đợt 423.
+
 ## ⭐ Đợt 404 (26/9/2026) — Fight Mode 1: bàn thua hiện từ đúng của đội kia
 - Móc core `reveal()` (gọi cả 2 bàn khi vòng ngã ngũ) → `m1Reveal()`: bàn chưa giải + đội kia có từ trong `S.log` ⇒ `M1.given`,
   ô `.is-given` chữ TRẮNG (bàn thua bị core `grayscale`), rơi từng chữ 70 ms; hẹn giờ xoá-sau-sai thoát nếu đã điền. Không ai

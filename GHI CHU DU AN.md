@@ -546,6 +546,25 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 423 (28/9/2026) — A SHOW SPEED: khoá Timer trong Options · nút Home · ô giữa không cuộn · Play again về màn chính · ô ▲ ĐẾM LÊN · phiên máy MSI · ⬜ CHƯA COMMIT (chờ thầy duyệt)
+
+**Thầy giao 5 việc:** (1) Options: đóng băng None/Count up/Count down vì màn đầu game đã chọn giờ · (2) thêm nút Home vào dòng nút tính năng · (3) Word list + Free words: HS luôn thấy MỌI từ ở ô giữa, không kéo/cuộn · (4) Play again ⇒ về trang chủ (màn START) ở mọi dạng · (5) Activity: thêm ô COUNT UP (mũi tên lên) cạnh 2/3/5 min trên màn START — đồng hồ đếm lên, hết từ là hết game.
+
+**Đã làm:**
+1. **Khoá Timer** — cờ core MỚI `tpl.lockTimerOption` (`core/options-panel.js`): ô Timer gắn `.is-locked` có sẵn (mờ .4 + `pointer-events:none`), title "Timer — chosen on the start screen". Template khai `lockTimerOption: true`. Màn START vẫn ghi `options.timer` mỗi lượt như Đợt 389.
+2. **Nút Home** — `tpl.belowTools` nay nhận thêm `home(btn)` + `icons` (`core/engine.js`). Template dựng `.aw-toolbtn.aw-ws-home` ĐẦU hàng (skin game sẵn có tự áp). Hành vi như Home của GAME: ván đã bắt đầu (kể cả đã hết) ⇒ hộp MỚI `buildBackToStartPanel` "Back to the start screen?" ⇒ `restart()` (Fight: `restartMatch`, cả hai bàn về màn START); đang ở màn START ⇒ hộp "Go home?" cũ ⇒ thư viện.
+3. **Ô giữa không cuộn** — `fitUnit(box, prop, base, inner)` trong `wordshake.js`: co ĐƠN VỊ của hộp (`--ws-u` của `.aw-ws-cen` trong Fight, `--aw-u` của bảng phải `.aw-ws-defs/.aw-ws-side` khi chơi đơn — mọi cỡ bên trong là bội của nó) từng nấc 6 % tới 58 % cho tới khi không phần tử nào tràn; vẫn tràn ⇒ `.is-ws-dense` (cột từ tìm được bỏ nghĩa, chảy 2 cột) rồi co tiếp tới 40 %. Gọi sau mỗi lần vẽ (`drawCentre`, `padRender`), khi đổi cỡ (ResizeObserver của host / của `wrap`) và khi font tải xong. CSS: mọi `overflow:auto` của danh sách → `hidden`; `.aw-ws-split` + `.aw-ws-ccols` thêm `grid-template-rows:minmax(0,1fr)` (hàng lưới auto sẽ nở theo nội dung, không bao giờ "tràn"). ⛔ `.aw-ws-defs` bỏ `justify-content:center` → căn giữa bằng margin auto: hộp flex căn giữa mà tràn thì tràn cả lên TRÊN và `scrollHeight` không đếm phần đó (cùng bẫy "scrollWidth nói dối" Đợt 222/371).
+4. **Play again** — GAME (`games/wordshake/wordshake.js`): nút PLAY AGAIN ở màn kết quả nay `toReady()` (màn START chọn lại phút) thay vì `start()` vào thẳng bàn mới. Template: "Start again" của màn kết thúc chơi đơn (`restart()` → `startGame` → `tpl.startScreen`) và của bảng kết quả Fight (`restartMatch`) VỐN ĐÃ về màn START — đã kiểm lại, không phải sửa.
+5. **Ô ▲ COUNT UP** (chỉ template/activity, GAME không có vì bộ chữ không có "hết từ"): `T_UP = 0` lưu cùng khoá `aword-showspeed-act-time` ("0"); ô thứ 4 `.aw-wss-up` icon mũi tên lên; chạm đúp ô ▲ KHÔNG vào chế độ một-ô (không có phút để vuốt). `beforePlay`: ▲ ⇒ `timer:"countUp"` (không giới hạn), còn lại như cũ. Hết từ ⇒ `finish()` (đơn: từ/bảng cuối; Fight: vòng cuối của trọng tài / bảng chung cuối). ⚠️ `liveTime || readTime()` cũ sẽ nuốt số 0 ⇒ đổi thành `liveTime != null ? …`.
+
+**Kiểm (bàn thử `test.html?mode=list|free` + `scratch/dot423-ws-fight.html?mode=free` — bàn Fight mới, bị ignore):** màn START có 4 ô, ▲ chọn được, đồng hồ khung 0:00, PLAY ⇒ đếm lên 0:02… · Home giữa ván ⇒ hộp hỏi ⇒ về màn START, ▲ vẫn được chọn · Options: hàng Timer mờ, bấm không ăn · chơi đơn Free words nhồi 30 từ ⇒ chuyển 2 cột, đủ 30 từ, không thanh cuộn · Fight Free words nhồi 25 từ/đội ⇒ `is-ws-dense`, `--ws-u` 2,58px, mọi `ol` scrollHeight = clientHeight (250/250), cen 374/374 · Fight: 4 ô vừa bảng giữa, Home ⇒ "Ends the match…" ⇒ cả trận về màn START · GAME 1 phút ⇒ màn kết quả ⇒ PLAY AGAIN ⇒ màn START (1 min, đồng hồ đứng) · 0 lỗi console · `node --input-type=module --check` sạch 4 file JS.
+
+**VIỆC ĐANG CHỜ:**
+- ⬜ Thầy duyệt + bấm tay TOMKO (cỡ chữ khi co nhiều ở ô giữa; vị trí nút Home ĐẦU hàng — trong Fight nó đứng sau cụm ☰ 🔊 do fight.js dời vào trước).
+- ⬜ COMMIT + PUSH khi thầy lệnh.
+- ⚠️ Count up + tắt NEXT: một từ không ai làm được thì ván không tự kết (không có đồng hồ cắt) — đường ra là bật NEXT (PASS ›) hoặc Home.
+- ⚠️ Bài giao cho học sinh KHÔNG có màn START (Đợt 389) ⇒ vẫn chạy theo `options.timer` đã lưu trên act (giá trị màn START ghi lần cuối); Options không còn chỉnh tay được ô này.
+
 ## Đợt 422 (28/9/2026) — GIỜ CHUẨN: mốc giờ ghi lên kho KHÔNG phụ thuộc đồng hồ máy học sinh · phiên máy 1
 
 **Thầy báo:** dashboard myLesson (pop-up em THANH PHƯƠNG A1A, STAGE LSB1-S1.T1.P2) ghi mọi lượt là 27/9, trong khi thầy nhìn tận mắt em làm 28/9. Vài em khác "cũng thế".
