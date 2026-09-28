@@ -27,6 +27,7 @@ import {
 } from "./core/assignments.js";
 import { ensureTemplate } from "./core/registry.js";
 import { gioChuan } from "./core/gio-chuan.js";   // Đợt 422 — mốc giờ theo máy chủ
+import { tiLeDaLam, ghiRoiVan, ghiXongVan, layNhacCho, hienNhac, dangMo } from "./bo-cuoc.js";   // Đợt 424 — "Start Again quá sớm"
 // No template is imported here on purpose. ensureTemplate() fetches the ONE
 // game this assignment uses, right before it starts — so a student on a phone
 // downloads one game, not the whole catalogue.
@@ -261,6 +262,9 @@ async function play(assignment, studentName, className, studentMa) {
   const dacBiet = new URLSearchParams(location.search).get("db") === "1";
   // ⭐ Đợt 410 — xin VÉ đăng nhập ngay khi vào ván (keepalive lúc đóng tab KHÔNG chờ được vé). Phụ huynh không có mã.
   if (ma && !dacBiet) sanVe(ma);
+  // ⭐ Đợt 424 — đếm BỎ CUỘC liên tiếp (bo-cuoc.js). Bước "Xem các câu sai" chỉ khi bài bật Show answers.
+  const khoaBC = { code: assignment.code, ma, ten: studentName };
+  const coShowBC = (assignment.endOptions || {}).showAnswers !== false;
   // ⭐ Đợt 246 — one attempt at a time. `submit` freezes the play into the
   // outbox and starts delivering; `retrySubmit` re-runs delivery for the SAME
   // attempt (same fixed id — a re-send can never create a second row). Both
@@ -281,6 +285,11 @@ async function play(assignment, studentName, className, studentMa) {
     let rvDo = null;
     try { rvDo = playLog.baiLamNay ? playLog.baiLamNay() : null; } catch (e) { rvDo = null; }
     nopLuotDo({ gap: true, review: rvDo });   // ⭐ Đợt 383 — tải lại / đóng tab giữa ván: nộp lượt dở (điểm ≥ 1)
+    // ⭐ Đợt 424 — bỏ cuộc bằng tải lại / đóng tab: không hiện được ⇒ cất nhắc cho lần mở sau.
+    if (!dacBiet && !playLog.mistakes) {
+      try { const d = playLog.diemNay ? playLog.diemNay() : null;
+            ghiRoiVan({ ...khoaBC, tiLe: tiLeDaLam({ review: rvDo, score: d && d.score, total: d && d.total }), trangChet: true }); } catch (e) {}
+    }
     if (!playLog.attemptId && rvDo) playLog.review = rvDo;
     beatPlayLog(playLog, { keepalive: true });
   });
@@ -338,6 +347,8 @@ async function play(assignment, studentName, className, studentMa) {
       playerName: studentName,
       className: className || "",
       endOptions: assignment.endOptions || {},
+      // ⭐ Đợt 424 — tấm "Start Again quá sớm" đang mở ⇒ engine hoãn lối vào thẳng ván (Start again) tới khi em đóng.
+      choVaoVan: () => dangMo(),
       // What the screenshot fallback board prints (engine side, Đợt 246).
       meta: { assignmentTitle: assignment.title || "", code: assignment.code },
 
@@ -413,6 +424,7 @@ async function play(assignment, studentName, className, studentMa) {
           if (!playLog) return;
           dropDraft(playLog.nhapId);   // Đợt 383 — lượt đã tới đích, nháp hết việc
           playLog.score = score; playLog.total = total; playLog.timeMs = timeMs; playLog.done = true;
+          if (!dacBiet && !playLog.mistakes) ghiXongVan(khoaBC);   // ⭐ Đợt 424 — làm HẾT ván ⇒ chuỗi bỏ cuộc về 0
           if (hoatDong) { playLog.activeMs = hoatDong.doc(); hoatDong.dung(); hoatDong = null; }
           playLog.attemptId = (playLog.mode === "submit" && attempt) ? attempt.attemptId : "";
           // ⭐ Đợt 384 — lượt KHÔNG nộp (Start with mistakes, 0 điểm) ⇒ bài làm vào practiceLog; lượt nộp đã có ở results.
@@ -431,6 +443,14 @@ async function play(assignment, studentName, className, studentMa) {
           else dropDraft(playLog.nhapId);
           if (!playLog.attemptId && Array.isArray(review) && review.length) playLog.review = review;   // Đợt 384 — lượt không nộp
           beatPlayLog(playLog, { keepalive: true });
+          // ⭐ Đợt 424 — rời ván khi mới làm < 50% ⇒ một lần BỎ CUỘC; tới ngưỡng thì hiện tấm hướng dẫn NGAY (ván kế tiếp
+          // chờ em đóng tấm — engine hỏi `session.choVaoVan`). Ván Start with mistakes / phụ huynh không tính.
+          if (!dacBiet && !playLog.mistakes) {
+            try {
+              const n = ghiRoiVan({ ...khoaBC, tiLe: tiLeDaLam({ review, score, total }) });
+              if (n) hienNhac({ lan: n, coShow: coShowBC });
+            } catch (e) { /* tấm nhắc chỉ là phụ — không bao giờ làm hỏng việc rời ván */ }
+          }
           playLog = null;
         }
       },
@@ -466,4 +486,6 @@ async function play(assignment, studentName, className, studentMa) {
       }
     }
   });
+  // ⭐ Đợt 424 — lần trước em bỏ cuộc bằng tải lại / đóng tab tới ngưỡng ⇒ hiện tấm hướng dẫn ngay khi mở bài.
+  if (!dacBiet) { try { const n = layNhacCho(khoaBC); if (n) hienNhac({ lan: n, coShow: coShowBC }); } catch (e) {} }
 }

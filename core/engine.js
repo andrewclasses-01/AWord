@@ -3170,7 +3170,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // ⭐ Đợt 366 — lối vào thẳng ván (Start again · Start with mistakes trên màn kết thúc): chờ cổng
   // chuẩn bị (Đợt 122) xong rồi tự START. Đợt 383: `hwPreset` chỉ còn nghĩa "tự bấm START".
   if (session && hwPreset) {
-    Promise.resolve(prepDoneP).catch(() => {}).then(() => {
+    // ⭐ Đợt 424 — play.js có thể đang mở tấm "Start Again quá sớm" (bo-cuoc.js) ngay lúc rời ván cũ ⇒ chờ em đóng
+    // tấm rồi mới vào ván (không để đồng hồ ván mới chạy sau tấm). Không có tấm ⇒ null ⇒ y như cũ.
+    let choTam = null;
+    try { choTam = typeof session.choVaoVan === "function" ? session.choVaoVan() : null; } catch (e) { choTam = null; }
+    Promise.all([Promise.resolve(prepDoneP).catch(() => {}), Promise.resolve(choTam).catch(() => {})]).then(() => {
       if (torndown || playStarted) return;
       hwMode = hwModeCuaVan(); startPressed();
     });

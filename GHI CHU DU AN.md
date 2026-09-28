@@ -546,6 +546,32 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 424 (28/9/2026) — TẤM "EM ĐÃ START AGAIN QUÁ SỚM": hướng dẫn cách học khi em bỏ cuộc giữa chừng nhiều lần · phiên máy MSI
+
+**Thầy:** nhiều em làm 1–2 câu rồi bấm Start again ngay, không bao giờ làm hết bài để học từ câu sai ⇒ mở hướng dẫn khi em bỏ cuộc nhiều lần liên tiếp; pop-up đẹp, hiển thị ổn trên điện thoại, đếm giây trước khi cho đóng.
+
+**Thầy chốt (AskUserQuestion + 4 vòng mẫu, `scratch/dot423-mau/` bị ignore — index.html A/B/C, c2, c3 = bản chốt):**
+- Ngưỡng: lần đầu 2 lần bỏ LIỀN, các lần sau tăng dần trong cùng act (3, 4, …). "Bỏ cuộc" = rời ván khi làm < 50% số câu. Đếm ngược 8 giây. Tiếng Việt.
+- Mẫu C (tấm trượt đáy) + chữ ANDREW CLASSES nhỏ trên cùng. Tiêu đề "Em đã Start Again quá sớm N lần liền!" + dòng nhỏ "Hãy thử cách học hiệu quả hơn dưới đây." 5 bước: Làm hết một lượt · Xem các câu sai (Show mistakes) · Ghi câu sai ra vở phân tích vì sao sai · Start with mistakes · Start again. Câu cuối "Bỏ cuộc giữa chừng (bấm Start again ngay khi sai) thì em không biết mình sai ở đâu!"
+- Bài TẮT Show answers ⇒ bỏ bước "Xem các câu sai" (phương án b).
+- KHÔNG BAO GIỜ CUỘN, gọn ở mọi cỡ cửa sổ.
+
+**Làm:**
+- File mới `bo-cuoc.js` (gốc web, cạnh play.js — chỉ trang học sinh): luật đếm (localStorage `aword-bo-cuoc`, khoá `code|ma` hoặc `code|ten:…`: `{lien, daNhac, cho}`), `tiLeDaLam` (bài làm giữa ván: `answered` — 7 template có `setReviewProvider`: quiz, anagram, find-the-gap, find-the-match, true-false, type-the-answer, wordshake; template khác ⇒ điểm ÷ số câu, xấp xỉ), `hienNhac` (CSS tự tiêm `#aw-bo-cuoc-css`, icon Lucide SVG).
+- ⭐ Vừa khung: `.aw-bc-phu` `container-type:size`; mọi kích thước tính bằng em theo `--f`; `vuaKhung` chặt nhị phân --f 9–19px sao cho chiều cao TỰ NHIÊN của tấm ≤ khung − lề (tấm đáy 10px, thẻ nổi 24px). Khung ≥ 600px hoặc ngang (≥ 5/4) ⇒ thẻ giữa; ngang + thấp (≤ 620px) ⇒ 5 bước 2 cột. Đo lại: ngay khi mở · ResizeObserver · `document.fonts.ready` + `loadingdone`.
+- ⛔ Bẫy bắt được ở mẫu: bộ chữ Baloo 2 CÓ DẤU (unicode-range riêng) chỉ tải khi chữ có dấu xuất hiện ⇒ lần đo đầu dùng font dự phòng, tải xong chữ cao thêm ~20px ⇒ tràn (SE 556 > 552). Phải đo lại khi font xong.
+- ⛔ ResizeObserver chỉ bắn khi trang được VẼ (tab ẩn/pane che thì chờ) ⇒ luôn gọi `vuaKhung` một lần ngay.
+- Gắn vào fullscreenElement nếu game đang toàn màn hình (gắn body sẽ không thấy). Chặn keydown/keyup pha capture khi tấm mở (game gõ chữ nghe phím ở window), trừ Tab/Enter/Space trên nút.
+- `play.js`: `leave` (trang sống) ⇒ `ghiRoiVan` → tới ngưỡng thì `hienNhac` NGAY; `end` ⇒ `ghiXongVan` (chuỗi về 0); `pagehide` ⇒ `ghiRoiVan({trangChet:true})` cất `cho`; mở bài ⇒ `layNhacCho` hiện nhắc đang chờ. Ván Start with mistakes + phụ huynh (`db=1`) không tính. Session thêm `choVaoVan: () => dangMo()`.
+- `core/engine.js` (1 chỗ): lối vào thẳng ván (`hwPreset` — Start again) chờ thêm `session.choVaoVan()` ⇒ ván mới KHÔNG chạy giờ sau tấm; không có tấm ⇒ null ⇒ y như cũ.
+- Rời ván khi đã làm ≥ 50% ⇒ chuỗi về 0 (em có cố gắng). `daNhac` giữ mãi theo act ⇒ ngưỡng lần sau = 2 + daNhac.
+
+**Kiểm (máy MSI, aword-dev 5591, `play.html?g=tbfhpb&n=THU 424` — không mã em ⇒ luật chặn ghi kho, không bẩn dữ liệu):**
+- Bấm thật: làm 1 câu → ☰ Start again ⇒ `lien 1`, không tấm; lần 2 ⇒ tấm hiện (4 bước vì bài này tắt Show answers), READY phía sau, đồng hồ 0:00; 8 giây → "Em hiểu rồi — làm hết bài!" → bấm ⇒ tấm đóng, ván tự vào. Console sạch.
+- Luật 12/12 (gọi thẳng module): ngưỡng 2 → 3 → 4, ≥50% về 0, làm hết về 0, đóng tab cất chờ + mở lại lấy 1 lần, act khác riêng, tỉ lệ answered / điểm / null.
+- Cửa sổ thật (5 bước): 320×568 chữ 13,75px cao 551 · 740×360 chữ 13,5px 2 cột cao 338 · 436×910 chữ 19px — đều vừa, không cuộn. Mẫu c3: 1280×760 / iPad / 1024×600 chữ 19px.
+- ⬜ Chưa: điện thoại thật / iPad thật / TOMKO fullscreen; em thật qua myLesson (có mã).
+
 ## Đợt 423 (28/9/2026) — A SHOW SPEED: khoá Timer trong Options · nút Home · ô giữa không cuộn · Play again về màn chính · ô ▲ ĐẾM LÊN · phiên máy MSI · ✅ ĐÃ COMMIT + PUSH `61b0aaa` + LIVE 5/5 mã băm
 
 **Thầy giao 5 việc:** (1) Options: đóng băng None/Count up/Count down vì màn đầu game đã chọn giờ · (2) thêm nút Home vào dòng nút tính năng · (3) Word list + Free words: HS luôn thấy MỌI từ ở ô giữa, không kéo/cuộn · (4) Play again ⇒ về trang chủ (màn START) ở mọi dạng · (5) Activity: thêm ô COUNT UP (mũi tên lên) cạnh 2/3/5 min trên màn START — đồng hồ đếm lên, hết từ là hết game.
