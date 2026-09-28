@@ -76,11 +76,24 @@ class CDP:
         while True:
             m = json.loads(self.ws.recv())
             if m.get("id") == mid: return m.get("result", m.get("error"))
+    def burst(self, calls):
+        """Gửi cả loạt lệnh LIỀN MỘT LƯỢT rồi mới đọc trả lời — như UniKey SendInput đổ cả gói
+        vào hàng đợi Windows một lần (giờ phím tới do trình duyệt đóng, trang bận cũng không giãn)."""
+        ids = []
+        for method, params in calls:
+            self.n += 1; ids.append(self.n)
+            self.ws.send(json.dumps({"id": self.n, "method": method, "params": params}))
+        left = set(ids)
+        while left:
+            m = json.loads(self.ws.recv())
+            left.discard(m.get("id"))
     def ev(self, expr):
         r = self.call("Runtime.evaluate", expression=expr, returnByValue=True, awaitPromise=True)
         return r.get("result", {}).get("value")
 
+PUNCT = {".": (190, "Period"), ",": (188, "Comma"), "'": (222, "Quote"), "!": (49, "Digit1"), "?": (191, "Slash"), "-": (189, "Minus")}
 def vk_of(ch):
+    if ch in PUNCT: return PUNCT[ch]
     if ch == " ": return 32, "Space"
     if ch.isalpha(): return ord(ch.upper()), "Key" + ch.upper()
     if ch.isdigit(): return ord(ch), "Digit" + ch
@@ -104,6 +117,7 @@ ROLL = os.environ.get("ROLL") == "1"
 def type_seq(c, seq, gap=0.07, unikey=True):
     """ROLL=1: gõ dồn — phím bị nuốt chỉ được NHẢ sau khi phím kế tiếp đã xuống."""
     if ROLL: gap = 0.035
+    gap = float(os.environ.get("GAP", gap))   # vd GAP=0.25 cho Crossword (game tự nuốt chữ khi gõ quá nhanh)
     word = ""
     held = None
     for k in seq:
@@ -118,12 +132,15 @@ def type_seq(c, seq, gap=0.07, unikey=True):
             else:
                 p = 0
                 while p < len(word) and p < len(new) and word[p] == new[p]: p += 1
+                sh = 8 if (k.isupper() and SHIFT_OK) else 0
+                J = lambda ch: [("Input.dispatchKeyEvent", dict(type="keyDown", key=ch, code="", windowsVirtualKeyCode=231, text=ch, unmodifiedText=ch, modifiers=sh)),
+                                ("Input.dispatchKeyEvent", dict(type="keyUp", key="Unidentified", code="", windowsVirtualKeyCode=231, modifiers=sh))]
+                B = [("Input.dispatchKeyEvent", dict(type="rawKeyDown", key="Backspace", code="Backspace", windowsVirtualKeyCode=8)),
+                     ("Input.dispatchKeyEvent", dict(type="keyUp", key="Backspace", code="Backspace", windowsVirtualKeyCode=8))]
                 if p == len(word) and len(new) == len(word) + 1 and new[-1] in "ưƯ" and k.lower() == "w":
-                    inj(c, new[-1], k.isupper())
+                    c.burst(J(new[-1]))
                 else:
-                    inj(c, "·", k.isupper())
-                    for _ in range(1 + len(word) - p): bs(c); time.sleep(0.002)
-                    for ch in new[p:]: inj(c, ch, k.isupper()); time.sleep(0.001)
+                    c.burst(J("·") + B * (1 + len(word) - p) + [x for ch in new[p:] for x in J(ch)])
                 word = new
                 swallowed = True
         if held is not None:
@@ -160,11 +177,19 @@ def main():
                 time.sleep(0.25)
                 if c.ev("!!window.__ready && !!(document.querySelector('.aw-tta-input,.aw-rw-input,.aw-cw-letter,.aw-ftg-inputtext'))"): break
             time.sleep(1.2)
+            if t == "cw":
+                for _ in range(20):
+                    if c.ev("!!window.cwPicked"): break
+                    time.sleep(0.2)
+                time.sleep(0.8)
             if t in ("tta", "rw"):
                 c.ev("(()=>{const i=document.querySelector('.aw-tta-input,.aw-rw-input'); i.focus(); return document.activeElement===i})()")
             else:
                 c.ev("document.activeElement && document.activeElement.blur && document.activeElement.blur()")
+            if os.environ.get("STALL") == "1":   # trang bận: cứ 70 ms lại kẹt 60 ms (như lúc vừa tải)
+                c.ev("window.__st = setInterval(() => { const t = performance.now(); while (performance.now() - t < 60); }, 70)")
             type_seq(c, seq, unikey=unikey)
+            c.ev("clearInterval(window.__st)")
             time.sleep(0.5)
             return c.ev(sys_snap(t))
         for case in cases:

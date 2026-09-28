@@ -546,6 +546,17 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 421 (28/9/2026) — vn-guard chịu được MÁY BẬN (trang vừa tải, máy yếu) · phiên máy 1
+
+**Phát hiện khi kiểm LIVE Đợt 419:** lần chạy đầu trên web thật Crossword `address` ⇒ `ADS`. Dựng lại bằng `STALL=1` (trang cứ 70 ms kẹt 60 ms): TTA ra `wwas`, `goood`, `cofffeee` — bộ đóng gói 30 ms (đồng hồ trang) chạy XEN GIỮA một gói UniKey ⇒ gói bị cắt đôi, mỗi mảnh chèn một chữ.
+**Sửa `core/vn-guard.js`:**
+- Ranh giới gói đo bằng `e.timeStamp` (giờ phím tới, trình duyệt đóng dấu lúc nhận — trang bận không giãn): gói đã có chữ mà gặp chữ mồi `·` mới hoặc im > `SPLIT` 25 ms ⇒ gói mới.
+- Backspace chỉ thuộc gói khi gói CHƯA có chữ (UniKey luôn xoá trước, chữ sau); gói có chữ rồi ⇒ Backspace thật.
+- Đồng hồ đóng gói nới lên `GAP` 150 ms (keyup / phím kế tiếp vẫn đóng sớm — chỉ là lưới an toàn); Backspace thật hoãn `BS_WAIT` 60 ms.
+- Mảnh đầu bị cắt khi CHƯA có chữ (`·`+Backspace) mà mảnh sau tới trong `MERGE` 150 ms ⇒ gỡ việc mảnh đầu, ghép lại. ⛔ Không ghép gói đã có chữ — gõ dồn `ooo`/`ddd` là gói mới (bản ghép rộng đã làm hỏng gõ dồn 5/9).
+**Máy phát lại:** gói giờ gửi LIỀN MỘT LƯỢT (`CDP.burst`) như SendInput thật — bản cũ chờ từng sự kiện nên khi trang bận các sự kiện trong gói bị giãn giả tạo. Thêm mã phím thật cho `. , ' ! ? -` (trước đó code "" ⇒ bị coi là gói). `GAP=0.25` cho Crossword: game tự nuốt chữ lặp khi gõ nhanh bất thường — CẢ khi không bộ gõ (`ADS`, `BOK`).
+**Kết quả (máy 1, sau sửa):** TTA 9/9 ở cả 5 chế độ (thường, ROLL, STALL, STALL+ROLL, NOSHIFT) · RW 5/5 ở cả 5 · FTG 5/5 + NOSHIFT 3/3 · Crossword tốc độ người 6/6 (STALL, ROLL, NOSHIFT) và `address` 8/8 = y hệt khi không bộ gõ.
+
 ## Đợt 419 (28/9/2026) — GÕ TIẾNG ANH KHI MÁY BẬT UNIKEY/EVKEY: hết "nháy mất chữ" ở Type the answer, Running word, Crossword, Find the gap (chế độ gõ) · phiên máy 1 (ANDREW CLASSES)
 
 **Thầy báo:** bật tiếng Việt rồi gõ bằng bàn phím vật lý ⇒ chữ nháy rồi mất. Bài AWord toàn tiếng Anh ⇒ muốn gõ ra đúng tiếng Anh dù máy đang bật bộ gõ.
@@ -563,7 +574,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 - `mirror` = chữ UniKey đang tưởng trên màn hình (để đoán đúng khi UniKey xoá nhiều chữ). Bấm chuột/mũi tên/Enter ⇒ xoá mirror (UniKey cũng quên từ).
 - keyup của phím bị nuốt = bằng chứng: đoán sai chữ (VNI…) và chưa gõ gì thêm ⇒ sửa. ⛔ Không sửa khi chỉ lệch hoa/thường (nhả Shift trước ⇒ keyup báo chữ thường).
 - Hoa/thường: Shift/CapsLock trên sự kiện bơm, hoặc cả từ đang VIẾT HOA (≥ 2 chữ); "W" đứng một mình theo chữ `Ư`/`ư`. ⛔ Đừng theo chữ mang dấu ("Awesome" ⇒ "Ắe" mà phím "s" thường).
-- Backspace thật hoãn 30 ms (không thấy gói thì xoá thật); phím thật kế tiếp tới sớm hơn ⇒ xả trước để giữ thứ tự.
+- Backspace thật hoãn 60 ms (không thấy gói thì xoá thật); phím thật kế tiếp tới sớm hơn ⇒ xả trước để giữ thứ tự.
 - ⚠️ BẪY đã dính khi làm: keyup của Backspace từng "ăn" mất slot của phím bị nuốt ⇒ gõ dồn ra "adddess"/"DOOO". Nay mọi phím thật đã xuống đều vào `down`, và keyup không ra ký tự (Backspace, Shift…) bị bỏ qua TRƯỚC khi lấy slot.
 - Bộ gõ kiểu gạch chân (Windows/Mac có sẵn): lúc `compositionend` thay đoạn ghép bằng các phím thật (`e.code`). ⚠️ CHƯA đo máy thật (máy 1 chỉ có UniKey).
 

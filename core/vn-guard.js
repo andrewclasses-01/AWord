@@ -15,7 +15,8 @@
 // Cách chữa ở đây: CHẶN cả gói (không cho chạm ô chữ / game), đoán phím thật từ gói
 // (luật Telex: â/ê/ô ⇒ a/e/o · ă/ơ/ư ⇒ w · đ ⇒ d · dấu ⇒ s f r x j · bỏ dấu ⇒ z),
 // chèn đúng phím đó; rồi lấy keyup của phím bị nuốt làm BẰNG CHỨNG — lệch (VNI, cấu
-// hình lạ) thì sửa lại. Backspace thật hoãn 30 ms: gói thì bỏ, không thì xoá thật.
+// hình lạ) thì sửa lại. Backspace thật hoãn 60 ms: gói thì bỏ, không thì xoá thật.
+// Ranh giới gói đo bằng e.timeStamp (giờ phím tới), không bằng giờ trang xử lý — máy bận vẫn đúng.
 // Bản chiếu `mirror` giữ "UniKey đang tưởng màn hình có gì" để đoán cho đúng.
 //
 // Dùng: const g = guardVnTyping({ accepts(e), insert(ch), backspace(), input? , afterSet? });
@@ -28,7 +29,10 @@
 
 const UA = typeof navigator !== "undefined" ? (navigator.userAgent || "") : "";
 const MOBILE = /Android|iPhone|iPad|iPod/i.test(UA);
-const GAP = 30;          // ms — các sự kiện trong một gói UniKey cách nhau < 10 ms
+const GAP = 150;         // ms — đóng gói khi im lặng chừng này (keyup / phím kế tiếp đóng sớm hơn)
+const BS_WAIT = 60;      // ms — Backspace thật hoãn chừng này xem có gói nào theo sau không
+const SPLIT = 25;        // ms — trong một gói UniKey các sự kiện cách nhau < 10 ms
+const MERGE = 150;       // ms — mảnh gói tới trễ (máy bận) trong khoảng này thì GHÉP lại gói trước
 const SLOT_TTL = 1500;   // ms — chờ keyup của phím bị nuốt tối đa chừng này
 const MIRROR_MAX = 64;
 
@@ -149,7 +153,8 @@ export function guardVnTyping({ accepts, insert, backspace, input = null, afterS
     mirror: "",           // chữ UniKey đang tưởng nằm trên màn hình (đuôi dòng)
     down: new Set(),      // phím thật đang giữ (đã thấy keydown)
     pendingBs: 0, bsTimer: 0,
-    packet: null,         // { before, work, last, timer }
+    packet: null,         // { before, work, last, timer, upper, chars }
+    lastClosed: null,     // gói vừa đóng — còn ghép lại được nếu mảnh sau tới trễ (máy bận)
     slots: [],            // phím bị nuốt chờ keyup: { ch, seq, t }
     seq: 0,               // đếm hành động chèn/xoá của bộ này — để biết slot có còn là việc cuối
     comp: null,           // bộ gõ kiểu gạch chân: { v, s, e, keys }
@@ -164,17 +169,32 @@ export function guardVnTyping({ accepts, insert, backspace, input = null, afterS
       backspace(); g.seq++;
     }
   }
-  function openPacket() {
+  function openPacket(e) {
     if (g.packet) return;
-    g.packet = { before: g.mirror, work: g.mirror, last: 0, timer: 0, upper: false };
+    // ⚠️ Máy bận (trang vừa tải, máy yếu): một gói UniKey có thể tới thành 2 mảnh và mảnh
+    // đầu đã bị đóng + chèn. Mảnh sau tới trong MERGE ms, chưa có phím thật nào xen giữa
+    // ⇒ gỡ việc mảnh đầu đã làm rồi ghép thành một gói (đo bằng e.timeStamp = giờ phím tới).
+    const lc = g.lastClosed;
+    g.lastClosed = null;
+    // ⛔ Chỉ ghép khi mảnh đầu CHƯA có chữ nào ("·" + Backspace rồi bị cắt): gói trọn vẹn
+    // thì phím bị nuốt kế tiếp (gõ dồn "ooo", "ddd") là gói MỚI — ghép vào là sai.
+    if (lc && !lc.chars && e.timeStamp - lc.last < MERGE && lc.seq === g.seq && !g.pendingBs) {
+      if (lc.ch) { backspace(); g.seq++; }
+      const i = g.slots.indexOf(lc.slot);
+      if (i >= 0) g.slots.splice(i, 1);
+      g.packet = { before: lc.before, work: lc.work, last: 0, timer: 0, upper: lc.upper, chars: lc.chars };
+      g.mirror = lc.before;
+      return;
+    }
+    g.packet = { before: g.mirror, work: g.mirror, last: 0, timer: 0, upper: false, chars: false };
     // Backspace đang hoãn thuộc về gói này (kiểu EVKey: xoá trước, chữ sau)
     clearTimeout(g.bsTimer);
     g.packet.work = g.packet.work.slice(0, Math.max(0, g.packet.work.length - g.pendingBs));
     g.pendingBs = 0;
   }
-  function touchPacket() {
+  function touchPacket(e) {
     const p = g.packet;
-    p.last = performance.now();
+    p.last = e.timeStamp;
     clearTimeout(p.timer);
     p.timer = setTimeout(closePacket, GAP);
   }
@@ -187,7 +207,9 @@ export function guardVnTyping({ accepts, insert, backspace, input = null, afterS
     g.mirror = p.work.slice(-MIRROR_MAX);
     if (g.disposed) return;
     if (ch) { insert(ch); g.seq++; }
-    g.slots.push({ ch, seq: g.seq, t: performance.now() });
+    const slot = { ch, seq: g.seq, t: performance.now() };
+    g.slots.push(slot);
+    g.lastClosed = { ...p, ch, seq: g.seq, slot };
   }
 
   g.keydown = e => {
@@ -195,11 +217,15 @@ export function guardVnTyping({ accepts, insert, backspace, input = null, afterS
     const mine = accepts(e);
     if (isInjected(e)) {
       if (!mine && !g.packet) return false;
-      openPacket();
+      // Ranh giới gói: gói đang mở đã có chữ mà gặp chữ mồi "·" mới, hoặc im > SPLIT ms
+      // (tính bằng giờ phím tới) ⇒ phím bị nuốt KẾ TIẾP (gõ dồn "ooo") — đóng gói cũ trước.
+      if (g.packet && g.packet.chars && (e.key === "\u00B7" || e.timeStamp - g.packet.last > SPLIT)) closePacket();
+      openPacket(e);
       g.packet.work += e.key;
+      if (e.key !== "\u00B7") g.packet.chars = true;   // "·" = chữ mồi của gói, chưa phải chữ thật
       // Shift đang giữ / CapsLock bật lúc gói tới ⇒ phím bị nuốt là chữ HOA
       if (e.shiftKey || e.getModifierState?.("CapsLock")) g.packet.upper = true;
-      touchPacket();
+      touchPacket(e);
       return true;
     }
     // ⚠️ Ghi nhận MỌI phím thật đã xuống (kể cả Backspace bị hoãn, kể cả lúc không phải
@@ -207,18 +233,23 @@ export function guardVnTyping({ accepts, insert, backspace, input = null, afterS
     if (e.code) g.down.add(e.code);
     if (!mine) { if (!g.packet) g.mirror = ""; return false; }
     if (e.key === "Backspace" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.isComposing) {
-      if (g.packet && performance.now() - g.packet.last < GAP) {
+      // UniKey luôn gửi Backspace TRƯỚC chữ mới ⇒ gói chưa có chữ nào thì Backspace thuộc gói;
+      // gói đã có chữ rồi ⇒ đây là Backspace thật: đóng gói trước.
+      if (g.packet && !g.packet.chars) {
         g.packet.work = g.packet.work.slice(0, -1);
-        touchPacket();
+        touchPacket(e);
       } else {
+        if (g.packet) closePacket();
+        g.lastClosed = null;
         g.pendingBs++;
         clearTimeout(g.bsTimer);
-        g.bsTimer = setTimeout(flushBs, GAP);
+        g.bsTimer = setTimeout(flushBs, BS_WAIT);
       }
       return true;
     }
     // phím thật khác — xong mọi việc đang treo trước để giữ đúng thứ tự
     if (g.packet) closePacket();
+    g.lastClosed = null;
     flushBs();
     if (e.isComposing || e.keyCode === 229) {
       if (g.comp && !MOBILE) { const ch = physChar(e); if (ch && ch !== " ") g.comp.keys += ch; }
@@ -237,6 +268,7 @@ export function guardVnTyping({ accepts, insert, backspace, input = null, afterS
     const real = physChar(e);
     if (!real) return;                       // Backspace/Shift… không bao giờ là phím bị nuốt
     if (g.packet) closePacket();
+    g.lastClosed = null;
     const now = performance.now();
     while (g.slots.length && now - g.slots[0].t > SLOT_TTL) g.slots.shift();
     const slot = g.slots.shift();
