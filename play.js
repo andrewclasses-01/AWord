@@ -284,6 +284,13 @@ async function play(assignment, studentName, className, studentMa) {
   // Lượt Start with mistakes không bao giờ nộp. `gap` = đang pagehide: đẩy outbox + REST keepalive (không
   // chờ được SDK). Chỉ nộp MỘT lần mỗi lượt (`daNopDo`) — trang quay lại từ bfcache rồi bấm Start again
   // không nộp lượt ấy lần thứ hai. review rỗng: template chưa tới bước kết thúc của nó.
+  // ⭐ Đợt 418 (28/09/2026) — giờ của lượt DỞ = THỜI GIAN HOẠT ĐỘNG (Đợt 380), không phải đồng hồ tường.
+  // Đồng hồ engine chạy cả khi tab treo/nền: MẠC MINH KHANG (L20 BT2) mở ván 16:36 27/9, để treo tới sáng
+  // hôm sau rồi lượt dở mới được nộp ⇒ kho scores ghi 1078 phút cho 1/30 câu. Lượt tới ĐÍCH giữ nguyên.
+  function gioLuotDo(tuong) {
+    const hd = hoatDong ? hoatDong.doc() : (playLog ? playLog.activeMs : null);
+    return Number.isFinite(hd) && hd >= 0 ? Math.min(tuong | 0, Math.round(hd)) : (tuong | 0);
+  }
   // ⚠️ Khai bằng `function` (không phải const) vì listener pagehide ở trên gọi nó.
   function nopLuotDo({ gap = false, score = null, total = null, timeMs = null, review = null } = {}) {
     if (!playLog || playLog.done || playLog.mistakes || playLog.daNopDo) return;
@@ -294,7 +301,7 @@ async function play(assignment, studentName, className, studentMa) {
     playLog.daNopDo = true;
     playLog.score = diem;
     const goi = { code: assignment.code, studentName, ma, score: diem, total: d.total || 0,
-                  timeMs: d.timeMs != null ? d.timeMs : playLog.timeMs, review: Array.isArray(review) ? review : [], doDang: true };   // Đợt 384 — + bài làm tới lúc dừng
+                  timeMs: gioLuotDo(d.timeMs != null ? d.timeMs : playLog.timeMs), review:Array.isArray(review) ? review : [], doDang: true };   // Đợt 384 — + bài làm tới lúc dừng
     if (dacBiet) {
       sendSpecialAttempt(goi, { keepalive: gap }).catch(() => {});
       return;
@@ -388,7 +395,7 @@ async function play(assignment, studentName, className, studentMa) {
             try {
               const d = playLog.diemNay();
               if (d && Number(d.score) >= 1) saveDraft({ code: assignment.code, studentName, ma, score: d.score, total: d.total,
-                                                         timeMs: d.timeMs, review: [], doDang: true, attemptId: playLog.nhapId });
+                                                         timeMs: gioLuotDo(d.timeMs), review: [], doDang: true, attemptId: playLog.nhapId });   // Đợt 418
             } catch (e) { /* nháp chỉ là lưới an toàn */ }
           }
           if (hoatDong) {
