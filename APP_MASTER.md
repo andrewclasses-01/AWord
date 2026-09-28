@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **28/9/2026 Đợt 426 — ô tích form giao bài (tạo + sửa, cả trong myLesson) đổi nhãn thành "Show mistakes"**, mặc định bật; khoá dữ liệu vẫn `endOptions.showAnswers`.
 > ⭐ **28/9/2026 Đợt 425 — A SHOW SPEED: GỢI Ý TỪNG CHỮ — cứ 15 s không có từ đúng (của bài) ⇒ hiện thêm 1 chữ của từ đích, thanh ánh sáng mảnh chạy 15 s ở mép trên ô giữa; đủ chữ ⇒ lật từ (bỏ lỡ) và qua; làm được sau gợi ý vẫn đủ điểm** (chỉ `templates/wordshake/`; ⬜ chưa bấm tay TOMKO). Chi tiết chặng Đợt 425.
 > 🧭 **28/9/2026 Đợt 424 — TẤM "EM ĐÃ START AGAIN QUÁ SỚM"** (`bo-cuoc.js`, trang học sinh): rời ván khi làm < 50% = bỏ cuộc; 2 lần liền (lần sau 3, 4…/act) ⇒ tấm hướng dẫn 5 bước (bỏ bước Show mistakes nếu bài tắt Show answers), đếm 8 giây. `vuaKhung` chọn cỡ chữ lớn nhất vừa khung (đo lại khi font có dấu tải xong) ⇒ không bao giờ cuộn. Core: lối vào thẳng ván chờ `session.choVaoVan()`.
 > 🕒 **28/9/2026 Đợt 422 — GIỜ CHUẨN** (`core/gio-chuan.js` `gioChuan()`): mọi MỐC GIỜ ghi lên kho (createdAt scores/results/practiceLog, mã `hw`/`sp`/`pl`, isLate, hạn vé) = Date.now() + lệch đo từ header `Date` máy chủ (HEAD cùng miền, lệch < 2 phút ⇒ 0, cache `lech-dong-ho`). Ca: máy THANH PHƯƠNG chậm 1 ngày ⇒ dashboard lùi ngày. ⛔ THỜI LƯỢNG + hạn sống nháp vẫn Date.now(); ⛔ đừng vá toàn cục `Date` (Firebase Auth cất hạn token theo giờ máy).

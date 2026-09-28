@@ -546,6 +546,19 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 426 (28/9/2026) — Ô tích form giao bài đổi nhãn "Show answers" → "SHOW MISTAKES" · phiên máy MSI
+
+**Thầy:** "đổi nhãn ô tích thành Show mistakes, kể cả mở trong myLesson hay AWord đều là ô Show mistakes. Mặc định sẽ luôn bật."
+
+**Đã làm (chỉ `core/assignment-ui.js`):**
+- Form **Set assignment** (tạo bài — myLesson mở chính form này qua `?giao=`, nên một chỗ sửa là cả hai app đổi) và form **sửa bài giao** (`openAssignmentDetail`): nhãn ô tích "Show answers" → **"Show mistakes"**; form sửa thêm tooltip giống form tạo.
+- Mặc định: form tạo vốn đã `checked = true` (Đợt 383) — giữ nguyên; form sửa hiện đúng giá trị đã lưu của bài đó.
+- ⛔ KHÔNG đổi khoá dữ liệu: vẫn `endOptions.showAnswers` (bài giao cũ, `core/assignments.js`, `play.js` bo-cuoc, `engine.js hwMenuItems` đọc y nguyên). Màn kết thúc học sinh vốn đã là nút "Show mistakes" → màn MY MISTAKES (không bao giờ đáp án đúng); màn ANSWERS đủ đáp án chỉ khi thầy tự chơi.
+
+**Kiểm:** `node --input-type=module --check` sạch; grep không còn chữ "Show answers" hiển thị trong `assignment-ui.js`.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy mở form giao bài trong myLesson nhìn nhãn mới (có thể cần Ctrl+F5 / khởi động lại myLesson để bỏ cache).
+
 ## Đợt 425 (28/9/2026) — A SHOW SPEED: GỢI Ý TỪNG CHỮ khi không ai làm được — thanh sáng 15 s ở mép trên ô giữa · phiên máy MSI
 
 **Bối cảnh:** thầy hỏi "không ai biết từ thì sao" — HS kẹt tới hết giờ (NEXT mặc định tắt; ▲ đếm lên thì kẹt mãi). Thầy chốt đề xuất bậc thang gợi ý: **cứ 15 s một chữ**, làm được sau gợi ý **vẫn đủ điểm**; một **thanh chạy 15 s** mảnh, dạng thanh ánh sáng cùng style, sát mép trên ô giữa; chạy hết ⇒ hiện chữ, nghỉ một chút, vẫn chưa có từ đúng ⇒ thanh chạy tiếp. (Số 424 đã bị một phiên song song dùng cho tấm "Em đã Start again quá sớm" — `c1f90a2`.)

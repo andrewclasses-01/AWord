@@ -443,10 +443,12 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe, duoiMau } = {
     const answersWrap = el("label", "aw-as-check");
     // ⭐ Đợt 383 (thầy chốt 24/09) — MẶC ĐỊNH TÍCH: "Show answers" của bài giao nay là màn MY MISTAKES (chỉ câu
     // sai + câu em đã trả lời, KHÔNG BAO GIỜ đáp án đúng — core/engine.js showReview), nên bật sẵn cũng được.
-    // App myLesson mở chính form này (`?giao=`) nên hai bên cùng đổi. Nhãn giữ "Show answers" cho thầy quen.
+    // App myLesson mở chính form này (`?giao=`) nên hai bên cùng đổi.
+    // ⭐ Đợt 426 (thầy 28/09) — nhãn đổi thành "Show mistakes" cho khớp nút em thấy ở màn kết thúc;
+    // khoá dữ liệu vẫn là `endOptions.showAnswers` (bài giao cũ đọc y nguyên).
     const cbAnswers = el("input"); cbAnswers.type = "checkbox"; cbAnswers.checked = true;
     answersWrap.title = "Students see only their mistakes and what they answered — never the correct answers";
-    answersWrap.append(cbAnswers, document.createTextNode("Show answers"));
+    answersWrap.append(cbAnswers, document.createTextNode("Show mistakes"));
     titleHead.append(answersWrap);
     titleCell.append(titleHead);
     const titleInput = el("input", "aw-as-input");
@@ -1122,7 +1124,8 @@ export function openAssignmentEdit(assignment, { onSaved } = {}) {
     const answersWrap = el("label", "aw-as-check");
     const cbAnswers = el("input"); cbAnswers.type = "checkbox";
     cbAnswers.checked = end.showAnswers !== false;
-    answersWrap.append(cbAnswers, document.createTextNode("Show answers"));
+    answersWrap.title = "Students see only their mistakes and what they answered — never the correct answers";
+    answersWrap.append(cbAnswers, document.createTextNode("Show mistakes"));
     opts.append(answersWrap);
     top.append(opts);
 
