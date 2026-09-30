@@ -26,7 +26,7 @@ import { el, copyText } from "./core/utils.js";
 import { icons } from "./core/icons.js";
 import { ensureTemplate } from "./core/registry.js";
 import { TEMPLATES, templateLabel, templateIcon } from "./core/catalog.js";
-import { getDefaultOptions, saveDefaultOptions, buildOptionsControls, loadSettings, resetSettingsCache } from "./core/settings.js";
+import { getDefaultOptions, saveDefaultOptions, buildOptionsControls, loadSettings, resetSettingsCache, actKindForRoot } from "./core/settings.js";
 import { getEntries as getWrongSoundEntries, getWrongChoice, setWrongChoice, previewSound as previewWrongSound, renameSound as renameWrongSound, removeSound as removeWrongSound, uploadSound as uploadWrongSound } from "./core/wrong-sound.js";
 import {
   ROOTS, holdsActs, holdsAssignments, folderIdsOfRoot,
@@ -1873,12 +1873,14 @@ async function createBlankAct(type) {
   let tpl = null;
   try { tpl = await ensureTemplate(type); } catch (e) { tpl = null; }
   if (!tpl || !tpl.edit) { toast(`${templateLabel(type)} — editor coming soon`); return; }
+  const root = state.root, parentId = state.folderId;
   const blank = {
     type, schemaVersion: 1, title: "", instruction: "", theme: "classic",
-    options: getDefaultOptions(type),   // inherit the teacher's Settings defaults
+    // inherit the teacher's Settings defaults — ⭐ Đợt 427: act mới trong COURSES
+    // lấy "Default course options", mọi cây khác "Default activity options".
+    options: getDefaultOptions(type, actKindForRoot(root)),
     content: { questions: [] }
   };
-  const root = state.root, parentId = state.folderId;
   tpl.edit(app, blank, {
     header: topbar(true),
     footer: footer(),
@@ -3055,11 +3057,11 @@ function openSettingsFlow() {
         "Set the options new activities start with", () => showTemplates("activity")));
       list.append(menuRow("Default homework options",
         "Set the options a new assignment starts with", () => showTemplates("homework")));
-      // ⭐ Đợt 337 (16/9/2026, thầy) — a third bucket for the paid COURSES tree:
-      // a "Set assignment" form opened on an act inside Courses starts from
-      // these instead of the homework ones (core/assignment-ui.js kindForAct).
+      // ⭐ Đợt 337 (16/9/2026, thầy) — a third bucket for the paid COURSES tree.
+      // ⭐⭐ Đợt 427 (30/9/2026, thầy) — ĐỔI VAI: nay là mặc định của ACT MỚI tạo
+      // trong COURSES; bài giao của act COURSES lấy options của chính act.
       list.append(menuRow("Default course options",
-        "Set the options a new COURSES assignment starts with", () => showTemplates("course")));
+        "Set the options new COURSES activities start with", () => showTemplates("course")));
       list.append(menuRow("Classes",
         "Class rolls used by activities that call pupils by name", showClasses));
       // ⭐ Đợt 274 (27/8/2026, thầy) — a meme sound effect for wrong answers,
@@ -3489,7 +3491,7 @@ function openSettingsFlow() {
       setTitle(`${t.label} ${isHw ? "homework " : isCourse ? "course " : ""}defaults`, () => showTemplates(kind));
       body.innerHTML = "";
       body.append(el("div", "aw-set-hint", isCourse
-        ? `A new "Set assignment" form for a ${t.label} act inside COURSES will start with these options.`
+        ? `New ${t.label} activities inside COURSES will start with these options.`
         : isHw
         ? `A new "Set assignment" form for ${t.label} will start with these options.`
         : `New ${t.label} activities will start with these options.`));

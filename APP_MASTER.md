@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **30/9/2026 Đợt 427 — act COURSES: form giao bài lấy OPTIONS CỦA ACT** (theo view/template act đã nhớ); Settings ▸ "Default course options" nay là mặc định ACT MỚI trong COURSES; form giao bài bỏ ô TEXT thừa khi act không có voice.
 > ✏️ **28/9/2026 Đợt 426 — ô tích form giao bài (tạo + sửa, cả trong myLesson) đổi nhãn thành "Show mistakes"**, mặc định bật; khoá dữ liệu vẫn `endOptions.showAnswers`.
 > ⭐ **28/9/2026 Đợt 425 — A SHOW SPEED: GỢI Ý TỪNG CHỮ — cứ 15 s không có từ đúng (của bài) ⇒ hiện thêm 1 chữ của từ đích, thanh ánh sáng mảnh chạy 15 s ở mép trên ô giữa; đủ chữ ⇒ lật từ (bỏ lỡ) và qua; làm được sau gợi ý vẫn đủ điểm** (chỉ `templates/wordshake/`; ✅ ĐÃ PUSH `30ecc6e` + LIVE 2/2 mã băm; ⬜ chưa bấm tay TOMKO). Chi tiết chặng Đợt 425.
 > 🧭 **28/9/2026 Đợt 424 — TẤM "EM ĐÃ START AGAIN QUÁ SỚM"** (`bo-cuoc.js`, trang học sinh): rời ván khi làm < 50% = bỏ cuộc; 2 lần liền (lần sau 3, 4…/act) ⇒ tấm hướng dẫn 5 bước (bỏ bước Show mistakes nếu bài tắt Show answers), đếm 8 giây. `vuaKhung` chọn cỡ chữ lớn nhất vừa khung (đo lại khi font có dấu tải xong) ⇒ không bao giờ cuộn. Core: lối vào thẳng ván chờ `session.choVaoVan()`.

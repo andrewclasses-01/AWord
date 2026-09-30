@@ -1279,9 +1279,18 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
   // without the column there is nowhere for the template button to live. The
   // cell then carries `is-tplonly` and holds just the one floor.
   const hasTpl = !!templatePicker;
+  // ⭐⭐ Đợt 427 (30/9/2026, thầy, kèm ảnh) — FORM GIAO BÀI: act KHÔNG có voice thì
+  // ô TEXT đứng một mình là THỪA ("ở đây không hề có lựa chọn text-voice") ⇒ bỏ
+  // hẳn ô đó, ô template (QUIZ…) kéo dài phủ cả hàng. Chỉ khi có `templatePicker`
+  // (form Set assignment) — bảng Options trong game/Settings giữ nguyên. Hàng gộp
+  // PRACTICE/HOMEWORK (`mergedSetSwitch`) vẫn giữ ô trái vì đó LÀ một lựa chọn.
+  // ⚠️ Act có khai khả năng voice mà chưa tạo (`voicePending`) vẫn có nút VOICE
+  // đen ⇒ `coVoiceBtn` true ⇒ không rơi vào nhánh này.
+  const boOText = hasTpl && !coVoiceBtn && !mergedSetSwitch;
   const row = el("div", "aw-opt-content"
     + (variants || hasTpl ? " has-variants" : "")
-    + (hasTpl ? " has-tpl" : ""));
+    + (hasTpl ? " has-tpl" : "")
+    + (boOText ? " is-notext" : ""));
   const switchEl = el("div", "aw-opt-switch");
   const MODES = coVoiceBtn ? [["text", "Text"], ["voice", "Voice"]] : [["text", "Text"]];
   const modeBtns = new Map();
@@ -1580,6 +1589,7 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
 
   paintSwitch();
   paintHalf();
-  row.append(switchEl, tplCell || half);
+  if (boOText) row.append(tplCell);          // Đợt 427 — không có ô TEXT
+  else row.append(switchEl, tplCell || half);
   swHost.append(row);
 }

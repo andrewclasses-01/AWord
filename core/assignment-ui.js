@@ -41,6 +41,10 @@ import { getDefaultOptions, buildOptionsControls } from "./settings.js";
 // course act is.
 // ⛔ Only the SET form seeds from a bucket. Edit assignment keeps the options
 // the assignment was created with and never reads Settings — unchanged.
+// ⭐⭐ Đợt 427 (30/9/2026, thầy) — "course" NO LONGER means a bucket here: a
+// course act's new assignment starts from THE ACT'S OWN options (see
+// optsTheoAct in openAssignmentSetup). The Settings "course" bucket is now the
+// default for a NEW act created inside COURSES.
 function kindForAct(act) { return act && act.root === "courses" ? "course" : "homework"; }
 // Đợt 211 — splits an options object into the keys that say WHICH CONTENT is
 // played (contentMode / contentVariant / voiceVariant / contentSet, plus the
@@ -49,7 +53,7 @@ function kindForAct(act) { return act && act.root === "courses" ? "course" : "ho
 // ⭐ Đợt 252 — `activeVariant`/`variantLabel`: WHICH CLUE SET the class is being
 // handed (ENG1 · VI1 …). myLesson prints it beside the template on the teacher's
 // own row, so `onCreated` has to report it — see the note on that callback.
-import { splitViewOptions, activeVariant, variantLabel, contentSetsOf } from "./content-view.js";
+import { splitViewOptions, activeVariant, variantLabel, contentSetsOf, viewKeyOf, optionsForView } from "./content-view.js";
 // Đợt 245 — the Edit form converts an old assignment's penalties onto today's
 // scale before showing them, and stamps the result. See openAssignmentEdit.
 import { migrateActivityOptions, OPT_VER } from "./options-migrate.js";
@@ -525,9 +529,58 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe, duoiMau } = {
     // Decided once from the act itself: the bucket does not change when the
     // teacher swaps template below (the act is still the same course act).
     const hwKind = kindForAct(act);
-    let hwDraft = { ...getDefaultOptions(act.type, hwKind),
-                    ...splitViewOptions(act.options).selectors };
-    if (coNuaHomework) hwDraft.contentSet = "homework";
+    // ⭐⭐ Đợt 427 (30/9/2026, thầy) — ACT COURSES: OPTIONS BÀI GIAO = OPTIONS CỦA ACT.
+    // Thầy: "options bình thường thế nào thì assignment giống hệt… lần sau tạo
+    // assignment từ act đó thì cứ options mặc định của act đang có mà làm mặc định.
+    // Chỉ khi chỉnh riêng và START thì mới lưu riêng." ⇒ act trong COURSES KHÔNG còn
+    // đọc bucket Settings ▸ "Default course options" ở đây nữa (bucket đó nay là mặc
+    // định cho act MỚI tạo trong COURSES — main.js createBlankAct).
+    // Đọc đúng chỗ game đọc khi thầy mở act:
+    //   · cùng template: view (PRACTICE/HOMEWORK × TEXT/VOICE, `viewKeyOf`) đang đứng
+    //     = `act.options`; view khác = `act.viewOptions[key]`; view chưa từng mở =
+    //     mặc định course (y như engine gieo view mới cho act COURSES);
+    //   · đổi template trong form: `act.templateOptions[type]` nếu act từng mở ở
+    //     template đó (thầy chốt), chưa thì mặc định course của game mới.
+    // ⛔ Form KHÔNG ghi gì về act — chỉnh trong form chỉ vào bài giao (createAssignment
+    // chụp `hwDraft`). Act thường (ngoài COURSES) giữ nguyên luật bucket homework.
+    const theoAct = hwKind === "course";
+    const khoaViewTu = (chon) => viewKeyOf({
+      ...act, options: { ...(act.options || {}), ...splitViewOptions(chon || {}).selectors }
+    });
+    const optsTheoAct = (type, chon) => {
+      const sel = splitViewOptions(chon || {}).selectors;
+      let goc;
+      if (type === act.type) {
+        const k = khoaViewTu(chon);
+        goc = k === viewKeyOf(act) ? act.options
+            : (optionsForView(act, k) || getDefaultOptions(type, "course"));
+      } else {
+        goc = (act.templateOptions && act.templateOptions[type]) || getDefaultOptions(type, "course");
+      }
+      return { ...splitViewOptions(goc || {}).view, ...sel };
+    };
+    const chonBanDau = { ...splitViewOptions(act.options).selectors };
+    if (coNuaHomework) chonBanDau.contentSet = "homework";
+    let hwDraft = theoAct
+      ? optsTheoAct(act.type, chonBanDau)
+      : { ...getDefaultOptions(act.type, hwKind), ...chonBanDau };
+    // Đợt 427 — view form đang đứng + bản nháp từng view thầy đã chỉnh trong form
+    // (quay lại view cũ thì gặp lại đúng số vừa chỉnh, như bảng Options trong game).
+    let viewDangLa = theoAct ? khoaViewTu(hwDraft) : null;
+    const nhapTheoView = new Map();
+    function doiViewTheoAct() {
+      if (!theoAct || playType !== act.type) return false;
+      const k = khoaViewTu(hwDraft);
+      if (k === viewDangLa) return false;
+      nhapTheoView.set(viewDangLa, { ...hwDraft });
+      const sel = splitViewOptions(hwDraft).selectors;
+      const moi = nhapTheoView.get(k) || optsTheoAct(act.type, hwDraft);
+      // Sửa TẠI CHỖ: bảng Options đang cầm đúng object này (sel = draft).
+      Object.keys(hwDraft).forEach(x => { delete hwDraft[x]; });
+      Object.assign(hwDraft, splitViewOptions(moi).view, sel);
+      viewDangLa = k;
+      return true;
+    }
 
     const optBlock = block("Options");
     const optsHost = el("div", "aw-as-optshost");
@@ -547,11 +600,15 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe, duoiMau } = {
         playType = type;
         // ⚠️ Selectors carried, settings NOT (thầy chốt: "Về mặc định của game
         // mới"). A number named the same in two games is not the same number.
-        hwDraft = { ...getDefaultOptions(playType, hwKind),
-                    ...splitViewOptions(hwDraft).selectors };
+        // ⭐ Đợt 427 — act COURSES: options act đã nhớ cho template này (xem optsTheoAct).
+        const chon = { ...splitViewOptions(hwDraft).selectors };
         // Vấn đề 5 — a template swap rebuilds the draft from scratch, so the
         // HOMEWORK default has to be re-applied here too (same act, same sets).
-        if (coNuaHomework) hwDraft.contentSet = "homework";
+        if (coNuaHomework) chon.contentSet = "homework";
+        hwDraft = theoAct ? optsTheoAct(playType, chon)
+                          : { ...getDefaultOptions(playType, hwKind), ...chon };
+        nhapTheoView.clear();
+        viewDangLa = theoAct ? khoaViewTu(hwDraft) : null;
         // ⭐ Đợt 255/332 — đuôi tiêu đề đổi theo template (tôn trọng bản thầy
         // đã sửa tay: mất đuôi cũ thì thôi, không đắp).
         capNhatDuoi();
@@ -721,10 +778,14 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe, duoiMau } = {
         // ⚠️ `act`, always the ORIGINAL — it is what NAMES the clue sets. The
         // converted act has none (see the header note), so handing the played
         // type's act here would empty the very row the teacher chooses from.
+        // ⭐ Đợt 427 — `kind: "homework"` = HÌNH bảng của form bài giao (bỏ ô chết
+        // "Show answers at end"), cho cả act COURSES: "course" nay là bucket act.
         optsHost.append(buildOptionsControls(tpl, hwDraft,
-          { kind: hwKind, act, templatePicker, daGiao: bangDaGiao(),   // Đợt 337 — same panel shape either way
-            // ⭐ Đợt 332 — chỉ để ĐUÔI TIÊU ĐỀ đổi theo bộ nghĩa/text-voice.
-            onSelector: capNhatDuoi }));
+          { kind: "homework", act, templatePicker, daGiao: bangDaGiao(),
+            // ⭐ Đợt 332 — ĐUÔI TIÊU ĐỀ đổi theo bộ nghĩa/text-voice.
+            // ⭐ Đợt 427 — act COURSES: đổi sang view khác (PRACTICE/HOMEWORK,
+            // TEXT/VOICE) thì nạp options của act cho view đó rồi vẽ lại bảng.
+            onSelector: () => { capNhatDuoi(); if (doiViewTheoAct()) renderOptions(); } }));
       }).catch(() => {
         if (!optsHost.isConnected || seq !== optsSeq) return;
         optsHost.innerHTML = "";

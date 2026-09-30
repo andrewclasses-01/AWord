@@ -546,6 +546,22 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 427 (30/9/2026) — ACT COURSES: bài giao lấy OPTIONS CỦA ACT · "Default course options" đổi vai thành mặc định ACT MỚI trong COURSES · bỏ ô TEXT thừa ở form giao bài · phiên máy 1
+
+**Thầy:** "Khi tôi tạo act trong Khóa học (Course) cho một lớp, tôi muốn options khi mở lên sẽ theo đúng options ở trong phần COURSE của act… options bình thường thế nào thì assignment giống hệt. Lần sau tạo assignment từ act đó thì cứ options mặc định của act đang có mà làm mặc định. Chỉ khi chỉnh riêng và START thì mới lưu riêng, muốn sửa thì mở result ra sửa, sửa trong act ko ảnh hưởng tới assignment đã giao." + ảnh form: "thừa phần TEXT do ở đây không hề có lựa chọn text-voice… bỏ ô text đi, kéo dài ô quiz phủ luôn hàng đó."
+**Thầy chốt (AskUserQuestion):** (1) "Default course options" nay là mặc định khi TẠO ACT MỚI trong COURSES, không còn cho bài giao; (2) đổi template trong form: lấy options act đã nhớ cho template đó, chưa nhớ thì mặc định game mới; (3) chỉ act COURSES — act thường giữ "Default homework options".
+
+**Đã làm:**
+- `core/assignment-ui.js` `openAssignmentSetup`: act `root==="courses"` ⇒ `hwDraft` = `optsTheoAct()` — view đang đứng = `act.options`; view khác (PRACTICE/HOMEWORK × TEXT/VOICE, `viewKeyOf`) = `act.viewOptions[key]`; chưa từng mở = bucket course; template khác = `act.templateOptions[type]` hoặc bucket course. Đổi view trong form ⇒ `doiViewTheoAct()` nạp options view đó của act (sửa TẠI CHỖ `hwDraft`, bảng đang cầm đúng object) + nhớ bản nháp từng view. Bảng truyền `kind:"homework"` (hình form bài giao). Form KHÔNG ghi act. Vấn đề 5 (act có 2 nửa mở ở HOMEWORK) giữ nguyên.
+- `core/settings.js`: `isAssignmentKind` chỉ còn "homework" (Settings ▸ Default course options nay có ô "Show answers at end" như mặc định act) + `actKindForRoot(root)`.
+- `main.js`: `createBlankAct` lấy `getDefaultOptions(type, actKindForRoot(root))`; chữ Settings đổi "Set the options new COURSES activities start with".
+- `core/engine.js`: bảng Options trong game gieo view chưa mở của act COURSES từ bucket course.
+- `core/options-panel.js` + `core/app.css`: form giao bài, act không có voice (và không có hàng gộp PRACTICE/HOMEWORK) ⇒ bỏ ô TEXT, ô template phủ cả hàng (`.is-notext`). Bảng trong game/Settings/Edit assignment không đổi.
+- Sẵn đúng từ trước (kiểm lại, không sửa): bài giao chụp bản riêng (`snapshotOf`) ⇒ sửa act không lan sang bài đã giao; sửa bài giao qua Edit assignment.
+
+**Kiểm:** bàn thử `scratch/dot427-options-theo-act.html` **21/21 ĐẠT** (Firebase giả). `dot250-assign.html`: 2 HỎNG đều do đổi có chủ ý (nhãn "Show mistakes" Đợt 426; ô TEXT nay bỏ).
+**⬜ Còn ngỏ:** act tạo bằng đường IMPORT (Wordwall/file) vào COURSES vẫn lấy options theo đường riêng của nó — chưa đổi, chờ thầy.
+
 ## Đợt 426 (28/9/2026) — Ô tích form giao bài đổi nhãn "Show answers" → "SHOW MISTAKES" · phiên máy MSI
 
 **Thầy:** "đổi nhãn ô tích thành Show mistakes, kể cả mở trong myLesson hay AWord đều là ô Show mistakes. Mặc định sẽ luôn bật."

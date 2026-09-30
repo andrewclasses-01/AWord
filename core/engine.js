@@ -5074,7 +5074,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       if (!nextKey || nextKey === curKey) return;
       pending[curKey] = draft;                       // park the view we are leaving
       const seed = pending[nextKey] || optionsForView(viewAct, nextKey)
-        || (settingsMod ? settingsMod.getDefaultOptions(viewAct.type) : draft);
+        // ⭐ Đợt 427 — act COURSES gieo view mới từ "Default course options".
+        || (settingsMod ? settingsMod.getDefaultOptions(viewAct.type,
+              settingsMod.actKindForRoot(viewAct.root || originAct.root)) : draft);
       const seeded = splitViewOptions(seed).view;
       // ⭐⭐⭐ Đợt 260 — MANG THEO 5 TUỲ CHỌN SHOWDOWN SANG VIEW MỚI.
       // ⛔⛔ Nếu không có mấy dòng này: một view chưa từng ghé (ENG1 → VI1 lần đầu)

@@ -181,6 +181,10 @@ async function writeRemote(buckets) {
 // independent of "homework" (thầy chốt: a type with no saved course default
 // falls back to BUILTIN_DEFAULTS, NOT to the homework bucket). Which bucket a
 // form reads is decided in core/assignment-ui.js (`kindForAct`).
+// ⭐⭐ Đợt 427 (30/9/2026, thầy) — "course" ĐỔI VAI: nay là mặc định của ACT MỚI
+// tạo trong COURSES (main.js createBlankAct) và của view chưa từng mở trên act
+// COURSES (engine.js). Form giao bài cho act COURSES lấy options CỦA CHÍNH ACT,
+// không đọc bucket này nữa ⇒ "course" là bucket ACT, không còn là bucket bài giao.
 export const KINDS = ["activity", "homework", "course"];
 function bucketKey(kind) {
   return kind === "homework" ? "homeworkOptionsByType"
@@ -190,7 +194,10 @@ function bucketKey(kind) {
 // Both assignment buckets build the same panel shape (no dead "Show answers at
 // end" switch, see buildOptionsControls) — one test, so a fourth bucket later
 // cannot forget one of the two places.
-export function isAssignmentKind(kind) { return kind === "homework" || kind === "course"; }
+// ⭐ Đợt 427 — chỉ còn "homework" (xem ghi chú "course" ngay trên).
+export function isAssignmentKind(kind) { return kind === "homework"; }
+// ⭐ Đợt 427 — bucket mặc định cho một ACT theo cây nó nằm.
+export function actKindForRoot(root) { return root === "courses" ? "course" : "activity"; }
 
 // The stored default options for a type, merged over the built-ins so a missing
 // field always has a sane value. Returns a fresh copy (safe to mutate).
@@ -244,7 +251,7 @@ export function buildOptionsControls(tpl, options, { kind = "activity", act = nu
     wrap.append(el("div", "aw-set-hint", "This game's options could not be loaded."));
     return wrap;
   }
-  const isHw = isAssignmentKind(kind);   // Đợt 337 — "course" is an assignment bucket too
+  const isHw = isAssignmentKind(kind);   // Đợt 427 — "course" nay là bucket act (giữ ô Show answers)
 
   // ⭐⭐⭐ Đợt 245 (23/8/2026, thầy) — THE TWO ROWS THAT NAME THE CONTENT.
   //
