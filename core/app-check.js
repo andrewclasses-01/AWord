@@ -1,8 +1,8 @@
 /* ============================================================
    app-check.js — FIREBASE APP CHECK (27/09/2026, AWord Đợt 408 — phương án F sau tấn công Tr0ngX)
    ⛔ BẢN CHÉP myLesson web `js/app-check.js` (cùng một Firebase app). Sửa một bên thì chép sang bên kia.
-   ⚠️ Đợt 431 (30/9/2026) AWord ĐI TRƯỚC: hạn chờ reCAPTCHA (`HAN_CHO`) + khởi động TRỄ (`TRE_*`) —
-   bản myLesson CHƯA có (chờ phiên myLesson chép sang).
+   ✅ Đợt 431 (30/9/2026) hạn chờ reCAPTCHA (`HAN_CHO`) + khởi động TRỄ (`TRE_*`) — myLesson web
+   v1.199.2 đã chép sang ⇒ hai bản KHỚP LẠI (chỉ khác cấu hình/ghi chú riêng từng web).
    AWord: nạp bằng <script defer> ở <head> index/play/source (chạy TRƯỚC module); core/firebase.js dùng
    getApps() để KHÔNG initializeApp hai lần.
 
