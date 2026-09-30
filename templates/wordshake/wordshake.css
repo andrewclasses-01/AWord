@@ -172,16 +172,41 @@
 .aw-ws-ccols{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr);border-top:1px solid rgba(61,245,138,.2);position:relative}
 .aw-ws-ccols::before{content:"";position:absolute;left:50%;top:calc(2 * var(--ws-u,4px));bottom:0;border-left:1px dashed rgba(61,245,138,.2)}
 .aw-ws-ccols ol{list-style:none;margin:0;padding:calc(2 * var(--ws-u,4px)) calc(2.2 * var(--ws-u,4px)) 0;overflow:hidden;display:flex;flex-direction:column;gap:calc(.7 * var(--ws-u,4px))}
-/* Đợt 423 — too many found words even at 58 %: two columns a team, no meanings */
-.aw-ws-cen.is-ws-dense .aw-ws-ccols ol{display:grid;grid-template-columns:1fr 1fr;align-content:start;column-gap:calc(1.6 * var(--ws-u,4px))}
-.aw-ws-cen.is-ws-dense .aw-ws-ccols li span{display:none}
-.aw-ws-ccols li{display:flex;gap:calc(1.6 * var(--ws-u,4px));align-items:baseline;min-width:0}
+/* ⭐ Đợt 434 (mẫu scratch/ws-bangiua-mau) — a found word = two lines: WORD + IPA, then the
+   meaning. Short meaning: full size, one line. Too long (JS `is-long`): smaller + wraps,
+   never cut with "…". The lists no longer shrink (Đợt 423's `is-ws-dense` is gone here). */
+.aw-ws-ccols li{display:block;min-width:0;flex:none;padding-bottom:calc(.8 * var(--ws-u,4px));border-bottom:1px solid rgba(61,245,138,.08)}
+.aw-ws-ccols ol.is-r li{text-align:right}
+.aw-ws-lw{display:flex;align-items:baseline;gap:calc(1.4 * var(--ws-u,4px));flex-wrap:wrap}
+.aw-ws-ccols ol.is-r .aw-ws-lw{flex-direction:row-reverse}
 .aw-ws-ccols li b{font-family:"Saira",sans-serif;font-style:italic;font-weight:800;font-size:calc(3.9 * var(--ws-u,4px));letter-spacing:.03em;color:#9BFFC4;flex:none}
-.aw-ws-ccols ol.is-r li{flex-direction:row-reverse;text-align:right}
 .aw-ws-ccols ol.is-r li b{color:#B4F0FF}
-.aw-ws-ccols li span{font-family:"Be Vietnam Pro",sans-serif;font-size:calc(3 * var(--ws-u,4px));line-height:1.35;color:#8DB9A2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.aw-ws-ccols li > span{display:block;margin-top:calc(.2 * var(--ws-u,4px));font-family:"Be Vietnam Pro",sans-serif;font-size:calc(3 * var(--ws-u,4px));line-height:1.35;color:#8DB9A2;min-width:0}
+.aw-ws-ccols li > span.is-long,.aw-ws-cdf .aw-ws-cclue > span.is-long{font-size:calc(2.45 * var(--ws-u,4px));line-height:1.3}
+.aw-ws-cdf .aw-ws-cclue > span{min-width:0}
+/* markLong() measures with this on for a moment: one line, how wide would it be? */
+.aw-ws-meas{display:inline-block !important;white-space:nowrap !important;flex:none !important}
+/* IPA: Saira has no IPA letters ⇒ a system face that does */
+.aw-ws-ipa{font-family:"Segoe UI","Noto Sans","Helvetica Neue",Arial,sans-serif;font-style:normal;font-weight:500;font-size:calc(2.7 * var(--ws-u,4px));letter-spacing:0;color:#7FD8A6;opacity:.9;white-space:nowrap;text-shadow:none}
+.aw-ws-ccols ol.is-r .aw-ws-ipa{color:#8FD9F0}
+.aw-ws-cbl .aw-ws-ipa{margin-left:calc(1.6 * var(--ws-u,4px))}
 .aw-ws-cdefs{display:flex;flex-direction:column;gap:calc(1.6 * var(--ws-u,4px));min-height:0;overflow:hidden;flex:1}
 .aw-ws-cdefs.is-short{flex:none;overflow:visible}
+.aw-ws-cdefs > .aw-ws-cdf{flex:none}
+/* ⭐ Đợt 434 — lists scroll (finger / wheel) with NO scrollbar; more below ⇒ the bottom fades
+   and a bobbing double chevron in the team colour shows up (tap = slide down) */
+.aw-ws-lst{position:relative;min-height:0;display:flex;flex-direction:column}
+.aw-ws-cen > .aw-ws-lst{flex:1}
+.aw-ws-ccols > .aw-ws-lst{height:100%}
+.aw-ws-lst > .aw-ws-sc{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;overscroll-behavior:contain;padding-bottom:calc(8 * var(--ws-u,4px))}
+.aw-ws-lst > .aw-ws-sc::-webkit-scrollbar{display:none}
+.aw-ws-sc.has-more{-webkit-mask-image:linear-gradient(#000 calc(100% - 11 * var(--ws-u,4px)),transparent);mask-image:linear-gradient(#000 calc(100% - 11 * var(--ws-u,4px)),transparent)}
+.aw-ws-more{position:absolute;left:50%;bottom:calc(.6 * var(--ws-u,4px));transform:translateX(-50%);z-index:3;width:calc(9 * var(--ws-u,4px));height:calc(6 * var(--ws-u,4px));
+  display:grid;place-items:center;border:0;padding:0;margin:0;cursor:pointer;background:none;color:#3DF58A;opacity:0;pointer-events:none;transition:opacity .3s ease}
+.aw-ws-more.is-r{color:#37D7FF}
+.aw-ws-more.is-on{opacity:1;pointer-events:auto}
+.aw-ws-more svg{width:100%;height:100%;filter:drop-shadow(0 0 calc(1.4 * var(--ws-u,4px)) currentColor);animation:aw-ws-bob 1.4s ease-in-out infinite}
+@keyframes aw-ws-bob{0%,100%{transform:translateY(-12%)}50%{transform:translateY(16%)}}
 .aw-ws-cdf{display:grid;grid-template-columns:calc(5 * var(--ws-u,4px)) 1fr calc(5 * var(--ws-u,4px));gap:calc(1.4 * var(--ws-u,4px));align-items:center;border-radius:calc(1.4 * var(--ws-u,4px));background:rgba(61,245,138,.06);border:1px solid rgba(61,245,138,.18);padding:calc(1.4 * var(--ws-u,4px)) calc(1.8 * var(--ws-u,4px))}
 .aw-ws-cdf .aw-ws-cclue{justify-content:flex-start}
 .aw-ws-cbl{font-family:"Saira",sans-serif;font-weight:800;font-size:calc(3.9 * var(--ws-u,4px));letter-spacing:.24em;color:rgba(61,245,138,.45)}

@@ -331,9 +331,46 @@ function fitUnit(box, prop, base, inner) {
   while (over() && k > .4) set(k -= .06);
 }
 const unitOf = (node, prop) => node ? parseFloat(getComputedStyle(node).getPropertyValue(prop)) || 0 : 0;
+// ⭐ Đợt 434 (thầy, 30/9/2026, mẫu `scratch/ws-bangiua-mau/`) — the match's CENTRE board no
+// longer shrinks (fitUnit above stays for the single frame's right panel only). Its lists
+// scroll by finger/wheel with NO scrollbar: the bottom fades and a bobbing double chevron
+// in the team colour says "more below" (tap it = slide down); gone at the bottom. A
+// meaning too long for one line at full size gets `is-long` (smaller, wraps to 2 lines —
+// never "…"). Found words carry their IPA (only AFTER they are made: before is a give-away).
 function fitCentre(host) {
   const cen = host && host.querySelector(":scope > .aw-ws-cen");
-  if (cen) fitUnit(cen, "--ws-u", host.clientWidth / 100, ".aw-ws-cdefs, .aw-ws-ccols ol");
+  if (!cen) return;
+  markLong(cen);
+  cen.querySelectorAll(".aw-ws-sc").forEach(moreOf);
+}
+// ⚠️ The room is read BEFORE the one-line trial: while the text is on one line the grid
+// columns around it grow to fit it (1fr has an auto minimum), so "does it overflow its
+// box" would always answer no.
+function markLong(root) {
+  root.querySelectorAll(".aw-ws-ccols li > span, .aw-ws-cdf .aw-ws-cclue > span").forEach(sp => {
+    sp.classList.remove("is-long");
+    const par = sp.parentElement, cs = getComputedStyle(par);
+    let room = par.clientWidth;   // (neither box has side padding)
+    // a flex row (the clue + its 🔊 button) shares the line; a block (li: WORD line above) does not
+    if (cs.display.includes("flex")) for (const sib of par.children) if (sib !== sp) room -= sib.offsetWidth + (parseFloat(cs.columnGap) || 0);
+    sp.classList.add("aw-ws-meas");
+    const wide = sp.getBoundingClientRect().width > room + 1;
+    sp.classList.remove("aw-ws-meas");
+    if (wide) sp.classList.add("is-long");
+  });
+}
+function moreOf(sc) {
+  const btn = sc.parentNode && sc.parentNode.querySelector(":scope > .aw-ws-more");
+  const more = sc.scrollHeight - sc.clientHeight - sc.scrollTop > 4;
+  sc.classList.toggle("has-more", more);
+  if (btn) btn.classList.toggle("is-on", more);
+}
+const CHEVRONS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m7 6 5 5 5-5"/><path d="m7 13 5 5 5-5"/></svg>';
+const moreBtn = side => `<button type="button" class="aw-ws-more${side === 1 ? " is-r" : ""}" aria-label="More">${CHEVRONS}</button>`;
+// "/ˈwɪndi/" whatever the source wrote (with or without the slashes / brackets)
+function ipaHtml(ipa) {
+  const t = String(ipa || "").trim().replace(/^[\/\[]+|[\/\]]+$/g, "").trim();
+  return t ? `<em class="aw-ws-ipa">/${esc(t)}/</em>` : "";
 }
 
 // ---------------- Đợt 425: letter hints — nobody gets stuck ----------------
@@ -475,7 +512,11 @@ function attachHost(S, host) {
   S.ro.observe(host);
   unit();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (S.host === host) fitCentre(host); });
+  // Đợt 434 — scroll does not bubble: listen in the capture phase for every list inside
+  host.addEventListener("scroll", e => { if (e.target.classList && e.target.classList.contains("aw-ws-sc")) moreOf(e.target); }, { capture: true, passive: true });
   host.addEventListener("click", e => {
+    const m = e.target.closest(".aw-ws-more");
+    if (m) { const sc = m.parentNode.querySelector(".aw-ws-sc"); if (sc) sc.scrollBy({ top: sc.clientHeight * .7, behavior: "smooth" }); return; }
     const b = e.target.closest("[data-voice]"); if (!b || !S.items) return;
     const it = S.items.find(x => x.up === b.dataset.voice); if (it) S.voice.toggle(it.voice, b);
   });
@@ -511,20 +552,26 @@ function drawCentre(S) {
   const host = S.host; if (!host || !S.items) return;
   if (S.hint) S.hint.ensure(matchHintKey(S));
   const byUp = up => S.items.find(x => x.up === up);
+  // Đợt 434 — line 1 = WORD + IPA, line 2 = the meaning
   const col = side => S.log.filter(f => f.side === side)
-    .map(f => `<li data-k="${esc(f.w.toLowerCase())}"><b>${esc(f.w.toUpperCase())}</b>${f.m ? `<span>${esc(f.m)}</span>` : ""}</li>`).join("");
+    .map(f => `<li data-k="${esc(f.w.toLowerCase())}"><div class="aw-ws-lw"><b>${esc(f.w.toUpperCase())}</b>${ipaHtml(f.ipa)}</div>${f.m ? `<span>${esc(f.m)}</span>` : ""}</li>`).join("");
   // Đợt 387 — where every listed word sits BEFORE the redraw, so the columns
   // can slide instead of jump (a new word drops in on top, the rest move down).
   const before = new Map();
-  host.querySelectorAll(".aw-ws-ccols li[data-k]").forEach(li => before.set(li.parentNode.className + "|" + li.dataset.k, li.getBoundingClientRect().top));
-  const cols = `<div class="aw-ws-ccols"><ol class="is-l">${col(0)}</ol><ol class="is-r">${col(1)}</ol></div>`;
+  host.querySelectorAll(".aw-ws-ccols li[data-k]").forEach(li => before.set(li.parentNode.dataset.sc + "|" + li.dataset.k, li.getBoundingClientRect().top));
+  // Đợt 434 — the redraw below replaces every list: keep where each one was scrolled to,
+  // except a team column that just got a new word (it lands on TOP ⇒ back to the top)
+  const scrolled = new Map();
+  host.querySelectorAll(".aw-ws-sc[data-sc]").forEach(sc => scrolled.set(sc.dataset.sc, { top: sc.scrollTop, n: sc.children.length }));
+  const slot = (key, cls, inner, side) => `<div class="aw-ws-lst"><${key === "defs" ? "div" : "ol"} class="${cls} aw-ws-sc" data-sc="${key === "defs" ? "defs:" + S.r : key}">${inner}</${key === "defs" ? "div" : "ol"}>${moreBtn(side)}</div>`;
+  const cols = `<div class="aw-ws-ccols">${slot("l", "is-l", col(0), 0)}${slot("r", "is-r", col(1), 1)}</div>`;
   const H = S.hint;
   const defRow = up => {
     const it = byUp(up); if (!it) return "";
     const who = S.found.get(up);
     const done = who === 0 || who === 1;
     const given = who === -1;             // Đợt 425 — turned over by the hints: nobody's
-    const bl = done ? esc(it.word.toUpperCase()) : given ? hintHtml(it.up, 0, true)
+    const bl = done ? esc(it.word.toUpperCase()) + ipaHtml(it.ipa) : given ? hintHtml(it.up, 0, true)
       : H && H.key === up && H.k ? hintHtml(it.up, H.k) : blanks(it.up.length);
     return `<div class="aw-ws-cdf${done ? " is-done" : given ? " is-given" : ""}"><span class="aw-ws-mk">${done && who === 0 ? arrow(0) : ""}</span>` +
       `<div>${clueHtml(S, it, false)}<div class="aw-ws-cbl">${bl}</div></div>` +
@@ -540,16 +587,21 @@ function drawCentre(S) {
     const P = S.plan && S.plan[S.r];
     const rows = P ? P.words.map(defRow).join("") : "";
     html = S.mode === "list"
-      ? `<div class="aw-ws-cen"><div class="aw-ws-cprog">${S.r + 1} / ${S.plan.length}</div><div class="aw-ws-cdefs">${rows}</div></div>`
+      ? `<div class="aw-ws-cen"><div class="aw-ws-cprog">${S.r + 1} / ${S.plan.length}</div>${slot("defs", "aw-ws-cdefs", rows, 0)}</div>`
       : `<div class="aw-ws-cen"><div class="aw-ws-cprog">${S.r + 1} / ${S.plan.length}</div><div class="aw-ws-cdefs is-short">${rows}</div>${cols}</div>`;
   }
   host.innerHTML = html;
   if (H) H.attach(host);   // Đợt 425 — the bar lives on the board's top edge (innerHTML just took it off)
-  fitCentre(host);   // Đợt 423 — before the slide below measures where the words landed
+  fitCentre(host);   // Đợt 423/434 — before the slide below measures where the words landed
+  // (after fitCentre: `is-long` changes the heights, a scroll put back earlier would drift)
+  host.querySelectorAll(".aw-ws-sc[data-sc]").forEach(sc => {
+    const was = scrolled.get(sc.dataset.sc);
+    if (was && !(sc.tagName === "OL" && sc.children.length > was.n)) { sc.scrollTop = was.top; moreOf(sc); }
+  });
   if (before.size || S.log.length) {
     const ease = "cubic-bezier(.22,.9,.3,1)";
     host.querySelectorAll(".aw-ws-ccols li[data-k]").forEach(li => {
-      const was = before.get(li.parentNode.className + "|" + li.dataset.k);
+      const was = before.get(li.parentNode.dataset.sc + "|" + li.dataset.k);
       if (was == null) {
         // only the newest words (top of a column) are new; a first draw of a full list stays still
         if (before.size || li === li.parentNode.firstElementChild)
@@ -754,7 +806,7 @@ const wordshakeTemplate = {
 
     let items = [...(activity.content?.items || [])]
       .filter(it => it && lettersOf(it.word).length >= 2)
-      .map(it => ({ word: String(it.word).trim(), up: lettersOf(it.word), clue: it.clue || "", voice: it.voice, hideText: it.hideText, src: it }));
+      .map(it => ({ word: String(it.word).trim(), up: lettersOf(it.word), clue: it.clue || "", ipa: it.ipa || "", voice: it.voice, hideText: it.hideText, src: it }));
     if (opt.shuffleQuestions && !fctl) items = shuffle(items);
     const total = items.length;
     root.innerHTML = "";
@@ -953,7 +1005,7 @@ const wordshakeTemplate = {
         s.solved = true; score++; M1.state = "is-good"; m1Patch(); ui.setScore(score);
         say("ok", 2); bubble("ok", "+1"); pour(wrap.querySelector(".aw-ws-slots"), "+1");
         if (fctl) {
-          S.log.unshift({ w: it.word, side, m: "" }); notify();
+          S.log.unshift({ w: it.word, side, m: voiceView(activity, it).hideText ? "" : it.clue, ipa: it.ipa }); notify();   // Đợt 434 — meaning + IPA in the column too
           fctl.wordDone(side, { index: M1.i, correct: true });   // the referee moves both boards on
         } else later(m1Next, 850);
       } else {
@@ -1088,7 +1140,7 @@ const wordshakeTemplate = {
         if (i >= 0) { st[i].solved = true; st[i].typed = w; }
         score++; pts += p;
         const m = mode === "free" && i >= 0 && !voiceView(activity, items[i]).hideText ? items[i].clue : "";
-        if (S) { S.found.set(w, side); if (mode === "free") S.log.unshift({ w: lw, side, m, p }); }
+        if (S) { S.found.set(w, side); if (mode === "free") S.log.unshift({ w: lw, side, m, p, ipa: i >= 0 ? items[i].ipa : "" }); }
         else if (mode === "free") found3.unshift({ w: lw, m, les: true, p });
         kind = "ok"; sym = "+" + p;
       } else if (mode === "free") {

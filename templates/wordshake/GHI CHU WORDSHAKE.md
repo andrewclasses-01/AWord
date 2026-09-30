@@ -1,5 +1,11 @@
 # GHI CHÚ WORDSHAKE — template #21 + game cố định trong GAMES
 
+## ⭐ Đợt 434 (30/9/2026) — bảng giữa Fight: phiên âm · nghĩa dài · cuộn có mũi tên
+- Từ đã làm: `TỪ /ipa/` (chỉ sau khi làm được) ở cột đội + ô Word list; `items[].ipa` từ core `resolveItem`. Từ điển Free words chưa có IPA.
+- Nghĩa: `markLong()` ⇒ `is-long` nhỏ + 2 dòng khi 1 dòng không vừa (đọc chỗ trống TRƯỚC khi thử 1 dòng — cột 1fr nở theo chữ).
+- Đảo Đợt 423 cho bảng giữa: KHÔNG thu nhỏ; `.aw-ws-lst > .aw-ws-sc` cuộn ẩn thanh, `.aw-ws-more` mũi tên màu đội; `scrollTop` nhớ qua `data-sc` sau mỗi `drawCentre`. `fitUnit` chỉ còn cho chơi đơn.
+- Mẫu: `scratch/ws-bangiua-mau/` · bàn thử: `scratch/ws-dot434-fight.html`. Chi tiết: GHI CHU DU AN.md chặng Đợt 434.
+
 ## ⭐ Đợt 425 (28/9/2026) — gợi ý từng chữ + thanh sáng 15 s
 - `createHintClock` (1/trận trong SHARED, 1/lượt đơn): 15 s không có TỪ CỦA BÀI nào ⇒ hiện thêm 1 chữ (trái → phải) của từ đích
   (Mode 1: từ đang hỏi; Mode 2/3: từ ngắn nhất chưa làm); nghỉ 1,4 s; chạy lại. Bước cuối = lật cả từ, tính bỏ lỡ, qua từ/bảng.

@@ -546,6 +546,27 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 434 (30/9/2026) — A SHOW SPEED FIGHT: BẢNG GIỮA có PHIÊN ÂM · nghĩa dài không bị cắt · CUỘN/VUỐT có mũi tên thay vì thu nhỏ · phiên máy MSI · ⬜ CHƯA COMMIT (chờ thầy lệnh)
+
+**Thầy:** bảng giữa (Fight) — (1) các từ có thêm phiên âm; (2) nghĩa dài không bị cắt (nhỏ lại hoặc 2 dòng chữ nhỏ); (3) bỏ thanh cuộn, số từ vượt khung thì có mũi tên ở đáy báo cuộn/vuốt được. "Thiết kế trước" ⇒ mẫu `scratch/ws-bangiua-mau/index.html` (bị ignore; dùng CSS thật của game, HIỆN TẠI vs ĐỀ XUẤT, 3 mode, nút thêm từ) ⇒ thầy: "làm theo mẫu đề xuất vào game luôn".
+⚠️ **Ý (3) ĐẢO quyết định Đợt 423** ("mọi từ trong tầm nhìn, không kéo cuộn" ⇒ thu nhỏ tới 40 % + `is-ws-dense` bỏ nghĩa). Nay bảng giữa KHÔNG thu nhỏ nữa; `fitUnit` chỉ còn dùng cho bảng phải của CHƠI ĐƠN (không đổi).
+
+**Làm (chỉ `templates/wordshake/wordshake.js` + `.css`, không đụng core):**
+- Phiên âm: `items` giữ `ipa: it.ipa` — core `resolveItem()` (content-view.js) đã đưa phiên âm của act WORDS lên `item.ipa` sẵn, template chỉ việc đọc. `ipaHtml()` bỏ `/ [ ]` sẵn có rồi bọc `/…/` (`em.aw-ws-ipa`, font hệ thống Segoe UI/Noto Sans vì Saira không có chữ IPA). CHỈ hiện SAU khi làm được (trước là lộ đáp án): cột từ của đội (`S.log` mang thêm `ipa`) + ô Word list đã làm (`WORD /ipa/`).
+- Cột từ đã tìm: `li` = 2 dòng — `.aw-ws-lw` (TỪ + phiên âm; đội phải lật chiều) rồi nghĩa. Fight **One word** nay CŨNG ghi nghĩa vào cột (trước `m: ""`) — trừ act chỉ-giọng (`hideText`), như luật Free words.
+- Nghĩa dài: `markLong()` — vừa 1 dòng ở cỡ đủ thì giữ; không vừa ⇒ `is-long` (2,45u thay 3u; nghĩa ô Word list 2,8u thay 3,4u), xuống dòng, KHÔNG "…". ⛔ Bẫy gặp khi làm: đo `scrollWidth > clientWidth` trên chính ô chữ luôn ra "vừa" vì cột lưới `1fr` (min auto) NỞ theo chữ lúc thử 1 dòng ⇒ phải đọc chỗ trống TRƯỚC (bề rộng khung cha, khung flex thì trừ nút 🔊 + gap), rồi mới thử `aw-ws-meas` (inline-block nowrap).
+- Cuộn: khung `.aw-ws-lst` > `.aw-ws-sc` (`overflow-y:auto`, `scrollbar-width:none` + `::-webkit-scrollbar` ẩn, `overscroll-behavior:contain`) cho 2 cột đội + danh sách Word list; Free words: 3 ô từ bài vẫn cố định (`is-short`), chỉ 2 cột cuộn. Còn nữa ⇒ `has-more` (đáy mờ bằng mask) + nút `.aw-ws-more` (2 chevron Lucide, màu đội, nhún 1,4 s); bấm = cuộn 70 % khung; tới đáy tắt. Nghe `scroll` ở pha capture trên host (scroll không nổi bọt).
+- `drawCentre` dựng lại innerHTML mỗi lần ⇒ nhớ `scrollTop` từng danh sách theo `data-sc` (`l` / `r` / `defs:<vòng>`) rồi đặt lại SAU `fitCentre` (đặt trước thì `is-long` đổi chiều cao làm lệch: đo được 18 → 2 px); cột đội VỪA có từ mới (từ mới rơi ở trên) ⇒ về đầu. Khoá trượt Đợt 387 đổi từ `className` sang `dataset.sc`.
+- ⚠️ Tên `.aw-ws-slot` đã là ô chữ bàn Mode 1 ⇒ khung cuộn đặt `.aw-ws-lst` (đã grep: các tên mới không trùng ai).
+
+**Kiểm (aword-dev 5591, bàn thử mới `scratch/ws-dot434-fight.html?mode=…` = dot423-ws-fight + phiên âm + 2 nghĩa dài; bấm chữ bằng sự kiện thật trên bàn):** Word list: CLOUDY/STORM/FROST hiện `/ˈklaʊdi/ /stɔːm/ /frɒst/`, nghĩa "sương giá; lớp băng…" `is-long` 2 dòng, mũi tên bật khi 220 > 202 px, bấm ⇒ cuộn tới đáy + tắt, có từ mới ⇒ vẫn ở 18 px · One word: 6 từ 2 đội đủ phiên âm + nghĩa, 2 nghĩa dài `is-long`, cột vừa khít ⇒ không mũi tên · Free words: từ điển (ARCH/CREDO/ERODE/RODENT) có nghĩa, KHÔNG phiên âm; cột trái 152 > 82 ⇒ mũi tên · thanh cuộn rộng 0 · chơi đơn test.html không đổi · 0 lỗi console.
+
+**VIỆC ĐANG CHỜ:**
+- ⬜ Thầy lệnh commit + push (chưa đẩy).
+- ⬜ Từ tự do ở Free words chưa có phiên âm: `ws-dict.txt` (~18k từ) chỉ có nghĩa. Muốn có ⇒ bổ sung cột IPA cho từ điển (cần nguồn IPA kiểu Anh cho khớp phiên âm WORDS).
+- ⬜ Act đổi sang A Show Speed từ template KHÁC (qua `core/convert.js`) mất phiên âm: `buildContent` nhánh wordshake không mang `ipa` (1 dòng core — chưa làm). Act WORDS thì có đủ.
+- ⬜ TOMKO: cỡ phiên âm/nghĩa nhỏ trên màn 86", mũi tên đủ rõ chưa, vuốt ngón tay trên cột.
+
 ## Đợt 433 (30/9/2026) — BẢNG XẾP HẠNG ĐỌC "BẢNG ĐIỂM TỐT NHẤT" (1 lượt đọc/ván) · phiên máy 1
 
 **Vì sao:** Firestore đọc 1–1,5 TRIỆU lượt/ngày (đo Cloud Monitoring 23–30/9); bảng xếp hạng AWord tải CẢ KHO scores (tới 800 dòng) 2 lần mỗi ván ⇒ ~350–500 nghìn/ngày. Thầy duyệt kế hoạch giảm lượt đọc A+B+C (hỏi kỹ: KHÔNG mất lượt nộp/chi tiết câu nào — chỉ đổi cách ĐỌC để dựng bảng).
