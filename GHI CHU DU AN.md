@@ -682,7 +682,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 **Thầy báo:** dashboard myLesson (pop-up em THANH PHƯƠNG A1A, STAGE LSB1-S1.T1.P2) ghi mọi lượt là 27/9, trong khi thầy nhìn tận mắt em làm 28/9. Vài em khác "cũng thế".
 
 **Điều tra (đo thật trên kho sống):** AWord ghi `createdAt` = `Date.now()` của MÁY EM; Firestore tự ghi `createTime` = giờ MÁY CHỦ. So hai giờ trong `assignments/*/scores` (119 act, 521 cặp em-lớp từ 14/9, đọc ĐỦ mọi trang):
-- THANH PHƯƠNG (`TRANTHANHPHUONG06072015`): máy chậm đúng **1 ngày 3 phút** ở cả 80 lượt (vd em 16:21 27/9 · máy chủ 16:23 28/9) ⇒ cả biểu đồ của em lùi 1 ngày (lượt "24/9" thật ra là tối 25/9).
+- THANH PHƯƠNG (`<mã HS đã ẩn>`): máy chậm đúng **1 ngày 3 phút** ở cả 80 lượt (vd em 16:21 27/9 · máy chủ 16:23 28/9) ⇒ cả biểu đồ của em lùi 1 ngày (lượt "24/9" thật ra là tối 25/9).
 - Không em nào khác lệch cả ngày; lệch vài phút: TRÍ CÔNG (A1B) nhanh ~25 phút, TRUNG HẢI (NTK9) + MINH PHƯƠNG (A1A) nhanh 4–5 phút. Lượt "khác ngày" lẻ tẻ còn lại = nháp gửi bù lần mở sau (trễ dương), không phải đồng hồ.
 - ⛔ Bẫy lúc đo: script đầu dùng `orderBy=createdAt desc` + 1 trang 300 ⇒ lượt của THANH PHƯƠNG (createdAt CŨ hơn thật) rơi ra ngoài trang đầu, tưởng "không có". Phải đọc ĐỦ mọi trang.
 - `practiceLog` cần phiên thầy (403 với apiKey) nên chưa quét được.
