@@ -546,6 +546,17 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 431 (30/9/2026) — iOS/iPadOS 27 CHẬM / KHÔNG VÀO ĐƯỢC GAME + VÁ LỖI CÓ SẴN màn nhập tên · phiên máy 1
+
+**Thầy:** "rất lag, chậm, đôi khi không load được game khi dùng iOS 27, iPadOS 27". Thầy "ok build" mục 1–4 (mục 5 Rocket race 3D thu ảnh: để sau).
+**Đã làm:**
+- ⛔⛔ **LỖI CÓ SẴN (bắt được khi thử):** Đợt 414 (27/9) gọi `escapeText` ở `showNameScreen` nhưng play.js KHÔNG có hàm đó ⇒ ReferenceError ⇒ MỌI link bài giao không qua myLesson (QR / link trần, không `&n=`) đứng mãi "Loading..." từ 27/9 — MỌI máy, không riêng iOS. Đã xác nhận trên bản live trước khi vá. Vá: thêm `escapeText` cục bộ (bản sao engine.js).
+- `core/app-check.js`: (a) HẠN CHỜ 4s cho `provider.getToken()` (bọc trên chính đối tượng ReCaptchaEnterpriseProvider — SDK 12.9.0 gọi `state.provider.getToken()`); quá hạn ⇒ SDK trả mã giả, Firestore đi tiếp; nghỉ 60s không thử lại. Trước đó reCAPTCHA treo (Safari chống dò vân tay, chặn quảng cáo…) là MỌI lượt Firestore treo theo. (b) khởi động TRỄ 4s sau `load` (nhúng trong myLesson 10s — thầy chốt chạy trễ chứ không bỏ, để số liệu theo dõi đúng). Vẫn gắn app MẶC ĐỊNH (không tách app riêng như đề xuất đầu) để lượt đọc/ghi SDK vẫn mang mã ⇒ số liệu theo dõi đúng. ⚠️ Bản myLesson `js/app-check.js` CHƯA chép.
+- `play.js`: đọc bài quá 8s ⇒ màn "Loading is taking too long" + nút TRY AGAIN (tải lại trang), vẫn chờ tiếp nếu lượt đọc về muộn; màn "No internet connection" / "This game could not be opened" cũng có nút TRY AGAIN.
+- `core/vn-guard.js`: iPad Safari xưng "Macintosh" ⇒ nhận thêm `Macintosh && maxTouchPoints > 1` là máy cảm ứng (trước bị coi là máy bàn ⇒ phím ảo `code ""` bị giữ 150ms như gói UniKey).
+**Kiểm:** localhost (reCAPTCHA không cấp mã được = tình huống hỏng): bài `bw4q96` mở tới màn nhập tên, 3 lượt `getAssignment` SAU khi App Check khởi động: 0/89/120ms (không treo); màn nhập tên hiện đủ ô tên + START.
+**⬜ Chờ thầy:** thử trên iPhone/iPad thật (link QR, link trong myLesson, gõ chữ Type the answer trên iPad). ⬜ mục 5 (Rocket race 3D) + tải đôi file do mẹo fetch() — để sau.
+
 ## Đợt 430 (30/9/2026) — ANAGRAM + UNJUMBLE "On submit" HẾT LAG · phiên máy 1 · ✅ ĐÃ COMMIT + PUSH `11a0562` + LIVE 2/2 mã băm
 
 **Thầy:** "Nhiều học sinh kêu anagram/on submit rất lag." Điều tra: KHÔNG phải máy chậm (mỗi cú chạm 1–4ms) mà game CHẶN cú bấm: (1) sau Submit lật 260ms/ô, trong lúc đó Next SÁNG mà bấm không ăn (`busy`) — từ 14 chữ chờ 4,4s, 23 chữ 6,3s; (2) chạm trả chữ về khoá `busy` suốt lúc chữ bay ⇒ chạm 5 ô nhanh chỉ ăn 3; (3) mỗi lần mount tạo 1 `AudioContext` cho loa nhảy cột, `cleanup()` không đóng ⇒ Start again chồng bộ chạy ngầm.

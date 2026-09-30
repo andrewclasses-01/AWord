@@ -117,11 +117,18 @@ async function start() {
 
   showMessage("Loading...", "");
   let assignment = null;
+  // ⭐ Đợt 431 (30/9/2026) — iPhone/iPad hay kẹt "Loading..." mãi: lượt đọc bài không
+  // có hạn chờ. Quá 8s thì hiện nút "Try again" (tải lại trang) nhưng VẪN chờ tiếp —
+  // lượt đọc về muộn thì đi tiếp bình thường, màn tên em thay chỗ màn này.
+  const cham = setTimeout(() => showMessage("Loading is taking too long",
+    "Check your connection, then press Try again.", true), 8000);
   try {
     assignment = await getAssignment(code);
   } catch (e) {
-    return showMessage("No internet connection", "Check your connection and open the link again.");
+    clearTimeout(cham);
+    return showMessage("No internet connection", "Check your connection and open the link again.", true);
   }
+  clearTimeout(cham);
   if (!assignment || !assignment.activity) {
     return showMessage("Assignment not found", "This link may be old. Ask your teacher for a new one.");
   }
@@ -188,12 +195,27 @@ function footer() {
   return f;
 }
 
-function showMessage(title, sub) {
+function showMessage(title, sub, thuLai) {
   const wrap = shell();
   const card = el("div", "aw-login");
   card.append(el("div", "aw-login-title", title));
   if (sub) card.append(el("div", "aw-login-sub", sub));
+  // Đợt 431 — nút tải lại cho các màn lỗi mạng (iPhone/iPad không có nút reload dễ thấy khi nhúng trong myLesson).
+  if (thuLai) {
+    const b = el("button", "aw-as-btn aw-as-primary aw-stu-go", "TRY AGAIN");
+    b.type = "button";
+    b.onclick = () => location.reload();
+    card.append(b);
+  }
   wrap.append(card, footer());
+}
+
+// ⛔⛔ Đợt 431 (30/9/2026) — Đợt 414 (27/9) gọi `escapeText` ở màn nhập tên nhưng play.js
+// KHÔNG có hàm này (nó chỉ nằm RIÊNG trong engine.js / assignment-ui.js, không export) ⇒
+// ReferenceError ⇒ mọi link bài giao KHÔNG qua myLesson (QR, link trần — không có `&n=`)
+// đứng mãi ở "Loading..." từ 27/9. Bản sao y hệt engine.js.
+function escapeText(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function showNameScreen(assignment) {
@@ -250,7 +272,7 @@ async function play(assignment, studentName, className, studentMa) {
     await ensureTemplate(activity.type);
   } catch (e) {
     return showMessage("This game could not be opened",
-      "Check your connection and open the link again.");
+      "Check your connection and open the link again.", true);
   }
 
   app.innerHTML = "";

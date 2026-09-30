@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **30/9/2026 Đợt 431 — iOS/iPadOS chậm + VÁ màn nhập tên hỏng từ 27/9** (link bài giao không qua myLesson đứng "Loading..." do thiếu `escapeText`); App Check có hạn chờ 4s + khởi động trễ; đọc bài quá 8s có nút TRY AGAIN; vn-guard nhận đúng iPad.
 > ✏️ **30/9/2026 Đợt 430 — Anagram + Unjumble "On submit" hết lag**: lật đáp án nhanh gấp đôi, tối đa 1,5s; ‹/Next MỜ trong lúc lật (trước sáng mà bấm không ăn); Anagram chạm trả chữ không còn bị nuốt cú chạm + đóng AudioContext khi xong ván.
 > ✏️ **30/9/2026 Đợt 429 — act IMPORT vào COURSES dùng "Default course options"** (giữ bộ chọn nội dung của file) + vá lỗi có sẵn: act mới nay đóng dấu `optVer` lúc lưu (trước đó điểm trừ bị nhân lại khi đọc).
 > ✏️ **30/9/2026 Đợt 428 — form Edit assignment cũng bỏ ô TEXT đứng một mình** (act không voice).

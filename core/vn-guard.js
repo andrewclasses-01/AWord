@@ -28,7 +28,12 @@
 //   ⚠️ Nhánh này CHƯA đo trên máy thật (máy 1 chỉ có UniKey).
 
 const UA = typeof navigator !== "undefined" ? (navigator.userAgent || "") : "";
-const MOBILE = /Android|iPhone|iPad|iPod/i.test(UA);
+// ⭐ Đợt 431 (30/9/2026) — Safari iPad (iPadOS 13+) mặc định XƯNG LÀ "Macintosh" nên
+// dòng UA không có chữ iPad ⇒ bị coi là máy tính bàn ⇒ phím bàn phím ảo (code "")
+// bị `isInjected` tưởng là gói UniKey, giữ lại 150ms rồi mới chèn. Máy Mac thật có
+// maxTouchPoints = 0; iPad "giả Mac" có ≥ 1 (thường 5).
+const MOBILE = /Android|iPhone|iPad|iPod/i.test(UA)
+  || (/Macintosh/i.test(UA) && typeof navigator !== "undefined" && navigator.maxTouchPoints > 1);
 const GAP = 150;         // ms — đóng gói khi im lặng chừng này (keyup / phím kế tiếp đóng sớm hơn)
 const BS_WAIT = 60;      // ms — Backspace thật hoãn chừng này xem có gói nào theo sau không
 const SPLIT = 25;        // ms — trong một gói UniKey các sự kiện cách nhau < 10 ms

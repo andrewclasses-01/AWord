@@ -1,6 +1,8 @@
 /* ============================================================
    app-check.js — FIREBASE APP CHECK (27/09/2026, AWord Đợt 408 — phương án F sau tấn công Tr0ngX)
-   ⛔ BẢN CHÉP y hệt myLesson web `js/app-check.js` (cùng một Firebase app). Sửa một bên thì chép sang bên kia.
+   ⛔ BẢN CHÉP myLesson web `js/app-check.js` (cùng một Firebase app). Sửa một bên thì chép sang bên kia.
+   ⚠️ Đợt 431 (30/9/2026) AWord ĐI TRƯỚC: hạn chờ reCAPTCHA (`HAN_CHO`) + khởi động TRỄ (`TRE_*`) —
+   bản myLesson CHƯA có (chờ phiên myLesson chép sang).
    AWord: nạp bằng <script defer> ở <head> index/play/source (chạy TRƯỚC module); core/firebase.js dùng
    getApps() để KHÔNG initializeApp hai lần.
 
@@ -78,6 +80,9 @@
     } catch (e) {}
     return Date.now() + 50 * 60000;
   }
+  var HAN_CHO = 4000;     // ms — Đợt 431: chờ reCAPTCHA cấp mã tối đa chừng này
+  var TRE_RIENG = 4000;   // ms — Đợt 431: khởi động sau `load` (trang mở riêng)
+  var TRE_NHUNG = 10000;  // ms — Đợt 431: khởi động sau `load` (nhúng trong myLesson)
   var _p = null;
   function batDau() {
     if (_p) return _p;
@@ -87,7 +92,27 @@
       var c = await import(SDK + '/firebase-app-check.js');
       var app = a.getApps().length ? a.getApp() : a.initializeApp(CAU_HINH);
       if (!app.options || !app.options.appId) app = a.initializeApp(CAU_HINH, 'appCheck');   // app mặc định do chỗ khác tạo thiếu appId
-      var ac = c.initializeAppCheck(app, { provider: new c.ReCaptchaEnterpriseProvider(SITE_KEY), isTokenAutoRefreshEnabled: true });
+      // ⭐⭐ Đợt 431 — HẠN CHỜ. App Check gắn vào app MẶC ĐỊNH (chung với Firestore) nên từ lúc
+      // khởi động, MỖI lượt đọc/ghi Firestore chờ `provider.getToken()` — mà trong SDK 12.9.0 lượt
+      // đó chờ file reCAPTCHA tải xong (`script.onload`, không bắt onerror) rồi `grecaptcha.ready()`,
+      // KHÔNG có hạn. Safari iOS (chống dò dấu vân tay, Private Relay, chặn quảng cáo, DNS trường)
+      // làm reCAPTCHA treo ⇒ game kẹt "Loading..." / nộp bài treo. Bọc getToken của provider: quá
+      // HAN_CHO thì báo lỗi ⇒ SDK trả "mã giả" và Firestore ĐI TIẾP (đang chỉ theo dõi nên vẫn qua);
+      // sau đó NGHỈ 60s không thử lại để lượt ghi sau khỏi chờ lại 4s mỗi lần.
+      // (SDK gọi `state.provider.getToken()` trên CHÍNH đối tượng này — đã soi firebase-app-check.js 12.9.0.)
+      var pv = new c.ReCaptchaEnterpriseProvider(SITE_KEY);
+      var gocGetToken = pv.getToken.bind(pv);
+      var nghiDen = 0;
+      pv.getToken = function () {
+        if (Date.now() < nghiDen) return Promise.reject(new Error('recaptcha-cham'));
+        return new Promise(function (xong, hong) {
+          var het = false;
+          var t = setTimeout(function () { het = true; nghiDen = Date.now() + 60000; hong(new Error('recaptcha-cham')); }, HAN_CHO);
+          gocGetToken().then(function (r) { clearTimeout(t); if (!het) xong(r); },
+                             function (e) { clearTimeout(t); if (!het) hong(e); });
+        });
+      };
+      var ac = c.initializeAppCheck(app, { provider: pv, isTokenAutoRefreshEnabled: true });
       c.onTokenChanged(ac, function (r) {
         try { if (r && r.token) localStorage.setItem('awc_ac', JSON.stringify({ t: r.token, het: hetHan(r.token) })); } catch (e) {}
       });
@@ -123,6 +148,15 @@
       chan.appendChild(p);
     } catch (e) {}
   }
-  function khiXong() { setTimeout(function () { batDau(); ghiChanTrang(); }, 0); }
+  // ⭐ Đợt 431 — khởi động TRỄ: reCAPTCHA ~0,8 MB mã + khung ẩn của Google; chạy ngay sau `load`
+  // thì rơi đúng lúc em bấm START (iPhone/iPad khựng) và lượt đọc bài đầu tiên phải chờ nó.
+  // Trang riêng: đợi TRE_RIENG; nhúng trong myLesson (trang mẹ cũng đang chạy reCAPTCHA): đợi
+  // TRE_NHUNG — thầy chốt CHẠY TRỄ chứ không bỏ, để số liệu theo dõi App Check vẫn đúng.
+  var nhung = false;
+  try { nhung = window.top !== window.self; } catch (e) { nhung = true; }
+  function khiXong() {
+    setTimeout(ghiChanTrang, 0);
+    setTimeout(batDau, nhung ? TRE_NHUNG : TRE_RIENG);
+  }
   if (document.readyState === 'complete') khiXong(); else window.addEventListener('load', khiXong);
 })();
