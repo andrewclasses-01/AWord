@@ -20,7 +20,7 @@ import { el } from "./core/utils.js";
 import {
   getAssignment, queueAttempt, sendAttempt, flushOutbox,
   listScores, isLate, nameKey, prettiestName, rankCompare,
-  tenTheoMa, chuanMaEm,   // Đợt 432 — bảng xếp hạng gộp theo MÃ em, tên thật từ danh sách lớp
+  tenTheoMa, chuanMaEm, docBangDiem,   // Đợt 432/433 — bảng xếp hạng gộp theo MÃ em, tên thật từ danh sách lớp
   sendSpecialAttempt,  // myLesson "HỌC SINH ĐẶC BIỆT" — kho điểm RIÊNG, xem assignments.js
   newPlayLogId, beatPlayLog,  // Đợt 366 — kho LƯỢT LUYỆN practiceLog (thời gian mọi lượt, cả bỏ dở)
   newAttemptId, saveDraft, dropDraft, queueAttemptKeepalive,  // Đợt 383 — nộp lượt DỞ DANG
@@ -493,7 +493,20 @@ async function play(assignment, studentName, className, studentMa) {
         // 🔒 Đợt 432 (bảo mật S2) — gộp theo MÃ EM (dòng có `ma`; luật bắt mã đúng vé đăng nhập) và
         // hiện TÊN THẬT theo mã từ danh sách lớp: ghi điểm mang "tên bạn khác" không mạo danh được nữa.
         // Dòng không mã (cũ trước 22/9 / chơi tự do) vẫn gộp theo tên như trước.
-        const [rows, tenMa] = await Promise.all([listScores(assignment.code), tenTheoMa()]);
+        // 📉 Đợt 433 (30/9/2026, giảm lượt đọc) — đọc BẢNG ĐIỂM TỐT NHẤT do máy chủ giữ sẵn (hàm `bangDiem`,
+        // `assignments/{code}/bang/tot`): 1 lượt đọc thay vì CẢ KHO scores (tới 800 dòng × 2 lần mỗi ván).
+        // Mỗi mục = dòng tốt nhất của một em + `tens` (mọi cách viết tên đã gặp). Chưa có bảng / đọc hỏng ⇒
+        // quay về đọc kho như cũ. Máy chủ cập nhật chậm 1–2s ⇒ tự chèn LƯỢT VỪA NỘP của chính em vào.
+        const [bang, tenMa] = await Promise.all([docBangDiem(assignment.code).catch(() => null), tenTheoMa()]);
+        let rows;
+        if (bang && bang.v === 1 && bang.em && typeof bang.em === "object") {
+          rows = Object.values(bang.em).map(m => ({ name: m.ten, ma: m.ma || "", score: m.score, total: m.total,
+            timeMs: m.timeMs, tens: Array.isArray(m.tens) && m.tens.length ? m.tens : [m.ten] }));
+          if (attempt) rows.push({ name: studentName, ma, score: attempt.score, total: attempt.total, timeMs: attempt.timeMs });
+        } else {
+          rows = await listScores(assignment.code);
+        }
+        const tenCua = r => r.tens || [r.name];
         // Dòng CŨ không mã của một em đã có dòng mới mang mã ⇒ nhập vào nhóm mã đó, NHƯNG chỉ khi tên
         // trong dòng có mã TRÙNG tên thật của mã (danh sách lớp) — dòng ghi "tên bạn khác" không hút
         // được điểm cũ của bạn đó. (Đo 59n6v2: không nhập thì 1 em thành 2 dòng.)
@@ -501,13 +514,13 @@ async function play(assignment, studentName, className, studentMa) {
         rows.forEach(r => {
           if (!r.ma) return;
           const k = chuanMaEm(r.ma), that = tenMa.get(k);
-          if (that && nameKey(that) === nameKey(r.name)) tenVeMa.set(nameKey(r.name), "m:" + k);
+          if (that) tenCua(r).forEach(t => { if (nameKey(that) === nameKey(t)) tenVeMa.set(nameKey(t), "m:" + k); });
         });
         const khoa = r => (r.ma ? "m:" + chuanMaEm(r.ma) : (tenVeMa.get(nameKey(r.name)) || "n:" + nameKey(r.name)));
         const best = new Map(), names = new Map();
         rows.forEach(r => {
           const key = khoa(r);
-          names.set(key, [...(names.get(key) || []), r.name]);
+          names.set(key, [...(names.get(key) || []), ...tenCua(r)]);
           const cur = best.get(key);
           if (!cur || rankCompare(r, cur) < 0) best.set(key, r);
         });

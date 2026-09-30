@@ -546,6 +546,15 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 433 (30/9/2026) — BẢNG XẾP HẠNG ĐỌC "BẢNG ĐIỂM TỐT NHẤT" (1 lượt đọc/ván) · phiên máy 1
+
+**Vì sao:** Firestore đọc 1–1,5 TRIỆU lượt/ngày (đo Cloud Monitoring 23–30/9); bảng xếp hạng AWord tải CẢ KHO scores (tới 800 dòng) 2 lần mỗi ván ⇒ ~350–500 nghìn/ngày. Thầy duyệt kế hoạch giảm lượt đọc A+B+C (hỏi kỹ: KHÔNG mất lượt nộp/chi tiết câu nào — chỉ đổi cách ĐỌC để dựng bảng).
+**Đã làm:**
+- Máy chủ (myLesson-app `may-chu/functions/bang-diem.js`, hàm `bangDiem` onDocumentWritten scores): giữ `assignments/{code}/bang/tot` = {v:1, em:{'m_<mã>'|'n_<sha1 tên>': dòng TỐT NHẤT + `tens`}, n, capNhat}; lượt mới ⇒ giao dịch 1 mục; sửa/xoá ⇒ tính lại (giao dịch). Luật `f55aeee2`: `bang/{id}` ai cũng đọc, không ai ghi. Dựng sẵn 100 bài / 11.701 dòng, so với cách cũ: 0 lệch.
+- `core/assignments.js` `docBangDiem(code)` (1 lượt đọc, hạn 8s). `play.js` bảng xếp hạng: có bảng ⇒ dựng từ bảng (gộp theo mã/tên y Đợt 432, tên dùng cả `tens`) + tự chèn LƯỢT VỪA NỘP của em (máy chủ chậm 1–2s); không có ⇒ `listScores` như cũ.
+- KHÔNG đổi: kho scores/results/practiceLog (mọi lượt vẫn ghi đủ), hộp Result + STATS của thầy (vẫn đọc kho).
+**Kiểm:** 25 bài thật mới nhất: 22 có bảng ⇒ bảng xếp hạng GIỐNG HỆT cách cũ 22/22 (tên, điểm, giờ, thứ tự); 3 chưa có lượt ⇒ quay về cách cũ. Máy chủ: `thu-bang-diem.js` 7/7 (mới/tốt hơn/kém hơn/bằng điểm nhanh hơn/không mã/thầy xoá ⇒ tính lại), sự kiện XOÁ tới chậm 30–60s.
+
 ## Đợt 432 (30/9/2026) — BẢNG XẾP HẠNG GỘP THEO MÃ EM + TRẦN SỐ DÒNG ĐIỂM · phiên máy 1
 
 **Thầy:** "ok build" nhóm bảo mật S2 (mục 1+2 phía AWord).

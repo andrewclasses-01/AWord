@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **30/9/2026 Đợt 433 — bảng xếp hạng đọc "bảng điểm tốt nhất" do máy chủ giữ** (`assignments/{code}/bang/tot`, hàm `bangDiem`): 1 lượt đọc thay vì cả kho scores; chưa có bảng ⇒ đọc kho như cũ.
 > ✏️ **30/9/2026 Đợt 432 — bảng xếp hạng gộp theo MÃ em** (tên thật từ danh sách lớp, không mạo danh được) + `listScores` có trần (HS 1500, thầy 5000 dòng).
 > ✏️ **30/9/2026 Đợt 431 — iOS/iPadOS chậm + VÁ màn nhập tên hỏng từ 27/9** (link bài giao không qua myLesson đứng "Loading..." do thiếu `escapeText`); App Check có hạn chờ 4s + khởi động trễ; đọc bài quá 8s có nút TRY AGAIN; vn-guard nhận đúng iPad.
 > ✏️ **30/9/2026 Đợt 430 — Anagram + Unjumble "On submit" hết lag**: lật đáp án nhanh gấp đôi, tối đa 1,5s; ‹/Next MỜ trong lúc lật (trước sáng mà bấm không ăn); Anagram chạm trả chữ không còn bị nuốt cú chạm + đóng AudioContext khi xong ván.

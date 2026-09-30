@@ -410,6 +410,14 @@ export async function listScores(code, max = MAX_SCORES_HS) {
   return snap.docs.map(s => ({ id: s.id, ...s.data() }));
 }
 
+// 📉 Đợt 433 — BẢNG ĐIỂM TỐT NHẤT từng em (máy chủ giữ, hàm `bangDiem` — myLesson-app may-chu/functions/bang-diem.js):
+// 1 lượt đọc. Chưa có ⇒ null (nơi gọi quay về listScores).
+export async function docBangDiem(code) {
+  const [d, { doc, getDoc }] = await Promise.all([db(), fs()]);
+  const s = await withTimeout(getDoc(doc(d, "assignments", String(code), "bang", "tot")), 8000);
+  return s.exists() ? s.data() : null;
+}
+
 // 🔒 Đợt 432 — TÊN THẬT THEO MÃ EM: danh sách lớp công khai của myLesson (`lessonWeb/lop`, chuỗi
 // JSON { lop:[{hocSinh:[{ma,ten}]}], khoa:[…] }). Bảng xếp hạng gộp theo MÃ và hiện tên ở đây ⇒
 // dòng điểm tự khai "tên bạn khác" vẫn hiện tên THẬT của người ghi. Đọc 1 lần/trang; hỏng ⇒ Map rỗng
