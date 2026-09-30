@@ -7811,6 +7811,8 @@ body.aw-page-dragover::after {
    phủ cả hàng (options-panel.js `boOText`). Đặc hiệu 0,3,0 thắng mọi luật cột ở trên
    kể cả `@media` điện thoại. */
 .aw-opt-content.has-tpl.is-notext { grid-template-columns: 1fr; gap: 0; }
+/* ⭐ Đợt 428 — form Edit assignment: chỉ còn dãy bộ nghĩa, phủ cả hàng. */
+.aw-opt-content.has-variants.is-notext { grid-template-columns: 1fr; gap: 0; }
 
 /* =====================================================================
    Đợt 253 — CHẾ ĐỘ ?giao= (form Set assignment đứng một mình, cho myLesson)

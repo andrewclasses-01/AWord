@@ -414,7 +414,9 @@ export function buildOptionsBody(host, {
   // assignment form passes it; every other caller (the in-game Options panel,
   // Settings, Showdown) leaves it null and gets byte-for-byte the old row.
   // Shape is documented on buildContentSwitchRow at the bottom of this file.
-  templatePicker = null
+  templatePicker = null,
+  // ⭐ Đợt 428 — form Edit assignment: bỏ ô TEXT đứng một mình (xem buildContentSwitchRow).
+  boTextLe = false
 }) {
   const swHost = switchHost || host;
   const sel = selectors || draft;   // Settings has no separate selector state
@@ -546,6 +548,7 @@ export function buildOptionsBody(host, {
     buildContentSwitchRow(swHost, {
       contentSwitch, sel, onViewChange, templatePicker,
       mergedSetSwitch: gopSetVaoHang ? contentSetSwitch : null,
+      boTextLe,
     });
   }
 
@@ -1214,7 +1217,7 @@ function buildSetSwitchButtons(sw, contentSetSwitch, sel, onViewChange) {
   });
   sw.append(...btns);
 }
-export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange = null, templatePicker = null, mergedSetSwitch = null }) {
+export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange = null, templatePicker = null, mergedSetSwitch = null, boTextLe = false }) {
   const shown = contentSwitch.shown === "voice" ? "voice" : "text";
   // ⭐ Đợt 299 (thầy chốt 07/9) — BỘ NGHĨA NÀO ĐÃ GIAO BÀI thì đeo dấu ✓ ngay
   // cạnh tên nó (ENG1 · VI2…). `daGiao` là một Map "khoá bộ nghĩa -> mảng
@@ -1286,7 +1289,10 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
   // PRACTICE/HOMEWORK (`mergedSetSwitch`) vẫn giữ ô trái vì đó LÀ một lựa chọn.
   // ⚠️ Act có khai khả năng voice mà chưa tạo (`voicePending`) vẫn có nút VOICE
   // đen ⇒ `coVoiceBtn` true ⇒ không rơi vào nhánh này.
-  const boOText = hasTpl && !coVoiceBtn && !mergedSetSwitch;
+  // ⭐ Đợt 428 (thầy) — form EDIT assignment cũng bỏ (`boTextLe`, không có ô
+  // template): còn ≥2 bộ nghĩa thì hàng chỉ còn dãy ENG1/VI1… phủ cả hàng; không
+  // còn gì để chọn thì KHÔNG vẽ hàng này nữa (xem cuối hàm).
+  const boOText = (hasTpl || boTextLe) && !coVoiceBtn && !mergedSetSwitch;
   const row = el("div", "aw-opt-content"
     + (variants || hasTpl ? " has-variants" : "")
     + (hasTpl ? " has-tpl" : "")
@@ -1589,7 +1595,10 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
 
   paintSwitch();
   paintHalf();
-  if (boOText) row.append(tplCell);          // Đợt 427 — không có ô TEXT
+  if (boOText && !hasTpl) {                  // Đợt 428 — form Edit assignment
+    if (!variants || variants.length < 2) return;   // chỉ còn ô TEXT trơ ⇒ bỏ cả hàng
+    row.append(half);
+  } else if (boOText) row.append(tplCell);   // Đợt 427 — không có ô TEXT
   else row.append(switchEl, tplCell || half);
   swHost.append(row);
 }

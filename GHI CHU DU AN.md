@@ -546,6 +546,12 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 428 (30/9/2026) — form EDIT assignment cũng bỏ ô TEXT đứng một mình · phiên máy 1
+
+**Thầy:** "Bỏ luôn ô TEXT ở form Edit assignment."
+**Đã làm:** tham số mới `boTextLe` (`buildOptionsControls` → `buildOptionsBody` → `buildContentSwitchRow`), CHỈ `buildHomeworkOptionsField` (form Edit) truyền. Act không voice + không hàng gộp PRACTICE/HOMEWORK: còn ≥2 bộ nghĩa ⇒ hàng chỉ còn dãy ENG1/VI1… phủ cả hàng (`.has-variants.is-notext`); không còn gì để chọn ⇒ KHÔNG vẽ hàng đó, Timer lên đầu khối Options. Bảng trong game/Settings không đổi.
+**Kiểm:** `scratch/dot428-edit-bo-text.html` **8/8 ĐẠT**; `dot427-options-theo-act.html` vẫn 21/21.
+
 ## Đợt 427 (30/9/2026) — ACT COURSES: bài giao lấy OPTIONS CỦA ACT · "Default course options" đổi vai thành mặc định ACT MỚI trong COURSES · bỏ ô TEXT thừa ở form giao bài · phiên máy 1 · ✅ ĐÃ COMMIT + PUSH `c67adb9` + LIVE 6/6 mã băm
 
 **Thầy:** "Khi tôi tạo act trong Khóa học (Course) cho một lớp, tôi muốn options khi mở lên sẽ theo đúng options ở trong phần COURSE của act… options bình thường thế nào thì assignment giống hệt. Lần sau tạo assignment từ act đó thì cứ options mặc định của act đang có mà làm mặc định. Chỉ khi chỉnh riêng và START thì mới lưu riêng, muốn sửa thì mở result ra sửa, sửa trong act ko ảnh hưởng tới assignment đã giao." + ảnh form: "thừa phần TEXT do ở đây không hề có lựa chọn text-voice… bỏ ô text đi, kéo dài ô quiz phủ luôn hàng đó."

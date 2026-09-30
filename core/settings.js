@@ -243,7 +243,8 @@ export function saveDefaultOptions(type, options, kind = "activity") {
 // vào `onViewChange` của buildOptionsBody — nhưng KHÔNG mang nghĩa "nạp lại
 // options theo view" như trong game (xem khối ⛔⛔ NO `onViewChange` bên dưới):
 // callback bên form chỉ đọc lựa chọn rồi viết lại ô tiêu đề, không đụng draft.
-export function buildOptionsControls(tpl, options, { kind = "activity", act = null, templatePicker = null, daGiao = null, onSelector = null } = {}) {
+// ⭐ Đợt 428 — `boTextLe`: CHỈ form Edit assignment truyền (bỏ ô TEXT đứng một mình).
+export function buildOptionsControls(tpl, options, { kind = "activity", act = null, templatePicker = null, daGiao = null, onSelector = null, boTextLe = false } = {}) {
   const wrap = el("div", "aw-set-opts");
   if (!tpl) {
     // A template that failed to load would otherwise throw here and take the
@@ -335,7 +336,8 @@ export function buildOptionsControls(tpl, options, { kind = "activity", act = nu
     // ⭐ Đợt 250 — only the Set assignment form sends one (see
     // buildContentSwitchRow in core/options-panel.js). Settings never does:
     // a DEFAULT has no act, so there is no content to hand out as another game.
-    templatePicker
+    templatePicker,
+    boTextLe
   });
   return wrap;
 }

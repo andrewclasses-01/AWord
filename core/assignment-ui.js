@@ -101,7 +101,8 @@ function buildHomeworkOptionsField(body, activityType, draft, act = null) {
   ensureTemplate(activityType).then(tpl => {
     if (!host.isConnected) return;   // the form was closed while this loaded
     host.innerHTML = "";
-    host.append(buildOptionsControls(tpl, draft, { kind: "homework", act }));
+    // ⭐ Đợt 428 (thầy) — bỏ ô TEXT đứng một mình, như form Set (Đợt 427).
+    host.append(buildOptionsControls(tpl, draft, { kind: "homework", act, boTextLe: true }));
   }).catch(() => {
     if (!host.isConnected) return;
     host.innerHTML = "";
