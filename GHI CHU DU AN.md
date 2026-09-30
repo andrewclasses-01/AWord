@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 430 (30/9/2026) — ANAGRAM + UNJUMBLE "On submit" HẾT LAG · phiên máy 1
+## Đợt 430 (30/9/2026) — ANAGRAM + UNJUMBLE "On submit" HẾT LAG · phiên máy 1 · ✅ ĐÃ COMMIT + PUSH `11a0562` + LIVE 2/2 mã băm
 
 **Thầy:** "Nhiều học sinh kêu anagram/on submit rất lag." Điều tra: KHÔNG phải máy chậm (mỗi cú chạm 1–4ms) mà game CHẶN cú bấm: (1) sau Submit lật 260ms/ô, trong lúc đó Next SÁNG mà bấm không ăn (`busy`) — từ 14 chữ chờ 4,4s, 23 chữ 6,3s; (2) chạm trả chữ về khoá `busy` suốt lúc chữ bay ⇒ chạm 5 ô nhanh chỉ ăn 3; (3) mỗi lần mount tạo 1 `AudioContext` cho loa nhảy cột, `cleanup()` không đóng ⇒ Start again chồng bộ chạy ngầm.
 **Thầy chốt (AskUserQuestion):** vẫn chờ lật xong nhưng làm MỜ ‹ và Next; lật nhanh GẤP ĐÔI và cả chuỗi TỐI ĐA 1,5s; giữ tiếng từng ô; sửa luôn Unjumble.
