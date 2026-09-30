@@ -26,7 +26,7 @@ import { el, copyText } from "./core/utils.js";
 import { icons } from "./core/icons.js";
 import { ensureTemplate } from "./core/registry.js";
 import { TEMPLATES, templateLabel, templateIcon } from "./core/catalog.js";
-import { getDefaultOptions, saveDefaultOptions, buildOptionsControls, loadSettings, resetSettingsCache, actKindForRoot } from "./core/settings.js";
+import { getDefaultOptions, saveDefaultOptions, buildOptionsControls, loadSettings, resetSettingsCache, actKindForRoot, courseImportOptions } from "./core/settings.js";
 import { getEntries as getWrongSoundEntries, getWrongChoice, setWrongChoice, previewSound as previewWrongSound, renameSound as renameWrongSound, removeSound as removeWrongSound, uploadSound as uploadWrongSound } from "./core/wrong-sound.js";
 import {
   ROOTS, holdsActs, holdsAssignments, folderIdsOfRoot,
@@ -2460,7 +2460,12 @@ function importFlow(initialFile, opts = {}) {
 
         err.style.display = "none"; ok.disabled = true; ok.textContent = "Importing…";
         try {
-          const res = await importBundle({ folderPath: segs, activities: chosen }, { parentId: basePid, root: importRoot });
+          // ⭐ Đợt 429 (thầy) — nhập vào COURSES: options theo "Default course options"
+          // (settings.js courseImportOptions). Cây khác giữ nguyên preset của file.
+          const dsNhap = importRoot === "courses"
+            ? chosen.map(a => ({ ...a, options: courseImportOptions(a.type, a.options || {}) }))
+            : chosen;
+          const res = await importBundle({ folderPath: segs, activities: dsNhap }, { parentId: basePid, root: importRoot });
           if (res.errors && res.errors.length) {
             // Some acts failed — keep the dialog open so the problem isn't missed.
             report.style.display = ""; report.innerHTML = "";

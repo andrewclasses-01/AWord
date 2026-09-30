@@ -54,6 +54,8 @@ import {
 // engine already uses (core/engine.js's makeContentSwitch); see the note where
 // `hasVoice` is added to `contentSwitch` below.
 import { hasAnyVoice } from "./voice-playback.js";
+// ⭐ Đợt 429 — courseImportOptions (dưới).
+import { VIEW_SELECTOR_KEYS } from "./content-view.js";
 
 const KEY = "aword-settings";
 
@@ -198,6 +200,20 @@ function bucketKey(kind) {
 export function isAssignmentKind(kind) { return kind === "homework"; }
 // ⭐ Đợt 427 — bucket mặc định cho một ACT theo cây nó nằm.
 export function actKindForRoot(root) { return root === "courses" ? "course" : "activity"; }
+
+// ⭐⭐ Đợt 429 (30/9/2026, thầy) — "Cho act Import vào COURSES cũng dùng Default
+// course options". Options một act IMPORT vào COURSES bắt đầu từ:
+//   preset của file nhập (giữ khoá riêng của game mà Settings không dựng, vd
+//   scoring/choices của Find the gap)  ⟵ đè bởi  "Default course options" của
+//   template đó  ⟵ đè lại bởi 4 BỘ CHỌN NỘI DUNG của file nhập (TEXT/VOICE,
+//   ENG1/VI1…, PRACTICE/HOMEWORK): đó là TÊN nội dung file mang theo, không phải
+//   một tuỳ chọn — mặc định không được phép đổi bộ nghĩa của act.
+// (Dấu `optVer` nằm ở CẤP ACT, do store.js saveActivity đóng cho act mới — Đợt 429.)
+export function courseImportOptions(type, preset = {}) {
+  const chon = {};
+  VIEW_SELECTOR_KEYS.forEach(k => { if (preset[k] !== undefined) chon[k] = preset[k]; });
+  return { ...preset, ...getDefaultOptions(type, "course"), ...chon };
+}
 
 // The stored default options for a type, merged over the built-ins so a missing
 // field always has a sane value. Returns a fresh copy (safe to mutate).

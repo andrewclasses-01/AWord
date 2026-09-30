@@ -546,6 +546,16 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 429 (30/9/2026) — act IMPORT vào COURSES dùng "Default course options" + VÁ LỖI CÓ SẴN: act MỚI không đóng dấu `optVer` ⇒ điểm trừ bị nhân lại · phiên máy 1
+
+**Thầy:** "Cho act Import vào COURSES cũng dùng Default course options."
+**Đã làm:**
+- `core/settings.js` `courseImportOptions(type, preset)` = preset file ⟵ "Default course options" của template ⟵ 4 bộ chọn nội dung của file (`VIEW_SELECTOR_KEYS`: TEXT/VOICE, ENG1/VI1…, PRACTICE/HOMEWORK — mặc định không được đổi bộ nghĩa). Khoá riêng game Settings không dựng (scoring/choices Find the gap, allCaps…) giữ từ preset.
+- `main.js` hộp Import: `importRoot === "courses"` ⇒ options mỗi act qua `courseImportOptions` trước `importBundle`. Cây khác giữ nguyên preset.
+- ⛔⛔ **LỖI CÓ SẴN bắt được nhờ bàn thử:** `store.js saveActivity` lưu act MỚI không có `optVer` (dấu cấp ACT) ⇒ `readAll()` coi là act cũ trước Đợt 143 và quy đổi lại: Points off −40 → −100, allowSkip Anagram/Unjumble lật về false. Ảnh hưởng MỌI act mới có mặc định Points off ≠ 0 (New activity + Import, mọi cây). Vá: act mới (`!existing`) chưa mang dấu ⇒ `optVer = OPT_VER`. Act đã có giữ nguyên.
+**Kiểm:** `scratch/dot429-import-course.html` **14/14 ĐẠT** (có đọc lại qua `resetCache` + `readAll` thật); 427 21/21, 428 8/8.
+**⬜ Chưa làm:** act đã tạo TRƯỚC đợt này có thể đã bị nhân điểm trừ — chưa rà kho thật.
+
 ## Đợt 428 (30/9/2026) — form EDIT assignment cũng bỏ ô TEXT đứng một mình · phiên máy 1 · ✅ ĐÃ COMMIT + PUSH `e9b2914` + LIVE 4/4 mã băm
 
 **Thầy:** "Bỏ luôn ô TEXT ở form Edit assignment."

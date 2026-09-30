@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **30/9/2026 Đợt 429 — act IMPORT vào COURSES dùng "Default course options"** (giữ bộ chọn nội dung của file) + vá lỗi có sẵn: act mới nay đóng dấu `optVer` lúc lưu (trước đó điểm trừ bị nhân lại khi đọc).
 > ✏️ **30/9/2026 Đợt 428 — form Edit assignment cũng bỏ ô TEXT đứng một mình** (act không voice).
 > ✏️ **30/9/2026 Đợt 427 — act COURSES: form giao bài lấy OPTIONS CỦA ACT** (theo view/template act đã nhớ); Settings ▸ "Default course options" nay là mặc định ACT MỚI trong COURSES; form giao bài bỏ ô TEXT thừa khi act không có voice.
 > ✏️ **28/9/2026 Đợt 426 — ô tích form giao bài (tạo + sửa, cả trong myLesson) đổi nhãn thành "Show mistakes"**, mặc định bật; khoá dữ liệu vẫn `endOptions.showAnswers`.

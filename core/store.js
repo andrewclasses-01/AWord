@@ -37,7 +37,7 @@ import { db, fs, currentUser } from "./firebase.js";
 // Đợt 143 — old penalty scales are converted on the way OUT of the library, at
 // the single point every reader goes through (readAll). Leaf module: it only
 // touches the plain object it is handed.
-import { migrateActivityOptions } from "./options-migrate.js";
+import { migrateActivityOptions, OPT_VER } from "./options-migrate.js";
 
 // ⭐ Đợt 287 (03/9/2026, thầy) — FOUR roots, in the order of the cards on the
 // home page. "courses" holds acts AND assignments side by side:
@@ -443,6 +443,14 @@ export async function saveActivity(activity, opts = {}) {
     createdAt: existing?.createdAt || now(),
     updatedAt: now()
   };
+  // ⛔⛔ Đợt 429 (30/9/2026) — LỖI CÓ SẴN, bắt được khi làm Import vào COURSES:
+  // act MỚI (New activity lấy Settings defaults, Import lấy preset của file) được
+  // lưu KHÔNG có `optVer` ⇒ lần đọc sau readAll() coi nó là act cũ trước Đợt 143
+  // và QUY ĐỔI LẠI: Points off −40 thành −100 (×20, chặn trần), allowSkip của
+  // Anagram/Unjumble bị lật về false dù mặc định thầy bật. Options của act mới
+  // luôn ở thang HIỆN TẠI ⇒ đóng dấu ngay lúc tạo. Act đã có (`existing`) giữ
+  // nguyên dấu của nó; payload tự mang dấu (act chuyển đổi…) thì tôn trọng.
+  if (!existing && !(Number(node.optVer) > 0)) node.optVer = OPT_VER;
   map[id] = node;
   await persist([node]);
   return node;
