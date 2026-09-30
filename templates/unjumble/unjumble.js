@@ -45,7 +45,11 @@ import { autoFit } from "../../core/fit.js";
 import { unjumbleSound } from "./unjumble-sound.js";
 import { openUnjumbleEditor } from "./unjumble-editor.js";
 
-const STAGGER_MS = 240;     // ms — gap between each position's reveal in "submit" mode
+const STAGGER_MS = 120;     // ms — gap between each position's reveal in "submit" mode
+// ⭐ Đợt 430 (thầy, 30/9/2026) — cùng gốc bệnh Anagram On submit: lật nhanh GẤP ĐÔI
+// (240→120ms/ô), cả chuỗi KHÔNG QUÁ 1,5s; trong lúc lật ‹ và Next MỜ ĐI.
+const REVEAL_MAX_MS = 1500;
+const revealStep = n => Math.min(STAGGER_MS, REVEAL_MAX_MS / Math.max(1, n));
 const INTRO_MS = 3272;      // ms — matches intro.mp3 (~3.27s): full "zoom in from far" intro
 const DROP_FLY_MS = 190;    // ms — a dropped word glides smoothly to its caret slot
 
@@ -790,7 +794,7 @@ const unjumbleTemplate = {
           if (!t) return;
           t.classList.add(isRight ? "is-correct" : "is-wrong");
           (isRight ? unjumbleSound.fastCorrect : unjumbleSound.fastWrong)();
-        }, slot * STAGGER_MS);
+        }, slot * revealStep(n));
       }
       // Đợt 311 — kết quả đã biết NGAY LÚC NỘP; hình ảnh + cú bay chỉ là lộ dần.
       const mine = () => {
@@ -845,7 +849,7 @@ const unjumbleTemplate = {
         if (outOfLives) autoTimer = setTimeout(() => finish("gameover"), FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 400);
         else if (state.every(doneCheck)) autoTimer = setTimeout(finish, FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 400);
         else maybeAutoNext(FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 400);   // Đợt 143 — "Auto next question"
-      }, n * STAGGER_MS + 300);
+      }, n * revealStep(n) + 300);
     }
 
     function updateSubmitState() {
@@ -1012,10 +1016,12 @@ const unjumbleTemplate = {
       ui.setNav({
         index: index + 1,
         total,
-        onPrev: index > 0 ? goPrev : null,
+        // Đợt 430 — đang lật đáp án (`busy`) thì ‹ và Next MỜ; doSubmit gọi lại
+        // updateNav() khi lật xong.
+        onPrev: (index > 0 && !busy) ? goPrev : null,
         // Last question: keep the Next button but DISABLE it (no ✓ icon either) —
         // the game hands in via "Submit answers" / auto-finish (teacher, Đợt 38).
-        onNext: (!isLast && canAdvance) ? goNext : null,
+        onNext: (!isLast && canAdvance && !busy) ? goNext : null,
         nextLabel: null
       });
     }

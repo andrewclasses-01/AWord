@@ -86,7 +86,13 @@ const RESULT_BG = "#2f6fed";
 // of a small corner badge). core/icons.js's markCheck/markCross already are
 // exactly this look (used elsewhere in this file for the whole-word marks).
 
-const STAGGER_MS = 260;     // ms — gap between each position's reveal in "submit" mode
+const STAGGER_MS = 130;     // ms — gap between each position's reveal in "submit" mode
+// ⭐ Đợt 430 (thầy, 30/9/2026) — HS kêu On submit "lag": lật 260ms/ô nên từ 14 chữ
+// chờ 4,2s, cụm 23 chữ 6,3s mới bấm Next được. Nay nhanh GẤP ĐÔI (130ms/ô) và cả
+// chuỗi lật KHÔNG QUÁ 1,5s — từ dài thì các ô lật dày hơn. Cộng 300ms nghỉ cuối.
+// Trong lúc lật ‹ và Next MỜ ĐI (updateNav đọc `busy`) thay vì sáng mà bấm không ăn.
+const REVEAL_MAX_MS = 1500;
+const revealStep = n => Math.min(STAGGER_MS, REVEAL_MAX_MS / Math.max(1, n));
 const EQ_BAR_COUNT = 5;     // Đợt 134 (teacher: "thêm 1 cột sóng nữa") — was 4 (Đợt 132)
 // Đợt 134 (teacher: "độ dao động nhạy hơn để dễ nhận ra biến động âm lượng
 // hơn") — raw byte-frequency levels for ordinary speech rarely reach anywhere
@@ -1364,10 +1370,16 @@ const anagramTemplate = {
       const fontSize = getComputedStyle(resultEl).fontSize;
       const borderRadius = getComputedStyle(resultEl).borderRadius;
       patchResultSlotDisplay(pos);
-      busy = true;
+      // ⭐ Đợt 430 (thầy, 30/9/2026) — KHÔNG khoá `busy` trong lúc chữ bay về nữa
+      // (giống Bonus từ v0.9.29): khoá cũ nuốt cú chạm thứ 2, 3 khi HS chạm nhanh
+      // để trả nhiều chữ (đo: chạm 5 ô cách 0,12s chỉ ăn 3). State đã đổi xong ở
+      // trên; ô đích trống ngay nên chạm lại nó là no-op; ô gốc còn ẨN tới lúc
+      // chữ hạ cánh nên không bấm trùng được. Chỉ cần: đã sang câu khác thì đừng
+      // "trả" ô gốc của câu mới (cùng data-tile).
+      const myIndex = index;
       flyTileClone(fromRect, toRect, shownChar, ORIGIN_BG, fontSize, () => {
+        if (dead || index !== myIndex) return;
         patchOriginRestored(tileId);
-        busy = false;
         updateSubmitButtonState();
       }, borderRadius);
     }
@@ -1662,6 +1674,7 @@ const anagramTemplate = {
       updateNav();
 
       const n = it.letters.length;
+      const step = revealStep(n);   // Đợt 430
       const rights = [];
       let allCorrect = true;
       for (let pos = 0; pos < n; pos++) {
@@ -1722,7 +1735,7 @@ const anagramTemplate = {
           setTimeout(() => mark.remove(), 550);
           if (dead) return;   // Đợt 114 — the play area is detached but the SOUND still played
           (isRight ? anagramSound.submitTileCorrect : anagramSound.wrongPick)();
-        }, pos * STAGGER_MS);
+        }, pos * step);
       }
 
       setTimeout(() => {
@@ -1777,7 +1790,7 @@ const anagramTemplate = {
           // flying score / big ✗ still plays out before the board moves on.
           maybeAutoNext(allCorrect ? FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 250 : 1500);
         }
-      }, n * STAGGER_MS + 300);
+      }, n * step + 300);
     }
 
     // ----- FIGHT MODE: the withheld grading picture, finally drawn -----
@@ -2295,8 +2308,10 @@ const anagramTemplate = {
       ui.setNav({
         index: index + 1,
         total,
-        onPrev: index > 0 ? goPrev : null,
-        onNext: canAdvance ? (isLast ? finish : goNext) : null,
+        // Đợt 430 — đang lật đáp án (`busy`) thì ‹ và Next MỜ (goPrev/goNext vẫn
+        // tự chặn `busy`); doSubmit gọi lại updateNav() khi lật xong.
+        onPrev: (index > 0 && !busy) ? goPrev : null,
+        onNext: (canAdvance && !busy) ? (isLast ? finish : goNext) : null,
         nextLabel: isLast ? icons.check : null
       });
     }
@@ -2493,6 +2508,10 @@ const anagramTemplate = {
       activeFlyNodes.clear();
       if (voiceAudioEl) voiceAudioEl.pause();
       stopEqualizer();
+      // ⭐ Đợt 430 — mỗi lần mount tạo một AudioContext riêng cho loa nhảy cột;
+      // không đóng thì Start again / Apply Options cứ chồng thêm bộ chạy ngầm
+      // (iOS còn giới hạn số bộ). Đóng ở đây — voice đã pause ở dòng trên.
+      if (audioCtx) { try { audioCtx.close(); } catch { /* đã đóng */ } audioCtx = null; }
       if (ui.livesSlot) ui.livesSlot.innerHTML = "";
     };
   }

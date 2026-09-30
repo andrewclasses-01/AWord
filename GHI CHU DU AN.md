@@ -546,6 +546,17 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 430 (30/9/2026) — ANAGRAM + UNJUMBLE "On submit" HẾT LAG · phiên máy 1
+
+**Thầy:** "Nhiều học sinh kêu anagram/on submit rất lag." Điều tra: KHÔNG phải máy chậm (mỗi cú chạm 1–4ms) mà game CHẶN cú bấm: (1) sau Submit lật 260ms/ô, trong lúc đó Next SÁNG mà bấm không ăn (`busy`) — từ 14 chữ chờ 4,4s, 23 chữ 6,3s; (2) chạm trả chữ về khoá `busy` suốt lúc chữ bay ⇒ chạm 5 ô nhanh chỉ ăn 3; (3) mỗi lần mount tạo 1 `AudioContext` cho loa nhảy cột, `cleanup()` không đóng ⇒ Start again chồng bộ chạy ngầm.
+**Thầy chốt (AskUserQuestion):** vẫn chờ lật xong nhưng làm MỜ ‹ và Next; lật nhanh GẤP ĐÔI và cả chuỗi TỐI ĐA 1,5s; giữ tiếng từng ô; sửa luôn Unjumble.
+**Đã làm:**
+- `templates/anagram/anagram.js`: `STAGGER_MS` 260→130 + `revealStep(n)=min(130,1500/n)`; `updateNav()` truyền `null` cho ‹/Next khi `busy` (engine `wireNav` ⇒ `disabled`); `unplace()` BỎ khoá `busy` (như Bonus v0.9.29) — cú hạ cánh chỉ trả ô gốc nếu vẫn đang ở câu đó (`myIndex`); `cleanup()` đóng `audioCtx`.
+- `templates/unjumble/unjumble.js`: `STAGGER_MS` 240→120 + `revealStep` + ‹/Next mờ khi `busy`.
+- KHÔNG đụng: Fight (lật cả bảng một lần), Bonus, cách tính điểm/trừ điểm/mạng, bài giao.
+**Kiểm:** `scratch/dot430-anagram.html` (`?t=unjumble` cho Unjumble) — Anagram 14 chữ: Next mờ ngay khi Submit, sáng lại sau **1,84s** (trước 4,4s); 23 chữ **1,85s** (trước 6,3s); chạm 5 ô cách 0,12s trả về **5/5** (trước 3/5), ô gốc hiện lại đủ 5; Unjumble 8 từ **1,32s** (trước ≈2,2s); 0 lỗi console.
+**⬜ Chờ thầy:** bấm tay iPhone/iPad thật (từ dài, chạm nhanh trả chữ, act có giọng đọc Start again nhiều lần).
+
 ## Đợt 429 (30/9/2026) — act IMPORT vào COURSES dùng "Default course options" + VÁ LỖI CÓ SẴN: act MỚI không đóng dấu `optVer` ⇒ điểm trừ bị nhân lại · phiên máy 1 · ✅ ĐÃ COMMIT + PUSH `a8e84ee` + LIVE 3/3 mã băm
 
 **Thầy:** "Cho act Import vào COURSES cũng dùng Default course options."
