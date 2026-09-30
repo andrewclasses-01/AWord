@@ -15,7 +15,7 @@ import { el, copyText } from "./utils.js";
 import { icons } from "./icons.js";
 import { qrSvg, copyQrImage, downloadQrPng } from "./qr.js";
 import {
-  createAssignment, updateAssignment, trashAssignment, listResultsLight, readResultReview, listScores,
+  createAssignment, updateAssignment, trashAssignment, listResultsLight, readResultReview, listScores, MAX_SCORES_THAY,
   listAllAssignments, assignmentLink, classFolderFor, classTokenOf, assignmentNameTaken,
   courseResultsFor, COURSE_RESULTS_NAME,
   assignmentsToArchive, hasNewResults, markAssignmentSeen,
@@ -1499,7 +1499,7 @@ async function loadReport(assignment) {
   // Đợt 296: light rows (no `review`) — answers load per row on click, see detailBlock().
   const [r1, r2] = await Promise.allSettled([
     listResultsLight(assignment.code),
-    listScores(assignment.code)
+    listScores(assignment.code, MAX_SCORES_THAY)   // Đợt 432 — trang thầy: trần 5000 dòng
   ]);
   // If BOTH reads failed, say so loudly instead of reporting an empty class.
   if (r1.status === "rejected" && r2.status === "rejected") {

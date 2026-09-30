@@ -546,6 +546,16 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 432 (30/9/2026) — BẢNG XẾP HẠNG GỘP THEO MÃ EM + TRẦN SỐ DÒNG ĐIỂM · phiên máy 1
+
+**Thầy:** "ok build" nhóm bảo mật S2 (mục 1+2 phía AWord).
+**Đã làm:**
+- `core/assignments.js`: `listScores(code, max)` = `orderBy(createdAt desc) + limit` — HS 1500 (`MAX_SCORES_HS`), trang thầy 5000 (`MAX_SCORES_THAY`, dùng ở `assignment-ui.js` báo cáo Result + `stats-home.js`). Trước đó tải CẢ KHO. Thật nhiều nhất 804 dòng/bài (29/9); 10.474/10.474 dòng có `createdAt`.
+- `tenTheoMa()` (mới): đọc 1 lần danh sách lớp công khai `lessonWeb/lop` ⇒ Map mã→tên thật; hỏng ⇒ Map rỗng (rơi về tên trong dòng). `chuanMaEm` = viết hoa bỏ khoảng trắng.
+- `play.js` bảng xếp hạng: gộp theo MÃ em (dòng không mã vẫn theo tên), tên hiện = tên thật theo mã. Dòng cũ không mã nhập vào nhóm mã CHỈ khi tên dòng có mã trùng tên thật của mã đó (không cho dòng "tên bạn khác" hút điểm cũ của bạn).
+**Kiểm (đọc thật, localhost):** `bw4q96` 804 dòng 0,48s → 18 nhóm = 18 như cũ, 18/18 tên lấy từ danh sách lớp (160 em); `59n6v2` (707 dòng cũ + 1 mới) → 18 = 18 (trước khi thêm luật nhập thì 19); giả mạo (mã A + tên B + 99999) → vào nhóm A, hiện tên thật A. Trang nhập tên + module báo cáo/STATS nạp OK.
+**⬜ Tiếp:** chuông báo máy chủ (mục 3, myLesson may-chu) · luật giới hạn `request.query.limit` sau 1–2 ngày.
+
 ## Đợt 431 (30/9/2026) — iOS/iPadOS 27 CHẬM / KHÔNG VÀO ĐƯỢC GAME + VÁ LỖI CÓ SẴN màn nhập tên · phiên máy 1 · ✅ ĐÃ COMMIT + PUSH `0539aba` + LIVE 3/3 mã băm; màn nhập tên bài `bw4q96` hiện lại trên bản live
 
 **Thầy:** "rất lag, chậm, đôi khi không load được game khi dùng iOS 27, iPadOS 27". Thầy "ok build" mục 1–4 (mục 5 Rocket race 3D thu ảnh: để sau).

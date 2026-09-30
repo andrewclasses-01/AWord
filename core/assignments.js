@@ -397,10 +397,41 @@ export async function getAssignment(code) {
 }
 
 // Name + score + time of everyone who played — the public leaderboard feed.
-export async function listScores(code) {
-  const [d, { collection, getDocs }] = await Promise.all([db(), fs()]);
-  const snap = await getDocs(collection(d, "assignments", String(code), "scores"));
+// 🔒 Đợt 432 (30/9/2026, bảo mật S2) — CÓ TRẦN: trước đây tải CẢ KHO không giới hạn, nên ai bơm
+// hàng loạt dòng vào một bài là máy MỌI em làm xong bài đó tải hết (treo máy + đốt lượt đọc). Nay
+// lấy `max` dòng MỚI NHẤT (mặc định 1500 cho bảng xếp hạng HS — thật nhiều nhất 804 dòng/bài ngày
+// 29/9; trang thầy truyền 5000). Mọi dòng thật đều có `createdAt` (luật bắt buộc; 10.474/10.474).
+export const MAX_SCORES_HS = 1500;
+export const MAX_SCORES_THAY = 5000;
+export async function listScores(code, max = MAX_SCORES_HS) {
+  const [d, { collection, getDocs, query, orderBy, limit }] = await Promise.all([db(), fs()]);
+  const snap = await getDocs(query(collection(d, "assignments", String(code), "scores"),
+    orderBy("createdAt", "desc"), limit(max)));
   return snap.docs.map(s => ({ id: s.id, ...s.data() }));
+}
+
+// 🔒 Đợt 432 — TÊN THẬT THEO MÃ EM: danh sách lớp công khai của myLesson (`lessonWeb/lop`, chuỗi
+// JSON { lop:[{hocSinh:[{ma,ten}]}], khoa:[…] }). Bảng xếp hạng gộp theo MÃ và hiện tên ở đây ⇒
+// dòng điểm tự khai "tên bạn khác" vẫn hiện tên THẬT của người ghi. Đọc 1 lần/trang; hỏng ⇒ Map rỗng
+// (bảng rơi về tên trong dòng điểm như cũ). Khoá = mã viết hoa, bỏ khoảng trắng (như chuanMa myLesson).
+export const chuanMaEm = s => String(s || "").replace(/\s+/g, "").toUpperCase();
+let _tenTheoMaP = null;
+export function tenTheoMa() {
+  if (!_tenTheoMaP) {
+    _tenTheoMaP = (async () => {
+      const m = new Map();
+      const url = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/lessonWeb/lop?key=${firebaseConfig.apiKey}`;
+      const r = await withTimeout(fetch(url), 6000);
+      if (!r.ok) return m;
+      const j = JSON.parse(((await r.json()).fields?.json?.stringValue) || "{}");
+      [...(j.lop || []), ...(j.khoa || [])].forEach(l => (l.hocSinh || []).forEach(h => {
+        const k = chuanMaEm(h.ma);
+        if (k && h.ten && !m.has(k)) m.set(k, String(h.ten));
+      }));
+      return m;
+    })().catch(() => new Map());
+  }
+  return _tenTheoMaP;
 }
 
 // =============================================================

@@ -20,6 +20,7 @@ import { el } from "./core/utils.js";
 import {
   getAssignment, queueAttempt, sendAttempt, flushOutbox,
   listScores, isLate, nameKey, prettiestName, rankCompare,
+  tenTheoMa, chuanMaEm,   // Đợt 432 — bảng xếp hạng gộp theo MÃ em, tên thật từ danh sách lớp
   sendSpecialAttempt,  // myLesson "HỌC SINH ĐẶC BIỆT" — kho điểm RIÊNG, xem assignments.js
   newPlayLogId, beatPlayLog,  // Đợt 366 — kho LƯỢT LUYỆN practiceLog (thời gian mọi lượt, cả bỏ dở)
   newAttemptId, saveDraft, dropDraft, queueAttemptKeepalive,  // Đợt 383 — nộp lượt DỞ DANG
@@ -489,18 +490,31 @@ async function play(assignment, studentName, className, studentMa) {
                  timeMs: attempt.timeMs, mine: true }]
             : [];
         }
-        const rows = await listScores(assignment.code);
+        // 🔒 Đợt 432 (bảo mật S2) — gộp theo MÃ EM (dòng có `ma`; luật bắt mã đúng vé đăng nhập) và
+        // hiện TÊN THẬT theo mã từ danh sách lớp: ghi điểm mang "tên bạn khác" không mạo danh được nữa.
+        // Dòng không mã (cũ trước 22/9 / chơi tự do) vẫn gộp theo tên như trước.
+        const [rows, tenMa] = await Promise.all([listScores(assignment.code), tenTheoMa()]);
+        // Dòng CŨ không mã của một em đã có dòng mới mang mã ⇒ nhập vào nhóm mã đó, NHƯNG chỉ khi tên
+        // trong dòng có mã TRÙNG tên thật của mã (danh sách lớp) — dòng ghi "tên bạn khác" không hút
+        // được điểm cũ của bạn đó. (Đo 59n6v2: không nhập thì 1 em thành 2 dòng.)
+        const tenVeMa = new Map();
+        rows.forEach(r => {
+          if (!r.ma) return;
+          const k = chuanMaEm(r.ma), that = tenMa.get(k);
+          if (that && nameKey(that) === nameKey(r.name)) tenVeMa.set(nameKey(r.name), "m:" + k);
+        });
+        const khoa = r => (r.ma ? "m:" + chuanMaEm(r.ma) : (tenVeMa.get(nameKey(r.name)) || "n:" + nameKey(r.name)));
         const best = new Map(), names = new Map();
         rows.forEach(r => {
-          const key = nameKey(r.name);
+          const key = khoa(r);
           names.set(key, [...(names.get(key) || []), r.name]);
           const cur = best.get(key);
           if (!cur || rankCompare(r, cur) < 0) best.set(key, r);
         });
-        const mineKey = nameKey(studentName);
+        const mineKey = ma ? "m:" + chuanMaEm(ma) : "n:" + nameKey(studentName);
         return [...best.entries()]
           .map(([key, r]) => ({
-            name: prettiestName(names.get(key) || [r.name]),
+            name: (r.ma && tenMa.get(chuanMaEm(r.ma))) || prettiestName(names.get(key) || [r.name]),
             score: r.score, total: r.total, timeMs: r.timeMs,
             mine: key === mineKey
           }))

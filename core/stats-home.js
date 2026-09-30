@@ -43,7 +43,7 @@
 
 import { icons } from "./icons.js";
 import { db, fs, currentUser } from "./firebase.js";
-import { listAllAssignments, listScores, classTokenOf, readResultReview } from "./assignments.js";
+import { listAllAssignments, listScores, MAX_SCORES_THAY, classTokenOf, readResultReview } from "./assignments.js";
 import { templateLabel } from "./catalog.js";
 import { buildAnalysisRows, DEFAULT_CLASSIFY } from "./showdown.js";
 import {
@@ -339,7 +339,7 @@ export function mountStatsHome(mount, opts = {}) {
       const date = dateOfAssignment(a);
       if (old && old.submitCount === sc && old.fullTitle === a.title && old.date === date) continue;
       let rows;
-      try { rows = await listScores(a.code); } catch (e) { console.warn("AWord STATS: scores", a.code, e); continue; }
+      try { rows = await listScores(a.code, MAX_SCORES_THAY); } catch (e) { console.warn("AWord STATS: scores", a.code, e); continue; }
       const { best, unmatched } = bestByPupil(rows, match);
       const values = {};
       const totals = [];
