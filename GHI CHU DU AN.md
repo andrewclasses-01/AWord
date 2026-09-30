@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 429 (30/9/2026) — act IMPORT vào COURSES dùng "Default course options" + VÁ LỖI CÓ SẴN: act MỚI không đóng dấu `optVer` ⇒ điểm trừ bị nhân lại · phiên máy 1
+## Đợt 429 (30/9/2026) — act IMPORT vào COURSES dùng "Default course options" + VÁ LỖI CÓ SẴN: act MỚI không đóng dấu `optVer` ⇒ điểm trừ bị nhân lại · phiên máy 1 · ✅ ĐÃ COMMIT + PUSH `a8e84ee` + LIVE 3/3 mã băm
 
 **Thầy:** "Cho act Import vào COURSES cũng dùng Default course options."
 **Đã làm:**
