@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 428 (30/9/2026) — form EDIT assignment cũng bỏ ô TEXT đứng một mình · phiên máy 1
+## Đợt 428 (30/9/2026) — form EDIT assignment cũng bỏ ô TEXT đứng một mình · phiên máy 1 · ✅ ĐÃ COMMIT + PUSH `e9b2914` + LIVE 4/4 mã băm
 
 **Thầy:** "Bỏ luôn ô TEXT ở form Edit assignment."
 **Đã làm:** tham số mới `boTextLe` (`buildOptionsControls` → `buildOptionsBody` → `buildContentSwitchRow`), CHỈ `buildHomeworkOptionsField` (form Edit) truyền. Act không voice + không hàng gộp PRACTICE/HOMEWORK: còn ≥2 bộ nghĩa ⇒ hàng chỉ còn dãy ENG1/VI1… phủ cả hàng (`.has-variants.is-notext`); không còn gì để chọn ⇒ KHÔNG vẽ hàng đó, Timer lên đầu khối Options. Bảng trong game/Settings không đổi.
