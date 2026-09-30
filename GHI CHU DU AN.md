@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 431 (30/9/2026) — iOS/iPadOS 27 CHẬM / KHÔNG VÀO ĐƯỢC GAME + VÁ LỖI CÓ SẴN màn nhập tên · phiên máy 1
+## Đợt 431 (30/9/2026) — iOS/iPadOS 27 CHẬM / KHÔNG VÀO ĐƯỢC GAME + VÁ LỖI CÓ SẴN màn nhập tên · phiên máy 1 · ✅ ĐÃ COMMIT + PUSH `0539aba` + LIVE 3/3 mã băm; màn nhập tên bài `bw4q96` hiện lại trên bản live
 
 **Thầy:** "rất lag, chậm, đôi khi không load được game khi dùng iOS 27, iPadOS 27". Thầy "ok build" mục 1–4 (mục 5 Rocket race 3D thu ảnh: để sau).
 **Đã làm:**
