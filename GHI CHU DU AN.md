@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 434 (30/9/2026) — A SHOW SPEED FIGHT: BẢNG GIỮA có PHIÊN ÂM · nghĩa dài không bị cắt · CUỘN/VUỐT có mũi tên thay vì thu nhỏ · phiên máy MSI · ⬜ CHƯA COMMIT (chờ thầy lệnh)
+## Đợt 434 (30/9/2026) — A SHOW SPEED FIGHT: BẢNG GIỮA có PHIÊN ÂM · nghĩa dài không bị cắt · CUỘN/VUỐT có mũi tên thay vì thu nhỏ · phiên máy MSI · ✅ ĐÃ COMMIT + PUSH `97217ca` (thầy lệnh) + LIVE 2/2 mã băm
 
 **Thầy:** bảng giữa (Fight) — (1) các từ có thêm phiên âm; (2) nghĩa dài không bị cắt (nhỏ lại hoặc 2 dòng chữ nhỏ); (3) bỏ thanh cuộn, số từ vượt khung thì có mũi tên ở đáy báo cuộn/vuốt được. "Thiết kế trước" ⇒ mẫu `scratch/ws-bangiua-mau/index.html` (bị ignore; dùng CSS thật của game, HIỆN TẠI vs ĐỀ XUẤT, 3 mode, nút thêm từ) ⇒ thầy: "làm theo mẫu đề xuất vào game luôn".
 ⚠️ **Ý (3) ĐẢO quyết định Đợt 423** ("mọi từ trong tầm nhìn, không kéo cuộn" ⇒ thu nhỏ tới 40 % + `is-ws-dense` bỏ nghĩa). Nay bảng giữa KHÔNG thu nhỏ nữa; `fitUnit` chỉ còn dùng cho bảng phải của CHƠI ĐƠN (không đổi).
@@ -562,7 +562,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 **Kiểm (aword-dev 5591, bàn thử mới `scratch/ws-dot434-fight.html?mode=…` = dot423-ws-fight + phiên âm + 2 nghĩa dài; bấm chữ bằng sự kiện thật trên bàn):** Word list: CLOUDY/STORM/FROST hiện `/ˈklaʊdi/ /stɔːm/ /frɒst/`, nghĩa "sương giá; lớp băng…" `is-long` 2 dòng, mũi tên bật khi 220 > 202 px, bấm ⇒ cuộn tới đáy + tắt, có từ mới ⇒ vẫn ở 18 px · One word: 6 từ 2 đội đủ phiên âm + nghĩa, 2 nghĩa dài `is-long`, cột vừa khít ⇒ không mũi tên · Free words: từ điển (ARCH/CREDO/ERODE/RODENT) có nghĩa, KHÔNG phiên âm; cột trái 152 > 82 ⇒ mũi tên · thanh cuộn rộng 0 · chơi đơn test.html không đổi · 0 lỗi console.
 
 **VIỆC ĐANG CHỜ:**
-- ⬜ Thầy lệnh commit + push (chưa đẩy).
+- ✅ Đã push `97217ca`, bản live aword.andrewclasses.com khớp mã băm wordshake.js + .css.
 - ⬜ Từ tự do ở Free words chưa có phiên âm: `ws-dict.txt` (~18k từ) chỉ có nghĩa. Muốn có ⇒ bổ sung cột IPA cho từ điển (cần nguồn IPA kiểu Anh cho khớp phiên âm WORDS).
 - ⬜ Act đổi sang A Show Speed từ template KHÁC (qua `core/convert.js`) mất phiên âm: `buildContent` nhánh wordshake không mang `ipa` (1 dòng core — chưa làm). Act WORDS thì có đủ.
 - ⬜ TOMKO: cỡ phiên âm/nghĩa nhỏ trên màn 86", mũi tên đủ rõ chưa, vuốt ngón tay trên cột.

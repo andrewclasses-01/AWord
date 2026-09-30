@@ -8,7 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> ✏️ **30/9/2026 Đợt 434 — A Show Speed FIGHT, bảng giữa**: từ đã làm có phiên âm (`item.ipa`), nghĩa dài nhỏ lại + 2 dòng không "…", danh sách CUỘN/VUỐT (ẩn thanh cuộn, mũi tên màu đội ở đáy) thay cho thu nhỏ Đợt 423. Chỉ template wordshake. ⬜ chưa push.
+> ✏️ **30/9/2026 Đợt 434 — A Show Speed FIGHT, bảng giữa**: từ đã làm có phiên âm (`item.ipa`), nghĩa dài nhỏ lại + 2 dòng không "…", danh sách CUỘN/VUỐT (ẩn thanh cuộn, mũi tên màu đội ở đáy) thay cho thu nhỏ Đợt 423. Chỉ template wordshake. ✅ push `97217ca` + LIVE.
 > ✏️ **30/9/2026 Đợt 433 — bảng xếp hạng đọc "bảng điểm tốt nhất" do máy chủ giữ** (`assignments/{code}/bang/tot`, hàm `bangDiem`): 1 lượt đọc thay vì cả kho scores; chưa có bảng ⇒ đọc kho như cũ.
 > ✏️ **30/9/2026 Đợt 432 — bảng xếp hạng gộp theo MÃ em** (tên thật từ danh sách lớp, không mạo danh được) + `listScores` có trần (HS 1500, thầy 5000 dòng).
 > ✏️ **30/9/2026 Đợt 431 — iOS/iPadOS chậm + VÁ màn nhập tên hỏng từ 27/9** (link bài giao không qua myLesson đứng "Loading..." do thiếu `escapeText`); App Check có hạn chờ 4s + khởi động trễ; đọc bài quá 8s có nút TRY AGAIN; vn-guard nhận đúng iPad.
