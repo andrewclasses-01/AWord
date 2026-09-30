@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 427 (30/9/2026) — ACT COURSES: bài giao lấy OPTIONS CỦA ACT · "Default course options" đổi vai thành mặc định ACT MỚI trong COURSES · bỏ ô TEXT thừa ở form giao bài · phiên máy 1
+## Đợt 427 (30/9/2026) — ACT COURSES: bài giao lấy OPTIONS CỦA ACT · "Default course options" đổi vai thành mặc định ACT MỚI trong COURSES · bỏ ô TEXT thừa ở form giao bài · phiên máy 1 · ✅ ĐÃ COMMIT + PUSH `c67adb9` + LIVE 6/6 mã băm
 
 **Thầy:** "Khi tôi tạo act trong Khóa học (Course) cho một lớp, tôi muốn options khi mở lên sẽ theo đúng options ở trong phần COURSE của act… options bình thường thế nào thì assignment giống hệt. Lần sau tạo assignment từ act đó thì cứ options mặc định của act đang có mà làm mặc định. Chỉ khi chỉnh riêng và START thì mới lưu riêng, muốn sửa thì mở result ra sửa, sửa trong act ko ảnh hưởng tới assignment đã giao." + ảnh form: "thừa phần TEXT do ở đây không hề có lựa chọn text-voice… bỏ ô text đi, kéo dài ô quiz phủ luôn hàng đó."
 **Thầy chốt (AskUserQuestion):** (1) "Default course options" nay là mặc định khi TẠO ACT MỚI trong COURSES, không còn cho bài giao; (2) đổi template trong form: lấy options act đã nhớ cho template đó, chưa nhớ thì mặc định game mới; (3) chỉ act COURSES — act thường giữ "Default homework options".
