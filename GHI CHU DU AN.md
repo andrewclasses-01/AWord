@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 437 (01/10/2026) — A SHOW SPEED FIGHT: HAI BÀN KHÔNG ĐỒNG NHẤT — bàn phải (xanh dương) bấm ô chữ mà chữ VẪN HIỆN · phiên máy MSI
+## Đợt 437 (01/10/2026) — A SHOW SPEED FIGHT: HAI BÀN KHÔNG ĐỒNG NHẤT — bàn phải (xanh dương) bấm ô chữ mà chữ VẪN HIỆN · phiên máy MSI · ✅ ĐÃ COMMIT + PUSH `7b69992` + LIVE 2/2 mã băm
 
 **Thầy (ảnh chụp Fight Mode 1):** bàn trái bấm chữ thì ô chữ ẩn (chỉ còn khung nét đứt), bàn phải bấm thì khung nét đứt nhưng chữ vẫn sáng ⇒ "cần ẩn như bên trái; tìm xem còn chỗ nào 2 bên không đồng nhất, sửa tất cả và push".
 
