@@ -44,6 +44,12 @@ import {
   // tests; nothing in the app calls it any more.
   parseStudentNames, resetClassesCache, MAX_STUDENTS
 } from "./core/classes.js";
+// ⭐ Đợt 435 — học sinh TẠM của lớp dashboard (Settings ▸ Classes ▸ một lớp).
+import { themHsTam, xoaHsTam, doiGtTam } from "./core/lop-dashboard.js";
+import { chanQuetChuotDongPopup } from "./core/print-quest.js";
+// ⭐ Đợt 435 (thầy báo 01/10) — quét chuột BÔI ĐEN chữ trong một pop-up rồi thả ra ngoài làm pop-up ĐÓNG
+// (click bắn lên tổ tiên chung = nền mờ). Chặn chung một chỗ cho MỌI pop-up của thư viện — xem hàm.
+chanQuetChuotDongPopup();
 // SHOWDOWN (Đợt 155) — the home page needs only the two account-change hooks;
 // the mode itself is driven entirely from inside a game (core/engine.js).
 import { resetShowdownCache } from "./core/showdown-setup.js";
@@ -3103,6 +3109,19 @@ function openSettingsFlow() {
       try {
         const classes = await listClasses();
         listWrap.innerHTML = "";
+        // ⭐⭐ Đợt 435 — lớp lấy từ DASHBOARD (thầy chốt: dashboard là nơi duy nhất nhập lớp/học sinh):
+        // chỉ XEM + thêm/xoá học sinh TẠM. Không đọc được dashboard (listClasses lùi về lớp cũ của AWord)
+        // thì giữ trình sửa lớp cũ y như trước.
+        if (classes.length && classes[0].fromDashboard) {
+          listWrap.append(el("div", "aw-set-hint aw-cls-nguon", "Classes and pupils come from the myLesson dashboard. Edit pupils there — here you can add a <b>temporary</b> pupil."));
+          classes.forEach(c => {
+            const chinh = c.students.filter(s => !s.tam).length, tam = c.students.length - chinh;
+            listWrap.append(menuRow(c.label || c.name,
+              (chinh === 1 ? "1 pupil" : `${chinh} pupils`) + (tam ? ` · ${tam} temp` : "") + (c.laKhoa ? " · course" : ""),
+              () => showDashClass(c.maLop)));
+          });
+          return;
+        }
         classes.forEach(c => {
           const n = c.students.length;
           listWrap.append(menuRow(c.name,
@@ -3113,6 +3132,89 @@ function openSettingsFlow() {
       } catch (e) {
         listWrap.innerHTML = "";
         listWrap.append(el("div", "aw-set-hint", e.message || "Could not load your classes."));
+      }
+    }
+
+    // ⭐⭐ Đợt 435 — MỘT LỚP CỦA DASHBOARD: học sinh chính thức CHỈ XEM (tên + giới tính đặt ở dashboard),
+    // học sinh TẠM có nhãn TEMP, đổi giới tính / xoá được, và ô "+ Add a temporary pupil" cuối danh sách.
+    // Thêm/xoá ghi thẳng `lopThem/chung` (core/lop-dashboard.js) ⇒ dashboard thấy ngay, xoá bên nào cũng mất cả hai bên.
+    async function showDashClass(maLop) {
+      setTitle("Class", showClasses);
+      body.innerHTML = "";
+      body.append(el("div", "aw-set-hint", "Loading…"));
+      let cls;
+      try { cls = (await listClasses()).find(c => c.maLop === maLop); }
+      catch (e) { body.innerHTML = ""; body.append(el("div", "aw-set-hint", e.message || "Could not load the class.")); return; }
+      if (!cls) { showClasses(); return; }
+      body.innerHTML = "";
+      setTitle(cls.label || cls.name, showClasses);
+      body.closest(".aw-modal")?.classList.add("is-classwide");
+      const errBar = el("div", "aw-ed-error"); errBar.style.display = "none";
+      body.append(errBar);
+      const grid = el("div", "aw-cls-grid aw-cls-grid-xem");
+      const rowCount = Math.max(CLS_COL_ROWS, Math.ceil(cls.students.length / 2));
+      grid.style.gridTemplateRows = `repeat(${rowCount}, auto)`;
+      cls.students.forEach((s, i) => {
+        const row = el("div", "aw-cls-row" + (s.tam ? " is-tam" : ""));
+        row.append(el("span", "aw-cls-num", String(i + 1)));
+        const ten = el("span", "aw-cls-name aw-cls-name-xem", escapeText(s.name));
+        ten.title = s.name;
+        if (s.tam) ten.append(el("span", "aw-cls-tamtag", "TEMP"));
+        row.append(ten);
+        const seg = el("div", "aw-cls-seg" + (s.tam ? "" : " is-readonly"));
+        [["m", icons.boy, "BOY"], ["f", icons.girl, "GIRL"]].forEach(([g, svg, text]) => {
+          const half = el("button", `aw-cls-half is-${g}` + (s.gender === g ? " is-on" : ""),
+            `<span class="aw-cls-halficon">${svg}</span><span class="aw-cls-halftext">${text}</span>`);
+          half.type = "button";
+          half.title = s.tam ? (text === "BOY" ? "Boy" : "Girl") : "Set on the dashboard";
+          if (!s.tam) half.disabled = true;
+          else half.onclick = async () => {
+            seg.classList.add("is-busy");
+            try { await doiGtTam(maLop, s.tamId, s.gender === g ? "" : g); await showDashClass(maLop); }
+            catch (e) { seg.classList.remove("is-busy"); showErr(e); }
+          };
+          seg.append(half);
+        });
+        row.append(seg);
+        if (s.tam) {
+          const del = el("button", "aw-cls-iconbtn aw-cls-del", icons.trash);
+          del.type = "button"; del.title = "Remove this temporary pupil (also from the dashboard)";
+          del.onclick = async () => {
+            del.disabled = true;
+            try { await xoaHsTam(maLop, s.tamId); toast(`Removed ${s.name}`); await showDashClass(maLop); }
+            catch (e) { del.disabled = false; showErr(e); }
+          };
+          row.append(del);
+        }
+        grid.append(row);
+      });
+      body.append(grid);
+      // ô thêm học sinh tạm
+      const add = el("div", "aw-cls-addwrap");
+      const holder = el("div", "aw-cls-tamadd");
+      const inp = el("input", "aw-cls-name");
+      inp.placeholder = "+ Add a temporary pupil (name)";
+      inp.maxLength = 60;
+      const btn = el("button", "aw-btn aw-btn-primary", "Add");
+      btn.type = "button";
+      const them = async () => {
+        const t = inp.value.replace(/\s+/g, " ").trim();
+        if (!t) { inp.focus(); return; }
+        btn.disabled = true;
+        try { await themHsTam(maLop, t); toast(`Added ${t} (temporary)`); await showDashClass(maLop); }
+        catch (e) { btn.disabled = false; showErr(e); }
+      };
+      btn.onclick = them;
+      inp.onkeydown = ev => { if (ev.key === "Enter") { ev.preventDefault(); them(); } };
+      holder.append(inp, btn);
+      add.append(holder);
+      body.append(add);
+      function showErr(e) {
+        const c = (e && e.code) || "";
+        errBar.textContent = /permission/i.test(c)
+          ? "The dashboard has not opened this store yet (Firestore rule for lopThem) — ask to publish it, then try again."
+          : ((e && e.message) || "Could not save.");
+        errBar.style.display = "";
       }
     }
 

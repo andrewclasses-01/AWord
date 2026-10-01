@@ -47,7 +47,8 @@ import { shuffle, el } from "./utils.js";
 import { icons } from "./icons.js";
 import { sound } from "./sound.js";
 import { variantsOf, clueOf, resolveActivity, activeVariant, variantLabel } from "./content-view.js";
-import { listClasses } from "./classes.js";
+import { dsLopDashboard, buoiTrongNgay, thuHoc, isoNgay, THU_VN } from "./lop-dashboard.js";
+import { coQuest, rowsQuest, maBaiCua, KIEU_QUEST, MO_DAP_AN, dungTrangQuest, inTo, pdfTuTo, dayBaiCheck, dsBoDe, luuBoDe, themLopVaoBo, hatMoi, laThietBiChamIOS, taiSan, daSan, chiaSe, moQr } from "./print-quest.js";
 
 const FORMAT_META = {
   anagram:   { label: "Anagram",   icon: icons.fmtAnagram },
@@ -79,131 +80,389 @@ const FORMAT_ORDER = ["anagram", "crossword", "quiz", "unjumble", "word"];
 //                      đó đã bị nướng phẳng còn 1 bộ).
 //   `resolveVariant` — key → (Promise) activity đã phẳng về đúng bộ đó, cùng
 //                      template với `activity` (mặc định: resolveActivity).
+// ⭐⭐ Đợt 435 (thầy chốt 01/10/2026, mẫu v5 `D:\OTHERS\CLAUDE\AWord - thiet ke in quest\mau-v5-quest.html`) —
+// MÀN CHỌN IN MỘT MÀN, thay 3 bước nối nhau (bộ → dạng → lớp) của Đợt 415:
+//   · Đầu hộp: BỘ NGHĨA (ENG1/ENG2/VI1/VI2/ALL) cùng hàng tiêu đề — mở lên CHƯA chọn bộ nào, nút IN khoá tới khi chọn.
+//   · DẠNG IN hai khu: CƠ BẢN (2×2 Anagram · Quiz · Crossword · Word, + Unjumble cho type-the-answer)
+//     và QUEST (Translation trên, Logic dưới — core/print-quest.js), thẻ có hình thu nhỏ trang giấy.
+//   · LỚP + NGÀY in trên đầu trang: lớp đọc từ DASHBOARD (core/lop-dashboard.js), 2 lớp HÔM NAY lên đầu, xanh lá.
+//   · Dạng QUEST: BỘ ĐỀ (cặp bản học sinh + bài check cùng hạt xáo, mã LQ-n / TQ-n) — máy tính: đúp = in lại
+//     đúng bộ; iPad/iPhone: chạm = chọn + tải sẵn bài check, đúp = hộp Chia sẻ (Notability). Nút QR nhỏ mỗi ô.
+//   · Công tắc "Bài check" (bật sẵn): in bộ mới thì dựng PDF bài check đẩy lên kho.
+//   · Cột phải: XEM TRƯỚC trang in thật (dạng Quest) + số trang + nút IN.
+// Dạng cơ bản vẫn in bằng runPrint/runPrintWord cũ y nguyên — màn này chỉ đổi cách CHỌN.
 export function openPrintPopup(activity, libAct = activity, { variantAct = null, resolveVariant = null } = {}) {
   const vAct = variantAct || libAct;
   const variants = variantsOf(vAct && vAct.content) || [];
   const hasWord = variants.length > 0 && wordRowsOf(vAct).length > 0;
   const resolveFor = resolveVariant || (key => resolveActivity(withVariant(libAct, key)));
-  let cur = activity;
-  let curKey = activeVariant(vAct);
-  let formats = eligibleFormats(cur, vAct);
+  const coBan = eligibleFormats(activity, vAct);
+  const quest = variants.length && coQuest(vAct) ? ["trans", "logic"] : [];
+  const maBai = maBaiCua(vAct);
+  const laIOS = laThietBiChamIOS();
+  napFontIn();
+
+  const st = {
+    dang: quest.length ? "logic" : (coBan[0] || ""),
+    bo: variants.length ? "" : "-",            // "-" = act không có bộ nghĩa (không cần chọn)
+    lop: "", lopDs: null, ngay: isoNgay(new Date()),
+    boDe: {}, boDeLoi: {}, boChon: {}, seedMoi: { logic: hatMoi(), trans: hatMoi() },
+    check: true, dangIn: false, san: {}, bam: null, xemLuot: 0
+  };
 
   const overlay = el("div", "aw-print-pop-overlay");
-  const box = el("div", "aw-print-pop");
+  const box = el("div", "aw-pq");
   overlay.append(box);
-  overlay.onclick = ev => { if (ev.target === overlay) close(); };
+  let nhanNen = false;
+  overlay.addEventListener("mousedown", ev => { nhanNen = ev.target === overlay; });
+  overlay.addEventListener("click", ev => { if (ev.target === overlay && nhanNen) close(); });
   document.body.append(overlay);
   document.addEventListener("keydown", onEsc);
+  function onEsc(ev) { if (ev.key === "Escape" && !document.querySelector(".aw-qp-qr")) close(); }
+  function close() { overlay.remove(); document.removeEventListener("keydown", onEsc); document.removeEventListener("click", dongDsLop, true); }
+  function dongDsLop(ev) { if (!ev.target.closest(".aw-pq-lop")) box.querySelector(".aw-pq-lop")?.classList.remove("is-open"); }
+  document.addEventListener("click", dongDsLop, true);
 
-  function onEsc(ev) { if (ev.key === "Escape") close(); }
-  function close() { overlay.remove(); document.removeEventListener("keydown", onEsc); }
+  const nSo = variants.length ? wordRowsOf(vAct).length : extractItems(activity).length;
+  box.innerHTML = `
+    <div class="aw-pq-trai">
+      <div class="aw-pq-dau">
+        <span class="aw-pq-ic">${IC_IN}</span>
+        <div class="aw-pq-tde"><h3>In bài tập giấy</h3><p>${escapeHtml(vAct.title || "")} · ${nSo} ${variants.length ? "từ" : "câu"} · A4 trắng đen</p></div>
+        <div class="aw-pq-bo"></div>
+        <button type="button" class="aw-pq-dong" title="Đóng">${IC_X}</button>
+      </div>
+      <div class="aw-pq-muc">DẠNG IN</div>
+      <div class="aw-pq-dangkhu${quest.length ? "" : " is-motkhu"}">
+        <div><div class="aw-pq-nhom">CƠ BẢN</div><div class="aw-pq-luoi aw-pq-luoi-cb"></div></div>
+        ${quest.length ? `<div class="aw-pq-q"><div class="aw-pq-nhom">QUEST</div><div class="aw-pq-luoi aw-pq-luoi-q"></div></div>` : ""}
+      </div>
+      <div class="aw-pq-muc">LỚP · NGÀY IN TRÊN ĐẦU TRANG</div>
+      <div class="aw-pq-hanglop">
+        <div class="aw-pq-lop"><button type="button" class="aw-pq-nutlop"></button><div class="aw-pq-dslop"></div></div>
+        <label class="aw-pq-ngay">${IC_LICH}<input type="date"></label>
+      </div>
+      <div class="aw-pq-khubo">
+        <div class="aw-pq-muc">BỘ ĐỀ <span class="aw-pq-muc-phu">cặp bản học sinh + bài check, cùng thứ tự xáo</span></div>
+        <div class="aw-pq-bode"></div>
+        <div class="aw-pq-nhac"></div>
+      </div>
+      <button type="button" class="aw-pq-check" role="switch"><span class="aw-pq-congtac"></span>
+        <span><b>Bài check</b><span>Bản cho thầy, cùng thứ tự với bộ đề · tự lưu lên kho · mở trên iPad/iPhone</span></span></button>
+    </div>
+    <div class="aw-pq-phai">
+      <div class="aw-pq-muc">XEM TRƯỚC</div>
+      <div class="aw-pq-xem"></div>
+      <div class="aw-pq-tomtat"></div>
+      <button type="button" class="aw-pq-in">${IC_IN}IN</button>
+      <div class="aw-pq-inphu">Hộp in của máy mở ra — chọn <b>In 2 mặt</b></div>
+    </div>`;
+  const $ = (s) => box.querySelector(s);
+  $(".aw-pq-dong").onclick = close;
+  $(".aw-pq-ngay input").value = st.ngay;
+  $(".aw-pq-ngay input").onchange = (e) => { st.ngay = e.target.value || isoNgay(new Date()); veXem(); };
+  $(".aw-pq-check").onclick = () => { st.check = !st.check; ve(); };
+  $(".aw-pq-in").onclick = () => { sound.click(); void bamIn(); };
+  $(".aw-pq-nutlop").onclick = () => $(".aw-pq-lop").classList.toggle("is-open");
 
-  if (variants.length) showVariantStep(); else showFormatStep();
+  // ---- lớp từ dashboard ----
+  dsLopDashboard().then(({ lop }) => {
+    const hn = new Date();
+    const ds = lop.map(c => ({ ma: c.maLop, ten: c.ten, laKhoa: c.laKhoa, buoi: buoiTrongNgay(c.lich, hn), thu: thuHoc(c.lich, hn) }));
+    const homNay = ds.filter(c => c.buoi).sort((a, b) => a.buoi.vao.localeCompare(b.buoi.vao));
+    const gio = String(hn.getHours()).padStart(2, "0") + ":" + String(hn.getMinutes()).padStart(2, "0");
+    const dangHoc = homNay.find(c => (c.buoi.tan || "99:99") >= gio) || homNay[homNay.length - 1];
+    st.lopDs = { homNay, khac: ds.filter(c => !c.buoi) };
+    if (!st.lop && dangHoc) st.lop = dangHoc.ma;
+    veLop(); veXem();
+  }).catch(e => { console.warn("AWord: print could not read dashboard classes", e); st.lopDs = { homNay: [], khac: [], loi: true }; veLop(); });
 
-  // ---- step 1 (acts with clue sets): pick WHICH clue set ----
-  function showVariantStep() {
-    box.innerHTML = "";
-    box.append(el("div", "aw-print-pop-head", "Print — which set?"));
-    const row = el("div", "aw-print-pop-row");
-    const choices = (hasWord ? ["all"] : []).concat(variants);
-    choices.forEach(key => {
-      const label = key === "all" ? "ALL" : variantLabel(vAct.content, key);
-      const btn = el("button", "aw-print-pop-btn aw-print-pop-btn-text");
-      btn.type = "button";
-      btn.append(el("span", "aw-print-pop-label", escapeHtml(label)));
-      btn.onclick = () => { sound.click(); void pickVariant(key); };
-      row.append(btn);
+  function laQuest(d = st.dang) { return d === "logic" || d === "trans"; }
+  function thieu() {
+    if (!st.dang) return "Act này chưa có câu nào để in.";
+    if (!st.bo) return "Chọn BỘ NGHĨA ở góc trên";
+    if (st.bo === "all" && st.dang !== "word") return "ALL chỉ dùng cho dạng Word — chọn một bộ nghĩa";
+    return "";
+  }
+
+  function ve() {
+    // bộ nghĩa
+    const boDau = $(".aw-pq-bo");
+    boDau.innerHTML = variants.length ? `<span class="aw-pq-nhanbo">BỘ NGHĨA</span>` : "";
+    boDau.classList.toggle("is-can", !st.bo);
+    (hasWord ? variants.concat("all") : variants).forEach(k => {
+      const b = el("button", "aw-pq-vb" + (st.bo === k ? " is-on" : ""), k === "all" ? "ALL" : escapeHtml(variantLabel(vAct.content, k)));
+      b.type = "button";
+      b.onclick = () => { sound.click(); st.bo = k; if (laQuest()) st.boChon[st.dang] = null; ve(); };
+      boDau.append(b);
     });
-    box.append(row);
-    if (hasWord) box.append(el("div", "aw-print-pop-note", "<b>ALL</b> prints the vocabulary table (Word)."));
+    // dạng in
+    const the = (k) => {
+      const d = DANG_IN[k];
+      const b = el("button", "aw-pq-dang" + (st.dang === k ? " is-on" : ""),
+        (d.moi ? `<span class="aw-pq-moi">MỚI</span>` : "") + `<span class="aw-pq-tich">${IC_TICH}</span>`
+        + `<span class="aw-pq-nho">${d.nho}</span><span class="aw-pq-chu"><span class="aw-pq-ten">${d.ten}</span><span class="aw-pq-mota">${d.mo}</span></span>`);
+      b.type = "button";
+      b.onclick = () => { sound.click(); st.dang = k; ve(); };
+      return b;
+    };
+    const cb = $(".aw-pq-luoi-cb"); cb.innerHTML = "";
+    ["anagram", "quiz", "crossword", "word", "unjumble"].filter(k => coBan.includes(k)).forEach(k => cb.append(the(k)));
+    if (!cb.children.length) cb.append(el("div", "aw-pq-trong", "Thêm câu hỏi trước rồi mới in được."));
+    const q = $(".aw-pq-luoi-q"); if (q) { q.innerHTML = ""; quest.forEach(k => q.append(the(k))); }
+    $(".aw-pq-check").classList.toggle("is-on", st.check);
+    $(".aw-pq-check").setAttribute("aria-checked", String(st.check));
+    $(".aw-pq-check").style.display = laQuest() ? "" : "none";
+    $(".aw-pq-khubo").style.display = laQuest() ? "" : "none";
+    veLop();
+    if (laQuest()) { veBoDe(); if (!st.boDe[st.dang] && !st.boDeLoi[st.dang]) void napBoDe(st.dang); }
+    veXem();
   }
 
-  async function pickVariant(key) {
-    if (key === "all") { showClassStep("all", showVariantStep); return; }
-    box.innerHTML = "";
-    box.append(el("div", "aw-print-pop-loading", "Loading…"));
-    let next = null;
-    try { next = await resolveFor(key); } catch (e) { console.warn("AWord: print could not load that set", e); }
-    if (!overlay.isConnected) return;
-    if (!next) { showVariantStep(); return; }
-    cur = next;
-    curKey = key;
-    formats = eligibleFormats(cur, vAct);
-    showFormatStep();
+  function veLop() {
+    const nut = $(".aw-pq-nutlop"), ds = $(".aw-pq-dslop");
+    const L = st.lopDs;
+    const hn = L && L.homNay.find(c => c.ma === st.lop);
+    nut.innerHTML = (hn ? `<span class="aw-pq-cham"></span>` : "")
+      + `<span class="aw-pq-lopten">${escapeHtml(st.lop || (L ? "Không ghi lớp" : "Đang đọc lớp…"))}</span>`
+      + (hn ? `<span class="aw-pq-lopphu">hôm nay · ${hn.buoi.vao}</span>` : "") + `<span class="aw-pq-mui">▾</span>`;
+    if (!L) { ds.innerHTML = ""; return; }
+    const d = new Date();
+    const dong = (c, laHn) => `<div class="aw-pq-l${laHn ? " is-hn" : ""}${st.lop === c.ma ? " is-on" : ""}" data-lop="${escapeHtml(c.ma)}">${escapeHtml(c.ma)}`
+      + (laHn ? `<span class="aw-pq-gio">${c.buoi.vao}</span>` : `<span class="aw-pq-gio2">${c.laKhoa ? "khóa học" : escapeHtml(c.thu)}</span>`) + `</div>`;
+    ds.innerHTML = (L.homNay.length ? `<div class="aw-pq-lnhom is-hn">HÔM NAY · ${THU_VN[d.getDay()]} ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}</div>` + L.homNay.map(c => dong(c, true)).join("") + `<div class="aw-pq-chia"></div>` : "")
+      + (L.khac.length ? `<div class="aw-pq-lnhom">CÁC LỚP KHÁC</div>` + L.khac.map(c => dong(c, false)).join("") + `<div class="aw-pq-chia"></div>` : "")
+      + `<div class="aw-pq-l aw-pq-l-khong${!st.lop ? " is-on" : ""}" data-lop="">Không ghi lớp</div>`
+      + `<div class="aw-pq-nguon">${L.loi ? "Không đọc được lớp của dashboard" : "Lớp + lịch đọc từ lịch tuần trên dashboard"}</div>`;
+    ds.querySelectorAll("[data-lop]").forEach(x => x.onclick = () => {
+      st.lop = x.dataset.lop; $(".aw-pq-lop").classList.remove("is-open"); veLop(); veXem();
+    });
   }
 
-  // ---- step 2: pick a FORMAT (unchanged look for the original 4) ----
-  function showFormatStep() {
-    box.innerHTML = "";
-    if (variants.length) box.append(backRow("Print — " + escapeHtml(variantLabel(vAct.content, curKey)), showVariantStep));
-    else box.append(el("div", "aw-print-pop-head", "Print"));
-    if (formats.length === 0) {
-      box.append(el("div", "aw-print-pop-empty", "Add some questions first, then you can print."));
+  // ---- bộ đề ----
+  async function napBoDe(kieu) {
+    try { st.boDe[kieu] = await dsBoDe(vAct, kieu); delete st.boDeLoi[kieu]; }
+    catch (e) { console.warn("AWord: could not read print sets", e); st.boDe[kieu] = []; st.boDeLoi[kieu] = (e && e.code) || "loi"; }
+    if (overlay.isConnected && st.dang === kieu) { veBoDe(); veXem(); }
+  }
+  const boDangChon = () => {
+    const id = st.boChon[st.dang];
+    return id ? (st.boDe[st.dang] || []).find(b => b.id === id) || null : null;
+  };
+  function maMoi(kieu) {
+    const ds = st.boDe[kieu] || [];
+    return KIEU_QUEST[kieu].tien + "-" + (ds.reduce((m, b) => Math.max(m, b.so || 0), 0) + 1);
+  }
+  function veBoDe() {
+    const host = $(".aw-pq-bode"); host.innerHTML = "";
+    const ds = st.boDe[st.dang];
+    const chon = boDangChon();
+    if (!ds) host.append(el("div", "aw-pq-trong", "Đang đọc bộ đề…"));
+    (ds || []).forEach((b, i) => {
+      const san = laIOS && b.pdf ? (daSan(b.pdf) ? `<span class="aw-pq-san">● sẵn sàng — chạm đúp để chia sẻ</span>` : st.san[b.id] === "dang" ? `<span class="aw-pq-dangtai">đang tải sẵn…</span>` : "") : "";
+      const o = el("div", "aw-pq-bo1" + (chon && chon.id === b.id ? " is-on" : ""),
+        `<b>${escapeHtml(b.ma)}${i === 0 ? " · mới nhất" : ""}</b><span>${escapeHtml(b.ngayTao || "")} · ${escapeHtml(String(b.bo || "").toUpperCase())}${b.lop && b.lop.length ? " · đã in: " + escapeHtml(b.lop.join(", ")) : ""}</span>`
+        + (b.pdf ? "" : `<span class="aw-pq-chuacheck">chưa có bài check</span>`) + san
+        + `<span class="aw-pq-qr" title="Mã QR + link bài check">${IC_QR}</span>`);
+      o.onclick = (e) => {
+        if (e.target.closest(".aw-pq-qr")) {
+          e.stopPropagation();
+          if (b.pdf) moQr(b.pdf, "Bài check " + b.ma); else baoLoi("Bộ " + b.ma + " chưa có bài check.");
+          return;
+        }
+        // ⛔ cú bấm 1 VẼ LẠI ô ⇒ `dblclick` không bao giờ tới ô mới ⇒ TỰ ĐẾM 2 cú bấm cùng ô trong 450 ms
+        const luc = performance.now();
+        if (st.bam && st.bam.id === b.id && luc - st.bam.t < 450) { st.bam = null; dupBo(b); return; }
+        st.bam = { id: b.id, t: luc };
+        st.boChon[st.dang] = b.id;
+        if (b.bo && variants.includes(b.bo)) st.bo = b.bo;          // bộ cũ in đúng bộ nghĩa lúc tạo
+        if (laIOS && b.pdf && !daSan(b.pdf)) {
+          st.san[b.id] = "dang";
+          taiSan(b.pdf).then(() => { st.san[b.id] = "xong"; }, e2 => { st.san[b.id] = ""; baoLoi(e2.message); })
+            .finally(() => { if (overlay.isConnected) veBoDe(); });
+        }
+        ve();
+      };
+      host.append(o);
+    });
+    if (ds) {
+      const moi = el("button", "aw-pq-bo1 aw-pq-bomoi" + (!chon ? " is-on" : ""), `<b>+ Bộ mới · ${maMoi(st.dang)}</b><span>xáo thứ tự mới</span>`);
+      moi.type = "button";
+      moi.onclick = () => {
+        if (!st.boChon[st.dang]) st.seedMoi[st.dang] = hatMoi();   // đang ở "bộ mới" mà bấm lại = xáo lần khác
+        st.boChon[st.dang] = null; ve();
+      };
+      host.append(moi);
+    }
+    $(".aw-pq-nhac").innerHTML = st.boDeLoi[st.dang]
+      ? `<span class="aw-pq-loi">Chưa đọc được kho bộ đề (${escapeHtml(st.boDeLoi[st.dang])}) — vẫn in được, nhưng bộ này không được lưu.</span>`
+      : laIOS ? "<b>iPad</b>: chạm = chọn + tải sẵn bài check · chạm đúp = hộp Chia sẻ → Notability · nút QR = mã QR + link"
+        : "<b>Máy tính</b>: bấm = chọn · đúp = in lại đúng bộ đó · nút QR = mã QR + link. Lớp khác dùng chung một bộ cũng được.";
+  }
+  function dupBo(b) {
+    if (laIOS) {
+      if (!b.pdf) { baoLoi("Bộ " + b.ma + " chưa có bài check."); return; }
+      chiaSe(b.pdf, `${maBai} - ${b.ma} ${KIEU_QUEST[b.kieu].ten} - BAI CHECK.pdf`).catch(e => { if (e && e.name !== "AbortError") baoLoi(e.message); });
       return;
     }
-    const row = el("div", "aw-print-pop-row");
-    const note = el("div", "aw-print-pop-note",
-      "Paper A4 &middot; black &amp; white. Pick <b>double-sided</b> in your printer dialog.");
-    formats.forEach(f => {
-      const meta = FORMAT_META[f];
-      const btn = el("button", "aw-print-pop-btn" + (meta.comingSoon ? " is-soon" : ""));
-      btn.type = "button";
-      btn.append(el("span", "aw-print-pop-icon", meta.icon), el("span", "aw-print-pop-label", meta.label));
-      if (meta.comingSoon) btn.append(el("span", "aw-print-pop-soon", "soon"));
-      btn.onclick = () => {
-        sound.click();
-        if (meta.comingSoon) { note.innerHTML = `<b>${meta.label}</b> — coming soon.`; return; }
-        if (f === "word") { showClassStep(curKey, showFormatStep); return; }
-        close();
-        void runPrint(cur, f);
-      };
-      row.append(btn);
-    });
-    box.append(row, note);
+    st.boChon[st.dang] = b.id;
+    if (b.bo && variants.includes(b.bo)) st.bo = b.bo;
+    ve();
+    void bamIn();
   }
 
-  // ---- step 3 (Word only): pick a CLASS to stamp on the header ----
-  function showClassStep(variantKey, onBack) {
-    box.innerHTML = "";
-    box.append(backRow("Print — which class?", onBack));
-    const host = el("div", "aw-print-pop-list");
-    host.append(el("div", "aw-print-pop-loading", "Loading…"));
-    box.append(host);
-
-    const skip = el("button", "aw-print-pop-listitem aw-print-pop-listitem-skip", "(No class)");
-    skip.type = "button";
-    skip.onclick = () => { close(); void runPrintWord(vAct, variantKey, ""); };
-
-    listClasses().then(list => {
-      if (!host.isConnected) return;
-      host.innerHTML = "";
-      host.append(skip);
-      if (!list.length) {
-        host.append(el("div", "aw-print-pop-loading", "No classes in Settings yet."));
-        return;
+  // ---- dữ liệu một lần in Quest (bộ đang chọn hoặc bộ mới) ----
+  function goiQuest(laCheck) {
+    const b = boDangChon();
+    const kieu = st.dang;
+    return {
+      b, kieu,
+      o: {
+        maBai, laCheck, mo: MO_DAP_AN,
+        lop: laCheck ? "" : st.lop,
+        ngay: laCheck ? ((b && b.ngayTao) || ngayVN(isoNgay(new Date()))) : ngayVN(st.ngay),
+        maBo: b ? b.ma : maMoi(kieu),
+        items: b ? b.items : rowsQuest(vAct, st.bo),
+        seed: b ? b.seed : st.seedMoi[kieu]
       }
-      list.forEach(c => {
-        const b = el("button", "aw-print-pop-listitem", escapeHtml(c.name || ""));
-        b.type = "button";
-        b.onclick = () => { close(); void runPrintWord(vAct, variantKey, c.name || ""); };
-        host.append(b);
-      });
-    }).catch(() => {
-      if (!host.isConnected) return;
-      host.innerHTML = "";
-      host.append(skip, el("div", "aw-print-pop-loading", "Could not load your classes."));
-    });
+    };
   }
 
-  function backRow(title, onBack) {
-    const row = el("div", "aw-print-pop-headrow");
-    const back = el("button", "aw-print-pop-back", icons.back);
-    back.type = "button";
-    back.onclick = () => { sound.click(); onBack(); };
-    row.append(back, el("div", "aw-print-pop-head", title));
-    return row;
+  // ---- xem trước ----
+  async function veXem() {
+    const luot = ++st.xemLuot;
+    const xem = $(".aw-pq-xem"), tt = $(".aw-pq-tomtat"), nut = $(".aw-pq-in");
+    const loi = thieu();
+    nut.disabled = !!loi || st.dangIn;
+    if (loi) { xem.innerHTML = `<div class="aw-pq-cho">${escapeHtml(loi)}</div>`; tt.innerHTML = ""; return; }
+    if (!laQuest()) {
+      xem.innerHTML = `<div class="aw-pq-xemcu"><span class="aw-pq-nho aw-pq-nho-to">${DANG_IN[st.dang].nho}</span></div>`;
+      tt.innerHTML = `<span class="aw-pq-ok">${DANG_IN[st.dang].ten}</span><span class="aw-pq-phu">tự giãn cho đủ số trang chẵn, in 2 mặt</span>`;
+      return;
+    }
+    if (!st.boDe[st.dang] && !st.boDeLoi[st.dang]) { xem.innerHTML = `<div class="aw-pq-cho">Đang đọc bộ đề…</div>`; tt.innerHTML = ""; return; }
+    const { o, kieu } = goiQuest(false);
+    if (!o.items.length) { xem.innerHTML = `<div class="aw-pq-cho">Bộ nghĩa này chưa có nội dung.</div>`; tt.innerHTML = ""; nut.disabled = true; return; }
+    const kq = await dungTrangQuest(kieu, o);
+    if (luot !== st.xemLuot || !overlay.isConnected) return;
+    xem.innerHTML = "";
+    const k = 150 / (210 * 96 / 25.4);
+    [...kq.sheet.querySelectorAll(".aw-qp-trang")].slice(0, 2).forEach(tr => {
+      const khung = el("div", "aw-pq-xemtrang");
+      const thu = el("div", "aw-pq-thu");
+      thu.style.transform = `scale(${k})`;
+      thu.append(tr);
+      khung.append(thu);
+      xem.append(khung);
+    });
+    tt.innerHTML = `<span class="aw-pq-ok">${kq.soTrang} trang · in ${kq.soTrang / 2} tờ 2 mặt</span>`
+      + `<span class="aw-pq-phu">${kq.tuNhien !== kq.soTrang ? `tự nhiên ${kq.tuNhien} trang → giãn đủ ${kq.soTrang}` : "vừa khít, đã nới hàng cho đầy trang"} · không câu nào bị cắt</span>`;
   }
+
+  // ---- IN ----
+  async function bamIn() {
+    if (thieu() || st.dangIn) return;
+    if (!laQuest()) {
+      const lopIn = st.lop;
+      if (st.dang === "word") { close(); void runPrintWord(vAct, st.bo, lopIn, ngayVN(st.ngay)); return; }
+      let cur = activity;
+      if (variants.length) {
+        st.dangIn = true; veXem();
+        try { cur = await resolveFor(st.bo); } catch (e) { console.warn("AWord: print could not load that set", e); cur = null; }
+        st.dangIn = false;
+        if (!overlay.isConnected) return;
+        if (!cur) { baoLoi("Không nạp được bộ nghĩa này."); veXem(); return; }
+      }
+      const f = st.dang;
+      close();
+      void runPrint(cur, f);
+      return;
+    }
+    st.dangIn = true; veXem();
+    try {
+      const { b, kieu, o } = goiQuest(false);
+      let id = b ? b.id : "", bo = b;
+      // bộ MỚI: lưu trước (để mã LQ-n in ở chân trang là mã thật); hỏng thì vẫn in, báo không lưu được
+      if (!b && !st.boDeLoi[kieu]) {
+        const so = Number(o.maBo.split("-").pop()) || 1;
+        id = `a${vAct.id}-${kieu}-${so}`;
+        bo = {
+          actId: String(vAct.id || ""), actNum: vAct.num || null, actTen: vAct.title || "", maBai, kieu, so, ma: o.maBo,
+          bo: st.bo, seed: o.seed, items: o.items, tao: Date.now(), ngayTao: ngayVN(isoNgay(new Date())),
+          lop: st.lop ? [st.lop] : [], pdf: "", tep: "", soTrang: 0
+        };
+        try { await luuBoDe(id, bo); bo = { ...bo, id }; (st.boDe[kieu] = st.boDe[kieu] || []).unshift(bo); st.boChon[kieu] = id; st.seedMoi[kieu] = hatMoi(); }
+        catch (e) { console.warn("AWord: could not save print set", e); baoLoi("Không lưu được bộ đề (" + ((e && e.code) || "lỗi") + ") — vẫn in."); id = ""; bo = null; }
+      } else if (b && st.lop && !(b.lop || []).includes(st.lop)) {
+        themLopVaoBo(b.id, st.lop).then(() => { b.lop = (b.lop || []).concat(st.lop); if (overlay.isConnected) veBoDe(); }, () => {});
+      }
+      const { sheet, soTrang } = await dungTrangQuest(kieu, o);
+      inTo(sheet);
+      // bài check: chỉ dựng khi bộ đã lưu + chưa có PDF (bộ cũ đã có thì thôi)
+      if (st.check && id && bo && !bo.pdf) void lamBaiCheck(id, bo, soTrang);
+    } finally {
+      st.dangIn = false;
+      if (overlay.isConnected) { veBoDe(); veXem(); }
+    }
+  }
+  async function lamBaiCheck(id, bo, soTrang) {
+    baoTin("Đang lưu bài check " + bo.ma + "…");
+    try {
+      const { sheet } = await dungTrangQuest(bo.kieu, { maBai, laCheck: true, mo: MO_DAP_AN, lop: "", ngay: bo.ngayTao, maBo: bo.ma, items: bo.items, seed: bo.seed });
+      const blob = await pdfTuTo(sheet);
+      const { url, tep } = await dayBaiCheck(blob, id + ".pdf");
+      await luuBoDe(id, { pdf: url, tep, soTrang });
+      bo.pdf = url; bo.tep = tep; bo.soTrang = soTrang;
+      const x = (st.boDe[bo.kieu] || []).find(y => y.id === id); if (x) Object.assign(x, { pdf: url, tep, soTrang });
+      baoTin("Đã lưu bài check " + bo.ma + " — bấm nút QR ở ô bộ đề để mở trên iPad.");
+      if (overlay.isConnected) veBoDe();
+    } catch (e) {
+      console.warn("AWord: answer-check PDF failed", e);
+      baoLoi("Không lưu được bài check " + bo.ma + ": " + (((e && e.code) || (e && e.message)) || "lỗi"));
+    }
+  }
+  ve();   // cuối hàm: mọi hàm/hằng ở trên đã khởi tạo (tránh TDZ)
 }
+
+// ---------- phụ trợ màn in (Đợt 435) ----------
+const IC_IN = `<svg viewBox="0 0 24 24"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v5"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>`;
+const IC_X = `<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+const IC_TICH = `<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>`;
+const IC_LICH = `<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>`;
+const IC_QR = `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 17h4v4h-4z"/></svg>`;
+const DANG_IN = {
+  logic: { ten: "Logic Quest", mo: "Đọc mô tả, suy ra từ · word bank đầu bài", moi: true,
+    nho: `<span class="bk"><i></i><i></i><i></i><i></i><i></i><i></i></span>` + `<span class="hang"><i></i><i></i><i></i></span>`.repeat(7) },
+  trans: { ten: "Translation Quest", mo: "Mô tả tiếng Anh + dòng dịch · word bank đầu bài", moi: true,
+    nho: `<span class="bk"><i></i><i></i><i></i><i></i><i></i><i></i></span>` + `<span class="hang2"><i></i><span class="c"><i></i><i></i></span><i></i></span>`.repeat(5) },
+  word: { ten: "Word", mo: "Bảng từ · phiên âm · nghĩa",
+    nho: `<i style="width:60%"></i>` + `<span class="tb"><i></i><i></i><i></i></span>`.repeat(9) },
+  anagram: { ten: "Anagram", mo: "Chữ cái xáo + ô viết lại",
+    nho: (`<i style="width:70%"></i><span class="o-chu"><i></i><i></i><i></i><i></i><i></i><i></i></span>`).repeat(4) },
+  unjumble: { ten: "Unjumble", mo: "Chữ xáo trong câu + ô viết lại",
+    nho: (`<i style="width:90%"></i><span class="o-chu"><i></i><i></i><i></i><i></i><i></i><i></i></span>`).repeat(4) },
+  quiz: { ten: "Quiz", mo: "Câu hỏi + 4 lựa chọn A/B/C/D",
+    nho: (`<i style="width:85%"></i><span class="ac"><i></i><i></i><i></i><i></i></span>`).repeat(4) },
+  crossword: { ten: "Crossword", mo: "Ô chữ đan + gợi ý ngang/dọc",
+    nho: `<span class="cw">` + Array.from({ length: 30 }, (_, i) => `<i class="${[1, 4, 7, 9, 14, 20, 22, 27].includes(i) ? "x" : ""}"></i>`).join("") + `</span><i></i><i style="width:80%"></i><i></i><i style="width:70%"></i>` }
+};
+const ngayVN = (iso) => { const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? `${m[3]}/${m[2]}/${m[1]}` : String(iso || ""); };
+// Chữ trang Quest: Noto Sans (đủ tiếng Việt + ký hiệu phiên âm IPA — Baloo 2 thiếu IPA). Nạp một lần khi mở màn in.
+function napFontIn() {
+  if (document.getElementById("aw-font-noto")) return;
+  const l = document.createElement("link");
+  l.id = "aw-font-noto"; l.rel = "stylesheet";
+  l.href = "https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600;1,700&display=swap";
+  document.head.append(l);
+}
+function hopTin(t, laLoi) {
+  let h = document.querySelector(".aw-pq-tin");
+  if (!h) { h = el("div", "aw-pq-tin"); document.body.append(h); }
+  h.textContent = t; h.classList.toggle("is-loi", !!laLoi); h.classList.add("is-show");
+  clearTimeout(h._t); h._t = setTimeout(() => h.classList.remove("is-show"), laLoi ? 5200 : 3200);
+}
+const baoTin = (t) => hopTin(t, false);
+const baoLoi = (t) => hopTin(t, true);
 
 // A copy of `act` set to play clue set `key` in TEXT mode — what
 // resolveActivity() / convertActivity() need to flatten to exactly that set.
@@ -404,7 +663,7 @@ async function runPrint(activity, format) {
 // flowing formats (measureFlow/resolveFitScale/packPages) by shaping each
 // word row as an ordinary `.aw-print-item` — runPrint() never has to know
 // Word exists in order for that to keep working.
-async function runPrintWord(libAct, variantKey, className) {
+async function runPrintWord(libAct, variantKey, className, ngayIn) {
   const rows = wordRowsOf(libAct);
   if (!rows.length) return;
   const isAll = variantKey === "all";
@@ -416,7 +675,7 @@ async function runPrintWord(libAct, variantKey, className) {
   const itemEls = Array.from(body.children);
   const scale = itemEls.length ? resolveFitScale(s => measureFlow(itemEls, s), 2) : 1;
 
-  const topRight = formatDateVN(new Date()) + (className ? "   •   " + className : "");
+  const topRight = (ngayIn || formatDateVN(new Date())) + (className ? "   •   " + className : "");
   const sheet = buildSheet(libAct, body, "word", topRight);
   sheet.style.setProperty("--pf-scale", String(scale));
   finishAndPrint(sheet);

@@ -46,6 +46,7 @@
 // =============================================================
 
 import { db, fs, currentUser } from "./firebase.js";
+import { dsLopDashboard } from "./lop-dashboard.js";
 
 export const CLASSES_ROOT = "classes";
 export const MAX_STUDENTS = 60;      // a guard, not a target (real classes ~10-25)
@@ -161,8 +162,37 @@ function nameTaken(map, name, exceptId) {
 }
 
 // ---- reads -----------------------------------------------------------------
-export async function listClasses() {
+// ⭐⭐ Đợt 435 (thầy chốt 01/10/2026) — DASHBOARD LÀ NGUỒN LỚP DUY NHẤT. `listClasses()` nay trả lớp + khóa
+// của dashboard myLesson (core/lop-dashboard.js: lessonWeb/lop + giới tính + học sinh TẠM ở lopThem/chung);
+// mọi chỗ gọi (Settings ▸ Classes, màn In, Showdown, Running team, ô Class form giao bài) tự đổi theo.
+//   · `name` = MÃ LỚP GỌN ("A1A", "B2B", "NNTNGK9") — đúng chữ đầu tên bài giao myLesson/AWord dùng
+//     (`A1A_9.6_…` ⇒ thư mục lớp A1A); `label` = tên đẹp của dashboard ("A1-A") chỉ để hiển thị.
+//   · Lớp cũ của AWord (kind "class", trước Đợt 435) KHÔNG xoá: lớp dashboard trùng tên (bỏ dấu/gạch) mượn lại
+//     `id` lớp + `id` từng em trùng tên ⇒ đội Showdown / lượt Running team đã lưu theo id vẫn khớp; giới tính cũ
+//     nhập ở AWord là đường lùi khi dashboard chưa đặt.
+//   · Dashboard không đọc được (mất mạng…) ⇒ lùi về lớp cũ của AWord như trước.
+export async function listLocalClasses() {
   return Object.values(await readAll()).sort(byName);
+}
+const khoaTenLop = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+export async function listClasses() {
+  let local = [];
+  try { local = await listLocalClasses(); } catch (e) { local = []; }
+  let dbl = null;
+  try { dbl = await dsLopDashboard(); } catch (e) { console.warn("AWord: dashboard classes unavailable — using AWord's own", e); }
+  if (!dbl || !dbl.lop.length) return local;
+  const cu = new Map(local.map(c => [khoaTenLop(c.name), c]));
+  return dbl.lop.map(c => {
+    const old = cu.get(khoaTenLop(c.maLop)) || cu.get(khoaTenLop(c.ten));
+    const oldStu = new Map(((old && old.students) || []).map(s => [String(s.name || "").trim().toLowerCase(), s]));
+    return {
+      id: old ? old.id : "db_" + c.maLop, name: c.maLop, label: c.ten, maLop: c.maLop, laKhoa: c.laKhoa, lich: c.lich, fromDashboard: true,
+      students: c.students.map(s => {
+        const o = oldStu.get(s.name.toLowerCase());
+        return { id: o ? o.id : s.id, name: s.name, gender: s.gender || (o && o.gender) || "", tam: !!s.tam, tamId: s.tamId || "", khoa: s.khoa || "" };
+      })
+    };
+  });
 }
 
 export async function getClass(id) {

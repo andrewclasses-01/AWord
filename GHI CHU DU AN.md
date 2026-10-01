@@ -546,6 +546,26 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 435 (01/10/2026) — MÀN IN MỘT MÀN · LOGIC QUEST + TRANSLATION QUEST · BỘ ĐỀ + BÀI CHECK · LỚP ĐỌC TỪ DASHBOARD
+
+**Thầy (01/10, qua 5 mẫu `D:\OTHERS\CLAUDE\AWord - thiet ke in quest\mau-v1..v5-quest.html`, chốt v5):** AWord in thẳng 2 dạng của file Excel `LSB1-S1.T1.P3-4.xlsm` (sheet Logic-Quest = bộ nghĩa VI1, Translation-Quest = ENG2 — trùng từng chữ với act #496). Màn chọn in gom về MỘT màn. Lớp/lịch/học sinh lấy từ DASHBOARD myLesson (nơi duy nhất nhập), AWord thêm được học sinh TẠM, có giới tính.
+
+**Làm:**
+- `core/print.js` — `openPrintPopup` viết lại: bộ nghĩa ở hàng tiêu đề (mở lên CHƯA chọn, IN khoá; ALL chỉ cho Word), DẠNG IN 2 khu (CƠ BẢN 2×2 + Unjumble · QUEST Translation trên/Logic dưới, thẻ hình thu nhỏ), LỚP (sổ xuống, 2 lớp hôm nay đầu xanh lá, tự chọn lớp đang/sắp học) + NGÀY cùng khuôn 42px, BỘ ĐỀ, công tắc Bài check, XEM TRƯỚC sống bên phải. Dạng cơ bản in bằng `runPrint`/`runPrintWord` cũ (Word nhận thêm ngày in).
+- `core/print-quest.js` (mới) — `dungTrangQuest`: word bank 4 cột ĐẦU bài, xáo câu + xáo bank theo HẠT (in lại bộ cũ = y thứ tự), chia trang đo thật: câu không bao giờ cắt, tổng trang CHẴN ≥2 (tràn ⇒ 4), nới đều hàng (tìm nhị phân) cho đầy trang; chiều cao dòng đo trên bản bài check ⇒ hai bản chồng khít. Bài check: chữ đen, đáp án `rgba(0,0,0,.05)` (thầy chọn 5%), Translation thêm "Gợi ý: VI1". PDF = html2canvas + jsPDF (cdnjs) ⇒ Storage `baiCheck/<id>.pdf`. Bộ đề Firestore `boDeIn/a<actId>-<logic|trans>-<n>` {ma LQ-n/TQ-n, bo, seed, items (BẢN CHỤP), pdf, lop[], ngayTao, soTrang}. Máy tính: đúp ô bộ = in lại đúng bộ; iPad/iPhone: chạm = chọn + TẢI SẴN PDF, đúp = `navigator.share` (Notability) — ⛔ iOS chỉ cho share ngay trong cú chạm nên phải tải trước. Nút QR nhỏ mỗi ô (không tự hiện QR sau khi in). `chanQuetChuotDongPopup()` (main.js gọi 1 lần): nhấn trong hộp/ô nhập rồi thả ra nền mờ không còn đóng pop-up.
+- ⛔ Ô bộ đề vẽ lại sau cú bấm 1 ⇒ `dblclick` không tới ⇒ tự đếm 2 cú bấm/450 ms.
+- `core/lop-dashboard.js` (mới) + `core/classes.js` — `listClasses()` trả lớp DASHBOARD (giữ id lớp/em cũ khi trùng tên để Showdown/Running team không lạc), hỏng thì lùi về lớp cũ của AWord (`listLocalClasses`). Settings ▸ Classes: lớp dashboard CHỈ XEM, em TẠM (nhãn TEMP) đổi giới tính/xoá được + ô thêm em tạm; ghi `lopThem/chung` từng trường (đọc mới trước khi ghi).
+- Trang Quest dùng font Noto Sans (Google Fonts, nạp khi mở màn in) vì Baloo 2 thiếu ký hiệu IPA. Lớp in `aw-print-logicquest` / `aw-print-transquest` (myLesson aw-in-pdf.js đặt tên file theo lớp này).
+
+**Kiểm (bàn thử không đăng nhập, dữ liệu thật act #496, đã xoá sau khi thử):** lớp dashboard đọc đúng (hôm nay A1A 17:45) · VI1 ⇒ Logic 2 trang, ENG2 ⇒ Translation 4 trang, không trang nào tràn (sau khi chừa 3px) · bài check PDF 2 trang ~0,86 MB / 0,8 s · Word + ALL nhận lớp + ngày · ALL + Quest ⇒ IN khoá + nhắc · chưa có luật ⇒ "Chưa đọc được kho bộ đề… vẫn in được" (đúng đường lùi).
+**CHƯA kiểm được:** lưu bộ đề + đẩy PDF thật (cần thầy đăng nhập + luật mới), hộp in thật (khổ A4 lề 0), chạm/đúp + Chia sẻ trên iPad thật, Settings ▸ Classes trong thư viện (cần đăng nhập).
+
+**VIỆC ĐANG CHỜ:**
+- ⬜ Thầy đăng luật: `cd "E:\LAP TRINH APP\myLesson\app"` ⇒ `node tools/dang-luat-lop-them.js --dang` ⇒ `--kiem` (thêm `lopThem`, `boDeIn`, Storage `baiCheck/`). Trước đó bộ đề không lưu, bài check không đẩy, em tạm/giới tính không ghi được (có báo lỗi rõ).
+- ⬜ Thầy in thử 1 bộ Logic + 1 bộ Translation (xem khổ giấy, 2 mặt), mở bài check trên iPad (QR / chạm đúp → Notability), chiếu TOMKO xem 5% có lộ không.
+
+---
+
 ## Đợt 434 (30/9/2026) — A SHOW SPEED FIGHT: BẢNG GIỮA có PHIÊN ÂM · nghĩa dài không bị cắt · CUỘN/VUỐT có mũi tên thay vì thu nhỏ · phiên máy MSI · ✅ ĐÃ COMMIT + PUSH `97217ca` (thầy lệnh) + LIVE 2/2 mã băm
 
 **Thầy:** bảng giữa (Fight) — (1) các từ có thêm phiên âm; (2) nghĩa dài không bị cắt (nhỏ lại hoặc 2 dòng chữ nhỏ); (3) bỏ thanh cuộn, số từ vượt khung thì có mũi tên ở đáy báo cuộn/vuốt được. "Thiết kế trước" ⇒ mẫu `scratch/ws-bangiua-mau/index.html` (bị ignore; dùng CSS thật của game, HIỆN TẠI vs ĐỀ XUẤT, 3 mode, nút thêm từ) ⇒ thầy: "làm theo mẫu đề xuất vào game luôn".
