@@ -546,6 +546,15 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 436 (01/10/2026 tối) — Ô NGÀY MÀN IN KIỂU VIỆT NAM + SỬA LUẬT boDeIn
+
+**Thầy:** thử màn in thấy (1) chữ đỏ "Chưa đọc được kho bộ đề (permission-denied)", (2) ô ngày hiện 10/01/2026 ⇒ "đổi hiển thị theo giờ Việt Nam".
+- (1) Gốc: luật `boDeIn` viết `allow read, write: if laThay() && id.size() <= 80` — AWord đọc bằng TRUY VẤN DANH SÁCH (`where actId ==`), Firestore không chứng minh được điều kiện theo mã tài liệu cho cả truy vấn ⇒ từ chối. ⛔ Bài học: điều kiện theo `{id}` chỉ đặt ở `write`/`get`, đừng đặt ở `read` khi có truy vấn danh sách. Sửa: `allow read: if laThay(); allow write: if laThay() && id.size() <= 80;` — myLesson-app `tools/dang-luat-lop-them.js --sua-bodein` (thầy cho phép chạy), firestore `43fc32f8-4c32-4070-8a22-b65648563420` (lùi `21ae4eca…`).
+- (2) `<input type=date>` hiện theo ngôn ngữ trình duyệt ⇒ ô gốc trong suốt phủ kín, chữ hiện `ngayVN()` dd/mm/yyyy, bấm = `showPicker()`. Ngày mặc định + ngày tạo bộ = `homNayVN()` (Intl, Asia/Ho_Chi_Minh).
+**Kiểm:** bàn thử không đăng nhập: ô hiện 01/10/2026, chọn 05/10 ⇒ "05/10/2026". ⬜ Thầy mở lại màn in (đăng nhập) xem hết chữ đỏ + in thử lưu bộ LQ-1.
+
+---
+
 ## Đợt 435 (01/10/2026) — MÀN IN MỘT MÀN · LOGIC QUEST + TRANSLATION QUEST · BỘ ĐỀ + BÀI CHECK · LỚP ĐỌC TỪ DASHBOARD
 
 **Thầy (01/10, qua 5 mẫu `D:\OTHERS\CLAUDE\AWord - thiet ke in quest\mau-v1..v5-quest.html`, chốt v5):** AWord in thẳng 2 dạng của file Excel `LSB1-S1.T1.P3-4.xlsm` (sheet Logic-Quest = bộ nghĩa VI1, Translation-Quest = ENG2 — trùng từng chữ với act #496). Màn chọn in gom về MỘT màn. Lớp/lịch/học sinh lấy từ DASHBOARD myLesson (nơi duy nhất nhập), AWord thêm được học sinh TẠM, có giới tính.

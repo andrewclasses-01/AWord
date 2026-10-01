@@ -105,7 +105,7 @@ export function openPrintPopup(activity, libAct = activity, { variantAct = null,
   const st = {
     dang: quest.length ? "logic" : (coBan[0] || ""),
     bo: variants.length ? "" : "-",            // "-" = act không có bộ nghĩa (không cần chọn)
-    lop: "", lopDs: null, ngay: isoNgay(new Date()),
+    lop: "", lopDs: null, ngay: homNayVN(),
     boDe: {}, boDeLoi: {}, boChon: {}, seedMoi: { logic: hatMoi(), trans: hatMoi() },
     check: true, dangIn: false, san: {}, bam: null, xemLuot: 0
   };
@@ -140,7 +140,7 @@ export function openPrintPopup(activity, libAct = activity, { variantAct = null,
       <div class="aw-pq-muc">LỚP · NGÀY IN TRÊN ĐẦU TRANG</div>
       <div class="aw-pq-hanglop">
         <div class="aw-pq-lop"><button type="button" class="aw-pq-nutlop"></button><div class="aw-pq-dslop"></div></div>
-        <label class="aw-pq-ngay">${IC_LICH}<input type="date"></label>
+        <label class="aw-pq-ngay" title="Đổi ngày in">${IC_LICH}<span class="aw-pq-ngaychu"></span><input type="date" tabindex="-1" aria-label="Ngày in"></label>
       </div>
       <div class="aw-pq-khubo">
         <div class="aw-pq-muc">BỘ ĐỀ <span class="aw-pq-muc-phu">cặp bản học sinh + bài check, cùng thứ tự xáo</span></div>
@@ -159,8 +159,13 @@ export function openPrintPopup(activity, libAct = activity, { variantAct = null,
     </div>`;
   const $ = (s) => box.querySelector(s);
   $(".aw-pq-dong").onclick = close;
-  $(".aw-pq-ngay input").value = st.ngay;
-  $(".aw-pq-ngay input").onchange = (e) => { st.ngay = e.target.value || isoNgay(new Date()); veXem(); };
+  // Đợt 436 (thầy 01/10): ô ngày hiện kiểu VIỆT NAM dd/mm/yyyy — ô <input type=date> của trình duyệt theo ngôn ngữ máy
+  // (Chrome tiếng Anh hiện 10/01/2026 = tháng/ngày) ⇒ ô gốc ẩn trong suốt phủ kín, chữ hiện là ngayVN(); bấm = mở lịch.
+  const oNgay = $(".aw-pq-ngay input");
+  const veNgay = () => { $(".aw-pq-ngaychu").textContent = ngayVN(st.ngay); };
+  oNgay.value = st.ngay; veNgay();
+  oNgay.onchange = (e) => { st.ngay = e.target.value || homNayVN(); veNgay(); veXem(); };
+  $(".aw-pq-ngay").addEventListener("click", (e) => { e.preventDefault(); try { oNgay.showPicker(); } catch { oNgay.focus(); } });
   $(".aw-pq-check").onclick = () => { st.check = !st.check; ve(); };
   $(".aw-pq-in").onclick = () => { sound.click(); void bamIn(); };
   $(".aw-pq-nutlop").onclick = () => $(".aw-pq-lop").classList.toggle("is-open");
@@ -320,7 +325,7 @@ export function openPrintPopup(activity, libAct = activity, { variantAct = null,
       o: {
         maBai, laCheck, mo: MO_DAP_AN,
         lop: laCheck ? "" : st.lop,
-        ngay: laCheck ? ((b && b.ngayTao) || ngayVN(isoNgay(new Date()))) : ngayVN(st.ngay),
+        ngay: laCheck ? ((b && b.ngayTao) || ngayVN(homNayVN())) : ngayVN(st.ngay),
         maBo: b ? b.ma : maMoi(kieu),
         items: b ? b.items : rowsQuest(vAct, st.bo),
         seed: b ? b.seed : st.seedMoi[kieu]
@@ -388,7 +393,7 @@ export function openPrintPopup(activity, libAct = activity, { variantAct = null,
         id = `a${vAct.id}-${kieu}-${so}`;
         bo = {
           actId: String(vAct.id || ""), actNum: vAct.num || null, actTen: vAct.title || "", maBai, kieu, so, ma: o.maBo,
-          bo: st.bo, seed: o.seed, items: o.items, tao: Date.now(), ngayTao: ngayVN(isoNgay(new Date())),
+          bo: st.bo, seed: o.seed, items: o.items, tao: Date.now(), ngayTao: ngayVN(homNayVN()),
           lop: st.lop ? [st.lop] : [], pdf: "", tep: "", soTrang: 0
         };
         try { await luuBoDe(id, bo); bo = { ...bo, id }; (st.boDe[kieu] = st.boDe[kieu] || []).unshift(bo); st.boChon[kieu] = id; st.seedMoi[kieu] = hatMoi(); }
@@ -446,6 +451,11 @@ const DANG_IN = {
   crossword: { ten: "Crossword", mo: "Ô chữ đan + gợi ý ngang/dọc",
     nho: `<span class="cw">` + Array.from({ length: 30 }, (_, i) => `<i class="${[1, 4, 7, 9, 14, 20, 22, 27].includes(i) ? "x" : ""}"></i>`).join("") + `</span><i></i><i style="width:80%"></i><i></i><i style="width:70%"></i>` }
 };
+// Hôm nay theo GIỜ VIỆT NAM (Asia/Ho_Chi_Minh), dạng yyyy-mm-dd — đúng cả khi máy đặt múi giờ khác.
+function homNayVN() {
+  try { return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
+  catch { return isoNgay(new Date()); }
+}
 const ngayVN = (iso) => { const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? `${m[3]}/${m[2]}/${m[1]}` : String(iso || ""); };
 // Chữ trang Quest: Noto Sans (đủ tiếng Việt + ký hiệu phiên âm IPA — Baloo 2 thiếu IPA). Nạp một lần khi mở màn in.
 function napFontIn() {
