@@ -1,5 +1,9 @@
 # GHI CHÚ WORDSHAKE — template #21 + game cố định trong GAMES
 
+## ⭐ Đợt 437 (01/10/2026) — hai bàn Fight đồng nhất
+- Bàn phải (`.is-side-1`) có luật tô màu nặng hơn luật trạng thái ⇒ `is-gone` vẫn hiện chữ, `is-good`/`is-bad` sai màu, `is-given` viền xanh dương, `aw-ws-idle` còn phát sáng; GAME `.wsg-t.idle` bàn phải ra xanh lá. Sửa CSS 6 chỗ.
+- ⛔ Luật mới cho bàn phải: luật màu side-1 luôn THẮNG luật trạng thái chung ⇒ mỗi trạng thái đổi màu (`is-gone/is-good/is-bad/is-given/idle`) phải có bản side-1 đủ thuộc tính hoặc gộp selector side-1 vào. Chi tiết: GHI CHU DU AN.md chặng Đợt 437.
+
 ## ⭐ Đợt 434 (30/9/2026) — bảng giữa Fight: phiên âm · nghĩa dài · cuộn có mũi tên
 - Từ đã làm: `TỪ /ipa/` (chỉ sau khi làm được) ở cột đội + ô Word list; `items[].ipa` từ core `resolveItem`. Từ điển Free words chưa có IPA.
 - Nghĩa: `markLong()` ⇒ `is-long` nhỏ + 2 dòng khi 1 dòng không vừa (đọc chỗ trống TRƯỚC khi thử 1 dòng — cột 1fr nở theo chữ).

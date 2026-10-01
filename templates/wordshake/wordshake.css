@@ -55,13 +55,15 @@
 .aw-ws-slot{--s:min(calc(6.2 * var(--aw-u)),calc((84 * var(--aw-u)) / var(--n) - 1 * var(--aw-u)));width:var(--s);height:var(--s);border-radius:calc(.8 * var(--aw-u));
   border:2px dashed rgba(61,245,138,.35);background:rgba(0,0,0,.2);display:grid;place-items:center;font-family:"Saira",sans-serif;font-weight:800;font-size:calc(var(--s) * .52);color:#9BFFC4}
 .aw-ws-slot.is-full{border:2px solid #3DF58A;background:rgba(9,38,26,.9);text-shadow:0 0 calc(1 * var(--aw-u)) rgba(61,245,138,.75)}
-.aw-ws-slots.is-good .aw-ws-slot.is-full{background:#3DF58A;color:#03150C;text-shadow:none;box-shadow:0 0 calc(1.8 * var(--aw-u)) rgba(61,245,138,.8)}
-.aw-ws-slots.is-bad .aw-ws-slot.is-full{border-color:#FF4B5C;color:#FF4B5C;text-shadow:0 0 calc(1 * var(--aw-u)) rgba(255,75,92,.8)}
+/* Đợt 437 — right board too (the cyan .is-side-1 slot rules out-rank these otherwise) */
+.aw-ws-slots.is-good .aw-ws-slot.is-full,.aw-ws-root.is-side-1 .aw-ws-slots.is-good .aw-ws-slot.is-full{border-color:#3DF58A;background:#3DF58A;color:#03150C;text-shadow:none;box-shadow:0 0 calc(1.8 * var(--aw-u)) rgba(61,245,138,.8)}
+.aw-ws-slots.is-bad .aw-ws-slot.is-full,.aw-ws-root.is-side-1 .aw-ws-slots.is-bad .aw-ws-slot.is-full{border-color:#FF4B5C;color:#FF4B5C;text-shadow:0 0 calc(1 * var(--aw-u)) rgba(255,75,92,.8)}
 .aw-ws-slots.is-bad{animation:aw-ws-shake .35s}
 /* ⭐ Đợt 404 — Fight Mode 1: the word the OTHER team made, shown on the board that lost it.
    White (the core greys the losing board — white stays the brightest thing on it), each
    letter dropping in a beat after the one before. */
-.aw-ws-slot.is-given,.aw-ws-root.is-side-1 .aw-ws-slot.is-given{border:2px solid #fff;background:rgba(255,255,255,.14);color:#fff;
+/* Đợt 437 — .is-full.is-given: the cyan `.is-side-1 .aw-ws-slot.is-full` (same weight, later) re-coloured the edge */
+.aw-ws-slot.is-given,.aw-ws-root.is-side-1 .aw-ws-slot.is-full.is-given{border:2px solid #fff;background:rgba(255,255,255,.14);color:#fff;
   text-shadow:0 0 calc(1.4 * var(--aw-u)) rgba(255,255,255,.9);box-shadow:0 0 calc(1.6 * var(--aw-u)) rgba(255,255,255,.45);
   animation:aw-ws-given .42s cubic-bezier(.3,1.4,.5,1) var(--d,0ms) both}
 @keyframes aw-ws-given{0%{opacity:0;transform:translateY(-40%) scale(.6)}100%{opacity:1;transform:none}}
@@ -147,7 +149,8 @@
 /* the right-hand team is cyan */
 .aw-ws-root.is-side-1 .aw-ws-t{border-color:rgba(55,215,255,.5);color:#B4F0FF;text-shadow:0 0 calc(2 * var(--aw-u)) rgba(55,215,255,.7);box-shadow:inset 0 0 calc(3 * var(--aw-u)) rgba(55,215,255,.12)}
 .aw-ws-root.is-side-1 .aw-ws-t.is-on{background:#37D7FF;border-color:#B4F0FF;color:#03150C;text-shadow:none;box-shadow:0 0 calc(4 * var(--aw-u)) rgba(55,215,255,.8)}
-.aw-ws-root.is-side-1 .aw-ws-t.is-gone{border-color:rgba(55,215,255,.18);box-shadow:none}
+/* Đợt 437 — a used tile is EMPTY on the right too: the rule above re-lit its letter */
+.aw-ws-root.is-side-1 .aw-ws-t.is-gone{border-color:rgba(55,215,255,.18);color:transparent;text-shadow:none;box-shadow:none}
 .aw-ws-root.is-side-1 .aw-ws-slot{border-color:rgba(55,215,255,.35);color:#B4F0FF}
 .aw-ws-root.is-side-1 .aw-ws-slot.is-full{border-color:#37D7FF;text-shadow:0 0 calc(2 * var(--aw-u)) rgba(55,215,255,.75)}
 .aw-ws-root.is-side-1 .aw-ws-pv{border-color:rgba(55,215,255,.3);text-shadow:0 0 calc(2.4 * var(--aw-u)) rgba(55,215,255,.7)}
@@ -281,7 +284,7 @@
 .aw-wss-note{font-family:"Be Vietnam Pro",sans-serif;font-weight:500;font-size:calc(14 * var(--p));color:#7FA893}
 /* a board's cover in a match: its tiles, still dark (like the GAME before PLAY) */
 .aw-ws-idle .aw-ws-t{color:rgba(61,245,138,.25);text-shadow:none;cursor:default}
-.aw-ws-idle.is-side-1 .aw-ws-t{color:rgba(55,215,255,.25)}
+.aw-ws-idle.is-side-1 .aw-ws-t{color:rgba(55,215,255,.25);text-shadow:none}
 .aw-ws-idle .aw-ws-b{filter:grayscale(.8) brightness(.6);cursor:default}
 /* the TIME DELAY bar, re-homed into the board (fightFrame.boardTools "shared") */
 .aw-playarea:has(> .aw-ws-waitslot){position:relative}

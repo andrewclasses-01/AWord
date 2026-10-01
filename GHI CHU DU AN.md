@@ -546,6 +546,28 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 437 (01/10/2026) — A SHOW SPEED FIGHT: HAI BÀN KHÔNG ĐỒNG NHẤT — bàn phải (xanh dương) bấm ô chữ mà chữ VẪN HIỆN · phiên máy MSI
+
+**Thầy (ảnh chụp Fight Mode 1):** bàn trái bấm chữ thì ô chữ ẩn (chỉ còn khung nét đứt), bàn phải bấm thì khung nét đứt nhưng chữ vẫn sáng ⇒ "cần ẩn như bên trái; tìm xem còn chỗ nào 2 bên không đồng nhất, sửa tất cả và push".
+
+**Gốc bệnh (1 kiểu, 6 chỗ):** JS hai bàn y hệt (`grid1Html` gắn `is-gone`); lệch là ở CSS. Luật tô màu bàn phải `.aw-ws-root.is-side-1 .aw-ws-t` / `.aw-ws-slot` / `.aw-ws-slot.is-full` (3–4 class) NẶNG HƠN các luật trạng thái chung (2–3 class) ⇒ đè lại màu chữ / bóng sáng / viền mà luật trạng thái đã đặt. Bàn trái không có luật đè nên luôn đúng.
+
+| # | Trạng thái | Bàn phải trước khi sửa | Sửa |
+|---|---|---|---|
+| 1 | Ô chữ đã dùng `is-gone` (Mode 1) | chữ xanh vẫn hiện + phát sáng | luật side-1 `is-gone` thêm `color:transparent;text-shadow:none` |
+| 2 | Ô đáp án ĐÚNG `.is-good` | chữ xanh nhạt trên nền xanh lá + phát sáng + viền xanh dương | gộp selector side-1 vào luật `is-good` + `border-color:#3DF58A` |
+| 3 | Ô đáp án SAI `.is-bad` | chữ + viền xanh dương, KHÔNG đỏ | gộp selector side-1 vào luật `is-bad` |
+| 4 | Ô "đội kia làm được" `is-given` (Đợt 404) | viền xanh dương thay vì trắng (luật `.is-full` cùng sức nặng, đứng SAU) | selector side-1 đổi thành `.is-full.is-given` |
+| 5 | Bàn chờ trước PLAY `.aw-ws-idle` | ô chữ còn phát sáng | thêm `text-shadow:none` |
+| 6 | GAME `games/wordshake` ô chờ `.wsg-t.idle` | (ngược lại) bàn phải ra màu XANH LÁ mờ của bàn trái | thêm `.wsg [data-side="1"] .wsg-t.idle` xanh dương mờ |
+
+Ô chọn `is-on`, nút Enter/Clear/⌫, Pass, ô xem chữ, cột từ bảng giữa: đã soát, hai bên đồng nhất (chỉ khác màu đội — đúng thiết kế).
+
+**Kiểm:** dev server `aword-dev` :5591, dựng 2 bàn với cùng 7 trạng thái rồi đọc `getComputedStyle` (màu chữ · bóng · viền · nền): good/bad/given GIỐNG HỆT từng giá trị; gone/on/idle/gameIdle chỉ khác màu đội; `is-gone` cả hai bên màu chữ `rgba(0,0,0,0)` + không bóng. Chỉ sửa 2 file CSS, không đụng JS/core.
+⬜ Thầy chơi Fight Mode 1 thật xem bàn phải: bấm chữ ⇒ ô trống; điền đúng ⇒ xanh lá; điền sai ⇒ đỏ.
+
+---
+
 ## Đợt 436 (01/10/2026 tối) — Ô NGÀY MÀN IN KIỂU VIỆT NAM + SỬA LUẬT boDeIn
 
 **Thầy:** thử màn in thấy (1) chữ đỏ "Chưa đọc được kho bộ đề (permission-denied)", (2) ô ngày hiện 10/01/2026 ⇒ "đổi hiển thị theo giờ Việt Nam".

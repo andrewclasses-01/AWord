@@ -115,6 +115,7 @@
 .wsg [data-side="1"] .wsg-t{border-color:rgba(55,215,255,.5);color:var(--ws-cyan2);text-shadow:0 0 10px rgba(55,215,255,.7);box-shadow:inset 0 0 14px rgba(55,215,255,.12)}
 .wsg [data-side="1"] .wsg-t.on{background:var(--ws-cyan);border-color:var(--ws-cyan2);color:#03150C;text-shadow:none;box-shadow:0 0 20px rgba(55,215,255,.8)}
 .wsg-t.idle{color:rgba(61,245,138,.25)!important;text-shadow:none!important}
+.wsg [data-side="1"] .wsg-t.idle{color:rgba(55,215,255,.25)!important}
 .wsg-t[disabled]{cursor:default}
 @keyframes wsg-jig{0%,100%{transform:rotate(0)}25%{transform:rotate(-7deg) scale(.96)}75%{transform:rotate(7deg) scale(.96)}}
 .wsg.shaking .wsg-t{animation:wsg-jig .1s linear infinite}
