@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 447 (02/10/2026 khuya) — MAZE CHASE = STAR LOOT 3D (thay hẳn bản 2D) · cầu `ui.host` trong engine
+## Đợt 447 (02/10/2026 khuya) — MAZE CHASE = STAR LOOT 3D (thay hẳn bản 2D) · cầu `ui.host` trong engine · ✅ COMMIT + PUSH `5bb5642` + LIVE 8/8 mã băm (kèm 1 file tiếng) + chạy thử trang live test.html (3D lên, vào câu 1)
 
 **Thầy:** *"Đẩy bản đầy đủ lên AWord, có đủ mọi chế độ (trong đó có single và fight) và có thể liên kết với bộ từ vựng của act để chơi nhé."*
 **Thầy chốt (AskUserQuestion):** THAY HẲN Maze chase 2D (thầy: chưa từng giao bài Maze chase nào) · CHƯA cho giao bài · hàng nút GIỮ KIỂU STAR LOOT nhưng NỐI THẬT.
