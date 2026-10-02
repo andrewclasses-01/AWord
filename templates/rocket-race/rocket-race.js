@@ -379,7 +379,7 @@ function rr3dFallback(st, err) {
 //   · Options: "Missile" bỏ Off (1–10 · ∞) · "Missile streak" 1–10 câu liên tiếp = 1 tên lửa (mặc định 3) · "Missiles max" 0–3
 //     (mặc định 3; 0 = không tên lửa, BOOST vẫn còn). Act cũ lưu rrMissile = 0 (Off) ⇒ hiểu là Missiles max 0.
 //   · cột vạch năng lượng tên lửa (trắng, mỏng) sát mép màn · 2 tên lửa cùng bay HÚT nhau, va nổ giữa đường (nổ sát tàu ⇒ tính trúng)
-//     · TRÚNG LAN: 2 tàu cùng nấc / cách 1 nấc ⇒ tàu kia bị y hệt (rr3d-missile.js gọi onEnd(other,"hit") ⇒ msEnd lùi bàn đó)
+//     · TRÚNG LAN: 2 tàu CÙNG NẤC ⇒ tàu kia bị y hệt (Đợt 443: bỏ "cách 1 nấc") (rr3d-missile.js gọi onEnd(other,"hit") ⇒ msEnd lùi bàn đó)
 //   · còn 1 câu là thắng ⇒ lửa đuôi dài 1,5 lần + xanh dương (rr3d-view.js tự xét trong move)
 //   · act VOICE: mọi tiếng hiệu ứng nhỏ cố định cả trận (sfx.setFxLevel(MS_VOICE_FX)) + nhạc nền tắt như Đợt 405.
 const MS_WINDOW = 1.25, MS_BOOST_STREAK = 5, MS_DEFAULT = 2, MS_INF = 11, MS_STREAK_DEFAULT = 3, MS_MAX_DEFAULT = 3, MS_VOICE_FX = 0.35;

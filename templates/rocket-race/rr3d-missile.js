@@ -1,5 +1,6 @@
 // ⭐⭐⭐⭐ MẪU 7d (thầy 28/9/2026 — sửa từ game7c): bỏ vầng sáng mũi tàu (setNearWin ⇒ r.nearWin, view đổi lửa đuôi) ·
-//   tên lửa trúng một tàu ⇒ tàu kia cùng nấc / cách đúng 1 nấc BỊ Y HỆT (hitShip + inSplash, xét nấc thật lúc nổ); khung đỏ báo cả tàu kề
+//   tên lửa trúng một tàu ⇒ tàu kia CÙNG NẤC BỊ Y HỆT (hitShip + inSplash, xét nấc thật lúc nổ); khung đỏ báo cả tàu cùng nấc
+//   (Đợt 443, thầy 02/10/2026: bỏ "cách 1 nấc" — chênh 1 nấc trở lên KHÔNG bị lan)
 // ⭐⭐⭐ MẪU 7c (thầy 27/9/2026 — sửa từ game7b):
 //   · 2 tên lửa cùng bay ⇒ HÚT nhau, va + nổ giữa đường; nổ quá gần một tàu (CLASH_NEAR) ⇒ tàu đó vẫn tính bị trúng
 //   · cột vạch năng lượng MỎNG hơn + màu TRẮNG; quả dự phòng nhỏ hơn, cách cột xa hơn
@@ -652,7 +653,7 @@ export function createMissiles(X) {
           f.passed = true;
           if (!f.dodged) {                                   // TRÚNG
             flights.splice(i, 1); m.g.visible = false; m.flame.visible = m.flare.visible = false;
-            hitShip(f.to, f.from, T);                          // 6d vết cháy · 7d: tàu kề ≤ 1 nấc cũng trúng
+            hitShip(f.to, f.from, T);                          // 6d vết cháy · 7d: tàu CÙNG NẤC cũng trúng (Đợt 443)
             continue;
           }
           X.onEnd && X.onEnd(f.to, "miss", f.from);            // né được: lao HỤT xuống thêm một đoạn rồi nổ
@@ -726,10 +727,10 @@ export function createMissiles(X) {
 
   // ⭐ MẪU 7d (thầy): bỏ vầng sáng mũi tàu của 7c (quá chói) — còn 1 câu là thắng ⇒ r.nearWin, view cho lửa đuôi dài 1,5 lần + xanh dương.
 
-  // ⭐ MẪU 7d (thầy): 2 tàu cùng nấc hoặc cách nhau ĐÚNG 1 nấc ⇒ tên lửa trúng tàu này thì tàu kia BỊ Y HỆT (lùi, khựng, cháy).
-  // Xét theo nấc THẬT (r.p) NGAY LÚC NỔ: tàu kia kịp BOOST / trả lời đúng (tiến) hoặc sai bị lùi ra xa hơn 1 nấc ⇒ thoát.
-  const SPLASH = 1;
-  const inSplash = side => Math.abs((rockets[side].p || 0) - (rockets[1 - side].p || 0)) <= SPLASH;
+  // ⭐ MẪU 7d (thầy): 2 tàu cùng nấc ⇒ tên lửa trúng tàu này thì tàu kia BỊ Y HỆT (lùi, khựng, cháy).
+  // ⭐ Đợt 443 (thầy 02/10/2026): CHỈ khi cùng nấc — chênh 1 nấc (hơn hay kém) là KHÔNG ảnh hưởng (7d cũ: cách ≤ 1 nấc).
+  // Xét theo nấc THẬT (r.p, số nguyên do view.move đặt) NGAY LÚC NỔ: tàu kia kịp BOOST / trả lời đúng / sai bị lùi ⇒ lệch nấc ⇒ thoát.
+  const inSplash = side => Math.abs((rockets[side].p || 0) - (rockets[1 - side].p || 0)) < 0.5;
   function hitShip(to, from, pos, sc = 0.75) {
     const other = 1 - to, alsoOther = inSplash(other);        // xét TRƯỚC khi báo trúng (trang game lùi nấc ngay trong onEnd)
     explosion(pos.clone(), sc); sfx("hit2", 1); sfx("boom", 0.7);
@@ -743,7 +744,7 @@ export function createMissiles(X) {
       X.onEnd && X.onEnd(other, "hit", from, "splash");
     }
   }
-  // khung đỏ + BOOST nhấp nháy cả ở tàu KỀ khi tên lửa đang bay vào tàu kia (để kịp chạy)
+  // khung đỏ + BOOST nhấp nháy cả ở tàu CÙNG NẤC khi tên lửa đang bay vào tàu kia (để kịp chạy)
   function threatFor(side) { const m = incoming(side); return inSplash(side) ? Math.min(m, incoming(1 - side)) : m; }
   function tick(dt) {
     for (let i = pending.length - 1; i >= 0; i--) { const p = pending[i]; p.t -= dt; if (p.t <= 0) { pending.splice(i, 1); p.fn(); } }

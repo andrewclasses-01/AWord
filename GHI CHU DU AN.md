@@ -546,6 +546,30 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 443 (02/10/2026 tối) — ROCKET RACE FIGHT 3D: TRÚNG LAN CHỈ KHI 2 TÀU CÙNG NẤC · phiên MSI · ⬜ CHƯA COMMIT (chờ thầy duyệt)
+
+**Bối cảnh / yêu cầu thầy:** "Chỉ khi 2 tàu ở cùng một vị trí thì tên lửa của bên A bắn sang bên B thì cả 2 mới cùng bị tác động,
+nếu chênh hơn 1 hoặc kém 1 thì không ảnh hưởng."
+
+**Trước đây (MẪU 7d, Đợt 417):** tên lửa trúng tàu B ⇒ tàu A cũng bị y hệt (lùi nấc, khựng, cháy, nhãn "HIT TOO!") khi 2 tàu
+cùng nấc HOẶC cách nhau đúng 1 nấc (`SPLASH = 1`, so `<= 1`).
+
+**Đã làm:**
+- `templates/rocket-race/rr3d-missile.js`: bỏ hằng `SPLASH`; `inSplash(side)` = `|p_A − p_B| < 0.5` (nấc `r.p` là số NGUYÊN do
+  `view.move` đặt — so `< 0.5` cho chắc thay vì `=== 0`). Vẫn xét ở nấc THẬT ngay lúc nổ như cũ ⇒ tàu kia kịp trả lời đúng /
+  BOOST / bị lùi vì sai ⇒ lệch nấc ⇒ thoát.
+- `threatFor()` dùng chung `inSplash` ⇒ khung đỏ + BOOST nhấp nháy ở tàu KIA giờ cũng chỉ hiện khi CÙNG NẤC (đúng logic: cách 1 nấc
+  không còn bị đe doạ thì không báo).
+- Không đụng vùng va chạm 2 tên lửa đâm nhau (`CLASH_ZONE`, Đợt 441) — đó là luật khác (nổ sát tàu nào thì tàu đó lùi ×1,5).
+- Sửa chú thích đầu file `rr3d-missile.js` + đầu `rocket-race.js` (dòng "TRÚNG LAN") + `GHI CHU ROCKET-RACE.md` mục 40.
+
+**Kiểm:** `node --input-type=module --check rr3d-missile.js` + `node --check rocket-race.js` sạch. ⬜ CHƯA chơi thử trên trình
+duyệt (đổi 1 phép so, không đổi luồng).
+
+**⬜ VIỆC ĐANG CHỜ (Đợt 443):**
+- Thầy duyệt ⇒ commit + push 2 file JS + hồ sơ, kiểm live bằng mã băm.
+- Thầy bấm tay TOMKO: 2 tàu cùng nấc bị bắn ⇒ cả 2 lùi; cách 1 nấc ⇒ chỉ tàu bị nhắm lùi.
+
 ## Đợt 442 (02/10/2026 tối) — KIỂM TRA ĐẦU VÀO: KHÔNG CUỘN · LƯU MỌI LƯỢT · KHOÁ SAU KHI NỘP (+ trang mẹ: nút PHÓNG TO, chip "Đã nộp ✓") · phiên MSI · ✅ COMMIT + PUSH (mã băm ghi ở cuối chặng)
 
 **Vòng 1 — thầy (ảnh màn Hướng dẫn BT1):** khung có thanh cuộn ⇒ "không muốn cuộn" + "dựng bản thử xem hướng dẫn/khung làm bài cả 3 bài".

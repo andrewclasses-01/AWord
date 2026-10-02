@@ -793,3 +793,9 @@ khu tên lửa "cột dọc mọc lên" · PEACE bật/tắt trong trận · thi
   sai về 0 · Quiz / Crossword / Type the answer: Fight content lên đầu, In turns vẫn khoá nó · 0 lỗi console.
 - **441b** (thầy): icon PEACE = TRÁI TIM — đang bắn nhau = tim VỠ (heart-crack), bấm ⇒ tim LÀNH tô xanh = in peace (`rrPeaceIcon(on)`).
 - ⬜ Thầy bấm tay TOMKO: cỡ "+X", nhìn 2 quả đâm nhau, PEACE, LED + thanh %.
+
+## 40. Đợt 443 (02/10/2026) — TRÚNG LAN CHỈ KHI CÙNG NẤC
+- Thầy: chỉ khi 2 tàu ở CÙNG một vị trí thì tên lửa bắn sang mới làm cả 2 cùng bị; chênh 1 nấc (hơn / kém) ⇒ không ảnh hưởng.
+- `rr3d-missile.js`: bỏ `SPLASH = 1`; `inSplash` = `|p_A − p_B| < 0.5` (r.p nguyên). `threatFor` dùng chung ⇒ khung đỏ báo tàu kia cũng
+  chỉ khi cùng nấc. Vùng va chạm `CLASH_ZONE` (Đợt 441) KHÔNG đổi. Mục 38 dòng "Trúng lan" nay hiểu là cùng nấc.
+- ⬜ Chưa chơi thử trình duyệt · chưa commit (chờ thầy).
