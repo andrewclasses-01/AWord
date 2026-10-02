@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 446 (02/10/2026 tối) — ROCKET RACE 3D: TRẦN ĐỘ NÉT TỪ myActivity (`window.__awMaxPR`) + NHỚ MỨC ĐỘ NÉT ĐÃ ÊM · phiên TOMKO (máy BOARD) · ⬜ CHƯA COMMIT/PUSH (chờ thầy duyệt)
+## Đợt 446 (02/10/2026 tối) — ROCKET RACE 3D: TRẦN ĐỘ NÉT TỪ myActivity (`window.__awMaxPR`) + NHỚ MỨC ĐỘ NÉT ĐÃ ÊM · phiên TOMKO (máy BOARD) · ✅ COMMIT + PUSH `8e633e6` + LIVE 3/3 mã băm
 
 **Yêu cầu thầy:** chơi thử Rocket race trong myActivity trên TOMKO, đo thông số, cải tiến cho mượt + tối ưu hiệu năng ("sửa cả 2" = myActivity + AWord).
 
@@ -565,7 +565,9 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 - Màn chờ phóng: 59,9 fps, p99 17,2 ms (trước 54,6 fps, p99 50 ms).
 - Đua: 59,3 fps, khung > 33 ms 16 → 4, p99 33,4 → 17,1 ms; bộ nhớ card ~2,4 GB (trước 2,6–2,8).
 - Nhớ mức (KHÔNG trần, 2 ván liền): ván 2 vào thẳng 1,1; màn chờ 0 khung giật; khung tệ nhất lúc đua 183 → 83 ms NHƯNG số khung > 33 ms 16 → 28 (card vẫn kịch trần, 84 °C) ⇒ hiệu quả CHƯA CHẮC, cái chắc là trần 1,0.
-- `node --input-type=module --check` 3 file sạch. ⬜ Thầy nhìn độ nét chữ ô đáp án ở 1,0 trên màn 86" · ⬜ commit + push + kiểm LIVE mã băm.
+- `node --input-type=module --check` 3 file sạch. ✅ push `8e633e6`, LIVE 3/3 mã băm SHA-256; app thật myActivity v2.27.0 + game LIVE: `__rr3d.view.res` = { pr 1, cap 1, hostCap 1, drops 0 }.
+- ⬜ Thầy nhìn độ nét chữ ô đáp án ở 1,0 trên màn 86" (mờ ⇒ đổi trần trong myActivity `AWORD_JS` sang 1,1).
+- ✅ Thầy chốt 02/10 tối: "Commit + push cả 2 và kết thúc phiên". Trước commit đã fetch: GitHub có 7 commit mới (Đợt 443–445 phiên MSI, trùng số) ⇒ đợt này đổi số 445 → 446, ghép 2 file hồ sơ giữ cả hai mục.
 ## Đợt 445 (02/10/2026 tối) — OPEN THE BOX NHẸ CHO iPAD CŨ: Ô PHẲNG (BỎ 3D) + NHỚ CỠ CHỮ MẶT SAU · play.js BÁO "VÀO/RỜI VÁN" CHO TRANG MẸ · phiên MSI · ✅ COMMIT + PUSH `72e2aeb` + LIVE 3/3 mã băm
 
 **Thầy báo:** ảnh iPad một em lớp NTK9 làm LESSON 21 BT2 (Open the Box 85 ô, mã `rf6crd`, nhúng trong myLesson) — cứ tới câu 75 là

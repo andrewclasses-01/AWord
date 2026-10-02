@@ -811,4 +811,4 @@ khu tên lửa "cột dọc mọc lên" · PEACE bật/tắt trong trận · thi
 - `rr3d-autores.js`: `window.__awMaxPR` = trần tỉ lệ điểm ảnh (myActivity v2.27.0 đặt 1,0 trên màn 4K), đọc mỗi khung. `key`
   ("launch"/"race") + cỡ cửa sổ ⇒ nhớ mức đã êm (localStorage `aw.rr3d.pr.*`), cảnh/ván sau vào thẳng mức đó.
 - Bàn thử: `__rr3d.view.res` = { pr, cap, max, drops, hostCap, learned }. Xoá mức đã nhớ: xoá các khoá `aw.rr3d.pr.*`.
-- Đo TOMKO (chi tiết GHI CHU DU AN Đợt 446): đua 59,3 fps, khung > 33 ms 16 → 4. ⬜ CHƯA push.
+- Đo TOMKO (chi tiết GHI CHU DU AN Đợt 446): đua 59,3 fps, khung > 33 ms 16 → 4. ✅ push `8e633e6` + LIVE 3/3 mã băm.
