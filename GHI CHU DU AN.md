@@ -600,7 +600,7 @@ duyệt (đổi 1 phép so, không đổi luồng).
 - ✅ Thầy duyệt ⇒ push `3034e5a`; `aword.andrewclasses.com` khớp SHA-256 2/2 file JS sau ~1 phút.
 - Thầy bấm tay TOMKO: 2 tàu cùng nấc bị bắn ⇒ cả 2 lùi; cách 1 nấc ⇒ chỉ tàu bị nhắm lùi.
 
-## Đợt 443 (02/10/2026 ~20:20) — KIỂM TRA ĐẦU VÀO: iPhone GÕ ĐÚNG MÀ BỊ CHẤM SAI (bàn phím song ngữ VI–EN) · phiên MSI
+## Đợt 443 (02/10/2026 ~20:20) — KIỂM TRA ĐẦU VÀO: iPhone GÕ ĐÚNG MÀ BỊ CHẤM SAI (bàn phím song ngữ VI–EN) · phiên MSI · ✅ PUSH `fcee0f8` + LIVE (mã băm kiemtra.js khớp)
 
 **Báo lỗi (ảnh iPhone, BT3 làm thử 3/3):** ô hiện "I played football yesterday" (đúng đáp án) mà báo "Chưa đúng rồi". Bàn phím iOS có phím cách "VI EN" (gõ song ngữ).
 
