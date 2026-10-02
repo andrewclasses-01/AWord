@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 441 (02/10/2026) — ROCKET RACE FIGHT 3D: 11 Ý THẦY + FIGHT CONTENT LÊN ĐẦU BẢNG OPTIONS (MỌI GAME FIGHT) · nhánh `dot441-rr-11y` · ⬜ CHỜ THẦY XEM
+## Đợt 441 (02/10/2026) — ROCKET RACE FIGHT 3D: 11 Ý THẦY + FIGHT CONTENT LÊN ĐẦU BẢNG OPTIONS (MỌI GAME FIGHT) · nhánh `dot441-rr-11y` · ✅ PUSH main `6e2d7e8` (+441b tim vỡ/tim lành) + LIVE 5/5 mã băm · ⬜ thầy bấm tay TOMKO
 - CORE (1 chỗ, `core/fight.js` buildOptions): ô Fight content = ô rộng không nhãn, chèn ngay sau vạch đứt `.aw-optc-dash` (thầy chọn áp
   dụng MỌI game có Fight). Đo Quiz / Crossword (pick) / Type the answer (In turns khoá ô này như cũ): đúng chỗ, 0 lỗi.
 - Template rocket-race: Missile damages · Missiles max 0–5/∞ · Points off trận riêng `rrStepsOff` 0–20/MAX · hàng nút LED + thanh % +
