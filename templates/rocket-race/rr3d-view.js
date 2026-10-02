@@ -2032,7 +2032,7 @@ export async function createView(cfg) {
   ro.observe(container);
   var autoRes = null;
   resize();
-  autoRes = makeAutoRes({ max: renderer.getPixelRatio(), min: Math.min(1, renderer.getPixelRatio()), apply: applyPR });   // sàn 1,0: chữ ô đáp án vẫn nét
+  autoRes = makeAutoRes({ max: renderer.getPixelRatio(), min: Math.min(1, renderer.getPixelRatio()), key: "race", apply: applyPR });   // sàn 1,0: chữ ô đáp án vẫn nét
 
   function setQuality(qn) {
     quality = qn;

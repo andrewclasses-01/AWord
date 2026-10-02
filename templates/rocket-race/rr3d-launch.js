@@ -1193,7 +1193,7 @@ export async function createLaunch(cfg) {
   const clock = new THREE.Clock();
   let raf = 0, manual = false, dead = false, fN = 0, fT = 0, lastFrame = 0;
   // 5c: tự giữ 60 khung — hạ/nâng độ nét (chỉ cấp lại bộ đệm vẽ, không dựng lại cảnh)
-  const autoRes = makeAutoRes({ max: renderer.getPixelRatio(), min: 0.8, apply: pr => { renderer.setPixelRatio(pr); composer.setPixelRatio(pr); resize(); } });
+  const autoRes = makeAutoRes({ max: renderer.getPixelRatio(), min: 0.8, key: "launch", apply: pr => { renderer.setPixelRatio(pr); composer.setPixelRatio(pr); resize(); } });
   function frame(now) {
     if (dead) return;
     raf = requestAnimationFrame(frame);

@@ -806,3 +806,9 @@ khu tên lửa "cột dọc mọc lên" · PEACE bật/tắt trong trận · thi
 - Câu đúng (`advanceFx`) phát `"boostx"` = file boost qua +14 dB → nén 8:1 → +5 dB → chặn đỉnh −3 dB (`rr3d-sfx.js` ALIAS/PUNCH);
   ≈ +8 dB so với cũ, đỉnh −1,1 dB. Động cơ `swell` 3,2. Né / boostFx giữ "boost" thường.
 - ✅ push `c207bfb` + LIVE 3/3 mã băm · ⬜ thầy nghe thử / TOMKO.
+
+## 42. Đợt 446 (02/10/2026) — TRẦN ĐỘ NÉT TỪ TRANG CHỦ + NHỚ MỨC ĐÃ ÊM
+- `rr3d-autores.js`: `window.__awMaxPR` = trần tỉ lệ điểm ảnh (myActivity v2.27.0 đặt 1,0 trên màn 4K), đọc mỗi khung. `key`
+  ("launch"/"race") + cỡ cửa sổ ⇒ nhớ mức đã êm (localStorage `aw.rr3d.pr.*`), cảnh/ván sau vào thẳng mức đó.
+- Bàn thử: `__rr3d.view.res` = { pr, cap, max, drops, hostCap, learned }. Xoá mức đã nhớ: xoá các khoá `aw.rr3d.pr.*`.
+- Đo TOMKO (chi tiết GHI CHU DU AN Đợt 446): đua 59,3 fps, khung > 33 ms 16 → 4. ⬜ CHƯA push.

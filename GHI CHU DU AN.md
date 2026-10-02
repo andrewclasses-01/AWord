@@ -546,6 +546,26 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 446 (02/10/2026 tối) — ROCKET RACE 3D: TRẦN ĐỘ NÉT TỪ myActivity (`window.__awMaxPR`) + NHỚ MỨC ĐỘ NÉT ĐÃ ÊM · phiên TOMKO (máy BOARD) · ⬜ CHƯA COMMIT/PUSH (chờ thầy duyệt)
+
+**Yêu cầu thầy:** chơi thử Rocket race trong myActivity trên TOMKO, đo thông số, cải tiến cho mượt + tối ưu hiệu năng ("sửa cả 2" = myActivity + AWord).
+
+**Đo trước khi sửa (TOMKO: Quadro T2000 4 GB, màn 3840×2160, DPR 1,25, bàn thử `templates/rocket-race/test.html` trong cột 0 myActivity, qua CDP):**
+- Đua: 58 fps, 16 khung > 33 ms / 20 s; card **100 %**, chạm trần 60 W, 83–84 °C. Không game: 0 %, 17 W.
+- Khung giật ngay sau khi vào đua: 50–133 ms, KHÔNG có JS/biên dịch shader/nạp ảnh trong các khung đó (đếm `linkProgram`/`texImage2D` từng khung) ⇒ card vẽ không kịp. Mỗi cảnh (phóng / đua) dựng `makeAutoRes` MỚI bắt đầu ở mức cao nhất (1,25) ⇒ phải rớt ~40 khung mới hạ.
+- So Chrome thường cùng cỡ khung: 57,3 fps ≈ myActivity 57,7 ⇒ myActivity không làm chậm game.
+- Cảnh đua nằm dưới cảnh phóng: 0 lệnh vẽ (đã đóng băng đúng như `st.view.step(1)`), chỉ tốn bộ nhớ.
+
+**Sửa (chỉ `templates/rocket-race/`):**
+- `rr3d-autores.js`: (1) trần `window.__awMaxPR` (đọc lại mỗi khung, đặt muộn vẫn ăn; không có ⇒ như cũ); `setMax()` luôn kẹp theo trần. (2) `key` + cỡ cửa sổ ⇒ nhớ mức đã êm trong localStorage `aw.rr3d.pr.<key>.<WxH>@<dpr>`; cảnh sau vào thẳng mức đó (vẫn thử nâng 0,05 khi êm ~7 s). Mức khởi đầu ≠ max ⇒ `apply()` ở khung ĐẦU (không gọi trong hàm dựng). `info` thêm `hostCap`, `learned`.
+- `rr3d-launch.js` `key: "launch"` · `rr3d-view.js` `key: "race"`.
+- Đi cùng **myActivity v2.27.0** (`AWORD_JS` đặt `__awMaxPR = 1` khi `screen.width × DPR ≥ 3200`).
+
+**Đo sau khi sửa (cùng máy, bàn thử từ `devserver.py` cục bộ, đặt `__awMaxPR=1` như myActivity):**
+- Màn chờ phóng: 59,9 fps, p99 17,2 ms (trước 54,6 fps, p99 50 ms).
+- Đua: 59,3 fps, khung > 33 ms 16 → 4, p99 33,4 → 17,1 ms; bộ nhớ card ~2,4 GB (trước 2,6–2,8).
+- Nhớ mức (KHÔNG trần, 2 ván liền): ván 2 vào thẳng 1,1; màn chờ 0 khung giật; khung tệ nhất lúc đua 183 → 83 ms NHƯNG số khung > 33 ms 16 → 28 (card vẫn kịch trần, 84 °C) ⇒ hiệu quả CHƯA CHẮC, cái chắc là trần 1,0.
+- `node --input-type=module --check` 3 file sạch. ⬜ Thầy nhìn độ nét chữ ô đáp án ở 1,0 trên màn 86" · ⬜ commit + push + kiểm LIVE mã băm.
 ## Đợt 445 (02/10/2026 tối) — OPEN THE BOX NHẸ CHO iPAD CŨ: Ô PHẲNG (BỎ 3D) + NHỚ CỠ CHỮ MẶT SAU · play.js BÁO "VÀO/RỜI VÁN" CHO TRANG MẸ · phiên MSI · ✅ COMMIT + PUSH `72e2aeb` + LIVE 3/3 mã băm
 
 **Thầy báo:** ảnh iPad một em lớp NTK9 làm LESSON 21 BT2 (Open the Box 85 ô, mã `rf6crd`, nhúng trong myLesson) — cứ tới câu 75 là
