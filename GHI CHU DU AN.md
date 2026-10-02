@@ -600,6 +600,17 @@ duyệt (đổi 1 phép so, không đổi luồng).
 - ✅ Thầy duyệt ⇒ push `3034e5a`; `aword.andrewclasses.com` khớp SHA-256 2/2 file JS sau ~1 phút.
 - Thầy bấm tay TOMKO: 2 tàu cùng nấc bị bắn ⇒ cả 2 lùi; cách 1 nấc ⇒ chỉ tàu bị nhắm lùi.
 
+## Đợt 444 (02/10/2026 ~20:50) — KIỂM TRA ĐẦU VÀO: LÀM THỬ KHÔNG CHẶN ĐƯỜNG + "l" ĐỨNG MỘT MÌNH = "I" · phiên MSI
+
+**Báo lỗi lần 2 (ảnh iPhone 20:44, BT3 làm thử 1/3):** ô hiện "I like cats" vẫn báo "Chưa đúng rồi" (chưa rõ máy em đã tải lại nhận bản Đợt 443 chưa).
+Thầy: "Mở luôn cho làm giúp tôi đã rồi tính sau".
+- Làm thử chấm sai ⇒ thêm nút phụ "Sang câu tiếp ›" (câu cuối: "Xong phần thử ›", `.kt-qua`, chỉ 1 nút dù sai nhiều lần). Chữ sai vẫn vào `kt.thuChu`.
+- Nghi phạm mới: phông Baloo vẽ "I" hoa ≈ "l" thường; bàn phím điện thoại tắt tự viết hoa ⇒ em gõ "l like cats" nhìn như đúng.
+  `kiemtra-cham.js` `chuan()`: từ "l" đứng một mình ⇒ "i" (tiếng Anh không có từ "l"). Áp cho cả bài thật.
+- Kiểm: node dung("l like cats")=true, dung("l played football yesterday")=true, "like cats"/"I like cat" vẫn sai · bàn thử: "l like cats" ⇒ Đúng rồi;
+  sai 2 lần ⇒ đúng 1 nút "Sang câu tiếp"; câu cuối "Xong phần thử" ⇒ màn sẵn sàng ⇒ bài thật; thuChu ghi đủ 3 lần sai.
+- ⬜ Khi em nộp BT3: đọc `kt.thuChu` (script `soi-ktdv.js` trong scratchpad phiên MSI — chép lại nếu cần) để biết chắc em đã gõ gì.
+
 ## Đợt 443 (02/10/2026 ~20:20) — KIỂM TRA ĐẦU VÀO: iPhone GÕ ĐÚNG MÀ BỊ CHẤM SAI (bàn phím song ngữ VI–EN) · phiên MSI · ✅ PUSH `fcee0f8` + LIVE (mã băm kiemtra.js khớp)
 
 **Báo lỗi (ảnh iPhone, BT3 làm thử 3/3):** ô hiện "I played football yesterday" (đúng đáp án) mà báo "Chưa đúng rồi". Bàn phím iOS có phím cách "VI EN" (gõ song ngữ).

@@ -35,7 +35,9 @@ export function chuan(s) {
   t = t.replace(/[‘’ʼ`´]/g, "'");
   for (const [re, ra] of TAT) t = t.replace(re, ra);
   t = t.replace(/[^a-z0-9' ]+/g, " ").replace(/'/g, "");
-  return t.split(/\s+/).filter(Boolean).map(w => SO[w] || w).join(" ");
+  // "l" (L thường) đứng một mình = "I": phông Baloo vẽ I hoa và l thường gần như y hệt, bàn phím điện thoại lại tắt
+  // tự viết hoa ⇒ em gõ "l like cats" mà nhìn như đúng (02/10 tối). Tiếng Anh không có từ "l" nên đổi an toàn.
+  return t.split(/\s+/).filter(Boolean).map(w => (w === "l" ? "i" : SO[w] || w)).join(" ");
 }
 
 /** Câu trả lời `typed` có khớp một đáp án nào không. Rỗng ⇒ sai. */

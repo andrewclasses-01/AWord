@@ -355,6 +355,11 @@ function lamThu(act, items) {
         bao.innerHTML = "";
         bao.append(h("div", "kt-bao-dau", "Chưa đúng rồi."), h("div", "kt-bao-hd", it.huongDan));
         o.inp.classList.add("sai");
+        // ⭐ Thầy 02/10 tối (em iPhone gõ đúng mà vẫn bị báo sai): làm thử KHÔNG được chặn đường — sai rồi là có nút
+        //    đi tiếp. Chữ em gõ vẫn ghi vào kt.thuChu để soi sau.
+        if (!nuts.querySelector(".kt-qua")) {
+          nuts.append(nut(i < d.thu.length - 1 ? "Sang câu tiếp ›" : "Xong phần thử ›", "kt-phu-btn kt-qua", () => tiep()));
+        }
         vuaKhung(c);
         setTimeout(() => o.inp.classList.remove("sai"), 600);
         o.inp.focus(); o.inp.select();
