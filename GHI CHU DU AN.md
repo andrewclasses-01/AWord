@@ -600,6 +600,34 @@ duyệt (đổi 1 phép so, không đổi luồng).
 - ✅ Thầy duyệt ⇒ push `3034e5a`; `aword.andrewclasses.com` khớp SHA-256 2/2 file JS sau ~1 phút.
 - Thầy bấm tay TOMKO: 2 tàu cùng nấc bị bắn ⇒ cả 2 lùi; cách 1 nấc ⇒ chỉ tàu bị nhắm lùi.
 
+## Đợt 443 (02/10/2026 ~20:20) — KIỂM TRA ĐẦU VÀO: iPhone GÕ ĐÚNG MÀ BỊ CHẤM SAI (bàn phím song ngữ VI–EN) · phiên MSI
+
+**Báo lỗi (ảnh iPhone, BT3 làm thử 3/3):** ô hiện "I played football yesterday" (đúng đáp án) mà báo "Chưa đúng rồi". Bàn phím iOS có phím cách "VI EN" (gõ song ngữ).
+
+**Soi dữ liệu thật (đọc kho bằng khoá quản trị, CHỈ ĐỌC — script scratchpad `soi-ktdv.js`):** người báo là em Ngọc Ánh `NGOCANH20102016` — đang THI THẬT
+(BT1 nộp 19:53, làm thử sai 6 lần; BT2 nộp 20:06; đang BT3). Mọi chữ em gõ trong bài làm đều ASCII sạch ⇒ không phải ký tự lạ.
+⚠️ Chữ làm thử KHÔNG được lưu ⇒ ca này không còn chứng cứ trực tiếp.
+
+**Gốc (suy luận, chưa tái hiện được trên iPhone thật):** bàn phím iOS giữ TỪ CUỐI ở trạng thái đang ghép (marked text); phím "Tiếp" (Enter) tới
+khi từ đó chưa ghi vào ô ⇒ `cham()` đọc câu thiếu từ cuối ⇒ sai; ngay sau đó chữ chốt vào ô nên màn hình vẫn hiện đủ. Kèm 2 điểm yếu cùng chỗ:
+`loc()` (lọc ASCII) sửa `inp.value` ngay TRONG lúc ghép (làm bàn phím iOS lạc nhịp), và `beforeinput insertReplacementText` bị CHẶN — kiểu chèn
+bàn phím điện thoại dùng để chốt từ đang ghép.
+
+**Sửa (`kiemtra.js` `taoO` + nơi chấm):**
+- Đang ghép (`compositionstart`…`compositionend`, `isComposing`, keyCode 229) ⇒ không lọc giá trị; lọc khi ghép xong.
+- Enter lúc đang ghép ⇒ KHÔNG chấm ngay: chờ `compositionend` rồi chấm ở nhịp sau; lưới đỡ 400 ms nếu không có compositionend. Enter thường + nút
+  KIỂM TRA / TIẾP / BỎ QUA cũng chấm ở nhịp sau (`setTimeout 0`).
+- Mọi chỗ chấm đọc `o.giaTri()` (lọc lại lần cuối rồi lấy giá trị).
+- Bỏ chặn `insertReplacementText` (vẫn chặn dán/kéo-thả); `autocorrect="off"` vẫn tắt tự sửa chữ.
+- Chứng cứ cho lần sau: `kt.thuChu` = chữ em gõ mỗi lần LÀM THỬ bị sai (≤12 lần, ký tự lạ dạng `<U+XXXX>`, kèm `ghep`); mỗi câu bài thật có `ghep`
+  = số lần Enter tới lúc đang ghép.
+
+**Kiểm (bàn thử, giả lập sự kiện ghép):** Enter lúc "I like ca" đang ghép, chữ chốt "I like cats" SAU Enter ⇒ "Đúng rồi" (mã cũ chấm "I like ca" ⇒ sai) ·
+Enter lúc ghép không có compositionend ⇒ chưa chấm ở 150 ms, chấm đúng sau 400 ms · Enter thường sai/đúng · bài thật ghép ⇒ lưu đủ "He is reading a book",
+`ghep:1` · nút TIẾP / BỎ QUA / TIẾP với ô trống (không qua câu) đúng · `thuChu` ghi chữ sai.
+
+**⬜ VIỆC ĐANG CHỜ (Đợt 443):** thử trên iPhone thật (bàn phím VI–EN), xem `kt.thuChu` / `ghep` của các bài nộp sau này.
+
 ## Đợt 442 (02/10/2026 tối) — KIỂM TRA ĐẦU VÀO: KHÔNG CUỘN · LƯU MỌI LƯỢT · KHOÁ SAU KHI NỘP (+ trang mẹ: nút PHÓNG TO, chip "Đã nộp ✓") · phiên MSI · ✅ COMMIT + PUSH (mã băm ghi ở cuối chặng)
 
 **Vòng 1 — thầy (ảnh màn Hướng dẫn BT1):** khung có thanh cuộn ⇒ "không muốn cuộn" + "dựng bản thử xem hướng dẫn/khung làm bài cả 3 bài".

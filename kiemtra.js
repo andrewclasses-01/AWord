@@ -211,6 +211,10 @@ function manReady(act, items) {
 
 // ================= GIỚI THIỆU (phim chữ) =================
 let mocGioiThieu = 0, gioiThieuMs = 0, thuSai = 0, thuMs = 0;
+// Chữ em gõ ở mỗi lần LÀM THỬ bị chấm sai (02/10 — ca iPhone báo "gõ đúng mà sai" không còn dữ liệu để soi).
+// Ký tự ngoài ASCII ghi dạng <U+XXXX>; tối đa 12 lần, mỗi lần 120 ký tự. Đi theo bài làm (hàng 0, kt.thuChu).
+let thuChu = [];
+const lo = v => [...String(v)].map(ch => (/[\x20-\x7E]/.test(ch) ? ch : "<U+" + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0") + ">")).join("").slice(0, 120);
 async function gioiThieu(act, items, { tuDau = false, xemLai = false, quayVe = null } = {}) {
   const d = dangCua(act);
   const { than } = khung;
@@ -325,7 +329,7 @@ function lamThu(act, items) {
     const bao = h("div", "kt-bao");
     c.append(bao);
     const nuts = h("div", "kt-nuts");
-    const kiem = nut("KIỂM TRA", "kt-chinh", () => cham());
+    const kiem = nut("KIỂM TRA", "kt-chinh", () => setTimeout(cham, 0));   // nhịp sau: bàn phím điện thoại kịp chốt chữ
     nuts.append(kiem);
     c.append(nuts);
     than.append(c);
@@ -335,7 +339,7 @@ function lamThu(act, items) {
     let daDung = false;
     function cham() {
       if (daDung) { tiep(); return; }
-      const v = o.inp.value;
+      const v = o.giaTri();
       if (!v.trim()) { o.inp.focus(); return; }
       if (dung(v, it.acceptedAnswers)) {
         daDung = true;
@@ -346,6 +350,7 @@ function lamThu(act, items) {
         kiem.focus();
       } else {
         thuSai++;
+        if (thuChu.length < 12) thuChu.push({ cau: i + 1, chu: lo(v), ghep: o.ghep });
         bao.className = "kt-bao sai";
         bao.innerHTML = "";
         bao.append(h("div", "kt-bao-dau", "Chưa đúng rồi."), h("div", "kt-bao-hd", it.huongDan));
@@ -387,14 +392,33 @@ function taoO() {
   inp.setAttribute("enterkeyhint", "next");
   inp.maxLength = 200;
   dong.append(inp);
-  const o = { dong, inp, onEnter: null };
+  // ⭐ 02/10 tối — BÁO LỖI iPhone (bàn phím song ngữ VI–EN): gõ đúng "I played football yesterday" mà bị chấm sai.
+  //   Bàn phím iOS giữ TỪ CUỐI ở trạng thái "đang ghép" (gạch chân); phím Tiếp/Enter tới khi từ đó CHƯA ghi vào ô
+  //   ⇒ chấm câu thiếu từ cuối, rồi chữ mới hiện đủ. Thêm: lọc ASCII sửa giá trị NGAY TRONG lúc ghép làm bàn phím iOS lạc nhịp.
+  //   Chữa: (1) đang ghép thì KHÔNG đụng giá trị, lọc khi ghép xong; (2) Enter lúc đang ghép ⇒ chờ compositionend
+  //   (lưới đỡ 400 ms) rồi mới chấm; Enter thường cũng chấm ở nhịp sau (bàn phím kịp ghi chữ); (3) mọi nơi chấm đọc
+  //   `o.giaTri()` (lọc lại lần cuối). `o.ghep` = Enter tới lúc đang ghép (ghi vào bài làm để còn soi).
+  const o = { dong, inp, onEnter: null, ghep: 0, giaTri: () => { loc(); return inp.value; } };
+  let dangGhep = false, choEnter = 0;
+  const banEnter = () => { clearTimeout(choEnter); choEnter = 0; o.onEnter && o.onEnter(); };
   const chanSk = e => { e.preventDefault(); if (demDan && (e.type === "paste" || e.type === "drop" || e.inputType === "insertFromPaste" || e.inputType === "insertFromDrop")) demDan(); };
   ["paste", "copy", "cut", "drop", "dragstart", "contextmenu"].forEach(t => inp.addEventListener(t, chanSk));
   inp.addEventListener("beforeinput", e => {
-    if (/^insertFrom(Paste|Drop|Yank)|^insertReplacementText$/.test(e.inputType || "")) chanSk(e);
+    if (/^insertFrom(Paste|Drop|Yank)$/.test(e.inputType || "")) chanSk(e);
+    // ⛔ KHÔNG chặn insertReplacementText nữa: bàn phím iOS/Android dùng nó để CHỐT từ đang ghép (và bộ gõ VI–EN trả lại
+    //    từ tiếng Anh sau khi lỡ thêm dấu). Chặn nó ⇒ ô giữ chữ dở dang. autocorrect="off" đã tắt việc tự sửa chữ.
   });
   inp.addEventListener("keydown", e => {
-    if (e.key === "Enter") { e.preventDefault(); o.onEnter && o.onEnter(); return; }
+    if (e.key === "Enter" || e.keyCode === 13) {
+      if (e.isComposing || e.keyCode === 229 || dangGhep) {   // đang ghép: để bàn phím chốt chữ trước
+        o.ghep++;
+        clearTimeout(choEnter); choEnter = setTimeout(banEnter, 400);
+        return;
+      }
+      e.preventDefault();
+      clearTimeout(choEnter); choEnter = setTimeout(banEnter, 0);
+      return;
+    }
     if ((e.ctrlKey || e.metaKey) && /^[vxc]$/i.test(e.key)) { e.preventDefault(); if (/v/i.test(e.key) && demDan) demDan(); return; }
     if (demPhim && (e.key.length === 1 || e.key === "Backspace")) demPhim();
   });
@@ -402,8 +426,13 @@ function taoO() {
     const v = inp.value, s = v.replace(/[^\x20-\x7E]/g, "");
     if (s !== v) { const p = Math.max(0, (inp.selectionStart ?? s.length) - (v.length - s.length)); inp.value = s; inp.setSelectionRange(p, p); }
   };
-  inp.addEventListener("input", loc);
-  inp.addEventListener("compositionend", loc);
+  inp.addEventListener("compositionstart", () => { dangGhep = true; });
+  inp.addEventListener("input", e => { if (!e.isComposing && !dangGhep) loc(); });
+  inp.addEventListener("compositionend", () => {
+    dangGhep = false;
+    loc();
+    if (choEnter) { clearTimeout(choEnter); choEnter = setTimeout(banEnter, 0); }   // Enter đang chờ ⇒ chấm ngay sau khi chốt chữ
+  });
   const chen = ch => {
     const a = inp.selectionStart ?? inp.value.length, b = inp.selectionEnd ?? inp.value.length;
     inp.value = inp.value.slice(0, a) + ch + inp.value.slice(b);
@@ -430,7 +459,7 @@ function moiTrangThai(items) {
 function lamBai(act, items, s) {
   if (!s) {
     s = moiTrangThai(items);
-    s.gioiThieuMs = gioiThieuMs; s.thuSai = thuSai; s.thuMs = thuMs;
+    s.gioiThieuMs = gioiThieuMs; s.thuSai = thuSai; s.thuMs = thuMs; s.thuChu = thuChu.slice();
   }
   const { than, dongHo, menu } = khung;
   dongHo.hidden = false; menu.hidden = false;
@@ -528,9 +557,9 @@ function lamBai(act, items, s) {
     k.append(o.dong);
     nhacEl = h("div", "kt-nhac"); k.append(nhacEl);
     const nuts = h("div", "kt-nuts");
-    nuts.append(nut("BỎ QUA", "kt-phu-btn", () => traLoi(true)));
+    nuts.append(nut("BỎ QUA", "kt-phu-btn", () => setTimeout(() => traLoi(true), 0)));
     const cuoi = laCuoi();
-    nuts.append(nut(cuoi ? "NỘP BÀI" : "TIẾP ›", "kt-chinh", () => traLoi(false)));
+    nuts.append(nut(cuoi ? "NỘP BÀI" : "TIẾP ›", "kt-chinh", () => setTimeout(() => traLoi(false), 0)));
     k.append(nuts);
     than.append(k);
     vuaKhung(k);
@@ -542,7 +571,8 @@ function lamBai(act, items, s) {
 
   function traLoi(boQua) {
     if (daNop || dangMenu) return;
-    const v = boQua ? "" : o.inp.value.trim().replace(/\s+/g, " ");
+    const v = boQua ? "" : o.giaTri().trim().replace(/\s+/g, " ");
+    if (o.ghep) { cau().ghep = (cau().ghep || 0) + o.ghep; o.ghep = 0; }   // Enter tới lúc bàn phím đang ghép chữ
     if (!boQua && !v) { o.inp.focus(); return; }
     chotCau();
     const c = cau();
@@ -660,7 +690,7 @@ function lamBai(act, items, s) {
         const cu = s;
         const moi = moiTrangThai(items);
         moi.lamLai = cu.lamLai + 1; moi.taiLai = cu.taiLai;
-        moi.gioiThieuMs = cu.gioiThieuMs; moi.thuSai = cu.thuSai; moi.thuMs = cu.thuMs;
+        moi.gioiThieuMs = cu.gioiThieuMs; moi.thuSai = cu.thuSai; moi.thuMs = cu.thuMs; moi.thuChu = cu.thuChu;
         Object.keys(s).forEach(k => delete s[k]); Object.assign(s, moi);
         dangMenu = false; doan = Date.now();
         beatPlayLog(log()).catch(() => {});
@@ -685,10 +715,11 @@ function dungReview(items, s, { doDang = false } = {}) {
     return {
       question: it.prompt, answered: !!c.typed, yourText: c.typed || "", yourCorrect, correctText: it.acceptedAnswers[0],
       ms: Math.round(c.ms), anMs: Math.round(c.anMs), roi: c.roi, mat: c.mat, matMs: Math.round(c.matMs),
-      dan: c.dan, phim: c.phim, lanXem: c.lanXem, boQua: !c.typed
+      dan: c.dan, phim: c.phim, lanXem: c.lanXem, boQua: !c.typed, ...(c.ghep ? { ghep: c.ghep } : {})
     };
   });
   review[0].kt = { lamLai: s.lamLai, taiLai: s.taiLai, gioiThieuMs: Math.round(s.gioiThieuMs), thuSai: s.thuSai, thuMs: Math.round(s.thuMs),
+    ...(Array.isArray(s.thuChu) && s.thuChu.length ? { thuChu: s.thuChu } : {}),
     luotSo: (s.lamLai || 0) + 1, ...(doDang ? { doDang: true, dangCau: s.i + 1 } : {}), phienBan: 2 };
   return review;
 }
