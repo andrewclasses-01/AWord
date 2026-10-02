@@ -798,4 +798,4 @@ khu tên lửa "cột dọc mọc lên" · PEACE bật/tắt trong trận · thi
 - Thầy: chỉ khi 2 tàu ở CÙNG một vị trí thì tên lửa bắn sang mới làm cả 2 cùng bị; chênh 1 nấc (hơn / kém) ⇒ không ảnh hưởng.
 - `rr3d-missile.js`: bỏ `SPLASH = 1`; `inSplash` = `|p_A − p_B| < 0.5` (r.p nguyên). `threatFor` dùng chung ⇒ khung đỏ báo tàu kia cũng
   chỉ khi cùng nấc. Vùng va chạm `CLASH_ZONE` (Đợt 441) KHÔNG đổi. Mục 38 dòng "Trúng lan" nay hiểu là cùng nấc.
-- ⬜ Chưa chơi thử trình duyệt · chưa commit (chờ thầy).
+- ✅ push `3034e5a` + LIVE 2/2 mã băm · ⬜ chưa chơi thử trình duyệt / TOMKO.

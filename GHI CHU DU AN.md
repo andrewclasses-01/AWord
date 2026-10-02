@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 443 (02/10/2026 tối) — ROCKET RACE FIGHT 3D: TRÚNG LAN CHỈ KHI 2 TÀU CÙNG NẤC · phiên MSI · ⬜ CHƯA COMMIT (chờ thầy duyệt)
+## Đợt 443 (02/10/2026 tối) — ROCKET RACE FIGHT 3D: TRÚNG LAN CHỈ KHI 2 TÀU CÙNG NẤC · phiên MSI · ✅ COMMIT + PUSH `3034e5a` + LIVE 2/2 mã băm
 
 **Bối cảnh / yêu cầu thầy:** "Chỉ khi 2 tàu ở cùng một vị trí thì tên lửa của bên A bắn sang bên B thì cả 2 mới cùng bị tác động,
 nếu chênh hơn 1 hoặc kém 1 thì không ảnh hưởng."
@@ -567,7 +567,7 @@ cùng nấc HOẶC cách nhau đúng 1 nấc (`SPLASH = 1`, so `<= 1`).
 duyệt (đổi 1 phép so, không đổi luồng).
 
 **⬜ VIỆC ĐANG CHỜ (Đợt 443):**
-- Thầy duyệt ⇒ commit + push 2 file JS + hồ sơ, kiểm live bằng mã băm.
+- ✅ Thầy duyệt ⇒ push `3034e5a`; `aword.andrewclasses.com` khớp SHA-256 2/2 file JS sau ~1 phút.
 - Thầy bấm tay TOMKO: 2 tàu cùng nấc bị bắn ⇒ cả 2 lùi; cách 1 nấc ⇒ chỉ tàu bị nhắm lùi.
 
 ## Đợt 442 (02/10/2026 tối) — KIỂM TRA ĐẦU VÀO: KHÔNG CUỘN · LƯU MỌI LƯỢT · KHOÁ SAU KHI NỘP (+ trang mẹ: nút PHÓNG TO, chip "Đã nộp ✓") · phiên MSI · ✅ COMMIT + PUSH (mã băm ghi ở cuối chặng)
