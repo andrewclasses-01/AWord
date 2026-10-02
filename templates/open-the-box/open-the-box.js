@@ -211,43 +211,81 @@ function layoutGrid(root, total, explicitCols) {
 // after a box is answered / on resize), so cost stays tiny. Measures FLOW
 // content height (q + gap + a) against the padded face minus room reserved for
 // the tick/lock badge, and each text line's own overflow for a long word.
-function fitBackFaces(root) {
+//
+// ⭐ Đợt 445 (02/10/2026) — NHỚ KẾT QUẢ TỪNG Ô (`cache`, một Map mỗi lần mount).
+// Lưới được DỰNG LẠI sau mỗi câu trả lời, nên hàm này từng đo lại TỪ ĐẦU mọi ô đã
+// mở — mỗi ô tới ~23 lần ép trình duyệt tính lại bố cục. "Few" ở chú thích trên chỉ
+// đúng với bài ít ô: bài 85 ô (NTK9 LESSON 21 BT2) đo bằng máy giả lập iPad thì câu 1
+// tốn 36 lần tính bố cục, câu 80 tốn 1.207 lần ⇒ cuối bài iPad cũ khựng mỗi câu.
+// Kết quả một ô chỉ phụ thuộc chữ của ô (chỉ số + đúng/khoá) và kích thước/cỡ chữ
+// của lưới (`fitSignature`) ⇒ cùng khoá + cùng chữ ký thì dùng lại ĐÚNG con số cũ;
+// lệch bất cứ thứ gì (đổi cỡ màn hình, ô bị mở lại thành đúng…) là đo lại như xưa.
+// ⚠️ Font CHƯA tải xong (`document.fonts.status !== "loaded"`) thì KHÔNG dùng và
+// KHÔNG ghi bộ nhớ — đo lại toàn bộ đúng như bản cũ, để lần dựng sau (font đã về)
+// tự sửa con số như trước giờ vẫn thế.
+function fontsSettled() {
+  return !document.fonts || document.fonts.status === "loaded";
+}
+function fitSignature(grid) {
+  const cs = getComputedStyle(grid);
+  return [grid.style.getPropertyValue("--cell"), cs.getPropertyValue("--back-size"),
+          cs.getPropertyValue("--aw-u"), cs.getPropertyValue("--fit"), cs.fontFamily].join("|");
+}
+function fitBackFaces(root, cache) {
+  const grid = root.querySelector(".aw-otb-grid");
+  const sig = (cache && grid && fontsSettled()) ? fitSignature(grid) : null;
+  // Pha 1 chỉ GHI (con số đã nhớ) ⇒ không ép tính bố cục; pha 2 mới đo các ô chưa có.
+  const todo = [];
   root.querySelectorAll(".aw-otb-box.is-open .aw-otb-face-back").forEach(face => {
-    const q = face.querySelector(".aw-otb-back-q");
-    const a = face.querySelector(".aw-otb-back-a");
-    if (!q && !a) return;
-    const badge = face.querySelector(".aw-otb-solved-tick");
-    const cs = getComputedStyle(face);
-    const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-    const apply = s => face.style.setProperty("--back-fit", s);
-    const contentH = () => {
-      const gap = parseFloat(getComputedStyle(face).rowGap) || 0;
-      return (q ? q.offsetHeight : 0) + (a ? a.offsetHeight : 0) + (q && a ? gap : 0);
-    };
-    // leave room under the text for the badge so the last line never sits on it
-    const reserve = () => (badge ? badge.offsetHeight + 2 : 0);
-    const overW = () => (q && q.scrollWidth > q.clientWidth + 1) || (a && a.scrollWidth > a.clientWidth + 1);
-    const overH = () => contentH() > (face.clientHeight - padY - reserve());
-    const over = () => overH() || overW();
-    apply(1);
-    if (!over()) return;
-    let lo = 0.2, hi = 1, best = 0.2;
-    for (let i = 0; i < 14; i++) {
-      const mid = (lo + hi) / 2;
-      apply(mid);
-      if (over()) hi = mid; else { best = mid; lo = mid; }
-    }
-    apply(best);
-    // width guarantee for a single unbreakable long word (same idea as the
-    // in-question fitOne): drop past the floor until it sits on one line.
-    let f = best;
-    const HARD_MIN = 0.1;
-    for (let i = 0; i < 8 && overW() && f > HARD_MIN; i++) {
-      const el = (q && q.scrollWidth > q.clientWidth + 1) ? q : a;
-      f = Math.max(HARD_MIN, f * (el.clientWidth / Math.max(el.scrollWidth, 1)) * 0.95);
-      apply(f);
-    }
+    const key = face.parentElement && face.parentElement.parentElement
+      ? face.parentElement.parentElement.dataset.fitKey : undefined;   // face → .aw-otb-box-inner → .aw-otb-box
+    const hit = (sig && key) ? cache.get(key) : null;
+    if (hit && hit.sig === sig) face.style.setProperty("--back-fit", hit.fit);
+    else todo.push({ face, key });
   });
+  todo.forEach(({ face, key }) => {
+    const fit = fitOneBackFace(face);
+    if (sig && key && fit != null && fontsSettled()) cache.set(key, { sig, fit });
+  });
+}
+// Đo + đặt --back-fit cho MỘT mặt sau; trả con số cuối cùng đã đặt (null = mặt
+// không có chữ, không đặt gì). Thân hàm y nguyên vòng đo cũ của fitBackFaces.
+function fitOneBackFace(face) {
+  const q = face.querySelector(".aw-otb-back-q");
+  const a = face.querySelector(".aw-otb-back-a");
+  if (!q && !a) return null;
+  const badge = face.querySelector(".aw-otb-solved-tick");
+  const cs = getComputedStyle(face);
+  const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+  const apply = s => face.style.setProperty("--back-fit", s);
+  const contentH = () => {
+    const gap = parseFloat(getComputedStyle(face).rowGap) || 0;
+    return (q ? q.offsetHeight : 0) + (a ? a.offsetHeight : 0) + (q && a ? gap : 0);
+  };
+  // leave room under the text for the badge so the last line never sits on it
+  const reserve = () => (badge ? badge.offsetHeight + 2 : 0);
+  const overW = () => (q && q.scrollWidth > q.clientWidth + 1) || (a && a.scrollWidth > a.clientWidth + 1);
+  const overH = () => contentH() > (face.clientHeight - padY - reserve());
+  const over = () => overH() || overW();
+  apply(1);
+  if (!over()) return 1;
+  let lo = 0.2, hi = 1, best = 0.2;
+  for (let i = 0; i < 14; i++) {
+    const mid = (lo + hi) / 2;
+    apply(mid);
+    if (over()) hi = mid; else { best = mid; lo = mid; }
+  }
+  apply(best);
+  // width guarantee for a single unbreakable long word (same idea as the
+  // in-question fitOne): drop past the floor until it sits on one line.
+  let f = best;
+  const HARD_MIN = 0.1;
+  for (let i = 0; i < 8 && overW() && f > HARD_MIN; i++) {
+    const el = (q && q.scrollWidth > q.clientWidth + 1) ? q : a;
+    f = Math.max(HARD_MIN, f * (el.clientWidth / Math.max(el.scrollWidth, 1)) * 0.95);
+    apply(f);
+  }
+  return f;
 }
 
 // Menu pause (Đợt 91, 8/8/2026) — bridges the CURRENT mount's pause/resume
@@ -432,6 +470,7 @@ function mountQuestions(root, activity, ui) {
   let ended = false;                 // game over OR every box solved
   let fitter = null;
   let lastBoxRect = null;    // rect of the tapped box, for the open/close zoom animation
+  const backFitCache = new Map();   // Đợt 445 — cỡ chữ mặt sau đã đo của từng ô, xem fitBackFaces
   let hasPlayedEntrance = false;   // the LONG music-synced grid pop only plays once per play-through
   // Pronunciation playback (10/8/2026) — optional per-question, carried
   // through Change Template from an Anagram source (core/convert.js). No
@@ -621,7 +660,7 @@ function mountQuestions(root, activity, ui) {
 
   ensureTimerUI();   // đợt 25b: BEFORE the first render, so the topbar never changes height mid-round
   render();
-  const ro = new ResizeObserver(() => { if (activeIndex === null) { layoutGrid(root, total, explicitCols); fitBackFaces(root); } });
+  const ro = new ResizeObserver(() => { if (activeIndex === null) { layoutGrid(root, total, explicitCols); fitBackFaces(root, backFitCache); } });
   ro.observe(root);
 
   function render() {
@@ -644,6 +683,8 @@ function mountQuestions(root, activity, ui) {
       const locked = boxState[i] === "locked";
       const box = el("button", "aw-otb-box" + ((solved || locked) ? " is-open" : "") + (locked ? " is-locked" : ""));
       box.type = "button";
+      // Đợt 445 — khoá bộ nhớ cỡ chữ mặt sau (fitBackFaces): chữ của ô = câu số i + đúng/khoá.
+      if (solved || locked) box.dataset.fitKey = i + (solved ? "c" : "l");
       // FIGHT (pick turn): a board may only tap while it is ITS turn to choose.
       box.disabled = boxState[i] !== "unplayed" || ended || (!!fightCtl && !fightMyTurn);
       const inner = el("div", "aw-otb-box-inner");
@@ -790,7 +831,7 @@ function mountQuestions(root, activity, ui) {
     const { card, grid } = buildBoxGrid();
     root.append(card);
     layoutGrid(root, total, explicitCols);
-    fitBackFaces(root);   // point 3: size any already-solved boxes' back text
+    fitBackFaces(root, backFitCache);   // point 3: size any already-solved boxes' back text
     applyPopEntrance(grid);
     updateProgress();
   }
@@ -962,7 +1003,7 @@ function mountQuestions(root, activity, ui) {
     gridCard.classList.add("aw-otb-anim-under");
     root.insertBefore(gridCard, qcard);
     layoutGrid(root, total, explicitCols);
-    fitBackFaces(root);   // point 3: fit the just-answered box's back text
+    fitBackFaces(root, backFitCache);   // point 3: fit the just-answered box's back text
 
     // delayed, shorter fade-in so the boxes appear LATER but still land at
     // full opacity right as the question card is removed (ZOOM_TRANSFORM_MS)

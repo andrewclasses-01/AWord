@@ -365,6 +365,17 @@ async function play(assignment, studentName, className, studentMa) {
     }).catch(() => {});
     return giao;
   };
+  // ⭐ Đợt 445 (02/10/2026) — BÁO TRANG MẸ "ĐANG TRONG VÁN / ĐÃ RỜI VÁN": myLesson web (bai.html) giữ mọi khung act
+  // đã mở tới khi rời trang ⇒ iPad cũ gánh 2–3 bản AWord + video bài giảng, Safari hết bộ nhớ là tải lại trang (ca
+  // NTK9 LESSON 21). Trang mẹ chỉ gỡ khung nào đã báo `dangChoi:false` — gỡ giữa ván là mất lượt dở + tính "bỏ cuộc"
+  // (Đợt 383/424). Chỉ là tin báo: không đổi gì trong game; không nhúng (parent === window) thì không bắn.
+  // HS đặc biệt không có `playLog` ⇒ không báo ⇒ trang mẹ để nguyên khung như trước.
+  const baoVanChoTrangMe = (dangChoi) => {
+    if (window.parent === window) return;
+    try {
+      window.parent.postMessage({ type: "AWORD:VAN", code: assignment.code, dangChoi: !!dangChoi }, "*");
+    } catch (_) { /* trang mẹ khó tính thì thôi */ }
+  };
   startGame(app, activity, {
     session: {
       playerName: studentName,
@@ -425,6 +436,7 @@ async function play(assignment, studentName, className, studentMa) {
           if (hoatDong) hoatDong.dung();
           hoatDong = taoDoHoatDong(choMs);
           beatPlayLog(playLog);
+          baoVanChoTrangMe(true);   // Đợt 445
         },
         beat: ({ timeMs }) => {
           if (!playLog || playLog.done) return;
@@ -453,9 +465,11 @@ async function play(assignment, studentName, className, studentMa) {
           // ⭐ Đợt 384 — lượt KHÔNG nộp (Start with mistakes, 0 điểm) ⇒ bài làm vào practiceLog; lượt nộp đã có ở results.
           if (!playLog.attemptId && Array.isArray(review) && review.length) playLog.review = review;
           beatPlayLog(playLog);
+          baoVanChoTrangMe(false);   // Đợt 445
         },
         leave: ({ timeMs, score, total, review }) => {
           if (!playLog || playLog.done) return;
+          baoVanChoTrangMe(false);   // Đợt 445 — báo TRƯỚC: phần dưới có thể ném (đã bọc) nhưng tin này không được lỡ
           playLog.timeMs = Math.max(playLog.timeMs, timeMs | 0);
           if (hoatDong) { playLog.activeMs = hoatDong.doc(); hoatDong.dung(); hoatDong = null; }
           // ⭐ Đợt 379 — START AGAIN giữa ván: engine gửi kèm "điểm tới lúc dừng" (total để 0 = lượt dở; dashboard lấy

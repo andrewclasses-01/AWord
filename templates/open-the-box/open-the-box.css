@@ -154,22 +154,35 @@
   -webkit-touch-callout: none;
   user-select: none; -webkit-user-select: none;
 }
+/* ⭐ Đợt 445 (02/10/2026) — Ô PHẲNG, BỎ LẬT 3D. Trước đây mỗi ô là một thẻ lật 3D
+   (`preserve-3d` + 2 mặt `backface-visibility:hidden`, ô mở = `rotateY(180deg)`).
+   Hiệu ứng lật đó CHƯA BAO GIỜ CHẠY: lưới được DỰNG LẠI sau mỗi câu và ô đã mở sinh
+   ra với sẵn `.is-open` (buildBoxGrid), nên không có lúc nào lớp đổi trên một ô
+   đang sống. Giá của nó thì có thật: Safari/iPad dựng mỗi khối 3D + mỗi mặt thành
+   một LỚP ĐỒ HOẠ riêng (85 ô = 255 lớp, ô đã mở còn phải vẽ chữ mặt sau), lúc chuyển
+   cảnh hai lưới chồng nhau ⇒ gấp đôi. Ca thật: iPad cũ lớp NTK9 (LESSON 21 BT2, 85 ô)
+   cứ tới khoảng ô 75 là Safari hết bộ nhớ, tự tải lại trang.
+   Nay: ô chưa mở chỉ hiện mặt trước, ô đã mở chỉ hiện mặt sau — y hệt những gì mắt
+   thấy trước đây (mặt sau xoay 180° trong khối xoay 180° = không xoay).
+   ⚠️ `isolation:isolate` giữ ĐÚNG ngữ cảnh xếp lớp mà `preserve-3d`/`transform` vốn
+   tạo ra (khối trong + mặt sau), để thứ tự chồng của dấu tích/ổ khoá không đổi.
+   ⛔ Muốn có lật thật thì phải làm trên ô SỐNG (đổi lớp tại chỗ), đừng gắn lại
+   `preserve-3d` cho cả lưới — đó chính là thứ làm sập iPad. */
 .aw-otb-box-inner {
   position: relative;
   width: 100%; height: 100%;
-  transition: transform .5s cubic-bezier(.22,.9,.3,1);
-  transform-style: preserve-3d;
+  isolation: isolate;
 }
-.aw-otb-box.is-open .aw-otb-box-inner { transform: rotateY(180deg); }
 
 .aw-otb-face {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
   border-radius: var(--aw-tile-radius, calc(1.3 * var(--aw-u)));
-  backface-visibility: hidden;
   padding: calc(calc(1 * var(--aw-u)) * var(--fit));
   overflow: hidden;
 }
+.aw-otb-box:not(.is-open) .aw-otb-face-back,
+.aw-otb-box.is-open .aw-otb-face-front { display: none; }
 .aw-otb-face-front {
   /* --otb-c/--otb-d are set per-box in JS (colorBoxes), cycling quiz.js's
      own 8-colour PALETTE by COLUMN index — a FILLED tile + darker bottom
@@ -190,7 +203,7 @@
   --tile-eff: var(--aw-tile-fixed, var(--otb-c, #3b82f6));
   background: #fff;
   color: var(--aw-text);
-  transform: rotateY(180deg);
+  isolation: isolate;   /* Đợt 445 — thay cho `transform: rotateY(180deg)` cũ (xem .aw-otb-box-inner) */
   font-weight: 600;
   /* Point 3 (fit back-face text to the box, 4/8/2026): the solved/locked box
      shows its question (+ correct answer) here. The old fixed 1.5cqw is

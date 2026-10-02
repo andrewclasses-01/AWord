@@ -546,6 +546,57 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 445 (02/10/2026 tối) — OPEN THE BOX NHẸ CHO iPAD CŨ: Ô PHẲNG (BỎ 3D) + NHỚ CỠ CHỮ MẶT SAU · play.js BÁO "VÀO/RỜI VÁN" CHO TRANG MẸ · phiên MSI · ✅ COMMIT + PUSH (mã băm ở cuối chặng)
+
+**Thầy báo:** ảnh iPad một em lớp NTK9 làm LESSON 21 BT2 (Open the Box 85 ô, mã `rf6crd`, nhúng trong myLesson) — cứ tới câu 75 là
+trang tự tải lại. Do game hay do thiết bị? Rồi: "triển cả 3 … không thay đổi tính năng, không đổi giao diện, không làm game xấu đi,
+không gây lỗi".
+
+**Chẩn đoán (đo bằng máy, không đoán):**
+- Bài chỉ có chữ (17 KB), BẬT xáo câu ⇒ "ô 75" mỗi lượt một câu khác ⇒ không phải câu hỏng. Không có `location.reload` nào trong ván.
+  Safari iPad hết bộ nhớ ⇒ tắt tab rồi tự tải lại, không báo ⇒ đúng triệu chứng. Gốc chính: trang myLesson giữ mọi khung act đã mở
+  (myLesson web v1.230.0 sửa). Game góp phần:
+- **3D vô ích:** mỗi ô là thẻ lật `preserve-3d` + 2 mặt `backface-visibility:hidden` (85 khối + 170 mặt ⇒ Safari ~255 lớp đồ hoạ, lúc
+  chuyển cảnh 2 lưới chồng nhau ⇒ gấp đôi). Hiệu ứng lật **chưa bao giờ chạy**: lưới DỰNG LẠI sau mỗi câu, ô đã mở sinh ra với sẵn
+  `.is-open` (buildBoxGrid là chỗ DUY NHẤT đặt lớp đó) ⇒ không có lúc nào lớp đổi trên ô đang sống.
+- **Co chữ mặt sau đo lại từ đầu mọi ô đã mở sau MỖI câu** (`fitBackFaces`, ~23 lần ép bố cục/ô): máy giả lập iPad (Chrome headless
+  CDP 1024×768 @2x, `scratch/do-bo-nho-otb.html` + script node) tự chơi 85 ô: câu 1 = 36 lần tính bố cục, câu 80 = **1.207 lần**
+  (105 ms trên máy bàn). Bộ nhớ JS đứng 2,9 MB, trình nghe giảm dần ⇒ KHÔNG rò bộ nhớ.
+
+**Đã làm:**
+1. `templates/open-the-box/open-the-box.css` — bỏ `preserve-3d`/`transition`/`rotateY` của `.aw-otb-box-inner`, bỏ
+   `backface-visibility` của `.aw-otb-face`, bỏ `rotateY` của `.aw-otb-face-back`; thêm `isolation:isolate` cho khối trong + mặt sau
+   (giữ ĐÚNG ngữ cảnh xếp lớp 3D cũ tạo ra) và luật ẩn: ô chưa mở ẩn mặt sau, ô mở ẩn mặt trước. `perspective` của lưới GIỮ (một
+   phần tử, giữ nguyên ngữ cảnh xếp lớp/khối chứa của lưới).
+2. `templates/open-the-box/open-the-box.js` — `fitBackFaces(root, cache)`: Map `backFitCache` mỗi lần mount, khoá ô
+   `box.dataset.fitKey = i + "c"|"l"` (đúng/khoá), chữ ký lưới `fitSignature` = `--cell` · `--back-size` · `--aw-u` · `--fit` ·
+   `font-family`. Pha 1 chỉ GHI con số đã nhớ (không ép bố cục), pha 2 đo ô chưa có bằng `fitOneBackFace` (thân vòng đo cũ, nguyên
+   văn, trả con số cuối). ⚠️ `document.fonts.status !== "loaded"` (trước VÀ sau khi đo) ⇒ không dùng + không ghi bộ nhớ = y bản cũ.
+   3 chỗ gọi (renderGrid · closeCardThen · ResizeObserver) truyền `backFitCache`.
+3. `play.js` — `baoVanChoTrangMe(dangChoi)`: postMessage `{type:'AWORD:VAN', code, dangChoi}` lên `window.parent` (chỉ khi nhúng) ở
+   `playLog.start` (true), `end` (false), đầu `leave` (false). HS đặc biệt không có playLog ⇒ không báo ⇒ trang mẹ giữ khung như cũ.
+
+**Đã kiểm:**
+- `node --input-type=module --check` 2 file JS sạch; CRLF giữ nguyên (0 LF trần, 0 CR trần).
+- **So ảnh cũ/mới** (`so-anh.mjs`, cùng kịch bản, `?tron=0` tắt xáo, bản CŨ nạp module từ `aword.andrewclasses.com`, bản MỚI từ máy):
+  11 mốc (bước 0/1/4/10/30/31/45/60/84 có cả ô khoá đỏ + xoay dọc 768×1024 + xoay ngang lại): con số `--back-fit` của MỌI ô
+  **trùng khớp 11/11** (bộ nhớ không bao giờ cho số khác cách đo cũ, kể cả qua ResizeObserver). Lưới lúc chưa mở ô **trùng từng
+  điểm ảnh**. Ô đã mở: bố cục/màu/vị trí y hệt, chỉ lệch khử răng cưa nét chữ (~400 điểm ảnh/ô, vẽ trong lớp 3D ≠ vẽ thẳng) — độ nét
+  (tổng chênh điểm ảnh liền kề) mới/cũ = 0,9996 · 0,9985 ⇒ mắt không phân biệt.
+- **Đo lại 85 ô bản mới:** lần tính bố cục mỗi câu **35 đều từ câu 1 tới câu 85** (cũ 36 → 1.207) · thời gian bố cục câu 80
+  12 ms (cũ 105) · tổng thời gian xử lý tới câu 80 10,7 s (cũ 21,7) · phần tử 3D 0/0 (cũ 85/170) · bộ nhớ JS vẫn 2,9 MB.
+- Bàn thử Fight sẵn có `scratch/dot259c-otb.html` **21/21 ĐẠT** trên code mới.
+- **Tin AWORD:VAN** (`scratch/dot445-van.html` nhúng play.js THẬT, CDP chặn mọi lượt GHI Firestore — chỉ cho GET + Listen/runQuery/
+  batchGet): mở trang ⇒ không tin · START ⇒ `true` · ☰ Start again giữa ván ⇒ `false,true` · hết giờ ⇒ `false`. 0 lượt ghi.
+- Phía myLesson (bản sao tạm `bai.html` + AWord giả `scratch/gia-play.html`): 23/23 ĐẠT — xem GHI CHU myLesson web v1.230.0.
+- LIVE: __LIVE__
+
+**⬜ VIỆC ĐANG CHỜ (Đợt 445):**
+- Thầy cho em NTK9 làm lại BT2 LESSON 21 trên iPad đó (khởi động lại máy một lần trước). Nếu vẫn tải lại: còn video bài giảng +
+  chính trang myLesson trên máy 2 GB — khi đó chỉ còn cách dùng máy khác.
+- ⛔ Muốn có hiệu ứng lật ô THẬT: đổi lớp tại chỗ trên ô SỐNG (không dựng lại lưới) và chỉ gắn 3D cho ĐÚNG ô đang lật, đừng trả
+  `preserve-3d` cho cả lưới.
+
 ## Đợt 444 (02/10/2026 tối) — ROCKET RACE FIGHT 3D: THANH % = VỊ TRÍ TÀU DẪN ĐẦU · TIẾNG TĂNG TỐC KHI ĐÚNG TO HẲN · phiên MSI · ✅ COMMIT + PUSH `c207bfb` + LIVE 3/3 mã băm
 
 **Yêu cầu thầy:**

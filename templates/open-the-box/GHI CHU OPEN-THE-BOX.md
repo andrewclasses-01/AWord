@@ -1,5 +1,14 @@
 # GHI CHÚ — TEMPLATE OPEN THE BOX
 
+## 02/10/2026 — Ô PHẲNG + NHỚ CỠ CHỮ MẶT SAU (Đợt 445 của dự án) — iPad cũ tự tải lại trang ở bài 85 ô
+
+- ⛔ **Lưới KHÔNG còn 3D.** Thẻ lật `preserve-3d` cũ chưa bao giờ lật (lưới dựng lại sau mỗi câu, ô mở sinh ra với sẵn `.is-open`)
+  mà Safari phải giữ ~255 lớp đồ hoạ cho 85 ô. Nay CSS chỉ ẩn/hiện mặt trước/mặt sau; `isolation:isolate` giữ ngữ cảnh xếp lớp cũ.
+  Muốn lật thật: đổi lớp TẠI CHỖ trên ô sống + 3D cho đúng ô đó, đừng trả `preserve-3d` cho cả lưới.
+- **`fitBackFaces(root, cache)`** nhớ `--back-fit` theo `data-fit-key` (= chỉ số câu + `c`/`l`) + chữ ký lưới (`--cell`,
+  `--back-size`, `--aw-u`, `--fit`, font). Font chưa tải xong ⇒ đo như cũ, không nhớ. Đo: 35 lần tính bố cục/câu (cũ tới 1.207).
+- So ảnh cũ/mới + số đo đầy đủ: `GHI CHU DU AN.md` mục Đợt 445. Bàn thử: `scratch/do-bo-nho-otb.html` (`?tron=0`, `?goc=<bản live>`).
+
 ## 25/8/2026 — BỎ HẲN HIỆU ỨNG LÀM NHẠT BÀN KHÔNG TỚI LƯỢT (Đợt 259c của dự án) — ✅ COMMIT `d65bdcc` + PUSH + LIVE (8/8 mã băm khớp · 44/44 phép chạy trên module bản live)
 
 Thầy: *"Open the box cũng bỏ làm nhạt luôn cho đồng bộ và thêm thanh thời gian tương tự"*.
