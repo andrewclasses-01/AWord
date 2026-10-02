@@ -592,6 +592,7 @@ không gây lỗi".
 - LIVE: push `72e2aeb`; `aword.andrewclasses.com` khớp SHA-256 3/3 file (play.js · open-the-box.js · open-the-box.css) ngay lượt kiểm đầu; bài `rf6crd` nạp trên bản live 0 lỗi console, CSS live không còn `preserve-3d`.
 
 **⬜ VIỆC ĐANG CHỜ (Đợt 445):**
+- ✅ Thầy chốt 02/10 tối: "Commit + push + kết thúc phiên".
 - Thầy cho em NTK9 làm lại BT2 LESSON 21 trên iPad đó (khởi động lại máy một lần trước). Nếu vẫn tải lại: còn video bài giảng +
   chính trang myLesson trên máy 2 GB — khi đó chỉ còn cách dùng máy khác.
 - ⛔ Muốn có hiệu ứng lật ô THẬT: đổi lớp tại chỗ trên ô SỐNG (không dựng lại lưới) và chỉ gắn 3D cho ĐÚNG ô đang lật, đừng trả
