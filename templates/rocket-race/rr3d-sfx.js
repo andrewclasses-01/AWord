@@ -22,6 +22,14 @@ const BG = new Set(["ambient"]);                 // còn lại đều là Effect
 const BASE = { ambient: 0.45, engine: 0.32, fire: 0.55, boost: 0.8, stall: 0.85, hit1: 0.95, hit2: 0.95, hit3: 0.95,
   boom: 1, boomlow: 0.8, turbo: 1, tap: 0.45, gate: 0.8, portal: 0.75, win: 0.8, whoosh: 0.75, ting: 0.6, tinggo: 0.7,
   mcharge: 0.9, mload: 0.75, mlaunch: 0.95, mwarn: 0.45, mdodge: 0.9, malarm_b: 0.65, malarmf_b: 0.7 };
+// ⭐ Đợt 444 (thầy 02/10/2026): "khi chọn 1 câu đúng, tiếng nổ tăng tốc động cơ to hơn nữa nhiều, nổi bật hẳn lên".
+// File boost to trung bình chỉ ~ −20 dB (đỉnh −2 dB) ⇒ gần ngang tiếng động cơ nền. Tên ảo "boostx" = buffer boost đi qua đường
+// KHUẾCH ĐẠI (+PUNCH_DB) → BỘ NÉN → bù lại → CHẶN ĐỈNH −3 dB: phần thân tiếng to lên nhiều mà không rè. Đo OfflineAudioContext
+// (1,5 s đầu): cũ RMS −18,7 dB / đỉnh −6,5 · mới RMS −10,5 / đỉnh −1,1 (≈ +8 dB; động cơ nền RMS −25). Không chặn đỉnh thì
+// đỉnh +3 dB = rè. Chỉ câu đúng (view.advanceFx — cả BOOST tiến nấc) gọi "boostx"; né của rr3d-missile.js vẫn "boost" thường.
+const ALIAS = { boostx: "boost" };
+const PUNCH = new Set(["boostx"]);
+const PUNCH_DB = 14, PUNCH_MAKEUP_DB = 5;
 const KEY = "aw-rr3d-sound";
 
 export function readSoundPrefs() {
@@ -39,6 +47,15 @@ export function createRr3dSound() {
   const bus = { fx: ctx.createGain(), bg: ctx.createGain() };
   bus.fx.gain.value = prefs.fx ? 1 : 0; bus.bg.gain.value = prefs.bg ? 1 : 0;
   bus.fx.connect(master); bus.bg.connect(master);
+  // Đợt 444: đường "punch" — nén mạnh rồi bù, đổ vào bus Effect (tắt Effect / act voice vẫn ăn như mọi tiếng khác)
+  const punchIn = ctx.createGain(); punchIn.gain.value = Math.pow(10, PUNCH_DB / 20);
+  const punchComp = ctx.createDynamicsCompressor();
+  punchComp.threshold.value = -14; punchComp.knee.value = 6; punchComp.ratio.value = 8;
+  punchComp.attack.value = 0.003; punchComp.release.value = 0.3;
+  const punchOut = ctx.createGain(); punchOut.gain.value = Math.pow(10, PUNCH_MAKEUP_DB / 20);
+  const punchLim = ctx.createDynamicsCompressor();
+  punchLim.threshold.value = -3; punchLim.knee.value = 0; punchLim.ratio.value = 20; punchLim.attack.value = 0.001; punchLim.release.value = 0.1;
+  punchIn.connect(punchComp); punchComp.connect(punchOut); punchOut.connect(punchLim); punchLim.connect(bus.fx);
   const buffers = new Map();
   let dead = false, paused = false;
   const base = new URL("./sfx/", import.meta.url);
@@ -54,10 +71,11 @@ export function createRr3dSound() {
   function out(name) { return BG.has(name) ? bus.bg : bus.fx; }
   function play(name, v = 1) {
     if (dead) return;
-    const b = buffers.get(name); if (!b) return;          // chưa tải xong — bỏ qua tiếng này
+    const file = ALIAS[name] || name;
+    const b = buffers.get(file); if (!b) return;          // chưa tải xong — bỏ qua tiếng này
     const src = ctx.createBufferSource(); src.buffer = b.buf;
-    const g = ctx.createGain(); g.gain.value = Math.min(1.5, (BASE[name] ?? 0.8) * v);
-    src.connect(g); g.connect(out(name));
+    const g = ctx.createGain(); g.gain.value = Math.min(1.5, (BASE[file] ?? 0.8) * v);
+    src.connect(g); g.connect(PUNCH.has(name) ? punchIn : out(name));
     src.start(ctx.currentTime, b.start);
   }
   function loop(name, on, v = 1, fade) {

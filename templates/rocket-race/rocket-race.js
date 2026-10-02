@@ -582,6 +582,7 @@ function rr3dScene({ root, ctl, title, play }) {
       missiles: { window: MS_WINDOW, dur: 3.8, boostCm: 6.5, gapCm: 2 },
       onFire: side => msFire(side), onBoost: side => msBoost(side), onMissileEnd: (to, res, from, tag) => msEnd(to, res, tag),
       onLoad: side => msLoadTap(side),        // Đợt 409: chạm quả nhỏ = nạp
+      onMove: () => { if (st.paintProg) st.paintProg(); },   // ⭐ Đợt 444: thanh % theo tàu dẫn đầu
       sfx: (n, v) => st.sfx && st.sfx.play(n, v),
       loop: (n, on, v, f) => st.sfx && st.sfx.loop(n, on, v, f),
       swell: (n, a, b, u, d) => st.sfx && st.sfx.swell(n, a, b, u, d) });
@@ -742,7 +743,7 @@ function rr3dMenuHost(st, wrap) {
 // ⭐ Đợt 441 (thầy 02/10/2026) — HÀNG NÚT TRẬN 3D kiểu STAR LOOT (myGame maze-chase mẫu 2m):
 //   · ĐỒNG HỒ ra NGOÀI CÙNG BÊN TRÁI, chữ số LED 7 đoạn neon (SVG — chép ledHtml của STAR LOOT). Số vẫn do trọng tài core/fight.js
 //     ghi vào `.aw-fight-clock` (ẩn) — ở đây chỉ NGHE chữ đổi rồi vẽ lại LED ⇒ không sửa core.
-//   · nút % bỏ ⇒ THANH % mảnh chạy trái → phải ngay TRÊN hàng nút (đọc nhãn `.aw-nav-label` ẩn mà rr3dPaintProgress / engine ghi).
+//   · nút % bỏ ⇒ THANH % mảnh chạy trái → phải ngay TRÊN hàng nút (Đợt 444: = vị trí tàu GẦN ĐÍCH HƠN, view.lead(); tăng / giảm theo tàu).
 //   · mọi nút cùng một cỡ (CSS `.is-skin-rr3d`) + nút PEACE (chỉ icon): tên lửa 2 bên xanh lá, không bắn được; vẫn nạp theo streak,
 //     BOOST vẫn chạy. Chỉ trong trận đang chơi — trận mới (Start again / Apply / ván mới) về bình thường vì rr3dScene dựng st mới.
 // =========================================================
@@ -780,11 +781,14 @@ function rr3dToolbar(st, wrap) {
     paintClock();
     const moClock = new MutationObserver(paintClock); moClock.observe(clock, { childList: true, characterData: true, subtree: true });
     // thanh % mảnh trên hàng nút
+    // ⭐ Đợt 444 (thầy 02/10/2026): thanh % = VỊ TRÍ của tàu đang GẦN ĐÍCH HƠN trên đường đua (nấc / số nấc tới đích) — tàu dẫn đầu
+    // tiến thì tăng, bị tên lửa / trả lời sai làm lùi thì GIẢM. Không còn đọc nhãn `.aw-nav-label` (= số câu đã hỏi, chỉ tăng).
+    // view gọi cfg.onMove ⇒ st.paintProg mỗi lần tàu đổi nấc (move / setTrack / về đích).
     const prog = el("div", "aw-rr3d-prog"), fill = el("i");
     prog.append(fill); below.before(prog);
-    const paintProg = () => { const n = parseInt(label.textContent, 10); fill.style.width = (Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0) + "%"; };
+    const paintProg = () => { const v = st.view, k = v && v.lead ? v.lead() : 0; fill.style.width = (100 * k).toFixed(2) + "%"; };
+    st.paintProg = paintProg;
     paintProg();
-    const moProg = new MutationObserver(paintProg); moProg.observe(label, { childList: true, characterData: true, subtree: true });
     // nút PEACE — ngay trước nút Mode
     const peace = el("button", "aw-toolbtn aw-rr3d-peace");
     peace.type = "button"; peace.title = "Peace — missiles can't be fired"; peace.setAttribute("aria-label", "Peace");
@@ -803,7 +807,7 @@ function rr3dToolbar(st, wrap) {
       if (st.sfx) st.sfx.play(st.peace ? "mload" : "mcharge", 0.5);
       if (st.ms) [0, 1].forEach(side => msSync(st, side));
     });
-    st.offs.push(() => { moClock.disconnect(); moProg.disconnect(); led.remove(); prog.remove(); peace.remove(); });
+    st.offs.push(() => { moClock.disconnect(); st.paintProg = null; led.remove(); prog.remove(); peace.remove(); });
     return true;
   };
   if (!setup()) {

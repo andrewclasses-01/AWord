@@ -799,3 +799,10 @@ khu tên lửa "cột dọc mọc lên" · PEACE bật/tắt trong trận · thi
 - `rr3d-missile.js`: bỏ `SPLASH = 1`; `inSplash` = `|p_A − p_B| < 0.5` (r.p nguyên). `threatFor` dùng chung ⇒ khung đỏ báo tàu kia cũng
   chỉ khi cùng nấc. Vùng va chạm `CLASH_ZONE` (Đợt 441) KHÔNG đổi. Mục 38 dòng "Trúng lan" nay hiểu là cùng nấc.
 - ✅ push `3034e5a` + LIVE 2/2 mã băm · ⬜ chưa chơi thử trình duyệt / TOMKO.
+
+## 41. Đợt 444 (02/10/2026) — THANH % THEO TÀU DẪN ĐẦU · TIẾNG TĂNG TỐC TO HẲN
+- Thanh `.aw-rr3d-prog` = `view.lead()` = max(p) / L — tàu gần đích hơn; lùi nấc ⇒ thanh tụt. View gọi `cfg.onMove` (move/setTrack/win)
+  ⇒ `st.paintProg`. KHÔNG còn đọc `.aw-nav-label` (% số câu đã hỏi).
+- Câu đúng (`advanceFx`) phát `"boostx"` = file boost qua +14 dB → nén 8:1 → +5 dB → chặn đỉnh −3 dB (`rr3d-sfx.js` ALIAS/PUNCH);
+  ≈ +8 dB so với cũ, đỉnh −1,1 dB. Động cơ `swell` 3,2. Né / boostFx giữ "boost" thường.
+- ⬜ chưa commit (chờ thầy nghe thử).

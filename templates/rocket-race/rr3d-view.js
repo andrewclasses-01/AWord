@@ -1756,8 +1756,10 @@ export async function createView(cfg) {
     burst(n0, { n: 60, speed: 6, color: new THREE.Color(2, 2.6, 4), colorEnd: new THREE.Color(0.4, 0.6, 2), size: 0.25, life: 0.6 });
     // Đợt 393 (thầy): tiếng lửa to lên khi tăng tốc rồi GIẢM DẦN THẬT CHẬM — file boost tự tắt dần ~6 s,
     // tiếng động cơ nền cũng gầm lên rồi lắng lại theo hàm mũ (không cắt).
-    sfx("boost", 0.85);
-    swell("engine", 2.2, 1, 0.3, 6);
+    // ⭐ Đợt 444 (thầy 02/10/2026): "tiếng nổ tăng tốc động cơ to hơn nữa nhiều, nổi bật hẳn lên" ⇒ "boostx" = file boost qua
+    // đường KHUẾCH ĐẠI + NÉN riêng (rr3d-sfx.js) — to hẳn mà không vỡ tiếng; động cơ gầm mạnh hơn (2,2 → 3,2).
+    sfx("boostx", 1);
+    swell("engine", 3.2, 1, 0.25, 6);
   }
   function retreatFx(r, n) {
     const c = new V3().setFromMatrixPosition(r.ship.matrixWorld);
@@ -1950,6 +1952,7 @@ export async function createView(cfg) {
     G.phase = "over"; G.winner = side;
     const w = rockets[side], loser = rockets[1 - side];
     if (w.p < L) { w.p = L; w.homeRun = true; w.boost = 1; }
+    cfg.onMove && cfg.onMove();                     // Đợt 444: thanh % chạm 100% khi có tàu về đích
     return finale(w, loser, !!opts.loserDown);
   }
   function countdown(onGo) {
@@ -2299,7 +2302,9 @@ export async function createView(cfg) {
 
   return {
     // --- dựng / nhịp trận ---
-    setTrack(n) { L = Math.max(1, n | 0); },
+    setTrack(n) { L = Math.max(1, n | 0); cfg.onMove && cfg.onMove(); },
+    // ⭐ Đợt 444 (thầy): thanh % = vị trí tàu GẦN ĐÍCH HƠN trên đường đua (0..1) — lùi nấc thì thanh tụt theo
+    lead() { return Math.max(0, Math.min(1, Math.max(rockets[0].p || 0, rockets[1].p || 0) / L)); },
     setLivesMax(n) {
       const had = LIVES_MAX > 0;
       LIVES_MAX = Math.max(0, n | 0); G.lives = [LIVES_MAX, LIVES_MAX];
@@ -2338,7 +2343,8 @@ export async function createView(cfg) {
     pick(side, k) { const t = consoles[side] && consoles[side].tiles[k]; if (t) { t.press = 1; t.state = "picked"; sfx("tap", 0.6); } },
     // --- tàu ---
     move(side, p, kind, n = 1) { const r = rockets[side]; r.p = Math.max(0, p); if (kind === "up") advanceFx(r); else if (kind === "back") retreatFx(r, n);
-      rockets.forEach(x => { x.nearWin = G.phase === "play" && L > 1 && x.p === L - 1; }); },   // ⭐ Đợt 417: còn 1 câu là thắng ⇒ lửa đuôi dài + xanh
+      rockets.forEach(x => { x.nearWin = G.phase === "play" && L > 1 && x.p === L - 1; });
+      cfg.onMove && cfg.onMove(); },                   // Đợt 444: vẽ lại thanh % theo tàu dẫn đầu   // ⭐ Đợt 417: còn 1 câu là thắng ⇒ lửa đuôi dài + xanh
     stall(side) { stallRocket(rockets[side]); },
     damage(side, level) { const r = rockets[side]; r.dmg = Math.max(0, Math.min(3, level | 0)); setDamageLook(r); },
     explode(side) { blowUp(rockets[side]); },

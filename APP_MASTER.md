@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **02/10/2026 Đợt 444 — Rocket race Fight 3D: thanh % = vị trí tàu GẦN ĐÍCH HƠN (tăng/giảm theo tàu, `view.lead()`) + tiếng tăng tốc khi đúng to hẳn ≈ +8 dB (`"boostx"` qua nén + chặn đỉnh trong `rr3d-sfx.js`).** ⬜ chưa commit, chờ thầy. Chi tiết GHI CHU Đợt 444.
 > ✏️ **02/10/2026 Đợt 443 — Rocket race Fight 3D: tên lửa TRÚNG LAN chỉ khi 2 tàu CÙNG NẤC** (trước: cùng nấc hoặc cách 1 nấc). Chỉ `rr3d-missile.js` (`inSplash`). ✅ push `3034e5a` + LIVE 2/2 mã băm; ⬜ thầy bấm tay TOMKO. Chi tiết GHI CHU Đợt 443.
 > ✏️ **02/10/2026 Đợt 442 — trang KIỂM TRA ĐẦU VÀO `kiemtra.html`: không còn thanh cuộn (thẻ ví dụ 1 hàng + `vuaKhung` tự gọn), MỌI lượt lên kho (Làm lại / đóng trang ⇒ lượt `doDang`; practiceLog mang bài làm), khoá "đã nộp" ngay khi bài vào hộp thư đi** + trang mẹ repo `kiemtra` có nút phóng to + chip "Đã nộp ✓". Chi tiết GHI CHU Đợt 442.
 > ✏️ **01/10/2026 Đợt 437 — A Show Speed FIGHT: bàn phải đồng nhất với bàn trái** (bấm ô chữ ⇒ ô trống như bên trái; đúng = xanh lá, sai = đỏ, từ đội kia = viền trắng). Gốc: luật màu `.is-side-1` đè luật trạng thái. Chỉ CSS wordshake (template + GAME). ✅ push `7b69992` + LIVE.

@@ -546,6 +546,36 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 444 (02/10/2026 tối) — ROCKET RACE FIGHT 3D: THANH % = VỊ TRÍ TÀU DẪN ĐẦU · TIẾNG TĂNG TỐC KHI ĐÚNG TO HẲN · phiên MSI · ⬜ CHƯA COMMIT (chờ thầy duyệt)
+
+**Yêu cầu thầy:**
+1. "Thanh % là vị trí của tàu đang ở gần đích hơn trên hành trình của game, có thể tăng giảm tùy vào vị trí của tàu này."
+2. "Khi chọn 1 câu đúng, tiếng nổ tăng tốc động cơ to hơn nữa nhiều, nổi bật hẳn lên."
+
+**1. Thanh % (`.aw-rr3d-prog`, Đợt 441):** trước đọc nhãn `.aw-nav-label` ẩn = % SỐ CÂU ĐÃ HỎI của 2 bàn ⇒ chỉ tăng.
+- `rr3d-view.js`: thêm `lead()` = max(p bàn 0, p bàn 1) / L (0..1); gọi `cfg.onMove()` trong `move()`, `setTrack()` và `win()`
+  (tàu thắng nhảy thẳng về L ⇒ 100%).
+- `rocket-race.js` `rr3dToolbar`: `paintProg` đọc `st.view.lead()`; `st.paintProg` để `onMove` (cấu hình createView) gọi. Bỏ
+  MutationObserver đọc nhãn (nhãn vẫn dùng làm điều kiện "hàng nút đã dựng"). CSS chuyển `width .8s` sẵn có ⇒ tăng/giảm mượt.
+- 2D fallback: CSS vẫn ẩn thanh như cũ.
+
+**2. Tiếng tăng tốc khi đúng:** đo bằng ffmpeg: `boost.mp3` RMS −19,8 dB (đỉnh −1,9) ⇒ phát ở 0,68 gần ngang động cơ nền.
+- `rr3d-sfx.js`: tên ảo `"boostx"` (ALIAS → file boost) đi đường riêng: +14 dB → DynamicsCompressor (−14 dB, 8:1, attack 3 ms)
+  → bù +5 dB → chặn đỉnh (−3 dB, 20:1, 1 ms) → bus Effect (tắt Effect / act voice vẫn ăn).
+- `rr3d-view.js advanceFx`: `sfx("boostx", 1)` thay `sfx("boost", 0.85)`; động cơ gầm `swell` 2,2 → 3,2.
+- Né tên lửa / `boostFx` của `rr3d-missile.js` giữ `"boost"` thường. Nút BOOST tiến nấc cũng đi qua `move("up")` ⇒ cũng nghe "boostx".
+
+**Đo (bàn thử `scratch/dot413-rr.html`, cổng 5599, Fight 3D thật):**
+- Thanh: bàn 1 đúng 3 câu ⇒ 20 → 40 → 60% · bàn 1 trúng tên lửa lùi 2 ⇒ 20% (bàn 0 đang 1 nấc) · bàn 0 lùi 1 ⇒ vẫn 20% (giờ bàn 1
+  dẫn) — đúng "tàu gần đích hơn". Ảnh chụp: vạch sáng 20% trên hàng nút.
+- Tiếng (OfflineAudioContext dựng lại đúng chuỗi, 1,5 s đầu): cũ RMS −18,7 / đỉnh −6,5 · mới RMS −10,5 / đỉnh −1,1 ⇒ **≈ +8 dB**,
+  hơn động cơ nền (RMS −25,4) ~15 dB. Bản đầu không chặn đỉnh ⇒ đỉnh +3 dB (rè) ⇒ thêm tầng chặn đỉnh. Chạy thật: câu đúng phát
+  `tap,boostx`, 2 BufferSource start (file boost tìm được qua alias), AudioContext running, 0 lỗi console.
+
+**⬜ VIỆC ĐANG CHỜ (Đợt 444):**
+- Thầy nghe thử: đủ to chưa (muốn to nữa: tăng `PUNCH_MAKEUP_DB` + nâng ngưỡng chặn đỉnh, nhưng gần 0 dB sẽ rè khi trùng tiếng khác).
+- Thầy duyệt ⇒ commit + push 3 file JS + hồ sơ, kiểm live mã băm. ⬜ TOMKO bấm tay.
+
 ## Đợt 443 (02/10/2026 tối) — ROCKET RACE FIGHT 3D: TRÚNG LAN CHỈ KHI 2 TÀU CÙNG NẤC · phiên MSI · ✅ COMMIT + PUSH `3034e5a` + LIVE 2/2 mã băm
 
 **Bối cảnh / yêu cầu thầy:** "Chỉ khi 2 tàu ở cùng một vị trí thì tên lửa của bên A bắn sang bên B thì cả 2 mới cùng bị tác động,
