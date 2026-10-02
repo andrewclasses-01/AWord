@@ -546,6 +546,21 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 440 (02/10/2026) — TRANG LÀM BÀI KIỂM TRA ĐẦU VÀO `kiemtra.html` (nhúng trong kiemtra.andrewclasses.com) · phiên máy 1
+Thầy giao 02/10: học sinh kiểm tra đầu vào làm 3 act Type the answer (Courses / KIEM TRA DAU VAO: BT1 TẠO CỤM SỐ ÍT 40 · BT2 TẠO CỤM SỐ NHIỀU 20 · BT3 TẠO CÂU 50)
+nhưng KHÔNG báo đúng/sai, có hướng dẫn + làm thử, đồng hồ đếm xuôi, ghi ngầm thời gian từng câu + rời trang + định dán, xong chỉ "Chúc mừng".
+- ⭐ Quyết định: TRANG RIÊNG, KHÔNG đụng engine/template Type the answer (đang chạy cho mọi lớp). Dùng CHUNG: act TTA (prompt + acceptedAnswers), bài giao
+  `assignments/{code}`, nộp qua `queueAttempt`/`sendAttempt` (VÉ của em — trang mẹ kiemtra.andrewclasses.com chạy nw-phien.js), `practiceLog` qua `beatPlayLog`.
+- File mới: `kiemtra.html` + `kiemtra.js` + `kiemtra.css` + `kiemtra-cham.js` (phép chấm: bỏ hoa-thường/dấu câu/dấu thanh, viết tắt = viết đủ, số = chữ; KHÔNG sửa chính tả).
+  Hướng dẫn + 3 câu làm thử theo DẠNG (nhận theo tiêu đề act: SỐ ÍT / SỐ NHIỀU / còn lại = TẠO CÂU, hoặc `content.kiemTra.loai`) nằm trong `DANG` của kiemtra.js.
+- Mỗi hàng `review` (results) thêm: ms, anMs, roi (ẩn tab), mat, matMs (mất tiêu điểm), dan (định dán), phim, lanXem, boQua. Hàng 0 thêm `kt` {lamLai, taiLai, gioiThieuMs, thuSai, thuMs, phienBan}.
+  Luật kho chỉ khoá trường CẤP ĐẦU ⇒ không phải đăng luật. Mỗi lần BẮT ĐẦU / LÀM LẠI = 1 lượt practiceLog (bỏ dở ⇒ done=false).
+- Tải lại trang giữa bài: tiến độ giữ ở localStorage `aword-kt-<code>-<ma>` ⇒ làm tiếp đúng câu (taiLai++). Hết bài còn câu trống ⇒ hỏi "làm các câu trống / nộp".
+- Báo trang mẹ: postMessage `{type:'AWORD:KT', code, trangThai:'chua'|'dang-lam'|'xong'}` (+ `AWORD:NOP` như play.js).
+- `core/assignments.js` VE_NGUON + `https://kiemtra.andrewclasses.com` + máy thử `localhost:8135`.
+- Bàn thử: `scratch/kiemtra-thu.html` (bài giả `window.__KT_THU`, chỉ localhost). Đã chạy: hướng dẫn · làm thử sai/đúng · chặn dán (đếm dan=1) · mất tiêu điểm (mat=1, matMs) ·
+  bỏ qua · tải lại giữa bài (về đúng câu 3, taiLai=1) · hỏi câu trống · menu làm lại (lamLai=1) · nộp không vé ⇒ màn "Chưa nộp được" + bài nằm outbox. Phép chấm: node 110/110 đáp án.
+
 ## Đợt 437 (01/10/2026) — A SHOW SPEED FIGHT: HAI BÀN KHÔNG ĐỒNG NHẤT — bàn phải (xanh dương) bấm ô chữ mà chữ VẪN HIỆN · phiên máy MSI · ✅ ĐÃ COMMIT + PUSH `7b69992` + LIVE 2/2 mã băm
 
 **Thầy (ảnh chụp Fight Mode 1):** bàn trái bấm chữ thì ô chữ ẩn (chỉ còn khung nét đứt), bàn phải bấm thì khung nét đứt nhưng chữ vẫn sáng ⇒ "cần ẩn như bên trái; tìm xem còn chỗ nào 2 bên không đồng nhất, sửa tất cả và push".

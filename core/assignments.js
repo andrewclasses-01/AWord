@@ -643,7 +643,8 @@ function sweepDrafts() {
 // Lượt KHÔNG mang mã (chơi tự do ngoài myLesson) đi SDK như cũ: thầy (Google) vẫn ghi được; người khác bị luật từ chối
 // ⇒ bỏ khỏi outbox (không bao giờ giao được — thầy chốt 27/09: chơi ngoài myLesson không lên bảng lớp nữa).
 // ⛔ Vé sống 1 giờ: đừng cất vào localStorage/outbox; chỉ giữ trong bộ nhớ trang (`_ve`).
-const VE_NGUON = ["https://andrewclasses.com", "http://localhost:8134", "http://127.0.0.1:8134"];
+// ⭐ Đợt 440 — + trang KIỂM TRA ĐẦU VÀO kiemtra.andrewclasses.com (cùng nw-phien.js cấp vé) + máy thử cổng 8135.
+const VE_NGUON = ["https://andrewclasses.com", "https://kiemtra.andrewclasses.com", "http://localhost:8134", "http://127.0.0.1:8134", "http://localhost:8135", "http://127.0.0.1:8135"];
 let _ve = null;                 // { ma, token, het(ms) }
 const _choVe = [];
 let _ngheVe = false;
