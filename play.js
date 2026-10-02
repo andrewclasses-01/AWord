@@ -497,14 +497,18 @@ async function play(assignment, studentName, className, studentMa) {
         // `assignments/{code}/bang/tot`): 1 lượt đọc thay vì CẢ KHO scores (tới 800 dòng × 2 lần mỗi ván).
         // Mỗi mục = dòng tốt nhất của một em + `tens` (mọi cách viết tên đã gặp). Chưa có bảng / đọc hỏng ⇒
         // quay về đọc kho như cũ. Máy chủ cập nhật chậm 1–2s ⇒ tự chèn LƯỢT VỪA NỘP của chính em vào.
-        const [bang, tenMa] = await Promise.all([docBangDiem(assignment.code).catch(() => null), tenTheoMa()]);
+        // ⭐ Đợt 439 (myLesson khoá đọc người ngoài GĐ3) — bảng điểm chỉ đọc được bằng VÉ em (trang mẹ myLesson cấp) / phiên
+        // thầy. Không đọc được (mở ngoài myLesson…) ⇒ chỉ hiện dòng của chính em, như phụ huynh — không báo lỗi.
+        const dongToi = () => (attempt ? [{ name: studentName, score: attempt.score, total: attempt.total, timeMs: attempt.timeMs, mine: true }] : []);
+        const [bang, tenMa] = await Promise.all([docBangDiem(assignment.code, ma).catch(() => null), tenTheoMa(ma)]);
         let rows;
         if (bang && bang.v === 1 && bang.em && typeof bang.em === "object") {
           rows = Object.values(bang.em).map(m => ({ name: m.ten, ma: m.ma || "", score: m.score, total: m.total,
             timeMs: m.timeMs, tens: Array.isArray(m.tens) && m.tens.length ? m.tens : [m.ten] }));
           if (attempt) rows.push({ name: studentName, ma, score: attempt.score, total: attempt.total, timeMs: attempt.timeMs });
         } else {
-          rows = await listScores(assignment.code);
+          try { rows = await listScores(assignment.code, undefined, ma); }
+          catch (e) { return dongToi(); }
         }
         const tenCua = r => r.tens || [r.name];
         // Dòng CŨ không mã của một em đã có dòng mới mang mã ⇒ nhập vào nhóm mã đó, NHƯNG chỉ khi tên

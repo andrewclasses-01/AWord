@@ -403,7 +403,43 @@ export async function getAssignment(code) {
 // 29/9; trang thầy truyền 5000). Mọi dòng thật đều có `createdAt` (luật bắt buộc; 10.474/10.474).
 export const MAX_SCORES_HS = 1500;
 export const MAX_SCORES_THAY = 5000;
-export async function listScores(code, max = MAX_SCORES_HS) {
+// ⭐⭐ Đợt 439 (02/10/2026, myLesson "khoá đọc người ngoài" GĐ3 — thầy chốt): luật kho THÔI cho người lạ đọc bảng điểm
+// (`assignments/{code}/scores` + `bang/*`) — chỉ học sinh ĐĂNG NHẬP hoặc thầy. Trang học sinh không có phiên Firebase
+// ⇒ đọc bằng REST + VÉ của em do trang mẹ myLesson cấp (`xinVe(ma)`, cùng đường vé ghi điểm Đợt 410). Không vé (mở ngoài
+// myLesson / phụ huynh) ⇒ thử phiên SDK (thầy đang đăng nhập Google cùng trình duyệt); không nốt ⇒ kho từ chối ⇒ nơi gọi
+// chỉ hiện dòng của chính em. Trang thầy (không truyền `ma`) đi SDK như cũ.
+// Giải một giá trị Firestore REST (đủ map/array — bảng `bang/tot` lồng map theo mã em).
+function giaiGiaTri(v) {
+  if (!v || typeof v !== "object") return undefined;
+  if ("mapValue" in v) { const o = {}; const f = (v.mapValue && v.mapValue.fields) || {}; Object.keys(f).forEach(k => { o[k] = giaiGiaTri(f[k]); }); return o; }
+  if ("arrayValue" in v) return ((v.arrayValue && v.arrayValue.values) || []).map(giaiGiaTri);
+  if ("timestampValue" in v) return v.timestampValue;
+  return fieldValue(v);
+}
+function giaiDoc(d) {
+  const o = { id: String((d && d.name) || "").split("/").pop() };
+  const f = (d && d.fields) || {};
+  Object.keys(f).forEach(k => { o[k] = giaiGiaTri(f[k]); });
+  return o;
+}
+async function veDocDiem(ma) {
+  if (ma) { try { const t = await xinVe(ma); if (t) return t; } catch (_) { /* không vé */ } }
+  return null;
+}
+const FS_REST = () => `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents`;
+
+export async function listScores(code, max = MAX_SCORES_HS, ma = "") {
+  const ve = await veDocDiem(ma);
+  if (ve) {   // Đợt 439 — trang học sinh: REST + vé
+    const r = await withTimeout(fetch(`${FS_REST()}/assignments/${encodeURIComponent(String(code))}:runQuery`, {
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${ve}` },
+      body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "scores" }],
+        orderBy: [{ field: { fieldPath: "createdAt" }, direction: "DESCENDING" }], limit: max } }),
+    }), 15000);
+    if (!r.ok) throw Object.assign(new Error(`HTTP ${r.status}`), { code: r.status === 403 ? "permission-denied" : "aw/http" });
+    const ds = await r.json();
+    return (Array.isArray(ds) ? ds : []).filter(x => x && x.document).map(x => giaiDoc(x.document));
+  }
   const [d, { collection, getDocs, query, orderBy, limit }] = await Promise.all([db(), fs()]);
   const snap = await getDocs(query(collection(d, "assignments", String(code), "scores"),
     orderBy("createdAt", "desc"), limit(max)));
@@ -412,7 +448,17 @@ export async function listScores(code, max = MAX_SCORES_HS) {
 
 // 📉 Đợt 433 — BẢNG ĐIỂM TỐT NHẤT từng em (máy chủ giữ, hàm `bangDiem` — myLesson-app may-chu/functions/bang-diem.js):
 // 1 lượt đọc. Chưa có ⇒ null (nơi gọi quay về listScores).
-export async function docBangDiem(code) {
+export async function docBangDiem(code, ma = "") {
+  const ve = await veDocDiem(ma);
+  if (ve) {   // Đợt 439 — trang học sinh: REST + vé (xem chú thích trên listScores)
+    const r = await withTimeout(fetch(`${FS_REST()}/assignments/${encodeURIComponent(String(code))}/bang/tot`,
+      { headers: { Authorization: `Bearer ${ve}` } }), 8000);
+    if (r.status === 404) return null;
+    if (!r.ok) throw Object.assign(new Error(`HTTP ${r.status}`), { code: r.status === 403 ? "permission-denied" : "aw/http" });
+    const o = giaiDoc(await r.json());
+    delete o.id;
+    return o;
+  }
   const [d, { doc, getDoc }] = await Promise.all([db(), fs()]);
   const s = await withTimeout(getDoc(doc(d, "assignments", String(code), "bang", "tot")), 8000);
   return s.exists() ? s.data() : null;
@@ -424,12 +470,14 @@ export async function docBangDiem(code) {
 // (bảng rơi về tên trong dòng điểm như cũ). Khoá = mã viết hoa, bỏ khoảng trắng (như chuanMa myLesson).
 export const chuanMaEm = s => String(s || "").replace(/\s+/g, "").toUpperCase();
 let _tenTheoMaP = null;
-export function tenTheoMa() {
+export function tenTheoMa(ma = "") {
   if (!_tenTheoMaP) {
     _tenTheoMaP = (async () => {
       const m = new Map();
       const url = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/lessonWeb/lop?key=${firebaseConfig.apiKey}`;
-      const r = await withTimeout(fetch(url), 6000);
+      // Đợt 439 — danh sách lớp sắp thôi đọc công khai (myLesson GĐ5) ⇒ kèm vé em khi có
+      const ve = await veDocDiem(ma);
+      const r = await withTimeout(fetch(url, ve ? { headers: { Authorization: `Bearer ${ve}` } } : undefined), 6000);
       if (!r.ok) return m;
       const j = JSON.parse(((await r.json()).fields?.json?.stringValue) || "{}");
       [...(j.lop || []), ...(j.khoa || [])].forEach(l => (l.hocSinh || []).forEach(h => {
