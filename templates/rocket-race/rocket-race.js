@@ -760,7 +760,9 @@ function rrLedHtml(str) {
     return `<svg class="ld" viewBox="0 0 50 90">${"abcdefg".split("").map(k => `<polygon class="${on.includes(k) ? "on" : "off"}" points="${RR_LED_POLY[k]}"/>`).join("")}</svg>`;
   }).join("");
 }
-const RR_PEACE_ICON = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M12 12l-6.36 6.36M12 12l6.36 6.36"/></svg>`;
+// Đợt 441b (thầy): icon TRÁI TIM — đang bắn nhau = tim VỠ; bấm ⇒ tim LÀNH = đang hoà bình (in peace). Nét kiểu Lucide heart / heart-crack.
+const RR_HEART_D = "M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z";
+const rrPeaceIcon = on => `<svg viewBox="0 0 24 24" width="24" height="24" fill="${on ? "currentColor" : "none"}" fill-opacity=".28" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${RR_HEART_D}"/>${on ? "" : '<path d="m12 13-1-1 2-2-3-3 2-2"/>'}</svg>`;
 function rr3dToolbar(st, wrap) {
   let done = false, mo = null;
   const setup = () => {
@@ -786,12 +788,13 @@ function rr3dToolbar(st, wrap) {
     // nút PEACE — ngay trước nút Mode
     const peace = el("button", "aw-toolbtn aw-rr3d-peace");
     peace.type = "button"; peace.title = "Peace — missiles can't be fired"; peace.setAttribute("aria-label", "Peace");
-    peace.innerHTML = RR_PEACE_ICON;
+    peace.innerHTML = rrPeaceIcon(false);
     mode.before(peace);
     press(peace, e => {
       e.stopPropagation();
       st.peace = !st.peace;
       peace.classList.toggle("is-on", st.peace);
+      peace.innerHTML = rrPeaceIcon(st.peace);        // 441b: tim vỡ ↔ tim lành
       v3(v => {
         if (!v.missile) return;
         v.missile.setPeace(st.peace);

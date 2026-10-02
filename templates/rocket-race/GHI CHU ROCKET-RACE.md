@@ -791,4 +791,5 @@ khu tên lửa "cột dọc mọc lên" · PEACE bật/tắt trong trận · thi
   trong console): ∞ giữ 6 dự phòng ⇒ 4 quả + "+2" · PEACE ⇒ chạm bắn không phóng, quả xanh · bắn cùng lúc ⇒ đâm giữa trời t≈2,2 s,
   2 tàu cách 14,8 > vùng 7,48 ⇒ không ai lùi · A bay 2,9 s rồi B mới bắn ⇒ nổ cách B 3,0 ⇒ B lùi 3 (= ceil(2×1,5)) · Points off MAX ⇒
   sai về 0 · Quiz / Crossword / Type the answer: Fight content lên đầu, In turns vẫn khoá nó · 0 lỗi console.
+- **441b** (thầy): icon PEACE = TRÁI TIM — đang bắn nhau = tim VỠ (heart-crack), bấm ⇒ tim LÀNH tô xanh = in peace (`rrPeaceIcon(on)`).
 - ⬜ Thầy bấm tay TOMKO: cỡ "+X", nhìn 2 quả đâm nhau, PEACE, LED + thanh %.
