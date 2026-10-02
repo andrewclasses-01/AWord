@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 445 (02/10/2026 tối) — OPEN THE BOX NHẸ CHO iPAD CŨ: Ô PHẲNG (BỎ 3D) + NHỚ CỠ CHỮ MẶT SAU · play.js BÁO "VÀO/RỜI VÁN" CHO TRANG MẸ · phiên MSI · ✅ COMMIT + PUSH (mã băm ở cuối chặng)
+## Đợt 445 (02/10/2026 tối) — OPEN THE BOX NHẸ CHO iPAD CŨ: Ô PHẲNG (BỎ 3D) + NHỚ CỠ CHỮ MẶT SAU · play.js BÁO "VÀO/RỜI VÁN" CHO TRANG MẸ · phiên MSI · ✅ COMMIT + PUSH `72e2aeb` + LIVE 3/3 mã băm
 
 **Thầy báo:** ảnh iPad một em lớp NTK9 làm LESSON 21 BT2 (Open the Box 85 ô, mã `rf6crd`, nhúng trong myLesson) — cứ tới câu 75 là
 trang tự tải lại. Do game hay do thiết bị? Rồi: "triển cả 3 … không thay đổi tính năng, không đổi giao diện, không làm game xấu đi,
@@ -589,7 +589,7 @@ không gây lỗi".
 - **Tin AWORD:VAN** (`scratch/dot445-van.html` nhúng play.js THẬT, CDP chặn mọi lượt GHI Firestore — chỉ cho GET + Listen/runQuery/
   batchGet): mở trang ⇒ không tin · START ⇒ `true` · ☰ Start again giữa ván ⇒ `false,true` · hết giờ ⇒ `false`. 0 lượt ghi.
 - Phía myLesson (bản sao tạm `bai.html` + AWord giả `scratch/gia-play.html`): 23/23 ĐẠT — xem GHI CHU myLesson web v1.230.0.
-- LIVE: __LIVE__
+- LIVE: push `72e2aeb`; `aword.andrewclasses.com` khớp SHA-256 3/3 file (play.js · open-the-box.js · open-the-box.css) ngay lượt kiểm đầu; bài `rf6crd` nạp trên bản live 0 lỗi console, CSS live không còn `preserve-3d`.
 
 **⬜ VIỆC ĐANG CHỜ (Đợt 445):**
 - Thầy cho em NTK9 làm lại BT2 LESSON 21 trên iPad đó (khởi động lại máy một lần trước). Nếu vẫn tải lại: còn video bài giảng +
