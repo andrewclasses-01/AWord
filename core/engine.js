@@ -6162,6 +6162,45 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     startTimer: startTimerNow,   // start the clock now (only meaningful with tpl.manualTimerStart)
     // Đợt 393 — dừng đồng hồ khi template đã tự phân thắng thua (Rocket race 3D: bảng kết quả riêng)
     stopTimer: () => stopTimer(),
+    // ⭐⭐ Đợt 447 (thầy 02/10/2026: "đẩy bản đầy đủ lên AWord… liên kết với bộ từ vựng của act") — CẦU NỐI cho
+    // template TỰ VẼ TRỌN MÀN với hàng nút riêng (STAR LOOT = Maze chase 3D, templates/maze-chase/maze-chase.js):
+    // các nút của game gọi ĐÚNG các đường thật của thanh công cụ engine (bị game che), không chép lại luật nào.
+    //   listActs()        = dữ liệu nút Switch activity (store.listSwitchActs) + cờ `current`; act ngoài thư viện ⇒ { groups: [] }
+    //   openAct(id)       = bấm một act trong bảng đó (switchToAct — giữ "template chơi cuối" của act kia)
+    //   saveOptions(patch)= Options ▸ Apply phần lưu: MUTATE activity.options rồi ghi act thật (act đổi template ⇒
+    //                       originAct.templateOptions[type], act "Start with mistakes" ⇒ act gốc) — KHÔNG dựng lại ván
+    //                       (game tự áp dụng). ⛔ Không bao giờ ghi act tạm conv_/mist_.
+    //   home()            = Mode ▸ Go home ▸ Home (goHome)
+    //   templates() / switchTemplate(type) = Options ▸ Template (switchList / doSwitchTemplate) — act từ vựng chơi game khác
+    // Học sinh (session) không có cầu này (null) — game tự ẩn các nút đó.
+    host: session ? null : {
+      async listActs() {
+        const o = libraryOrigin();
+        if (!o) return { folderName: "", groups: [] };
+        const d = await (await import("./store.js")).listSwitchActs(o.id);
+        if (!d) return { folderName: "", groups: [] };
+        return { folderName: d.folderName || "Library", groups: d.groups.map(g => ({ path: g.path, acts: g.acts.map(a => ({ id: a.id, title: a.title || "", current: a.id === o.id })) })) };
+      },
+      openAct(id) { if (!torndown) switchToAct(id); },
+      saveOptions(patch) {
+        if (torndown || !patch || typeof patch !== "object") return;
+        if (!activity.options) activity.options = {};
+        Object.assign(activity.options, patch);   // ⚠️ MUTATE — libAct / bản mistakes giữ cùng object (xem Options ▸ Apply)
+        const realAct = activity._mistakes ? (activity._mistakesBase || originAct) : libAct;
+        const isConv = !!realAct._converted;
+        if (isConv) {
+          if (!originAct.templateOptions) originAct.templateOptions = {};
+          originAct.templateOptions[realAct.type] = { ...realAct.options };
+        }
+        const target = isConv ? originAct : realAct;
+        if (target.id && !/^(conv|mist)_/.test(String(target.id))) {
+          import("./store.js").then(m => m.saveActivity(target)).catch(() => {});
+        }
+      },
+      home() { if (!torndown) goHome(); },
+      templates() { try { return switchList().map(t => ({ type: t.type, label: t.label })); } catch { return []; } },
+      switchTemplate(type) { if (!torndown && type) doSwitchTemplate(type); }
+    },
     // ⭐ Đợt 353 — FIGHT ONLY: nhận nuôi thanh Time delay vào một ổ trong sân của
     // template (xem chú thích tại `placeWaitBar`). Trả false ngoài trận / thiếu ổ.
     hostFightWaitBar(host) {

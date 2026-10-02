@@ -133,3 +133,9 @@
 .aw-mc-dbtn:active { transform: translateY(calc(.4 * var(--aw-u))); box-shadow: 0 calc(.2 * var(--aw-u)) 0 #241452; }
 .aw-mc-dbtn.is-u { grid-area: 1 / 2; } .aw-mc-dbtn.is-l { grid-area: 2 / 1; }
 .aw-mc-dbtn.is-d { grid-area: 3 / 2; } .aw-mc-dbtn.is-r { grid-area: 2 / 3; }
+
+/* ⭐ Đợt 447 — STAR LOOT 3D (maze-chase.js): ô game gắn vào <body>, phủ TRỌN trang (lớp .mc-root của STAR LOOT
+   đã là position:fixed; inset:0). Đứng trên mọi thứ của trang AWord; bảng nổi của STAR LOOT nằm TRONG ô này. */
+.aw-sl-host { z-index: 1000; }
+/* trang AWord phía sau không cuộn / không hiện thanh cuộn khi STAR LOOT đang mở */
+html.aw-sl-on, html.aw-sl-on body { overflow: hidden; }

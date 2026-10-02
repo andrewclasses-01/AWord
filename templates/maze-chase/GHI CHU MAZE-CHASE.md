@@ -1,5 +1,13 @@
 # GHI CHÚ — MAZE CHASE (game thứ 9)
 
+## ⭐⭐ Đợt 447 (02/10/2026) — MAZE CHASE NAY LÀ **STAR LOOT 3D**. ĐỌC MỤC NÀY TRƯỚC.
+
+- `maze-chase.js` = STAR LOOT (đăng ký `maze_chase`). Phần dưới mục này (Đợt 91 trở về trước) nói về bản **2D**, nay ở `maze-chase-2d.js` — chỉ còn là ĐƯỜNG LÙI (máy không WebGL / 3D nạp lỗi) và cho editor · sample · in ấn.
+- `3d/` + `am-thanh/` là BẢN CHÉP từ kho myGame (`E:\LAP TRINH APP\myGame\maze-chase`, mẫu `2n`) — ⛔ KHÔNG sửa tay. Sửa STAR LOOT: làm bản mới ở myGame (bản mới = tên mới) → thầy OK → sửa `BAN`/`CORE` trong `tools/chep-star-loot.py` nếu tên lõi đổi → chạy `python tools/chep-star-loot.py` (tự đổi import three về `../../rocket-race/vendor/three`, chép đúng 46 file tiếng trong `LIB`, ghi `3d/NGUON.json` = mã commit myGame) → đổi `CSS_3D` + đường `import("./3d/mc3d-XX.js")` trong `maze-chase.js` cho khớp.
+- STAR LOOT phủ TRỌN TRANG (`.aw-sl-host` trên `<body>`, z-index 1000; `html.aw-sl-on` khoá cuộn). Hàng nút là của STAR LOOT nhưng đi qua `ui.host` của engine: Thư mục = act thật cùng thư mục · Options Apply / Mode ⇒ `activity.options.starLoot` + lưu act · Menu (ở màn START / kết quả) = Library + Change template; Menu giữa ván = Paused + 2 nút đó.
+- Học sinh: KHÔNG giao bài được (`noAssignment`). Không `ui.finish` ⇒ không bảng xếp hạng engine; kết quả + Show answers là màn của STAR LOOT.
+- Bàn thử: `scratch/dot447-sl.html` (`?src=anagram` = act từ vựng đổi template · `?fight=1`). Browser pane KHÔNG vẽ WebGL/overlay — chụp bằng BrowserWindow offscreen trong Electron (xem GHI CHU DU AN Đợt 447). Lái tay: `window.__mc` (start · step · state · setFight · press · destroy).
+
 **Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho MENU PAUSE toàn hệ thống. ✅ THẦY DUYỆT → COMMIT
 `be7cd55` + PUSH + LIVE.**
 Chỉ đụng `maze-chase.js`: thêm `pauseGame`/`resumeGame` + bridge module `mazePauseHandlers` + `onPause`.

@@ -546,6 +546,26 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 447 (02/10/2026 khuya) — MAZE CHASE = STAR LOOT 3D (thay hẳn bản 2D) · cầu `ui.host` trong engine
+
+**Thầy:** *"Đẩy bản đầy đủ lên AWord, có đủ mọi chế độ (trong đó có single và fight) và có thể liên kết với bộ từ vựng của act để chơi nhé."*
+**Thầy chốt (AskUserQuestion):** THAY HẲN Maze chase 2D (thầy: chưa từng giao bài Maze chase nào) · CHƯA cho giao bài · hàng nút GIỮ KIỂU STAR LOOT nhưng NỐI THẬT.
+
+**Làm gì:**
+- `templates/maze-chase/maze-chase.js` = STAR LOOT (type vẫn `maze_chase`, nhãn catalog "Star loot"). Bản 2D cũ ⇒ `maze-chase-2d.js` (không đăng ký nữa, chỉ export) = ĐƯỜNG LÙI khi máy không có WebGL / 3D nạp lỗi; editor · sample · in ấn dùng chung.
+- Game THIẾT KẾ ở myGame (`maze-chase` mẫu **2n** = 2m + chỗ nối AWord) và CHÉP sang `templates/maze-chase/3d/` + `am-thanh/` (46 file, 12,4 MB) bằng `python tools/chep-star-loot.py` — ⛔ đừng sửa tay `3d/`. three r170 dùng CHUNG `templates/rocket-race/vendor/three` (+ 2 addon mới `MeshSurfaceSampler.js`, `BufferGeometryUtils.js`, import đổi về `../three.module.min.js`).
+- STAR LOOT tự vẽ TRỌN MÀN: ô `.aw-sl-host` gắn vào `<body>` (`html.aw-sl-on` khoá cuộn trang); `tpl.startScreen` tự bấm Play ⇒ thầy thấy thẳng màn START của STAR LOOT (READY của engine không hiện). Không gọi `ui.finish` (Fight 2 đội không có "điểm của em"); đồng hồ engine không chạy (`manualTimerStart`).
+- ⭐ `core/engine.js` thêm **`ui.host`** (null với học sinh): `listActs` / `openAct` (nút Thư mục = `listSwitchActs` + `switchToAct`) · `saveOptions` (phần LƯU của Options ▸ Apply, KHÔNG dựng lại ván; act đổi template ⇒ `originAct.templateOptions[type]`; ⛔ không ghi act `conv_`/`mist_`) · `home` · `templates`/`switchTemplate` (= Options ▸ Template).
+- Options STAR LOOT nằm gọn trong `activity.options.starLoot` (fight, timer, timerSec, lives, difficulty, bombs, bombGift, dpadStyle, shuffle, showAnswers) — không đụng khoá `timer` của engine; act 2D cũ lấy lives/difficulty/shuffleQuestions làm giá trị đầu.
+- "Liên kết bộ từ vựng": act từ vựng ⇒ Change template ▸ Star loot (`core/convert.js` sẵn `QA_TARGETS` có `maze_chase`: lời giải nghĩa = câu hỏi, từ đúng + 3 từ nhiễu = 4 bệ). Đổi template ghi "template chơi cuối" ⇒ lần sau mở act từ vựng là vào thẳng STAR LOOT; thoát bằng Menu ▸ Change template / Library.
+- `noAssignment` ⇒ form giao bài làm mờ ô này.
+
+**Kiểm (bàn thử `scratch/dot447-sl.html`, chạy trong cửa sổ ẨN offscreen của Electron myActivity — Browser pane không vẽ WebGL):** màn START · Menu (Library + 15 template) · Options kiểu AWord · chơi Single · act anagram mẫu ⇒ Star loot (4 bệ elephant/giraffe/dolphin/kangaroo) · Fight 2 đội (lưu option ⇒ START ⇒ intro ⇒ 2 robot xa nhau) · END GAME ⇒ màn START · Apply Lives 3 ⇒ mở lại vẫn 3 · Change template ⇒ Quiz: `.aw-sl-host` 0, `__mc` gỡ, MYACT:3D:OFF · Library ⇒ dỡ sạch · dựng lại ván: đúng 1 canvas.
+
+**⬜ CHỜ THẦY:** chơi trên TOMKO bằng act thật (thư mục thật cho nút Thư mục — bàn thử không đăng nhập nên chỉ thấy "No other activities") · nghe tiếng · 2 đội Fight thật.
+
+---
+
 ## Đợt 446 (02/10/2026 tối) — ROCKET RACE 3D: TRẦN ĐỘ NÉT TỪ myActivity (`window.__awMaxPR`) + NHỚ MỨC ĐỘ NÉT ĐÃ ÊM · phiên TOMKO (máy BOARD) · ✅ COMMIT + PUSH `8e633e6` + LIVE 3/3 mã băm
 
 **Yêu cầu thầy:** chơi thử Rocket race trong myActivity trên TOMKO, đo thông số, cải tiến cho mượt + tối ưu hiệu năng ("sửa cả 2" = myActivity + AWord).

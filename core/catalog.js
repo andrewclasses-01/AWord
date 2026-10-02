@@ -70,8 +70,9 @@ export const TEMPLATES = [
     load: () => import("../templates/gameshow/gameshow.js"),
     sample: () => import("../templates/gameshow/sample-gameshow.js") },
 
-  { type: "maze_chase",      label: "Maze chase",      built: true,
-    blurb: "Run through the maze to the correct answer, dodging the enemies.",
+  // ⭐ Đợt 447 — Maze chase = STAR LOOT 3D (templates/maze-chase/maze-chase.js; bản 2D chỉ còn là đường lùi).
+  { type: "maze_chase",      label: "Star loot",       built: true,
+    blurb: "3D space maze — steer your robot to the right answer, dodge the enemy robots. Single or Fight (2 teams).",
     css: "templates/maze-chase/maze-chase.css",
     load: () => import("../templates/maze-chase/maze-chase.js"),
     sample: () => import("../templates/maze-chase/sample-maze-chase.js") },
