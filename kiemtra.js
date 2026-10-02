@@ -18,7 +18,7 @@
 // =============================================================
 
 import {
-  getAssignment, queueAttempt, sendAttempt, flushOutbox, sanVe, listScores,
+  getAssignment, queueAttempt, queueAttemptKeepalive, sendAttempt, flushOutbox, sanVe, listScores,
   newPlayLogId, beatPlayLog
 } from "./core/assignments.js";
 import { gioChuan } from "./core/gio-chuan.js";
@@ -146,7 +146,9 @@ function thongBao(tieuDe, phu, nutThuLai) {
 }
 
 // ================= KHỞI ĐỘNG =================
-start();
+// ⛔ chạy SAU khi cả module khai báo xong: bàn thử (bài giả, không await) đi thẳng tới lamBai() trong phần đồng bộ
+//    ⇒ chạm `let demDan` khai bên dưới khi còn TDZ. Promise.then = đợi hết thân module rồi mới chạy.
+Promise.resolve().then(start);
 async function start() {
   flushOutbox().catch(() => {});
   dungKhung(null);
@@ -176,7 +178,12 @@ async function start() {
       xong = ds.some(r => r && String(r.ma || "").toUpperCase() === MA.toUpperCase() && !r.doDang);
     } catch (e) { /* không đọc được: coi như chưa */ }
   }
-  if (xong) { baoMe("xong"); return manXong(act, { daNopTruoc: true }); }
+  if (xong) {
+    baoMe("xong");
+    manXong(act, { daNopTruoc: true });
+    guiBuBaiNop();   // bài nộp hẳn còn kẹt trong hộp thư đi (mạng rớt lúc nộp rồi tải lại) ⇒ gửi bù có vé
+    return;
+  }
 
   const luu = docLuu();
   if (luu && luu.pha === "lam" && Array.isArray(luu.ds) && luu.ds.length === items.length) {
@@ -199,6 +206,7 @@ function manReady(act, items) {
   if (TEN) c.append(h("div", "kt-chao", `Chào ${TEN}!`));
   c.append(nut("READY", "kt-chinh kt-lon", () => gioiThieu(act, items, { tuDau: true })));
   than.append(c);
+  vuaKhung(c);
 }
 
 // ================= GIỚI THIỆU (phim chữ) =================
@@ -221,26 +229,31 @@ async function gioiThieu(act, items, { tuDau = false, xemLai = false, quayVe = n
   const phimId = Symbol();
   gioiThieu.dangChay = phimId;
   const conChay = () => !huy && gioiThieu.dangChay === phimId && c.isConnected;
-  const boQua = nut("Bỏ qua phim ›", "kt-phu-btn", () => { huy = true; veHet(); });
-  chan.append(boQua);
-
   function theVd(v) {
     const the = h("div", "kt-vidu");
+    const trai = h("div", "kt-vidu-trai");
     const viet = h("div", "kt-vidu-viet", v.viet);
+    const ghi = h("div", "kt-vidu-ghi", v.ghiChu);
+    trai.append(viet, ghi);
     const mui = h("div", "kt-vidu-mui", "→");
     const o = h("div", "kt-vidu-o");
     const chu = h("span", "kt-vidu-chu", "");
     const nhay = h("span", "kt-nhay");
     o.append(chu, nhay);
-    const ghi = h("div", "kt-vidu-ghi", v.ghiChu);
-    the.append(viet, mui, o, ghi);
+    the.append(trai, mui, o);
     return { the, chu, ghi, nhay };
   }
+  // Dựng SẴN cả bố cục (thẻ + lời dặn ẩn mờ, chiếm đúng chỗ) ⇒ phim chỉ việc làm hiện, trang không nhảy,
+  // và đo được ngay từ đầu để chọn độ gọn vừa khung (thầy 02/10: không được có thanh cuộn).
+  const the = d.viDu.map(v => { const t = theVd(v); dsVd.append(t.the); return t; });
+  const dong = LOI_DAN.map(x => { const li = h("li", "", x); dan.append(li); return li; });
+  const boQua = nut("Bỏ qua phim ›", "kt-phu-btn", () => { huy = true; veHet(); });
+  chan.append(boQua);
+  vuaKhung(c);
+
   function veHet() {
-    dsVd.innerHTML = "";
-    d.viDu.forEach(v => { const t = theVd(v); t.chu.textContent = v.anh; t.the.classList.add("hien", "xong"); dsVd.append(t.the); });
-    dan.innerHTML = "";
-    LOI_DAN.forEach(x => { const li = h("li", "hien", x); dan.append(li); });
+    the.forEach((t, k) => { t.chu.textContent = d.viDu[k].anh; t.the.classList.add("hien", "xong"); t.ghi.classList.add("hien"); });
+    dong.forEach(li => li.classList.add("hien"));
     ketThuc();
   }
   function ketThuc() {
@@ -250,12 +263,12 @@ async function gioiThieu(act, items, { tuDau = false, xemLai = false, quayVe = n
       chan.append(nut("Xem lại", "kt-phu-btn", () => gioiThieu(act, items)));
       chan.append(nut("LÀM THỬ ›", "kt-chinh", () => lamThu(act, items)));
     }
+    vuaKhung(c);
   }
   // phim: từng ví dụ hiện ra, chữ tiếng Anh tự gõ từng phím, rồi ghi chú hiện
-  for (const v of d.viDu) {
+  for (let k = 0; k < d.viDu.length; k++) {
     if (!conChay()) return;
-    const t = theVd(v);
-    dsVd.append(t.the);
+    const v = d.viDu[k], t = the[k];
     await cho(60); t.the.classList.add("hien");
     await cho(700);
     for (const ch of v.anh) { if (!conChay()) return; t.chu.textContent += ch; await cho(95); }
@@ -264,14 +277,35 @@ async function gioiThieu(act, items, { tuDau = false, xemLai = false, quayVe = n
     t.ghi.classList.add("hien");
     await cho(1100);
   }
-  for (const x of LOI_DAN) {
+  for (const li of dong) {
     if (!conChay()) return;
-    const li = h("li", "", x); dan.append(li);
     await cho(40); li.classList.add("hien");
     await cho(650);
   }
   if (conChay()) ketThuc();
 }
+
+// ---------- VỪA KHUNG: không bao giờ để màn có thanh cuộn ----------
+// Thử lần lượt các độ gọn (bình thường → gọn → gọn hơn) tới khi nội dung lọt khung `.kt-than`.
+// So scrollHeight với clientHeight của CÙNG một hộp (cả hai đều tính padding) ⇒ không bị lệch kiểu fitOnce.
+// Còn tràn ở mức gọn nhất (màn quá thấp) thì để `.kt-than` tự cuộn như cũ — thà cuộn còn hơn mất chữ.
+// ⛔ mảng độ gọn để TRONG hàm: màn READY gọi vuaKhung() ngay trong phần đồng bộ của start() (bàn thử không await),
+//    lúc đó một `const` cấp module khai bên dưới vẫn còn trong vùng TDZ ⇒ ném lỗi im lặng.
+function vuaKhung(c) {
+  const DO_GON = ["", "kt-gon", "kt-gon kt-gon2"];
+  if (!khung || !c || !c.isConnected) return;
+  const { k, than } = khung;
+  for (const lop of DO_GON) {
+    k.classList.remove("kt-gon", "kt-gon2");
+    if (lop) k.classList.add(...lop.split(" "));
+    if (than.scrollHeight <= than.clientHeight + 1) return;
+  }
+}
+// Đổi cỡ cửa sổ / phông Baloo tải xong muộn ⇒ đo lại màn đang hiện.
+let henDo = 0;
+const doLai = () => { clearTimeout(henDo); henDo = setTimeout(() => khung && vuaKhung(khung.than.firstElementChild), 80); };
+window.addEventListener("resize", doLai);
+try { document.fonts && document.fonts.ready.then(doLai); } catch (e) { /* trình duyệt cũ */ }
 
 // ================= LÀM THỬ =================
 function lamThu(act, items) {
@@ -295,6 +329,7 @@ function lamThu(act, items) {
     nuts.append(kiem);
     c.append(nuts);
     than.append(c);
+    vuaKhung(c);
     o.inp.focus();
     o.onEnter = () => cham();
     let daDung = false;
@@ -315,6 +350,7 @@ function lamThu(act, items) {
         bao.innerHTML = "";
         bao.append(h("div", "kt-bao-dau", "Chưa đúng rồi."), h("div", "kt-bao-hd", it.huongDan));
         o.inp.classList.add("sai");
+        vuaKhung(c);
         setTimeout(() => o.inp.classList.remove("sai"), 600);
         o.inp.focus(); o.inp.select();
       }
@@ -333,6 +369,7 @@ function lamThu(act, items) {
     nuts.append(nut("BẮT ĐẦU LÀM BÀI", "kt-chinh kt-lon", () => lamBai(act, items, null)));
     c.append(nuts);
     than.append(c);
+    vuaKhung(c);
   }
   ve();
 }
@@ -406,7 +443,9 @@ function lamBai(act, items, s) {
 
   // ----- nhật ký lượt (practiceLog) — mỗi lần bắt đầu/làm lại là một lượt -----
   const log = () => ({ code: CODE, id: s.luot, name: TEN || "Học sinh", ma: MA, mode: "submit", again: s.lamLai > 0, mistakes: false,
-    score: 0, total: items.length, timeMs: tongMs(), done: false, attemptId: "", createdAt: s.luotTao, activeMs: tongMs() });
+    score: 0, total: items.length, timeMs: tongMs(), done: false, attemptId: "", createdAt: s.luotTao, activeMs: tongMs(),
+    // 02/10 — nhịp 1 phút + lúc đóng trang ghi kèm BÀI LÀM tới lúc đó (cùng 1 tài liệu/lượt, ghi đè) ⇒ máy tắt ngang vẫn còn bài
+    review: s.ds.some(c => c.typed) ? dungReview(items, s, { doDang: true }) : undefined });
   beatPlayLog(log()).catch(() => {});
   const nhip = setInterval(() => { if (!daNop) { luu(); beatPlayLog(log()).catch(() => {}); } }, 60000);
 
@@ -421,7 +460,7 @@ function lamBai(act, items, s) {
   document.addEventListener("visibilitychange", onVis);
   window.addEventListener("blur", onBlur);
   window.addEventListener("focus", onFocus);
-  const onHide = () => { if (daNop) return; chotCau(false); luu(); beatPlayLog(log(), { keepalive: true }); };
+  const onHide = () => { if (daNop) return; chotCau(false); guiLuotDo(true); luu(); beatPlayLog(log(), { keepalive: true }); };
   window.addEventListener("pagehide", onHide);
   demDan = () => { cau().dan++; nhacDan(); };
   demPhim = () => { cau().phim++; };
@@ -432,6 +471,27 @@ function lamBai(act, items, s) {
   menu.onclick = () => moMenu();
 
   function luu() { if (!daNop) ghiLuu({ ...s, daMs: tongMs() }); }
+  // ⭐ Thầy 02/10: MỌI lượt làm đều phải lưu lên kho, kể cả lượt bị "Làm lại từ đầu" hay bỏ ngang (đóng/tải lại trang).
+  // Lượt chưa nộp đi dưới dạng `doDang: true` (khuôn Đợt 383 — luật kho nhận sẵn; dashboard ktdv-ql.js chỉ dùng lượt
+  // dở khi em CHƯA có lượt nộp hẳn, và trang này không coi lượt dở là "đã xong"). Chỉ gửi khi đã có ít nhất 1 câu gõ chữ,
+  // và không gửi lại nếu bài chưa đổi từ lần gửi trước (tải lại trang nhiều lần không đẻ nhiều bản giống nhau).
+  // gap = trang sắp đóng (pagehide): đường keepalive đồng bộ; không kịp thì hộp thư đi gửi bù lần mở sau.
+  function guiLuotDo(gap) {
+    const daGo = s.ds.filter(c => c.typed).length;
+    if (!daGo) return;
+    let bam = 5381;   // dấu vân tay bài làm (djb2)
+    for (const ch of s.ds.map(c => c.typed || "").join("|")) bam = (bam * 33 + ch.charCodeAt(0)) >>> 0;
+    const dau = `${s.luot}|${daGo}|${bam}`;
+    if (s.doGui === dau) return;
+    s.doGui = dau;
+    const review = dungReview(items, s, { doDang: true });
+    const args = { code: CODE, studentName: TEN || "Học sinh", ma: MA, score: review.filter(r => r.yourCorrect).length,
+      total: items.length, timeMs: tongMs(), review, doDang: true };
+    try {
+      if (gap) queueAttemptKeepalive(args);
+      else sendAttempt(queueAttempt(args)).catch(() => {});
+    } catch (e) { /* bài vẫn còn trong localStorage */ }
+  }
   // cộng thời gian đang xem câu hiện tại vào câu đó (gọi trước khi rời câu)
   function chotCau(roiCau = true) {
     const c = cau(), t = Date.now();
@@ -463,7 +523,8 @@ function lamBai(act, items, s) {
     k.append(tren);
     k.append(h("div", "kt-de-cau", it.prompt));
     o = taoO();
-    o.inp.value = c.typed || "";
+    o.inp.value = c.typed || c.nhap || "";
+    o.inp.addEventListener("input", () => { c.nhap = o.inp.value; });   // chữ gõ dở (chưa TIẾP) — tải lại trang vẫn còn
     k.append(o.dong);
     nhacEl = h("div", "kt-nhac"); k.append(nhacEl);
     const nuts = h("div", "kt-nuts");
@@ -472,6 +533,7 @@ function lamBai(act, items, s) {
     nuts.append(nut(cuoi ? "NỘP BÀI" : "TIẾP ›", "kt-chinh", () => traLoi(false)));
     k.append(nuts);
     than.append(k);
+    vuaKhung(k);
     o.onEnter = () => traLoi(false);
     o.inp.focus();
     luu();
@@ -526,21 +588,16 @@ function lamBai(act, items, s) {
     window.removeEventListener("pagehide", onHide);
     demDan = null; demPhim = null;
     menu.hidden = true;
-    const review = items.map((it, i) => {
-      const c = s.ds[i];
-      const yourCorrect = dung(c.typed, it.acceptedAnswers);
-      return {
-        question: it.prompt, answered: !!c.typed, yourText: c.typed || "", yourCorrect, correctText: it.acceptedAnswers[0],
-        ms: Math.round(c.ms), anMs: Math.round(c.anMs), roi: c.roi, mat: c.mat, matMs: Math.round(c.matMs),
-        dan: c.dan, phim: c.phim, lanXem: c.lanXem, boQua: !c.typed
-      };
-    });
-    review[0].kt = { lamLai: s.lamLai, taiLai: s.taiLai, gioiThieuMs: Math.round(s.gioiThieuMs), thuSai: s.thuSai, thuMs: Math.round(s.thuMs), phienBan: 1 };
+    const review = dungReview(items, s, {});
     const score = review.filter(r => r.yourCorrect).length;
-    xoaLuu();
     thongBao("Đang nộp bài...", "Em chờ một chút nhé.");
     const entry = queueAttempt({ code: CODE, studentName: TEN || "Học sinh", ma: MA, score, total: items.length, timeMs, review });
-    const ghiLog = () => beatPlayLog({ ...log(), timeMs, activeMs: timeMs, done: true, attemptId: entry.attemptId }).catch(() => {});
+    // ⛔ Khoá "đã nộp" NGAY khi bài nằm trong hộp thư đi (localStorage, chắc chắn ghi được) — trước đây chỉ khoá sau khi
+    //    gửi xong ⇒ mạng rớt lúc nộp + tải lại trang = tiến độ đã xoá mà chưa khoá ⇒ em được làm lại cả bài.
+    //    Mở lại trang: start() thấy khoá ⇒ màn "đã hoàn thành" + guiBuBaiNop() gửi bù.
+    try { localStorage.setItem(KHOA_XONG, "1"); } catch (e) { /* thôi */ }
+    xoaLuu();
+    const ghiLog = () => beatPlayLog({ ...log(), timeMs, activeMs: timeMs, done: true, attemptId: entry.attemptId, review }).catch(() => {});
     let kq = await sendAttempt(entry).catch(() => ({ ok: false }));
     if (kq && kq.ok) {
       try { localStorage.setItem(KHOA_XONG, "1"); } catch (e) { /* thôi */ }
@@ -592,12 +649,13 @@ function lamBai(act, items, s) {
     function xacNhanLamLai() {
       hop.innerHTML = "";
       hop.append(h("div", "kt-to", "Làm lại từ đầu?"));
-      hop.append(h("div", "kt-phu", "Mọi câu em đã làm sẽ bị xoá, em bắt đầu lại từ câu 1."));
+      hop.append(h("div", "kt-phu", "Em sẽ bắt đầu lại từ câu 1 (bài đang làm vẫn được gửi cho thầy)."));
       const nuts = h("div", "kt-nuts");
       nuts.append(nut("Không", "kt-phu-btn", dong));
       nuts.append(nut("LÀM LẠI", "kt-chinh kt-do", () => {
         nen.remove();
-        // lượt cũ = bỏ dở (done=false), ghi lần cuối rồi mở lượt mới
+        // lượt cũ = bỏ dở (done=false), ghi lần cuối rồi mở lượt mới — BÀI LÀM của lượt cũ lên kho (doDang)
+        guiLuotDo(false);
         beatPlayLog({ ...log(), timeMs: s.daMs, activeMs: s.daMs }).catch(() => {});
         const cu = s;
         const moi = moiTrangThai(items);
@@ -617,6 +675,30 @@ function lamBai(act, items, s) {
 
   baoMe("dang-lam");
   ve();
+}
+
+// ---------- bài làm gửi kho (dùng chung cho bài nộp hẳn + lượt dở) ----------
+function dungReview(items, s, { doDang = false } = {}) {
+  const review = items.map((it, i) => {
+    const c = s.ds[i];
+    const yourCorrect = dung(c.typed, it.acceptedAnswers);
+    return {
+      question: it.prompt, answered: !!c.typed, yourText: c.typed || "", yourCorrect, correctText: it.acceptedAnswers[0],
+      ms: Math.round(c.ms), anMs: Math.round(c.anMs), roi: c.roi, mat: c.mat, matMs: Math.round(c.matMs),
+      dan: c.dan, phim: c.phim, lanXem: c.lanXem, boQua: !c.typed
+    };
+  });
+  review[0].kt = { lamLai: s.lamLai, taiLai: s.taiLai, gioiThieuMs: Math.round(s.gioiThieuMs), thuSai: s.thuSai, thuMs: Math.round(s.thuMs),
+    luotSo: (s.lamLai || 0) + 1, ...(doDang ? { doDang: true, dangCau: s.i + 1 } : {}), phienBan: 2 };
+  return review;
+}
+// Bài NỘP HẲN của bài này còn trong hộp thư đi ⇒ gửi lại (vé đã xin ở start). Khoá OUTBOX phải khớp core/assignments.js.
+async function guiBuBaiNop() {
+  let ds = [];
+  try { ds = JSON.parse(localStorage.getItem("aword-hw-outbox") || "[]") || []; } catch (e) { return; }
+  for (const e of ds.filter(x => x && x.code === CODE && !x.doDang)) {
+    try { await sendAttempt(e); } catch (er) { /* lần sau */ }
+  }
 }
 
 // ================= XONG =================

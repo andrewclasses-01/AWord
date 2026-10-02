@@ -546,6 +546,59 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 442 (02/10/2026 tối) — KIỂM TRA ĐẦU VÀO: KHÔNG CUỘN · LƯU MỌI LƯỢT · KHOÁ SAU KHI NỘP (+ trang mẹ: nút PHÓNG TO, chip "Đã nộp ✓") · phiên MSI · ✅ COMMIT + PUSH (mã băm ghi ở cuối chặng)
+
+**Vòng 1 — thầy (ảnh màn Hướng dẫn BT1):** khung có thanh cuộn ⇒ "không muốn cuộn" + "dựng bản thử xem hướng dẫn/khung làm bài cả 3 bài".
+**Vòng 2 — thầy duyệt bản thử, thêm:** (1) tải lại vẫn làm tiếp chỗ dở — GIỮ; chỉ làm lại khi bấm Làm lại, nhưng MỌI lượt phải lưu dữ liệu;
+(2) nút phóng to (rộng kín cửa sổ, không phải full screen thật) góc dưới phải; (3) chip Đang mở/Chưa mở bị cao ⇒ ngang tâm dòng BT;
+bài đã gửi ⇒ "Đã nộp ✓" xanh lá, làm hết + nộp xong thì KHÔNG được làm lại. "Xong đẩy live ngay, nhưng chạy 1 lượt kiểm mọi tình huống."
+
+### A. Không cuộn (`kiemtra.js` + `kiemtra.css`)
+- Gốc: thẻ ví dụ lưới `"v m o" / "g g g"` ⇒ ghi chú là HÀNG RIÊNG, thẻ cao ~95px. Lỗi kèm (khoảng trắng trong ảnh thầy): `veHet()` (Bỏ qua phim / Xem lại
+  hướng dẫn) quên thêm `hien` cho ghi chú ⇒ `opacity:0` chiếm chỗ mà không thấy chữ.
+- Thẻ một hàng `[chữ Việt + ghi chú nhỏ] → [ô đáp án]` (`.kt-vidu-trai`); điện thoại: khối trái `display:contents`, lưới `"v o" / "g g"`.
+- Dựng SẴN cả bố cục hướng dẫn (ẩn mờ, chiếm đúng chỗ), phim chỉ làm hiện ⇒ không nhảy + đo được ngay.
+- `vuaKhung(c)`: thử `""` → `.kt-gon` → `.kt-gon .kt-gon2` tới khi `than.scrollHeight <= than.clientHeight`; gọi ở mọi màn + resize + phông tải xong.
+  Mức gọn nhất vẫn tràn ⇒ để cuộn (thà cuộn còn hơn mất chữ). ⛔ mảng độ gọn để TRONG hàm (TDZ, xem C).
+
+### B. Lưu mọi lượt (thầy: "dù với mọi lượt làm, dữ liệu luôn phải được lưu")
+- Tải lại = làm tiếp (đã có từ Đợt 440, giữ) + nay giữ cả CHỮ GÕ DỞ trong ô (`c.nhap`, chưa bấm TIẾP).
+- `guiLuotDo(gap)`: lượt CHƯA nộp lên kho dạng `doDang:true` (khuôn Đợt 383, luật nhận sẵn) khi: bấm ☰ Làm lại từ đầu (SDK `sendAttempt`) · đóng/tải lại
+  trang (pagehide ⇒ `queueAttemptKeepalive`). Chỉ khi đã có ≥1 câu gõ chữ; dấu vân tay `luot|số câu|djb2(bài)` ⇒ tải lại nhiều lần không đẻ bản trùng.
+- practiceLog (nhịp 1 phút + pagehide) nay mang `review` = bài làm tới lúc đó (1 tài liệu/lượt, ghi đè) ⇒ máy tắt ngang vẫn còn bài.
+- Hàng 0 `kt` thêm `luotSo`, `doDang`, `dangCau`; `phienBan: 2`. Hàm dùng chung `dungReview(items, s, {doDang})`.
+- Dashboard myLesson `js/ktdv-ql.js` KHÔNG phải sửa: đã chọn lượt nộp hẳn mới nhất, lượt dở chỉ dùng khi chưa có lượt nộp; `tinhTrang` 'xong' đòi `!doDang`.
+- Câu cảnh báo Làm lại: "Em sẽ bắt đầu lại từ câu 1 (bài đang làm vẫn được gửi cho thầy)."
+
+### C. Khoá sau khi nộp + lỗi đã gỡ
+- ⛔ Trước: `KHOA_XONG` chỉ ghi SAU khi gửi thành công, mà tiến độ đã xoá trước đó ⇒ mạng rớt lúc nộp + tải lại = em làm lại được cả bài.
+  Nay ghi `KHOA_XONG` NGAY khi bài vào hộp thư đi; mở lại ⇒ màn "Em đã hoàn thành bài này" (không nút nào) + `guiBuBaiNop()` gửi bù bài nộp còn kẹt
+  (đọc thẳng `aword-hw-outbox` — khoá phải khớp core/assignments.js).
+- `start()` ⇒ `Promise.resolve().then(start)`: bàn thử (bài giả, không await) + có tiến độ lưu đi thẳng `lamBai()` chạm `let demDan` còn TDZ ⇒ khung trắng.
+
+### D. Nút phóng to cần chỗ trống
+- Trang mẹ đặt nút 40px góc dưới phải khung. Khung rộng: nội dung ≤680px căn giữa, sẵn lề phải. Khung ≤820px: hàng nút hướng dẫn `.kt-chan` dồn TRÁI
+  + `padding-right:52px`. (Thử chừa đáy 58px trước: điện thoại tràn lại 29px — bỏ.)
+
+### Trang mẹ — repo `kiemtra` (`E:\LAP TRINH APP\kiemtra`, clone mới trên máy MSI) — xem GHI CHU DU AN.md của repo đó
+- Nút PHÓNG TO (`.kb-khung.phong` = position:fixed inset:0, KHÔNG dời iframe ⇒ không tải lại), Esc/bấm lại để thu; tự thu khi vừa nộp xong phần.
+- Chip cùng hàng tên bài (`.kb-phan-ten`), lệch tâm đo = 0px; xong ⇒ "Đã nộp ✓" nền xanh lá chữ trắng. Điện thoại: tên bài 16px, ẩn "· n câu".
+- `bai.html?thu=1&aword=http://localhost:5591` (chỉ localhost) ⇒ khung trỏ về AWord trên máy. `?v=2` cho kiemtra.css + bai.js.
+
+### Bàn thử + kết quả kiểm (scratch, không lên GitHub)
+- `scratch/kiemtra-thu.html?dang=bt1|bt2|bt3&g=<mã>&ma=ZTESTKT` (bài giả). ⛔ LUÔN kèm `&ma=`: có mã ⇒ chỉ đi đường VÉ, bàn thử không có vé ⇒ không bao giờ
+  ghi lên kho thật (không mã ⇒ đường SDK ghi được scores/results rác!). `scratch/kiemtra-xem.html` = 3 bài × 4 màn × 3 cỡ khung.
+- Không cuộn: **36/36 khung** (máy tính 908×660 · laptop thấp 908×480 · điện thoại 343×600), sau cả thay đổi D.
+- Kịch bản (bài giả BT1, 40 câu): A tải lại giữa bài ⇒ về đúng câu 4, đồng hồ chạy tiếp, taiLai++, lượt dở vào hộp thư đi · A' tải lại không đổi gì ⇒
+  KHÔNG thêm bản · A'' chữ gõ dở còn nguyên · B Làm lại ⇒ lượt cũ (3 câu) vào hộp thư đi, lượt mới câu 1, lamLai=1 · C Làm lại khi chưa gõ ⇒ không gửi gì ·
+  D làm hết 40 câu có 2 câu trống ⇒ hỏi "còn 2 câu trống" ⇒ làm câu trống ⇒ nộp ⇒ (không vé) "Chưa nộp được" + KHOA_XONG=1 + tiến độ đã xoá ⇒
+  tải lại ⇒ "Em đã hoàn thành bài này", 0 nút. Trang mẹ: chip lệch tâm 0px cả 3 (máy tính + điện thoại), "Đã nộp ✓" khi phần 1 xong + phần 2 tự mở,
+  phóng to phủ kín cửa sổ mà phim hướng dẫn vẫn chạy tiếp, Esc/bấm lại về 660px, điện thoại nút không đè.
+
+**⬜ VIỆC ĐANG CHỜ (Đợt 442):**
+- Chưa thử với VÉ thật (em đăng nhập thật): lượt dở/nộp thật lên kho — thầy tạo 1 tài khoản KT đầu vào thử, làm dở + Làm lại + nộp, xem dashboard.
+- Chưa thử điện thoại thật / TOMKO.
+
 ## Đợt 441 (02/10/2026) — ROCKET RACE FIGHT 3D: 11 Ý THẦY + FIGHT CONTENT LÊN ĐẦU BẢNG OPTIONS (MỌI GAME FIGHT) · nhánh `dot441-rr-11y` · ✅ PUSH main `6e2d7e8` (+441b tim vỡ/tim lành) + LIVE 5/5 mã băm · ⬜ thầy bấm tay TOMKO
 - CORE (1 chỗ, `core/fight.js` buildOptions): ô Fight content = ô rộng không nhãn, chèn ngay sau vạch đứt `.aw-optc-dash` (thầy chọn áp
   dụng MỌI game có Fight). Đo Quiz / Crossword (pick) / Type the answer (In turns khoá ô này như cũ): đúng chỗ, 0 lỗi.
