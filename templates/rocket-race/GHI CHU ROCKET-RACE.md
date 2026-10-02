@@ -805,4 +805,4 @@ khu tên lửa "cột dọc mọc lên" · PEACE bật/tắt trong trận · thi
   ⇒ `st.paintProg`. KHÔNG còn đọc `.aw-nav-label` (% số câu đã hỏi).
 - Câu đúng (`advanceFx`) phát `"boostx"` = file boost qua +14 dB → nén 8:1 → +5 dB → chặn đỉnh −3 dB (`rr3d-sfx.js` ALIAS/PUNCH);
   ≈ +8 dB so với cũ, đỉnh −1,1 dB. Động cơ `swell` 3,2. Né / boostFx giữ "boost" thường.
-- ⬜ chưa commit (chờ thầy nghe thử).
+- ✅ push `c207bfb` + LIVE 3/3 mã băm · ⬜ thầy nghe thử / TOMKO.

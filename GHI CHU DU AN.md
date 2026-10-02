@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 444 (02/10/2026 tối) — ROCKET RACE FIGHT 3D: THANH % = VỊ TRÍ TÀU DẪN ĐẦU · TIẾNG TĂNG TỐC KHI ĐÚNG TO HẲN · phiên MSI · ⬜ CHƯA COMMIT (chờ thầy duyệt)
+## Đợt 444 (02/10/2026 tối) — ROCKET RACE FIGHT 3D: THANH % = VỊ TRÍ TÀU DẪN ĐẦU · TIẾNG TĂNG TỐC KHI ĐÚNG TO HẲN · phiên MSI · ✅ COMMIT + PUSH `c207bfb` + LIVE 3/3 mã băm
 
 **Yêu cầu thầy:**
 1. "Thanh % là vị trí của tàu đang ở gần đích hơn trên hành trình của game, có thể tăng giảm tùy vào vị trí của tàu này."
@@ -574,7 +574,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 **⬜ VIỆC ĐANG CHỜ (Đợt 444):**
 - Thầy nghe thử: đủ to chưa (muốn to nữa: tăng `PUNCH_MAKEUP_DB` + nâng ngưỡng chặn đỉnh, nhưng gần 0 dB sẽ rè khi trùng tiếng khác).
-- Thầy duyệt ⇒ commit + push 3 file JS + hồ sơ, kiểm live mã băm. ⬜ TOMKO bấm tay.
+- ✅ Thầy duyệt ⇒ push `c207bfb`; `aword.andrewclasses.com` khớp SHA-256 3/3 file JS sau ~1 phút. ⬜ TOMKO bấm tay.
 
 ## Đợt 443 (02/10/2026 tối) — ROCKET RACE FIGHT 3D: TRÚNG LAN CHỈ KHI 2 TÀU CÙNG NẤC · phiên MSI · ✅ COMMIT + PUSH `3034e5a` + LIVE 2/2 mã băm
 
