@@ -595,8 +595,15 @@ bài đã gửi ⇒ "Đã nộp ✓" xanh lá, làm hết + nộp xong thì KHÔ
   tải lại ⇒ "Em đã hoàn thành bài này", 0 nút. Trang mẹ: chip lệch tâm 0px cả 3 (máy tính + điện thoại), "Đã nộp ✓" khi phần 1 xong + phần 2 tự mở,
   phóng to phủ kín cửa sổ mà phim hướng dẫn vẫn chạy tiếp, Esc/bấm lại về 660px, điện thoại nút không đè.
 
+**✅ Thử THẬT trên kiemtra.andrewclasses.com (02/10 tối, tài khoản thầy tạo: Ngọc Ánh `NGOCANH20102016`, BT1 `5576de`):**
+hướng dẫn không cuộn · làm thử báo sai · gõ 3 câu + gõ dở câu 4 "a b" ⇒ tải lại ⇒ về câu 4, còn "a b", đồng hồ chạy tiếp ·
+lượt dở LÊN KHO thật qua keepalive lúc tải lại (scores `hw1790938975658xnbvx` doDang, 2 điểm) · ☰ Làm lại sau 4 câu ⇒ lượt cũ lên kho
+(`hw1790939010407x9vxx` doDang, 3 điểm), lượt mới câu 1. Kiểm bằng REST runQuery scores với token của em; `results/{id}` em đọc ⇒ 403 (đúng luật).
+Thầy dặn DỪNG trước bước nộp hẳn (không nộp BT1 cho tài khoản này).
+
 **⬜ VIỆC ĐANG CHỜ (Đợt 442):**
-- Chưa thử với VÉ thật (em đăng nhập thật): lượt dở/nộp thật lên kho — thầy tạo 1 tài khoản KT đầu vào thử, làm dở + Làm lại + nộp, xem dashboard.
+- Thầy xem dashboard KT đầu vào: Ngọc Ánh phải hiện "đang làm" BT1 + bài làm của lượt dở. Chưa thử đường NỘP HẲN với vé thật.
+- Tài khoản Ngọc Ánh còn 2 lượt dở thử trên kho + lượt thứ 3 đang mở ở câu 1 (localStorage Browser pane máy MSI) — xoá nếu là tài khoản em thi thật.
 - Chưa thử điện thoại thật / TOMKO.
 
 ## Đợt 441 (02/10/2026) — ROCKET RACE FIGHT 3D: 11 Ý THẦY + FIGHT CONTENT LÊN ĐẦU BẢNG OPTIONS (MỌI GAME FIGHT) · nhánh `dot441-rr-11y` · ✅ PUSH main `6e2d7e8` (+441b tim vỡ/tim lành) + LIVE 5/5 mã băm · ⬜ thầy bấm tay TOMKO
