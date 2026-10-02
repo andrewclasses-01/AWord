@@ -765,3 +765,30 @@ dừng lại"*. Chốt: Count down hết giờ vẫn kết theo giờ · Differe
 - View: `r.nearWin` ⇒ lửa dài 1,5 + xanh; đặt trong `move()`, tắt trong `win()`.
 - Act voice: `sfx.setFxLevel(MS_VOICE_FX)` cạnh mọi `lockBg(true)`.
 - Bàn thử: `scratch/dot417-rr.html?t=rocket_race&dup=3` (+ `rrMissile/rrMsStreak/rrMsMax/voice`) — chi tiết `GHI CHU DU AN.md` Đợt 417.
+
+## 39. Đợt 441 (02/10/2026) — 11 Ý THẦY: Options · hàng nút kiểu STAR LOOT · PEACE · tên lửa dẫn đường / đâm đầu nhau
+Thầy cho sửa thẳng repo (không bắt buộc làm mẫu myGame trước). Chốt qua AskUserQuestion: Fight content lên đầu cho MỌI game Fight ·
+khu tên lửa "cột dọc mọc lên" · PEACE bật/tắt trong trận · thiệt hại ×1,5 làm tròn LÊN.
+- **Options**: Fight content (core/fight.js) = ô rộng không nhãn, chèn NGAY SAU `.aw-optc-dash` · "Missile" → **"Missile damages"** ·
+  **Missiles max 0–5, nấc 6 = ∞** (`MS_MAX_INF`, `msMaxOf` trả Infinity) · **Points off của trận RIÊNG**: khoá `rrStepsOff` 0–20, 21 = MAX
+  (về vạch xuất phát); act chưa chỉnh đọc `pointsOff` cũ (> 20 ⇒ MAX). Points off chung 0–100 ẩn TRONG trận bằng getter
+  `hidePointsOff` đọc `rrPanelInFight` (buildExtraOptions đặt; options-panel đọc ngay sau) ⇒ không sửa core. Chế độ thường / bài giao
+  vẫn dùng `pointsOff` như cũ.
+- **Hàng nút** (`rr3dToolbar`, CSS cuối rocket-race.css): đồng hồ LED 7 đoạn ngoài cùng trái (`rrLedHtml` chép STAR LOOT, nghe chữ của
+  `.aw-fight-clock` ẩn) · thanh % mảnh trong khe giữa cảnh và hàng nút (`.aw-rr3d-prog` tuyệt đối top −17px, đọc `.aw-nav-label` ẩn) ·
+  mọi nút `--rr-btn` (= cỡ `.aw-toolbtn`) · nút **PEACE** trước Mode. 2D (fallback) ⇒ CSS ẩn hết 3 thứ mới.
+- **PEACE**: `st.peace`; `msFire` từ chối; `view.missile.setPeace()` đổi màu VẬT LIỆU dùng chung (mRed/mRedDark/mGlow + quầng + vòng +
+  "MISSILE +1") sang xanh lá; bật ⇒ `clearAll()` (quả đang bay nổ tan, vô hại). Vẫn nạp theo streak, BOOST vẫn chạy. Trận mới về thường.
+- **Khu tên lửa**: 4 ô dự phòng xếp cột từ dưới (`slotY(i) = −0,3 + 0,3·i` × ammoH; 3 ô đầu đúng chỗ cũ) — số ô = Missiles max − 1
+  (∞ ⇒ 4); dự phòng > 4 ⇒ nhãn **"+X"** (sprite canvas) trên đỉnh cột · cột vạch streak cao theo số ô (`buildMsPips(U, n, slots)`).
+  `setArsenal` nay có `max`.
+- **Đường bay**: `flightTarget()` — đích bám tàu MƯỢT (lerp 3,5/s) rồi khoá hẳn ở 22% cuối ⇒ hết giật khi tàu nhảy nấc; trả lời/BOOST
+  sớm hơn 1,25 s cuối vẫn trúng (đo: bàn 1 trả lời đúng lúc quả bay 1 s ⇒ vẫn lùi). Bỏ "hút về điểm giữa" 7c: 2 quả đi đường riêng
+  (A→B và B→A gần trùng một đường cong ngược chiều) ⇒ tự gặp; < `CLASH_SEEK` 9 đv thì bẻ lái tìm nhau; va = khoảng cách 2 đoạn bay
+  trong khung < 0,9 (`segGap`). Nổ **to gấp đôi** (`explosion(mid, 2)` + vòng sóng tại chỗ). Tàu trong **`CLASH_ZONE` = 2 × CLASH_NEAR**
+  ⇒ `onEnd(side,"hit",from,"clash")` ⇒ `msEnd` lùi `ceil(push × 1,5)` (∞ giữ ∞). rr3d-view chuyển tiếp tham số `tag`.
+- Đo (bàn thử `scratch/dot441-rr.html?t=rocket_race&dup=3&rrMsStreak=1&rrMsMax=6&rrStepsOff=21`, `right(side)`/`wrong(side)` tự viết
+  trong console): ∞ giữ 6 dự phòng ⇒ 4 quả + "+2" · PEACE ⇒ chạm bắn không phóng, quả xanh · bắn cùng lúc ⇒ đâm giữa trời t≈2,2 s,
+  2 tàu cách 14,8 > vùng 7,48 ⇒ không ai lùi · A bay 2,9 s rồi B mới bắn ⇒ nổ cách B 3,0 ⇒ B lùi 3 (= ceil(2×1,5)) · Points off MAX ⇒
+  sai về 0 · Quiz / Crossword / Type the answer: Fight content lên đầu, In turns vẫn khoá nó · 0 lỗi console.
+- ⬜ Thầy bấm tay TOMKO: cỡ "+X", nhìn 2 quả đâm nhau, PEACE, LED + thanh %.

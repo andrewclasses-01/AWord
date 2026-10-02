@@ -396,19 +396,35 @@ function msStreakOf(opt) {
   const n = Math.round(Number(v));
   return Number.isFinite(n) ? Math.max(1, Math.min(10, n)) : MS_STREAK_DEFAULT;
 }
+// ⭐ Đợt 441 (thầy 02/10/2026) — Missiles max 0–5, nấc cuối (6) = ∞ (giữ không giới hạn). Act cũ 0–3 giữ nguyên số.
+const MS_MAX_INF = 6, MS_MAX_SHOW = 5;
 function msMaxOf(opt) {
   const v = opt ? opt.rrMsMax : undefined;
   if (v == null || v === "") return opt && Number(opt.rrMissile) === 0 && opt.rrMissile !== "" && opt.rrMissile != null ? 0 : MS_MAX_DEFAULT;
   const n = Math.round(Number(v));
-  return Number.isFinite(n) ? Math.max(0, Math.min(3, n)) : MS_MAX_DEFAULT;
+  if (!Number.isFinite(n)) return MS_MAX_DEFAULT;
+  return n >= MS_MAX_INF ? Infinity : Math.max(0, n);
 }
+// ⭐ Đợt 441 (thầy) — POINTS OFF RIÊNG CỦA FIGHT: trả lời sai lùi mấy nấc, 0–20, nấc cuối (21) = MAX (về vạch xuất phát).
+// Khoá riêng `rrStepsOff` ⇒ chỉnh trong trận KHÔNG đụng `pointsOff` (điểm trừ của bài giao / chế độ thường).
+// Act chưa từng chỉnh ⇒ đọc `pointsOff` cũ (trước đợt này Fight dùng chung số đó làm số nấc lùi): > 20 ⇒ MAX.
+const STEPS_OFF_MAX = 21;
+function stepsOffOf(opt) {
+  const raw = opt && opt.rrStepsOff != null && opt.rrStepsOff !== "" ? opt.rrStepsOff : (opt ? opt.pointsOff : 0);
+  const n = Math.round(Number(raw) || 0);
+  if (n <= 0) return 0;
+  return n >= STEPS_OFF_MAX ? Infinity : n;
+}
+// options-panel.js đọc `tpl.hidePointsOff` NGAY SAU buildExtraOptions ⇒ cờ này do buildExtraOptions đặt theo inFight:
+// trong trận ẩn Points off chung (0–100 điểm) vì template dựng thanh riêng ở trên.
+let rrPanelInFight = false;
 function msLocked() { const sc = rrFightScene; return !!(sc && (sc.decided || sc.sudden)); }
 function msLater(st, fn, ms) { const t = setTimeout(() => { if (!st.dead && rr3d === st) fn(); }, ms); st.offs.push(() => clearTimeout(t)); }
 function msTotal(a) { return a.reserve + (a.loaded ? 1 : 0); }
 function msSync(st, side) {
   if (!st.ms) return;
   const a = st.ms[side], locked = msLocked();
-  v3(v => v.missile && v.missile.setArsenal(side, { on: st.msMax > 0, reserve: a.reserve, loaded: a.loaded, pips: a.ms, pipsMax: st.msStreak,
+  v3(v => v.missile && v.missile.setArsenal(side, { on: st.msMax > 0, max: st.msMax, reserve: a.reserve, loaded: a.loaded, pips: a.ms, pipsMax: st.msStreak,
     full: msTotal(a) >= st.msMax, boost: a.boost, boostPips: a.bs, boostMax: MS_BOOST_STREAK, locked }));
 }
 function msIncoming(side) { const v = rr3d && rr3d.view; return v && v.missile ? v.missile.incoming(side) : Infinity; }
@@ -458,8 +474,8 @@ function msLoadTap(side) {
 function msFire(side) {
   const st = rr3d; if (!st || !st.ms) return;
   const a = st.ms[side], v = st.view;
-  if (v && v.missile && !msLocked() && !a.loaded && a.reserve > 0 && v.phase === "play") return msLoad(st, side);   // Đợt 409: ô to trống mà còn quả nhỏ ⇒ nạp
-  if (!v || !v.missile || msLocked() || !a.loaded || v.phase !== "play") { if (v && v.missile) v.missile.refuse(side, "fire"); return; }
+  if (v && v.missile && !msLocked() && !a.loaded && a.reserve > 0 && v.phase === "play") return msLoad(st, side);   // (PEACE vẫn nạp được)   // Đợt 409: ô to trống mà còn quả nhỏ ⇒ nạp
+  if (!v || !v.missile || msLocked() || st.peace || !a.loaded || v.phase !== "play") { if (v && v.missile) v.missile.refuse(side, "fire"); return; }   // 441: PEACE ⇒ không bắn
   a.loaded = false; msSync(st, side);
   v.missile.launch(side, 1 - side);          // Đợt 409: quả to lùi khỏi màn rồi mới phóng
   st.msWideReady = false;
@@ -476,12 +492,14 @@ function msBoost(side) {
   if (!dodged && v.missile.boostFx) v.missile.boostFx(side);
   b.boostStep();
 }
-function msEnd(to, res) {
+function msEnd(to, res, tag) {
   const st = rr3d; if (!st || !st.ms) return;
   st.msWideReady = true;
   if (res !== "hit" || msLocked()) return;
   const b = st.boards[to];
-  if (b && b.missileHit) b.missileHit(st.msPush);
+  // ⭐ Đợt 441 (thầy) — dính vụ 2 tên lửa ĐÂM NHAU ⇒ thiệt hại ×1,5, LÀM TRÒN LÊN (1→2, 2→3, 3→5…; ∞ vẫn ∞)
+  const push = tag === "clash" && st.msPush !== Infinity ? Math.ceil(st.msPush * 1.5) : st.msPush;
+  if (b && b.missileHit) b.missileHit(push);
 }
 // Sudden death / phân thắng thua ⇒ khoá ô bắn + BOOST, quả đang bay nổ giữa đường
 function msOver(keepWide) {
@@ -549,7 +567,7 @@ function rr3dScene({ root, ctl, title, play }) {
   rrSound.quiet = true;                       // tiếng tổng hợp cũ im — bộ tiếng 3D thay
   console.log("MYACT:3D:ON");                // ⭐ Đợt 399: myActivity v2.23.0 tạm lặng hiệu ứng nền (sao lấp lánh) nhường card đồ hoạ
   const wrap = root.closest(".aw-fight");
-  if (wrap) { rr3dSoundMenu(st, wrap); rr3dMenuHost(st, wrap); rr3dMissWait(st, wrap); }
+  if (wrap) { rr3dSoundMenu(st, wrap); rr3dMenuHost(st, wrap); rr3dMissWait(st, wrap); rr3dToolbar(st, wrap); }
   Promise.all([import("./rr3d-view.js"), import("./rr3d-sfx.js")]).then(([V, S]) => {
     if (st.dead) return null;
     st.sfx = S.createRr3dSound();
@@ -562,7 +580,7 @@ function rr3dScene({ root, ctl, title, play }) {
       onQuestionTap: side => { const b = st.boards[side == null ? 0 : side]; if (b && b.replayVoice) b.replayVoice(); },
       // Đợt 413: gapCm = khoảng cách tên lửa / BOOST tới cụm đáp án · Đợt 417: BOOST to hơn (5,2 → 6,5 cm), né trong 1,25 s cuối
       missiles: { window: MS_WINDOW, dur: 3.8, boostCm: 6.5, gapCm: 2 },
-      onFire: side => msFire(side), onBoost: side => msBoost(side), onMissileEnd: (to, res) => msEnd(to, res),
+      onFire: side => msFire(side), onBoost: side => msBoost(side), onMissileEnd: (to, res, from, tag) => msEnd(to, res, tag),
       onLoad: side => msLoadTap(side),        // Đợt 409: chạm quả nhỏ = nạp
       sfx: (n, v) => st.sfx && st.sfx.play(n, v),
       loop: (n, on, v, f) => st.sfx && st.sfx.loop(n, on, v, f),
@@ -720,6 +738,78 @@ function rr3dMenuHost(st, wrap) {
 // ⭐ Đợt 393 (thầy): "bấm vào nút loa sẽ hiện lên 2 menu để bật tắt gồm Effect và Background".
 // Nút 🔊 của hàng nút trận vẫn là nút của engine — trong trận 3D ta chặn cú bấm (bắt ở pha CAPTURE
 // trên khung trận, chạy trước onclick của nút) và mở bảng nhỏ ngay trên nút. Lựa chọn nhớ theo máy.
+// =========================================================
+// ⭐ Đợt 441 (thầy 02/10/2026) — HÀNG NÚT TRẬN 3D kiểu STAR LOOT (myGame maze-chase mẫu 2m):
+//   · ĐỒNG HỒ ra NGOÀI CÙNG BÊN TRÁI, chữ số LED 7 đoạn neon (SVG — chép ledHtml của STAR LOOT). Số vẫn do trọng tài core/fight.js
+//     ghi vào `.aw-fight-clock` (ẩn) — ở đây chỉ NGHE chữ đổi rồi vẽ lại LED ⇒ không sửa core.
+//   · nút % bỏ ⇒ THANH % mảnh chạy trái → phải ngay TRÊN hàng nút (đọc nhãn `.aw-nav-label` ẩn mà rr3dPaintProgress / engine ghi).
+//   · mọi nút cùng một cỡ (CSS `.is-skin-rr3d`) + nút PEACE (chỉ icon): tên lửa 2 bên xanh lá, không bắn được; vẫn nạp theo streak,
+//     BOOST vẫn chạy. Chỉ trong trận đang chơi — trận mới (Start again / Apply / ván mới) về bình thường vì rr3dScene dựng st mới.
+// =========================================================
+const RR_LED_MAP = { 0: "abcdef", 1: "bc", 2: "abdeg", 3: "abcdg", 4: "bcfg", 5: "acdfg", 6: "acdefg", 7: "abc", 8: "abcdefg", 9: "abcdfg" };
+const RR_LED_POLY = (() => {
+  const H = (cx, cy, len, t) => [[cx - len / 2, cy], [cx - len / 2 + t / 2, cy - t / 2], [cx + len / 2 - t / 2, cy - t / 2], [cx + len / 2, cy], [cx + len / 2 - t / 2, cy + t / 2], [cx - len / 2 + t / 2, cy + t / 2]];
+  const Vv = (cx, cy, len, t) => H(cx, cy, len, t).map(([x, y]) => [cx + (y - cy), cy + (x - cx)]);
+  const q = a => a.map(p => p.map(n => +n.toFixed(1)).join(",")).join(" ");
+  return { a: q(H(25, 5, 35, 8)), g: q(H(25, 45, 35, 8)), d: q(H(25, 85, 35, 8)), f: q(Vv(5, 25, 35, 8)), b: q(Vv(45, 25, 35, 8)), e: q(Vv(5, 65, 35, 8)), c: q(Vv(45, 65, 35, 8)) };
+})();
+function rrLedHtml(str) {
+  return [...String(str)].map(ch => {
+    if (ch === ":") return `<svg class="lc" viewBox="0 0 16 90"><circle cx="8" cy="30" r="4.6"/><circle cx="8" cy="62" r="4.6"/></svg>`;
+    const on = RR_LED_MAP[ch] || "";
+    return `<svg class="ld" viewBox="0 0 50 90">${"abcdefg".split("").map(k => `<polygon class="${on.includes(k) ? "on" : "off"}" points="${RR_LED_POLY[k]}"/>`).join("")}</svg>`;
+  }).join("");
+}
+const RR_PEACE_ICON = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M12 12l-6.36 6.36M12 12l6.36 6.36"/></svg>`;
+function rr3dToolbar(st, wrap) {
+  let done = false, mo = null;
+  const setup = () => {
+    if (done || st.dead) return true;
+    const center = wrap.querySelector(".aw-below-center"), below = wrap.querySelector(".aw-below");
+    const clock = wrap.querySelector(".aw-fight-clock"), label = wrap.querySelector(".aw-fight-boardtools .aw-nav-label");
+    const mode = center && center.querySelector('.aw-toolbtn[aria-label="Mode"]');
+    if (!center || !below || !clock || !label || !mode) return false;
+    done = true;
+    // đồng hồ LED — ngoài cùng bên trái hàng nút
+    const led = el("div", "aw-rr3d-led"); led.setAttribute("aria-hidden", "true");
+    center.prepend(led);
+    let last = "";
+    const paintClock = () => { const s = (clock.textContent || "").trim(); if (s === last) return; last = s; led.innerHTML = rrLedHtml(s); };
+    paintClock();
+    const moClock = new MutationObserver(paintClock); moClock.observe(clock, { childList: true, characterData: true, subtree: true });
+    // thanh % mảnh trên hàng nút
+    const prog = el("div", "aw-rr3d-prog"), fill = el("i");
+    prog.append(fill); below.before(prog);
+    const paintProg = () => { const n = parseInt(label.textContent, 10); fill.style.width = (Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0) + "%"; };
+    paintProg();
+    const moProg = new MutationObserver(paintProg); moProg.observe(label, { childList: true, characterData: true, subtree: true });
+    // nút PEACE — ngay trước nút Mode
+    const peace = el("button", "aw-toolbtn aw-rr3d-peace");
+    peace.type = "button"; peace.title = "Peace — missiles can't be fired"; peace.setAttribute("aria-label", "Peace");
+    peace.innerHTML = RR_PEACE_ICON;
+    mode.before(peace);
+    press(peace, e => {
+      e.stopPropagation();
+      st.peace = !st.peace;
+      peace.classList.toggle("is-on", st.peace);
+      v3(v => {
+        if (!v.missile) return;
+        v.missile.setPeace(st.peace);
+        if (st.peace) v.missile.clearAll();           // quả đang bay nổ tan giữa trời, không gây hại (thầy chọn)
+      });
+      if (st.sfx) st.sfx.play(st.peace ? "mload" : "mcharge", 0.5);
+      if (st.ms) [0, 1].forEach(side => msSync(st, side));
+    });
+    st.offs.push(() => { moClock.disconnect(); moProg.disconnect(); led.remove(); prog.remove(); peace.remove(); });
+    return true;
+  };
+  if (!setup()) {
+    mo = new MutationObserver(() => { if (setup()) { mo.disconnect(); mo = null; } });
+    mo.observe(wrap, { childList: true, subtree: true });
+    st.offs.push(() => { if (mo) mo.disconnect(); });
+  }
+}
+
 function rr3dSoundMenu(st, wrap) {
   let pop = null;
   const findBtn = () => wrap.querySelector('.aw-fight-boardtools button[aria-label="Sound"]');
@@ -1038,6 +1128,8 @@ const rocketRaceTemplate = {
   manualTimerStart: true,
   // The two shared switches this game genuinely obeys (Đợt 143: declare, don't assume).
   usesShuffleAnswers: true,
+  // ⭐ Đợt 441 — trong trận dùng thanh "Points off" RIÊNG (số nấc lùi, khoá rrStepsOff) — xem rrPanelInFight.
+  get hidePointsOff() { return rrPanelInFight; },
   // Thứ tự ô tích theo CỘT (Đợt 213b) — mã định danh, không phải chữ hiện ra.
   checkOrder: ["shuffle", "shuffleAnswers", "showAnswers"],
   // Planets are dropped in by JS (not CSS) so the engine's CSS scan can't see them.
@@ -1123,12 +1215,14 @@ const rocketRaceTemplate = {
     // go looking for it. It is now its OWN button on the toolbar row between
     // Options and Mode (declared by `fightScreen` below, drawn by core/engine.js),
     // where a lit button says "on" without anyone opening a panel at all.
+    rrPanelInFight = !!inFight;
     if (inFight) {
       // ⭐ Đợt 407 — tên lửa: trúng thì lùi mấy nấc. 11 = ∞ (về vạch xuất phát). Chưa chỉnh = 2.
       // ⭐ Đợt 417 (thầy) — bỏ Off ở thanh này (tắt tên lửa = "Missiles max" 0) + 2 thanh mới.
+      // ⭐ Đợt 441 (thầy) — đổi tên "Missile" → "Missile damages" (luật giữ nguyên).
       const push = missilePushOf(draft);
       const missile = mkSliderCell({
-        label: "Missile", min: 1, max: MS_INF, step: 1, value: push === Infinity ? MS_INF : push, tone: "red",
+        label: "Missile damages", min: 1, max: MS_INF, step: 1, value: push === Infinity ? MS_INF : push, tone: "red",
         fmt: v => (v >= MS_INF ? "∞" : "−" + v),
         onInput: v => { draft.rrMissile = v; }
       });
@@ -1139,13 +1233,23 @@ const rocketRaceTemplate = {
         onInput: v => { draft.rrMsStreak = v; }
       });
       msStreak.cell.title = "Correct answers in a row that make 1 missile";
+      const mmax = msMaxOf(draft);
       const msMax = mkSliderCell({
-        label: "Missiles max", min: 0, max: 3, step: 1, value: msMaxOf(draft), tone: "red", offAt: 0,
-        fmt: v => (v === 0 ? "Off" : String(v)),
+        label: "Missiles max", min: 0, max: MS_MAX_INF, step: 1, value: mmax === Infinity ? MS_MAX_INF : mmax, tone: "red", offAt: 0,
+        fmt: v => (v === 0 ? "Off" : v >= MS_MAX_INF ? "∞" : String(v)),
         onInput: v => { draft.rrMsMax = v; if (draft.rrMissile === 0) draft.rrMissile = MS_DEFAULT; }
       });
-      msMax.cell.title = "Most missiles a team can hold. 0 = no missiles (BOOST still works)";
-      panel.append(lives.cell, missile.cell, msStreak.cell, msMax.cell);
+      msMax.cell.title = "Most missiles a team can hold (∞ = no limit). 0 = no missiles (BOOST still works)";
+      // ⭐ Đợt 441 — Points off của TRẬN: số nấc lùi khi trả lời sai, 0–20 + MAX (về vạch xuất phát). Khoá riêng rrStepsOff.
+      const so = stepsOffOf(draft);
+      const stepsOff = mkSliderCell({
+        label: "Points off", sub: "wrong answer", min: 0, max: STEPS_OFF_MAX, step: 1,
+        value: so === Infinity ? STEPS_OFF_MAX : so, tone: "red", offAt: 0,
+        fmt: v => (v === 0 ? "Off" : v >= STEPS_OFF_MAX ? "MAX" : "−" + v),
+        onInput: v => { draft.rrStepsOff = v; }
+      });
+      stepsOff.cell.title = "A wrong answer moves the rocket back this many steps (MAX = to the start line)";
+      panel.append(lives.cell, missile.cell, msStreak.cell, msMax.cell, stepsOff.cell);
       // ⭐ Đợt 416 (thầy 27/9/2026) — hết câu mà chưa tàu nào về đích ⇒ bốc lại câu cũ
       // (xào lại) tới khi có tàu chạm vạch. Mọi chế độ (Same / In turns / Different).
       // Count down hết giờ vẫn kết như cũ (tàu gần hơn bay về). MẶC ĐỊNH BẬT.
@@ -1197,6 +1301,7 @@ const rocketRaceTemplate = {
   mount(root, activity, ui) {
     const opt = activity.options || {};
     const pointsOff = Math.max(0, Math.min(100, Number(opt.pointsOff) || 0));
+    const stepsOff = stepsOffOf(opt);       // ⭐ Đợt 441 — chỉ dùng trong trận (Fight)
 
     // ----- FIGHT MODE — this play is one of two boards of a match. `_fight` is
     // put here by core/fight.js; everything below falls back to ordinary
@@ -1964,19 +2069,23 @@ const rocketRaceTemplate = {
       const mover = teamsMode ? currentTeam() : player;
       if (teamsMode) { mover.queue.shift(); mover.pupilPtr++; teamPtr = (teamPtr + 1) % rockets.length; }
       else if (!fightCtl) { queue.push(queue.shift()); }      // ask it again later
-      if (pointsOff && fightCtl) {
+      if (stepsOff && fightCtl) {
         // Đợt 354 — in a match the rocket IS the score: the penalty is applied at
         // once (no flight to a hidden number) and the rocket backs up N segments,
         // never past the start line. The referee's points may go negative; the
         // track cannot — the track is the class's reading, the points are the
         // referee's (winner, end panel). "−N" floats up from the rocket itself.
-        penalty += pointsOff;
-        ui.setScore(scoreNow());
+        // ⭐ Đợt 441 — số nấc là `stepsOff` (thanh Points off RIÊNG của trận, 0–20 / MAX = về vạch xuất phát).
         const pBefore = mover.p;
-        retreatRocket(mover, pointsOff);
-        if (on3d) { const side = mover.id, p = mover.p, n = pointsOff; v3(v => v.move(side, p, "back", n)); }
+        const nBack = stepsOff === Infinity ? pBefore : Math.min(stepsOff, pBefore);
+        penalty += stepsOff === Infinity ? pBefore : stepsOff;
+        ui.setScore(scoreNow());
+        if (nBack > 0) {
+          retreatRocket(mover, nBack);
+          if (on3d) { const side = mover.id, p = mover.p, n = nBack; v3(v => v.move(side, p, "back", n)); }
+        }
         wrongRetreated = mover.p < pBefore;   // Đợt 407: lùi THẬT ⇒ có thể né tên lửa
-      } else if (pointsOff) ui.flyPenalty?.(tileEl, pointsOff, () => { penalty += pointsOff; return scoreNow(); });
+      } else if (pointsOff && !fightCtl) ui.flyPenalty?.(tileEl, pointsOff, () => { penalty += pointsOff; return scoreNow(); });
 
       if (shield && !teamsMode && !fightCtl) {
         shield = false;

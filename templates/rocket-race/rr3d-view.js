@@ -1420,7 +1420,7 @@ export async function createView(cfg) {
     THREE, scene, camera, rockets, cfg, fire, smoke, burst, explosion, labelOn, hitList, frameGeo, RoundedBoxGeometry, canvasTex, radialTex, FONT_UI, G,
     sfx: (n, v) => sfx(n, v), stall: r => stallRocket(r), shake: k => { trauma = Math.min(1, trauma + k); },
     onFire: side => cfg.onFire && cfg.onFire(side), onBoost: side => cfg.onBoost && cfg.onBoost(side),
-    onEnd: (to, res, from) => cfg.onMissileEnd && cfg.onMissileEnd(to, res, from),
+    onEnd: (to, res, from, tag) => cfg.onMissileEnd && cfg.onMissileEnd(to, res, from, tag),   // 441: tag "clash" = dính vụ đâm nhau (×1,5)
     onLoad: side => cfg.onLoad && cfg.onLoad(side)                 // Đợt 409: chạm quả nhỏ = nạp
   });
   const MW = createMissWait({ THREE, ui, screenToLocal, screenSize, frameGeo, canvasTex, radialTex, FONT_UI, TEAMS, G, UID });   // Đợt 409

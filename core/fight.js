@@ -2449,7 +2449,11 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // nearest of the two remaining choices — but its OWN value on disk stays
     // "same" unless the teacher actually touches this control;
     // `ctl.shareLetters` above still reads it correctly either way.
-    const cContent = mkCell({ label: "Fight content" });
+    // ⭐ Đợt 441 (thầy, 02/10/2026, MỌI game có Fight) — ô này lên ĐẦU khu dưới, ngay dưới vạch đứt,
+    // trải hết bề ngang, BỎ chữ "FIGHT CONTENT" (2 nút tự nói nó chọn gì). Xem chỗ chèn ở dưới (sau .aw-optc-dash).
+    const cContent = mkCell({ wide: true, noLabel: true });
+    cContent.cell.classList.add("aw-opt-fightcontent");
+    cContent.cell.title = "Fight content";
     cContent.ctl.append(mkSeg([
       { value: "scramble", label: "Same words", title: "Same words, mix letters" },
       { value: "different", label: "Different", title: "Different words" }
@@ -2561,7 +2565,10 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     });
     cWrongWait.cell.title = "How long the other team keeps its chance once one side has already answered wrong and nobody has won the round yet, before the referee gives up and moves the class on. ∞ waits for as long as it takes.";
 
-    panel.append(cContent.cell);
+    // Đợt 441: đứng NGAY SAU vạch đứt (khung chưa có vạch ⇒ đầu bảng). Ô rộng = cả hàng, nên thuật xếp cột
+    // (seatCellsByColumn — isFullRowCell) để yên nó; các ô còn lại chảy tiếp như cũ.
+    const dashEl = Array.from(panel.children).find(n => n.classList && n.classList.contains("aw-optc-dash"));
+    if (dashEl) dashEl.after(cContent.cell); else panel.prepend(cContent.cell);
     // ⭐ Đợt 188 — Time delay and Speed bonus share ONE column, stacked, because
     // the first decides whether the second does anything (teacher: "time delay và
     // speed bonus luôn cùng 1 cột"). Side by side, the greyed-out Speed bonus read

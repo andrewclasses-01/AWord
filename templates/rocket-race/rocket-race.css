@@ -855,3 +855,53 @@
 .aw-rr3d-rva.is-ok { color: #7ff0b0; background: rgba(22, 196, 127, .14); }
 .aw-rr3d-rva.is-bad { color: #ff9aa6; background: rgba(255, 59, 78, .14); text-decoration: line-through; }
 .aw-rr3d-rvempty { color: #7f93bd; font-size: 15px; padding: 8px; }
+
+/* =============================================================
+   ⭐ Đợt 441 (thầy 02/10/2026) — HÀNG NÚT TRẬN 3D kiểu STAR LOOT: đồng hồ LED 7 đoạn ngoài cùng trái · thanh % mảnh trên
+   hàng nút (thay nút %) · mọi nút CÙNG MỘT CỠ · nút PEACE. Phần tử do rocket-race.js `rr3dToolbar` thêm vào.
+   2D (WebGL hỏng ⇒ gỡ .is-skin-rr3d) ⇒ ẩn hết, trả lại hàng nút cũ.
+   ============================================================= */
+.aw-fight:not(.is-skin-rr3d) .aw-rr3d-led,
+.aw-fight:not(.is-skin-rr3d) .aw-rr3d-prog,
+.aw-fight:not(.is-skin-rr3d) .aw-rr3d-peace { display: none !important; }
+.aw-fight.is-skin-rr3d { --rr-btn: clamp(30px, 5.5vw, 44px); }
+.aw-fight.is-skin-rr3d .aw-fight-boardtools .aw-nav,
+.aw-fight.is-skin-rr3d .aw-fight-boardtools .aw-fight-clockbox { display: none !important; }
+.aw-fight.is-skin-rr3d .aw-below-center,
+.aw-fight.is-skin-rr3d .aw-fight-boardtools { gap: 10px; align-items: center; }
+.aw-fight.is-skin-rr3d .aw-fight-boardtools { padding: 0 !important; margin: 0 !important; border: 0 !important; }   /* khe đều: bỏ vách ngăn cụm nút bàn */
+.aw-fight.is-skin-rr3d .aw-fight-boardtools > div { display: flex; gap: 10px; }
+.aw-fight.is-skin-rr3d .aw-below-center .aw-toolbtn,
+.aw-fight.is-skin-rr3d .aw-fight-boardtools .aw-iconbtn,
+.aw-fight.is-skin-rr3d .aw-fight-boardtools .aw-tools button {
+  width: var(--rr-btn) !important; height: var(--rr-btn) !important; min-width: 0 !important; min-height: 0 !important;
+  padding: 0 !important; margin: 0 !important; flex: 0 0 auto;
+  display: inline-flex !important; align-items: center; justify-content: center;
+}
+.aw-fight.is-skin-rr3d .aw-below-center .aw-toolbtn svg,
+.aw-fight.is-skin-rr3d .aw-fight-boardtools .aw-iconbtn svg,
+.aw-fight.is-skin-rr3d .aw-fight-boardtools .aw-tools button svg { width: 56% !important; height: 56% !important; }
+/* PEACE bật ⇒ XANH LÁ (khác vàng của nút đang bật khác: màu này = màu tên lửa lúc hoà bình) */
+.aw-fight.is-skin-rr3d .aw-below .aw-toolbtn.aw-rr3d-peace.is-on {
+  border-color: #4ade80 !important; color: #bbf7d0 !important;
+  box-shadow: 0 0 16px rgba(74, 222, 128, .55), inset 0 0 10px rgba(74, 222, 128, .25) !important;
+  background: linear-gradient(180deg, rgba(30, 120, 60, .5), rgba(6, 30, 16, .85)) !important;
+}
+/* đồng hồ LED 7 đoạn (chép STAR LOOT .led) */
+.aw-rr3d-led { --lc: #a5f3fc; display: inline-flex; align-items: center; gap: calc(var(--rr-btn) * .08);
+  height: var(--rr-btn); padding: 0 calc(var(--rr-btn) * .22) 0 calc(var(--rr-btn) * .1); margin-right: 4px; }
+.aw-rr3d-led svg.ld { width: calc(var(--rr-btn) * .36); height: calc(var(--rr-btn) * .64); overflow: visible; transform: skewX(-7deg); }
+.aw-rr3d-led svg.lc { width: calc(var(--rr-btn) * .13); height: calc(var(--rr-btn) * .64); overflow: visible; fill: var(--lc);
+  filter: drop-shadow(0 0 2px var(--lc)) drop-shadow(0 0 6px var(--lc)); }
+.aw-rr3d-led polygon.off { fill: var(--lc); opacity: .085; }
+.aw-rr3d-led polygon.on { fill: #fff; stroke: var(--lc); stroke-width: 1.4; stroke-linejoin: round;
+  filter: drop-shadow(0 0 2px var(--lc)) drop-shadow(0 0 5px var(--lc)); }
+/* thanh % mảnh (chép STAR LOOT .mc-prog) — dài hết khung, ngay trên hàng nút */
+/* đứng trong khe giữa cảnh 3D và hàng nút (.aw-fight-bottom là hộp tuyệt đối phủ hàng nút ⇒ đặt tuyệt đối, top âm) */
+.aw-rr3d-prog { position: absolute; left: 0; right: 0; top: -17px; height: 6px; border-radius: 99px; background: rgba(125, 211, 252, .14);
+  box-shadow: inset 0 0 0 1px rgba(125, 211, 252, .18); }
+.aw-rr3d-prog i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: inherit; transition: width .8s cubic-bezier(.22, .9, .3, 1);
+  background: linear-gradient(90deg, #38bdf8, #7dd3fc 60%, #fde68a); box-shadow: 0 0 10px rgba(56, 189, 248, .7); }
+.aw-rr3d-prog i::after { content: ""; position: absolute; right: -4px; top: 50%; width: 10px; height: 10px; margin-top: -5px; border-radius: 50%;
+  background: #fff7d6; box-shadow: 0 0 10px 3px rgba(253, 230, 138, .9); }
+/* ⭐ Đợt 441 (MỌI game Fight) — Fight content trải hết bề ngang ngay dưới vạch đứt: luật ở core/app.css */

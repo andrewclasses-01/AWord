@@ -546,6 +546,13 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 441 (02/10/2026) — ROCKET RACE FIGHT 3D: 11 Ý THẦY + FIGHT CONTENT LÊN ĐẦU BẢNG OPTIONS (MỌI GAME FIGHT) · nhánh `dot441-rr-11y` · ⬜ CHỜ THẦY XEM
+- CORE (1 chỗ, `core/fight.js` buildOptions): ô Fight content = ô rộng không nhãn, chèn ngay sau vạch đứt `.aw-optc-dash` (thầy chọn áp
+  dụng MỌI game có Fight). Đo Quiz / Crossword (pick) / Type the answer (In turns khoá ô này như cũ): đúng chỗ, 0 lỗi.
+- Template rocket-race: Missile damages · Missiles max 0–5/∞ · Points off trận riêng `rrStepsOff` 0–20/MAX · hàng nút LED + thanh % +
+  nút cùng cỡ + PEACE · khu tên lửa cột 4 ô + "+X" · tên lửa dẫn đường mượt · 2 quả đâm đầu nhau, vùng nổ ×2, thiệt hại ×1,5 làm tròn lên.
+  Chi tiết + phép đo: `templates/rocket-race/GHI CHU ROCKET-RACE.md` mục 39.
+
 ## Đợt 440 (02/10/2026) — TRANG LÀM BÀI KIỂM TRA ĐẦU VÀO `kiemtra.html` (nhúng trong kiemtra.andrewclasses.com) · phiên máy 1
 Thầy giao 02/10: học sinh kiểm tra đầu vào làm 3 act Type the answer (Courses / KIEM TRA DAU VAO: BT1 TẠO CỤM SỐ ÍT 40 · BT2 TẠO CỤM SỐ NHIỀU 20 · BT3 TẠO CÂU 50)
 nhưng KHÔNG báo đúng/sai, có hướng dẫn + làm thử, đồng hồ đếm xuôi, ghi ngầm thời gian từng câu + rời trang + định dán, xong chỉ "Chúc mừng".
