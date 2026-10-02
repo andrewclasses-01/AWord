@@ -1033,8 +1033,13 @@ export function nameKey(name) {
 
 // Of several spellings of one name, show the nicest-looking one: prefer the
 // version with capital letters, then the longest.
+// Dot 438 (02/10/2026): thay doi ten goc moi em tu IN HOA ("MINH THU") sang "Minh Thu" — ban viet
+// CO CA hoa lan thuong (ten moi) thang ban toan IN HOA cua cac luot cu, roi moi xet so chu hoa.
 export function prettiestName(names) {
+  const tron = (s) => (s !== s.toUpperCase() && s !== s.toLowerCase()) ? 1 : 0;   // co ca chu hoa lan chu thuong
   return names.slice().sort((a, b) => {
+    const tA = tron(a), tB = tron(b);
+    if (tA !== tB) return tB - tA;
     const capsA = (a.match(/[A-ZÀ-Ỹ]/g) || []).length, capsB = (b.match(/[A-ZÀ-Ỹ]/g) || []).length;
     if (capsA !== capsB) return capsB - capsA;
     return b.length - a.length;
