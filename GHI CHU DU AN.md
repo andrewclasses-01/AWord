@@ -600,7 +600,7 @@ duyệt (đổi 1 phép so, không đổi luồng).
 - ✅ Thầy duyệt ⇒ push `3034e5a`; `aword.andrewclasses.com` khớp SHA-256 2/2 file JS sau ~1 phút.
 - Thầy bấm tay TOMKO: 2 tàu cùng nấc bị bắn ⇒ cả 2 lùi; cách 1 nấc ⇒ chỉ tàu bị nhắm lùi.
 
-## Đợt 444 (02/10/2026 ~20:50) — KIỂM TRA ĐẦU VÀO: LÀM THỬ KHÔNG CHẶN ĐƯỜNG + "l" ĐỨNG MỘT MÌNH = "I" · phiên MSI
+## Đợt 444 (02/10/2026 ~20:50) — KIỂM TRA ĐẦU VÀO: LÀM THỬ KHÔNG CHẶN ĐƯỜNG + "l" ĐỨNG MỘT MÌNH = "I" · phiên MSI · ✅ PUSH `4618383` + LIVE 2/2 mã băm
 
 **Báo lỗi lần 2 (ảnh iPhone 20:44, BT3 làm thử 1/3):** ô hiện "I like cats" vẫn báo "Chưa đúng rồi" (chưa rõ máy em đã tải lại nhận bản Đợt 443 chưa).
 Thầy: "Mở luôn cho làm giúp tôi đã rồi tính sau".
