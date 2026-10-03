@@ -546,6 +546,21 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 453 (04/10/2026) — MÀN CHỌN TEMPLATE + LOẠI ACT cho act WORDS · ⬜ CHỜ THẦY BẤM TAY (chưa push live)
+
+Thầy giao: act WORDS (gộp ENG1/ENG2/VI1/VI2 × TEXT/VOICE × ~14 template) mở tay thì hiện MÀN CHỌN trước, không vào thẳng game.
+Thiết kế chốt qua 6 bản: `D:\OTHERS\CLAUDE\AWord - thiet ke man chon WORDS\man-chon-v6.html` (bộ C "Flat color" thầy chọn).
+
+- **File mới:** `core/words-picker.js` (logic) · `core/words-picker.css` (SINH từ `tools/wp.src.css` bằng `python tools/wp-css.py`; số kèm `@` = nhân `--p` = 1% bề ngang khung/12,8, điện thoại /3,75) · `core/words-picker-art.js` (icon + 3 cảnh 2D, sinh từ bản thiết kế).
+- **Sửa:** `main.js` (`openWordsPickerFor` ở `playAct` và link `?a=`), `core/engine.js` (`setWordsPickerHook` + nút GAMES trên màn START), `core/store.js` (`setLastTemplate(id, type, sel)` ghi luôn `contentMode/contentVariant/voiceVariant`), `core/icons.js` (`gamesGrid`).
+- **Cách chạy:** chạm ô ⇒ ghi lựa chọn + `lastTpl` ⇒ `startGame()` thường (engine tự chuyển sang `lastTpl`). Không có đường chơi riêng, nên Options/Edit/Fight/Showdown y như cũ. Ô sáng sẵn = template chơi cuối; hai nửa TEXT/VOICE nhớ bộ riêng (contentVariant ≠ voiceVariant).
+- **Hàng bộ nghĩa "thở":** VOICE thu VI1/VI2 (flex-grow→0), hiện loa sau ENG1/ENG2; thanh trượt tính bằng `calc(N * var(--p))`.
+- **Hiện khi nào:** `wantsPicker()` = act có `content.variants` VÀ không phải app Electron (myActivity nhiều cột, myLesson — chúng điều khiển bằng `__awordBridge`, cần game ĐANG CHẠY). `?go=1` bỏ qua, `?pick=1` ép hiện. Học sinh (`play.js`) không đi qua. ⛔ Hệ quả: trên TOMKO (myActivity) KHÔNG có màn chọn.
+- **Nút GAMES** (chỉ icon) góc dưới trái màn START, chỉ khi mở qua màn chọn, không Fight/Showdown/học sinh; gỡ khi thầy chạm vào khung. Game 3D (`tpl.ownFight`: Train Rush, Star Loot) phủ cả cửa sổ `z-index:1000` nên nút ra `body` (`.is-fixed`, góc dưới trái cửa sổ). Rocket Race mở vào thẳng Fight (`fightByDefault`) ⇒ không nút; MODE ▸ Single rồi mới có.
+- **Đã đo (bàn thử `scratch/dot453-picker.html`, fake Firebase):** dựng đúng 11 ô + 3 thẻ; VOICE thu VI1/VI2 (rộng 0); chọn Quiz ⇒ START "DS-S4.I1.W1 - ENG2", `voiceVariant=eng2`, `contentMode=voice`, `lastTpl=quiz`; GAMES quay lại đúng ô + đúng TEXT/VOICE/bộ; Anagram (loại gốc) xoá `lastTpl`; Train Rush mở được, nút GAMES bấm trúng (không bị 3D che), quay lại dỡ sạch host 3D; mũi tên/Enter; điện thoại 375×246 không tràn. 0 lỗi console.
+- ⚠️ **Chưa đo:** Firebase thật (setLastTemplate persist), Rocket Race 3D chọn → Fight, Star Loot (cùng đường Train Rush), iPad/TOMKO thật, `?a=` trên Chrome thật.
+- ⬜ Thầy bấm tay: mở act WORDS thật trong thư viện → màn chọn → chọn VOICE+ENG2+Quiz → START → GAMES quay lại.
+
 ## Đợt 452 (03/10/2026) — STAR LOOT · TRAIN RUSH theo khuôn Rocket Race: Options THẬT của AWord + khung 2:1 + màn chờ mới
 
 **Thầy** (ảnh bảng Options STAR LOOT): *"Options star loot không có đủ chức năng (ví dụ như chuyển Template), hãy kiểm tra xem train rush có bị như vậy không"*.

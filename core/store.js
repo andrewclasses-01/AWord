@@ -316,13 +316,29 @@ export async function listChildren(root, parentId = null) {
 // qua các lần đổi; act chỉ mang thêm `lastTpl`. Về đúng loại gốc ⇒ xoá trường đi.
 // ⚠️ KHÔNG bump `updatedAt`: đổi game không phải sửa nội dung, không được đẩy act lên
 // đầu các danh sách xếp theo "sửa gần đây".
-export async function setLastTemplate(id, type) {
+// ⭐ Đợt 453 — tham số thứ ba `sel` (tuỳ chọn): các lựa chọn TEXT/VOICE + bộ nghĩa mà màn
+// chọn act WORDS (core/words-picker.js) ghi CÙNG LÚC với template, để một lượt lưu là đủ.
+// Chỉ nhận đúng ba khoá Options đã ghi; lệch gì mới lưu. Không có `sel` thì y hệt Đợt 400.
+const PICK_KEYS = ["contentMode", "contentVariant", "voiceVariant"];
+export async function setLastTemplate(id, type, sel) {
   if (!id || !type) return null;
   const map = await readAll();
   const n = map[id];
   if (!n || n.kind !== "act") return null;   // mẫu / gói nhập chưa lưu: không có gì để ghi
-  if ((n.lastTpl || n.type) === type) return n;
-  if (type === n.type) delete n.lastTpl; else n.lastTpl = type;
+  let changed = false;
+  if (sel) {
+    PICK_KEYS.forEach(k => {
+      if (sel[k] === undefined || (n.options && n.options[k] === sel[k])) return;
+      if (!n.options) n.options = {};
+      n.options[k] = sel[k];
+      changed = true;
+    });
+  }
+  if ((n.lastTpl || n.type) !== type) {
+    if (type === n.type) delete n.lastTpl; else n.lastTpl = type;
+    changed = true;
+  }
+  if (!changed) return n;
   await persist([n]);
   return n;
 }

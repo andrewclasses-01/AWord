@@ -1,0 +1,136 @@
+/* =============================================================
+   core/words-picker.css — MÀN CHỌN TEMPLATE + LOẠI ACT cho act WORDS (Đợt 453)
+   Thiết kế: D:\OTHERS\CLAUDE\AWord - thiet ke man chon WORDS\man-chon-v6.html (bộ C).
+   ⚠️ Mọi cỡ viết theo PX CỦA BẢN THIẾT KẾ (khung 1280 rộng; điện thoại 375) rồi nhân
+   với `--p` = 1% bề ngang khung / 12,8 (điện thoại: / 3,75). Dấu `@` sau số = "nhân --p"
+   — file này được SINH từ tools/wp.src.css bằng tools/wp-css.py từ tools/wp.src.css; sửa nguồn rồi sinh lại, đừng
+   sửa tay file sinh. `--aw-u` do core/unit.js đặt trên `.aw-stage` (⛔ KHÔNG dùng cqw).
+   ============================================================= */
+.aw-wp {
+  --p: calc(var(--aw-u) / 12.8);
+  --wp-blue: #2f7bff; --wp-blue-soft: rgba(47,123,255,.12); --wp-line: #e2ebf4; --wp-track: #e7eef7;
+  position: absolute; inset: 0; overflow: hidden; z-index: 5;
+  color: #23303e; user-select: none; -webkit-user-select: none;
+  background:
+    radial-gradient(calc(900 * var(--p)) calc(420 * var(--p)) at 12% -6%, rgba(120,180,255,.28), transparent 70%),
+    radial-gradient(calc(800 * var(--p)) calc(420 * var(--p)) at 94% 4%, rgba(255,190,140,.20), transparent 70%),
+    linear-gradient(180deg, #fff 0%, #f1f6fd 100%);
+  animation: wpIn .28s cubic-bezier(.22,.61,.36,1);
+}
+@keyframes wpIn { from { opacity: 0; transform: scale(.985); } to { opacity: 1; transform: none; } }
+.aw-wp button { font-family: inherit; }
+.aw-wp-slogan { position: absolute; top: calc(24 * var(--p)); left: 0; right: 0; text-align: center; font-weight: 300; font-size: calc(16 * var(--p)); letter-spacing: .3em; color: #9aa8bb; }
+.aw-wp-head { position: absolute; top: calc(62 * var(--p)); left: 0; right: 0; text-align: center; padding: 0 calc(80 * var(--p)); }
+.aw-wp-title { font-weight: 800; font-size: calc(52 * var(--p)); line-height: 1.05; color: #1d2a3a; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aw-wp-ctl { position: absolute; top: calc(150 * var(--p)); left: 0; right: 0; display: flex; justify-content: center; gap: calc(16 * var(--p)); }
+
+/* two segmented rows */
+.aw-wp-seg { position: relative; display: flex; gap: calc(2 * var(--p)); padding: calc(4 * var(--p)); height: calc(54 * var(--p)); background: var(--wp-track); border-radius: calc(16 * var(--p)); box-shadow: inset 0 1px 3px rgba(31,42,68,.10); }
+.aw-wp-seg .wp-th { position: absolute; top: calc(4 * var(--p)); bottom: calc(4 * var(--p)); background: #fff; border-radius: calc(12 * var(--p)); box-shadow: 0 3px 8px rgba(31,42,68,.14), 0 0 0 1px rgba(31,42,68,.04); pointer-events: none; transition: left .34s cubic-bezier(.22,.61,.36,1), width .34s cubic-bezier(.22,.61,.36,1); }
+.aw-wp-seg button { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; flex: 1 1 0; min-width: 0; overflow: hidden; white-space: nowrap; border: 0; background: transparent; color: #7a889c; font-weight: 800; font-size: calc(18 * var(--p)); letter-spacing: .07em; padding: 0; border-radius: calc(12 * var(--p)); cursor: pointer; transition: flex-grow .34s cubic-bezier(.22,.61,.36,1), margin-left .34s cubic-bezier(.22,.61,.36,1), opacity .22s ease, color .2s ease; }
+.aw-wp-seg button:hover:not(.on) { color: #4a5a70; }
+.aw-wp-seg button.on { color: var(--wp-blue); }
+.aw-wp-seg button.gone { flex-grow: 0; margin-left: calc(-2 * var(--p)); opacity: 0; pointer-events: none; }
+.aw-wp-seg .wp-ic { display: block; flex: 0 0 auto; width: calc(22 * var(--p)); height: calc(22 * var(--p)); margin-right: calc(8 * var(--p)); }
+.aw-wp-seg .wp-ic svg { width: 100%; height: 100%; display: block; }
+.aw-wp-mode { width: calc(262 * var(--p)); }
+.aw-wp-sets { transition: width .34s cubic-bezier(.22,.61,.36,1); }
+.aw-wp-sets .wp-spk { display: block; flex: 0 0 auto; width: 0; height: calc(22 * var(--p)); margin-left: 0; opacity: 0; transform: scale(.4); transition: width .3s cubic-bezier(.22,.61,.36,1), margin-left .3s cubic-bezier(.22,.61,.36,1), opacity .22s ease .08s, transform .3s cubic-bezier(.34,1.56,.64,1) .06s; }
+.aw-wp-sets .wp-spk svg { width: calc(22 * var(--p)); height: calc(22 * var(--p)); display: block; }
+.aw-wp-sets.is-voice .wp-spk { width: calc(22 * var(--p)); margin-left: calc(7 * var(--p)); opacity: 1; transform: none; }
+
+/* zones */
+.aw-wp-z3 { position: absolute; left: calc(80 * var(--p)); right: calc(80 * var(--p)); top: calc(236 * var(--p)); display: grid; grid-template-columns: repeat(3, 1fr); gap: calc(20 * var(--p)); }
+.aw-wp-rule { position: absolute; left: calc(80 * var(--p)); right: calc(80 * var(--p)); top: calc(448 * var(--p)); height: 1px; background: linear-gradient(90deg, transparent, #cfdbea 18%, #cfdbea 82%, transparent); }
+.aw-wp-z2 { position: absolute; left: calc(80 * var(--p)); right: calc(80 * var(--p)); top: calc(474 * var(--p)); display: grid; grid-template-columns: repeat(12, 1fr); gap: calc(14 * var(--p)); }
+.aw-wp-z2 .wp-tile { grid-column: span 2; }
+.aw-wp-z2 .wp-tile:nth-child(7) { grid-column: 2 / span 2; }
+
+/* 3D scene cards (flat art) */
+.wp-card { position: relative; height: calc(190 * var(--p)); border-radius: calc(22 * var(--p)); overflow: hidden; cursor: pointer; border: 0; padding: 0; display: block; width: 100%; text-align: left; transition: transform .22s cubic-bezier(.22,.61,.36,1), box-shadow .22s ease; outline: 0; }
+.wp-card svg.art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; transition: transform .5s cubic-bezier(.22,.61,.36,1); }
+.wp-card .wp-nm { position: absolute; left: calc(22 * var(--p)); top: calc(14 * var(--p)); z-index: 2; font-weight: 800; font-size: calc(28 * var(--p)); letter-spacing: .03em; color: #fff; }
+.wp-card.hi { transform: translateY(calc(-5 * var(--p))); box-shadow: 0 0 0 calc(4 * var(--p)) var(--wp-blue), 0 calc(18 * var(--p)) calc(30 * var(--p)) rgba(31,42,68,.22); }
+.wp-card.hi svg.art { transform: scale(1.05); }
+.wp-card:active { transform: translateY(calc(-1 * var(--p))) scale(.985); }
+/* regular tiles */
+.wp-tile { position: relative; height: calc(150 * var(--p)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(10 * var(--p)); padding: 0; background: #fff; border: 1.5px solid var(--wp-line); border-radius: calc(22 * var(--p)); cursor: pointer; box-shadow: 0 calc(5 * var(--p)) calc(14 * var(--p)) rgba(31,42,68,.06); transition: transform .2s cubic-bezier(.22,.61,.36,1), box-shadow .2s ease, border-color .2s ease, opacity .2s ease; outline: 0; }
+.wp-tile .wp-tic { width: calc(80 * var(--p)); height: calc(80 * var(--p)); transition: transform .26s cubic-bezier(.34,1.56,.64,1); }
+.wp-tile .wp-tic svg { width: 100%; height: 100%; display: block; }
+.wp-tile .wp-nm { font-weight: 700; font-size: calc(17 * var(--p)); line-height: 1.05; text-align: center; color: #2b394b; padding: 0 calc(8 * var(--p)); }
+.wp-tile.hi { transform: translateY(calc(-5 * var(--p))); border-color: var(--wp-blue); box-shadow: 0 0 0 calc(3.5 * var(--p)) var(--wp-blue-soft), 0 calc(14 * var(--p)) calc(26 * var(--p)) rgba(47,123,255,.18); }
+.wp-tile.hi .wp-tic { transform: scale(1.1) rotate(-3deg); }
+.wp-tile:active { transform: translateY(calc(-1 * var(--p))) scale(.97); }
+.wp-tile.is-soon, .wp-card.is-soon { opacity: .35; cursor: not-allowed; }
+.wp-tile.is-soon.hi, .wp-card.is-soon.hi { transform: none; box-shadow: none; border-color: var(--wp-line); }
+.wp-card.is-soon.hi { box-shadow: none; } .wp-card.is-soon.hi svg.art { transform: none; }
+.wp-card.is-loading, .wp-tile.is-loading { animation: wpPulse .7s ease-in-out infinite; }
+@keyframes wpPulse { 50% { opacity: .6; } }
+/* Home (same place and class as the game's Home) */
+.aw-wp-home { position: absolute; left: 0; bottom: 0; margin: 0 0 0 calc(2.2 * var(--aw-u)); }
+
+/* ---- the START screen's one new button: back to the picker (icon only) ---- */
+.aw-wp-back { position: absolute; left: calc(1.9 * var(--aw-u)); bottom: calc(1.7 * var(--aw-u)); width: calc(3.75 * var(--aw-u)); height: calc(3.75 * var(--aw-u)); display: flex; align-items: center; justify-content: center; padding: 0; border-radius: calc(1.1 * var(--aw-u)); background: #21242b; border: 1px solid #343944; color: #cfd5df; cursor: pointer; transition: border-color .15s ease, color .15s ease, transform .15s ease; z-index: 30; }
+.aw-wp-back:hover { border-color: #35b1f0; color: #35b1f0; }
+.aw-wp-back:active { transform: scale(.93); }
+.aw-wp-back.is-fixed { position: fixed; left: 14px; bottom: 14px; width: 44px; height: 44px; border-radius: 12px; z-index: 1100; }
+.aw-wp-back.is-fixed svg { width: 22px; height: 22px; }
+.aw-wp-back svg { width: calc(1.9 * var(--aw-u)); height: calc(1.9 * var(--aw-u)); display: block; }
+
+/* ============ ART ROLES — bộ C "Flat color" ============ */
+.aw-wp svg text { font-family: "Baloo 2", sans-serif; font-weight: 800; }
+.aw-wp svg .r, .aw-wp svg .sp, .aw-wp svg .ck, .aw-wp svg .hl, .aw-wp svg .rg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.aw-wp svg .soft { opacity: .55; }
+.aw-wp svg .plate { fill: var(--tint); }
+.aw-wp svg .pr { display: none; }
+.aw-wp svg .f { fill: var(--c); }
+.aw-wp svg .s { fill: var(--c3); }
+.aw-wp svg .a { fill: var(--c2); }
+.aw-wp svg .i, .aw-wp svg .w { fill: #fff; }
+.aw-wp svg .c { fill: #fff; stroke: var(--c3); stroke-width: 1.6; }
+.aw-wp svg .sh { fill: var(--c3); fill-opacity: .45; }
+.aw-wp svg .b { fill: var(--c3); }
+.aw-wp svg .l { fill: #4cc36b; }
+.aw-wp svg .h { fill: #5a3a1e; }
+.aw-wp svg .k { fill: var(--c); }
+.aw-wp svg .t { fill: #fff; }
+.aw-wp svg .e { fill: #23303e; }
+.aw-wp svg .r { stroke: var(--c); stroke-width: 3; }
+.aw-wp svg .sp { stroke: var(--c); stroke-width: 2.4; }
+.aw-wp svg .ck { stroke: #fff; stroke-width: 3.4; }
+.aw-wp svg .hl { stroke: #fff; stroke-width: 3; stroke-opacity: .85; }
+.aw-wp svg .bg { fill: var(--bg); }
+.aw-wp svg .sa { fill: var(--sa); }
+.aw-wp svg .sb { fill: var(--sb); }
+.aw-wp svg .gr { fill: var(--gr); }
+.aw-wp svg .rg { stroke: #fff; stroke-opacity: .45; stroke-width: 3; }
+.aw-wp svg .kd { fill: var(--kd); }
+
+/* ============ PHONE — khung tràn viền 375 (cùng mốc 700px với app.css) ============ */
+@media (max-width: 700px) {
+  .aw-wp { --p: calc(var(--aw-u) / 3.75); }
+  .aw-wp-slogan { top: calc(5 * var(--p)); font-size: calc(6 * var(--p)); }
+  .aw-wp-head { top: calc(19 * var(--p)); padding: 0 calc(12 * var(--p)); }
+  .aw-wp-title { font-size: calc(19 * var(--p)); }
+  .aw-wp-ctl { top: calc(50 * var(--p)); gap: calc(6 * var(--p)); }
+  .aw-wp-seg { height: calc(24 * var(--p)); padding: calc(2 * var(--p)); border-radius: calc(8 * var(--p)); gap: calc(2 * var(--p)); }
+  .aw-wp-seg .wp-th { top: calc(2 * var(--p)); bottom: calc(2 * var(--p)); border-radius: calc(6 * var(--p)); }
+  .aw-wp-seg button { font-size: calc(8.5 * var(--p)); border-radius: calc(6 * var(--p)); }
+  .aw-wp-seg .wp-ic { width: calc(10 * var(--p)); height: calc(10 * var(--p)); margin-right: calc(3 * var(--p)); }
+  .aw-wp-mode { width: calc(98 * var(--p)); }
+  .aw-wp-sets .wp-spk { height: calc(10 * var(--p)); }
+  .aw-wp-sets .wp-spk svg { width: calc(10 * var(--p)); height: calc(10 * var(--p)); }
+  .aw-wp-sets.is-voice .wp-spk { width: calc(10 * var(--p)); margin-left: calc(3 * var(--p)); }
+  .aw-wp-z3 { left: calc(8 * var(--p)); right: calc(8 * var(--p)); top: calc(84 * var(--p)); gap: calc(6 * var(--p)); }
+  .wp-card { height: calc(50 * var(--p)); border-radius: calc(9 * var(--p)); }
+  .wp-card .wp-nm { font-size: calc(9 * var(--p)); left: calc(7 * var(--p)); top: calc(5 * var(--p)); }
+  .wp-card.hi { box-shadow: 0 0 0 calc(2 * var(--p)) var(--wp-blue); transform: none; }
+  .aw-wp-rule { display: none; }
+  .aw-wp-z2 { left: calc(8 * var(--p)); right: calc(8 * var(--p)); top: calc(144 * var(--p)); gap: calc(5 * var(--p)); }
+  .wp-tile { height: calc(46 * var(--p)); border-radius: calc(9 * var(--p)); gap: calc(1 * var(--p)); border-width: 1px; box-shadow: none; }
+  .wp-tile .wp-tic { width: calc(25 * var(--p)); height: calc(25 * var(--p)); }
+  .wp-tile .wp-nm { font-size: calc(6.5 * var(--p)); padding: 0 calc(1 * var(--p)); }
+  .wp-tile.hi { transform: none; box-shadow: 0 0 0 calc(1.5 * var(--p)) var(--wp-blue-soft); }
+  .aw-wp-home { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .aw-wp, .aw-wp * { transition: none !important; animation: none !important; } }

@@ -513,6 +513,7 @@ async function routeFromLocation() {
       state.view = "play";
       if (!p.get("a")) setUrl(await linkFor(node), true);   // upgrade an old link in place
       document.title = node.title || PAGE_TITLE_BASE;   // ⭐ Đợt 325
+      if (await openWordsPickerFor(node)) return;   // ⭐ Đợt 453 — act WORDS mở tay ⇒ màn chọn
       startGame(app, node, { onExit: goTop });
       return;
     }
@@ -1820,6 +1821,21 @@ function actMenuItems(node) {
 }
 
 // ---------------- actions ----------------
+// ⭐ Đợt 453 — act WORDS (gộp ENG1/ENG2/VI1/VI2 × TEXT/VOICE × nhiều template) mở TAY thì hiện
+// màn chọn template + loại act trước khi vào game (core/words-picker.js; lúc nào không hiện
+// thì đọc đầu file đó). Trả true = đã mở màn chọn; false = mở game như cũ (act thường, app
+// Electron, `?go=1`, hoặc màn chọn lỗi — lỗi thì thà vào thẳng game còn hơn trang trắng).
+async function openWordsPickerFor(node) {
+  try {
+    const m = await import("./core/words-picker.js");
+    if (!m.wantsPicker(node)) return false;
+    await m.openWordsPicker(app, node, { onExit: goTop });
+    return true;
+  } catch (e) {
+    console.warn("AWord: words picker failed, opening the game directly", e);
+    return false;
+  }
+}
 async function playAct(id) {
   const node = await getItem(id);
   if (!node) return render();
@@ -1829,6 +1845,7 @@ async function playAct(id) {
   catch (e) { toast(`${templateLabel(node.type)} — could not load`); return; }
   state.view = "play";
   setUrl(await linkFor(node));               // the address bar now points at this act
+  if (await openWordsPickerFor(node)) return;
   startGame(app, node, { onExit: goTop });   // the in-game Home button returns here
 }
 // Edit content -> open the editor for THIS act's type (each template registers
