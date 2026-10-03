@@ -565,7 +565,7 @@ chọn xong vào START thì cột khác mới nạp; bấm GAMES chọn lại th
   cột theo `f=1` ⇒ màn chờ (không game); `f=1&tpl=…` ⇒ START QUIZ "- ENG2", không nút GAMES; act thường + f=1 ⇒ ANAGRAM thẳng; Chrome + `f=1` ⇒ vẫn màn chọn.
   Test-bench myActivity (`__myactFireViewEvent`): mở act ⇒ cột 1 `…&f=1`; chọn ⇒ có tpl; GAMES ⇒ lại chờ; chọn lại ⇒ có tpl; về thư viện ⇒ start.html.
 - ⬜ **CHƯA đo trên Electron/TOMKO thật:** replaceState có kích `did-navigate-in-page` không; 3–5 cột; game 3D ở cột theo.
-- **04/10 chỉnh:** nút ngôi nhà ở màn chọn ĐỔI THÀNH nút QUAY LẠI (mũi tên `icons.backArrow`, ô trắng bo góc, cách đều mép trái/dưới 28px thiết kế): về THƯ MỤC CHỨA ACT (`enterFolder(node.root, node.parentId)` qua tham số `onBack`), không về trang chủ. Home trong game vẫn về trang chủ. Đã đo trái=dưới=23px ở khung 1001.
+- **04/10 chỉnh:** nút ngôi nhà ở màn chọn ĐỔI THÀNH nút QUAY LẠI (mũi tên `icons.backArrow`, CHỈ ICON không nền — thầy chốt 04/10; ô chạm 48px, icon 30px, cách đều mép trái/dưới, đo 25=25): về THƯ MỤC CHỨA ACT (`enterFolder(node.root, node.parentId)` qua tham số `onBack`), không về trang chủ. Home trong game vẫn về trang chủ. Đã đo trái=dưới=23px ở khung 1001.
 
 ## Đợt 453 (04/10/2026) — MÀN CHỌN TEMPLATE + LOẠI ACT cho act WORDS · ✅ LIVE cùng Đợt 453b (`0ddd227`) · ⬜ CHỜ THẦY BẤM TAY
 

@@ -66,12 +66,12 @@
 .wp-card.is-soon.hi { box-shadow: none; } .wp-card.is-soon.hi svg.art { transform: none; }
 .wp-card.is-loading, .wp-tile.is-loading { animation: wpPulse .7s ease-in-out infinite; }
 @keyframes wpPulse { 50% { opacity: .6; } }
-/* Nút QUAY LẠI (mũi tên) — góc dưới trái, cách đều mép trái và mép dưới */
-.aw-wp-exit { position: absolute; left: calc(28 * var(--p)); bottom: calc(28 * var(--p)); width: calc(48 * var(--p)); height: calc(48 * var(--p)); display: flex; align-items: center; justify-content: center; padding: 0; border-radius: calc(14 * var(--p)); background: #fff; border: 1.5px solid var(--wp-line); color: #5b6b80; cursor: pointer; box-shadow: 0 calc(5 * var(--p)) calc(14 * var(--p)) rgba(31,42,68,.08); transition: transform .2s cubic-bezier(.22,.61,.36,1), border-color .2s ease, color .2s ease, box-shadow .2s ease; z-index: 2; }
-.aw-wp-exit svg { width: calc(24 * var(--p)); height: calc(24 * var(--p)); display: block; transition: transform .2s cubic-bezier(.22,.61,.36,1); }
-.aw-wp-exit:hover { border-color: var(--wp-blue); color: var(--wp-blue); box-shadow: 0 0 0 calc(3.5 * var(--p)) var(--wp-blue-soft), 0 calc(8 * var(--p)) calc(18 * var(--p)) rgba(47,123,255,.16); }
-.aw-wp-exit:hover svg { transform: translateX(calc(-2 * var(--p))); }
-.aw-wp-exit:active { transform: scale(.93); }
+/* Nút QUAY LẠI — chỉ icon mũi tên, không nền; ô bấm vẫn calc(48 * var(--p)) cho dễ chạm. Cách đều mép trái/dưới. */
+.aw-wp-exit { position: absolute; left: calc(28 * var(--p)); bottom: calc(28 * var(--p)); width: calc(48 * var(--p)); height: calc(48 * var(--p)); display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; border: 0; background: none; box-shadow: none; color: #6b7a90; cursor: pointer; transition: transform .2s cubic-bezier(.22,.61,.36,1), color .2s ease; z-index: 2; -webkit-tap-highlight-color: transparent; }
+.aw-wp-exit svg { width: calc(30 * var(--p)); height: calc(30 * var(--p)); display: block; transition: transform .2s cubic-bezier(.22,.61,.36,1); }
+.aw-wp-exit:hover { color: var(--wp-blue); }
+.aw-wp-exit:hover svg { transform: translateX(calc(-3 * var(--p))); }
+.aw-wp-exit:active { transform: scale(.9); }
 
 /* ---- the START screen's one new button: back to the picker (icon only) ---- */
 .aw-wp-back { position: absolute; left: calc(1.9 * var(--aw-u)); bottom: calc(1.7 * var(--aw-u)); width: calc(3.75 * var(--aw-u)); height: calc(3.75 * var(--aw-u)); display: flex; align-items: center; justify-content: center; padding: 0; border-radius: calc(1.1 * var(--aw-u)); background: #21242b; border: 1px solid #343944; color: #cfd5df; cursor: pointer; transition: border-color .15s ease, color .15s ease, transform .15s ease; z-index: 30; }
@@ -143,8 +143,8 @@
   .wp-tile .wp-tic { width: calc(25 * var(--p)); height: calc(25 * var(--p)); }
   .wp-tile .wp-nm { font-size: calc(6.5 * var(--p)); padding: 0 calc(1 * var(--p)); }
   .wp-tile.hi { transform: none; box-shadow: 0 0 0 calc(1.5 * var(--p)) var(--wp-blue-soft); }
-  .aw-wp-exit { left: calc(7 * var(--p)); bottom: calc(7 * var(--p)); width: calc(20 * var(--p)); height: calc(20 * var(--p)); border-radius: calc(6 * var(--p)); border-width: 1px; box-shadow: none; }
-  .aw-wp-exit svg { width: calc(11 * var(--p)); height: calc(11 * var(--p)); }
+  .aw-wp-exit { left: calc(5 * var(--p)); bottom: calc(5 * var(--p)); width: calc(24 * var(--p)); height: calc(24 * var(--p)); }
+  .aw-wp-exit svg { width: calc(14 * var(--p)); height: calc(14 * var(--p)); }
   .aw-wp-wait { --p: calc(var(--aw-u) / 3.75); gap: calc(10 * var(--p)); }
   .aw-wp-wtitle { font-size: calc(20 * var(--p)); }
   .aw-wp-spin { width: calc(14 * var(--p)); height: calc(14 * var(--p)); border-width: calc(1.5 * var(--p)); }
