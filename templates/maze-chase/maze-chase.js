@@ -1,6 +1,10 @@
 // =============================================================
 // TEMPLATE: MAZE CHASE = STAR LOOT 3D  (Đợt 447, thầy 02/10/2026)
 //
+// ⭐ Đợt 450 (thầy 03/10/2026: "Bỏ dạng 2D của STAR LOOT và TRAIN RUSH đi, chỉ giữ dạng 3D cho mọi mode"): bản 2D
+// (maze-chase-2d.js + mc-sound.js + img/ + sounds/) đã GỠ HẲN — máy không chạy được WebGL chỉ thấy một dòng báo.
+// Vẫn chưa giao bài, chưa mở Showdown (thầy chốt: mở sau khi game ổn định).
+//
 // Thầy: "Đẩy bản đầy đủ lên AWord, có đủ mọi chế độ (trong đó có single và fight) và có thể
 // liên kết với bộ từ vựng của act để chơi". Thầy chốt (AskUserQuestion):
 //   • THAY HẲN Maze chase 2D — type vẫn là `maze_chase` (act cũ, đổi template, nút MODE… giữ nguyên đường đi),
@@ -22,8 +26,7 @@
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
-import base2d from "./maze-chase-2d.js";
-import { mcSound } from "./mc-sound.js";
+import { openMazeChaseEditor } from "./maze-chase-editor.js";
 
 const CSS_3D = new URL("./3d/mc3d-2n.css", import.meta.url).href;
 const SL_KEYS = ["fight", "timer", "timerSec", "lives", "difficulty", "bombs", "bombGift", "dpadStyle", "shuffle", "showAnswers"];
@@ -59,25 +62,36 @@ function playable(activity) {
     .map(q => ({ question: q.question || "", answers: q.answers.filter(a => a && a.text != null && a.text !== "").map(a => ({ text: String(a.text), correct: !!a.correct })) }));
 }
 
-let live3d = 0;   // số ván 3D đang mở (tiếng 2D không được kêu chồng lên STAR LOOT)
-let cur = null;   // ván 3D đang chạy (onPause)
+function needMessage(root, text) {
+  root.innerHTML = "";
+  const d = document.createElement("div");
+  d.className = "aw-sl-need3d";
+  d.textContent = text;
+  root.append(d);
+}
+let live3d = 0;   // số ván 3D đang mở (lớp html.aw-sl-on)
 
 const starLootTemplate = {
-  ...base2d,
   type: "maze_chase",
   name: "Star loot",
+  itemsKey: "questions",
+  edit: openMazeChaseEditor,
+  toPrintItems(activity) {
+    return (activity.content?.questions || [])
+      .filter(q => q && Array.isArray(q.answers) && q.answers.length)
+      .map(q => ({
+        clue: q.question || "",
+        answer: (q.answers.find(a => a.correct) || q.answers[0] || {}).text || "",
+        options: q.answers.filter(a => a && a.text != null).map(a => ({ text: a.text, correct: !!a.correct }))
+      }));
+  },
   // STAR LOOT tự lo điểm + kết quả; engine không chấm (không có ô điểm / bảng kết quả của engine phía sau).
   timeCost: false,
   manualTimerStart: true,   // đồng hồ engine không chạy — đồng hồ LED là của STAR LOOT
   // ⛔ Thầy chốt 02/10/2026: chưa giao bài được (form giao bài làm mờ ô này và hiện câu dưới).
   noAssignment: "Star loot is a classroom game for now — it cannot be set as homework yet.",
-  sounds: {
-    play: () => { if (!live3d) mcSound.play(); },
-    restart: () => { if (!live3d) mcSound.restart(); },
-    timeWarning: () => { if (!live3d) mcSound.timeWarning(); }
-  },
   // Bỏ màn READY của engine: bấm Play ngay khi engine chuẩn bị xong ⇒ thầy thấy thẳng màn START của STAR LOOT.
-  // Không chạy được 3D ⇒ NÉM để engine trả lại màn READY thường (core/engine.js bắt lỗi startScreen) ⇒ chơi bản 2D.
+  // Không chạy được 3D ⇒ NÉM để engine giữ màn READY thường; bấm Play ra dòng báo thiếu WebGL (Đợt 450: không còn bản 2D).
   startScreen({ play, ready }) {
     if (!canRun3d()) throw new Error("Star loot: no WebGL — using the 2D maze");
     let gone = false;
@@ -86,7 +100,8 @@ const starLootTemplate = {
   },
   mount(root, activity, ui) {
     const questions = playable(activity);
-    if (!canRun3d() || !questions.length) return base2d.mount(root, activity, ui);   // 2D: tự hiện "No questions yet."
+    if (!canRun3d()) { needMessage(root, "Star loot needs 3D graphics (WebGL), which this browser or device cannot run."); return () => {}; }
+    if (!questions.length) { needMessage(root, "No questions yet — add questions with one correct answer."); return () => {}; }
     ensureCss();
     root.innerHTML = "";
     const box = document.createElement("div");
@@ -94,10 +109,8 @@ const starLootTemplate = {
     document.body.append(box);
     document.documentElement.classList.add("aw-sl-on");
     live3d++;
-    let dead = false, game = null, fallback = null;
+    let dead = false, game = null;
     console.log("MYACT:3D:ON");   // myActivity: nhường card đồ hoạ (như Rocket race 3D)
-    const me = { pause(p) { if (game && game.__pause) game.__pause(p); } };
-    cur = me;
     import("./3d/mc3d-2n.js")
       .then(m => m.createMazeChase({
         mount: box, view: "tilt", questions,
@@ -118,18 +131,17 @@ const starLootTemplate = {
       }))
       .then(g => { if (dead) g.destroy(); else game = g; })
       .catch(err => {
-        console.error("Star loot failed — falling back to the 2D maze", err);
+        console.error("Star loot failed to start", err);
         if (dead) return;
         try { box.remove(); } catch (e) { /* đã gỡ */ }
         live3d = Math.max(0, live3d - 1);
         if (!live3d) document.documentElement.classList.remove("aw-sl-on");
         console.log("MYACT:3D:OFF");
-        fallback = base2d.mount(root, activity, ui) || null;
+        needMessage(root, "Star loot could not start 3D graphics on this device.");
       });
     return function cleanup() {
       if (dead) return;
       dead = true;
-      if (cur === me) cur = null;
       if (game) { try { game.destroy(); } catch (e) { console.warn("Star loot destroy", e); } }
       if (box.isConnected) {
         box.remove();
@@ -137,13 +149,9 @@ const starLootTemplate = {
         if (!live3d) document.documentElement.classList.remove("aw-sl-on");
         console.log("MYACT:3D:OFF");
       }
-      if (fallback) { try { fallback(); } catch (e) { /* 2D tự dọn */ } }
     };
   },
-  onPause(paused) {
-    if (cur) return;   // STAR LOOT có Menu/Paused riêng; engine không mở menu được khi game phủ trọn màn
-    base2d.onPause(paused);
-  }
+  onPause() { /* STAR LOOT có Menu/Paused riêng; menu engine không mở được khi game phủ trọn màn */ }
 };
 
 registerTemplate(starLootTemplate);

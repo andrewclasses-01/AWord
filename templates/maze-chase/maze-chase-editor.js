@@ -22,5 +22,5 @@ export function openMazeChaseEditor(container, activity, opts = {}) {
     }
   });
   const badge = container.querySelector(".aw-ed-typebadge");
-  if (badge) badge.textContent = "MAZE CHASE";
+  if (badge) badge.textContent = "STAR LOOT";
 }

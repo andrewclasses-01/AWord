@@ -1,3 +1,7 @@
+// TRAIN RUSH — lõi MẪU 1ak (03/10/2026): như 1aj + CHỖ NỐI AWORD cho chế độ SINGLE (thầy: "bỏ dạng 2D, chỉ giữ 3D cho mọi mode") —
+//   createBalloonPop({ …, host }): Thư mục = act thật cùng thư mục (host.listActs/openAct) · Options Apply ⇒ host.saveOptions(opt) ·
+//   Menu ở màn START / kết quả + nút template trong Options = Library + Change template (host.home / templates / switchTemplate) ·
+//   bảng PAUSED thêm Change template · Library · nút iPad ẩn. Không có host ⇒ y hệt 1aj.
 // TRAIN RUSH — lõi MẪU 1aj (03/10/2026): như 1ai + destroy() (dỡ sạch bàn chơi — AWord đổi chế độ / rời act không nạp lại trang).
 // TRAIN RUSH — lõi MẪU 1ai (03/10/2026): thầy "ghép 1ab + 1ah thành 1 bản tốt nhất" — y hệt 1ah, chỉ mở nút Mode ▸ Fight (trước: "coming soon")
 //   ⇒ onEvent("mode", "fight"); trang mau-1ai-train-rush.html lo chuyển chế độ. Chạy đơn = 1ab + mọi cải tiến 1ac→1ah (cảnh 1ag, âm thanh thật 1ah).
@@ -108,7 +112,7 @@ const VIEWS = {
 const DEFAULTS = { timerMode: "down", timer: 120, levels: 10, pointsOff: 0, balloonSpeed: 4, trainSpeed: 4, shuffle: true, showAnswers: true, bonusTime: false, bonusPoints: false, bonusX2: false };   // 1j: tốc độ 1–10, Points off 0–10, Max cars 3–20 + 21 = ∞   // 1i: Points off thang AWord 0–100
 
 export const TEAM_COLORS = ["#e2402f", "#2f7fe2"];   // 1ac: đội 1 đỏ · đội 2 xanh
-export async function createBalloonPop({ mount, view = "side", words, wordsTitle = "", embed = false, share = false, seed = null, mirror = false, trainColors = null, options = {}, onEvent = () => {} }) {
+export async function createBalloonPop({ mount, view = "side", words, wordsTitle = "", embed = false, share = false, seed = null, mirror = false, trainColors = null, options = {}, onEvent = () => {}, host = null }) {
   const V0 = VIEWS[view] || VIEWS.side;
   // 1ac: bàn Fight DẸT (tầng trên–dưới) ⇒ máy quay tiến gần 28 % — khung dọc chỉ ôm từ mặt ray tới làn khinh khí cầu cao nhất
   const wide = embed && mount.clientWidth / Math.max(1, mount.clientHeight) > 2.6;
@@ -1497,21 +1501,55 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   press(".bp-again3", startGame);
   press(".bp-show", showAnswers);
   press(".bp-ans-back", () => { ovAns.hidden = true; ovEnd.hidden = false; });
-  press(".bp-menu", () => { if (S.state === "attract" || S.state === "over") return; S.paused = true; ovPause.hidden = false; });
+  press(".bp-menu", () => {
+    // 1ak: AWord — màn START / kết quả: Menu = Library + Change template (không thì kẹt, không về được thư viện)
+    if (S.state === "attract" || S.state === "over") { if (host) { ovPanel.dataset.kind === "tpl" && !ovPanel.hidden ? closePanel() : openPanel("tpl"); } return; }
+    S.paused = true; ovPause.hidden = false;
+  });
   press(".bp-resume", () => { S.paused = false; ovPause.hidden = true; last = 0; });
   press(".bp-endgame", () => { ovPause.hidden = true; S.paused = false; last = 0; endGame("ended"); });
   press(".bp-sound", () => { sfx.setMuted(!sfx.muted); mount.querySelector(".bp-sound").classList.toggle("is-off", sfx.muted); });
+  if (host) {   // 1ak: AWord — bảng PAUSED có Change template · Library; nút iPad (mẫu) ẩn
+    const row = mount.querySelector(".bp-hostrow"), tl = host.templates ? host.templates() : [];
+    mount.querySelector(".bp-chtpl").hidden = !(tl && tl.length); mount.querySelector(".bp-lib").hidden = !host.home;
+    row.hidden = false;
+    press(".bp-chtpl", () => { ovPause.hidden = true; openPanel("tpl"); });
+    press(".bp-lib", () => host.home());
+    mount.querySelector(".bp-ipad").hidden = true;
+  }
   const onEsc = e => { if (e.key === "Escape" && S.state === "play") mount.querySelector(".bp-menu").click(); };   // 1aj: có tên ⇒ destroy() gỡ được
   if (!embed) document.addEventListener("keydown", onEsc);
   // 1h: bảng nổi cho 4 nút hệ AWord — mở giữa ván thì tạm dừng, đóng thì chơi tiếp
   const ovPanel = $(".bp-ov-panel"), pnT = $(".bp-pn-t"), pnB = $(".bp-pn-b"), optsEl = $(".bp-opts"), optsHome = optsEl.parentNode;
-  let panelPaused = false;
+  let panelPaused = false, folderTok = 0;
+  const esc = v => String(v ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   function openPanel(kind) {
     if (!ovPanel.hidden) closePanel();
     if ((S.state === "play" || S.state === "intro" || S.state === "clear") && !S.paused) { S.paused = true; panelPaused = true; }
-    pnB.innerHTML = ""; ovPanel.dataset.kind = kind;
+    pnB.innerHTML = ""; pnB.onclick = null; ovPanel.dataset.kind = kind;   // 1ak: bảng Options gắn onclick lên pnB — bảng khác dùng lại pnB thì phải gỡ (trước: bấm Fight ⇒ paint() của Options ⇒ lỗi)
     ovPanel.querySelector(".bp-pn").classList.toggle("is-aw", kind === "options");
     if (kind === "options") { pnT.textContent = ""; buildAwOptions(pnB); }
+    else if (kind === "folder" && host && host.listActs) {   // 1ak: AWord — act THẬT cùng thư mục
+      pnT.textContent = "Switch activity";
+      pnB.innerHTML = `<p class="bp-pn-note">Loading…</p>`;
+      const tok = ++folderTok;
+      Promise.resolve().then(() => host.listActs()).then(d => {
+        if (tok !== folderTok || ovPanel.hidden || ovPanel.dataset.kind !== "folder") return;
+        const groups = (d && d.groups) || [];
+        if (d && d.folderName) pnT.textContent = d.folderName;
+        pnB.innerHTML = groups.length ? `<div class="bp-pn-list">${groups.map(g => (g.path ? `<p class="bp-pn-grp">${esc(g.path)}</p>` : "") + g.acts.map(a =>
+          `<button class="bp-pn-row${a.current ? " is-on" : ""}" data-id="${esc(String(a.id))}"${a.current ? " disabled" : ""}>${ICON.folder}<span>${esc(a.title || "Untitled")}</span></button>`).join("")).join("")}</div>`
+          : `<p class="bp-pn-note">No other activities in this folder.</p>`;
+        pnB.querySelectorAll(".bp-pn-row[data-id]").forEach(b => b.addEventListener("click", () => host.openAct(b.dataset.id)));
+      }).catch(() => { if (tok === folderTok) pnB.innerHTML = `<p class="bp-pn-note">Could not load the folder.</p>`; });
+    } else if (kind === "tpl") {                                       // 1ak: AWord — Library + Change template
+      const list = (host && host.templates ? host.templates() : []) || [];
+      pnT.textContent = "Menu";
+      pnB.innerHTML = `<div class="bp-pn-list">${host && host.home ? `<button class="bp-pn-row bp-pn-lib">${ICON.folder}<span>Library</span></button>` : ""}${list.length ? `<p class="bp-pn-grp">Change template</p>` : ""}${list.map(t =>
+        `<button class="bp-pn-row" data-t="${esc(t.type)}">${ICON.mode}<span>${esc(t.label)}</span></button>`).join("")}</div>`;
+      pnB.querySelectorAll(".bp-pn-row[data-t]").forEach(b => b.addEventListener("click", () => host.switchTemplate(b.dataset.t)));
+      pnB.querySelector(".bp-pn-lib")?.addEventListener("click", () => host.home());
+    }
     else if (kind === "folder") {
       pnT.textContent = "Switch activity";
       pnB.innerHTML = `<div class="bp-pn-list">${["LSA2 S4 T4 — Words", "LSA2 S4 T3 — Words", "LSA2 S4 T2 — Words", "Wild West animals"].map((t, i) =>
@@ -1537,6 +1575,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   // lưới 2 cột (ô số bên trái, thanh trượt bên phải) · khối ô tích · nút trò chơi + Apply (chỉ sáng khi có thay đổi).
   // Apply ⇒ lưu lựa chọn và về màn bắt đầu (như AWord chơi lại act).
   const AW_BALLOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5a6 6 0 0 0-6 6c0 3.7 3 6.8 6 7.2 3-.4 6-3.5 6-7.2a6 6 0 0 0-6-6z"/><path d="M11 17.6h2l-1-1.9zM12 17.6c.6 1.2-.8 2.2 0 3.9"/></svg>';
+  const awHost = host;   // 1ak: buildAwOptions dùng tên `host` cho ô chứa bảng — giữ cầu AWord ở tên khác
   function buildAwOptions(host) {
     const d = { ...opt };
     const slider = (k, label, sub, min, max, off) => `<div class="aw-o-cell"><div class="aw-o-lab">${label}${sub ? ` <small>${sub}</small>` : ""}</div>
@@ -1570,9 +1609,10 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     }
     host.onclick = e => {
       const b = e.target.closest("button"); if (!b) return;
+      if (b.classList.contains("aw-o-tpl")) { if (awHost && awHost.templates) { closePanel(); openPanel("tpl"); } return; }   // 1ak: AWord — đổi template
       if (b.dataset.tm) d.timerMode = b.dataset.tm;
       else if (b.dataset.ts && d.timerMode === "down") { setTime(d.timer + +b.dataset.ts); return; }
-      else if (b.classList.contains("aw-o-apply")) { Object.assign(opt, d); closePanel(); toStart(); return; }
+      else if (b.classList.contains("aw-o-apply")) { Object.assign(opt, d); if (awHost && awHost.saveOptions) { try { awHost.saveOptions({ ...opt }); } catch (e) { console.warn("TRAIN RUSH: save options", e); } } closePanel(); toStart(); return; }   // 1ak: AWord lưu Options theo act
       paint();
     };
     // ô giờ kiểu AWord: chạm / vuốt lên số phút = +1 phút, vuốt xuống = −1 phút; số giây: lên +10, xuống −10 (bám mốc :10);
@@ -2011,7 +2051,7 @@ const HUD_HTML = `
     <div class="bp-opts" hidden></div>
   </div>
   <div class="bp-ov bp-ov-pause" hidden>
-    <div class="bp-card"><h2>PAUSED</h2><button class="bp-big bp-resume">Resume</button><button class="bp-mid bp-again3">Start again</button><button class="bp-mid bp-endgame">End game</button></div>
+    <div class="bp-card"><h2>PAUSED</h2><button class="bp-big bp-resume">Resume</button><button class="bp-mid bp-again3">Start again</button><button class="bp-mid bp-endgame">End game</button><div class="bp-hostrow" hidden><button class="bp-mid bp-chtpl">Change template</button><button class="bp-mid bp-lib">Library</button></div></div>
   </div>
   <div class="bp-ov bp-ov-end" hidden>
     <div class="bp-wanted">

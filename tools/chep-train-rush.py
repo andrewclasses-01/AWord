@@ -23,8 +23,8 @@ import json, os, re, shutil, subprocess, sys
 SRC = r"E:/LAP TRINH APP/myGame/balloon-pop"
 WEB = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DST = os.path.join(WEB, "templates", "balloon-pop")
-GOC = "fight-1aj.js"
-CSS = ["bp3d.css", "bp3d-1j.css", "bp3d-1p.css", "bp3d-1q.css", "bp3d-1r.css", "bp3d-1ab.css", "fight-cine-1ae.css", "fight-1aj.css"]
+GOC = "fight-1ak.js"   # Đợt 450: 1ak — Single cũng 3D (lõi bp3d-1ak có chỗ nối AWord `host`)
+CSS = ["bp3d.css", "bp3d-1j.css", "bp3d-1p.css", "bp3d-1q.css", "bp3d-1r.css", "bp3d-1ab.css", "fight-cine-1ae.css", "fight-1ak.css", "bp3d-1ak.css"]
 SOUND = "sound-1ah"
 VENDOR = "../../rocket-race/vendor/three"
 FONT_CDN = "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/fonts/helvetiker_bold.typeface.json"
@@ -80,6 +80,11 @@ def main():
             sys.exit(f"DỪNG: {c} còn luật html/body/#game nhiều dòng — sửa tay ở myGame")
         wr(os.path.join(out3d, c), s)
         print("chép", c)
+    # 2b. dọn file cũ trong 3d/ không còn trong bộ (đổi bản 1aj ⇒ 1ak…)
+    keep = set(files) | set(CSS) | {"NGUON.json"}
+    for f in os.listdir(out3d):
+        if f not in keep:
+            os.remove(os.path.join(out3d, f)); print("xoá cũ", f)
     # 3. tiếng
     sdir = os.path.join(SRC, "assets", SOUND)
     odir = os.path.join(DST, "assets", SOUND)

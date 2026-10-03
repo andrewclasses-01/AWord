@@ -545,7 +545,24 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
-
+
+## Đợt 450 (03/10/2026) — CHỈ CÒN 3D: STAR LOOT (Maze chase) + TRAIN RUSH (Balloon pop) — gỡ hẳn bản 2D
+
+**Thầy:** *"Bỏ dạng 2D của STAR LOOT và TRAIN RUSH đi, chỉ giữ dạng 3D cho mọi mode"*. Chốt (AskUserQuestion): tạm CHƯA giao bài · tạm CHƯA mở Showdown cho game 3D · thầy chưa từng giao bài 3 game 3D ⇒ không giữ 2D cho bài cũ.
+
+**Làm gì:**
+- **Balloon pop = TRAIN RUSH** (nhãn catalog "Train rush"): `balloon-pop.js` viết lại — SINGLE = một bàn TRAIN RUSH 3D trọn màn (myGame **1ak** `b24324d`, `3d/bp3d-1ak.js`) nối thật qua `ui.host` (Thư mục · Options ⇒ `activity.options.trainRush` + lưu act · Menu ở màn START/kết quả = Library + Change template · PAUSED thêm 2 nút đó · Mode ▸ Fight ⇒ `ui.host.fight()`); FIGHT = `ownFight` (Đợt 449, nay `3d/fight-1ak.js`). Act Balloon pop cũ: `bp*` ở gốc options làm giá trị đầu. `noAssignment`, bỏ `showdownMode`/`sdDeal`. Gỡ: toàn bộ code 2D, `sounds/`, `balloon-pop-sound.js`, CSS 2D (giữ khối editor `.aw-bp-ed-*`).
+- **Maze chase = STAR LOOT**: bỏ đường lùi 2D — gỡ `maze-chase-2d.js`, `mc-sound.js`, `img/`, `sounds/`, CSS 2D; `maze-chase.js` tự có `edit` + `toPrintItems`; badge editor "STAR LOOT".
+- Máy không chạy được WebGL ⇒ một dòng báo (`.aw-tr-need3d` / `.aw-sl-need3d`) thay vì game.
+- `core/engine.js` `ui.host` thêm `canFight()` / `fight()` (= MODE ▸ Fight). `tools/chep-train-rush.py`: GOC `fight-1ak.js`, thêm `bp3d-1ak.css`, tự xoá file cũ trong `3d/`. `core/tpl-files.js` sinh lại (`tools/sinh-preload.py --write`; ⚠️ index.html/play.html bị công cụ đổi do lệch SẴN từ đợt khác — đã TRẢ LẠI, không đưa vào đợt này).
+- ⭐ Bẫy bắt được khi thử: trong `buildAwOptions(host)` của lõi TRAIN RUSH, `host` là Ô CHỨA bảng ⇒ Apply không lưu qua cầu AWord; và `pnB.onclick` của bảng Options còn bám khi mở bảng khác ⇒ bấm Fight gọi `paint()` ⇒ lỗi `classList` (vá ở myGame 1ak `b24324d`).
+
+**Kiểm (`scratch/dot450-tr.html`, `scratch/dot450-sl.html`, Electron offscreen):** TRAIN RUSH: START 3D ngay (READY engine bỏ qua) · Menu = Library + 15 template · iPad ẩn · Options Apply tốc độ 7 ⇒ Mode ▸ Fight ⇒ 2 bàn ⇒ Single mode ⇒ Options vẫn 7 · vào chơi lấy đúng định nghĩa act · 0 lỗi. STAR LOOT (act từ vựng): vào câu 1, 4 bệ đúng từ · Library ⇒ dỡ sạch.
+
+**⬜ CHỜ THẦY:** TRAIN RUSH Single + Fight trên TOMKO với act thật (nút Thư mục thư mục thật, tiếng).
+
+---
+
 ## Đợt 449 (03/10/2026) — BALLOON POP ▸ MODE ▸ FIGHT = TRAIN RUSH 3D (kiểu Rocket Race) · cờ `tpl.ownFight` trong engine
 
 **Thầy:** *"đẩy cả STAR LOOT và TRAIN RUSH lên cả AWord và github tương tự cách làm của ROCKET RACE"* — chọn (AskUserQuestion) **"Kiểu Rocket Race: 3D chỉ ở Fight"**: Single / Showdown / bài giao học sinh vẫn Balloon pop 2D; MODE ▸ Fight ra trận TRAIN RUSH 3D hai bàn trái–phải.

@@ -1,3 +1,5 @@
+## ⛔⛔ Đợt 450 (03/10/2026) — BẢN 2D ĐÃ GỠ HẲN. Balloon pop = TRAIN RUSH 3D ở MỌI chế độ (Single + Fight); chưa giao bài, chưa Showdown. Mọi mục bên dưới nói về bản 2D cũ (lịch sử git trước Đợt 450). Đọc `balloon-pop.js` đầu file + GHI CHU DU AN Đợt 449/450.
+
 ## ⭐ Đợt 449 (03/10/2026) — MODE ▸ FIGHT = TRAIN RUSH 3D
 
 - Single / Showdown / bài giao: vẫn bản 2D trong file này. MODE ▸ Fight ⇒ `ownFight` ⇒ trận TRAIN RUSH 3D (myGame `balloon-pop` mẫu 1aj) trong ô `.aw-tr-host` phủ trọn trang.

@@ -70,7 +70,7 @@ export const TEMPLATES = [
     load: () => import("../templates/gameshow/gameshow.js"),
     sample: () => import("../templates/gameshow/sample-gameshow.js") },
 
-  // ⭐ Đợt 447 — Maze chase = STAR LOOT 3D (templates/maze-chase/maze-chase.js; bản 2D chỉ còn là đường lùi).
+  // ⭐ Đợt 447 — Maze chase = STAR LOOT 3D (templates/maze-chase/maze-chase.js). Đợt 450: bản 2D đã gỡ hẳn.
   { type: "maze_chase",      label: "Star loot",       built: true,
     blurb: "3D space maze — steer your robot to the right answer, dodge the enemy robots. Single or Fight (2 teams).",
     css: "templates/maze-chase/maze-chase.css",
@@ -89,8 +89,9 @@ export const TEMPLATES = [
     load: () => import("../templates/flying-fruit/flying-fruit.js"),
     sample: () => import("../templates/flying-fruit/sample-flying-fruit.js") },
 
-  { type: "balloon_pop",     label: "Balloon pop",     built: true,
-    blurb: "Pop the balloon carrying the matching word.",
+  // ⭐ Đợt 450 — Balloon pop = TRAIN RUSH 3D (Single + Fight, bản 2D đã gỡ).
+  { type: "balloon_pop",     label: "Train rush",      built: true,
+    blurb: "3D Wild West train — pop the balloons so each word crate lands on its definition car. Single or Fight (2 teams).",
     css: "templates/balloon-pop/balloon-pop.css",
     load: () => import("../templates/balloon-pop/balloon-pop.js"),
     sample: () => import("../templates/balloon-pop/sample-balloon-pop.js") },

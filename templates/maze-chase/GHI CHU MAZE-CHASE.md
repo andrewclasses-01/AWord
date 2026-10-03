@@ -1,3 +1,5 @@
+## ⛔⛔ Đợt 450 (03/10/2026) — BẢN 2D ĐÃ GỠ HẲN (không còn đường lùi). Máy không có WebGL chỉ thấy một dòng báo. Mục Đợt 91 trở về trước là lịch sử bản 2D.
+
 # GHI CHÚ — MAZE CHASE (game thứ 9)
 
 ## ⭐⭐ Đợt 447 (02/10/2026) — MAZE CHASE NAY LÀ **STAR LOOT 3D**. ĐỌC MỤC NÀY TRƯỚC.

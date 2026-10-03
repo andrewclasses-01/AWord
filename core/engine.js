@@ -6190,6 +6190,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     //                       (game tự áp dụng). ⛔ Không bao giờ ghi act tạm conv_/mist_.
     //   home()            = Mode ▸ Go home ▸ Home (goHome)
     //   templates() / switchTemplate(type) = Options ▸ Template (switchList / doSwitchTemplate) — act từ vựng chơi game khác
+    //   canFight() / fight() (Đợt 450) = MODE ▸ Fight (enterFight — trận core/fight.js hoặc tpl.ownFight)
     // Học sinh (session) không có cầu này (null) — game tự ẩn các nút đó.
     host: session ? null : {
       async listActs() {
@@ -6217,7 +6218,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       },
       home() { if (!torndown) goHome(); },
       templates() { try { return switchList().map(t => ({ type: t.type, label: t.label })); } catch { return []; } },
-      switchTemplate(type) { if (!torndown && type) doSwitchTemplate(type); }
+      switchTemplate(type) { if (!torndown && type) doSwitchTemplate(type); },
+      // ⭐ Đợt 450 — nút Mode ▸ Fight của game tự vẽ trọn màn (TRAIN RUSH Single 3D) = MODE ▸ Fight mode ▸ Start fight.
+      canFight: () => canFight,
+      fight() { if (!torndown && canFight) enterFight(); }
     },
     // ⭐ Đợt 353 — FIGHT ONLY: nhận nuôi thanh Time delay vào một ổ trong sân của
     // template (xem chú thích tại `placeWaitBar`). Trả false ngoài trận / thiếu ổ.
