@@ -177,14 +177,14 @@ async function openFollowerWait(root, node) {
   below.append(bl);
 }
 
-export async function openWordsPicker(root, node, { onExit } = {}) {
+export async function openWordsPicker(root, node, { onExit, onBack } = {}) {
   await loadCss();
   const sets = variantsOf(node.content);
   const voiceSets = voiceVariantsOf(node.content);        // null ⇒ act không có giọng đọc
   const opts = node.options || {};
   const exit = () => { setWordsPickerHook(null); if (onExit) onExit(); };
   // Nút GAMES trên màn START quay về đây (engine.js đọc hook này).
-  setWordsPickerHook({ actId: node.id, open: r => openWordsPicker(r, node, { onExit }) });
+  setWordsPickerHook({ actId: node.id, open: r => openWordsPicker(r, node, { onExit, onBack }) });
   setPickUrl(null);   // myActivity: địa chỉ về trơn ⇒ cột theo (đang mở game) quay lại CHỜ
 
   // game nào chơi được với nội dung này — cùng luật nút Template trong Options (switchTargets)
@@ -271,11 +271,12 @@ export async function openWordsPicker(root, node, { onExit } = {}) {
   });
   wp.append(z3, el("div", "aw-wp-rule"), z2);
 
-  // ---- về thư viện (cùng chỗ, cùng class với nút Home của game) ----
-  const home = el("button", "aw-iconbtn aw-wp-home", icons.home);
-  home.type = "button"; home.title = "Home"; home.setAttribute("aria-label", "Home");
-  home.onclick = () => { off(); exit(); };
-  wp.append(home);
+  // ---- nút QUAY LẠI (mũi tên) góc dưới trái: về thư mục chứa act, như bấm Back. Home trong game
+  //      vẫn về trang chủ (onExit); riêng nút này dùng `onBack` (main.js: thư mục cha của act). ----
+  const backBtn = el("button", "aw-wp-exit", icons.backArrow);
+  backBtn.type = "button"; backBtn.title = "Back"; backBtn.setAttribute("aria-label", "Back");
+  backBtn.onclick = () => { off(); setWordsPickerHook(null); (onBack || onExit || (() => {}))(); };
+  wp.append(backBtn);
 
   function wire(b, type) {
     if (!usable(type)) { b.classList.add("is-soon"); b.setAttribute("aria-disabled", "true"); b.title = "Doesn't fit this content"; }

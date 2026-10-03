@@ -66,8 +66,12 @@
 .wp-card.is-soon.hi { box-shadow: none; } .wp-card.is-soon.hi svg.art { transform: none; }
 .wp-card.is-loading, .wp-tile.is-loading { animation: wpPulse .7s ease-in-out infinite; }
 @keyframes wpPulse { 50% { opacity: .6; } }
-/* Home (same place and class as the game's Home) */
-.aw-wp-home { position: absolute; left: 0; bottom: 0; margin: 0 0 0 calc(2.2 * var(--aw-u)); }
+/* Nút QUAY LẠI (mũi tên) — góc dưới trái, cách đều mép trái và mép dưới */
+.aw-wp-exit { position: absolute; left: 28@; bottom: 28@; width: 48@; height: 48@; display: flex; align-items: center; justify-content: center; padding: 0; border-radius: 14@; background: #fff; border: 1.5px solid var(--wp-line); color: #5b6b80; cursor: pointer; box-shadow: 0 5@ 14@ rgba(31,42,68,.08); transition: transform .2s cubic-bezier(.22,.61,.36,1), border-color .2s ease, color .2s ease, box-shadow .2s ease; z-index: 2; }
+.aw-wp-exit svg { width: 24@; height: 24@; display: block; transition: transform .2s cubic-bezier(.22,.61,.36,1); }
+.aw-wp-exit:hover { border-color: var(--wp-blue); color: var(--wp-blue); box-shadow: 0 0 0 3.5@ var(--wp-blue-soft), 0 8@ 18@ rgba(47,123,255,.16); }
+.aw-wp-exit:hover svg { transform: translateX(-2@); }
+.aw-wp-exit:active { transform: scale(.93); }
 
 /* ---- the START screen's one new button: back to the picker (icon only) ---- */
 .aw-wp-back { position: absolute; left: calc(1.9 * var(--aw-u)); bottom: calc(1.7 * var(--aw-u)); width: calc(3.75 * var(--aw-u)); height: calc(3.75 * var(--aw-u)); display: flex; align-items: center; justify-content: center; padding: 0; border-radius: calc(1.1 * var(--aw-u)); background: #21242b; border: 1px solid #343944; color: #cfd5df; cursor: pointer; transition: border-color .15s ease, color .15s ease, transform .15s ease; z-index: 30; }
@@ -139,7 +143,8 @@
   .wp-tile .wp-tic { width: 25@; height: 25@; }
   .wp-tile .wp-nm { font-size: 6.5@; padding: 0 1@; }
   .wp-tile.hi { transform: none; box-shadow: 0 0 0 1.5@ var(--wp-blue-soft); }
-  .aw-wp-home { margin-left: 0; }
+  .aw-wp-exit { left: 7@; bottom: 7@; width: 20@; height: 20@; border-radius: 6@; border-width: 1px; box-shadow: none; }
+  .aw-wp-exit svg { width: 11@; height: 11@; }
   .aw-wp-wait { --p: calc(var(--aw-u) / 3.75); gap: 10@; }
   .aw-wp-wtitle { font-size: 20@; }
   .aw-wp-spin { width: 14@; height: 14@; border-width: 1.5@; }

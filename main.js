@@ -1832,7 +1832,7 @@ function actMenuItems(node) {
 async function openWordsPickerFor(node) {
   try {
     const m = await import("./core/words-picker.js");
-    return await m.enterWords(app, node, { onExit: goTop });
+    return await m.enterWords(app, node, { onExit: goTop, onBack: () => enterFolder(node.root, node.parentId ?? null) });
   } catch (e) {
     console.warn("AWord: words picker failed, opening the game directly", e);
     return false;
