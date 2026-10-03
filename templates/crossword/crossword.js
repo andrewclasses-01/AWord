@@ -81,8 +81,13 @@ function gridKey(str) {
 // -------------------------------------------------------------------
 // CROSSWORD BUILDER — place words on a grid so they interlock at shared
 // letters. Greedy: longest word first at the origin, then each next word takes
-// its best-scoring valid crossing; a word that can't cross anything is dropped
-// (kept out of the grid but still listed as a clue with "No answer" possible).
+// its best-scoring valid crossing.
+// ⭐⭐ Đợt 455 (04/10/2026) — KHÔNG BAO GIỜ BỎ CÂU. Trước đây một từ không cắt được từ nào
+// bị BỎ khỏi bảng (và khỏi cả danh sách câu hỏi): ô chữ 50 từ có lượt chỉ còn 49 câu, em
+// nộp "49/49" và tưởng game lỗi (đo thật 03/10/2026, ADMISSION; mô phỏng 8,9% lượt có từ
+// bị bỏ). Nay `buildCrossword` xếp LẠI (tối đa MAX_BUILD_TRIES lần) tới khi mọi từ đều
+// cắt được; từ nào vẫn không cắt nổi thì được ĐẶT RIÊNG thành một hàng ngang dưới bảng
+// (vẫn đủ câu hỏi + chấm điểm). Đo trên 50 từ thật: 8.000 trang, 0 trang thiếu từ, TB 1,06 lần.
 // -------------------------------------------------------------------
 // ⚠️ `fixed` (Đợt 185) — build the SAME grid every time, for FIGHT MODE. This
 // function is deliberately random in single play (see the two comments below):
@@ -91,7 +96,34 @@ function gridKey(str) {
 // different word on the two screens, and the referee's "open clue 3 on both
 // boards" opens two different questions. Nothing looks wrong on either board
 // on its own; the class just sees two teams answering different things.
+const MAX_BUILD_TRIES = 30;
+
+// Seeded PRNG (mulberry32) — FIGHT must build the SAME grid on both boards, so its retries
+// cannot use Math.random. Try #0 is the old fixed layout untouched; only when that one
+// loses a word do tries 1.. run, each with its own fixed seed ⇒ both boards still agree.
+function seededRand(seed) {
+  let a = (seed * 0x9E3779B9) >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Lay the words out until none is left loose (or MAX_BUILD_TRIES). `skipped` of the result
+// = words that cross nothing even in the best layout; they are already placed standalone.
 function buildCrossword(words, fixed = false) {
+  let best = buildCrosswordOnce(words, fixed, Math.random);
+  for (let t = 1; best.skipped.length && t < MAX_BUILD_TRIES; t++) {
+    const bp = buildCrosswordOnce(words, false, fixed ? seededRand(t) : Math.random);
+    if (bp.skipped.length < best.skipped.length) best = bp;
+  }
+  return best;
+}
+
+function buildCrosswordOnce(words, fixed, rand) {
   const usable = words
     // `src` = the ORIGINAL content object, carried through BOTH hops of this
     // build (here, then into the placed-clue objects below) so "Start with
@@ -108,7 +140,7 @@ function buildCrossword(words, fixed = false) {
   // little each new game instead of being identical every time.
   if (!fixed) {
     for (let i = list.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(rand() * (i + 1));
       [list[i], list[j]] = [list[j], list[i]];
     }
   }
@@ -163,7 +195,7 @@ function buildCrossword(words, fixed = false) {
           const score = fitScore(w.key, row, col, dir);
           // random tie-break: among equally-good crossings, pick either one so
           // the layout varies between games.
-          if (score > 0 && (!best || score > best.score || (score === best.score && !fixed && Math.random() < 0.5)))
+          if (score > 0 && (!best || score > best.score || (score === best.score && !fixed && rand() < 0.5)))
             best = { row, col, dir, score };
         }
       }
@@ -171,6 +203,17 @@ function buildCrossword(words, fixed = false) {
     if (best) stamp(w, best.row, best.col, best.dir);
     else skipped.push(w);
   });
+
+  // Đợt 455 — a word that crosses nothing is NOT dropped: it goes on its own row under the
+  // grid (one blank row between, so nothing touches it). Still a real clue, still graded.
+  if (skipped.length) {
+    let bottom = -Infinity, left = Infinity;
+    for (const key of cells.keys()) {
+      const [r, c] = key.split(",").map(Number);
+      bottom = Math.max(bottom, r); left = Math.min(left, c);
+    }
+    for (const w of skipped) { stamp(w, bottom + 2, left, "A"); bottom += 2; }
+  }
 
   if (!placed.length) return { grid: null, clues: [], rows: 0, cols: 0, skipped };
 

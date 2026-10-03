@@ -955,6 +955,7 @@ function buildCrosswordGrid(items) {
     placed.push({ ...w, row, col, dir });
   }
 
+  const loose = [];
   list.forEach((w, wi) => {
     if (wi === 0) { stamp(w, 0, 0, "A"); return; }
     let best = null;
@@ -974,7 +975,18 @@ function buildCrosswordGrid(items) {
       }
     }
     if (best) stamp(w, best.row, best.col, best.dir);
+    else loose.push(w);
   });
+  // Đợt 455 — a word that crosses nothing is no longer dropped from the worksheet: it is
+  // printed on its own row under the grid (same rule as the live game).
+  if (loose.length && placed.length) {
+    let bottom = -Infinity, left = Infinity;
+    for (const key of cells.keys()) {
+      const [r, c] = key.split(",").map(Number);
+      bottom = Math.max(bottom, r); left = Math.min(left, c);
+    }
+    for (const w of loose) { stamp(w, bottom + 2, left, "A"); bottom += 2; }
+  }
 
   if (!placed.length) return { grid: null, clues: [], rows: 0, cols: 0 };
 

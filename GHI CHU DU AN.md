@@ -546,6 +546,28 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 455 (04/10/2026) — CROSSWORD: KHÔNG BAO GIỜ BỎ CÂU (xếp lại tới khi đủ từ · từ không chéo được đặt riêng) · ⬜ chưa push/live — xem cuối mục
+
+**Ca gốc (03/10, lớp B2-A, em Anthony, act `B2A_29/9.19:19 ENG1.VOICE/CROSSWORD`):** thầy nghi gian lận vì bảng xếp
+hạng ghi 50/50 · 7:09 còn màn kết quả ghi 49/49 · 6:39. Đọc bài làm từng câu trên AWord: lượt 23:21 chỉ có **49 câu**, thiếu
+đúng từ `ADMISSION`. KHÔNG phải hack: `buildCrossword` xếp ô chữ NGẪU NHIÊN mỗi lượt và **BỎ** từ nào không cắt được từ đã
+đặt (bỏ khỏi cả danh sách câu hỏi). Mô phỏng trên 50 từ thật (2 trang × 25): **8,9 % lượt có từ bị bỏ**, hay nhất `ADMISSION`.
+Em nộp "49/49" nhìn như game lỗi. Thầy chốt: PHẢI đủ câu.
+
+**Sửa (chỉ `templates/crossword/crossword.js` + `core/print.js`):**
+- `buildCrossword` = vòng lặp ngoài: xếp lại tối đa `MAX_BUILD_TRIES = 30` lần, lấy bản ít từ "lạc" nhất, dừng khi 0.
+  Thân cũ đổi tên `buildCrosswordOnce(words, fixed, rand)` (thay 2 chỗ `Math.random` bằng `rand`).
+- Từ vẫn không cắt nổi ⇒ ĐẶT RIÊNG thành hàng ngang dưới bảng (cách 1 hàng trống), vẫn là câu hỏi thật + chấm điểm.
+- **FIGHT** (`fixed`): lượt 0 y hệt cũ; chỉ khi lượt 0 mất từ mới chạy lượt 1.. với `seededRand(t)` cố định ⇒ hai bàn vẫn
+  dựng GIỐNG HỆT (đo: 50 lần × 2 trang, 0 lệch).
+- `core/print.js` (bản in worksheet có bộ xếp riêng, từng bỏ từ im lặng): thêm đặt-riêng y như trên (không retry — bản in cố ý
+  không ngẫu nhiên).
+- Đo: 4.000 lượt × 2 trang, **0 lượt thiếu câu**, TB 1,06 lần xếp, ≈1 ms/trang. Bàn thử thật (sample + `XYLOPHONE` + `JZQ`):
+  đếm `0 / 22`, `JZQ` nằm riêng góc dưới, không lỗi console.
+- Chưa sửa (không thuộc ca này): từ trùng khoá (`gridKey` giống nhau) và từ < 2 chữ vẫn bị lọc im lặng ở đầu `buildCrossword`.
+- Lưu ý dữ liệu cũ: lượt cũ nộp 49/49 vẫn nằm trong kho điểm; dashboard xếp theo lượt MỚI NHẤT còn trang học sinh xếp theo lượt
+  TỐT NHẤT (lệch hạng 5 ↔ 8 của Anthony) — chưa đụng.
+
 ## Đợt 454b (03/10/2026) — chỉnh theo ảnh thầy: ô nạp kiểu BÓNG MỜ + mép mềm · tiếng nạp chỉ "vút" nhỏ · tên lửa NGANG HÔNG, xoay 90° lên trời rồi phóng · nổ va chạm to hơn · ✅ ĐÃ PUSH `4fb1290` + LIVE 4/4 mã băm (03/10)
 
 Thầy gửi 2 ảnh (quả đang nạp màu đen xám — xấu; bóng mờ khi ô trống — đẹp) + 4 ý:
