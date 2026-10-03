@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 453b (04/10/2026) — MÀN CHỌN CHẠY ĐƯỢC TRÊN MYACTIVITY NHIỀU CỘT: cột 0 chọn, cột theo đứng chờ · ⬜ CHƯA push · đi cặp myActivity v2.31.0
+## Đợt 453b (04/10/2026) — MÀN CHỌN CHẠY ĐƯỢC TRÊN MYACTIVITY NHIỀU CỘT: cột 0 chọn, cột theo đứng chờ · ✅ ĐÃ PUSH `0ddd227` + LIVE 7/7 mã băm (04/10) · đi cặp myActivity v2.31.0 `90868fe` (đã push) · ⬜ thầy thử TOMKO
 
 Thầy: dùng chủ yếu trên myActivity nhiều cột; "không chọn được ở đây thì tính năng vô nghĩa". Thầy chốt: cột 0 hiện màn chọn, cột khác chờ,
 chọn xong vào START thì cột khác mới nạp; bấm GAMES chọn lại thì cột khác chờ lại; màn chờ = tối + tên act + vòng xoay nhỏ.
@@ -566,7 +566,7 @@ chọn xong vào START thì cột khác mới nạp; bấm GAMES chọn lại th
   Test-bench myActivity (`__myactFireViewEvent`): mở act ⇒ cột 1 `…&f=1`; chọn ⇒ có tpl; GAMES ⇒ lại chờ; chọn lại ⇒ có tpl; về thư viện ⇒ start.html.
 - ⬜ **CHƯA đo trên Electron/TOMKO thật:** replaceState có kích `did-navigate-in-page` không; 3–5 cột; game 3D ở cột theo.
 
-## Đợt 453 (04/10/2026) — MÀN CHỌN TEMPLATE + LOẠI ACT cho act WORDS · ⬜ CHỜ THẦY BẤM TAY (chưa push live)
+## Đợt 453 (04/10/2026) — MÀN CHỌN TEMPLATE + LOẠI ACT cho act WORDS · ✅ LIVE cùng Đợt 453b (`0ddd227`) · ⬜ CHỜ THẦY BẤM TAY
 
 Thầy giao: act WORDS (gộp ENG1/ENG2/VI1/VI2 × TEXT/VOICE × ~14 template) mở tay thì hiện MÀN CHỌN trước, không vào thẳng game.
 Thiết kế chốt qua 6 bản: `D:\OTHERS\CLAUDE\AWord - thiet ke man chon WORDS\man-chon-v6.html` (bộ C "Flat color" thầy chọn).
