@@ -580,7 +580,8 @@ D-pad, Shuffle/Show answers, nút "Star loot"/"Train rush") · Apply Lives 8 + D
 giữa ván: mở Options đồng hồ đứng, Apply ⇒ START AGAIN ⇒ chơi lại · TRAIN RUSH Train speed 9 áp ngay, Timer Count down 1:00 đúng act mẫu · Fight 2 bàn 797×756 ·
 chuỗi khung lúc mở: khung 0 = màn chờ, tên game có từ khung 0,6 s (máy chưa lưu phông), mờ dần sang START.
 
-**⬜ CHỜ THẦY:** xem ảnh rồi cho đưa live; bấm tay trên TOMKO với act từ vựng nhiều bộ nghĩa (hàng ENG1/VI1 trong Options của game).
+**✅ LIVE 03/10** (thầy: "ok được rồi, lên live Aword đi"): `13301f5` → main, live 8/8 mã băm khớp; thử lại trên live: STAR LOOT khung 1600×800 + Options Apply áp ngay, TRAIN RUSH Fight 2 bàn 797×756.
+**⬜ CHỜ THẦY:** bấm tay trên TOMKO với act từ vựng nhiều bộ nghĩa (hàng ENG1/VI1 trong Options của game).
 
 ---
 
