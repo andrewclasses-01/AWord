@@ -28,7 +28,7 @@ import {
 } from "./core/assignments.js";
 import { ensureTemplate } from "./core/registry.js";
 import { gioChuan } from "./core/gio-chuan.js";   // Đợt 422 — mốc giờ theo máy chủ
-import { tiLeDaLam, ghiRoiVan, ghiXongVan, layNhacCho, hienNhac, dangMo } from "./bo-cuoc.js";   // Đợt 424 — "Start Again quá sớm"
+import { tiLeDaLam, ghiRoiVan, ghiXongVan, layNhacCho, hienNhac, dangMo, ghiDat100, canKiemMayChu, ghiDaKiem } from "./bo-cuoc.js";   // Đợt 424 — "Start Again quá sớm"
 // No template is imported here on purpose. ensureTemplate() fetches the ONE
 // game this assignment uses, right before it starts — so a student on a phone
 // downloads one game, not the whole catalogue.
@@ -459,7 +459,11 @@ async function play(assignment, studentName, className, studentMa) {
           if (!playLog) return;
           dropDraft(playLog.nhapId);   // Đợt 383 — lượt đã tới đích, nháp hết việc
           playLog.score = score; playLog.total = total; playLog.timeMs = timeMs; playLog.done = true;
-          if (!dacBiet && !playLog.mistakes) ghiXongVan(khoaBC);   // ⭐ Đợt 424 — làm HẾT ván ⇒ chuỗi bỏ cuộc về 0
+          if (!dacBiet && !playLog.mistakes) {
+            ghiXongVan(khoaBC);   // ⭐ Đợt 424 — làm HẾT ván ⇒ chuỗi bỏ cuộc về 0
+            // ⭐ Đợt 456 — đạt 100% (điểm = số câu của đề) ⇒ từ nay em cày xếp hạng: bỏ hẳn tấm nhắc ở act này.
+            if (Number(total) > 0 && Number(score) >= Number(total)) ghiDat100(khoaBC);
+          }
           if (hoatDong) { playLog.activeMs = hoatDong.doc(); hoatDong.dung(); hoatDong = null; }
           playLog.attemptId = (playLog.mode === "submit" && attempt) ? attempt.attemptId : "";
           // ⭐ Đợt 384 — lượt KHÔNG nộp (Start with mistakes, 0 điểm) ⇒ bài làm vào practiceLog; lượt nộp đã có ở results.
@@ -555,4 +559,16 @@ async function play(assignment, studentName, className, studentMa) {
   });
   // ⭐ Đợt 424 — lần trước em bỏ cuộc bằng tải lại / đóng tab tới ngưỡng ⇒ hiện tấm hướng dẫn ngay khi mở bài.
   if (!dacBiet) { try { const n = layNhacCho(khoaBC); if (n) hienNhac({ lan: n, coShow: coShowBC }); } catch (e) {} }
+  // ⭐ Đợt 456 — đã đạt 100% ở MÁY KHÁC? Hỏi bảng điểm tốt nhất của máy chủ một lần cho mỗi act/máy (1 lượt đọc).
+  // Chạy nền, lỗi/không có thì thôi (lần sau hỏi lại). Chỉ trang có mã em (phụ huynh `db=1` không nhắc nên khỏi hỏi).
+  if (!dacBiet && ma && canKiemMayChu(khoaBC)) {
+    docBangDiem(assignment.code, ma).then(bang => {
+      if (bang && bang.v === 1 && bang.em && typeof bang.em === "object") {
+        const k = chuanMaEm(ma);
+        const m = Object.values(bang.em).find(x => x && chuanMaEm(x.ma) === k);
+        if (m && Number(m.total) > 0 && Number(m.score) >= Number(m.total)) { ghiDat100(khoaBC); return; }
+      }
+      ghiDaKiem(khoaBC);
+    }).catch(() => {});
+  }
 }

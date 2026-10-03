@@ -12,6 +12,9 @@
 //   · Lần nhắc ĐẦU sau 2 lần bỏ liền; mỗi lần nhắc sau cần thêm 1 (3, 4, …) — nhớ theo act + mã em, trên máy.
 //   · Làm HẾT một ván ⇒ chuỗi về 0 (số lần đã nhắc giữ nguyên).
 //   · Ván Start with mistakes không tính; phụ huynh (`db=1`) không nhắc.
+//   · ⭐ Đợt 456 (04/10/2026, thầy chốt): em ĐÃ ĐẠT 100% ở act này (một lượt làm hết, điểm = số câu) ⇒ KHÔNG BAO GIỜ nhắc
+//     nữa ở act đó — em đang cày xếp hạng, không còn vì mục tiêu làm đủ bài. Cờ `hoan` lưu theo act + mã em; máy khác
+//     thì trang học sinh đọc bảng điểm tốt nhất của máy chủ MỘT lần/act/máy (`canKiemMayChu`) để biết.
 //   · Bỏ bằng tải lại / đóng tab (trang chết, không hiện được) ⇒ cờ `cho`, hiện ngay lần mở bài sau.
 //   · Bước 2 "Xem các câu sai" chỉ có khi bài bật Show answers (`endOptions.showAnswers !== false`) — thầy chọn (b).
 //
@@ -46,6 +49,7 @@ export function tiLeDaLam({ review, score, total }) {
 export function ghiRoiVan({ code, ma, ten, tiLe, trangChet = false }) {
   if (tiLe == null) return 0;
   const m = docKho(), k = khoaAct(code, ma, ten), o = m[k] || { lien: 0, daNhac: 0, cho: 0 };
+  if (o.hoan) return 0;   // Đợt 456 — đã đạt 100% ở act này: cày xếp hạng, không nhắc
   if (tiLe >= TI_LE_BO) { o.lien = 0; m[k] = o; ghiKho(m); return 0; }
   o.lien = (o.lien || 0) + 1;
   let hien = 0;
@@ -69,7 +73,26 @@ export function layNhacCho({ code, ma, ten }) {
   const m = docKho(), k = khoaAct(code, ma, ten), o = m[k];
   if (!o || !o.cho) return 0;
   const n = o.cho; o.cho = 0; m[k] = o; ghiKho(m);
-  return n;
+  return o.hoan ? 0 : n;   // Đợt 456 — đã đạt 100% ⇒ bỏ luôn nhắc đang chờ
+}
+// ⭐ Đợt 456 — em đã đạt 100% ở act này ⇒ từ nay không đếm bỏ cuộc, không nhắc.
+export function ghiDat100({ code, ma, ten }) {
+  const m = docKho(), k = khoaAct(code, ma, ten), o = m[k] || { lien: 0, daNhac: 0, cho: 0 };
+  if (o.hoan) return;
+  o.hoan = 1; o.lien = 0; o.cho = 0; m[k] = o; ghiKho(m);
+}
+export function daDat100({ code, ma, ten }) {
+  const o = docKho()[khoaAct(code, ma, ten)];
+  return !!(o && o.hoan);
+}
+// Máy này chưa biết em có từng đạt 100% ở máy khác không ⇒ hỏi máy chủ ĐÚNG MỘT LẦN cho mỗi act (cờ `kiem`).
+export function canKiemMayChu({ code, ma, ten }) {
+  const o = docKho()[khoaAct(code, ma, ten)];
+  return !(o && (o.hoan || o.kiem));
+}
+export function ghiDaKiem({ code, ma, ten }) {
+  const m = docKho(), k = khoaAct(code, ma, ten), o = m[k] || { lien: 0, daNhac: 0, cho: 0 };
+  o.kiem = 1; m[k] = o; ghiKho(m);
 }
 
 // ---------------- giao diện ----------------

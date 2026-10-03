@@ -546,6 +546,19 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 456 (04/10/2026) — TẤM NHẮC "START AGAIN QUÁ SỚM": ĐÃ ĐẠT 100% Ở ACT NÀY ⇒ KHÔNG BAO GIỜ NHẮC NỮA · ✅ push + live (xem commit) · ⬜ thầy thử tay
+
+**Thầy chốt (04/10):** em đã đạt 100% rồi thì các lượt sau là cày xếp hạng, không còn vì mục tiêu làm đủ bài ⇒ bỏ hẳn tấm nhắc.
+- Làm hết một ván mà `score >= total > 0` (ván thường, không phải Start with mistakes, không phải phụ huynh) ⇒ `ghiDat100` đặt cờ
+  `hoan` trong `aword-bo-cuoc` (theo act + mã em, localStorage). Có cờ ⇒ `ghiRoiVan` không đếm/không nhắc, `layNhacCho` bỏ luôn
+  nhắc đang chờ (đóng tab/tải lại).
+- Đạt 100% ở MÁY KHÁC: lúc mở bài, nếu máy chưa biết (`canKiemMayChu`) thì đọc `assignments/{code}/bang/tot` (`docBangDiem`, 1 lượt đọc,
+  CHẠY NỀN) một lần/act/máy; dòng của em có `score >= total` ⇒ đặt cờ. Lỗi mạng ⇒ lần sau hỏi lại (cờ `kiem` chỉ đặt khi đọc xong).
+- Chỉ đụng `bo-cuoc.js` + `play.js`. Luật cũ (2 lần bỏ liền, 50 %, tăng dần) giữ nguyên với em CHƯA đạt 100%.
+- Tự kiểm: 9 ca bằng máy (localStorage giả) đạt hết — bỏ 10 lần sau khi đạt 100% = 0 nhắc; act khác vẫn nhắc; cờ chờ bị xoá.
+  ⬜ CHƯA thử đường đọc bảng điểm máy chủ bằng vé em thật (cần trang học sinh trong myLesson).
+- Lưu ý: Gameshow (điểm theo tốc độ, có thể > số câu) có thể bị coi là "đạt 100%" sớm — chưa xử lý.
+
 ## Đợt 455 (04/10/2026) — CROSSWORD: KHÔNG BAO GIỜ BỎ CÂU (xếp lại tới khi đủ từ · từ không chéo được đặt riêng) · ⬜ chưa push/live — xem cuối mục
 
 **Ca gốc (03/10, lớp B2-A, em Anthony, act `B2A_29/9.19:19 ENG1.VOICE/CROSSWORD`):** thầy nghi gian lận vì bảng xếp
