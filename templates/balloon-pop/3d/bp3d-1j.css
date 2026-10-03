@@ -1,0 +1,171 @@
+/* Balloon Pop 1j (dựa trên 1i/1h) — HUD kiểu biển gỗ viền đồng miền Tây + hàng nút ngoài màn chơi (như Rocket Race) */
+.bp-score { display: none !important; }
+
+/* dải trên: đồng hồ (trái) · thanh thời gian (phải) */
+.bp-top { height: auto; top: 1.6cqh; padding: 0 2.2cqw; gap: 1.4cqw; background: none; }
+.bp-clock { display: flex; align-items: center; gap: .7cqw; min-width: 0; padding: .45cqw 1.5cqw .45cqw .6cqw; border-radius: 3cqw;
+  font-family: "Rye", "Baloo 2", serif; font-weight: 400; font-size: 2.9cqw; line-height: 1; letter-spacing: .04em; color: #ffe9b8;
+  background: linear-gradient(180deg, #6e4221, #3d220e 70%, #2c180a); border: .28cqw solid #d9a650;
+  box-shadow: 0 .5cqw 1.2cqw rgba(0,0,0,.45), inset 0 .18cqw 0 rgba(255,230,170,.35), inset 0 -.25cqw .4cqw rgba(0,0,0,.35);
+  text-shadow: 0 .2cqw 0 #1d0f05; }
+.bp-clock::before { content: ""; width: 3.3cqw; height: 3.3cqw; flex: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cdefs%3E%3CradialGradient id='g' cx='.4' cy='.35'%3E%3Cstop offset='0' stop-color='%23fff2c4'/%3E%3Cstop offset='.55' stop-color='%23e3b35a'/%3E%3Cstop offset='1' stop-color='%23946420'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect x='17' y='1' width='6' height='5' rx='1.5' fill='%23c9953f'/%3E%3Ccircle cx='20' cy='5' r='2.6' fill='none' stroke='%23c9953f' stroke-width='1.6'/%3E%3Ccircle cx='20' cy='23' r='16' fill='url(%23g)'/%3E%3Ccircle cx='20' cy='23' r='12.2' fill='%23fbf1d8' stroke='%235a3a14' stroke-width='1.2'/%3E%3Cg stroke='%235a3a14' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M20 12.6v2.2M20 31.2v2.2M9.6 23h2.2M28.2 23h2.2'/%3E%3Cpath d='M20 23v-7M20 23l5 3' stroke-width='1.9'/%3E%3C/g%3E%3Ccircle cx='20' cy='23' r='1.4' fill='%235a3a14'/%3E%3C/svg%3E") center / contain no-repeat;
+  filter: drop-shadow(0 .15cqw .2cqw rgba(0,0,0,.5)); }
+.bp-clock.is-warn { color: #ffb09a; animation: bp-pulse 1s infinite; }
+.bp-clock.is-x2::after { content: "×2"; margin-left: .5cqw; padding: .1cqw .6cqw; border-radius: 1cqw; font: 800 1.8cqw "Baloo 2", sans-serif; color: #2a1206; background: #e8c2ff; }
+.bp-prog { position: relative; height: 2.1cqw; border-radius: 2cqw; overflow: hidden;
+  background: linear-gradient(180deg, #1f1108, #4a2b15); border: .28cqw solid #d9a650;
+  box-shadow: inset 0 .35cqw .6cqw rgba(0,0,0,.65), 0 .45cqw 1cqw rgba(0,0,0,.4); }
+.bp-prog i { border-radius: 2cqw; transition: width .3s linear, background .4s;
+  background: linear-gradient(180deg, rgba(255,255,255,.35), rgba(255,255,255,0) 45%, rgba(0,0,0,.18)), repeating-linear-gradient(-45deg, #f6c95a 0 1.1cqw, #e0a236 1.1cqw 2.2cqw); }
+.bp-prog.is-warn i { background: linear-gradient(180deg, rgba(255,255,255,.3), rgba(255,255,255,0) 45%, rgba(0,0,0,.2)), repeating-linear-gradient(-45deg, #ff7452 0 1.1cqw, #cf3b22 1.1cqw 2.2cqw); }
+.bp-prog::before, .bp-prog::after { content: ""; position: absolute; top: 50%; width: .7cqw; height: .7cqw; margin-top: -.35cqw; border-radius: 50%; z-index: 2;
+  background: radial-gradient(circle at 35% 35%, #fff3c8, #b8862e 70%); box-shadow: 0 0 .2cqw rgba(0,0,0,.6); }
+.bp-prog::before { left: .5cqw; } .bp-prog::after { right: .5cqw; }
+.bp-clock-plus { left: 3cqw; right: auto; top: 8cqh; color: #9fe2ff; font-family: "Rye", serif; text-shadow: 0 .2cqw .4cqw rgba(0,0,0,.6); }
+
+/* hàng nút ngoài màn chơi: nút gỗ viền đồng */
+.bp-outbar { height: 80px; flex: 0 0 80px; display: flex; align-items: center; justify-content: center; gap: 14px; }
+.bp-tool { position: relative; width: 64px; height: 50px; padding: 0; display: inline-grid; place-items: center; cursor: pointer; color: #ffe6b0;
+  border-radius: 12px; border: 2px solid #c9974a;
+  background: repeating-linear-gradient(90deg, rgba(0,0,0,0) 0 9px, rgba(0,0,0,.07) 9px 10px, rgba(0,0,0,0) 10px 23px), linear-gradient(180deg, #86532b, #5a3418 55%, #43250f);
+  box-shadow: 0 4px 0 #22120a, 0 7px 14px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,225,160,.4); transition: transform .08s, box-shadow .08s, border-color .15s; }
+.bp-tool:hover { border-color: #f3c76c; color: #fff3d0; }
+.bp-tool:active { transform: translateY(3px); box-shadow: 0 1px 0 #22120a, 0 3px 8px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,225,160,.4); }
+.bp-tool svg { width: 25px; height: 25px; filter: drop-shadow(0 1px 0 rgba(0,0,0,.6)); }
+.bp-tool.bp-sound.is-off { border-color: #e86a4a; color: #ffc1ad; }
+.bp-tool-gap { width: 22px; }
+
+/* bảng nổi của 4 nút hệ AWord */
+.bp-pn { position: relative; min-width: 44cqw; text-align: left; }
+.bp-pn h2 { text-align: center; }
+.bp-pn-x { position: absolute; right: 1.4cqw; top: 1.2cqw; width: 4cqw; height: 4cqw; border-radius: 50%; border: 0; cursor: pointer; font-size: 2cqw; color: #fff; background: rgba(255,255,255,.14); }
+.bp-pn-list { display: grid; gap: .8cqw; }
+.bp-pn-row { display: flex; align-items: center; gap: 1.2cqw; padding: 1cqw 1.4cqw; border-radius: 1.2cqw; border: .2cqw solid rgba(255,255,255,.15); background: rgba(255,255,255,.06);
+  color: #fff; font: 700 2.1cqw "Baloo 2", sans-serif; cursor: pointer; text-align: left; }
+.bp-pn-row.is-on { border-color: #ffd34d; background: rgba(255,211,77,.14); }
+.bp-pn-row svg { width: 2.6cqw; height: 2.6cqw; flex: none; color: #ffd34d; }
+.bp-pn-note { margin: 1cqw 0 0; font-size: 1.5cqw; opacity: .6; text-align: center; }
+.bp-pn-tb { width: 100%; border-collapse: collapse; font-size: 2.1cqw; }
+.bp-pn-tb th, .bp-pn-tb td { padding: .6cqw 1cqw; border-bottom: .12cqw solid rgba(255,255,255,.14); }
+.bp-pn-tb th { text-align: left; color: #ffd34d; font-size: 1.7cqw; letter-spacing: .06em; }
+.bp-pn-modes { display: flex; gap: 1.6cqw; justify-content: center; }
+.bp-pn-mode { display: grid; justify-items: center; gap: .4cqw; width: 16cqw; padding: 1.6cqw 1cqw; border-radius: 1.4cqw; cursor: pointer;
+  border: .25cqw solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); color: #fff; font: 800 2.2cqw "Baloo 2", sans-serif; }
+.bp-pn-mode svg { width: 5cqw; height: 5cqw; }
+.bp-pn-mode.is-on { border-color: #ffd34d; background: rgba(255,211,77,.14); }
+.bp-pn-mode[disabled] { opacity: .5; cursor: default; }
+.bp-pn-mode small { font-size: 1.4cqw; font-weight: 600; opacity: .8; }
+.bp-pn .bp-opts { margin-top: 0; }
+
+/* nút Menu cũ trong bp3d.css đặt tuyệt đối góc màn — trong hàng nút thì về dòng */
+.bp-outbar .bp-tool.bp-menu { position: relative; left: auto; top: auto; right: auto; bottom: auto; margin: 0; }
+
+/* ============ 1i: bảng Options theo đúng kiểu AWord (thẻ trắng, Timer xanh lá, ô số, thanh trượt xanh, ô tích) ============ */
+.bp-pn.is-aw { background: #fff; color: #1e293b; min-width: 0; width: 56cqw; max-width: 56cqw; padding: 2cqw 2.2cqw 1.8cqw; border-radius: 2cqw; box-shadow: 0 2cqw 5cqw rgba(0,0,0,.35); border: 0; }
+.bp-pn.is-aw h2 { display: none; }
+.bp-pn.is-aw .bp-pn-x { background: #f1f5f9; color: #475569; width: 3.2cqw; height: 3.2cqw; font-size: 1.5cqw; right: -1.2cqw; top: -1.2cqw; box-shadow: 0 .3cqw .8cqw rgba(0,0,0,.25); }
+.aw-o { font-family: "Baloo 2", system-ui, sans-serif; text-align: left; }
+.aw-o button { font-family: inherit; }
+.aw-o-timer { display: flex; gap: 1cqw; align-items: center; }
+.aw-o-seg { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); padding: .35cqw; border-radius: 1cqw; background: #dcf1e2; }
+.aw-o-seg button { border: 0; background: none; padding: .55cqw 0; border-radius: .7cqw; font-size: 1.45cqw; font-weight: 700; color: #1f5132; cursor: pointer; }
+.aw-o-seg button.is-on { background: #17603a; color: #fff; box-shadow: 0 .2cqw .5cqw rgba(23,96,58,.35); }
+.aw-o-tstep, .aw-o-step { display: inline-flex; align-items: center; border: .14cqw solid #dbe3ec; border-radius: .9cqw; background: #fff; }
+.aw-o-tstep button, .aw-o-step button { border: 0; background: none; width: 2.8cqw; height: 3.1cqw; font-size: 1.8cqw; color: #64748b; cursor: pointer; }
+.aw-o-tstep b { min-width: 7cqw; text-align: center; font-size: 1.6cqw; color: #1e293b; letter-spacing: .05em; }
+.aw-o-tstep.is-dis { opacity: .45; pointer-events: none; }
+.aw-o-step b { min-width: 3.6cqw; text-align: center; font-size: 1.7cqw; }
+.aw-o-dash { margin: 1.2cqw 0; border-top: .14cqw dashed #d6dee8; }
+.aw-o-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 2.4cqw; }
+.aw-o-col { display: grid; gap: 1.2cqw; align-content: start; }
+.aw-o-lab { font-size: 1.15cqw; font-weight: 800; letter-spacing: .08em; color: #64748b; margin-bottom: .45cqw; }
+.aw-o-lab small { font-size: 1.05cqw; font-weight: 600; letter-spacing: .02em; color: #a3b1c2; margin-left: .4cqw; }
+.aw-o-sl { display: flex; align-items: center; gap: 1cqw; }
+.aw-o-sl b { min-width: 3.4cqw; font-size: 1.6cqw; color: #2563eb; }
+.aw-o-sl.is-off b { color: #a3b1c2; font-size: 1.35cqw; }
+.aw-o-sl input { -webkit-appearance: none; appearance: none; flex: 1; height: .55cqw; border-radius: 1cqw; margin: 0; cursor: pointer;
+  background: linear-gradient(90deg, #3b82f6 0 var(--p, 0%), #e2e8f0 var(--p, 0%) 100%); }
+.aw-o-sl input::-webkit-slider-thumb { -webkit-appearance: none; width: 1.7cqw; height: 1.7cqw; border-radius: 50%; background: #3b82f6; border: .3cqw solid #fff; box-shadow: 0 .15cqw .5cqw rgba(15,23,42,.35); }
+.aw-o-sl input::-moz-range-thumb { width: 1.2cqw; height: 1.2cqw; border-radius: 50%; background: #3b82f6; border: .3cqw solid #fff; }
+.aw-o-sl.is-off input::-webkit-slider-thumb { background: #ef4444; }
+.aw-o-sl.is-off input::-moz-range-thumb { background: #ef4444; }
+.aw-o-sep { margin: 1.4cqw 0 1.1cqw; border-top: .14cqw solid #e2e8f0; }
+.aw-o-checks { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-flow: column; grid-template-rows: repeat(2, auto); gap: .9cqw 1.4cqw; }
+.aw-o-chk { display: flex; align-items: center; gap: .8cqw; font-size: 1.45cqw; font-weight: 600; color: #1e293b; cursor: pointer; }
+.aw-o-chk input { display: none; }
+.aw-o-chk i { width: 1.9cqw; height: 1.9cqw; border-radius: .45cqw; border: .16cqw solid #94a3b8; background: #fff; flex: none; position: relative; }
+.aw-o-chk input:checked + i { background: #3b82f6; border-color: #3b82f6; }
+.aw-o-chk input:checked + i::after { content: ""; position: absolute; left: 30%; top: 8%; width: 28%; height: 55%; border: solid #fff; border-width: 0 .28cqw .28cqw 0; transform: rotate(45deg); }
+.aw-o-foot { display: flex; justify-content: center; gap: 1cqw; margin-top: 1.8cqw; }
+.aw-o-tpl, .aw-o-apply { height: 4.2cqw; padding: 0 2.4cqw; border-radius: 1.1cqw; font-size: 1.55cqw; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: .8cqw; }
+.aw-o-tpl { background: #fff; color: #2563eb; border: .16cqw solid #93c5fd; }
+.aw-o-tpl svg { width: 2cqw; height: 2cqw; }
+.aw-o-apply { background: #3b82f6; color: #fff; border: 0; box-shadow: 0 .3cqw .8cqw rgba(59,130,246,.35); }
+.aw-o-apply:disabled { background: #bfdbfe; box-shadow: none; cursor: default; }
+.bp-top .bp-clock[hidden], .bp-top .bp-prog[hidden] { display: none; }
+
+/* ============ 1j ============ */
+/* ô giờ AWord: vùng phút / giây chạm-vuốt, số trượt */
+.aw-o-tmid { display: flex; align-items: center; gap: .2cqw; padding: 0 .3cqw; }
+.aw-o-tmid i { font-style: normal; font-weight: 800; color: #475569; font-size: 1.6cqw; }
+.aw-o-zone { position: relative; overflow: hidden; width: 3cqw; height: 2.6cqw; cursor: ns-resize; touch-action: none; border-radius: .4cqw; }
+.aw-o-zone:hover { background: #f1f5f9; }
+.aw-o-zone span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 1.6cqw; font-weight: 800; color: #1e293b; }
+/* Points off: thanh LUÔN đỏ */
+.aw-o-sl.is-offable input { background: linear-gradient(90deg, #ef4444 0 var(--p, 0%), #fde2e2 var(--p, 0%) 100%); }
+.aw-o-sl.is-offable input::-webkit-slider-thumb { background: #ef4444; }
+.aw-o-sl.is-offable input::-moz-range-thumb { background: #ef4444; }
+.aw-o-sl.is-offable b { color: #dc2626; }
+.aw-o-sl.is-offable.is-off b { color: #f87171; }
+/* ô Bonus: xanh lá */
+.aw-o-chk.is-green input:checked + i { background: #16a34a; border-color: #16a34a; }
+.aw-o-checks { grid-template-rows: repeat(2, auto); }
+/* ô đồng hồ Count up trong hàng nút */
+.bp-uptime { height: 50px; min-width: 104px; padding: 0 14px 0 10px; display: inline-flex; align-items: center; gap: 8px; border-radius: 12px; border: 2px solid #c9974a;
+  background: linear-gradient(180deg, #5a3519, #321a0b); color: #ffe9b8; font: 400 22px "Rye", serif; box-shadow: 0 4px 0 #22120a, inset 0 1px 0 rgba(255,225,160,.35); }
+.bp-uptime[hidden] { display: none; }
+.bp-uptime-ic { width: 26px; height: 26px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='23' r='16' fill='%23d9a650'/%3E%3Ccircle cx='20' cy='23' r='12.2' fill='%23fbf1d8' stroke='%235a3a14' stroke-width='1.2'/%3E%3Crect x='17' y='1' width='6' height='5' rx='1.5' fill='%23c9953f'/%3E%3Cpath d='M20 23v-7M20 23l5 3' stroke='%235a3a14' stroke-width='1.9' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat; }
+.bp-pn-ipad { display: grid; justify-items: center; gap: 1cqw; padding: 1cqw 0; color: #cfe0ff; }
+.bp-pn-ipad svg { width: 8cqw; height: 8cqw; }
+.bp-pn-ipad p { margin: 0; font-size: 1.8cqw; opacity: .75; }
+
+/* bảng kết quả: biển gỗ / giấy dán kiểu truy nã miền Tây */
+.bp-ov-end { background: radial-gradient(ellipse at center, rgba(20,10,4,.35), rgba(20,10,4,.72)); }
+.bp-wanted { position: relative; width: 50cqw; padding: 2.6cqw 3cqw 2.4cqw; text-align: center; color: #3a220f;
+  background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.35), rgba(255,255,255,0) 50%), radial-gradient(ellipse at 80% 90%, rgba(120,70,30,.25), rgba(0,0,0,0) 55%), linear-gradient(180deg, #f3dfb4, #e5c68c);
+  border-radius: .6cqw; box-shadow: 0 0 0 .5cqw #6b3f1d, 0 0 0 .9cqw #3e2310, 0 2cqw 4cqw rgba(0,0,0,.55), inset 0 0 3cqw rgba(110,60,20,.45);
+  animation: bp-wanted-in .6s cubic-bezier(.2,1.3,.4,1); }
+@keyframes bp-wanted-in { from { transform: translateY(-40cqh) rotate(-6deg); } to { transform: translateY(0) rotate(0); } }
+.bp-wanted::before, .bp-wanted::after { content: ""; position: absolute; top: .9cqw; width: 1.3cqw; height: 1.3cqw; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff3c8, #9a6a24 70%); box-shadow: 0 .15cqw .3cqw rgba(0,0,0,.5); }
+.bp-wanted::before { left: 1cqw; } .bp-wanted::after { right: 1cqw; }
+.bp-w-title { font: 400 4.6cqw "Rye", serif; letter-spacing: .04em; color: #7a2e12; text-shadow: 0 .2cqw 0 rgba(255,240,200,.7); line-height: 1.05; }
+.bp-w-rule { display: flex; align-items: center; gap: 1cqw; margin: .9cqw 3cqw .4cqw; color: #8a5a22; }
+.bp-w-rule i { flex: 1; height: .3cqw; background: linear-gradient(90deg, transparent, #8a5a22, transparent); }
+.bp-w-rule span { font-size: 2cqw; }
+.bp-w-label { font: 800 1.6cqw "Baloo 2", sans-serif; letter-spacing: .35em; color: #6b4520; }
+.bp-ov-end .bp-end-score { font: 400 10cqw "Rye", serif; line-height: 1; margin: .2cqw 0 1cqw; color: #b8321f;
+  text-shadow: 0 .35cqw 0 #5a1a0c, 0 .7cqw 1.2cqw rgba(0,0,0,.35); }
+.bp-w-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1cqw; margin: 0 0 1.8cqw; }
+.bp-w-stats > div { display: grid; justify-items: center; gap: .1cqw; padding: .8cqw .4cqw; border-radius: 1cqw; background: rgba(90,52,20,.12); border: .18cqw dashed rgba(90,52,20,.45); }
+.bp-w-ic { font-size: 2cqw; filter: sepia(.6); }
+.bp-w-stats b { font: 400 2.8cqw "Rye", serif; color: #3a220f; }
+.bp-w-stats small { font: 800 1.1cqw "Baloo 2", sans-serif; letter-spacing: .2em; color: #7a5530; }
+.bp-w-btns { display: flex; justify-content: center; gap: 1.2cqw; }
+.bp-wbtn { height: 4.6cqw; padding: 0 2.4cqw; border-radius: 1cqw; cursor: pointer; font: 800 1.8cqw "Baloo 2", sans-serif; color: #ffe6b0; border: .2cqw solid #c9974a;
+  background: linear-gradient(180deg, #86532b, #5a3418 55%, #43250f); box-shadow: 0 .4cqw 0 #22120a, inset 0 .1cqw 0 rgba(255,225,160,.4); }
+.bp-wbtn.is-main { background: linear-gradient(180deg, #c8402e, #8e2616 60%, #6d1b0f); border-color: #f0c46a; color: #fff3d6; }
+.bp-wbtn:active { transform: translateY(.3cqw); box-shadow: 0 .1cqw 0 #22120a; }
+.bp-wbtn[hidden] { display: none; }
+/* hàng nút tự co khi màn hẹp (iPad dọc, cửa sổ nhỏ) */
+.bp-outbar { gap: clamp(6px, 1.6vw, 14px); }
+.bp-tool { width: clamp(38px, 9vw, 64px); height: clamp(34px, 7vw, 50px); }
+.bp-tool svg { width: clamp(18px, 3.4vw, 25px); height: clamp(18px, 3.4vw, 25px); }
+.bp-tool-gap { width: clamp(6px, 2.4vw, 22px); }
+.bp-uptime { height: clamp(34px, 7vw, 50px); min-width: 0; font-size: clamp(14px, 3vw, 22px); padding: 0 clamp(6px, 1.6vw, 14px); }
+/* thanh trượt trình duyệt có bề rộng tối thiểu mặc định (~130px) ⇒ khung hẹp bị tràn thẻ: cho co về 0 */
+.aw-o-sl input { min-width: 0; width: 100%; }
+.aw-o-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.aw-o-checks { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.aw-o-seg { min-width: 0; }

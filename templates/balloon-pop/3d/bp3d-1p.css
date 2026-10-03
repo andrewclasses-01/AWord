@@ -1,0 +1,48 @@
+/* Balloon Pop 3D mẫu 1p — INTRO ĐIỆN ẢNH: dải đen, chữ ANDREW CLASSES presents, BALLOON POP đập xuống */
+.bp-cine { position: absolute; inset: 0; z-index: 30; overflow: hidden; pointer-events: auto; cursor: pointer; }
+.bp-cine[hidden] { display: none; }
+.bp-cine-bar { position: absolute; left: 0; right: 0; height: 11.5%; background: #050404; }
+.bp-cine-bar.top { top: 0; }
+.bp-cine-bar.bot { bottom: 0; }
+.bp-cine.is-on .bp-cine-bar.top { animation: bp-bar-top .9s cubic-bezier(.3,.1,.2,1) both; }
+.bp-cine.is-on .bp-cine-bar.bot { animation: bp-bar-bot .9s cubic-bezier(.3,.1,.2,1) both; }
+.bp-cine.is-open .bp-cine-bar.top { animation: bp-bar-top-out 1.8s cubic-bezier(.6,0,.3,1) both; }
+.bp-cine.is-open .bp-cine-bar.bot { animation: bp-bar-bot-out 1.8s cubic-bezier(.6,0,.3,1) both; }
+@keyframes bp-bar-top { from { transform: translateY(-100%); } to { transform: none; } }
+@keyframes bp-bar-bot { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes bp-bar-top-out { from { transform: none; } to { transform: translateY(-100%); } }
+@keyframes bp-bar-bot-out { from { transform: none; } to { transform: translateY(100%); } }
+
+/* ANDREW CLASSES presents — chữ mảnh giãn dần ở 1/3 dưới */
+.bp-cine-pre { position: absolute; left: 0; right: 0; bottom: 17%; text-align: center; opacity: 0; color: #fff4dc;
+  text-shadow: 0 .2cqw 1.2cqw rgba(0,0,0,.75); }
+.bp-cine-pre .a { display: block; font: italic 900 3.1cqw "Exo 2", sans-serif; letter-spacing: .5em; }
+.bp-cine-pre .b { display: block; font: 400 1.7cqw Rye, serif; letter-spacing: .35em; margin-top: .6cqw; color: #ffd98a; }
+.bp-cine-pre.is-in { animation: bp-pre 3.6s ease-out both; }
+@keyframes bp-pre { 0% { opacity: 0; letter-spacing: .1em; filter: blur(6px); } 18% { opacity: 1; filter: blur(0); } 78% { opacity: 1; } 100% { opacity: 0; letter-spacing: .7em; filter: blur(3px); } }
+
+/* BALLOON POP — chữ Viễn Tây vàng đồng, đập xuống + bụi tung */
+.bp-cine-title { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); opacity: 0; white-space: nowrap; pointer-events: none; }
+.bp-cine-title span { display: block; font: 400 10.5cqw Rye, serif; letter-spacing: .04em; line-height: 1;
+  background: linear-gradient(180deg, #fff3c4 0%, #ffd46a 38%, #d8902c 62%, #8a4f14 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  -webkit-text-stroke: .18cqw #3a2008; filter: drop-shadow(0 .5cqw 0 #2a1504) drop-shadow(0 1.2cqw 1.6cqw rgba(0,0,0,.6)); }
+.bp-cine-title::before { content: ""; position: absolute; left: 50%; top: 60%; width: 120%; height: 90%; transform: translate(-50%, -50%) scale(.2); opacity: 0; z-index: -1;
+  background: radial-gradient(closest-side, rgba(230,190,140,.75), rgba(200,150,100,.35) 55%, rgba(200,150,100,0)); filter: blur(8px); }
+.bp-cine-title.is-in { animation: bp-slam 1.1s cubic-bezier(.2,.9,.3,1) both; }
+.bp-cine-title.is-in::before { animation: bp-dust 2.2s ease-out both; }
+.bp-cine-title.is-out { animation: bp-title-out .9s ease-in both; }
+@keyframes bp-slam { 0% { opacity: 0; transform: translate(-50%, -50%) scale(2.8); filter: blur(10px); } 14% { opacity: 1; transform: translate(-50%, -50%) scale(.93); filter: blur(0); }
+  24% { transform: translate(-50%, -50%) scale(1.04); } 34%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes bp-dust { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.2); } 10% { opacity: .95; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); } }
+@keyframes bp-title-out { from { opacity: 1; transform: translate(-50%, -50%) scale(1); } to { opacity: 0; transform: translate(-50%, -80%) scale(.86); filter: blur(4px); } }
+
+/* bản Phim cao bồi: vệt xước + nhấp nháy phim cũ */
+.bp-cine.is-film::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+  background: repeating-linear-gradient(90deg, rgba(255,240,210,0) 0 23%, rgba(255,240,210,.12) 23.1% 23.25%, rgba(255,240,210,0) 23.4% 61%, rgba(40,20,5,.14) 61.1% 61.2%, rgba(255,240,210,0) 61.3% 100%);
+  animation: bp-film .18s steps(2) infinite; }
+.bp-cine.is-film.is-open::after { animation: bp-film .18s steps(2) infinite, bp-film-out 2s ease-in both; }
+@keyframes bp-film { 0% { transform: translateX(0); opacity: .45; } 50% { transform: translateX(3.5%); opacity: .6; } 100% { transform: translateX(-2%); opacity: .5; } }
+@keyframes bp-film-out { to { opacity: 0; } }
+
+.bp-cine-skip { position: absolute; right: 2.2cqw; bottom: 13.5%; font: 700 1.25cqw "Baloo 2", sans-serif; color: rgba(255,244,220,.72); letter-spacing: .06em; text-shadow: 0 1px 4px rgba(0,0,0,.8); }
+.bp-cine.is-open .bp-cine-skip { opacity: 0; transition: opacity .4s; }

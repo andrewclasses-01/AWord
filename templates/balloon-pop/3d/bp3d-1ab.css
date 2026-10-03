@@ -1,0 +1,4 @@
+/* 1ab (30/9/2026): intro nhanh hơn — dải đen mở nhanh theo đoạn trôi về góc chơi 1,5 s, chữ PRESENTS gọn hơn */
+.bp-cine.is-open .bp-cine-bar.top, .bp-cine.is-open .bp-cine-bar.bot { animation-duration: 1.2s; }
+.bp-cine.is-on .bp-cine-bar.top, .bp-cine.is-on .bp-cine-bar.bot { animation-duration: .6s; }
+.bp-cine-pre.is-in { animation-duration: 3s; }

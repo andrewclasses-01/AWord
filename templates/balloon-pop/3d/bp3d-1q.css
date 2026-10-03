@@ -1,0 +1,29 @@
+/* Balloon Pop 3D mẫu 1q — MÀN CHỜ: chỉ logo ANDREW STUDIO + nút START (tinh tế, vàng đồng, kính mờ) */
+.bp-ov.bp-idle { background: radial-gradient(ellipse at 50% 120%, rgba(20,10,4,.35), rgba(0,0,0,0) 60%); display: block; }
+.bp-ov.bp-idle[hidden] { display: none; }
+.bp-studio { position: absolute; left: 50%; top: 13%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 1.1cqw;
+  animation: bp-studio-in 2.2s cubic-bezier(.22,.9,.3,1) both; pointer-events: none; }
+.bp-studio-mark { width: 5.6cqw; height: 5.6cqw; filter: drop-shadow(0 .3cqw .9cqw rgba(0,0,0,.45)); }
+.bp-studio-name { display: flex; align-items: center; gap: 1.4cqw; }
+.bp-studio-name i { display: block; width: 7cqw; height: .12cqw; background: linear-gradient(90deg, rgba(226,178,90,0), #e2b25a); }
+.bp-studio-name i:last-child { transform: scaleX(-1); }
+.bp-studio-name span { font: italic 900 2.5cqw "Exo 2", sans-serif; letter-spacing: .42em; padding-left: .42em; white-space: nowrap;
+  background: linear-gradient(100deg, #fff6dc 0%, #f1cf86 40%, #fffaf0 50%, #e2b25a 60%, #fff1c8 100%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 .2cqw .6cqw rgba(0,0,0,.55)); animation: bp-shine 6s ease-in-out 2s infinite; }
+@keyframes bp-studio-in { from { opacity: 0; transform: translate(-50%, -1.2cqw); filter: blur(6px); } to { opacity: 1; transform: translate(-50%, 0); filter: blur(0); } }
+@keyframes bp-shine { 0%, 60% { background-position: 100% 0; } 100% { background-position: -150% 0; } }
+
+.bp-start.bp-start-lux { position: absolute; left: 50%; top: 79%; transform: translate(-50%, -50%); cursor: pointer; border: 0; padding: 0; background: none;
+  animation: bp-start-in 1.6s .6s cubic-bezier(.22,.9,.3,1) both; }
+.bp-start-lux span { display: block; position: relative; padding: 1.15cqw 5.4cqw 1.15cqw 5.9cqw; border-radius: 99cqw; font: italic 900 2.3cqw "Exo 2", sans-serif; letter-spacing: .5em; color: #fff4d8;
+  background: linear-gradient(180deg, rgba(40,24,12,.62), rgba(18,10,5,.72)); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  box-shadow: inset 0 0 0 .13cqw rgba(236,196,120,.9), inset 0 .15cqw .5cqw rgba(255,236,190,.25), 0 .6cqw 2cqw rgba(0,0,0,.45), 0 0 2.4cqw rgba(236,180,90,.25);
+  text-shadow: 0 .1cqw .4cqw rgba(0,0,0,.6); transition: transform .35s cubic-bezier(.22,.9,.3,1), box-shadow .35s; animation: bp-breathe 3.2s ease-in-out 2.2s infinite; }
+.bp-start-lux span::before, .bp-start-lux span::after { content: ""; position: absolute; top: 50%; width: 4cqw; height: .12cqw; background: linear-gradient(90deg, rgba(226,178,90,0), #e2b25a); }
+.bp-start-lux span::before { right: 100%; margin-right: 1.2cqw; }
+.bp-start-lux span::after { left: 100%; margin-left: 1.2cqw; transform: scaleX(-1); }
+.bp-start-lux:hover span { transform: translateY(-.2cqw) scale(1.03); box-shadow: inset 0 0 0 .13cqw #ffe0a0, inset 0 .15cqw .5cqw rgba(255,236,190,.35), 0 .9cqw 2.4cqw rgba(0,0,0,.5), 0 0 3.4cqw rgba(255,200,110,.45); }
+.bp-start-lux:active span { transform: translateY(.1cqw) scale(.98); }
+@keyframes bp-start-in { from { opacity: 0; transform: translate(-50%, -30%); } to { opacity: 1; transform: translate(-50%, -50%); } }
+@keyframes bp-breathe { 0%, 100% { box-shadow: inset 0 0 0 .13cqw rgba(236,196,120,.9), inset 0 .15cqw .5cqw rgba(255,236,190,.25), 0 .6cqw 2cqw rgba(0,0,0,.45), 0 0 2cqw rgba(236,180,90,.2); }
+  50% { box-shadow: inset 0 0 0 .13cqw #ffe3a8, inset 0 .15cqw .5cqw rgba(255,236,190,.35), 0 .6cqw 2cqw rgba(0,0,0,.45), 0 0 3.6cqw rgba(255,196,100,.5); } }

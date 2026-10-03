@@ -1,0 +1,43 @@
+/* Balloon Pop 3D mẫu 1r — màn chờ TRAIN RUSH + nút START kiểu miền Tây; intro chỉ ANDREW STUDIO / PRESENTS */
+.bp-ov.bp-idle.is-leaving { animation: bp-idle-out 1s ease-out forwards; pointer-events: none; }
+@keyframes bp-idle-out { to { opacity: 0; transform: scale(1.04); filter: blur(3px); } }
+.bp-logo { position: absolute; left: 50%; top: 12%; transform: translateX(-50%); text-align: center; pointer-events: none; animation: bp-logo-in 2.4s cubic-bezier(.22,.9,.3,1) both; }
+.bp-logo .t { display: block; font: 400 8.6cqw Rye, serif; letter-spacing: .05em; line-height: 1; white-space: nowrap;
+  background: linear-gradient(180deg, #fff6d6 0%, #f7d47c 36%, #d9953a 60%, #93551a 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  -webkit-text-stroke: .14cqw #3b2109; filter: drop-shadow(0 .35cqw 0 #2a1605) drop-shadow(0 1cqw 1.6cqw rgba(0,0,0,.55)); }
+.bp-logo-rule { display: flex; align-items: center; justify-content: center; gap: 1cqw; margin-top: 1cqw; }
+.bp-logo-rule i { width: 10cqw; height: .14cqw; background: linear-gradient(90deg, rgba(240,200,120,0), #f0c878); }
+.bp-logo-rule i:last-child { transform: scaleX(-1); }
+.bp-logo-rule b { font-size: 1.5cqw; color: #f5cf7c; text-shadow: 0 .1cqw .4cqw rgba(0,0,0,.6); }
+@keyframes bp-logo-in { from { opacity: 0; transform: translate(-50%, -1.5cqw) scale(1.06); filter: blur(8px); } to { opacity: 1; transform: translate(-50%, 0) scale(1); filter: blur(0); } }
+
+/* START: tấm gỗ sẫm, viền đồng thau, đinh tán 2 bên, chữ Rye khắc */
+.bp-start.bp-start-west { position: absolute; left: 50%; top: 79%; transform: translate(-50%, -50%); border: 0; padding: 0; background: none; cursor: pointer; animation: bp-start-in 1.6s .7s cubic-bezier(.22,.9,.3,1) both; }
+.bp-start-west span { position: relative; display: block; padding: 1.05cqw 5.6cqw 1.15cqw; border-radius: .9cqw; font: 400 2.6cqw Rye, serif; letter-spacing: .32em; padding-left: 5.9cqw; color: #ffe9b8;
+  text-shadow: 0 -.08cqw 0 rgba(0,0,0,.7), 0 .12cqw 0 rgba(255,220,150,.25);
+  background:
+    radial-gradient(circle at 1.6cqw 50%, #ffe7a8 0 .28cqw, #9a6a24 .32cqw .42cqw, transparent .46cqw),
+    radial-gradient(circle at calc(100% - 1.6cqw) 50%, #ffe7a8 0 .28cqw, #9a6a24 .32cqw .42cqw, transparent .46cqw),
+    repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 .5cqw, rgba(0,0,0,.08) .5cqw .62cqw),
+    linear-gradient(180deg, #6a4020 0%, #4a2a12 55%, #34200c 100%);
+  box-shadow: inset 0 0 0 .16cqw #c99a4c, inset 0 0 0 .32cqw #3a220c, inset 0 0 0 .4cqw rgba(232,190,110,.55), 0 .5cqw 0 #1f1206, 0 1cqw 2cqw rgba(0,0,0,.5);
+  transition: transform .3s cubic-bezier(.22,.9,.3,1), filter .3s; animation: bp-west-glow 3.4s ease-in-out 2.3s infinite; }
+.bp-start-west:hover span { transform: translateY(-.2cqw); filter: brightness(1.12); }
+.bp-start-west:active span { transform: translateY(.25cqw); }
+@keyframes bp-west-glow { 0%, 100% { filter: brightness(1) drop-shadow(0 0 0 rgba(255,200,110,0)); } 50% { filter: brightness(1.08) drop-shadow(0 0 1.4cqw rgba(255,200,110,.45)); } }
+
+/* intro: dải đen khép chậm (khung màn chờ còn thấy), không còn tên game; ANDREW STUDIO / PRESENTS ở giữa */
+.bp-cine.is-on .bp-cine-bar.top { animation-duration: 2.2s; }
+.bp-cine.is-on .bp-cine-bar.bot { animation-duration: 2.2s; }
+.bp-cine-title { display: none; }
+.bp-cine-pre { bottom: auto; top: 50%; transform: translateY(-50%); }
+.bp-cine-pre .a { font-size: 3.8cqw; letter-spacing: .55em; padding-left: .55em; }
+.bp-cine-pre .b { font-size: 1.9cqw; letter-spacing: .6em; padding-left: .6em; margin-top: 1cqw; }
+.bp-cine-pre.is-in { animation: bp-pre 4.4s ease-out both; }
+.bp-cine.is-film::after { animation: bp-film-mv .18s steps(2) infinite, bp-film-in 2.8s ease-in both; }
+.bp-cine.is-film.is-open::after { animation: bp-film-mv .18s steps(2) infinite, bp-film-out 2s ease-in both; }
+@keyframes bp-film-mv { 0% { transform: translateX(0); } 50% { transform: translateX(3.5%); } 100% { transform: translateX(-2%); } }
+@keyframes bp-film-in { from { opacity: 0; } to { opacity: .5; } }
+.bp-cine-pre::before { content: ""; position: absolute; left: 50%; top: 50%; width: 70cqw; height: 16cqw; transform: translate(-50%, -50%); z-index: -1;
+  background: radial-gradient(closest-side, rgba(12,8,4,.62), rgba(12,8,4,.35) 55%, rgba(12,8,4,0)); }
+.bp-cine-pre .b { color: #ffe2a0; text-shadow: 0 .15cqw .8cqw rgba(0,0,0,.9); }

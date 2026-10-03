@@ -1,0 +1,77 @@
+/* TRAIN RUSH — CSS trận FIGHT mẫu 1aj (03/10/2026): tách từ <style> của mau-1ai-train-rush.html; #fight ⇒ .fb-root (gắn được vào ô bất kỳ / AWord). */
+  .fb-root { --red: #e2402f; --blue: #2f7fe2; --wood: #3a2414; --brass: #c89a4a; --paper: #f6e6c4; --hud: 64px; --bar: 80px; }
+  .fb-root { position: fixed; inset: 0; display: flex; flex-direction: column; background: #120c07; color: var(--paper); font-family: "Baloo 2", system-ui, sans-serif; user-select: none; -webkit-user-select: none; }
+
+  /* ---- dải điểm trên cùng */
+  .fb-hud { height: var(--hud); flex: 0 0 var(--hud); display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 14px; padding: 0 14px;
+    background: linear-gradient(#4a2e18, #2c1a0d); border-bottom: 3px solid var(--brass); }
+  .fb-team { display: flex; align-items: center; gap: 14px; height: 48px; padding: 0 18px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, .25); }
+  .fb-team.t0 { background: linear-gradient(90deg, #8f1f14, #c73526); }
+  .fb-team.t1 { background: linear-gradient(270deg, #143f8f, #2769c7); flex-direction: row-reverse; }
+  .fb-team span { font: 800 20px "Baloo 2"; letter-spacing: .06em; opacity: .92; }
+  .fb-team b { font: 400 34px Rye, serif; min-width: 70px; text-align: center; }
+  .fb-team.t0 b { margin-left: auto; } .fb-team.t1 b { margin-right: auto; }
+  .fb-team.is-lead { box-shadow: 0 0 0 3px #ffd98a, 0 0 18px rgba(255, 217, 138, .6); }
+  .fb-clock { font: 400 34px Rye, serif; min-width: 120px; text-align: center; padding: 2px 18px; border-radius: 10px; background: #1c1008; border: 2px solid var(--brass); color: #ffd98a; }
+  .fb-clock.is-warn { color: #ff7b6b; border-color: #ff7b6b; }
+
+  /* ---- vùng chơi */
+  .fb-area { position: relative; flex: 1 1 auto; min-height: 0; display: grid; gap: 6px; background: #120c07; }
+  .fb-area.k1 { grid-template-columns: 1fr 1fr; }
+  .fb-area.k2 { grid-template-rows: 1fr 1fr; }
+  .fb-area.k3 { grid-template-columns: 1fr; }
+  .fb-board { position: relative; overflow: hidden; min-width: 0; min-height: 0; }
+  .fb-board .bp-stage { position: absolute; left: 0; top: 0; }
+  .is-embed .bp-top, .is-embed .bp-outbar { display: none !important; }
+  .fb-board::after { content: ""; position: absolute; inset: 0; pointer-events: none; border: 4px solid var(--c); border-radius: 2px; opacity: .9; }
+  .fb-board.t0 { --c: var(--red); } .fb-board.t1 { --c: var(--blue); }
+  .fb-board.k3::after { display: none; }
+  .fb-tag { position: absolute; z-index: 6; pointer-events: none; font: 800 18px "Baloo 2"; letter-spacing: .08em; padding: 2px 14px; border-radius: 0 0 10px 10px; background: var(--c); color: #fff; top: 0; left: 50%; transform: translateX(-50%); }
+  /* kiểu 3: vạch chia đôi + 2 mép màu đội */
+  .fb-split { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+  .fb-split i { position: absolute; top: 0; bottom: 0; left: 50%; width: 0; border-left: 3px dashed rgba(255, 245, 225, .55); filter: drop-shadow(0 0 3px rgba(0, 0, 0, .6)); }
+  .fb-split .l, .fb-split .r { position: absolute; top: 0; bottom: 0; width: 7%; }
+  .fb-split .l { left: 0; background: linear-gradient(90deg, rgba(226, 64, 47, .45), transparent); }
+  .fb-split .r { right: 0; background: linear-gradient(270deg, rgba(47, 127, 226, .45), transparent); }
+  .fb-split em { position: absolute; bottom: 12px; font: 800 20px "Baloo 2"; font-style: normal; letter-spacing: .08em; padding: 3px 16px; border-radius: 10px; color: #fff; }
+  .fb-split em.l2 { left: 14px; background: var(--red); } .fb-split em.r2 { right: 14px; background: var(--blue); }
+
+  /* ---- màn chờ / đếm ngược / kết quả / tạm dừng: phủ lên vùng chơi */
+  .fb-ov { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; background: radial-gradient(ellipse at center, rgba(20, 10, 4, .35), rgba(20, 10, 4, .78)); }
+  .fb-ov[hidden] { display: none; }
+  .fb-card { text-align: center; padding: 26px 46px 30px; border-radius: 18px; background: linear-gradient(#f3e2bf, #e2c996); color: #3a1f0e; border: 4px solid #7a4a22; box-shadow: 0 18px 50px rgba(0, 0, 0, .55), inset 0 0 0 3px #f8edd6; min-width: 420px; }
+  .fb-title { font: 400 64px Rye, serif; line-height: 1; color: #6b2a12; }
+  .fb-sub { font: 400 30px Rye, serif; color: #a0381f; margin: 4px 0 14px; letter-spacing: .12em; }
+  .fb-desc { font: 700 18px "Baloo 2"; max-width: 520px; margin: 0 auto 18px; color: #5a3a1e; }
+  .fb-btn { font: 400 30px Rye, serif; color: #fff4dc; padding: 8px 40px; border-radius: 12px; cursor: pointer; border: 3px solid #ffd98a; background: linear-gradient(#b8541f, #7d2f10); box-shadow: 0 6px 0 #4a1c08; margin: 6px; }
+  .fb-btn.sm { font-size: 22px; padding: 6px 26px; }
+  .fb-btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #4a1c08; }
+  .fb-count { font: 400 180px Rye, serif; color: #ffd98a; text-shadow: 0 8px 0 #4a1c08, 0 0 40px rgba(0, 0, 0, .8); }
+  .fb-res-row { display: flex; gap: 22px; justify-content: center; margin: 10px 0 18px; }
+  .fb-res-t { padding: 10px 26px; border-radius: 14px; color: #fff; min-width: 150px; }
+  .fb-res-t.t0 { background: linear-gradient(#c73526, #8f1f14); } .fb-res-t.t1 { background: linear-gradient(#2769c7, #143f8f); }
+  .fb-res-t span { display: block; font: 800 18px "Baloo 2"; letter-spacing: .08em; }
+  .fb-res-t b { font: 400 54px Rye, serif; }
+  .fb-res-t.is-win { box-shadow: 0 0 0 4px #ffd98a, 0 0 26px rgba(255, 200, 80, .8); }
+  .fb-loading { font: 400 34px Rye, serif; color: #ffd98a; }
+  /* 1ae: lúc intro — bàn phải phủ cả vùng chơi, ẩn bàn trái + viền/nhãn đội */
+  .fb-area.is-cine { grid-template-columns: 1fr; }
+  .fb-area.is-cine .fb-board.t0 { display: none; }
+  .fb-area.is-cine .fb-board::after, .fb-area.is-cine .fb-tag { display: none; }
+  .fb-black { position: absolute; inset: 0; z-index: 30; background: #000; opacity: 0; pointer-events: none; transition: opacity .5s; }
+  .fb-black.is-on { opacity: 1; transition: none; }
+
+  /* ---- hàng nút dưới */
+  .fb-bar { height: var(--bar); flex: 0 0 var(--bar); display: flex; align-items: center; gap: 10px; padding: 0 14px; background: linear-gradient(#2c1a0d, #1c1008); border-top: 3px solid var(--brass); }
+  .fb-tool { width: 58px; height: 58px; border-radius: 14px; display: grid; place-items: center; cursor: pointer; background: #4a2e18; border: 2px solid var(--brass); color: var(--paper); }
+  .fb-tool svg { width: 30px; height: 30px; }
+  .fb-tool.is-off { opacity: .5; }
+  .fb-kieu { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .fb-kieu small { font: 700 15px "Baloo 2"; color: #cdb58a; margin-right: 4px; }
+  .fb-kieu a { font: 700 17px "Baloo 2"; text-decoration: none; color: var(--paper); padding: 8px 16px; border-radius: 12px; background: #4a2e18; border: 2px solid rgba(200, 154, 74, .5); white-space: nowrap; }
+  .fb-kieu a.on { background: var(--brass); color: #2a1a0c; border-color: #ffd98a; }
+  @media (max-width: 1100px) { .fb-kieu a span { display: none; } }
+.fb-root[hidden] { display: none !important; }
+/* 1aj: bảng PAUSED (cũng là Menu khi chưa chơi) có thêm Single mode · Library khi chạy trong AWord */
+.fb-hostrow { margin-top: 10px; }
+.fb-hostrow[hidden], .fb-hostrow [hidden], .fb-tool[hidden] { display: none !important; }

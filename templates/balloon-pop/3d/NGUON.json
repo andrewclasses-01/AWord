@@ -1,0 +1,34 @@
+{
+ "nguon": "myGame/balloon-pop/core",
+ "goc": "fight-1aj.js",
+ "commit": "0205bdc",
+ "con_sua_chua_commit": false,
+ "js": [
+  "fight-1aj.js",
+  "sound-1ah.js",
+  "bp3d-1aj.js",
+  "fight-cine-1ah.js",
+  "cine-1ah.js",
+  "grime-1i.js",
+  "coach-1i.js",
+  "west-world-1ah.js",
+  "bunchgrass-1n.js",
+  "sign-chase-1ah.js",
+  "animals-1ah.js",
+  "dune-1z.js",
+  "west-props-1ag.js",
+  "near-mounds-1v.js",
+  "west-props-1u.js"
+ ],
+ "css": [
+  "bp3d.css",
+  "bp3d-1j.css",
+  "bp3d-1p.css",
+  "bp3d-1q.css",
+  "bp3d-1r.css",
+  "bp3d-1ab.css",
+  "fight-cine-1ae.css",
+  "fight-1aj.css"
+ ],
+ "tieng": "sound-1ah"
+}

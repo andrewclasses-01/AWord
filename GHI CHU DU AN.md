@@ -545,6 +545,22 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
+
+## Đợt 449 (03/10/2026) — BALLOON POP ▸ MODE ▸ FIGHT = TRAIN RUSH 3D (kiểu Rocket Race) · cờ `tpl.ownFight` trong engine
+
+**Thầy:** *"đẩy cả STAR LOOT và TRAIN RUSH lên cả AWord và github tương tự cách làm của ROCKET RACE"* — chọn (AskUserQuestion) **"Kiểu Rocket Race: 3D chỉ ở Fight"**: Single / Showdown / bài giao học sinh vẫn Balloon pop 2D; MODE ▸ Fight ra trận TRAIN RUSH 3D hai bàn trái–phải.
+
+**Làm gì:**
+- myGame TRAIN RUSH **1aj** (`0205bdc`): trận Fight thành mô-đun `core/fight-1aj.js` (`createTrainRushFight`, `destroy()`), lõi `bp3d-1aj.js` có `destroy()` ⇒ mở / đóng trận không nạp lại trang.
+- `tools/chep-train-rush.py` lần import từ `fight-1aj.js` ⇒ `templates/balloon-pop/3d/` (đổi `three` ⇒ vendor r170 của Rocket Race, `cannon-es` ⇒ `templates/balloon-pop/vendor/cannon-es.js` 0.20.0, phông helvetiker ⇒ vendor; CSS bỏ luật html/body/#game) + tiếng `assets/sound-1ah/` (63 file, 7,8 MB) + `3d/NGUON.json`. ⛔ đừng sửa tay `3d/`.
+- `core/engine.js`: cờ mới **`tpl.ownFight(root, act, { single, home })`** — `canFight` nhận cả `ownFight`; `enterFight` gọi nó thay `core/fight.js` (trận riêng trọn màn), `single()` = dựng lại act (noAutoFight), `home()` = onExit; vẫn phát MYACT:AW:FIGHT on/off.
+- `balloon-pop.js`: `ownFight` ⇒ `mountTrainRushFight`: ô `.aw-tr-host` trên `<body>`, từ = `resolveActivity(act).content.items` (keyword + definition; act từ vựng đổi template dùng được), thời gian trận = max(120 s, Options bpTimerSeconds); MutationObserver trên `root` ⇒ engine dựng lại trang vì lý do khác thì trận tự dỡ. Bảng PAUSED của trận (cũng là Menu khi chưa chơi) có Single mode + Library.
+
+**Kiểm (bàn thử `scratch/dot449-tr.html`, cửa sổ Electron offscreen):** MODE ▸ Fight mode ▸ Start fight ⇒ 2 bàn, 2 canvas · START ⇒ intro ⇒ đang chơi · Single mode ⇒ về Balloon pop 2D, `.aw-tr-host` 0, canvas 0 · `?src=anagram` (act từ vựng) ⇒ định nghĩa trên toa đúng · Library ⇒ onExit, dỡ sạch.
+
+**⬜ CHỜ THẦY:** Fight thật trên TOMKO (2 đội bấm cùng lúc, tiếng).
+
+---
 
 ## Đợt 448 (03/10/2026) — SHOWDOWN PODIUM "BÓNG AVATAR": thẻ có avatar · tích ⇒ thẻ co thành bóng + sparkle ⇒ bay về cột bóng · kéo thả đổi chỗ / đổi đội / trả về · mũi tên cuộn · Podium cho ANALYSIS · phiên MSI · ✅ THẦY DUYỆT → COMMIT + PUSH `e8be92f` + LIVE 6/6 mã băm
 

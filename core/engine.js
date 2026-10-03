@@ -1663,7 +1663,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   const modeTpl = (playMode && originAct.type !== activity.type && hasTemplate(originAct.type))
     ? getTemplate(originAct.type)
     : tpl;
-  const canFight = !!modeTpl.fightMode && !session;
+  // ⭐ Đợt 449 — `tpl.ownFight` (Balloon pop ⇒ TRAIN RUSH 3D): template có TRẬN RIÊNG trọn màn (không qua core/fight.js) —
+  // MODE ▸ Fight vẫn hiện như mọi game có Fight; vào trận thì gọi tpl.ownFight(...) thay startFight (xem enterFight).
+  const canFight = !!(modeTpl.fightMode || modeTpl.ownFight) && !session;
   // ⭐ Đợt 394 (thầy 26/9/2026) — template khai `fightByDefault` (Rocket race): mở act / chọn
   // template ⇒ vào thẳng Fight, như bấm MODE → Fight → Start fight. Hoãn một nhịp để cả khung
   // single dựng xong (enterFight dùng cleanupAll…), rồi chỉ chạy nếu khung này vẫn còn trên trang.
@@ -2194,8 +2196,24 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         if (playMode) {
           let home = homeType();
           await ensureTemplate(home);
-          if (!getTemplate(home).fightMode) { home = originAct.type; await ensureTemplate(home); }
+          if (!getTemplate(home).fightMode && !getTemplate(home).ownFight) { home = originAct.type; await ensureTemplate(home); }
           matchAct = home === originAct.type ? originAct : await convertActivity(originAct, home);
+        }
+        // ⭐⭐ Đợt 449 — TRẬN RIÊNG của template (`tpl.ownFight`, Balloon pop ⇒ TRAIN RUSH 3D, kiểu Rocket Race: Single vẫn 2D,
+        // Fight là cảnh 3D). Template tự dựng trận trọn màn và gọi lại các đường của engine:
+        //   single() = về Single (dựng lại act này, KHÔNG tự vào Fight lại) · home() = về thư viện (onExit)
+        // Hàm trả về cleanup; engine giữ nó trong `ownFightOff` để lần dựng kế tiếp (startGame mới) không cần biết.
+        await ensureTemplate(matchAct.type);
+        const mt = getTemplate(matchAct.type);
+        if (mt.ownFight) {
+          let off = null, gone = false;
+          const leave = () => { if (gone) return; gone = true; try { off && off(); } catch (e) { console.warn("AWord: own fight cleanup", e); } awEmit("FIGHT", "off"); };
+          off = mt.ownFight(root, matchAct, {
+            single: () => { leave(); startGame(root, matchAct, { onExit, base: originAct, noAutoFight: true }); },
+            home: () => { leave(); onExit?.(); }
+          }) || null;
+          awEmit("FIGHT", "on");
+          return;
         }
         const { startFight } = await import("./fight.js");
         // `base` travels into the match so a Change-template DURING the fight

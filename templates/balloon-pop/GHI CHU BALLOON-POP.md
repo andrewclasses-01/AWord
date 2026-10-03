@@ -1,3 +1,9 @@
+## ⭐ Đợt 449 (03/10/2026) — MODE ▸ FIGHT = TRAIN RUSH 3D
+
+- Single / Showdown / bài giao: vẫn bản 2D trong file này. MODE ▸ Fight ⇒ `ownFight` ⇒ trận TRAIN RUSH 3D (myGame `balloon-pop` mẫu 1aj) trong ô `.aw-tr-host` phủ trọn trang.
+- `3d/` + `assets/sound-1ah/` + `vendor/cannon-es.js` là BẢN CHÉP — sửa ở myGame (bản mới = tên mới) rồi chạy `python tools/chep-train-rush.py` (đổi `GOC` nếu tên mô-đun đổi + đường `import("./3d/fight-1aj.js")` + danh sách `TR3D_CSS` trong balloon-pop.js).
+- Bàn thử: `scratch/dot449-tr.html` (`?src=anagram`). Lái: `window.__fight` (G, boards, start, finish, destroy).
+
 # GHI CHU — BALLOON POP
 
 **TRẠNG THÁI: ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE** (1/8/2026, Đợt 32; thầy duyệt gộp cả 8 template

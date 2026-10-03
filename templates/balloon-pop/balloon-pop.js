@@ -22,6 +22,7 @@
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
+import { resolveActivity } from "../../core/content-view.js";   // Đợt 449 — act từ vựng nhiều bộ nghĩa ⇒ đúng bộ đang chọn
 import { shuffle, el } from "../../core/utils.js";
 import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
@@ -113,6 +114,12 @@ const balloonPopTemplate = {
   // ⛔ Ba game bàn-chơi (Crossword · Open the box · Find the match) KHÔNG được mở: mảng câu
   // của chúng CHÍNH LÀ cái bàn, nối dài là ô chữ có một từ hai lần.
   sdDeal: true,
+  // ⭐⭐ Đợt 449 (thầy 03/10/2026: "đẩy TRAIN RUSH lên AWord tương tự Rocket Race", chọn "3D chỉ ở Fight") —
+  // MODE ▸ Fight = TRẬN TRAIN RUSH 3D (hai bàn trái–phải, intro điện ảnh, đếm 3-2-1, đồng hồ + nhạc chung).
+  // Single / Showdown / bài giao học sinh: VẪN là Balloon pop 2D bên dưới, không đổi gì.
+  // Trận là mô-đun của myGame (mẫu 1aj) chép vào ./3d bằng `python tools/chep-train-rush.py` — ⛔ đừng sửa tay ./3d.
+  // core/engine.js gọi hàm này thay core/fight.js (cờ `ownFight`, xem enterFight). Trả về cleanup.
+  ownFight(root, act, { single, home }) { return mountTrainRushFight(root, act, { single, home }); },
   // ⭐⭐ Đợt 213b (thầy, 20/8/2026) — THỨ TỰ Ô TÍCH, theo CỘT.
   // Thầy đọc từng cột: "cột 1 <trên>/<dưới>, cột 2 …". Khối đổ theo CỘT (đầy cột 1
   // từ trên xuống rồi mới sang cột 2 — xem `.aw-checks` trong core/app.css), nên
@@ -774,6 +781,48 @@ const SCENE_HTML = `
   <div class="aw-bp-levelsign">Level 1</div>
   <div class="aw-bp-fx"></div>
 `;
+
+// ⭐ Đợt 449 — TRẬN TRAIN RUSH 3D (xem `ownFight` ở trên). Ô `.aw-tr-host` gắn vào <body> phủ TRỌN trang (như STAR LOOT —
+// khung AWord có lớp tạo khung quy chiếu riêng). Rời trận theo mọi đường đều dỡ sạch: nút Single mode / Library của trận,
+// hoặc engine dựng lại `root` vì lý do khác (◀ trình duyệt, đổi act…) — MutationObserver trên root bắt việc đó.
+const TR3D_CSS = ["bp3d.css", "bp3d-1j.css", "bp3d-1p.css", "bp3d-1q.css", "bp3d-1r.css", "bp3d-1ab.css", "fight-cine-1ae.css", "fight-1aj.css"];
+const TR3D_FONTS = "https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@1,800;1,900&family=Rye&display=swap";
+function ensureTr3dCss() {
+  if (document.querySelector("link[data-tr3d]")) return;
+  [TR3D_FONTS, ...TR3D_CSS.map(f => new URL("./3d/" + f, import.meta.url).href)].forEach(href => {
+    const l = document.createElement("link"); l.rel = "stylesheet"; l.href = href; l.dataset.tr3d = "1"; document.head.append(l);
+  });
+}
+function mountTrainRushFight(root, act, { single, home }) {
+  const items = ((resolveActivity(act) || act).content?.items || [])
+    .filter(it => it && String(it.keyword || "").trim() && String(it.definition || "").trim())
+    .map(it => ({ keyword: String(it.keyword).trim(), definition: String(it.definition).trim() }));
+  if (items.length < 2) { setTimeout(() => single(), 0); return () => {}; }
+  ensureTr3dCss();
+  const box = document.createElement("div");
+  box.className = "aw-tr-host";
+  document.body.append(box);
+  document.documentElement.classList.add("aw-tr-on");
+  console.log("MYACT:3D:ON");   // myActivity: nhường card đồ hoạ (như Rocket race 3D)
+  let dead = false, fightApi = null;
+  const opt = act.options || {};
+  const time = Math.max(120, Number(opt.bpTimerSeconds) || 0);   // trận 2 đội: ít nhất 2 phút (mẫu 1ah), dài hơn nếu Options đặt dài hơn
+  const off = () => {
+    if (dead) return; dead = true;
+    obs.disconnect();
+    try { fightApi && fightApi.destroy(); } catch (e) { console.warn("Train rush destroy", e); }
+    box.remove();
+    document.documentElement.classList.remove("aw-tr-on");
+    console.log("MYACT:3D:OFF");
+  };
+  const obs = new MutationObserver(() => { if (root.childNodes.length) off(); });
+  obs.observe(root, { childList: true });
+  import("./3d/fight-1aj.js")
+    .then(m => m.createTrainRushFight({ mount: box, words: items, wordsTitle: act.title || "", time, onSingle: () => single(), onHome: () => home() }))
+    .then(api => { if (dead) api.destroy(); else fightApi = api; })
+    .catch(err => { console.error("Train rush fight failed — back to single", err); off(); single(); });
+  return off;
+}
 
 registerTemplate(balloonPopTemplate);
 export default balloonPopTemplate;
