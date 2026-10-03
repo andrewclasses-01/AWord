@@ -59,7 +59,7 @@ import { makeHStepper } from "./numberstepper.js";
 // and free of Firestore, so importing it here does not breach the rule that
 // keeps THIS file behind a dynamic import (see the header).
 import {
-  renderReviewList, renderReviewPodium, renderReviewTable, fitPodiumNames, POD_MAX_W, POD_MIN_W
+  renderReviewList, renderReviewPodium, renderAnalysisPodium, renderReviewTable, fitPodiumNames, POD_MAX_W, POD_MIN_W
 } from "./showdown-review.js";
 import {
   MIN_TEAMS, MAX_TEAMS, MAX_PER_TEAM, SOLO_TEAM_ID, SD_MODES, browserId, writePick, clearPick, planRoundJoin,
@@ -2423,11 +2423,11 @@ export function buildShowdownPanel(panel, ctx) {
         if (!hasRows && view !== "podium") {
           dbody.append(el("div", "aw-sd-rec-note",
             "The answers for this match were not kept — here is the ranking."));
-          dbody.append(renderReviewPodium(ranked, { showTeam: true, picks }));
+          dbody.append(renderReviewPodium(ranked, { showTeam: true, picks, className }));
         } else if (view === "table") {
           dbody.append(renderReviewTable(ranked, [className, displayName(m)].filter(Boolean).join(" • ")));
         } else if (view === "podium") {
-          dbody.append(renderReviewPodium(ranked, { showTeam: true, picks }));
+          dbody.append(renderReviewPodium(ranked, { showTeam: true, picks, className }));
         } else {
           dbody.append(renderReviewList(ranked, { showTeam: true }));
         }
@@ -2558,11 +2558,34 @@ export function buildShowdownPanel(panel, ctx) {
           if (layer.isConnected) paintCols();
         });
       };
-      ch.append(ct, dlBtn, backBtn);
+      // ⭐⭐⭐⭐ Đợt 448 — Chart / Podium, như ANALYSIS của Showdown Home (core/showdown-home.js):
+      // Podium xếp theo % trung bình + chia đội bằng bóng avatar, dấu tích TẠM (không bản ghi để lưu).
+      let anaView = "chart";
+      const anaPicks = new Map();
+      const chartBtn = el("button", "aw-sd-rec-close is-toggle", icons.barChart);
+      chartBtn.type = "button"; chartBtn.title = "Chart";
+      const podBtn = el("button", "aw-sd-rec-close is-toggle", icons.trophy);
+      podBtn.type = "button"; podBtn.title = "Podium";
+      ch.append(ct, chartBtn, podBtn, dlBtn, backBtn);
 
       const cbody = el("div", "aw-sd-rec-cbody");
       chart.append(ch, cbody);
-      cbody.append(renderChart(full, partial, entries));
+      function paintAna() {
+        chartBtn.classList.toggle("is-on", anaView === "chart");
+        podBtn.classList.toggle("is-on", anaView === "podium");
+        cbody.innerHTML = "";
+        if (anaView === "chart") {
+          cbody.append(renderChart(full, partial, entries));
+          fitPodiumNames(chart, ".aw-sd-rec-barname");
+          fitChartTierLabels(chart);
+        } else {
+          cbody.append(renderAnalysisPodium({ full, partial, entries }, { picks: anaPicks, className }));
+          fitPodiumNames(cbody);
+        }
+      }
+      chartBtn.onclick = () => { if (anaView !== "chart") { anaView = "chart"; sfx.tap(); paintAna(); } };
+      podBtn.onclick = () => { if (anaView !== "podium") { anaView = "podium"; sfx.tap(); paintAna(); } };
+      paintAna();
 
       layer.append(chart);
       // AFTER the append — same rule as fitPodiumNames/openDetail: a detached
@@ -2573,7 +2596,7 @@ export function buildShowdownPanel(panel, ctx) {
       document.addEventListener("fullscreenchange", onFsChange);
       Promise.resolve()
         .then(() => chart.requestFullscreen?.())
-        .then(() => { fitPodiumNames(chart, ".aw-sd-rec-barname"); fitChartTierLabels(chart); })
+        .then(() => { if (anaView === "chart") { fitPodiumNames(chart, ".aw-sd-rec-barname"); fitChartTierLabels(chart); } else fitPodiumNames(cbody); })
         .catch(e => console.warn("AWord: fullscreen refused, showing the analysis in the panel", e));
       chart.animate([{ opacity: 0, transform: "scale(.97)" }, { opacity: 1, transform: "scale(1)" }],
         { duration: 180, easing: "cubic-bezier(.22,.9,.3,1)" });

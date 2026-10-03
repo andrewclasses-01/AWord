@@ -48,6 +48,7 @@
 import { el } from "./utils.js";
 import { icons } from "./icons.js";
 import { sound } from "./sound.js";
+import { avatarNode } from "./avatar.js";
 import {
   fmtRoundMs, pctBand, pctOf, shortenName, assignShortLabels, groupByMember, rankBlocks,
   mergeClassBlocks, buildAnalysisRows
@@ -729,7 +730,8 @@ export function mountShowdownReview({
   const picks = new Map();
   let picksDirty = false;      // something changed since the last save
   const renderPodium = ranked => renderReviewPodium(ranked, {
-    showTeam: scope === "class", picks, onChange: () => { picksDirty = true; }
+    showTeam: scope === "class", picks, onChange: () => { picksDirty = true; },
+    className: pick.className || ""          // ⭐ Đợt 448 — tìm ảnh avatar theo lớp
   });
 
   /**
@@ -841,6 +843,11 @@ export function mountShowdownReview({
     // wrapper holding the scroller AND the two tick counters; removing only
     // `.aw-sd-pod` would leave an empty wrapper (and a pair of stale counts)
     // behind on every repaint. ⭐ Đợt 235 — `.aw-rv-tablewrap` joined it too.
+    // ⭐ Đợt 448 (thầy: "cột thẻ tên vẫn giữ ở vị trí đó") — bảng này được DỰNG LẠI mỗi khi một đội
+    // gửi kết quả về (listener) ⇒ cột thẻ từng nhảy về đầu giữa lúc thầy đang chia đội. Nhớ vị trí
+    // cuộn của cột cũ, trả lại cho cột mới ngay sau khi gắn.
+    const oldPod = host.querySelector(".aw-sd-pod");
+    const keepTop = oldPod ? oldPod.scrollTop : 0;
     host.querySelectorAll(".aw-sd-rv, .aw-sd-podwrap, .aw-sd-warn, .aw-rv-tablewrap").forEach(n => n.remove());
     const lines = warnings();
     if (lines.length) {
@@ -860,6 +867,8 @@ export function mountShowdownReview({
       host.append(renderReviewTable(ranked, pick.className || "Showdown"));
     } else if (view === "podium") {
       host.append(renderPodium(ranked));
+      const newPod = host.querySelector(".aw-sd-pod");
+      if (newPod && keepTop) newPod.scrollTop = keepTop;
       // ⚠️ AFTER the append, never before: fitPodiumNames measures, and a board
       // that is not in the document has no width to measure against.
       fitPodiumNames(host);
@@ -1073,436 +1082,561 @@ export function renderReviewList(ranked, { showTeam = false } = {}) {
 /**
  * THE PODIUM — the ranking as a funnel (teacher's design, 17/8/2026).
  * One column, every box the same HEIGHT and each a little narrower than the one
- * above, so the board tapers to a point: first place is the widest thing on
- * screen and the eye runs straight down the taper.
+ * above, so the board tapers to a point.
  *
- * ⭐⭐ Đợt 207 — FOUR changes thầy asked for, and one of them is a trade he was
- * warned about and chose anyway:
- *   • THE PLACE MOVED INSIDE THE BOX ("Đưa số thứ tự vào trong khung tên"), as
- *     a medal with 1/2/3 on it for the top three and a plain numeral after that.
- *     ⚠️ THE TRADE: the numeral used to hang OUTSIDE each box, tracking the
- *     narrowing left edge, and that diagonal line of numbers is what made the
- *     taper read as a funnel rather than as a ragged stack. Inside the boxes
- *     they line up straight and the funnel leans on its own edges alone. This
- *     was said out loud before building; it is not an oversight to "fix".
- *   • A NAME IS NEVER CUT — see fitPodiumNames below, which the caller must run
- *     once the board is on screen.
- *   • SPARKLES around the top three (thầy: "sparkle và sao nhỏ lấp lánh ẩn hiện
- *     xung quanh"), pure CSS — see the note on the spark layer below.
- *   • TWO TICK BOXES per row, for splitting the class into two teams straight
- *     off the results (see `picks`).
+ * ⭐⭐⭐⭐ Đợt 448 (3/10/2026) — "BÓNG AVATAR", dựng lại theo mẫu thầy chốt
+ * (`D:\OTHERS\CLAUDE\AWord - thiet ke Showdown Podium\podium-v2.html`). THAY HẲN cách chia
+ * đội của Đợt 319/323/324 (cột TÊN hai bên + hàng đã tích trượt xuống dưới vạch đứt, nền xanh):
+ *   • Mỗi thẻ có AVATAR TRÒN (core/avatar.js — kho ảnh myLesson, thiếu ảnh thì chữ tắt).
+ *   • Tích một bên ⇒ cả dải thẻ CO TRÒN vào quả avatar (clip-path) ⇒ quả bóng nảy + bắn
+ *     sparkle vàng ⇒ bay vòng cung về cột bóng bên đó. Hàng khép lại TẠI CHỖ — không dồn
+ *     xuống cuối, không dải xanh, cột thẻ KHÔNG chạy về đầu.
+ *   • Cột bóng: dọc, cả cụm căn giữa theo chiều cao, so le trái/phải, bóng chọn SAU nằm TRÊN
+ *     và ĐÈ lên bóng chọn trước; mỗi bóng lơ lửng nhịp riêng (CSS thuần — cột nền đóng băng rAF).
+ *   • Kéo bóng: thả vào vùng thẻ ⇒ bỏ chọn (bóng bay về đúng hạng, nở lại thành thẻ) · thả
+ *     trong cột ⇒ đổi chỗ · thả sang cột kia ⇒ chuyển đội (cột kia LUÔN nhận, không xét luật
+ *     chênh 1 — thầy: "cột bóng đội bên kia vẫn nhận"), bóng GIỮ MÀU đội đã chọn em lần đầu.
+ *   • Chọn quá người (cú TÍCH làm hai bên chênh > 1) ⇒ chỉ thẻ lắc + buzz.
+ *   • Mũi tên nhấp nháy trên/dưới cột thẻ khi còn thẻ khuất ở phía đó.
  *
- * ⭐⭐⭐ Đợt 319 — THREE more changes, thầy again:
- *   • THE TWO FLOATING TICK-COUNTS ARE GONE ("bỏ ô số đếm tích đi vì đã có số
- *     thứ tự trong tên rồi") — replaced by two name-list columns flanking the
- *     funnel (see `sides`/`paintSides` below), each entry already carrying its
- *     own running number.
- *   • A NEW PICK MAY NOT PUSH THE TWO SIDES MORE THAN ONE APART (thầy: "2 bên
- *     không chênh nhau quá 1 người") — enforced inside the tick's own
- *     `onclick`, which simulates the count the pick would produce and simply
- *     refuses (a buzz + a shake, nothing changes) when it would not hold.
- *     Un-ticking is always allowed — it can only shrink the gap.
- *   • THE TICKS CAN NOW BE SAVED ("lưu lại theo bảng") — but not by this
- *     function: it only calls `onChange` so the CALLER knows something moved,
- *     and the caller decides WHEN that is actually worth a write (see
- *     mountShowdownReview's `commitPicks`/`picksDirty`).
+ * `picks` (Map key → "l"|"r") GIỮ NGUYÊN hình dạng — setMatchPicks/commitPicks của người gọi không
+ * đổi một dòng. Thứ tự bóng trong cột + màu đội gốc sống ở `podState` (WeakMap theo chính Map
+ * `picks` của người gọi), nên sống qua mọi lần vẽ lại bảng (đổi scope, listener về) mà không ai
+ * phải truyền thêm gì. ⚠️ Hai thứ này KHÔNG được lưu Firestore: mở lại trận cũ thì bóng xếp theo
+ * thứ tự khoá và màu = cột đang đứng (đã nói với thầy).
  *
- * @param {object}  opts.picks  the caller's OWN Map of `block.key → "l" | "r"`.
- *   Passed in rather than kept here because this board is re-rendered on every
- *   scope switch and on every arrival from the live listener; a Map owned by the
- *   render would drop the teacher's ticks the moment another team finished.
- * @param {function} [opts.onChange]  called after EVERY tick that actually
- *   changes the Map (not on a blocked one — see the turn-limit note below).
- *   ⭐⭐⭐ Đợt 319 — this is how a caller with `savePicks` (core/showdown-review.js's
- *   mountShowdownReview, core/showdown-home.js's openTileDetail) knows there is
- *   now something worth writing out, WITHOUT this render function knowing
- *   anything about Firestore or about WHEN a save is allowed to happen — see
- *   those callers' own `commitPicks`/`picksDirty`.
- *   Omit `picks` and the tick boxes are not built at all — that is how the
- *   miniature/preview callers stay untouched.
- *
- * ⭐⭐⭐ Đợt 323 — SIX more changes, thầy again, all in the same visit:
- *   • Names are ALWAYS the abbreviated "N.B.AN" form now (group-aware, see
- *     `assignShortLabels`), in both the funnel and the two side columns —
- *     no longer only a fallback fitPodiumNames reaches for on overflow.
- *   • The LEFT/RIGHT header text and the running "1. "/"2. " numbers on each
- *     side-column entry are both gone; the side lists now grow to fill their
- *     column and space themselves with `space-evenly` (CSS) so a short roster
- *     still reads as centred, not stuck at the top.
- *   • The "Team N" chip inside each box is gone (`showTeam` removed).
- *   • ✓5 ✗5 became one fraction, `right/total` (green over plain black).
- *   • Each row now carries `--sc`, the same taper `--w` already used, so a
- *     narrow bottom row's stats shrink instead of clipping (CSS `calc`, no
- *     extra measuring pass).
- *   • A NEW PICK MOVES THE ROW: ticked rows drop below a dashed separator,
- *     turn light blue, and animate there with a FLIP (`layoutRows` below);
- *     un-ticking sends them back up the same way.
+ * @param {object} opts
+ *   picks     Map của NGƯỜI GỌI (bỏ trống ⇒ không có chấm tích, không cột bóng — bản thu nhỏ/xem trước).
+ *   onChange  gọi sau mỗi lần Map đổi thật (tích, bỏ chọn, chuyển đội) — người gọi tự quyết khi nào lưu.
+ *   className mã lớp ("NNTNG4") — để tìm ảnh avatar; "" ⇒ chỉ chữ tắt.
  */
-export function renderReviewPodium(ranked, { picks = null, onChange = null } = {}) {
-  // ⚠️ Đợt 207 — the returned root is now a WRAPPER, not `.aw-sd-pod` itself.
-  // ⭐⭐⭐ Đợt 319 — and now holds THREE children when `picks` is on: the two
-  // name-list columns flank the funnel rather than floating two digits over
-  // it (see the file header on WHY — the count is unreadable at a glance past
-  // a handful of pupils, a running roster is not). All three must stay put
-  // while the middle one scrolls, so they are FLEX SIBLINGS of the scroller
-  // and each scrolls on its own. Anything that removes this board by selector
-  // must know all the names involved — see paintBody().
+// ⭐ Đợt 448b — `pop` nay chỉ là độ dài chùm sparkle (bóng không còn chờ nó mới bay).
+const PT = { shrink: 230, pop: 340, flyOut: 640, collapse: 280, flyBack: 480, rowOpen: 240, grow: 200 };
+const podState = new WeakMap();
+
+/** Thứ tự cột bóng + màu gốc của một Map `picks`, khớp lại với nội dung Map hiện tại. */
+function podStateFor(picks) {
+  let st = podState.get(picks);
+  if (!st) { st = { cols: { l: [], r: [] }, origin: new Map() }; podState.set(picks, st); }
+  ["l", "r"].forEach(s => { st.cols[s] = st.cols[s].filter(k => picks.get(k) === s); });
+  picks.forEach((side, k) => {
+    if (side !== "l" && side !== "r") return;
+    if (!st.cols[side].includes(k)) st.cols[side].push(k);
+    if (!st.origin.has(k)) st.origin.set(k, side);
+  });
+  [...st.origin.keys()].forEach(k => { if (!picks.has(k)) st.origin.delete(k); });
+  return st;
+}
+
+// ⭐ Đợt 219 — KHOÁ CỦA MỘT LẦN TÍCH, và nó KHÔNG được là `b.key` trần: Recent results đọc
+// `key` ra khỏi SỔ CÁI, nơi trận cũ thiếu trường đó cho ra chuỗi RỖNG cho MỌI em. Bậc lùi lấy
+// đúng luật `mergeClassBlocks` (core/showdown.js) — tên viết thường.
+function podKey(b, i) {
+  return String(b.key || "").trim() || String(b.name || "").trim().toLowerCase() || `#${i}`;
+}
+
+/** Cột số liệu của một trận: đúng/tổng · % · thời gian (Đợt 323/324, giữ nguyên). */
+function singleStats(b) {
+  const stats = el("div", "aw-sd-pod-stats");
+  const pct = pctOf(b);
+  const band = pct !== null ? pctBand(pct) : "";
+  stats.append(el("span", "aw-sd-pod-score",
+    `<span class="is-right ${band}">${b.right}</span><span class="is-total">/${b.total}</span>`));
+  if (pct !== null) stats.append(el("span", "aw-sd-pod-pct " + band, pct + "%"));
+  if (b.hasTime) stats.append(el("span", "aw-sd-pod-time", fmtRoundMs(b.ms)));
+  return stats;
+}
+
+/** Cột số liệu của Analysis: một viên % mỗi trận (vắng = viên gạch đứt) + % trung bình. */
+function analysisStats(r, entries) {
+  const stats = el("div", "aw-sd-pod-stats");
+  const chips = el("span", "aw-sd-pod-chips");
+  (r.segments || []).forEach((s, i) => {
+    const c = s.pct == null
+      ? el("span", "aw-sd-pod-chip is-miss", "–")
+      : el("span", "aw-sd-pod-chip " + pctBand(s.pct), String(s.pct));
+    const e = entries[i];
+    if (e && e.label) c.title = String(e.label);          // teacher's own text — title attr, never markup
+    chips.append(c);
+  });
+  const avg = Math.round(Number(r.total) || 0);
+  stats.append(chips, el("span", "aw-sd-pod-pct " + pctBand(avg), avg + "%"));
+  return stats;
+}
+
+export function renderReviewPodium(ranked, { picks = null, onChange = null, className = "" } = {}) {
+  const items = (ranked || []).map((b, i) => ({ key: podKey(b, i), name: b.name, stats: () => singleStats(b) }));
+  return buildPodium(items, { picks, onChange, className });
+}
+
+/**
+ * ⭐⭐⭐⭐ Đợt 448 — PODIUM CHO ANALYSIS (thầy: "Phần analyzing cũng có phần cột và chọn thành viên
+ * như thế"). Xếp theo % TRUNG BÌNH trên các trận em có mặt (buildAnalysisRows' `total`), em vắng
+ * vài trận (`partial`) đứng chung bảng, viên trận vắng vẽ gạch đứt.
+ */
+export function renderAnalysisPodium({ full = [], partial = [], entries = [] } = {}, { picks = null, onChange = null, className = "" } = {}) {
+  const rows = full.concat(partial).sort((a, b) => b.total - a.total);
+  const items = rows.map((r, i) => ({ key: podKey(r, i), name: r.name, stats: () => analysisStats(r, entries) }));
+  return buildPodium(items, { picks, onChange, className });
+}
+
+function buildPodium(items, { picks, onChange, className }) {
   const wrap = el("div", "aw-sd-podwrap");
+  const podcol = el("div", "aw-sd-podcol");
   const box = el("div", "aw-sd-pod");
-  const n = ranked.length;
-
-  // ⭐⭐⭐ Đợt 319 — THE TWO NAME COLUMNS (replaces Đợt 208/209's two floating
-  // tick-counts, thầy: "bỏ ô số đếm tích đi vì đã có số thứ tự trong tên rồi").
-  // Built even with nobody ticked yet: an empty scroller costs nothing and
-  // appearing from nothing on the first tick would be a visible pop.
-  // ⚠️ THE NUMBER IS EACH SIDE'S OWN DRAFT ORDER, not the funnel's rank: side
-  // ("l"/"r") + Map insertion order together are the closest thing this Map
-  // has to "who did this side pick first", and re-ticking a name (delete then
-  // set) puts it at the end of ITS side's own list on purpose — that IS a
-  // fresh pick.
-  // ⭐⭐⭐ Đợt 323 (thầy: "bỏ chữ left/right") — no header row any more, just the
-  // scrolling name list itself.
-  const mkSide = side => {
-    const col = el("div", "aw-sd-pod-side is-" + side);
-    col.append(el("div", "aw-sd-pod-side-list"));
-    return col;
-  };
-  const sides = picks ? { l: mkSide("l"), r: mkSide("r") } : null;
+  const arrUp = el("button", "aw-sd-pod-arrow is-up", `<span>${icons.chevronUp || "▲"}</span>`);
+  const arrDn = el("button", "aw-sd-pod-arrow is-down", `<span>${icons.chevronDown || "▼"}</span>`);
+  arrUp.type = arrDn.type = "button";
+  arrUp.title = "More above"; arrDn.title = "More below";
+  podcol.append(box, el("i", "aw-sd-pod-fade is-up"), el("i", "aw-sd-pod-fade is-down"), arrUp, arrDn);
+  const sides = picks ? { l: el("div", "aw-sd-pod-side is-l"), r: el("div", "aw-sd-pod-side is-r") } : null;
+  const fly = el("div", "aw-sd-pod-fly");
   if (sides) wrap.append(sides.l);
-  wrap.append(box);
+  wrap.append(podcol);
   if (sides) wrap.append(sides.r);
+  wrap.append(fly);
 
-  // Filled in as rows are built below — the side lists need every picked
-  // pupil's DISPLAY NAME, and the row loop is the only place that has it.
-  // ⭐⭐⭐ Đợt 323 — `nameByKey` now holds the ABBREVIATED label ("N.B.AN"), the
-  // same one the funnel itself prints (thầy: "các tên đều viết tắt... cả ở
-  // trong cột tên chọn và các ô tên ở giữa"); `fullNameByKey` keeps the real
-  // name around only for the side item's hover tooltip.
-  const nameByKey = new Map();
-  const fullNameByKey = new Map();
-  // Group-aware so two pupils who would abbreviate to the same initials (see
-  // assignShortLabels's own header) still read apart on this board.
-  const labels = assignShortLabels(ranked.map(b => b.name));
+  const st = picks ? podStateFor(picks) : null;
+  const labels = assignShortLabels(items.map(x => x.name));
+  const rows = new Map();          // key → { row, card, av, it, label, i }
+  const balls = new Map();         // key → ball node
+  const alive = () => wrap.isConnected;
 
-  // ⭐⭐ Đợt 219 — MỖI HÀNG ĐỂ LẠI ĐÂY CÁCH TỰ VẼ CỦA NÓ, và một cú tích vẽ LẠI CẢ
-  // BẢNG chứ không chỉ hàng vừa bấm.
-  // ⚠️ VÌ SAO KHÔNG PHẢI LÀ THỪA: `picks` được đánh theo KHOÁ HỌC SINH, nên hai hàng
-  // dùng chung một khoá là hai hàng dùng chung một ô nhớ. Chỉ vẽ hàng vừa bấm thì
-  // hàng KIA giữ nguyên dấu tích cũ của mình — trên màn là "tích bên này mà bên kia
-  // vẫn còn chấm", đúng thứ thầy tả, mà bộ đếm lại nói khác. Vẽ cả bảng thì dù khoá
-  // có đụng nhau, cái nhìn thấy vẫn luôn khớp với cái được ghi.
-  // ⚠️ Rẻ: một lớp phễu là 6–20 hàng, mỗi hàng ba lần `classList.toggle` không đổi
-  // bố cục ⇒ trình duyệt không phải tính lại layout.
-  const rowPaints = [];
-  const paintAll = () => rowPaints.forEach(fn => fn());
-
-  /** `{l, r}` — how many pupils are ticked to each side right now. */
-  function sideCounts() {
-    let l = 0, r = 0;
-    picks.forEach(v => { if (v === "l") l++; else if (v === "r") r++; });
-    return { l, r };
-  }
-
-  /**
-   * ⭐⭐⭐ Đợt 319 (thầy: "chờ bên kia chọn trước... miễn sao 2 bên không chênh
-   * nhau quá 1 người") — REBUILD BOTH NAME COLUMNS from the one Map, same
-   * "redraw everything, never just the one row" reasoning `paintAll` already
-   * uses for the tick dots.
-   */
-  function paintSides() {
-    if (!sides) return;
-    const order = { l: [], r: [] };
-    picks.forEach((side, key) => { if (order[side]) order[side].push(key); });
-    (["l", "r"]).forEach(side => {
-      const list = sides[side].querySelector(".aw-sd-pod-side-list");
-      list.innerHTML = "";
-      // ⭐⭐⭐ Đợt 323 (thầy: "bỏ các số ở tên") — just the (already abbreviated,
-      // see `labels` below) name, no running number in front of it any more.
-      order[side].forEach(key => {
-        const item = el("div", "aw-sd-pod-side-item");
-        item.textContent = nameByKey.get(key) || "";
-        item.title = fullNameByKey.get(key) || "";
-        list.append(item);
-      });
-    });
-    const { l, r } = sideCounts();
-    // ⭐⭐ Đợt 209's "everybody placed" light, carried over onto the two column
-    // heads now that the digits themselves are gone — same green, same test
-    // (against the board's OWN size, not the class register: see the old
-    // paintCounts note this replaces).
-    wrap.classList.toggle("is-all", n > 0 && l + r === n);
-  }
-
-  /**
-   * ⭐⭐⭐ Đợt 323 (thầy: "khi 1 học sinh được tích, ô học sinh sẽ được di
-   * chuyển xuống khu vực dưới cùng, có phân cách bằng 1 nét đứt... Hiệu ứng
-   * chuyển xuống/lên sẽ là animation mượt mà") — every tick now also moves the
-   * whole ROW out of the ranked funnel and down into a second group below a
-   * dashed line, and un-ticking sends it back up.
-   *
-   * ⚠️ REBUILD THE WHOLE ORDER FROM `picks`, never move just the one row that
-   * was tapped — same reasoning as `paintAll`/`paintSides` above: a row's place
-   * is decided by the ONE shared Map, so re-partitioning the full list on every
-   * tick is what keeps "picked" and "where it sits" from ever disagreeing.
-   * `.append()` on an element already in the document MOVES it, so replaying
-   * the whole order is just two `forEach`s and a cheap for 6–20 rows.
-   *
-   * ⚠️ FLIP, not a layout-triggered transition: `box.append()` jumps every
-   * moved (and shifted) row straight to its new spot with no browser animation
-   * of its own. Measure every row's rect BEFORE the reorder, reorder, measure
-   * again, and hand `.animate()` the delta — the same Web-Animations idiom the
-   * turn-limit buzz above already uses, with the same try/catch (a browser
-   * without WAAPI just lands the rows at their new spot with no motion, which
-   * is correct, not broken).
-   *
-   * ⭐⭐⭐ Đợt 324 (thầy, sau khi xem ảnh chụp: "hiệu ứng di chuyển dần TRÊN MẶT
-   * các ô khác và chạy dần xuống dưới. Tốc độ chậm và mượt") — `movedPk` names
-   * the ONE row a tap just toggled (`null`/omitted for the initial, unanimated
-   * layout). That row alone gets `.is-moving` (z-index + shadow, CSS) for the
-   * length of its own animation, so it visibly LIFTS OFF and glides over
-   * whichever rows it passes — without it, a row moving UP (un-tick) would
-   * paint BEHIND the rows it passes, because reordering the DOM first (so the
-   * FLIP measurement is against the real final layout) leaves it earlier in
-   * DOM order than them, and plain stacking order paints later-in-DOM on top.
-   * Duration is up from 320ms to 640ms (700ms for the lifted row, so it visibly
-   * lands a beat after everything else has settled) — thầy's own "chậm mượt".
-   */
-  const MOVE_MS = 640;
-  const sep = picks ? el("div", "aw-sd-pod-sep") : null;
-  const rowEls = [];   // { pk, row } in RANK order — filled in by the loop below
-  function layoutRows(animate, movedPk) {
-    if (!picks) return;
-    const before = animate
-      ? new Map(rowEls.map(({ row }) => [row, row.getBoundingClientRect()]))
-      : null;
-    const unpicked = [], pickedRows = [];
-    rowEls.forEach(({ pk, row }) => (picks.get(pk) ? pickedRows : unpicked).push(row));
-    unpicked.forEach(r => box.append(r));
-    box.append(sep);
-    pickedRows.forEach(r => box.append(r));
-    sep.classList.toggle("is-on", pickedRows.length > 0);
-    if (!before) return;
-    rowEls.forEach(({ pk, row }) => {
-      const b0 = before.get(row);
-      const b1 = row.getBoundingClientRect();
-      const dy = b0.top - b1.top;
-      if (Math.abs(dy) < 0.5) return;      // did not actually move — nothing to animate
-      const lifted = pk === movedPk;
-      if (lifted) row.classList.add("is-moving");
-      try {
-        const anim = row.animate(
-          [{ transform: `translateY(${dy}px)` }, { transform: "translateY(0)" }],
-          { duration: lifted ? MOVE_MS + 60 : MOVE_MS, easing: "cubic-bezier(.22,.61,.22,1)" }
-        );
-        if (lifted) {
-          const settle = () => row.classList.remove("is-moving");
-          anim.onfinish = settle;
-          // ⚠️ Every element.animate() needs a timeout fallback (file header,
-          // Đợt 219's own rule) — a backgrounded column can leave `onfinish`
-          // never firing, and `.is-moving` stuck would leave this one pupil's
-          // row permanently floating above its neighbours.
-          setTimeout(settle, MOVE_MS + 200);
-        }
-      } catch { if (lifted) row.classList.remove("is-moving"); }
-    });
-  }
-
-  ranked.forEach((b, i) => {
-    // Linear from POD_MAX_W down to POD_MIN_W across however many pupils there
-    // are — see the constants' own note for why this is not a fixed step.
-    const w = n > 1 ? POD_MAX_W - (POD_MAX_W - POD_MIN_W) * (i / (n - 1)) : POD_MAX_W;
+  // ---------------- thẻ ----------------
+  items.forEach((it, i) => {
     const row = el("div", "aw-sd-pod-row");
-    row.style.setProperty("--w", w.toFixed(2) + "%");
-    // ⭐⭐⭐ Đợt 323 — how far THIS row's stats (score fraction/%/time) shrink,
-    // tied to the same taper the box width already follows: a box that is 65%
-    // as wide as the top one gets stats at 65% of the base size too, so a
-    // narrow bottom row never has to clip what a wide top row shows in full
-    // (thầy: "giảm size... đi tương ứng để không bị co mất nội dung").
-    row.style.setProperty("--sc", (w / POD_MAX_W).toFixed(3));
-    // ⭐ Đợt 219 — KHOÁ CỦA MỘT LẦN TÍCH, và nó KHÔNG được là `b.key` trần.
-    // `b.key` tới từ hai đường khác nhau: bảng Show answers dựng nó từ `m.id` (luôn
-    // có), còn Recent results đọc nó ra khỏi SỔ CÁI, nơi `normStudent` viết
-    // `String(s?.key || "")` — một trận cũ thiếu trường đó cho ra chuỗi RỖNG cho
-    // MỌI em, tức cả lớp dùng chung một ô nhớ. Đây đúng là bậc thang duy nhất em tìm
-    // được giữa hai bảng, và cũng là lý do lỗi chỉ xuất hiện ở một bên.
-    // ⚠️ Bậc lùi lấy đúng luật `mergeClassBlocks` (core/showdown.js) đã dùng để gộp
-    // lớp — tên viết thường. Hai chỗ hỏi "ai là ai" phải hỏi cùng một câu.
-    const pk = String(b.key || "").trim()
-      || String(b.name || "").trim().toLowerCase()
-      || `#${i}`;
-    const label = labels[i];
-    nameByKey.set(pk, label);
-    fullNameByKey.set(pk, b.name);
-
     const card = el("div", "aw-sd-pod-box" + (i < 3 ? ` is-m${i + 1}` : ""));
-
     const left = el("div", "aw-sd-pod-who");
-    // ⭐ Đợt 207 — the place, INSIDE the box and BEFORE the name. A medal for the
-    // first three (the digit is drawn into the icon itself — see core/icons.js
-    // for why it is not a separate span), a numeral for everybody else.
     const badge = el("span", "aw-sd-pod-badge" + (i < 3 ? " is-medal" : ""));
     if (i < 3) badge.innerHTML = icons[`medal${i + 1}`];   // trusted markup, core/icons.js
     else badge.textContent = String(i + 1);
-    left.append(badge);
-    // ⭐ Đợt 208 — the name sits in a WRAPPER, and the wrapper is what the
-    // sparkles are anchored to (thầy: "sparkle lấp lánh xuất hiện liên tục xung
-    // quanh chính TÊN của các bạn này" — Đợt 207 put them round the whole box).
-    // ⚠️ The wrapper is not decoration: `.aw-sd-pod-name` carries `overflow:hidden`
-    // (that is what makes a too-long name measurable), so a sparkle placed INSIDE
-    // it would be clipped away at exactly the edges it is meant to sit on.
+    const av = avatarNode(className, it.name, "aw-av aw-sd-pod-av");
     const nmWrap = el("span", "aw-sd-pod-nm");
     const nm = el("span", "aw-sd-pod-name" + (i < 3 ? " is-top" : ""));
-    // ⭐⭐⭐ Đợt 323 (thầy: "các tên đều viết tắt họ và tên đệm") — the funnel now
-    // always prints the abbreviated label, not just when it overflows; the full
-    // name survives only as the hover title. `dataset.full` still feeds
-    // fitPodiumNames its "start from here" text — which is now this label, so a
-    // name whose INITIALS still overflow a very narrow bottom row keeps
-    // shrinking exactly as before.
-    nm.textContent = label;                                 // pupil's own name: textContent only
-    nm.dataset.full = label;                                // fitPodiumNames needs the original back
-    nm.title = b.name;
+    nm.textContent = labels[i];                             // pupil's own name: textContent only
+    nm.dataset.full = labels[i];                            // fitPodiumNames needs the original back
+    nm.title = it.name;
     nmWrap.append(nm);
-    // ⭐ Đợt 208 — SPARKLES ON THE NAME. A layer of its own, `pointer-events:none`
-    // so it can never eat a tap, and animated ENTIRELY in CSS: a backgrounded
-    // myActivity column freezes requestAnimationFrame (bẫy #11 in myActivity's
-    // BAN GIAO.md), and a JS-driven twinkle would simply stop dead there while
-    // everything else kept working.
     if (i < 3) {
+      // ⭐ Đợt 208 — sparkles on the NAME, CSS only (a backgrounded column freezes rAF).
       const spark = el("span", "aw-sd-pod-spark");
       spark.setAttribute("aria-hidden", "true");
       for (let s = 0; s < 6; s++) spark.append(el("i", "aw-sd-pod-star s" + s));
       nmWrap.append(spark);
     }
-    left.append(nmWrap);
-    // ⭐⭐⭐ Đợt 323 (thầy: "bỏ tên TEAM trong các ô tên học sinh") — the funnel
-    // used to carry a "Team N" chip beside the name (`showTeam`); gone, the
-    // side columns and the box's own gold/silver/bronze already say enough.
-
-    const stats = el("div", "aw-sd-pod-stats");
-    // ⭐⭐⭐ Đợt 323 (thầy: "phần đúng sai chuyển thành dạng số câu đúng trên
-    // tổng thể, VD: 19/20") — replaces the old "✓5 ✗5" pair with ONE fraction,
-    // right over total dealt (plain black). `b.right + b.wrong === b.total`
-    // always (see pctOf's own note in core/showdown.js), so this is not a new
-    // number, just a new way to read the two the board already had.
-    // ⭐⭐⭐ Đợt 324 (thầy: "số 19 sử dụng màu giống màu của %") — computed BEFORE
-    // building the score span now, so its "is-right" number can carry the SAME
-    // `pctBand` class the % chip beside it uses — one rule (`pctBand`, in
-    // core/showdown.js) for both colours, so they can never disagree about what
-    // this pupil scored. A pupil dealt no question at all (`pct === null`) gets
-    // no band class — falls back to the same plain colour as the total.
-    const pct = pctOf(b);
-    const band = pct !== null ? pctBand(pct) : "";
-    stats.append(
-      el("span", "aw-sd-pod-score",
-        `<span class="is-right ${band}">${b.right}</span><span class="is-total">/${b.total}</span>`)
-    );
-    if (pct !== null) stats.append(el("span", "aw-sd-pod-pct " + band, pct + "%"));
-    // Only when the round clock was on — a Showdown played without it shows
-    // the two tallies alone rather than a column of dashes.
-    if (b.hasTime) stats.append(el("span", "aw-sd-pod-time", fmtRoundMs(b.ms)));
-
-    card.append(left, stats);
-    // ⚠️ Đợt 208 — the sparkle layer moved OUT of the card and onto the name
-    // (see `nmWrap` above). Do not put a second one back here.
-
-    if (picks) {
-      // ⭐⭐ Đợt 207 — SPLITTING THE CLASS OFF THE RESULTS (thầy, 20/8/2026):
-      // "chia đội dựa theo danh sách kết quả, đội nào chọn ai thì tích vào người
-      // đó, tích bên trái thì về bên trái, tích bên phải thì về bên phải."
-      // ⚠️ THE BOXES HUG THE ROW, so they narrow with the funnel and do NOT line
-      // up in two straight columns (thầy asked for exactly this: "các ô tích sẽ
-      // bám sát theo chiều dài ngang của ô, vì vậy các ô tích không thẳng hàng").
-      // ⭐ Đợt 208 — A DOT, NOT A BOX (thầy): "thay các ô vuông để tích bằng chấm
-      // tròn đặc nhỏ hơn (nhưng vẫn khá to)… Khi bấm vào sẽ biến thành dấu tích ✓
-      // to, dày màu xanh dương… dấu tích chỉ đứng một mình, không cần nằm trong
-      // khung hay ô gì cả."
-      // ⚠️ THE BUTTON KEEPS ITS FULL SIZE, only its skin went away: the dot is a
-      // child, the button around it stays 4.8cqw of invisible hit area. Shrinking
-      // the button to the dot would make a target the size of a fingernail on a
-      // board people tap from arm's length.
+    left.append(badge, av, nmWrap);
+    card.append(left, it.stats());
+    const dup = rows.has(it.key);   // hai hàng chung khoá (Đợt 219) — hàng sau không cho tích
+    if (picks && !dup) {
+      // ⭐ Đợt 208 — A DOT, NOT A BOX; the button keeps its full 4.8cqw hit area.
       const tick = side => {
         const t = el("button", "aw-sd-pod-tick is-" + side);
         t.type = "button";
         t.title = side === "l" ? "Left team" : "Right team";
         t.append(el("i", "aw-sd-pod-dot"));
-        t.insertAdjacentHTML("beforeend", icons.check);     // trusted markup
-        // ⭐⭐ Đợt 219 — BA CÁI CHỐT PHÒNG THỦ, viết vào đây sau khi thầy báo
-        // "tích một bên thì chấm bên kia chưa ẩn" ở Recent results (20/8/2026).
-        // Lỗi KHÔNG tái hiện được trên lưới chạy (18/18 phép đo đều ẩn đúng, đúng
-        // đường thật: bảng Showdown ▸ Recent results ▸ bấm cột ▸ nút cúp), nên ba
-        // chốt này bịt ba đường mà nó CÓ THỂ đi, chứ không phải vá một chỗ đã bắt
-        // được quả tang. Cả ba đều rẻ và không đổi hình bảng một pixel nào.
-        //
-        // ⚠️ 1. VẼ TRƯỚC, KÊU SAU. `sound.tick()` đứng TRƯỚC hai lời gọi vẽ thì một
-        //    cú ném từ tầng âm thanh (AudioContext bị treo, thiết bị ra rồi vào) sẽ
-        //    nuốt luôn cả việc vẽ lại — dấu tích không hiện, chấm bên kia không ẩn,
-        //    và không có gì trên màn nói vì sao. Tiếng động là trang trí; nó phải
-        //    đứng sau, và trong `try`.
-        // ⚠️ 2. VẼ CẢ BẢNG, KHÔNG VẼ MỘT HÀNG. Xem `paintAll` bên dưới.
-        t.onclick = e => {
-          e.stopPropagation();
-          const cur = picks.get(pk);
-          if (cur === side) {
-            picks.delete(pk);          // un-ticking never makes the gap worse
-          } else {
-            // ⭐⭐⭐ Đợt 319 (thầy: "chờ bên kia chọn trước... miễn sao 2 bên
-            // không chênh nhau quá 1 người") — a NEW pick (never an unset) must
-            // not push the two sides more than one apart. Simulate the count
-            // AFTER this one pupil moves — pulling them off their OLD side
-            // first, since a straight l→r tap is a MOVE, not two separate taps.
-            const after = sideCounts();
-            if (cur === "l") after.l--; else if (cur === "r") after.r--;
-            if (side === "l") after.l++; else after.r++;
-            if (Math.abs(after.l - after.r) > 1) {
-              try { sound.buzz(); } catch { /* âm thanh là trang trí */ }
-              try {
-                row.animate(
-                  [{ transform: "translateX(0)" }, { transform: "translateX(-3%)" },
-                   { transform: "translateX(3%)" }, { transform: "translateX(-2%)" }, { transform: "translateX(0)" }],
-                  { duration: 240, easing: "ease-in-out" }
-                );
-              } catch { /* Web Animations không có thì bỏ qua hiệu ứng, không chặn gì cả */ }
-              return;               // blocked — nothing changed, nothing to redraw or save
-            }
-            picks.set(pk, side);
-          }
-          paintAll();
-          paintSides();
-          // ⭐⭐⭐ Đợt 323 — the row itself now also moves: up into the funnel when
-          // un-ticked, down below the dashed line when ticked. Animated (see
-          // layoutRows' own note); the sound and onChange still fire regardless.
-          // ⭐⭐⭐ Đợt 324 — `pk` tells layoutRows WHICH row to lift above the rest
-          // while it travels (see its own note on `movedPk`/`.is-moving`).
-          layoutRows(true, pk);
-          onChange?.();
-          try { sound.tick(); } catch { /* âm thanh là trang trí, không được chặn việc vẽ */ }
-        };
+        t.onclick = e => { e.stopPropagation(); pickFromRow(it.key, side); };
         return t;
       };
-      const tl = tick("l"), tr = tick("r");
-      // ⚠️ The unchosen box is hidden with `visibility`, never `display:none`
-      // and never removed: it still holds its width, so the box between them
-      // does not jump sideways the moment a tick lands. A funnel that shuffles
-      // under the teacher's finger is the thing this whole screen is for.
-      const paintRow = () => {
-        const cur = picks.get(pk) || "";
-        row.classList.toggle("is-picked", !!cur);
-        tl.classList.toggle("is-on", cur === "l");
-        tr.classList.toggle("is-on", cur === "r");
-        tl.classList.toggle("is-off", cur === "r");
-        tr.classList.toggle("is-off", cur === "l");
-      };
-      rowPaints.push(paintRow);
-      row.append(tl, card, tr);
-      paintRow();
+      row.append(tick("l"), card, tick("r"));
     } else {
       row.append(card);
     }
     box.append(row);
-    rowEls.push({ pk, row });
+    if (!dup) rows.set(it.key, { row, card, av, it, label: labels[i], i });
   });
-  paintSides();
-  layoutRows(false);   // initial placement — no motion, `picks` may arrive pre-filled
+
+  // ---------------- độ thuôn phễu: tính trên các thẻ CÒN trong cột ----------------
+  function retaper(instant) {
+    const list = [...rows.values()].filter(r => !(picks && picks.has(r.it.key))).sort((a, b) => a.i - b.i);
+    const m = list.length;
+    list.forEach((r, j) => {
+      const w = m > 1 ? POD_MAX_W - (POD_MAX_W - POD_MIN_W) * (j / (m - 1)) : POD_MAX_W;
+      if (instant) r.card.classList.add("no-tr");
+      r.row.style.setProperty("--w", w.toFixed(2) + "%");
+      // ⭐⭐⭐ Đợt 323 — the stats shrink with the box so a narrow row never clips them.
+      r.row.style.setProperty("--sc", (w / POD_MAX_W).toFixed(3));
+      if (instant) { void r.card.offsetWidth; r.card.classList.remove("no-tr"); }
+    });
+  }
+
+  // ---------------- mũi tên "còn người ở trên/dưới" ----------------
+  function paintArrows() {
+    if (!alive()) return;
+    const max = box.scrollHeight - box.clientHeight;
+    podcol.classList.toggle("more-up", box.scrollTop > 4);
+    podcol.classList.toggle("more-down", box.scrollTop < max - 4);
+  }
+  box.addEventListener("scroll", paintArrows, { passive: true });
+  arrUp.onclick = () => box.scrollBy({ top: -box.clientHeight * .6, behavior: "smooth" });
+  arrDn.onclick = () => box.scrollBy({ top: box.clientHeight * .6, behavior: "smooth" });
+
+  // Đặt lại khi khung đổi cỡ (fullscreen, cột myActivity kéo hẹp) — và tự tắt khi bảng bị thay.
+  let ro = null;
+  try {
+    ro = new ResizeObserver(() => {
+      if (!alive()) { ro.disconnect(); return; }
+      layoutSides(true);
+      paintArrows();
+    });
+    ro.observe(wrap);
+  } catch { /* không có ResizeObserver: lượt đặt đầu tiên vẫn đứng */ }
+  // Lần đầu: chờ bảng vào trang (người gọi append SAU khi hàm này trả về).
+  setTimeout(() => { if (alive()) { layoutSides(true); paintArrows(); } }, 0);
+
+  retaper(true);
+  if (!picks) return wrap;
+
+  // ================= phần CHIA ĐỘI (chỉ khi có `picks`) =================
+  const teamCls = side => side === "l" ? "is-tl" : "is-tr";
+
+  function addBall(key, side, hidden) {
+    const r = rows.get(key);
+    const ball = el("div", "aw-sd-ball no-tr " + teamCls(st.origin.get(key) || side) + (hidden ? " is-hidden" : ""));
+    const inner = el("div", "aw-sd-ball-in");
+    // Mỗi bóng lơ lửng theo nhịp riêng ⇒ cả cột không bao giờ nhún cùng lúc.
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    inner.style.setProperty("--bd", rnd(3.6, 5.6).toFixed(2) + "s");
+    inner.style.setProperty("--bdl", (-rnd(0, 5)).toFixed(2) + "s");
+    ["--x1", "--x2", "--x3"].forEach(k => inner.style.setProperty(k, rnd(-6, 6).toFixed(1) + "%"));
+    ["--y1", "--y2", "--y3"].forEach(k => inner.style.setProperty(k, rnd(-7, 7).toFixed(1) + "%"));
+    inner.style.setProperty("--r1", rnd(-6, 6).toFixed(1) + "deg");
+    inner.style.setProperty("--r3", rnd(-6, 6).toFixed(1) + "deg");
+    inner.append(avatarNode(className, r.it.name, "aw-av"));
+    const cap = el("span", "aw-sd-ball-cap");
+    cap.textContent = r.label;                              // pupil's own name: textContent only
+    inner.append(cap);
+    ball.append(inner);
+    ball.title = r.it.name;
+    sides[side].append(ball);
+    balls.set(key, ball);
+    wireDrag(ball, key);
+    return ball;
+  }
+
+  /** Hình học một cột n bóng: cỡ tự co cho vừa, bước = 80% cỡ (bóng đè nhau), căn giữa, so le. */
+  function colGeom(side, n) {
+    const col = sides[side];
+    const W = col.clientWidth, H = col.clientHeight;
+    const maxS = W * .5;
+    const K = .8;
+    const size = Math.max(8, n > 1 ? Math.min(maxS, (H * .92) / (1 + (n - 1) * K)) : maxS);
+    const step = size * K;
+    const y0 = (H - (size + step * (n - 1))) / 2;
+    const zig = size * .2 * (side === "l" ? 1 : -1);
+    return { size, step, y0, x: i => (W - size) / 2 + (n > 1 ? (i % 2 ? zig : -zig) : 0), y: i => y0 + step * i };
+  }
+
+  /**
+   * Đặt bóng vào cột. `preview` = { side, key, index } khi đang kéo: bóng `key` rút khỏi mọi
+   * cột, cột `side` chừa ô trống ở `index`. Bóng TRÊN đè bóng DƯỚI (z-index giảm dần).
+   */
+  function layoutSides(instant, preview) {
+    if (!alive()) return;
+    ["l", "r"].forEach(side => {
+      let keys = st.cols[side].filter(k => rows.has(k));
+      if (preview) {
+        keys = keys.filter(k => k !== preview.key);
+        if (preview.side === side) keys.splice(preview.index, 0, null);
+      }
+      const n = keys.length;
+      if (!n) return;
+      const g = colGeom(side, n);
+      keys.forEach((k, i) => {
+        if (k == null) return;
+        const b = balls.get(k);
+        if (!b || b.classList.contains("is-drag")) return;
+        if (instant) b.classList.add("no-tr");
+        b.style.width = b.style.height = g.size + "px";
+        b.style.setProperty("--bs", g.size + "px");
+        b.style.left = g.x(i) + "px";
+        b.style.top = g.y(i) + "px";
+        b.style.zIndex = String(10 + n - i);
+        if (instant) void b.offsetWidth;
+      });
+    });
+    setTimeout(() => balls.forEach(b => b.classList.remove("no-tr")), 40);
+  }
+
+  /** Ô đích tính từ style — bóng có thể đang trượt dở, getBoundingClientRect sẽ nói dối. */
+  function ballTarget(ball) {
+    const s = ball.parentElement.getBoundingClientRect();
+    const w = parseFloat(ball.style.width) || 40;
+    return { left: s.left + (parseFloat(ball.style.left) || 0), top: s.top + (parseFloat(ball.style.top) || 0), width: w, height: w };
+  }
+  function slotAt(side, key, clientY) {
+    const m = st.cols[side].filter(k => k !== key && rows.has(k)).length;
+    const g = colGeom(side, m + 1);
+    const i = Math.round((clientY - sides[side].getBoundingClientRect().top - g.y0 - g.size / 2) / g.step);
+    return Math.max(0, Math.min(m, i));
+  }
+
+  // ---------------- lớp phủ: bóng bay + sparkle ----------------
+  function relRect(r) { const w = wrap.getBoundingClientRect(); return { x: r.left - w.left, y: r.top - w.top, w: r.width, h: r.height }; }
+  function makeFlyBall(key, teamSide, rect) {
+    const f = relRect(rect);
+    const node = el("div", "aw-sd-flyball " + teamCls(teamSide));
+    node.style.width = f.w + "px"; node.style.height = f.h + "px";
+    node.style.setProperty("--bs", f.w + "px");
+    node.style.transform = `translate(${f.x}px,${f.y}px)`;
+    node.append(avatarNode(className, rows.get(key).it.name, "aw-av"));
+    fly.append(node);
+    return { node, f };
+  }
+  function flyTo(fb, toR, ms, done) {
+    const { node, f } = fb;
+    const t = relRect(toR);
+    const sx = f.x, sy = f.y, ex = t.x + (t.w - f.w) / 2, ey = t.y + (t.h - f.h) / 2;
+    const sEnd = t.w / f.w;
+    const midX = sx + (ex - sx) * .5, midY = Math.min(sy, ey) - Math.max(f.w * .8, Math.abs(ex - sx) * .18);
+    let a;
+    try {
+      a = node.animate([
+        { transform: `translate(${sx}px,${sy}px) scale(1)` },
+        { transform: `translate(${midX}px,${midY}px) scale(${(1 + sEnd) / 2 * 1.15})`, offset: .5 },
+        { transform: `translate(${ex}px,${ey}px) scale(${sEnd})` }
+      ], { duration: ms, easing: "cubic-bezier(.45,.05,.35,1)", fill: "forwards" });
+    } catch { done(); node.remove(); return; }
+    whenDone(a, () => { done(); node.remove(); }, ms + 200);
+  }
+  /**
+   * Vòng sáng + chùm sao vàng toả ra NGAY CHỖ quả bóng vừa bật khỏi thẻ (thầy: "bắn ra một chút
+   * sparkle vàng"). ⭐ Đợt 448b — không còn nhịp "bóng nảy tại chỗ" trước khi bay: bóng bay luôn,
+   * sparkle ở lại chỗ cũ toả ra sau lưng nó.
+   */
+  function popSparkle(fb, ms) {
+    const { f } = fb;
+    const cx = f.x + f.w / 2, cy = f.y + f.h / 2, R = f.w / 2;
+    const ring = el("i", "aw-sd-burst-ring");
+    ring.style.left = cx + "px"; ring.style.top = cy + "px";
+    ring.style.width = ring.style.height = f.w + "px";
+    fly.append(ring);
+    try {
+      const ra = ring.animate([
+        { transform: "translate(-50%,-50%) scale(.9)", opacity: .9 },
+        { transform: "translate(-50%,-50%) scale(1.9)", opacity: 0 }
+      ], { duration: ms + 80, easing: "cubic-bezier(.2,.7,.3,1)", fill: "forwards" });
+      whenDone(ra, () => ring.remove(), ms + 300);
+    } catch { ring.remove(); }
+    const N = 12;
+    for (let i = 0; i < N; i++) {
+      const s = el("i", "aw-sd-burst-star" + (i % 3 === 0 ? " is-dot" : i % 2 ? " is-pale" : ""));
+      const ang = (i / N) * Math.PI * 2 + (Math.random() - .5) * .5;
+      const d0 = R * .85, d1 = R * (1.45 + Math.random() * .6);
+      const sz = R * (i % 3 === 0 ? .16 : .3 + Math.random() * .12);
+      s.style.width = s.style.height = sz + "px";
+      s.style.left = cx + "px"; s.style.top = cy + "px";
+      fly.append(s);
+      const rot = (Math.random() - .5) * 160;
+      const p = d => `translate(-50%,-50%) translate(${Math.cos(ang) * d}px,${Math.sin(ang) * d}px)`;
+      try {
+        const sa = s.animate([
+          { transform: p(d0) + " scale(.2) rotate(0deg)", opacity: 0 },
+          { transform: p((d0 + d1) / 2) + ` scale(1) rotate(${rot / 2}deg)`, opacity: 1, offset: .35 },
+          { transform: p(d1) + ` scale(.3) rotate(${rot}deg)`, opacity: 0 }
+        ], { duration: ms + 160 + Math.random() * 120, easing: "cubic-bezier(.15,.7,.3,1)", fill: "forwards" });
+        whenDone(sa, () => s.remove(), ms + 500);
+      } catch { s.remove(); }
+    }
+    try { [0, 60, 120].forEach((d, i) => setTimeout(() => sound.glide({ freq: 1800 + i * 500, freqEnd: 2600 + i * 500, dur: .12, gain: .05 }), d)); }
+    catch { /* âm thanh là trang trí */ }
+  }
+
+  function clipCircle(card, av) {
+    const br = card.getBoundingClientRect(), ar = av.getBoundingClientRect();
+    const cx = ar.left + ar.width / 2 - br.left, cy = ar.top + ar.height / 2 - br.top;
+    const R = Math.hypot(Math.max(cx, br.width - cx), Math.max(cy, br.height - cy));
+    return { big: `circle(${R}px at ${cx}px ${cy}px)`, small: `circle(${ar.width / 2 + 1}px at ${cx}px ${cy}px)` };
+  }
+
+  function counts() { const c = { l: 0, r: 0 }; picks.forEach(v => { if (c[v] != null) c[v]++; }); return c; }
+  function shake(node) {
+    try { sound.buzz(); } catch { /* âm thanh là trang trí */ }
+    try {
+      node.animate([{ transform: "translateX(0)" }, { transform: "translateX(-3%)" }, { transform: "translateX(3%)" },
+        { transform: "translateX(-2%)" }, { transform: "translateX(1%)" }, { transform: "translateX(0)" }],
+      { duration: 300, easing: "ease-in-out" });
+    } catch { /* không có WAAPI: không lắc, vẫn chặn */ }
+  }
+
+  // ---------------- CHỌN: bóng bật ra bay sang cột + thẻ co lại — CÙNG LÚC ----------------
+  // ⭐ Đợt 448b (thầy: "thẻ tên vừa co và quả bóng cũng đồng thời nhảy ra đội luôn, không trễ một
+  // nhịp chờ") — trước: co thẻ 230 ms ⇒ nảy + sparkle 340 ms ⇒ mới bay. Nay ngay cú tích: quả avatar
+  // trong thẻ ẩn đi, bản sao của nó bay luôn về cột (sparkle toả ở chỗ nó vừa rời), còn dải thẻ co
+  // tròn về đúng chỗ trống đó rồi hàng khép lại.
+  function pickFromRow(key, side) {
+    const r = rows.get(key);
+    if (!r || picks.has(key) || r.row.dataset.busy) return;
+    // ⭐⭐⭐ Đợt 319 — hai bên không chênh quá 1 (chỉ cú TÍCH). ⭐ Đợt 448 — chỉ thẻ lắc, không toast.
+    const c = counts(); c[side]++;
+    if (Math.abs(c.l - c.r) > 1) { shake(r.card); return; }
+    picks.set(key, side);
+    st.origin.set(key, side);
+    st.cols[side].unshift(key);             // bóng mới lên ĐẦU cột, đè lên bóng chọn trước
+    onChange?.();
+    try { sound.tick(); } catch { /* âm thanh là trang trí */ }
+    r.row.dataset.busy = "1";
+    r.row.classList.add("is-leaving");
+    const from = r.av.getBoundingClientRect();
+    const clip = clipCircle(r.card, r.av);
+    // 1) bóng bật ra, bay về cột ngay
+    r.av.style.visibility = "hidden";
+    const fb = makeFlyBall(key, side, from);
+    popSparkle(fb, PT.pop);
+    const ball = addBall(key, side, true);
+    layoutSides(false);
+    flyTo(fb, ballTarget(ball), PT.flyOut, () => ball.classList.remove("is-hidden"));
+    // 2) cùng lúc: dải thẻ co tròn về chỗ quả bóng vừa rời, xong thì hàng khép lại tại chỗ
+    const afterShrink = () => {
+      const restore = () => { r.card.style.visibility = ""; r.av.style.visibility = ""; delete r.row.dataset.busy; paintArrows(); };
+      if (!alive()) return restore();
+      r.card.style.visibility = "hidden";
+      collapseRow(r, restore);
+      retaper(false);
+    };
+    try {
+      const shrink = r.card.animate([{ clipPath: clip.big }, { clipPath: clip.small }],
+        { duration: PT.shrink, easing: "cubic-bezier(.6,0,.8,.4)", fill: "forwards" });
+      whenDone(shrink, afterShrink, PT.shrink + 150);
+    } catch { afterShrink(); }
+  }
+
+  function collapseRow(r, after) {
+    const h = r.row.offsetHeight;
+    const gap = parseFloat(getComputedStyle(box).rowGap) || 0;
+    const end = () => { r.row.classList.add("is-gone"); r.row.classList.remove("is-leaving"); after && after(); };
+    try {
+      const a = r.row.animate([
+        { height: h + "px", marginBottom: "0px", opacity: 1 },
+        { height: "0px", marginBottom: -gap + "px", opacity: 0 }
+      ], { duration: PT.collapse, easing: "cubic-bezier(.4,0,.2,1)", fill: "forwards" });
+      whenDone(a, end, PT.collapse + 150);
+    } catch { end(); }
+  }
+
+  // ---------------- BỎ CHỌN: bóng bay về đúng hạng, thẻ nở ra ----------------
+  function unpick(key, fromR) {
+    const r = rows.get(key);
+    const side = picks.get(key);
+    const teamSide = st.origin.get(key) || side;
+    picks.delete(key);
+    st.origin.delete(key);
+    if (st.cols[side]) st.cols[side] = st.cols[side].filter(k => k !== key);
+    const ball = balls.get(key);
+    if (ball) { ball.remove(); balls.delete(key); }
+    onChange?.();
+    try { sound.tick(); } catch { /* âm thanh là trang trí */ }
+    layoutSides(false);
+    retaper(false);
+    if (!r) return;
+    r.row.classList.remove("is-gone");
+    r.row.classList.add("is-leaving");
+    r.row.dataset.busy = "1";
+    r.card.classList.add("no-tr");          // thẻ này vào thẳng bề ngang mới, không trượt
+    r.card.style.visibility = "hidden";
+    void r.card.offsetWidth;
+    // Hàng nằm ngoài khung cuộn thì kéo vừa đủ cho thấy — chỉ khi cần.
+    const pr = box.getBoundingClientRect(), rr = r.row.getBoundingClientRect();
+    if (rr.top < pr.top) box.scrollTop -= (pr.top - rr.top) + 10;
+    else if (rr.bottom > pr.bottom) box.scrollTop += (rr.bottom - pr.bottom) + 10;
+    const to = r.av.getBoundingClientRect();
+    const h = r.row.offsetHeight;
+    const gap = parseFloat(getComputedStyle(box).rowGap) || 0;
+    r.card.classList.remove("no-tr");
+    try {
+      r.row.animate([{ height: "0px", marginBottom: -gap + "px" }, { height: h + "px", marginBottom: "0px" }],
+        { duration: PT.rowOpen, easing: "cubic-bezier(.22,.61,.22,1)" });
+    } catch { /* không có WAAPI: hàng mở thẳng */ }
+    const fb = makeFlyBall(key, teamSide, fromR);
+    flyTo(fb, to, PT.flyBack, () => {
+      r.card.style.visibility = "";
+      const done = () => { r.row.classList.remove("is-leaving"); delete r.row.dataset.busy; paintArrows(); };
+      if (!alive()) return done();
+      const clip = clipCircle(r.card, r.av);
+      try {
+        const g = r.card.animate([{ clipPath: clip.small }, { clipPath: clip.big }],
+          { duration: PT.grow, easing: "cubic-bezier(.2,.8,.3,1)" });
+        whenDone(g, done, PT.grow + 150);
+      } catch { done(); }
+    });
+  }
+
+  // ---------------- kéo bóng ----------------
+  function wireDrag(ball, key) {
+    let id = null, sx = 0, sy = 0, ox = 0, oy = 0, dragging = false, last = "";
+    const inR = (n, x, y) => { const r = n.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; };
+    const hot = (x, y) => inR(podcol, x, y) ? "pod" : inR(sides.l, x, y) ? "l" : inR(sides.r, x, y) ? "r" : null;
+    const paintHot = h => {
+      podcol.classList.toggle("is-hot", h === "pod");
+      sides.l.classList.toggle("is-hot", h === "l");
+      sides.r.classList.toggle("is-hot", h === "r");
+    };
+    ball.addEventListener("pointerdown", e => {
+      if (e.button !== 0) return;
+      id = e.pointerId; sx = e.clientX; sy = e.clientY;
+      ox = parseFloat(ball.style.left) || 0; oy = parseFloat(ball.style.top) || 0;
+      dragging = false; last = "";
+      try { ball.setPointerCapture(id); } catch { /* not capturable */ }
+    });
+    ball.addEventListener("pointermove", e => {
+      if (e.pointerId !== id) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      if (!dragging && Math.hypot(dx, dy) < 8) return;
+      if (!dragging) { dragging = true; ball.classList.add("is-drag"); wrap.classList.add("is-dragging"); }
+      ball.style.left = (ox + dx) + "px";
+      ball.style.top = (oy + dy) + "px";
+      const h = hot(e.clientX, e.clientY);
+      paintHot(h);
+      // Trên một cột bóng ⇒ các bóng khác dạt ra chừa đúng ô sẽ thả vào.
+      const prev = (h === "l" || h === "r") ? { side: h, key, index: slotAt(h, key, e.clientY) } : null;
+      const sig = prev ? prev.side + prev.index : "";
+      if (sig !== last) { last = sig; layoutSides(false, prev); }
+    });
+    const end = e => {
+      if (e.pointerId !== id) return;
+      id = null;
+      wrap.classList.remove("is-dragging");
+      paintHot(null);
+      if (!dragging) {                       // chạm nhẹ ⇒ hé tên em trong giây lát
+        ball.classList.add("is-peek");
+        setTimeout(() => ball.classList.remove("is-peek"), 1500);
+        return;
+      }
+      dragging = false;
+      const h = e.type === "pointerup" ? hot(e.clientX, e.clientY) : null;
+      const cur = picks.get(key);
+      if (h === "pod") { ball.classList.remove("is-drag"); unpick(key, ball.getBoundingClientRect()); return; }
+      if ((h === "l" || h === "r") && cur) {
+        const idx = slotAt(h, key, e.clientY);
+        st.cols[cur] = st.cols[cur].filter(k => k !== key);
+        st.cols[h].splice(idx, 0, key);
+        if (h !== cur) {
+          picks.set(key, h);                  // màu bóng vẫn theo st.origin — không đổi
+          const a = sides[cur].getBoundingClientRect(), b = sides[h].getBoundingClientRect();
+          ball.classList.add("no-tr");
+          sides[h].append(ball);
+          ball.style.left = (parseFloat(ball.style.left) + a.left - b.left) + "px";
+          ball.style.top = (parseFloat(ball.style.top) + a.top - b.top) + "px";
+          void ball.offsetWidth;
+          onChange?.();
+        }
+        try { sound.tick(); } catch { /* âm thanh là trang trí */ }
+      }
+      ball.classList.remove("is-drag", "no-tr");
+      layoutSides(false);                    // trượt vào ô mới (hoặc về chỗ cũ nếu thả ra ngoài)
+    };
+    ball.addEventListener("pointerup", end);
+    ball.addEventListener("pointercancel", end);
+    ball.addEventListener("contextmenu", e => e.preventDefault());
+  }
+
+  // Bóng của những em đã chọn từ trước (vẽ lại bảng / mở lại trận) — đặt thẳng, không bay.
+  ["l", "r"].forEach(side => st.cols[side].forEach(key => {
+    const r = rows.get(key);
+    if (!r) return;
+    r.row.classList.add("is-gone");
+    addBall(key, side, false);
+  }));
+  retaper(true);
   return wrap;
 }
 

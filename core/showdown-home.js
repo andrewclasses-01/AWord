@@ -47,7 +47,7 @@ import {
   renderChart, fitChartTierLabels, watchChartResize,
   applyClassifyToChart, buildClassifyBar
 } from "./showdown-setup.js";
-import { renderReviewTable, renderReviewPodium, renderReviewList, fitPodiumNames } from "./showdown-review.js";
+import { renderReviewTable, renderReviewPodium, renderAnalysisPodium, renderReviewList, fitPodiumNames } from "./showdown-review.js";
 import { buildAnalysisRows, DEFAULT_CLASSIFY } from "./showdown.js";
 
 const WEEKDAY = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -828,17 +828,43 @@ export function mountShowdownHome(host, opts = {}) {
     const backBtn = el("button", "aw-sd-rec-close", icons.close);
     backBtn.type = "button"; backBtn.title = "Close";
     backBtn.onclick = () => { sfx.back(); closeChart(); };
-    ch.append(ct, dlBtn, backBtn);
+    // ⭐⭐⭐⭐ Đợt 448 (thầy: "Phần analyzing cũng có phần cột và chọn thành viên như thế") — hai
+    // nút Chart / Podium như màn một trận. Podium xếp theo % trung bình, có chia đội bằng bóng
+    // avatar; dấu tích ở đây là TẠM (Analysis không có bản ghi riêng để lưu — như classify).
+    let anaView = "chart";
+    const anaPicks = new Map();
+    const chartBtn = el("button", "aw-sd-rec-close is-toggle", icons.barChart);
+    chartBtn.type = "button"; chartBtn.title = "Chart";
+    const podBtn = el("button", "aw-sd-rec-close is-toggle", icons.trophy);
+    podBtn.type = "button"; podBtn.title = "Podium";
+    ch.append(ct, chartBtn, podBtn, dlBtn, backBtn);
     const cbody = el("div", "aw-sd-rec-cbody");
     chart.append(ch, cbody, classifyRow);
-    cbody.append(renderChart(full, partial, entries));
+    function paintAna() {
+      chartBtn.classList.toggle("is-on", anaView === "chart");
+      podBtn.classList.toggle("is-on", anaView === "podium");
+      cbody.innerHTML = "";
+      classifyRow.style.display = anaView === "chart" ? "" : "none";
+      if (anaView === "chart") {
+        cbody.append(renderChart(full, partial, entries));
+        if (currentClassify) applyClassifyToChart(chart, currentClassify);
+        fitPodiumNames(chart, ".aw-sd-rec-barname");
+        fitChartTierLabels(chart);
+      } else {
+        cbody.append(renderAnalysisPodium({ full, partial, entries }, { picks: anaPicks, className: curClassName }));
+        fitPodiumNames(cbody);
+      }
+    }
+    chartBtn.onclick = () => { if (anaView !== "chart") { anaView = "chart"; sfx.tap(); paintAna(); } };
+    podBtn.onclick = () => { if (anaView !== "podium") { anaView = "podium"; sfx.tap(); paintAna(); } };
+    paintAna();
     root.append(chart);
     fitPodiumNames(chart, ".aw-sd-rec-barname");
     fitChartTierLabels(chart);
     watchChartResize(chart);
     document.addEventListener("fullscreenchange", onFsChange);
     Promise.resolve().then(() => chart.requestFullscreen?.())
-      .then(() => { fitPodiumNames(chart, ".aw-sd-rec-barname"); fitChartTierLabels(chart); })
+      .then(() => { if (anaView === "chart") { fitPodiumNames(chart, ".aw-sd-rec-barname"); fitChartTierLabels(chart); } else fitPodiumNames(cbody); })
       .catch(e => console.warn("AWord: fullscreen refused, showing the analysis inline", e));
     chart.animate([{ opacity: 0, transform: "scale(.97)" }, { opacity: 1, transform: "scale(1)" }],
       { duration: 180, easing: "cubic-bezier(.22,.9,.3,1)" });
@@ -964,11 +990,11 @@ export function mountShowdownHome(host, opts = {}) {
       classifyRow.style.display = showingTable ? "" : "none";
       if (!hasRows && view !== "podium") {
         dbody.append(el("div", "aw-sd-rec-note", "The answers for this match were not kept — here is the ranking."));
-        dbody.append(renderReviewPodium(ranked, { showTeam: true, picks, onChange: () => { picksDirty = true; } }));
+        dbody.append(renderReviewPodium(ranked, { showTeam: true, picks, onChange: () => { picksDirty = true; }, className: curClassName }));
       } else if (view === "table") {
         dbody.append(renderReviewTable(ranked, [curClassName, displayName(m)].filter(Boolean).join(" • "), { classify }));
       } else if (view === "podium") {
-        dbody.append(renderReviewPodium(ranked, { showTeam: true, picks, onChange: () => { picksDirty = true; } }));
+        dbody.append(renderReviewPodium(ranked, { showTeam: true, picks, onChange: () => { picksDirty = true; }, className: curClassName }));
       } else {
         dbody.append(renderReviewList(ranked, { showTeam: true }));
       }

@@ -7250,69 +7250,118 @@ body.aw-page-dragover::after {
    `.aw-sd-pod`'s own (now narrower) box, nothing in showdown-review.js had to
    change for "co ngắn 2 bên trái phải". */
 .aw-sd-podwrap { position: relative; flex: 1 1 auto; min-height: 0; display: flex; gap: calc(0.8 * var(--aw-u)); }
-.aw-sd-podwrap > .aw-sd-pod { flex: 1 1 auto; min-width: 0; }
-/* ⭐⭐⭐ Đợt 319 — THE TWO NAME COLUMNS. A little narrower than the funnel's own
-   gutters used to be (thầy: "co ngắn... một chút"), each scrolling on its own
-   so a long roster never grows the funnel's own height to match. */
-.aw-sd-pod-side {
-  flex: 0 0 17%; min-width: 0; min-height: 0; overflow-y: auto;
-  display: flex; flex-direction: column;
-  padding: calc(0.6 * var(--aw-u)) calc(0.3 * var(--aw-u)) calc(1 * var(--aw-u));
+/* ⭐ Đợt 448c — CẮT mọi thứ lòi ra ở đây (mũi tên ▼ nhấp nháy dịch xuống 22%, bóng lơ lửng sát mép, sparkle).
+   Không cắt thì phần lòi làm hộp cha `overflow-y:auto` (.aw-sd-rec-dbody / .aw-review) hiện THANH CUỘN ⇒ hụt 15px
+   bề ngang ⇒ cả bảng (đo bằng cqw) co lại ⇒ mũi tên lọt vào ⇒ thanh cuộn biến ⇒ nở ra… GIẬT liên tục theo
+   nhịp nhấp nháy (thầy bắt được). `clip` không biến hộp thành khung cuộn; `hidden` đứng trước là đường lùi. */
+.aw-sd-podwrap { overflow: hidden; overflow: clip; }
+/* ⭐⭐⭐⭐ Đợt 448 — CỘT THẺ nằm trong `.aw-sd-podcol` để treo hai mũi tên "còn người ở trên/dưới"
+   (thầy: "nếu ở trên và ở dưới có các thẻ khác, thì phải có mũi tên nhấp nháy"). */
+.aw-sd-podcol { position: relative; flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; }
+.aw-sd-podcol > .aw-sd-pod { flex: 1 1 auto; min-width: 0; }
+.aw-sd-podcol.is-hot > .aw-sd-pod { background: radial-gradient(ellipse at center, rgba(37,99,235,.07), transparent 70%); }
+.aw-sd-pod-fade { position: absolute; left: 0; right: 0; height: calc(4 * var(--aw-u)); pointer-events: none; opacity: 0; transition: opacity .25s; z-index: 2; }
+.aw-sd-pod-fade.is-up { top: 0; background: linear-gradient(#fff, rgba(255,255,255,0)); }
+.aw-sd-pod-fade.is-down { bottom: 0; background: linear-gradient(rgba(255,255,255,0), #fff); }
+.aw-sd-podcol.more-up .aw-sd-pod-fade.is-up, .aw-sd-podcol.more-down .aw-sd-pod-fade.is-down { opacity: 1; }
+.aw-sd-pod-arrow {
+  position: absolute; left: 50%; margin-left: calc(-2.6 * var(--aw-u)); width: calc(5.2 * var(--aw-u)); height: calc(3.6 * var(--aw-u));
+  border: none; background: none; padding: 0; cursor: pointer; color: #2563eb; z-index: 4;
+  display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .25s;
 }
-/* ⭐⭐⭐ Đợt 323 (thầy: "bỏ chữ left/right") — the LEFT/RIGHT header row is gone;
-   the list below is the column's only content now.
-   ⭐⭐⭐ Đợt 323 (thầy: "tên đặt vào giữa theo chiều cao... có thêm học sinh thì
-   dàn đều để cân bằng ở giữa") — the list GROWS to fill the column
-   (`flex:1 1 auto`) and spaces its own children with `space-evenly`: one name
-   sits dead centre, several spread out with equal gaps above/below/between —
-   both readings of "centred" thầy asked for, from the one rule. */
-.aw-sd-pod-side-list {
-  flex: 1 1 auto; display: flex; flex-direction: column; justify-content: space-evenly;
-  gap: calc(0.3 * var(--aw-u));
+.aw-sd-pod-arrow.is-up { top: 0; }
+.aw-sd-pod-arrow.is-down { bottom: 0; }
+.aw-sd-podcol.more-up .aw-sd-pod-arrow.is-up, .aw-sd-podcol.more-down .aw-sd-pod-arrow.is-down { opacity: 1; pointer-events: auto; }
+/* ⭐ Đợt 448b (thầy: "mảnh và đơn giản, ko cần cả nút tròn") — chỉ còn nét mũi tên đôi, không đĩa nền. */
+.aw-sd-pod-arrow span { display: flex; align-items: center; justify-content: center; width: calc(3.6 * var(--aw-u)); height: calc(3.6 * var(--aw-u)); }
+.aw-sd-pod-arrow svg { width: 100%; height: 100%; }
+/* Nhịp nhấp nháy đặt trên `span` (con), không trên nút: giữ `transform` của nút trống —
+   bẫy keyframe transform đè transform tĩnh. */
+.aw-sd-pod-arrow.is-up span { animation: aw-sd-arr-up 1.1s ease-in-out infinite; }
+.aw-sd-pod-arrow.is-down span { animation: aw-sd-arr-dn 1.1s ease-in-out infinite; }
+@keyframes aw-sd-arr-up { 0%, 100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(-22%); opacity: .35; } }
+@keyframes aw-sd-arr-dn { 0%, 100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(22%); opacity: .35; } }
+
+/* ⭐⭐⭐⭐ Đợt 448 — HAI CỘT BÓNG AVATAR (thay hai cột TÊN của Đợt 319/323). Bóng đặt bằng
+   left/top tuyệt đối (showdown-review.js `layoutSides`), nên cột không cuộn, không flex. */
+.aw-sd-pod-side { position: relative; flex: 0 0 17%; min-width: 0; min-height: 0; }
+.aw-sd-pod-side.is-l { --aw-team: #2563eb; }
+.aw-sd-pod-side.is-r { --aw-team: #e8590c; }
+.aw-sd-pod-side::before {
+  content: ""; position: absolute; inset: calc(1 * var(--aw-u)) calc(.4 * var(--aw-u)); border-radius: calc(2 * var(--aw-u));
+  border: calc(.2 * var(--aw-u)) dashed transparent; transition: border-color .2s, background .2s; pointer-events: none;
 }
-/* ⭐⭐⭐ Đợt 324 (thầy: "font chữ to tối đa") — up again from Đợt 323's 1.9.
-   "Tối đa" nghĩa là KHÔNG đoán một số cố định vừa mắt, mà đặt cỡ CỐ Ý QUÁ TO
-   rồi để `fitPodiumNames` (gọi thêm trên selector này — xem
-   showdown-review.js) tự co từng tên xuống MỨC LỚN NHẤT còn vừa cột, đúng
-   khuôn "to hết cỡ, chỉ co khi thật sự tràn" mà tên trong phễu đã dùng. */
-.aw-sd-pod-side-item {
-  font-size: calc(4 * var(--aw-u)); font-weight: 700; color: #23303e; line-height: 1.25;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
-  font-variant-numeric: tabular-nums;
+.aw-sd-podwrap.is-dragging .aw-sd-pod-side::before { border-color: #d6dee8; }
+.aw-sd-pod-side.is-hot::before { border-color: var(--aw-team); background: color-mix(in srgb, var(--aw-team) 7%, transparent); }
+
+/* AVATAR TRÒN — dùng chung cho thẻ, bóng trong cột, bóng đang bay (core/avatar.js). */
+.aw-av {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; overflow: hidden;
+  background: var(--av-bg, #cbd5e1); color: #fff; font-weight: 800; letter-spacing: -.02em; line-height: 1;
 }
-/* Each column's names hug the funnel rather than the outer edge — the same
-   "lean toward the middle" idiom the tick dots themselves already use. */
-.aw-sd-pod-side.is-l .aw-sd-pod-side-item { text-align: right; }
-.aw-sd-pod-side.is-r .aw-sd-pod-side-item { text-align: left; }
+.aw-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.aw-sd-pod-av {
+  flex: 0 0 auto; width: calc(5.4 * var(--aw-u)); height: calc(5.4 * var(--aw-u)); font-size: calc(1.9 * var(--aw-u));
+  box-shadow: 0 0 0 calc(.28 * var(--aw-u)) #fff, 0 0 0 calc(.5 * var(--aw-u)) var(--aw-ring, #dbe3ec);
+}
+.aw-sd-pod-box.is-m1 .aw-sd-pod-av { --aw-ring: #efc03c; }
+.aw-sd-pod-box.is-m2 .aw-sd-pod-av { --aw-ring: #b9c5d2; }
+.aw-sd-pod-box.is-m3 .aw-sd-pod-av { --aw-ring: #dda56a; }
+
+/* Quả bóng: VỊ TRÍ ở `.aw-sd-ball` (left/top, có transition để trượt khi cột xếp lại), LƠ LỬNG ở
+   `.aw-sd-ball-in` (keyframe transform) — tách hai lớp để keyframe không đè vị trí. Màu viền = đội
+   đã chọn em LẦN ĐẦU (`is-tl`/`is-tr`), không đổi khi kéo sang cột kia. */
+.aw-sd-ball {
+  position: absolute; left: 0; top: 0; width: 40px; height: 40px; touch-action: none; cursor: grab;
+  transition: left .65s cubic-bezier(.34,1.3,.5,1), top .65s cubic-bezier(.34,1.3,.5,1), width .5s, height .5s;
+}
+.aw-sd-ball.no-tr { transition: none; }
+.aw-sd-ball.is-hidden { visibility: hidden; }
+.aw-sd-ball.is-drag { z-index: 90 !important; cursor: grabbing; transition: none; }
+.aw-sd-ball.is-tl, .aw-sd-flyball.is-tl { --aw-team: #2563eb; }
+.aw-sd-ball.is-tr, .aw-sd-flyball.is-tr { --aw-team: #e8590c; }
+.aw-sd-ball-in { position: absolute; inset: 0; animation: aw-sd-bob var(--bd, 4s) ease-in-out infinite; animation-delay: var(--bdl, 0s); }
+.aw-sd-ball.is-drag .aw-sd-ball-in { animation-play-state: paused; }
+.aw-sd-ball .aw-av, .aw-sd-flyball .aw-av {
+  width: 100%; height: 100%; font-size: calc(var(--bs, 40px) * .34);
+  box-shadow: 0 0 0 calc(var(--bs, 40px) * .05) #fff, 0 0 0 calc(var(--bs, 40px) * .09) var(--aw-team),
+    0 calc(var(--bs, 40px) * .08) calc(var(--bs, 40px) * .22) rgba(15,23,42,.22);
+}
+@keyframes aw-sd-bob {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(var(--x1), var(--y1)) rotate(var(--r1)); }
+  50% { transform: translate(var(--x2), var(--y2)) rotate(0deg); }
+  75% { transform: translate(var(--x3), var(--y3)) rotate(var(--r3)); }
+}
+/* Chạm nhẹ một quả bóng ⇒ hé tên em 1,5 s. */
+.aw-sd-ball-cap {
+  position: absolute; left: 50%; top: 100%; transform: translate(-50%, 18%); white-space: nowrap; pointer-events: none;
+  font-weight: 800; font-size: calc(var(--bs, 40px) * .24); color: #23303e; background: #fff; padding: 0 .45em; border-radius: 99px;
+  box-shadow: 0 1px 4px rgba(15,23,42,.18); opacity: 0; transition: opacity .2s;
+}
+.aw-sd-ball.is-peek .aw-sd-ball-cap { opacity: 1; }
+/* Lớp phủ cho bóng đang bay + sparkle — phủ cả bảng, không ăn cú chạm. */
+.aw-sd-pod-fly { position: absolute; inset: 0; pointer-events: none; z-index: 80; }
+.aw-sd-flyball { position: absolute; left: 0; top: 0; }
+.aw-sd-burst-ring {
+  position: absolute; border-radius: 50%; border: 3px solid #ffd54a; pointer-events: none;
+  box-shadow: 0 0 18px rgba(255,200,40,.75), inset 0 0 12px rgba(255,214,90,.6);
+}
+.aw-sd-burst-star {
+  position: absolute; background: #f5b915; pointer-events: none;
+  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+}
+.aw-sd-burst-star.is-pale { background: #ffd75e; }
+.aw-sd-burst-star.is-dot { clip-path: circle(50%); background: #fff1b8; }
 .aw-sd-pod-row {
   position: relative; display: flex; justify-content: center; align-items: center;
   gap: calc(0.9 * var(--aw-u));      /* only ever seen when the tick boxes are there */
 }
-/* ⭐⭐⭐ Đợt 323 (thầy: "có phân cách bằng 1 nét đứt với cụm các ô chưa chọn") —
-   a dashed rule between the still-ranked funnel and the picked group below it.
-   `display:none` until there is at least one picked row (layoutRows toggles
-   `.is-on`) so it never shows as an empty line above an untouched board. Not
-   part of the FLIP animation itself — it snaps in/out with the reorder rather
-   than fading, same moment the rows themselves jump to their measured start. */
-/* ⭐⭐⭐ Đợt 324 (thầy: "tăng không gian giãn cách ở khoảng giữa này ra một
-   chút") — margin lên gần gấp 3 so với Đợt 323 (0.5→1.4), viền đậm/tối hơn
-   một chút để tự nó đủ rõ là một ranh giới, không chỉ là khoảng trắng tình cờ. */
-.aw-sd-pod-sep {
-  display: none; flex: 0 0 auto;
-  border: none; border-top: calc(0.2 * var(--aw-u)) dashed #94a3b8;
-  margin: calc(1.4 * var(--aw-u)) calc(1 * var(--aw-u));
-}
-.aw-sd-pod-sep.is-on { display: block; }
-/* ⭐⭐⭐ Đợt 324 (thầy: "di chuyển dần TRÊN MẶT các ô khác") — the ONE row a tap
-   just moved (see `layoutRows`'s `movedPk` in showdown-review.js), for the
-   length of its own slide. `.aw-sd-pod-row` is already `position:relative`
-   (above), so `z-index` alone lifts it above whichever rows it passes; the
-   shadow on its OWN box (not the row, which is just ticks+box side by side)
-   is what sells "picked up", not just "reordered". */
-.aw-sd-pod-row.is-moving { z-index: 5; }
-.aw-sd-pod-row.is-moving .aw-sd-pod-box {
-  box-shadow: 0 calc(0.9 * var(--aw-u)) calc(2.2 * var(--aw-u)) rgba(15, 23, 42, .28);
-}
+/* ⭐⭐⭐⭐ Đợt 448 — vạch đứt + nhóm "đã chọn" (Đợt 323/324) đã BỎ: thẻ được chọn co thành bóng
+   bay sang cột bên, hàng của nó khép lại TẠI CHỖ (`is-gone`). `is-leaving` = đang co/nở —
+   giấu hai chấm tích cho khỏi bị bấm giữa chừng. */
+.aw-sd-pod-row.is-gone { display: none; }
+.aw-sd-pod-row.is-leaving .aw-sd-pod-tick { opacity: 0; pointer-events: none; }
 .aw-sd-pod-box {
   position: relative;      /* Đợt 207 — the sparkle layer is positioned against it */
   width: var(--w); box-sizing: border-box; min-height: calc(7.2 * var(--aw-u));
@@ -7320,6 +7369,9 @@ body.aw-page-dragover::after {
   padding: calc(0.7 * var(--aw-u)) calc(1.5 * var(--aw-u)); border-radius: calc(1.1 * var(--aw-u));
   background: #f3f6fa; border: calc(0.18 * var(--aw-u)) solid #e3e9f1;
 }
+/* ⭐ Đợt 448 — phễu tự thuôn lại khi rút/trả thẻ: bề ngang trượt mượt; `no-tr` cho lần đặt đầu. */
+.aw-sd-pod-box { transition: width .55s cubic-bezier(.22,.61,.22,1); }
+.aw-sd-pod-box.no-tr { transition: none; }
 /* Gold, silver, bronze — the box itself, not just the medal, so the top three
    read from across the room. */
 .aw-sd-pod-box.is-m1 { background: linear-gradient(100deg, #fff7db, #ffe8a3); border-color: #efc03c; }
@@ -7329,7 +7381,7 @@ body.aw-page-dragover::after {
    light blue (Đợt 323); a picked row reads as "done" rather than "ranked", so
    flat light green wins over the medal gradient. Same 3-class-selector trick
    as before, no `!important` needed against `.aw-sd-pod-box.is-m1/2/3`. */
-.aw-sd-pod-row.is-picked .aw-sd-pod-box { background: #dcfce7; border-color: #4ade80; }
+/* ⭐ Đợt 448 — nền xanh của hàng đã chọn BỎ (thầy: "Bỏ dải xanh cho những người đã được chọn"). */
 .aw-sd-pod-who { display: flex; align-items: center; gap: calc(0.8 * var(--aw-u)); min-width: 0; flex: 1 1 auto; }
 .aw-sd-pod-name {
   /* ⭐⭐⭐ Đợt 323 (thầy: "size tên tăng lên thêm") — up from 2.6; names are now
@@ -7525,6 +7577,21 @@ body.aw-page-dragover::after {
 .aw-sd-pod-pct.is-p4, .aw-sd-pod-score .is-right.is-p4 { color: #16a34a; }
 .aw-sd-pod-box.is-m1 .aw-sd-pod-pct.is-p1,
 .aw-sd-pod-box.is-m1 .aw-sd-pod-score .is-right.is-p1 { color: #a16207; }
+/* ⭐ Đợt 448 — chấm tích ửng màu đội khi rê chuột. */
+.aw-sd-pod-tick.is-l:hover .aw-sd-pod-dot { background: #2563eb; }
+.aw-sd-pod-tick.is-r:hover .aw-sd-pod-dot { background: #e8590c; }
+/* ⭐ Đợt 448 — Podium của ANALYSIS: một viên % mỗi trận (vắng = gạch đứt), rồi % trung bình. */
+.aw-sd-pod-chips { display: flex; gap: calc(.4 * var(--aw-u) * var(--sc, 1)); }
+.aw-sd-pod-chip {
+  min-width: calc(4 * var(--aw-u) * var(--sc, 1)); padding: 0 calc(.5 * var(--aw-u) * var(--sc, 1)); border-radius: calc(.7 * var(--aw-u));
+  font-size: calc(1.65 * var(--aw-u) * var(--sc, 1)); line-height: 1.75; text-align: center; color: #fff; font-weight: 800;
+}
+.aw-sd-pod-chip.is-p0 { background: #ef4444; }
+.aw-sd-pod-chip.is-p1 { background: #eab308; }
+.aw-sd-pod-chip.is-p2 { background: #f97316; }
+.aw-sd-pod-chip.is-p3 { background: #3b82f6; }
+.aw-sd-pod-chip.is-p4 { background: #22c55e; }
+.aw-sd-pod-chip.is-miss { background: transparent; color: #b6c0cc; border: calc(.15 * var(--aw-u)) dashed #cfd7e1; line-height: 1.55; }
 
 /* =============================================================
    ⭐⭐⭐ Đợt 236 — SHOWDOWN HOME: the full-page durable ledger.
