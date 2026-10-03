@@ -19,6 +19,8 @@
 import { registerTemplate } from "../../core/registry.js";
 import { resolveActivity } from "../../core/content-view.js";   // act từ vựng nhiều bộ nghĩa ⇒ đúng bộ đang chọn
 import { openBalloonPopEditor } from "./balloon-pop-editor.js";
+import { showLoader3d } from "../../core/loader3d.js";   // Đợt 451 — màn chờ thay khung trống lúc nạp 3D
+const loader = () => { ensureTr3dCss(); return showLoader3d({ key: "trainrush", title: "TRAIN RUSH", theme: "west" }); };
 
 // CSS của game (chép từ myGame) + phông miền Tây; nạp một lần khi game mở lần đầu.
 const TR3D_CSS = ["bp3d.css", "bp3d-1j.css", "bp3d-1p.css", "bp3d-1q.css", "bp3d-1r.css", "bp3d-1ab.css", "fight-cine-1ae.css", "fight-1ak.css", "bp3d-1ak.css"];
@@ -104,6 +106,7 @@ const balloonPopTemplate = {
   // Không chạy được 3D ⇒ NÉM để engine giữ màn READY thường; bấm Play sẽ ra dòng báo thiếu WebGL (mount).
   startScreen({ play, ready }) {
     if (!canRun3d()) throw new Error("Train rush: no WebGL");
+    loader();   // Đợt 451 — hiện NGAY khung đầu
     let gone = false;
     Promise.resolve(ready()).then(() => { if (!gone) play(); });
     return { dispose() { gone = true; } };
@@ -113,9 +116,11 @@ const balloonPopTemplate = {
     if (!canRun3d()) { noWebglMessage(root); return () => {}; }
     const words = wordsOf(activity);
     if (words.length < 2) {
+      loader().drop();
       const d = document.createElement("div"); d.className = "aw-tr-need3d"; d.textContent = "No words yet — add at least 2 keywords with definitions.";
       root.append(d); return () => {};
     }
+    const ld = loader();
     const h = openHost();
     let dead = false, game = null;
     const host = ui.host ? {
@@ -131,14 +136,16 @@ const balloonPopTemplate = {
         mount: h.box, view: "side", words, wordsTitle: activity.title || "", options: trOptions(activity), host,
         onEvent: (k, d) => { if (k === "mode" && d === "fight" && ui.host && ui.host.fight) ui.host.fight(); }
       }))
-      .then(g => { if (dead) g.destroy(); else game = g; })
+      .then(g => { if (dead) g.destroy(); else game = g; ld.done(); })
       .catch(err => {
         console.error("Train rush failed to start", err);
+        ld.drop();
         if (dead) return;
         h.close(); noWebglMessage(root);
       });
     return function cleanup() {
       if (dead) return; dead = true;
+      ld.drop();
       if (game) { try { game.destroy(); } catch (e) { console.warn("Train rush destroy", e); } }
       h.close();
     };
@@ -153,21 +160,25 @@ const balloonPopTemplate = {
 function mountTrainRushFight(root, act, { single, home }) {
   const items = wordsOf(act);
   if (!canRun3d() || items.length < 2) { setTimeout(() => single(), 0); return () => {}; }
+  const ld = loader();
   const h = openHost();
   let dead = false, fightApi = null;
   const o = trOptions(act);
   const time = Math.max(120, o.timerMode === "down" && Number(o.timer) ? Number(o.timer) : 0);   // trận 2 đội: ít nhất 2 phút (mẫu 1ah)
   const off = () => {
     if (dead) return; dead = true;
+    ld.drop(); clearInterval(poll);
     obs.disconnect();
     try { fightApi && fightApi.destroy(); } catch (e) { console.warn("Train rush destroy", e); }
     h.close();
   };
+  let poll = 0;   // Đợt 451 — chờ 2 bàn dựng xong (ô Loading… của trận ẩn) rồi mới mờ màn chờ
   const obs = new MutationObserver(() => { if (root.childNodes.length) off(); });
   obs.observe(root, { childList: true });
   import("./3d/fight-1ak.js")
     .then(m => m.createTrainRushFight({ mount: h.box, words: items, wordsTitle: act.title || "", time, onSingle: () => single(), onHome: () => home() }))
     .then(api => { if (dead) api.destroy(); else fightApi = api; })
+    .then(() => { poll = setInterval(() => { const l = h.box.querySelector(".fb-ov-load"); if (dead || !l || l.hidden) { clearInterval(poll); ld.done(); } }, 100); })
     .catch(err => { console.error("Train rush fight failed — back to single", err); off(); single(); });
   return off;
 }

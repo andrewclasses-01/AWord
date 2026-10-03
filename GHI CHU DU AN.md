@@ -545,7 +545,17 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
-
+
+## Đợt 451 (03/10/2026) — MÀN CHỜ cho game 3D (STAR LOOT · TRAIN RUSH) thay khung trắng lúc nạp
+
+**Thầy** (gửi ảnh khung AWord trống 0:00 / ✓0 / ‹ ›): *"Khi khởi động game STAR LOOT, có hình này một lát khá xấu. Xem các game khác có bị không, tạo một màn loading"*.
+**Đo** (Electron offscreen, xoá bộ đệm, chụp 4 lần/giây): STAR LOOT ~2,25 s khung trắng AWord + 1 nhịp đen · TRAIN RUSH ~2 s màn tối trơn · Rocket race ~0,75 s đen (READY engine 0,25 s rồi cảnh 3D) — chưa làm màn chờ cho Rocket race.
+**Làm:** `core/loader3d.js` — `showLoader3d({ key, title, theme: "space"|"west" })` lớp phủ trọn trang z 1001 (trên ô game 1000): tên game + thanh chạy + LOADING; `done()` mờ đi sau 2 nhịp vẽ, `drop()` gỡ ngay, lưới an toàn 25 s. Gọi từ `startScreen` (engine gọi đồng bộ ⇒ KHUNG ĐẦU đã là màn chờ) và giữ qua `mount` tới khi game dựng xong (STAR LOOT `createMazeChase` xong · TRAIN RUSH Single `createBalloonPop` xong · Fight: ô "Loading…" của trận ẩn).
+⛔ 2 bẫy đo được: (1) luồng chính bận cứng 1–2 s lúc dựng cảnh ⇒ animation `left` đứng hình ⇒ thanh chạy bằng `transform`; (2) chữ đợi phông bằng promise/hẹn giờ cũng bị kẹt ⇒ `document.fonts.check()` đồng bộ (index.html/play.html preload Baloo 800 nên đúng ngay); test.html của 2 template thêm preload cho giống trang thật.
+**Kiểm:** chụp lại — STAR LOOT / TRAIN RUSH: khung 0 đã là màn chờ có tên game, thanh chạy suốt lúc bận, mờ dần sang màn START. Không còn khung trắng.
+
+---
+
 ## Đợt 450 (03/10/2026) — CHỈ CÒN 3D: STAR LOOT (Maze chase) + TRAIN RUSH (Balloon pop) — gỡ hẳn bản 2D
 
 **Thầy:** *"Bỏ dạng 2D của STAR LOOT và TRAIN RUSH đi, chỉ giữ dạng 3D cho mọi mode"*. Chốt (AskUserQuestion): tạm CHƯA giao bài · tạm CHƯA mở Showdown cho game 3D · thầy chưa từng giao bài 3 game 3D ⇒ không giữ 2D cho bài cũ.

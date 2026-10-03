@@ -27,6 +27,8 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { openMazeChaseEditor } from "./maze-chase-editor.js";
+import { showLoader3d } from "../../core/loader3d.js";   // Đợt 451 — màn chờ thay khung trắng của AWord lúc nạp 3D
+const loader = () => showLoader3d({ key: "starloot", title: "STAR LOOT", theme: "space" });
 
 const CSS_3D = new URL("./3d/mc3d-2n.css", import.meta.url).href;
 const SL_KEYS = ["fight", "timer", "timerSec", "lives", "difficulty", "bombs", "bombGift", "dpadStyle", "shuffle", "showAnswers"];
@@ -93,7 +95,8 @@ const starLootTemplate = {
   // Bỏ màn READY của engine: bấm Play ngay khi engine chuẩn bị xong ⇒ thầy thấy thẳng màn START của STAR LOOT.
   // Không chạy được 3D ⇒ NÉM để engine giữ màn READY thường; bấm Play ra dòng báo thiếu WebGL (Đợt 450: không còn bản 2D).
   startScreen({ play, ready }) {
-    if (!canRun3d()) throw new Error("Star loot: no WebGL — using the 2D maze");
+    if (!canRun3d()) throw new Error("Star loot: no WebGL");
+    loader();   // Đợt 451 — hiện NGAY khung đầu (che màn READY + khung trống của engine trong lúc nạp)
     let gone = false;
     Promise.resolve(ready()).then(() => { if (!gone) play(); });
     return { dispose() { gone = true; } };
@@ -101,7 +104,8 @@ const starLootTemplate = {
   mount(root, activity, ui) {
     const questions = playable(activity);
     if (!canRun3d()) { needMessage(root, "Star loot needs 3D graphics (WebGL), which this browser or device cannot run."); return () => {}; }
-    if (!questions.length) { needMessage(root, "No questions yet — add questions with one correct answer."); return () => {}; }
+    if (!questions.length) { loader().drop(); needMessage(root, "No questions yet — add questions with one correct answer."); return () => {}; }
+    const ld = loader();   // Đợt 451 — cùng màn chờ từ startScreen (hoặc mới nếu vào thẳng mount)
     ensureCss();
     root.innerHTML = "";
     const box = document.createElement("div");
@@ -129,9 +133,10 @@ const starLootTemplate = {
           switchTemplate: t => ui.host.switchTemplate(t)
         } : null
       }))
-      .then(g => { if (dead) g.destroy(); else game = g; })
+      .then(g => { if (dead) g.destroy(); else game = g; ld.done(); })
       .catch(err => {
         console.error("Star loot failed to start", err);
+        ld.drop();
         if (dead) return;
         try { box.remove(); } catch (e) { /* đã gỡ */ }
         live3d = Math.max(0, live3d - 1);
@@ -142,6 +147,7 @@ const starLootTemplate = {
     return function cleanup() {
       if (dead) return;
       dead = true;
+      ld.drop();
       if (game) { try { game.destroy(); } catch (e) { console.warn("Star loot destroy", e); } }
       if (box.isConnected) {
         box.remove();
