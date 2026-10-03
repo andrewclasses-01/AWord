@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 448 (03/10/2026) — SHOWDOWN PODIUM "BÓNG AVATAR": thẻ có avatar · tích ⇒ thẻ co thành bóng + sparkle ⇒ bay về cột bóng · kéo thả đổi chỗ / đổi đội / trả về · mũi tên cuộn · Podium cho ANALYSIS · phiên MSI · ✅ THẦY DUYỆT → COMMIT + PUSH
+## Đợt 448 (03/10/2026) — SHOWDOWN PODIUM "BÓNG AVATAR": thẻ có avatar · tích ⇒ thẻ co thành bóng + sparkle ⇒ bay về cột bóng · kéo thả đổi chỗ / đổi đội / trả về · mũi tên cuộn · Podium cho ANALYSIS · phiên MSI · ✅ THẦY DUYỆT → COMMIT + PUSH `e8be92f` + LIVE 6/6 mã băm
 
 **Bối cảnh.** Thầy muốn thiết kế lại phần chia đội trên màn Podium: bỏ cột TÊN hai bên + dải xanh + nhóm "đã chọn" dưới vạch đứt (Đợt 319/323/324). Dựng mẫu ngoài repo tới khi chốt: `D:\OTHERS\CLAUDE\AWord - thiet ke Showdown Podium\podium-v1.html` → `podium-v2.html` (hồ sơ mẫu ở `GHI CHU DU AN.md` cùng thư mục). Thầy: "ok ghép vào AWord đi".
 
