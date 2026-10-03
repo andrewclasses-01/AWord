@@ -4082,6 +4082,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // (game included) behind it. Click outside (the dim, or elsewhere) closes it.
   // =============================================================
   let toolDim = null, toolPanelEl = null, activeToolBtn = null;
+  // ⭐ Đợt 452 — bảng Options mở TRÊN game 3D tự vẽ trọn màn (STAR LOOT / TRAIN RUSH, `ui.host.options`): thanh công cụ
+  // engine nằm DƯỚI ô game (z-index 1000) nên lớp mờ + bảng được gắn vào LỚP của game (`ovlLayer`), neo trên hàng nút của game.
+  // pendingOvl = lời mời đang chờ openToolPanel nhận · ovlPanel = bảng đang mở kiểu này ({ layer, top(), onClose }).
+  let pendingOvl = null, ovlPanel = null, ovlLayer = null, ovlAnchor = null;
+  // ⭐ Đợt 452 — template áp Options NGAY không dựng lại ván (ui.liveOptions) — xem Options ▸ Apply.
+  let liveOptsFn = null;
   // Which BUILDER the open panel is showing (Dot 192) - see openToolPanelFor().
   let activeToolBuild = null;
   let panelCompactObs = null;   // ResizeObserver for is-compact-opts (Đợt 134) — see openToolPanel
@@ -4102,6 +4108,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // relay a close-then-reopen flicker to every other myActivity column.
     const wasOptions = fade && !!panel && activeToolBuild === buildOptionsPanel;
     toolDim = null; toolPanelEl = null; activeToolBtn = null; activeToolBuild = null;
+    // Đợt 452 — bảng trên game 3D: gỡ luôn lớp của nó (cùng lúc lớp mờ) + báo game chạy tiếp
+    const ovl = ovlPanel, layer = ovlLayer;
+    ovlPanel = null; ovlLayer = null; ovlAnchor = null;
+    if (ovl && typeof ovl.onClose === "function") { try { ovl.onClose(); } catch (e) { console.warn("options onClose", e); } }
     panelCompactObs?.disconnect(); panelCompactObs = null;
     document.removeEventListener("pointerdown", onToolOutside);
     if (btn) btn.classList.remove("is-active");
@@ -4110,9 +4120,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // Đợt 217 — SAU dòng trên, để cú `closeToolPanel(false)` dọn dẹp ở đầu
     // openToolPanel (lúc chưa có bảng nào) không thả đồng hồ chạy rồi khoá lại ngay.
     exitPause("panel");
-    if (!fade) { dim?.remove(); panel?.remove(); return; }
+    if (!fade) { dim?.remove(); panel?.remove(); layer?.remove(); return; }
     let done = false;
-    const remove = () => { if (done) return; done = true; dim?.remove(); panel?.remove(); };
+    const remove = () => { if (done) return; done = true; dim?.remove(); panel?.remove(); layer?.remove(); };
     const fadeOpts = { duration: 180, easing: "cubic-bezier(.22,.9,.3,1)", fill: "forwards" };
     const a = dim?.animate([{ opacity: 1 }, { opacity: 0 }], fadeOpts);
     // Mirrors .aw-tool-panel's entrance (app.css, `aw-pop-cx`) in reverse —
@@ -4381,16 +4391,28 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   }
 
   function openToolPanel(btn, buildContent) {
+    const ovl = pendingOvl && pendingOvl.layer && pendingOvl.layer.isConnected ? pendingOvl : null;   // Đợt 452
+    pendingOvl = null;
     if (activeToolBtn === btn) { closeToolPanel(true); return; }   // clicking the open one again closes it
     sound.click();
     if (toolPanelEl && activeToolBtn) { twoBeatPanelSwap(buildContent, btn); return; }
     closeToolPanel(false);
     toolDim = el("div", "aw-tool-dim");
     toolDim.onclick = () => closeToolPanel(true);
-    document.body.append(toolDim);
+    if (ovl) {
+      // Đợt 452 — game 3D trọn màn: lớp mờ + chỗ neo bảng nằm TRONG ô game, ngay trên hàng nút của game
+      ovlPanel = ovl;
+      ovlLayer = el("div", "aw-tool-ovl");
+      ovlAnchor = el("div", "aw-tool-ovl-anchor");
+      let top = innerHeight - 70;
+      try { const t = Number(ovl.top && ovl.top()); if (Number.isFinite(t) && t > 0) top = t; } catch { /* giữ mặc định */ }
+      ovlAnchor.style.top = Math.round(top) + "px";
+      ovlLayer.append(toolDim, ovlAnchor);
+      ovl.layer.append(ovlLayer);
+    } else document.body.append(toolDim);
     toolPanelEl = el("div", "aw-tool-panel");
     mountPanelContent(buildContent);
-    belowCenter.append(toolPanelEl);
+    (ovl ? ovlAnchor : belowCenter).append(toolPanelEl);
     capPanelHeight(buildContent);
     btn.classList.add("is-active");
     activeToolBtn = btn;
@@ -4428,7 +4450,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // is simply MORE room than the stage's own height in single mode too —
     // there was never a reason to leave it capped tighter there. Applying it
     // everywhere is a strict increase, nothing shrinks for anyone.
-    const roomAbove = belowCenter.getBoundingClientRect().top - 24;
+    const roomAbove = (ovlAnchor || belowCenter).getBoundingClientRect().top - 24;
     const maxH = Math.max(200, roomAbove);
     toolPanelEl.style.maxHeight = maxH + "px";
     // Đợt 134 (teacher, Anagram Options: "tự động... chỉnh kích thước nội
@@ -5331,7 +5353,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // biết Apply sẽ thoát qua nhánh nào, để mọi đường thoát bên dưới đều được mở lại.
       // ⭐ Kèm `openOptionsSilently` (thầy báo cú đóng-mở này "nháy" — bỏ hẳn hiệu ứng bật lên
       // cho panel/nền lần mở lại này, xem chỗ tiêu thụ cờ + rule .aw-no-anim trong app.css).
-      if (!fight) { openOptionsOnMount = true; openOptionsSilently = true; }
+      if (!fight && !liveOptsFn) { openOptionsOnMount = true; openOptionsSilently = true; }   // Đợt 452: game 3D trọn màn không mở lại bảng sau khi dựng lại
       // FIGHT MODE: each board plays a COPY of the act (its own frozen word
       // order), so writing into this copy's options would leave the real act —
       // and the other board — untouched. Hand the whole draft to the match,
@@ -5420,6 +5442,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // ⚠️ Không tự closeToolPanel() ở đây nữa (Apply-only sync, 29/8/2026) — panel sẽ
       // biến mất rồi hiện lại ngay do replayCurrent(), vì openOptionsOnMount đã set ở
       // trên; teacher chỉ đóng thật khi bấm ra ngoài.
+      // ⭐ Đợt 452 — NGOẠI LỆ DUY NHẤT, khai bằng HÀM chứ không bằng danh sách tuỳ chọn: game 3D tự vẽ trọn màn (STAR LOOT /
+      // TRAIN RUSH, `ui.liveOptions`) đọc Options TRONG LÚC CHẠY và tự áp (chơi lại / START AGAIN) — dựng lại = nạp lại three.js +
+      // cả cảnh ~2 s. Hai game này không có Showdown / phòng chờ (lý do của Đợt 263). Hàm trả true = đã áp ⇒ chỉ đóng bảng.
+      // Đổi bộ nghĩa (applySubActSelection ở trên) vẫn dựng lại vì đổi cả bộ từ.
+      if (liveOptsFn) {
+        let took = false;
+        try { took = liveOptsFn({ ...activity.options }) === true; } catch (e) { console.warn("live options", e); }
+        if (took) { closeToolPanel(true); return; }
+      }
       replayCurrent();
     };
     footWrap.append(applyBtn);
@@ -6192,6 +6223,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     //   templates() / switchTemplate(type) = Options ▸ Template (switchList / doSwitchTemplate) — act từ vựng chơi game khác
     //   canFight() / fight() (Đợt 450) = MODE ▸ Fight (enterFight — trận core/fight.js hoặc tpl.ownFight)
     // Học sinh (session) không có cầu này (null) — game tự ẩn các nút đó.
+    // ⭐ Đợt 452 — template áp Options ngay trong cảnh đang chạy: fn(options) trả true = đã áp (engine chỉ đóng bảng, không dựng lại).
+    liveOptions(fn) { liveOptsFn = typeof fn === "function" ? fn : null; },
     host: session ? null : {
       async listActs() {
         const o = libraryOrigin();
@@ -6221,7 +6254,18 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       switchTemplate(type) { if (!torndown && type) doSwitchTemplate(type); },
       // ⭐ Đợt 450 — nút Mode ▸ Fight của game tự vẽ trọn màn (TRAIN RUSH Single 3D) = MODE ▸ Fight mode ▸ Start fight.
       canFight: () => canFight,
-      fight() { if (!torndown && canFight) enterFight(); }
+      fight() { if (!torndown && canFight) enterFight(); },
+      // ⭐ Đợt 452 (thầy 03/10/2026: "Options STAR LOOT không có đủ chức năng… lấy Rocket Race làm mẫu") — nút Options của game
+      // mở ĐÚNG bảng Options của engine (Timer · bộ nghĩa · mục riêng của game qua tpl.buildExtraOptions · nút Template · Apply).
+      //   ov = { layer: ô game (bảng + lớp mờ gắn vào đây), top(): toạ độ y mép trên hàng nút game, onClose(): bảng đã đóng }
+      options(ov) {
+        if (torndown) return;
+        if (activeToolBtn === optionsBtn) { closeToolPanel(true); return; }
+        pendingOvl = ov && ov.layer ? ov : null;
+        openToolPanelFor(optionsBtn, buildOptionsPanel);
+        pendingOvl = null;
+        if (!toolPanelEl && ov && typeof ov.onClose === "function") ov.onClose();   // không mở được ⇒ game chạy tiếp
+      }
     },
     // ⭐ Đợt 353 — FIGHT ONLY: nhận nuôi thanh Time delay vào một ổ trong sân của
     // template (xem chú thích tại `placeWaitBar`). Trả false ngoài trận / thiếu ổ.

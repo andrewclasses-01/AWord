@@ -1,4 +1,10 @@
-// TRAIN RUSH — lõi MẪU 1ak (03/10/2026): như 1aj + CHỖ NỐI AWORD cho chế độ SINGLE (thầy: "bỏ dạng 2D, chỉ giữ 3D cho mọi mode") —
+// TRAIN RUSH — lõi MẪU 1al (03/10/2026): như 1ak + ý thầy "train rush bị size quá to — lấy tỷ lệ khung hình, size của Rocket Race làm mẫu;
+//   Options đủ như AWord":
+//   • khung = khung Rocket Race: rộng hết màn, cao = min(rộng/2, màn − hàng nút), dính mép trên (1ak: khung 16:10,5 giữa màn, 2 dải đen).
+//   • nút hàng dưới cỡ Rocket Race 44×44, cách 10 (giữ màu gỗ) — bp3d-1al.css.
+//   • host.options (AWord Đợt 452) ⇒ nút Options mở ĐÚNG bảng Options của AWord trên game; ván dừng khi bảng mở. Apply ⇒ AWord gọi
+//     api.setOptions(o) ⇒ áp + về màn START (như Apply của bảng riêng). Không có host.options ⇒ bảng riêng như 1ak.
+// ---- ghi chú 1ak: TRAIN RUSH — lõi MẪU 1ak (03/10/2026): như 1aj + CHỖ NỐI AWORD cho chế độ SINGLE (thầy: "bỏ dạng 2D, chỉ giữ 3D cho mọi mode") —
 //   createBalloonPop({ …, host }): Thư mục = act thật cùng thư mục (host.listActs/openAct) · Options Apply ⇒ host.saveOptions(opt) ·
 //   Menu ở màn START / kết quả + nút template trong Options = Library + Change template (host.home / templates / switchTemplate) ·
 //   bảng PAUSED thêm Change template · Library · nút iPad ẩn. Không có host ⇒ y hệt 1aj.
@@ -168,8 +174,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     if (embed) { w = Math.max(1, mount.clientWidth); h = Math.max(1, mount.clientHeight); }   // 1ac: bàn Fight lấp đầy ô chứa
     else {
       const W = window.innerWidth, Hh = window.innerHeight - BAR_H;   // 1h: chừa hàng nút bên dưới
-      w = W; h = W / ASPECT;
-      if (h > Hh) { h = Hh; w = h * ASPECT; }
+      w = W; h = Math.max(120, Math.min(W / 2, Hh));                   // 1al: khung Rocket Race (1ak: 16:10,5 giữa màn)
     }
     stage.style.width = Math.floor(w) + "px";
     stage.style.height = Math.floor(h) + "px";
@@ -1667,7 +1672,19 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     clockEl.classList.remove("is-warn", "is-x2");
     updateHud();
   }
-  ["folder", "options", "ipad", "mode"].forEach(k => press(".bp-" + k, () => ovPanel.dataset.kind === k && !ovPanel.hidden ? closePanel() : openPanel(k)));
+  ["folder", "options", "ipad", "mode"].forEach(k => press(".bp-" + k, () => {
+    if (k === "options" && host && host.options) { openHostOptions(); return; }   // 1al: bảng Options THẬT của AWord
+    ovPanel.dataset.kind === k && !ovPanel.hidden ? closePanel() : openPanel(k);
+  }));
+  // 1al: AWord — bảng Options của AWord gắn lên ô game, neo trên hàng nút; ván dừng tới khi bảng đóng
+  let hostPaused = false;
+  function openHostOptions() {
+    if (!ovPanel.hidden) closePanel();
+    if ((S.state === "play" || S.state === "intro" || S.state === "clear") && !S.paused) { S.paused = true; hostPaused = true; }
+    const bar = mount.querySelector(".bp-outbar");
+    host.options({ layer: mount, top: () => bar.getBoundingClientRect().top - mount.getBoundingClientRect().top,
+      onClose: () => { if (hostPaused) { hostPaused = false; S.paused = false; last = 0; } } });
+  }
   press(".bp-pn-x", closePanel);
   ovPanel.addEventListener("click", e => { if (e.target === ovPanel) closePanel(); });
 
@@ -1699,6 +1716,15 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   const api = window.__bp = {
     sfx, S, opt, get HALF() { return HALF; }, get SKY() { return SKY; }, camera, PH, world, cine, get cineOn() { return cine.active; }, get trainBody() { return trainBody; }, dropCrate, cartWorldX, spawnBlimp,
     start: startGame,
+    // 1al: AWord ▸ Options ▸ Apply (bảng thật của AWord) ⇒ áp + về màn START (như Apply bảng riêng; AWord đã lưu). Chỉ nhận đúng khoá + kiểu.
+    setOptions(o) {
+      if (dead || !o || typeof o !== "object") return false;
+      Object.keys(DEFAULTS).forEach(k => { if (k in o && typeof o[k] === typeof DEFAULTS[k]) opt[k] = o[k]; });
+      hostPaused = false;
+      if (!ovPanel.hidden) closePanel();
+      toStart(); paintOpts();
+      return true;
+    },
     // 1aj: dỡ hẳn bàn chơi — vòng vẽ dừng, listener gỡ, tiếng của bàn tắt, card đồ hoạ trả lại (dispose + forceContextLoss). Gọi lại vô hại.
     destroy() {
       if (dead) return; dead = true;

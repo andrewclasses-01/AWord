@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **03/10/2026 Đợt 452 — STAR LOOT / TRAIN RUSH: khung + nút = Rocket Race, nút Options mở ĐÚNG bảng Options AWord (cầu `ui.host.options` + `ui.liveOptions`), màn chờ cảnh động mới + ANDREW STUDIO; vá Fight TRAIN RUSH bàn rộng 1 px.** Chi tiết GHI CHU Đợt 452.
 > ✏️ **03/10/2026 Đợt 451 — màn chờ cho game 3D (`core/loader3d.js`): STAR LOOT / TRAIN RUSH không còn lộ khung trắng AWord ~2 s lúc nạp.** Chi tiết GHI CHU Đợt 451.
 > ✏️ **03/10/2026 Đợt 450 — CHỈ CÒN 3D: Maze chase = STAR LOOT, Balloon pop = TRAIN RUSH (Single + Fight đều 3D), gỡ hẳn mọi bản 2D.** Chưa giao bài, chưa Showdown (thầy chốt). `ui.host` thêm `fight()`. Chi tiết GHI CHU Đợt 450.
 > ✏️ **03/10/2026 Đợt 449 — Balloon pop ▸ MODE ▸ Fight = TRAIN RUSH 3D (kiểu Rocket Race: Single/Showdown/bài giao vẫn 2D).** Cờ engine mới `tpl.ownFight` (trận riêng trọn màn thay core/fight.js). Trận chép từ myGame (TRAIN RUSH 1aj) bằng `python tools/chep-train-rush.py` vào `templates/balloon-pop/3d/` + `assets/sound-1ah/` (⛔ đừng sửa tay). Chi tiết GHI CHU Đợt 449.

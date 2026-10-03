@@ -1432,6 +1432,11 @@ html.aw-nhung .aw-below { display: none; }
    note at openOptionsOnMount's consumption), so animating "in" here would just be a flash. */
 .aw-tool-dim.aw-no-anim,
 .aw-tool-panel.aw-no-anim { animation: none; }
+/* ⭐ Đợt 452 — bảng Options mở TRÊN game 3D tự vẽ trọn màn (STAR LOOT / TRAIN RUSH — core/engine.js `ui.host.options`):
+   lớp riêng gắn vào ô game (z-index 1000), lớp mờ phủ cả game, chỗ neo = điểm giữa mép trên hàng nút của game
+   (bảng vẫn `bottom: calc(100% + 12px)` như dưới thanh công cụ thường). */
+.aw-tool-ovl { position: absolute; inset: 0; z-index: 60; }
+.aw-tool-ovl-anchor { position: absolute; left: 50%; width: 0; height: 0; z-index: 42; }
 .aw-tool-panel {
   position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%);
   z-index: 42;

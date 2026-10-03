@@ -1,0 +1,12 @@
+/* TRAIN RUSH 1ak (03/10/2026) — chép nguyên vào 1al: chỗ nối AWord — nhãn nhóm trong danh sách act / template, hàng Change template · Library dưới PAUSED, nút ẩn. */
+.bp-pn-grp { margin: 8px 2px 0; color: #ffd98a; font: 800 13px "Baloo 2", system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
+.bp-pn-row:disabled { cursor: default; }
+.bp-pn .bp-pn-list { max-height: min(60vh, 520px); overflow: auto; }
+.bp-hostrow { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+.bp-hostrow[hidden], .bp-hostrow [hidden], .bp-outbar .bp-tool[hidden] { display: none !important; }
+
+/* TRAIN RUSH 1al (03/10/2026): khung + nút cỡ Rocket Race — khung dính mép trên, nút 44×44 cách 10 (giữ màu gỗ). */
+.bp-outbar { gap: 10px; }
+.bp-tool { width: 44px; height: 44px; border-radius: 12px; }
+.bp-tool svg { width: 22px; height: 22px; }
+.bp-tool-gap { width: 14px; }

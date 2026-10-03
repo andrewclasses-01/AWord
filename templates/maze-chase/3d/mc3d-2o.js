@@ -1,4 +1,11 @@
-// STAR LOOT — lõi MẪU 2n (02/10/2026): chép mc3d-2m.js + CHỖ NỐI AWORD (thầy: "đẩy bản đầy đủ lên AWord", Đợt 447). Chạy riêng (myGame) y hệt 2m.
+// STAR LOOT — lõi MẪU 2o (03/10/2026): chép mc3d-2n.js + ý thầy "Options STAR LOOT không có đủ chức năng (ví dụ chuyển Template)…
+//   lấy Rocket Race làm mẫu, tỷ lệ khung hình + size của Rocket Race":
+//   • KHUNG mọi mode = khung Rocket Race: rộng hết ô, cao = min(rộng/2, ô − dải nút), dính mép trên (2n: Single cao gần kín màn).
+//   • Hàng nút cỡ Rocket Race: nút 44×44 bo 12, cách 10, đồng hồ LED 28px (mc3d-2o.css).
+//   • host.options (AWord Đợt 452) ⇒ nút Options mở ĐÚNG bảng Options của AWord trên game (Timer · bộ nghĩa · Lives/Bombs/D-pad… ·
+//     nút Template · Apply); game dừng khi bảng mở, chạy tiếp khi đóng. Apply ⇒ AWord gọi api.setOptions(o) — áp như Apply của bảng riêng.
+//     Không có host.options (chạy riêng ở myGame) ⇒ bảng Options riêng như 2n.
+// ---- ghi chú 2n: STAR LOOT — lõi MẪU 2n (02/10/2026): chép mc3d-2m.js + CHỖ NỐI AWORD (thầy: "đẩy bản đầy đủ lên AWord", Đợt 447). Chạy riêng (myGame) y hệt 2m.
 //   • createMazeChase({ …, options, host }): `options` = Options đã lưu của act (khoá OPT_KEYS) · `host` = cầu nối AWord (core/engine.js `ui.host`):
 //     listActs() / openAct(id) (nút Thư mục = act thật cùng thư mục) · saveOptions(o) (Apply / Mode lưu theo act) · home() · templates() /
 //     switchTemplate(type) (Menu ▸ Change template / Library). Không có host ⇒ danh sách mẫu như 2m.
@@ -809,8 +816,7 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
   function fit() {
     const Wn = mount.clientWidth || window.innerWidth, Hn = (mount.clientHeight || window.innerHeight) - BAR_H;   // 2n: đo CHÍNH ô mount · 1e: chừa thanh nút bên dưới
     let w = Wn, h = Wn / ASPECT;
-    if (fight) { w = Wn; h = Math.max(120, Math.min(Wn / 2, Hn)); }         // 1v: khung Fight của Rocket Race: rộng hết màn, cao = min(rộng/2, cửa sổ − dải nút)
-    else if (h > Hn) { h = Hn; w = Wn; }                                  // 2a: màn rộng hơn khung AWord (TOMKO) ⇒ trải hết bề ngang, không chừa dải đen 2 bên
+    w = Wn; h = Math.max(120, Math.min(Wn / 2, Hn));                    // 2o: MỌI mode = khung Rocket Race: rộng hết, cao = min(rộng/2, ô − dải nút)
     stageW = Math.floor(w); stageH = Math.floor(h); aspect = stageW / stageH; camera.aspect = aspect; camera.updateProjectionMatrix();
     stage.style.width = stageW + "px"; stage.style.height = stageH + "px"; progEl.style.width = stageW + "px";   // 1m: thanh tiến độ dài đúng bằng khung game
     renderer.setSize(stageW, stageH, false);
@@ -2412,11 +2418,13 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
   const OPT_KEYS = ["fight", "timer", "timerSec", "lives", "difficulty", "bombs", "bombGift", "dpadStyle", "shuffle", "showAnswers"];
   const pickOpt = o => Object.fromEntries(OPT_KEYS.map(k => [k, o[k]]));
   const dimApply = () => { const a = optsEl.querySelector(".mco-opt-apply"); if (a) a.classList.toggle("is-dim", JSON.stringify(draft) === JSON.stringify(pickOpt(opt))); };
-  function applyOpts() {
+  function applyOpts() { applyFrom(draft, true); }
+  // 2o: áp một bộ Options (bảng riêng: save = true · bảng AWord qua api.setOptions: AWord đã lưu ⇒ save = false)
+  function applyFrom(d, save) {
     const wasFight = !!opt.fight, midGame = phase !== "menu" && phase !== "end";   /* 2j */
-    Object.assign(opt, draft);
+    Object.assign(opt, d);
     if (phase === "end") opt.fight = wasFight;
-    saveOpts();                                                      // 2n: AWord lưu Options theo act                        // màn kết quả: đổi chế độ ở màn chờ (2j: giữa ván đổi được vì chơi lại từ đầu)
+    if (save) saveOpts();                                            // 2n: AWord lưu Options theo act                        // màn kết quả: đổi chế độ ở màn chờ (2j: giữa ván đổi được vì chơi lại từ đầu)
     if (!!opt.fight !== wasFight && !midGame) setFightMode(!!opt.fight);
     clockWrap.hidden = opt.timer === "none";
     paintHow(); sfx.click();
@@ -2529,8 +2537,18 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
   // 1h: TABLET — nối iPad như Rocket Race; chức năng gán sau, tạm bật/tắt trạng thái nút
   const tabBtn = $$(".mc-tablet"); if (host) tabBtn.hidden = true;   // 2n: AWord — chưa có iPad cho STAR LOOT ⇒ ẩn nút mẫu
   tabBtn.addEventListener("click", () => { tabBtn.classList.toggle("is-on"); sfx.unlock(); sfx.click(); });
-  ["folder", "options", "mode"].forEach(k => $$(".mc-" + k).addEventListener("click", () =>
-    ovPanel.dataset.kind === k && !ovPanel.hidden ? closePanel() : openPanel(k)));
+  ["folder", "options", "mode"].forEach(k => $$(".mc-" + k).addEventListener("click", () => {
+    if (k === "options" && host && host.options) { openHostOptions(); return; }   // 2o: bảng Options THẬT của AWord
+    ovPanel.dataset.kind === k && !ovPanel.hidden ? closePanel() : openPanel(k);
+  }));
+  // 2o: AWord — bảng Options của AWord gắn lên chính ô game, neo trên hàng nút; game dừng (như bảng riêng) tới khi bảng đóng
+  function openHostOptions() {
+    if (!ovPanel.hidden) closePanel();
+    if (phase !== "menu" && phase !== "end" && !paused) { paused = true; panelPaused = true; sfx.suspend(); }
+    const bar = mount.querySelector(".mc-outbar");
+    host.options({ layer: mount, top: () => bar.getBoundingClientRect().top - mount.getBoundingClientRect().top,
+      onClose: () => { if (panelPaused) { panelPaused = false; paused = false; sfx.resume(); } } });
+  }
   $$(".mc-pn-x").addEventListener("click", closePanel);
   ovPanel.addEventListener("click", e => { if (e.target === ovPanel) closePanel(); });
 
@@ -2667,6 +2685,14 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
       if (window.__mc === api) delete window.__mc;
     },
     get dead() { return dead; },
+    // 2o: AWord ▸ Options ▸ Apply (bảng thật của AWord) ⇒ áp ngay như Apply của bảng riêng. Chỉ nhận đúng khoá + đúng kiểu.
+    setOptions(o) {
+      if (dead || !o || typeof o !== "object") return false;
+      const d = pickOpt(opt);
+      Object.keys(DEFAULTS).forEach(k => { if (k in o && typeof o[k] === typeof DEFAULTS[k]) d[k] = o[k]; });
+      applyFrom(d, false);
+      return true;
+    },
     start: startGame,
     step(n = 1, dt = 1 / 60) { manual = true; const t0 = performance.now(); for (let i = 0; i < n; i++) update(dt); const t1 = performance.now(); render(); api.prof = { update: +(t1 - t0).toFixed(1), render: +(performance.now() - t1).toFixed(1) }; return api.state(); },
     resume() { manual = false; last = performance.now(); },

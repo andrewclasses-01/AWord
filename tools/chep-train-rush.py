@@ -23,8 +23,8 @@ import json, os, re, shutil, subprocess, sys
 SRC = r"E:/LAP TRINH APP/myGame/balloon-pop"
 WEB = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DST = os.path.join(WEB, "templates", "balloon-pop")
-GOC = "fight-1ak.js"   # Đợt 450: 1ak — Single cũng 3D (lõi bp3d-1ak có chỗ nối AWord `host`)
-CSS = ["bp3d.css", "bp3d-1j.css", "bp3d-1p.css", "bp3d-1q.css", "bp3d-1r.css", "bp3d-1ab.css", "fight-cine-1ae.css", "fight-1ak.css", "bp3d-1ak.css"]
+GOC = "fight-1al.js"   # Đợt 452: 1al — khung + nút Rocket Race, Options = bảng thật của AWord (host.options) · Đợt 450: 1ak
+CSS = ["bp3d.css", "bp3d-1j.css", "bp3d-1p.css", "bp3d-1q.css", "bp3d-1r.css", "bp3d-1ab.css", "fight-cine-1ae.css", "fight-1al.css", "bp3d-1al.css"]
 SOUND = "sound-1ah"
 VENDOR = "../../rocket-race/vendor/three"
 FONT_CDN = "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/fonts/helvetiker_bold.typeface.json"

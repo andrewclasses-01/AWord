@@ -546,6 +546,44 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 452 (03/10/2026) — STAR LOOT · TRAIN RUSH theo khuôn Rocket Race: Options THẬT của AWord + khung 2:1 + màn chờ mới
+
+**Thầy** (ảnh bảng Options STAR LOOT): *"Options star loot không có đủ chức năng (ví dụ như chuyển Template), hãy kiểm tra xem train rush có bị như vậy không"*.
+Chốt (AskUserQuestion): **"Đủ như AWord — lấy Rocket Race làm mẫu… train rush cũng bị size quá to, lấy tỷ lệ khung hình, size của Rocket Race làm mẫu"**; OK build +
+*"làm màn hình load khác đẹp và ngầu hơn… STAR LOOT: tàu, hành tinh, lỗ không gian · TRAIN RUSH: 2 tàu đua nhau, chim đuổi nhau, hoàng hôn · thêm chữ ANDREW STUDIO tinh tế"*.
+**Đo trước khi làm (1600×900):** Rocket Race khung 1600×800 dính mép trên + nút 44×44 · STAR LOOT 1600×820 nút 56×52, bảng Options tự vẽ (thiếu Template, bộ nghĩa) ·
+TRAIN RUSH khung 16:10,5 giữa màn (dải đen 2 bên) nút 64×50, bảng Options tự vẽ to hơn ~25 %, nút template ghi "Balloon pop".
+
+**Làm gì:**
+- **Engine (`core/engine.js` + `core/app.css`):** `ui.host.options({ layer, top(), onClose })` — nút Options của game mở ĐÚNG `buildOptionsPanel` của engine; lớp mờ +
+  chỗ neo (`.aw-tool-ovl` / `.aw-tool-ovl-anchor`) gắn vào ô game (z 1000) ngay trên hàng nút game; đóng bảng ⇒ `onClose` (game chạy tiếp).
+  `ui.liveOptions(fn)`: Options ▸ Apply gọi `fn(activity.options)`, trả true ⇒ chỉ đóng bảng (KHÔNG `replayCurrent()` = không nạp lại three.js + cảnh ~2 s).
+  NGOẠI LỆ duy nhất của luật Đợt 263 "Apply luôn dựng lại" — khai bằng hàm, 2 game này không có Showdown/phòng chờ. Đổi bộ nghĩa vẫn dựng lại (applySubActSelection).
+- **Template:** `buildExtraOptions` (STAR LOOT: Mode Single/Fight · Lives · Difficulty · Bombs · Bomb gift · D-pad style; TRAIN RUSH: Max cars · Balloon speed · Train speed ·
+  Points off 0–10 · 3 ô Bonus), `hidePointsOff`. Options lưu PHẲNG trong `activity.options` (proxy nháp của engine chỉ thấy khoá cấp 1): `timer`/`timerTotalSeconds`/
+  `shuffleQuestions`/`showAnswers`(/`lives`) + `sl*` / `tr*`. `flatSeed()` rải giá trị đầu (starLoot / trainRush cũ, bp* bản 2D, mặc định) vào bộ nhớ;
+  ⚠️ act chưa có khoá sl*/tr* ⇒ `timer` gốc KHÔNG phải giờ của game (Balloon pop 2D luôn lưu "none") ⇒ lấy giờ của game.
+- **myGame:** STAR LOOT **2o** (`mc3d-2o.js/.css`, mau-2o) · TRAIN RUSH **1al** (`bp3d-1al.js/.css`, `fight-1al.js/.css`, mau-1al): khung mọi mode = min(rộng/2, ô − dải nút)
+  dính mép trên, nút 44×44 cách 10; `host.options` ⇒ bảng AWord; `api.setOptions(o)` áp như Apply bảng riêng (STAR LOOT giữa ván ⇒ START AGAIN · TRAIN RUSH ⇒ màn START).
+  Chép bằng `tools/chep-star-loot.py` (BAN 2o) / `tools/chep-train-rush.py` (GOC fight-1al). ⚠️ Chạy 2 công cụ với `PYTHONIOENCODING=utf-8` (cp1252 nổ giữa chừng khi in tiếng Việt).
+- **Màn chờ mới (`core/loader3d.js`):** cảnh động HTML+SVG, MỌI chuyển động chỉ transform/opacity (luồng chính bận ~2 s lúc dựng 3D).
+  STAR LOOT: lỗ không gian (đĩa xoáy nghiêng 3 lớp, vành sáng, cung sáng bẻ cong, lõi đen) phía trên, 3 phi thuyền lao vào lỗ, hành tinh vành đai + hành tinh xanh, sao 2 lớp,
+  sao băng, tàu mẹ xa. TRAIN RUSH: hoàng hôn, mặt trời lặn sau núi mesa + tia nắng xoay, mây, 2 đàn chim vỗ cánh lượn đuổi nhau, 2 đoàn tàu đỏ / xanh trên 2 đường ray thay nhau
+  dẫn (tà vẹt, xương rồng, cột điện chạy lùi, bánh quay, khói). Cột chữ: ANDREW STUDIO (nhỏ, giãn chữ, 2 gạch mảnh) · tên game · thanh chạy · LOADING.
+  ⛔ Bẫy phông Rye: file CSS Google Fonts chưa về ⇒ `fonts.check()` TRUE ⇒ chữ phông tạm; rồi phông về lúc luồng chính đã bận ⇒ tên trống ~2,4 s. Chữa: `@font-face` Rye
+  khai thẳng file gstatic + `preloadLoader3d("west")` lúc nạp module + `ld.ready` (tên đã vẽ, tối đa 0,9 s) — `startScreen` chờ `Promise.all([ready(), ld.ready])` rồi mới Play.
+- **Vá lỗi đang LIVE (từ Đợt 451):** TRAIN RUSH ▸ Mode ▸ Fight — 2 bàn rộng 1 px (CSS game nạp trước `balloon-pop.css` ⇒ `align-items:center` của `.aw-tr-host` đè `.fb-root`)
+  ⇒ `.aw-tr-host.fb-root { align-items: stretch }`.
+
+**Kiểm (Electron offscreen 1600×900, `scratch/ld452.html` xem riêng màn chờ):** khung 2 game 1600×800, nút 44×44 · Options mở bảng AWord trên game (Timer, Mode, sliders,
+D-pad, Shuffle/Show answers, nút "Star loot"/"Train rush") · Apply Lives 8 + D-pad Stick áp ngay, không dựng lại · nút Template ⇒ lưới 21 template ⇒ Quiz: game dỡ sạch (0 canvas) ·
+giữa ván: mở Options đồng hồ đứng, Apply ⇒ START AGAIN ⇒ chơi lại · TRAIN RUSH Train speed 9 áp ngay, Timer Count down 1:00 đúng act mẫu · Fight 2 bàn 797×756 ·
+chuỗi khung lúc mở: khung 0 = màn chờ, tên game có từ khung 0,6 s (máy chưa lưu phông), mờ dần sang START.
+
+**⬜ CHỜ THẦY:** xem ảnh rồi cho đưa live; bấm tay trên TOMKO với act từ vựng nhiều bộ nghĩa (hàng ENG1/VI1 trong Options của game).
+
+---
+
 ## Đợt 451 (03/10/2026) — MÀN CHỜ cho game 3D (STAR LOOT · TRAIN RUSH) thay khung trắng lúc nạp
 
 **Thầy** (gửi ảnh khung AWord trống 0:00 / ✓0 / ‹ ›): *"Khi khởi động game STAR LOOT, có hình này một lát khá xấu. Xem các game khác có bị không, tạo một màn loading"*.

@@ -784,3 +784,14 @@
 .mc-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #6d7fa3; transition: transform .2s, background .2s; }
 .mc-sndrow.is-on .mc-switch { background: linear-gradient(90deg, #1d6fd6, #37c3ff); border-color: #7fd6ff; box-shadow: 0 0 12px rgba(80,190,255,.55); }
 .mc-sndrow.is-on .mc-switch::after { transform: translateX(22px); background: #fff; }
+
+/* ===================== 2o (03/10/2026) — khung + hàng nút ĐÚNG Rocket Race ===================== */
+/* khung dính mép trên (fit(): cao = min(rộng/2, ô − dải nút)), dải nút ngay dưới */
+.mc-root { justify-content: flex-start; }
+.mc-outbar { gap: 10px; }
+.mc-tool { width: 44px; height: 44px; border-radius: 12px; }
+.mc-tool svg { width: 22px; height: 22px; }
+.mc-outbar .mc-clock { margin-right: 4px; }
+.mc-outbar .mc-clock b { gap: 3.5px; }
+.mc-outbar .mc-clock svg.ld { width: 16px; height: 28px; }
+.mc-outbar .mc-clock svg.lc { width: 6px; height: 28px; }
