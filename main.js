@@ -302,7 +302,11 @@ async function init() {
   // (pushState, nên ◀ quay về act trước).
   setActSwitchHandler(async node => {
     state.view = "play";
-    setUrl(await linkFor(node));
+    let link = await linkFor(node);
+    // ⭐ Đợt 453b — myActivity: đổi act ngay trong game không qua màn chọn ⇒ nối sẵn lựa chọn đang
+    // lưu vào địa chỉ, không thì cột theo gặp act WORDS sẽ đứng chờ mãi (xem core/words-picker.js).
+    try { link = (await import("./core/words-picker.js")).urlForSwitch(link, node); } catch { /* giữ link trơn */ }
+    setUrl(link);
     document.title = node.title || PAGE_TITLE_BASE;
   });
   // ⭐ Đợt 221 — NO resize listener any more. Đợt 218b needed one because the
@@ -1828,9 +1832,7 @@ function actMenuItems(node) {
 async function openWordsPickerFor(node) {
   try {
     const m = await import("./core/words-picker.js");
-    if (!m.wantsPicker(node)) return false;
-    await m.openWordsPicker(app, node, { onExit: goTop });
-    return true;
+    return await m.enterWords(app, node, { onExit: goTop });
   } catch (e) {
     console.warn("AWord: words picker failed, opening the game directly", e);
     return false;

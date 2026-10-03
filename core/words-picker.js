@@ -73,14 +73,108 @@ function loadCss() {
   return cssReady;
 }
 
+// ---------------------------------------------------------------------------
+// myActivity (nhiều cột) — ĐỢT 453b. Cột 0 là cột CHỦ, cột 1..N là cột THEO.
+//   · myActivity (v2.31.0) gắn " myActivityHost/1" vào UA của trang AWord (nó đã GỠ chữ Electron
+//     khỏi UA để đăng nhập Google, nên không còn cách nào khác để AWord biết mình ở đó).
+//   · Link act đẩy sang cột theo có thêm `f=1`.
+//   · Cột CHỦ hiện màn chọn như thường. Cột THEO gặp act WORDS mà link chưa có `tpl` thì ĐỨNG CHỜ
+//     (màn tối + tên act); chọn xong, cột chủ đổi địa chỉ của nó thành
+//     `?a=N&tpl=<template>&cm=<text|voice>&cv=<bộ TEXT>&vv=<bộ VOICE>`, myActivity chép đúng địa chỉ đó
+//     (kèm f=1) sang cột theo ⇒ chúng mở thẳng vào màn START với đúng lựa chọn, KHÔNG đọc lại
+//     Firebase (tránh chậm/lệch). Bấm GAMES ở cột chủ ⇒ địa chỉ về trơn ⇒ cột theo lại chờ.
+//   · Cột theo CHỈ áp lựa chọn trong bộ nhớ, không ghi Firebase (cột chủ đã ghi rồi).
+const PICK_PARAMS = ["tpl", "cm", "cv", "vv"];
+const sp = () => { try { return new URLSearchParams(location.search); } catch { return new URLSearchParams(); } };
+export function inMyActivity() { return /myActivityHost\//.test((navigator && navigator.userAgent) || ""); }
+
 // Act này có phải act WORDS cần màn chọn, và nơi mở có được phép hiện không?
 export function wantsPicker(node) {
   if (!node || node.kind !== "act" || !variantsOf(node.content)) return false;
-  let p = null;
-  try { p = new URLSearchParams(location.search); } catch { /* ignore */ }
-  if (p && p.get("go") === "1") return false;
-  if (p && p.get("pick") === "1") return true;
-  return !/Electron\//i.test((navigator && navigator.userAgent) || "");
+  const p = sp();
+  if (p.get("go") === "1") return false;
+  if (p.get("pick") === "1") return true;
+  if (inMyActivity()) return true;                                   // cột chủ của myActivity
+  return !/Electron\//i.test((navigator && navigator.userAgent) || "");   // myLesson… giữ nguyên
+}
+
+// Đặt/gỡ lựa chọn trên địa chỉ (CHỈ trong myActivity — ở Chrome thường giữ link sạch). replaceState
+// vẫn làm myActivity nghe `did-navigate-in-page` ⇒ mirrorAword chép sang cột theo.
+function setPickUrl(type, sel) {
+  if (!inMyActivity()) return;
+  try {
+    const u = new URL(location.href);
+    PICK_PARAMS.concat("f").forEach(k => u.searchParams.delete(k));
+    if (type) {
+      u.searchParams.set("tpl", type);
+      if (sel.contentMode) u.searchParams.set("cm", sel.contentMode);
+      if (sel.contentVariant) u.searchParams.set("cv", sel.contentVariant);
+      if (sel.voiceVariant) u.searchParams.set("vv", sel.voiceVariant);
+    }
+    if (u.toString() !== location.href) history.replaceState(history.state, "", u.toString());
+  } catch { /* ignore */ }
+}
+
+// Lựa chọn ĐANG LƯU của một act WORDS (để nối vào link khi chuyển act ngay trong game).
+function savedPick(node) {
+  const o = node.options || {};
+  const sets = variantsOf(node.content) || [], vs = voiceVariantsOf(node.content);
+  const sel = { contentVariant: sets.includes(o.contentVariant) ? o.contentVariant : sets[0] };
+  if (vs) { sel.contentMode = o.contentMode === "voice" ? "voice" : "text"; sel.voiceVariant = vs.includes(o.voiceVariant) ? o.voiceVariant : vs[0]; }
+  return sel;
+}
+// Nút chuyển act ngay trong game KHÔNG qua màn chọn (vào thẳng template chơi cuối) ⇒ nếu địa chỉ
+// mới của cột chủ trơn thì cột theo gặp act WORDS sẽ đứng chờ mãi. Nối sẵn lựa chọn đang lưu.
+export function urlForSwitch(url, node) {
+  if (!inMyActivity() || !node || !variantsOf(node.content)) return url;
+  try {
+    const u = new URL(url, location.href);
+    const sel = savedPick(node);
+    u.searchParams.set("tpl", node.lastTpl || node.type);
+    Object.entries({ cm: sel.contentMode, cv: sel.contentVariant, vv: sel.voiceVariant }).forEach(([k, v]) => { if (v) u.searchParams.set(k, v); });
+    return u.toString();
+  } catch { return url; }
+}
+
+// CỔNG VÀO DUY NHẤT cho main.js (thư viện bấm act, link ?a=). Trả true = đã tự dựng màn (màn chọn /
+// màn chờ), false = để main.js mở game như thường (có thể sau khi áp lựa chọn cho cột theo).
+export async function enterWords(root, node, { onExit } = {}) {
+  if (!node || node.kind !== "act" || !variantsOf(node.content)) return false;
+  const p = sp();
+  if (p.get("go") === "1") return false;
+  if (inMyActivity() && p.get("f") === "1") {
+    const tpl = p.get("tpl");
+    if (!tpl) { await openFollowerWait(root, node); return true; }
+    applyFollowerPick(node, p, tpl);
+    return false;
+  }
+  if (!wantsPicker(node)) return false;
+  return openWordsPicker(root, node, { onExit });
+}
+
+function applyFollowerPick(node, p, tpl) {
+  const sets = variantsOf(node.content) || [], vs = voiceVariantsOf(node.content);
+  const sel = {};
+  if (sets.includes(p.get("cv"))) sel.contentVariant = p.get("cv");
+  if (vs && vs.includes(p.get("vv"))) sel.voiceVariant = p.get("vv");
+  if (vs && (p.get("cm") === "text" || p.get("cm") === "voice")) sel.contentMode = p.get("cm");
+  node.options = { ...(node.options || {}), ...sel };
+  if (tpl === node.type) delete node.lastTpl; else node.lastTpl = tpl;   // engine kiểm tpl hợp lệ (rememberedTemplate)
+}
+
+// Cột theo đứng chờ: tối, tên act, vòng xoay nhỏ. Khi cột chủ chọn xong, myActivity nạp lại trang này.
+async function openFollowerWait(root, node) {
+  await loadCss();
+  root.innerHTML = "";
+  const { page, stage, inner, below } = buildStage("classic");
+  stage.classList.add("act-wordswait");
+  const w = el("div", "aw-wp-wait");
+  w.append(el("div", "aw-wp-slogan", "ANDREW CLASSES"), el("div", "aw-wp-wtitle", esc(node.title || "")), el("div", "aw-wp-spin"));
+  inner.append(w);
+  root.append(page);
+  const bl = el("div", "aw-below-left");
+  bl.append(el("div", "aw-below-title", esc(node.title || "")));
+  below.append(bl);
 }
 
 export async function openWordsPicker(root, node, { onExit } = {}) {
@@ -91,6 +185,7 @@ export async function openWordsPicker(root, node, { onExit } = {}) {
   const exit = () => { setWordsPickerHook(null); if (onExit) onExit(); };
   // Nút GAMES trên màn START quay về đây (engine.js đọc hook này).
   setWordsPickerHook({ actId: node.id, open: r => openWordsPicker(r, node, { onExit }) });
+  setPickUrl(null);   // myActivity: địa chỉ về trơn ⇒ cột theo (đang mở game) quay lại CHỜ
 
   // game nào chơi được với nội dung này — cùng luật nút Template trong Options (switchTargets)
   const ok = new Set([node.type]);
@@ -256,6 +351,7 @@ export async function openWordsPicker(root, node, { onExit } = {}) {
     node.options = { ...(node.options || {}), ...sel };
     if (type === node.type) delete node.lastTpl; else node.lastTpl = type;
     off();
+    setPickUrl(type, sel);   // myActivity: địa chỉ mang lựa chọn ⇒ chép sang cột theo, chúng mở theo
     startGame(root, node, { onExit: exit });
   }
 

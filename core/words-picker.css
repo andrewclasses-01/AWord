@@ -77,6 +77,14 @@
 .aw-wp-back.is-fixed svg { width: 22px; height: 22px; }
 .aw-wp-back svg { width: calc(1.9 * var(--aw-u)); height: calc(1.9 * var(--aw-u)); display: block; }
 
+
+/* ---- cột THEO của myActivity đứng chờ cột chủ chọn (Đợt 453b) ---- */
+.aw-wp-wait { --p: calc(var(--aw-u) / 12.8); position: absolute; inset: 0; z-index: 5; background: #17181c; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(34 * var(--p)); user-select: none; }
+.aw-wp-wait .aw-wp-slogan { color: #6b7a90; }
+.aw-wp-wtitle { font-weight: 800; font-size: calc(61 * var(--p)); letter-spacing: .01em; max-width: 90%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aw-wp-spin { width: calc(44 * var(--p)); height: calc(44 * var(--p)); border-radius: 50%; border: calc(4 * var(--p)) solid rgba(53,177,240,.25); border-top-color: #35b1f0; animation: wpSpin 1s linear infinite; }
+@keyframes wpSpin { to { transform: rotate(360deg); } }
+
 /* ============ ART ROLES — bộ C "Flat color" ============ */
 .aw-wp svg text { font-family: "Baloo 2", sans-serif; font-weight: 800; }
 .aw-wp svg .r, .aw-wp svg .sp, .aw-wp svg .ck, .aw-wp svg .hl, .aw-wp svg .rg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
@@ -132,5 +140,8 @@
   .wp-tile .wp-nm { font-size: calc(6.5 * var(--p)); padding: 0 calc(1 * var(--p)); }
   .wp-tile.hi { transform: none; box-shadow: 0 0 0 calc(1.5 * var(--p)) var(--wp-blue-soft); }
   .aw-wp-home { margin-left: 0; }
+  .aw-wp-wait { --p: calc(var(--aw-u) / 3.75); gap: calc(10 * var(--p)); }
+  .aw-wp-wtitle { font-size: calc(20 * var(--p)); }
+  .aw-wp-spin { width: calc(14 * var(--p)); height: calc(14 * var(--p)); border-width: calc(1.5 * var(--p)); }
 }
 @media (prefers-reduced-motion: reduce) { .aw-wp, .aw-wp * { transition: none !important; animation: none !important; } }

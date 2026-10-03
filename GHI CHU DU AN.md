@@ -546,6 +546,26 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 453b (04/10/2026) — MÀN CHỌN CHẠY ĐƯỢC TRÊN MYACTIVITY NHIỀU CỘT: cột 0 chọn, cột theo đứng chờ · ⬜ CHƯA push · đi cặp myActivity v2.31.0
+
+Thầy: dùng chủ yếu trên myActivity nhiều cột; "không chọn được ở đây thì tính năng vô nghĩa". Thầy chốt: cột 0 hiện màn chọn, cột khác chờ,
+chọn xong vào START thì cột khác mới nạp; bấm GAMES chọn lại thì cột khác chờ lại; màn chờ = tối + tên act + vòng xoay nhỏ.
+
+- ⛔ **SỬA LỖI CỦA ĐỢT 453:** myActivity GỠ "Electron/" và tên app khỏi UA (CHROME_UA, để đăng nhập Google) ⇒ phép dò Electron ở Đợt 453 KHÔNG
+  nhận ra myActivity ⇒ màn chọn sẽ hiện ở MỌI cột và gãy đồng bộ (`__awordBridge` cần game đang chạy). Nay myActivity v2.31.0 thêm token
+  **` myActivityHost/1`** vào UA riêng của host AWord; `inMyActivity()` dò token này. myLesson giữ chữ Electron ⇒ vẫn KHÔNG có màn chọn.
+- **Giao thức** (`core/words-picker.js` `enterWords`): cột 0 (không `f=1`) ⇒ màn chọn. Cột theo (`f=1`): act WORDS chưa có `tpl` ⇒ `openFollowerWait`;
+  có `tpl` ⇒ `applyFollowerPick` (chỉ trong bộ nhớ: `options.contentMode/contentVariant/voiceVariant` + `lastTpl`, KHÔNG ghi Firebase) rồi `startGame` thường.
+  Act không phải WORDS ⇒ bỏ qua cờ. `?go=1` luôn thắng. Chrome thường (không token) bỏ qua `f=1`.
+- **Cột 0 đổi địa chỉ** (`setPickUrl`, chỉ trong myActivity): chọn xong ⇒ `?a=N&tpl=&cm=&cv=&vv=` (replaceState); mở màn chọn/GAMES ⇒ gỡ 5 tham số. myActivity
+  nghe `did-navigate-in-page` ⇒ `mirrorAword` ⇒ cột theo nạp `…&f=1`. Chép địa chỉ (không đọc lại Firebase) ⇒ không chậm/lệch.
+- **Chuyển act trong game** (`switchToAct`, nút cạnh tên act) không qua màn chọn ⇒ `main.js` setActSwitchHandler gọi `urlForSwitch()` nối sẵn
+  `tpl/cm/cv/vv` đang lưu của act mới, nếu không cột theo gặp act WORDS sẽ chờ mãi.
+- **Đã đo:** bàn thử `scratch/dot453-enter.html` (UA giả): cột chủ chọn ⇒ search có `tpl=quiz&cm=voice&cv=eng1&vv=eng2`, START "- ENG2"; GAMES ⇒ gỡ tham số;
+  cột theo `f=1` ⇒ màn chờ (không game); `f=1&tpl=…` ⇒ START QUIZ "- ENG2", không nút GAMES; act thường + f=1 ⇒ ANAGRAM thẳng; Chrome + `f=1` ⇒ vẫn màn chọn.
+  Test-bench myActivity (`__myactFireViewEvent`): mở act ⇒ cột 1 `…&f=1`; chọn ⇒ có tpl; GAMES ⇒ lại chờ; chọn lại ⇒ có tpl; về thư viện ⇒ start.html.
+- ⬜ **CHƯA đo trên Electron/TOMKO thật:** replaceState có kích `did-navigate-in-page` không; 3–5 cột; game 3D ở cột theo.
+
 ## Đợt 453 (04/10/2026) — MÀN CHỌN TEMPLATE + LOẠI ACT cho act WORDS · ⬜ CHỜ THẦY BẤM TAY (chưa push live)
 
 Thầy giao: act WORDS (gộp ENG1/ENG2/VI1/VI2 × TEXT/VOICE × ~14 template) mở tay thì hiện MÀN CHỌN trước, không vào thẳng game.
