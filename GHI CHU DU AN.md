@@ -546,6 +546,82 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 454b (03/10/2026) — chỉnh theo ảnh thầy: ô nạp kiểu BÓNG MỜ + mép mềm · tiếng nạp chỉ "vút" nhỏ · tên lửa NGANG HÔNG, xoay 90° lên trời rồi phóng · nổ va chạm to hơn · ⬜ CHƯA COMMIT
+
+Thầy gửi 2 ảnh (quả đang nạp màu đen xám — xấu; bóng mờ khi ô trống — đẹp) + 4 ý:
+1. **Ô đang nạp** = BÓNG MỜ có sẵn (`ghostOf`, y như ô trống) + lớp ĐỎ "đổ đầy" từ đuôi lên mũi. Bỏ quả xám + mặt phẳng cắt (mép sắc).
+   Lớp đỏ = vật liệu clone có `onBeforeCompile`: varying `vLX = position.x` (toạ độ dọc quả — dải trắng nướng sẵn vị trí `BAND_GEO`,
+   hàm mới `makeMissileWith`), `alpha *= 1 − smoothstep(uFill ± FILL_SOFT 0,22)` ⇒ MÉP MỀM + viền sáng đỏ nhẹ đúng mép (`totalEmissiveRadiance`).
+   `customProgramCacheKey "awFill454"`. Quả nhỏ bay sang ô thì nhạt dần thành bóng mờ (màu → `mGhost`, opacity → 0,16).
+   Bỏ `renderer.localClippingEnabled`, `mGrey*`, `clipMats`.
+2. **Tiếng nạp** (`rr3d-sfx.js charge`): bỏ 3 dao động + rung + "ting". Chỉ còn tiếng gió **"vút"**: ồn trắng (bộ đệm 2 s dùng lại) qua lọc
+   dải Q 1,4, tần số giữa quét 220 → 2400 Hz, to dần tới 85 % thời gian nạp rồi lặng; đỉnh 0,07 (cũ 0,32 + ting 0,28).
+3. **Tên lửa NGANG HÔNG** (`MOUNT_TH` = π/2). Cửa khoang đóng ⇒ ẩn hẳn (`dL/dR.visible = open > 0,01`) để không che số đội; số đội sơn
+   (`makeRocket` num/num2) dời lên nửa trên hông (rotation.y −0,6 / π + 0,6) vì quả nằm ngang giữa hông.
+   **Phóng**: quả rời tay ⇒ **pha 0 `ROT_T` 0,38 s đứng tại bệ, XOAY quanh TÂM 90° cho mũi chĩa THẲNG LÊN TRỜI** (slerp `qA → qB`, tiếng cơ khí
+   `mload`), rồi `ignite()` đánh lửa (khói + chớp phụt XUỐNG, `mlaunch`) ⇒ pha 1 lên thẳng `D1` trong `T1` ⇒ Bézier bậc 4: P1 thẳng trên
+   (liền mạch), P2 cao 0,9·H và nghiêng 35 % (theo phương ngang) về phía tàu địch, P3 trên đầu tàu địch, P4 tàu địch. Bỏ F2/"phía trước/sau".
+   Bắn đôi: quả 2 đợi quả 1 `f.t ≥ PAIR_T − carry·0,85` (không cộng ROT_T — 2 quả cùng xoay) ⇒ đánh lửa cách nhau ~0,43 s.
+   Chạm vỏ chỉ xét từ `ROT_T + T1 + 0,2`.
+4. **Nổ 2 quả đâm nhau** to hơn: `boom` 0,5 → 0,85, `hit1` 0,55 → 0,8.
+
+**Đã tự kiểm** (bàn thử `scratch/dot413-rr.html`, 0 lỗi console): ảnh ô nạp nửa chừng = bóng mờ + đỏ đầy nửa đuôi, mép mềm; quỹ đạo cùng nấc:
+đứng yên 0,38 s (fwd không đổi) → lên thẳng tới cao 8,8 → lao xuống, nổ cách tâm tàu 0,62 (mặt vỏ); chênh 3 nấc: lên thẳng rồi vòng ra sau
+(fwd −37, cao 12) trúng; 2 bên bắn lệch 0,9 s ⇒ đâm nhau giữa trời (cách tàu 17,9 / 28,3), không ai lùi; ảnh hông: quả đỏ nằm ngang hông
+phía người xem, số "1"/"2" hiện phía trên quả.
+
+### VIỆC ĐANG CHỜ (Đợt 454b)
+- ⬜ Thầy xem lại: độ mềm mép nạp (`FILL_SOFT`), âm lượng "vút" (0,07), thời gian xoay 0,38 s, cỡ nổ va chạm.
+- ⬜ Thầy duyệt ⇒ commit + push 454 + 454b, kiểm live bằng mã băm.
+
+## Đợt 454 (03/10/2026) — ROCKET RACE ▸ FIGHT 3D: TÊN LỬA 2 BÊN HÔNG · NẠP ĐỎ DẦN · BẮN CÁCH QUÃNG / NỐI ĐUÔI · BẮT BUỘC ĐÂM NHAU · CHẠM VỎ LÀ NỔ · THIỆT HẠI 50 % · ⬜ CHƯA COMMIT — CHỜ THẦY XEM
+
+Thầy giao 10 ý một lượt (sửa thẳng repo, không làm mẫu myGame). File: `templates/rocket-race/rr3d-missile.js` (phần lớn) ·
+`rr3d-view.js` · `rr3d-sfx.js` · `rocket-race.js`. Chi tiết kỹ thuật: `templates/rocket-race/GHI CHU ROCKET-RACE.md` mục 43.
+
+1. **Tên lửa nhỏ 30 %** (`MS` 1,05 → 0,735, cả quả trên tàu lẫn quả đang bay) + **2 khoang ở 2 BÊN HÔNG** (lệch nóc `MOUNT_TH` 0,8 rad ≈ 46°,
+   vẫn gần đỉnh, giữa thân) thay 1 khoang trên nóc. Ô 0 = hông PHÍA NGƯỜI XEM (+Z), ô 1 = hông khuất. Lên nòng vào ô 0 trước, bắn ô 1 trước
+   ⇒ chỉ còn 1 quả thì quả đó luôn ở bên người xem nhìn thấy. `r.mis` nay = `{ slots: [ô0, ô1] }`, mỗi ô có cửa/tay robot/quả riêng
+   (`attachSlot(r, sgn)`, rig xoay quanh trục thân `rotation.x = sgn·MOUNT_TH`).
+2. **Bỏ cửa sổ tròn + phi công** trên thân tàu (`makeRocket`), bỏ luôn mảnh vòng buồng lái + kính vỡ trong xác tàu (`makeWreckKit`).
+3. **Bắn cách quãng + nạp đỏ dần**: mỗi tàu 2 ô sẵn sàng (xếp chồng trong bảng, ô 0 dưới / ô 1 trên). Trạng thái ô: `empty → shuttle`
+   (quả nhỏ bay sang 0,5 s, đỏ NHẠT dần thành xám) `→ charge` (MC.charge = 2 s: phần ĐỎ lan từ đuôi tới mũi bằng 2 mặt phẳng cắt
+   `renderer.localClippingEnabled`, lõi sáng nhấp nháy nhanh dần, **tiếng nạp năng lượng tổng hợp** `sfx.charge(dur)` to + cao dần rồi "ting";
+   quả trên thân tàu ĐỒNG THỜI từ từ đưa ra theo % nạp) `→ ready → firing → empty`. Luật: quả trước phải bay cách tàu ≥ **2 lần chiều dài tàu**
+   (`GAP_SHIP` = 2 × 4,75 × RS) hoặc đã nổ thì mới phóng quả kế; chạm bắn sớm ⇒ quả chuyển `queued` (rung nhẹ, quầng nháy) rồi TỰ phóng khi đủ xa.
+   NGOẠI LỆ: 2 ô **cùng sẵn sàng** lúc bắn quả đầu ⇒ quả thứ 2 bắn **NỐI ĐUÔI** (rời bệ sau ~0,43 s, mũi sau sát đuôi trước).
+   Trang game: `a.loaded` nay là SỐ (0–2, `msCap`), `msLoad` lên nòng lần lượt cách 0,6 s, view từ chối (ô đầy) ⇒ thử lại sau 0,4 s.
+4. **2 quả ngược chiều KHÔNG BAO GIỜ lướt qua nhau**: trong tầm `CLASH_SEEK` 12·RS hai đầu HÚT nhau (mạnh dần khi gần); đoạn bay chạm nhau
+   (`CLASH_HIT` 0,7·RS) ⇒ nổ; lỡ đang xáp lại (≥ 1 đv) mà bắt đầu rời ra trong `PASS_D` 5·RS ⇒ ÉP nổ giữa 2 quả. Áp cho mọi cặp, kể cả quả đã bị né.
+5. **Đường bay đúng vật lý**: pha 1 lao THẲNG ra trước (`D1` 2,2·RS trong `T1` 0,45 s, nhanh dần) rồi Bézier **bậc 4** (P1 thẳng phía trước ⇒
+   hướng bay liền mạch; P2 phía trước + trên cao ⇒ ngóc lên thành vòng cung; P3 trên đầu tàu địch; P4 tàu địch). Tàu dẫn đầu bắn lùi: ra trước
+   ~3,9 đv, vừa vòng lên (cao 5,6 lúc quay đầu) vừa lật về sau. Nhịp u(k) bậc 3 khớp tốc độ cuối pha 1.
+6. **Chạm vỏ là nổ**: `hullContact` dò mũi quả (4 điểm/khung) trong hệ toạ độ tàu địch, bán kính theo đúng biên dạng vỏ ⇒ nổ tại chỗ chạm
+   (đo: cách tâm tàu 0,60–0,67 = mặt vỏ 0,64), không cắm vào tâm nữa. Hết đường (k = 1) vẫn còn làm lưới an toàn.
+7. **Nổ trúng tàu nhỏ lại**: `HIT_SC` 0,75 → 0,58; `explosion()` của view nay thu cả tia lửa + than hồng + vòng xung kích theo cỡ
+   (`w = min(1, sc/0,75)` — nổ tàu sc 1 không đổi).
+8. **Đâm nhau trên không = NỬA vụ trúng tàu + XỊT** (`CLASH_SC` = 0,29, ít tia, cụm khói xám, tiếng nhỏ, rung nhẹ). Bỏ "nổ ×2 + thiệt hại ×1,5" của Đợt 441.
+9. **2 tàu cùng nấc**: 1 quả trúng ⇒ cả 2 tàu cùng bị nhưng mỗi tàu chỉ **50 %** (tag `"half"`, nhãn "HIT 50%").
+10. **Bắn trả khi quả địch đã kề sát**: vùng ảnh hưởng vụ đâm nhau `CLASH_ZONE` thu từ 6,8·RS xuống **3·RS** (≈ ngay trên thân tàu); trong vùng ⇒
+    tàu đó chịu **50 %** (không phải ×1,5). `msEnd` → `board.missileHit(push, 0.5)`: làm tròn LÊN, ∞ ⇒ nửa quãng đã đi.
+
+**Đã tự kiểm (bàn thử `scratch/dot413-rr.html` trên `aword-dev` :5591, 0 lỗi console):**
+- 2 ô sẵn sàng sau ~2,5 s; bắn 2 lần cách 60 ms ⇒ quả 2 `queued` rồi rời bệ khi quả 1 bay 0,43 s (nối đuôi). Pha 1: fwd 0 → 2,67, độ cao giữ nguyên.
+- Tàu dẫn đầu (nấc 3) bắn lùi: fwd tối đa 3,9 rồi âm dần, độ cao tăng tới ~7 ⇒ lao xuống; nổ cách tâm tàu địch 0,64.
+- Cùng nấc 3–3 trúng 1 quả ⇒ 2–2 (mỗi tàu −1 = 50 % của 2). Bắn trả lúc quả địch còn 0,75 s ⇒ đâm nhau cách tàu bắn trả 1,46 ⇒ tàu đó −1, tàu kia
+  (cách 4,42) không sao. 5 lần bắn lệch giờ 0,3 / 1 / 1,8 / 2,5 / 3 s ⇒ 5/5 đâm nhau, 0 quả lọt; lần 3 s nổ cách tàu 3,04 < 3,3 ⇒ −1.
+- Ảnh: 2 quả gắn 2 hông, không còn cửa sổ; ô đang nạp nửa đỏ (đuôi) nửa xám (mũi); nổ ngay trên vỏ tàu cam, vòng nổ cỡ thân tàu.
+- `clearAll()` lúc 1 quả `firing` + 1 `queued` ⇒ cả 2 bỏ, ô trống, nạp lại đúng số; Missiles max 1 ⇒ chỉ ô 0.
+- API bàn thử mới: `view.missile.slots`, `readyCount(side)`, `steps`, `lastHit`, `flights[].fwd/up/dist/tdist`, `gapShip`.
+
+### VIỆC ĐANG CHỜ (Đợt 454)
+- ⬜ Thầy xem + chơi thử (máy 1/2, TOMKO): cỡ quả, 2 ô xếp chồng trong bảng (có cần to hơn — `BIG_K` 0,74), thời gian nạp 2 s (`missiles.charge`),
+  tiếng nạp, độ cao vòng cung, cỡ nổ.
+- ⬜ Thầy duyệt ⇒ commit + push + kiểm live bằng mã băm (`aword.andrewclasses.com`).
+- Lưu ý luật: push = 1 thì 50 % vẫn là 1 nấc (làm tròn lên, nấc là số nguyên).
+
+---
+
 ## Đợt 453b (04/10/2026) — MÀN CHỌN CHẠY ĐƯỢC TRÊN MYACTIVITY NHIỀU CỘT: cột 0 chọn, cột theo đứng chờ · ✅ ĐÃ PUSH `0ddd227` + LIVE 7/7 mã băm (04/10) · đi cặp myActivity v2.31.0 `90868fe` (đã push) · ⬜ thầy thử TOMKO
 
 Thầy: dùng chủ yếu trên myActivity nhiều cột; "không chọn được ở đây thì tính năng vô nghĩa". Thầy chốt: cột 0 hiện màn chọn, cột khác chờ,

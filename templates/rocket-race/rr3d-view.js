@@ -402,19 +402,7 @@ export function makeRocket(team, idx, H = {}) {
     model.add(f);
   }
 
-  // cửa sổ + phi công (phía +Z của mô hình = phía camera ở góc nhìn ngang)
-  const ringM = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.045, 16, 48), darkMat);
-  ringM.position.set(0, 0.75, 0.56);
-  const pc = document.createElement("canvas"); pc.width = pc.height = 128;
-  const pg = pc.getContext("2d");
-  const grd = pg.createRadialGradient(64, 64, 10, 64, 64, 64); grd.addColorStop(0, "#1c2a44"); grd.addColorStop(1, "#070b14");
-  pg.fillStyle = grd; pg.beginPath(); pg.arc(64, 64, 64, 0, TAU); pg.fill();
-  pg.font = '84px "Segoe UI Emoji","Apple Color Emoji",sans-serif'; pg.textAlign = "center"; pg.textBaseline = "middle"; pg.fillText(team.pilot, 64, 72);
-  const pilot = new THREE.Mesh(new THREE.CircleGeometry(0.22, 32), new THREE.MeshBasicMaterial({ map: canvasTex(pc) }));
-  pilot.position.set(0, 0.75, 0.545);
-  const glass = new THREE.Mesh(new THREE.SphereGeometry(0.235, 32, 16, 0, TAU, 0, Math.PI / 2), new THREE.MeshPhysicalMaterial({ color: "#aee3ff", metalness: 0, roughness: 0.03, transparent: true, opacity: 0.28, clearcoat: 1, envMapIntensity: 2.5 }));
-  glass.rotation.x = Math.PI / 2; glass.scale.z = 0.35; glass.position.set(0, 0.75, 0.55);
-  model.add(pilot, glass, ringM);
+  // ⭐ Đợt 454 (thầy 03/10/2026): BỎ cửa sổ tròn + phi công trên thân — thân tàu liền một khối.
 
   // số đội sơn trên thân (mặt +Z)
   const nc = document.createElement("canvas"); nc.width = 256; nc.height = 256;
@@ -423,9 +411,10 @@ export function makeRocket(team, idx, H = {}) {
   const numMat = new THREE.MeshStandardMaterial({ map: canvasTex(nc), transparent: true, metalness: 0.3, roughness: 0.4 });
   const numGeo = new THREE.CylinderGeometry(0.586, 0.586, 0.62, 32, 1, true, -0.55, 1.1);
   const num = new THREE.Mesh(numGeo, numMat);
-  num.position.y = -0.25; num.rotation.y = Math.PI / 2 - Math.PI / 2;   // mở góc quanh +Z
+  // Đợt 454b: tên lửa gắn NGANG HÔNG che giữa hông ⇒ số đội dời lên nửa trên hông (lệch 0,6 rad về phía nóc)
+  num.position.y = -0.25; num.rotation.y = -0.6;   // mở góc quanh +Z
   model.add(num);
-  const num2 = num.clone(); num2.rotation.y = Math.PI; model.add(num2);  // mặt bên kia
+  const num2 = num.clone(); num2.rotation.y = Math.PI + 0.6; model.add(num2);  // mặt bên kia
 
   // lửa: 2 nón chồng (lõi trắng + vỏ cam), shader nhiễu cuộn
   const flameMat = (core, outer, pow) => new THREE.ShaderMaterial({
@@ -1084,7 +1073,9 @@ export async function createView(cfg) {
   scene.add(boomLight);
   const cSmokeHot = new THREE.Color(), cSmokeCold = new THREE.Color();
   function explosion(pos, sc = 1) {   // Đợt 407: sc = hệ số cỡ (tên lửa nổ nhỏ hơn tàu nổ)
-    const b = { pos: pos.clone(), t: 0, balls: [], rings: [], emitters: [] };
+    // ⭐ Đợt 454: w = độ RỘNG của tia lửa + vòng xung kích theo cỡ (vụ nổ tên lửa nhỏ không còn văng tia rộng bằng nổ tàu); sc ≥ 0,75 như cũ
+    const w = Math.min(1, sc / 0.75);
+    const b = { pos: pos.clone(), t: 0, balls: [], rings: [], emitters: [], w };
     // chớp trắng (vài hạt khổng lồ, sống 0,2 s)
     for (let i = 0; i < 2; i++) fire.emit({ pos: pos.clone(), vel: new V3(), life: 0.12 + i * 0.05, size: 2.2 + i * 1.2, sizeEnd: 4.5 + i * 1.5, color: new THREE.Color(2.6, 2.2, 1.7), colorEnd: new THREE.Color(1.4, 0.6, 0.2), alpha: 0.9 });
     // các quả cầu lửa: lệch chỗ, lệch nhịp, to nhỏ khác nhau
@@ -1104,12 +1095,12 @@ export async function createView(cfg) {
         color: new THREE.Color(2.1, 1.25, 0.5), colorEnd: new THREE.Color(0.45, 0.06, 0.01), drag: 2.6, alpha: 0.7 });
     }
     // tia lửa nhanh + than hồng chậm, sống lâu
-    for (let i = 0; i < 140; i++) {
-      const d = new V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).normalize().multiplyScalar(rand(14, 30));
+    for (let i = 0; i < 140 * Math.max(0.4, w); i++) {
+      const d = new V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).normalize().multiplyScalar(rand(14, 30) * w);
       fire.emit({ pos: pos.clone(), vel: d, life: rand(0.5, 1.2), size: rand(0.05, 0.1), sizeEnd: 0.02, color: new THREE.Color(3.2, 2.2, 0.9), colorEnd: new THREE.Color(1.2, 0.25, 0), drag: 0.9 });
     }
-    for (let i = 0; i < 70; i++) {
-      const d = new V3(rand(-1, 1), rand(-0.6, 1), rand(-1, 1)).normalize().multiplyScalar(rand(2, 7));
+    for (let i = 0; i < 70 * Math.max(0.4, w); i++) {
+      const d = new V3(rand(-1, 1), rand(-0.6, 1), rand(-1, 1)).normalize().multiplyScalar(rand(2, 7) * w);
       fire.emit({ pos: pos.clone(), vel: d, life: rand(1.6, 3.2), size: rand(0.05, 0.1), sizeEnd: 0.03, color: new THREE.Color(3, 1.3, 0.3), colorEnd: new THREE.Color(0.8, 0.1, 0), drag: 0.7 });
     }
     // sóng xung kích: 2 vòng, vòng sau mờ và chậm hơn
@@ -1151,7 +1142,7 @@ export async function createView(cfg) {
       b.rings.forEach(({ m, k }) => {
         const tt = b.t - k * 0.09;
         m.quaternion.copy(camera.quaternion);
-        m.scale.setScalar(0.6 + Math.max(0, tt) * (k ? 11 : 16));
+        m.scale.setScalar((0.6 + Math.max(0, tt) * (k ? 11 : 16)) * (b.w ?? 1));
         m.material.opacity = tt < 0 ? 0 : Math.max(0, (k ? 0.22 : 0.5) * (1 - tt / (k ? 0.75 : 0.55)));
         if (tt > 0.8) m.visible = false;
       });
@@ -1309,7 +1300,6 @@ export async function createView(cfg) {
     const metalW = std("#3b3e43", { metalness: 0.75, roughness: 0.62, side: THREE.DoubleSide });
     const copperW = std("#5e3b22", { metalness: 0.7, roughness: 0.7 });
     const wireW = [std("#3a1612", { roughness: 0.85 }), std("#4a3c14", { roughness: 0.85 })];
-    const glassW = new THREE.MeshPhysicalMaterial({ color: "#3d4650", metalness: 0, roughness: 0.25, transparent: true, opacity: 0.4, side: THREE.DoubleSide, envMapIntensity: 1 });
     const hot = [hullW, teamW, darkW, innerW, metalW];
     const pieces = [];
     const add = (geo, mat, o = {}) => {
@@ -1368,14 +1358,7 @@ export async function createView(cfg) {
       const pts = [[0.26, -1.9], [0.3, -2.05], [0.4, -2.35], [0.46, -2.5], [0.43, -2.52], [0.36, -2.36], [0.24, -2.05]].map(([x, y]) => new THREE.Vector2(x, y));
       add(new THREE.LatheGeometry(pts, 36, rand(0, TAU), rand(3.8, 5.3)), darkW, { heavy: true, burn: true, crumple: 0.04 });
     }
-    // vòng buồng lái (gãy cong) + mảnh kính ám khói
-    { const g = new THREE.TorusGeometry(0.24, 0.045, 10, 30, rand(3.2, 5)); g.translate(0, 0.75, 0.56); add(g, darkW, { crumple: 0.03 }); }
-    for (let k = 0; k < 6; k++) {
-      const s = rand(0.05, 0.12), g = new THREE.BufferGeometry();
-      g.setAttribute("position", new THREE.Float32BufferAttribute([0, 0, 0, s, rand(-0.3, 0.3) * s, 0, rand(0.1, 0.9) * s, s * rand(0.6, 1.1), 0], 3));
-      g.computeVertexNormals(); g.translate(rand(-0.15, 0.15), 0.75 + rand(-0.15, 0.15), 0.6);
-      add(g, glassW, { noSmoke: true });
-    }
+    // Đợt 454: tàu không còn cửa sổ ⇒ bỏ mảnh vòng buồng lái + kính vỡ
     // ruột tàu: bồn nhiên liệu móp, khung sườn gãy, bơm, ống đồng cháy, bó dây cháy
     { const g = new THREE.CapsuleGeometry(0.2, 0.62, 6, 18); g.translate(0, -0.25, 0); add(g, metalW, { heavy: true, burn: true, crumple: 0.06, freq: 5 }); }
     [-1.5, -0.95, -0.4, 0.5].forEach(y => { const g = new THREE.TorusGeometry(bodyR(y) - 0.04, 0.026, 6, 30, rand(1.8, 3.8)); g.rotateX(Math.PI / 2); g.rotateY(rand(0, TAU)); g.translate(0, y, 0); add(g, darkW, { crumple: 0.05, freq: 4 }); });
@@ -1421,7 +1404,9 @@ export async function createView(cfg) {
     sfx: (n, v) => sfx(n, v), stall: r => stallRocket(r), shake: k => { trauma = Math.min(1, trauma + k); },
     onFire: side => cfg.onFire && cfg.onFire(side), onBoost: side => cfg.onBoost && cfg.onBoost(side),
     onEnd: (to, res, from, tag) => cfg.onMissileEnd && cfg.onMissileEnd(to, res, from, tag),   // 441: tag "clash" = dính vụ đâm nhau (×1,5)
-    onLoad: side => cfg.onLoad && cfg.onLoad(side)                 // Đợt 409: chạm quả nhỏ = nạp
+    onLoad: side => cfg.onLoad && cfg.onLoad(side),                // Đợt 409: chạm quả nhỏ = nạp
+    renderer,                                                       // Đợt 454: mặt phẳng cắt (tên lửa đỏ dần khi nạp)
+    sfxCharge: (dur, v) => { try { return cfg.sfxCharge ? cfg.sfxCharge(dur, v) : null; } catch { return null; } }   // Đợt 454: tiếng nạp năng lượng
   });
   const MW = createMissWait({ THREE, ui, screenToLocal, screenSize, frameGeo, canvasTex, radialTex, FONT_UI, TEAMS, G, UID });   // Đợt 409
   warmBoom();

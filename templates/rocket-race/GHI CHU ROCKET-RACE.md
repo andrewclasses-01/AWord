@@ -812,3 +812,28 @@ khu tên lửa "cột dọc mọc lên" · PEACE bật/tắt trong trận · thi
   ("launch"/"race") + cỡ cửa sổ ⇒ nhớ mức đã êm (localStorage `aw.rr3d.pr.*`), cảnh/ván sau vào thẳng mức đó.
 - Bàn thử: `__rr3d.view.res` = { pr, cap, max, drops, hostCap, learned }. Xoá mức đã nhớ: xoá các khoá `aw.rr3d.pr.*`.
 - Đo TOMKO (chi tiết GHI CHU DU AN Đợt 446): đua 59,3 fps, khung > 33 ms 16 → 4. ✅ push `8e633e6` + LIVE 3/3 mã băm.
+
+## 43. Đợt 454 (03/10/2026) — TÊN LỬA 2 BÊN HÔNG · NẠP ĐỎ DẦN · CÁCH QUÃNG / NỐI ĐUÔI · BẮT BUỘC ĐÂM NHAU · CHẠM VỎ LÀ NỔ · 50 %
+- Luật + đo đạc: `GHI CHU DU AN.md` chặng Đợt 454. ⬜ chưa commit, chờ thầy xem.
+- **Mô hình**: `MS` 0,735 (−30 %), `M_LEN` 2,32·MS. Khoang = `attachSlot(r, sgn)` ở φ = 270° ± `MOUNT_TH` (0,8 rad); `r.mis.slots[0]` = hông +Z (người xem),
+  `[1]` = hông khuất. Cửa `Y0..Y1` = −1,05..0,75 (tránh số đội sơn ở y −0,56..0,06 phía +Z). Tàu KHÔNG còn cửa sổ/phi công (`makeRocket`, xác tàu).
+- **Ô sẵn sàng** (`SL[side][j]`, cấp module, chạy cả khi chưa dựng bảng): `empty → shuttle (SHUTTLE 0,5) → charge (MC.charge 2) → ready → firing (MC.carry)
+  → empty` (+ `queued`). `tickSlots` chạy TRƯỚC `poseMount`, đặt `mount.has/wantRise` (= smooth(k) khi nạp ⇒ quả trên thân đưa ra theo %).
+  Bảng: `makeBigSlot` = quả đỏ + quả xám chồng khít, vật liệu CLONE có `clippingPlanes` (pR giữ phía đuôi, pG phía mũi) — tính lại mỗi khung từ
+  `matrixWorld` của nhóm quả; màu đỏ chép từ `mRed`… mỗi khung ⇒ PEACE vẫn ăn. `BIG_DY` 0,235·ammoH, `BIG_K` 0,74 khi 2 ô; Missiles max 1 ⇒ 1 ô giữa.
+  Cột dự phòng: `slotsOf` = max − min(2, max).
+- **Khoảng cách bắn**: `lastF[side]` = { pending, f, pairOK, pairUsed }. `gapOK`: quả trước còn `pending` ⇒ chưa; đã nổ ⇒ được; thường ⇒ cách tàu ≥ `GAP_SHIP`;
+  quả thứ 2 của CẶP (ô kia `ready` lúc bắn quả đầu) ⇒ khi `f.t ≥ PAIR_T − carry·0,85`. `launch()` xét khoảng cách thường TRƯỚC, chỉ khi chưa đủ mới
+  xét quyền nối đuôi (bẫy đã cắn: quyền `pairOK` của lần bắn CŨ còn sót làm cặp mới mất quyền).
+- **Đường bay** `pathPos`: pha 1 thẳng `D1` trong `T1`; pha 2 Bézier bậc 4 (`_bp`), `F` 4·RS, `F2` 8·RS (địch phía trước > 6·RS) hoặc 5·RS, P2 cao 0,9·H.
+- **Va chạm** (`stepFlights` 5 bước: vị trí → hút → cặp chạm/lướt qua → chạm vỏ → vẽ). `pairD` nhớ khoảng cách từng cặp; `clash()` nổ `CLASH_SC`,
+  tàu cách < `CLASH_ZONE` 3·RS ⇒ `onEnd(s,"hit",from,"half")`. `hitShip` cùng nấc ⇒ cả 2 tag `"half"`. Trang game: `missileHit(push, frac)`.
+- **Tiếng nạp**: `rr3d-sfx.js` `charge(dur, v)` (saw + sine + square quét 95→760 Hz, lọc 380→5200 Hz, rung 5→26 Hz, "ting" 1760 Hz) → `cfg.sfxCharge`
+  → `X.sfxCharge`; `clearAll` gọi `.stop()`.
+- **Nổ**: `explosion(pos, sc)` của view thu tia/than/vòng theo `w = min(1, sc/0,75)`.
+
+- **454b (03/10, thầy chỉnh)**: ô nạp = bóng mờ `ghostOf` + lớp đỏ shader `fillMat` (alpha theo `vLX = position.x`, mép mềm `FILL_SOFT`, viền
+  sáng) — BỎ mặt phẳng cắt + quả xám. Tiếng nạp chỉ còn "vút" (ồn trắng lọc dải quét lên, đỉnh 0,07). `MOUNT_TH` = π/2 (ngang hông),
+  cửa đóng ẩn hẳn, số đội dời lên (±0,6 rad). Phóng: pha 0 `ROT_T` 0,38 s xoay quanh tâm 90° lên trời → `ignite` → lên thẳng `D1` → Bézier bậc 4
+  (P1 trên, P2 cao + 35 % về phía địch). Nổ đâm nhau: boom 0,85 + hit1 0,8. ⚠️ Viết shader bằng bash heredoc thì `
+` bị nuốt — sửa bằng Edit.

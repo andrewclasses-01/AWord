@@ -125,6 +125,35 @@ export function createRr3dSound() {
   }
   // ⭐ Đợt 405 (thầy): act VOICE ⇒ nhạc nền TẮT và không bật được (giọng đọc phải nghe rõ).
   // Khoá chỉ ép kênh nền về 0 cho trận này — KHÔNG ghi đè lựa chọn đã nhớ của máy.
+  // ⭐ Đợt 454 (thầy 03/10/2026): tiếng NẠP NĂNG LƯỢNG lúc tên lửa ở ô sẵn sàng đỏ dần — tổng hợp tại chỗ (không file).
+  // ⭐ 454b (thầy: "tiếng titttt quá lớn, chói") — CHỈ còn tiếng gió "VÚT": tiếng ồn trắng qua lọc dải, tần số giữa quét 220 → 2400 Hz,
+  // to dần rồi lặng đi đúng lúc nạp xong; không dao động, không "ting"; đỉnh nhỏ (0,07).
+  // Trả { stop() } — huỷ giữa chừng (trận khoá / tên lửa bị dọn) thì trượt tắt trong 0,12 s.
+  let noiseBuf = null;
+  function charge(dur = 2, v = 1) {
+    if (dead) return { stop() {} };
+    const t0 = ctx.currentTime, t1 = t0 + Math.max(0.3, dur);
+    if (!noiseBuf) {
+      noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+      const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const src = ctx.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+    const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 1.4;
+    bp.frequency.setValueAtTime(220, t0); bp.frequency.exponentialRampToValueAtTime(2400, t1);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(0.07 * v, t0 + (t1 - t0) * 0.85); g.gain.linearRampToValueAtTime(0.0001, t1 + 0.12);
+    src.connect(bp); bp.connect(g); g.connect(bus.fx);
+    src.start(t0); src.stop(t1 + 0.2);
+    let done = false;
+    return {
+      stop() {
+        if (done || dead) return; done = true;
+        const now = ctx.currentTime; if (now >= t1) return;
+        g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(g.gain.value, now); g.gain.linearRampToValueAtTime(0.0001, now + 0.12);
+        try { src.stop(now + 0.15); } catch { /* ignore */ }
+      }
+    };
+  }
   let bgLocked = false;
   // ⭐ MẪU 7b (thầy 27/9/2026): act VOICE ⇒ MỌI tiếng hiệu ứng (động cơ, tăng tốc, báo động, nổ…) nhỏ lại CẢ TRẬN ở một mức
   // cố định để nghe rõ giọng đọc — không tăng giảm theo lúc voice phát. fxLevel 1 = bình thường; trận voice đặt ~0,35.
@@ -145,7 +174,7 @@ export function createRr3dSound() {
   function lockBg(on) { bgLocked = !!on; applyBus(0.3); }
   function setFxLevel(k) { fxLevel = Math.max(0, Math.min(1, +k || 0)); applyBus(0.3); }
   return {
-    play, loop, swell, setPrefs, lockBg, setFxLevel,
+    play, loop, swell, charge, setPrefs, lockBg, setFxLevel,
     get fxLevel() { return fxLevel; },
     get prefs() { return { ...prefs, bg: prefs.bg && !bgLocked }; },
     get bgLocked() { return bgLocked; },
@@ -177,5 +206,5 @@ function bounds(buf) {
 
 function dummy() {
   const noop = () => {};
-  return { play: noop, loop: noop, swell: noop, setPrefs: noop, lockBg: noop, setFxLevel: noop, fxLevel: 1, prefs: { fx: true, bg: true }, bgLocked: false, state: "none", pause: noop, stopAll: noop };
+  return { play: noop, loop: noop, swell: noop, charge: () => ({ stop: noop }), setPrefs: noop, lockBg: noop, setFxLevel: noop, fxLevel: 1, prefs: { fx: true, bg: true }, bgLocked: false, state: "none", pause: noop, stopAll: noop };
 }

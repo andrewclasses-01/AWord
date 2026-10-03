@@ -420,7 +420,10 @@ function stepsOffOf(opt) {
 let rrPanelInFight = false;
 function msLocked() { const sc = rrFightScene; return !!(sc && (sc.decided || sc.sudden)); }
 function msLater(st, fn, ms) { const t = setTimeout(() => { if (!st.dead && rr3d === st) fn(); }, ms); st.offs.push(() => clearTimeout(t)); }
-function msTotal(a) { return a.reserve + (a.loaded ? 1 : 0); }
+function msTotal(a) { return a.reserve + (a.loaded | 0); }
+// ⭐ Đợt 454 (thầy 03/10/2026): HAI quả trên nòng (2 bên hông tàu) — a.loaded nay là SỐ quả đã vào ô sẵn sàng (0–2, kể cả đang nạp)
+const MS_SLOTS = 2;
+function msCap(st) { return st.msMax === Infinity ? MS_SLOTS : Math.max(0, Math.min(MS_SLOTS, st.msMax | 0)); }
 function msSync(st, side) {
   if (!st.ms) return;
   const a = st.ms[side], locked = msLocked();
@@ -428,11 +431,14 @@ function msSync(st, side) {
     full: msTotal(a) >= st.msMax, boost: a.boost, boostPips: a.bs, boostMax: MS_BOOST_STREAK, locked }));
 }
 function msIncoming(side) { const v = rr3d && rr3d.view; return v && v.missile ? v.missile.incoming(side) : Infinity; }
+// Lên nòng 1 quả (quả nhỏ bay sang ô sẵn sàng rồi NẠP đỏ dần ~2 s, quả trên thân từ từ đưa ra) — ô sẵn sàng còn đầy (quả trước
+// chưa rời bệ) ⇒ view trả false, giữ quả, thử lại sau. Còn chỗ + còn quả ⇒ lên nòng tiếp quả sau, cách 0,6 s.
 function msLoad(st, side) {
-  const a = st.ms[side];
-  if (a.loaded || a.reserve <= 0 || msLocked()) return;
-  a.reserve--; a.loaded = true; msSync(st, side);
-  v3(v => v.missile && v.missile.loadFx(side));
+  const a = st.ms[side], v = st.view;
+  if (a.loaded >= msCap(st) || a.reserve <= 0 || msLocked() || !v || !v.missile) return;
+  if (!v.missile.loadFx(side, a.reserve - 1)) { msLater(st, () => msLoad(st, side), 400); return; }
+  a.reserve--; a.loaded++; msSync(st, side);
+  if (a.loaded < msCap(st) && a.reserve > 0) msLater(st, () => msLoad(st, side), 600);
 }
 // bàn `side` vừa trả lời ĐÚNG (sau khi tàu đã tiến)
 function msCorrect(side) {
@@ -468,7 +474,7 @@ function msAnswered() {
 function msLoadTap(side) {
   const st = rr3d; if (!st || !st.ms) return;
   const a = st.ms[side], v = st.view;
-  if (!v || !v.missile || msLocked() || a.loaded || a.reserve <= 0 || v.phase !== "play") { if (v && v.missile) v.missile.refuse(side, "load"); return; }
+  if (!v || !v.missile || msLocked() || a.loaded >= msCap(st) || a.reserve <= 0 || v.phase !== "play") { if (v && v.missile) v.missile.refuse(side, "load"); return; }
   msLoad(st, side);
 }
 function msFire(side) {
@@ -476,10 +482,12 @@ function msFire(side) {
   const a = st.ms[side], v = st.view;
   if (v && v.missile && !msLocked() && !a.loaded && a.reserve > 0 && v.phase === "play") return msLoad(st, side);   // (PEACE vẫn nạp được)   // Đợt 409: ô to trống mà còn quả nhỏ ⇒ nạp
   if (!v || !v.missile || msLocked() || st.peace || !a.loaded || v.phase !== "play") { if (v && v.missile) v.missile.refuse(side, "fire"); return; }   // 441: PEACE ⇒ không bắn
-  a.loaded = false; msSync(st, side);
-  v.missile.launch(side, 1 - side);          // Đợt 409: quả to lùi khỏi màn rồi mới phóng
+  // ⭐ Đợt 454: view từ chối khi chưa có quả NẠP XONG, hoặc đã có 1 quả chờ phóng. Quả trước còn gần (< 2 lần dài tàu; 2 quả cùng
+  // sẵn sàng thì được NỐI ĐUÔI) ⇒ view nhận lệnh, giữ quả ở ô sẵn sàng rồi tự phóng khi đủ xa.
+  if (!v.missile.launch(side, 1 - side)) { v.missile.refuse(side, "fire"); return; }
+  a.loaded--; msSync(st, side);
   st.msWideReady = false;
-  msLater(st, () => msLoad(st, side), 1100);   // ⭐ Đợt 413: còn quả dự phòng ⇒ tự lên nòng quả kế
+  msLater(st, () => msLoad(st, side), 700);    // ⭐ Đợt 413: còn quả dự phòng ⇒ tự lên nòng quả kế
 }
 // ⭐ Đợt 417 (mẫu 7b): BOOST đầy ⇒ bấm LÚC NÀO CŨNG ĐƯỢC — tàu tiến THẬT 1 nấc (board.boostStep). Tên lửa địch đang ở 1,25 s cuối
 // ⇒ đồng thời NÉ (vẫn giữ nấc). Bấm sớm hơn ⇒ vẫn tiến nhưng tên lửa bám theo và trúng — HS tự canh (bỏ "giương sẵn" Đợt 413).
@@ -497,9 +505,9 @@ function msEnd(to, res, tag) {
   st.msWideReady = true;
   if (res !== "hit" || msLocked()) return;
   const b = st.boards[to];
-  // ⭐ Đợt 441 (thầy) — dính vụ 2 tên lửa ĐÂM NHAU ⇒ thiệt hại ×1,5, LÀM TRÒN LÊN (1→2, 2→3, 3→5…; ∞ vẫn ∞)
-  const push = tag === "clash" && st.msPush !== Infinity ? Math.ceil(st.msPush * 1.5) : st.msPush;
-  if (b && b.missileHit) b.missileHit(push);
+  // ⭐ Đợt 454 (thầy 03/10/2026) — bỏ "×1,5 khi đâm nhau" của Đợt 441. Tag "half" = 50 % thiệt hại (làm tròn LÊN; ∞ ⇒ nửa
+  // quãng đã đi): 2 tàu cùng nấc cùng dính 1 quả · nổ đâm nhau SÁT thân tàu vừa phóng quả đáp trả.
+  if (b && b.missileHit) b.missileHit(st.msPush, tag === "half" ? 0.5 : 1);
 }
 // Sudden death / phân thắng thua ⇒ khoá ô bắn + BOOST, quả đang bay nổ giữa đường
 function msOver(keepWide) {
@@ -562,7 +570,7 @@ function rr3dScene({ root, ctl, title, play }) {
   if (st.msStreak == null) st.msStreak = MS_STREAK_DEFAULT;
   if (st.msMax == null) st.msMax = MS_MAX_DEFAULT;
   // Đợt 417: LUÔN dựng (BOOST nằm trong mô-đun tên lửa) — Missiles max 0 chỉ ẩn phần tên lửa (setArsenal on:false)
-  st.ms = [0, 1].map(() => ({ reserve: 0, loaded: false, ms: 0, bs: 0, boost: false }));
+  st.ms = [0, 1].map(() => ({ reserve: 0, loaded: 0, ms: 0, bs: 0, boost: false }));   // Đợt 454: loaded = số quả trên nòng (0–2)
   st.msWideReady = false;
   rrSound.quiet = true;                       // tiếng tổng hợp cũ im — bộ tiếng 3D thay
   console.log("MYACT:3D:ON");                // ⭐ Đợt 399: myActivity v2.23.0 tạm lặng hiệu ứng nền (sao lấp lánh) nhường card đồ hoạ
@@ -584,6 +592,7 @@ function rr3dScene({ root, ctl, title, play }) {
       onLoad: side => msLoadTap(side),        // Đợt 409: chạm quả nhỏ = nạp
       onMove: () => { if (st.paintProg) st.paintProg(); },   // ⭐ Đợt 444: thanh % theo tàu dẫn đầu
       sfx: (n, v) => st.sfx && st.sfx.play(n, v),
+      sfxCharge: (dur, v) => st.sfx && st.sfx.charge ? st.sfx.charge(dur, v) : null,   // Đợt 454: tiếng nạp năng lượng
       loop: (n, on, v, f) => st.sfx && st.sfx.loop(n, on, v, f),
       swell: (n, a, b, u, d) => st.sfx && st.sfx.swell(n, a, b, u, d) });
   }).then(view => {
@@ -1440,9 +1449,11 @@ const rocketRaceTemplate = {
     if (on3d) {
       rr3d.boards[fightSide] = { choose: k => choose(k), stopClock: () => ui.stopTimer?.(), replayVoice: () => replayVoice(),
         // ⭐ Đợt 407 — tàu bàn này trúng tên lửa: lùi N nấc (∞ = về vạch xuất phát), không đổi điểm trọng tài
-        missileHit: push => {
+        missileHit: (push, frac = 1) => {
           if (dead || !scene || scene.decided || !player) return;
-          const n = push === Infinity ? player.p : Math.min(push, player.p);
+          let n = push === Infinity ? player.p : push;
+          if (frac < 1) n = Math.ceil(n * frac);          // Đợt 454: 50 % thiệt hại
+          n = Math.min(n, player.p);
           if (n <= 0) return;
           retreatRocket(player, n); fightRepaint();
           const side = fightSide, p = player.p; v3(v => v.move(side, p, "back", n));
