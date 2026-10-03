@@ -814,7 +814,7 @@ khu tên lửa "cột dọc mọc lên" · PEACE bật/tắt trong trận · thi
 - Đo TOMKO (chi tiết GHI CHU DU AN Đợt 446): đua 59,3 fps, khung > 33 ms 16 → 4. ✅ push `8e633e6` + LIVE 3/3 mã băm.
 
 ## 43. Đợt 454 (03/10/2026) — TÊN LỬA 2 BÊN HÔNG · NẠP ĐỎ DẦN · CÁCH QUÃNG / NỐI ĐUÔI · BẮT BUỘC ĐÂM NHAU · CHẠM VỎ LÀ NỔ · 50 %
-- Luật + đo đạc: `GHI CHU DU AN.md` chặng Đợt 454. ⬜ chưa commit, chờ thầy xem.
+- Luật + đo đạc: `GHI CHU DU AN.md` chặng Đợt 454. ✅ PUSH `4fb1290` (cùng 454b) + LIVE 4/4 mã băm 03/10 · ⬜ thầy thử TOMKO.
 - **Mô hình**: `MS` 0,735 (−30 %), `M_LEN` 2,32·MS. Khoang = `attachSlot(r, sgn)` ở φ = 270° ± `MOUNT_TH` (0,8 rad); `r.mis.slots[0]` = hông +Z (người xem),
   `[1]` = hông khuất. Cửa `Y0..Y1` = −1,05..0,75 (tránh số đội sơn ở y −0,56..0,06 phía +Z). Tàu KHÔNG còn cửa sổ/phi công (`makeRocket`, xác tàu).
 - **Ô sẵn sàng** (`SL[side][j]`, cấp module, chạy cả khi chưa dựng bảng): `empty → shuttle (SHUTTLE 0,5) → charge (MC.charge 2) → ready → firing (MC.carry)

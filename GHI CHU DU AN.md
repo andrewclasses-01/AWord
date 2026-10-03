@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 454b (03/10/2026) — chỉnh theo ảnh thầy: ô nạp kiểu BÓNG MỜ + mép mềm · tiếng nạp chỉ "vút" nhỏ · tên lửa NGANG HÔNG, xoay 90° lên trời rồi phóng · nổ va chạm to hơn · ⬜ CHƯA COMMIT
+## Đợt 454b (03/10/2026) — chỉnh theo ảnh thầy: ô nạp kiểu BÓNG MỜ + mép mềm · tiếng nạp chỉ "vút" nhỏ · tên lửa NGANG HÔNG, xoay 90° lên trời rồi phóng · nổ va chạm to hơn · ✅ ĐÃ PUSH `4fb1290` + LIVE 4/4 mã băm (03/10)
 
 Thầy gửi 2 ảnh (quả đang nạp màu đen xám — xấu; bóng mờ khi ô trống — đẹp) + 4 ý:
 1. **Ô đang nạp** = BÓNG MỜ có sẵn (`ghostOf`, y như ô trống) + lớp ĐỎ "đổ đầy" từ đuôi lên mũi. Bỏ quả xám + mặt phẳng cắt (mép sắc).
@@ -572,9 +572,9 @@ phía người xem, số "1"/"2" hiện phía trên quả.
 
 ### VIỆC ĐANG CHỜ (Đợt 454b)
 - ⬜ Thầy xem lại: độ mềm mép nạp (`FILL_SOFT`), âm lượng "vút" (0,07), thời gian xoay 0,38 s, cỡ nổ va chạm.
-- ⬜ Thầy duyệt ⇒ commit + push 454 + 454b, kiểm live bằng mã băm.
+- ✅ Thầy duyệt 03/10 ⇒ push `4fb1290`, live 4/4 mã băm (rocket-race.js, rr3d-missile/sfx/view.js).
 
-## Đợt 454 (03/10/2026) — ROCKET RACE ▸ FIGHT 3D: TÊN LỬA 2 BÊN HÔNG · NẠP ĐỎ DẦN · BẮN CÁCH QUÃNG / NỐI ĐUÔI · BẮT BUỘC ĐÂM NHAU · CHẠM VỎ LÀ NỔ · THIỆT HẠI 50 % · ⬜ CHƯA COMMIT — CHỜ THẦY XEM
+## Đợt 454 (03/10/2026) — ROCKET RACE ▸ FIGHT 3D: TÊN LỬA 2 BÊN HÔNG · NẠP ĐỎ DẦN · BẮN CÁCH QUÃNG / NỐI ĐUÔI · BẮT BUỘC ĐÂM NHAU · CHẠM VỎ LÀ NỔ · THIỆT HẠI 50 % · ✅ ĐÃ PUSH `4fb1290` + LIVE 4/4 mã băm (03/10) · ⬜ thầy thử TOMKO
 
 Thầy giao 10 ý một lượt (sửa thẳng repo, không làm mẫu myGame). File: `templates/rocket-race/rr3d-missile.js` (phần lớn) ·
 `rr3d-view.js` · `rr3d-sfx.js` · `rocket-race.js`. Chi tiết kỹ thuật: `templates/rocket-race/GHI CHU ROCKET-RACE.md` mục 43.
@@ -617,7 +617,7 @@ Thầy giao 10 ý một lượt (sửa thẳng repo, không làm mẫu myGame). 
 ### VIỆC ĐANG CHỜ (Đợt 454)
 - ⬜ Thầy xem + chơi thử (máy 1/2, TOMKO): cỡ quả, 2 ô xếp chồng trong bảng (có cần to hơn — `BIG_K` 0,74), thời gian nạp 2 s (`missiles.charge`),
   tiếng nạp, độ cao vòng cung, cỡ nổ.
-- ⬜ Thầy duyệt ⇒ commit + push + kiểm live bằng mã băm (`aword.andrewclasses.com`).
+- ✅ Push `4fb1290` cùng 454b, live 4/4 mã băm.
 - Lưu ý luật: push = 1 thì 50 % vẫn là 1 nấc (làm tròn lên, nấc là số nguyên).
 
 ---
