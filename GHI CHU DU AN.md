@@ -546,6 +546,24 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 463 (04/10/2026) — ICON APP MỚI "AW làm mới" (bản 3A)
+
+Thầy thiết kế lại icon AWord sau khi xong icon Andrew Classes ("sách bay", web myLesson v1.246.0). Qua 3 vòng
+(`D:\OTHERS\CLAUDE\AWord - thiet ke icon app\icon-v1..v3.html`) thầy chốt **3A**: chữ **AW** Fredoka 700 trắng,
+nền **#37A8DF** (màu icon cũ), **sao vàng #FFD54A** góc trên phải chữ W; bỏ dòng "in ANDREW CLASSES" (cỡ điện thoại không đọc được).
+⭐ Thầy chốt thêm: **chữ AW đứng đúng TÂM icon** (không tính sao) — đo khung chữ trắng trên PNG xuất rồi dời bù, tâm đo lại (256; 255,5)/512.
+
+- `core/assets/icons/`: thay 10 file, GIỮ NGUYÊN TÊN.
+  - `favicon-16/32/48/180/192/512.png` + `favicon.ico` = bản **BO GÓC nền trong suốt** (rx 112/512). ⛔ Lý do: Windows/Chrome máy tính dùng
+    NGUYÊN ảnh `purpose:any` cho lối tắt ⇒ ảnh vuông đặc ra ô vuông (đã gặp ở icon Andrew Classes).
+  - `apple-touch-icon-180.png` = vuông đặc (iOS tự bo; nền trong suốt ⇒ góc đen).
+  - `maskable-192/512.png` = vuông, khối chữ+sao thu 78 % ⇒ điểm xa nhất 187,5 px ≤ vòng an toàn 204,8.
+- Mọi đường dẫn icon thêm **`?v=2`** (manifest + index/play/source/kiemtra/404/tools-voice-cleanup — 17 chỗ) để trình duyệt + app đã cài nhận ra icon đổi.
+- Chữ được VẼ SẴN vào PNG (xuất bằng Chrome headless có tải Google Fonts) ⇒ không phụ thuộc font máy.
+- ⬜ Máy đã cài AWord phải cài lại: iPhone xoá icon → Safari Thêm vào MH chính; Windows gỡ app → cài lại.
+
+---
+
 ## Đợt 462 (04/10/2026) — NÚT POPUP BO TRÒN GÓC · NÚT MODE CHỈ SÁNG ICON · ⭐ DẢI ĐIỂM FIGHT KIỂU MỚI `.is-strip2` (ô điểm = thanh thời gian, mép blur 24px, Saira Condensed) · SỬA CORE `core/app.css` + `core/engine.js` + `core/fight.js` + font mới · ✅ thầy duyệt build + commit + push `45d9ecf` (gộp Đợt 461) + LIVE 4/4 mã băm (04/10)
 
 **Thầy giao (04/10/2026, kèm 2 ảnh: popup "Switch to Fight mode?" và màn trận Fight)**:
