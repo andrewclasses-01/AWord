@@ -184,7 +184,7 @@ export function mountWordshake(root, ctx = {}) {
     applyBoxes();
     let n = 0, grown = false;
     const done = () => {
-      tanks.forEach((t, i) => t.landCount(sc[i]));
+      tanks.forEach((t, i) => { t.landCount(sc[i]); t.settle(); });
       sfx.land();
       // after the count the boxes settle back on their own boards, the centre lights up again,
       // THEN the result panel
@@ -199,6 +199,7 @@ export function mountWordshake(root, ctx = {}) {
     const tickOne = () => {
       n++;
       sc.forEach((v, i) => { if (n <= v) tanks[i].countTo(n, v); });
+      tanks.forEach(t => t.follow(hi > 0 ? n / hi : 1));   // Đợt 459: both columns fall alike, a little, smoothly
       sfx.countTick(hi > 1 ? (n - 1) / (hi - 1) : 1);
       later(step, n >= hi ? 450 : STEP);
     };

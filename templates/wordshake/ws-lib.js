@@ -269,6 +269,13 @@ export function createSfx() {
 //   flyPoint(fromEl, toEl, text, side) -> Promise (resolves when the comet lands)
 // ---------------------------------------------------------------
 const FIXED = .62;
+// ⭐ Đợt 459 (thầy, 4/10/2026) — the column's fall during the count: SLOW and TINY, the same for both.
+// It used to drop in a jump per counted number and EMPTY (the lower team's tank stopped early, the
+// leader's kept falling) — an easy way to read who is ahead. Now both tanks follow the SAME overall
+// progress (`follow(n / hi)`) down by only DROP of the full height (≈ 6 % of the box), eased
+// every frame (never a jump), and differ from each other by a random ≤ ±JITTER·p unrelated to the
+// score. After the count `settle()` lets the level glide away (the numbers are final by then).
+const DROP = .1, JITTER = .006;
 const TEAM_C = [
   { c1: [125, 255, 178], c2: [14, 122, 67], glow: "61,245,138" },
   { c1: [143, 235, 255], c2: [12, 93, 134], glow: "55,215,255" }
@@ -314,7 +321,8 @@ export function createTank({ side = 0, cls = "" } = {}) {
   const num = document.createElement("span"); num.className = "wst-num";
   el.append(cv, num);
   const ctx = cv.getContext("2d");
-  let level = FIXED, energy = 0, time = Math.random() * 10, iv = null, W = 0, H = 0, dpr = 1;
+  let level = FIXED, target = FIXED, ease = 2.2, off = (Math.random() - .5) * JITTER * 2;
+  let energy = 0, time = Math.random() * 10, iv = null, W = 0, H = 0, dpr = 1;
   let pulses = [], sparks = [];
   // ⭐ Đợt 403 — the canvas is drawn at its ON-SCREEN size: a box scaled up by a transform
   // (the score boxes grow ×1.4–1.8 at the end) or a drawing scaled by fit() would stretch a
@@ -334,6 +342,7 @@ export function createTank({ side = 0, cls = "" } = {}) {
   }
   function frame(dt) {
     time += dt; energy *= Math.pow(.18, dt);
+    if (level !== target) { level += (target - level) * (1 - Math.exp(-dt * ease)); if (Math.abs(target - level) < .0004) level = target; }
     if (!fit()) return;
     const w = W, h = H;
     ctx.clearRect(0, 0, w, h);
@@ -393,36 +402,43 @@ export function createTank({ side = 0, cls = "" } = {}) {
       const from = level, t0 = performance.now(), dur = Math.max(300, ms);
       let shown = 0;
       return new Promise(res => {
-        const end = () => { clearInterval(iv); iv = null; level = 0; num.textContent = String(final); num.classList.remove("is-land"); void num.offsetWidth; num.classList.add("is-land"); res(final); };
+        const end = () => { clearInterval(iv); iv = null; level = target = 0; num.textContent = String(final); num.classList.remove("is-land"); void num.offsetWidth; num.classList.add("is-land"); res(final); };
         if (final <= 0) { num.textContent = String(final); return setTimeout(end, 300); }
         // setInterval, not rAF: a hidden pane freezes rAF and the count would never end
         iv = setInterval(() => {
           const t = Math.min(1, (performance.now() - t0) / dur);
           const e = 1 - Math.pow(1 - t, 2.2);          // slows down near the end — the suspense
-          level = from * (1 - e);
+          level = target = from * (1 - e);
           const n = Math.min(final, Math.floor(final * e + 1e-6));
           if (n !== shown) { shown = n; num.textContent = String(n); if (onStep) onStep(n); }
           if (t >= 1) end();
         }, 30);
       });
     },
-    /** Đợt 395 — step-by-step count driven by the caller: show n, level falls in
-     *  proportion (empty at n === final). `landCount` then lands the number. */
+    /** Đợt 395 — step-by-step count driven by the caller: show the number n. (Đợt 459: it no longer
+     *  moves the level — `follow` does, for both tanks alike.) `landCount` then lands the number. */
     countTo(n, final) {
       T.stop();
       el.classList.add("is-count");
       num.textContent = String(n);
-      level = final > 0 ? FIXED * Math.max(0, 1 - n / final) : 0;
       energy = Math.max(energy, .6);
     },
+    /** Đợt 459 — the level for the count's overall progress p (0…1), the same for every team: it eases
+     *  toward FIXED·(1 − DROP·p) (+ a tiny random offset, nothing to do with the score). */
+    follow(p) {
+      p = Math.max(0, Math.min(1, Number(p) || 0));
+      ease = 2.2; target = Math.max(0, FIXED * (1 - DROP * p) + off * p);
+    },
+    /** Đợt 459 — the count is over: the level glides away (the result screen has no tank). */
+    settle() { ease = 5; target = 0; },
     // Đợt 395b (thầy): the number never pops (no scale up-and-down) while counting
     // or when it lands — only the leader's box grows, once (the game does that).
     landCount(final) {
-      T.stop(); el.classList.add("is-count"); level = 0;
+      T.stop(); el.classList.add("is-count");
       num.textContent = String(final);
     },
     stop() { if (iv) { clearInterval(iv); iv = null; } },
-    reset() { T.stop(); el.classList.remove("is-count"); num.classList.remove("is-land"); level = FIXED; energy = 0; pulses = []; sparks = []; },
+    reset() { T.stop(); el.classList.remove("is-count"); num.classList.remove("is-land"); level = target = FIXED; ease = 2.2; off = (Math.random() - .5) * JITTER * 2; energy = 0; pulses = []; sparks = []; },
     destroy() { T.stop(); LIVE.delete(T); el.remove(); }
   };
   LIVE.add(T); wake();

@@ -1,5 +1,8 @@
 # GHI CHÚ WORDSHAKE — template #21 + game cố định trong GAMES
 
+## ⭐ Đợt 459 (04/10/2026) — cột chất lỏng 2 ô điểm: giảm từ từ, rất ít, 2 đội ngang nhau
+- `ws-lib.js`: `follow(p)` (tiến độ chung n/hi, rơi `DROP` .1 + lệch ngẫu nhiên ≤ `JITTER` .006) + làm mượt mỗi khung hình + `settle()` sau đếm. `countTo/landCount` không đụng mức nữa. GAME `finish()` + template `countTanks` gọi. Chi tiết: GHI CHU DU AN.md Đợt 459.
+
 ## ⭐ Đợt 458 (04/10/2026) — màn đếm điểm mới + Free words: đáp án cuộn lại
 - Hết giờ: 3 bảng mờ (cả giữa), 2 ô điểm to như GAME (×1,4 / người dẫn ×1,7) đứng SÁT nhau giữa màn (`placeBoxes "gather"`; GAME `boxPlan`), đếm xong về bảng đội mình, bảng giữa sáng lại, rồi kết quả. Ô trong dải template nới thành 5,5:1 lúc đếm. ⛔ Đo hình chữ nhật chưa biến đổi MỘT lần + cache (`NAT`) — đo giữa transition ra số lửng.
 - Free words: chỉ phần gợi ý+ô điền co/không cuộn (`DEFS_MAX` .55); cột đáp án bên dưới cuộn + mũi tên (Đợt 434). Word list vẫn co cả bảng.

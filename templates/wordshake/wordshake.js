@@ -292,13 +292,14 @@ function countTanks(tanks, scores, grow) {
     // a torn-down match / left page: stop counting, let the caller go on
     const later = (fn, ms) => setTimeout(() => { if (tanks.every(t => t.el.isConnected)) fn(); else res(); }, ms);
     const done = () => {
-      tanks.forEach((t, i) => t.landCount(real[i]));
+      tanks.forEach((t, i) => { t.landCount(real[i]); t.settle(); });
       if (neg && lead >= 0 && grow) grow(lead);
       say("land"); later(res, 1000);
     };
     const tickOne = () => {
       n++;
       sc.forEach((v, i) => { if (n <= v) show(i, n); });
+      tanks.forEach(t => t.follow(hi > 0 ? n / hi : 1));   // Đợt 459: both columns fall alike, a little, smoothly
       say("countTick", hi > 1 ? (n - 1) / (hi - 1) : 1);
       later(step, n >= hi ? 450 : STEP);
     };

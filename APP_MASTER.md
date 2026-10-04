@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **04/10/2026 Đợt 459 — A SHOW SPEED: cột chất lỏng trong 2 ô điểm giảm TỪ TỪ, rất ít (~6 % chiều cao), 2 đội ngang nhau (theo tiến độ chung, không theo điểm) — `ws-lib.js` `follow/settle`. ⬜ chưa commit/push.** Chi tiết GHI CHU Đợt 459
 > ✏️ **04/10/2026 Đợt 458 — A SHOW SPEED: màn đếm điểm mới (2 ô to như GAME, sát nhau giữa màn, nền mờ cả bảng giữa; GAME + Fight template) + Free words: gợi ý/ô điền không cuộn, đáp án bên dưới cuộn + mũi tên. ⬜ chưa commit/push.** Chi tiết GHI CHU Đợt 458
 > ✏️ **04/10/2026 Đợt 457 — A SHOW SPEED (template): ô tích Options "Word list only" (mặc định BẬT, `wsOnlyList`) — Free words chỉ tính từ ẩn của bảng, từ khác kể cả đúng từ điển = `?`; bảng giữa Fight Word list/Free words co `--ws-u` cho vừa khung (`fitNoScroll`), không cuộn, không mũi tên (đảo Đợt 434 cho 2 mode này). ⬜ chưa commit/push.** Chi tiết GHI CHU Đợt 457
 > ✏️ **03/10/2026 Đợt 452 — STAR LOOT / TRAIN RUSH: khung + nút = Rocket Race, nút Options mở ĐÚNG bảng Options AWord (cầu `ui.host.options` + `ui.liveOptions`), màn chờ cảnh động mới + ANDREW STUDIO; vá Fight TRAIN RUSH bàn rộng 1 px.** Chi tiết GHI CHU Đợt 452.

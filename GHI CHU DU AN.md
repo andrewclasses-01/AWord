@@ -574,6 +574,23 @@ Thầy (3 ý):
 - ⬜ Thầy xem trên TOMKO: cảm giác rung còn 10 % (`UI_SHAKE`), độ dài cửa sổ khi bị bắn, thanh chờ chạy dài theo.
 - ✅ Thầy duyệt sửa core 04/10 ⇒ commit + push (gồm cả `core/fight.js`).
 
+## Đợt 459 (04/10/2026) — A SHOW SPEED: CỘT CHẤT LỎNG TRONG 2 Ô ĐIỂM — GIẢM TỪ TỪ, RẤT ÍT, HAI ĐỘI NGANG NHAU · ⬜ chưa commit/push · ⬜ thầy xem tay
+
+**Thầy giao (04/10):** cột chất lỏng (bình năng lượng) trong 2 ô điểm, mọi dạng (GAME + Fight template): (1) khi giảm, giảm TỪ TỪ chứ không giật; (2) giảm rất ít và chênh nhau
+(rất ít) để mắt thường không nhận ra đội nào nhiều/ít.
+- Gốc lỗi cũ (`ws-lib.js createTank`): `countTo(n, final)` đặt `level = FIXED·(1 − n/final)` MỖI bước đếm ⇒ nhảy từng nấc (~340 ms) và tụt về 0; đội ít điểm dừng sớm (đã về 0)
+  trong khi đội dẫn còn xuống tiếp ⇒ nhìn mực là biết ai hơn (rò thông tin đúng cái Đợt 390b muốn giấu).
+- Nay: `countTo` CHỈ đổi số; mức do `follow(p)` gọi cho CẢ HAI bình theo TIẾN ĐỘ CHUNG p = n/hi (không theo điểm từng đội) ⇒ mục tiêu `FIXED·(1 − DROP·p)` với `DROP = .1`
+  (rơi ~6 % chiều cao ô, ≈ 3,5 px ở ô ×1,4), cộng lệch ngẫu nhiên ≤ ±`JITTER`·p (.006, không liên quan điểm). Mức được làm mượt MỖI KHUNG HÌNH trong `frame(dt)`
+  (`level += (target − level)·(1 − e^(−dt·ease))`, ease 2,2) ⇒ không bao giờ nhảy. Đếm xong gọi `settle()` (ease 5, mục tiêu 0): mức trôi hết trong ~1 s lúc 2 ô còn đang
+  nghỉ trước khi về bảng đội — màn kết quả vẫn không còn bình như trước. `landCount` không còn đụng mức; `reset()` đặt lại mức + lệch mới.
+- Gọi từ: GAME `finish()` (`tickOne` → `follow`, `done` → `settle`), template `countTanks` (cùng 2 chỗ). `drain()` cũ không ai dùng — giữ, chỉ cập nhật `target` cho khớp.
+- Đã đo (2 bình thật, đếm 22 vs 7 bước 340 ms): bước thay đổi lớn nhất 0,0007 chiều cao/40 ms (cũ: ~0,03 mỗi nấc), mức thấp nhất khi đếm 0,551 (từ 0,62), chênh nhau tối đa
+  ≈ 1,7 % chiều cao ở JITTER .012 (nay .006 ⇒ ~0,5 % ≈ 0,7 px), `settle` về ~0 sau ~1 s; GAME 4–2 giữa lúc đếm: hai cột gần như đầy ngang nhau; Fight 12–12 y vậy; 0 lỗi console.
+- ⬜ **CHỜ THẦY:** nhìn bằng mắt trên TOMKO xem mức rơi/độ lệch đã "không nhận ra" chưa (muốn kín hơn: giảm `DROP`/`JITTER` ở `ws-lib.js`).
+
+---
+
 ## Đợt 458 (04/10/2026) — A SHOW SPEED: MÀN ĐẾM ĐIỂM MỚI (2 ô to như GAME, đứng SÁT NHAU giữa màn, nền mờ cả bảng giữa) · BẢNG GIỮA FREE WORDS: GỢI Ý+Ô ĐIỀN KHÔNG CUỘN, ĐÁP ÁN BÊN DƯỚI CUỘN LẠI + MŨI TÊN · ⬜ chưa commit/push — chờ thầy · ⬜ thầy thử tay TOMKO
 
 **Thầy giao (04/10):** (1) ô đếm điểm hai bên khi kết thúc ván Fight quá bé ⇒ to như ô đếm trong GAME, đưa sát lại nhau lúc bắt đầu đếm (GAME cũng vậy),
