@@ -581,7 +581,7 @@ Em nộp "49/49" nhìn như game lỗi. Thầy chốt: PHẢI đủ câu.
 - Lưu ý dữ liệu cũ: lượt cũ nộp 49/49 vẫn nằm trong kho điểm; dashboard xếp theo lượt MỚI NHẤT còn trang học sinh xếp theo lượt
   TỐT NHẤT (lệch hạng 5 ↔ 8 của Anthony) — chưa đụng.
 
-## Đợt 455 (04/10/2026) — ROCKET RACE ▸ FIGHT 3D: xoay tên lửa TRÊN BỆ thật hơn (đẩy ra rồi xoay, không lẹm thân) + tiếng SERVO robot · nền câu hỏi ĐẶC + chữ viền tối · ✅ ĐÃ PUSH (04/10) · ⬜ thầy thử TOMKO
+## Đợt 455 (04/10/2026) — ROCKET RACE ▸ FIGHT 3D: xoay tên lửa TRÊN BỆ thật hơn (đẩy ra rồi xoay, không lẹm thân) + tiếng SERVO robot · nền câu hỏi ĐẶC + chữ viền tối · ✅ ĐÃ PUSH `2298283` + LIVE 4/4 mã băm (04/10) · ⬜ thầy thử TOMKO
 
 Thầy: (1) thao tác xoay tên lửa ở ngang hông phải thật hơn, không lẹm vào thân tàu, có âm thanh xoay của robot; (2) nền câu hỏi opacity cao
 hơn — chạy qua vùng sáng mạnh, chữ trắng trên nền mờ bị ánh sáng ngoài lem vào rất khó đọc.
