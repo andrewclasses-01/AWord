@@ -546,6 +546,31 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 457 (04/10/2026) — A SHOW SPEED (template): Ô TÍCH "WORD LIST ONLY" (mặc định BẬT) · BẢNG GIỮA FIGHT WORD LIST/FREE WORDS CO CHỮ VỪA KHUNG, KHÔNG CUỘN, KHÔNG MŨI TÊN · ⬜ chưa commit/push — chờ thầy duyệt · ⬜ thầy thử tay TOMKO
+
+**Thầy giao (04/10):** (1) mọi chế độ thêm 1 ô tích (mặc định bật) chỉ dùng từ trong bộ từ của act — gõ từ khác, dù đúng từ điển, KHÔNG tính;
+(2) Fight · Word list / Free words: nội dung bảng giữa phải CO LẠI để không cuộn, không tràn, không khuyết, không hiện mũi tên.
+Chỉ đụng `templates/wordshake/wordshake.js` + `wordshake.css` (GAME cố định `games/wordshake/` không đổi — thầy nói "phần sử dụng bộ từ tôi cung cấp").
+- **Ô tích** `opt.wsOnlyList` (`!== false` = bật; act cũ không có khoá ⇒ BẬT), key `wsOnly`, đứng sau Shuffle trong `checkOrder`. Chỉ Mode 3
+  (Free words) từng nhận từ ngoài bộ từ; Mode 1 (so với từ đang hỏi) và Mode 2 (chỉ từ trong danh sách bảng) vốn đã chỉ nhận từ của bài ⇒ ở
+  hai mode đó ô tích không đổi hành vi. Bật: từ không phải từ ẩn của BẢNG HIỆN TẠI ⇒ `?` đỏ, 0 điểm, không "Taken", không vào cột đội. Không
+  tra từ điển nữa (`prepare()` và `mount()` bỏ `loadDict()` khi bật); MISSED cuối trận Mode 3 chỉ liệt kê từ của bài (`S.onlyList`).
+  Tắt ô tích ⇒ y hệt cũ (mọi từ điển tính điểm). ⚠️ Từ của bài nhưng nằm ở BẢNG KHÁC (trùng chữ ngẫu nhiên) cũng bị `?` — cố ý, vì nhận nó sẽ
+  làm bảng kia "đã xong" mà không ai bấm (kẹt vòng).
+- **Bảng giữa không cuộn** (Fight, `S.mode !== "one"`): `drawCentre` gắn `.aw-ws-cen.is-ws-fit`, bỏ nút mũi tên `.aw-ws-more`; `fitNoScroll()` (thay
+  nhánh cuộn của Đợt 434 cho 2 mode này) co `--ws-u` RIÊNG trên `.aw-ws-cen` (mọi cỡ trong bảng là bội số của nó) bằng chia đôi k trong [0,1 ; 1] rồi
+  dò lùi từng 0,02 tới khi KHÔNG cái nào bị cắt (đo `scrollHeight>clientHeight` VÀ `scrollWidth>clientWidth` của cả bảng lẫn từng danh sách).
+  Không bỏ nghĩa, không giấu từ — chỉ đổi cỡ. `markLong()` chạy lại MỖI cỡ (nghĩa dài 2 dòng ở cỡ to có thể vừa 1 dòng ở cỡ nhỏ). Sàn 0,1
+  chỉ để kết thúc vòng lặp. CSS: `.is-ws-fit .aw-ws-sc{overflow:hidden;padding-bottom:0;mask:none}` + ẩn `.aw-ws-more`. Mode 1 Fight GIỮ cuộn + mũi tên.
+- **Đã đo** (bàn thử `scratch/ws-dot457-fight.html?mode=list|free&n=..&long=1&only=0`, màn 800×600 nên bảng giữa chỉ ~272px): Word list 5 hàng nghĩa
+  rất dài ⇒ k≈0,94, đáy hàng cuối 316 < 325, không cắt; Free words giải trọn 24 từ (11 bảng, nghĩa dài, IPA) ⇒ k 1→0,42, **0 lần bị cắt,
+  0 mũi tên**, đủ 24 từ ở 2 cột; Free ON: gõ THE ⇒ `?`, điểm 0, không vào cột · tắt ô tích: gõ SUN ⇒ +1; Options hiện ô "Word list only" tích sẵn;
+  Mode 1 Fight vẫn `aw-ws-more`×2, không `is-ws-fit`; 0 lỗi console. Cú pháp `node --input-type=module --check` sạch.
+- ⬜ **VIỆC ĐANG CHỜ:** thầy nhìn chữ bảng giữa khi vào ~20+ từ trên màn 86" (ở 24 từ nghĩa dài k≈0,42 — nhỏ nhưng đủ); có muốn Mode 1 Fight cũng không cuộn không;
+  có muốn ô tích hiện mờ ở Mode 1/2 (không tác dụng) không; commit + push + kiểm live khi thầy duyệt.
+
+---
+
 ## Đợt 456 (04/10/2026) — TẤM NHẮC "START AGAIN QUÁ SỚM": ĐÃ ĐẠT 100% Ở ACT NÀY ⇒ KHÔNG BAO GIỜ NHẮC NỮA · ✅ push + live (xem commit) · ⬜ thầy thử tay
 
 **Thầy chốt (04/10):** em đã đạt 100% rồi thì các lượt sau là cày xếp hạng, không còn vì mục tiêu làm đủ bài ⇒ bỏ hẳn tấm nhắc.

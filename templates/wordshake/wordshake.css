@@ -210,6 +210,11 @@
 .aw-ws-more.is-on{opacity:1;pointer-events:auto}
 .aw-ws-more svg{width:100%;height:100%;filter:drop-shadow(0 0 calc(1.4 * var(--ws-u,4px)) currentColor);animation:aw-ws-bob 1.4s ease-in-out infinite}
 @keyframes aw-ws-bob{0%,100%{transform:translateY(-12%)}50%{transform:translateY(16%)}}
+/* ⭐ Đợt 457 — Fight · Word list / Free words: the centre never scrolls and shows no arrow — JS
+   (fitNoScroll) shrinks the board's own `--ws-u` on `.aw-ws-cen` until nothing is clipped, so
+   the lists only need to hide what would spill (it never does) and lose the scroll furniture. */
+.aw-ws-cen.is-ws-fit .aw-ws-lst > .aw-ws-sc{overflow:hidden;padding-bottom:0;-webkit-mask-image:none;mask-image:none}
+.aw-ws-cen.is-ws-fit .aw-ws-more{display:none}
 .aw-ws-cdf{display:grid;grid-template-columns:calc(5 * var(--ws-u,4px)) 1fr calc(5 * var(--ws-u,4px));gap:calc(1.4 * var(--ws-u,4px));align-items:center;border-radius:calc(1.4 * var(--ws-u,4px));background:rgba(61,245,138,.06);border:1px solid rgba(61,245,138,.18);padding:calc(1.4 * var(--ws-u,4px)) calc(1.8 * var(--ws-u,4px))}
 .aw-ws-cdf .aw-ws-cclue{justify-content:flex-start}
 .aw-ws-cbl{font-family:"Saira",sans-serif;font-weight:800;font-size:calc(3.9 * var(--ws-u,4px));letter-spacing:.24em;color:rgba(61,245,138,.45)}

@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **04/10/2026 Đợt 457 — A SHOW SPEED (template): ô tích Options "Word list only" (mặc định BẬT, `wsOnlyList`) — Free words chỉ tính từ ẩn của bảng, từ khác kể cả đúng từ điển = `?`; bảng giữa Fight Word list/Free words co `--ws-u` cho vừa khung (`fitNoScroll`), không cuộn, không mũi tên (đảo Đợt 434 cho 2 mode này). ⬜ chưa commit/push.** Chi tiết GHI CHU Đợt 457
 > ✏️ **03/10/2026 Đợt 452 — STAR LOOT / TRAIN RUSH: khung + nút = Rocket Race, nút Options mở ĐÚNG bảng Options AWord (cầu `ui.host.options` + `ui.liveOptions`), màn chờ cảnh động mới + ANDREW STUDIO; vá Fight TRAIN RUSH bàn rộng 1 px.** Chi tiết GHI CHU Đợt 452.
 > ✏️ **03/10/2026 Đợt 451 — màn chờ cho game 3D (`core/loader3d.js`): STAR LOOT / TRAIN RUSH không còn lộ khung trắng AWord ~2 s lúc nạp.** Chi tiết GHI CHU Đợt 451.
 > ✏️ **03/10/2026 Đợt 450 — CHỈ CÒN 3D: Maze chase = STAR LOOT, Balloon pop = TRAIN RUSH (Single + Fight đều 3D), gỡ hẳn mọi bản 2D.** Chưa giao bài, chưa Showdown (thầy chốt). `ui.host` thêm `fight()`. Chi tiết GHI CHU Đợt 450.

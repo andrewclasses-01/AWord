@@ -21,7 +21,8 @@
 //          words are spelt. Long lessons are split into several boards, each
 //          holding every letter its own words need. 1 point per word.
 //   "free" Mode 3 · Free words — a 16-letter board with 2–3 lesson words hidden
-//          in it; ANY dictionary word counts (each tile once per word, 3–7
+//          in it; with Options ▸ "Word list only" OFF any dictionary word counts, with it ON
+//          (the default, Đợt 457) ONLY the hidden lesson words do (each tile once per word, 3–7
 //          letters, 3→1 … 7→5 points), a lesson word scores ×2 and turns its
 //          clue over. Single: the ✓ chip / submitted score = lesson words found
 //          (never "8/8" for one word); the word points show as PTS. Fight: the
@@ -184,6 +185,11 @@ const TANKS = new WeakMap();
 // the result panel shows (fightReveal only gets the wrap).
 const WRAP_S = new WeakMap();
 const tankOn = o => !(o && o.wsTank === false);
+// ⭐ Đợt 457 (thầy, 4/10/2026) — Options ▸ "Word list only", DEFAULT ON: only the words of the
+// activity's own list score. Mode 3 used to take ANY dictionary word; with this on a word that
+// is not one of the board's list words scores nothing, even if it is real English (the class
+// is racing on THIS list and THESE meanings). Modes 1 and 2 only ever took list words.
+const onlyListOf = o => !(o && o.wsOnlyList === false);
 // (Đợt 390b: ignored — the tank level is FIXED, the same for every team; kept for the old call shape)
 const tankK = (mode, fight) => mode === "free" ? (fight ? 20 : 3) : 6;
 function fightTanks(wrap, k) {
@@ -299,6 +305,8 @@ function missedHtml(S) {
   const P = S.plan && S.plan[Math.min(S.r, S.plan.length - 1)];
   if (!P) return Promise.resolve("");
   const lesson = P.words.map(up => items.find(x => x.up === up)).filter(it => it && !done.has(it.up.toLowerCase()));
+  // Đợt 457 — "Word list only": the everyday extras were never scoreable, so not "missed" either
+  if (S.onlyList) return Promise.resolve(wrapUp(lesson.map(it => row(it.word, it.clue))));
   return loadDict().then(dict => {
     const extra = wordsOn(dict, P.letters, 4)
       .filter(w => !done.has(w) && !dict.get(w).base && !lesson.some(it => it.up.toLowerCase() === w))
@@ -340,8 +348,38 @@ const unitOf = (node, prop) => node ? parseFloat(getComputedStyle(node).getPrope
 function fitCentre(host) {
   const cen = host && host.querySelector(":scope > .aw-ws-cen");
   if (!cen) return;
+  if (cen.classList.contains("is-ws-fit")) return fitNoScroll(host, cen);
   markLong(cen);
   cen.querySelectorAll(".aw-ws-sc").forEach(moreOf);
+}
+// ⭐ Đợt 457 (thầy, 4/10/2026) — Fight · Word list and Free words: the centre board NEVER
+// scrolls, never spills out of the board, never drops a word, and shows no arrow. So the
+// whole board's size unit (`--ws-u` on `.aw-ws-cen`; every size inside is a multiple of it)
+// shrinks until nothing is clipped — in either direction, or by the board itself. Nothing is
+// hidden to make room (no dropped meanings): only the size changes. Found-word lists grow
+// without bound in Free words, so the floor is far below anything readable (FIT_MIN) — it is
+// there to end the search, not to be reached. The search is a bisection on k (size = base × k),
+// then a step-down check, because wrapping makes "fits" only roughly monotone in k.
+// `is-long` is decided again at EVERY size (a meaning that needed two lines big may fit on one).
+const FIT_MIN = .1;
+function fitNoScroll(host, cen) {
+  const base = unitOf(host, "--ws-u");
+  if (!(base > 0) || !host.clientHeight) return;
+  const lists = [...cen.querySelectorAll(".aw-ws-sc")];
+  const clipped = n => n.scrollHeight > n.clientHeight + 1 || n.scrollWidth > n.clientWidth + 1;
+  const over = () => clipped(cen) || lists.some(clipped);
+  const set = k => { cen.style.setProperty("--ws-u", (base * k).toFixed(3) + "px"); markLong(cen); };
+  set(1);
+  if (!over()) return;
+  let lo = FIT_MIN, hi = 1;           // hi = does not fit; lo = assumed to fit
+  for (let n = 0; n < 9; n++) {
+    const mid = (lo + hi) / 2;
+    set(mid);
+    if (over()) hi = mid; else lo = mid;
+  }
+  let k = lo;
+  set(k);
+  while (over() && k > .03) set(k -= .02);
 }
 // ⚠️ The room is read BEFORE the one-line trial: while the text is on one line the grid
 // columns around it grow to fit it (1fr has an auto minimum), so "does it overflow its
@@ -563,7 +601,10 @@ function drawCentre(S) {
   // except a team column that just got a new word (it lands on TOP ⇒ back to the top)
   const scrolled = new Map();
   host.querySelectorAll(".aw-ws-sc[data-sc]").forEach(sc => scrolled.set(sc.dataset.sc, { top: sc.scrollTop, n: sc.children.length }));
-  const slot = (key, cls, inner, side) => `<div class="aw-ws-lst"><${key === "defs" ? "div" : "ol"} class="${cls} aw-ws-sc" data-sc="${key === "defs" ? "defs:" + S.r : key}">${inner}</${key === "defs" ? "div" : "ol"}>${moreBtn(side)}</div>`;
+  // Đợt 457 — Word list / Free words never scroll (the board shrinks, see fitNoScroll): no arrow
+  const noScroll = S.mode !== "one";
+  const slot = (key, cls, inner, side) => `<div class="aw-ws-lst"><${key === "defs" ? "div" : "ol"} class="${cls} aw-ws-sc" data-sc="${key === "defs" ? "defs:" + S.r : key}">${inner}</${key === "defs" ? "div" : "ol"}>${noScroll ? "" : moreBtn(side)}</div>`;
+  const cenCls = "aw-ws-cen" + (noScroll ? " is-ws-fit" : "");
   const cols = `<div class="aw-ws-ccols">${slot("l", "is-l", col(0), 0)}${slot("r", "is-r", col(1), 1)}</div>`;
   const H = S.hint;
   const defRow = up => {
@@ -582,13 +623,13 @@ function drawCentre(S) {
     const it = S.items[S.i];
     const hk = H && it && H.key === "m1:" + S.i && (H.k || H.full)
       ? `<div class="aw-ws-chint${H.full ? " is-given" : ""}">${hintHtml(it.up, H.k, H.full)}</div>` : "";
-    html = `<div class="aw-ws-cen">${it ? clueHtml(S, it, true) : ""}${hk}<div class="aw-ws-cprog">${Math.min(S.i + 1, S.items.length)} / ${S.items.length}</div>${cols}</div>`;
+    html = `<div class="${cenCls}">${it ? clueHtml(S, it, true) : ""}${hk}<div class="aw-ws-cprog">${Math.min(S.i + 1, S.items.length)} / ${S.items.length}</div>${cols}</div>`;
   } else {
     const P = S.plan && S.plan[S.r];
     const rows = P ? P.words.map(defRow).join("") : "";
     html = S.mode === "list"
-      ? `<div class="aw-ws-cen"><div class="aw-ws-cprog">${S.r + 1} / ${S.plan.length}</div>${slot("defs", "aw-ws-cdefs", rows, 0)}</div>`
-      : `<div class="aw-ws-cen"><div class="aw-ws-cprog">${S.r + 1} / ${S.plan.length}</div><div class="aw-ws-cdefs is-short">${rows}</div>${cols}</div>`;
+      ? `<div class="${cenCls}"><div class="aw-ws-cprog">${S.r + 1} / ${S.plan.length}</div>${slot("defs", "aw-ws-cdefs", rows, 0)}</div>`
+      : `<div class="${cenCls}"><div class="aw-ws-cprog">${S.r + 1} / ${S.plan.length}</div><div class="aw-ws-cdefs is-short">${rows}</div>${cols}</div>`;
   }
   host.innerHTML = html;
   if (H) H.attach(host);   // Đợt 425 — the bar lives on the board's top edge (innerHTML just took it off)
@@ -596,7 +637,7 @@ function drawCentre(S) {
   // (after fitCentre: `is-long` changes the heights, a scroll put back earlier would drift)
   host.querySelectorAll(".aw-ws-sc[data-sc]").forEach(sc => {
     const was = scrolled.get(sc.dataset.sc);
-    if (was && !(sc.tagName === "OL" && sc.children.length > was.n)) { sc.scrollTop = was.top; moreOf(sc); }
+    if (was && !noScroll && !(sc.tagName === "OL" && sc.children.length > was.n)) { sc.scrollTop = was.top; moreOf(sc); }
   });
   if (before.size || S.log.length) {
     const ease = "cubic-bezier(.22,.9,.3,1)";
@@ -632,7 +673,7 @@ const wordshakeTemplate = {
   },
   // Đợt 425 — Menu / a tool panel pauses the play: the hint bar waits too
   onPause(p) { pauseHints(p); },
-  checkOrder: ["shuffle", "wsTank", "showAnswers"],
+  checkOrder: ["shuffle", "wsOnly", "wsTank", "showAnswers"],
   edit: openWordshakeEditor,
   fightMode: true,
   fightLayout: "shared-middle",
@@ -762,8 +803,9 @@ const wordshakeTemplate = {
   },
 
   // Mode 3 checks free words against the dictionary — load it while READY is on screen.
+  // (Đợt 457: "Word list only" never looks a word up, so no dictionary to wait for)
   prepare(activity) {
-    return modeOf(activity.options) === "free" ? loadDict() : Promise.resolve();
+    return modeOf(activity.options) === "free" && !onlyListOf(activity.options) ? loadDict() : Promise.resolve();
   },
 
   toPrintItems(activity) {
@@ -783,6 +825,9 @@ const wordshakeTemplate = {
     tilesCell.ctl.append(mkSeg(TILE_CHOICES.map(n => ({ value: n, label: String(n) })), tilesOf(draft), v => { draft.wsTiles = v; }));
     sync(cur);
     panel.append(modeCell.cell, tilesCell.cell);
+    // Đợt 457 — only the activity's own words score (thầy: default ON, every mode)
+    if (addCheck) addCheck("Word list only", onlyListOf(draft), v => { draft.wsOnlyList = v; },
+      { key: "wsOnly", title: "On: only words from this activity's word list score — any other word, even a real English one, counts for nothing" });
     // Đợt 390 — the score tank (thầy: the GAME always has it, an activity may switch it off)
     if (addCheck) addCheck("Score tank", draft.wsTank !== false, v => { draft.wsTank = v; },
       { key: "wsTank", title: "Fight: hide the score in a tank until the end, then count it up" });
@@ -796,6 +841,7 @@ const wordshakeTemplate = {
     hintPaused = false;
     const opt = activity.options || {};
     const mode = modeOf(opt);
+    const onlyList = onlyListOf(opt);   // Đợt 457 (Options changes restart the play, so read once)
     const fight = activity._fight || null;
     const side = fight ? fight.side : 0;
     const fctl = fight ? fight.ctl : null;
@@ -833,6 +879,7 @@ const wordshakeTemplate = {
     const S = fctl ? sharedOf(fctl) : null;
     if (S) {
       S.mode = mode;
+      S.onlyList = onlyList;
       if (!S.items) { S.items = items; S.activity = activity; }
       // Đợt 390 — a new grouping every play ⇒ new boards (thầy: "play again trùng nhau quá")
       if (!S.plan && mode === "list") S.plan = planList(shuffle(items));
@@ -1143,6 +1190,9 @@ const wordshakeTemplate = {
         if (S) { S.found.set(w, side); if (mode === "free") S.log.unshift({ w: lw, side, m, p, ipa: i >= 0 ? items[i].ipa : "" }); }
         else if (mode === "free") found3.unshift({ w: lw, m, les: true, p });
         kind = "ok"; sym = "+" + p;
+      } else if (mode === "free" && onlyList) {
+        // Đợt 457 — a real word, but not one of this board's list words: no points, no "Taken"
+        kind = "bad"; sym = "?";
       } else if (mode === "free") {
         const hit = lookup(M3dict, lw);
         if (!hit) { kind = "bad"; sym = "?"; }
@@ -1251,7 +1301,7 @@ const wordshakeTemplate = {
     // ---------------- start ----------------
     if (mode === "one") { m1Deal(); m1Render(); }
     else {
-      if (mode === "free") loadDict().then(d => { if (!dead) M3dict = d; }).catch(() => {});
+      if (mode === "free" && !onlyList) loadDict().then(d => { if (!dead) M3dict = d; }).catch(() => {});
       sub.r = S ? S.r : 0;
       dealOrder(); padRender();
     }

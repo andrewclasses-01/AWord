@@ -1,5 +1,10 @@
 # GHI CHÚ WORDSHAKE — template #21 + game cố định trong GAMES
 
+## ⭐ Đợt 457 (04/10/2026) — ô tích "Word list only" + bảng giữa Fight Word list/Free words co chữ, không cuộn
+- Options ▸ **Word list only** (`opt.wsOnlyList`, mặc định BẬT = `!== false`, key `wsOnly`): Mode 3 chỉ nhận từ ẩn của bảng hiện tại; từ khác (kể cả đúng từ điển) ⇒ `?`, 0 điểm. Bật thì không nạp từ điển. Tắt = như cũ. Mode 1/2 vốn chỉ nhận từ của bài.
+- Fight Mode 2/3: `.aw-ws-cen.is-ws-fit` + `fitNoScroll()` co `--ws-u` của bảng giữa tới khi không có gì bị cắt (đo cả cao lẫn rộng), không mũi tên, không cuộn, không bỏ nghĩa. ĐẢO Đợt 434 cho 2 mode này; Mode 1 Fight giữ cuộn + mũi tên; chơi đơn vẫn `fitUnit` (Đợt 423).
+- Bàn thử: `scratch/ws-dot457-fight.html?mode=list|free&n=24&long=1&only=0`. Chi tiết: GHI CHU DU AN.md chặng Đợt 457.
+
 ## ⭐ Đợt 437 (01/10/2026) — hai bàn Fight đồng nhất
 - Bàn phải (`.is-side-1`) có luật tô màu nặng hơn luật trạng thái ⇒ `is-gone` vẫn hiện chữ, `is-good`/`is-bad` sai màu, `is-given` viền xanh dương, `aw-ws-idle` còn phát sáng; GAME `.wsg-t.idle` bàn phải ra xanh lá. Sửa CSS 6 chỗ.
 - ⛔ Luật mới cho bàn phải: luật màu side-1 luôn THẮNG luật trạng thái chung ⇒ mỗi trạng thái đổi màu (`is-gone/is-good/is-bad/is-given/idle`) phải có bản side-1 đủ thuộc tính hoặc gộp selector side-1 vào. Chi tiết: GHI CHU DU AN.md chặng Đợt 437.
