@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 458 (04/10/2026) — ROCKET RACE ▸ FIGHT 3D: ô "không kịp chọn" giữ nguyên màu · ô đáp án gần như không rung khi trúng tên lửa · TIME DELAY kéo dài tới sát lúc tên lửa nổ · ⚠️ SỬA CORE `core/fight.js` (móc tuỳ chọn) · ✅ THẦY DUYỆT ⇒ PUSH (04/10) · ⬜ thầy thử TOMKO
+## Đợt 458 (04/10/2026) — ROCKET RACE ▸ FIGHT 3D: ô "không kịp chọn" giữ nguyên màu · ô đáp án gần như không rung khi trúng tên lửa · TIME DELAY kéo dài tới sát lúc tên lửa nổ · ⚠️ SỬA CORE `core/fight.js` (móc tuỳ chọn) · ✅ THẦY DUYỆT ⇒ PUSH `41b6627` + LIVE 4/4 mã băm (04/10) · ⬜ thầy thử TOMKO
 
 (Số 456/457 đã có phiên khác dùng song song — Start Again / A Show Speed.)
 
