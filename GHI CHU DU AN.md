@@ -560,6 +560,7 @@ nền **#37A8DF** (màu icon cũ), **sao vàng #FFD54A** góc trên phải chữ
   - `maskable-192/512.png` = vuông, khối chữ+sao thu 78 % ⇒ điểm xa nhất 187,5 px ≤ vòng an toàn 204,8.
 - Mọi đường dẫn icon thêm **`?v=2`** (manifest + index/play/source/kiemtra/404/tools-voice-cleanup — 17 chỗ) để trình duyệt + app đã cài nhận ra icon đổi.
 - Chữ được VẼ SẴN vào PNG (xuất bằng Chrome headless có tải Google Fonts) ⇒ không phụ thuộc font máy.
+- ✅ Push `dc7886e` + LIVE 6/6 mã băm (favicon-512, apple-touch-180, maskable-512, favicon.ico, manifest, index).
 - ⬜ Máy đã cài AWord phải cài lại: iPhone xoá icon → Safari Thêm vào MH chính; Windows gỡ app → cài lại.
 
 ---
