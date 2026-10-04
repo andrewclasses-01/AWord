@@ -46,15 +46,21 @@
 .wsg-score{transition:transform .4s cubic-bezier(.3,1.5,.5,1),box-shadow .4s}
 .wsg-score.big{transform:translateX(-50%) skewX(-14deg) scale(1.3);z-index:3;box-shadow:0 0 34px rgba(61,245,138,.85),inset 0 0 26px rgba(61,245,138,.3)}
 .wsg-score.s1.big{box-shadow:0 0 34px rgba(55,215,255,.85),inset 0 0 26px rgba(55,215,255,.3)}
-/* ⭐ Đợt 401 — time's up: the score boxes slide from the strip (centre y 28) down to the
-   middle of their team's board (y 56 + 408/2 = 260), a little bigger, over the dimmed
-   board; the leader's box grows further there. They stay down on the result screen. */
-.wsg-score.down{z-index:4;transform:translateX(-50%) translateY(232px) skewX(-14deg) scale(1.4);
+/* ⭐ Đợt 401 — time's up: the score boxes slide from the strip (centre y 28) to the middle
+   (y 56 + 408/2 = 260), a little bigger, over the dimmed boards; the leader's box grows further.
+   ⭐ Đợt 458: --tx/--ty/--sc come from boxPlan() (JS): side by side in the middle for the count,
+   then back on their own board; they stay there on the result screen. */
+.wsg-score.down{z-index:4;transform:translateX(-50%) translate(var(--tx,0px),var(--ty,232px)) skewX(-14deg) scale(var(--sc,1.4));
   transition:transform .8s cubic-bezier(.22,1,.36,1),box-shadow .4s}
-.wsg-score.down.big{transform:translateX(-50%) translateY(232px) skewX(-14deg) scale(1.7);
-  transition:transform .4s cubic-bezier(.3,1.5,.5,1),box-shadow .4s}
+.wsg-score.down.big{transition:transform .5s cubic-bezier(.3,1.35,.5,1),box-shadow .4s;box-shadow:0 0 44px rgba(61,245,138,.9),inset 0 0 26px rgba(61,245,138,.3)}
+.wsg-score.s1.down.big{box-shadow:0 0 44px rgba(55,215,255,.9),inset 0 0 26px rgba(55,215,255,.3)}
+/* Đợt 458 — the dim: the two team boards AND, during the count, the centre board too — so the two
+   boxes (side by side over the middle) stand out of a dark, blurred background */
 .wsg.ending .wsg-stage[data-side]>*{filter:brightness(.35) saturate(.6) blur(4px);transition:filter .6s ease}
 .wsg.ending .wsg-stage[data-side]::before{opacity:.3;transition:opacity .6s ease}
+.wsg-stage:not([data-side])>*{transition:filter .6s ease}
+.wsg.ending-c .wsg-stage:not([data-side])>*{filter:brightness(.35) saturate(.6) blur(4px)}
+.wsg.ending-c .wsg-stage:not([data-side])::before{opacity:.3}
 /* Đợt 390 — score tank (ws-lib createTank): no number while playing, only the water;
    the tank counts the number itself while it drains, then the real number returns */
 .wsg-score b{position:relative;z-index:1}

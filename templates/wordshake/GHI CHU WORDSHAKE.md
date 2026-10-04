@@ -1,5 +1,10 @@
 # GHI CHÚ WORDSHAKE — template #21 + game cố định trong GAMES
 
+## ⭐ Đợt 458 (04/10/2026) — màn đếm điểm mới + Free words: đáp án cuộn lại
+- Hết giờ: 3 bảng mờ (cả giữa), 2 ô điểm to như GAME (×1,4 / người dẫn ×1,7) đứng SÁT nhau giữa màn (`placeBoxes "gather"`; GAME `boxPlan`), đếm xong về bảng đội mình, bảng giữa sáng lại, rồi kết quả. Ô trong dải template nới thành 5,5:1 lúc đếm. ⛔ Đo hình chữ nhật chưa biến đổi MỘT lần + cache (`NAT`) — đo giữa transition ra số lửng.
+- Free words: chỉ phần gợi ý+ô điền co/không cuộn (`DEFS_MAX` .55); cột đáp án bên dưới cuộn + mũi tên (Đợt 434). Word list vẫn co cả bảng.
+- Chi tiết: GHI CHU DU AN.md chặng Đợt 458.
+
 ## ⭐ Đợt 457 (04/10/2026) — ô tích "Word list only" + bảng giữa Fight Word list/Free words co chữ, không cuộn
 - Options ▸ **Word list only** (`opt.wsOnlyList`, mặc định BẬT = `!== false`, key `wsOnly`): Mode 3 chỉ nhận từ ẩn của bảng hiện tại; từ khác (kể cả đúng từ điển) ⇒ `?`, 0 điểm. Bật thì không nạp từ điển. Tắt = như cũ. Mode 1/2 vốn chỉ nhận từ của bài.
 - Fight Mode 2/3: `.aw-ws-cen.is-ws-fit` + `fitNoScroll()` co `--ws-u` của bảng giữa tới khi không có gì bị cắt (đo cả cao lẫn rộng), không mũi tên, không cuộn, không bỏ nghĩa. ĐẢO Đợt 434 cho 2 mode này; Mode 1 Fight giữ cuộn + mũi tên; chơi đơn vẫn `fitUnit` (Đợt 423).

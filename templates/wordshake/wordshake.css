@@ -213,8 +213,9 @@
 /* ⭐ Đợt 457 — Fight · Word list / Free words: the centre never scrolls and shows no arrow — JS
    (fitNoScroll) shrinks the board's own `--ws-u` on `.aw-ws-cen` until nothing is clipped, so
    the lists only need to hide what would spill (it never does) and lose the scroll furniture. */
-.aw-ws-cen.is-ws-fit .aw-ws-lst > .aw-ws-sc{overflow:hidden;padding-bottom:0;-webkit-mask-image:none;mask-image:none}
-.aw-ws-cen.is-ws-fit .aw-ws-more{display:none}
+.aw-ws-cen.is-ws-fit > .aw-ws-lst > .aw-ws-sc{overflow:hidden;padding-bottom:0;-webkit-mask-image:none;mask-image:none}
+.aw-ws-cen.is-ws-fit > .aw-ws-lst > .aw-ws-more{display:none}
+/* Đợt 458 — Free words: only the hint rows on top are held to "no scroll"; the answer columns below scroll as in Đợt 434 */
 .aw-ws-cdf{display:grid;grid-template-columns:calc(5 * var(--ws-u,4px)) 1fr calc(5 * var(--ws-u,4px));gap:calc(1.4 * var(--ws-u,4px));align-items:center;border-radius:calc(1.4 * var(--ws-u,4px));background:rgba(61,245,138,.06);border:1px solid rgba(61,245,138,.18);padding:calc(1.4 * var(--ws-u,4px)) calc(1.8 * var(--ws-u,4px))}
 .aw-ws-cdf .aw-ws-cclue{justify-content:flex-start}
 .aw-ws-cbl{font-family:"Saira",sans-serif;font-weight:800;font-size:calc(3.9 * var(--ws-u,4px));letter-spacing:.24em;color:rgba(61,245,138,.45)}
@@ -345,8 +346,14 @@
 .aw-fight.is-ws-ending .aw-fight-board .aw-playarea>*{filter:brightness(.35) saturate(.6) blur(4px);transition:filter .6s ease}
 .aw-fight.is-skin-wordshake .aw-fight-team{transition:transform .8s cubic-bezier(.22,1,.36,1)}
 .aw-fight.is-skin-wordshake .aw-fight-team.is-ws-down{z-index:20;transform:translate(var(--ws-dx),var(--ws-dy)) scale(var(--ws-k))}
-.aw-fight.is-skin-wordshake .aw-fight-team.is-ws-down.is-ws-big{transform:translate(var(--ws-dx),var(--ws-dy)) scale(calc(var(--ws-k) * 1.2));
-  transition:transform .4s cubic-bezier(.3,1.5,.5,1)}
+/* Đợt 458 — `--ws-k` already holds the full size (GAME ×1.4, the leader ×1.7): the leader just
+   gets the springy transition + a stronger glow. During the count the CENTRE board dims + blurs
+   too (`is-ws-counting`), so the two boxes — side by side over the middle — stand out of it. */
+.aw-fight.is-skin-wordshake .aw-fight-team.is-ws-down.is-ws-big{transition:transform .5s cubic-bezier(.3,1.35,.5,1),width .5s}
+.aw-fight.is-skin-wordshake .aw-fight-team.is-ws-big::before{box-shadow:0 0 44px rgba(61,245,138,.9),inset 0 0 26px rgba(61,245,138,.3)}
+.aw-fight.is-skin-wordshake .aw-fight-team.side-1.is-ws-big::before{box-shadow:0 0 44px rgba(55,215,255,.9),inset 0 0 26px rgba(55,215,255,.3)}
+.aw-fight-shared.aw-ws-host>*{transition:filter .6s ease}
+.aw-fight.is-ws-counting .aw-fight-shared.aw-ws-host>*{filter:brightness(.35) saturate(.6) blur(4px)}
 .aw-fight-shared>.aw-fight-result.is-ws-mid{position:absolute;inset:0;z-index:6;gap:clamp(8px,1.4vw,18px);padding:4%;text-align:center;
   background:radial-gradient(ellipse 75% 65% at 50% 42%,#0F4029 0%,#05170F 62%,#030D09 100%);backdrop-filter:none;border-radius:inherit}
 .aw-fight-result.is-ws-mid .aw-fight-result-title{font:italic 800 clamp(20px,2.9vw,40px)/1.1 "Saira",sans-serif;color:#E6FFF1;text-shadow:0 0 22px rgba(61,245,138,.8);letter-spacing:.02em}

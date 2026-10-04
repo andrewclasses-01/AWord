@@ -213,34 +213,63 @@ function fightTanks(wrap, k) {
 }
 
 // ⭐ Đợt 402 (thầy, 26/9/2026) — "the other modes like the GAME" (Đợt 395 + 401): time's up
-// ⇒ the boards go dark + blurred, the score box(es) slide from the strip down to the middle
-// of their board, THEN both numbers count up together one step at a time (a tick a step);
-// the leader's box grows on its first number past the lower score and counts on alone.
-// `placeDown` measures in page px and converts to the target's own px (a zoomed / scaled
-// frame); the box's centre is unchanged by its skew / scale, so centre-to-centre is exact.
-// ⭐ Đợt 403 — measured with the box's own transform switched off for the moment, so it can
-// run again whenever the size changes (⛶ fullscreen, iPad turned): `snap` = no animation.
-function placeDown(box, target, scale, snap) {
-  if (!box || !target) return;
-  if (snap) box.style.transition = "none";
-  box.style.transform = "none";
-  const a = box.getBoundingClientRect(), b = target.getBoundingClientRect();
-  box.style.transform = "";
-  const k = target.offsetWidth / (b.width || 1) || 1;
-  box.style.setProperty("--ws-dx", ((b.left + b.width / 2) - (a.left + a.width / 2)) * k + "px");
-  box.style.setProperty("--ws-dy", ((b.top + b.height / 2) - (a.top + a.height / 2)) * k + "px");
-  box.style.setProperty("--ws-k", String(scale));
-  box.classList.add("is-ws-down");
-  if (snap) { void box.offsetWidth; box.style.transition = ""; }
+// ⇒ the boards go dark + blurred, the score boxes slide off the strip, THEN both numbers count up
+// together one step at a time (a tick a step); the leader's box grows on its first number past the
+// lower score and counts on alone.
+// ⭐ Đợt 458 (thầy, 4/10/2026, mẫu `AWord - thiet ke Wordshake/man-dem-diem/`) — like the GAME now:
+//   • the two boxes are GAME-sized at the count: 220×40 design px ×1.4 (the leader ×1.7), measured
+//     in the frame's own unit (u = board width / 392) so any screen size gives the same look;
+//   • "gather": they slide off the strip and stand SIDE BY SIDE in the middle (GATHER_GAP apart);
+//     the centre board dims + blurs too (`is-ws-counting`), so the boxes stand out of a dark ground;
+//   • after the count they settle back to the middle of their own board ("own"), the centre
+//     lights up again and the result panel comes.
+// The strip box is 155×36 at 1280 (not 220×40): at the count it is first widened to the GAME's 5.5 : 1
+// (its centre does not move — the box is centred over its board), then scaled UNIFORMLY by height, so
+// the number and the neon frame keep their proportions.
+// `placeBoxes` measures in page px and converts to the box's own px (a zoomed / scaled frame); a box's
+// centre is unchanged by its skew / scale, so centre-to-centre is exact. It runs again whenever the
+// size changes (⛶ fullscreen, iPad turned): `snap` = no animation.
+const BOX_ASPECT = 220 / 40, BOX_SCALE = 1.4, BOX_BIG = 1.7 / 1.4, GATHER_GAP = 14;
+// ⚠️ The box's UNTRANSFORMED rect is measured once and cached (NAT): measuring again while a
+// transform transition is running reads the half-way picture (setting `transform:none` restarts the
+// transition from where it is), and the box lands off-centre. Only `snap` (a resize) measures anew.
+const NAT = new WeakMap();
+function placeBoxes(teams, boards, mode, big, snap) {
+  if (!teams[0] || !teams[1] || boards.length < 2) return;
+  const u = boards[0].getBoundingClientRect().width / 392 || 1;      // page px per design px
+  if (snap || teams.some(x => !NAT.has(x))) {
+    teams.forEach(x => { x.style.transition = "none"; x.style.transform = "none"; });
+    teams.forEach(x => {
+      x.style.width = ""; x.style.width = (x.offsetHeight * BOX_ASPECT) + "px";
+      const r = x.getBoundingClientRect();
+      NAT.set(x, { l: r.left + scrollX, t: r.top + scrollY, w: r.width, h: r.height });
+    });
+    teams.forEach(x => { x.style.transform = ""; });
+    void teams[0].offsetWidth;
+    if (!snap) teams.forEach(x => { x.style.transition = ""; });
+  }
+  if (snap) teams.forEach(x => { x.style.transition = "none"; });
+  const rect = teams.map(x => { const n = NAT.get(x); return { left: n.l - scrollX, top: n.t - scrollY, width: n.w, height: n.h }; });
+  const sc = teams.map((x, i) => 40 * u * BOX_SCALE * (big === i ? BOX_BIG : 1) / (rect[i].height || 1));
+  const w = rect.map((r, i) => r.width * sc[i]);
+  const b = boards.map(x => x.getBoundingClientRect());
+  const midX = (b[0].left + b[1].right) / 2, midY = b[0].top + b[0].height / 2;
+  let cx;
+  if (mode === "gather") {
+    const total = w[0] + w[1] + GATHER_GAP * u;
+    cx = [midX - total / 2 + w[0] / 2, midX + total / 2 - w[1] / 2];
+  } else cx = b.map(r => r.left + r.width / 2);
+  teams.forEach((x, i) => {
+    const k = x.offsetWidth / (rect[i].width || 1) || 1;
+    x.style.setProperty("--ws-dx", (cx[i] - (rect[i].left + rect[i].width / 2)) * k + "px");
+    x.style.setProperty("--ws-dy", (midY - (rect[i].top + rect[i].height / 2)) * k + "px");
+    x.style.setProperty("--ws-k", sc[i].toFixed(4));
+    x.classList.add("is-ws-down");
+    x.classList.toggle("is-ws-big", big === i);
+  });
+  if (snap) { void teams[0].offsetWidth; teams.forEach(x => { x.style.transition = ""; }); }
 }
-// The team box grows to at most 1.5×, and never wider than 75 % of its board — the
-// leader's box grows ×1.2 more during the count (Đợt 403: ≤ 90 %, it spilled at 0.9 × 1.2).
-const downScale = (team, board) => Math.min(1.5, .75 * board.offsetWidth / (team.offsetWidth || 1));
-function slideDown(box, target, scale) {
-  if (!box || !target) return Promise.resolve();
-  placeDown(box, target, scale, false);
-  return new Promise(r => setTimeout(r, 900));
-}
+const slideBoxes = (...a) => { placeBoxes(...a, false); return new Promise(r => setTimeout(r, 900)); };
 // The GAME's count (Đợt 395) for 1 or 2 tanks. `grow(side)` makes the leader's box bigger.
 // ⭐ Đợt 403 — a NEGATIVE score (penalties) counts DOWN from 0 to its value, step for step
 // with the other number (the steps run on |score|); with a negative score in the match
@@ -352,34 +381,49 @@ function fitCentre(host) {
   markLong(cen);
   cen.querySelectorAll(".aw-ws-sc").forEach(moreOf);
 }
-// ⭐ Đợt 457 (thầy, 4/10/2026) — Fight · Word list and Free words: the centre board NEVER
-// scrolls, never spills out of the board, never drops a word, and shows no arrow. So the
-// whole board's size unit (`--ws-u` on `.aw-ws-cen`; every size inside is a multiple of it)
-// shrinks until nothing is clipped — in either direction, or by the board itself. Nothing is
-// hidden to make room (no dropped meanings): only the size changes. Found-word lists grow
-// without bound in Free words, so the floor is far below anything readable (FIT_MIN) — it is
-// there to end the search, not to be reached. The search is a bisection on k (size = base × k),
-// then a step-down check, because wrapping makes "fits" only roughly monotone in k.
-// `is-long` is decided again at EVERY size (a meaning that needed two lines big may fit on one).
-const FIT_MIN = .1;
+// ⭐ Đợt 457 (thầy, 4/10/2026) — Fight · Word list and Free words: the HINTS + BLANKS part of the
+// centre board NEVER scrolls, never spills out of the board, never drops a word, and shows no
+// arrow. So its size unit (`--ws-u`; every size inside is a multiple of it) shrinks until nothing
+// is clipped. Nothing is hidden to make room (no dropped meanings): only the size changes. The
+// search is a bisection on k (size = base × k), then a step-down check, because wrapping makes
+// "fits" only roughly monotone in k. `is-long` is decided again at EVERY size.
+// ⭐ Đợt 458 (thầy) — what shrinks is ONLY that hints + blanks part:
+//   Word list  — the whole board is that part (`.aw-ws-cen` shrinks, as in Đợt 457);
+//   Free words — the 3 hint rows on top (`.aw-ws-cdefs.is-short`) shrink, but never past
+//                DEFS_MAX of the board's height; the found ANSWERS below keep their full size
+//                and DO scroll, with the bobbing arrow (Đợt 434) — they grow without bound, and
+//                shrinking them (0.42× at 24 words) made them unreadable.
+const FIT_MIN = .1, DEFS_MAX = .55;
 function fitNoScroll(host, cen) {
   const base = unitOf(host, "--ws-u");
   if (!(base > 0) || !host.clientHeight) return;
-  const lists = [...cen.querySelectorAll(".aw-ws-sc")];
-  const clipped = n => n.scrollHeight > n.clientHeight + 1 || n.scrollWidth > n.clientWidth + 1;
-  const over = () => clipped(cen) || lists.some(clipped);
-  const set = k => { cen.style.setProperty("--ws-u", (base * k).toFixed(3) + "px"); markLong(cen); };
-  set(1);
-  if (!over()) return;
-  let lo = FIT_MIN, hi = 1;           // hi = does not fit; lo = assumed to fit
-  for (let n = 0; n < 9; n++) {
-    const mid = (lo + hi) / 2;
-    set(mid);
-    if (over()) hi = mid; else lo = mid;
+  cen.style.removeProperty("--ws-u");
+  const defs = cen.querySelector(":scope > .aw-ws-cdefs.is-short");
+  let target = cen, over, finish = () => {};
+  if (defs) {
+    target = defs;
+    markLong(cen);
+    over = () => defs.offsetHeight > cen.clientHeight * DEFS_MAX + 1 || defs.scrollWidth > defs.clientWidth + 1;
+    finish = () => cen.querySelectorAll(".aw-ws-ccols .aw-ws-sc").forEach(moreOf);
+  } else {
+    const lists = [...cen.querySelectorAll(".aw-ws-sc")];
+    const clipped = n => n.scrollHeight > n.clientHeight + 1 || n.scrollWidth > n.clientWidth + 1;
+    over = () => clipped(cen) || lists.some(clipped);
   }
-  let k = lo;
-  set(k);
-  while (over() && k > .03) set(k -= .02);
+  const set = k => { target.style.setProperty("--ws-u", (base * k).toFixed(3) + "px"); markLong(target); };
+  set(1);
+  if (over()) {
+    let lo = FIT_MIN, hi = 1;           // hi = does not fit; lo = assumed to fit
+    for (let n = 0; n < 9; n++) {
+      const mid = (lo + hi) / 2;
+      set(mid);
+      if (over()) hi = mid; else lo = mid;
+    }
+    let k = lo;
+    set(k);
+    while (over() && k > .03) set(k -= .02);
+  }
+  finish();
 }
 // ⚠️ The room is read BEFORE the one-line trial: while the text is on one line the grid
 // columns around it grow to fit it (1fr has an auto minimum), so "does it overflow its
@@ -601,9 +645,10 @@ function drawCentre(S) {
   // except a team column that just got a new word (it lands on TOP ⇒ back to the top)
   const scrolled = new Map();
   host.querySelectorAll(".aw-ws-sc[data-sc]").forEach(sc => scrolled.set(sc.dataset.sc, { top: sc.scrollTop, n: sc.children.length }));
-  // Đợt 457 — Word list / Free words never scroll (the board shrinks, see fitNoScroll): no arrow
+  // Đợt 457/458 — Word list / Free words: the hints + blanks never scroll (they shrink, see fitNoScroll) and
+  // have no arrow; Free words' found-answer columns below still scroll with the arrow
   const noScroll = S.mode !== "one";
-  const slot = (key, cls, inner, side) => `<div class="aw-ws-lst"><${key === "defs" ? "div" : "ol"} class="${cls} aw-ws-sc" data-sc="${key === "defs" ? "defs:" + S.r : key}">${inner}</${key === "defs" ? "div" : "ol"}>${noScroll ? "" : moreBtn(side)}</div>`;
+  const slot = (key, cls, inner, side) => `<div class="aw-ws-lst"><${key === "defs" ? "div" : "ol"} class="${cls} aw-ws-sc" data-sc="${key === "defs" ? "defs:" + S.r : key}">${inner}</${key === "defs" ? "div" : "ol"}>${noScroll && key === "defs" ? "" : moreBtn(side)}</div>`;
   const cenCls = "aw-ws-cen" + (noScroll ? " is-ws-fit" : "");
   const cols = `<div class="aw-ws-ccols">${slot("l", "is-l", col(0), 0)}${slot("r", "is-r", col(1), 1)}</div>`;
   const H = S.hint;
@@ -637,7 +682,7 @@ function drawCentre(S) {
   // (after fitCentre: `is-long` changes the heights, a scroll put back earlier would drift)
   host.querySelectorAll(".aw-ws-sc[data-sc]").forEach(sc => {
     const was = scrolled.get(sc.dataset.sc);
-    if (was && !noScroll && !(sc.tagName === "OL" && sc.children.length > was.n)) { sc.scrollTop = was.top; moreOf(sc); }
+    if (was && !(noScroll && sc.dataset.sc.startsWith("defs:")) && !(sc.tagName === "OL" && sc.children.length > was.n)) { sc.scrollTop = was.top; moreOf(sc); }
   });
   if (before.size || S.log.length) {
     const ease = "cubic-bezier(.22,.9,.3,1)";
@@ -751,25 +796,32 @@ const wordshakeTemplate = {
     const clk = wrap.querySelector(".aw-fight-clock");
     if (clk && /^0?0:00$/.test(clk.textContent.trim()) && !sound.isMuted()) bell.timeup();
     wrap.classList.add("is-ws-ending");
-    const k = downScale(teams[0], boards[0]);
+    const t = tankOn(activity.options) ? TANKS.get(wrap) : null;
+    // Đợt 458 — the boxes gather in the middle only for the COUNT (no tank = no count: straight to the boards)
+    let mode = t ? "gather" : "own", bigSide = -1, settled = false;
+    if (t) wrap.classList.add("is-ws-counting");
     // ⭐ Đợt 403 — ⛶ fullscreen / turning the iPad / a new window size: measure again, so
-    // the boxes stay in the middle of their boards (until Start again rebuilds the match)
-    let settled = false;
+    // the boxes keep their place (until Start again rebuilds the match)
     const again = () => {
       if (!wrap.isConnected) { ro.disconnect(); return; }
       if (!settled) return;
-      teams.forEach((x, i) => placeDown(x, boards[i], downScale(teams[0], boards[0]), true));
+      placeBoxes(teams, boards, mode, bigSide, true);
     };
     const ro = new ResizeObserver(() => requestAnimationFrame(again));
     ro.observe(wrap); boards.forEach(b => ro.observe(b));
-    const t = tankOn(activity.options) ? TANKS.get(wrap) : null;
-    return Promise.all(teams.map((x, i) => slideDown(x, boards[i], k)))
+    return slideBoxes(teams, boards, mode, bigSide)
       .then(() => { settled = true; again(); })
-      .then(() => t ? countTanks(t, scores, side => teams[side].classList.add("is-ws-big")) : null)
+      .then(() => t ? countTanks(t, scores, side => { bigSide = side; placeBoxes(teams, boards, mode, bigSide, false); }) : null)
       .then(() => {
         if (!t) return;
-        wrap.classList.remove("is-ws-tank");
-        t.forEach(x => x.el.classList.remove("is-count"));
+        // after the count: back to the middle of their own boards, the centre lights up again
+        mode = "own";
+        wrap.classList.remove("is-ws-counting");
+        placeBoxes(teams, boards, mode, bigSide, false);
+        return new Promise(r => setTimeout(r, 900)).then(() => {
+          wrap.classList.remove("is-ws-tank");
+          t.forEach(x => x.el.classList.remove("is-count"));
+        });
       });
   },
 

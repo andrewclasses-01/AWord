@@ -77,8 +77,27 @@ export function mountWordshake(root, ctx = {}) {
   // box grew during the count (Đợt 395), kept big on the result screen
   // down: time's up — both team boards dim + blur, the score boxes have slid down to
   // the middle of their team's board (Đợt 401), and stay there on the result screen
-  const G = { phase: "ready", letters: [], sides: [], found: new Map(), log: [], last: null, left: dur, prev: [0, 0], ask: false, opts: false, big: -1, down: false };
+  const G = { phase: "ready", letters: [], sides: [], found: new Map(), log: [], last: null, left: dur, prev: [0, 0], ask: false, opts: false, big: -1, down: false, pos: null };
   let clock = null, shakeIv = null, countRun = 0;
+  // ⭐ Đợt 458 (thầy, 4/10/2026, mẫu `AWord - thiet ke Wordshake/man-dem-diem/`) — the two score boxes at
+  // the count: GAME size ×SIZE (the leader ×BIG), first GATHERED side by side in the middle (GAP apart)
+  // while all three boards are dimmed + blurred, afterwards back on their own team's board (G.pos).
+  const SIZE = 1.4, BIG = 1.7 / 1.4, GAP = 14, BOX_W = 220, BOX_CY = 28, MID_Y = Y + BH / 2;
+  function boxPlan() {
+    const s = [0, 1].map(i => G.big === i ? SIZE * BIG : SIZE);
+    const cx = [L.x + L.w / 2, R.x + R.w / 2];
+    if (G.pos !== "gather") return s.map(sc => ({ tx: 0, ty: MID_Y - BOX_CY, sc }));
+    const total = BOX_W * (s[0] + s[1]) + GAP;
+    const c = [640 - total / 2 + BOX_W * s[0] / 2, 640 + total / 2 - BOX_W * s[1] / 2];
+    return s.map((sc, i) => ({ tx: c[i] - cx[i], ty: MID_Y - BOX_CY, sc }));
+  }
+  const boxVars = i => { if (!G.down) return ""; const p = boxPlan()[i]; return `--tx:${p.tx.toFixed(1)}px;--ty:${p.ty}px;--sc:${p.sc.toFixed(3)};`; };
+  function applyBoxes() {
+    cv.querySelectorAll(".wsg-score").forEach((b, i) => {
+      b.classList.add("down"); b.classList.toggle("big", G.big === i);
+      boxVars(i).split(";").filter(Boolean).forEach(kv => { const [k, v] = kv.split(":"); b.style.setProperty(k, v); });
+    });
+  }
 
   function readTime() { try { const v = +localStorage.getItem(PREF); return TIMES.includes(v) ? v : 180; } catch (e) { return 180; } }
   function saveTime(v) { try { localStorage.setItem(PREF, String(v)); } catch (e) {} }
@@ -102,7 +121,7 @@ export function mountWordshake(root, ctx = {}) {
     pushRecent(G.letters);
     tanks.forEach(t => t.reset(0));
     G.sides = [0, 1].map(() => ({ order: shuffle([...Array(16).keys()]), sel: [], score: 0 }));
-    G.found = new Map(); G.log = []; G.last = null; G.left = dur; G.prev = [0, 0]; G.big = -1; G.down = false;
+    G.found = new Map(); G.log = []; G.last = null; G.left = dur; G.prev = [0, 0]; G.big = -1; G.down = false; G.pos = null;
   }
   function start() {
     if (!dict) return;
@@ -133,7 +152,7 @@ export function mountWordshake(root, ctx = {}) {
   function toReady() {
     clearInterval(clock); clearInterval(shakeIv); root.classList.remove("shaking");
     countRun++;
-    G.phase = "ready"; G.sides = []; G.left = dur; G.ask = false; G.opts = false; G.big = -1; G.down = false;
+    G.phase = "ready"; G.sides = []; G.left = dur; G.ask = false; G.opts = false; G.big = -1; G.down = false; G.pos = null;
     tanks.forEach(t => t.reset(0));
     render();
   }
@@ -154,22 +173,27 @@ export function mountWordshake(root, ctx = {}) {
     const later = (fn, ms) => setTimeout(() => { if (alive()) fn(); }, ms);
     sfx.timeup();
     tanks.forEach(t => t.countTo(0, 1));
-    // ⭐ Đợt 401 (thầy, 26/9/2026) — first the two team boards go dark + blurred and
-    // both score boxes slide from the strip down to the middle of their team's board;
-    // only then does the count start. render() draws the boxes up top, a forced reflow
+    // ⭐ Đợt 401 (thầy, 26/9/2026) — first the boards go dark + blurred and both score
+    // boxes slide from the strip; only then does the count start. ⭐ Đợt 458: the centre board
+    // dims too and the boxes stand side by side in the middle for the count (see boxPlan). render() draws the boxes up top, a forced reflow
     // fixes that as the starting point, THEN they get `down` — so the move animates.
     // (Đợt 403: was two requestAnimationFrame — a hidden / covered window never runs
     // them, and the boxes then never came down at all.)
     void cv.offsetWidth;
-    G.down = true; root.classList.add("ending");
-    cv.querySelectorAll(".wsg-score").forEach(b => b.classList.add("down"));
+    G.down = true; G.pos = "gather"; root.classList.add("ending", "ending-c");
+    applyBoxes();
     let n = 0, grown = false;
     const done = () => {
       tanks.forEach((t, i) => t.landCount(sc[i]));
       sfx.land();
+      // after the count the boxes settle back on their own boards, the centre lights up again,
+      // THEN the result panel
       later(() => {
-        G.phase = "over"; render();
-        if (lead >= 0) sfx.win(pan(lead));
+        G.pos = "own"; applyBoxes(); root.classList.remove("ending-c");
+        later(() => {
+          G.phase = "over"; render();
+          if (lead >= 0) sfx.win(pan(lead));
+        }, 900);
       }, 1000);
     };
     const tickOne = () => {
@@ -186,9 +210,7 @@ export function mountWordshake(root, ctx = {}) {
         grown = true;
         if (lo > 0) tanks[1 - lead].landCount(lo);
         return later(() => {
-          G.big = lead;
-          const box = cv.querySelectorAll(".wsg-score")[lead];
-          if (box) box.classList.add("big");
+          G.big = lead; applyBoxes();
           sfx.swell(pan(lead));
           later(tickOne, 420);
         }, lo > 0 ? 650 : 250);
@@ -278,14 +300,15 @@ export function mountWordshake(root, ctx = {}) {
     const warn = G.phase === "play" && G.left <= 10;
     root.classList.toggle("asking", G.ask || G.opts);
     root.classList.toggle("ending", G.down);
+    root.classList.toggle("ending-c", G.phase === "count");
     const down = G.down ? "down" : "";
     // Options only between games: a new level means a new board
     const between = G.phase === "ready" || G.phase === "over";
     cv.innerHTML =
       `<div class="wsg-hudline"></div>` +
-      `<div class="wsg-score ${over && a > b ? "lead" : ""} ${over ? "" : "tank"} ${G.big === 0 ? "big" : ""} ${down}" style="left:${L.x + L.w / 2}px"><b>${a}</b></div>` +
+      `<div class="wsg-score ${over && a > b ? "lead" : ""} ${over ? "" : "tank"} ${G.big === 0 ? "big" : ""} ${down}" style="left:${L.x + L.w / 2}px;${boxVars(0)}"><b>${a}</b></div>` +
       `<div class="wsg-clock ${warn ? "warn" : ""}"><span>${fmt(G.phase === "ready" ? dur : G.left)}</span></div>` +
-      `<div class="wsg-score s1 ${over && b > a ? "lead" : ""} ${over ? "" : "tank"} ${G.big === 1 ? "big" : ""} ${down}" style="left:${R.x + R.w / 2}px"><b>${b}</b></div>` +
+      `<div class="wsg-score s1 ${over && b > a ? "lead" : ""} ${over ? "" : "tank"} ${G.big === 1 ? "big" : ""} ${down}" style="left:${R.x + R.w / 2}px;${boxVars(1)}"><b>${b}</b></div>` +
       stage(L, sideHtml(0), 0) + stage(C, centreHtml(), null) + stage(R, sideHtml(1), 1) +
       `<div class="wsg-tools" style="top:${Y + BH + 10}px">` +
         `<button class="wsg-tool" data-do="home" title="${G.phase === "ready" ? "Back to Games" : "Start screen"}" aria-label="${G.phase === "ready" ? "Back to Games" : "Start screen"}"><span>${ICON.home}</span></button>` +

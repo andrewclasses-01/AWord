@@ -574,6 +574,29 @@ Thầy (3 ý):
 - ⬜ Thầy xem trên TOMKO: cảm giác rung còn 10 % (`UI_SHAKE`), độ dài cửa sổ khi bị bắn, thanh chờ chạy dài theo.
 - ✅ Thầy duyệt sửa core 04/10 ⇒ commit + push (gồm cả `core/fight.js`).
 
+## Đợt 458 (04/10/2026) — A SHOW SPEED: MÀN ĐẾM ĐIỂM MỚI (2 ô to như GAME, đứng SÁT NHAU giữa màn, nền mờ cả bảng giữa) · BẢNG GIỮA FREE WORDS: GỢI Ý+Ô ĐIỀN KHÔNG CUỘN, ĐÁP ÁN BÊN DƯỚI CUỘN LẠI + MŨI TÊN · ⬜ chưa commit/push — chờ thầy · ⬜ thầy thử tay TOMKO
+
+**Thầy giao (04/10):** (1) ô đếm điểm hai bên khi kết thúc ván Fight quá bé ⇒ to như ô đếm trong GAME, đưa sát lại nhau lúc bắt đầu đếm (GAME cũng vậy),
+nền mờ cả chỗ hai ô; thầy xem MẪU trước (`D:\OTHERS\CLAUDE\AWord - thiet ke Wordshake\man-dem-diem\index.html`, chạy bằng bản SAO GAME) rồi **"Duyệt"**
+— không chọn riêng ①/② và cỡ nên làm đúng mặc định đã nêu: **① về bảng đội sau khi đếm, cỡ như GAME (×1,4, người dẫn ×1,7)**. (2) Word list/Free words:
+phần gợi ý + ô điền KHÔNG cuộn; các câu trả lời hiện bên dưới vẫn có thể cuộn + mũi tên nháy.
+- **Màn đếm** (cả `games/wordshake/` lẫn Fight trong `templates/wordshake/`): hết giờ ⇒ cả 2 bảng đội VÀ bảng giữa mờ+tối (`ending` + `ending-c` / `is-ws-counting`);
+  2 ô trượt khỏi dải điểm, đứng SÁT nhau giữa màn (cách 14 px design) — vị trí tính lại khi người dẫn phóng to (cả 2 ô dịch để vẫn sát); đếm xong ⇒ về giữa bảng
+  đội mình (người dẫn ×1,7), bảng giữa sáng lại, rồi mới hiện kết quả. GAME: `boxPlan()`/`boxVars()`/`applyBoxes()` + biến CSS `--tx/--ty/--sc`.
+  Template: `placeBoxes(teams, boards, "gather"|"own", big, snap)` thay `placeDown/slideDown/downScale`. Ô điểm trong dải của template là 155×36 ở 1280 (không phải
+  220×40): lúc đếm nới bề ngang lên tỉ lệ 5,5:1 (tâm không dịch) rồi co giãn ĐỒNG ĐỀU theo chiều cao — đo ở 1280: ô thường 308×56, người dẫn 373×68 (GAME 308×56 / 374×68),
+  tâm trùng tâm bảng 0 px. Không bật Score tank ⇒ không đếm ⇒ ô đi thẳng về bảng đội (không gom).
+  ⛔ BẪY: đặt `transform:none` để đo KHI transition đang chạy ⇒ trình duyệt bắt đầu transition mới từ vị trí giữa chừng ⇒ đo ra số lửng ⇒ ô lệch tâm ~11 px
+  (bắt được ở lần chạy đầu: ô phải lệch trái). Nay đo hình chữ nhật CHƯA biến đổi MỘT lần rồi cache (`NAT`), chỉ đo lại khi `snap` (đổi cỡ màn).
+- **Bảng giữa Free words** (đảo MỘT PHẦN Đợt 457): chỉ 3 hàng gợi ý+ô điền ở trên co chữ (`fitNoScroll` nhắm `.aw-ws-cdefs.is-short`, trần `DEFS_MAX` = 55 % chiều cao bảng);
+  cột đáp án đội bên dưới giữ nguyên cỡ chữ, cuộn + mũi tên nháy như Đợt 434 (24 từ nghĩa dài: chữ cột vẫn 14,6 px thay vì co còn 0,42×). Word list không có cột đáp án
+  (đáp án hiện ngay trong ô điền) nên vẫn co cả bảng, không cuộn, không mũi tên như Đợt 457.
+- **Đã đo** (bàn thử `scratch/ws-dot457-fight.html`, `games/wordshake/test.html` với đồng hồ tăng tốc): Fight Free words giải đủ 8 từ ⇒ gom đối xứng quanh x=640, đếm 12→22→33/36, kết thúc tâm ô = tâm bảng; GAME 3–2 ⇒ gom rồi về bảng,
+  WINS + MISSED + PLAY AGAIN; Free words 18 từ: hàng gợi ý k≈0,99, cột đáp án cuộn được, 2 mũi tên bật; Word list 24 từ nghĩa dài: 0 bị cắt, 0 mũi tên; 0 lỗi console.
+- ⬜ **VIỆC ĐANG CHỜ:** thầy xem trên TOMKO; nếu muốn ② (hai ô ở lại giữa, kết quả hiện bên dưới) — mẫu đã có nút ②, chưa đưa vào mã thật; nút PLAY AGAIN/Start again chưa đo lại sau đếm bằng chạm thật; commit + push + kiểm live.
+
+---
+
 ## Đợt 457 (04/10/2026) — A SHOW SPEED (template): Ô TÍCH "WORD LIST ONLY" (mặc định BẬT) · BẢNG GIỮA FIGHT WORD LIST/FREE WORDS CO CHỮ VỪA KHUNG, KHÔNG CUỘN, KHÔNG MŨI TÊN · ⬜ chưa commit/push — chờ thầy duyệt · ⬜ thầy thử tay TOMKO
 
 **Thầy giao (04/10):** (1) mọi chế độ thêm 1 ô tích (mặc định bật) chỉ dùng từ trong bộ từ của act — gõ từ khác, dù đúng từ điển, KHÔNG tính;
