@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 462 (04/10/2026) — NÚT POPUP BO TRÒN GÓC · NÚT MODE CHỈ SÁNG ICON · ⭐ DẢI ĐIỂM FIGHT KIỂU MỚI `.is-strip2` (ô điểm = thanh thời gian, mép blur 24px, Saira Condensed) · SỬA CORE `core/app.css` + `core/engine.js` + `core/fight.js` + font mới · ✅ thầy duyệt build + commit + push (gộp Đợt 461)
+## Đợt 462 (04/10/2026) — NÚT POPUP BO TRÒN GÓC · NÚT MODE CHỈ SÁNG ICON · ⭐ DẢI ĐIỂM FIGHT KIỂU MỚI `.is-strip2` (ô điểm = thanh thời gian, mép blur 24px, Saira Condensed) · SỬA CORE `core/app.css` + `core/engine.js` + `core/fight.js` + font mới · ✅ thầy duyệt build + commit + push `45d9ecf` (gộp Đợt 461) + LIVE 4/4 mã băm (04/10)
 
 **Thầy giao (04/10/2026, kèm 2 ảnh: popup "Switch to Fight mode?" và màn trận Fight)**:
 1. *"Các nút cancel/start fight hay các nút tương tự cần bo tròn góc"*
@@ -563,7 +563,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 - **C — Tối giản** (69 px): số đứng trên nền như cũ, chỉ đồng hồ có viên bo tròn + chấm xanh.
 ⚠️ Khi build: thanh Miss wait (`.aw-fight-missbar`, mép trên) và Pick time (`.aw-fight-pickbar`, mép dưới + `padding-bottom` ở `.is-pickmode`) đang dựa vào cặp đệm `padding-top`/`padding-bottom` GIỐNG NHAU ở `.aw-fight-half` và `.aw-fight-clockbox` để số và đồng hồ cùng một hàng — đổi chỗ thanh phải đổi cả hai nơi. Các template có dải riêng (`fightFrame.topStrip: "below"`, Rocket race, A Show Speed) phải kiểm lại.
 
-### VIỆC ĐANG CHỜ (Đợt 462)
+### DIỄN BIẾN CHỌN MẪU (Đợt 462)
 - ✅ 04/10 thầy chọn **B**, yêu cầu thêm: thanh thời gian DÀI hơn, BỎ chữ TEAM, font số "ngầu" hơn, nhiều mẫu để chọn ⇒ `b-mau.html` cùng thư mục mẫu: **12 mẫu B0–B11** (Orbitron ×2 · Chakra Petch · Rajdhani · Oswald · Bebas Neue · Teko · Russo One · Saira Condensed · Exo 2 nghiêng · Black Ops One · Baloo 2 để so), mỗi mẫu một kiểu khối đồng hồ (slate/LED/xanh/carbon/đỏ/hổ phách/tím/trắng). Đồng hồ chạy thật + điểm nhảy số; mỗi font được CO theo chiều cao chữ số đo bằng canvas (`actualBoundingBoxAscent`) cho bằng Baloo 2 800 ở 40.8 px, ô chữ số rộng cố định theo chữ số rộng nhất (khỏi xô lệch); dòng cao tuyệt đối `calc(var(--num)*1.06)` ⇒ mọi mẫu cùng **71 px** (hiện tại 91). Thanh thời gian chạy 4 %→13 % mỗi nửa (chừa khối đồng hồ), đội phải rút về mép ngoài. ⚠️ Mẫu nạp font từ Google Fonts — khi build phải TỰ HOST woff2 vào `core/assets/fonts/` như Baloo 2 (TOMKO/lớp có thể mất mạng).
 - ✅ 04/10 thầy chọn **B9** (Saira Condensed 800 + khối đồng hồ trắng viền đen) và yêu cầu: số điểm ở GIỮA ô của đội, thanh thời gian KHÔNG còn là vạch nhỏ dưới số mà chạy trên CẢ Ô ĐIỂM to ⇒ `b9-mau.html`: **8 mẫu C1–C8** — C1 dâng nhạt + mép đậm (rút ra mép ngoài) · C2 như C1 nhưng rút VỀ đồng hồ · C3 màu đậm, số trắng khi đang chạy · C4 sọc chéo trôi · C5 nền rất nhạt + quầng sáng đầu thanh · C6 ô nền tối neon · C7 chia 10 nấc kiểu pin · C8 như C1 + còn 20 % thì cả ô viền đỏ nhấp nháy. Mỗi đội một ô riêng (trái bo trái, phải bo phải), `.fill` absolute trong ô `overflow:hidden`; không bị đếm giờ ⇒ ô trắng trơn (`.is-idle`). Dải 73 px (hiện tại 91). Trong mẫu đội trái chạy 8 s lặp, nút bật đội phải.
 - ⚠️ Khi build: thanh Miss wait (`.aw-fight-missbar`) và Pick time (`.aw-fight-pickbar`) hiện là 2 phần tử RIÊNG ở mép trên/dưới — nếu cả hai có thể chạy cùng lúc trên một đội thì ô điểm chỉ diễn tả được một; phải hỏi/quyết thứ tự ưu tiên. Đồng thời bỏ cặp đệm `padding-top/bottom` đang để dành chỗ cho 2 thanh. Chế độ ∞ (thanh đầy, thở) cần kiểu riêng cho ô to.
@@ -596,6 +596,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 - `scratch/dot460-mode-dbl.html`: 18/18.
 
 ### VIỆC ĐANG CHỜ (Đợt 462)
+- ✅ LIVE: `core/fight.js`, `core/app.css`, `core/engine.js`, font Saira — SHA-256 bản `aword.andrewclasses.com` khớp `git show HEAD:` 4/4. ⚠️ So với FILE ĐĨA thì lệch 3/4 vì máy checkout CRLF, Pages phục vụ LF — luôn băm `git show HEAD:<file>`.
 - ⬜ Thầy xem trên TOMKO: dải 68 px, số Saira, mép blur 24 px khi Miss wait / Pick time chạy; ∞ (thở sáng) chưa được thầy nhìn tận mắt lần nào.
 - ⬜ Template pick mode (Crossword, Open the box) chưa thử tay với kiểu mới.
 - ⬜ Nếu Miss wait và Pick time cùng chạy trên một đội: thanh Miss wait (đứng sau trong DOM) phủ lên — trong thực tế hai pha này không trùng nhau (Pick là lúc chọn ô, Miss wait là sau khi đội kia sai), nên chưa làm luật "thanh sắp hết hơn" như đã đề xuất.
