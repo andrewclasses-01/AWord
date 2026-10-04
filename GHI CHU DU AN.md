@@ -581,6 +581,32 @@ Em nộp "49/49" nhìn như game lỗi. Thầy chốt: PHẢI đủ câu.
 - Lưu ý dữ liệu cũ: lượt cũ nộp 49/49 vẫn nằm trong kho điểm; dashboard xếp theo lượt MỚI NHẤT còn trang học sinh xếp theo lượt
   TỐT NHẤT (lệch hạng 5 ↔ 8 của Anthony) — chưa đụng.
 
+## Đợt 455 (04/10/2026) — ROCKET RACE ▸ FIGHT 3D: xoay tên lửa TRÊN BỆ thật hơn (đẩy ra rồi xoay, không lẹm thân) + tiếng SERVO robot · nền câu hỏi ĐẶC + chữ viền tối · ✅ ĐÃ PUSH (04/10) · ⬜ thầy thử TOMKO
+
+Thầy: (1) thao tác xoay tên lửa ở ngang hông phải thật hơn, không lẹm vào thân tàu, có âm thanh xoay của robot; (2) nền câu hỏi opacity cao
+hơn — chạy qua vùng sáng mạnh, chữ trắng trên nền mờ bị ánh sáng ngoài lem vào rất khó đọc.
+
+1. **Xoay trên bệ** (`rr3d-missile.js`): bỏ pha xoay giữa không trung của 454b (`ROT_T` = 0, quả đứng yên trong thế giới trong khi tàu vẫn
+   nhấp nhô/vọt ⇒ lẹm). Nay khi bắn, quả VẪN GẮN THEO TÀU: trạng thái `firing` đếm `S.t` ⇒ `mount.ext` (0→1 trong `EXT_T` 0,3 s: 2 tay đẩy
+   quả ra xa hông thêm `EXT` 0,3 đv, 2 cổ tay CHỤM về giữa bụng quả thành trục xoay — `poseArm(a, wrist, ax)` dời cả vai) rồi `mount.tilt`
+   (0→1 trong `TILT_T` 0,45 s: `ms.g.rotation.y = sgn·π/2` — mũi chĩa thẳng lên trời quanh tâm quả). Hết `EXT_T + TILT_T` ⇒ `liftoff` lấy vị trí
+   + hướng (đã thẳng đứng) của quả trên bệ, đánh lửa ngay. Tay dài hơn (`LA = LB` 0,3 → 0,5) để với tới. Bắn đôi: quả 2 bắt đầu khi quả 1 đã
+   chuẩn bị `PAIR_T` (đo bằng `G.t − rec.t0`, không chờ quả 1 rời bệ) ⇒ 2 quả đánh lửa cách nhau ~0,4 s.
+   **Đo** (bàn thử, `mountGap` mới — khoảng hở nhỏ nhất thân quả + vây ~0,25 tới vỏ tàu, hệ toạ độ tàu): lúc gắn −0,08 (tựa vào hông như thiết kế),
+   đẩy ra tăng dần tới +0,22, suốt lúc xoay giữ +0,22 ⇒ không lẹm. Ảnh: quả hông phía người xem ra khỏi thân rồi nghiêng 45° → đứng.
+2. **Tiếng servo robot** (`rr3d-sfx.js servo(dur, v)`): răng cưa 150→235→180 Hz qua lọc dải 1,1 kHz, rung 32 Hz kiểu bánh răng, cuối có tiếng
+   "cạch" khớp (ồn ngắn lọc thấp); nhỏ (đỉnh 0,06). Phát 2 lần: đẩy ra (0,55) + xoay (1). Nối dây `cfg.sfxServo` → `X.sfxServo`. Tàu bị ẩn ⇒ không phát.
+3. **Thanh câu hỏi** (`rr3d-view.js`): `glassPanel(..., solid)` mới — tấm nền `MeshBasicMaterial` #040814 opacity 0,95 (cũ: kính kim loại
+   Physical opacity 0,8 ăn đèn + phản chiếu môi trường ⇒ sáng theo cảnh). Chữ câu hỏi (cả 2 nửa Different) có VIỀN TỐI `stroke: 0.16`
+   (`drawTextCanvas` thêm tuỳ chọn `stroke`) để chữ trắng vẫn tách khỏi quầng sáng bloom của mặt trời.
+
+**Đã tự kiểm** (bàn thử `scratch/dot413-rr.html`, khung ẩn ⇒ tua tay bằng `view.step`, 0 lỗi console): bắn đôi đánh lửa cách 0,4 s, cả 2 lên
+thẳng rồi vòng xuống trúng mặt vỏ (cách tâm 0,55); 2 bên bắn lệch ⇒ đâm nhau giữa trời (cách tàu 7,6 / 8,2), không ai lùi.
+
+### VIỆC ĐANG CHỜ (Đợt 455)
+- ⬜ Thầy xem/nghe trên TOMKO: động tác đẩy ra + xoay (0,3 + 0,45 s), tiếng servo, thanh câu hỏi khi đi qua vùng mặt trời.
+- ✅ Thầy duyệt 04/10 ⇒ commit + push.
+
 ## Đợt 454b (03/10/2026) — chỉnh theo ảnh thầy: ô nạp kiểu BÓNG MỜ + mép mềm · tiếng nạp chỉ "vút" nhỏ · tên lửa NGANG HÔNG, xoay 90° lên trời rồi phóng · nổ va chạm to hơn · ✅ ĐÃ PUSH `4fb1290` + LIVE 4/4 mã băm (03/10)
 
 Thầy gửi 2 ảnh (quả đang nạp màu đen xám — xấu; bóng mờ khi ô trống — đẹp) + 4 ý:

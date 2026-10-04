@@ -593,6 +593,7 @@ function rr3dScene({ root, ctl, title, play }) {
       onMove: () => { if (st.paintProg) st.paintProg(); },   // ⭐ Đợt 444: thanh % theo tàu dẫn đầu
       sfx: (n, v) => st.sfx && st.sfx.play(n, v),
       sfxCharge: (dur, v) => st.sfx && st.sfx.charge ? st.sfx.charge(dur, v) : null,   // Đợt 454: tiếng nạp năng lượng
+      sfxServo: (dur, v) => st.sfx && st.sfx.servo && st.sfx.servo(dur, v),          // Đợt 455: servo robot xoay tên lửa
       loop: (n, on, v, f) => st.sfx && st.sfx.loop(n, on, v, f),
       swell: (n, a, b, u, d) => st.sfx && st.sfx.swell(n, a, b, u, d) });
   }).then(view => {

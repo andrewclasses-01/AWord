@@ -156,7 +156,12 @@ export function createMissiles(X) {
   const MS = 1.05 * 0.7;                                 // cỡ quả trên tàu và lúc bay (Đợt 454: −30 %)
   const M_R = 0.2 * MS, M_LEN = 2.32 * MS;               // bán kính thân · dài cả quả (đuôi −1,15 → mũi 1,17)
   const Y_IN = 0.28, Y_OUT = 0.58 + 0.1 + M_R;           // tâm quả: nằm TRONG thân ↔ gắn sát ngoài hông (hở 0,1 cho thấy 2 tay kẹp)
-  const LA = 0.3, LB = 0.3, SH_Y = 0.02;                 // 2 đốt tay + vai (sâu trong thân)
+  const LA = 0.5, LB = 0.5, SH_Y = 0.02;                 // 2 đốt tay + vai (sâu trong thân) — 455: dài hơn để đẩy quả ra xa EXT
+  // ⭐ Đợt 455 (thầy 04/10/2026: "xoay ở ngang hông phải thật hơn, không lẹm vào thân tàu; có âm thanh xoay của robot"):
+  // trước khi phóng, quả vẫn GẮN THEO TÀU: (1) EXT_T — 2 tay đẩy quả ra XA hông thêm EXT, đồng thời 2 cổ tay CHỤM về giữa bụng quả
+  // thành trục xoay; (2) TILT_T — quả xoay 90° quanh TÂM cho mũi chĩa thẳng lên trời (lúc này cách vỏ đủ xa, không lẹm), tiếng servo;
+  // (3) nhả ⇒ đánh lửa ngay. Đo: tâm quả cách trục tàu 1,13 > vỏ 0,58 + nửa sải vây quả.
+  const EXT = 0.3, EXT_T = 0.3, TILT_T = 0.45;
   function sliceGeo(rs, phiStart, phiLen) {
     const pts = []; for (let i = 0; i <= 16; i++) { const y = lerp(Y0, Y1, i / 16); pts.push(new THREE.Vector2(hullR(y) * rs, y)); }
     return new THREE.LatheGeometry(pts, 10, phiStart, phiLen);
@@ -190,14 +195,14 @@ export function createMissiles(X) {
       const claw = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.04, 0.18), mJoint); rig.add(claw);   // kẹp: ôm dưới bụng quả
       return { ax, sh, elbow, claw };
     });
-    return { bay, pit, dL, dR, rig, ms, arms, open: 0, rise: 0, wantRise: 0, has: false };
+    return { bay, pit, dL, dR, rig, ms, arms, sgn, open: 0, rise: 0, wantRise: 0, has: false, ext: 0, tilt: 0 };
   }
   function attach(r) {
     r.mis = { slots: [attachSlot(r, 1), attachSlot(r, -1)] };
     poseMount(r, 0);
   }
   // 2 đốt tay (IK): vai cố định trong thân, cổ tay dính dưới bụng quả; khuỷu gập về phía MŨI tàu
-  function poseArm(a, wristY) {
+  function poseArm(a, wristY, ax = a.ax) {
     const dy = wristY - SH_Y, d = clamp(Math.abs(dy), 0.03, LA + LB - 1e-3);
     const base = Math.PI / 2;                                             // cổ tay NGAY TRÊN vai
     const off = Math.acos(clamp((LA * LA + d * d - LB * LB) / (2 * LA * d), -1, 1));
@@ -205,7 +210,8 @@ export function createMissiles(X) {
     const ex = Math.cos(sh) * LA, ey = Math.sin(sh) * LA;
     a.sh.rotation.z = sh;
     a.elbow.rotation.z = Math.atan2(dy - ey, 0 - ex) - sh;
-    a.claw.position.set(a.ax, wristY + 0.025, 0);
+    a.sh.position.x = ax;
+    a.claw.position.set(ax, wristY + 0.025, 0);
   }
   function poseMount(r, dt) {
     if (r.mis) r.mis.slots.forEach(m => poseSlot(r, m, dt));
@@ -224,11 +230,13 @@ export function createMissiles(X) {
     m.pit.visible = m.open > 0.01;
     m.dL.visible = m.dR.visible = m.open > 0.01;          // 454b: cửa đóng = liền vỏ ⇒ ẩn hẳn (không che số đội sơn ở hông)
     const k = m.rise < 1 ? smooth(m.rise) : 1;
-    const y = lerp(Y_IN, Y_OUT, k) + (m.rise >= 1 ? Math.sin(G.t * 3 + r.idx) * 0.008 : 0);
+    const ke = smooth(m.ext), kt = smooth(m.tilt);
+    const y = lerp(Y_IN, Y_OUT, k) + EXT * ke + (m.rise >= 1 && ke <= 0 ? Math.sin(G.t * 3 + r.idx) * 0.008 : 0);
     m.ms.g.position.set(0, y, 0);
+    m.ms.g.rotation.y = m.sgn * Math.PI / 2 * kt;                        // 455: mũi xoay lên trời quanh tâm quả
     m.ms.g.visible = m.has && (m.open > 0.9 || m.rise > 0);            // cánh đuôi quả thò ra ngoài vỏ ⇒ chỉ hiện khi cửa đã mở
     const armOn = m.open > 0.02 || m.rise > 0;
-    m.arms.forEach(arm => { arm.sh.visible = arm.claw.visible = armOn; poseArm(arm, y - M_R - 0.05); });
+    m.arms.forEach(arm => { arm.sh.visible = arm.claw.visible = armOn; poseArm(arm, y - M_R - 0.05, arm.ax * (1 - 0.85 * ke)); });   // 455: chụm thành trục xoay
   }
 
   // ---------------------------------------------------------------- 6d: VẾT CHÁY ĐEN + LỬA NHỎ trên thân tàu bị trúng
@@ -328,13 +336,13 @@ export function createMissiles(X) {
   const SHUTTLE = 0.5, BIG_DY = 0.235, BIG_K = 0.74;
   const SHIP_LEN = 4.75 * RS, GAP_SHIP = 2 * SHIP_LEN;
   const T1 = 0.45, D1 = 2.2 * RS;                      // pha 1 khi phóng: lao THẲNG LÊN D1 trong T1 giây (nhanh dần)
-  const ROT_T = 0.38;                                  // 454b: pha 0 — quả xoay quanh TÂM 90° chĩa thẳng lên trời rồi mới đánh lửa
+  const ROT_T = 0;                                     // 455: xoay lên trời nay làm TRÊN BỆ (EXT_T + TILT_T, quả còn theo tàu) ⇒ rời bệ là đánh lửa
   const PAIR_T = T1 * Math.sqrt(Math.min(1, M_LEN * RS * 1.1 / D1));   // quả đầu đi được ~1 thân quả ⇒ quả sau rời bệ
   function gapOK(side, S) {
     const L = lastF[side]; if (!L) return true;
+    if (S.pair) return G.t - L.t0 >= PAIR_T;            // 455: 2 quả cùng chuẩn bị trên bệ ⇒ quả sau bắt đầu sau quả đầu PAIR_T
     if (L.pending) return false;
     const f = L.f; if (!f || flights.indexOf(f) < 0) return true;
-    if (S.pair) return f.t >= PAIR_T - MC.carry * 0.85;   // 454b: 2 quả cùng xoay ROT_T ⇒ quả sau đánh lửa sau quả đầu đúng PAIR_T
     return f.m.g.position.distanceTo(shipPos(rockets[side])) >= GAP_SHIP;
   }
   function tickSlots(side, dt) {
@@ -353,18 +361,23 @@ export function createMissiles(X) {
         const m = mounts[j];
         m.has = S.st !== "empty";
         m.wantRise = S.st === "charge" ? smooth(S.k) : (S.st === "ready" || S.st === "queued" || S.st === "firing") ? 1 : 0;
+        if (S.st === "firing") { S.t += dt; m.ext = clamp(S.t / EXT_T, 0, 1); m.tilt = clamp((S.t - EXT_T) / TILT_T, 0, 1); }
+        else m.ext = m.tilt = 0;
       }
     });
   }
   function fireSlot(from, j) {
     const S = SL[from][j], other = SL[from][1 - j];
     if (S.pair && lastF[from]) lastF[from].pairUsed = true;
-    const rec = { pending: true, f: null, pairOK: !S.pair && other.st === "ready", pairUsed: false };
+    const rec = { pending: true, f: null, pairOK: !S.pair && other.st === "ready", pairUsed: false, t0: G.t };
     lastF[from] = rec;
-    S.st = "firing"; S.pair = false;
+    S.st = "firing"; S.pair = false; S.t = 0;
+    const vis = rockets[from].model.visible && !rockets[from].hidden;
+    if (vis && X.sfxServo) X.sfxServo(EXT_T, 0.55);                // 455: tiếng servo đẩy ra…
     const B = UI[from] && UI[from].bigs[j]; if (B) B.fireK = 1;   // 6d: quả to trong bảng lùi ra khỏi màn trước…
     const g0 = gen, to = S.to;
-    later(MC.carry * 0.85, () => {                                   // …rồi tên lửa trên tàu mới rời bệ
+    later(EXT_T, () => { if (g0 === gen && vis && X.sfxServo) X.sfxServo(TILT_T, 1); });   // …và xoay lên
+    later(EXT_T + TILT_T, () => {                                    // …rồi tên lửa (đã chĩa lên trời) mới rời bệ
       if (g0 !== gen) return;
       rec.pending = false; rec.f = liftoff(from, to, j);
       S.st = "empty";
@@ -669,7 +682,6 @@ export function createMissiles(X) {
       q0: p0.clone().addScaledVector(UP, D1), F: 4 * RS, ua: a, ub: 3 - 2 * a - e, uc: e + a - 2, k: 0 };
     flights.push(f);
     G.wideCam = true;                                  // 6b: góc nhìn RỘNG để thấy cả đường bay + va chạm
-    sfx("mload", 0.6);                                 // tiếng cơ khí lúc xoay quả
     alarm(f, true);                                  // 6d: chuông báo động bên bị bắn
     return f;
   }
@@ -996,7 +1008,14 @@ export function createMissiles(X) {
         fwd: +f.m.g.position.clone().sub(shipPos(rockets[f.from])).dot(TRAVEL).toFixed(2), up: +f.m.g.position.clone().sub(shipPos(rockets[f.from])).dot(UP).toFixed(2),
         dist: +f.m.g.position.distanceTo(shipPos(rockets[f.from])).toFixed(2), tdist: +f.m.g.position.distanceTo(shipPos(rockets[f.to])).toFixed(2) })); },
       get lastHit() { return lastHit; },
-      get steps() { return rockets.map(r => r.p || 0); },      // Đợt 454 bàn thử: nấc hiện tại 2 tàu
+      get steps() { return rockets.map(r => r.p || 0); },
+      // Đợt 455 bàn thử: khoảng hở nhỏ nhất (đv mô hình) giữa thân quả trên bệ (kể cả vây ~0,25) và vỏ tàu — dò 21 điểm dọc trục quả
+      mountGap(side, j) {
+        const r = rockets[side], m = r.mis.slots[j]; r.ship.updateWorldMatrix(true, true); let best = Infinity; const p = new V3();
+        for (let i = 0; i <= 20; i++) { p.set(lerp(-1.15, 1.17, i / 20), 0, 0); m.ms.g.localToWorld(p); r.ship.worldToLocal(p);
+          const rad = p.x < -2.05 || p.x > 2.2 ? 0 : hullRad(p.x); best = Math.min(best, Math.hypot(p.y, p.z) - rad - (M_R + 0.25 * MS) / MS * MS); }
+        return { gap: +best.toFixed(3), ext: +m.ext.toFixed(2), tilt: +m.tilt.toFixed(2) };
+      },      // Đợt 454 bàn thử: nấc hiện tại 2 tàu
       get arsenal() { return A.map(a => ({ ...a })); },
       get slots() { return SL.map(arr => arr.map(S => ({ st: S.st, k: +S.k.toFixed(2) }))); },   // Đợt 454: bàn thử
       readyCount: side => SL[side].filter(S => S.st === "ready").length,

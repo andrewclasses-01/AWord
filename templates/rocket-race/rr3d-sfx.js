@@ -154,6 +154,29 @@ export function createRr3dSound() {
       }
     };
   }
+  // ⭐ Đợt 455 (thầy 04/10/2026): tiếng SERVO ROBOT lúc tay đẩy quả ra + xoay quả lên trời — động cơ nhỏ rít lên rồi hạ (răng cưa qua
+  // lọc dải, rung 32 Hz như bánh răng), cuối có tiếng "cạch" khớp (ồn ngắn qua lọc thấp). Nhỏ (đỉnh ~0,06).
+  function servo(dur = 0.4, v = 1) {
+    if (dead) return;
+    const t0 = ctx.currentTime, t1 = t0 + Math.max(0.12, dur);
+    const o = ctx.createOscillator(); o.type = "sawtooth";
+    o.frequency.setValueAtTime(150, t0); o.frequency.linearRampToValueAtTime(235, t0 + (t1 - t0) * 0.7); o.frequency.linearRampToValueAtTime(180, t1);
+    const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1100; bp.Q.value = 1.6;
+    const grit = ctx.createGain(); grit.gain.value = 0.75;
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 32; const lg = ctx.createGain(); lg.gain.value = 0.25; lfo.connect(lg); lg.connect(grit.gain);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(0.06 * v, t0 + 0.04);
+    g.gain.setValueAtTime(0.06 * v, t1 - 0.05); g.gain.linearRampToValueAtTime(0.0001, t1);
+    o.connect(bp); bp.connect(grit); grit.connect(g); g.connect(bus.fx);
+    [o, lfo].forEach(n => { n.start(t0); n.stop(t1 + 0.05); });
+    if (!noiseBuf) {
+      noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+      const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const n = ctx.createBufferSource(); n.buffer = noiseBuf;
+    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1400;
+    const ng = ctx.createGain(); ng.gain.setValueAtTime(0.0001, t1); ng.gain.linearRampToValueAtTime(0.12 * v, t1 + 0.005); ng.gain.exponentialRampToValueAtTime(0.0001, t1 + 0.07);
+    n.connect(lp); lp.connect(ng); ng.connect(bus.fx); n.start(t1); n.stop(t1 + 0.1);
+  }
   let bgLocked = false;
   // ⭐ MẪU 7b (thầy 27/9/2026): act VOICE ⇒ MỌI tiếng hiệu ứng (động cơ, tăng tốc, báo động, nổ…) nhỏ lại CẢ TRẬN ở một mức
   // cố định để nghe rõ giọng đọc — không tăng giảm theo lúc voice phát. fxLevel 1 = bình thường; trận voice đặt ~0,35.
@@ -174,7 +197,7 @@ export function createRr3dSound() {
   function lockBg(on) { bgLocked = !!on; applyBus(0.3); }
   function setFxLevel(k) { fxLevel = Math.max(0, Math.min(1, +k || 0)); applyBus(0.3); }
   return {
-    play, loop, swell, charge, setPrefs, lockBg, setFxLevel,
+    play, loop, swell, charge, servo, setPrefs, lockBg, setFxLevel,
     get fxLevel() { return fxLevel; },
     get prefs() { return { ...prefs, bg: prefs.bg && !bgLocked }; },
     get bgLocked() { return bgLocked; },
@@ -206,5 +229,5 @@ function bounds(buf) {
 
 function dummy() {
   const noop = () => {};
-  return { play: noop, loop: noop, swell: noop, charge: () => ({ stop: noop }), setPrefs: noop, lockBg: noop, setFxLevel: noop, fxLevel: 1, prefs: { fx: true, bg: true }, bgLocked: false, state: "none", pause: noop, stopAll: noop };
+  return { play: noop, loop: noop, swell: noop, charge: () => ({ stop: noop }), servo: noop, setPrefs: noop, lockBg: noop, setFxLevel: noop, fxLevel: 1, prefs: { fx: true, bg: true }, bgLocked: false, state: "none", pause: noop, stopAll: noop };
 }

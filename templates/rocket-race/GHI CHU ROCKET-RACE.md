@@ -837,3 +837,7 @@ khu tên lửa "cột dọc mọc lên" · PEACE bật/tắt trong trận · thi
   cửa đóng ẩn hẳn, số đội dời lên (±0,6 rad). Phóng: pha 0 `ROT_T` 0,38 s xoay quanh tâm 90° lên trời → `ignite` → lên thẳng `D1` → Bézier bậc 4
   (P1 trên, P2 cao + 35 % về phía địch). Nổ đâm nhau: boom 0,85 + hit1 0,8. ⚠️ Viết shader bằng bash heredoc thì `
 ` bị nuốt — sửa bằng Edit.
+
+- **455 (04/10)**: xoay lên trời làm TRÊN BỆ (quả theo tàu): `firing` ⇒ `ext` (EXT_T 0,3, đẩy ra EXT 0,3 + cổ tay chụm) → `tilt` (TILT_T 0,45,
+  `ms.g.rotation.y = sgn·π/2`) → `liftoff` (ROT_T = 0). Tay `LA = LB` 0,5. Bắn đôi đo `G.t − rec.t0 ≥ PAIR_T`. Tiếng `sfx.servo`. Bàn thử
+  `missile.mountGap(side, j)` (khoảng hở quả↔vỏ). Thanh câu hỏi: `glassPanel(..., solid=true)` MeshBasic 0,95 + chữ `stroke` 0,16.

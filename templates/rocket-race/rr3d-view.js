@@ -119,6 +119,8 @@ function drawTextCanvas(canvas, text, o = {}) {
   const lh = px * 1.12, y0 = H / 2 - (lines.length - 1) * lh / 2 + px * 0.04;
   lines.forEach((ln, i) => {
     if (o.shadow !== false) { g.shadowColor = "rgba(0,0,0,0.65)"; g.shadowBlur = px * 0.18; g.shadowOffsetY = px * 0.06; }
+    // Đợt 455: viền tối quanh chữ (thanh câu hỏi) — đi qua vùng sáng mạnh chữ trắng vẫn tách nền
+    if (o.stroke) { g.lineJoin = "round"; g.lineWidth = px * o.stroke; g.strokeStyle = "rgba(2,5,14,0.9)"; g.strokeText(ln, x, y0 + i * lh); g.shadowColor = "transparent"; }
     g.fillStyle = o.color ?? "#ffffff";
     g.fillText(ln, x, y0 + i * lh);
   });
@@ -659,11 +661,13 @@ export async function createView(cfg) {
     return { w: w * 2 * hw, h: h * 2 * hh };
   }
 
-  function glassPanel(w, h, color, opacity = 0.55) {
+  function glassPanel(w, h, color, opacity = 0.55, solid = false) {
     const g = new THREE.Group();
     const r = Math.min(w, h) * 0.08;
-    const slab = new THREE.Mesh(new RoundedBoxGeometry(w, h, 0.06, 4, r),
-      new THREE.MeshPhysicalMaterial({ color: new THREE.Color("#060b18"), metalness: 0.8, roughness: 0.4, transparent: true, opacity, clearcoat: 0.5, depthWrite: false, envMapIntensity: 0.25 }));
+    // Đợt 455 (thầy): solid ⇒ tấm nền KHÔNG ăn đèn/phản chiếu (MeshBasic, gần đặc) — ánh sáng cảnh không lem vào thanh câu hỏi
+    const slab = new THREE.Mesh(new RoundedBoxGeometry(w, h, 0.06, 4, r), solid
+      ? new THREE.MeshBasicMaterial({ color: new THREE.Color("#040814"), transparent: true, opacity, depthWrite: false })
+      : new THREE.MeshPhysicalMaterial({ color: new THREE.Color("#060b18"), metalness: 0.8, roughness: 0.4, transparent: true, opacity, clearcoat: 0.5, depthWrite: false, envMapIntensity: 0.25 }));
     // viền sáng = KHUNG rỗng (không phải tấm đặc — tấm đặc sẽ lộ qua kính mờ)
     const edge = new THREE.Mesh(frameGeo(w + 0.03, h + 0.03, r * 1.05, Math.min(w, h) * 0.012),
       new THREE.MeshBasicMaterial({ color: color.clone().multiplyScalar(1.8), transparent: true, opacity: 0.95, depthWrite: false }));
@@ -1406,7 +1410,8 @@ export async function createView(cfg) {
     onEnd: (to, res, from, tag) => cfg.onMissileEnd && cfg.onMissileEnd(to, res, from, tag),   // 441: tag "clash" = dính vụ đâm nhau (×1,5)
     onLoad: side => cfg.onLoad && cfg.onLoad(side),                // Đợt 409: chạm quả nhỏ = nạp
     renderer,                                                       // Đợt 454: mặt phẳng cắt (tên lửa đỏ dần khi nạp)
-    sfxCharge: (dur, v) => { try { return cfg.sfxCharge ? cfg.sfxCharge(dur, v) : null; } catch { return null; } }   // Đợt 454: tiếng nạp năng lượng
+    sfxCharge: (dur, v) => { try { return cfg.sfxCharge ? cfg.sfxCharge(dur, v) : null; } catch { return null; } },   // Đợt 454: tiếng nạp năng lượng
+    sfxServo: (dur, v) => { try { cfg.sfxServo && cfg.sfxServo(dur, v); } catch { /* ignore */ } }   // Đợt 455: servo robot xoay tên lửa
   });
   const MW = createMissWait({ THREE, ui, screenToLocal, screenSize, frameGeo, canvasTex, radialTex, FONT_UI, TEAMS, G, UID });   // Đợt 409
   warmBoom();
@@ -1664,7 +1669,7 @@ export async function createView(cfg) {
     const p = screenToLocal(x + wFrac / 2, r.y + r.h / 2, r.depth ?? UID);
     const s = screenSize(wFrac, r.h, r.depth ?? UID);
     const g = new THREE.Group();
-    const panel = glassPanel(s.w, s.h, new THREE.Color("#8fd3ff"), 0.8);
+    const panel = glassPanel(s.w, s.h, new THREE.Color("#8fd3ff"), 0.95, true);   // Đợt 455: 0,8 kính → 0,95 đặc
     // canvas đúng TỈ LỆ mặt chữ (không kéo méo chữ khi thanh dãn), cao ~180 px, rộng tối đa 4096
     const aspect = (s.w * 0.96) / (s.h * 0.9);
     const cvH = Math.min(180, Math.floor(4096 / aspect));
@@ -1684,13 +1689,13 @@ export async function createView(cfg) {
     if (qRect && Math.abs(want - questionPanel.wFrac) > 0.004) buildQuestion(want);
     const cv = questionPanel.cv;
     if (G.qSame || !G.qTexts[1]) {
-      drawTextCanvas(cv, G.qTexts[0] || cfg.title || "", { lines: 2, maxPx: Math.floor(cv.height * 0.62), weight: 800 });
+      drawTextCanvas(cv, G.qTexts[0] || cfg.title || "", { lines: 2, maxPx: Math.floor(cv.height * 0.62), weight: 800, stroke: 0.16 });
     } else {
       // Different: hai nửa, mỗi đội một câu, CÙNG cỡ chữ (lấy cỡ nhỏ hơn)
       const half = document.createElement("canvas"); half.width = cv.width / 2; half.height = cv.height;
       const g = cv.getContext("2d"); g.clearRect(0, 0, cv.width, cv.height);
       [0, 1].forEach(s => {
-        drawTextCanvas(half, G.qTexts[s] || "", { lines: 1, maxPx: Math.floor(cv.height * 0.5), weight: 800 });
+        drawTextCanvas(half, G.qTexts[s] || "", { lines: 1, maxPx: Math.floor(cv.height * 0.5), weight: 800, stroke: 0.16 });
         g.drawImage(half, s * cv.width / 2, 0);
       });
       g.fillStyle = "rgba(143,211,255,.45)"; g.fillRect(cv.width / 2 - 2, cv.height * 0.18, 4, cv.height * 0.64);
