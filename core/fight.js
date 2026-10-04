@@ -390,8 +390,10 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // centre over ITS OWN board — teacher, 12/8/2026), plus the clock floating
   // over the join.
   const teams = [makeTeam(0), makeTeam(1)];
-  const half0 = el("div", "aw-fight-half");
-  const half1 = el("div", "aw-fight-half");
+  // ⭐ Đợt 462 — `is-l`/`is-r`: dải kiểu mới (`.is-strip2`) bo góc ngoài + neo thanh màu ở MÉP NGOÀI
+  // của từng nửa, nên CSS phải biết nửa nào là trái/phải (half1 có thể nằm cột 3 ở shared-middle).
+  const half0 = el("div", "aw-fight-half is-l");
+  const half1 = el("div", "aw-fight-half is-r");
   half0.append(teams[0].el);
   half1.append(teams[1].el);
   // ⭐⭐ Đợt 259 — THE PICK-TIME BAR, one per half, over that team's OWN board.
@@ -474,6 +476,23 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // Rocket race: the rockets' positions ARE the score (thầy, 20/9/2026). The referee
   // still counts points underneath — they decide the winner and the end panel.
   if (frame && frame.noScore) wrap.classList.add("is-noscore");
+  // ⭐⭐ Đợt 462 (thầy, 04/10/2026) — DẢI ĐIỂM KIỂU MỚI cho template THƯỜNG: mỗi đội một ô trắng, số
+  // Saira Condensed xanh lá đặc + quầng trắng mờ, đồng hồ là ô trắng viền đen ở giữa, và CẢ Ô ĐIỂM là
+  // thanh Miss wait / Pick time (màu đậm, mép blur 24px) — xem `.aw-fight.is-strip2` trong core/app.css.
+  // Template có dải RIÊNG thì không đụng: skin (Wordshake neon, Rocket race 3D), dải dưới (`topStrip:
+  // "below"`), không điểm (`noScore`), cảnh trọn màn (`fullscene`).
+  // ⚠️ Logic đếm giờ KHÔNG đổi một dòng: vẫn là hai thanh `.aw-fight-missbar`/`-pickbar` cũ với `fill`
+  // chạy `width` bằng transition — chỉ CSS phóng chúng ra phủ kín ô.
+  const strip2 = !topBelow && !(frame && (frame.noScore || frame.skin || frame.fullscene));
+  if (strip2) wrap.classList.add("is-strip2");
+  // Saira Condensed KHÔNG có chữ số đều bề rộng (đo: "1111" rộng 2/3 "0000"), nên ở dải mới mỗi chữ số
+  // nằm trong một ô rộng cố định (`.aw-s2d`; ⚠️ KHÔNG dùng `aw-fd`/`aw-fp` — `.aw-fp` là ô xem trước thư mục, cao 118px) — không thì đồng hồ giật ngang mỗi giây. `textContent` của
+  // node vẫn y nguyên chuỗi cũ, nên ai đọc chữ (MutationObserver, regex "00:00") không thấy khác gì.
+  function setNum(node, str) {
+    if (!strip2) { node.textContent = str; return; }
+    node.replaceChildren(...[...str].map(ch => el("span", /\d/.test(ch) ? "aw-s2d" : "aw-s2p", ch)));
+  }
+  if (strip2) { setNum(clockEl, clockEl.textContent); teams.forEach(t => setNum(t.value, t.value.textContent)); }
   root.append(wrap);
 
   function makeTeam(side) {
@@ -1085,7 +1104,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   }
   function paintScore(side) {
     const v = totalOf(side);
-    teams[side].value.textContent = String(v);
+    setNum(teams[side].value, String(v));
     teams[side].value.classList.toggle("is-neg", v < 0);
   }
 
@@ -2128,7 +2147,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       if (side !== 0) return;
       const s = Math.max(0, Math.floor(Number(seconds) || 0));
       const m = Math.floor(s / 60);
-      clockEl.textContent = `${String(m).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+      setNum(clockEl, `${String(m).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`);
     },
     // ⭐ Đợt 354 — `ctl.forfeit(side)`: this board gives the match up (Rocket race:
     // its rocket ran out of lives and exploded). The OTHER side wins regardless of

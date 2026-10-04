@@ -546,6 +546,82 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 462 (04/10/2026) — NÚT POPUP BO TRÒN GÓC · NÚT MODE CHỈ SÁNG ICON · ⭐ DẢI ĐIỂM FIGHT KIỂU MỚI `.is-strip2` (ô điểm = thanh thời gian, mép blur 24px, Saira Condensed) · SỬA CORE `core/app.css` + `core/engine.js` + `core/fight.js` + font mới · ✅ thầy duyệt build + commit + push (gộp Đợt 461)
+
+**Thầy giao (04/10/2026, kèm 2 ảnh: popup "Switch to Fight mode?" và màn trận Fight)**:
+1. *"Các nút cancel/start fight hay các nút tương tự cần bo tròn góc"*
+2. *"Nút mode chuyển thành dạng từ sáng viền ngoài và nền nút thành chỉ sáng nút bên trong thôi"*
+3. *"Thay đổi thiết kế của dải đồng hồ và điểm trên cùng ở các template thường… dạng đẹp, chuyên nghiệp hơn và dải trên đó mỏng hơn nhưng vẫn giữ size đồng hồ và điểm. Hãy thiết kế cho tôi xem trước rồi build sau"*
+
+**1. Bo góc nút popup** — `.aw-btn.aw-mode-confirm-btn` thêm `border-radius: 12px` (`.aw-mode-wordvoice-btn` 10px). Gốc: `.aw-btn` bo theo `calc(1.2 * var(--aw-u))` — `--aw-u` là đơn vị TRONG khung game, popup nằm NGOÀI khung nên góc gần như vuông. Mọi popup của thanh công cụ (Single/Fight/Showdown/IPA/Running/Edit content/Go home/Question screen) đều dùng chung lớp này ⇒ một luật phủ hết (đã grep engine.js: 16 nút, không sót).
+
+**2. Nút MODE chỉ sáng icon** — engine gắn thêm lớp `aw-mode-btn` cho nút Mode (khi `modeAvail`); CSS mới đặt SAU luật trận `.aw-below-center .aw-toolbtn.is-active` (nền xanh + chữ trắng): `.aw-below-center .aw-toolbtn.aw-mode-btn.is-active` trả vỏ về trắng/viền #e2e9f2/bóng thường, chỉ `color:#2f7bff` + `filter: drop-shadow(...)` trên **SVG con** (không đặt filter trên nút để khỏi đẻ stacking context — xem bẫy stacking context). Áp cho cả hai lúc nút sáng: đang ở chế độ khác Single và lúc popup của nó đang mở. Các nút công cụ khác (Options…) GIỮ kiểu sáng viền cũ. Đo computed: nền rgb(255,255,255), bóng thường, svg có drop-shadow — cả Single (popup mở) lẫn trong trận.
+
+**3. 🎨 Mẫu dải điểm + đồng hồ** — hiểu là dải `.aw-fight-top` (ảnh 2 thầy gửi: 0 · 00:00 · 0 trên hai bàn). Mẫu ở `D:\OTHERS\CLAUDE\AWord - thiet ke Dai diem Fight\index.html` (launch `aword-daidiem-mau`, cổng 8862), font Baloo 2 thật, cỡ số đúng công thức app `clamp(18px, 3.12vw, 40.8px)`. Đo ở 1920 px: **hiện tại 91 px** từ mép trên vùng trận tới khung game (khớp ảnh thầy) — trong đó 18 px là chỗ để dành sẵn cho thanh Miss wait phía trên số. Ba phương án đều bỏ chỗ để dành đó (thanh Miss wait / Pick time chuyển xuống mép dưới ô điểm), số vẫn 41 px:
+- **A — Chip nổi** (73 px): mỗi đội 1 ô trắng bo 16 px + chấm màu, đồng hồ là ô tối có icon đồng hồ ở giữa; đồng bộ với nút công cụ.
+- **B — Bảng tỉ số truyền hình** (73 px): một thanh trắng liền, đồng hồ là khối tối nhô lên ở giữa, nhãn TEAM 1/2 nhỏ ở hai mép (tuỳ chọn).
+- **C — Tối giản** (69 px): số đứng trên nền như cũ, chỉ đồng hồ có viên bo tròn + chấm xanh.
+⚠️ Khi build: thanh Miss wait (`.aw-fight-missbar`, mép trên) và Pick time (`.aw-fight-pickbar`, mép dưới + `padding-bottom` ở `.is-pickmode`) đang dựa vào cặp đệm `padding-top`/`padding-bottom` GIỐNG NHAU ở `.aw-fight-half` và `.aw-fight-clockbox` để số và đồng hồ cùng một hàng — đổi chỗ thanh phải đổi cả hai nơi. Các template có dải riêng (`fightFrame.topStrip: "below"`, Rocket race, A Show Speed) phải kiểm lại.
+
+### VIỆC ĐANG CHỜ (Đợt 462)
+- ✅ 04/10 thầy chọn **B**, yêu cầu thêm: thanh thời gian DÀI hơn, BỎ chữ TEAM, font số "ngầu" hơn, nhiều mẫu để chọn ⇒ `b-mau.html` cùng thư mục mẫu: **12 mẫu B0–B11** (Orbitron ×2 · Chakra Petch · Rajdhani · Oswald · Bebas Neue · Teko · Russo One · Saira Condensed · Exo 2 nghiêng · Black Ops One · Baloo 2 để so), mỗi mẫu một kiểu khối đồng hồ (slate/LED/xanh/carbon/đỏ/hổ phách/tím/trắng). Đồng hồ chạy thật + điểm nhảy số; mỗi font được CO theo chiều cao chữ số đo bằng canvas (`actualBoundingBoxAscent`) cho bằng Baloo 2 800 ở 40.8 px, ô chữ số rộng cố định theo chữ số rộng nhất (khỏi xô lệch); dòng cao tuyệt đối `calc(var(--num)*1.06)` ⇒ mọi mẫu cùng **71 px** (hiện tại 91). Thanh thời gian chạy 4 %→13 % mỗi nửa (chừa khối đồng hồ), đội phải rút về mép ngoài. ⚠️ Mẫu nạp font từ Google Fonts — khi build phải TỰ HOST woff2 vào `core/assets/fonts/` như Baloo 2 (TOMKO/lớp có thể mất mạng).
+- ✅ 04/10 thầy chọn **B9** (Saira Condensed 800 + khối đồng hồ trắng viền đen) và yêu cầu: số điểm ở GIỮA ô của đội, thanh thời gian KHÔNG còn là vạch nhỏ dưới số mà chạy trên CẢ Ô ĐIỂM to ⇒ `b9-mau.html`: **8 mẫu C1–C8** — C1 dâng nhạt + mép đậm (rút ra mép ngoài) · C2 như C1 nhưng rút VỀ đồng hồ · C3 màu đậm, số trắng khi đang chạy · C4 sọc chéo trôi · C5 nền rất nhạt + quầng sáng đầu thanh · C6 ô nền tối neon · C7 chia 10 nấc kiểu pin · C8 như C1 + còn 20 % thì cả ô viền đỏ nhấp nháy. Mỗi đội một ô riêng (trái bo trái, phải bo phải), `.fill` absolute trong ô `overflow:hidden`; không bị đếm giờ ⇒ ô trắng trơn (`.is-idle`). Dải 73 px (hiện tại 91). Trong mẫu đội trái chạy 8 s lặp, nút bật đội phải.
+- ⚠️ Khi build: thanh Miss wait (`.aw-fight-missbar`) và Pick time (`.aw-fight-pickbar`) hiện là 2 phần tử RIÊNG ở mép trên/dưới — nếu cả hai có thể chạy cùng lúc trên một đội thì ô điểm chỉ diễn tả được một; phải hỏi/quyết thứ tự ưu tiên. Đồng thời bỏ cặp đệm `padding-top/bottom` đang để dành chỗ cho 2 thanh. Chế độ ∞ (thanh đầy, thở) cần kiểu riêng cho ô to.
+- ✅ 04/10 thầy chọn **C3** (màu đậm), chỉnh thêm: mép thanh màu BLUR mờ (không nét) + khi rút có hiệu ứng SÓNG SÁNH như rút cạn nước; số đổi thành XANH LÁ ĐẶC có viền + bóng nét, rõ ở mọi vị trí/mọi nền ⇒ `c3-mau.html`: nước = `.water` (2 lớp `.w1`/`.w2`) rộng `calc(p% + 6px)`, chìm 6 px ra trên/dưới/mép ngoài để `filter: blur(2.6px)` chỉ lộ ở ĐẦU thanh; đầu thanh lượn sóng bằng `mask` = hình chữ nhật `calc(100% - 20px)` + SVG sóng dọc lặp `repeat-y`, `mask-position-y` trôi (2 lớp ngược chiều, chu kỳ 40/56 px) + `mask-size` co giãn biên độ 22↔34 px (sánh); nấc đỏ sóng nhanh + lắc mạnh hơn. ⚠️ filter đặt ở VỎ `.water`, mask ở lớp CON — CSS áp filter TRƯỚC mask, đặt chung một phần tử thì mask cắt lại mép nét. Đội phải = `scaleX(-1)`. Số: xanh #22c55e đặc (âm = đỏ #ef4444), `-webkit-text-stroke` + `paint-order: stroke fill` (Chrome 152 nhận) + `text-shadow` cứng; 3 kiểu viền **D1** trắng + bóng đậm · **D2** xanh rêu đậm · **D3** viền kép trắng + đen. Mỗi mẫu có bảng "soi chữ" 4 ô đứng yên (trắng · xanh phủ kín · cam mép cắt ngang · đỏ + điểm âm). Đo ở cỡ thật 40.8 px: cả 3 đọc rõ; D2/D3 chắc nhất trên nền xanh.
+- ✅ 04/10 thầy CHỐT **D1** (số xanh lá đặc viền trắng + bóng đậm), nhưng mép thanh màu đổi thành BLUR THƯỜNG, mờ nhiều hơn — bỏ hẳn sóng ("trông phức tạp quá") ⇒ `d1-chot.html`: `.water` một lớp `background: var(--fill)` + `filter: blur(var(--bl))`, chìm `--bl*1.5` ra trên/dưới/mép ngoài để vệt mờ chỉ lộ ở đầu thanh; mặc định `--bl: 10px`, trang có thanh kéo 2–24 px để thầy chọn mức mờ.
+- ✅ 04/10 thầy chốt **blur 24 px**; viền trắng quanh số cũng phải MỜ (không cứng) ⇒ bỏ `-webkit-text-stroke`, thay bằng QUẦNG TRẮNG nhiều lớp `text-shadow: 0 0 .06em/.14em/.26em/.42em #fff` (bóng đậm cứng `0 .07em 0 #14532d` đứng ĐẦU danh sách để nằm trên quầng); dải + số nhỏ đi một chút ⇒ hệ số `--sz: .86` nhân vào cỡ số (TOMKO: 41 → 35 px), đệm ô 3→2 px, khối đồng hồ +12→+8 px, bo 12 px ⇒ dải **65 px** (hiện tại 91). `d1-chot.html` có thanh kéo Cỡ 70–100 %.
+- ✅ 04/10 thầy: **"68 px, build + commit + push"** (68 px = chiều cao từ mép trên vùng trận tới mép trên khung game, đo trên 1920).
+
+### 4. ⭐ BUILD DẢI ĐIỂM KIỂU MỚI (`.aw-fight.is-strip2`)
+
+**`core/fight.js`** (logic đếm giờ KHÔNG đổi một dòng):
+- `half0`/`half1` thêm lớp `is-l`/`is-r` (CSS cần biết trái/phải để bo góc ngoài + neo thanh ở mép ngoài; half1 có thể nằm cột 3 ở shared-middle nên không dựa thứ tự DOM).
+- `const strip2 = !topBelow && !(frame && (frame.noScore || frame.skin || frame.fullscene))` ⇒ `wrap.classList.add("is-strip2")`. Chỉ template THƯỜNG; Wordshake/A Show Speed (`skin: "wordshake"`), Rocket race (2D: `topStrip: "below"` + `noScore`; 3D: skin `rr3d` + `fullscene`) giữ dải riêng — đã kiểm `ws-dot457-fight.html`: lớp vắng, đồng hồ vẫn chữ trơn.
+- `setNum(node, str)`: ở strip2 mỗi ký tự thành `<span class="aw-s2d|aw-s2p">` (ô chữ số rộng cố định); ngoài strip2 vẫn `textContent`. Dùng ở `paintScore` + `ctl` cập nhật đồng hồ + một lượt đầu sau khi biết strip2 (số "0"/"00:00" dựng trước đó). `textContent` của node y nguyên ⇒ MutationObserver / regex `00:00` của template không thấy khác.
+- ⚠️ **Saira Condensed KHÔNG có tabular-nums** (đo DOM: "1111" 127.6px vs "0000" 191.6px, có `tabular-nums` cũng y vậy) ⇒ không có ô cố định là đồng hồ giật ngang mỗi giây.
+- ⚠️⚠️ **BẪY TRÙNG TÊN LỚP (bắt được khi đo)**: bản đầu đặt `aw-fd`/`aw-fp` ⇒ ô đồng hồ cao 118px, chữ lòi lên trên — `.aw-fp` đã là Ô XEM TRƯỚC THƯ MỤC của thư viện (`app.css` ~3626, cao 118px). Đổi `aw-s2d`/`aw-s2p`. Bài học: lớp CSS mới phải grep cả app trước khi đặt, nhất là tên 2–3 chữ.
+
+**`core/app.css`**:
+- `@font-face "Saira Condensed" 800` → `core/assets/fonts/saira-condensed-800.woff2` (bản latin Google Fonts v12, 18 KB, TỰ HOST cho màn lớp mất mạng).
+- Khối `.aw-fight.is-strip2` (sau `.aw-fight-clock`): biến `--s2-sz: .97` (⇒ đúng **68 px** đo trên 1920: dải 48 + đệm 10 + gap 10), `--s2-num`, `--s2-k: .915` (co Saira cho cao chữ số = Baloo 2 800, đo canvas), `--s2-blur: 24px`, `--s2-sink: blur×1.5`.
+- Ô điểm: nền trắng, viền #dbe3ee, `overflow:hidden`, trái bo `14 0 0 14`, phải `0 14 14 0`. Xoá 2 cặp đệm cũ (padding-top Miss wait / padding-bottom Pick time). Số xanh #22c55e (âm #ef4444) + quầng trắng mờ + bóng đậm cứng.
+- Đồng hồ: `.aw-fight-middle` `top:0;bottom:0;translateX(-50%)`, ô trắng viền 2px #1f2937, cao `100% + 8px`, bo 12.
+- Thanh: `.aw-fight-missbar`/`-pickbar` chìm `--s2-sink` ra trên/dưới/MÉP NGOÀI, `overflow:visible`, fill `filter: blur(24px)` + gradient dọc C3 (xanh/cam/đỏ); đội phải fill `left:auto;right:0` (rút về mép phải). ∞: tắt `aw-pickglow` của thanh, fill dùng keyframe riêng `aw-s2-breathe` có SẴN blur — ⚠️ `aw-waitbreathe` ghi `filter: brightness()` sẽ ĐÈ MẤT blur (animation thắng luật thường).
+- Rocket race 3D đọc tỉ lệ `fill.width / bar.width` của missbar — không ảnh hưởng (skin rr3d không có strip2; mà `filter` cũng không đổi getBoundingClientRect).
+
+**Đo / bàn thử** (`scratch/dot462-fight.html` mới — Quiz Fight, Miss wait 8 s, bấm sai bàn trái):
+- 1920: trên khung **68 px**, ô dải 48, đồng hồ 56 (lòi 4px mỗi phía), chữ số 42 px dòng; font tải thật (`document.fonts.check`).
+- Bấm sai bàn trái ⇒ ô đội phải tô xanh, rút về mép phải, sang cam đúng mốc 50 %; filter `blur(24px)`; console sạch.
+- `scratch/dot259-fight.html` (Pick time): **45 ĐẠT / 2 HỎNG — cả 2 là thay đổi CỐ Ý**: "∞ có hào quang aw-pickglow" (nay ô thở sáng thay hào quang) và "thanh nằm gọn trong nửa" (thanh nay chìm ra mép NGOÀI để giấu vệt blur, bị ô cắt nên không đè sang bàn kia; mục "số điểm đúng tâm bàn" vẫn ĐẠT).
+- `scratch/dot460-mode-dbl.html`: 18/18.
+
+### VIỆC ĐANG CHỜ (Đợt 462)
+- ⬜ Thầy xem trên TOMKO: dải 68 px, số Saira, mép blur 24 px khi Miss wait / Pick time chạy; ∞ (thở sáng) chưa được thầy nhìn tận mắt lần nào.
+- ⬜ Template pick mode (Crossword, Open the box) chưa thử tay với kiểu mới.
+- ⬜ Nếu Miss wait và Pick time cùng chạy trên một đội: thanh Miss wait (đứng sau trong DOM) phủ lên — trong thực tế hai pha này không trùng nhau (Pick là lúc chọn ô, Miss wait là sau khi đội kia sai), nên chưa làm luật "thanh sắp hết hơn" như đã đề xuất.
+- ⬜ Hai mục HỎNG cố ý trong `dot259-fight.html` nên sửa lại kỳ vọng của bàn thử khi có dịp.
+- ⬜ Thầy xác nhận đúng là dải Fight (không phải hàng đồng hồ/điểm nhỏ trong khung game Single).
+- ⬜ Chờ thầy duyệt ⇒ commit + push (gộp cả Đợt 461 chưa push).
+
+---
+
+## Đợt 461 (04/10/2026) — NÚT MODE: Ở MỌI CHẾ ĐỘ KHÁC SINGLE, NHẤP ĐÚP VỀ SINGLE (CÓ XÁC NHẬN) · SỬA CORE `core/engine.js` (1 hàm) · ✅ push cùng Đợt 462 · ⬜ thầy thử tay TOMKO
+
+**Thầy giao (04/10/2026, ngay sau Đợt 460)**: *"Trong mọi mode đều có thể nhấn đúp để về single (có hỏi xác nhận)"*
+
+**Đã làm**: sửa đúng `doubleTapTarget()` (cạnh `tapOrHold(modeBtn, …)`, `core/engine.js`). Trước (Đợt 460): đang Fight → Single, còn lại → Fight. Nay: `inSingle = !fight && !showdownPick && !playMode`; **không ở Single (Fight · Showdown · Running · IPA) → `buildSingleConfirmPanel`** ("Switch to Single mode?" → nút "Back to single"); đang ở Single → Fight như cũ. Đảo quy ước "Showdown/Running/IPA nhấp đúp ⇒ Fight" của Đợt 460 (việc đang chờ thầy chốt ở Đợt 460 nay đã chốt).
+
+**Vì sao không cần thêm code rời mode**: `buildModeConfirmPanel(panel, "single")` đã tự biết rời từng chế độ — Fight (`exitFight`), Running/IPA (`doSwitchTemplate(homeType())` về act gốc), Showdown (`dropShowdown()` trả team + `replayCurrent()`) — và đã là popup xác nhận. Nhấp đúp chỉ đi tắt tới nó.
+
+**Bàn thử** `scratch/dot460-mode-dbl.html` (thêm mục E): **18/18 ĐẠT** — gồm cả IPA: vào IPA bằng picker, nhấp đúp ⇒ "Switch to Single mode?", xác nhận ⇒ về Single, nhấp đúp tiếp ⇒ "Switch to Fight mode?". ⚠️ **Showdown CHƯA đo riêng** (cần bảng đội + Firestore): nó đi cùng đường `buildSingleConfirmPanel` vốn đã có nhánh `leavingShowdown`, chỉ khác cách tới. ⚠️ `showdownPick` là `const` cố định theo mount (xem ghi chú `canEditNow`), nên đúng ngay cả khi vừa vào Showdown (vào Showdown dựng lại mount).
+
+### VIỆC ĐANG CHỜ (Đợt 461)
+- ⬜ Thầy thử nhấp đúp ở Showdown (đường duy nhất chưa đo) và ở Running word/team.
+- ⬜ Thầy thử ngón tay TOMKO (xem Đợt 460, `DBL_TAP_MS`).
+- ✅ Thầy duyệt ⇒ commit + push cùng Đợt 462 (04/10).
+
+---
+
 ## Đợt 460 (04/10/2026) — NÚT MODE: NHẤP ĐÚP ĐẢO SINGLE ⇄ FIGHT (VẪN QUA POPUP XÁC NHẬN) · SỬA CORE `core/engine.js` · ⬜ chưa commit/push · ⬜ thầy thử tay TOMKO
 
 **Thầy giao (04/10/2026)**: *"Khi click đúp vào nút Mode, nó sẽ chuyển qua lại luôn giữa Single và Fight. Vẫn có pop-up nhỏ hỏi lại 1 lần như mọi khi."*

@@ -5314,3 +5314,13 @@ khớp nhau ở 13 em còn bảng thứ tư ngồi riêng với 5 em. Những lu
   `originAct.type`.
 - ⛔ Đừng ghi `lastTpl` lên act trong bộ nhớ trước khi gọi `setLastTemplate`: object đó thường chính là bản đệm của store ⇒ store
   thấy "đã đúng" và bỏ lượt lưu Firebase.
+
+## ⭐ DẢI ĐIỂM FIGHT KIỂU MỚI `.aw-fight.is-strip2` (Đợt 462, 04/10/2026)
+
+- `core/fight.js` gắn `.is-strip2` khi `!topBelow && !(frame && (frame.noScore || frame.skin || frame.fullscene))`. Template muốn dải
+  RIÊNG thì khai `fightFrame.skin` (như Wordshake, Rocket race 3D) — khi đó KHÔNG có lớp này, mọi luật `.is-strip2` không chạm tới.
+- Ở strip2: ô điểm (`.aw-fight-half.is-l/.is-r`) nền trắng `overflow:hidden`; `.aw-fight-missbar`/`-pickbar` bị CSS phóng ra phủ kín ô
+  (fill `filter: blur(--s2-blur)`), logic `paintMissBar`/`paintPickBar` y như cũ. Số + đồng hồ là `<span class="aw-s2d|aw-s2p">` từng ký tự
+  (`setNum`) — `textContent` không đổi. ⚠️ Template đọc số bằng `textContent` thì vẫn đúng; đừng đọc `firstChild.nodeValue`.
+- ⛔ `aw-waitbreathe` (filter brightness) không được gắn lên fill ở strip2 — nó đè mất blur; dùng `aw-s2-breathe`.
+- ⛔ Tên lớp ngắn phải grep cả app: `.aw-fp` là ô xem trước thư mục (cao 118px).

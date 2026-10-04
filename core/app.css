@@ -29,6 +29,9 @@
 @font-face { font-family: "Baloo 2"; font-weight: 600; src: url("assets/fonts/baloo-2-600.woff2") format("woff2"); font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 @font-face { font-family: "Baloo 2"; font-weight: 700; src: url("assets/fonts/baloo-2-700.woff2") format("woff2"); font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 @font-face { font-family: "Baloo 2"; font-weight: 800; src: url("assets/fonts/baloo-2-800.woff2") format("woff2"); font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+/* ⭐ Đợt 462 — số của dải điểm Fight kiểu mới (`.aw-fight.is-strip2`). TỰ HOST (bản latin của Google
+   Fonts, 18 KB) để màn lớp mất mạng vẫn đúng font. Chỉ dùng cho chữ số ⇒ không cần bản tiếng Việt. */
+@font-face { font-family: "Saira Condensed"; font-weight: 800; src: url("assets/fonts/saira-condensed-800.woff2") format("woff2"); font-display: swap; unicode-range: U+0000-00FF, U+2212; }
 
 /* ⚠️ VIETNAMESE — the four files above are Google's `latin` subset ONLY (230
    characters). They are missing 102 of the 178 letters of the Vietnamese
@@ -2594,14 +2597,17 @@ html.aw-nhung .aw-below { display: none; }
    lives OUTSIDE the 16:9 stage, so .aw-btn's cqw sizing would render huge. */
 .aw-mode-confirm-text { font-size: 13px; color: #57667a; line-height: 1.4; margin-top: 2px; max-width: 30ch; }
 .aw-mode-confirm-row { display: flex; justify-content: center; gap: 10px; margin-top: 16px; }
-.aw-btn.aw-mode-confirm-btn { padding: 9px 20px; font-size: 14px; }
+/* ⭐ Đợt 462 (thầy) — Cancel / Start fight và mọi nút cùng loại trong popup nhỏ phải BO TRÒN GÓC.
+   `.aw-btn` gốc bo theo `--aw-u` (đơn vị TRONG khung game); ngoài khung không có biến đó nên
+   góc gần như vuông. Đặt px cố định, cùng 12px với Apply/nút công cụ cho đồng bộ. */
+.aw-btn.aw-mode-confirm-btn { padding: 9px 20px; font-size: 14px; border-radius: 12px; }
 /* ⭐ Đợt 339 — "Word voices: N / M ready · Generate" on the IPA confirm (core/engine.js
    buildIpaConfirmPanel). Same fixed-px world as the two rules above (outside the stage). */
 .aw-mode-wordvoice { display: flex; align-items: center; justify-content: space-between; gap: 10px;
   margin-top: 12px; padding: 8px 10px; border: 1px dashed #c9d2de; border-radius: 10px;
   font-size: 12.5px; color: #57667a; max-width: 30ch; }
 .aw-mode-wordvoice-text { min-width: 0; line-height: 1.35; }
-.aw-btn.aw-mode-wordvoice-btn { padding: 6px 12px; font-size: 12.5px; flex: none; }
+.aw-btn.aw-mode-wordvoice-btn { padding: 6px 12px; font-size: 12.5px; flex: none; border-radius: 10px; }
 
 /* ⭐⭐ MODE PICKER (Đợt 158) — the one button that replaced MODE + SHOWDOWN opens
    this: icon tiles, ONE PER MODE, and no words ("dùng icon thật to, không dùng
@@ -4879,6 +4885,117 @@ body.aw-page-dragover::after {
   color: #55606d;
 }
 
+/* =============================================================
+   ⭐⭐ Đợt 462 (thầy, 04/10/2026) — DẢI ĐIỂM KIỂU MỚI `.aw-fight.is-strip2`
+   Chốt qua 5 vòng mẫu (D:\OTHERS\CLAUDE\AWord - thiet ke Dai diem Fight\d1-chot.html):
+   phương án B (bảng tỉ số liền) → B9 (Saira Condensed + đồng hồ trắng viền đen) → C3 (CẢ Ô ĐIỂM
+   là thanh thời gian, màu đậm) → D1 (số xanh lá đặc + quầng trắng mờ + bóng đậm) → blur 24px.
+   core/fight.js chỉ gắn `.is-strip2` cho template THƯỜNG (không skin / topStrip below / noScore /
+   fullscene) — mọi dải riêng của Wordshake, Rocket race giữ nguyên.
+   ⚠️ KHÔNG đổi logic thanh: `.aw-fight-missbar` / `.aw-fight-pickbar` + `fill` chạy `width` bằng
+   transition y như cũ (Rocket race 3D còn ĐỌC tỉ lệ fill/thanh). Ở đây chỉ phóng thanh ra phủ kín ô:
+   thanh chìm `--s2-sink` ra trên/dưới/MÉP NGOÀI để vệt blur chỉ lộ ở ĐẦU thanh; ô `overflow:hidden`.
+   ⚠️ Hai cặp đệm cũ (`padding-top` cho Miss wait, `padding-bottom` cho Pick time) bị XOÁ ở đây —
+   thanh không còn là vạch mảnh trên/dưới số nữa, nên không phải chừa chỗ.
+   ============================================================= */
+.aw-fight.is-strip2 {
+  --s2-sz: .97;                                   /* thầy chốt dải 68px (đo trên 1920) */
+  --s2-num: calc(clamp(18px, 3.12vw, 40.8px) * var(--s2-sz));
+  --s2-k: .915;                                   /* co Saira cho CAO CHỮ SỐ = Baloo 2 800 (đo canvas) */
+  --s2-blur: 24px;
+  --s2-sink: calc(var(--s2-blur) * 1.5);
+}
+.aw-fight.is-strip2 .aw-fight-top { padding: 0; align-items: stretch; }
+.aw-fight.is-strip2 .aw-fight-half,
+.aw-fight.is-strip2.is-pickmode .aw-fight-half {
+  overflow: hidden;
+  padding: 2px 0;
+  background: #fff;
+  border: 1px solid #dbe3ee;
+  box-shadow: 0 4px 14px rgba(31, 42, 68, .08);
+}
+.aw-fight.is-strip2 .aw-fight-half.is-l { border-radius: 14px 0 0 14px; }
+.aw-fight.is-strip2 .aw-fight-half.is-r { border-radius: 0 14px 14px 0; }
+.aw-fight.is-strip2 .aw-fight-team { z-index: 2; }
+
+/* số: xanh lá ĐẶC, quầng trắng MỜ nhiều lớp + bóng đậm cứng. text-shadow vẽ lớp ĐẦU lên TRÊN ⇒ bóng
+   đậm đứng trước để nằm trên quầng. Âm = đỏ đặc, cùng cách viền. */
+.aw-fight.is-strip2 .aw-fight-score {
+  display: flex; justify-content: center;
+  min-width: 0;
+  font-family: "Saira Condensed", "Baloo 2", sans-serif;
+  font-weight: 800;
+  font-size: calc(var(--s2-num) * var(--s2-k));
+  line-height: calc(var(--s2-num) * 1.06);
+  color: #22c55e;
+  text-shadow: 0 .07em 0 #14532d, 0 .1em .03em rgba(0, 0, 0, .3),
+    0 0 .06em #fff, 0 0 .14em #fff, 0 0 .26em rgba(255, 255, 255, .95), 0 0 .42em rgba(255, 255, 255, .8);
+}
+.aw-fight.is-strip2 .aw-fight-score.is-neg {
+  color: #ef4444;
+  text-shadow: 0 .07em 0 #7f1d1d, 0 .1em .03em rgba(0, 0, 0, .3),
+    0 0 .06em #fff, 0 0 .14em #fff, 0 0 .26em rgba(255, 255, 255, .95), 0 0 .42em rgba(255, 255, 255, .8);
+}
+/* ô chữ số rộng cố định (core/fight.js `setNum`) — Saira không có tabular-nums */
+.aw-fight.is-strip2 .aw-s2d { display: inline-block; width: .52em; text-align: center; }
+.aw-fight.is-strip2 .aw-s2p { display: inline-block; width: .33em; text-align: center; }
+
+/* đồng hồ: ô trắng viền đen, cao hơn dải 8px (lòi đều trên/dưới) */
+.aw-fight.is-strip2 .aw-fight-middle { top: 0; bottom: 0; transform: translateX(-50%); z-index: 3; }
+.aw-fight.is-strip2 .aw-fight-clockbox,
+.aw-fight.is-strip2.is-pickmode .aw-fight-clockbox {
+  height: calc(100% + 8px);
+  padding: 0 .5em;
+  font-size: var(--s2-num);
+  border-radius: 12px;
+  background: #fff;
+  border: 2px solid #1f2937;
+  box-shadow: 0 6px 16px rgba(31, 42, 68, .16);
+}
+.aw-fight.is-strip2 .aw-fight-clock {
+  display: flex;
+  font-family: "Saira Condensed", "Baloo 2", sans-serif;
+  font-weight: 800;
+  font-size: calc(var(--s2-num) * var(--s2-k));
+  line-height: calc(var(--s2-num) * 1.06);
+  color: #1f2937;
+}
+
+/* thanh thời gian = CẢ Ô: phóng thanh ra, fill mờ mép */
+.aw-fight.is-strip2 .aw-fight-missbar,
+.aw-fight.is-strip2 .aw-fight-pickbar {
+  top: calc(var(--s2-sink) * -1); bottom: calc(var(--s2-sink) * -1);
+  height: auto;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+  z-index: 1;
+}
+.aw-fight.is-strip2 .is-l > .aw-fight-missbar,
+.aw-fight.is-strip2 .is-l > .aw-fight-pickbar { left: calc(var(--s2-sink) * -1); right: 0; }
+.aw-fight.is-strip2 .is-r > .aw-fight-missbar,
+.aw-fight.is-strip2 .is-r > .aw-fight-pickbar { left: 0; right: calc(var(--s2-sink) * -1); }
+.aw-fight.is-strip2 .aw-fight-missbar-fill,
+.aw-fight.is-strip2 .aw-fight-pickbar-fill {
+  border-radius: 0;
+  filter: blur(var(--s2-blur));
+  background: linear-gradient(180deg, #5fd17a, #2f9e44);
+}
+/* đội phải rút về MÉP NGOÀI (phải) cho đối xứng */
+.aw-fight.is-strip2 .is-r > .aw-fight-missbar > .aw-fight-missbar-fill,
+.aw-fight.is-strip2 .is-r > .aw-fight-pickbar > .aw-fight-pickbar-fill { left: auto; right: 0; }
+.aw-fight.is-strip2 .aw-fight-missbar.is-orange .aw-fight-missbar-fill { background: linear-gradient(180deg, #ffb24d, #f08c00); }
+.aw-fight.is-strip2 .aw-fight-missbar.is-red    .aw-fight-missbar-fill { background: linear-gradient(180deg, #ff7a5c, #d9362f); }
+/* ∞: ô đầy và "thở". ⚠️ Keyframe RIÊNG có cả blur — `aw-waitbreathe` ghi `filter: brightness()` sẽ
+   ĐÈ MẤT blur của fill (animation thắng luật thường). Hào quang box-shadow của thanh tắt: thanh nay
+   to hơn ô, bóng của nó chỉ bị cắt nham nhở. */
+.aw-fight.is-strip2 .aw-fight-pickbar.is-forever { animation: none; }
+.aw-fight.is-strip2 .aw-fight-pickbar.is-forever .aw-fight-pickbar-fill { animation: aw-s2-breathe 3.2s ease-in-out infinite; }
+@keyframes aw-s2-breathe {
+  0%, 100% { filter: blur(var(--s2-blur)) brightness(1); }
+  50%      { filter: blur(var(--s2-blur)) brightness(1.18); }
+}
+
 /* --- ONE row under the boards: just the shared toolbar (Đợt 297) ---
    Used to also carry the teacher's hand-point boxes either side of the
    toolbar (removed, thầy: "bỏ ô số bên dưới khung game của 2 đội") — the row
@@ -5115,6 +5232,18 @@ body.aw-page-dragover::after {
 /* MODE lights up while a match is on, like the other tool buttons do when
    their panel is open. */
 .aw-below-center .aw-toolbtn.is-active { color: #fff; background: rgba(96, 165, 250, .28); }
+/* ⭐ Đợt 462 (thầy) — NÚT MODE: "từ sáng viền ngoài và nền nút thành chỉ sáng nút bên trong thôi".
+   Khi sáng (đang ở chế độ khác Single, hoặc popup của nó đang mở) nút giữ nguyên vỏ trắng như lúc
+   thường; chỉ ICON đổi xanh và toả sáng. Phải đứng SAU luật trận ở trên (đè nền xanh + chữ trắng)
+   và có độ đặc hiệu cao hơn cả hai luật `.is-active`.
+   `filter` đặt trên SVG con (không trên nút) để không đẻ stacking context cho chính nút. */
+.aw-below-center .aw-toolbtn.aw-mode-btn.is-active {
+  color: #2f7bff; background: #fff; border-color: #e2e9f2;
+  box-shadow: 0 2px 6px rgba(31,42,68,.07);
+}
+.aw-below-center .aw-toolbtn.aw-mode-btn.is-active svg {
+  filter: drop-shadow(0 0 3px rgba(47,123,255,.85)) drop-shadow(0 0 9px rgba(47,123,255,.55));
+}
 
 /* --- who won --- */
 .aw-fight-result {

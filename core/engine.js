@@ -1782,6 +1782,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // button standing for every mode this is the only at-a-glance "something
   // is on" the toolbar has left. A button that is only Home never glows.
   if (modeAvail && (fight || showdownPick || playMode)) modeBtn.classList.add("is-active");
+  // ⭐ Đợt 462 (thầy) — nút MODE sáng kiểu RIÊNG: chỉ ICON bên trong sáng, không vòng sáng viền
+  // ngoài, không nền xanh (xem `.aw-toolbtn.aw-mode-btn.is-active` trong app.css).
+  if (modeAvail) modeBtn.classList.add("aw-mode-btn");
   // ⭐ Đợt 191 (thầy: "chuyển vị trí nút mode ra ngoài cùng bên phải trong mọi
   // trạng thái") — MODE now sits LAST everywhere, and that **reverses Đợt 124**,
   // where it swapped places with Style during a match so it landed dead centre
@@ -4537,13 +4540,16 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // ⚠️ Phải đi qua `openToolPanelFor` (đổi nội dung tại chỗ), KHÔNG `openToolPanel`: tap thứ hai
   // rơi vào lúc picker đang mở dưới chính nút này, `openToolPanel` sẽ ĐÓNG nó (cử chỉ "bấm
   // lại nút đang mở").
-  // ⚠️ Chế độ đích đọc tại LÚC nhấp, không chụp lúc dựng nút: đang Fight → Single; còn lại
-  // (Single · Showdown · Running · IPA) → Fight. Board không có Fight (`canFight` sai) thì
-  // nhấp đúp rơi về đường cũ (tap hai đóng picker như trước).
+  // ⭐ Đợt 461 (thầy, 04/10/2026) — MỌI chế độ KHÁC Single đều nhấp đúp được để VỀ Single
+  // (Fight · Showdown · Running · IPA; vẫn qua popup xác nhận). Đang Single thì nhấp đúp → Fight
+  // như Đợt 460. `buildSingleConfirmPanel` đã tự biết rời từng chế độ (trận · Showdown · play mode).
+  // ⚠️ Chế độ đích đọc tại LÚC nhấp, không chụp lúc dựng nút. Board không có Fight (`canFight`
+  // sai) mà đang ở Single thì nhấp đúp rơi về đường cũ (tap hai đóng picker như trước).
   const DBL_TAP_MS = 400;
   let lastModeTap = 0, modeTapQuietUntil = 0;
   function doubleTapTarget() {
-    if (fight) return buildSingleConfirmPanel;
+    const inSingle = !fight && !showdownPick && !playMode;
+    if (!inSingle) return buildSingleConfirmPanel;
     return canFight ? buildFightConfirmPanel : null;
   }
   if (modeAvail) {
