@@ -546,6 +546,29 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 460 (04/10/2026) — NÚT MODE: NHẤP ĐÚP ĐẢO SINGLE ⇄ FIGHT (VẪN QUA POPUP XÁC NHẬN) · SỬA CORE `core/engine.js` · ⬜ chưa commit/push · ⬜ thầy thử tay TOMKO
+
+**Thầy giao (04/10/2026)**: *"Khi click đúp vào nút Mode, nó sẽ chuyển qua lại luôn giữa Single và Fight. Vẫn có pop-up nhỏ hỏi lại 1 lần như mọi khi."*
+
+**Đã làm** (chỉ `core/engine.js`, chỗ `tapOrHold(modeBtn, …)` ~dòng 4532):
+- Tap thứ nhất vẫn mở picker NGAY (không thêm độ trễ chờ xem có tap hai không). Tap thứ hai trong `DBL_TAP_MS = 400` ms thì đổi nội dung picker đang mở sang popup xác nhận của chế độ đích: đang Fight → `buildSingleConfirmPanel` ("Switch to Single mode?"), còn lại → `buildFightConfirmPanel` ("Switch to Fight mode?"). Bấm Start fight / Back to single mới đổi thật — nhấp đúp KHÔNG tự đổi chế độ.
+- Nhấn giữ vẫn là "Go home?" (đặt lại `lastModeTap` để giữ không dính vào cặp).
+
+**Quyết định kỹ thuật / bẫy**
+- ⚠️ Đi qua `openToolPanelFor`, KHÔNG `openToolPanel`: tap hai rơi lúc picker đang mở dưới chính nút Mode, `openToolPanel` sẽ ĐÓNG nó ("bấm lại nút đang mở"). Nút Mode nằm trên lớp mờ (`.aw-below-center` z-index 41 > `.aw-tool-dim` 40) nên tap hai tới được nút.
+- Chế độ đích đọc LÚC nhấp (`doubleTapTarget()`), không chụp lúc dựng nút. Từ Showdown/Running/IPA nhấp đúp ⇒ Fight (quy ước: "không phải Fight thì sang Fight"; thầy muốn khác thì đổi 1 dòng). Board không có Fight (`canFight` sai) ⇒ nhấp đúp rơi về đường cũ (tap hai đóng picker).
+- ⭐ Bắt được ở bàn thử: tap THỨ BA dồn dập (80 ms) đua với hiệu ứng đổi panel 2 nhịp (`activeToolBuild` chưa kịp cập nhật nên `openToolPanelFor` hiểu là "bấm lại nút đang mở"). Sửa: sau cú nhấp đúp có cửa sổ yên `modeTapQuietUntil` (400 ms) nuốt tap thừa.
+- Nút Mode kiêm Home (không có mode để chọn, `modeAvail` sai) KHÔNG đổi: vẫn `onclick`, không có nhấp đúp.
+
+**Bàn thử** `scratch/dot460-mode-dbl.html` (engine + Quiz thật, firebase giả): **12/12 ĐẠT** — 1 tap = picker; 2 tap nhanh ở Single = "Switch to Fight mode?"; 2 tap cách 700 ms = không phải cặp (tap hai đóng picker); tap ba bị nuốt; giữ = "Go home?"; Start fight vào đúng 2 bàn; trong Fight nhấp đúp = "Switch to Single mode?" và Back to single về 0 bàn Fight. ⚠️ Bàn thử dùng PointerEvent giả lập chuột; **chưa thử bằng ngón tay thật trên TOMKO** (ngón cảm ứng có thể chậm hơn 400 ms giữa hai tap — nếu thầy thấy khó ăn thì nâng `DBL_TAP_MS`).
+
+### VIỆC ĐANG CHỜ (Đợt 460)
+- ⬜ Thầy thử nhấp đúp nút Mode trên TOMKO (ngón tay) ở Single và trong trận Fight; chỉnh `DBL_TAP_MS` nếu cần.
+- ⬜ Thầy chốt: từ Showdown/Running/IPA nhấp đúp nên sang Fight (đang làm vậy) hay về Single?
+- ⬜ Chờ thầy duyệt sửa core ⇒ commit + push.
+
+---
+
 ## Đợt 458 (04/10/2026) — ROCKET RACE ▸ FIGHT 3D: ô "không kịp chọn" giữ nguyên màu · ô đáp án gần như không rung khi trúng tên lửa · TIME DELAY kéo dài tới sát lúc tên lửa nổ · ⚠️ SỬA CORE `core/fight.js` (móc tuỳ chọn) · ✅ THẦY DUYỆT ⇒ PUSH `41b6627` + LIVE 4/4 mã băm (04/10) · ⬜ thầy thử TOMKO
 
 (Số 456/457 đã có phiên khác dùng song song — Start Again / A Show Speed.)

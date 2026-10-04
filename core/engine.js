@@ -4529,10 +4529,37 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // or the Showdown table, and Home has now joined them.
   // ⚠️ `openToolPanelFor` for the same reason Options and Template use it (see
   // below): `openToolPanel` called with the button already lit CLOSES the popover.
+  // ⭐ Đợt 460 (thầy, 04/10/2026) — NHẤP ĐÚP nút MODE = đảo Single ⇄ Fight ngay, vẫn qua
+  // popup xác nhận nhỏ như mọi lần. Tap thứ nhất vẫn mở picker NGAY (không trễ thêm một nhịp
+  // nào để chờ xem có tap hai không); tap thứ hai trong DBL_TAP_MS thì đổi nội dung picker
+  // đang mở sang popup xác nhận của chế độ đích. Nhấp đúp KHÔNG đổi chế độ một mình — chỉ
+  // đi tắt tới đúng cái popup "Switch to … mode?".
+  // ⚠️ Phải đi qua `openToolPanelFor` (đổi nội dung tại chỗ), KHÔNG `openToolPanel`: tap thứ hai
+  // rơi vào lúc picker đang mở dưới chính nút này, `openToolPanel` sẽ ĐÓNG nó (cử chỉ "bấm
+  // lại nút đang mở").
+  // ⚠️ Chế độ đích đọc tại LÚC nhấp, không chụp lúc dựng nút: đang Fight → Single; còn lại
+  // (Single · Showdown · Running · IPA) → Fight. Board không có Fight (`canFight` sai) thì
+  // nhấp đúp rơi về đường cũ (tap hai đóng picker như trước).
+  const DBL_TAP_MS = 400;
+  let lastModeTap = 0, modeTapQuietUntil = 0;
+  function doubleTapTarget() {
+    if (fight) return buildSingleConfirmPanel;
+    return canFight ? buildFightConfirmPanel : null;
+  }
   if (modeAvail) {
     tapOrHold(modeBtn, {
-      onTap: () => openToolPanelFor(modeBtn, buildModePickPanel),
-      onHold: () => openToolPanelFor(modeBtn, buildHomeConfirmPanel)
+      onTap: () => {
+        const now = performance.now();
+        // Tap thừa ngay sau một cú nhấp đúp (nhấp ba) bị NUỐT: nó rơi giữa lúc popup đang
+        // đổi nội dung (hiệu ứng 2 nhịp) nên `activeToolBuild` còn là của picker, và
+        // `openToolPanelFor` sẽ hiểu là "bấm lại nút đang mở" mà đóng/đua với lần đổi đó.
+        if (now < modeTapQuietUntil) return;
+        const target = (now - lastModeTap <= DBL_TAP_MS) ? doubleTapTarget() : null;
+        lastModeTap = target ? 0 : now;   // một cặp chỉ ăn một lần
+        if (target) modeTapQuietUntil = now + DBL_TAP_MS;
+        openToolPanelFor(modeBtn, target || buildModePickPanel);
+      },
+      onHold: () => { lastModeTap = 0; openToolPanelFor(modeBtn, buildHomeConfirmPanel); }
     });
   } else {
     // No mode to pick — the button IS Home (see where it is built), so the plain

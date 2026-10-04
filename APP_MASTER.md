@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **04/10/2026 Đợt 460 — NÚT MODE: NHẤP ĐÚP đảo Single ⇄ Fight (vẫn qua popup xác nhận như mọi lần); tap 1 mở picker ngay, tap 2 trong 400 ms đổi sang popup "Switch to Fight/Single mode?" qua `openToolPanelFor`. Sửa core `core/engine.js` (chỗ `tapOrHold(modeBtn…)`), bàn thử `scratch/dot460-mode-dbl.html` 12/12 ĐẠT. ⬜ chưa commit/push · ⬜ thầy thử ngón tay TOMKO.
 > ✏️ **04/10/2026 Đợt 459 — A SHOW SPEED: cột chất lỏng trong 2 ô điểm giảm TỪ TỪ, rất ít (~6 % chiều cao), 2 đội ngang nhau (theo tiến độ chung, không theo điểm) — `ws-lib.js` `follow/settle`. ⬜ chưa commit/push.** Chi tiết GHI CHU Đợt 459
 > ✏️ **04/10/2026 Đợt 458 — A SHOW SPEED: màn đếm điểm mới (2 ô to như GAME, sát nhau giữa màn, nền mờ cả bảng giữa; GAME + Fight template) + Free words: gợi ý/ô điền không cuộn, đáp án bên dưới cuộn + mũi tên. ⬜ chưa commit/push.** Chi tiết GHI CHU Đợt 458
 > ✏️ **04/10/2026 Đợt 457 — A SHOW SPEED (template): ô tích Options "Word list only" (mặc định BẬT, `wsOnlyList`) — Free words chỉ tính từ ẩn của bảng, từ khác kể cả đúng từ điển = `?`; bảng giữa Fight Word list/Free words co `--ws-u` cho vừa khung (`fitNoScroll`), không cuộn, không mũi tên (đảo Đợt 434 cho 2 mode này). ⬜ chưa commit/push.** Chi tiết GHI CHU Đợt 457
