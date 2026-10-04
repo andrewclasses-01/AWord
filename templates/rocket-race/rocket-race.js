@@ -430,6 +430,18 @@ function msSync(st, side) {
   v3(v => v.missile && v.missile.setArsenal(side, { on: st.msMax > 0, max: st.msMax, reserve: a.reserve, loaded: a.loaded, pips: a.ms, pipsMax: st.msStreak,
     full: msTotal(a) >= st.msMax, boost: a.boost, boostPips: a.bs, boostMax: MS_BOOST_STREAK, locked }));
 }
+// ⭐ Đợt 458 (thầy 04/10/2026): đang có tên lửa bay tới bàn X mà đội kia vừa trả lời ĐÚNG ⇒ TIME DELAY của bàn X kéo dài tới NGAY
+// TRƯỚC lúc tên lửa nổ (thay vì số giây trong Options) ⇒ bàn X vẫn kịp chọn đáp án đúng để NÉ, không bị khoá ô. Trọng tài core:
+// `ctl.setDelayFloor` (hỏi lúc cửa sổ mở) + `ctl.stretchDelay` (tên lửa phóng giữa cửa sổ). Chỉ kéo dài, không rút ngắn.
+const MS_DELAY_MARGIN = 0.35;                  // s — khoá trước lúc chạm vỏ một chút (chạm vỏ sớm hơn hết đường ~0,1–0,25 s)
+function msDelayFloorMs(side) {
+  const left = msIncoming(side);
+  return left < Infinity && !msLocked() ? Math.max(0, (left - MS_DELAY_MARGIN) * 1000) : 0;
+}
+function msStretchDelay(side) {
+  const st = rr3d; if (!st || !st.ctl || !st.ctl.stretchDelay) return;
+  st.ctl.stretchDelay(side, msDelayFloorMs(side));
+}
 function msIncoming(side) { const v = rr3d && rr3d.view; return v && v.missile ? v.missile.incoming(side) : Infinity; }
 // Lên nòng 1 quả (quả nhỏ bay sang ô sẵn sàng rồi NẠP đỏ dần ~2 s, quả trên thân từ từ đưa ra) — ô sẵn sàng còn đầy (quả trước
 // chưa rời bệ) ⇒ view trả false, giữ quả, thử lại sau. Còn chỗ + còn quả ⇒ lên nòng tiếp quả sau, cách 0,6 s.
@@ -558,6 +570,7 @@ function rr3dScene({ root, ctl, title, play }) {
   const st = { root, host2d, ctl, view: null, sfx: null, boards: [null, null], q: ["", ""], pending: [], dead: false, failed: false,
                prog: [{ done: 0, total: 0 }, { done: 0, total: 0 }], twoDevice: false, offs: [] };
   rr3d = st;
+  if (ctl && ctl.setDelayFloor) ctl.setDelayFloor(side => msDelayFloorMs(side));   // Đợt 458
   // ⭐ Đợt 405 — act VOICE biết NGAY lúc dựng cảnh (bàn chỉ mount sau START) ⇒ nền cảnh phóng cũng im.
   try {
     const a = ctl && ctl.matchAct && ctl.matchAct();
@@ -590,6 +603,7 @@ function rr3dScene({ root, ctl, title, play }) {
       missiles: { window: MS_WINDOW, dur: 3.8, boostCm: 6.5, gapCm: 2 },
       onFire: side => msFire(side), onBoost: side => msBoost(side), onMissileEnd: (to, res, from, tag) => msEnd(to, res, tag),
       onLoad: side => msLoadTap(side),        // Đợt 409: chạm quả nhỏ = nạp
+      onMissileLaunch: to => msStretchDelay(to),   // Đợt 458: bàn bị bắn được chờ tới sát lúc nổ
       onMove: () => { if (st.paintProg) st.paintProg(); },   // ⭐ Đợt 444: thanh % theo tàu dẫn đầu
       sfx: (n, v) => st.sfx && st.sfx.play(n, v),
       sfxCharge: (dur, v) => st.sfx && st.sfx.charge ? st.sfx.charge(dur, v) : null,   // Đợt 454: tiếng nạp năng lượng
@@ -1954,7 +1968,7 @@ const rocketRaceTemplate = {
     //   · chọn SAI  ⇒ ô đó ĐỎ, các ô còn lại MẤT MÀU ("dim")
     //   · chọn ĐÚNG ⇒ ô đó sáng lên + viền xanh lá ("correct"), các ô còn lại giữ màu nhưng NHẠT ("pale")
     //   · không kịp chọn (đội kia chọn trước, bàn này hết giờ) ⇒ mọi ô mất màu, riêng ô đúng mất màu nhưng có
-    //     VIỀN SÁNG DÀY ("reveal") — thầy chọn cho lộ đáp án đúng sau khi vòng đã chốt.
+    //     VIỀN SÁNG DÀY ("reveal") — thầy chọn cho lộ đáp án đúng sau khi vòng đã chốt. ⭐ Đợt 458: "reveal" nay vẽ Y NHƯ ô chưa chọn (không sáng).
     // Trước khi chốt: CẢ BÀN mờ đều ("dim"), KHÔNG đánh dấu ô đã chọn — Đợt 413b (thầy): viền trắng ô đã chọn + tàu tiến lên
     // ngay = lộ đúng ô đáp án cho đội đang nghĩ cùng câu suốt Time delay (trái luật Đợt 217). Tàu tiến chỉ nói "đội này đúng".
     function paint3dTiles() {

@@ -681,6 +681,7 @@ export function createMissiles(X) {
       qA: q0.clone(), qB: new THREE.Quaternion().setFromUnitVectors(new V3(1, 0, 0), UP), lit: false,
       q0: p0.clone().addScaledVector(UP, D1), F: 4 * RS, ua: a, ub: 3 - 2 * a - e, uc: e + a - 2, k: 0 };
     flights.push(f);
+    if (X.onLaunch) X.onLaunch(to, f.dur);              // Đợt 458: trang game kéo dài Time delay của bàn bị bắn
     G.wideCam = true;                                  // 6b: góc nhìn RỘNG để thấy cả đường bay + va chạm
     alarm(f, true);                                  // 6d: chuông báo động bên bị bắn
     return f;

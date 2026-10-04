@@ -841,3 +841,6 @@ khu tên lửa "cột dọc mọc lên" · PEACE bật/tắt trong trận · thi
 - **455 (04/10)**: xoay lên trời làm TRÊN BỆ (quả theo tàu): `firing` ⇒ `ext` (EXT_T 0,3, đẩy ra EXT 0,3 + cổ tay chụm) → `tilt` (TILT_T 0,45,
   `ms.g.rotation.y = sgn·π/2`) → `liftoff` (ROT_T = 0). Tay `LA = LB` 0,5. Bắn đôi đo `G.t − rec.t0 ≥ PAIR_T`. Tiếng `sfx.servo`. Bàn thử
   `missile.mountGap(side, j)` (khoảng hở quả↔vỏ). Thanh câu hỏi: `glassPanel(..., solid=true)` MeshBasic 0,95 + chữ `stroke` 0,16.
+
+- **458 (04/10)**: `"reveal"` vẽ như idle · `UI_SHAKE` 0,1 (bảng là con camera — trừ ngược cú rung làm bảng rung MẠNH hơn) · Time delay kéo
+  dài khi bị bắn: `ctl.setDelayFloor(msDelayFloorMs)` + `onMissileLaunch → ctl.stretchDelay` (core/fight.js mới), lề `MS_DELAY_MARGIN` 0,35 s.

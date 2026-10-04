@@ -1160,6 +1160,21 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   }
   function cancelRound() { clearTimeout(roundTimer); roundTimer = null; roundDue = null; }
   function cancelPending() { clearTimeout(pendingTimer); pendingTimer = null; pendingDue = null; }
+  // ⭐ Đợt 458 (thầy 04/10/2026, Rocket race) — KÉO DÀI cửa sổ Time delay theo yêu cầu template. Template đăng ký
+  // `ctl.setDelayFloor(fn)` (fn(bànChờ) → số ms tối thiểu tính từ BÂY GIỜ) — hỏi lúc cửa sổ mở; và gọi `ctl.stretchDelay(bàn, ms)`
+  // khi tình huống mới phát sinh giữa cửa sổ. Chỉ KÉO DÀI (không bao giờ rút ngắn), chỉ khi đang chờ đúng bàn đó, bỏ qua ở ∞.
+  // Template không đăng ký ⇒ không có gì đổi.
+  let delayFloorFn = null;
+  function stretchPending(waitSide, ms) {
+    if (!pendingDue || pendingWinner === null || 1 - pendingWinner !== waitSide || !(ms > 0) || !isFinite(ms) || torndown) return false;
+    const left = pendingTimer ? Math.max(0, pendingDue.endAt - performance.now()) : pendingDue.left;
+    if (ms <= left + 30) return false;
+    if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; }
+    pendingDue.left = ms;
+    armPending();                                      // đang dừng (☰) ⇒ armPending tự hoãn, giữ `left` mới
+    if (!pickMode && !turnsMode && !soloBoards) paintWaitBar(ms, refPaused ? "hold" : undefined);
+    return true;
+  }
   function cancelPick() { clearTimeout(pickTimer); pickTimer = null; pickDue = null; }
 
   /**
@@ -1616,6 +1631,9 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // "shared-top"`), or null. Rebuilt with every match (restartMatch builds a
     // new frame), so a template must compare it against what it drew into last.
     sharedRoot() { return sharedEl; },
+    // ⭐ Đợt 458 — xem `stretchPending` (kéo dài Time delay cho bàn đang chờ; Rocket race: đang bị tên lửa bắn)
+    setDelayFloor(fn) { delayFloorFn = typeof fn === "function" ? fn : null; },
+    stretchDelay(side, ms) { return stretchPending(side, ms); },
 
     // Đợt 133 (teacher: "chỉ phát 1 voice duy nhất cho cả 2 đội") — a tap on
     // EITHER board's listen button routes here (see anagram.js's
@@ -2018,6 +2036,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
           left: tieMs, endAt: 0
         };
         armPending();   // Đợt 219 — không đặt nếu trọng tài đang bị dừng; nối lại lúc chạy tiếp
+        if (delayFloorFn) { try { stretchPending(other, delayFloorFn(other)); } catch { /* template lỗi ⇒ giữ Time delay gốc */ } }   // Đợt 458
         return;
       }
 

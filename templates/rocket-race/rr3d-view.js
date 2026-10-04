@@ -635,6 +635,7 @@ export async function createView(cfg) {
     winner: null, paused: false, qHidden: false
   };
   let trauma = 0;           // rung camera
+  const UI_SHAKE = 0.1;     // Đợt 458: phần rung còn lại của bảng đáp án / câu hỏi (cũ = 1)
   let fovKick = 0;
   let introT = 0;
   const introShown = [];
@@ -1409,6 +1410,7 @@ export async function createView(cfg) {
     onFire: side => cfg.onFire && cfg.onFire(side), onBoost: side => cfg.onBoost && cfg.onBoost(side),
     onEnd: (to, res, from, tag) => cfg.onMissileEnd && cfg.onMissileEnd(to, res, from, tag),   // 441: tag "clash" = dính vụ đâm nhau (×1,5)
     onLoad: side => cfg.onLoad && cfg.onLoad(side),                // Đợt 409: chạm quả nhỏ = nạp
+    onLaunch: (to, dur) => cfg.onMissileLaunch && cfg.onMissileLaunch(to, dur),   // Đợt 458: tên lửa vừa rời bệ
     renderer,                                                       // Đợt 454: mặt phẳng cắt (tên lửa đỏ dần khi nạp)
     sfxCharge: (dur, v) => { try { return cfg.sfxCharge ? cfg.sfxCharge(dur, v) : null; } catch { return null; } },   // Đợt 454: tiếng nạp năng lượng
     sfxServo: (dur, v) => { try { cfg.sfxServo && cfg.sfxServo(dur, v); } catch { /* ignore */ } }   // Đợt 455: servo robot xoay tên lửa
@@ -2173,7 +2175,10 @@ export async function createView(cfg) {
       const sx = rand(-1, 1) * sh * 0.5, sy = rand(-1, 1) * sh * 0.5;
       const off = new V3(sx, sy, 0).applyQuaternion(camera.quaternion);
       camera.position.add(off);
-      ui.position.set(-sx, -sy, 0);
+      // ⭐ Đợt 458 (thầy: "bị tên lửa trúng, ô đáp án rung mạnh quá, lẫn lúc đang chọn"): bảng là CON của camera ⇒ để yên (0) là
+      // đứng im tuyệt đối trên màn; trừ ngược −sx như 2h lại làm bảng ĐỨNG YÊN TRONG KHÔNG GIAN, tức là rung trên màn còn mạnh hơn cảnh
+      // (bảng ở rất gần camera). Nay chỉ giữ 10 % cú rung cũ cho có cảm giác va chạm.
+      ui.position.set(-sx * UI_SHAKE, -sy * UI_SHAKE, 0);
     } else {
       camera.position.copy(camBase.pos).add(new V3(rand(-1, 1) * sh * 0.5, rand(-1, 1) * sh * 0.5, 0));
       camera.lookAt(camBase.look);
@@ -2250,7 +2255,9 @@ export async function createView(cfg) {
     else if (t.state === "correct") { body = tc.clone().multiplyScalar(0.62); rim = new THREE.Color(0.25, 2.4, 0.8); emis = 0.42 + 0.4 * t.pulse; border = 0.075; }
     else if (t.state === "wrong") { body = new THREE.Color("#6b0f1c"); rim = new THREE.Color(3.6, 0.4, 0.5); emis = 0.3; emisCol = RED_EM; }
     else if (t.state === "pale") { body = tc.clone().multiplyScalar(0.3).lerp(new THREE.Color("#1b1f29"), 0.35); rim = tc.clone().multiplyScalar(0.7); emis = 0.1; txtOp = 0.7; }
-    else if (t.state === "reveal") { body = new THREE.Color("#1b1f29"); rim = new THREE.Color(1.5, 1.6, 1.8).multiplyScalar(0.85 + 0.15 * Math.sin(G.t * 5)); emis = 0.02; txtOp = 0.85; border = 0.09; }
+    // ⭐ Đợt 458 (thầy 04/10/2026): "reveal" (bàn không kịp chọn) = ô đúng GIỮ NGUYÊN như lúc chưa chọn — KHÔNG sáng, không viền dày
+    // (sáng lên làm HS tưởng mình đã chọn được); các ô sai "dim" mất màu. Tức là để nguyên màu mặc định ở trên.
+    else if (t.state === "reveal") { /* như idle */ }
     else if (t.state === "locked" || t.state === "dim") { body = new THREE.Color("#1b1f29"); rim = tc.clone().multiplyScalar(0.25); emis = 0.02; txtOp = 0.45; }
     t.bodyMat.color.lerp(body, Math.min(1, dt * 10));
     t.rimMat.color.lerp(rim, Math.min(1, dt * 10));

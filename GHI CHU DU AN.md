@@ -546,6 +546,34 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 458 (04/10/2026) — ROCKET RACE ▸ FIGHT 3D: ô "không kịp chọn" giữ nguyên màu · ô đáp án gần như không rung khi trúng tên lửa · TIME DELAY kéo dài tới sát lúc tên lửa nổ · ⚠️ SỬA CORE `core/fight.js` (móc tuỳ chọn) · ✅ THẦY DUYỆT ⇒ PUSH (04/10) · ⬜ thầy thử TOMKO
+
+(Số 456/457 đã có phiên khác dùng song song — Start Again / A Show Speed.)
+
+Thầy (3 ý):
+1. **Đội chậm không kịp chọn** (`"reveal"`, rr3d-view.js `tickTile`): ô ĐÚNG giữ NGUYÊN như lúc chưa chọn (không sáng, không viền dày —
+   trước đây sáng lên làm HS tưởng mình đã chọn được); ô sai vẫn `"dim"` mất màu (đen trắng). rocket-race.js vẫn gửi "reveal"/"dim",
+   chỉ đổi cách vẽ.
+2. **Rung ô đáp án khi trúng tên lửa**: nguyên nhân — `steadyUI` (2h) dời bảng NGƯỢC cú rung camera (`ui.position = −sx`) với ý "giữ
+   bảng đứng yên", nhưng bảng là CON của camera ⇒ làm vậy là ghim bảng trong KHÔNG GIAN ⇒ trên màn bảng rung theo tỉ lệ khoảng cách gần
+   (mạnh HƠN cả cảnh). Nay `ui.position = −sx · UI_SHAKE`, `UI_SHAKE = 0,1` (còn 10 % cú rung cũ cho có cảm giác va chạm).
+3. **Time delay kéo dài khi đang bị bắn**: đội A trả lời đúng mà đang có tên lửa bay tới bàn B ⇒ cửa sổ chờ của B = thời gian còn lại tới lúc
+   tên lửa nổ − `MS_DELAY_MARGIN` 0,35 s (chỉ khi dài hơn Time delay trong Options). Tên lửa phóng GIỮA cửa sổ ⇒ kéo dài ngay lúc rời bệ
+   (`X.onLaunch` → `cfg.onMissileLaunch` → `msStretchDelay`). B chọn đúng trong cửa sổ ⇒ được nhận + NÉ như thường.
+   ⚠️ **SỬA CORE** `core/fight.js`: thêm `delayFloorFn` + `stretchPending(waitSide, ms)` (cạnh `cancelPending`), gọi 1 lần ngay sau
+   `armPending()` lúc mở cửa sổ; `ctl.setDelayFloor(fn)` + `ctl.stretchDelay(side, ms)`. Template không đăng ký ⇒ y như cũ. Ghi vào
+   `core/HUONG DAN CORE.md` cạnh `ctl.forfeit`.
+
+**Đã tự kiểm** (bàn thử `scratch/dot413-rr.html` + `fightTieWindow: 1`, khung ẩn ⇒ tua cảnh khớp đồng hồ thật, viewport 1280×800, 0 lỗi console):
+- Tên lửa còn 3,47 s lúc đội 0 trả lời đúng ⇒ cửa sổ bàn 1 kéo dài **3 169 ms** (thay 1 000), rồi bàn 1 mới bị khoá.
+- Không có tên lửa ⇒ cửa sổ **1 026 ms** (như cũ).
+- Đội 1 trả lời đúng ở giây 2,4 của cửa sổ kéo dài (tên lửa còn 1,07 s) ⇒ ô "correct", tên lửa bị NÉ, tàu 1 tiến 0 → 1 không mất nấc.
+- Ảnh bàn chậm: ô đúng "Armstrong" giữ màu cam như chưa chọn, 2 ô sai xám.
+
+### VIỆC ĐANG CHỜ (Đợt 458)
+- ⬜ Thầy xem trên TOMKO: cảm giác rung còn 10 % (`UI_SHAKE`), độ dài cửa sổ khi bị bắn, thanh chờ chạy dài theo.
+- ✅ Thầy duyệt sửa core 04/10 ⇒ commit + push (gồm cả `core/fight.js`).
+
 ## Đợt 457 (04/10/2026) — A SHOW SPEED (template): Ô TÍCH "WORD LIST ONLY" (mặc định BẬT) · BẢNG GIỮA FIGHT WORD LIST/FREE WORDS CO CHỮ VỪA KHUNG, KHÔNG CUỘN, KHÔNG MŨI TÊN · ⬜ chưa commit/push — chờ thầy duyệt · ⬜ thầy thử tay TOMKO
 
 **Thầy giao (04/10):** (1) mọi chế độ thêm 1 ô tích (mặc định bật) chỉ dùng từ trong bộ từ của act — gõ từ khác, dù đúng từ điển, KHÔNG tính;
