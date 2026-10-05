@@ -18,6 +18,8 @@ const SO = { zero: "0", one: "1", two: "2", three: "3", four: "4", five: "5", si
   eighteen: "18", nineteen: "19", twenty: "20" };
 
 const TAT = [
+  // Đợt 471 (05/10): "l'm" (L thường) = "I'm" — phông Baloo vẽ I và l y hệt; bài thật 02/10 có "l'm 10 year old".
+  [/\bl'(m|ll|ve|d)\b/g, "i'$1"],
   [/\bcan'?t\b/g, "cannot"], [/\bcan not\b/g, "cannot"], [/\bwon'?t\b/g, "will not"], [/\bshan'?t\b/g, "shall not"],
   [/\bain'?t\b/g, "is not"],
   [/\b(do|does|did|is|are|was|were|has|have|had|could|would|should|must|need|might)n'?t\b/g, "$1 not"],

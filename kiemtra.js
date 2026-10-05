@@ -214,6 +214,8 @@ let mocGioiThieu = 0, gioiThieuMs = 0, thuSai = 0, thuMs = 0;
 // Chữ em gõ ở mỗi lần LÀM THỬ bị chấm sai (02/10 — ca iPhone báo "gõ đúng mà sai" không còn dữ liệu để soi).
 // Ký tự ngoài ASCII ghi dạng <U+XXXX>; tối đa 12 lần, mỗi lần 120 ký tự. Đi theo bài làm (hàng 0, kt.thuChu).
 let thuChu = [];
+// Đợt 471: lần chấm mà chữ TỚI MUỘN (đọc lại sau nửa giây khác lần đầu) — { cau, truoc, sau, dung }.
+let thuTre = [];
 const lo = v => [...String(v)].map(ch => (/[\x20-\x7E]/.test(ch) ? ch : "<U+" + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0") + ">")).join("").slice(0, 120);
 async function gioiThieu(act, items, { tuDau = false, xemLai = false, quayVe = null } = {}) {
   const d = dangCua(act);
@@ -336,11 +338,25 @@ function lamThu(act, items) {
     vuaKhung(c);
     o.inp.focus();
     o.onEnter = () => cham();
-    let daDung = false;
-    function cham() {
+    let daDung = false, dangCham = false;
+    async function cham() {
       if (daDung) { tiep(); return; }
-      const v = o.giaTri();
+      if (dangCham) return;
+      dangCham = true;
+      try { await chamThat(); } finally { dangCham = false; }
+    }
+    async function chamThat() {
+      let v = await o.choYen();
       if (!v.trim()) { o.inp.focus(); return; }
+      // Sai ⇒ đợi thêm nửa giây đọc lại: chữ tới muộn mà nay khớp đáp án thì tính ĐÚNG (ghi lại để soi).
+      if (!dung(v, it.acceptedAnswers)) {
+        await new Promise(r => setTimeout(r, 500));
+        const v2 = o.giaTri();
+        if (v2 !== v) {
+          if (thuTre.length < 12) thuTre.push({ cau: i + 1, truoc: lo(v), sau: lo(v2), dung: dung(v2, it.acceptedAnswers) });
+          v = v2;
+        }
+      }
       if (dung(v, it.acceptedAnswers)) {
         daDung = true;
         bao.className = "kt-bao dung";
@@ -405,6 +421,19 @@ function taoO() {
   //   `o.giaTri()` (lọc lại lần cuối). `o.ghep` = Enter tới lúc đang ghép (ghi vào bài làm để còn soi).
   const o = { dong, inp, onEnter: null, ghep: 0, giaTri: () => { loc(); return inp.value; } };
   let dangGhep = false, choEnter = 0;
+  // ⭐ Đợt 471 (05/10) — "gõ đúng mà báo sai": chữ CUỐI có thể tới ô SAU lúc chấm (bàn phím iPhone đang ghép chữ,
+  //   UniKey giữ phím ~150 ms để đoán, Zalo chậm…). choYen() chờ ô "đứng yên": không ghép chữ + 250 ms không có
+  //   phím/chữ mới (tối đa 1 giây). Gõ xong rồi mới bấm thì trả về ngay, không làm em phải đợi.
+  let lanGo = 0;
+  inp.addEventListener("keydown", e => { if (e.key !== "Enter" && e.keyCode !== 13) lanGo = performance.now(); }, true);
+  inp.addEventListener("input", () => { lanGo = performance.now(); }, true);
+  o.choYen = () => new Promise(xong => {
+    const bd = performance.now();
+    (function doi() {
+      const t = performance.now();
+      if ((!dangGhep && t - lanGo >= 250) || t - bd >= 1000) xong(o.giaTri()); else setTimeout(doi, 50);
+    })();
+  });
   const banEnter = () => { clearTimeout(choEnter); choEnter = 0; o.onEnter && o.onEnter(); };
   const chanSk = e => { e.preventDefault(); if (demDan && (e.type === "paste" || e.type === "drop" || e.inputType === "insertFromPaste" || e.inputType === "insertFromDrop")) demDan(); };
   ["paste", "copy", "cut", "drop", "dragstart", "contextmenu"].forEach(t => inp.addEventListener(t, chanSk));
@@ -440,11 +469,12 @@ function taoO() {
   });
   const chen = ch => {
     const a = inp.selectionStart ?? inp.value.length, b = inp.selectionEnd ?? inp.value.length;
-    inp.value = inp.value.slice(0, a) + ch + inp.value.slice(b);
+    inp.value = inp.value.slice(0, a) + ch + inp.value.slice(b); lanGo = performance.now();
     inp.setSelectionRange(a + ch.length, a + ch.length);
   };
   const xoa = () => {
     const a = inp.selectionStart ?? inp.value.length, b = inp.selectionEnd ?? inp.value.length;
+    lanGo = performance.now();
     if (a === b) { if (!a) return; inp.value = inp.value.slice(0, a - 1) + inp.value.slice(b); inp.setSelectionRange(a - 1, a - 1); }
     else { inp.value = inp.value.slice(0, a) + inp.value.slice(b); inp.setSelectionRange(a, a); }
   };
@@ -464,7 +494,7 @@ function moiTrangThai(items) {
 function lamBai(act, items, s) {
   if (!s) {
     s = moiTrangThai(items);
-    s.gioiThieuMs = gioiThieuMs; s.thuSai = thuSai; s.thuMs = thuMs; s.thuChu = thuChu.slice();
+    s.gioiThieuMs = gioiThieuMs; s.thuSai = thuSai; s.thuMs = thuMs; s.thuChu = thuChu.slice(); s.thuTre = thuTre.slice();
   }
   const { than, dongHo, menu } = khung;
   dongHo.hidden = false; menu.hidden = false;
@@ -574,14 +604,25 @@ function lamBai(act, items, s) {
   }
   function laCuoi() { return s.hang ? s.hang.length <= 1 : s.i === items.length - 1; }
 
-  function traLoi(boQua) {
-    if (daNop || dangMenu) return;
+  // Đợt 471: TIẾP/Enter chờ ô "đứng yên" (chữ cuối tới muộn — xem taoO) rồi mới lấy chữ.
+  let dangTraLoi = false;
+  async function traLoi(boQua) {
+    if (daNop || dangMenu || dangTraLoi) return;
+    const oCu = o;
+    dangTraLoi = true;
+    try { if (!boQua) await oCu.choYen(); } finally { dangTraLoi = false; }
+    if (daNop || dangMenu || o !== oCu) return;
     const v = boQua ? "" : o.giaTri().trim().replace(/\s+/g, " ");
     if (o.ghep) { cau().ghep = (cau().ghep || 0) + o.ghep; o.ghep = 0; }   // Enter tới lúc bàn phím đang ghép chữ
     if (!boQua && !v) { o.inp.focus(); return; }
     chotCau();
     const c = cau();
     c.typed = v; c.xong = true; c.boQua = !v;
+    // Lưới đỡ: nửa giây sau đọc lại ô CŨ — chữ tới muộn (bộ gõ vẫn chèn vào ô cũ) mà nối tiếp đúng chữ đã lấy ⇒ bổ sung.
+    if (v) setTimeout(() => {
+      const v2 = oCu.giaTri().trim().replace(/\s+/g, " ");
+      if (v2 !== v && v2.startsWith(v) && c.typed === v) { c.typed = v2; c.tre = (c.tre || 0) + 1; luu(); }
+    }, 500);
     // câu kế tiếp
     if (s.hang) {
       s.hang = s.hang.filter(x => x !== s.i);
@@ -695,7 +736,7 @@ function lamBai(act, items, s) {
         const cu = s;
         const moi = moiTrangThai(items);
         moi.lamLai = cu.lamLai + 1; moi.taiLai = cu.taiLai;
-        moi.gioiThieuMs = cu.gioiThieuMs; moi.thuSai = cu.thuSai; moi.thuMs = cu.thuMs; moi.thuChu = cu.thuChu;
+        moi.gioiThieuMs = cu.gioiThieuMs; moi.thuSai = cu.thuSai; moi.thuMs = cu.thuMs; moi.thuChu = cu.thuChu; moi.thuTre = cu.thuTre;
         Object.keys(s).forEach(k => delete s[k]); Object.assign(s, moi);
         dangMenu = false; doan = Date.now();
         beatPlayLog(log()).catch(() => {});
@@ -720,11 +761,12 @@ function dungReview(items, s, { doDang = false } = {}) {
     return {
       question: it.prompt, answered: !!c.typed, yourText: c.typed || "", yourCorrect, correctText: it.acceptedAnswers[0],
       ms: Math.round(c.ms), anMs: Math.round(c.anMs), roi: c.roi, mat: c.mat, matMs: Math.round(c.matMs),
-      dan: c.dan, phim: c.phim, lanXem: c.lanXem, boQua: !c.typed, ...(c.ghep ? { ghep: c.ghep } : {})
+      dan: c.dan, phim: c.phim, lanXem: c.lanXem, boQua: !c.typed, ...(c.ghep ? { ghep: c.ghep } : {}), ...(c.tre ? { tre: c.tre } : {})
     };
   });
   review[0].kt = { lamLai: s.lamLai, taiLai: s.taiLai, gioiThieuMs: Math.round(s.gioiThieuMs), thuSai: s.thuSai, thuMs: Math.round(s.thuMs),
     ...(Array.isArray(s.thuChu) && s.thuChu.length ? { thuChu: s.thuChu } : {}),
+    ...(Array.isArray(s.thuTre) && s.thuTre.length ? { thuTre: s.thuTre } : {}),
     luotSo: (s.lamLai || 0) + 1, ...(doDang ? { doDang: true, dangCau: s.i + 1 } : {}), phienBan: 2 };
   return review;
 }

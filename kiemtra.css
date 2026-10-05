@@ -106,6 +106,9 @@ html:not(.kt-nhung) .kt { max-width: 900px; margin: 16px auto; height: calc(100%
 .kt-de-cau { font-size: 1.7rem; font-weight: 800; text-align: center; line-height: 1.25; padding: 14px 6px; }
 .kt-o-dong { display: flex; }
 .kt-o { flex: 1; font: inherit; font-size: 1.35rem; font-weight: 700; color: var(--chu); padding: 10px 16px; border: 3px solid var(--vien); border-radius: 14px; outline: none; background: #fff; min-width: 0; }
+/* Đợt 471: ô gõ dùng Verdana — chữ I hoa có gạch trên/dưới, khác hẳn l thường (Baloo vẽ I và l y hệt ⇒ em gõ nhầm mà không thấy).
+   Android không có Verdana ⇒ phông đơn cách (I cũng có gạch). */
+.kt-o { font-family: Verdana, Tahoma, "DejaVu Sans Mono", "Droid Sans Mono", monospace; font-weight: 600; letter-spacing: .01em; }
 .kt-o:focus { border-color: var(--xanh); }
 .kt-o.dung { border-color: var(--dung); background: #effaf3; }
 .kt-o.sai { border-color: var(--sai); animation: kt-lac .35s; }
