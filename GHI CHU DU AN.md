@@ -564,6 +564,7 @@ Thêm 11–19 ms/câu: shader mảnh xác robot bị three.js xoá khi dispose r
 
 **Đo sau (bản cục bộ trong myActivity, `__awMaxPR = 1`):** intro 60 fps · chơi 59,3–59,9 fps, khung dài nhất 33–55 ms · Fight (myGame 2p) 59,7–59,8 ·
 không trần (như Chrome) tự xuống PR 1,05 + MSAA 0, 59–60 fps. Ảnh: sàn khớp đúng mê cung mới ở các câu sau. Còn ~40 ms/câu (`getImageData` sau bộ lọc mờ) — chấp nhận.
+- ✅ Push `7c3c408` + LIVE 5/5 mã băm. App thật myActivity + game LIVE (không đặt tay): hostCap 1, màn chờ / intro 60 fps, chơi 59,2–59,8 fps.
 - ⬜ Thầy chơi trên TOMKO: độ mượt, sàn đổi đúng mỗi câu, độ lấp loá khi bỏ MSAA.
 
 ---
