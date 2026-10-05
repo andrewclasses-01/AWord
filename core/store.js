@@ -117,8 +117,13 @@ async function readAll() {
   if (cache && cacheUid === uid) return cache;
   if (inflight && inflight.uid === uid) return inflight.p;
   const p = (async () => {
-    const [d, { collection, getDocs }] = await Promise.all([db(), fs()]);
-    const snap = await getDocs(collection(d, itemsPath(uid)));
+    const [d, { collection, getDocs, query, where }] = await Promise.all([db(), fs()]);
+    // ⭐ Đợt 483 (05/10/2026) — KHÔNG kéo SỔ CÁI SHOWDOWN về lúc mở trang. Đo kho thật: 547 doc ≈ 33 MB
+    // (JSON REST), trong đó 32 doc "showdown-history" = 12,8 MB (doc to nhất 1 MB) — iPad đứng ở màn chờ
+    // 30–40 s (bảng ?do=1). Không ai đọc chúng qua cache này: core/showdown-history.js tự getDoc từng
+    // tháng/lớp, còn ở đây chúng chỉ bị APP_DATA_KINDS lọc bỏ. `!=` loại cả doc THIẾU `kind` — 5/10 mọi
+    // doc đều có kind (546/546); doc mới phải luôn có kind. Thử máy chủ: 515 doc, 20,3 MB, đủ mọi kind khác.
+    const snap = await getDocs(query(collection(d, itemsPath(uid)), where("kind", "!=", "showdown-history")));
     const map = {};
     snap.forEach(s => { map[s.id] = { ...s.data(), id: s.id }; });
     // Đợt 143 — every act the library hands out arrives on the CURRENT option

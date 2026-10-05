@@ -546,6 +546,20 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 483 (05/10/2026) — ⭐⭐⭐ THƯ VIỆN MỞ CHẬM 30–40 s TRÊN iPAD = KÉO CẢ KHO 33 MB ⇒ BỎ SỔ CÁI SHOWDOWN KHỎI LƯỢT ĐỌC ĐẦU · phiên MSI
+**Thầy gửi bảng `?do=1` lần 2 (sau Đợt 481):** tải trùng 92 → 6 lượt, FCP 5,30 → 3,25 s — nhưng thầy "vẫn thấy lâu": màn chờ `.aw-boot` CÒN HIỆN sau 30 s,
+ảnh đại diện Google (`lh3`, vẽ cùng thanh trên của thư viện) tải lúc 38,9 s, file AWord cuối xong 42,5 s ⇒ thư viện hiện ra sau ~35–40 s.
+Gốc: `init()` → `maybeSeed()/ensureNumbers()` → `readAll()` = `getDocs(users/{uid}/items)` TOÀN BỘ kho rồi mới `render()` (xoá màn chờ).
+**Đo kho thật (khoá quản trị, CHỈ ĐỌC, script scratchpad `do-kho*.js`):** 547 doc ≈ **33 MB** JSON REST:
+act 306 doc 20,2 MB (trong đó `content.goiY` — các bộ gợi ý — 13,4 MB) · **showdown-history 32 doc 12,8 MB** (`matches`, doc to nhất 1 MB) · folder 176 doc 78 KB · còn lại < 0,2 MB.
+**Đã làm:** `core/store.js` `readAll()`: `getDocs(query(collection, where("kind", "!=", "showdown-history")))`. Không ai đọc sổ cái qua cache này
+(`core/showdown-history.js` tự `getDoc` từng tháng/lớp/idx; ở store chúng chỉ bị `APP_DATA_KINDS` lọc). Luật `users/{uid}/items`: `isTeacher() && uid` ⇒ truy vấn có where hợp lệ.
+⚠️ `!=` loại doc THIẾU `kind` — 5/10 kho 546/546 doc có kind; doc mới PHẢI có kind (mọi đường ghi hiện tại đều có).
+**Kiểm:** runQuery NOT_EQUAL trên máy chủ thật (khoá quản trị, chỉ đọc): HTTP 200, 515 doc, **20,3 MB** (−39 %), đủ act/folder/class/settings/stats-month/showdown-history-index…, 2,6 s.
+`node --input-type=module --check` sạch · trang chủ WebKit + Chrome nạp `core/store.js` không lỗi (400 reCAPTCHA `clr` trên localhost có sẵn từ trước).
+⬜ CHƯA chạy đường đăng nhập thật (Claude không đăng nhập được Google của thầy) ⇒ thầy mở AWord đã đăng nhập: thư viện, Showdown Home (lịch sử theo tháng), Stats phải như cũ.
+**Còn lại (đề xuất, chưa làm):** 13,4 MB `content.goiY` của act cũng chỉ cần lúc CHƠI act đó ⇒ tách ra doc riêng (đổi cấu trúc dữ liệu, cần thầy duyệt) sẽ đưa lượt đọc đầu về ~7 MB.
+
 ## Đợt 482 (05/10/2026) — THU GỌN MÃ KHI XUẤT BẢN (esbuild minify từng file) · ĐÃ THỬ ĐỦ, ⬜ CHỜ THẦY BẬT · phiên MSI
 **Vì sao:** sau Đợt 481 trang chủ vẫn phải tải ~1 MB; JS+CSS trang chủ 837 KB (nén) mà phần lớn là CHÚ THÍCH tiếng Việt ⇒ thu gọn còn ~219 KB.
 **Đã làm (repo, KHÔNG đổi cách xuất bản):**
