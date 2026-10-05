@@ -55,6 +55,13 @@
   }
   requestAnimationFrame(raf);
 
+  // ---- LCP (nội dung lớn nhất hiện ra) — Safari mới + Chrome; không có thì bỏ qua ----
+  var lcp = null;
+  try {
+    new PerformanceObserver(function (l) { var e = l.getEntries(); if (e.length) lcp = e[e.length - 1].startTime; })
+      .observe({ type: 'largest-contentful-paint', buffered: true });
+  } catch (e) { /* trình duyệt không hỗ trợ */ }
+
   // ---- mốc DOM của AWord ----
   function coChuLoading() {
     var b = document.body;
@@ -72,7 +79,9 @@
   function kiem() {
     henKiem = 0;
     var now = T();
-    var boot = !!document.querySelector('.aw-boot');
+    // Đợt 480: màn chờ còn trong DOM nhưng đã ẨN (khung cha display:none…) cũng tính là hết — iPad đã đăng nhập báo "—" suốt 30 s.
+    var bEl = document.querySelector('.aw-boot');
+    var boot = !!bEl && bEl.getClientRects().length > 0;
     if (!boot && moc.hetMauCho == null) moc.hetMauCho = now;
     if (!boot && moc.hetLoading == null && !coChuLoading()) moc.hetLoading = now;
     if (moc.hetLoading != null && coChuLoading()) moc.hetLoading = null;   // "Loading" hiện lại ⇒ chưa xong
@@ -115,8 +124,12 @@
       if (/\.m?js(\?|$)/.test(r.name)) { js.n++; js.giai += r.decodedBodySize || 0; }
     });
     var cham = res.slice().sort(function (a, b) { return b.duration - a.duration; }).slice(0, 10);
+    // Đợt 480: cùng một đường dẫn bị tải nhiều lần (bẫy Safari + fetch() làm nóng của Đợt 285c)
+    var demUrl = {}, trung = 0, thua = 0;
+    res.forEach(function (r) { demUrl[r.name] = (demUrl[r.name] || 0) + 1; });
+    Object.keys(demUrl).forEach(function (u) { if (demUrl[u] > 1 && !/Listen\/channel|recaptcha|appcheck/.test(u)) { trung++; thua += demUrl[u] - 1; } });
     return {
-      n: n, fcp: fcpE ? fcpE.startTime : null, res: res, theoNoi: theoNoi, js: js, tai: tai, cache: cache, khongBiet: khongBiet, cham: cham
+      n: n, fcp: fcpE ? fcpE.startTime : null, res: res, theoNoi: theoNoi, js: js, tai: tai, cache: cache, khongBiet: khongBiet, cham: cham, trung: trung, thua: thua
     };
   }
 
@@ -137,10 +150,10 @@
       (n.secureConnectionStart > 0 ? ' (TLS ' + soMs(n.connectEnd - n.secureConnectionStart) + ')' : '') + ' · chờ trang ' + soMs(n.responseStart - n.requestStart) +
       (n.redirectEnd ? ' · chuyển hướng ' + soMs(n.redirectEnd - n.redirectStart) : ''));
     L.push('② HTML xong ' + soMs(n.responseEnd) + ' · DOM sẵn ' + soMs(n.domContentLoadedEventEnd || null) + ' · load ' + soMs(n.loadEventEnd || null));
-    L.push('③ Hình đầu tiên (FCP) ' + soMs(d.fcp));
+    L.push('③ Hình đầu tiên (FCP) ' + soMs(d.fcp) + ' · nội dung lớn nhất (LCP) ' + soMs(lcp));
     L.push('④ ⭐ Hết màn chờ ' + soMs(moc.hetMauCho) + ' · ⭐ Hết "Loading" ' + soMs(moc.hetLoading) + ' · DOM thôi đổi ' + soMs(moc.domCuoi));
     L.push('⑤ ' + d.res.length + ' file · tải ' + soKB(d.tai) + ' · từ cache ' + d.cache + (d.khongBiet ? ' · không rõ ' + d.khongBiet : '') +
-      ' · JS ' + d.js.n + ' file (' + soKB(d.js.giai) + ' mã)');
+      ' · JS ' + d.js.n + ' file (' + soKB(d.js.giai) + ' mã)' + ' · TẢI TRÙNG ' + d.trung + ' file (thừa ' + d.thua + ' lượt)');
     Object.keys(d.theoNoi).sort(function (a, b) { return d.theoNoi[b].n - d.theoNoi[a].n; }).forEach(function (k) {
       var g = d.theoNoi[k];
       L.push('    ' + k + ': ' + g.n + ' file ' + soKB(g.kb) + ' · xong lúc ' + soMs(g.xong));
