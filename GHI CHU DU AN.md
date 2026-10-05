@@ -564,6 +564,7 @@ nhúng: KHÔNG phần tử nào cuộn được (scrollHeight = clientHeight c�
 - Đo giả lập điện thoại cảm ứng 375×812: gõ "cold" bằng phím ảo ⇒ đúng chữ, ô KHÔNG focus, vạch theo cuối chữ (x 187→206);
   Submit ⇒ vạch ẩn; câu sau ⇒ hiện lại. Máy tính: không vạch giả, gõ phím thật vẫn vào ô, không lỗi console.
 - myLesson `bai.html` v1.248.0: nút tròn nền trắng mờ .78 + viền mảnh + icon xám #94a3b8 (hover trắng, icon #64748b).
+- ✅ AWord push `24751fa` · myLesson `55ae6c9` + trang thử `7e9eb79` · LIVE 4/4 mã băm.
 - ⬜ Thầy thử iPhone thật: chữ đầu tiên còn giật không.
 
 ---
