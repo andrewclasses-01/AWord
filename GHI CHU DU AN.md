@@ -545,7 +545,27 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
-
+
+## Đợt 466 (05/10/2026) — PHÓNG TO TRÊN ĐIỆN THOẠI: đồng hồ + điểm + thanh dưới TO RA · tín hiệu "giữa hàng trên bận" cho nút THU NHỎ tròn của myLesson
+
+Thầy thử điện thoại thật (ảnh 390×844): đồng hồ/điểm ~9px khó nhìn; nút "THU NHỎ" (chữ, góc trái) đè đồng hồ ⇒ muốn chỉ icon
+trong hình tròn ở GIỮA hàng trên, cân với đồng hồ và điểm; thanh dưới cũng to ra (thầy chọn). Nút tròn áp MỌI màn hình.
+Sửa 2 kho: AWord (Đợt này) + myLesson web v1.247.0 (nút tròn + nghe tín hiệu).
+
+- `type-the-answer.css` (khối kiểu B): `.aw-topbar` `--aw-u: min(9px, 2.3vw)` (chữ 19,7px ở 390), cao 38px + `margin-top 2px`
+  ⇒ tâm hàng 27,2px = tâm nút tròn (top 8 + 19) — đo trong khung mô phỏng trang mẹ. `.aw-bottombar` `--aw-u: min(7,5px, 1,92vw)`
+  (thanh cần ≈ 49,7u, rộng 95,6vw ⇒ vừa khít 373px ở 390; 320px ⇒ 6,1px, nút ⛶ vẫn trong khung). Câu hỏi: bỏ khoảng chừa 46px
+  cho nút chữ cũ ⇒ `padding-top 14px`.
+- `core/engine.js` (sau `tpl.mount`, chỉ khi `html.aw-nhung` + đang trong iframe): gửi `postMessage({type:"AWORD:GIUA", ban})`
+  2 lần (ngay + 600ms). `ban` = có `topbarMid` (inlineTimerBar: Gameshow · Open the box · Whack-a-mole · Flying fruit ·
+  HOẶC ô giữa (`centreSlot`) có chữ HOẶC topbar có con nào khác ngoài đồng hồ/điểm đang hiện chữ (Crossword tự
+  gắn slogan). Mở rộng so với "4 game" thầy nêu — tự kiểm thay vì ghi cứng (Anagram/Crossword cũng có chữ giữa).
+  Đo: TTA ⇒ false; Anagram · Gameshow · Crossword ⇒ true.
+- myLesson `bai.html` v1.247.0: `.game-thu` = tròn 38px giữa trên (`left:50%`), `data-giua="1"` ⇒ góc trái; nghe `AWORD:GIUA`.
+- ⬜ Thầy thử điện thoại thật.
+
+---
+
 ## Đợt 465 (05/10/2026) — ⭐ BÀN PHÍM "GRID" KHI PHÓNG TO TRÊN ĐIỆN THOẠI (chép số đo bàn phím điện thoại thật)
 
 Thầy gửi ảnh chụp cùng một điện thoại: bàn phím Laban Key vs bàn phím AWord kiểu B (Đợt 464) — chê AWord "xấu, nút không

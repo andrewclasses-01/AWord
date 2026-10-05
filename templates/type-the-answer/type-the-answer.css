@@ -318,12 +318,19 @@
    ============================================================= */
 @media (max-width: 700px) and (max-aspect-ratio: 4/5) {
   html.aw-nhung .aw-stage:has(.aw-tta-card) { --ti-le: 100vh; --ti-le: 100dvh; }
-  /* padding-top 46px: nút "THU NHỎ" của myLesson đè góc trên trái lúc phóng to
-     (top 8px, cao 34px — bai.html `.game-thu`) ⇒ đẩy câu hỏi xuống dưới nó. */
+  /* ⭐ Đợt 466 — nút THU NHỎ của myLesson nay là icon tròn 38px ở GIỮA hàng trên cùng
+     (bai.html `.game-thu`, top 8px) ⇒ không còn đè góc trái, bỏ khoảng chừa 46px cũ. */
   html.aw-nhung .aw-tta-card {
     --tta-input-fs: 20px;
-    padding-top: 46px;
+    padding-top: 14px;
   }
+  /* ⭐ Đợt 466 (thầy: "số điểm và thời gian cần to ra") — đồng hồ + điểm ~20px, hàng cao
+     38px = đúng cỡ nút tròn THU NHỎ để ba thứ thẳng hàng; thanh dưới (≡ ⌨ ‹ 1 of N › 🔈 ⛶)
+     to tương xứng. Cách làm: nâng `--aw-u` RIÊNG cho hai thanh (mọi cỡ bên trong đều
+     viết theo u). Thanh dưới cần ≈ 49,7u bề ngang, còn bề ngang thanh = 95,6vw ⇒ u tối đa
+     1,92vw (= 7,5px ở màn 390, đo: lấp vừa khít 373px); màn hẹp hơn tự co theo. */
+  html.aw-nhung .aw-stage-inner:has(.aw-tta-card) > .aw-topbar { --aw-u: min(9px, 2.3vw); min-height: 38px; margin-top: 2px; }   /* tâm hàng = tâm nút tròn (top 8 + 19 = 27px) */
+  html.aw-nhung .aw-stage-inner:has(.aw-tta-card) > .aw-bottombar { --aw-u: min(7.5px, 1.92vw); }
   html.aw-nhung .aw-tta-prompt { font-size: calc(min(7vw, 30px) * var(--qfit)); }
   html.aw-nhung .aw-stage-inner > .aw-playarea:has(.aw-tta-card) { margin-left: calc(-2.2 * var(--aw-u)); margin-right: calc(-2.2 * var(--aw-u)); }
   html.aw-nhung .aw-tta-card .aw-kbd.is-grid {

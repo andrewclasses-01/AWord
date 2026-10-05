@@ -4035,6 +4035,19 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // của học sinh (`activity` là bản sao play.js dựng mỗi lượt) — giáo viên chơi thử / trình chiếu y như cũ.
     if (session) activity.options = Object.assign({}, activity.options, { showAnswerWhenWrong: false, anDapAn: true });
     cleanup = tpl.mount(playArea, activity, ui) || (() => {});
+    // ⭐ Đợt 466 — báo trang bài tập myLesson (khung nhúng `&nhung=1`) GIỮA hàng trên cùng
+    // có đang bận không (thanh thời gian/tim của inlineTimerBar, dòng slogan, chữ template tự
+    // gắn vào topbar…) ⇒ bên đó đặt nút THU NHỎ tròn ở giữa hay dời sang góc trái (bai.html).
+    // Gửi 2 lần: template có thể điền chữ sau một nhịp (Anagram viết slogan mỗi lần render).
+    if (document.documentElement.classList.contains("aw-nhung") && window.parent !== window) {
+      const baoGiua = () => {
+        const ban = !!topbarMid || !!(centreSlot && centreSlot.textContent.trim())
+          || [...topbar.children].some(c => c !== timerEl && c !== scoreEl && c !== centreSlot
+               && !c.contains(scoreEl) && c.textContent.trim() && c.offsetWidth > 0);
+        try { window.parent.postMessage({ type: "AWORD:GIUA", ban }, "*"); } catch (e) {}
+      };
+      baoGiua(); setTimeout(baoGiua, 600);
+    }
   }
   // ⚠️ Also kills the TIME COST watcher (Đợt 139). Every teardown path in this
   // file already funnels through stopTimer() — cleanupAll(), the countDown
