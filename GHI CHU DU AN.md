@@ -560,6 +560,7 @@ muốn nhỏ thì bấm nút tròn. Thầy chọn: phóng to khi game NẠP XONG
 - Đo (trang mô phỏng chép nguyên listener + CSS bai.html, giả lập điện thoại cảm ứng 375×812): TTA nạp xong ⇒ tự phóng to; bấm thu
   nhỏ ⇒ giữ nhỏ; bấm START trong ô nhỏ ⇒ phóng to lại + bàn phím grid; Quiz ⇒ không; Find the gap mẫu (chế độ quiz) ⇒ không;
   `usesKeyboard` FTG: type=true, find/quiz=false; máy tính (pointer fine) ⇒ không. Không lỗi console.
+- ✅ AWord push `295bf71` · myLesson `68a456c` + trang thử `0ded8e2` · LIVE 5/5 mã băm.
 - ⬜ Thầy thử điện thoại thật.
 
 ---
