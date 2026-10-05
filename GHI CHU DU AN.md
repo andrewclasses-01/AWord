@@ -546,6 +546,29 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 479 (05/10/2026) — CHẾ ĐỘ ĐO TẢI TRANG `?do=1` (đo Safari iPad thật, chụp ảnh gửi) · phiên MSI
+**Thầy báo:** AWord mở trên iPad (iOS 27) "rất lâu" mỗi lần vào aword.andrewclasses.com.
+**Đo trước (Chrome headless CDP giả lập iPad 1024×768 @2, mobile UA, CPU chậm 4–6×, wifi 40 ms/10 Mbps hoặc 4G 120 ms/6 Mbps, chặn mọi lượt GHI Firestore;
+script `do-ipad.mjs` để ở scratchpad phiên, không commit):**
+- Trang chủ (chưa đăng nhập): lần đầu 2,7 s (wifi, 4×) / 3,9 s (4G, 6×) · mở lại 0,5 / 1,1 s. 122 file, 1,3 MB, JS 103 file (871 KB nén, 3,5 MB mã).
+- Link HS `play.html?g=rf6crd`: lần đầu 1,7 / 2,6 s · mở lại 0,5 / 1,1 s. 104 file, ~1 MB.
+- Script chạy chỉ 0,05–0,23 s; modulepreload đã đủ (không tải trùng); mọi file từ Fastly Singapore (đổi host không nhanh hơn — xem kiemtra Chặng 8: thử Firebase Hosting ngang GitHub Pages).
+  ⇒ KHÔNG tái hiện được "rất lâu" ⇒ nghi Safari thật (cache, ~100 module rời) hoặc thư viện khi ĐĂNG NHẬP (chưa đo được) hoặc máy/mạng cụ thể.
+**Đã làm:**
+- `core/do-tai.js` (MỚI, script thường, chỉ ĐỌC): Navigation Timing (DNS · kết nối · TLS · chờ trang · HTML · DOM sẵn · load) · FCP ·
+  mốc AWord: hết màn chờ `.aw-boot` · hết chữ "Loading" (TreeWalker, bỏ SCRIPT/STYLE; hiện lại thì xoá mốc) · DOM thôi đổi ·
+  Resource Timing gom theo nơi tải + 10 file chậm nhất (cache = transferSize 0 mà có decodedBodySize) · khựng rAF > 50 ms trong 30 s đầu · lỗi JS/tải file/promise ·
+  lịch sử 8 lần (`localStorage aw_do_ls`) để so lần đầu ↔ mở lại. Nút ⏱ góc dưới trái (gắn vào `<html>`, ngoài body ⇒ không dính stacking của app) hiện số chính;
+  chạm ⇒ bảng chữ + Sao chép · Đo lại · Tắt đo · Đóng. Tên/mã HS (`n`, `ma`) bị che trong URL của bảng.
+- `index.html` + `play.html`: đoạn `<script>` nhỏ đầu `<head>` (trước no-zoom.js): `?do=1` ⇒ `localStorage aw_do=1` (nhớ cho lần mở sau), `?do=0` ⇒ xoá;
+  có cờ thì `setResourceTimingBufferSize(1000)` + nạp `core/do-tai.js?v=1` (async=false). KHÔNG có cờ ⇒ không tải thêm byte nào.
+**Kiểm (devserver :5679):** không cờ ⇒ 0 lượt tải do-tai.js, không bảng · `/?do=1` ⇒ bảng đủ 8 mục, ⏱ 271 ms · `play.html?g=rf6crd` (cờ nhớ, không kèm ?do) ⇒ đo được, hết Loading 410 ms ·
+  "Tắt đo" ⇒ về `play.html?g=rf6crd`, cờ xoá, không bảng · 0 lỗi console.
+**Cách dùng trên iPad:** mở `https://aword.andrewclasses.com/?do=1` (hoặc link game kèm `&do=1`) ⇒ chờ ⏱ ra số ⇒ chạm ⏱ ⇒ chụp màn hình (bảng dài thì cuộn chụp 2 ảnh).
+  Mở lại lần 2 (không cần ?do=1) để có dòng lịch sử so sánh. Xong thì bấm "Tắt đo".
+**VIỆC ĐANG CHỜ:** ⬜ thầy đo trên iPad thật (trang chủ đã đăng nhập + link game), gửi ảnh ⇒ phiên sau đọc số tìm chỗ chậm.
+  Bảng không đo được bên trong khung myLesson nếu chưa bật cờ trong khung đó (Safari tách localStorage của iframe khác miền) — mở thẳng aword trước.
+
 ## Đợt 478 (05/10/2026) — ROCKET RACE 3D: HẾT KHỰNG LÚC THẮNG + NẤC MSAA CHO BỘ TỰ GIỮ 60 KHUNG · phiên máy BOARD
 
 Thầy: "check tiếp Rocket race cũng đã tối ưu chưa" (sau TRAIN RUSH / STAR LOOT Đợt 475–477). Đo LIVE trong myActivity (TOMKO, trần `__awMaxPR` = 1):

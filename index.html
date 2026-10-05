@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <!-- Đợt 479: CHẾ ĐỘ ĐO TẢI TRANG — chỉ nạp core/do-tai.js khi mở kèm ?do=1 (nhớ ở localStorage aw_do; ?do=0 tắt) -->
+  <script>try{var q=location.search;if(/[?&]do=1(&|$)/.test(q))localStorage.setItem("aw_do","1");else if(/[?&]do=0(&|$)/.test(q))localStorage.removeItem("aw_do");if(localStorage.getItem("aw_do")==="1"){performance.setResourceTimingBufferSize&&performance.setResourceTimingBufferSize(1000);var s=document.createElement("script");s.src="core/do-tai.js?v=1";s.async=false;document.head.appendChild(s);}}catch(e){}</script>
   <script src="core/no-zoom.js"></script>
   <script src="core/app-check.js" defer></script>   <!-- Đợt 408: Firebase App Check (theo dõi) -->
   <title>AWord in ANDREW CLASSES</title>
