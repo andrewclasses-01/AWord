@@ -216,6 +216,17 @@ let mocGioiThieu = 0, gioiThieuMs = 0, thuSai = 0, thuMs = 0;
 let thuChu = [];
 // Đợt 471: lần chấm mà chữ TỚI MUỘN (đọc lại sau nửa giây khác lần đầu) — { cau, truoc, sau, dung }.
 let thuTre = [];
+// Đợt 473: em bấm "Đã gõ đúng nhưng không nhận?" → BỎ QUA CÂU NÀY — { cau, chu, may }.
+let thuLoi = [];
+// Loại máy + trình duyệt, gọn: "iPhone · Zalo", "Windows · Chrome"… (báo cáo của thầy hiện cạnh lỗi bàn phím).
+function thietBi() {
+  const ua = (typeof navigator !== "undefined" && navigator.userAgent) || "";
+  const he = /iPhone|iPod/.test(ua) ? "iPhone" : (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) ? "iPad"
+    : /Android/.test(ua) ? "Android" : /Windows/.test(ua) ? "Windows" : /Mac OS/.test(ua) ? "Mac" : /CrOS/.test(ua) ? "Chromebook" : "Máy khác";
+  const tr = /Zalo/i.test(ua) ? "Zalo" : /FBAN|FBAV|FB_IAB/.test(ua) ? "Facebook" : /Edg/.test(ua) ? "Edge"
+    : /FxiOS|Firefox/.test(ua) ? "Firefox" : /CriOS|Chrome/.test(ua) ? "Chrome" : /Safari/.test(ua) ? "Safari" : "trình duyệt khác";
+  return he + " · " + tr;
+}
 const lo = v => [...String(v)].map(ch => (/[\x20-\x7E]/.test(ch) ? ch : "<U+" + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0") + ">")).join("").slice(0, 120);
 async function gioiThieu(act, items, { tuDau = false, xemLai = false, quayVe = null } = {}) {
   const d = dangCua(act);
@@ -338,7 +349,7 @@ function lamThu(act, items) {
     vuaKhung(c);
     o.inp.focus();
     o.onEnter = () => cham();
-    let daDung = false, dangCham = false;
+    let daDung = false, dangCham = false, saiCau = 0, loiMo = false, vCuoi = "";
     async function cham() {
       if (daDung) { tiep(); return; }
       if (dangCham) return;
@@ -365,21 +376,39 @@ function lamThu(act, items) {
         kiem.textContent = i < d.thu.length - 1 ? "CÂU TIẾP ›" : "XONG ›";
         kiem.focus();
       } else {
-        thuSai++;
+        thuSai++; saiCau++; vCuoi = v;
         if (thuChu.length < 12) thuChu.push({ cau: i + 1, chu: lo(v), ghep: o.ghep });
-        bao.className = "kt-bao sai";
-        bao.innerHTML = "";
-        bao.append(h("div", "kt-bao-dau", "Chưa đúng rồi."), h("div", "kt-bao-hd", it.huongDan));
-        o.inp.classList.add("sai");
-        // ⭐ Thầy 02/10 tối (em iPhone gõ đúng mà vẫn bị báo sai): làm thử KHÔNG được chặn đường — sai rồi là có nút
-        //    đi tiếp. Chữ em gõ vẫn ghi vào kt.thuChu để soi sau.
-        if (!nuts.querySelector(".kt-qua")) {
-          nuts.append(nut(i < d.thu.length - 1 ? "Sang câu tiếp ›" : "Xong phần thử ›", "kt-phu-btn kt-qua", () => tiep()));
+        if (!loiMo) {
+          bao.className = "kt-bao sai";
+          bao.innerHTML = "";
+          bao.append(h("div", "kt-bao-dau", "Chưa đúng rồi."), h("div", "kt-bao-hd", it.huongDan));
         }
+        o.inp.classList.add("sai");
+        // ⭐ Đợt 473 (thầy 05/10): bỏ nút "Sang câu tiếp" (Đợt 444). Sai từ lần 2 của CÙNG câu mới hiện một dòng
+        //    "Đã gõ đúng nhưng không nhận?" — bấm vào mở giải thích lỗi bàn phím + BỎ QUA CÂU NÀY (báo thầy, kt.thuLoi).
+        if (saiCau >= 2 && !loiMo && !c.querySelector(".kt-loi-lnk")) c.append(nut("Đã gõ đúng nhưng không nhận?", "kt-loi-lnk", moLoi));
         vuaKhung(c);
         setTimeout(() => o.inp.classList.remove("sai"), 600);
         o.inp.focus(); o.inp.select();
       }
+    }
+    function moLoi() {
+      loiMo = true;
+      const lk = c.querySelector(".kt-loi-lnk");
+      if (lk) lk.remove();
+      bao.className = "kt-bao kt-loi-mo";
+      bao.innerHTML = "";
+      bao.append(h("div", "kt-loi-dau", "⌨️ Có thể bàn phím gửi chữ chưa đúng"),
+        h("div", "kt-loi-p", "Đôi khi bàn phím điện thoại hoặc bộ gõ tiếng Việt (UniKey, Telex…) gửi chữ chậm hoặc đổi chữ, nên máy không nhận được đúng câu em gõ."),
+        h("div", "kt-loi-p", "• Em thử tắt gõ tiếng Việt / chuyển sang bàn phím tiếng Anh rồi gõ lại."),
+        h("div", "kt-loi-p", "• Vẫn không được thì bỏ qua câu này — thầy Andrew sẽ được báo để kiểm tra."));
+      const n = h("div", "kt-nuts");
+      n.append(nut(i < d.thu.length - 1 ? "BỎ QUA CÂU NÀY ›" : "BỎ QUA, XONG PHẦN THỬ ›", "kt-chinh kt-cam", () => {
+        if (thuLoi.length < 6) thuLoi.push({ cau: i + 1, chu: lo(vCuoi), may: thietBi() });
+        tiep();
+      }));
+      bao.append(n);
+      vuaKhung(c);
     }
     function tiep() { i++; if (i < d.thu.length) ve(); else xongThu(); }
   }
@@ -494,7 +523,7 @@ function moiTrangThai(items) {
 function lamBai(act, items, s) {
   if (!s) {
     s = moiTrangThai(items);
-    s.gioiThieuMs = gioiThieuMs; s.thuSai = thuSai; s.thuMs = thuMs; s.thuChu = thuChu.slice(); s.thuTre = thuTre.slice();
+    s.gioiThieuMs = gioiThieuMs; s.thuSai = thuSai; s.thuMs = thuMs; s.thuChu = thuChu.slice(); s.thuTre = thuTre.slice(); s.thuLoi = thuLoi.slice();
   }
   const { than, dongHo, menu } = khung;
   dongHo.hidden = false; menu.hidden = false;
@@ -736,7 +765,7 @@ function lamBai(act, items, s) {
         const cu = s;
         const moi = moiTrangThai(items);
         moi.lamLai = cu.lamLai + 1; moi.taiLai = cu.taiLai;
-        moi.gioiThieuMs = cu.gioiThieuMs; moi.thuSai = cu.thuSai; moi.thuMs = cu.thuMs; moi.thuChu = cu.thuChu; moi.thuTre = cu.thuTre;
+        moi.gioiThieuMs = cu.gioiThieuMs; moi.thuSai = cu.thuSai; moi.thuMs = cu.thuMs; moi.thuChu = cu.thuChu; moi.thuTre = cu.thuTre; moi.thuLoi = cu.thuLoi;
         Object.keys(s).forEach(k => delete s[k]); Object.assign(s, moi);
         dangMenu = false; doan = Date.now();
         beatPlayLog(log()).catch(() => {});
@@ -767,6 +796,8 @@ function dungReview(items, s, { doDang = false } = {}) {
   review[0].kt = { lamLai: s.lamLai, taiLai: s.taiLai, gioiThieuMs: Math.round(s.gioiThieuMs), thuSai: s.thuSai, thuMs: Math.round(s.thuMs),
     ...(Array.isArray(s.thuChu) && s.thuChu.length ? { thuChu: s.thuChu } : {}),
     ...(Array.isArray(s.thuTre) && s.thuTre.length ? { thuTre: s.thuTre } : {}),
+    ...(Array.isArray(s.thuLoi) && s.thuLoi.length ? { thuLoi: s.thuLoi } : {}),
+    may: thietBi(),
     luotSo: (s.lamLai || 0) + 1, ...(doDang ? { doDang: true, dangCau: s.i + 1 } : {}), phienBan: 2 };
   return review;
 }

@@ -116,6 +116,13 @@ html:not(.kt-nhung) .kt { max-width: 900px; margin: 16px auto; height: calc(100%
 .kt-bao { min-height: 28px; text-align: center; font-weight: 700; font-size: 1.05rem; }
 .kt-bao.dung { color: var(--dung); }
 .kt-bao.sai { color: var(--sai); background: #fff4f4; border: 2px solid #ffd3d4; border-radius: 12px; padding: 8px 12px; text-align: left; }
+/* Đợt 473: "Đã gõ đúng nhưng không nhận?" → giải thích lỗi bàn phím + BỎ QUA CÂU NÀY */
+.kt-loi-lnk { display: block; margin: 12px auto 0; background: none; box-shadow: none; color: #b25b00; text-decoration: underline; font-size: 1rem; padding: 4px 10px; }
+.kt-bao.kt-loi-mo { background: #fff8ec; border: 2px solid #f1c27a; border-radius: 12px; padding: 10px 14px; text-align: left; color: #4a3a1c; font-weight: 600; font-size: .98rem; line-height: 1.5; }
+.kt-loi-dau { font-weight: 800; margin-bottom: 4px; }
+.kt-loi-mo .kt-nuts { margin-top: 10px; }
+.kt-cam.kt-chinh { background: #b25b00; box-shadow: 0 4px 0 #854f0b; }
+.kt-cam.kt-chinh:hover { background: #c26a0a; }
 .kt-bao-hd { color: var(--chu); font-weight: 600; margin-top: 2px; }
 .kt-nhac { min-height: 22px; text-align: center; color: var(--sai); font-weight: 700; opacity: 0; transition: opacity .2s; }
 .kt-nhac.hien { opacity: 1; }
