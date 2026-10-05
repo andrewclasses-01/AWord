@@ -68,6 +68,7 @@ import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { createKeyboard } from "../../core/keyboard.js";
 import { guardVnTyping, isEditableTarget } from "../../core/vn-guard.js";
+import { guardNoCopy } from "../../core/no-copy.js";   // Đợt 464 — chặn copy + dán
 import { createVoicePlayer, voiceView } from "../../core/voice-playback.js";
 import { openCrosswordEditor } from "./crossword-editor.js";
 import { crosswordSound } from "./crossword-sound.js";
@@ -500,6 +501,8 @@ const crosswordTemplate = {
       insert: ch => onKey({ key: ch, preventDefault() {} }),
       backspace: () => onKey({ key: "Backspace", preventDefault() {} })
     });
+    // ⭐ Đợt 464 — chặn dán / kéo thả / copy trong game (core/no-copy.js).
+    const noCopy = guardNoCopy(root);
 
     // ----- static shell: clue bar + grid + keyboard + active strip -----
     root.innerHTML = "";
@@ -1576,6 +1579,9 @@ const crosswordTemplate = {
     // -------------------------------------------------------------------
     function onKey(e) {
       if (finished || curWord < 0) return;
+      // Đợt 464 — Ctrl/Cmd/Alt + phím (Ctrl+V, Ctrl+C…) là phím tắt, không phải chữ:
+      // trước đây Ctrl+V gõ nhầm chữ "V" vào ô.
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
       const k = e.key;
       if (k === "Backspace") { e.preventDefault(); backspace(); kbd.refresh(); return; }
       if (k === "Enter") { e.preventDefault(); return submitCurrentWord(); }
@@ -1663,6 +1669,7 @@ const crosswordTemplate = {
 
     return function cleanup() {
       vnGuard.dispose();
+      noCopy.dispose();
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("resize", relayout);
       if (navWrap) navWrap.style.visibility = "";

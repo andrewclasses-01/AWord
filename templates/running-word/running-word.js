@@ -40,6 +40,7 @@ import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { createKeyboard } from "../../core/keyboard.js";
 import { guardVnTyping } from "../../core/vn-guard.js";
+import { guardNoCopy } from "../../core/no-copy.js";   // Đợt 464 — chặn copy + dán
 import { fitOnce } from "../../core/fit.js";
 // Dot 143 - the shared [-][value][+] control, so "Time each team" is the same
 // kind of thing as the countdown in the shared Timer option.
@@ -491,6 +492,8 @@ const rwTemplate = {
       input,
       afterSet: () => refreshKeys()
     });
+    // ⭐ Đợt 464 — chặn dán / kéo thả / copy trong game (core/no-copy.js).
+    const noCopy = guardNoCopy(root);
 
     // The keyboard is built when "prep" starts (the match screen first shows),
     // not at mount(): during setup there is nothing to type into and every key
@@ -1487,6 +1490,7 @@ const rwTemplate = {
       rwEndData = null;   // Đợt 114 — module-level bridge, same rule as rwPauseHandlers:
                           // no summary of a discarded match may survive into the next mount
       vnGuard.dispose();
+      noCopy.dispose();
       window.removeEventListener("keydown", onKey);
       boardRO.disconnect();
       if (tickId) clearInterval(tickId);

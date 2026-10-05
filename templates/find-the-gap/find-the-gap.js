@@ -44,6 +44,7 @@ import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { createKeyboard } from "../../core/keyboard.js";
 import { guardVnTyping, isEditableTarget } from "../../core/vn-guard.js";
+import { guardNoCopy } from "../../core/no-copy.js";   // Đợt 464 — chặn copy + dán
 import { openFtgEditor } from "./find-the-gap-editor.js";
 import { ftgSound } from "./ftg-sound.js";
 import { loadAudio, createSegmentPlayer } from "./ftg-audio.js";
@@ -473,6 +474,8 @@ const ftgTemplate = {
       insert: ch => onKey({ key: ch, preventDefault() {} }),
       backspace: () => onKey({ key: "Backspace", preventDefault() {} })
     }) : null;
+    // ⭐ Đợt 464 — chặn dán / kéo thả / copy trong game (core/no-copy.js).
+    const noCopy = guardNoCopy(root);
     ui.setScoreProvider?.(scoreNow);
     // ⭐ Đợt 384 — bài làm TỚI LÚC NÀY cho lượt dở (dashboard myLesson xem từng câu); bọc hàm ⇒ lỗi chỉ rơi vào try của engine.
     ui.setReviewProvider?.(() => buildReview());
@@ -1114,6 +1117,7 @@ const ftgTemplate = {
       dead = true;
       finished = true;
       vnGuard?.dispose();
+      noCopy.dispose();
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("resize", onResize);
       cancelAnimationFrame(fitRaf);

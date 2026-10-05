@@ -546,6 +546,41 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 464 (05/10/2026) — ⭐ CHẶN COPY + DÁN trong 4 game gõ chữ · BÀN PHÍM TYPE THE ANSWER TO THÊM 20 % · ⭐ BÀN PHÍM LỚN KHI HS BẤM "PHÓNG TO" TRÊN ĐIỆN THOẠI (bài giao trong myLesson)
+
+Thầy báo: học sinh copy + dán được vào ô gõ (gian lận); bàn phím Type the answer trên điện thoại quá nhỏ.
+Đo thật trước khi sửa (iPhone 375px): khung act 375×246, phím chữ **19×15 px**, chữ trên phím **5 px**.
+Thầy xem 2 vòng ảnh thử (chụp từ game thật, đắp CSS tạm) rồi chốt:
+
+1. **Chặn copy + dán — `core/no-copy.js` (MỚI)**, gắn vào Type the answer · Running word · Crossword · Find the gap
+   (`const noCopy = guardNoCopy(root)` ngay sau `vnGuard`, `noCopy.dispose()` trong cleanup). Bắt ở pha capture TRÊN
+   `root` (playArea): `paste` · `copy` · `cut` · `drop` · `dragstart` · `contextmenu` + lưới thứ hai `beforeinput`
+   `insertFromPaste/Drop/Yank`. `.aw-nocopy` (core/app.css) tắt menu giữ lâu iOS (`-webkit-touch-callout`). Gõ phím thật,
+   bàn phím ảo, UniKey không đi qua các sự kiện này. Ngoài root (dải dưới khung, màn soạn bài dán Excel) không bị chặn.
+   Đo: bắn 9 loại sự kiện vào ô gõ/câu hỏi ⇒ 8 bị chặn, `insertText` (gõ thường) đi qua, `copy` ngoài root đi qua.
+   ⚠️ Không đo được dán THẬT bằng Ctrl+V: công cụ thử của trình duyệt không chạm clipboard (ô ngoài game cũng không dán được).
+2. **Vá kèm**: Crossword gõ nhầm chữ khi bấm Ctrl+V/Ctrl+C (onKey không bỏ phím có Ctrl) ⇒ thêm `if (e.ctrlKey||e.metaKey||e.altKey) return`.
+   `core/vn-guard.js` `isInjected`: phím có Ctrl/Cmd/Alt KHÔNG BAO GIỜ là gói UniKey (bộ thử gửi Ctrl+V không kèm `code`
+   ⇒ bị tưởng là gói ⇒ chèn "v"; phím thật luôn có `code` nên HS chưa gặp, nhưng chốt cho chắc).
+3. **Bàn phím Type the answer to thêm 20 %** (chỉ TTA; 3 game kia dùng chung bàn phím nhưng KHÔNG đổi): rộng 70 %→**84 %**,
+   mọi cỡ trong bàn phím ×1,2 bằng cách đổi `--aw-u` ngay trên `.aw-kbd` qua biến trung gian `--tta-ku` khai ở `.aw-tta-card`
+   (⛔ `--aw-u: calc(var(--aw-u)*1.2)` trên chính nó là vòng lặp, trình duyệt bỏ cả dòng). Khung 1131px: phím 56×45→**68×56**.
+   Sai + câu trả lời dài 2 dòng: ô gõ cách bàn phím 4px (game tự co `--fit`), không đè. FIGHT 1280: bàn 620×408, phím 37×30, không đè.
+   Ô nhúng myLesson trên điện thoại (375×246): phím 19×15→**23×19**, câu trả lời sai 2 dòng vẫn vừa.
+4. **Kiểu B khi bấm Phóng to trên điện thoại** — chỉ CSS, KHÔNG sửa myLesson: `@media (max-width:700px) and (max-aspect-ratio:4/5)`
+   + `html.aw-nhung .aw-stage:has(.aw-tta-card)`. Ô nhúng bình thường có tỉ lệ 16:10,5 (nằm ngang) ⇒ không khớp; nút Phóng to
+   của myLesson (`.game.phong` 100vw×100dvh, iframe inset 0) ⇒ khớp. Khung cao hết màn (`--ti-le: 100dvh`), bàn phím rộng hết bề
+   ngang sát đáy, phím chữ chia đều **24×46 px** (375px) / 19×46 (320px), câu hỏi `min(7vw,30px)`, ô gõ 20px,
+   `padding-top: 46px` để câu hỏi không nằm dưới nút THU NHỎ của myLesson (`.game-thu` top 8px cao 34px).
+   Xoay ngang / THU NHỎ ⇒ về khung thường, ván không mất (đã thử: đang hiện đáp án sai ⇒ phóng to ⇒ thu nhỏ, đúng cả hai chiều).
+   Act thầy mở trực tiếp: không có `aw-nhung` ⇒ giữ trong khung như cũ (chỉ +20 %). Màn START trước khi bấm play vẫn 16:10,5
+   (chưa có `.aw-tta-card`), bấm play khung mới cao lên.
+   ⚠️ Trình duyệt không hiểu `:has` (Safari < 15.4) ⇒ giữ khung thường, vẫn chơi được.
+
+- ⬜ Thầy thử trên điện thoại thật: trang bài tập myLesson → READY → Phóng to → gõ; thử giữ lâu ô gõ xem còn hiện "Dán" không.
+
+---
+
 ## Đợt 463 (04/10/2026) — ICON APP MỚI "AW làm mới" (bản 3A)
 
 Thầy thiết kế lại icon AWord sau khi xong icon Andrew Classes ("sách bay", web myLesson v1.246.0). Qua 3 vòng

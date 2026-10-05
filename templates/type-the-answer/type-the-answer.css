@@ -279,6 +279,69 @@
 .aw-tta-key-andrew.is-used .aw-kbd-key-fnlabel { color: #6a6a6d; }
 
 /* =============================================================
+   ⭐ Đợt 464 (05/10/2026, thầy chốt) — BÀN PHÍM TO THÊM 20 % (chỉ Type the answer).
+   Rộng 70 % → 84 % khung, và MỌI cỡ bên trong bàn phím (phím, chữ, khe, bo góc —
+   đều viết `calc(N * var(--aw-u))` trong core/app.css) nhân 1,2 bằng cách đổi
+   `--aw-u` NGAY TRÊN `.aw-kbd`.
+   ⛔ Không viết `--aw-u: calc(var(--aw-u) * 1.2)` trên chính `.aw-kbd` — biến tự
+   tham chiếu chính nó là VÒNG LẶP, trình duyệt bỏ cả dòng (không báo lỗi). Phải đi
+   qua một biến trung gian khai trên CHA (`.aw-tta-card`), con đọc lại giá trị đã
+   tính xong của cha. Ba template khác dùng chung bàn phím (Running word, Crossword,
+   Find the gap) KHÔNG đổi — luật này chỉ khớp bên trong `.aw-tta-card`.
+   ============================================================= */
+.aw-tta-card { --tta-ku: calc(var(--aw-u) * 1.2); }
+.aw-tta-card .aw-kbd { width: 84%; --aw-u: var(--tta-ku); }
+
+/* =============================================================
+   ⭐ Đợt 464 — BÀN PHÍM LỚN KHI HỌC SINH BẤM "PHÓNG TO" TRÊN ĐIỆN THOẠI (kiểu B).
+   Chỉ khớp khi đủ CẢ BA:
+     · bài giao nhúng trong trang bài tập myLesson (`html.aw-nhung`, play.js);
+     · màn đứng hẹp: cửa sổ của khung ≤ 700px VÀ cao hơn rộng rõ rệt (≤ 4/5).
+       Bình thường ô nhúng myLesson có đúng tỉ lệ 16:10,5 (nằm ngang) ⇒ không khớp;
+       bấm Phóng to thì ô đó phủ kín màn điện thoại dựng đứng ⇒ khớp. Xoay ngang
+       hoặc THU NHỎ ⇒ hết khớp, tự về khung thường. Không cần sửa myLesson.
+     · khung đang chơi Type the answer (`:has(.aw-tta-card)`; trình duyệt quá cũ
+       không hiểu `:has` thì giữ khung thường — vẫn chơi được, chỉ phím nhỏ).
+   Khung cao hết màn (`--ti-le` nhận một ĐỘ DÀI thay cho tỉ lệ %), bàn phím rộng hết
+   bề ngang nằm sát đáy khung, phím chữ tự chia đều (~24×46px ở màn 375px). Cỡ ở đây
+   viết bằng px vì `--aw-u` của khung = 1 % bề ngang (3,75px ở màn 375) — quá nhỏ.
+   ============================================================= */
+@media (max-width: 700px) and (max-aspect-ratio: 4/5) {
+  html.aw-nhung .aw-stage:has(.aw-tta-card) { --ti-le: 100vh; --ti-le: 100dvh; }
+  /* padding-top 46px: nút "THU NHỎ" của myLesson đè góc trên trái lúc phóng to
+     (top 8px, cao 34px — bai.html `.game-thu`) ⇒ đẩy câu hỏi xuống dưới nó. */
+  html.aw-nhung .aw-tta-card {
+    --tta-input-fs: 20px;
+    padding-top: 46px;
+  }
+  html.aw-nhung .aw-tta-prompt { font-size: calc(min(7vw, 30px) * var(--qfit)); }
+  html.aw-nhung .aw-tta-card .aw-kbd {
+    width: 100%;
+    margin: auto 0 0;
+    padding: 8px 4px;
+    border-radius: 14px 14px 0 0;
+  }
+  html.aw-nhung .aw-tta-card .aw-kbd-main { gap: 9px; }
+  html.aw-nhung .aw-tta-card .aw-kbd-row { gap: 5px; }
+  html.aw-nhung .aw-tta-card .aw-kbd-key {
+    height: 46px; padding: 0;
+    font-size: 19px;
+    border-radius: 6px;
+    box-shadow: 0 2px 0 #202022;
+  }
+  html.aw-nhung .aw-tta-card .aw-kbd-key-back { box-shadow: 0 2px 0 #7f1212; }
+  html.aw-nhung .aw-tta-card .aw-kbd-submit { box-shadow: 0 2px 0 var(--aw-tile-fixed-dark, #2563eb); font-size: 16px; }
+  html.aw-nhung .aw-tta-card .aw-kbd-key-letter { flex: 1 1 0; }
+  html.aw-nhung .aw-tta-card .aw-kbd-row:first-child > .aw-kbd-key:first-child { flex: 0 0 22px; }   /* phím ' */
+  html.aw-nhung .aw-tta-card .aw-kbd-key-fn { padding: 0 6px 6px; }
+  html.aw-nhung .aw-tta-card .aw-kbd-key-fnlabel { font-size: 12px; }
+  html.aw-nhung .aw-tta-card .aw-kbd-key-dot { top: 6px; right: 6px; width: 6px; height: 6px; }
+  html.aw-nhung .aw-tta-card .aw-kbd-key-caps { flex: 0 0 48px; }
+  html.aw-nhung .aw-tta-card .aw-kbd-key-numbers { flex: 0 0 62px; }
+  html.aw-nhung .aw-tta-card .aw-tta-key-andrew { flex: 0 0 70px; }
+}
+
+/* =============================================================
    OPTIONS PANEL — "Points off per wrong" slider (0..5, 0 = Off — no separate
    checkbox anymore, 3/8/2026) and the "Lives" slider (0..10, 0 = Unlimited),
    same look/pattern as True/false's Speed + Lives sliders. The Options panel

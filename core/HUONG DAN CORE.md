@@ -22,6 +22,19 @@ const vnGuard = guardVnTyping({
 - ⛔ Đừng bỏ `filterEnglish` (vẫn là lưới cuối cho dán chữ). ⛔ Đừng chặn keyCode 229/code "" trên điện thoại — bàn phím ảo gửi y như vậy (`isInjected` đã loại MOBILE).
 - Thử: `tools/vn-guard-test.html?t=tta|rw|cw|ftg` + máy phát lại `tools/unikey-replay.py` (CDP) — xem mục Đợt 419 trong `GHI CHU DU AN.md`.
 
+## 🚫 Đợt 464 — game GÕ CHỮ: gắn `core/no-copy.js` (chặn copy + dán)
+
+Template mới có ô gõ chữ (học sinh tự gõ đáp án) gắn thêm, ngay cạnh `guardVnTyping`:
+
+```js
+import { guardNoCopy } from "../../core/no-copy.js";
+const noCopy = guardNoCopy(root);   // root = playArea engine đưa cho mount()
+// cleanup: noCopy.dispose();
+```
+
+Chặn trong root: dán (Ctrl+V, chuột phải, giữ lâu điện thoại), kéo thả, copy/cut, menu chuột phải. Gõ phím / bàn phím ảo / UniKey không bị ảnh hưởng.
+⛔ Template nghe `window` keydown: nhớ bỏ phím có Ctrl/Cmd/Alt (Crossword từng gõ "V" khi bấm Ctrl+V).
+
 ## ⚠️ ONLINE từ v0.7.4 — thư viện nằm trên Firestore, phải ĐĂNG NHẬP
 
 `core/store.js` không còn lưu vào máy nữa: thư viện của thầy ở **`users/{uid}/items/{id}`** trên

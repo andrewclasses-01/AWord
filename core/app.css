@@ -257,6 +257,10 @@ html.aw-nhung .aw-below { display: none; }
   user-select: text;
   -webkit-user-select: text;
 }
+/* ⭐ Đợt 464 — game gõ chữ chặn copy + dán (`core/no-copy.js` gắn `.aw-nocopy` lên
+   root của template): tắt luôn menu giữ lâu của iOS (Copy/Look Up/Share). Ô gõ vẫn
+   giữ `user-select: text` ở trên — bỏ đi thì Safari iOS không đặt được con trỏ. */
+.aw-nocopy, .aw-nocopy * { -webkit-touch-callout: none; }
 .aw-stage-inner {
   position: absolute; inset: 0;
   display: flex; flex-direction: column;

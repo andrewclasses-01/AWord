@@ -38,6 +38,7 @@ import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { createKeyboard } from "../../core/keyboard.js";
 import { guardVnTyping } from "../../core/vn-guard.js";
+import { guardNoCopy } from "../../core/no-copy.js";   // Đợt 464 — chặn copy + dán
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { openTypeTheAnswerEditor } from "./type-the-answer-editor.js";
 import { ttaSound } from "./type-the-answer-sound.js";
@@ -493,6 +494,8 @@ const ttaTemplate = {
       input,
       afterSet: () => { autoGrow(input); fitLayout(); syncSubmitEnabled(); }
     });
+    // ⭐ Đợt 464 — chặn dán / kéo thả / copy trong game (core/no-copy.js).
+    const noCopy = guardNoCopy(root);
     row.append(input);
     // ⭐⭐ Đợt 305 — LỚP CHỮ MÀU ĐÈ LÊN Ô NHẬP.
     // ⛔ Bên trong một `<textarea>` KHÔNG tô màu từng chữ được (giới hạn của trình
@@ -1518,6 +1521,7 @@ const ttaTemplate = {
     return function cleanup() {
       dead = true;   // Đợt 114 — MUST be first; see land() / showScore / pulseScoreTo
       vnGuard.dispose();
+      noCopy.dispose();
       window.removeEventListener("resize", onResize);
       cancelAnimationFrame(rafFit);
       clearAutoTimer();

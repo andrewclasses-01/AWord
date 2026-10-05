@@ -49,8 +49,9 @@ let listening = false;
 // ⛔ Điện thoại/iPad: bàn phím ảo cũng gửi code "" ⇒ chỉ tin keyCode 231 ở đó.
 function isInjected(e) {
   if (e.keyCode === 231) return true;
+  // Đợt 464 — UniKey không bao giờ bơm gói kèm Ctrl/Cmd/Alt ⇒ phím tắt (Ctrl+V…) không phải gói.
   return !MOBILE && e.code === "" && typeof e.key === "string" && e.key.length === 1
-    && !e.isComposing && e.keyCode !== 229;
+    && !e.isComposing && e.keyCode !== 229 && !e.ctrlKey && !e.metaKey && !e.altKey;
 }
 
 // Tách dấu một chữ: NFD rồi đếm các dấu phụ.
