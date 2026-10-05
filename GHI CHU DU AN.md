@@ -568,6 +568,7 @@ AWord cũ: phím 24×46, hàng Q–P (12 ô: ' + 10 chữ + ⌫) hẹp hơn các
   (caps mờ, 123 sáng chấm). Thu nhỏ khi đang ở trang 123 ⇒ về 4 hàng cũ, chữ đã gõ còn nguyên; phóng to lại ⇒ 5 hàng, vẫn trang 123.
   Máy tính 1280: vẫn 4 hàng, rộng 906px như Đợt 464.
 - Mockup: scratchpad phiên (kbd-mau/index.html ?v=A|B).
+- ✅ Push `5e67363` + LIVE 3/3 mã băm (keyboard.js, TTA css/js).
 - ⬜ Thầy thử điện thoại thật.
 
 ---
