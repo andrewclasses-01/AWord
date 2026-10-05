@@ -867,3 +867,9 @@ màn chờ 60 fps (card 98 %) · phóng 56,8 · đua 59–59,9 — GPU ổn. NH�
 - Bàn thử: `__rr3d.view.renderer`, `__rr3d.view.res` thêm `aa`, `aaOK`.
 **Đo sau (bản cục bộ trong myActivity):** trọn ván tới 12 s sau khi thắng: 0 shader mới, 0 khung > 40 ms · có trần: đua 59,6–59,9 fps, khung dài nhất 33 ms ·
 màn kết quả không còn thanh cuộn. Còn: khung đầu cảnh phóng (~230 ms, gần như không phải JS — GPU dựng cảnh) và huỷ cảnh phóng `forceContextLoss` 14–32 ms lúc trao sang đua.
+
+## 45. 05/10/2026 — ĐỒNG BỘ SANG myGame (quy tắc)
+Thầy: "myGame cũng phải có các bản mới nhất đồng bộ với AWord". Rocket Race GỐC ở đây (AWord); myGame chỉ giữ bản CHỤP để làm mẫu.
+⭐ MỖI Đợt Rocket Race xong push ⇒ ở myGame: `python -X utf8 tools/chep-aword-sang-game.py gameN` (thư mục mới, lấy từ origin/main — chép cả
+cảnh đua, tên lửa, MISS WAIT, tự giữ 60 khung, cảnh phóng `rr3d-launch.js` + `launch/`, tiếng intro + `sfx-intro/`) + trang `mau-N-…html`
+(chép trang mẫu gần nhất, đổi import sang gameN) ⇒ commit + push myGame. Hiện: game8 / mau-8-khop-aword.html = AWord `156cf57` (Đợt 478), myGame `9bd8b9c`.
