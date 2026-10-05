@@ -2505,11 +2505,18 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
   $(".mc-again").addEventListener("click", startGame);
   $(".mc-restart").addEventListener("click", () => { setPaused(false); jobs = []; startGame(); });
   $(".mc-resume").addEventListener("click", () => setPaused(false));
-  $(".mc-endgame").addEventListener("click", () => {                  // 1m: kết thúc ván ngay ⇒ màn kết quả (câu chưa chơi ghi "chưa chơi")
-    if (phase === "menu" || phase === "end") return;
+  // 2q: đường "bỏ ván, về màn START" — dùng cho END GAME và cho bảng Mode khi đổi Single/Fight giữa chừng
+  function leaveToMenu() {
+    if (phase === "menu") return;
+    ovAgain.hidden = true;
+    if (phase === "end") { toMenu(); return; }
     if (phase === "cine") { setPaused(false); intro.abort(); cineCam = null; toMenu(); return; }   // 1o: đang intro ⇒ về màn chờ (1p: thiên hà)
     setPaused(false); jobs = []; countEl.hidden = true; swapEl.hidden = true; bigq.hidden = true; bigq.classList.remove("is-fly"); qEl.classList.remove("is-wait");
     if (intro && (intro.active || intro.tailing)) intro.abort(); cineCam = null; toMenu();   // 1x: thầy — END GAME về màn START ban đầu
+  }
+  $(".mc-endgame").addEventListener("click", () => {                  // 1m: kết thúc ván ngay ⇒ màn kết quả (câu chưa chơi ghi "chưa chơi")
+    if (phase === "menu" || phase === "end") return;
+    leaveToMenu();
   });
   $$(".mc-menu").addEventListener("click", () => {
     // 2n: AWord — ở màn START / màn kết quả không có gì để dừng ⇒ Menu mở bảng Library + Change template (không thì kẹt, không về được thư viện)
@@ -2587,9 +2594,14 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
       try { remote.panel(pnB, { fight }); } catch (e) { pnB.innerHTML = `<p class="mc-pn-note">iPad link is not available.</p>`; }
     } else if (kind === "mode") {
       pnT.textContent = "Mode";
-      const can = phase === "menu";
-      pnB.innerHTML = `<div class="mc-pn-modes"><button class="mc-pn-mode${opt.fight ? "" : " is-on"}" data-m="0"${can ? "" : " disabled"}>${IC.mode}<span>Single</span></button><button class="mc-pn-mode${opt.fight ? " is-on" : ""}" data-m="1"${can ? "" : " disabled"}>${IC.fight}<span>Fight</span><small>2 teams</small></button></div>${can ? "" : `<p class="mc-pn-note">Change the mode from the start screen.</p>`}`;
-      pnB.querySelectorAll(".mc-pn-mode").forEach(b => b.addEventListener("click", () => { setFightMode(b.dataset.m === "1"); saveOpts(); paintOpts(); applyDpad(); paintHow(); sfx.click(); closePanel(); }));
+      const mid = phase !== "menu";   // 2q: KHÔNG khoá nữa — giữa chừng (intro / đang chơi / kết quả) đổi chế độ ⇒ bỏ ván, về màn START với chế độ mới
+      pnB.innerHTML = `<div class="mc-pn-modes"><button class="mc-pn-mode${opt.fight ? "" : " is-on"}" data-m="0">${IC.mode}<span>Single</span></button><button class="mc-pn-mode${opt.fight ? " is-on" : ""}" data-m="1">${IC.fight}<span>Fight</span><small>2 teams</small></button></div>${mid ? `<p class="mc-pn-note">Switching ends this round and goes back to the start screen.</p>` : ""}`;
+      pnB.querySelectorAll(".mc-pn-mode").forEach(b => b.addEventListener("click", () => {
+        const v = b.dataset.m === "1";
+        if (mid && v === !!opt.fight) { sfx.click(); closePanel(); return; }   // bấm lại đúng chế độ đang chơi ⇒ chỉ đóng bảng, không bỏ ván
+        closePanel(); if (mid) leaveToMenu();
+        setFightMode(v); saveOpts(); paintOpts(); applyDpad(); paintHow(); sfx.click();
+      }));
     }
     ovPanel.hidden = false; sfx.unlock(); sfx.click();
   }

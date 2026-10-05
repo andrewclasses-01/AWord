@@ -570,9 +570,22 @@ iPad A "lên" ⇒ robot A (4,4)→(3,4), iPad B "xuống" ⇒ robot B (0,11)→(
 **Lỗi gặp & gỡ:** (1) kho bắt tay RƠI một lần báo (game đang nạp lỡ lời chào ⇒ iPad kẹt "Connecting…"; và ngược lại iPad lỡ offer) ⇒ iPad ghi lại `hc` mỗi 4 s
 (tối đa 8), game thấy `hc` tăng mà chưa có answer ⇒ ghi lại offer + `h_t`. (2) đường dự phòng mất phím giữa khi bấm dồn (kho gộp lượt ghi) ⇒ gửi đuôi 4 phím `rq` + số đếm `rs`.
 (3) `__mc.step()` ngay sau `skipIntro()` ném lỗi three.js `toArray` — CHỈ ở bàn thử tự bước khung; để game tự chạy thì vào ván sạch (2q không đụng phần vẽ).
+**Chỉnh theo thầy (05/10, sau khi xem bản đầu, kèm ảnh):** "AWord đã có nút iPad này, tôi muốn iPad bấm vào thì mở ra trang và chọn 1 trong 2 đội ·
+Thiết kế toàn bộ màn hình iPad là D-pad đang sử dụng của game, nút bom để ở góc trên bên phải, xa xa khu D-pad, D-pad to chiếm cả màn hình cũng được ·
+Tôi bấm nút Fight trong Mode thì không chuyển được, tiện kiểm tra".
+- **Màn chọn đội:** `pad.html` không có `?t` ⇒ 2 nút lớn TEAM A / TEAM B (hình D-pad màu đội) ⇒ `pad.html?t=0|1`. Nút iPad trên thanh AWord (cạnh Settings,
+  Đợt 368f — trước mở `source.html`) nay mở `pad.html`; màn câu hỏi Rocket Race vẫn còn qua link nhỏ dưới màn chọn đội. Màn D-pad có nút ‹ góc trên trái để về chọn đội.
+- **Màn D-pad:** đúng D-pad RING của game (4 múi vành khăn SVG + mũi tên, viền xanh; đội B ngả cam bằng hue-rotate như trong game), cao ~94 % màn; tâm ghi chữ đội A/B;
+  vùng bấm = cả GÓC PHẦN TƯ theo góc so với tâm (chạm lệch vẫn ăn), vòng tâm bỏ qua. Bom = nút tròn riêng ở GÓC TRÊN PHẢI.
+- **Lỗi Mode:** dòng "ENEMY LOCATED / POSITION / TARGET" là INTRO sau khi bấm START (pha `cine`), không phải màn START ⇒ bảng Mode khoá 2 nút + chữ
+  "Change the mode from the start screen". Nay KHÔNG khoá: giữa chừng (intro / đang chơi / kết quả) bấm chế độ kia ⇒ bỏ ván, về màn START với chế độ mới
+  (hàm chung `leaveToMenu()` tách từ END GAME); bấm lại đúng chế độ đang chơi ⇒ chỉ đóng bảng.
+- Kiểm: intro bấm Fight ⇒ menu + fight ✓ · đang chơi Fight bấm Single ⇒ menu + single ✓ ⇒ START lại chơi Single bình thường, 0 lỗi · màn chọn đội + D-pad 1366×1024 (ảnh) ·
+  chạm lệch góc trái ⇒ "l", robot B (6,11)→(6,10) · bom góc ⇒ bom đội B 1→0 · chạm tâm ⇒ bỏ qua.
+- Thầy DUYỆT sửa `core/store.js` + cho push cả AWord và myGame.
 **⬜ CHƯA KIỂM ĐƯỢC (Claude không đăng nhập được Google của thầy):** đường Firestore thật + 2 iPad thật trên Wi-Fi lớp. Checklist thầy bấm:
   1) TOMKO mở act STAR LOOT (đã đăng nhập) ⇒ nút Tablet (icon máy tính bảng, hàng nút dưới) ⇒ thấy QR (Fight: 2 mã A/B).
-  2) iPad mở Camera quét mã ⇒ Safari mở pad.html ⇒ Sign in bằng Google của thầy ⇒ thấy D-pad; góc trên phải iPad "Connected" + số ms.
+  2) iPad mở Camera quét mã (hoặc mở AWord trên iPad ⇒ nút iPad cạnh Settings ⇒ chọn đội) ⇒ Sign in bằng Google của thầy ⇒ thấy D-pad; góc trên phải iPad "Connected" + số ms.
   3) Trên TOMKO bảng QR đổi "Connected"; vào ván thấy nhãn xanh "iPad" trên D-pad đội đó. Bấm iPad ⇒ robot đi, nút D-pad trên màn sáng theo.
   4) Nếu nhãn VÀNG "iPad · slow": Wi-Fi lớp chặn nối thẳng ⇒ vẫn chơi được nhưng trễ hơn — báo lại để tính cách khác (máy chủ nội bộ trong myActivity).
   5) Đổi act / mở lại game ⇒ iPad tự nối lại trong vài giây, không phải quét lại. 💡 iPad: Cài đặt ▸ Màn hình ▸ Tự động khoá = Không bao giờ trong giờ chơi; "Thêm vào MH chính" để toàn màn.

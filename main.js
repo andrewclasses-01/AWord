@@ -2961,9 +2961,11 @@ function topbar(showNav) {
   // rest of the lesson, and Safari is free to swallow a popup — a navigation
   // never fails the way a blocked popup does, silently.
   const qscreen = el("button", "aw-appbtn aw-qscreen-btn", icons.follow);
-  qscreen.type = "button"; qscreen.title = "Question screen (second device)";
-  qscreen.setAttribute("aria-label", "Question screen");
-  qscreen.onclick = () => { location.href = "source.html"; };
+  // ⭐ Đợt 480 (thầy 05/10/2026: "iPad bấm vào thì mở ra trang và chọn 1 trong 2 đội") — now opens pad.html's
+  // TEAM chooser (STAR LOOT iPad D-pad); the Rocket Race question screen stays one tap away (link on that page).
+  qscreen.type = "button"; qscreen.title = "iPad: D-pad / question screen";
+  qscreen.setAttribute("aria-label", "iPad");
+  qscreen.onclick = () => { location.href = "pad.html"; };
   right.append(qscreen);
 
   const gear = el("button", "aw-appbtn aw-settings-btn", icons.settings);

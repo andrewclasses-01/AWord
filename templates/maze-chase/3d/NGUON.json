@@ -1,7 +1,7 @@
 {
  "nguon": "myGame/maze-chase/core",
  "ban": "2q",
- "commit": "f594ede",
+ "commit": "ea20330",
  "con_sua_chua_commit": false,
  "files": [
   "mc3d-2q.js",

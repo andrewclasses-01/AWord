@@ -4,14 +4,18 @@
 // Phím đi thẳng iPad → máy chiếu bằng WebRTC (templates/maze-chase/3d/mc3d-padlink-2q.js, chép từ myGame — đừng sửa tay).
 // Bắt tay qua Firestore tài khoản thầy (templates/maze-chase/sl-pad-signal.js) ⇒ iPad phải đăng nhập CÙNG tài khoản Google
 // với máy chiếu (như iPad câu hỏi Rocket Race, source.html). Game mở lại / đổi act ⇒ trang này tự nối lại, không quét lại QR.
+// Không có ?t (nút iPad trên thanh AWord mở thẳng pad.html — thầy 05/10: "iPad bấm vào thì mở ra trang và chọn 1 trong 2 đội") ⇒
+// màn CHỌN ĐỘI, kèm link sang màn câu hỏi Rocket Race (source.html — nút này trước Đợt 480 mở thẳng trang đó).
 // =============================================================
 
 import { onUser, signIn } from "./core/firebase.js";
 import { createPadClient } from "./templates/maze-chase/3d/mc3d-padlink-2q.js";
-import { mountPadUI } from "./templates/maze-chase/3d/mc3d-padui-2q.js";
+import { mountPadUI, mountPadChooser } from "./templates/maze-chase/3d/mc3d-padui-2q.js";
 import { firestoreSignal, PAD_LOCAL } from "./templates/maze-chase/sl-pad-signal.js";
 
-const team = new URLSearchParams(location.search).get("t") === "1" ? 1 : 0;
+const q = new URLSearchParams(location.search);
+const team = q.get("t") === "1" ? 1 : 0;
+const goTo = t => { if (t === null) q.delete("t"); else q.set("t", t); location.href = "pad.html" + (q.toString() ? "?" + q : ""); };
 const note = document.getElementById("note"), noteB = note.querySelector("b"), noteP = note.querySelector("p"), noteBtn = note.querySelector("button");
 function showNote(title, text, { bad = false, button = false } = {}) {
   note.hidden = false; note.classList.toggle("is-bad", bad);
@@ -23,7 +27,7 @@ function start() {
   note.hidden = true;
   if (client) return;
   client = createPadClient({ signal: firestoreSignal(), team, onState: s => ui && ui.setState(s) });
-  ui = mountPadUI(document.getElementById("pad"), { team, send: k => client.send(k) });
+  ui = mountPadUI(document.getElementById("pad"), { team, send: k => client.send(k), onBack: () => { stop(); goTo(null); } });
   ui.setState(client.state);
   window.__padc = client;   // bàn thử
 }
@@ -38,7 +42,11 @@ noteBtn.addEventListener("click", async () => {
   finally { noteBtn.disabled = false; }
 });
 
-if (PAD_LOCAL) start();   // bàn thử ?padsig=local — không đăng nhập
+if (!q.has("t")) {
+  note.hidden = true;
+  mountPadChooser(document.getElementById("pad"), { onPick: t => goTo(t),
+    extra: `Rocket Race question screen: <a href="source.html">open</a>.` });
+} else if (PAD_LOCAL) start();   // bàn thử ?padsig=local — không đăng nhập
 else onUser(user => {
   if (user) { start(); return; }
   stop();
