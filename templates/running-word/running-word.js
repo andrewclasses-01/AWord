@@ -104,6 +104,7 @@ let rwPauseHandlers = null;
 
 const rwTemplate = {
   type: "running_word",
+  usesKeyboard: true,          // Đợt 472 — có bàn phím AWord ⇒ bài giao trên điện thoại tự phóng to (engine baoBanPhim)
   scorable: true,
   // ⭐⭐⭐ Đợt 245 (23/8/2026, thầy chốt "CHẶN hẳn") — CANNOT BE SET AS HOMEWORK.
   // Two reasons, and the second is the one that cannot be waved through:

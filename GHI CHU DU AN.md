@@ -546,6 +546,24 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 472 (05/10/2026) — BÀI GIAO CÓ BÀN PHÍM TRÊN ĐIỆN THOẠI: TRANG BÀI TẬP TỰ "PHÓNG TO" (myLesson v1.249.0)
+
+Thầy: bài giao gắn trên trang bài tập, game có bàn phím, ở điện thoại ⇒ bấm READY và bấm START là tự phóng to cho rộng rãi;
+muốn nhỏ thì bấm nút tròn. Thầy chọn: phóng to khi game NẠP XONG (chậm ~0,5–1 s nhưng luôn đúng loại game).
+
+- Template thêm `usesKeyboard`: Type the answer · Crossword · Running word = true; Find the gap = `act => normMode(act.options.mode) === "type"`.
+- `core/engine.js`: chỉ khi `html.aw-nhung` + trong iframe — `baoBanPhim(luc)` gửi `postMessage({type:"AWORD:BANPHIM", co, luc})`:
+  "nap" ngay sau khi dựng màn START (`inner.append(playOverlay)`), "start" ở đầu `startPressed()` (bấm START/CONTINUE, Start
+  with mistakes, lối tự START của Start again — lối đó chạy trong Promise.then nên không dính TDZ của `nhungTrongKhung`).
+- myLesson `bai.html`: nghe `AWORD:BANPHIM` — chỉ khi `co` + điện thoại (`pointer: coarse` + cạnh ngắn màn ≤ 500px); "nap" tự phóng
+  to MỘT lần mỗi iframe (`data-tu-phong`), "start" phóng to lại nếu đang nhỏ; `khung.phongTo` lộ ra từ closure dựng khối act.
+- Đo (trang mô phỏng chép nguyên listener + CSS bai.html, giả lập điện thoại cảm ứng 375×812): TTA nạp xong ⇒ tự phóng to; bấm thu
+  nhỏ ⇒ giữ nhỏ; bấm START trong ô nhỏ ⇒ phóng to lại + bàn phím grid; Quiz ⇒ không; Find the gap mẫu (chế độ quiz) ⇒ không;
+  `usesKeyboard` FTG: type=true, find/quiz=false; máy tính (pointer fine) ⇒ không. Không lỗi console.
+- ⬜ Thầy thử điện thoại thật.
+
+---
+
 ## Đợt 470 (05/10/2026) — LÀM TIẾP lượt dở cho 13 template còn lại (trừ 3D + 3 game không giao bài được)
 
 Thầy: "làm các template còn lại, trừ game 3D". Áp hợp đồng Đợt 469 (`ui.setLuuTrangThai` · `ui.daDoiBaiLam` · `ui.khoiPhuc`) cho:

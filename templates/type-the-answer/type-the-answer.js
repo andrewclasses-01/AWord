@@ -243,6 +243,7 @@ function levChu(a, b) {
 }
 const ttaTemplate = {
   type: "type_the_answer",
+  usesKeyboard: true,          // Đợt 472 — có bàn phím AWord ⇒ bài giao trên điện thoại tự phóng to (engine baoBanPhim)
   scorable: true,
   // TIME COST (Đợt 143) — opt in to the shared "-N per idle second" option.
   timeCost: true,

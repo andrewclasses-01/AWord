@@ -173,6 +173,7 @@ function gappedText(it) {
 
 const ftgTemplate = {
   type: "find_the_gap",
+  usesKeyboard: act => normMode(act?.options?.mode) === "type",   // Đợt 472 — chỉ chế độ GÕ mới có bàn phím
   scorable: true,
   name: "Find the gap",
   timeCost: true,

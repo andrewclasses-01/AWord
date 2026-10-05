@@ -2949,6 +2949,17 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     else inner.append(pickBack);
   }
   inner.append(playOverlay);
+  // ⭐ Đợt 472 (thầy chốt) — bài giao NHÚNG trong trang bài tập myLesson (`&nhung=1`): báo trang mẹ game
+  // này có BÀN PHÍM AWord không (`tpl.usesKeyboard`: true | fn(activity)) — lúc màn START hiện ra ("nap")
+  // và lúc bấm START/CONTINUE ("start"). Trên ĐIỆN THOẠI bên đó tự bấm "Phóng to" (bai.html v1.249.0).
+  const nhungTrongKhung = document.documentElement.classList.contains("aw-nhung") && window.parent !== window;
+  function baoBanPhim(luc) {
+    if (!nhungTrongKhung) return;
+    let co = false;
+    try { co = typeof tpl.usesKeyboard === "function" ? !!tpl.usesKeyboard(activity) : !!tpl.usesKeyboard; } catch (e) {}
+    try { window.parent.postMessage({ type: "AWORD:BANPHIM", co, luc }, "*"); } catch (e) {}
+  }
+  baoBanPhim("nap");
 
   // ----- OPTIONAL "get ready first" gate — `tpl.prepare` (Đợt 108, 11/8/2026) --
   // A template whose game genuinely CANNOT start until something heavy has
@@ -3121,6 +3132,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // which set `hwMode` first). Everything inside is byte-for-byte the old
   // handler apart from disabling all start buttons together.
   function startPressed() {
+    baoBanPhim("start");   // Đợt 472 — điện thoại: trang bài tập tự phóng to lại nếu em đã thu nhỏ
     // Đợt 389 — the custom start screen settles what it chose (A Show Speed: the
     // minutes) on THIS board's act before anything reads it. In a match board 1
     // arrives here through the relay click, so both boards take the same value.
