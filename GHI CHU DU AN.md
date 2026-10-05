@@ -565,6 +565,10 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
   `goiYTheoBang` gõ "I like aples" ⇒ đúng câu hướng dẫn, gõ đúng ⇒ "".
 **Bước dữ liệu (sau khi mã LIVE):** sao lưu cả `users/{uid}/items` vào `E:\LAP TRINH APP\_SAO LUU FIRESTORE\` rồi di trú bằng khoá quản trị (ghi gy_ trước, sửa act sau, điều kiện updateTime) — kết quả ghi ở mục dưới.
 ⚠️ Tab/app AWord đang mở bằng mã CŨ (myActivity…) sau khi di trú: act TTA mở ra thiếu bảng tới khi tải lại; lưu từ mã cũ vẫn giữ dấu ⇒ không mất bảng. Thầy tải lại app/tab.
+**⬜ DI TRÚ DỮ LIỆU CHƯA CHẠY (Claude bị bộ phân quyền chặn ghi Firestore thật):** đã sao lưu 548 doc → `E:\LAP TRINH APP\_SAO LUU FIRESTORE\2026-10-05_2118_aword-items-truoc-dot484\users_items.json` (36 MB).
+Thử khô (`--thu`): 52 act có bảng, 13,4 MB; runQuery NOT_IN [showdown-history, act-goiy] máy chủ thật HTTP 200 (515 doc 20,4 MB trước di trú).
+Script `di-tru-484.js` (chép cạnh bản sao lưu: `E:\LAP TRINH APP\_SAO LUU FIRESTORE\2026-10-05_2118_aword-items-truoc-dot484\di-tru-484.js`) — `--lam <file sao lưu>` ghi gy_ trước, sửa act sau
+(updateMask content.goiY/goiYTach + điều kiện updateTime), đọc lại kiểm từng act; `--hoan <file>` hoàn tác. Chưa di trú ⇒ mọi thứ chạy như cũ (act tách DẦN khi thầy lưu lại act TTA).
 
 ## Đợt 483 (05/10/2026) — ⭐⭐⭐ THƯ VIỆN MỞ CHẬM 30–40 s TRÊN iPAD = KÉO CẢ KHO 33 MB ⇒ BỎ SỔ CÁI SHOWDOWN KHỎI LƯỢT ĐỌC ĐẦU · phiên MSI
 **Thầy gửi bảng `?do=1` lần 2 (sau Đợt 481):** tải trùng 92 → 6 lượt, FCP 5,30 → 3,25 s — nhưng thầy "vẫn thấy lâu": màn chờ `.aw-boot` CÒN HIỆN sau 30 s,
@@ -597,6 +601,10 @@ act 306 doc 20,2 MB (trong đó `content.goiY` — các bộ gợi ý — 13,4 M
   (1) thêm workflow (checkout → setup-node 22 → `npm i --no-save --no-package-lock esbuild@0.28.2` → `node tools/xuat-ban.mjs _site` → upload-pages-artifact@v3 → deploy-pages@v4,
   permissions pages:write + id-token:write, concurrency pages cancel-in-progress); (2) Settings › Pages › Source = **GitHub Actions** (tài khoản andrewclasses-01 — `gh` máy MSI là andrewclasses-code KHÔNG có quyền admin).
   ⚠️ Sau khi bật: MỌI phiên kiểm live bằng `python tools/kiem-live.py` (băm .js/.css live ≠ repo là ĐÚNG) — phải sửa mục quy trình kiểm live trong APP_MASTER cùng lúc.
+**⭐ ĐÃ BẬT (05/10/2026 tối, thầy: "Bật cả thu gọn mã. Hãy tự làm giúp tôi"):** `.github/workflows/xuat-ban.yml` push `b035ad0` (lượt chạy đầu build 16 s + deploy 13 s ✅);
+Settings › Pages › Source chuyển "Deploy from a branch" → **GitHub Actions** qua Chrome của thầy (đăng nhập andrewclasses-01); API: `build_type: workflow`, cname giữ `aword.andrewclasses.com`.
+⛔⛔ **TỪ NAY KIỂM BẢN LIVE = `python tools/kiem-live.py [file…] [--cho 300]`** — .js/.css trên live là bản THU GỌN, băm khác repo là ĐÚNG; công cụ so `build.json` (sha == HEAD + băm nguồn).
+Push xong ~1 phút mới live (Actions). Lỗi dựng ⇒ xem `gh run list --repo andrewclasses-01/AWord`; bản cũ vẫn chạy.
 
 ## Đợt 481 (05/10/2026) — ⭐⭐ iPad/SAFARI TẢI MỖI FILE JS 3 LẦN ⇒ fetch() "làm nóng" của Đợt 285c CHỈ CHO CHROMIUM · phiên MSI (đặt nhầm số 480 trong commit `5b1d1ec` — trùng Đợt 480 STAR LOOT của phiên khác, đã đổi thành 481)
 **Thầy gửi bảng `?do=1` iPad thật (iOS 27, `/?r=activities` đã đăng nhập):** chờ trang 50 ms (máy chủ không chậm) nhưng DOM sẵn 5,25 s · FCP 5,30 s ·
