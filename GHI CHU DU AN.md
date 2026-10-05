@@ -562,6 +562,7 @@ Sửa 2 kho: AWord (Đợt này) + myLesson web v1.247.0 (nút tròn + nghe tín
   gắn slogan). Mở rộng so với "4 game" thầy nêu — tự kiểm thay vì ghi cứng (Anagram/Crossword cũng có chữ giữa).
   Đo: TTA ⇒ false; Anagram · Gameshow · Crossword ⇒ true.
 - myLesson `bai.html` v1.247.0: `.game-thu` = tròn 38px giữa trên (`left:50%`), `data-giua="1"` ⇒ góc trái; nghe `AWORD:GIUA`.
+- ✅ AWord push `60f8303` (+`65a48f1` trả lại CRLF cho file này) · myLesson `82f5f2c` + trang thử `1423e4c` · LIVE 4/4 mã băm.
 - ⬜ Thầy thử điện thoại thật.
 
 ---
