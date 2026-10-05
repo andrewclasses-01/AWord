@@ -3153,6 +3153,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
    */
   function enterGame() {
     playStarted = true;
+    apMenuHs();   // ⭐ Đợt 468 — cờ 100% có thể vừa về từ máy chủ
     // ⭐ Đợt 366 — nhật ký lượt chơi cho dashboard myLesson (xem play.js `playLog`):
     // ghi lúc vào ván, rồi MỖI PHÚT một nhịp (kể cả em bỏ dở), xong ván ghi `end` ở finish().
     if (session && session.playLog) {
@@ -5727,7 +5728,26 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // register one keep the old behavior — the guard simply doesn't apply.
   let answeredCounter = null;
   let menuEl = null;
-  menuBtn.onclick = () => (menuEl ? closeMenu() : openMenu());
+  menuBtn.onclick = () => { if (cheDoMenuHs() === "an") return; (menuEl ? closeMenu() : openMenu()); };
+  // ⭐⭐ Đợt 468 (thầy chốt 05/10/2026) — ÉP HỌC SINH LÀM HẾT BÀI. Đo thật 25/9–4/10: 76% lượt bài giao là
+  // BỎ DỞ (Start again sau 1–2 câu sai), lượt dở ngốn 197 giờ > 179 giờ lượt làm hết; tấm nhắc Đợt 424 chỉ đỡ
+  // vài ngày. Trang học sinh (play.js) trả lời `session.cheDoMenu()`:
+  //   "an"   — em CHƯA từng đạt 100% ở act này ⇒ KHÔNG có ☰ (không Start again, không Resume = không dừng
+  //            đồng hồ để nghĩ). Màn kết thúc vẫn đủ Show mistakes · Start with mistakes · Start again.
+  //   "chay" — em ĐÃ đạt 100% (đua top) ⇒ ☰ có Start again, nhưng mở menu ván KHÔNG dừng (đồng hồ chạy).
+  //   ""     — như cũ (giáo viên, phụ huynh, chưa trả lời).
+  // ⚠️ Hỏi lại MỖI lần (dựng bàn, vào ván, bấm nút): cờ 100% có thể tới muộn (máy chủ trả lời sau khi dựng).
+  // Ván Start with mistakes (không tính điểm) và Fight giữ menu như cũ.
+  function cheDoMenuHs() {
+    if (!session || fight || activity._mistakes || typeof session.cheDoMenu !== "function") return "";
+    try { const m = session.cheDoMenu(); return m === "an" || m === "chay" ? m : ""; } catch (e) { return ""; }
+  }
+  function apMenuHs() {
+    const an = cheDoMenuHs() === "an";
+    menuBtn.style.display = an ? "none" : "";
+    if (an) closeMenu();
+  }
+  apMenuHs();
 
   // ----- Menu pause (Đợt 91, 8/8/2026) — teacher's brief: opening the ☰ Menu
   // dims + softly blurs the STAGE only (title/Options/Template/Style/Edit/
@@ -5962,7 +5982,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // sang footer của popup Options (xem `footWrap` trong buildOptionsPanel),
     // cạnh trái nút Template, dạng icon — "tiện hơn" vì thầy đang mở Options
     // đằng nào cũng để đổi Template/settings, không cần vòng qua Menu riêng.
-    enterPause("menu");
+    // ⭐ Đợt 468 — em đã đạt 100%: menu KHÔNG dừng ván (đồng hồ vẫn chạy, không mượn menu để nghĩ).
+    if (cheDoMenuHs() === "chay") menuEl.classList.add("is-chay");
+    else enterPause("menu");
     inner.append(menuEl);
     // clicking anywhere else closes the menu (deferred so the opening click doesn't trigger it)
     setTimeout(() => document.addEventListener("pointerdown", onMenuOutside), 0);

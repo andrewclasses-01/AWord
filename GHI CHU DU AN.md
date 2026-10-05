@@ -546,6 +546,30 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 468 (05/10/2026) — ⭐⭐ ÉP HỌC SINH LÀM HẾT BÀI GIAO: em chưa đạt 100% thì KHÔNG CÒN nút ☰ · em đã 100% thì ☰ không dừng đồng hồ
+
+Thầy: em làm 1–2 câu sai là Start again, không bao giờ làm hết để học câu sai ⇒ ở nhà đúng hết (thuộc ngắn hạn), lên lớp sai liên tục;
+còn bấm ☰ để dừng đồng hồ suy nghĩ rồi Resume. ĐO THẬT (sao lưu đêm 04/10, kho scores 25/9→4/10, 9.978 lượt): **76% lượt là BỎ DỞ**;
+87% lượt dở dừng trước nửa bài; lượt dở ngốn **197 giờ** > 179 giờ lượt làm hết; 132/154 em có ≥ nửa lượt là bỏ dở; lần làm hết ĐẦU TIÊN
+được 76% nếu không bỏ lượt nào trước đó, nhưng 88% nếu đã bỏ ≥ 6 lượt (= học thuộc bằng làm thử). Tấm nhắc Đợt 424 chỉ kéo 83%→60–70%
+vài ngày, 03/10 lại 85%. Thầy chốt (AskUserQuestion 05/10):
+
+- `play.js` trả lời `session.cheDoMenu()` (MỚI): em CHƯA từng đạt 100% ở act (`daDat100` của bo-cuoc.js, Đợt 456 — ghi khi làm hết đạt
+  điểm tối đa hoặc đọc bảng `bang/tot` máy chủ) ⇒ `"an"`; đã đạt ⇒ `"chay"`; phụ huynh `db=1` ⇒ `""` (như cũ).
+- `core/engine.js` `cheDoMenuHs()` + `apMenuHs()` (đặt ngay dưới `menuBtn.onclick`): `"an"` ⇒ `menuBtn.style.display="none"` (cả màn
+  READY lẫn trong ván; onclick cũng chặn); `"chay"` ⇒ menu mở KHÔNG `enterPause("menu")`, mang lớp `.is-chay` (không tấm mờ, đồng hồ
+  chạy, game vẫn chạy). Hỏi lại ở mỗi lần dựng bàn + `enterGame()` + mỗi cú bấm vì cờ 100% có thể về muộn từ máy chủ.
+  ⛔ Không áp: giáo viên (không `session`), Fight, ván **Start with mistakes** (không tính điểm — giữ menu như cũ).
+- Màn kết thúc KHÔNG đổi: Show mistakes · Start with mistakes · Start again = đúng vòng học thầy muốn.
+- `play.js` đo giờ hoạt động: menu `.is-chay` không còn coi là "đang dừng" (`.aw-menu:not(.is-chay)`).
+- Đường thoát còn lại = tải lại trang / đóng tab ⇒ Đợt 2 (thầy chốt (c) GIỮ LƯỢT DỞ, mở lại làm tiếp, đồng hồ chạy theo GIỜ THẬT).
+- ⚠️ Chưa áp: Balloon pop 3D / Maze chase 3D có menu RIÊNG trong cảnh 3D (END GAME/restart) — không dùng trong bài giao 10 ngày qua.
+- Bàn thử `scratch/dot468/ban.html?m=an|chay` (ignore): an ⇒ ☰ `display:none` ở READY + trong ván, bấm không mở; chay ⇒ menu
+  [Start again, Resume], không tấm mờ, đồng hồ 0:52→0:55 sau 3,2 s; "" ⇒ tấm mờ, đồng hồ đứng 1:00→1:00; READY "an" rồi cờ đổi "chay"
+  trước START ⇒ vào ván ☰ hiện lại.
+
+---
+
 ## Đợt 467 (05/10/2026) — iPhone: GÕ CHỮ ĐẦU TIÊN Ở CHẾ ĐỘ PHÓNG TO, CẢ MÀN GIẬT LÊN RỒI HẠ XUỐNG · nút THU NHỎ màu sáng (myLesson v1.248.0)
 
 Thầy thử điện thoại thật: chỉ CHỮ ĐẦU TIÊN mới giật, gõ tiếp không sao. Nguyên nhân: iOS BỎ QUA `focus()` không đến từ cú chạm

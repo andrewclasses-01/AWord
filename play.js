@@ -28,7 +28,7 @@ import {
 } from "./core/assignments.js";
 import { ensureTemplate } from "./core/registry.js";
 import { gioChuan } from "./core/gio-chuan.js";   // Đợt 422 — mốc giờ theo máy chủ
-import { tiLeDaLam, ghiRoiVan, ghiXongVan, layNhacCho, hienNhac, dangMo, ghiDat100, canKiemMayChu, ghiDaKiem } from "./bo-cuoc.js";   // Đợt 424 — "Start Again quá sớm"
+import { tiLeDaLam, ghiRoiVan, ghiXongVan, layNhacCho, hienNhac, dangMo, ghiDat100, daDat100, canKiemMayChu, ghiDaKiem } from "./bo-cuoc.js";   // Đợt 424 — "Start Again quá sớm"
 // No template is imported here on purpose. ensureTemplate() fetches the ONE
 // game this assignment uses, right before it starts — so a student on a phone
 // downloads one game, not the whole catalogue.
@@ -81,7 +81,8 @@ function taoDoHoatDong(choMs) {
     // ⭐ Đợt 420 (28/09/2026) — ☰ Menu đang mở = ván TẠM DỪNG: đồng hồ game đứng (engine `pauseClockForMenu`)
     // thì giờ hoạt động cũng đứng. Trước đây vẫn cộng (cú bấm mở menu là một lần chạm ⇒ +60 s, bài đọc 180 s,
     // âm thanh đang phát) ⇒ 105/6.070 lượt có activeMs > timeMs (quét 28/9). Đọc DOM, không đụng core/.
-    if (document.querySelector(".aw-menu")) return;
+    // Đợt 468 — menu `.is-chay` (em đã đạt 100%) KHÔNG dừng ván ⇒ giờ hoạt động vẫn tính như thường.
+    if (document.querySelector(".aw-menu:not(.is-chay)")) return;
     // trần 2 s/nhịp: tab vừa hiện lại / máy vừa thức dậy thì khoảng ngủ không lọt vào
     if (t - lanCham <= choMs || coAmDangPhat()) activeMs += Math.min(Math.max(d, 0), 2000);
   };
@@ -383,6 +384,10 @@ async function play(assignment, studentName, className, studentMa) {
       endOptions: assignment.endOptions || {},
       // ⭐ Đợt 424 — tấm "Start Again quá sớm" đang mở ⇒ engine hoãn lối vào thẳng ván (Start again) tới khi em đóng.
       choVaoVan: () => dangMo(),
+      // ⭐⭐ Đợt 468 (thầy chốt 05/10/2026) — ÉP LÀM HẾT BÀI: chưa từng đạt 100% ở act này ⇒ ☰ ẩn ("an");
+      // đã đạt 100% ⇒ ☰ có nhưng mở ra đồng hồ vẫn chạy ("chay"). Phụ huynh (`db=1`) giữ như cũ.
+      // Cờ 100% = `daDat100` của bo-cuoc.js (Đợt 456: ghi khi làm hết đạt điểm tối đa, hoặc đọc bảng máy chủ).
+      cheDoMenu: () => (dacBiet ? "" : (daDat100(khoaBC) ? "chay" : "an")),
       // What the screenshot fallback board prints (engine side, Đợt 246).
       meta: { assignmentTitle: assignment.title || "", code: assignment.code },
 
