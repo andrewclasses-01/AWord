@@ -1,4 +1,13 @@
-// TRAIN RUSH — lõi MẪU 1al (03/10/2026): như 1ak + ý thầy "train rush bị size quá to — lấy tỷ lệ khung hình, size của Rocket Race làm mẫu;
+// TRAIN RUSH — lõi MẪU 1am (05/10/2026): như 1al + HIỆU NĂNG (thầy: "chơi Train rush trên TOMKO rất giật lag trên myActivity, cả Chrome").
+//   Đo TOMKO (Quadro T2000 4 GB, 3840×2160, DPR 1,25, trong myActivity): 1al vẽ 3840×1780 + MSAA 4 HalfFloat ⇒ 36–38 fps, 30–35 % khung > 33 ms,
+//   card 100 % (60 W, 83 °C, hạ xung vì nóng); bỏ qua trần `__awMaxPR` = 1 của myActivity; 14 shader dịch GIỮA ván (khựng 0,1–1,3 s).
+//   • auto-res-1am.js: tự giữ 60 khung — thang [độ nét tối đa + MSAA 4] → [tối đa, MSAA 0] → hạ độ nét 0,1/nấc tới 0,8; đọc trần `__awMaxPR`;
+//     nhớ nấc đã êm (localStorage). Máy khoẻ vẫn y như 1al (MSAA 4).
+//   • canvas `antialias: false` — mọi thứ vẽ qua composer (đã MSAA riêng), khử răng cưa ở canvas chỉ tốn bộ nhớ + phân giải.
+//   • DỊCH SẴN shader ở màn chờ (`prewarm`: đầu máy, toa than, toa đáp án, toa trơn, toa khách, toa than đá, thùng, bóng thưởng, máy bay,
+//     hạt khói/chớp) bằng `renderer.compileAsync` — GIỮ bộ mẫu (không thả) ⇒ shader không bị xoá khi tàu cũ bị huỷ cuối mỗi màn.
+//   • bàn thử: `__bp.quality` = { pr, msaa, level, levels, cap, drops, hostCap, learned }.
+// ---- ghi chú 1al: TRAIN RUSH — lõi MẪU 1al (03/10/2026): như 1ak + ý thầy "train rush bị size quá to — lấy tỷ lệ khung hình, size của Rocket Race làm mẫu;
 //   Options đủ như AWord":
 //   • khung = khung Rocket Race: rộng hết màn, cao = min(rộng/2, màn − hàng nút), dính mép trên (1ak: khung 16:10,5 giữa màn, 2 dải đen).
 //   • nút hàng dưới cỡ Rocket Race 44×44, cách 10 (giữ màu gỗ) — bp3d-1al.css.
@@ -98,6 +107,7 @@ import { makeCoach, addPassengers, animatePassengers, makeCoalCar, COACH_LEN, CO
 import { weather } from "./grime-1i.js";
 import { createCine, INTROS, INTRO_ID } from "./cine-1ah.js";
 import { createFightCine } from "./fight-cine-1ah.js";
+import { makeAutoQuality } from "./auto-res-1am.js";   // 1am
 
 const FONT = '"Baloo 2", system-ui, sans-serif';
 const ASPECT = 16 / 10.5;                       // đúng khung act đơn của AWord
@@ -146,8 +156,9 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   $(".bp-words").textContent = `${words.length} words${wordsTitle ? " · " + wordsTitle : ""}`;
   if (embed) ovStart.hidden = true;   // 1ac: bàn Fight dùng màn chờ chung của trang
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  const PR = Math.min(window.devicePixelRatio || 1, 1.5);
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });   // 1am: AA nằm ở composer (MSAA)
+  const PR_MAX = Math.min(window.devicePixelRatio || 1, 1.5);
+  let PR = PR_MAX;   // 1am: auto-res-1am.js hạ/nâng (trần `__awMaxPR` áp ở khung đầu)
   renderer.setPixelRatio(PR);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.92;
@@ -1487,11 +1498,19 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     stage.querySelector(".bp-top").append(f); setTimeout(() => f.remove(), 1200);
   }
 
+  // 1am: tự giữ 60 khung — đổi độ nét / MSAA chỉ cấp lại bộ đệm vẽ (không dựng lại cảnh)
+  const AQ = makeAutoQuality({ max: PR_MAX, min: Math.min(0.8, PR_MAX), key: embed ? "fight" : "single", apply: ({ pr, msaa }) => {
+    if (dead) return;
+    PR = pr; renderer.setPixelRatio(pr);
+    for (const rt of [composer.renderTarget1, composer.renderTarget2]) if (rt.samples !== msaa) { rt.samples = msaa; rt.dispose(); }
+    fit();
+  } });
   let last = 0, raf = 0, manual = false;
   function frame(ts) {
     if (dead) return;   // 1aj
     raf = requestAnimationFrame(frame);
     if (manual) return;
+    if (!S.paused) AQ.frame(ts); else AQ.pause();   // 1am
     const dt = last ? Math.min(0.05, (ts - last) / 1000) : 0; last = ts;
     if (!S.paused) update(dt);
     composer.render(dt);
@@ -1712,8 +1731,31 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   paintOpts();
   if (!embed) { sfx.amb(true); sfx.music("menu"); }   // 1ah: màn START — gió sa mạc + nhạc chờ (phát sau lần chạm đầu)
 
+  // 1am: DỊCH SẴN SHADER ở màn chờ — đo 1al: 14 shader (sơn đầu máy clearcoat, gỗ normalMap, bảng chữ, toa khách, thùng, hạt…) dịch
+  // GIỮA ván ⇒ khựng 0,1–1,3 s lúc START / màn mới / thùng rơi đầu tiên. Dựng 1 bộ mẫu bằng ĐÚNG các hàm dựng của ván (cùng weather())
+  // ⇒ cùng khoá shader; compileAsync (không chặn khung). Bộ mẫu KHÔNG vào cảnh và KHÔNG thả: vật liệu của nó giữ shader sống, nên
+  // huỷ tàu cũ cuối mỗi màn (disposeTree) không làm three.js xoá shader rồi dịch lại ở màn sau.
+  const warm = new THREE.Group();
+  try {
+    const parts = new THREE.Group();
+    parts.add(makeEngine(PALETTE[0], 1), makeTender(PALETTE[0], "LV.1"), makeCart(words[0] ? words[0].definition : "…"), makeCart(null),
+      makeFiller("coach", 0).group, makeFiller("coal", 0).group);
+    weather(parts);   // như buildTrain (trước máy bay — cùng thứ tự weather lên vật liệu dùng chung như ván thật)
+    const bp = makeBiplane(); weather(bp.g, { bump: 0.02 });   // như flyPlane
+    const label = new THREE.MeshStandardMaterial({ map: tx(crateTexture("…")), normalMap: M.crateSide.normalMap, roughness: 0.85 });
+    const crate = new THREE.Mesh(G.crate, [M.crateSide, M.crateSide, label, M.crateSide, label, M.crateSide]); crate.castShadow = true; crate.receiveShadow = true;
+    const flash = spriteOf(flashTex, 1, 1); flash.material.blending = THREE.AdditiveBlending;
+    const smoke = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, color: 0xf3ece2, transparent: true, depthWrite: false, opacity: 0.8 }));
+    warm.add(parts, bp.g, makeBanner("…").grp, crate, new THREE.Mesh(G.shard, M.shard.clone()), flash, smoke, makeBonusBalloon("time"), makeGuide(V.lanes[0]));
+    // ⚠ dịch khi đích vẽ = render target của composer (như RenderPass): vẽ ra màn hình thì three.js thêm ACES + sRGB vào khoá shader ⇒ lệch khoá, dịch phí
+    const rt0 = renderer.getRenderTarget(); renderer.setRenderTarget(composer.readBuffer);
+    try { if (renderer.compileAsync) renderer.compileAsync(warm, camera, scene).catch(() => { /* dịch lúc vẽ như cũ */ }); }
+    finally { renderer.setRenderTarget(rt0); }
+  } catch (e) { console.warn("TRAIN RUSH prewarm", e); }
+
   // bàn thử cho máy (khi khung xem trước bị ẩn rAF đứng)
   const api = window.__bp = {
+    get quality() { return AQ.info; }, renderer,   // 1am
     sfx, S, opt, get HALF() { return HALF; }, get SKY() { return SKY; }, camera, PH, world, cine, get cineOn() { return cine.active; }, get trainBody() { return trainBody; }, dropCrate, cartWorldX, spawnBlimp,
     start: startGame,
     // 1al: AWord ▸ Options ▸ Apply (bảng thật của AWord) ⇒ áp + về màn START (như Apply bảng riêng; AWord đã lưu). Chỉ nhận đúng khoá + kiểu.

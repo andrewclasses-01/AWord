@@ -32,7 +32,7 @@ preloadLoader3d("west");   // Đợt 452 — phông Rye tải ngay lúc nạp te
 // CSS của game (chép từ myGame) + phông miền Tây; nạp một lần khi game mở lần đầu.
 const TR3D_CSS = ["bp3d.css", "bp3d-1j.css", "bp3d-1p.css", "bp3d-1q.css", "bp3d-1r.css", "bp3d-1ab.css", "fight-cine-1ae.css", "fight-1al.css", "bp3d-1al.css"];
 const TR3D_FONTS = "https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@1,800;1,900&family=Rye&display=swap";
-// Đợt 452 — khoá game (DEFAULTS trong 3d/bp3d-1al.js) <-> khoá PHẲNG trong activity.options (engine + tr*)
+// Đợt 452 — khoá game (DEFAULTS trong 3d/bp3d-1am.js) <-> khoá PHẲNG trong activity.options (engine + tr*)
 const TR_DEF = { timerMode: "down", timer: 120, levels: 10, pointsOff: 0, balloonSpeed: 4, trainSpeed: 4, shuffle: true, showAnswers: true, bonusTime: false, bonusPoints: false, bonusX2: false };
 const TM_TO_GAME = { none: "none", countUp: "up", countDown: "down" }, TM_TO_AW = { none: "none", up: "countUp", down: "countDown" };
 const clampN = (v, lo, hi, d) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d; };
@@ -202,7 +202,7 @@ const balloonPopTemplate = {
       templates: () => ui.host.templates(),
       switchTemplate: t => ui.host.switchTemplate(t)
     } : null;
-    import("./3d/bp3d-1al.js")
+    import("./3d/bp3d-1am.js")
       .then(m => m.createBalloonPop({
         mount: h.box, view: "side", words, wordsTitle: activity.title || "", options: trGame(activity), host,
         onEvent: (k, d) => { if (k === "mode" && d === "fight" && ui.host && ui.host.fight) ui.host.fight(); }
@@ -247,7 +247,7 @@ function mountTrainRushFight(root, act, { single, home }) {
   let poll = 0;   // Đợt 451 — chờ 2 bàn dựng xong (ô Loading… của trận ẩn) rồi mới mờ màn chờ
   const obs = new MutationObserver(() => { if (root.childNodes.length) off(); });
   obs.observe(root, { childList: true });
-  import("./3d/fight-1al.js")
+  import("./3d/fight-1am.js")
     .then(m => m.createTrainRushFight({ mount: h.box, words: items, wordsTitle: act.title || "", time, onSingle: () => single(), onHome: () => home() }))
     .then(api => { if (dead) api.destroy(); else fightApi = api; })
     .then(() => { poll = setInterval(() => { const l = h.box.querySelector(".fb-ov-load"); if (dead || !l || l.hidden) { clearInterval(poll); ld.done(); } }, 100); })

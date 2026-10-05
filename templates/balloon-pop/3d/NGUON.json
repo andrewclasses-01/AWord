@@ -1,12 +1,13 @@
 {
  "nguon": "myGame/balloon-pop/core",
- "goc": "fight-1al.js",
- "commit": "98152f5",
+ "goc": "fight-1am.js",
+ "commit": "cd90e24",
  "con_sua_chua_commit": false,
  "js": [
-  "fight-1al.js",
+  "fight-1am.js",
   "sound-1ah.js",
-  "bp3d-1al.js",
+  "bp3d-1am.js",
+  "auto-res-1am.js",
   "fight-cine-1ah.js",
   "cine-1ah.js",
   "grime-1i.js",

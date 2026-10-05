@@ -546,6 +546,31 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 475 (05/10/2026) — TRAIN RUSH 3D HẾT GIẬT LAG TRÊN TOMKO: myGame mẫu 1am (tự giữ 60 khung + dịch sẵn shader) · phiên máy BOARD
+
+Thầy: "chơi Train rush trên TOMKO rất giật lag trên myActivity (có lẽ cả Chrome) — mở chơi thử, đo, tìm nguyên nhân, khắc phục" → chốt
+"sửa ở kho myGame trước, rồi đưa lên AWord như các máy khác" (máy này chưa có myGame ⇒ clone từ GitHub).
+
+**Đo bản cũ (1al, LIVE) trong myActivity** (CDP, đếm rAF + long-animation-frame, `nvidia-smi`; Quadro T2000, 3840×2160, DPR 1,25):
+màn chờ 40 fps · chơi 36–38 fps, 30–35 % khung > 33 ms · Fight 31 fps (47 %) · card 97–100 %, 60 W, 83 °C, đang SW Thermal Slowdown.
+Nguyên nhân: (1) lõi vẽ `min(DPR, 1,5)` = 3840×1780, BỎ QUA trần `window.__awMaxPR = 1` của myActivity (Rocket Race thì đọc);
+(2) MSAA 4 mẫu trên render target HalfFloat = phần đắt nhất (thử: PR 1 ⇒ 48 fps; PR 1 + MSAA 0 ⇒ 59,5; bloom / bóng đổ gần như không đổi);
+(3) 14 shader dịch GIỮA ván ⇒ khựng 1,3 s lúc START, 0,1–0,4 s giữa ván (tàu cũ bị huỷ cuối màn ⇒ shader bị xoá, màn sau dịch lại).
+Chrome chạy cùng code ⇒ cùng lag. Phần cứng: card 76 °C khi KHÔNG chơi ⇒ máy cần vệ sinh bụi / kiểm quạt (làm lag nặng thêm).
+
+**Sửa (myGame `cd90e24`, chép bằng `python -X utf8 tools/chep-train-rush.py`, GOC = `fight-1am.js`):**
+- `3d/auto-res-1am.js` (mới): thang [độ nét tối đa + MSAA 4] → [tối đa, MSAA 0] → hạ 0,1/nấc tới 0,8; đọc trần `__awMaxPR` mỗi khung;
+  nhớ nấc đã êm (localStorage `aw.bp3d.q.<single|fight>.<WxH>@<dpr>`). Máy khoẻ giữ y 1al (MSAA 4).
+- `3d/bp3d-1am.js`: canvas `antialias: false` (vẽ qua composer); `prewarm` dựng 1 bộ mẫu bằng chính hàm dựng ván + `weather()`,
+  `renderer.compileAsync` với đích vẽ = render target của composer, giữ bộ mẫu để shader sống qua các màn. Bàn thử `__bp.quality`, `__bp.renderer`.
+- `3d/fight-1am.js` = fight-1al dùng lõi 1am. `balloon-pop.js`: import 1am. Script chép tự xoá `bp3d-1al.js` / `fight-1al.js`; CSS giữ bản 1al.
+
+**Đo sau (bản cục bộ `devserver.py` trong myActivity, `__awMaxPR = 1`):** màn chờ 59,1 fps · chơi 59,6–59,8 fps, 1 khung > 33 ms / 12 s ·
+khựng START 83 ms · Fight (myGame 1am) 58,4 fps, 2 % · bộ tự chỉnh chốt PR 0,9–1 + MSAA 0. Còn 2 shader bóng đổ (depth) dịch giữa ván (~0,1 s, 1 lần/ván).
+Ảnh: bỏ MSAA hơi răng cưa ở mép gò cỏ / bụi cỏ; chữ, tàu, khinh khí cầu nét như cũ.
+- ⬜ Thầy chơi trên TOMKO: độ mượt + độ lấp loá vật mảnh khi máy quay lia.
+
+---
 ## Đợt 474 (05/10/2026) — MÀN START CỦA TYPE THE ANSWER CŨNG KÉO KÍN MÀN (bài giao, điện thoại, đã phóng to)
 
 Thầy hỏi: sau READY, trước khi bấm START đã phóng to chưa? — Rồi (Đợt 472 gửi "nap" lúc dựng màn START), nhưng màn START vẫn là
