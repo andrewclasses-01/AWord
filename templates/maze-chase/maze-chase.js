@@ -36,7 +36,7 @@ import { openMazeChaseEditor } from "./maze-chase-editor.js";
 import { showLoader3d } from "../../core/loader3d.js";   // Đợt 451 — màn chờ thay khung trắng của AWord lúc nạp 3D
 const loader = () => showLoader3d({ key: "starloot", title: "STAR LOOT", theme: "space" });
 
-const CSS_3D = new URL("./3d/mc3d-2o.css", import.meta.url).href;
+const CSS_3D = new URL("./3d/mc3d-2p.css", import.meta.url).href;
 // Đợt 452 — khoá game (mc3d-2o DEFAULTS) <-> khoá PHẲNG trong activity.options (engine + sl*)
 const SL_DEF = { fight: false, timer: "up", timerSec: 120, lives: 5, difficulty: 6, bombs: 1, bombGift: 3, dpadStyle: "ring", shuffle: true, showAnswers: true };
 const DPADS = [["glass", "Glass"], ["ring", "Ring"], ["keys", "Keys"], ["console", "Console"], ["stick", "Stick"]];
@@ -187,7 +187,7 @@ const starLootTemplate = {
     console.log("MYACT:3D:ON");   // myActivity: nhường card đồ hoạ (như Rocket race 3D)
     // Đợt 452 — Options ▸ Apply của engine => áp ngay trong cảnh (game chưa dựng xong => false => engine dựng lại như thường)
     if (ui.liveOptions) ui.liveOptions(o => (game && !dead ? game.setOptions({ ...SL_DEF, ...gameOpts(o) }) === true : false));
-    import("./3d/mc3d-2o.js")
+    import("./3d/mc3d-2p.js")
       .then(m => m.createMazeChase({
         mount: box, view: "tilt", questions,
         title: activity.title || "", act: activity.title || "",

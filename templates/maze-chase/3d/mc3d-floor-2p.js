@@ -1,4 +1,9 @@
-// MAZE CHASE 3D — SÀN TÀU VŨ TRỤ, bản 1f (như 1e; chữ ANDREW STUDIO nhỏ + tối, chỉ khắc chìm, không sáng).
+// STAR LOOT — SÀN TÀU VŨ TRỤ, bản 2p (05/10/2026): hình y hệt 1f, chỉ đổi CÁCH CHẠY cho hết khựng lúc sang câu.
+//   Đo 2o trên TOMKO (myActivity): đổi mê cung = 141–264 ms trong MỘT khung (vẽ 4 canvas lớn + Sobel JS + getImageData đọc ngược từ GPU).
+//   • paint() thành generator `paintGen` có điểm dừng (mỗi vài tấm thép / mỗi khối hàng Sobel). `paint()` = chạy hết ngay (như cũ);
+//     `paintLazy(…)` ⇒ { step(ms) → true khi xong, cancel() } — nơi gọi chia ra nhiều khung (mc3d-2p: trong lúc câu hỏi to che màn).
+//   • canvas độ cao + pháp tuyến dùng `willReadFrequently` (vẽ bằng CPU) ⇒ getImageData không phải chờ GPU đọc ngược.
+// ---- ghi chú 1f: MAZE CHASE 3D — SÀN TÀU VŨ TRỤ, bản 1f (như 1e; chữ ANDREW STUDIO nhỏ + tối, chỉ khắc chìm, không sáng).
 // ---- ghi chú 1d: (mẫu 1d, 29/9/2026). Thầy: "làm sàn đẹp và chi tiết hơn, sàn hiện tại trông giả quá".
 // Vẽ 4 lớp bằng canvas cho vật liệu PBR của three.js:
 //   color (màu + trong suốt ở ô không sàn) · normal (độ gồ ghề, sinh từ bản đồ độ cao) · rough (chỗ bóng / chỗ nhám) · emit (đèn nhỏ).
@@ -30,12 +35,12 @@ function noiseCanvas(w, h, scale, oct = 3) {        // bẩn loang: cộng vài 
 
 export function createDeckPainter(COLS, ROWS) {
   const P = DECK_P, W = COLS * P, H = ROWS * P;
-  const mk = () => { const c = document.createElement("canvas"); c.width = W; c.height = H; return c; };
-  const cv = { color: mk(), normal: mk(), rough: mk(), emit: mk() };
-  const hcv = mk(), mask = mk();
+  const mk = (cpu = false) => { const c = document.createElement("canvas"); c.width = W; c.height = H; if (cpu) c.getContext("2d", { willReadFrequently: true }); return c; };   // 2p
+  const cv = { color: mk(), normal: mk(true), rough: mk(), emit: mk() };
+  const hcv = mk(true), mask = mk();
   let grime = null;
 
-  function paint(grid, theme, start, logo) {
+  function* paintGen(grid, theme, start, logo) {   // 2p: generator — `yield` = chỗ được nhường khung
     if (!grime) grime = noiseCanvas(W, H, 180, 4);
     const on = (r, c) => r >= 0 && r < ROWS && c >= 0 && c < COLS && grid[r][c].on;
     const g = cv.color.getContext("2d"), hg = hcv.getContext("2d"), rg = cv.rough.getContext("2d"), eg = cv.emit.getContext("2d");
@@ -59,6 +64,7 @@ export function createDeckPainter(COLS, ROWS) {
       }
     }
     for (const p of plates) {
+      yield;   // 2p: mỗi tấm thép
       const w = p.x1 - p.x0, h = p.y1 - p.y0;
       if (w < 8) continue;
       const col = p.type === "tread" ? mix(base, steel, 0.45) : p.type === "grate" ? mix(base, [30, 34, 44], 0.6) : base;
@@ -123,6 +129,7 @@ export function createDeckPainter(COLS, ROWS) {
       }
     }
 
+    yield;
     // ---- 2. dùng lâu: bẩn loang (nhân tối) + xước + chữ in khu vực
     g.save(); g.globalCompositeOperation = "multiply"; g.globalAlpha = 0.55; g.drawImage(grime, 0, 0); g.restore();
     rg.save(); rg.globalAlpha = 0.35; rg.globalCompositeOperation = "overlay"; rg.drawImage(grime, 0, 0); rg.restore();
@@ -141,6 +148,7 @@ export function createDeckPainter(COLS, ROWS) {
       g.fillStyle = "rgba(235,240,255,.13)"; g.fillText(TAGS[i % TAGS.length], 0, 0); g.restore();
     }
 
+    yield;
     // ---- 3. bóng tối sát chân tường (theo mê cung của câu này)
     const band = (x, y, len, horiz) => {
       const S = 38;
@@ -157,6 +165,7 @@ export function createDeckPainter(COLS, ROWS) {
       if ((a || b) && !(a && b && grid[r][c - 1].r)) band(c * P, r * P, P, false);
     }
 
+    yield;
     // ---- 4. mép giáp khoảng trống / mép trạm: sọc cảnh báo vàng-đen + đèn đường băng
     const hazard = (x, y, w, h) => {
       g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip();
@@ -168,6 +177,7 @@ export function createDeckPainter(COLS, ROWS) {
     };
     const B = 18, L = 30;
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      if (c === 0 && r > 0) yield;   // 2p: mỗi hàng ô
       if (!on(r, c)) continue;
       const x = c * P, y = r * P;
       const sides = [[!on(r - 1, c), x, y + 8, P, B, true], [!on(r + 1, c), x, y + P - 8 - B, P, B, true],
@@ -184,6 +194,7 @@ export function createDeckPainter(COLS, ROWS) {
       }
     }
 
+    yield;
     // ---- 5. vòng xuất phát
     if (start) {
       const x = (start.c + 0.5) * P, y = (start.r + 0.5) * P;
@@ -218,16 +229,20 @@ export function createDeckPainter(COLS, ROWS) {
       [g, hg, eg, rg].forEach(x => { x.letterSpacing = "0px"; });
     }
 
+    yield;
     // ---- 6. cắt theo hình map (ô không sàn = trong suốt)
     const mg = mask.getContext("2d"); mg.clearRect(0, 0, W, H); mg.fillStyle = "#fff";
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (on(r, c)) mg.fillRect(c * P - 0.5, r * P - 0.5, P + 1, P + 1);
     g.save(); g.globalCompositeOperation = "destination-in"; g.drawImage(mask, 0, 0); g.restore();
 
+    yield;
     // ---- 7. độ cao ⇒ pháp tuyến (Sobel), mượt nhẹ trước cho khỏi răng cưa
     const ng = cv.normal.getContext("2d");
     ng.filter = "blur(0.8px)"; ng.drawImage(hcv, 0, 0); ng.filter = "none";
     const hd = ng.getImageData(0, 0, W, H).data, out = ng.createImageData(W, H), od = out.data, S = 2.2 / 255;
+    yield;
     for (let y = 0; y < H; y++) {
+      if (y && y % 96 === 0) yield;   // 2p: mỗi 96 hàng điểm ảnh
       const y0 = y > 0 ? y - 1 : y, y1 = y < H - 1 ? y + 1 : y;
       for (let x = 0; x < W; x++) {
         const x0 = x > 0 ? x - 1 : x, x1 = x < W - 1 ? x + 1 : x;
@@ -240,5 +255,17 @@ export function createDeckPainter(COLS, ROWS) {
     ng.putImageData(out, 0, 0);
     return cv;
   }
-  return { canvases: cv, paint, W, H };
+  // 2p: chạy hết ngay (như 1f) — lúc tải / intro
+  function paint(grid, theme, start, logo) { const it = paintGen(grid, theme, start, logo); for (;;) { const r = it.next(); if (r.done) return r.value; } }
+  // 2p: chia nhiều khung — step(ms) chạy tới hết ngân sách ms rồi nhường; trả true khi đã vẽ xong. cancel(): bỏ dở (map khác thay).
+  function paintLazy(grid, theme, start, logo) {
+    const it = paintGen(grid, theme, start, logo); let done = false;
+    return {
+      get done() { return done; },
+      step(ms = 4) { if (done) return true; const t0 = performance.now(); do { if (it.next().done) { done = true; return true; } } while (performance.now() - t0 < ms); return false; },
+      finish() { while (!done) if (it.next().done) done = true; return true; },
+      cancel() { done = true; try { it.return(); } catch (e) { /* bỏ qua */ } },
+    };
+  }
+  return { canvases: cv, paint, paintLazy, W, H };
 }

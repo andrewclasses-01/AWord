@@ -1,3 +1,4 @@
+/* STAR LOOT 2p (05/10/2026): y hệt mc3d-2o.css — đổi tên theo lõi mc3d-2p.js (bản mới = tên mới). */
 /* STAR LOOT — CSS mẫu 2n (02/10/2026): chép mc3d-2m.css; lớp gốc .mc-root thay #game, bỏ luật html/body, tiền tố bảng Options aw- ⇒ mco- (xem đầu mc3d-2n.js). */
 /* 2a: --u = đơn vị cỡ chữ/nút. Chế độ 1 người: khung có thể rộng hơn 16:10,5 (TOMKO) ⇒ lấy theo chiều cao để không phình; Fight giữ 1cqw như 1z. */
 .mc-root { --u: 1cqw; }   /* 2n: biến của STAR LOOT nằm trong lớp gốc (vào AWord không rò ra trang) */

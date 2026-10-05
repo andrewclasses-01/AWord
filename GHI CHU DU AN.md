@@ -546,6 +546,27 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 476 (05/10/2026) — STAR LOOT 3D HẾT GIẬT LAG TRÊN TOMKO: myGame mẫu 2p (tự giữ 60 khung + sàn vẽ chia khung + ghim shader) · phiên máy BOARD
+
+Thầy: "tạm ổn rồi (Train Rush Đợt 475). Tiếp tục đo đạc và tối ưu tương tự với STAR LOOT".
+
+**Đo bản cũ (2o, LIVE) trong myActivity:** màn chờ 52 fps · chơi 44 fps, 18–20 % khung > 33 ms · Fight 42–44 fps · card 96–100 % · canvas 3840×1780
+(bỏ qua trần `__awMaxPR`). Thử núm lúc chạy (`__mc.renderer/composer`): PR 1 + MSAA 4 ⇒ 44 fps (độ nét gần như KHÔNG ảnh hưởng) · MSAA 0 ⇒ 56–58.
+Khựng 140–280 ms MỖI CÂU (profiler CDP): `nextQuestion → useMap → deck.paint` vẽ lại 4 canvas sàn + Sobel JS + `getImageData` đọc ngược GPU trong 1 khung.
+Thêm 11–19 ms/câu: shader mảnh xác robot bị three.js xoá khi dispose rồi dịch lại (`getProgramInfoLog` / `getProgramParameter` chờ card).
+
+**Sửa (myGame `ed155cd`, `python -X utf8 tools/chep-star-loot.py`, BAN = 2p, CORE + `mc3d-floor-2p.js` + `mc3d-autoq-2p.js`; gỡ tay `mc3d-2o.*`, `mc3d-floor-1f.js`):**
+- `3d/mc3d-autoq-2p.js`: như auto-res-1am (Train Rush) + nấc nào rớt 2 lần ⇒ chốt trần dưới nó (hết nhấp nhả MSAA giữa màn chờ nhẹ / lúc chơi nặng).
+- `3d/mc3d-2p.js`: canvas `antialias: false` · `renderer.debug.checkShaderErrors` tắt (`?glcheck=1` bật lại) · `pinPrograms()` giữ shader sống ·
+  `useMap(m, true)` ở `nextQuestion` ⇒ sàn vẽ ~4 ms/khung trong lúc câu hỏi to che màn, xong tải lên card mỗi khung 1 ảnh; `finishDeck()` trước `buildMaze`.
+- `3d/mc3d-floor-2p.js`: `paintGen` (generator) + `paintLazy`; canvas độ cao + pháp tuyến `willReadFrequently`. Hình sàn y hệt 1f.
+- `maze-chase.js`: import 2p.
+
+**Đo sau (bản cục bộ trong myActivity, `__awMaxPR = 1`):** intro 60 fps · chơi 59,3–59,9 fps, khung dài nhất 33–55 ms · Fight (myGame 2p) 59,7–59,8 ·
+không trần (như Chrome) tự xuống PR 1,05 + MSAA 0, 59–60 fps. Ảnh: sàn khớp đúng mê cung mới ở các câu sau. Còn ~40 ms/câu (`getImageData` sau bộ lọc mờ) — chấp nhận.
+- ⬜ Thầy chơi trên TOMKO: độ mượt, sàn đổi đúng mỗi câu, độ lấp loá khi bỏ MSAA.
+
+---
 ## Đợt 475 (05/10/2026) — TRAIN RUSH 3D HẾT GIẬT LAG TRÊN TOMKO: myGame mẫu 1am (tự giữ 60 khung + dịch sẵn shader) · phiên máy BOARD
 
 Thầy: "chơi Train rush trên TOMKO rất giật lag trên myActivity (có lẽ cả Chrome) — mở chơi thử, đo, tìm nguyên nhân, khắc phục" → chốt

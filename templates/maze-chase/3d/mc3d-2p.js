@@ -1,4 +1,12 @@
-// STAR LOOT — lõi MẪU 2o (03/10/2026): chép mc3d-2n.js + ý thầy "Options STAR LOOT không có đủ chức năng (ví dụ chuyển Template)…
+// STAR LOOT — lõi MẪU 2p (05/10/2026): như 2o + HIỆU NĂNG (thầy: "tiếp tục đo đạc và tối ưu tương tự Train Rush với STAR LOOT").
+//   Đo 2o trên TOMKO (Quadro T2000, 3840×2160, DPR 1,25, trong myActivity): màn chờ 52 fps · chơi 44 fps, 18–20 % khung > 33 ms · card 96–100 % ·
+//   canvas 3840×1780 (bỏ qua trần `__awMaxPR` = 1) · mỗi câu mới khựng 141–264 ms (vẽ lại sàn trong một khung).
+//   Thử: PR 1 + MSAA 4 ⇒ 44 fps (độ nét gần như không ảnh hưởng) · MSAA 0 ⇒ 56–58 fps.
+//   • mc3d-autoq-2p.js (chép auto-res-1am của TRAIN RUSH): tự giữ 60 khung — [tối đa + MSAA 4] → [tối đa, MSAA 0] → hạ độ nét; trần `__awMaxPR`; nhớ nấc.
+//   • canvas `antialias: false` (mọi thứ vẽ qua composer). Bàn thử `__mc.quality`.
+//   • sàn (mc3d-floor-2p.js): sang câu ⇒ vẽ lại sàn CHIA NHIỀU KHUNG (~4 ms/khung) trong lúc câu hỏi to che màn (4,7 s); xong mới đưa lên card.
+//     Trước khi dựng mê cung (`buildMaze`) chắc chắn vẽ xong (`finishDeck`). Lúc tải / intro vẫn vẽ ngay như cũ.
+// ---- ghi chú 2o: STAR LOOT — lõi MẪU 2o (03/10/2026): chép mc3d-2n.js + ý thầy "Options STAR LOOT không có đủ chức năng (ví dụ chuyển Template)…
 //   lấy Rocket Race làm mẫu, tỷ lệ khung hình + size của Rocket Race":
 //   • KHUNG mọi mode = khung Rocket Race: rộng hết ô, cao = min(rộng/2, ô − dải nút), dính mép trên (2n: Single cao gần kín màn).
 //   • Hàng nút cỡ Rocket Race: nút 44×44 bo 12, cách 10, đồng hồ LED 28px (mc3d-2o.css).
@@ -165,7 +173,8 @@ import { RoomEnvironment } from "../../rocket-race/vendor/three/addons/RoomEnvir
 import { createMcSound } from "./mc3d-audio-2n.js";   /* 2n: + close() */   /* 2m */   /* 2j: + gõ phím chữ HUD, nổ thật, còi hú, nhạc vũ trụ du dương (2i: file thu âm thật) */
 import { createIntro } from "./mc3d-intro-2m.js";   /* 2m */
 import { MAPS, genMap, makeDeck } from "./mc3d-maps-1t.js";
-import { createDeckPainter } from "./mc3d-floor-1f.js";
+import { createDeckPainter } from "./mc3d-floor-2p.js";   /* 2p: + paintLazy */
+import { makeAutoQuality } from "./mc3d-autoq-2p.js";   /* 2p */
 import { createBoomFX, makeBomb } from "./mc3d-boom-1v.js";
 import { MeshSurfaceSampler } from "../../rocket-race/vendor/three/addons/MeshSurfaceSampler.js";
 import { createHatches, createPortal, createUnderdeck, UNDER } from "./mc3d-hatch-1s.js";
@@ -798,8 +807,10 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
   $(".mc-sub").textContent = `${questions.length} questions${title ? " · " + title : ""}`;
 
   // ---------------------------------------------------------------- renderer
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  const PR = Math.min(window.devicePixelRatio || 1, 1.5);
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });   // 2p: AA nằm ở composer (MSAA)
+  const PR_MAX = Math.min(window.devicePixelRatio || 1, 1.5);
+  let PR = PR_MAX;   // 2p: mc3d-autoq-2p.js hạ/nâng (trần `__awMaxPR` áp ở khung đầu)
+  renderer.debug.checkShaderErrors = !!new URLSearchParams(location.search).get("glcheck");   // 2p: đo — hỏi log lỗi shader (getProgramInfoLog) ở lần dùng đầu bắt luồng chính CHỜ card dịch xong (16–19 ms/lần); ?glcheck=1 bật lại khi cần dò lỗi
   renderer.setPixelRatio(PR);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
@@ -840,6 +851,13 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
   composer.addPass(new OutputPass());
   composer.addPass(new ShaderPass(GRADE_SHADER));
   fit();
+  // 2p: tự giữ 60 khung — đổi độ nét / MSAA chỉ cấp lại bộ đệm vẽ (không dựng lại cảnh, không dịch lại shader)
+  const AQ = makeAutoQuality({ max: PR_MAX, min: Math.min(0.8, PR_MAX), key: fight ? "fight" : "single", apply: ({ pr, msaa }) => {
+    if (dead) return;
+    PR = pr; renderer.setPixelRatio(pr);
+    for (const rt of [composer.renderTarget1, composer.renderTarget2]) if (rt.samples !== msaa) { rt.samples = msaa; rt.dispose(); }
+    fit();
+  } });
 
   // ---------------------------------------------------------------- vũ trụ
   const sky = new THREE.Mesh(new THREE.SphereGeometry(2000, 48, 24), new THREE.ShaderMaterial({ ...SKY_SHADER, side: THREE.BackSide, depthWrite: false }));
@@ -1506,16 +1524,28 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
       L.l.visible = u > 0.01; L.dm.color.setRGB(0.35 + 2.8 * b, 0.05 + 0.2 * b, 0.04 + 0.12 * b); L.sp.material.opacity = b * u * u; });
     if (alarmCss) alarmCss.style.opacity = (0.12 * alarm.k + 0.88 * b).toFixed(3);   /* 2h: viền màn đỏ sáng cùng lúc với đèn */
   }
-  let floorTok = 0;
-  function useMap(m) {                      // dựng một map: lưới + sàn + màu + vách mép
+  let floorTok = 0, deckJob = null;
+  // 2p: sàn vẽ chia khung xong ⇒ đưa lên card MỖI KHUNG MỘT ẢNH, đặt needsUpdate ngay trước khi tải (đặt cả 4 cùng lúc thì lượt vẽ kế tiếp tự tải cả 4 ⇒ vẫn dồn một khung)
+  function uploadDeckLazy() {
+    const q = [floorTex, floorNrm, floorRgh, floorEmi], tok = ++floorTok;
+    const up = () => { if (dead || tok !== floorTok || !q.length) return; const t = q.shift(); t.needsUpdate = true; try { renderer.initTexture(t); } catch (e) { /* bỏ qua */ } requestAnimationFrame(up); };
+    requestAnimationFrame(up);
+  }
+  function stepDeck() { if (deckJob && deckJob.step(4)) { deckJob = null; uploadDeckLazy(); } }   // mỗi khung (frame)
+  function finishDeck() { if (!deckJob) return; deckJob.finish(); deckJob = null; ++floorTok; [floorTex, floorNrm, floorRgh, floorEmi].forEach(t => { t.needsUpdate = true; }); }   // phải xong NGAY (dựng mê cung)
+  function useMap(m, lazy = false) {        // dựng một map: lưới + sàn + màu + vách mép · 2p: lazy ⇒ sàn vẽ chia khung (sang câu)
     curMapSrc = m; curMap = genMap(m); grid = curMap.grid; START = curMap.start; espots = curMap.enemySpots;
     logo = openPlaza();
-    applyTheme(curMap.theme); deck.paint(grid, curMap.theme, null, logo); startRing.position.set(cellX(START.c), 0.035, cellZ(START.r)); startRing.visible = false;
+    if (deckJob) { deckJob.cancel(); deckJob = null; }
+    applyTheme(curMap.theme);
+    if (lazy) deckJob = deck.paintLazy(grid, curMap.theme, null, logo); else deck.paint(grid, curMap.theme, null, logo);
+    startRing.position.set(cellX(START.c), 0.035, cellZ(START.r)); startRing.visible = false;
     placeWings();                                                    // 1x: thanh giằng pin chạm đúng mép map này
     SPAWN = [null, null]; if (fight) chooseSpawns();                  // 1x: Fight — 2 ô xuất phát xa nhau, cân bằng
     { const pads0 = [[cellX(spawnOf(0).c), cellZ(spawnOf(0).r)]];      // 1s: ô tròn cố định (thay vòng vàng nét đứt)
       if (fight || +(new URLSearchParams(location.search).get("robots") || 1) > 1) { const b = spawnOf(1); pads0.push([cellX(b.c), cellZ(b.r)]); }
       hatches.fixtures(pads0); }
+    if (lazy) { layoutWalls(grid); return; }   // 2p: sàn tự tải lên card khi vẽ xong (stepDeck)
     [floorTex, floorNrm, floorRgh, floorEmi].forEach(t => { t.needsUpdate = true; });
     // 2b: đưa 4 ảnh sàn lớn lên card đồ hoạ NGAY, mỗi khung một ảnh (không dồn cả 4 vào khung đầu tiên mê cung hiện ra ⇒ khựng khi Start again / sang câu)
     { const q = [floorTex, floorNrm, floorRgh, floorEmi], tok = ++floorTok; const up = () => { if (tok !== floorTok || !q.length) return; try { renderer.initTexture(q.shift()); } catch (e) { /* bỏ qua */ } requestAnimationFrame(up); }; requestAnimationFrame(up); }
@@ -1736,7 +1766,7 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
     const q = results[qi].q;
     clearBombs(); hatches.clear(); gates.clear(); gatePair = null; pl.warp = pl2.warp = null; pl.lift = 0; pl.hold = null; pl.salute = false; pl2.lift = 0; pl.fly = pl2.fly = 0; pl2.hold = null; pl2.salute = false;
     const m = firstMapOverride || nextMap(); firstMapOverride = null;
-    if (m !== curMapSrc || !introRobot) useMap(m); miniBase = null;      // 1p: map đã dựng sẵn trong intro ⇒ không dựng lại (sàn không đổi)
+    if (m !== curMapSrc || !introRobot) useMap(m, true); miniBase = null;   /* 2p: sàn vẽ chia khung trong lúc câu hỏi to che màn */      // 1p: map đã dựng sẵn trong intro ⇒ không dựng lại (sàn không đổi)
     $(".mc-mapname").textContent = "Map · " + m.name;
     if (!introWallsUp) { wallAnim.dir = -1; wallAnim.t = 99; paintWalls(); }   /* tường nằm phẳng chờ dựng · 2f: intro đã dựng lúc robot quay người thì giữ */
     clearPads();
@@ -1763,7 +1793,7 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
     if (firstQ && !warmedInGame) { later(0.3, warmInGame); later(1.0, warmInGame2); }
     qEl.classList.add("is-wait");                                     // 2d: câu hỏi to đang giữa màn ⇒ dòng câu hỏi trên cùng chưa hiện
     if (introRobot && firstQ) { later(5.2 - 1.0 - 3.0, () => raiseWallsIntro()); later(5.2 - 1.0, () => spawnEnemies()); }   /* 2h: tường dựng 3 s trước khi địch trồi */   /* 2f: 1 s trước khi câu hỏi bay lên ⇒ địch trồi lên */
-    later(firstQ ? 5.2 : 4.7, () => { flyBigq(); setAlarm(false); buildMaze(q); });   // 1m: câu hỏi to hiện thêm 3 s
+    later(firstQ ? 5.2 : 4.7, () => { finishDeck(); flyBigq(); setAlarm(false); buildMaze(q); });   /* 2p: finishDeck — sàn chắc chắn xong trước khi dựng tường */   // 1m: câu hỏi to hiện thêm 3 s
   }
   // 2d: hết giờ đọc ⇒ chữ câu hỏi to BAY + thu nhỏ vào đúng chỗ dòng câu hỏi trên cùng, nền tối tan dần; tới nơi thì dòng trên hiện, chữ to ẩn
   // 2f: robot địch trồi lên qua nắp boong ở các góc (tách khỏi buildMaze để cuối intro gọi sớm)
@@ -2659,21 +2689,29 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
 
   let last = performance.now(), manual = false;
   // 2e: đã thử "vẽ cách 1 nhịp màn hình" cho khung đều — màn máy này có tần số thay đổi (VRR), đo bật/tắt không thấy lợi ⇒ bỏ, giữ vòng vẽ gốc
+  // 2p: GHIM shader — vật tạo/huỷ mỗi câu (mảnh xác robot, vết cháy…) dispose vật liệu ⇒ three.js XOÁ program khi hết người dùng ⇒ câu sau dịch lại
+  //   (đo: + ở pha hold, − ở intro câu sau, 11–19 ms/lần). Cộng 1 lượt dùng cho mỗi program một lần ⇒ không bao giờ về 0 ⇒ dùng lại mãi.
+  let pinT = 0;
+  function pinPrograms() { const ps = renderer.info.programs; if (ps) for (const p of ps) if (!p.__pin2p) { p.__pin2p = true; p.usedTimes++; } }
   let rafId = 0;
   function frame(now) {
     if (dead) return;                                  // 2n: destroy() ⇒ thôi vẽ
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    if (!manual) { update(dt); render(); }
+    stepDeck();                                        // 2p: sàn đang vẽ chia khung
+    if (++pinT >= 30) { pinT = 0; pinPrograms(); }   // 2p: giữ shader sống
+    if (!manual) { if (!paused) AQ.frame(now); else AQ.pause(); update(dt); render(); }   // 2p: tự giữ 60 khung
     rafId = requestAnimationFrame(frame);
   }
   rafId = requestAnimationFrame(frame);
 
   // bàn thử (khung xem trước bị ẩn ⇒ rAF không chạy: lái tay bằng step)
   const api = {
+    get quality() { return AQ.info; }, get deckBusy() { return !!deckJob; },   // 2p: bàn thử
     // 2n: dỡ hẳn game (AWord rời act / đổi act / đổi template). Gọi lại lần nữa vô hại.
     destroy() {
       if (dead) return; dead = true;
       cancelAnimationFrame(rafId);
+      if (deckJob) { deckJob.cancel(); deckJob = null; }   // 2p
       offs.splice(0).forEach(f => { try { f(); } catch (e) { /* bỏ qua */ } });
       try { closeSnd(); } catch (e) { /* bỏ qua */ }
       try { if (intro && (intro.active || intro.tailing)) intro.abort(); } catch (e) { /* bỏ qua */ }

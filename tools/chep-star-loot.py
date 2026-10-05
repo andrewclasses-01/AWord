@@ -22,9 +22,9 @@ WEB = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DST = os.path.join(WEB, "templates", "maze-chase")
 
 # lõi STAR LOOT đang dùng (đọc từ dòng import của mc3d-2n.js)
-BAN = "2o"   # Đợt 452: khung + nút Rocket Race, Options = bảng thật của AWord (host.options)
+BAN = "2p"   # Đợt 476: tự giữ 60 khung + sàn vẽ chia khung + ghim shader (TOMKO 44 → 59,7 fps) · Đợt 452: khung + nút Rocket Race, Options = bảng thật của AWord (host.options)
 CORE = [f"mc3d-{BAN}.js", f"mc3d-{BAN}.css", "mc3d-audio-2n.js", "mc3d-intro-2m.js", "mc3d-maps-1t.js",
-        "mc3d-floor-1f.js", "mc3d-boom-1v.js", "mc3d-hatch-1s.js", "mc3d-ship-2j.js", "mc3d-gate-2b.js"]
+        "mc3d-floor-2p.js", "mc3d-boom-1v.js", "mc3d-hatch-1s.js", "mc3d-ship-2j.js", "mc3d-gate-2b.js", "mc3d-autoq-2p.js"]
 VENDOR = "../../rocket-race/vendor/three"
 
 
