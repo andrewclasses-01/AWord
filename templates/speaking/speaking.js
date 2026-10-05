@@ -37,6 +37,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
+import { thuTuHopLe } from "../../core/lam-tiep.js";   // Đợt 470 — làm tiếp lượt dở bài giao
 import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
@@ -195,7 +196,12 @@ const spkTemplate = {
 
     let items = [...(activity.content?.items || [])]
       .filter(it => it && it.word && it.phonemes);
-    if (opt.shuffleQuestions) items = shuffle(items);
+    // ⭐⭐ Đợt 470 — LÀM TIẾP lượt dở của bài giao (core/lam-tiep.js, engine đặt `ui.khoiPhuc`): đúng thứ tự từ của lượt cũ
+    // + kết quả chấm từng từ (CHỈ con số % — không bao giờ lưu âm thanh). Không khớp đề ⇒ ván mới như thường.
+    const goc = items;
+    const kp = docKhoiPhuc(ui.khoiPhuc, goc);
+    if (kp) items = kp.thuTu.map(i => goc[i]);
+    else if (opt.shuffleQuestions) items = shuffle(items);
 
     const total = items.length;
     if (total === 0) {
@@ -205,7 +211,14 @@ const spkTemplate = {
       return () => {};
     }
 
-    const state = items.map(() => ({ graded: false, correct: null, score: null, stars: null }));
+    // Đợt 470 — từ đã chấm của lượt cũ: chỉ cất % (kp.st[i] = số 0–100, null = chưa chấm); sao + đạt/không TÍNH LẠI
+    // bằng đúng công thức gradeAttempt (đổi ngưỡng sao thì dấu vết đề đổi ⇒ lượt cũ đã bị bỏ trước khi tới đây).
+    const state = items.map((_, i) => {
+      const sc = kp ? kp.st[i] : null;
+      if (typeof sc !== "number" || !Number.isFinite(sc)) return { graded: false, correct: null, score: null, stars: null };
+      const stars = starsForScore(sc);
+      return { graded: true, correct: stars >= passStars, score: sc, stars };
+    });
     let index = 0;
     let finished = false;
     let autoTimer = null;
@@ -276,13 +289,34 @@ const spkTemplate = {
     }
 
     ui.onSubmit(finish, () => state.filter(s => s.graded).length);
-    loadQuestion(0, false);
+    // ⭐ Đợt 470 — trạng thái ván để LÀM TIẾP (chỉ engine bài giao học sinh đọc): thứ tự = chỉ số trong danh sách gốc
+    // đã lọc (`goc`), st = % của lần chấm CUỐI từng từ (null = chưa chấm). Đơn vị daLam/tong = TỪ đã chấm.
+    ui.setLuuTrangThai?.(() => ({
+      v: 1, daLam: state.filter(s => s.graded).length, tong: total, i: index,
+      thuTu: items.map(it => goc.indexOf(it)),
+      st: state.map(s => (s.graded ? s.score : null))
+    }));
+    // Đợt 470 — làm tiếp: vào từ CHƯA chấm đầu tiên kể từ từ đang đứng lúc rời (hết thì từ chưa chấm bất kỳ).
+    let vaoTu = 0;
+    if (kp) {
+      const tu = Math.max(0, Math.min(total - 1, kp.i | 0));
+      let k = state.findIndex((s, j) => j >= tu && !s.graded);
+      if (k < 0) k = state.findIndex(s => !s.graded);
+      vaoTu = k < 0 ? tu : k;
+    }
+    loadQuestion(vaoTu, false);
+    if (kp) {
+      ui.setScore(scoreNow());
+      // lượt cũ đã chấm HẾT mà chưa kịp tới màn kết thúc (tải lại đúng lúc chờ) ⇒ kết thúc luôn.
+      if (state.every(s => s.graded)) autoTimer = setTimeout(() => finish("complete"), 700);
+    }
     fitter = autoFit(root, wordArea, s => card.style.setProperty("--fit", s), { slack: root.clientWidth * 0.02 });
 
     // ===== load a question =====
     function loadQuestion(i, withFade) {
       resetMicForNewQuestion();
       index = i;
+      ui.daDoiBaiLam?.();   // Đợt 470 — nhớ từ đang đứng
       const it = items[index];
       wordEl.innerHTML = escapeHtml(it.word);
       ipaEl.textContent = it.phonemes ? `/${it.phonemes}/` : "";
@@ -558,6 +592,7 @@ const spkTemplate = {
       st.score = score;
       st.stars = starsForScore(score);
       st.correct = st.stars >= passStars;
+      ui.daDoiBaiLam?.();   // Đợt 470 — cất lượt để làm tiếp nếu em tải lại trang
       micState = "done";
       updateMicUI();
       setStatus("");
@@ -679,6 +714,15 @@ const spkTemplate = {
     };
   }
 };
+
+// ⭐ Đợt 470 — đọc trạng thái LÀM TIẾP (`ui.khoiPhuc`) và kiểm nó khớp ĐÚNG đề đang dựng; sai một li ⇒ null (ván mới).
+function docKhoiPhuc(kp, goc) {
+  if (!kp || kp.v !== 1) return null;
+  const n = goc.length;
+  if (!thuTuHopLe(kp.thuTu, n) || !Array.isArray(kp.st) || kp.st.length !== n) return null;
+  const okSt = kp.st.every(x => x === null || (typeof x === "number" && Number.isFinite(x) && x >= 0 && x <= 100));
+  return okSt ? kp : null;
+}
 
 registerTemplate(spkTemplate);
 export default spkTemplate;

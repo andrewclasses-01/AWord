@@ -34,6 +34,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
+import { thuTuHopLe } from "../../core/lam-tiep.js";   // Đợt 470 — làm tiếp lượt dở bài giao
 import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
@@ -214,8 +215,12 @@ const tfTemplate = {
     // on both screens. Shuffling again here — once per board, independently —
     // would put two different statements behind one round number, and nothing on
     // screen would say so: each board looks perfectly normal on its own.
-    let order = fightCtl ? statements.map((_, i) => i) : shuffle(statements.map((_, i) => i));
-    const queue = [...order];
+    // ⭐⭐ Đợt 470 — LÀM TIẾP lượt dở của bài giao (core/lam-tiep.js, engine đặt `ui.khoiPhuc`; Fight/Showdown không bao
+    // giờ có): dựng lại ĐÚNG thứ tự đã xáo (`order`), hàng chờ còn lại (`queue`, kể cả câu Repeat đã chèn lại) và từng
+    // lượt đã làm (`turnLog`). Không khớp đề ⇒ null ⇒ ván mới y như cũ.
+    const kp = fightCtl ? null : docKhoiPhuc(ui.khoiPhuc, total);
+    let order = kp ? [...kp.thuTu] : (fightCtl ? statements.map((_, i) => i) : shuffle(statements.map((_, i) => i)));
+    const queue = kp ? [...kp.hang] : [...order];
     // ⭐⭐ Đợt 178 — SHOWDOWN needs "which ROW of `review` is on screen".
     // `review` is built as `order.map(idx => …)` (see finish), so row j holds
     // statement `order[j]`; this is that lookup the other way round.
@@ -254,11 +259,30 @@ const tfTemplate = {
     // flying off — reading the queue there would hand the next pupil their name
     // half a second early, in the middle of the previous pupil's answer.
     let curRow = 0;
+    // Đợt 470 — TRUE khi phần tử cuối của `turnLog` là câu ĐANG TRÊN MÀN chưa ai chạm (startCycle vừa đẩy vào). Lúc lưu
+    // để lượt làm tiếp, hàng đó bỏ ra: dựng lại thì startCycle() đẩy lại đúng một hàng cho câu đầu hàng chờ.
+    let luotDangMo = false;
+    // Đợt 470 — mốc giờ thật (Date.now) đồng hồ của lượt bắt đầu; làm tiếp thì tiếng tích Count down phải lùi theo.
+    const batDauLuc = (kp && Number(kp.t0) > 0) ? Number(kp.t0) : Date.now();
+    if (kp) kp.luot.forEach(t => turnLog.push({ idx: t.i, answered: t.a === true, correct: t.k === true,
+      chosen: typeof t.c === "boolean" ? t.c : null, timedOut: t.t === true }));
 
-    const state = statements.map(() => ({ answered: false, correct: false, chosen: null }));
+    const state = statements.map((_, i) => {
+      const o = kp && kp.st[i];   // Đợt 470 — câu đã làm của lượt cũ
+      return o ? { answered: o.a === true, correct: o.k === true, chosen: typeof o.c === "boolean" ? o.c : null, timedOut: o.t === true }
+               : { answered: false, correct: false, chosen: null };
+    });
     let finished = false;
     let livesLeft = startLives;
     let penalty = 0;          // accumulated points-off from wrong answers (pointsOff each)
+    // ⭐ Đợt 470 — tim + điểm phạt TÍNH LẠI từ các lượt đã làm (một "−N" đang bay lúc chụp chưa kịp trừ): mỗi lượt
+    // trả lời SAI hoặc hết giờ-của-lượt (roundTimeUp) = một tim + pointsOff; lượt trôi khỏi băng chuyền (onTimeUp) ghi
+    // `answered:false` nên không tính — đúng như choose()/roundTimeUp()/onTimeUp() đang trừ.
+    if (kp) {
+      const sai = turnLog.filter(t => t.answered && !t.correct).length;
+      if (livesLeft != null) livesLeft = Math.max(0, livesLeft - sai);
+      penalty = pointsOff * sai;
+    }
     let fitter = null;
     let promptAnim = null;    // the currently-running Animation on .aw-tf-prompt (enter/crawl/exit)
     let fallbackTimer = null; // setTimeout backup for whichever animation is running
@@ -318,6 +342,16 @@ const tfTemplate = {
     ui.setScoreProvider?.(liveScore);
     // ⭐ Đợt 384 — bài làm TỚI LÚC NÀY cho lượt dở (dashboard myLesson xem từng câu); bọc hàm ⇒ lỗi chỉ rơi vào try của engine.
     ui.setReviewProvider?.(() => buildReview());
+    // ⭐ Đợt 470 — trạng thái ván để LÀM TIẾP (chỉ engine bài giao học sinh đọc). Mọi số là CHỈ SỐ trong `statements`
+    // (danh sách gốc đã lọc) — đọc lại ở `docKhoiPhuc` cuối file. "Đã làm" = câu đã rời hàng chờ (Repeat: câu sai quay
+    // lại hàng chờ thì chưa tính).
+    ui.setLuuTrangThai?.(() => ({
+      v: 1, daLam: total - queue.length, tong: total, i: curRow, t0: batDauLuc,
+      thuTu: order.slice(), hang: queue.slice(),
+      st: state.map(s => ({ a: s.answered === true, k: s.correct === true, c: s.chosen, t: s.timedOut === true })),
+      luot: (luotDangMo ? turnLog.slice(0, -1) : turnLog)
+        .map(t => ({ i: t.idx, a: t.answered === true, k: t.correct === true, c: t.chosen, t: t.timedOut === true }))
+    }));
     // ⭐⭐⭐ Đợt 265 — the per-round count down now has somebody to call. See roundTimeUp().
     ui.setRoundTimeout?.(roundTimeUp);
     // ⭐⭐⭐ Đợt 266 — vế "clip còn đang đọc" ĐI RIÊNG qua ui.setVoiceGuard, không
@@ -331,7 +365,14 @@ const tfTemplate = {
       return !!(btn && btn.disabled);
     });
 
-    if (timerMode === "countUp") {
+    if (kp) {
+      // ⭐ Đợt 470 — làm tiếp: bỏ 3-2-1 (đã đếm lần đầu rồi), bật đồng hồ ngay (engine đã lùi theo giờ thật) và vào thẳng
+      // câu đầu hàng chờ. Hàng chờ rỗng ⇒ startCycle() tự kết thúc "complete"; hết tim ⇒ Game over.
+      ui.startTimer();
+      if (timerMode === "countDown") armCountdownTicks();
+      if (livesLeft === 0) armFallback(() => finish("gameover"), 700);
+      else startCycle();
+    } else if (timerMode === "countUp") {
       runPrepCountdown();          // starts the clock (ui.startTimer) after 3-2-1
     } else {
       ui.startTimer();             // count-down / none: clock starts right away
@@ -388,7 +429,9 @@ const tfTemplate = {
       const at = [];
       for (let r = 10; r >= 6; r--) at.push(timerTotal - r);
       for (let r = 5; r >= 1; r -= 0.5) at.push(timerTotal - r);
+      const boS = kp ? Math.max(0, (Date.now() - batDauLuc) / 1000) : 0;   // Đợt 470 — làm tiếp: giây đã trôi
       at.forEach(sec => {
+        sec -= boS;
         if (sec < 0) return;
         tickTimers.push(setTimeout(() => { if (!finished) tfSound.clockTick(); }, sec * 1000));
       });
@@ -496,6 +539,7 @@ const tfTemplate = {
       curRow = fightCtl
         ? rowOf[queue[0]]
         : (turnLog.push({ idx: queue[0], answered: false, correct: false, chosen: null, timedOut: false }) - 1);
+      if (!fightCtl) { luotDangMo = true; ui.daDoiBaiLam?.(); }   // Đợt 470 — nhớ câu đang đứng
       ui.itemChanging?.(curRow, NAME_MOVE);
       const vv = voiceView(activity, st);   // Options > Content decides text/voice
       const hasVoice = vv.hasVoice, hideText = vv.hideText;
@@ -654,6 +698,8 @@ const tfTemplate = {
         return;
       }
       dropOrRequeue(queue[0]);
+      luotDangMo = false;     // Đợt 470 — lượt này đã ngã ngũ (trôi khỏi băng chuyền)
+      ui.daDoiBaiLam?.();
       startCycle();
     }
 
@@ -794,6 +840,9 @@ const tfTemplate = {
       // được hỏi hai lần bởi hai em khác nhau.
       const turn = turnLog[curRow];
       if (turn) { turn.answered = true; turn.chosen = value; turn.correct = isRight; turn.timedOut = false; }
+      // Đợt 470 — cất lượt để làm tiếp nếu em tải lại trang. Engine gom 120 ms ⇒ `state[idx].correct` và cú chèn lại
+      // (Repeat) ở dưới cùng cú bấm này đều đã có mặt lúc nó đọc.
+      if (!fightCtl) { luotDangMo = false; ui.daDoiBaiLam?.(); }
       // ⭐⭐ Đợt 265 — TIME EACH ROUND: this pupil's turn ends the instant they tap, so
       // their clock stops here (Quiz/Anagram/Type the answer have done this since Đợt
       // 174). Without it the count down went on running through the fly-to-score, the
@@ -997,6 +1046,8 @@ const tfTemplate = {
       st.timedOut = true;
       // Đợt 265b — cùng lý do như trong choose(): lượt này là của em đang hiện tên.
       if (turn) { turn.answered = true; turn.correct = false; turn.chosen = null; turn.timedOut = true; }
+      luotDangMo = false;     // Đợt 470
+      ui.daDoiBaiLam?.();
       lockButtons();
       tfSound.wrong();
       // The class still has to SEE that it was marked wrong. The ✗ rides on the statement
@@ -1219,6 +1270,16 @@ const tfTemplate = {
     };
   }
 };
+
+// ⭐ Đợt 470 — đọc trạng thái LÀM TIẾP (`ui.khoiPhuc`) và kiểm nó khớp ĐÚNG đề đang dựng (n câu); sai một li ⇒ null (ván mới).
+function docKhoiPhuc(kp, n) {
+  if (!kp || kp.v !== 1 || !thuTuHopLe(kp.thuTu, n)) return null;
+  const laChiSo = i => Number.isInteger(i) && i >= 0 && i < n;
+  if (!Array.isArray(kp.hang) || kp.hang.length > n || !kp.hang.every(laChiSo) || new Set(kp.hang).size !== kp.hang.length) return null;
+  if (!Array.isArray(kp.st) || kp.st.length !== n || !kp.st.every(o => o && typeof o === "object")) return null;
+  if (!Array.isArray(kp.luot) || !kp.luot.every(t => t && laChiSo(t.i))) return null;
+  return kp;
+}
 
 registerTemplate(tfTemplate);
 export default tfTemplate;

@@ -27,6 +27,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el, formatTime } from "../../core/utils.js";
+import { thuTuHopLe } from "../../core/lam-tiep.js";   // Đợt 470 — làm tiếp lượt dở bài giao
 import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { createVoicePlayer, voiceView } from "../../core/voice-playback.js";
@@ -407,10 +408,17 @@ function mountQuestions(root, activity, ui) {
   let items = [...(activity.content?.items || [])]
     .filter(it => it && it.question && Array.isArray(it.answers)
       && it.answers.length >= MIN_ANSWERS && it.answers.some(a => a && a.correct));
-  if (opt.shuffleQuestions) items = shuffle(items);
-  items = items.map(it => ({
+  // ⭐⭐ Đợt 470 — LÀM TIẾP lượt dở của bài giao (core/lam-tiep.js, engine đặt `ui.khoiPhuc`; Fight/Showdown không bao
+  // giờ có): dựng lại ĐÚNG thứ tự ô hộp + thứ tự đáp án đã xáo của lượt cũ, rồi ô nào đã đúng / khoá và từng lượt đã
+  // làm ở dưới. Không khớp đề ⇒ null ⇒ ván mới y như cũ.
+  const goc = items;
+  const kp = activity._fight ? null : docKhoiPhuc(ui.khoiPhuc, goc);
+  if (kp) items = kp.thuTu.map(i => goc[i]);
+  else if (opt.shuffleQuestions) items = shuffle(items);
+  items = items.map((it, qi) => ({
     question: it.question,
-    answers: (opt.shuffleAnswers ? shuffle(it.answers) : [...it.answers]).filter(a => a && a.text != null),
+    answers: (kp ? kp.dapAn[qi].map(j => it.answers[j]) : (opt.shuffleAnswers ? shuffle(it.answers) : [...it.answers]))
+      .filter(a => a && a.text != null),
     src: it   // the ORIGINAL content object — "Start with mistakes" filters by it
   }));
 
@@ -458,7 +466,7 @@ function mountQuestions(root, activity, ui) {
   const turnOutcome = [];      // [{ correct, yourText }] — một phần tử MỖI LƯỢT
   let curTurn = -1;            // lượt đang mở, = chỉ số trong playOrder/turnOutcome
 
-  const boxState = items.map(() => "unplayed");   // "unplayed" | "correct" | "locked"
+  const boxState = items.map((_, i) => (kp ? ({ c: "correct", l: "locked" }[kp.bs[i]] || "unplayed") : "unplayed"));   // "unplayed" | "correct" | "locked"
   // ⚠️ Đợt 265b — CHỈ CÒN FIGHT ĐỌC TỚI NÓ. Chơi đơn nay ghi câu trả lời vào `turnOutcome`
   // theo LƯỢT (xem chỗ khai nó), vì một ô hộp có thể bị hỏi hai lần bởi hai em khác nhau và
   // một ô nhớ duy nhất cho cả ô hộp thì không nói được điều đó. Nhánh fight vẫn dùng nó vì
@@ -466,6 +474,21 @@ function mountQuestions(root, activity, ui) {
   const lastWrongText = items.map(() => null);    // last wrong answer text picked (fight mode)
   let score = 0;
   let timeLeft = questionSeconds;
+  let kpTimer = null;   // Đợt 470 — hẹn kết thúc khi lượt làm tiếp đã xong hết ô (cleanup dọn)
+  // ⭐ Đợt 470 — dựng lại các lượt đã làm. Điểm TÍNH LẠI từ lượt (đúng +1, sai/hết giờ −pointsOff — y như answer() và
+  // setRoundTimeout cộng trừ), không đọc con số đang hiện: một "−N" đang bay lúc chụp là phép trừ chưa áp.
+  // Ô đang MỞ dở lúc rời trang không được lưu (lượt đó bỏ đi, ô vẫn "unplayed") ⇒ em chọn lại ô từ lưới.
+  // Đồng hồ ô: giữ số giây còn lại; chưa chạy cho tới khi em mở ô kế tiếp (startSharedTimerIfNeeded).
+  if (kp) {
+    kp.po.forEach((i, t) => {
+      playOrder.push(i);
+      const o = kp.to[t];
+      const ans = items[i].answers;
+      turnOutcome.push({ correct: o.c === true, yourText: Number.isInteger(o.y) && ans[o.y] ? ans[o.y].text : null });
+      score += o.c === true ? 1 : -pointsOff;
+    });
+    if (Number.isFinite(kp.tl)) timeLeft = Math.max(1, Math.min(questionSeconds, kp.tl));
+  }
   let activeIndex = null;            // box index currently showing its question, else null
   let ended = false;                 // game over OR every box solved
   let fitter = null;
@@ -660,6 +683,37 @@ function mountQuestions(root, activity, ui) {
 
   ensureTimerUI();   // đợt 25b: BEFORE the first render, so the topbar never changes height mid-round
   render();
+  // ⭐ Đợt 470 — trạng thái ván để LÀM TIẾP (chỉ engine bài giao học sinh đọc). Thứ tự = chỉ số trong `goc` (danh sách
+  // ô gốc đã lọc), đáp án = chỉ số trong `it.answers` gốc, câu em chọn (`y`) = chỉ số trong đáp án ĐÃ XẾP — đọc lại ở
+  // `docKhoiPhuc`. "Đã làm" = số ô đã đúng (ô khoá sẽ được mở lại sau một câu đúng nên chưa tính).
+  ui.setLuuTrangThai?.(() => {
+    const mo = activeIndex !== null && curTurn >= 0 && !turnOutcome[curTurn];   // ô đang mở, chưa trả lời
+    const n = mo ? curTurn : playOrder.length;
+    return {
+      v: 1, daLam: boxState.filter(s => s === "correct").length, tong: total, i: n,
+      thuTu: items.map(it => goc.indexOf(it.src)),
+      dapAn: items.map(it => it.answers.map(a => it.src.answers.indexOf(a))),
+      bs: boxState.map(s => (s === "correct" ? "c" : s === "locked" ? "l" : "u")),
+      po: playOrder.slice(0, n),
+      to: turnOutcome.slice(0, n).map((o, t) => {
+        const ans = items[playOrder[t]].answers;
+        const y = o && o.yourText != null ? ans.findIndex(a => a.text === o.yourText) : -1;
+        return { c: !!(o && o.correct), y: y >= 0 ? y : null };
+      }),
+      tl: Math.round(timeLeft * 10) / 10
+    };
+  });
+  // Lượt cũ đã đúng HẾT ô mà chưa kịp tới màn kết thúc (tải lại đúng lúc chờ) ⇒ kết thúc luôn.
+  if (kp && boxState.every(s => s === "correct")) {
+    kpTimer = setTimeout(() => {
+      kpTimer = null;
+      if (ended) return;
+      ended = true;
+      stopSharedTimer();
+      otbSound.timesUp();
+      finishRound("Game complete");
+    }, 700);
+  }
   const ro = new ResizeObserver(() => { if (activeIndex === null) { layoutGrid(root, total, explicitCols); fitBackFaces(root, backFitCache); } });
   ro.observe(root);
 
@@ -808,6 +862,7 @@ function mountQuestions(root, activity, ui) {
     boxState[i] = "locked";
     // Đợt 265b — nobody picked anything, so the row prints "no answer" (see turnOutcome).
     if (curTurn >= 0) turnOutcome[curTurn] = { correct: false, yourText: null };
+    ui.daDoiBaiLam?.();   // Đợt 470 — cất lượt để làm tiếp nếu em tải lại trang
     // Đợt 256's rule — a deduction has to be SEEN. Nothing was tapped, so `null` drops the
     // number into the middle of the frame (core/engine.js).
     if (pointsOff) {
@@ -862,6 +917,7 @@ function mountQuestions(root, activity, ui) {
       curTurn = playOrder.indexOf(i);
     } else {
       curTurn = playOrder.push(i) - 1;
+      ui.daDoiBaiLam?.();   // Đợt 470 — nhớ lượt (ô đang mở chưa trả lời thì lúc lưu tự bỏ ra)
     }
     updateProgress();                                 // moves the Showdown name on to this box's pupil
     animateOpen(i);
@@ -1289,6 +1345,7 @@ function mountQuestions(root, activity, ui) {
     // ⭐⭐ Đợt 265b — và GHI VÀO LƯỢT NÀY nữa (xem `turnOutcome`). `boxState` trả lời "ô này
     // rốt cuộc thế nào"; hàng trong Show answers phải trả lời "em ấy, ở lượt ấy, làm gì".
     if (curTurn >= 0) turnOutcome[curTurn] = { correct, yourText: it.answers[k].text };
+    ui.daDoiBaiLam?.();   // Đợt 470 — cất lượt để làm tiếp nếu em tải lại trang
     // ⭐⭐ Đợt 265 — TIME EACH ROUND: this pupil's turn is over the instant their box is
     // graded, so their clock stops here. Quiz/Anagram/Type the answer have done this since
     // Đợt 174; this game never did, so the count down carried on running through the close
@@ -1631,6 +1688,7 @@ function mountQuestions(root, activity, ui) {
     ro.disconnect();
     clearPending();
     if (gateTimer) { clearTimeout(gateTimer); gateTimer = null; }
+    if (kpTimer) { clearTimeout(kpTimer); kpTimer = null; }   // Đợt 470
     if (fightRefillTimer) { clearTimeout(fightRefillTimer); fightRefillTimer = null; }   // Đợt 183
     if (fitter) fitter.destroy();
     stopSharedTimer();
@@ -1656,6 +1714,21 @@ function readBoxRadius(root) {
     if (r > 0) return r;
   }
   return 0;
+}
+
+// ⭐ Đợt 470 — đọc trạng thái LÀM TIẾP (`ui.khoiPhuc`) và kiểm nó khớp ĐÚNG đề đang dựng; sai một li ⇒ null (ván mới).
+function docKhoiPhuc(kp, goc) {
+  const n = goc.length;
+  if (!kp || kp.v !== 1 || !thuTuHopLe(kp.thuTu, n)) return null;
+  if (!Array.isArray(kp.dapAn) || kp.dapAn.length !== n || !Array.isArray(kp.bs) || kp.bs.length !== n) return null;
+  const okDapAn = kp.thuTu.every((gi, qi) => {
+    const d = kp.dapAn[qi], m = goc[gi].answers.length;
+    return Array.isArray(d) && d.length <= m && d.every(j => Number.isInteger(j) && j >= 0 && j < m) && new Set(d).size === d.length;
+  });
+  if (!okDapAn || !kp.bs.every(s => s === "u" || s === "c" || s === "l")) return null;
+  if (!Array.isArray(kp.po) || !Array.isArray(kp.to) || kp.to.length !== kp.po.length) return null;
+  if (!kp.po.every(i => Number.isInteger(i) && i >= 0 && i < n) || !kp.to.every(o => o && typeof o === "object")) return null;
+  return kp;
 }
 
 registerTemplate(otbTemplate);

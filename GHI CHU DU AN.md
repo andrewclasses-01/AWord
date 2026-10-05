@@ -546,6 +546,39 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 470 (05/10/2026) — LÀM TIẾP lượt dở cho 13 template còn lại (trừ 3D + 3 game không giao bài được)
+
+Thầy: "làm các template còn lại, trừ game 3D". Áp hợp đồng Đợt 469 (`ui.setLuuTrangThai` · `ui.daDoiBaiLam` · `ui.khoiPhuc`) cho:
+Anagram · Unjumble · Crossword · True/false · Open the box · Group sort · Find the match · Gameshow · Speaking · Wordshake · Flying
+fruit · Whack-a-mole · Rocket race (chỉ chơi đơn). KHÔNG: Balloon pop 3D, Maze chase 3D (game 3D, `noAssignment`), Running word,
+Running team, Speaking cards (`noAssignment` — vốn không giao bài được). Mỗi template ghi chi tiết ở mục "Đợt 470" đầu `GHI CHU` của nó.
+
+- **Core `engine.js`:**
+  · `lamTiepBuMs` — startTimerNow trừ vào mốc ⇒ 6 template tự bật đồng hồ sau intro (`manualTimerStart`) cũng chạy theo giờ thật.
+  · Template TỪ CHỐI lượt cũ (bản lưu hỏng/không khớp ⇒ ván mới): sau mount engine hỏi lại `trangThaiProvider()`; lượt cũ `daLam > 0`
+    mà ván vừa dựng `daLam = 0` (hoặc không khai) ⇒ trả đồng hồ + Time cost về 0, vẽ lại điểm. Đo: Quiz bản lưu `thuTu` hỏng + lùi mốc
+    5 phút ⇒ vào ván "1 of 6", đồng hồ 0:01 (trước vá: lùi 5 phút).
+- Những điểm riêng cần nhớ:
+  · Crossword: KHÔNG gọi `buildCrossword` khi làm tiếp — dựng lại đúng lưới từ `[từ, hàng, cột, hướng]` (`dungLaiLuoi`; đuôi
+    `buildCrosswordOnce` tách thành `chotLuoi` dùng chung, không đổi logic).
+  · Anagram: nhớ thứ tự xáo chữ (đi qua `fixedOrder` sẵn có), thêm `st.sai` đếm chạm sai để tính lại phạt.
+  · Unjumble: nhớ cả thứ tự xáo GỐC (mục tiêu số lần kéo tính từ nó); làm tiếp bỏ màn bảng trắng intro.
+  · Gameshow: LƯU THẲNG điểm (thưởng tốc độ / thẻ bonus không tính lại được) + chuỗi + phao đã dùng + vòng bonus đã mở; câu đang dở
+    chạy lại đồng hồ câu từ đầu (lợi nhỏ khi tải lại).
+  · Whack-a-mole: KHÔNG dùng đồng hồ engine (manualTimerStart nhưng không gọi ui.startTimer) ⇒ tự lưu mốc hết giờ `hetLuc` theo
+    Date.now(). Điểm lưu thẳng (combo/kẹp 0 không suy ngược được). ⚠️ Đổi cách tính giờ của core thì nhớ game này tự lùi riêng.
+  · Rocket race: chỉ solo; nhớ vị trí/hạng từng tàu; shield/thùng/turbo đang có thì mất.
+  · Open the box: ô đang mở chưa trả lời lúc rời ⇒ trở về "chưa chơi".
+  · Wordshake: mode 1 nhớ bảng chữ của từ đang hỏi; mode 2/3 nhớ cả kế hoạch bảng; mode 3 nhớ từ đã tìm (kể cả từ từ điển).
+- Thử (bàn thử `scratch/dot469/ban.html?...&t=<thư mục template>` — `gia-assignments.js` nay nạp `sample-<t>.js` của mọi template):
+  mỗi template làm vài câu (có sai) → tải lại → CONTINUE "x / n DONE", đúng câu kế, điểm/tim đúng, đồng hồ giờ thật → làm hết ⇒ đúng
+  MỘT `sendAttempt`, lượt giữ bị xoá; bản lưu hỏng ⇒ ván mới; `test.html` (giáo viên) 16 template 0 lỗi. Số đo từng template trong
+  GHI CHU riêng. Pane ẩn ⇒ chưa nhìn chuyển động thật (Group sort băng chuyền, Flying fruit, Rocket race chạy được nhờ setTimeout).
+- ⚠️ Chưa thử được (bàn thử chỉ đọc Options của file mẫu): nhánh Points off / Lives / Count down / Repeat của nhiều template; Whack
+  chế độ Quiz + Count up; Crossword nhiều trang; Speaking chấm bằng mic thật. Logic theo đúng công thức finish() của từng template.
+
+---
+
 ## Đợt 469 (05/10/2026) — ⭐⭐ GIỮ LƯỢT DỞ: tải lại / đóng tab rồi mở lại bài giao ⇒ nút CONTINUE, làm TIẾP đúng câu đang dở (Quiz · Type the answer · Find the gap)
 
 Đợt 468 bỏ ☰ ⇒ đường bỏ dở còn lại là tải lại trang. Thầy chọn (c) "giữ lượt dở, mở lại làm tiếp" + **đồng hồ chạy theo GIỜ THẬT**

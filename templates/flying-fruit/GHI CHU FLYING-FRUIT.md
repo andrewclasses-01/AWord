@@ -1,5 +1,9 @@
 # GHI CHU — FLYING FRUIT (game thứ 8)
 
+## Đợt 470 (05/10/2026) — LÀM TIẾP lượt dở bài giao (core/lam-tiep.js)
+
+`ui.setLuuTrangThai` + `ui.daDoiBaiLam` + đọc `ui.khoiPhuc` (hợp đồng ở `core/HUONG DAN CORE.md`, mục Đợt 469). Lưu: thứ tự câu (chỉ số trong danh sách đã lọc) + kết quả từng câu (0 chưa · 1 đúng · 2 sai) + tổng số lần chạm sai + câu đang đứng. Điểm và tim TÍNH LẠI từ đó (đúng − sai×pointsOff; tim = Lives − sai). Quả đang bay KHÔNG giữ: câu đang dở bay lại từ đầu. Đã xong hết / hết tim ⇒ kết thúc sau 700 ms. Khôi phục ở đầu mount (`docKhoiPhuc` cuối file). Thử bàn `scratch/dot469/ban.html?g=D4FF&t=flying-fruit`: 4/12 (2 đúng 2 sai) → tải lại → CONTINUE "4 / 12 DONE", cùng câu, điểm 2, 4 tim, đồng hồ tiếp 0:29 → làm nốt ⇒ nộp 10/12; ép kq hết ⇒ nộp ngay 9/12; ép thuTu hỏng ⇒ ván mới.
+
 **Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho MENU PAUSE toàn hệ thống. ✅ THẦY DUYỆT → COMMIT
 `be7cd55` + PUSH + LIVE.**
 Chỉ đụng `flying-fruit.js`: thêm `pauseGame`/`resumeGame` + bridge module `ffPauseHandlers` + `onPause`.

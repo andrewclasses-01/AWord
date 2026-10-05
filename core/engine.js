@@ -3718,6 +3718,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // trả lời. Lúc dựng ván làm tiếp, engine đặt `ui.khoiPhuc` = trạng thái đã lưu (null = ván mới) TRƯỚC mount().
   let trangThaiProvider = null;
   let luuHen = null;
+  // Đợt 470 — số ms GIỜ THẬT lượt làm tiếp đã trôi (0 = ván mới). startTimerNow trừ nó vào mốc ⇒ template tự bật đồng hồ
+  // sau intro (`manualTimerStart`: True/false · Unjumble · Find the match · Group sort · Whack · Rocket race) cũng được lùi giờ.
+  let lamTiepBuMs = 0;
   // ⭐ Đợt 379 — số đang HIỆN trên chip điểm (ui.setScore). Dùng khi template KHÔNG khai `setScoreProvider`
   // (Gameshow, Rocket race) để biết "điểm tới lúc này" của lượt bị bỏ dở — xem `diemBoDo()`.
   let lastShownScore = null;
@@ -3982,7 +3985,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // game on screen at all.
     if (torndown) return;
     timerStarted = true;
-    startedAt = performance.now();
+    startedAt = performance.now() - lamTiepBuMs;   // Đợt 470 — lượt làm tiếp: đồng hồ theo giờ thật từ lúc lượt bắt đầu
     timeWarned = false; countdownSec = -1;
     timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
     if (timerMode() !== "none") {
@@ -4034,18 +4037,19 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     startedAt = performance.now();   // baseline (kept sane even if a manual-start template never starts the clock)
     timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
     // ⭐⭐ Đợt 469 — LÀM TIẾP lượt dở (play.js đưa đúng MỘT lần, ngay ván đầu sau khi mở trang). Đồng hồ = GIỜ THẬT từ lúc
-    // lượt bắt đầu (thầy chốt): lùi `startedAt` đúng chừng ấy; Time cost đã trừ giữ nguyên. ⚠️ Lùi SAU startTimerNow (hàm
-    // đó đặt lại startedAt) và TRƯỚC mount (scoreNow của template đọc timeCostTotal ngay lúc dựng).
+    // lượt bắt đầu (thầy chốt): `lamTiepBuMs` — startTimerNow tự trừ vào mốc (Đợt 470, kể cả template bật đồng hồ
+    // sau intro); Time cost đã trừ giữ nguyên, khôi phục TRƯỚC mount (scoreNow của template đọc timeCostTotal ngay lúc dựng).
     let lamTiep = null;
     if (session && !fight && !activity._mistakes && typeof session.layLamTiep === "function") {
       try { lamTiep = session.layLamTiep(); } catch (e) { lamTiep = null; }
     }
     ui.khoiPhuc = lamTiep && lamTiep.tpl ? lamTiep.tpl : null;
-    if (!tpl.manualTimerStart) startTimerNow();
+    lamTiepBuMs = ui.khoiPhuc ? Math.max(0, Number(lamTiep.daChoiMs) || 0) : 0;
     if (ui.khoiPhuc) {
-      startedAt -= Math.max(0, Number(lamTiep.daChoiMs) || 0);
+      startedAt -= lamTiepBuMs;   // mốc tạm (template tự bật đồng hồ sau intro) — startTimerNow trừ lại từ mốc của nó
       timeCostTotal = Math.max(0, Number(lamTiep.timeCost) || 0);
     }
+    if (!tpl.manualTimerStart) startTimerNow();
     // TIME EACH ROUND (Đợt 174) — started BEFORE mount(), and INDEPENDENTLY of
     // the whole-game clock: the two are different options and a teacher may well
     // run Timer = None with a per-round count down. mount() calls ui.setNav()
@@ -4058,6 +4062,17 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // của học sinh (`activity` là bản sao play.js dựng mỗi lượt) — giáo viên chơi thử / trình chiếu y như cũ.
     if (session) activity.options = Object.assign({}, activity.options, { showAnswerWhenWrong: false, anDapAn: true });
     cleanup = tpl.mount(playArea, activity, ui) || (() => {});
+    // ⭐ Đợt 470 — template TỪ CHỐI lượt cũ (bản lưu không khớp đề ⇒ nó dựng ván mới): trả đồng hồ + Time cost về ván mới.
+    // Nhận ra bằng chính trạng thái nó vừa dựng: lượt cũ đã làm được câu nào mà ván vừa dựng chưa làm câu nào ⇒ từ chối.
+    if (ui.khoiPhuc) {
+      let nay = null;
+      try { nay = trangThaiProvider ? trangThaiProvider() : null; } catch (e) { nay = null; }
+      // ⚠️ Chỉ khi template TRẢ LỜI rõ ràng (hỏi lỗi / không khai ⇒ giữ nguyên giờ đã lùi — an toàn cho em hơn là xoá giờ).
+      if (nay && typeof nay === "object" && (ui.khoiPhuc.daLam | 0) > 0 && (nay.daLam | 0) === 0) {
+        startedAt += lamTiepBuMs; lamTiepBuMs = 0; timeCostTotal = 0; ui.khoiPhuc = null;
+        try { if (scoreProvider) ui.setScore(scoreProvider()); } catch (e) { /* chỉ là vẽ lại */ }
+      }
+    }
     // ⭐ Đợt 469 — vẽ ngay giờ đã lùi (Count down đã cạn thì hết giờ luôn — template đã khai onSubmit nên nộp được).
     if (ui.khoiPhuc && timerStarted && !torndown) tickTimer();
     // ⭐ Đợt 466 — báo trang bài tập myLesson (khung nhúng `&nhung=1`) GIỮA hàng trên cùng

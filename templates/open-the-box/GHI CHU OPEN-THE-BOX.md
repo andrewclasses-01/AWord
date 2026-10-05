@@ -1,5 +1,9 @@
 # GHI CHÚ — TEMPLATE OPEN THE BOX
 
+## Đợt 470 (05/10/2026) — LÀM TIẾP lượt dở bài giao (core/lam-tiep.js)
+
+`ui.setLuuTrangThai` + `ui.daDoiBaiLam` + đọc `ui.khoiPhuc` (hợp đồng ở `core/HUONG DAN CORE.md`, mục Đợt 469). Lưu: thứ tự ô (chỉ số trong danh sách gốc đã lọc) + thứ tự đáp án đã xáo từng ô + trạng thái ô (u/c/l) + `playOrder`/`turnOutcome` (câu em chọn = chỉ số trong đáp án đã xếp) + số giây còn lại của đồng hồ ô (`tl`). Ô đang MỞ chưa trả lời lúc rời trang KHÔNG lưu (ô vẫn chưa chơi, em chọn lại). Điểm TÍNH LẠI từ lượt (+1 / −pointsOff). Làm tiếp: lưới dựng lại đúng ô đúng/khoá, đồng hồ ô ĐỨNG ở số giây cũ tới khi mở ô kế (⚠️ thanh hiện đầy như nhánh resume của ☰ Menu). Đúng hết ô ⇒ kết thúc sau 700 ms (`kpTimer`). Thử `?g=B2OTB&t=open-the-box`: 3 lượt (1 sai, ô sai được mở lại sau câu đúng) + 1 ô đang mở ⇒ tải lại ⇒ "2 / 9 DONE", ô 1/6 đúng, ô đang mở về chưa chơi, điểm 2, đồng hồ đứng 0:08 ⇒ làm hết ⇒ sendAttempt 9/9.
+
 ## 02/10/2026 — Ô PHẲNG + NHỚ CỠ CHỮ MẶT SAU (Đợt 445 của dự án) — iPad cũ tự tải lại trang ở bài 85 ô
 
 - ⛔ **Lưới KHÔNG còn 3D.** Thẻ lật `preserve-3d` cũ chưa bao giờ lật (lưới dựng lại sau mỗi câu, ô mở sinh ra với sẵn `.is-open`)

@@ -1,5 +1,10 @@
 # GHI CHU — GAMESHOW QUIZ (game thứ 10)
 
+## Đợt 470 (05/10/2026) — LÀM TIẾP lượt dở bài giao (core/lam-tiep.js)
+
+`ui.setLuuTrangThai` + `ui.daDoiBaiLam` + đọc `ui.khoiPhuc` (hợp đồng ở `core/HUONG DAN CORE.md`, mục Đợt 469). Lưu: thứ tự câu + thứ tự ô đáp án (chỉ số gốc) + từng câu đã chốt (ô chọn/đúng/hết giờ) + ĐIỂM (`diem` — không tính lại được vì thưởng tốc độ + thẻ bonus) + chuỗi đúng + phao đã dùng (`phao` "fxtc") + ×2 đang chờ + mốc vòng bonus đã mở xong (`bonus`). Khôi phục ở đầu mount (`docKhoiPhuc` cuối file): tim TÍNH LẠI = lives − số câu sai/hết giờ; bỏ intro 6 s, bật nhạc nền, vào "Get ready" câu chưa chốt đầu tiên; tải lại lúc đang chờ/đang mở vòng bonus mà chưa lật thẻ ⇒ mở lại đúng vòng đó. Câu đang dở: đồng hồ câu chạy lại từ đầu (mức "câu"). Đo trên bàn thử `scratch/dot469/ban.html?g=C3GS`: tải lại giữa vòng bonus ⇒ CONTINUE "3 / 10 DONE", vòng bonus mở lại, 493 điểm giữ nguyên, ×2 vẫn khoá; làm hết ⇒ nộp 1 lượt 2307 điểm, 9/10.
+
+
 > **Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho tính năng MENU PAUSE toàn hệ thống.** Chỉ đụng
 > `gameshow.js` (thêm `tickCountdown`/`pauseGame`/`resumeGame` + bridge module `gsPauseHandlers` +
 > `onPause`) + `gs-sound.js` (thêm `musicPause`/`musicResume`). Bấm ☰ Menu giờ tạm dừng đúng cả đếm ngược

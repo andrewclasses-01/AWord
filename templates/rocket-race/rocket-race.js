@@ -46,6 +46,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
+import { thuTuHopLe } from "../../core/lam-tiep.js";   // Đợt 470 — làm tiếp lượt dở bài giao (CHỈ Solo)
 import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { fitOnce } from "../../core/fit.js";
@@ -1354,7 +1355,13 @@ const rocketRaceTemplate = {
       .filter(q => q && Array.isArray(q.answers) && q.answers.some(a => a && a.correct) && q.answers.length >= 2);
     // ⚠️ In a match the referee owns the order (both boards must hold the same
     // question at the same index) — the match act already has shuffle forced off.
-    if (opt.shuffleQuestions && !fightCtl) items = shuffle(items);
+    // ⭐⭐ Đợt 470 — LÀM TIẾP lượt dở của bài giao (engine đặt `ui.khoiPhuc`). CHỈ SOLO: trận Fight (2D/3D) và Teams
+    // (máy thầy) không bao giờ có — vẫn chặn ở đây cho chắc. `goc` = danh sách đã lọc, chưa xáo (chỉ số lưu trỏ vào đây).
+    const goc = items;
+    const kp = !fightCtl && !(opt.rrMode === "teams" && document.querySelector(".aw-below-right"))
+      ? docKhoiPhuc(ui.khoiPhuc, goc.length, clampInt(opt.rrRivals, 3, 5, 4) + 1) : null;
+    if (kp) items = kp.thuTu.map(i => goc[i]);
+    else if (opt.shuffleQuestions && !fightCtl) items = shuffle(items);
     const N = items.length;
     voiceAct = items.some(q => voiceView(activity, q).hideText);
 
@@ -1445,6 +1452,20 @@ const rocketRaceTemplate = {
     let tiles = [];
     let started = false;                   // GO has happened (fight: questions may be shown)
     let fightIndex = 0;                    // fight: the index the referee last asked for
+    // ⭐ Đợt 470 — làm tiếp: bài làm từng câu + tim + chuỗi đúng của lượt cũ. Điểm phạt TÍNH LẠI từ bài làm (đúng
+    // công thức onWrong: mỗi lần sai −pointsOff) — một "−N" đang bay lúc chụp không bị mất. Shield / thùng / turbo
+    // đang có KHÔNG giữ (thứ trang trí của một câu, không phải bài làm).
+    if (kp) {
+      kp.st.forEach((o, i) => {
+        const s = state[i];
+        s.correct = o.k === 1; s.attempts = o.a;
+        s.wrong = Array.from({ length: o.w }, (_, j) => (j === o.w - 1 ? String(o.lw || "") : ""));
+        s.answeredWith = s.correct ? null : (o.w ? String(o.lw || "") : null);
+      });
+      penalty = pointsOff * state.reduce((n, s) => n + s.wrong.length, 0);
+      streak = kp.sk;
+      if (livesLeft != null && Number.isInteger(kp.mang)) livesLeft = Math.max(0, Math.min(livesLeft, kp.mang));
+    }
 
     // ---- rockets ----
     // Each rocket: { id, name, pilot, hull, p (segments), L (segments to finish),
@@ -1452,7 +1473,7 @@ const rocketRaceTemplate = {
     //   queue (teams: item indices), pupils (teams: names), pupilPtr }
     let rockets = [];
     let player = null;                     // solo / fight: this board's rocket
-    let queue = shuffle(items.map((_, i) => i));   // solo question order (wrong → back of the queue)
+    let queue = kp ? kp.hang.slice() : shuffle(items.map((_, i) => i));   // solo question order (wrong → back of the queue) · Đợt 470: làm tiếp = hàng đợi cũ
     let teamPtr = 0;                       // teams: whose turn
     // ⚠️ TDZ: declared HERE, above the first call into renderSetup() — a `let`
     // written next to the function that uses it is a ReferenceError at mount.
@@ -1492,6 +1513,30 @@ const rocketRaceTemplate = {
       v3(v => { v.setTrack(scene ? scene.L : fightTrackLength(N)); v.setLivesMax(livesStart || 0); });
     }
     if (!fightCtl) renderRockets();
+    // ⭐ Đợt 470 — làm tiếp (Solo): đặt lại vị trí từng tàu theo làn (tàu đối thủ ở đúng chỗ lúc rời, tàu em = số câu đúng),
+    // tàu đã về đích nhận lại huy chương. Chỉ dữ liệu, không hiệu ứng.
+    if (kp) {
+      rockets.forEach((r, i) => {
+        const d = kp.dua[i];
+        r.p = r.isPlayer ? Math.min(r.L, state.filter(s => s.correct).length) : Math.max(0, Math.min(r.L, Number(d[0]) || 0));
+        if (d[1] > 0) {
+          r.done = true; r.place = d[1];
+          finishedCount = Math.max(finishedCount, r.place);
+          if (r.el) { r.el.classList.add("is-done"); r.el.append(el("div", "aw-rr-medal", MEDAL[r.place - 1] || placeWord(r.place))); }
+        }
+        paintRocket(r);
+      });
+    }
+    // ⭐ Đợt 470 — trạng thái ván để LÀM TIẾP (chỉ engine bài giao học sinh đọc; CHỈ Solo). thuTu = chỉ số trong `goc`;
+    // hang = hàng câu còn lại (câu sai xếp cuối); st: k đúng · a số lượt · w số lần sai · lw chữ đã chọn sai gần nhất;
+    // dua = [vị trí, hạng] từng tàu theo làn. Đọc lại ở `docKhoiPhuc` cuối file.
+    if (!fightCtl && !teamsMode) ui.setLuuTrangThai?.(() => ({
+      v: 1, daLam: correctCount(), tong: N, mang: livesLeft, sk: streak,
+      thuTu: items.map(q => goc.indexOf(q)),
+      hang: queue.slice(),
+      st: state.map(s => ({ k: s.correct ? 1 : 0, a: s.attempts, w: s.wrong.length, lw: s.wrong.length ? String(s.wrong[s.wrong.length - 1] || "").slice(0, 200) : "" })),
+      dua: rockets.map(r => [Math.round(r.p * 1000) / 1000, r.place || 0])
+    }));
     // ⭐ Đợt 368 — board 0 opens the link for the whole match. Board 1 mounts
     // later and only feeds its own question text into the module slot.
     // ⚠️ `paintLink(false)` runs FIRST and on purpose: until an iPad actually
@@ -1507,7 +1552,7 @@ const rocketRaceTemplate = {
     }
     if (twoDevice) paintLink(false);
     renderLives();
-    ui.setScore(0);
+    ui.setScore(kp ? scoreNow() : 0);   // Đợt 470 — làm tiếp: điểm của lượt cũ
     ui.onSubmit(finish, () => state.filter(s => s.attempts > 0).length);
     window.addEventListener("keydown", onKey);
 
@@ -1573,7 +1618,12 @@ const rocketRaceTemplate = {
       });
     }
 
-    if (teamsMode) renderSetup(); else startCountdown();
+    // ⭐ Đợt 470 — làm tiếp: lượt cũ đã về đích / hết tim mà chưa kịp tới màn kết thúc ⇒ kết thúc luôn sau ~700 ms.
+    // Còn dở ⇒ đếm 3-2-1 như thường (đồng hồ engine đã lùi theo giờ thật) rồi vào câu đầu hàng đợi.
+    if (kp && (player.done || (livesLeft != null && livesLeft <= 0))) {
+      endTitle = player.done ? (MEDAL[player.place - 1] ? MEDAL[player.place - 1] + " " : "") + placeWord(player.place) + " place!" : "Game over";
+      later(finish, 700);
+    } else if (teamsMode) renderSetup(); else startCountdown();
 
     // =========================================================
     // building the grid of rockets
@@ -2043,6 +2093,7 @@ const rocketRaceTemplate = {
       }
 
       if (a.correct) onCorrect(q, st); else onWrong(q, st, tile);
+      if (!fightCtl) ui.daDoiBaiLam?.();   // Đợt 470 — cất lượt để làm tiếp nếu em tải lại trang
       // report to the referee AFTER our own bookkeeping — `correct` decides the round
       if (fightCtl) fightCtl.wordDone(fightSide, { index: curItem, correct: !!a.correct });
     }
@@ -2059,6 +2110,7 @@ const rocketRaceTemplate = {
       tiles.forEach(t => { t.tile.disabled = true; if (t.ans.correct && !opt.anDapAn) t.tile.append(el("span", "aw-tile-badge", icons.markCheck)); else t.tile.classList.add("is-dimmed"); });
       showBanner("TIME'S UP", "is-stall", 900);
       onWrong(q, st, null);
+      ui.daDoiBaiLam?.();   // Đợt 470
     }
 
     function onCorrect(q, st) {
@@ -2573,6 +2625,22 @@ const rocketRaceTemplate = {
     if (rr3d && rr3d.view) { rr3d.view.pause(!!paused); if (rr3d.sfx) rr3d.sfx.pause(!!paused); }
   }
 };
+
+// ⭐ Đợt 470 — đọc trạng thái LÀM TIẾP (`ui.khoiPhuc`, CHỈ Solo) và kiểm nó khớp ĐÚNG đề đang dựng; sai một li ⇒ null.
+// Hàng đợi `hang` phải đúng bằng tập câu CHƯA đúng (Solo chỉ rút câu khỏi hàng khi trả lời đúng).
+function docKhoiPhuc(kp, n, soTau) {
+  if (!kp || kp.v !== 1 || !thuTuHopLe(kp.thuTu, n)) return null;
+  const nguyen = x => Number.isInteger(x) && x >= 0;
+  if (!Array.isArray(kp.st) || kp.st.length !== n) return null;
+  if (!kp.st.every(o => o && (o.k === 0 || o.k === 1) && nguyen(o.a) && nguyen(o.w) && o.w <= o.a)) return null;
+  const chua = kp.st.map((o, i) => (o.k ? -1 : i)).filter(i => i >= 0);
+  const h = kp.hang;
+  if (!Array.isArray(h) || h.length !== chua.length || !chua.every(i => h.includes(i)) || new Set(h).size !== h.length) return null;
+  if (!Array.isArray(kp.dua) || kp.dua.length !== soTau || !kp.dua.every(d => Array.isArray(d) && d.length === 2 && Number.isFinite(d[0]) && nguyen(d[1]))) return null;
+  if (kp.mang != null && !nguyen(kp.mang)) return null;
+  if (!nguyen(kp.sk)) return null;
+  return kp;
+}
 
 registerTemplate(rocketRaceTemplate);
 export default rocketRaceTemplate;

@@ -1,5 +1,9 @@
 # GHI CHU — Template WHACK-A-MOLE
 
+## Đợt 470 (05/10/2026) — LÀM TIẾP lượt dở bài giao (core/lam-tiep.js)
+
+`ui.setLuuTrangThai` + `ui.daDoiBaiLam` + đọc `ui.khoiPhuc` (hợp đồng ở `core/HUONG DAN CORE.md`, mục Đợt 469). Lưu ở mức "câu": True/False = các đáp án cần đập CHƯA trúng (`conLai`); Quiz = thứ tự câu `qOrder` + câu đang đứng + số câu đã qua; cùng điểm, combo, số lần sai/đập, tim. Điểm lưu NGUYÊN (combo + phạt kẹp 0 không suy lại được; phạt áp ngay nên không có "−N" đang bay). ⚠️ Game tự chạy đồng hồ riêng (manualTimerStart nhưng KHÔNG gọi ui.startTimer) ⇒ phần lùi giờ của engine không tới đây: lưu MỐC HẾT GIỜ theo đồng hồ thật `hetLuc` (Date.now()), làm tiếp thì chạy nốt phần còn lại (đã cạn ⇒ Time's up sau 700 ms). Làm tiếp BỎ intro máy quay (vào thẳng khung, 300 ms). Chuột chũi đang trồi không giữ. Thử bàn `?g=D4WM&t=whack-a-mole` (True/False, đếm ngược 60 s): đập 3 đúng 1 sai → tải lại → CONTINUE "3 / 7 DONE", đồng hồ 0:19 (mốc lưu cho 18–19 s), conLai [0,1,5,6] giữ đúng, đập tiếp còn [5,6] → hết giờ nộp 2. ⬜ Chưa thử chế độ Quiz và Count up (bàn mẫu là True/False đếm ngược).
+
 **Đợt 99 dự án (10/8/2026, v0.9.73) — THANH "PHẠT" (đỏ, không số) hiện ở hàng nút Menu/Sound khi đập sai
 bị đông cứng. ✅ THẦY DUYỆT → COMMIT `cde45a2` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/`
 (`curl` xác nhận `aw-wam-punishbar` trong CSS + `startPunishBar` trong JS đã có trên bản live ngay lần

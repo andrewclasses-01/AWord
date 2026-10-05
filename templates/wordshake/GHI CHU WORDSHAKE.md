@@ -1,5 +1,13 @@
 # GHI CHÚ WORDSHAKE — template #21 + game cố định trong GAMES
 
+## ⭐ Đợt 470 (05/10/2026) — LÀM TIẾP lượt dở bài giao (core/lam-tiep.js) — chỉ chơi đơn
+- `ui.setLuuTrangThai` (chỉ khi `!fctl`) + `ui.daDoiBaiLam` + `ui.khoiPhuc` (hợp đồng `core/HUONG DAN CORE.md` mục Đợt 469). Màn START riêng không chạy ở bài giao (engine bỏ `startScreen` khi có session) nên không đụng.
+- Lưu: `m` mode · thứ tự từ (chỉ số gốc) · từng từ `{s đã làm, t số lần thử, y chữ đã ghép, g bị gợi ý lật}` · Mode 1: từ đang hỏi + bảng chữ `b1` (8/12/16 ô) + `m1x` từ đó đã xong · Mode 2/3: cả kế hoạch bảng `plan[{w chỉ số từ, l 16 chữ}]` + bảng đang đứng + chỗ từng ô `o` · Mode 3: các từ đã tìm `f3` (cả từ từ điển khi tắt Word list only).
+- Khôi phục: điểm ✓ = số từ đã làm, PTS = tổng `f3` (tính lại). Từ/bảng đang đứng đã xong ⇒ sang kế; hết ⇒ finish 700 ms. Gợi ý từng chữ (Đợt 425) KHÔNG giữ. `docKhoiPhuc` kiểm mỗi bảng đủ chữ cho từ của nó.
+- `daLam/tong` = TỪ: Mode 1 số từ đã đi qua / tổng; Mode 2/3 số từ làm được hoặc bị lật / tổng từ trong các bảng.
+- Đo bàn thử (`scratch/dot469/ban.html?g=C3WS` Mode 1; `scratch/dot470/c3-ban.html?...&ws=list|free&wo=0` Mode 2/3): bảng chữ y hệt sau tải lại cả 3 mode, từ đã làm ✓, PTS 11 + 3 từ đã tìm giữ nguyên (MIND nộp lại ⇒ "Found"), làm hết ⇒ nộp 1 lượt 8/8. Kế hoạch bảng hỏng ⇒ ván mới, không lỗi.
+
+
 ## ⭐ Đợt 459 (04/10/2026) — cột chất lỏng 2 ô điểm: giảm từ từ, rất ít, 2 đội ngang nhau
 - `ws-lib.js`: `follow(p)` (tiến độ chung n/hi, rơi `DROP` .1 + lệch ngẫu nhiên ≤ `JITTER` .006) + làm mượt mỗi khung hình + `settle()` sau đếm. `countTo/landCount` không đụng mức nữa. GAME `finish()` + template `countTanks` gọi. Chi tiết: GHI CHU DU AN.md Đợt 459.
 

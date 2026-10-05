@@ -65,6 +65,7 @@ import { registerTemplate } from "../../core/registry.js";
 // penalties used to run on ranges of their own; see MAX_SUBMIT_PENALTY below.
 import { POINTS_MAX, POINTS_STEP } from "../../core/options-panel.js";
 import { shuffle, el } from "../../core/utils.js";
+import { thuTuHopLe } from "../../core/lam-tiep.js";   // Đợt 470 — làm tiếp lượt dở bài giao
 import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
@@ -529,15 +530,20 @@ const anagramTemplate = {
     const scoreTargetEl = () => (fightCtl ? fightCtl.scoreTarget(fightSide) : ui.scoreEl);
 
     let items = [...(activity.content?.items || [])].filter(it => it && String(it.word || "").trim());
-    if (opt.shuffleQuestions) items = shuffle(items);
+    // ⭐⭐ Đợt 470 — LÀM TIẾP lượt dở của bài giao (core/lam-tiep.js, engine đặt `ui.khoiPhuc`): dựng lại ĐÚNG thứ tự
+    // từ + thứ tự chữ cái đã xáo của từng từ (tileOrder) của lượt cũ, rồi chữ đã đặt từng từ ở dưới. Không khớp đề ⇒ ván mới.
+    const goc = items;
+    const kp = docKhoiPhuc(ui.khoiPhuc, goc, isBonusFamily);
+    if (kp) items = kp.thuTu.map(i => goc[i]);
+    else if (opt.shuffleQuestions) items = shuffle(items);
     // `src` = the ORIGINAL content object, carried through so "Start with
     // mistakes" can filter activity.content.items by identity (core/mistakes.js).
     // In a fight with "same letters" the two boards share these very objects,
     // so whichever board prepares a word first leaves its scramble on the
     // source for the other to copy.
-    items = items.map(it => {
+    items = items.map((it, qi) => {
       const shared = fightCtl && fightCtl.shareLetters;
-      const prepared = prepareItem(it.word, shared ? it._fightOrder : null);
+      const prepared = prepareItem(it.word, kp ? kp.xao[qi] : (shared ? it._fightOrder : null));   // Đợt 470 — làm tiếp: đúng thứ tự xáo cũ
       if (shared && !it._fightOrder) it._fightOrder = prepared.tileOrder;
       return { clue: it.clue || "", word: it.word, ...prepared, src: it };
     });
@@ -565,15 +571,41 @@ const anagramTemplate = {
       // have counted it as solved.
       timedOut: false,
       correct: null,
-      points: 0
+      points: 0,
+      sai: 0              // Đợt 470 — số lần chạm SAI chữ (Bonus and minus trừ letterPenalty mỗi lần) — để tính lại điểm phạt khi làm tiếp
     }));
     let index = 0;
+    // ⭐ Đợt 470 — làm tiếp: dựng lại bài làm từng từ. Đúng/sai, điểm thưởng, điểm phạt, mạng đều TÍNH LẠI từ chữ đã đặt
+    // (đúng công thức bonusEarned / doSubmit / roundTimeUp) — phép cộng/trừ đang bay lúc chụp có thể chưa hạ cánh.
+    let kpPhat = 0, kpMatMang = 0;
+    if (kp) {
+      state.forEach((s, qi) => {
+        const o = kp.st[qi], it = items[qi], n = it.letters.length;
+        s.placed = o.p.map(x => (x == null ? null : x));
+        s.placed.forEach(t => { if (t != null) s.used[t] = true; });
+        s.hadMistake = o.m === true;
+        s.timedOut = o.t === true;
+        s.sai = Math.max(0, o.s | 0);
+        if (isBonusFamily) {
+          const k = s.placed.indexOf(null);
+          s.nextPos = k < 0 ? n : k;
+          if (s.nextPos === n && !s.timedOut) { s.correct = true; s.points = n * (!s.hadMistake ? (mode === "bonusMinus" ? bonusMult : 2) : 1); }
+          if (s.timedOut || (s.correct === true && s.hadMistake)) kpMatMang++;
+          if (mode === "bonusMinus") kpPhat += letterPenalty * s.sai;
+        } else if (o.g === true || s.timedOut) {
+          s.graded = true; s.revealed = true;
+          s.correct = !s.timedOut && s.placed.every((t, pos) => t != null && it.letters[t].toLowerCase() === it.letters[pos].toLowerCase());
+          s.points = s.correct ? 1 : 0;
+          if (!s.correct) { kpMatMang++; kpPhat += pointsOff; }
+        }
+      });
+    }
     let finished = false;
     // "this mount was thrown away" — set ONLY by cleanup(), never by finish().
     // Separate from `finished` so a legitimately completed game still animates
     // its last score pulse (Đợt 114).
     let dead = false;
-    let penalty = 0;           // total points-off across words answered wrong (stays 0 when the option is off)
+    let penalty = kpPhat;      // total points-off across words answered wrong (stays 0 when the option is off) — Đợt 470: làm tiếp thì tính lại
     // ⭐⭐⭐ Đợt 311 (08/9/2026, thầy báo: "HS làm đúng 30 câu, máy ghi 29") — CỬA SỔ
     // NỘP. Kết quả của từ vừa nộp/vừa giải chỉ được GHI VÀO STATE khi hoạt ảnh
     // (lộ đáp án lần lượt ~n×260ms+300ms ở submit mode; "+N" bay ~1–1.5s ở bonus)
@@ -588,6 +620,7 @@ const anagramTemplate = {
     // còn finish() tới trước thì gọi nó rồi mới đọc điểm.
     let pendingSettle = null;
     let livesLeft = startLives;   // null = unlimited (can't lose)
+    if (kp && livesLeft != null) livesLeft = Math.max(0, livesLeft - kpMatMang);   // Đợt 470 — mạng tính lại từ bài làm
     let busy = false;          // true while a fly/reveal animation must not be interrupted
     let fitter = null;
     let autoTimer = null;
@@ -794,6 +827,15 @@ const anagramTemplate = {
     ui.setScoreProvider?.(scoreNow);
     // ⭐ Đợt 384 — bài làm TỚI LÚC NÀY cho lượt dở (dashboard myLesson xem từng câu); bọc hàm ⇒ lỗi chỉ rơi vào try của engine.
     ui.setReviewProvider?.(() => buildReview());
+    // ⭐ Đợt 470 — trạng thái ván để LÀM TIẾP (chỉ engine bài giao học sinh đọc). thuTu = chỉ số trong danh sách từ gốc
+    // đã lọc (`goc`), xao = thứ tự chữ cái đã xáo của từng từ, p = chữ đã đặt vào từng ô (chỉ số chữ) — đọc lại ở `docKhoiPhuc`.
+    // Đúng/sai, điểm, mạng KHÔNG lưu: tính lại từ p/m/t/g/s lúc dựng (xem khối Đợt 470 ở trên).
+    ui.setLuuTrangThai?.(() => ({
+      v: 1, daLam: state.filter(doneCheck).length, tong: total, i: index,
+      thuTu: items.map(it => goc.indexOf(it.src)),
+      xao: items.map(it => it.tileOrder.slice()),
+      st: state.map(s => ({ p: s.placed.slice(), m: s.hadMistake, t: s.timedOut, g: s.graded, s: s.sai }))
+    }));
     // ⭐⭐⭐ Đợt 266 — vế "clip còn đang đọc" ĐI RIÊNG qua ui.setVoiceGuard, không
     // nằm trong idleGuard nữa: trong Fight chỉ bàn 0 có <audio> thật (core/fight.js
     // `ctl.speaks`), nên để nguyên chỗ cũ là bàn PHẢI bị Time cost trừ suốt quãng cả
@@ -805,8 +847,18 @@ const anagramTemplate = {
     // this template can say. See roundTimeUp() further down.
     ui.setRoundTimeout?.(roundTimeUp);
 
+    // ⭐ Đợt 470 — làm tiếp: vào từ CHƯA xong đầu tiên kể từ từ đang đứng lúc rời (hết thì từ chưa xong bất kỳ).
+    if (kp) {
+      const tu = Math.max(0, Math.min(total - 1, kp.i | 0));
+      let k = state.findIndex((s, j) => j >= tu && !doneCheck(s));
+      if (k < 0) k = state.findIndex(s => !doneCheck(s));
+      index = k < 0 ? tu : k;
+    }
     renderLives();
     render();
+    // ⭐ Đợt 470 — lượt cũ đã hết mạng / đã làm HẾT mà chưa kịp tới màn kết thúc (tải lại đúng lúc chờ) ⇒ kết thúc luôn.
+    if (kp && livesLeft === 0) autoTimer = setTimeout(() => finish({ gameover: true }), 700);
+    else if (kp && state.every(doneCheck)) autoTimer = setTimeout(finish, 700);
 
     // ⭐ Đợt 174 — `timedOut` counts as DONE in both modes: the word is over, the
     // pupil cannot go on with it, and every caller of this (the idle guard, Next,
@@ -872,6 +924,7 @@ const anagramTemplate = {
       // right place to zero the idle clock: a NEW word deserves its full
       // thinking grace, not whatever was banked staring at the last one.
       ui.noteActivity?.();
+      ui.daDoiBaiLam?.();   // Đợt 470 — nhớ từ đang đứng (làm tiếp)
       if (fitter) { fitter.destroy(); fitter = null; }
       root.innerHTML = "";
       submitBtnEl = null;
@@ -1121,6 +1174,8 @@ const anagramTemplate = {
       const picked = it.letters[tileId];
       if (picked.toLowerCase() !== expected.toLowerCase()) {
         st.hadMistake = true;
+        st.sai++;              // Đợt 470 — đếm để làm tiếp tính lại điểm phạt từng chữ
+        ui.daDoiBaiLam?.();
         anagramSound.wrongPick();
         showWrongPickMark();
         // "Bonus and minus" (teacher, 10/8/2026): a wrong tap ALSO flies a
@@ -1151,6 +1206,7 @@ const anagramTemplate = {
       st.used[tileId] = true;
       st.placed[destPos] = tileId;
       st.nextPos++;
+      ui.daDoiBaiLam?.();   // Đợt 470
       tileEl.disabled = true;
       const wordDone = st.nextPos === it.letters.length;
       // Đợt 311 — chữ cuối vừa được xác nhận đúng là từ ĐÃ GIẢI XONG về mặt dữ liệu
@@ -1201,6 +1257,7 @@ const anagramTemplate = {
       const mult = mode === "bonusMinus" ? bonusMult : 2;   // "bonus" keeps the old fixed x2 (label "Nx PERFECT")
       const earned = bonusEarned(st, it);
       st.correct = true;               // word is DONE — points deferred, see below
+      ui.daDoiBaiLam?.();              // Đợt 470 — "x / n DONE" trên nút CONTINUE đếm từ này
       ui.roundDone?.();                // TIME EACH ROUND (Đợt 174) — the pupil's turn ends the instant the word is solved
       // No render() here: every origin tile is already .is-used and every
       // result tile already .is-blue via the incremental patches each
@@ -1283,6 +1340,7 @@ const anagramTemplate = {
       if (!it || dead || finished || busy || fightLocked()) return;
       if (doneCheck(st)) return;                 // already solved/submitted/timed out
       st.timedOut = true;
+      ui.daDoiBaiLam?.();   // Đợt 470
       if (!isBonusFamily) {
         st.graded = true;
         st.correct = false;
@@ -1335,6 +1393,7 @@ const anagramTemplate = {
       // so taps never wait on each other's flight to finish.
       st.used[tileId] = true;
       st.placed[slotIdx] = tileId;
+      ui.daDoiBaiLam?.();   // Đợt 470
       tileEl.disabled = true;
       updateSubmitButtonState();
       const destEl = root.querySelector(`.aw-anagram-rtile[data-pos="${slotIdx}"]`);
@@ -1359,6 +1418,7 @@ const anagramTemplate = {
       anagramSound.pickup();
       st.placed[pos] = null;
       st.used[tileId] = false;
+      ui.daDoiBaiLam?.();   // Đợt 470
       updateSubmitButtonState();
       if (!resultEl || !originEl) { patchResultSlotDisplay(pos); patchOriginRestored(tileId); return; }
       // Empty the slot right away (back to its dashed placeholder look) —
@@ -1427,6 +1487,7 @@ const anagramTemplate = {
       const oldPlaced = st.placed.slice();
       const moved = st.placed.splice(fromPos, 1)[0];
       st.placed.splice(toPos, 0, moved);
+      ui.daDoiBaiLam?.();   // Đợt 470
       anagramSound.pickup();
       updateSubmitButtonState();
 
@@ -1659,6 +1720,7 @@ const anagramTemplate = {
       const it = items[index];
       busy = true;
       st.graded = true;
+      ui.daDoiBaiLam?.();   // Đợt 470 — đúng/sai tính lại từ chữ đã đặt nên lưu ngay được
       // TIME EACH ROUND (Đợt 174): the pupil's turn ends at Submit — their clock
       // freezes on this reading (which is what Show answers prints), and a Count
       // down can no longer fire over a word already handed in. Called BEFORE the
@@ -2516,6 +2578,30 @@ const anagramTemplate = {
     };
   }
 };
+
+// ⭐ Đợt 470 — đọc trạng thái LÀM TIẾP (`ui.khoiPhuc`) và kiểm nó khớp ĐÚNG đề đang dựng; sai một li ⇒ null (ván mới).
+// Mỗi từ: xao = hoán vị đúng số chữ cái; p = chữ đã đặt (null hoặc chỉ số chữ, không trùng). Bonus: chữ đặt phải là
+// một đoạn đầu liền và ĐÚNG chữ (bonusPick chỉ nhận chữ kế tiếp đúng) — lệch là dữ liệu hỏng.
+function docKhoiPhuc(kp, goc, isBonusFamily) {
+  if (!kp || kp.v !== 1) return null;
+  const n = goc.length;
+  if (!thuTuHopLe(kp.thuTu, n) || !Array.isArray(kp.xao) || kp.xao.length !== n || !Array.isArray(kp.st) || kp.st.length !== n) return null;
+  const ok = kp.thuTu.every((gi, qi) => {
+    const letters = String(goc[gi].word ?? "").split("").filter(ch => ch !== " ");
+    const L = letters.length, o = kp.st[qi];
+    if (!thuTuHopLe(kp.xao[qi], L) || !o || !Array.isArray(o.p) || o.p.length !== L) return false;
+    const thay = new Set();
+    const pOk = o.p.every(t => t == null || (Number.isInteger(t) && t >= 0 && t < L && !thay.has(t) && thay.add(t)));
+    if (!pOk) return false;
+    if (isBonusFamily) {
+      const k = o.p.indexOf(null), m = k < 0 ? L : k;
+      if (o.p.slice(m).some(t => t != null)) return false;
+      if (o.p.slice(0, m).some((t, pos) => letters[t].toLowerCase() !== letters[pos].toLowerCase())) return false;
+    }
+    return true;
+  });
+  return ok ? kp : null;
+}
 
 function escapeHtml(s) {
   return String(s ?? "")

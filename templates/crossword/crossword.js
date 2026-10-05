@@ -216,6 +216,13 @@ function buildCrosswordOnce(words, fixed, rand) {
     for (const w of skipped) { stamp(w, bottom + 2, left, "A"); bottom += 2; }
   }
 
+  return chotLuoi(cells, placed, skipped);
+}
+
+// ⭐ Đợt 470 — phần CHỐT LƯỚI tách ra khỏi buildCrosswordOnce (y nguyên code cũ, không đổi một phép tính) để
+// `dungLaiLuoi` dựng lại ĐÚNG lưới của lượt dở từ vị trí từng từ đã lưu (làm tiếp bài giao) — không xếp lưới mới.
+// `cells` = Map "r,c" → chữ; `placed` = [{key, clue, answer, src, row, col, dir}] (row/col bị chuẩn hoá về gốc 0 tại chỗ).
+function chotLuoi(cells, placed, skipped) {
   if (!placed.length) return { grid: null, clues: [], rows: 0, cols: 0, skipped };
 
   let minR = Infinity, minC = Infinity, maxR = -Infinity, maxC = -Infinity;
@@ -258,6 +265,33 @@ function buildCrosswordOnce(words, fixed, rand) {
   clues.sort((a, b) => a.number - b.number || (a.dir === b.dir ? 0 : a.dir === "A" ? -1 : 1));
 
   return { grid, clues, rows, cols, skipped };
+}
+
+// ⭐ Đợt 470 — dựng lại lưới một trang từ vị trí đã lưu: `layout` = [[wi, row, col, dir], …], wi = chỉ số từ trong
+// `wp` (danh sách từ của trang, đúng thứ tự đề). Kiểm đủ chặt để lưới dựng ra là lưới buildCrosswordOnce CÓ THỂ đã dựng:
+// đúng tập từ (khử trùng theo key, giữ từ ĐẦU TIÊN như buildCrosswordOnce), chữ ở ô giao nhau khớp nhau. Sai ⇒ null.
+function dungLaiLuoi(wp, layout) {
+  const usable = wp.map(w => ({ key: gridKey(w.answer), clue: w.clue || "", answer: w.answer || "", src: w }));
+  const keys = new Set(usable.filter(w => w.key.length >= 2).map(w => w.key));
+  if (!Array.isArray(layout) || layout.length !== keys.size) return null;
+  const cells = new Map(), placed = [];
+  for (const x of layout) {
+    if (!Array.isArray(x) || x.length !== 4) return null;
+    const [wi, row, col, dir] = x;
+    if (!Number.isInteger(wi) || wi < 0 || wi >= wp.length || (dir !== "A" && dir !== "D")) return null;
+    if (!Number.isInteger(row) || !Number.isInteger(col) || Math.abs(row) > 500 || Math.abs(col) > 500) return null;
+    const w = usable[wi];
+    if (!keys.has(w.key) || usable.findIndex(u => u.key === w.key) !== wi) return null;
+    keys.delete(w.key);
+    const dr = dir === "D" ? 1 : 0, dc = dir === "A" ? 1 : 0;
+    for (let i = 0; i < w.key.length; i++) {
+      const k = (row + dr * i) + "," + (col + dc * i), cur = cells.get(k);
+      if (cur != null && cur !== w.key[i]) return null;
+      cells.set(k, w.key[i]);
+    }
+    placed.push({ ...w, row, col, dir });
+  }
+  return chotLuoi(cells, placed, []);
 }
 
 const crosswordTemplate = {
@@ -378,17 +412,25 @@ const crosswordTemplate = {
     const perPage = Math.ceil(words.length / rawPageCount);
     const wordPages = [];
     for (let p = 0; p < rawPageCount; p++) wordPages.push(words.slice(p * perPage, (p + 1) * perPage));
+    // ⭐⭐ Đợt 470 — LÀM TIẾP lượt dở của bài giao (core/lam-tiep.js, engine đặt `ui.khoiPhuc`): lưới mỗi trang dựng LẠI
+    // từ vị trí từng từ đã lưu (`dungLaiLuoi`) — KHÔNG gọi buildCrossword (nó xếp ngẫu nhiên, lưới mới ⇒ ô chữ đã điền
+    // lệch chỗ). Không khớp đề ở bất cứ chỗ nào ⇒ `kp` = null, ván mới như cũ.
+    const kpLuoi = docKhoiPhucLuoi(ui.khoiPhuc, wordPages);
     const pageState = wordPages
       // `!!activity._fight` — in a match BOTH boards must build the identical
       // grid, see buildCrossword's own note. (Read straight off the activity:
       // this runs before the `fightCtl` shorthand below is in scope.)
-      .map(wp => buildCrossword(wp, !!activity._fight))
-      .filter(bp => bp.clues.length > 0)   // a page can only end up empty if every one of its words was <2 letters
-      .map(bp => ({
+      .map((wp, p) => (kpLuoi ? kpLuoi[p] : buildCrossword(wp, !!activity._fight)))
+      .map((bp, p) => ({ bp, p }))
+      .filter(x => x.bp.clues.length > 0)   // a page can only end up empty if every one of its words was <2 letters
+      .map(({ bp, p }) => ({
         grid: bp.grid, clues: bp.clues, rows: bp.rows, cols: bp.cols,
+        trangDe: p,   // Đợt 470 — chỉ số trang trong `wordPages` (để lưu lưới làm tiếp)
         userGrid: new Map(), cellStatus: new Map(),
         wordState: bp.clues.map(() => ({ done: false, correct: false, revealed: false, wrong: false }))
       }));
+    const kp = kpLuoi ? docKhoiPhucBaiLam(ui.khoiPhuc, pageState) : null;
+    if (kp) napBaiLam(kp, pageState, opt.showAnswerWhenWrong !== false);
     const PAGE_COUNT = pageState.length;
     const total = pageState.reduce((sum, ps) => sum + ps.clues.length, 0);   // grand total across every page
 
@@ -435,6 +477,16 @@ const crosswordTemplate = {
     let curCell = 0;
     let finished = false;
     let livePoints = 0;              // shown score: +1 per correct, −penalty per wrong (Minus mode); may go negative
+    // ⭐ Đợt 470 — làm tiếp: điểm TÍNH LẠI từ bài làm (đúng công thức điểm của finish()), lượt/thứ tự mở ô + Andrew đã dùng.
+    if (kp) {
+      pageState.forEach(ps => ps.wordState.forEach(st => {
+        if (st.done && st.correct) livePoints += 1;
+        else if (st.done && minusOn) livePoints -= penalty;
+      }));
+      kp.po.forEach(([page, i]) => playOrder.push({ page, i }));
+      kp.to.forEach((o, t) => { if (o) turnOutcome[t] = { correct: o[0] === 1, typed: String(o[1]) }; });
+      curRow = Math.max(0, playOrder.length - 1);
+    }
     let clueFitter = null;
     let ro = null;
     // Pronunciation playback (10/8/2026) — optional per-word, carried
@@ -457,7 +509,7 @@ const crosswordTemplate = {
     const timers = [];               // pending setTimeouts for the current word's end sequence
     const pushTimer = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
     const clearTimers = () => { timers.forEach(clearTimeout); timers.length = 0; };
-    let andrewUsed = false;          // ONE use for the WHOLE game
+    let andrewUsed = !!(kp && kp.an === true);   // ONE use for the WHOLE game (Đợt 470 — làm tiếp: giữ "đã dùng")
     let andrewGlowing = false;       // from the press until this word ends
 
     const bigCells = new Map();      // index-in-current-word -> big overlay cell
@@ -564,7 +616,36 @@ const crosswordTemplate = {
 
     root.append(wrap);
 
-    loadPage(0);   // builds the first page's grid cells and shows the board
+    // ⭐ Đợt 470 — trạng thái ván để LÀM TIẾP (chỉ engine bài giao học sinh đọc): lưới từng trang = vị trí từng từ
+    // ([chỉ số từ trong trang đề, hàng, cột, hướng]), chữ đã điền + trạng thái ô + trạng thái từng từ, thứ tự lượt mở ô
+    // (Show answers đi theo nó) + kết quả từng lượt, Andrew đã dùng. Đọc lại ở docKhoiPhucLuoi / docKhoiPhucBaiLam.
+    ui.setLuuTrangThai?.(() => {
+      const luoi = wordPages.map(() => null);
+      pageState.forEach(ps => {
+        luoi[ps.trangDe] = ps.clues.map(c => [wordPages[ps.trangDe].indexOf(c.src), c.row, c.col, c.dir]);
+      });
+      return {
+        v: 1, daLam: pageState.reduce((n, ps) => n + ps.wordState.filter(x => x.done).length, 0), tong: total,
+        trang: curPageIdx, luoi,
+        bai: pageState.map(ps => ({
+          g: [...ps.userGrid], s: [...ps.cellStatus],
+          w: ps.wordState.map(x => (x.done ? 1 : 0) | (x.correct ? 2 : 0) | (x.revealed ? 4 : 0) | (x.wrong ? 8 : 0))
+        })),
+        po: playOrder.map(k => [k.page, k.i]),
+        to: playOrder.map((_, t) => (turnOutcome[t] ? [turnOutcome[t].correct ? 1 : 0, turnOutcome[t].typed] : null)),
+        an: andrewUsed
+      };
+    });
+    // ⭐ Đợt 470 — làm tiếp: mở trang đang làm dở (trang đã xong hết thì trang kế còn ô chưa xong); xong hết ⇒ kết thúc.
+    let trangDau = 0;
+    if (kp) {
+      const tu = Math.max(0, Math.min(PAGE_COUNT - 1, kp.trang | 0));
+      let k = pageState.findIndex((ps, j) => j >= tu && ps.wordState.some(x => !x.done));
+      if (k < 0) k = pageState.findIndex(ps => ps.wordState.some(x => !x.done));
+      trangDau = k < 0 ? tu : k;
+    }
+    loadPage(trangDau);   // builds the first page's grid cells and shows the board
+    if (kp && pageState.every(ps => ps.wordState.every(x => x.done))) pushTimer(() => finish(), 700);   // Đợt 470
     relayout();
     requestAnimationFrame(() => requestAnimationFrame(relayout));
     const settleTimers = [setTimeout(relayout, 60), setTimeout(relayout, 200)];
@@ -656,6 +737,7 @@ const crosswordTemplate = {
     // the grid cells and shows the board.
     function loadPage(p) {
       curPageIdx = p;
+      ui.daDoiBaiLam?.();   // Đợt 470 — nhớ trang đang làm
       ({ grid, clues, rows, cols, userGrid, cellStatus, wordState } = pageState[p]);
       curWord = -1; curCell = 0;
       buildGridDom();
@@ -807,6 +889,7 @@ const crosswordTemplate = {
       curWord = ((i % n) + n) % n;
       curCell = 0;   // typing always begins at the FIRST cell of the word
       activate();
+      ui.daDoiBaiLam?.();   // Đợt 470 — lượt mở ô mới (playOrder)
     }
 
     function returnToBoard() {
@@ -1028,6 +1111,7 @@ const crosswordTemplate = {
       }
       userGrid.set(rc, ch);
       setGridLetter(rc, ch);
+      ui.daDoiBaiLam?.();   // Đợt 470
       advanceCursor();
       refreshActiveCells();
       kbd.refresh();
@@ -1057,7 +1141,7 @@ const crosswordTemplate = {
       let [r, c] = w.cells[curCell] || w.cells[0];
       let rc = r + "," + c;
       if (userGrid.get(rc) && cellStatus.get(rc) == null) {
-        userGrid.delete(rc); setGridLetter(rc, ""); refreshActiveCells(); return;
+        userGrid.delete(rc); setGridLetter(rc, ""); refreshActiveCells(); ui.daDoiBaiLam?.(); return;   // Đợt 470
       }
       // …otherwise step back to the previous editable cell and clear it
       for (let k = curCell - 1; k >= 0; k--) {
@@ -1068,7 +1152,7 @@ const crosswordTemplate = {
         // rubbed a letter out would be looking at a strip that still claims they
         // had reached the end.
         typedGivens.forEach(i => { if (i >= k) typedGivens.delete(i); });
-        if (cellStatus.get(rc) == null && userGrid.get(rc)) { userGrid.delete(rc); setGridLetter(rc, ""); }
+        if (cellStatus.get(rc) == null && userGrid.get(rc)) { userGrid.delete(rc); setGridLetter(rc, ""); ui.daDoiBaiLam?.(); }   // Đợt 470
         break;
       }
       refreshActiveCells();
@@ -1222,6 +1306,7 @@ const crosswordTemplate = {
       if (andrewUsed || finished || curWord < 0 || wordState[curWord].done || ui.inShowdown?.()) return;
       andrewUsed = true;
       andrewGlowing = true;
+      ui.daDoiBaiLam?.();   // Đợt 470
       refreshActiveCells();   // gold hint letters take their final (glowing) state
       kbd.refresh();          // Andrew key -> glowing
       crosswordSound.magic(); // a sparkly chime as the gold letters appear
@@ -1297,6 +1382,9 @@ const crosswordTemplate = {
       // "ô chữ này rốt cuộc thế nào"; hàng trong Show answers phải trả lời "em ấy, ở lượt
       // ấy, gõ gì".
       if (curTurn >= 0) turnOutcome[curTurn] = { correct: ok, typed };
+      // Đợt 470 — báo SAU khi st.done/cellStatus đổi xong (gom 120 ms); hiệu ứng lộ đáp án còn chạy thì khi làm tiếp
+      // `napBaiLam` tự dựng lại kết cục của nó (flipRevealWord / ô "wrong").
+      ui.daDoiBaiLam?.();
       if (ok) {
         st.done = true; st.correct = true;
         w.cells.forEach(([r, c]) => cellStatus.set(r + "," + c, "solved"));
@@ -1506,6 +1594,7 @@ const crosswordTemplate = {
       if (!w || !st || st.done) return;
       consumeAndrewGlow();
       st.done = true; st.wrong = true; st.correct = false;
+      ui.daDoiBaiLam?.();   // Đợt 470
       if (curTurn >= 0) {
         turnOutcome[curTurn] = { correct: false, typed: w.cells.map(([r, c]) => userGrid.get(r + "," + c) || "·").join("") };
       }
@@ -1684,6 +1773,76 @@ const crosswordTemplate = {
     };
   }
 };
+
+// ⭐ Đợt 470 — đọc LƯỚI của lượt làm tiếp (`ui.khoiPhuc.luoi`): mỗi trang đề dựng lại bằng dungLaiLuoi; trang nào lệch
+// ⇒ null cả lượt (ván mới). Trang đề rỗng (mọi từ < 2 chữ) lưu null và phải vẫn rỗng.
+function docKhoiPhucLuoi(kp, wordPages) {
+  if (!kp || kp.v !== 1 || !Array.isArray(kp.luoi) || kp.luoi.length !== wordPages.length) return null;
+  const out = [];
+  for (let p = 0; p < wordPages.length; p++) {
+    const L = kp.luoi[p];
+    if (L == null) {
+      if (wordPages[p].some(w => gridKey(w.answer).length >= 2)) return null;
+      out.push({ grid: null, clues: [], rows: 0, cols: 0, skipped: [] });
+      continue;
+    }
+    const bp = dungLaiLuoi(wordPages[p], L);
+    if (!bp || !bp.clues.length) return null;
+    out.push(bp);
+  }
+  return out;
+}
+
+// ⭐ Đợt 470 — kiểm BÀI LÀM của lượt làm tiếp khớp các trang vừa dựng (số trang, số từ, ô có thật, chữ A–Z, trạng thái hợp
+// lệ, lượt mở ô trỏ đúng ô chữ). Sai ⇒ null: ván mới trên lưới vừa dựng (nó vẫn là một lưới hợp lệ của đề).
+function docKhoiPhucBaiLam(kp, pageState) {
+  if (!Array.isArray(kp.bai) || kp.bai.length !== pageState.length) return null;
+  const TT = new Set(["solved", "revealed", "wrong"]);
+  const ok = pageState.every((ps, p) => {
+    const b = kp.bai[p];
+    if (!b || !Array.isArray(b.g) || !Array.isArray(b.s) || !Array.isArray(b.w) || b.w.length !== ps.clues.length) return false;
+    const coO = rc => {
+      if (typeof rc !== "string") return false;
+      const [r, c] = rc.split(",").map(Number);
+      return Number.isInteger(r) && Number.isInteger(c) && r >= 0 && c >= 0 && r < ps.rows && c < ps.cols && !!ps.grid[r][c];
+    };
+    return b.g.every(x => Array.isArray(x) && coO(x[0]) && typeof x[1] === "string" && /^[A-Z]$/.test(x[1]))
+      && b.s.every(x => Array.isArray(x) && coO(x[0]) && TT.has(x[1]))
+      && b.w.every(x => Number.isInteger(x) && x >= 0 && x < 16);
+  });
+  if (!ok) return null;
+  if (!Array.isArray(kp.po) || !Array.isArray(kp.to) || kp.to.length !== kp.po.length) return null;
+  const poOk = kp.po.every(x => Array.isArray(x) && Number.isInteger(x[0]) && Number.isInteger(x[1])
+    && x[0] >= 0 && x[0] < pageState.length && x[1] >= 0 && x[1] < pageState[x[0]].clues.length);
+  const toOk = kp.to.every(o => o == null || (Array.isArray(o) && (o[0] === 0 || o[0] === 1) && typeof o[1] === "string" && o[1].length <= 200));
+  return poOk && toOk ? kp : null;
+}
+
+// ⭐ Đợt 470 — nạp bài làm đã kiểm vào pageState. Kết cục của hiệu ứng lộ đáp án (chạy bằng timer, có thể chưa xong lúc
+// chụp) được dựng lại ở đây: từ sai ⇒ Show corrects bật: lật đáp án vào (như flipRevealWord), tắt (bài giao luôn tắt):
+// ô "wrong"; rồi từ đúng ⇒ ô "solved" — "solved" luôn thắng, y như gradeWord / setRoundTimeout.
+function napBaiLam(kp, pageState, showCorrects) {
+  pageState.forEach((ps, p) => {
+    const b = kp.bai[p];
+    b.g.forEach(([rc, ch]) => ps.userGrid.set(rc, ch));
+    b.s.forEach(([rc, t]) => ps.cellStatus.set(rc, t));
+    ps.wordState = b.w.map(x => ({ done: !!(x & 1), correct: !!(x & 2), revealed: !!(x & 4), wrong: !!(x & 8) }));
+    ps.clues.forEach((w, i) => {
+      const st = ps.wordState[i];
+      if (!st.done || st.correct) return;
+      w.cells.forEach(([r, c], k) => {
+        const rc = r + "," + c;
+        if (ps.cellStatus.get(rc) === "solved") return;
+        if (showCorrects) { ps.userGrid.set(rc, w.key[k]); ps.cellStatus.set(rc, "revealed"); }
+        else ps.cellStatus.set(rc, "wrong");
+      });
+    });
+    ps.clues.forEach((w, i) => {
+      const st = ps.wordState[i];
+      if (st.done && st.correct) w.cells.forEach(([r, c]) => ps.cellStatus.set(r + "," + c, "solved"));
+    });
+  });
+}
 
 registerTemplate(crosswordTemplate);
 export default crosswordTemplate;

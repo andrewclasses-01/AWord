@@ -45,6 +45,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
+import { thuTuHopLe } from "../../core/lam-tiep.js";   // Đợt 470 — làm tiếp lượt dở bài giao
 import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
@@ -244,10 +245,21 @@ const ftmTemplate = {
     // still lines up with its one row in Show answers — the rule Đợt 178 wrote
     // down for True/false, and the only mapping that can stay consistent.
     let curRow = 0;
+    // ⭐⭐ Đợt 470 — LÀM TIẾP lượt dở của bài giao (core/lam-tiep.js, engine đặt `ui.khoiPhuc`; Fight/Showdown không bao
+    // giờ có): dựng lại ĐÚNG thứ tự xáo của lượt cũ — `order`, bố cục ô (`choiceOrder` ⇒ cùng phép chia trang), hàng chờ
+    // từng trang — rồi cặp nào đã bắt / bỏ, từng lượt, trang đang đứng. Không khớp đề ⇒ null ⇒ ván mới y như cũ.
+    const kp = fightCtl ? null : docKhoiPhuc(ui.khoiPhuc, total);
+    // TRUE khi phần tử cuối của `playOrder` là lời nhắc ĐANG TRÊN MÀN chưa ngã ngũ (startCycle vừa đẩy vào). Lúc lưu thì
+    // bỏ hàng đó ra: dựng lại, startCycle() đẩy lại đúng một hàng cho lời nhắc đầu hàng chờ.
+    let luotDangMo = false;
+    let soSai = kp ? kp.sai : 0;   // số cú chạm SAI (mỗi cú một tim + pointsOff) — trôi khỏi băng chuyền thì không tính
+    // Mốc giờ thật đồng hồ lượt bắt đầu — làm tiếp thì tiếng tích Count down lùi theo.
+    const batDauLuc = (kp && Number(kp.t0) > 0) ? Number(kp.t0) : Date.now();
+    if (kp) kp.po.forEach((idx, i) => { playOrder.push(idx); turnSolved[i] = kp.ts[i] === true; });
 
     // `order` = the fixed sequence used for scoring/review (never mutated).
-    let order = pairs.map((_, i) => i);
-    if (opt.shuffleQuestions) order = shuffle(order);
+    let order = kp ? [...kp.ord] : pairs.map((_, i) => i);
+    if (opt.shuffleQuestions && !kp) order = shuffle(order);
 
     // PAGINATION (teacher 3/8/2026): a big set is split across PAGES of at most
     // MAX_TILES_PER_PAGE keyword tiles, divided as evenly as possible (e.g. 40 ->
@@ -273,7 +285,7 @@ const ftmTemplate = {
     // bàn CÓ xáo chỗ ngồi khác nhau — nhưng vẫn qua đúng cửa này, tức thứ tự gốc
     // (và do đó PHÉP CHIA TRANG) vẫn chung cho hai bàn. Đây vẫn là chỗ duy nhất
     // được phép quyết định "cả bộ xếp theo thứ tự nào".
-    const choiceOrder = (fightCtl || opt.shuffleAnswers === false)
+    const choiceOrder = kp ? [...kp.co] : (fightCtl || opt.shuffleAnswers === false)
       ? pairs.map((_, i) => i)
       : shuffle(pairs.map((_, i) => i));
     const PAGE_COUNT = Math.max(1, Math.ceil(total / MAX_TILES_PER_PAGE));
@@ -285,7 +297,8 @@ const ftmTemplate = {
     // ⚠️⚠️ Đợt 222 — DỰNG TRƯỚC CÚ XÁO BỐ CỤC NGAY DƯỚI, và thứ tự hai khối này là
     // cả phần an toàn của tính năng: hàng chờ lời nhắc phải sinh ra từ thứ tự
     // CHUNG, không phải từ mảng đã xáo riêng cho bàn này.
-    const pageQueues = pages.map(arr => ((opt.shuffleQuestions && !fightCtl) ? shuffle([...arr]) : [...arr]));
+    const pageQueues = kp ? kp.pq.map(a => [...a])   // Đợt 470 — hàng chờ còn lại của từng trang (docKhoiPhuc đã kiểm khớp trang)
+      : pages.map(arr => ((opt.shuffleQuestions && !fightCtl) ? shuffle([...arr]) : [...arr]));
 
     // ⭐⭐⭐ Đợt 222 (thầy, 21/8/2026) — TRONG TRẬN, HAI BÀN PHẢI XẾP Ô KHÁC NHAU.
     // Thầy: *"vị trí các ô trả lời chưa được xáo trộn (kể cả khi đã tích Shuffle cả
@@ -317,12 +330,20 @@ const ftmTemplate = {
     const cols = Math.max(1, Math.ceil(maxPageSize / ROWS));
     const colW = Math.min(15, 90 / cols);
 
-    const state = pairs.map(() => ({ solved: false, skipped: false }));
+    const state = pairs.map((_, i) => {
+      const o = kp && kp.st[i];   // Đợt 470 — cặp đã làm của lượt cũ
+      return { solved: !!(o && o.s === true), skipped: !!(o && o.k === true) };
+    });
     let finished = false;
-    let curPage = 0;                 // page currently on screen / being played
+    let curPage = kp ? kp.cp : 0;    // page currently on screen / being played
     let queue = pageQueues[curPage]; // LIVE working sequence for the current page — front = current prompt
     let penalty = 0;          // total points docked by wrong taps (pointsOff); stays 0 when the feature is off
     let livesLeft = normLives(opt.lives);
+    // ⭐ Đợt 470 — tim + điểm phạt TÍNH LẠI từ số cú chạm sai (một "−N" đang bay lúc chụp là phép trừ chưa áp).
+    if (kp) {
+      if (livesLeft != null) livesLeft = Math.max(0, livesLeft - soSai);
+      penalty = pointsOff * soSai;
+    }
     let fitter = null;
     let tileFitRaf = 0;       // rAF handle coalescing per-tile font fitting after --fit settles
     let promptAnim = null;    // the currently-running Animation on .aw-ftm-prompt (enter or crawl)
@@ -389,6 +410,17 @@ const ftmTemplate = {
     ui.setScoreProvider?.(scoreNow);
     // ⭐ Đợt 384 — bài làm TỚI LÚC NÀY cho lượt dở (dashboard myLesson xem từng câu); bọc hàm ⇒ lỗi chỉ rơi vào try của engine.
     ui.setReviewProvider?.(() => buildReview());
+    // ⭐ Đợt 470 — trạng thái ván để LÀM TIẾP (chỉ engine bài giao học sinh đọc). Mọi số là CHỈ SỐ trong `pairs` (danh
+    // sách gốc đã lọc) — đọc lại ở `docKhoiPhuc` cuối file. "Đã làm" = cặp đã bắt được hoặc đã bỏ (Ask once).
+    ui.setLuuTrangThai?.(() => {
+      const n = luotDangMo ? playOrder.length - 1 : playOrder.length;
+      return {
+        v: 1, daLam: state.filter(s => s.solved || s.skipped).length, tong: total, i: n, t0: batDauLuc,
+        ord: order.slice(), co: choiceOrder.slice(), pq: pageQueues.map(q => q.slice()), cp: curPage,
+        st: state.map(s => ({ s: s.solved === true, k: s.skipped === true })),
+        po: playOrder.slice(0, n), ts: playOrder.slice(0, n).map((_, i) => turnSolved[i] === true), sai: soSai
+      };
+    });
     // ⭐⭐⭐ Đợt 266 — vế "clip còn đang đọc" ĐI RIÊNG qua ui.setVoiceGuard, không
     // nằm trong idleGuard nữa: trong Fight chỉ bàn 0 có <audio> thật (core/fight.js
     // `ctl.speaks`), nên để nguyên chỗ cũ là bàn PHẢI bị Time cost trừ suốt quãng cả
@@ -400,7 +432,14 @@ const ftmTemplate = {
       return !!(tile && tile.disabled);
     });
 
-    if (timerMode === "countUp") {
+    if (kp) {
+      // ⭐ Đợt 470 — làm tiếp: bỏ 3-2-1, bật đồng hồ ngay (engine đã lùi theo giờ thật) và vào thẳng lời nhắc đầu hàng chờ
+      // của trang đang đứng. Trang hết ⇒ startCycle() tự sang trang kế / kết thúc "complete"; hết tim ⇒ Game over.
+      ui.startTimer();
+      if (timerMode === "countDown") armCountdownTicks();
+      if (livesLeft === 0) armFallback(() => finish("gameover"), 700);
+      else startCycle();
+    } else if (timerMode === "countUp") {
       runPrepCountdown();          // starts the clock (ui.startTimer) only after the 3-2-1
     } else {
       ui.startTimer();             // count-down / none: clock starts right away
@@ -460,7 +499,9 @@ const ftmTemplate = {
       const at = [];
       for (let r = 10; r >= 6; r--) at.push(timerTotal - r);
       for (let r = 5; r >= 1; r -= 0.5) at.push(timerTotal - r);
+      const boS = kp ? Math.max(0, (Date.now() - batDauLuc) / 1000) : 0;   // Đợt 470 — làm tiếp: giây đã trôi
       at.forEach(sec => {
+        sec -= boS;
         if (sec < 0) return;
         tickTimers.push(setTimeout(() => { if (!finished) ftmSound.clockTick(); }, sec * 1000));
       });
@@ -734,6 +775,8 @@ const ftmTemplate = {
         curRow = playOrder.indexOf(idx0);
       } else {
         curRow = playOrder.push(idx0) - 1;
+        luotDangMo = true;      // Đợt 470
+        ui.daDoiBaiLam?.();     // Đợt 470 — nhớ trang + lời nhắc đang đứng
       }
       ui.itemChanging?.(curRow, NAME_MOVE);
       updateNav();
@@ -863,6 +906,8 @@ const ftmTemplate = {
         return;
       }
       dropOrRequeue(queue[0]);
+      luotDangMo = false;   // Đợt 470 — lượt này đã ngã ngũ (trôi khỏi băng chuyền / hết giờ)
+      ui.daDoiBaiLam?.();
       startCycle();
     }
 
@@ -1104,6 +1149,8 @@ const ftmTemplate = {
         queue.shift();
         state[target].solved = true;
         turnSolved[curRow] = true;   // Đợt 265b — LƯỢT này bắt đúng (xem `turnSolved`)
+        luotDangMo = false;          // Đợt 470 — cất lượt để làm tiếp nếu em tải lại trang
+        ui.daDoiBaiLam?.();
 
         flyMarkOnTile(tile, true);   // Đợt 222 — vẽ trên lớp phủ, xem hàm đó
         if (removeCorrects) {
@@ -1152,6 +1199,9 @@ const ftmTemplate = {
 
         const outOfLives = loseLife();
         dropOrRequeue(target);
+        soSai++;                     // Đợt 470 — tim/điểm phạt của lượt làm tiếp tính lại từ con số này
+        luotDangMo = false;
+        ui.daDoiBaiLam?.();
         exitPromptThenCall(() => {
           if (outOfLives) finish("gameover");
           else startCycle();   // auto-advances to the next page or finishes when the page is cleared
@@ -1359,6 +1409,24 @@ const ftmTemplate = {
     };
   }
 };
+
+// ⭐ Đợt 470 — đọc trạng thái LÀM TIẾP (`ui.khoiPhuc`) và kiểm nó khớp ĐÚNG đề đang dựng (n cặp); sai một li ⇒ null.
+// Phép chia trang tính lại y như mount() từ bố cục đã lưu (`co`) để kiểm hàng chờ từng trang nằm gọn trong trang đó.
+function docKhoiPhuc(kp, n) {
+  if (!kp || kp.v !== 1 || !thuTuHopLe(kp.ord, n) || !thuTuHopLe(kp.co, n)) return null;
+  const laChiSo = i => Number.isInteger(i) && i >= 0 && i < n;
+  const soTrang = Math.max(1, Math.ceil(n / MAX_TILES_PER_PAGE));
+  const moiTrang = Math.ceil(n / soTrang);
+  if (!Array.isArray(kp.pq) || kp.pq.length !== soTrang || !Number.isInteger(kp.cp) || kp.cp < 0 || kp.cp >= soTrang) return null;
+  const okPq = kp.pq.every((q, p) => {
+    const trang = new Set(kp.co.slice(p * moiTrang, (p + 1) * moiTrang));
+    return Array.isArray(q) && q.every(i => trang.has(i)) && new Set(q).size === q.length;
+  });
+  if (!okPq || !Array.isArray(kp.st) || kp.st.length !== n || !kp.st.every(o => o && typeof o === "object")) return null;
+  if (!Array.isArray(kp.po) || !kp.po.every(laChiSo) || !Array.isArray(kp.ts) || kp.ts.length !== kp.po.length) return null;
+  if (!Number.isInteger(kp.sai) || kp.sai < 0) return null;
+  return kp;
+}
 
 function escapeHtml(s) {
   return String(s ?? "")

@@ -39,6 +39,7 @@ import { registerTemplate } from "../../core/registry.js";
 // game's slider and its mount() clamp drifting apart again.
 import { POINTS_MAX, POINTS_STEP } from "../../core/options-panel.js";
 import { shuffle, el } from "../../core/utils.js";
+import { thuTuHopLe } from "../../core/lam-tiep.js";   // Đợt 470 — làm tiếp lượt dở bài giao
 import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
@@ -239,10 +240,19 @@ const unjumbleTemplate = {
 
     let items = [...(activity.content?.items || [])]
       .filter(it => it && String(itemSentence(it)).trim());
-    if (opt.shuffleQuestions) items = shuffle(items);
+    // ⭐⭐ Đợt 470 — LÀM TIẾP lượt dở của bài giao (core/lam-tiep.js, engine đặt `ui.khoiPhuc`): dựng lại ĐÚNG thứ tự câu +
+    // thứ tự mảnh đã xáo LÚC ĐẦU của từng câu (minMoves = n − LIS tính từ nó) + thứ tự em đang xếp. Không khớp đề ⇒ ván mới.
+    const goc = items;
+    const kp = docKhoiPhuc(ui.khoiPhuc, goc);
+    if (kp) items = kp.thuTu.map(i => goc[i]);
+    else if (opt.shuffleQuestions) items = shuffle(items);
     // `src` = the ORIGINAL content object, carried through so "Start with
     // mistakes" can filter activity.content.items by identity (core/mistakes.js).
-    items = items.map(it => ({ clue: it.clue || "", ...prepareItem(itemSentence(it)), src: it }));
+    items = items.map((it, qi) => {
+      const pr = prepareItem(itemSentence(it));
+      if (kp) pr.order = kp.xao[qi].slice();   // Đợt 470 — thứ tự xáo của lượt cũ (đã kiểm độ dài ở docKhoiPhuc)
+      return { clue: it.clue || "", ...pr, src: it };
+    });
 
     const total = items.length;
     if (total === 0) {
@@ -269,6 +279,35 @@ const unjumbleTemplate = {
       // exactly one drag.
       st.minMoves = items[i].words.length - lisLength(items[i].order);
     });
+    // ⭐ Đợt 470 — làm tiếp: dựng lại bài làm từng câu. Đúng/sai, điểm, mạng TÍNH LẠI từ thứ tự đang xếp + số lần kéo
+    // (đúng công thức finalizeLiveWord / doSubmit / roundTimeUp) — cú bay ✓/BONUS/−N lúc chụp có thể chưa hạ cánh.
+    if (kp) {
+      let matMang = 0;
+      state.forEach((st, i) => {
+        const o = kp.st[i], n = items[i].words.length;
+        st.order = o.o.slice();
+        st.moveCount = Math.max(0, o.m | 0);
+        st.timedOut = o.t === true;
+        const xong = greenPrefix(st.order) === n;
+        if (st.timedOut) {
+          st.graded = true;
+          if (mode === "submit") { st.correct = false; st.points = pointsOff ? -pointsOff : 0; }
+          matMang++;
+        } else if (mode === "submit") {
+          if (o.g === true) {
+            st.graded = true;
+            st.marks = st.order.map((id, slot) => (id === slot ? "correct" : "wrong"));
+            st.correct = xong;
+            st.points = xong ? 1 : (pointsOff ? -pointsOff : 0);
+            if (!xong) matMang++;
+          }
+        } else if (xong) {
+          st.graded = true; st.correct = true;
+          st.points = st.moveCount <= st.minMoves ? 2 : 1;
+        }
+      });
+      if (livesLeft != null) livesLeft = Math.max(0, livesLeft - matMang);
+    }
 
     let index = 0;
     let finished = false;
@@ -317,7 +356,7 @@ const unjumbleTemplate = {
       });
       // Hidden while the intro plays; the intro title flies up and hands off to it
       // (runIntro reveals it). With no intro, it's visible straight away.
-      sloganEl.style.opacity = (isClassic && stageEl) ? "0" : "1";
+      sloganEl.style.opacity = (isClassic && stageEl && !kp) ? "0" : "1";   // Đợt 470 — làm tiếp: không chạy lại intro
       topbarEl.append(sloganEl);
     }
     // The clue (top of the card, under the slogan) and the "N moves for bonus"
@@ -385,10 +424,29 @@ const unjumbleTemplate = {
       }
     }
 
-    introActive = isClassic && !!stageEl;   // the "moves for bonus" line stays hidden until the intro ends
+    // ⭐ Đợt 470 — làm tiếp lượt dở: BỎ intro bảng trắng (đã xem lúc đầu lượt), vào thẳng câu đang dở.
+    introActive = isClassic && !!stageEl && !kp;   // the "moves for bonus" line stays hidden until the intro ends
     ui.onSubmit(finish, () => state.filter(st => doneCheck(st)).length);   // block "Submit answers" at 0 answered
+    // ⭐ Đợt 470 — trạng thái ván để LÀM TIẾP (chỉ engine bài giao học sinh đọc). thuTu = chỉ số trong danh sách câu gốc
+    // đã lọc (`goc`), xao = thứ tự mảnh xáo LÚC ĐẦU của từng câu, st.o = thứ tự em đang xếp — đọc lại ở `docKhoiPhuc`.
+    ui.setLuuTrangThai?.(() => ({
+      v: 1, daLam: state.filter(doneCheck).length, tong: total, i: index,
+      thuTu: items.map(it => goc.indexOf(it.src)),
+      xao: items.map(it => it.order.slice()),
+      st: state.map(st => ({ o: st.order.slice(), m: st.moveCount, g: st.graded, t: st.timedOut === true }))
+    }));
+    // ⭐ Đợt 470 — làm tiếp: vào câu CHƯA xong đầu tiên kể từ câu đang đứng lúc rời (hết thì câu chưa xong bất kỳ).
+    if (kp) {
+      const tu = Math.max(0, Math.min(total - 1, kp.i | 0));
+      let k = state.findIndex((st, j) => j >= tu && !doneCheck(st));
+      if (k < 0) k = state.findIndex(st => !doneCheck(st));
+      index = k < 0 ? tu : k;
+    }
     render();
     renderLives();
+    // ⭐ Đợt 470 — lượt cũ đã hết mạng / đã làm HẾT mà chưa kịp tới màn kết thúc (tải lại đúng lúc chờ) ⇒ kết thúc luôn.
+    if (kp && livesLeft === 0) autoTimer = setTimeout(() => finish("gameover"), 700);
+    else if (kp && state.every(doneCheck)) autoTimer = setTimeout(finish, 700);
 
     // Intro (Classic): the title zooms in over ~3.3s (intro.mp3), then the clock
     // starts. Other Styles skip straight in. The clock only starts here
@@ -435,6 +493,7 @@ const unjumbleTemplate = {
       // down. 200ms both ways is `crossfadeCards`' own duration, so the two
       // motions cannot drift apart if that is ever retimed.
       ui.itemChanging?.(index, { outMs: 200, inMs: 200 });
+      ui.daDoiBaiLam?.();   // Đợt 470 — nhớ câu đang đứng (làm tiếp)
       const oldCard = transition ? root.querySelector(".aw-unj-card") : null;
       if (fitter) { fitter.destroy(); fitter = null; }
       if (!oldCard) root.innerHTML = "";
@@ -716,7 +775,7 @@ const unjumbleTemplate = {
       st.order = arr;
       unjumbleSound.drop();
       renderBoard();
-      if (changed) { st.moveCount++; afterDrop(wordId); }
+      if (changed) { st.moveCount++; afterDrop(wordId); ui.daDoiBaiLam?.(); }   // Đợt 470
       updateBonusMoves();
       updateSubmitState();
     }
@@ -776,6 +835,7 @@ const unjumbleTemplate = {
       if (st.graded || busy) return;
       busy = true;
       st.graded = true;
+      ui.daDoiBaiLam?.();   // Đợt 470 — đúng/sai tính lại từ thứ tự đã xếp nên lưu ngay được
       // ⭐⭐ Đợt 265 — TIME EACH ROUND: the turn ends at Submit, not when the ~2s
       // mark-and-reveal animation finishes. Same reason as finalizeLiveWord() above.
       ui.roundDone?.();
@@ -988,6 +1048,7 @@ const unjumbleTemplate = {
       if (doneCheck(st)) return;              // already solved / submitted / timed out
       st.timedOut = true;
       st.graded = true;
+      ui.daDoiBaiLam?.();   // Đợt 470
       if (mode === "submit") {
         st.correct = false;
         st.points = 0;
@@ -1200,6 +1261,19 @@ const unjumbleTemplate = {
 function escapeHtml(s) {
   return String(s ?? "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// ⭐ Đợt 470 — đọc trạng thái LÀM TIẾP (`ui.khoiPhuc`) và kiểm nó khớp ĐÚNG đề đang dựng; sai một li ⇒ null (ván mới).
+// Mỗi câu: xao + o đều phải là hoán vị đúng số mảnh (dấu ?/! cuối câu là mảnh cố định, không tính — xem prepareItem).
+function docKhoiPhuc(kp, goc) {
+  if (!kp || kp.v !== 1) return null;
+  const n = goc.length;
+  if (!thuTuHopLe(kp.thuTu, n) || !Array.isArray(kp.xao) || kp.xao.length !== n || !Array.isArray(kp.st) || kp.st.length !== n) return null;
+  const ok = kp.thuTu.every((gi, qi) => {
+    const m = prepareItem(itemSentence(goc[gi])).words.length, o = kp.st[qi];
+    return thuTuHopLe(kp.xao[qi], m) && !!o && thuTuHopLe(o.o, m);
+  });
+  return ok ? kp : null;
 }
 
 // Length of the leading run of already-correctly-placed words (order[i] === i for

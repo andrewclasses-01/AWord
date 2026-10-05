@@ -1,5 +1,10 @@
 # GHI CHÚ — SPEAKING
 
+## Đợt 470 (05/10/2026) — LÀM TIẾP lượt dở bài giao (core/lam-tiep.js)
+
+`ui.setLuuTrangThai` + `ui.daDoiBaiLam` + đọc `ui.khoiPhuc` (hợp đồng ở `core/HUONG DAN CORE.md`, mục Đợt 469). Lưu: thứ tự từ (chỉ số gốc) + % của lần chấm CUỐI từng từ (`st`, null = chưa chấm) — KHÔNG lưu âm thanh. Sao + đạt/không tính lại bằng đúng công thức `gradeAttempt`. Khôi phục: vào từ CHƯA chấm đầu tiên kể từ từ đang đứng; chấm hết ⇒ finish sau 700 ms. Từ chấm trượt (Try again bật) vẫn quay lại bằng ‹ để thu lại được. Đo bàn thử `?g=C3SP` (sửa tay kho lượt vì máy không có mic): [85,40,·,·] ⇒ "2 / 4 DONE", vào "butterfly", điểm 1, ‹ thấy 40%; [85,40,90,72] ⇒ tự kết thúc 3/4, nộp 1 lượt.
+
+
 **TRẠNG THÁI: ✅ ĐÃ CHỐT, SỐNG Ở TRANG CHỦ** (11/8/2026, Đợt 108, v0.9.82). Thầy test cơ bản trên máy
 thật (mic thật) rồi duyệt đưa lên live để test tiếp — đã thêm vào `core/catalog.js` + commit + push.
 **Đang trong giai đoạn thầy test thêm trên bản LIVE — sẽ còn chỉnh sửa theo phản hồi.**

@@ -31,6 +31,9 @@ GIỜ THẬT. Template muốn có (đang có: Quiz · Type the answer · Find th
 2. `ui.daDoiBaiLam?.()` ngay sau khi ghi bài làm một câu (và khi đổi câu). Engine gom 120 ms nên gọi thừa không sao.
 3. Lúc dựng: `ui.khoiPhuc` (null = ván mới). KIỂM khớp đề (`thuTuHopLe` của core/lam-tiep.js + độ dài mảng) — sai ⇒ ván mới.
    Điểm sống / điểm phạt nên TÍNH LẠI từ bài làm (phép trừ đang bay lúc chụp sẽ mất). Vào câu chưa làm đầu tiên; đã làm hết ⇒ finish().
+⭐ Đợt 470: mọi template giao bài được (trừ 3D) đã khai. Engine tự nhận ra template TỪ CHỐI (sau mount `daLam` của ván = 0 trong khi
+lượt cũ > 0 ⇒ trả đồng hồ về 0) — nên `daLam` PHẢI phản ánh đúng số câu đã làm. Template bật đồng hồ sau intro (`ui.startTimer()`):
+engine tự lùi giờ (`lamTiepBuMs`). Template tự giữ đồng hồ riêng (Whack-a-mole) phải tự lùi.
 ⛔ `khoiPhuc` không bao giờ có trong Fight / Showdown / Start with mistakes / giáo viên. ⛔ Đừng lưu gì nặng (localStorage dùng chung).
 
 ## 🚫 Đợt 464 — game GÕ CHỮ: gắn `core/no-copy.js` (chặn copy + dán)

@@ -25,6 +25,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
+import { thuTuHopLe } from "../../core/lam-tiep.js";   // Đợt 470 — làm tiếp lượt dở bài giao
 import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
@@ -146,7 +147,13 @@ const flyingFruitTemplate = {
         // through Change Template from an Anagram source (core/convert.js).
         voice: it.voice || "", voiceId: it.voiceId || "", hideText: !!(it.voice && it.hideText)
       }));
-    if (opt.shuffleQuestions) items = shuffle(items);
+    // ⭐⭐ Đợt 470 — LÀM TIẾP lượt dở của bài giao (engine đặt `ui.khoiPhuc`): dựng lại ĐÚNG thứ tự câu của lượt cũ +
+    // câu nào đã xong (đúng/sai) + số lần chạm sai. Quả đang bay KHÔNG giữ — câu đang dở bay lại từ đầu.
+    // Không khớp đề ⇒ ván mới như thường. `goc` = danh sách đã lọc, chưa xáo (chỉ số lưu trỏ vào đây).
+    const goc = items;
+    const kp = docKhoiPhuc(ui.khoiPhuc, goc.length);
+    if (kp) items = kp.thuTu.map(i => goc[i]);
+    else if (opt.shuffleQuestions) items = shuffle(items);
     const total = items.length;
     if (total === 0) {
       root.innerHTML = "";
@@ -173,6 +180,18 @@ const flyingFruitTemplate = {
     const activeFruits = new Set();
     // per-item outcome: "correct" | "failed" | undefined (never reached)
     const results = new Array(total);
+    // ⭐ Đợt 470 — làm tiếp: kết quả từng câu + số lần chạm sai của lượt cũ. Điểm và tim TÍNH LẠI từ đó (đúng công
+    // thức của onTap: +1 mỗi câu đúng, −pointsOff và −1 tim mỗi lần sai) — một "−N" đang bay lúc chụp không bị mất.
+    if (kp) {
+      kp.kq.forEach((r, i) => { if (r === 1) results[i] = "correct"; else if (r === 2) results[i] = "failed"; });
+      wrong = kp.sai;
+      score = results.filter(r => r === "correct").length - wrong * pointsOff;
+      lives = Math.max(0, maxLives - wrong);
+      let k = results.findIndex((r, j) => j >= Math.min(total - 1, kp.i) && !r);
+      if (k < 0) k = results.findIndex(r => !r);
+      index = k < 0 ? total : k;
+      current = items[Math.min(index, total - 1)];
+    }
 
     function later(fn, ms) { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t; }
     function clearTimer(t) { if (t) { clearTimeout(t); timers.delete(t); } }
@@ -361,6 +380,7 @@ const flyingFruitTemplate = {
         removeFruit(f);
         score++; ui.setScore(scoreNow());
         results[index] = "correct";
+        ui.daDoiBaiLam?.();   // Đợt 470 — cất lượt để làm tiếp nếu em tải lại trang
         advance();
       } else {
         floatMark(cx, cy, false);
@@ -373,6 +393,7 @@ const flyingFruitTemplate = {
         if (f.removeT) clearTimer(f.removeT);
         later(() => removeFruit(f), 320);
         lives = Math.max(0, lives - 1); wrong++; updateHearts();
+        ui.daDoiBaiLam?.();   // Đợt 470 (engine gom 120 ms — results[] ghi ngay dưới vẫn kịp vào bản lưu)
         // ⭐⭐⭐ Đợt 256 (thầy, 24/8/2026) — "−N" BAY TỪ CHÍNH QUẢ BẤM SAI VÀO Ô ĐIỂM,
         // TỚI NƠI MỚI TRỪ (trước đợt này điểm chỉ lặng lẽ tụt).
         // ⚠️ Quả bị gỡ sau 320ms (`later(() => removeFruit(f), 320)` ngay trên), nhưng
@@ -389,6 +410,8 @@ const flyingFruitTemplate = {
 
     function advance() {
       index++;
+      // Đợt 470 — lượt làm tiếp: bỏ qua câu đã xong (ván thường không bao giờ có câu đã xong phía trước ⇒ y như cũ).
+      while (index < total && results[index]) index++;
       clearFruits();
       queue = [];
       if (index >= total) { endGame("won"); return; }
@@ -499,10 +522,27 @@ const flyingFruitTemplate = {
       });
     }
 
+    // ⭐ Đợt 470 — trạng thái ván để LÀM TIẾP (chỉ engine bài giao học sinh đọc). thuTu = chỉ số trong `goc`;
+    // kq: 0 chưa làm · 1 đúng · 2 sai; sai = tổng số lần chạm sai (kể cả Retry). Đọc lại ở `docKhoiPhuc` cuối file.
+    ui.setLuuTrangThai?.(() => ({
+      v: 1, daLam: results.filter(Boolean).length, tong: total, i: Math.min(index, total - 1), sai: wrong,
+      thuTu: items.map(it => goc.indexOf(it)),
+      kq: Array.from(results, r => (r === "correct" ? 1 : r === "failed" ? 2 : 0))
+    }));
+
     // ---------- go ----------
-    startItem(0);
-    scheduleSpawn();
-    scheduleAmbient();
+    // ⭐ Đợt 470 — làm tiếp: vào câu chưa làm (đã tính ở trên). Lượt cũ đã xong hết / hết tim mà chưa kịp tới màn
+    // kết thúc ⇒ kết thúc luôn sau ~700 ms (timer `later` — cleanup() dọn).
+    if (kp && (index >= total || lives <= 0)) {
+      startItem(Math.min(index, total - 1));
+      ui.setScore(scoreNow());
+      later(() => endGame(lives <= 0 ? "gameover" : "won"), 700);
+    } else {
+      startItem(index);
+      if (kp) ui.setScore(scoreNow());
+      scheduleSpawn();
+      scheduleAmbient();
+    }
 
     // ---------- cleanup ----------
     return function cleanup() {
@@ -532,6 +572,14 @@ function wordFontCqw(w) {
   if (n <= 8) return 2.05;
   if (n <= 11) return 1.65;
   return 1.35;
+}
+
+// ⭐ Đợt 470 — đọc trạng thái LÀM TIẾP (`ui.khoiPhuc`) và kiểm nó khớp ĐÚNG đề đang dựng; sai một li ⇒ null (ván mới).
+function docKhoiPhuc(kp, n) {
+  if (!kp || kp.v !== 1 || !thuTuHopLe(kp.thuTu, n)) return null;
+  if (!Array.isArray(kp.kq) || kp.kq.length !== n || !kp.kq.every(r => r === 0 || r === 1 || r === 2)) return null;
+  if (!Number.isInteger(kp.sai) || kp.sai < 0 || !Number.isInteger(kp.i) || kp.i < 0) return null;
+  return kp;
 }
 
 registerTemplate(flyingFruitTemplate);

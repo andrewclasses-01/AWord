@@ -1,5 +1,9 @@
 # GHI CHÚ — ROCKET RACE (đua tên lửa)
 
+## Đợt 470 (05/10/2026) — LÀM TIẾP lượt dở bài giao (core/lam-tiep.js) — CHỈ SOLO
+
+`ui.setLuuTrangThai` + `ui.daDoiBaiLam` + đọc `ui.khoiPhuc` (hợp đồng ở `core/HUONG DAN CORE.md`, mục Đợt 469). Fight 2D/3D và Teams KHÔNG đụng (không khai, không đọc). Lưu: thứ tự câu (chỉ số gốc), hàng câu còn lại `hang` (câu sai xếp cuối), từng câu (đúng · số lượt · số lần sai · chữ chọn sai gần nhất), tim, chuỗi đúng, và [vị trí, hạng] từng tàu theo làn (`dua`). Điểm phạt TÍNH LẠI = pointsOff × tổng lần sai. Shield/thùng/turbo đang có không giữ. Làm tiếp: tàu đối thủ đứng đúng chỗ lúc rời, tàu em = số câu đúng, rồi đếm 3-2-1 như thường (đồng hồ engine đã lùi). Về đích / hết tim ⇒ kết thúc sau 700 ms. Thử bàn `?g=D4RR&t=rocket-race`: 3 đúng 1 sai → tải lại → CONTINUE "3 / 10 DONE", cùng câu kế, điểm 3, tàu đối thủ ở đúng vị trí bản lưu (p 3,427 → x 30,07), đồng hồ 0:28 → làm nốt ⇒ nộp 10/10.
+
 🆕 **Đợt 393 (26/9/2026) — FIGHT 3D chỉnh 13 ý thầy** (tiếng điện ảnh, bảng 🔊, iPad chỉ từ, màn kết riêng…), xem **mục 27**.
 **Đợt 392 (26/9/2026) — FIGHT 3D (WebGL)**, xem **mục 26**. ⬜ thầy chưa bấm tay TOMKO.
 

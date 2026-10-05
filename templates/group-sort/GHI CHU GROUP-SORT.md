@@ -1,5 +1,9 @@
 # GHI CHÚ — SPEED SORTING (type `group_sort`: Speed sorting · Group sort)
 
+## Đợt 470 (05/10/2026) — LÀM TIẾP lượt dở bài giao (core/lam-tiep.js)
+
+`ui.setLuuTrangThai` + `ui.daDoiBaiLam` + đọc `ui.khoiPhuc` (hợp đồng ở `core/HUONG DAN CORE.md`, mục Đợt 469). Hai mode, hai dạng lưu (`m` khác ⇒ không khôi phục chéo). **Băng chuyền** (`tap`): giữ ở mức MỤC — `order` đã xáo + `played` (thứ tự thả) + nhóm em thả từng mục; chip trên băng KHÔNG giữ vị trí, băng chạy lại từ đầu với mục còn lại. Tim/điểm phạt = số mục thả sai. Bỏ 3-2-1 khi làm tiếp. **Group sort** (`drag`): thứ tự chip trong kho + `placed` + `locked` (Instantly) + `sai` (số lần thả sai — Instantly trừ tim/điểm từ đây); On submit: chip về đúng nhóm, đủ hết ⇒ chấm sau 700 ms. Thử: băng `?g=B2GS&t=group-sort` (pane ẩn ⇒ thay rAF bằng setTimeout trong trang thử) 3 mục (1 sai) ⇒ tải lại ⇒ "3 / 12 DONE", 3 mục đó không lên băng ⇒ làm hết ⇒ sendAttempt 11/12. Drag: mount thật với ui giả (bàn thử chỉ có mẫu mode tap) — Instantly 2 đúng + 1 sai (lives 3, pointsOff 2) ⇒ dựng lại: 2 chip ✓ trong nhóm, 10 chip kho đúng thứ tự, 2 tim, điểm 0; On submit 3 chip về đúng nhóm; trạng thái Instantly đưa cho On submit ⇒ ván mới.
+
 **Trạng thái: ⬜ Đợt 334 (16/9/2026) — thầy bấm tay live Đợt 329 rồi báo 3 lỗi băng chuyền, đã vá + lên live, CHƯA bấm
 tay lại.** Băng nay bắt đầu TRỐNG rồi ô đầu trượt vào từ mép · băng LIỀN một dải (sinh ô theo nhu cầu, hết `BELT_SLOTS`)
 · LUÔN trộn ngẫu nhiên mọi nhóm (bỏ qua ô Shuffle). Đợt 329 (14/9) thầy "ok tạm thế đã, cải tiến thêm sau". Phiên sau

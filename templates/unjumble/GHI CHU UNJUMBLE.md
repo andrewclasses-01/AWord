@@ -4,6 +4,10 @@
 tồn kho một lượt, rồi tự test và xác nhận). Đã `built:true` trong `core/catalog.js`, commit + push,
 GitHub Pages đã deploy. Chơi thử riêng vẫn được: `templates/unjumble/test.html`.
 
+## Đợt 470 (05/10/2026) — LÀM TIẾP lượt dở bài giao (core/lam-tiep.js)
+
+`ui.setLuuTrangThai` + `ui.daDoiBaiLam` + đọc `ui.khoiPhuc` (hợp đồng ở `core/HUONG DAN CORE.md`, mục Đợt 469). Lưu: thứ tự câu (chỉ số gốc) + thứ tự mảnh xáo LÚC ĐẦU từng câu (`xao` — minMoves = n − LIS tính từ nó) + từng câu `o` (thứ tự đang xếp) / `m` (số lần kéo) / `g` / `t`. Đúng/sai, điểm (Bonus 2/1, Submit 1/−pointsOff), mạng TÍNH LẠI lúc dựng; `marks` của câu đã Submit dựng lại từ `o`. Làm tiếp thì BỎ intro bảng trắng (slogan hiện ngay, `ui.startTimer()` liền). `docKhoiPhuc` cuối file. Vào câu chưa xong đầu tiên; hết mạng/xong hết ⇒ finish sau 700 ms.
+
 ## ⭐ Đợt 336 (16/9/2026, thầy giao tiếp ngay sau 335) — ✓ XANH LÁ · ✗ ĐỎ · TIẾNG "TING"/"TÙNG" KHI ĐÚNG/SAI Ở ON SUBMIT · ✅ COMMIT + PUSH · ⬜ CHƯA BẤM TAY · KHÔNG SỬA CORE
 
 Thầy: *"Đổi ✓ xanh lá, ✗ đỏ luôn đi. Thêm tiếng ting khi đúng và tùng khi sai (trong on submit) như các

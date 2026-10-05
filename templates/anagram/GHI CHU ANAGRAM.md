@@ -1,5 +1,9 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## Đợt 470 (05/10/2026) — LÀM TIẾP lượt dở bài giao (core/lam-tiep.js)
+
+`ui.setLuuTrangThai` + `ui.daDoiBaiLam` + đọc `ui.khoiPhuc` (hợp đồng ở `core/HUONG DAN CORE.md`, mục Đợt 469). Lưu: thứ tự từ (chỉ số gốc) + thứ tự chữ đã xáo từng từ (`xao` = tileOrder) + từng từ `p` (chữ đã đặt vào từng ô) / `m` (hadMistake) / `t` (timedOut) / `g` (graded) / `s` (số lần chạm sai — trường MỚI `st.sai`, chỉ để tính lại phạt Bonus and minus). Đúng/sai, điểm thưởng (n×mult / n), điểm phạt (pointsOff mỗi từ sai, letterPenalty×sai), mạng TÍNH LẠI từ đó lúc dựng — phép cộng/trừ đang bay lúc chụp không mất. `docKhoiPhuc` (cuối file) kiểm hoán vị + chữ đặt; Bonus: chữ đặt phải là đoạn đầu ĐÚNG chữ. Vào từ chưa xong đầu tiên; hết mạng/xong hết ⇒ finish sau 700 ms. `prepareItem(word, kp.xao[qi])` dùng lại ngả `fixedOrder` sẵn có của Fight.
+
 ## Đợt 311 (08/9/2026, thầy báo kèm ảnh) — ⭐⭐⭐ "CỬA SỔ NỘP": HS LÀM ĐÚNG 30 CÂU, MÁY GHI 29/30
 
 ✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE (08/9/2026).** Gốc rễ + cách vá đầy đủ: `../../GHI CHU DU AN.md` Đợt 311;

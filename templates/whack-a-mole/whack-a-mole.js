@@ -37,6 +37,7 @@ import { registerTemplate } from "../../core/registry.js";
 // game's slider and its mount() clamp drifting apart again.
 import { POINTS_MAX, POINTS_STEP } from "../../core/options-panel.js";
 import { shuffle, el, formatTime } from "../../core/utils.js";
+import { thuTuHopLe } from "../../core/lam-tiep.js";   // Đợt 470 — làm tiếp lượt dở bài giao
 import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
@@ -349,6 +350,25 @@ const wamTemplate = {
     let rotating = false;
     let frozen = false;                 // wrong-hit penalty: everything paused, the dizzy mole held up
     let answeredCount = 0;              // questions cleared so far
+    // ⭐⭐ Đợt 470 — LÀM TIẾP lượt dở của bài giao (engine đặt `ui.khoiPhuc`). Giữ ở mức "câu": câu nào đã đập trúng
+    // (True/False: đáp án cần đập đã trúng; Quiz: thứ tự câu + đang ở câu nào + đã qua mấy câu), điểm, combo, số lần
+    // sai, tim, và GIỜ đếm ngược dưới dạng MỐC HẾT GIỜ theo đồng hồ thật (`hetLuc`, Date.now()) — đóng tab không được
+    // thêm giờ. Chuột chũi đang trồi KHÔNG giữ: ván làm tiếp trồi lại từ đầu. Không khớp đề ⇒ ván mới như thường.
+    // ⚠️ Game này KHÔNG dùng đồng hồ engine (manualTimerStart nhưng không gọi ui.startTimer — tự chạy giờ riêng),
+    // nên phần "engine lùi giờ" của Đợt 470 không tới đây: tự lùi bằng `hetLuc`.
+    // Điểm lưu NGUYÊN (`diem`) chứ không tính lại: combo cộng thưởng + phạt kẹp ở 0 nên không suy được từ bài làm;
+    // mà ở game này phép trừ áp NGAY lúc đập sai (không có "−N" bay chậm) nên số đang có luôn là số thật.
+    const kp = docKhoiPhuc(ui.khoiPhuc, { mode, nt: targetItems.length, nq: questions.length });
+    if (kp) {
+      score = kp.diem; wrongCount = kp.sai; whacks = kp.dap; combo = kp.combo; bestCombo = Math.max(kp.combo, kp.bestCombo);
+      if (livesLeft != null && Number.isInteger(kp.mang)) livesLeft = Math.max(0, Math.min(livesLeft, kp.mang));
+      if (mode === "quiz") {
+        qOrder = kp.qOrder.slice(); answeredCount = kp.qDa;
+        qPos = Math.min(kp.qPos, qOrder.length - 1); levelIndex = qOrder[qPos];
+      } else {
+        remainingTargets.clear(); kp.conLai.forEach(i => remainingTargets.add(i));
+      }
+    }
 
     function later(fn, ms) { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t; }
     function clearTimer(t) { if (t) { clearTimeout(t); timers.delete(t); } }
@@ -562,6 +582,8 @@ const wamTemplate = {
     // pause (below) can restart the SAME interval without duplicating this body
     // or resetting the tick-sound cadence.
     let lastTickSlot = Math.ceil(totalSeconds);
+    let clockStarted = false;   // Đợt 470 — startClock() đã chạy (trước đó còn intro: giờ chưa trôi)
+    let introEndPerf = 0;       // Đợt 470 — performance.now() lúc intro xong (đồng hồ bắt đầu)
     function tickClock() {
       if (ended) return;
       const remaining = Math.max(0, (endAt - performance.now()) / 1000);
@@ -576,8 +598,10 @@ const wamTemplate = {
       if (remaining <= 10 && slot < lastTickSlot && remaining > 0) { lastTickSlot = slot; wamSound.clockTick(); }
       if (remaining <= 0) endGame("time");
     }
-    function startClock() {
-      endAt = performance.now() + totalSeconds * 1000;
+    function startClock(conLaiMs) {
+      // Đợt 470 — `conLaiMs` (chỉ lượt làm tiếp): giờ còn lại theo đồng hồ thật; ván thường = trọn totalSeconds.
+      endAt = performance.now() + (conLaiMs != null ? conLaiMs : totalSeconds * 1000);
+      clockStarted = true;
       lastTickSlot = Math.ceil(totalSeconds);
       clockTimer = setInterval(tickClock, 200);
     }
@@ -777,6 +801,7 @@ const wamTemplate = {
         score += pts;
         ui.setScore(scoreNow());
         floatText(h, "+" + pts, "is-plus");
+        ui.daDoiBaiLam?.();   // Đợt 470 — cất lượt (engine gom 120 ms: remainingTargets / onQuizCorrect ngay dưới vẫn kịp)
         if (mode === "quiz") { onQuizCorrect(); }
         else {
           // this needed answer is cleared (won't reappear this wave)
@@ -800,6 +825,7 @@ const wamTemplate = {
         h.hole.classList.add("is-wrong");
         if (penalty > 0) { score = Math.max(0, score - penalty); ui.setScore(scoreNow()); floatText(h, "–" + penalty, "is-minus"); }
         const outOfLives = loseLife();
+        ui.daDoiBaiLam?.();   // Đợt 470
         if (outOfLives) {
           later(() => endGame("gameover"), 600);
           h.freeT = later(() => { h.hole.classList.remove("is-up"); later(() => freeHole(h), 300); }, 520);
@@ -828,7 +854,7 @@ const wamTemplate = {
     function hitCrate(h) {
       popZap(h);
       // Đợt 213b — chỉ còn thùng thêm giờ (xem CRATE_TYPES ở đầu file).
-      if (h.crateType === "time") { addTime(5); wamSound.crateTime(); floatText(h, "+5s", "is-combo"); }
+      if (h.crateType === "time") { addTime(5); wamSound.crateTime(); floatText(h, "+5s", "is-combo"); ui.daDoiBaiLam?.(); }   // Đợt 470 — mốc hết giờ mới
       h.freeT = later(() => { h.hole.classList.remove("is-crate"); later(() => freeHole(h), 300); }, 520);
     }
 
@@ -850,6 +876,7 @@ const wamTemplate = {
         answerQueue = [];
         wamSound.tableRotation();
         updateSign(true);
+        ui.daDoiBaiLam?.();   // Đợt 470 — nhớ câu mới đang đứng
         later(() => { wamSound.nextLevel(); rotating = false; }, 260);
       }, 620);
     }
@@ -961,15 +988,53 @@ const wamTemplate = {
     // whole world in to the play framing. Clock + spawns wait until we've
     // settled so no seconds are lost during the fly-in. (is-intro is set before
     // the first paint, so there's no flash — only the zoom-IN animates.)
-    wamSound.go();
-    world.classList.add("is-intro");
-    void world.offsetWidth;                                    // lock the wide state as the starting frame
-    later(() => world.classList.remove("is-intro"), INTRO_HOLD);
-    later(() => {
-      if (ended) return;
-      if (timerMode === "countDown") startClock();             // count up has no bar; ends on the objective
-      scheduleSpawn();
-    }, INTRO_HOLD + INTRO_ZOOM);
+    // ⭐ Đợt 470 — trạng thái ván để LÀM TIẾP (chỉ engine bài giao học sinh đọc). Đọc lại ở `docKhoiPhuc` cuối file.
+    ui.setLuuTrangThai?.(() => ({
+      v: 1, mode, nt: targetItems.length, nq: questions.length,
+      daLam: mode === "quiz" ? answeredCount : targetItems.length - remainingTargets.size,
+      tong: mode === "quiz" ? questions.length : targetItems.length,
+      diem: score, sai: wrongCount, dap: whacks, combo, bestCombo, mang: livesLeft,
+      // quiz: đang xoay bảng sang câu kế (rotating) ⇒ câu ĐANG ĐỨNG là câu kế, không phải câu vừa trúng
+      qOrder: mode === "quiz" ? qOrder.slice() : null,
+      qPos: mode === "quiz" ? Math.max(0, rotating ? qPos + 1 : qPos) : 0, qDa: answeredCount,
+      conLai: mode === "quiz" ? null : [...remainingTargets],
+      hetLuc: hetLucNay()
+    }));
+    // Mốc hết giờ (đồng hồ thật) của bản đếm ngược; null = đếm lên / đã hết ván.
+    function hetLucNay() {
+      if (timerMode !== "countDown" || ended) return null;
+      const nay = performance.now();
+      if (clockStarted) return Date.now() + Math.max(0, endAt - (pausedClockAt || nay));
+      return Date.now() + Math.max(0, introEndPerf - nay) + totalSeconds * 1000;   // còn trong intro: giờ chưa trôi
+    }
+
+    // ⭐ Đợt 470 — làm tiếp: BỎ intro máy quay (vào thẳng khung chơi), đồng hồ chạy tiếp từ mốc hết giờ đã lưu.
+    // Đã xong hết (đếm lên) / hết tim / hết giờ mà chưa kịp tới màn kết thúc ⇒ kết thúc luôn sau ~700 ms.
+    const kpXong = kp && ((timerMode === "countUp" && (mode === "quiz" ? answeredCount >= questions.length : remainingTargets.size === 0))
+      || (livesLeft != null && livesLeft <= 0));
+    const kpConLaiMs = kp && timerMode === "countDown" && Number.isFinite(kp.hetLuc) ? kp.hetLuc - Date.now() : null;
+    if (kp) {
+      ui.setScore(scoreNow());
+      introEndPerf = performance.now() + 300;
+      if (kpXong) later(() => endGame(livesLeft != null && livesLeft <= 0 ? "gameover" : "complete"), 700);
+      else if (kpConLaiMs != null && kpConLaiMs <= 0) later(() => endGame("time"), 700);
+      else later(() => {
+        if (ended) return;
+        if (timerMode === "countDown") startClock(kpConLaiMs != null ? Math.min(kpConLaiMs, 24 * 3600 * 1000) : null);
+        scheduleSpawn();
+      }, 300);
+    } else {
+      wamSound.go();
+      world.classList.add("is-intro");
+      void world.offsetWidth;                                    // lock the wide state as the starting frame
+      later(() => world.classList.remove("is-intro"), INTRO_HOLD);
+      introEndPerf = performance.now() + INTRO_HOLD + INTRO_ZOOM;   // Đợt 470
+      later(() => {
+        if (ended) return;
+        if (timerMode === "countDown") startClock();             // count up has no bar; ends on the objective
+        scheduleSpawn();
+      }, INTRO_HOLD + INTRO_ZOOM);
+    }
 
     // ---------- cleanup ----------
     return function cleanup() {
@@ -999,6 +1064,23 @@ const wamTemplate = {
 function escapeHtml(s) {
   return String(s ?? "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// ⭐ Đợt 470 — đọc trạng thái LÀM TIẾP (`ui.khoiPhuc`) và kiểm nó khớp ĐÚNG đề đang dựng; sai một li ⇒ null (ván mới).
+function docKhoiPhuc(kp, de) {
+  if (!kp || kp.v !== 1 || kp.mode !== de.mode || kp.nt !== de.nt || kp.nq !== de.nq) return null;
+  const so = x => typeof x === "number" && Number.isFinite(x);
+  const nguyen = x => Number.isInteger(x) && x >= 0;
+  if (!so(kp.diem) || !nguyen(kp.sai) || !nguyen(kp.dap) || !nguyen(kp.combo) || !nguyen(kp.bestCombo)) return null;
+  if (kp.mang != null && !nguyen(kp.mang)) return null;
+  if (kp.hetLuc != null && !so(kp.hetLuc)) return null;
+  if (de.mode === "quiz") {
+    if (!thuTuHopLe(kp.qOrder, de.nq) || !nguyen(kp.qPos) || !nguyen(kp.qDa) || kp.qDa > de.nq) return null;
+  } else {
+    const c = kp.conLai, thay = new Set();
+    if (!Array.isArray(c) || c.length > de.nt || !c.every(i => nguyen(i) && i < de.nt && !thay.has(i) && thay.add(i))) return null;
+  }
+  return kp;
 }
 
 registerTemplate(wamTemplate);

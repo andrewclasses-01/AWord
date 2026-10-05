@@ -1,5 +1,9 @@
 # GHI CHÚ — TRUE FALSE (True or false)
 
+## Đợt 470 (05/10/2026) — LÀM TIẾP lượt dở bài giao (core/lam-tiep.js)
+
+`ui.setLuuTrangThai` + `ui.daDoiBaiLam` + đọc `ui.khoiPhuc` (hợp đồng ở `core/HUONG DAN CORE.md`, mục Đợt 469). Lưu: `order` đã xáo + hàng chờ còn lại (`queue`, kể cả câu Repeat chèn lại) + answered/correct/chosen/timedOut từng câu + `turnLog` (bỏ hàng của câu ĐANG trên màn chưa chạm — cờ `luotDangMo`) + mốc giờ `t0`. Tim + điểm phạt TÍNH LẠI = số lượt sai/hết-giờ-lượt × (1 tim, pointsOff). Làm tiếp: bỏ 3-2-1, `ui.startTimer()` ngay, vào câu đầu hàng chờ; hàng rỗng ⇒ complete, hết tim ⇒ gameover. Tiếng tích Count down lùi theo `t0`. Kiểm khớp đề ở `docKhoiPhuc` cuối file. Thử bàn `scratch/dot469/ban.html?g=B2TF&t=true-false`: làm 4/8 (1 sai) ⇒ tải lại ⇒ CONTINUE "4 / 8 DONE", đúng câu kế, điểm 3, 4 tim, đồng hồ 0:23→0:38 (giờ thật) ⇒ làm hết ⇒ 1 lần sendAttempt 5/8, lượt giữ được xoá.
+
 ## Đợt 146 (14/8/2026) — EDITOR CÓ TAB **PRACTICE | HOMEWORK**, SỬA ĐƯỢC CẢ 2 NỬA
 
 ✅ **THẦY DUYỆT** ("commit + push live", 14/8/2026) **→ COMMIT + PUSH + LIVE.** Chỉ sửa `true-false-editor.js`; **file game không đụng một dòng** (nó nhận act

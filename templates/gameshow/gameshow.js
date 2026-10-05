@@ -19,6 +19,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
+import { thuTuHopLe } from "../../core/lam-tiep.js";   // Đợt 470 — làm tiếp lượt dở bài giao
 import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
@@ -164,10 +165,15 @@ const gameshowTemplate = {
     // ----- questions (shuffle once so it's stable) -----
     let questions = [...(activity.content?.questions || [])]
       .filter(q => q && Array.isArray(q.answers) && q.answers.some(a => a && a.correct) && q.answers.length >= 2);
-    if (opt.shuffleQuestions !== false) questions = shuffle(questions);
-    questions = questions.map(q => ({
+    // ⭐⭐ Đợt 470 — LÀM TIẾP lượt dở của bài giao (core/lam-tiep.js, engine đặt `ui.khoiPhuc`): dựng lại ĐÚNG thứ tự
+    // câu + thứ tự ô đáp án đã xáo của lượt cũ (y như quiz.js Đợt 469). Không khớp đề ⇒ ván mới như thường.
+    const goc = questions;
+    const kp = docKhoiPhuc(ui.khoiPhuc, goc);
+    if (kp) questions = kp.thuTu.map(i => goc[i]);
+    else if (opt.shuffleQuestions !== false) questions = shuffle(questions);
+    questions = questions.map((q, qi) => ({
       question: q.question || "",
-      answers: (opt.shuffleAnswers !== false ? shuffle(q.answers) : [...q.answers]).filter(a => a && a.text != null),
+      answers: (kp ? kp.dapAn[qi].map(j => q.answers[j]) : (opt.shuffleAnswers !== false ? shuffle(q.answers) : [...q.answers])).filter(a => a && a.text != null),
       src: q   // the ORIGINAL content object — "Start with mistakes" filters by it
     }));
     const total = questions.length;
@@ -244,7 +250,12 @@ const gameshowTemplate = {
     }
 
     // ----- state -----
-    const state = questions.map(() => ({ resolved: false, chosen: null, correct: false, timedOut: false }));
+    const state = questions.map((_, qi) => {
+      const o = kp && kp.st[qi];   // Đợt 470 — câu đã làm của lượt cũ (c = ô chọn, k = đúng, t = hết giờ)
+      return o && o.r === true
+        ? { resolved: true, chosen: Number.isInteger(o.c) && o.c >= 0 && o.c < questions[qi].answers.length ? o.c : null, correct: o.k === true, timedOut: o.t === true }
+        : { resolved: false, chosen: null, correct: false, timedOut: false };
+    });
     let index = 0;
     let finished = false;
     let points = 0;
@@ -253,6 +264,20 @@ const gameshowTemplate = {
     let fitter = null;
     const used = { fifty: false, x2: false, time: false, cheat: false };
     let doubleArmed = false;
+    // ⭐ Đợt 470 — vòng BONUS đã mở xong tới mốc câu thứ mấy (resolvedCount của afterResolve). Tải lại giữa lúc chờ vòng
+    // bonus (hoặc trước khi kịp lật thẻ) ⇒ làm tiếp sẽ mở lại đúng vòng đó, không mất lượt bonus, không được hai lượt.
+    let bonusDa = 0;
+    if (kp) {
+      // Điểm KHÔNG tính lại được (thưởng tốc độ theo giờ còn lại + thẻ bonus) ⇒ lấy số đã cất (cất ngay sau mỗi lần cộng).
+      points = Math.max(0, Math.round(Number(kp.diem) || 0));
+      streak = Math.max(0, kp.chuoi | 0);
+      // Mạng TÍNH LẠI từ bài làm: mỗi câu đã chốt mà sai/hết giờ = một tim (đúng luật loseLife).
+      if (limitedLives) livesLeft = Math.max(0, livesMax - state.filter(s => s.resolved && !s.correct).length);
+      const pp = String(kp.phao || "");   // phao đã dùng: f = 50:50 · x = ×2 · t = thêm giờ · c = REVEAL
+      used.fifty = pp.includes("f"); used.x2 = pp.includes("x"); used.time = pp.includes("t"); used.cheat = pp.includes("c");
+      doubleArmed = kp.x2Cho === true && used.x2;
+      bonusDa = Math.max(0, kp.bonus | 0);
+    }
     // timer
     let tickId = null, qDeadline = 0, warned = false, pausedQAt = 0;
     // pending timeouts to clear on cleanup/restart
@@ -278,13 +303,43 @@ const gameshowTemplate = {
      * `st.resolved` makes the second call a no-op — the guard is already the first line.
      */
     ui.setRoundTimeout?.(() => resolveQuestion(null, true));
-    ui.setScore(0);
+    // ⭐ Đợt 470 — trạng thái ván để LÀM TIẾP (chỉ engine bài giao học sinh đọc). Thứ tự = chỉ số trong danh sách câu
+    // gốc đã lọc (`goc`), ô đáp án = chỉ số trong `q.answers` gốc — đọc lại ở `docKhoiPhuc` cuối file.
+    ui.setLuuTrangThai?.(() => ({
+      v: 1, daLam: state.filter(s => s.resolved).length, tong: total, i: index,
+      thuTu: questions.map(q => goc.indexOf(q.src)),
+      dapAn: questions.map(q => q.answers.map(a => q.src.answers.indexOf(a))),
+      st: state.map(s => (s.resolved ? { r: true, c: s.chosen, k: s.correct === true, t: s.timedOut } : 0)),
+      diem: points, chuoi: streak, bonus: bonusDa, x2Cho: doubleArmed,
+      phao: (used.fifty ? "f" : "") + (used.x2 ? "x" : "") + (used.time ? "t" : "") + (used.cheat ? "c" : "")
+    }));
+    ui.setScore(kp ? state.filter(s => s.correct).length : 0);
     ui.setNav({ index: 1, total, onPrev: null, onNext: null });
     window.addEventListener("keydown", onKey);
 
     renderLives();
     renderLifelines();
-    introShow(() => nextGetReady());
+    if (kp) {
+      // ⭐ Đợt 470 — làm tiếp: vào câu CHƯA chốt đầu tiên kể từ câu đang đứng lúc rời (hết thì câu chưa chốt bất kỳ).
+      // Bỏ màn intro 6 s (em đã xem lúc vào lượt) — nhạc nền bật lại luôn. Câu đang dở thì đồng hồ câu chạy lại từ đầu
+      // (giữ ở mức "câu", như brief Đợt 470). Đã chốt hết / hết tim ⇒ kết thúc sau ~700 ms (timer `later`, cleanup dọn).
+      const tu = Math.max(0, Math.min(total - 1, kp.i | 0));
+      let k = state.findIndex((s, j) => j >= tu && !s.resolved);
+      if (k < 0) k = state.findIndex(s => !s.resolved);
+      index = k < 0 ? tu : k;
+      const numEl = pointsSign.querySelector(".aw-gs-points-num");
+      if (numEl) numEl.textContent = String(points);
+      if (doubleArmed) pointsSign.classList.add("is-x2");
+      if (limitedLives && livesLeft <= 0) later(() => finishGame(false), 700);
+      else if (k < 0) later(() => finishGame(true), 700);
+      else {
+        gsSound.musicStart();
+        // vòng bonus của mốc này chưa mở xong (tải lại lúc đang chờ / chưa lật thẻ) ⇒ mở lại trước câu kế
+        const traBonus = bonusEvery > 0 && index > 0 && index % bonusEvery === 0 && bonusDa < index;
+        if (traBonus) bonusRound(() => nextGetReady(), index);
+        else nextGetReady();
+      }
+    } else introShow(() => nextGetReady());
 
     // ============================================================= INTRO (≈6s — matches intro.mp3)
     // Big "ANDREW CLASSES / QUIZ SHOW" marquee sign bounces onto the harlequin
@@ -499,6 +554,7 @@ const gameshowTemplate = {
       }
       ui.setScore(state.filter(s => s.correct).length);
       ui.setNav({ index: index + 1, total, onPrev: null, onNext: null });
+      ui.daDoiBaiLam?.();   // Đợt 470 — câu đã chốt + điểm/tim đã đổi: cất lượt để làm tiếp nếu em tải lại trang
 
       if (finished) return;   // ran out of lives
       later(afterResolve, correct ? 1050 : 1650);
@@ -509,13 +565,14 @@ const gameshowTemplate = {
       const resolvedCount = index + 1;
       const isLast = index >= total - 1;
       const wantBonus = bonusEvery > 0 && resolvedCount % bonusEvery === 0 && !isLast;
-      if (wantBonus) { bonusRound(() => advance()); }
+      if (wantBonus) { bonusRound(() => advance(), resolvedCount); }
       else advance();
     }
     function advance() {
       if (finished) return;
       if (index >= total - 1) { finishGame(true); return; }
       index++;
+      ui.daDoiBaiLam?.();   // Đợt 470 — nhớ câu đang đứng
       gsSound.chipDisappear();
       nextGetReady();
     }
@@ -590,10 +647,11 @@ const gameshowTemplate = {
         used.cheat = true; gsSound.useLifeline(); gsSound.lifelineCheat();
       }
       renderLifelines();
+      ui.daDoiBaiLam?.();   // Đợt 470 — phao đã dùng không được "hồi" khi tải lại
     }
 
     // ============================================================= BONUS ROUND
-    function bonusRound(done) {
+    function bonusRound(done, moc = 0) {   // moc (Đợt 470) = mốc số câu của vòng này — xem `bonusDa`
       if (finished) { done(); return; }
       const ov = el("div", "aw-gs-bonus");
       const book = el("div", "aw-gs-book");
@@ -627,6 +685,8 @@ const gameshowTemplate = {
               gsSound.bonusReveal();
               addPoints(val);
               ui.setScore(state.filter(s => s.correct).length);
+              bonusDa = Math.max(bonusDa, moc);
+              ui.daDoiBaiLam?.();   // Đợt 470 — điểm thẻ bonus đã vào: cất lượt
             }, 480);
             let closed = false;
             const close = () => { if (closed) return; closed = true; ov.remove(); done(); };
@@ -720,6 +780,18 @@ const gameshowTemplate = {
 function escapeHtml(s) {
   return String(s ?? "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// ⭐ Đợt 470 — đọc trạng thái LÀM TIẾP (`ui.khoiPhuc`) và kiểm nó khớp ĐÚNG đề đang dựng; sai một li ⇒ null (ván mới).
+function docKhoiPhuc(kp, goc) {
+  if (!kp || kp.v !== 1) return null;
+  const n = goc.length;
+  if (!thuTuHopLe(kp.thuTu, n) || !Array.isArray(kp.dapAn) || kp.dapAn.length !== n || !Array.isArray(kp.st) || kp.st.length !== n) return null;
+  const okDapAn = kp.thuTu.every((gi, qi) => {
+    const d = kp.dapAn[qi], m = goc[gi].answers.length;
+    return Array.isArray(d) && d.length <= m && d.every(j => Number.isInteger(j) && j >= 0 && j < m) && new Set(d).size === d.length;
+  });
+  return okDapAn ? kp : null;
 }
 
 registerTemplate(gameshowTemplate);

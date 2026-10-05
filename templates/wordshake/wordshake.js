@@ -48,6 +48,7 @@ import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core
 import { loadDict, lookup, points, shuffle, countOf, wordsOn, createSfx, createTank, flyPoint, escapeHtml as esc } from "./ws-lib.js";
 import { openWordshakeEditor } from "./wordshake-editor.js";
 import { sound } from "../../core/sound.js";
+import { thuTuHopLe } from "../../core/lam-tiep.js";   // Đợt 470 — làm tiếp lượt dở bài giao
 
 // Đợt 387 — the last-10-seconds bell (engine hook `sounds.countdownTick`, board 0
 // only in a Fight). One module-level player: the hook is not tied to one mount.
@@ -906,7 +907,14 @@ const wordshakeTemplate = {
     let items = [...(activity.content?.items || [])]
       .filter(it => it && lettersOf(it.word).length >= 2)
       .map(it => ({ word: String(it.word).trim(), up: lettersOf(it.word), clue: it.clue || "", ipa: it.ipa || "", voice: it.voice, hideText: it.hideText, src: it }));
-    if (opt.shuffleQuestions && !fctl) items = shuffle(items);
+    // ⭐⭐ Đợt 470 — LÀM TIẾP lượt dở của bài giao (core/lam-tiep.js, engine đặt `ui.khoiPhuc`; chỉ chơi đơn — Fight không
+    // bao giờ có). Dựng lại ĐÚNG lượt cũ: thứ tự từ, bảng chữ (Mode 1: 8/12/16 ô của từ đang hỏi; Mode 2/3: cả kế hoạch
+    // bảng + chỗ từng ô trên bảng đang chơi), từ đã làm / bị gợi ý lật, các từ đã tìm (Mode 3) ⇒ điểm TÍNH LẠI từ đó.
+    // Không khớp đề ⇒ ván mới như thường. Gợi ý từng chữ (Đợt 425) KHÔNG giữ: từ đang dở bắt đầu lại 15 s từ con số 0.
+    const goc = items;
+    const kp = fctl ? null : docKhoiPhuc(ui.khoiPhuc, goc, mode);
+    if (kp) items = kp.thuTu.map(i => goc[i]);
+    else if (opt.shuffleQuestions && !fctl) items = shuffle(items);
     const total = items.length;
     root.innerHTML = "";
     const wrap = el("div", "aw-ws-root aw-ws-m-" + mode + (fctl ? " is-fight is-side-" + side : ""));
@@ -921,9 +929,16 @@ const wordshakeTemplate = {
     }
     if (!total) { wrap.append(el("div", "aw-ws-empty", "This activity has no words yet.")); return () => {}; }
 
-    const st = items.map(() => ({ solved: false, tries: 0, typed: null }));
+    const st = items.map((_, i) => {
+      const o = kp && kp.st[i];   // Đợt 470 — s = đã làm · t = số lần thử · y = chữ đã ghép · g = gợi ý đã lật
+      if (!o) return { solved: false, tries: 0, typed: null };
+      const x = { solved: o.s === 1, tries: Math.max(0, o.t | 0), typed: typeof o.y === "string" && o.y ? o.y : null };
+      if (o.g === 1) x.given = true;
+      return x;
+    });
     const idxOf = up => items.findIndex(it => it.up === up);
     let score = 0, pts = 0, finished = false, dead = false, locked = false, refLocked = false, firstVoice = true;
+    if (kp) score = st.filter(x => x.solved).length;   // Đợt 470 — điểm ✓ = số từ đã làm (tính lại, không tin số cất)
     let fitRO = null;   // Đợt 423 — single play's right panel refits on resize
     const timers = new Set();
     const later = (fn, ms) => { const t = setTimeout(() => { timers.delete(t); if (!dead) fn(); }, ms); timers.add(t); return t; };
@@ -1062,6 +1077,7 @@ const wordshakeTemplate = {
       if (mode !== "one" || dead || finished) return;
       const s = st[M1.i]; if (!s || s.solved) return;
       M1.given = M1.i; locked = true; m1Patch();
+      ui.daDoiBaiLam?.();   // Đợt 470 — từ bị lật: cất lượt
       if (fctl) { if (!fctl.isLocked(side)) fctl.wordDone(side, { index: M1.i, correct: false }); }
       else later(m1Next, 2000);
     }
@@ -1083,6 +1099,7 @@ const wordshakeTemplate = {
       }
       c.full = true; c.stop();
       st[i].given = true;
+      ui.daDoiBaiLam?.();   // Đợt 470
       padRender(); afterFind();
     }
     function m1Nav() {
@@ -1100,6 +1117,7 @@ const wordshakeTemplate = {
       const it = items[M1.i], s = st[M1.i];
       const guess = M1.slots.map(k => M1.board[k].ch).join("");
       locked = true; s.tries++; s.typed = guess;
+      ui.daDoiBaiLam?.();   // Đợt 470 — lần thử (đúng hay sai) đã ghi: cất lượt để làm tiếp nếu em tải lại trang
       if (guess === it.up) {
         hint.stop();   // Đợt 425 — the word is made (a match: the round is decided)
         s.solved = true; score++; M1.state = "is-good"; m1Patch(); ui.setScore(score);
@@ -1113,7 +1131,7 @@ const wordshakeTemplate = {
         later(() => { if (M1.given === M1.i) return; M1.board.forEach(b => b.used = false); M1.slots.fill(null); M1.state = ""; locked = false; m1Patch(); }, 650);
       }
     }
-    function m1Next() { if (M1.i + 1 >= total) return finish(); M1.i++; m1Deal(); locked = false; m1Render(); sfx.next(); }
+    function m1Next() { if (M1.i + 1 >= total) return finish(); M1.i++; m1Deal(); locked = false; m1Render(); sfx.next(); ui.daDoiBaiLam?.(); }   // Đợt 470 — nhớ từ + bảng chữ mới
     // ⭐ Đợt 404 (thầy, 26/9/2026) — FIGHT Mode 1: the round is decided (core `reveal()`, called on
     // BOTH boards) and the OTHER team made the word ⇒ this board's slots show that word, letter
     // by letter, so the team that lost it can learn it during the hold before the next word
@@ -1136,8 +1154,14 @@ const wordshakeTemplate = {
     // =============================================================
     // MODE 2 / MODE 3 — a pad of 16 letters
     // =============================================================
-    const plan = S ? S.plan : (mode === "list" ? planList(shuffle(items)) : mode === "free" ? planFree(shuffle(items)) : null);
+    const plan = S ? S.plan : kp && kp.plan ? kp.plan.map(b => ({ words: b.w.map(i => items[i].up), letters: b.l.split("") }))   // Đợt 470
+      : (mode === "list" ? planList(shuffle(items)) : mode === "free" ? planFree(shuffle(items)) : null);
     let R = 0, order = [], input = "", sel = [], found3 = [], M3dict = null;
+    if (kp && mode === "free") {
+      // Đợt 470 — Mode 3: các từ đã tìm (cả từ ngoài danh sách khi tắt "Word list only") ⇒ PTS = tổng điểm của chúng
+      found3 = (kp.f3 || []).map(f => ({ w: f.w, m: f.m || "", les: f.l === 1, p: f.p }));
+      pts = found3.reduce((a, f) => a + f.p, 0);
+    } else if (kp && mode === "list") pts = score;   // Mode 2: mỗi từ +1
     const curPlan = () => plan[S ? S.r : R];
     function dealOrder() { order = shuffle([...Array(curPlan().letters.length).keys()]); input = ""; sel = []; }
     function padHtml(listMode) {
@@ -1259,6 +1283,7 @@ const wordshakeTemplate = {
         kind = "bad"; sym = "?";
         P.words.forEach(up => { const j = idxOf(up); if (j >= 0 && !st[j].solved) st[j].tries++; });
       }
+      ui.daDoiBaiLam?.();   // Đợt 470 — từ vừa nộp (đúng / sai / trùng) đã ghi: cất lượt
       say(kind, kind === "ok" ? parseInt(sym.slice(1), 10) || 1 : 0);
       // single Mode 3: the tank holds lesson WORDS (the ✓ score), so only those pour
       if (kind === "ok" && (fctl || lesson)) pour(wrap.querySelector(".aw-ws-pv"), fctl ? sym : "+1");
@@ -1270,6 +1295,7 @@ const wordshakeTemplate = {
     function nextBoard() {
       if (R + 1 >= plan.length) return finish();
       R++; dealOrder(); padRender(); sfx.next();
+      ui.daDoiBaiLam?.();   // Đợt 470 — nhớ bảng mới + chỗ từng ô
     }
     // Called by the other board / by the round turning over, in a fight.
     function refreshFromShared(done) {
@@ -1351,12 +1377,63 @@ const wordshakeTemplate = {
     };
     nextSubs.add(onNextFlip);
 
+    // ⭐ Đợt 470 — trạng thái ván để LÀM TIẾP (chỉ chơi đơn; engine bài giao học sinh đọc). Đơn vị daLam/tong = TỪ của bài:
+    // Mode 1 = số từ đã đi qua (làm được / bị lật / bỏ qua bằng ›) trên tổng số từ; Mode 2/3 = số từ của các bảng đã làm
+    // được hoặc bị gợi ý lật trên tổng số từ nằm trong các bảng (Mode 3 bỏ từ > 12 chữ — planFree không xếp được).
+    if (!fctl) ui.setLuuTrangThai?.(() => {
+      const o = {
+        v: 1, m: mode, tong: total, thuTu: items.map(it => goc.indexOf(it)),
+        st: st.map(x => (x.solved || x.tries || x.given ? { s: x.solved ? 1 : 0, t: x.tries, y: x.typed || "", g: x.given ? 1 : 0 } : 0))
+      };
+      if (mode === "one") {
+        const xong = !!(st[M1.i] && st[M1.i].solved) || M1.given === M1.i;
+        Object.assign(o, { daLam: Math.min(total, M1.i + (xong ? 1 : 0)), i: M1.i, m1x: xong, b1: M1.board.map(b => b.ch).join("") });
+      } else {
+        const tu = plan.reduce((a, P) => a.concat(P.words), []);
+        Object.assign(o, {
+          daLam: tu.filter(up => { const j = idxOf(up); return j >= 0 && (st[j].solved || st[j].given); }).length, tong: tu.length,
+          i: R, o: order.slice(), plan: plan.map(P => ({ w: P.words.map(idxOf), l: P.letters.join("") }))
+        });
+        if (mode === "free") o.f3 = found3.map(f => ({ w: f.w, m: f.m || "", l: f.les ? 1 : 0, p: f.p }));
+      }
+      return o;
+    });
+
     // ---------------- start ----------------
-    if (mode === "one") { m1Deal(); m1Render(); }
+    if (mode === "one" && kp) {
+      // Đợt 470 — làm tiếp Mode 1: từ đang đứng đã xong (làm được / bị lật) ⇒ từ kế; đã qua hết ⇒ kết thúc sau ~700 ms.
+      // Còn đúng từ cũ ⇒ y bảng chữ cũ (ô đã chọn dở trả về bảng).
+      const i0 = Math.max(0, Math.min(total - 1, kp.i | 0));
+      const xong = st[i0].solved || kp.m1x === true;
+      M1.i = xong ? Math.min(total - 1, i0 + 1) : i0;
+      m1Deal();
+      const b1 = typeof kp.b1 === "string" ? kp.b1 : "";
+      if (!xong && b1.length >= items[M1.i].up.length && b1.length <= 24 && /^[A-Z]+$/.test(b1)
+          && Object.entries(countOf(items[M1.i].up)).every(([ch, n]) => b1.split(ch).length - 1 >= n)) {
+        M1.board = b1.split("").map(ch => ({ ch, used: false }));
+        M1.slots = Array(items[M1.i].up.length).fill(null);
+      }
+      m1Render();
+      if (xong && i0 + 1 >= total) { locked = true; later(() => finish(), 700); }
+    } else if (mode === "one") { m1Deal(); m1Render(); }
     else {
       if (mode === "free" && !onlyList) loadDict().then(d => { if (!dead) M3dict = d; }).catch(() => {});
-      sub.r = S ? S.r : 0;
-      dealOrder(); padRender();
+      if (kp) {
+        // Đợt 470 — làm tiếp Mode 2/3: bảng đang đứng đã xong hết từ ⇒ bảng kế (bảng bỏ qua bằng › thì thôi, như lúc chơi).
+        const xongBang = P => P.words.every(up => { const j = idxOf(up); return j < 0 || st[j].solved || st[j].given; });
+        let r0 = Math.max(0, Math.min(plan.length - 1, kp.i | 0));
+        const cu = r0;
+        while (r0 < plan.length && xongBang(plan[r0])) r0++;
+        R = Math.min(plan.length - 1, r0);
+        sub.r = R;
+        dealOrder();
+        if (R === cu && thuTuHopLe(kp.o, plan[R].letters.length)) order = kp.o.slice();
+        padRender();
+        if (r0 >= plan.length) later(() => finish(), 700);
+      } else {
+        sub.r = S ? S.r : 0;
+        dealOrder(); padRender();
+      }
     }
     if (fctl) {
       fctl.attach(side, {
@@ -1384,5 +1461,26 @@ const wordshakeTemplate = {
     };
   }
 };
+
+// ⭐ Đợt 470 — đọc trạng thái LÀM TIẾP (`ui.khoiPhuc`) và kiểm nó khớp ĐÚNG đề đang dựng; sai một li ⇒ null (ván mới).
+// Mode 2/3: mỗi bảng phải chứa đủ chữ cho từng từ của nó (Mode 3 tính cả số lần lặp — mỗi ô dùng một lần).
+function docKhoiPhuc(kp, goc, mode) {
+  if (!kp || kp.v !== 1 || kp.m !== mode) return null;
+  const n = goc.length;
+  if (!thuTuHopLe(kp.thuTu, n) || !Array.isArray(kp.st) || kp.st.length !== n) return null;
+  if (!kp.st.every(x => x === 0 || (x && typeof x === "object"))) return null;
+  if (!Number.isInteger(kp.i) || kp.i < 0) return null;
+  if (mode === "one") return kp.i < n ? kp : null;
+  if (!Array.isArray(kp.plan) || !kp.plan.length || kp.i >= kp.plan.length) return null;
+  const okPlan = kp.plan.every(b => b && typeof b.l === "string" && /^[A-Z]{1,24}$/.test(b.l)
+    && Array.isArray(b.w) && b.w.length > 0 && b.w.every(i => {
+      if (!Number.isInteger(i) || i < 0 || i >= n) return false;
+      const c = countOf(goc[kp.thuTu[i]].up);
+      return Object.entries(c).every(([ch, k]) => b.l.split(ch).length - 1 >= (mode === "free" ? k : 1));
+    }));
+  if (!okPlan) return null;
+  if (mode === "free" && kp.f3 != null && !(Array.isArray(kp.f3) && kp.f3.every(f => f && typeof f.w === "string" && Number.isFinite(f.p)))) return null;
+  return kp;
+}
 
 registerTemplate(wordshakeTemplate);

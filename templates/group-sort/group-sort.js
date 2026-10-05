@@ -44,6 +44,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
+import { thuTuHopLe } from "../../core/lam-tiep.js";   // Đợt 470 — làm tiếp lượt dở bài giao
 import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
@@ -325,12 +326,32 @@ const gsTemplate = {
       // a belt that runs "all of WHERE, then all of WHEN…" hands out the answer.
       // `shuffleQuestions` is left to drag mode. (Show answers still lists the
       // items in the order they were PLAYED — see consume().)
-      const order = shuffle(items.map((_, i) => i));
+      // ⭐⭐ Đợt 470 — LÀM TIẾP lượt dở của bài giao (core/lam-tiep.js, engine đặt `ui.khoiPhuc`): giữ ở mức MỤC, không giữ
+      // vị trí từng chip trên băng — thứ tự xáo (`order`), mục nào đã thả vào nhóm nào theo thứ tự thả (`played` +
+      // `state`). Băng chạy lại từ đầu với các mục còn lại. Không khớp đề ⇒ null ⇒ ván mới y như cũ.
+      const kp = docKhoiPhucBelt(ui.khoiPhuc, total, groups.length);
+      const order = kp ? [...kp.thuTu] : shuffle(items.map((_, i) => i));
       reviewOrder = order;
-      const pool = [...order];          // items not yet dropped anywhere
+      const played = kp ? [...kp.played] : [];   // item indices in the order they were dropped
+      const pool = order.filter(i => !played.includes(i));   // items not yet dropped anywhere
       let queue = [];                   // this lap's feed order — reshuffled from `pool` each time it runs dry
       const onBelt = new Set();         // item indices currently riding the belt
-      const played = [];                // item indices in the order they were dropped
+      // Mốc giờ thật đồng hồ lượt bắt đầu — làm tiếp thì tiếng tích Count down lùi theo.
+      const batDauLuc = (kp && Number(kp.t0) > 0) ? Number(kp.t0) : Date.now();
+      if (kp) {
+        // Bài làm từng mục đã thả; tim + điểm phạt TÍNH LẠI (mỗi mục thả SAI = một tim + pointsOff, y như endDrag) —
+        // một "−N" đang bay lúc chụp là phép trừ chưa áp.
+        played.forEach(i => {
+          const o = kp.st[i];
+          state[i] = { answered: true, correct: o.k === true, chosen: o.c, timedOut: false };
+        });
+        const sai = played.filter(i => !state[i].correct).length;
+        if (livesLeft != null) livesLeft = Math.max(0, livesLeft - sai);
+        penalty = pointsOff * sai;
+        renderLives();
+        const playedSet = new Set(played);
+        reviewOrder = played.concat(order.filter(i => !playedSet.has(i)));
+      }
       let belt = [];                    // { el, x, itemIdx, held }
       let chipW = 0, chipH = 0, chipGap = 0, colourCursor = 0;
       let rafId = null, lastTime = null, running = false;
@@ -341,8 +362,22 @@ const gsTemplate = {
       ui.onSubmit(() => finish("timesup"));
       renderShell();
       ui.setIdleGuard?.(() => finished || !running);
+      // ⭐ Đợt 470 — trạng thái ván để LÀM TIẾP (chỉ engine bài giao học sinh đọc). Chỉ số = vị trí trong `items` (danh sách
+      // gốc đã lọc); `c` = chỉ số nhóm em thả vào. Đọc lại ở `docKhoiPhucBelt` cuối file.
+      ui.setLuuTrangThai?.(() => ({
+        v: 1, m: "tap", daLam: played.length, tong: total, i: played.length, t0: batDauLuc,
+        thuTu: order.slice(), played: played.slice(),
+        st: state.map(s => ({ k: s.correct === true, c: s.chosen }))
+      }));
 
-      if (timerMode === "countUp") runPrepCountdown();
+      if (kp) {
+        // ⭐ Đợt 470 — làm tiếp: bỏ 3-2-1, bật đồng hồ ngay (engine đã lùi theo giờ thật), băng chạy lại với các mục còn lại.
+        ui.startTimer();
+        if (timerMode === "countDown") armCountdownTicks();
+        if (livesLeft === 0) later(() => finish("gameover"), 700);
+        else if (!pool.length) later(() => finish("complete"), 700);   // đã thả hết mà chưa kịp tới màn kết thúc
+        else startBelt();
+      } else if (timerMode === "countUp") runPrepCountdown();
       else {
         ui.startTimer();
         if (timerMode !== "none") gsSound.go();
@@ -419,7 +454,9 @@ const gsTemplate = {
         const at = [];
         for (let r = 10; r >= 6; r--) at.push(timerTotal - r);
         for (let r = 5; r >= 1; r -= 0.5) at.push(timerTotal - r);
+        const boS = kp ? Math.max(0, (Date.now() - batDauLuc) / 1000) : 0;   // Đợt 470 — làm tiếp: giây đã trôi
         at.forEach(sec => {
+          sec -= boS;
           if (sec < 0) return;
           tickTimers.push(setTimeout(() => { if (!finished) gsSound.clockTick(); }, sec * 1000));
         });
@@ -590,6 +627,7 @@ const gsTemplate = {
         reviewOrder = played.concat(order.filter(i => !playedSet.has(i)));
         retireSlot(chip);
         updateNav();
+        ui.daDoiBaiLam?.();   // Đợt 470 — cất lượt (state của mục này đã ghi xong trước khi gọi consume)
       }
 
       // ---- drag: press ANY chip → a fixed clone follows the pointer ----
@@ -799,10 +837,16 @@ const gsTemplate = {
     // =====================================================================
     function mountDrag() {
       const instant = opt.dragCheck === "instant";
-      const order = opt.shuffleQuestions === false ? items.map((_, i) => i) : shuffle(items.map((_, i) => i));
+      // ⭐⭐ Đợt 470 — LÀM TIẾP lượt dở của bài giao: thứ tự chip trong kho, chip nào đang nằm ở nhóm nào, chip nào đã
+      // khoá đúng (Instantly) + số lần thả sai (tim/điểm phạt tính lại từ đó). Không khớp đề ⇒ null ⇒ ván mới y như cũ.
+      const kp = docKhoiPhucDrag(ui.khoiPhuc, total, groups.length, instant);
+      const order = kp ? [...kp.thuTu]
+        : (opt.shuffleQuestions === false ? items.map((_, i) => i) : shuffle(items.map((_, i) => i)));
       reviewOrder = items.map((_, i) => i);
-      const placed = items.map(() => null);   // group index each chip sits in, null = pool
-      const locked = items.map(() => false);  // instant mode: correctly placed chips stay put
+      // Instantly: chỉ chip đã KHOÁ đúng mới nằm lại trong nhóm (chip sai đang bật về kho lúc chụp ⇒ về kho).
+      const locked = items.map((_, i) => !!(kp && instant && kp.locked[i] === true && kp.placed[i] === answerOf(items[i])));
+      const placed = items.map((_, i) => (!kp ? null : instant ? (locked[i] ? kp.placed[i] : null) : kp.placed[i]));   // group index each chip sits in, null = pool
+      let soSai = kp ? kp.sai : 0;            // Đợt 470 — Instantly: số lần thả sai (mỗi lần một tim + pointsOff)
       let graded = false;
       let selected = null;                    // chip idx picked by a TAP, waiting for a box tap
       const chips = [];
@@ -836,6 +880,23 @@ const gsTemplate = {
         attachDrag(chip, idx);
         pool.append(chip);
       });
+      // ⭐ Đợt 470 — làm tiếp: đặt lại chip vào nhóm em đã thả; chip đã khoá đúng (Instantly) mang ✓ như lúc vừa thả.
+      if (kp) {
+        order.forEach(idx => {
+          if (placed[idx] == null) return;
+          boxEls[placed[idx]].querySelector(".aw-gs-boxbody").append(chips[idx]);
+          if (locked[idx]) {
+            state[idx].answered = true; state[idx].chosen = placed[idx]; state[idx].correct = true;
+            chips[idx].classList.add("is-correct");
+            chips[idx].append(badge(true));
+          }
+        });
+        if (instant) {
+          if (livesLeft != null) livesLeft = Math.max(0, livesLeft - soSai);
+          penalty = pointsOff * soSai;
+          renderLives();
+        }
+      }
       card.append(pool, boxes);
       root.append(card);
       paintNav = updateNav;
@@ -844,7 +905,19 @@ const gsTemplate = {
       ui.setIdleGuard?.(() => finished || graded);
       ui.onSubmit(() => grade(true));
       ui.startTimer();
-      if (timerMode !== "none") gsSound.go();
+      if (timerMode !== "none" && !kp) gsSound.go();
+      // ⭐ Đợt 470 — trạng thái ván để LÀM TIẾP (chỉ engine bài giao học sinh đọc). Chỉ số = vị trí trong `items`.
+      ui.setLuuTrangThai?.(() => ({
+        v: 1, m: "drag", ck: instant ? "i" : "s", tong: total, i: 0,
+        daLam: instant ? locked.filter(Boolean).length : placedCount(),
+        thuTu: order.slice(), placed: placed.slice(), locked: locked.slice(), sai: soSai
+      }));
+      if (kp) {
+        // Lượt cũ đã xong mà chưa kịp tới màn kết thúc (tải lại đúng lúc chờ) ⇒ đi tiếp đúng đường cũ.
+        if (instant && livesLeft === 0) later(() => finish("gameover"), 700);
+        else if (instant && locked.every(Boolean)) later(() => finish("complete"), 700);
+        else if (!instant && placedCount() === total) later(() => grade(false), 700);
+      }
 
       function placedCount() { return placed.filter(p => p != null).length; }
       function updateNav() {
@@ -879,12 +952,14 @@ const gsTemplate = {
         if (gi === -1 || gi == null) {
           if (placed[idx] != null) { placed[idx] = null; pool.append(chip); }
           updateNav();
+          ui.daDoiBaiLam?.();   // Đợt 470
           return;
         }
         ui.noteActivity?.();
         placed[idx] = gi;
         boxEls[gi].querySelector(".aw-gs-boxbody").append(chip);
         chip.classList.remove("is-wrong");
+        ui.daDoiBaiLam?.();   // Đợt 470 — cất lượt để làm tiếp (engine gom 120 ms ⇒ locked/soSai bên dưới đã kịp ghi)
         if (instant) {
           const ok = answerOf(items[idx]) === gi;
           state[idx].answered = true; state[idx].chosen = gi; state[idx].correct = ok;
@@ -900,6 +975,7 @@ const gsTemplate = {
             if (locked.every(Boolean)) { later(() => finish("complete"), 500); return; }
           } else {
             gsSound.wrong();
+            soSai++;   // Đợt 470
             chip.classList.add("is-wrong");
             flyMark(chip, false);
             if (pointsOff) chargePenalty(chip, pointsOff);
@@ -911,6 +987,7 @@ const gsTemplate = {
               state[idx].answered = false; state[idx].chosen = null;
               pool.append(chip);
               updateNav();
+              ui.daDoiBaiLam?.();   // Đợt 470
               if (outOfLives) finish("gameover");
             }, 650);
           }
@@ -1026,6 +1103,23 @@ const gsTemplate = {
     }
   }
 };
+
+// ⭐ Đợt 470 — đọc trạng thái LÀM TIẾP (`ui.khoiPhuc`) và kiểm nó khớp ĐÚNG đề + ĐÚNG mode đang dựng; sai một li ⇒ null.
+function docKhoiPhucBelt(kp, n, soNhom) {
+  if (!kp || kp.v !== 1 || kp.m !== "tap" || !thuTuHopLe(kp.thuTu, n)) return null;
+  if (!Array.isArray(kp.played) || kp.played.length > n || new Set(kp.played).size !== kp.played.length) return null;
+  if (!kp.played.every(i => Number.isInteger(i) && i >= 0 && i < n)) return null;
+  if (!Array.isArray(kp.st) || kp.st.length !== n) return null;
+  const okSt = kp.played.every(i => { const o = kp.st[i]; return o && Number.isInteger(o.c) && o.c >= 0 && o.c < soNhom; });
+  return okSt ? kp : null;
+}
+function docKhoiPhucDrag(kp, n, soNhom, instant) {
+  if (!kp || kp.v !== 1 || kp.m !== "drag" || kp.ck !== (instant ? "i" : "s") || !thuTuHopLe(kp.thuTu, n)) return null;
+  if (!Array.isArray(kp.placed) || kp.placed.length !== n || !Array.isArray(kp.locked) || kp.locked.length !== n) return null;
+  if (!kp.placed.every(g => g === null || (Number.isInteger(g) && g >= 0 && g < soNhom))) return null;
+  if (!Number.isInteger(kp.sai) || kp.sai < 0) return null;
+  return kp;
+}
 
 registerTemplate(gsTemplate);
 export default gsTemplate;
