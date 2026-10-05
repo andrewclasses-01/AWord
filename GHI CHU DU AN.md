@@ -557,6 +557,7 @@ khung ngang 16:10,5 ở trên, nền tối bên dưới. Thầy chốt: cho màn
   START xong khung co lại (giật).
 - Đo 390×760: khung 390×760, màn START nằm giữa (nút ▶ y≈361); bấm START ⇒ y như Đợt 465–467 (bàn phím grid, đồng hồ 20px);
   ô nhỏ 390×256 vẫn 390×256.
+- ✅ Push `6f6b2d6` + LIVE (mã băm type-the-answer.css khớp).
 - ⬜ Thầy thử điện thoại thật.
 
 ---
