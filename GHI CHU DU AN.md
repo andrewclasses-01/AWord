@@ -546,6 +546,12 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Hồ sơ (05/10/2026) — SỔ TAY TỐI ƯU TỐC ĐỘ WEB + BỘ CÔNG CỤ ĐO (cho máy khác / web khác dùng lại) · phiên MSI
+**Thầy:** "ghi và commit cả hồ sơ để ở máy tính khác tôi cũng có thể tiếp tục dùng cách tương tự để tối ưu các trang web khác trong hệ sinh thái".
+**Đã làm:** `docs/TOI-UU-TOC-DO-WEB.md` (bài học, quy trình 5 bước, bảng đọc kết quả `?do=1`, 4 thủ phạm Đợt 481–485 + cách chữa, bẫy của công cụ đo,
+danh sách kiểm cho web khác, bảng công cụ) · `tools/toc-do/` 14 script đã dùng trong phiên (máy chủ chậm, đo WebKit/Chrome, giả lập iPad CDP, so bản gốc/thu gọn,
+Firestore giả, đo kho Firestore chỉ đọc, mẫu di trú + kiểm sâu) + README. Không file nào chứa khoá (đã quét).
+
 ## Đợt 485 (05/10/2026) — ⭐⭐ MỞ THƯ MỤC CHẬM: MỖI LẦN MỞ KÉO LẠI 147 BÀI GIAO (3,9 MB) CHỈ ĐỂ VẼ CHẤM ĐỎ · phiên MSI
 **Thầy (sau bảng ?do=1 thứ 5 — trang chủ hết màn chờ 3,74 s):** "trang chủ tải nhanh hơn khá nhiều rồi, nhưng khi bấm vào các thư mục (VD Activity) thì không hiển thị gì, phải đợi khá lâu".
 **Gốc:** `renderInside()` (main.js) `await loadAssignmentsForDots()` = `listAllAssignments({includeTrashed:true})` TRƯỚC khi vẽ thẻ nào — chỉ để biết act nào có chấm đỏ
