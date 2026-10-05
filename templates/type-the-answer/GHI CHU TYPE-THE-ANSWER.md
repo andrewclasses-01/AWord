@@ -1,5 +1,9 @@
 # GHI CHÚ — TEMPLATE TYPE THE ANSWER
 
+## Đợt 469 (05/10/2026) — LÀM TIẾP lượt dở bài giao (core/lam-tiep.js)
+
+`ui.setLuuTrangThai` + `ui.daDoiBaiLam` + đọc `ui.khoiPhuc` (hợp đồng ở `core/HUONG DAN CORE.md`, mục Đợt 469). Lưu: thứ tự câu + chữ đã gõ/đúng sai/hết giờ + tim + Andrew help đã dùng; `livePoints` tính lại từ bài làm. Chi tiết + số đo: `GHI CHU DU AN.md` Đợt 469.
+
 ## Đợt 326 (14/9/2026) — ⭐ **3 KIỂU KHỚP MỚI `chi-dau` · `mau` · `gan` + `MAX_ALTERNATES` 15**
 
 Chi tiết đầy đủ ở `GHI CHU DU AN.md` Đợt 326. Tóm tắt cho người sửa template:

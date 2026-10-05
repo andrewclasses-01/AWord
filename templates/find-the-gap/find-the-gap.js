@@ -40,6 +40,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
+import { thuTuHopLe } from "../../core/lam-tiep.js";   // Đợt 469 — làm tiếp lượt dở bài giao
 import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { createKeyboard } from "../../core/keyboard.js";
@@ -298,15 +299,23 @@ const ftgTemplate = {
     const fightRound = i => { const L = ftgFightLedger; if (!L.rounds.has(i)) L.rounds.set(i, [0, 0]); return L.rounds.get(i); };
 
     let items = normalizeItems(activity.content);
+    // ⭐⭐ Đợt 469 — LÀM TIẾP lượt dở của bài giao (core/lam-tiep.js, engine đặt `ui.khoiPhuc`): đúng thứ tự dòng, ĐÚNG
+    // các chữ bị khoét (Random gaps khoét ngẫu nhiên — phải nhớ) và bài làm từng ô của lượt cũ. Không khớp đề ⇒ ván mới.
+    const goc = items;
+    const kp = docKhoiPhuc(ui.khoiPhuc, goc);
+    let thuTuGoc = goc.map((_, i) => i);   // thuTuGoc[vị trí] = chỉ số dòng trong `goc`
     // A dealt (Showdown) list must keep its order — one rule, one place (ui.keepItemOrder).
-    if (opt.shuffleQuestions && !ui.keepItemOrder?.()) items = shuffle(items);
+    if (kp) thuTuGoc = kp.thuTu.slice();
+    else if (opt.shuffleQuestions && !ui.keepItemOrder?.()) thuTuGoc = shuffle(thuTuGoc);
+    items = thuTuGoc.map(i => goc[i]);
     // GAPS range / Random gaps (see applyGapPolicy). In a FIGHT both boards must
     // blank the SAME words (and the same NUMBER of them): the board that mounts
     // FIRST decides, the other takes the layout from the shared ledger (keyed by
     // ftgLineKey — see its note).
     const { lo: minGaps, hi: maxGaps } = normGapRange(opt.minGaps, opt.maxGaps);
     const randomGaps = opt.randomGaps === true;
-    items = items.map(it => {
+    if (kp) items = items.map((it, i) => ({ ...it, gaps: kp.gaps[i] }));
+    else items = items.map(it => {
       const key = ftgLineKey(it);
       if (fightCtl && ftgFightLedger.gaps.has(key)) return { ...it, gaps: ftgFightLedger.gaps.get(key) };
       const gaps = applyGapPolicy(it, { minGaps, maxGaps, randomGaps });
@@ -323,11 +332,19 @@ const ftgTemplate = {
     const palette = shuffle(PALETTE);
 
     // Per-item state. `cur` = which gap is being filled right now.
-    const state = items.map(it => ({
-      done: it.gaps.map(() => false), chosen: it.gaps.map(() => null), ok: it.gaps.map(() => false),
-      typed: it.gaps.map(() => ""), cur: 0, settled: false, correct: false, timedOut: false,
-      points: 0, scored: false   // FIGHT only: the round's point, settled at reveal()
-    }));
+    const state = items.map((it, i) => {
+      const o = kp && kp.st[i];   // Đợt 469 — dòng đã làm của lượt cũ
+      const n = it.gaps.length, mang = (a, f) => it.gaps.map((_, k) => (Array.isArray(a) && k < a.length ? f(a[k]) : f(undefined)));
+      return o ? {
+        done: mang(o.d, v => v === true), chosen: mang(o.c, v => (typeof v === "string" ? v : null)), ok: mang(o.o, v => v === true),
+        typed: mang(o.ty, v => (typeof v === "string" ? v : "")), cur: Math.max(0, Math.min(n, o.cur | 0)),
+        settled: o.s === true, correct: o.k === true, timedOut: o.t === true, points: 0, scored: false
+      } : {
+        done: it.gaps.map(() => false), chosen: it.gaps.map(() => null), ok: it.gaps.map(() => false),
+        typed: it.gaps.map(() => ""), cur: 0, settled: false, correct: false, timedOut: false,
+        points: 0, scored: false   // FIGHT only: the round's point, settled at reveal()
+      };
+    });
     const gapTotal = items.reduce((n, it) => n + it.gaps.length, 0);
     const scoreTotal = scoring === "gap" ? gapTotal : total;
 
@@ -360,6 +377,10 @@ const ftgTemplate = {
     let ro = null, fitRaf = 0;   // ResizeObserver + its rAF handle (declared up here: renderArea runs before the observer exists)
     let livesLeft = normLives(opt.lives);
     let penalty = 0;
+    if (kp) {   // ⭐ Đợt 469 — điểm phạt tính LẠI từ bài làm: một lần mỗi ô chọn/gõ sai + một lần mỗi dòng hết giờ
+      penalty = pointsOff * state.reduce((n, x) => n + x.chosen.filter((c, k) => c != null && x.done[k] && !x.ok[k]).length + (x.timedOut ? 1 : 0), 0);
+      if (livesLeft != null && Number.isInteger(kp.mang)) livesLeft = Math.max(0, Math.min(livesLeft, kp.mang));
+    }
     let curPage = -1;
     const timers = new Set();
     const later = (fn, ms) => { const t = setTimeout(() => { timers.delete(t); if (!dead) fn(); }, ms); timers.add(t); return t; };
@@ -483,10 +504,25 @@ const ftgTemplate = {
     ui.setIdleGuard?.(() => animating || ending || finished || fightLocked() || state[index].settled);
     ui.setRoundTimeout?.(roundTimeUp);
 
+    // ⭐ Đợt 469 — trạng thái ván để LÀM TIẾP (chỉ engine bài giao học sinh đọc).
+    ui.setLuuTrangThai?.(() => ({
+      v: 1, daLam: state.filter(x => x.settled).length, tong: total, i: index, mang: livesLeft,
+      thuTu: thuTuGoc.slice(), gaps: items.map(it => it.gaps),
+      st: state.map(x => ({ d: x.done, c: x.chosen, o: x.ok, ty: x.typed, cur: x.cur, s: x.settled, k: x.correct, t: x.timedOut }))
+    }));
+    let dauTien = 0;
+    if (kp) {   // vào dòng CHƯA xong đầu tiên kể từ dòng đang đứng lúc rời
+      const tu = Math.max(0, Math.min(total - 1, kp.i | 0));
+      let k = state.findIndex((x, j) => j >= tu && !x.settled);
+      if (k < 0) k = state.findIndex(x => !x.settled);
+      dauTien = k < 0 ? tu : k;
+    }
     renderLives();
     ui.setScore(scoreNow());
-    showItemNow(0);
+    showItemNow(dauTien);
     later(() => playLine(index), INTRO_DELAY_MS);
+    // Lượt cũ đã làm HẾT mà chưa tới màn kết thúc (tải lại đúng lúc chờ) ⇒ kết thúc luôn.
+    if (kp && state.every(x => x.settled) && !fightCtl) autoTimer = later(() => finish("complete"), 700);
 
     const onResize = () => { cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(fitNow); };
     window.addEventListener("resize", onResize);
@@ -725,6 +761,7 @@ const ftgTemplate = {
       if (k >= it.gaps.length) return;
       const ok = isRightAnswer(it, it.gaps[k], text);
       st.done[k] = true; st.chosen[k] = text; st.ok[k] = ok;
+      ui.daDoiBaiLam?.();   // Đợt 469 — cất lượt để làm tiếp nếu em tải lại trang (st.cur++ ngay dưới, lưu chạy sau 120 ms)
       if (fightCtl) fightRound(index)[fightSide] = st.ok.filter(Boolean).length;
       ui.noteActivity?.();
 
@@ -846,6 +883,7 @@ const ftgTemplate = {
       for (let k = st.cur; k < it.gaps.length; k++) { st.done[k] = true; st.ok[k] = false; }
       st.cur = it.gaps.length;
       st.timedOut = true;
+      ui.daDoiBaiLam?.();   // Đợt 469
       ftgSound.wrong();
       const willFly = pointsOff > 0;
       ui.setScore(scoreNow());
@@ -944,6 +982,7 @@ const ftgTemplate = {
 
     function showItemNow(i) {
       index = i;
+      ui.daDoiBaiLam?.();   // Đợt 469 — nhớ dòng đang đứng
       fightPendingReveal = fightCtl ? (state[i].settled && !state[i].revealed) : false;
       renderItem();
       updateNav();
@@ -1130,6 +1169,16 @@ const ftgTemplate = {
     };
   }
 };
+
+// ⭐ Đợt 469 — đọc trạng thái LÀM TIẾP (`ui.khoiPhuc`) và kiểm nó khớp ĐÚNG đề đang dựng; sai một li ⇒ null (ván mới).
+function docKhoiPhuc(kp, goc) {
+  if (!kp || kp.v !== 1) return null;
+  const n = goc.length;
+  if (!thuTuHopLe(kp.thuTu, n) || !Array.isArray(kp.gaps) || kp.gaps.length !== n || !Array.isArray(kp.st) || kp.st.length !== n) return null;
+  const okGaps = kp.gaps.every(g => Array.isArray(g) && g.length > 0 &&
+    g.every(x => x && Number.isInteger(x.word) && x.word >= 0));
+  return okGaps && kp.st.every(o => o && typeof o === "object") ? kp : null;
+}
 
 registerTemplate(ftgTemplate);
 export default ftgTemplate;

@@ -1,5 +1,9 @@
 # GHI CHÚ QUIZ
 
+## Đợt 469 (05/10/2026) — LÀM TIẾP lượt dở bài giao (core/lam-tiep.js)
+
+`ui.setLuuTrangThai` + `ui.daDoiBaiLam` + đọc `ui.khoiPhuc` (hợp đồng ở `core/HUONG DAN CORE.md`, mục Đợt 469). Lưu: thứ tự câu + thứ tự ô đáp án (chỉ số gốc) + chosen/correct/timedOut + Time limit đã tiêu + tim. Khôi phục ở đầu mount (`docKhoiPhuc` cuối file). Chi tiết + số đo: `GHI CHU DU AN.md` Đợt 469.
+
 ## Đợt 364 (20/9/2026 khuya) — TIME LIMIT: cụm số+thanh CÂN ĐÚNG MÉP KHỐI Ô · TÍCH DỒN DẬP 5 s CUỐI · bỏ nhạc thừa khi HẾT MẠNG
 
 **Trạng thái: ✅ COMMIT + PUSH `824aad0`** (thầy bảo "commit + ghi hồ sơ + push + kết thúc phiên") · ⬜ CHƯA BẤM TAY trang thật. Chỉ `quiz.js` · `quiz.css` · `quiz-sound.js`.

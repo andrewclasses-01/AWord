@@ -34,6 +34,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
+import { thuTuHopLe } from "../../core/lam-tiep.js";   // Đợt 469 — làm tiếp lượt dở bài giao
 import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
@@ -256,13 +257,18 @@ const quizTemplate = {
     // Guard against missing/empty data so a malformed activity never crashes.
     let questions = [...(activity.content?.questions || [])]
       .filter(q => q && Array.isArray(q.answers) && q.answers.length > 0);
+    // ⭐⭐ Đợt 469 — LÀM TIẾP lượt dở của bài giao (core/lam-tiep.js, engine đặt `ui.khoiPhuc`): dựng lại ĐÚNG thứ tự
+    // câu + thứ tự ô đáp án đã xáo của lượt cũ, rồi trạng thái từng câu ở dưới. Không khớp đề ⇒ ván mới như thường.
+    const goc = questions;
+    const kp = docKhoiPhuc(ui.khoiPhuc, goc);
     // ⭐ Đợt 220 — mảng đã được CHIA BÀI (Showdown Free/Count) thì cấm tự xáo:
     // slot s thuộc về em s % M, xáo là phá tan bài đã chia. Hỏi engine chứ
     // không đọc options — một luật một chỗ, xem ui.keepItemOrder trong engine.js.
-    if (opt.shuffleQuestions && !ui.keepItemOrder?.()) questions = shuffle(questions);
-    questions = questions.map(q => ({
+    if (kp) questions = kp.thuTu.map(i => goc[i]);
+    else if (opt.shuffleQuestions && !ui.keepItemOrder?.()) questions = shuffle(questions);
+    questions = questions.map((q, qi) => ({
       question: q.question || "",
-      answers: (opt.shuffleAnswers ? shuffle(q.answers) : [...q.answers])
+      answers: (kp ? kp.dapAn[qi].map(j => q.answers[j]) : (opt.shuffleAnswers ? shuffle(q.answers) : [...q.answers]))
         .filter(a => a && a.text != null),
       src: q   // the ORIGINAL content object — "Start with mistakes" filters by it
     }));
@@ -280,11 +286,15 @@ const quizTemplate = {
     // read as an INDEX into q.answers in three places (badges, the review row,
     // the idle guard), and a -1 there would have printed `undefined` into the
     // review instead of "No answer".
-    const state = questions.map(() => ({ chosen: null, correct: null, timedOut: false }));
+    const state = questions.map((_, qi) => {
+      const o = kp && kp.st[qi];   // Đợt 469 — câu đã làm của lượt cũ
+      return o ? { chosen: Number.isInteger(o.c) ? o.c : null, correct: typeof o.k === "boolean" ? o.k : null, timedOut: o.t === true }
+               : { chosen: null, correct: null, timedOut: false };
+    });
     // TIME LIMIT (Đợt 363) — ms đã TIÊU của từng câu. Cộng dồn theo CÂU, không theo
     // lượt xem (cùng luật với đồng hồ lượt của engine): quay lại câu chưa trả lời
     // bằng ‹ thì đồng hồ chạy tiếp từ chỗ còn lại, không nạp lại từ đầu.
-    const tlUsed = questions.map(() => 0);
+    const tlUsed = questions.map((_, qi) => (kp && Array.isArray(kp.tl) ? Math.max(0, Number(kp.tl[qi]) || 0) : 0));
     let tlId = null;        // ticker 50ms, chỉ tồn tại khi tlOn
     let tlLast = 0;         // performance.now() của nhịp trước (đồng hồ kiểu DELTA)
     let tlPaused = false;   // ☰ Menu / bảng công cụ đang mở (qua tpl.onPause)
@@ -293,6 +303,7 @@ const quizTemplate = {
     let finished = false;
     let autoTimer = null;   // pending "auto game complete" timer
     let livesLeft = normLives(opt.lives);   // null = unlimited (see normLives)
+    if (kp && livesLeft != null && Number.isInteger(kp.mang)) livesLeft = Math.max(0, Math.min(livesLeft, kp.mang));   // Đợt 469
     let ending = false;     // out of lives: the game is on its way out, ignore any further input
     let heartTimer = null;  // fallback timer for the "heart pops out" animation
 
@@ -378,6 +389,15 @@ const quizTemplate = {
     ui.setScoreProvider?.(scoreNow);
     // ⭐ Đợt 384 — bài làm TỚI LÚC NÀY cho lượt dở (dashboard myLesson xem từng câu); bọc hàm ⇒ lỗi chỉ rơi vào try của engine.
     ui.setReviewProvider?.(() => buildReview());
+    // ⭐ Đợt 469 — trạng thái ván để LÀM TIẾP (chỉ engine bài giao học sinh đọc). Thứ tự = chỉ số trong danh sách câu
+    // gốc đã lọc (`goc`), ô đáp án = chỉ số trong `q.answers` gốc — đọc lại ở `docKhoiPhuc`.
+    ui.setLuuTrangThai?.(() => ({
+      v: 1, daLam: state.filter(settled).length, tong: total, i: index, mang: livesLeft,
+      thuTu: questions.map(q => goc.indexOf(q.src)),
+      dapAn: questions.map(q => q.answers.map(a => q.src.answers.indexOf(a))),
+      st: state.map(x => ({ c: x.chosen, k: x.correct, t: x.timedOut })),
+      tl: tlUsed.map(x => Math.round(x))
+    }));
     // ⭐⭐⭐ Đợt 266 — vế "clip còn đang đọc" ĐI RIÊNG qua ui.setVoiceGuard, không
     // nằm trong idleGuard nữa: trong Fight chỉ bàn 0 có <audio> thật (core/fight.js
     // `ctl.speaks`), nên để nguyên chỗ cũ là bàn PHẢI bị Time cost trừ suốt quãng cả
@@ -480,11 +500,20 @@ const quizTemplate = {
     const tlPauseHandler = { pause: () => { tlPaused = true; }, resume: () => { tlPaused = false; } };
     if (tlOn) quizPauseHandlers.add(tlPauseHandler);
 
-    applyQuestion(0);   // first question, no animation
+    // ⭐ Đợt 469 — làm tiếp: vào câu CHƯA làm đầu tiên kể từ câu đang đứng lúc rời (hết thì câu chưa làm bất kỳ).
+    if (kp) {
+      const tu = Math.max(0, Math.min(total - 1, kp.i | 0));
+      let k = state.findIndex((x, j) => j >= tu && !settled(x));
+      if (k < 0) k = state.findIndex(x => !settled(x));
+      index = k < 0 ? tu : k;
+    }
+    applyQuestion(index);   // first question, no animation
     ui.setScore(scoreNow());
     updateNav();
     renderLives();
     tlStart();          // TIME LIMIT (Đợt 363) — câu 1 bắt đầu tính giờ từ đây
+    // ⭐ Đợt 469 — lượt cũ đã làm HẾT mà chưa kịp tới màn kết thúc (tải lại đúng lúc chờ) ⇒ kết thúc luôn.
+    if (kp && state.every(settled) && !fightCtl) autoTimer = setTimeout(() => finish("complete"), 700);
 
     // Fit now, once fonts are ready, and on every resize.
     fitNow();
@@ -767,6 +796,7 @@ const quizTemplate = {
       if (settled(st) || finished || ending || fightLocked()) return;
       st.chosen = i;
       st.correct = !!q.answers[i].correct;
+      ui.daDoiBaiLam?.();   // Đợt 469 — cất lượt để làm tiếp nếu em tải lại trang
       ui.noteActivity?.();   // TIME COST (Đợt 139): answering IS the progress this game measures
       // TIME EACH ROUND (Đợt 174): this pupil's turn is over, so their clock
       // stops HERE — the reading frozen now is the one Show answers prints for
@@ -904,6 +934,7 @@ const quizTemplate = {
       const q = questions[index];
       st.timedOut = true;
       st.correct = false;
+      ui.daDoiBaiLam?.();   // Đợt 469
       // Engine's per-pupil clock (Showdown "Time each round", count UP too): the
       // turn is over, freeze its reading — same as choose() does on a tap.
       ui.roundDone?.();
@@ -1047,6 +1078,7 @@ const quizTemplate = {
         outAnims.forEach(a => { try { a.cancel(); } catch (_) {} });   // drop the "forwards" hold
         index = i;
         applyQuestion(i);
+        ui.daDoiBaiLam?.();   // Đợt 469 — nhớ câu đang đứng
         // TIME COST (Đợt 139) — a NEW question is a fresh start: without this
         // the idle time banked on the previous question would still be sitting
         // there and the student would be charged the instant this one appears.
@@ -1226,6 +1258,18 @@ const quizTemplate = {
     };
   }
 };
+
+// ⭐ Đợt 469 — đọc trạng thái LÀM TIẾP (`ui.khoiPhuc`) và kiểm nó khớp ĐÚNG đề đang dựng; sai một li ⇒ null (ván mới).
+function docKhoiPhuc(kp, goc) {
+  if (!kp || kp.v !== 1) return null;
+  const n = goc.length;
+  if (!thuTuHopLe(kp.thuTu, n) || !Array.isArray(kp.dapAn) || kp.dapAn.length !== n || !Array.isArray(kp.st) || kp.st.length !== n) return null;
+  const okDapAn = kp.thuTu.every((gi, qi) => {
+    const d = kp.dapAn[qi], m = goc[gi].answers.length;
+    return Array.isArray(d) && d.length <= m && d.every(j => Number.isInteger(j) && j >= 0 && j < m) && new Set(d).size === d.length;
+  });
+  return okDapAn ? kp : null;
+}
 
 registerTemplate(quizTemplate);
 export default quizTemplate;

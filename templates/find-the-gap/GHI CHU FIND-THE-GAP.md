@@ -6,6 +6,10 @@ Find the gap, Import gói `.ftg.json`, editor lưu Firestore), TOMKO, điện th
 nghe băng thật, điền chỗ trống. Thiết kế đã duyệt qua canvas https://claude.ai/artifact/Qe5PJEBRUfGSHU6azNFzkF
 (bản 3: đáp án hiện ngay, trả lời được cả lúc đang nghe; Options đúng khuôn core).
 
+## Đợt 469 (05/10/2026) — LÀM TIẾP lượt dở bài giao (core/lam-tiep.js)
+
+`ui.setLuuTrangThai` + `ui.daDoiBaiLam` + đọc `ui.khoiPhuc` (hợp đồng ở `core/HUONG DAN CORE.md`, mục Đợt 469). Lưu: thứ tự dòng (xáo theo chỉ số `thuTuGoc`) + đúng các chữ bị khoét + từng ô; `penalty` tính lại = Points off × (ô sai + dòng hết giờ). Lưu cả lúc vừa vào. Chi tiết + số đo: `GHI CHU DU AN.md` Đợt 469.
+
 ## Cách chơi
 
 Một act = MỘT bài nghe (`content.audio` = mã bài trong kho `myLesson-audio`, hoặc URL mp3). Mỗi lượt = MỘT CÂU

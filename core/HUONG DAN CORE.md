@@ -22,6 +22,17 @@ const vnGuard = guardVnTyping({
 - ⛔ Đừng bỏ `filterEnglish` (vẫn là lưới cuối cho dán chữ). ⛔ Đừng chặn keyCode 229/code "" trên điện thoại — bàn phím ảo gửi y như vậy (`isInjected` đã loại MOBILE).
 - Thử: `tools/vn-guard-test.html?t=tta|rw|cw|ftg` + máy phát lại `tools/unikey-replay.py` (CDP) — xem mục Đợt 419 trong `GHI CHU DU AN.md`.
 
+## ⏯️ Đợt 469 — LÀM TIẾP lượt dở bài giao: `ui.setLuuTrangThai` · `ui.daDoiBaiLam` · `ui.khoiPhuc`
+
+Bài giao học sinh (play.js) nhớ lượt đang làm trên máy em; tải lại / đóng tab rồi mở lại ⇒ CONTINUE, làm tiếp đúng chỗ, đồng hồ theo
+GIỜ THẬT. Template muốn có (đang có: Quiz · Type the answer · Find the gap — mẫu chép theo quiz.js):
+1. `ui.setLuuTrangThai?.(() => ({ v: 1, daLam, tong, i: index, … }))` — JSON thuần, đủ để dựng LẠI y nguyên: thứ tự câu dưới dạng CHỈ SỐ
+   trong danh sách gốc đã lọc (đừng lưu cả câu), mọi thứ đã xáo/khoét ngẫu nhiên, bài làm từng câu, tim. `daLam`/`tong` hiện trên nút.
+2. `ui.daDoiBaiLam?.()` ngay sau khi ghi bài làm một câu (và khi đổi câu). Engine gom 120 ms nên gọi thừa không sao.
+3. Lúc dựng: `ui.khoiPhuc` (null = ván mới). KIỂM khớp đề (`thuTuHopLe` của core/lam-tiep.js + độ dài mảng) — sai ⇒ ván mới.
+   Điểm sống / điểm phạt nên TÍNH LẠI từ bài làm (phép trừ đang bay lúc chụp sẽ mất). Vào câu chưa làm đầu tiên; đã làm hết ⇒ finish().
+⛔ `khoiPhuc` không bao giờ có trong Fight / Showdown / Start with mistakes / giáo viên. ⛔ Đừng lưu gì nặng (localStorage dùng chung).
+
 ## 🚫 Đợt 464 — game GÕ CHỮ: gắn `core/no-copy.js` (chặn copy + dán)
 
 Template mới có ô gõ chữ (học sinh tự gõ đáp án) gắn thêm, ngay cạnh `guardVnTyping`:

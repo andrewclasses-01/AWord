@@ -26,6 +26,7 @@ import { db, fs, auth, currentUser, firebaseConfig } from "./firebase.js";
 // core/engine.js stays intact.
 import { OPT_VER } from "./options-migrate.js";
 import { gioChuan } from "./gio-chuan.js";   // Đợt 422 — mốc giờ theo máy chủ, không theo đồng hồ máy em
+import { maLuotDangGiu } from "./lam-tiep.js";   // Đợt 469 — lượt đang giữ để làm tiếp: nháp không bị nộp dở
 
 // No 0/O/1/I/l — teachers read these codes aloud and type them on phones.
 const CODE_ALPHABET = "23456789abcdefghjkmnpqrstuvwxyz";
@@ -622,10 +623,13 @@ export function dropDraft(attemptId) {
 // Stale drafts → outbox (layer 3). Run before flushOutbox delivers.
 function sweepDrafts() {
   const m = readDrafts(), t = Date.now();   // Đợt 422 — cùng hệ với draftAt
+  // ⭐ Đợt 469 — lượt đang được GIỮ để làm tiếp (core/lam-tiep.js) chưa phải lượt bỏ: nộp dở nó bây giờ là chiếm
+  // mất mã lượt mà lần làm tiếp sẽ nộp (scores chỉ cho tạo, không cho sửa). Hết hạn giữ thì mới nộp như cũ.
+  const giu = maLuotDangGiu();
   let doi = false;
   Object.keys(m).forEach(id => {
     const e = m[id];
-    if (!e || t - (e.draftAt || 0) < DRAFT_STALE_MS) return;
+    if (!e || t - (e.draftAt || 0) < DRAFT_STALE_MS || giu.has(id)) return;
     delete e.draftAt;
     if (e.score > 0) saveOutboxEntry(e);
     delete m[id]; doi = true;

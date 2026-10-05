@@ -34,6 +34,7 @@ import { registerTemplate } from "../../core/registry.js";
 // game's slider and its mount() clamp drifting apart again.
 import { POINTS_MAX, POINTS_STEP } from "../../core/options-panel.js";
 import { shuffle, el } from "../../core/utils.js";
+import { thuTuHopLe } from "../../core/lam-tiep.js";   // Đợt 469 — làm tiếp lượt dở bài giao
 import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { createKeyboard } from "../../core/keyboard.js";
@@ -382,9 +383,15 @@ const ttaTemplate = {
 
     let items = [...(activity.content?.items || [])]
       .filter(it => it && it.prompt && Array.isArray(it.acceptedAnswers) && it.acceptedAnswers.length);
+    // ⭐⭐ Đợt 469 — LÀM TIẾP lượt dở của bài giao (core/lam-tiep.js, engine đặt `ui.khoiPhuc`): đúng thứ tự câu của
+    // lượt cũ + bài làm từng câu (khối `state` dưới). Không khớp đề ⇒ ván mới như thường.
+    const goc = items;
+    const kp = (ui.khoiPhuc && ui.khoiPhuc.v === 1 && thuTuHopLe(ui.khoiPhuc.thuTu, goc.length)
+                && Array.isArray(ui.khoiPhuc.st) && ui.khoiPhuc.st.length === goc.length) ? ui.khoiPhuc : null;
     // ⭐ Đợt 220 — mảng đã chia bài (Showdown Free/Count) thì cấm tự xáo — xem
     // ghi chú cùng dòng bên quiz.js.
-    if (opt.shuffleQuestions && !ui.keepItemOrder?.()) items = shuffle(items);
+    if (kp) items = kp.thuTu.map(i => goc[i]);
+    else if (opt.shuffleQuestions && !ui.keepItemOrder?.()) items = shuffle(items);
 
     const total = items.length;
     if (total === 0) {
@@ -397,7 +404,12 @@ const ttaTemplate = {
     // because the pupil typed something wrong. It scores exactly like any other
     // wrong answer; the flag exists so the review can print "No answer" instead
     // of the empty box the pupil left behind.
-    const state = items.map(() => ({ typed: null, graded: false, correct: null, timedOut: false }));
+    const state = items.map((_, qi) => {
+      const o = kp && kp.st[qi];   // Đợt 469 — câu đã làm của lượt cũ
+      return o && o.g === true
+        ? { typed: typeof o.ty === "string" ? o.ty : "", graded: true, correct: o.k === true, timedOut: o.t === true }
+        : { typed: null, graded: false, correct: null, timedOut: false };
+    });
     let index = 0;
     let finished = false;
     let dead = false;   // "this mount was thrown away" — set ONLY by cleanup() (Đợt 114)
@@ -411,10 +423,15 @@ const ttaTemplate = {
     let lastDiffShown = false;   // "câu vừa rồi có tô 2 màu không" — dùng để nới thời gian chờ
     let livePoints = 0;                 // running score shown live (can be reduced by Minus mode)
     let livesLeft = normLives(opt.lives);   // null = unlimited (see normLives)
+    if (kp) {   // ⭐ Đợt 469 — điểm sống tính LẠI từ bài làm (đúng công thức finish()), mạng còn lại của lượt cũ
+      const pen = Math.max(0, Math.min(POINTS_MAX, Number(opt.minusAmount) || 0));
+      livePoints = state.filter(x => x.graded && x.correct).length - pen * state.filter(x => x.graded && x.correct === false).length;
+      if (livesLeft != null && Number.isInteger(kp.mang)) livesLeft = Math.max(0, Math.min(livesLeft, kp.mang));
+    }
     let keyboardVisible = true;         // ON by default every time the act is opened
     // Đợt 467 — máy cảm ứng không chuột (điện thoại / máy tính bảng): xem `focusInput` / `paintCaret`.
     const TOUCH = typeof matchMedia === "function" && matchMedia("(hover: none) and (pointer: coarse)").matches;
-    let andrewUsed = false;             // "Andrew help" — ONE use for the WHOLE game (all questions share it)
+    let andrewUsed = !!(kp && kp.andrew);   // "Andrew help" — ONE use for the WHOLE game (all questions share it) · Đợt 469: lượt làm tiếp nhớ đã dùng
     let andrewGlowing = false;          // true from the press until that question is submitted (bright + halo)
     const activeFlyNodes = new Set();   // stray document.body clones — swept on cleanup
 
@@ -640,7 +657,22 @@ const ttaTemplate = {
 
     ui.onSubmit(finish, () => state.filter(s => s.graded).length);   // block "Submit answers" at 0 answered
     root.append(card);
-    loadQuestion(0, false);
+    // ⭐ Đợt 469 — trạng thái ván để LÀM TIẾP (chỉ engine bài giao học sinh đọc); `thuTu` = chỉ số trong danh sách gốc đã lọc.
+    ui.setLuuTrangThai?.(() => ({
+      v: 1, daLam: state.filter(x => x.graded).length, tong: total, i: index, mang: livesLeft, andrew: andrewUsed,
+      thuTu: items.map(it => goc.indexOf(it)),
+      st: state.map(x => (x.graded ? { g: true, ty: String(x.typed || ""), k: x.correct === true, t: x.timedOut === true } : { g: false }))
+    }));
+    let dauTien = 0;
+    if (kp) {   // vào câu CHƯA làm đầu tiên kể từ câu đang đứng lúc rời
+      const tu = Math.max(0, Math.min(total - 1, kp.i | 0));
+      let k = state.findIndex((x, j) => j >= tu && !x.graded);
+      if (k < 0) k = state.findIndex(x => !x.graded);
+      dauTien = k < 0 ? tu : k;
+    }
+    loadQuestion(dauTien, false);
+    // Lượt cũ đã làm HẾT mà chưa tới màn kết thúc (tải lại đúng lúc chờ) ⇒ kết thúc luôn.
+    if (kp && state.every(x => x.graded) && !fightCtl) autoTimer = setTimeout(() => { if (!dead) finish("complete"); }, 700);
     showScore(scoreNow());
     renderLives();
 
@@ -818,6 +850,7 @@ const ttaTemplate = {
       if (withFade) ui.itemChanging?.(i, { outMs: 120, inMs: 160 });
 
       index = i;
+      if (withFade) ui.daDoiBaiLam?.();   // Đợt 469 — nhớ câu đang đứng
       const it = items[index];
       const st = state[index];
       // A withheld reveal belongs to the question that was on screen; moving
@@ -905,6 +938,7 @@ const ttaTemplate = {
       st.typed = typed;
       st.graded = true;
       st.correct = it.acceptedAnswers.some(a => normalize(a) === normalize(typed));
+      ui.daDoiBaiLam?.();   // Đợt 469 — cất lượt để làm tiếp nếu em tải lại trang
       // TIME EACH ROUND (Đợt 174): this pupil's turn ends here, so their clock
       // freezes at this reading — which is both what Show answers prints for the
       // question and what stops a Count down firing over an answer already in.
@@ -1137,6 +1171,7 @@ const ttaTemplate = {
       st.graded = true;
       st.timedOut = true;
       st.correct = false;
+      ui.daDoiBaiLam?.();   // Đợt 469
       input.disabled = true;
       syncSubmitEnabled();
       updateNav();
@@ -1417,6 +1452,7 @@ const ttaTemplate = {
       if (andrewUsed || st.graded || fightCtl || ui.inShowdown?.()) return;
       andrewUsed = true;
       andrewGlowing = true;
+      ui.daDoiBaiLam?.();   // Đợt 469 — tải lại không lấy lại được lượt Andrew help
       const it = items[index];
       revealText.textContent = it.acceptedAnswers[0];
       revealWrap.classList.add("is-open", "is-andrew");

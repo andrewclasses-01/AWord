@@ -2623,9 +2623,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     const b = el("button", "aw-startbtn is-practice");
     const title = activity._mistakes ? "Start — mistakes only" : "Start";
     b.type = "button"; b.title = title; b.setAttribute("aria-label", title);
-    b.append(el("span", "aw-startbtn-ic", icons.practiceBig), el("span", "aw-startbtn-label", "START"));
+    // ⭐ Đợt 469 — có lượt dở đang giữ ⇒ nút ghi CONTINUE + "12 / 50 DONE" (play.js `session.lamTiepNhan`).
+    let nhan = null;
+    if (!activity._mistakes && !hwPreset && typeof session.lamTiepNhan === "function") { try { nhan = session.lamTiepNhan(); } catch (e) { nhan = null; } }
+    b.append(el("span", "aw-startbtn-ic", icons.practiceBig), el("span", "aw-startbtn-label", nhan ? "CONTINUE" : "START"));
     wrap.append(b);
     if (activity._mistakes) wrap.append(el("div", "aw-ready-mtag", "MISTAKES ONLY"));
+    else if (nhan) wrap.append(el("div", "aw-ready-mtag", (nhan.daLam | 0) + " / " + (nhan.tong | 0) + " DONE"));
     practiceBtn = b;
     playControl = wrap;
     readyCenter.append(wrap);
@@ -3162,7 +3166,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // chơi — chỉ để hiện; myLesson KHÔNG lấy mẫu số của lượt dở (`doDang`).
       const diemNay = () => ({ score: diemBoDo(), total: playItemCount(), timeMs: Math.round(performance.now() - startedAt) });
       // ⭐ Đợt 384 — `baiLamNay`: pagehide hỏi bài làm tới lúc này (engine không kịp leave()).
-      try { session.playLog.start({ mode: hwMode, again: !!hwPreset, mistakes: !!activity._mistakes, diemNay, baiLamNay: () => (fight ? null : baiLamNay()) }); } catch (e) {}
+      try { session.playLog.start({ mode: hwMode, again: !!hwPreset, mistakes: !!activity._mistakes, diemNay, baiLamNay: () => (fight ? null : baiLamNay()),
+                                    trangThaiNay }); } catch (e) {}   // Đợt 469 — pagehide / tab ẩn: chụp ván để làm tiếp
       playLogTimer = setInterval(() => {
         if (torndown || playLogDone) return;
         try { session.playLog.beat({ timeMs: Math.round(performance.now() - startedAt) }); } catch (e) {}
@@ -3708,6 +3713,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   let timeCostTotal = 0;        // points the idle clock has taken so far, this play
   let scoreProvider = null;     // template's own scoreNow(), via ui.setScoreProvider
   let reviewProvider = null;    // ⭐ Đợt 384 — template's own buildReview(), via ui.setReviewProvider (bài làm GIỮA ván)
+  // ⭐⭐ Đợt 469 — GIỮ LƯỢT DỞ, MỞ LẠI LÀM TIẾP (core/lam-tiep.js). Template khai `ui.setLuuTrangThai(fn)`: fn() trả
+  // trạng thái ván dạng JSON ({v, daLam, tong, …} — chỉ template đọc lại được) và báo `ui.daDoiBaiLam()` sau mỗi câu
+  // trả lời. Lúc dựng ván làm tiếp, engine đặt `ui.khoiPhuc` = trạng thái đã lưu (null = ván mới) TRƯỚC mount().
+  let trangThaiProvider = null;
+  let luuHen = null;
   // ⭐ Đợt 379 — số đang HIỆN trên chip điểm (ui.setScore). Dùng khi template KHÔNG khai `setScoreProvider`
   // (Gameshow, Rocket race) để biết "điểm tới lúc này" của lượt bị bỏ dở — xem `diemBoDo()`.
   let lastShownScore = null;
@@ -4023,7 +4033,19 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     }
     startedAt = performance.now();   // baseline (kept sane even if a manual-start template never starts the clock)
     timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
+    // ⭐⭐ Đợt 469 — LÀM TIẾP lượt dở (play.js đưa đúng MỘT lần, ngay ván đầu sau khi mở trang). Đồng hồ = GIỜ THẬT từ lúc
+    // lượt bắt đầu (thầy chốt): lùi `startedAt` đúng chừng ấy; Time cost đã trừ giữ nguyên. ⚠️ Lùi SAU startTimerNow (hàm
+    // đó đặt lại startedAt) và TRƯỚC mount (scoreNow của template đọc timeCostTotal ngay lúc dựng).
+    let lamTiep = null;
+    if (session && !fight && !activity._mistakes && typeof session.layLamTiep === "function") {
+      try { lamTiep = session.layLamTiep(); } catch (e) { lamTiep = null; }
+    }
+    ui.khoiPhuc = lamTiep && lamTiep.tpl ? lamTiep.tpl : null;
     if (!tpl.manualTimerStart) startTimerNow();
+    if (ui.khoiPhuc) {
+      startedAt -= Math.max(0, Number(lamTiep.daChoiMs) || 0);
+      timeCostTotal = Math.max(0, Number(lamTiep.timeCost) || 0);
+    }
     // TIME EACH ROUND (Đợt 174) — started BEFORE mount(), and INDEPENDENTLY of
     // the whole-game clock: the two are different options and a teacher may well
     // run Timer = None with a per-round count down. mount() calls ui.setNav()
@@ -4036,6 +4058,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // của học sinh (`activity` là bản sao play.js dựng mỗi lượt) — giáo viên chơi thử / trình chiếu y như cũ.
     if (session) activity.options = Object.assign({}, activity.options, { showAnswerWhenWrong: false, anDapAn: true });
     cleanup = tpl.mount(playArea, activity, ui) || (() => {});
+    // ⭐ Đợt 469 — vẽ ngay giờ đã lùi (Count down đã cạn thì hết giờ luôn — template đã khai onSubmit nên nộp được).
+    if (ui.khoiPhuc && timerStarted && !torndown) tickTimer();
     // ⭐ Đợt 466 — báo trang bài tập myLesson (khung nhúng `&nhung=1`) GIỮA hàng trên cùng
     // có đang bận không (thanh thời gian/tim của inlineTimerBar, dòng slogan, chữ template tự
     // gắn vào topbar…) ⇒ bên đó đặt nút THU NHỎ tròn ở giữa hay dời sang góc trái (bai.html).
@@ -6038,6 +6062,20 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // ván START WITH MISTAKES (mẫu số chỉ là số câu sai cũ). KHÔNG thêm lượt ghi nào: điểm đi chung lần ghi `leave` vốn có.
   // Điểm = `scoreNow()` của template (15 game khai `setScoreProvider`) hoặc số đang hiện trên chip (Gameshow, Rocket race).
   // ⭐ Đợt 384 — bài làm tới lúc này (null khi template không khai / lỗi). Không bao giờ ném.
+  // ⭐ Đợt 469 — trạng thái ván để làm tiếp (null: template không hỗ trợ / ván không được giữ). Không bao giờ ném.
+  function laVanGiuDuoc() {
+    return !!(session && trangThaiProvider && !fight && !activity._mistakes && playStarted && !playLogDone && !torndown);
+  }
+  function trangThaiNay() {
+    if (!laVanGiuDuoc()) return null;
+    try { const t = trangThaiProvider(); return t && typeof t === "object" ? { tpl: t, timeCost: timeCostTotal } : null; }
+    catch (e) { return null; }
+  }
+  function luuLamTiep() {
+    if (typeof session?.luuLamTiep !== "function") return;
+    const t = trangThaiNay();
+    if (t) { try { session.luuLamTiep(t); } catch (e) { /* chỉ là lưới an toàn */ } }
+  }
   function baiLamNay() {
     try { const r = reviewProvider ? reviewProvider() : null; return Array.isArray(r) && r.length ? r : null; }
     catch (e) { return null; }
@@ -6465,6 +6503,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // ⭐ Đợt 384 — bài làm TỚI LÚC NÀY (cùng dạng `review` lúc kết thúc). Template nào có `buildReview()` gọi được bất cứ lúc
     // nào (vốn dùng cho Fight) thì khai ở đây ⇒ lượt DỞ (Start again / tải lại / đóng tab) mang theo bài làm cho dashboard myLesson.
     setReviewProvider(fn) { reviewProvider = typeof fn === "function" ? fn : null; },
+    // ⭐ Đợt 469 — xem khai báo `trangThaiProvider`. Ngoài bài giao học sinh thì cả ba vô hại (không ai đọc).
+    khoiPhuc: null,
+    setLuuTrangThai(fn) { trangThaiProvider = typeof fn === "function" ? fn : null; },
+    daDoiBaiLam() {
+      if (luuHen || torndown) return;
+      luuHen = setTimeout(() => { luuHen = null; luuLamTiep(); }, 120);   // gom các thay đổi cùng một cú bấm
+    },
     // Đợt 143 — a template that DRAWS ITS OWN score chip supplies the painter
     // the Time cost count-down should use. Crossword and Type the answer write
     // `ui.scoreEl.innerHTML` themselves ("7 / 20", coloured by sign) instead of

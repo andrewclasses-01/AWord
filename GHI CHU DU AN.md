@@ -546,6 +546,49 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 469 (05/10/2026) — ⭐⭐ GIỮ LƯỢT DỞ: tải lại / đóng tab rồi mở lại bài giao ⇒ nút CONTINUE, làm TIẾP đúng câu đang dở (Quiz · Type the answer · Find the gap)
+
+Đợt 468 bỏ ☰ ⇒ đường bỏ dở còn lại là tải lại trang. Thầy chọn (c) "giữ lượt dở, mở lại làm tiếp" + **đồng hồ chạy theo GIỜ THẬT**
+(đóng tab để nghĩ không lợi gì). Làm trước 3 template chiếm 90% lượt bài giao (đo 25/9–4/10: Quiz 6.773 · TTA 1.408 · FTG 840 / 9.978).
+
+- **`core/lam-tiep.js` (MỚI)** — kho `aword-lam-tiep` {`<code>|<ma>`: lượt} (7 ngày không đụng ⇒ bỏ) + kho nhịp `aword-lam-tiep-song` (tab
+  đang làm đập 2 s/lần; tab thứ hai mở cùng bài lúc tab kia còn sống ⇒ chơi lượt MỚI, không cướp lượt) + `dauVet(activity)` (thầy sửa
+  đề/Options ⇒ lượt cũ thôi giữ) + `maLuotDangGiu()` + `thuTuHopLe()` cho template.
+- **Hợp đồng template (cộng thêm, tương thích ngược):** `ui.setLuuTrangThai(fn)` — fn() trả JSON `{v:1, daLam, tong, …}`; `ui.daDoiBaiLam()`
+  sau mỗi câu trả lời / đổi câu (engine gom 120 ms rồi gửi `session.luuLamTiep`); lúc dựng đọc `ui.khoiPhuc` (null = ván mới) — kiểm
+  khớp đề, sai một li ⇒ ván mới. Ngoài bài giao học sinh cả ba vô hại.
+  · Quiz: thứ tự câu (chỉ số trong danh sách đã lọc) + thứ tự ô đáp án + chosen/correct/timedOut + Time limit đã tiêu + tim.
+  · TTA: thứ tự câu + chữ đã gõ/đúng sai/hết giờ + tim + đã dùng Andrew help; `livePoints` tính LẠI từ bài làm (công thức của finish()).
+  · FTG: thứ tự dòng (xáo theo CHỈ SỐ `thuTuGoc`) + ĐÚNG các chữ bị khoét (Random gaps) + từng ô (done/chosen/ok/typed/cur); `penalty`
+    tính lại = Points off × (ô chọn sai + dòng hết giờ). Lưu ngay cả lúc vừa vào (tải lại không xào lại được chỗ khoét).
+  · Cả ba: vào câu CHƯA làm đầu tiên kể từ câu đang đứng; lượt cũ đã làm hết (tải lại đúng lúc chờ màn kết thúc) ⇒ tự kết thúc sau 0,7 s.
+- **`core/engine.js`**: `begin()` hỏi `session.layLamTiep()` (đúng MỘT lần, không cho Fight/Start with mistakes) ⇒ `ui.khoiPhuc`, lùi
+  `startedAt` đúng `daChoiMs` (giờ thật từ lúc lượt bắt đầu) SAU startTimerNow, khôi phục `timeCostTotal` TRƯỚC mount, vẽ lại đồng hồ
+  SAU mount (Count down đã cạn ⇒ hết giờ nộp luôn). `playLog.start` thêm `trangThaiNay`. Nút START bài giao ⇒ **CONTINUE** + dòng
+  "12 / 50 DONE" khi `session.lamTiepNhan()` có lượt.
+- **`play.js`**: lượt đầu tiên của trang mà có lượt đang giữ ⇒ mượn LẠI `nhapId`, mã nhật ký practiceLog, `createdAt`, `batDau`,
+  `activeMs` (bộ đo hoạt động nhận `goc`). `pagehide`: chụp lượt lần cuối + cất NHÁP (điểm ≥ 1) + nhịp nhật ký keepalive, **KHÔNG nộp dở,
+  KHÔNG đếm bỏ cuộc** (bo-cuoc.js). Tab ẩn (`visibilitychange`) cũng chụp (iOS hay giết tab không kịp pagehide). `end`/`leave` ⇒ xoá lượt.
+- **`core/assignments.js` `sweepDrafts`**: bỏ qua nháp có mã nằm trong `maLuotDangGiu()` (nộp dở bây giờ là sai — em chưa bỏ). Hết hạn
+  giữ ⇒ nháp được nộp dở như cũ ⇒ thầy vẫn thấy BỎ DỞ cho lượt bỏ hẳn.
+- Một lượt = một dòng điểm: làm tiếp tới đích ⇒ nộp lượt hoàn chỉnh (mã mới như mọi lượt) + bỏ nháp; làm tiếp rồi Start again ⇒ nộp dở bằng
+  ĐÚNG `nhapId` cũ.
+- `play.html` + `index.html`: chạy lại `tools/sinh-preload.py --write` (thêm `core/lam-tiep.js`; khối cũ sót vài module, nay đủ).
+- ⚠️ Chưa có: 14 template còn lại (tải lại = bỏ dở như cũ, vẫn bị tấm nhắc); lượt giữ trên MÁY này thôi (sang máy khác là lượt mới);
+  tab nền > 5 phút Chrome hãm nhịp ⇒ tab mới có thể làm tiếp chính lượt đó (hiếm, chỉ có hại khi cả hai cùng Start again).
+- Bàn thử `scratch/dot469/` (ignore): `python dung.py` dựng `play-thu.js` = **play.js THẬT** chỉ đổi đường import kho sang
+  `gia-assignments.js` (mọi hàm thật trừ đường mạng, ghi vào `window.__mang`) ⇒ không đụng Firestore. Mở
+  `ban.html?g=THUQ&n=Em%20Thu&ma=TESTMA01&t=quiz|tta|ftg`. Đo:
+  · Quiz: sai câu 1, chờ, tải lại ⇒ pagehide chỉ có nhịp keepalive (không nộp dở), `bo-cuoc` lien 0; nút CONTINUE · "1 / 6 DONE"; vào
+    "2 of 6"; đồng hồ 0:12 trước tải + 12 s ⇒ **0:24**; cùng mã nhật ký; làm hết ⇒ 1 lần `sendAttempt` 1/6 0:40, lượt giữ bị xoá.
+  · TTA: gõ "zzzz" câu 1, tải lại ⇒ CONTINUE "1 / 6 DONE", vào câu 2; lùi về câu 1: ô "zzzz" đỏ (`is-wrong`), khoá.
+  · FTG: chọn 4/7 ô dòng 1, tải lại ⇒ dòng 1 còn đúng 4 chữ đã chọn, `cur` 4, đồng hồ giờ thật.
+  · `flushOutbox()` THẬT với 2 nháp cũ 20 phút: nháp của lượt đang giữ ở lại, nháp kia sang outbox (không vé ⇒ không gửi mạng).
+  · Tab thứ hai cùng bài khi tab đầu đang làm ⇒ START (không CONTINUE).
+  · Chế độ giáo viên `templates/{quiz,type-the-answer,find-the-gap}/test.html`: 0 lỗi, ☰ còn, không lưu lượt nào.
+
+---
+
 ## Đợt 468 (05/10/2026) — ⭐⭐ ÉP HỌC SINH LÀM HẾT BÀI GIAO: em chưa đạt 100% thì KHÔNG CÒN nút ☰ · em đã 100% thì ☰ không dừng đồng hồ
 
 Thầy: em làm 1–2 câu sai là Start again, không bao giờ làm hết để học câu sai ⇒ ở nhà đúng hết (thuộc ngắn hạn), lên lớp sai liên tục;
