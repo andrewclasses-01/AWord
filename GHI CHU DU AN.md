@@ -583,7 +583,8 @@ Tôi bấm nút Fight trong Mode thì không chuyển được, tiện kiểm tr
 - Kiểm: intro bấm Fight ⇒ menu + fight ✓ · đang chơi Fight bấm Single ⇒ menu + single ✓ ⇒ START lại chơi Single bình thường, 0 lỗi · màn chọn đội + D-pad 1366×1024 (ảnh) ·
   chạm lệch góc trái ⇒ "l", robot B (6,11)→(6,10) · bom góc ⇒ bom đội B 1→0 · chạm tâm ⇒ bỏ qua.
 - Thầy DUYỆT sửa `core/store.js` + cho push cả AWord và myGame.
-**⬜ CHƯA KIỂM ĐƯỢC (Claude không đăng nhập được Google của thầy):** đường Firestore thật + 2 iPad thật trên Wi-Fi lớp. Checklist thầy bấm:
+✅ **THẦY ĐÃ THỬ iPad THẬT (05/10/2026): nhãn XANH (nối thẳng WebRTC trên Wi-Fi lớp), chơi ổn.** Thầy sẽ build thêm sau.
+**(Lịch sử) checklist ban đầu khi Claude chưa kiểm được (không đăng nhập được Google của thầy):** đường Firestore thật + 2 iPad thật trên Wi-Fi lớp. Checklist thầy bấm:
   1) TOMKO mở act STAR LOOT (đã đăng nhập) ⇒ nút Tablet (icon máy tính bảng, hàng nút dưới) ⇒ thấy QR (Fight: 2 mã A/B).
   2) iPad mở Camera quét mã (hoặc mở AWord trên iPad ⇒ nút iPad cạnh Settings ⇒ chọn đội) ⇒ Sign in bằng Google của thầy ⇒ thấy D-pad; góc trên phải iPad "Connected" + số ms.
   3) Trên TOMKO bảng QR đổi "Connected"; vào ván thấy nhãn xanh "iPad" trên D-pad đội đó. Bấm iPad ⇒ robot đi, nút D-pad trên màn sáng theo.
