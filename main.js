@@ -65,7 +65,7 @@ import { variantsOf, voiceVariantsOf, clueOf, voiceOf, setVoiceOf, variantFullyV
 import {
   listAllAssignments, listAssignmentsForAct, updateAssignment, trashAssignment,
   restoreAssignment, deleteAssignmentForever, assignmentNameTaken, hasNewResults,
-  getAssignment
+  getAssignment, soLanGhiBaiGiao
 } from "./core/assignments.js";
 import {
   openAssignmentDetail, openAssignmentEdit, confirmTrashAssignment,
@@ -939,10 +939,36 @@ async function withQuickAccess(content) {
 
 // In ACTIVITIES we do not show assignments, but we still want the "new results"
 // dot on the acts that have some, so the list is fetched (one query) anyway.
+// ⭐⭐ Đợt 485 (05/10/2026) — KHÔNG CHỜ danh sách bài giao nữa. Thầy: mở thư mục trong Activities trên
+// iPad "không hiển thị gì, phải đợi khá lâu". Gốc: lượt đọc này chỉ để vẽ CHẤM ĐỎ mà kéo cả 147 bài giao
+// ≈ 3,9 MB (98 % là ảnh chụp act trong mỗi bài) — và kéo lại ở MỌI lần mở thư mục, trước khi vẽ thẻ nào.
+// Nay: vẽ thư mục + act NGAY từ kho đã nhớ; bài giao tải NGẦM (nhớ 30 s, tải lại khi trang này vừa ghi
+// bài giao — soLanGhiBaiGiao) rồi gắn/gỡ chấm trên các thẻ đang hiện (capNhatChamDo).
 async function loadAssignmentsForDots() {
-  try { assignmentCache = await listAllAssignments({ includeTrashed: true }); }
-  catch (e) { assignmentCache = []; }
+  if (!baiGiaoConMoi()) taiBaiGiao().then(capNhatChamDo).catch(() => {});
   return [];
+}
+const BAI_GIAO_TUOI = 30000;
+let baiGiaoLuc = 0, baiGiaoBanGhi = -1, baiGiaoDangTai = null;
+function baiGiaoConMoi() {
+  return baiGiaoLuc > 0 && Date.now() - baiGiaoLuc < BAI_GIAO_TUOI && baiGiaoBanGhi === soLanGhiBaiGiao();
+}
+function taiBaiGiao() {
+  if (!baiGiaoDangTai) {
+    const ban = soLanGhiBaiGiao();   // chốt TRƯỚC khi đọc: ghi xen giữa ⇒ lần sau vẫn coi là cũ
+    baiGiaoDangTai = listAllAssignments({ includeTrashed: true })
+      .then(ds => { assignmentCache = ds; baiGiaoLuc = Date.now(); baiGiaoBanGhi = ban; return ds; })
+      .finally(() => { baiGiaoDangTai = null; });
+  }
+  return baiGiaoDangTai;
+}
+function capNhatChamDo() {
+  document.querySelectorAll(".aw-card-act[data-act-id]").forEach(card => {
+    const co = actHasNews(card.dataset.actId);
+    const dot = card.querySelector(":scope > .aw-newdot");
+    if (co && !dot) card.append(newDot("New results in an assignment"));
+    else if (!co && dot) dot.remove();
+  });
 }
 
 // A small red dot in the top-right corner of a card, like a phone notification.
@@ -975,7 +1001,10 @@ let assignmentCache = [];
 
 async function assignmentsForView() {
   try {
-    assignmentCache = await listAllAssignments({ includeTrashed: true });
+    // ⭐ Đợt 485 — Results/Courses cần danh sách THẬT để vẽ, nên vẫn chờ — nhưng chỉ tải lại khi đã quá
+    // 30 s hoặc trang này vừa ghi bài giao (tạo / sửa / chuyển / xoá / đánh dấu đã xem); đi qua lại giữa
+    // các thư mục không kéo lại 3,9 MB nữa.
+    if (!baiGiaoConMoi()) await taiBaiGiao();
   } catch (e) {
     assignmentCache = [];
     return [];
@@ -1612,6 +1641,7 @@ function actFullyVoiced(node) {
 
 function actCard(node) {
   const card = el("div", "aw-card aw-card-act");
+  card.dataset.actId = node.id;   // ⭐ Đợt 485 — capNhatChamDo gắn chấm đỏ sau khi bài giao tải ngầm xong
 
   const preview = el("div", "aw-cp");
   const pick = previewPick(node);

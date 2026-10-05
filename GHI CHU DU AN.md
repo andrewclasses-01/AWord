@@ -546,6 +546,22 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 485 (05/10/2026) — ⭐⭐ MỞ THƯ MỤC CHẬM: MỖI LẦN MỞ KÉO LẠI 147 BÀI GIAO (3,9 MB) CHỈ ĐỂ VẼ CHẤM ĐỎ · phiên MSI
+**Thầy (sau bảng ?do=1 thứ 5 — trang chủ hết màn chờ 3,74 s):** "trang chủ tải nhanh hơn khá nhiều rồi, nhưng khi bấm vào các thư mục (VD Activity) thì không hiển thị gì, phải đợi khá lâu".
+**Gốc:** `renderInside()` (main.js) `await loadAssignmentsForDots()` = `listAllAssignments({includeTrashed:true})` TRƯỚC khi vẽ thẻ nào — chỉ để biết act nào có chấm đỏ
+"có kết quả mới". Sao lưu 14:06 hôm nay: **147 bài giao ≈ 3,9 MB, 98 % là `activity` (ảnh chụp act)**; Firestore SDK không có cache ⇒ kéo lại ở MỌI lần mở thư mục.
+Results/Courses (`assignmentsForView`) cũng kéo lại 3,9 MB mỗi lần chuyển thư mục.
+**Đã làm:**
+- `core/assignments.js`: `soLanGhiBaiGiao()` — đếm lượt ghi bài giao của trang này (createAssignment · updateAssignment ⇒ trash/restore/markSeen/move · deleteAssignmentForever; `finally` nên lỗi cũng đếm).
+- `main.js`: `taiBaiGiao()` (chung 1 lượt đang tải) · `baiGiaoConMoi()` = đã tải < 30 s VÀ chưa có lượt ghi nào kể từ lúc bắt đầu tải.
+  Activities/Courses-act: `loadAssignmentsForDots()` KHÔNG chờ — vẽ thẻ ngay, tải ngầm rồi `capNhatChamDo()` gắn/gỡ `.aw-newdot` trên `.aw-card-act[data-act-id]` (actCard thêm `data-act-id`).
+  Results/Courses: `assignmentsForView()` vẫn chờ (cần danh sách để vẽ) nhưng chỉ tải lại khi cũ.
+**Kiểm (bàn thử `scratchpad/tm/{cu,moi}`: index.html + main.js THẬT trên Firestore giả, 30 act, 147 bài giao 25 KB/bài, lượt tải bài giao trễ 3 s):**
+- Mở thư mục — thẻ act hiện: Chrome 3157 → **74 ms** (lần 2: 3038 → 37 ms) · WebKit 3163 → **132 ms** (lần 2: 3137 → 119 ms); chấm đỏ hiện khi tải ngầm xong (~2,7–2,9 s), lần 2 ngay.
+- Results vẽ lại cùng trang: 3183 → **146 ms**; xoá (thùng rác) C146 bằng module của trang rồi vẽ lại ⇒ đúng 146 bài, KHÔNG còn C146 (bộ đếm lượt ghi buộc tải lại).
+⚠️ Bài giao do máy KHÁC tạo / học sinh vừa nộp: chấm đỏ + danh sách Results trễ tối đa 30 s (trước: luôn mới) — chấp nhận được.
+**VIỆC ĐANG CHỜ:** ⬜ thầy mở thư mục trên iPad (lần đầu thẻ phải hiện ngay; chấm đỏ có thể đến sau 1–3 s).
+
 ## Đợt 484 (05/10/2026) — ⭐⭐⭐ BẢNG "HƯỚNG DẪN KHI SAI" (`content.goiY`, 13,4 MB) RA DOC RIÊNG, NẠP KHI MỞ ACT · phiên MSI
 **Thầy (sau bảng ?do=1 thứ 3 — Đợt 483 đã đưa màn chờ từ >30 s xuống 5,23 s):** "Đồng ý tách gợi ý goiY, làm luôn đi".
 **Đo:** lượt đọc đầu sau Đợt 483 = 515 doc 20,3 MB, trong đó `content.goiY` của các act Type the answer = 13,4 MB (chỉ cần lúc CHƠI/SOẠN/GIAO đúng act đó).

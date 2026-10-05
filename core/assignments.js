@@ -151,9 +151,16 @@ export async function createAssignment(act, { title, deadline = null, endOptions
     ownerUid: user.uid,
     createdAt: now()
   });
-  await setDoc(doc(d, "assignments", code), data);
+  try { await setDoc(doc(d, "assignments", code), data); } finally { soLanGhi++; }
   return data;
 }
+
+// ⭐ Đợt 485 (05/10/2026) — ĐẾM LƯỢT GHI bài giao của chính trang này. main.js nhớ danh sách bài giao
+// (147 bài ≈ 3,9 MB vì mỗi bài mang ảnh chụp act) thay vì tải lại ở MỖI lần mở thư mục; số này đổi ⇒
+// danh sách đang nhớ đã cũ, phải tải lại. Mọi đường ghi phía thầy đi qua createAssignment /
+// updateAssignment (trash/restore/markSeen/move…) / deleteAssignmentForever.
+let soLanGhi = 0;
+export function soLanGhiBaiGiao() { return soLanGhi; }
 
 // Every assignment made from this act, newest first (bin excluded by default).
 export async function listAssignmentsForAct(activityId, { includeTrashed = false } = {}) {
@@ -181,7 +188,7 @@ export async function listAllAssignments({ includeTrashed = false } = {}) {
 // Change a few fields (title / deadline / endOptions / folderId / closed).
 export async function updateAssignment(code, patch) {
   const [d, { doc, updateDoc }] = await Promise.all([db(), fs()]);
-  await updateDoc(doc(d, "assignments", String(code)), clean(patch));
+  try { await updateDoc(doc(d, "assignments", String(code)), clean(patch)); } finally { soLanGhi++; }   // Đợt 485
 }
 
 // Delete = send to the Results recycle bin. While it is in the bin the student
@@ -214,7 +221,7 @@ export async function deleteAssignmentForever(code) {
   await removeAll(scores.docs);
   const results = await getDocs(query(collection(d, "results"), where("assignmentId", "==", String(code))));
   await removeAll(results.docs);
-  await deleteDoc(doc(d, "assignments", String(code)));
+  try { await deleteDoc(doc(d, "assignments", String(code))); } finally { soLanGhi++; }   // Đợt 485
 }
 
 // ---- filing a new assignment under its CLASS folder ------------------------
