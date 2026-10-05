@@ -23,7 +23,7 @@ import json, os, re, shutil, subprocess, sys
 SRC = r"E:/LAP TRINH APP/myGame/balloon-pop"
 WEB = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DST = os.path.join(WEB, "templates", "balloon-pop")
-GOC = "fight-1am.js"   # Đợt 475: 1am — tự giữ 60 khung + dịch sẵn shader (TOMKO 36 → 59 fps) · Đợt 452: 1al — khung + nút Rocket Race, Options = bảng thật của AWord (host.options) · Đợt 450: 1ak
+GOC = "fight-1an.js"   # Đợt 477: 1an — 60 khung phẳng (chốt trần, ghim shader, kho saguaro) · Đợt 475: 1am — tự giữ 60 khung + dịch sẵn shader (TOMKO 36 → 59 fps) · Đợt 452: 1al — khung + nút Rocket Race, Options = bảng thật của AWord (host.options) · Đợt 450: 1ak
 CSS = ["bp3d.css", "bp3d-1j.css", "bp3d-1p.css", "bp3d-1q.css", "bp3d-1r.css", "bp3d-1ab.css", "fight-cine-1ae.css", "fight-1al.css", "bp3d-1al.css"]
 SOUND = "sound-1ah"
 VENDOR = "../../rocket-race/vendor/three"

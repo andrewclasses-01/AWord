@@ -546,6 +546,18 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 477 (05/10/2026) — TRAIN RUSH 60 KHUNG PHẲNG: myGame mẫu 1an (cải tiến STAR LOOT 2p + kho saguaro) · phiên máy BOARD
+
+Thầy: "làm bản 1an cho Train Rush luôn".
+- Áp 3 cải tiến của STAR LOOT 2p (Đợt 476): `3d/auto-res-1an.js` chốt trần khi rớt 2 lần · `pinPrograms()` ghim shader · `checkShaderErrors` tắt (`?glcheck=1`).
+- Đo 1am lại trên TOMKO: còn 1 khung 70–130 ms mỗi ~12 s — profiler CDP: `regrow → tallSaguaro → cactus.saguaro` dựng lưới xương rồng mới khi
+  khúc cảnh quay vòng. `3d/west-world-1an.js`: kho 10 saguaro dựng sẵn lúc tải + cây bị bỏ vào kho dùng lại (đặt chỗ / xoay / scale mới).
+- myGame `ca4d0ac`, chép bằng `python -X utf8 tools/chep-train-rush.py` (GOC = `fight-1an.js`; script tự xoá bản 1am + west-world-1ah). `balloon-pop.js`: import 1an.
+- Đo (myActivity, `__awMaxPR = 1`): myGame 1an chơi 60,0 fps × 4 đoạn, khung dài nhất 17 ms · Fight 60,0 fps · bản AWord cục bộ chơi 59,9–60,0.
+- ⬜ Thầy chơi trên TOMKO: xương rồng mọc lại (dùng lại cây từ khúc khác) trông có tự nhiên không.
+
+---
+
 ## Đợt 476 (05/10/2026) — STAR LOOT 3D HẾT GIẬT LAG TRÊN TOMKO: myGame mẫu 2p (tự giữ 60 khung + sàn vẽ chia khung + ghim shader) · phiên máy BOARD
 
 Thầy: "tạm ổn rồi (Train Rush Đợt 475). Tiếp tục đo đạc và tối ưu tương tự với STAR LOOT".

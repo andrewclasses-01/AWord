@@ -1,4 +1,10 @@
-// TRAIN RUSH — lõi MẪU 1am (05/10/2026): như 1al + HIỆU NĂNG (thầy: "chơi Train rush trên TOMKO rất giật lag trên myActivity, cả Chrome").
+// TRAIN RUSH — lõi MẪU 1an (05/10/2026): như 1am + 3 cải tiến rút từ STAR LOOT 2p (thầy: "làm bản 1an cho Train Rush luôn"):
+//   • auto-res-1an.js: nấc nào RỚT 2 LẦN ⇒ chốt trần dưới nó (1am: màn chờ / intro nhẹ ⇒ thử lại MSAA 4 ⇒ vào chơi rớt ⇒ lặp; mỗi lần đổi MSAA
+//     cấp lại bộ đệm ⇒ khựng; đo 1am trên TOMKO: drops 5 / ~50 s, PR nhảy 0,9 ↔ 1).
+//   • GHIM shader (pinPrograms mỗi 30 khung: +1 usedTimes cho mỗi program một lần) ⇒ không shader nào bị xoá rồi dịch lại giữa ván.
+//   • renderer.debug.checkShaderErrors tắt (?glcheck=1 bật lại): hỏi log lỗi shader ở lần dùng đầu bắt luồng chính chờ card dịch xong —
+//     đây là phần còn lại của 1am (2 shader bóng đổ dịch giữa ván, ~0,1 s).
+// ---- ghi chú 1am: TRAIN RUSH — lõi MẪU 1am (05/10/2026): như 1al + HIỆU NĂNG (thầy: "chơi Train rush trên TOMKO rất giật lag trên myActivity, cả Chrome").
 //   Đo TOMKO (Quadro T2000 4 GB, 3840×2160, DPR 1,25, trong myActivity): 1al vẽ 3840×1780 + MSAA 4 HalfFloat ⇒ 36–38 fps, 30–35 % khung > 33 ms,
 //   card 100 % (60 W, 83 °C, hạ xung vì nóng); bỏ qua trần `__awMaxPR` = 1 của myActivity; 14 shader dịch GIỮA ván (khựng 0,1–1,3 s).
 //   • auto-res-1am.js: tự giữ 60 khung — thang [độ nét tối đa + MSAA 4] → [tối đa, MSAA 0] → hạ độ nét 0,1/nấc tới 0,8; đọc trần `__awMaxPR`;
@@ -102,12 +108,12 @@ import { ShaderPass } from "../../rocket-race/vendor/three/addons/ShaderPass.js"
 import { OutputPass } from "../../rocket-race/vendor/three/addons/OutputPass.js";
 import { createBpSound } from "./sound-1ah.js";
 import * as CANNON from "../vendor/cannon-es.js";
-import { createWestWorld, normalFromNoise, TRACK_TOP } from "./west-world-1ah.js";
+import { createWestWorld, normalFromNoise, TRACK_TOP } from "./west-world-1an.js";   // 1an: kho saguaro
 import { makeCoach, addPassengers, animatePassengers, makeCoalCar, COACH_LEN, COAL_LEN, COAL_LUMP, coalMaterial } from "./coach-1i.js";
 import { weather } from "./grime-1i.js";
 import { createCine, INTROS, INTRO_ID } from "./cine-1ah.js";
 import { createFightCine } from "./fight-cine-1ah.js";
-import { makeAutoQuality } from "./auto-res-1am.js";   // 1am
+import { makeAutoQuality } from "./auto-res-1an.js";   // 1an: + chốt trần khi rớt 2 lần
 
 const FONT = '"Baloo 2", system-ui, sans-serif';
 const ASPECT = 16 / 10.5;                       // đúng khung act đơn của AWord
@@ -159,6 +165,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });   // 1am: AA nằm ở composer (MSAA)
   const PR_MAX = Math.min(window.devicePixelRatio || 1, 1.5);
   let PR = PR_MAX;   // 1am: auto-res-1am.js hạ/nâng (trần `__awMaxPR` áp ở khung đầu)
+  renderer.debug.checkShaderErrors = !!new URLSearchParams(location.search).get("glcheck");   // 1an: không bắt luồng chính chờ card dịch shader
   renderer.setPixelRatio(PR);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.92;
@@ -1505,10 +1512,14 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     for (const rt of [composer.renderTarget1, composer.renderTarget2]) if (rt.samples !== msaa) { rt.samples = msaa; rt.dispose(); }
     fit();
   } });
+  // 1an: GHIM shader — +1 lượt dùng cho mỗi program một lần ⇒ three.js không bao giờ xoá ⇒ không dịch lại giữa ván
+  let pinT = 0;
+  function pinPrograms() { const ps = renderer.info.programs; if (ps) for (const p of ps) if (!p.__pin1an) { p.__pin1an = true; p.usedTimes++; } }
   let last = 0, raf = 0, manual = false;
   function frame(ts) {
     if (dead) return;   // 1aj
     raf = requestAnimationFrame(frame);
+    if (++pinT >= 30) { pinT = 0; pinPrograms(); }   // 1an
     if (manual) return;
     if (!S.paused) AQ.frame(ts); else AQ.pause();   // 1am
     const dt = last ? Math.min(0.05, (ts - last) / 1000) : 0; last = ts;

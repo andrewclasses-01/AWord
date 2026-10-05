@@ -1,4 +1,5 @@
-// TRAIN RUSH — TRẬN FIGHT mẫu 1am (05/10/2026): y hệt fight-1al, chỉ dùng lõi bp3d-1am (tự giữ 60 khung, dịch sẵn shader — xem đầu bp3d-1am.js).
+// TRAIN RUSH — TRẬN FIGHT mẫu 1an (05/10/2026): y hệt fight-1am, chỉ dùng lõi bp3d-1an.
+// ---- ghi chú 1am: TRAIN RUSH — TRẬN FIGHT mẫu 1am (05/10/2026): y hệt fight-1al, chỉ dùng lõi bp3d-1am (tự giữ 60 khung, dịch sẵn shader — xem đầu bp3d-1am.js).
 // ---- ghi chú 1al: TRAIN RUSH — TRẬN FIGHT mẫu 1al (03/10/2026): y hệt fight-1ak, chỉ dùng lõi bp3d-1al.
 // ---- ghi chú 1ak: TRAIN RUSH — TRẬN FIGHT mẫu 1ak (03/10/2026): y hệt fight-1aj, chỉ dùng lõi bp3d-1ak.
 // ---- ghi chú 1aj: TRAIN RUSH — TRẬN FIGHT dạng MÔ-ĐUN (mẫu 1aj, 03/10/2026). Tách nguyên phần Fight của trang mau-1ai-train-rush.html (1ah: hai bàn trái–phải,
@@ -6,7 +7,7 @@
 // (Balloon pop ▸ Mode ▸ Fight, Đợt 449) mở / đóng trận mà không nạp lại trang. Luật chơi, hình, tiếng: y hệt 1ah/1ai.
 //   createTrainRushFight({ mount, words:[{keyword, definition}], wordsTitle, time (giây), onSingle, onHome }) ⇒ { destroy(), G, boards }
 //   onSingle / onHome có ⇒ bảng PAUSED có thêm nút Single mode / Library; nút Mode ở hàng nút gọi onSingle.
-import { createBalloonPop } from "./bp3d-1am.js";
+import { createBalloonPop } from "./bp3d-1an.js";
 import { createBpSound } from "./sound-1ah.js";   // 1ah: bộ máy âm thanh CHUNG của trận (nhạc, gió, đếm ngược, thắng)
 
 const MARKUP = `

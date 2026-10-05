@@ -1,5 +1,10 @@
 // =============================================================
-// TRAIN RUSH — TỰ GIỮ 60 KHUNG/GIÂY (mẫu 1am, 05/10/2026). Chép ý từ AWord templates/rocket-race/rr3d-autores.js (Đợt 399 + 446),
+// TRAIN RUSH — TỰ GIỮ 60 KHUNG/GIÂY (mẫu 1an, 05/10/2026): CHÉP NGUYÊN maze-chase/core/mc3d-autoq-2p.js (STAR LOOT 2p — có "rớt 2 lần ⇒ chốt trần"), khoá nhớ "aw.bp3d.q.*".
+// ---- ghi chú STAR LOOT 2p:
+// Đo STAR LOOT 2o trên TOMKO trong myActivity: chơi 44 fps · PR 1 + MSAA 4 ⇒ 44 · PR 1,25 + MSAA 0 ⇒ 58 · PR 1 + MSAA 0 ⇒ 56 (độ nét gần như không ảnh hưởng, MSAA quyết định).
+// 2p (khác 1am): nấc nào RỚT 2 LẦN ⇒ chốt trần ngay dưới nó. Đo STAR LOOT: màn chờ / intro nhẹ ⇒ thử lên MSAA 4 thấy êm ⇒ vào chơi rớt ⇒ lặp mãi
+//   (drops 5 / 40 s, mỗi lần đổi MSAA cấp lại bộ đệm ⇒ khựng ~50 ms).
+// ---- ghi chú gốc 1am: TRAIN RUSH — TỰ GIỮ 60 KHUNG/GIÂY (mẫu 1am, 05/10/2026). Chép ý từ AWord templates/rocket-race/rr3d-autores.js (Đợt 399 + 446),
 // thêm một nấc riêng cho MSAA vì đo trên TOMKO (Quadro T2000, màn 4K, DPR 1,25, trong myActivity) MSAA 4 mẫu HalfFloat là phần TỐN NHẤT:
 //   1,25 + MSAA 4 ⇒ 36 fps · 1,0 + MSAA 4 ⇒ 48 · 1,25 + MSAA 0 ⇒ 53 · 1,0 + MSAA 0 ⇒ 59,5 (card 87 %) · bloom / bóng đổ ⇒ gần như không đổi.
 // Thang chất lượng (cao ⇒ thấp): [max, MSAA 4] → [max, MSAA 0] → max − 0,1 … min (MSAA 0).
@@ -29,6 +34,7 @@ export function makeAutoQuality({ max, min = 0.8, msaa = 4, apply, key = "" }) {
   build();
   const mk = memKey(key), learned = memGet(mk);
   let idx = learned ? nearest(learned) : 0, capIdx = 0;
+  let fails = levels.map(() => 0);   // 2p: số lần rớt khỏi từng nấc
   let sum = 0, n = 0, calm = 0, probing = false, lastT = 0, drops = 0, saved = learned ? JSON.stringify(learned) : "";
   let pending = idx !== 0 || levels[0].pr !== r2(max);   // khởi đầu khác cấu hình nơi gọi đã dựng ⇒ áp ở khung ĐẦU
   const cur = () => levels[idx];
@@ -40,7 +46,7 @@ export function makeAutoQuality({ max, min = 0.8, msaa = 4, apply, key = "" }) {
     get info() { return { ...cur(), level: idx, levels: levels.length, cap: capIdx, drops, hostCap: hc === Infinity ? null : hc, learned: learned || null }; },
     frame(now) {
       const h = hostCap();
-      if (h !== hc) { const q = cur(); hc = h; build(); idx = nearest(q); capIdx = Math.min(capIdx, idx); apply(cur()); lastT = 0; return; }
+      if (h !== hc) { const q = cur(); hc = h; build(); fails = levels.map(() => 0); idx = nearest(q); capIdx = Math.min(capIdx, idx); apply(cur()); lastT = 0; return; }
       if (pending) { pending = false; apply(cur()); lastT = 0; return; }
       if (lastT) { const d = now - lastT; if (d > 0 && d < 100) { sum += d; n++; } }   // > 100 ms = vừa đóng băng/ẩn/dịch shader — bỏ qua
       lastT = now;
@@ -48,7 +54,7 @@ export function makeAutoQuality({ max, min = 0.8, msaa = 4, apply, key = "" }) {
       const avg = sum / n; sum = 0; n = 0;
       if (avg > 18.2) {
         drops++;
-        if (probing) capIdx = Math.min(levels.length - 1, idx + 1);
+        if (probing || ++fails[idx] >= 2) capIdx = Math.max(capIdx, Math.min(levels.length - 1, idx + 1));   // 2p: rớt 2 lần ⇒ chốt trần
         probing = false; calm = 0;
         go(idx + (avg > 24 ? 2 : 1));
         save();

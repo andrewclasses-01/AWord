@@ -1,4 +1,9 @@
-// CẢNH MIỀN TÂY — bản 1ag (30/9/2026): ĐIỀU PHỐI con vật mặt đất — một lúc chỉ 1 cặp đuổi nhau (dải xa HOẶC quanh chữ) + tối đa
+// Cảnh viễn tây — bản 1an (05/10/2026): như 1ah + hết khựng khi khúc cảnh MỌC LẠI saguaro giữa ván.
+//   Đo TRAIN RUSH 1an trên TOMKO (profiler CDP): mỗi ~12 s một khung 70–130 ms = regrow → tallSaguaro → cactus.saguaro dựng lưới mới
+//   (ống 40×80 đoạn + cành + mergeVertices) ngay trong khung vẽ. Nay: KHO 10 cây dựng sẵn lúc tải (màn chờ nạp đang che) + cây bị bỏ
+//   không huỷ mà vào kho DÙNG LẠI (trộn từ nhiều khúc). Mọc lại = lấy cây trong kho, đặt chỗ mới, xoay mới, scale theo chiều cao mới
+//   (dáng saguaro tỉ lệ theo h nên scale đều không méo). Hết kho mới dựng như cũ.
+// ---- ghi chú 1ah: CẢNH MIỀN TÂY — bản 1ag (30/9/2026): ĐIỀU PHỐI con vật mặt đất — một lúc chỉ 1 cặp đuổi nhau (dải xa HOẶC quanh chữ) + tối đa
 // 2 con ra xem tàu; con ra xem gặp cặp đuổi nhau thì chạy tránh. Chữ bị húc đổ nằm yên, chỉ
 // dựng lại khi bảng chữ đã khuất khỏi khung hình (west-props-1ag restoreHidden). Trên trời giữ nguyên.
 // CẢNH MIỀN TÂY — bản 1af (30/9/2026): dải CỎ THƯA DẦN sau vạt cỏ (z −104 → −190, mật độ giảm dần rồi hết — thầy: "xa xa tự dưng
@@ -259,9 +264,22 @@ export function createWestWorld(scene, renderer) {
   function settle(c) { for (let i = c.userData.nTrack; i < c.children.length; i++) settleOne(c, c.children[i]); }
 
   // 1ab: saguaro cao — cây TIỀN CẢNH (gần ray) nhỏ lại còn ~55 %, lùi xa dần về cỡ cũ (thầy: "xương rồng tiền cảnh to quá")
-  function tallSaguaro(r) {
+  // 1an: kho saguaro — fresh = dựng sẵn chưa dùng · spare = cây vừa bỏ, dùng lại (≤ 24, quá thì huỷ)
+  const sagFresh = [], sagSpare = [];
+  function newSag(x, z, h, r) { const m = cactus.saguaro(x, z, h, r); m.userData.h0 = h; return m; }
+  function takeSag(x, z, h, r) {
+    const m = sagFresh.length ? sagFresh.pop() : sagSpare.length ? sagSpare.splice(Math.floor(r() * sagSpare.length), 1)[0] : null;
+    if (!m) return newSag(x, z, h, r);
+    m.position.set(x, -0.15, z); m.rotation.set(0, r() * 6, 0); m.scale.setScalar(h / m.userData.h0); m.visible = true;
+    m.userData.bandHid = false; m.userData.saguaro = true;
+    return m;
+  }
+  function dropSag(o) { if (sagSpare.length < 24) sagSpare.push(o); else o.geometry.dispose(); }
+  { const r = mulberry((Math.random() * 1e9) | 0); for (let i = 0; i < 10; i++) sagFresh.push(newSag(0, -0.15, 8.5 + r() * 7, r)); }   // 1an: dựng sẵn lúc tải
+  // 1ab: saguaro cao — cây TIỀN CẢNH (gần ray) nhỏ lại còn ~55 %, lùi xa dần về cỡ cũ (thầy: "xương rồng tiền cảnh to quá")
+  function tallSaguaro(r, pooled = false) {
     const x = r() * CHUNK, z = -16 - r() * 70, k = 0.55 + 0.45 * Math.min(1, Math.max(0, (-z - 25) / 35));
-    return cactus.saguaro(x, z, (8.5 + r() * 7) * k, r);
+    return (pooled ? takeSag : newSag)(x, z, (8.5 + r() * 7) * k, r);
   }
 
   function buildChunk(seed) {
@@ -380,10 +398,10 @@ export function createWestWorld(scene, renderer) {
   // 1i: khúc cảnh quay vòng lên trước ⇒ saguaro cũ bỏ đi, mọc cây MỚI (dáng khác hẳn) ở chỗ khác
   function regrow(c) {
     const r = mulberry((Math.random() * 1e9) | 0);
-    for (const o of c.children.slice()) if (o.userData.saguaro) { c.remove(o); o.geometry.dispose(); }
+    for (const o of c.children.slice()) if (o.userData.saguaro) { c.remove(o); dropSag(o); }   // 1an: không huỷ — vào kho dùng lại
     const nSag = 2 + Math.floor(r() * 2), plant = o => { o.userData.baseY = o.position.y; settleOne(c, o); c.add(o); };   // 1aa: cây mới cũng đặt theo mặt đất
-    for (let i = 0; i < nSag; i++) plant(tallSaguaro(r));
-    if (r() < 0.18) { const fx = 8 + r() * (CHUNK - 16); plant(cactus.saguaro(fx, 9 + r() * 4, (2.1 + r() * 0.5) * 0.7, r)); }
+    for (let i = 0; i < nSag; i++) plant(tallSaguaro(r, true));   // 1an: lấy từ kho
+    if (r() < 0.18) { const fx = 8 + r() * (CHUNK - 16); plant(takeSag(fx, 9 + r() * 4, (2.1 + r() * 0.5) * 0.7, r)); }
   }
 
   // ------------------------------------------------------------ bụi vàng lấp lánh trong nắng (bám máy quay)
