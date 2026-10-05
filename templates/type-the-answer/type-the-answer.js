@@ -412,6 +412,8 @@ const ttaTemplate = {
     let livePoints = 0;                 // running score shown live (can be reduced by Minus mode)
     let livesLeft = normLives(opt.lives);   // null = unlimited (see normLives)
     let keyboardVisible = true;         // ON by default every time the act is opened
+    // Đợt 467 — máy cảm ứng không chuột (điện thoại / máy tính bảng): xem `focusInput` / `paintCaret`.
+    const TOUCH = typeof matchMedia === "function" && matchMedia("(hover: none) and (pointer: coarse)").matches;
     let andrewUsed = false;             // "Andrew help" — ONE use for the WHOLE game (all questions share it)
     let andrewGlowing = false;          // true from the press until that question is submitted (bright + halo)
     const activeFlyNodes = new Set();   // stray document.body clones — swept on cleanup
@@ -509,6 +511,16 @@ const ttaTemplate = {
     const diffEl = el("div", "aw-tta-diff");
     diffEl.setAttribute("aria-hidden", "true");
     row.append(diffEl);
+    // ⭐ Đợt 467 — CON TRỎ GIẢ cho máy cảm ứng (xem `focusInput`): trên điện thoại/máy tính bảng
+    // phím ảo KHÔNG focus ô gõ nữa (cú focus thật đầu tiên làm cả màn giật trên iPhone), nên ô
+    // không có con trỏ nhấp nháy thật ⇒ vẽ một vạch nhấp nháy ở CUỐI chữ. Lớp này dùng chung bộ
+    // số chữ với `.aw-tta-diff` (cùng ngắt dòng với ô thật), chữ trong nó trong suốt.
+    const caretEl = el("div", "aw-tta-diff aw-tta-caret");
+    caretEl.setAttribute("aria-hidden", "true");
+    const caretTxt = el("span", "aw-tta-caret-txt");
+    caretEl.append(caretTxt, el("span", "aw-tta-caret-bar"));
+    caretEl.hidden = true;
+    row.append(caretEl);
     answerBlock.append(row);
 
     const submitBtn = el("button", "aw-tta-submit", "Submit Answer");
@@ -556,6 +568,42 @@ const ttaTemplate = {
     card.append(qArea, slot, kbd.el);
     const curInput = input;   // single persistent textarea (for autoGrow)
 
+    // ⭐⭐ Đợt 467 — "GÕ CHỮ ĐẦU TIÊN, CẢ MÀN GIẬT LÊN RỒI HẠ XUỐNG" (thầy, iPhone, bài giao phóng to).
+    // iOS BỎ QUA `focus()` không đến từ cú chạm của người dùng ⇒ `input.focus()` lúc mở câu hỏi
+    // (loadQuestion) không ăn, và lần focus THẬT đầu tiên là ở cú chạm phím ảo đầu tiên
+    // (insertChar). Đúng lúc đó WebKit "lộ ô nhập": CUỘN các khung chứa (kể cả khung
+    // `overflow:hidden` — vẫn là khung cuộn, xem bẫy Running word Đợt 8g/`viewport` scroll guard)
+    // và dời màn nhìn như sắp bật bàn phím; bàn phím hệ thống không bật (inputMode="none") nên
+    // nó trả về ⇒ một cú giật. Các phím sau ô đã focus sẵn ⇒ không giật nữa.
+    // Chữa 2 lớp: (1) focus KHÔNG CUỘN (`preventScroll`) và chỉ khi chưa focus;
+    // (2) lưới chặn: khung nào CHỨA ô gõ bị cuộn (vì bất cứ lý do gì) ⇒ kéo ngay về 0;
+    // trong khung nhúng myLesson (`html.aw-nhung`, trang không bao giờ cuộn) cả cửa sổ cũng vậy.
+    // (3) ⭐ MÁY CẢM ỨNG (không chuột): KHÔNG focus ô gõ từ phím ảo / lúc mở câu — chèn chữ không cần
+    //     focus, và không focus thì Safari không có gì để "lộ" ⇒ hết giật tận gốc. Con trỏ nhấp nháy
+    //     do `caretEl` vẽ giả. HS chạm thẳng vào ô (vd iPad có bàn phím rời) thì ô vẫn focus như thường.
+    //     (`TOUCH` khai ở đầu mount, cạnh `keyboardVisible` — bẫy TDZ Đợt 305.)
+    function focusInput() {
+      if (TOUCH || input.disabled || document.activeElement === input) return;
+      try { input.focus({ preventScroll: true }); } catch { input.focus(); }
+    }
+    function paintCaret() {
+      const on = TOUCH && keyboardVisible && !input.disabled && document.activeElement !== input
+        && !!state[index] && !state[index].graded && !input.classList.contains("is-diffed");
+      caretEl.hidden = !on;
+      if (on) caretTxt.textContent = input.value;
+    }
+    input.addEventListener("focus", paintCaret);
+    input.addEventListener("blur", paintCaret);
+    const onAnyScroll = e => {
+      const t = e.target;
+      if (t === document || t === window) {
+        if (document.documentElement.classList.contains("aw-nhung") && (window.scrollX || window.scrollY)) window.scrollTo(0, 0);
+        return;
+      }
+      if (t !== input && t.contains?.(input) && (t.scrollTop || t.scrollLeft)) { t.scrollTop = 0; t.scrollLeft = 0; }
+    };
+    document.addEventListener("scroll", onAnyScroll, true);   // capture: `scroll` của phần tử không nổi bọt
+
     // ----- keyboard show/hide button, next to Menu (engine's opt-in slot) -----
     let kbdBtn = null;
     if (ui.kbdSlot) {
@@ -568,6 +616,7 @@ const ttaTemplate = {
         kbd.setHidden(!keyboardVisible);   // animates (CSS transition)
         input.inputMode = keyboardVisible ? "none" : "text";   // OS keyboard off while AWord's is up
         syncSubmitVisibility();   // outside "Submit Answer" only shows when kbd hidden
+        paintCaret();             // Đợt 467 — ẩn bàn phím AWord ⇒ ẩn con trỏ giả
         updateKbdBtn();
         fitLayout();   // block height (outside Submit) + keyboard-top changed -> re-fit & re-centre
       });
@@ -747,6 +796,7 @@ const ttaTemplate = {
       const st = state[index];
       submitBtn.disabled = st.graded || !input.value.trim() || fightLocked();
       kbd.refresh();   // re-syncs the keyboard's own Submit key + the Andrew key
+      paintCaret();    // Đợt 467 — con trỏ giả theo chữ / trạng thái chấm
     }
 
     // ===== load a question into the persistent DOM (no rebuild) =====
@@ -844,7 +894,7 @@ const ttaTemplate = {
         setPrompt();
       }
 
-      if (!st.graded) input.focus();
+      if (!st.graded) focusInput();
     }
 
     function submitAnswer(typed) {
@@ -1372,7 +1422,7 @@ const ttaTemplate = {
       revealWrap.classList.add("is-open", "is-andrew");
       scheduleRevealRefit();
       kbd.refresh();   // Andrew key -> "glowing"
-      if (!input.disabled) input.focus();
+      focusInput();
     }
     function insertChar(inp, ch) {
       if (!inp || inp.disabled) return;
@@ -1387,7 +1437,7 @@ const ttaTemplate = {
       inp.setSelectionRange(pos, pos);
       autoGrow(inp);
       syncSubmitEnabled();
-      inp.focus();
+      focusInput();
     }
     function backspace(inp) {
       if (!inp || inp.disabled) return;
@@ -1404,7 +1454,7 @@ const ttaTemplate = {
       }
       autoGrow(inp);
       syncSubmitEnabled();
-      inp.focus();
+      focusInput();
     }
 
     // Next is blocked until the current question is answered, unless Allow skip is on.
@@ -1533,6 +1583,7 @@ const ttaTemplate = {
       vnGuard.dispose();
       noCopy.dispose();
       phoneMq?.removeEventListener?.("change", onPhoneMq);
+      document.removeEventListener("scroll", onAnyScroll, true);
       window.removeEventListener("resize", onResize);
       cancelAnimationFrame(rafFit);
       clearAutoTimer();

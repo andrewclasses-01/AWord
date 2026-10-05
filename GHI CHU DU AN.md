@@ -546,6 +546,28 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 467 (05/10/2026) — iPhone: GÕ CHỮ ĐẦU TIÊN Ở CHẾ ĐỘ PHÓNG TO, CẢ MÀN GIẬT LÊN RỒI HẠ XUỐNG · nút THU NHỎ màu sáng (myLesson v1.248.0)
+
+Thầy thử điện thoại thật: chỉ CHỮ ĐẦU TIÊN mới giật, gõ tiếp không sao. Nguyên nhân: iOS BỎ QUA `focus()` không đến từ cú chạm
+⇒ `input.focus()` lúc mở câu (loadQuestion) không ăn ⇒ lần focus THẬT đầu tiên là ở cú chạm phím ảo đầu tiên (`insertChar`) ⇒
+Safari phản ứng như sắp bật bàn phím (lộ ô nhập / dời màn nhìn / thanh công cụ) rồi trả về vì `inputMode="none"`. Đo trong khung
+nhúng: KHÔNG phần tử nào cuộn được (scrollHeight = clientHeight cả chuỗi tổ tiên) ⇒ cú giật nằm ở tầng trình duyệt, không ở khung.
+⚠️ Không tái hiện được trên máy (không có WebKit iOS); suy ra từ triệu chứng "chỉ chữ đầu" + bẫy cùng họ ở Running word (Đợt 8g).
+
+- `type-the-answer.js`: `focusInput()` thay MỌI `input.focus()` (loadQuestion · useAndrew · insertChar · backspace):
+  máy cảm ứng không chuột (`(hover: none) and (pointer: coarse)`, hằng `TOUCH` khai ĐẦU mount — bẫy TDZ Đợt 305) ⇒ KHÔNG focus
+  (chèn chữ không cần focus); máy khác ⇒ `focus({preventScroll:true})` chỉ khi chưa focus.
+- CON TRỎ GIẢ `caretEl` (`.aw-tta-diff.aw-tta-caret`, chung bộ số chữ nên cùng ngắt dòng): vạch 2px nhấp nháy ở cuối chữ; hiện khi
+  TOUCH + bàn phím AWord đang hiện + ô chưa focus + chưa chấm (`paintCaret` gọi trong `syncSubmitEnabled`, nút ẩn/hiện bàn phím,
+  focus/blur). HS chạm thẳng vào ô (iPad có bàn phím rời) ⇒ focus thật, con trỏ giả tự ẩn.
+- Lưới chặn: `scroll` (capture) — phần tử nào CHỨA ô gõ bị cuộn ⇒ về 0; khung nhúng `aw-nhung` ⇒ cửa sổ về 0. Gỡ trong cleanup.
+- Đo giả lập điện thoại cảm ứng 375×812: gõ "cold" bằng phím ảo ⇒ đúng chữ, ô KHÔNG focus, vạch theo cuối chữ (x 187→206);
+  Submit ⇒ vạch ẩn; câu sau ⇒ hiện lại. Máy tính: không vạch giả, gõ phím thật vẫn vào ô, không lỗi console.
+- myLesson `bai.html` v1.248.0: nút tròn nền trắng mờ .78 + viền mảnh + icon xám #94a3b8 (hover trắng, icon #64748b).
+- ⬜ Thầy thử iPhone thật: chữ đầu tiên còn giật không.
+
+---
+
 ## Đợt 466 (05/10/2026) — PHÓNG TO TRÊN ĐIỆN THOẠI: đồng hồ + điểm + thanh dưới TO RA · tín hiệu "giữa hàng trên bận" cho nút THU NHỎ tròn của myLesson
 
 Thầy thử điện thoại thật (ảnh 390×844): đồng hồ/điểm ~9px khó nhìn; nút "THU NHỎ" (chữ, góc trái) đè đồng hồ ⇒ muốn chỉ icon

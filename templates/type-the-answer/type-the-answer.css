@@ -505,6 +505,19 @@
    chữ) — `caret-color` cũng tắt cho chắc, dù lúc này ô đã bị khoá. */
 .aw-tta-input.is-diffed { color: transparent; caret-color: transparent; }
 
+/* ⭐ Đợt 467 — CON TRỎ GIẢ (máy cảm ứng: phím ảo không focus ô gõ — xem `focusInput` trong JS).
+   Nằm đè đúng ô như `.aw-tta-diff` (chung bộ số chữ ⇒ cùng ngắt dòng); chữ trong suốt, chỉ thấy
+   vạch nhấp nháy ở CUỐI chữ. Luật `[hidden]` viết tường minh (bẫy `display` đè `hidden`). */
+.aw-tta-caret[hidden] { display: none; }
+.aw-tta-caret-txt { color: transparent; }
+.aw-tta-caret-bar {
+  display: inline-block; width: 2px; height: 1.1em; margin-left: 1px;
+  vertical-align: -0.18em;
+  background: var(--aw-text, #1f2937);
+  animation: aw-tta-caret-blink 1.06s steps(1) infinite;
+}
+@keyframes aw-tta-caret-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
 .aw-tta-w-ok  { color: #10b981; }
 .aw-tta-w-bad { color: #ef4444; text-decoration: underline; text-decoration-thickness: 2px;
                 text-underline-offset: 3px; }
