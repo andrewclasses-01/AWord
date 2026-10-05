@@ -564,6 +564,8 @@ màn chờ 60 fps (card 98 %) · phóng 56,8 · đua 59–59,9 — GPU ổn. NH�
 - Bàn thử: `__rr3d.view.renderer`, `__rr3d.view.res` thêm `aa`, `aaOK`.
 **Đo sau (bản cục bộ trong myActivity):** trọn ván tới 12 s sau khi thắng: 0 shader mới, 0 khung > 40 ms · có trần: đua 59,6–59,9 fps, khung dài nhất 33 ms ·
 màn kết quả không còn thanh cuộn. Còn: khung đầu cảnh phóng (~230 ms, gần như không phải JS — GPU dựng cảnh) và huỷ cảnh phóng `forceContextLoss` 14–32 ms lúc trao sang đua.
+- ✅ Push `4819ace` + LIVE 4/4 mã băm. App thật myActivity + game LIVE, trọn ván tới 12 s sau thắng: 0 shader mới, 59,6 fps, lúc thắng 1 khung 60 ms, không thanh cuộn;
+  còn 2–3 khung 55–117 ms ngay lúc trao cảnh phóng ⇒ cảnh đua (huỷ cảnh phóng + dựng bảng) — để sau.
 - ⬜ Thầy chơi trên TOMKO: lúc thắng (cổng loé, chữ WINS) còn khựng không; màn kết quả không nhảy khung.
 
 ---
