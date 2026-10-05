@@ -317,6 +317,9 @@
    Cỡ viết bằng px vì `--aw-u` của khung = 1 % bề ngang — quá nhỏ ở đây.
    ============================================================= */
 @media (max-width: 700px) and (max-aspect-ratio: 4/5) {
+  /* ⭐ Đợt 474 (thầy) — kéo cao hết màn NGAY TỪ MÀN START (bài giao trên điện thoại tự phóng to lúc nạp xong,
+     Đợt 472): neo vào lớp `act-type_the_answer` engine gắn sẵn lên khung, không chờ `.aw-tta-card` (chỉ có sau START). */
+  html.aw-nhung .aw-stage.act-type_the_answer,
   html.aw-nhung .aw-stage:has(.aw-tta-card) { --ti-le: 100vh; --ti-le: 100dvh; }
   /* ⭐ Đợt 466 — nút THU NHỎ của myLesson nay là icon tròn 38px ở GIỮA hàng trên cùng
      (bai.html `.game-thu`, top 8px) ⇒ không còn đè góc trái, bỏ khoảng chừa 46px cũ. */

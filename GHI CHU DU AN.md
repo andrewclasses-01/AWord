@@ -546,6 +546,21 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 474 (05/10/2026) — MÀN START CỦA TYPE THE ANSWER CŨNG KÉO KÍN MÀN (bài giao, điện thoại, đã phóng to)
+
+Thầy hỏi: sau READY, trước khi bấm START đã phóng to chưa? — Rồi (Đợt 472 gửi "nap" lúc dựng màn START), nhưng màn START vẫn là
+khung ngang 16:10,5 ở trên, nền tối bên dưới. Thầy chốt: cho màn START kéo kín màn luôn.
+
+- `type-the-answer.css` (khối kiểu B): `--ti-le: 100dvh` neo thêm vào `html.aw-nhung .aw-stage.act-type_the_answer` (lớp engine gắn
+  sẵn lên khung, `core/engine.js` `act-${activity.type}`) ⇒ có hiệu lực từ màn START, không chờ `.aw-tta-card` (chỉ có sau START).
+- CHỈ Type the answer: Crossword / Running word / Find the gap khi chơi vẫn là khung ngang ⇒ kéo cao màn START của chúng thì bấm
+  START xong khung co lại (giật).
+- Đo 390×760: khung 390×760, màn START nằm giữa (nút ▶ y≈361); bấm START ⇒ y như Đợt 465–467 (bàn phím grid, đồng hồ 20px);
+  ô nhỏ 390×256 vẫn 390×256.
+- ⬜ Thầy thử điện thoại thật.
+
+---
+
 ## Đợt 472 (05/10/2026) — BÀI GIAO CÓ BÀN PHÍM TRÊN ĐIỆN THOẠI: TRANG BÀI TẬP TỰ "PHÓNG TO" (myLesson v1.249.0)
 
 Thầy: bài giao gắn trên trang bài tập, game có bàn phím, ở điện thoại ⇒ bấm READY và bấm START là tự phóng to cho rộng rãi;
