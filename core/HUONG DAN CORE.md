@@ -43,6 +43,8 @@ GIỜ THẬT. Template muốn có (đang có: Quiz · Type the answer · Find th
 ⭐ Đợt 470: mọi template giao bài được (trừ 3D) đã khai. Engine tự nhận ra template TỪ CHỐI (sau mount `daLam` của ván = 0 trong khi
 lượt cũ > 0 ⇒ trả đồng hồ về 0) — nên `daLam` PHẢI phản ánh đúng số câu đã làm. Template bật đồng hồ sau intro (`ui.startTimer()`):
 engine tự lùi giờ (`lamTiepBuMs`). Template tự giữ đồng hồ riêng (Whack-a-mole) phải tự lùi.
+⛔⛔ **Đợt 486:** Firestore trả khoá map THỨ TỰ NGẪU NHIÊN mỗi lần đọc (cả SDK) ⇒ `dauVet` phải băm chuỗi ĐÃ XẾP KHOÁ (`chuoiXepKhoa`) — bản
+JSON.stringify thường làm CONTINUE gần như không bao giờ hiện. Bàn thử làm tiếp phải đọc bài giao THẬT ≥ 2 lần, đừng dùng object giả cố định.
 ⛔ `khoiPhuc` không bao giờ có trong Fight / Showdown / Start with mistakes / giáo viên. ⛔ Đừng lưu gì nặng (localStorage dùng chung).
 
 ## 🚫 Đợt 464 — game GÕ CHỮ: gắn `core/no-copy.js` (chặn copy + dán)

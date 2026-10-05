@@ -74,9 +74,20 @@ export function tabKhacDangLam(k) {
 }
 
 // Dấu vết của đề: thầy sửa act / đổi Options sau khi em làm dở ⇒ lượt cũ không khôi phục được nữa.
+// ⛔⛔ Đợt 486 — Firestore (cả SDK getDoc lẫn REST) trả khoá map theo THỨ TỰ NGẪU NHIÊN mỗi lần đọc (đo 05/10: 5 lần đọc
+// cùng bài = 5 thứ tự khoá `options`). JSON.stringify thường ⇒ mỗi lần tải lại một dấu vết khác ⇒ play.js tưởng thầy sửa đề,
+// xoá lượt đang giữ ⇒ KHÔNG BAO GIỜ có CONTINUE, lượt cũ thành nộp dở (tối 5/10: 68% lượt nộp). Phải xếp khoá trước khi băm.
+function chuoiXepKhoa(v) {
+  if (Array.isArray(v)) return "[" + v.map(x => (x === undefined || typeof x === "function" ? "null" : chuoiXepKhoa(x))).join(",") + "]";
+  if (v && typeof v === "object") {
+    return "{" + Object.keys(v).sort().filter(k => v[k] !== undefined && typeof v[k] !== "function")
+      .map(k => JSON.stringify(k) + ":" + chuoiXepKhoa(v[k])).join(",") + "}";
+  }
+  return JSON.stringify(v === undefined ? null : v);
+}
 export function dauVet(activity) {
   let str = "";
-  try { str = JSON.stringify([activity.type, activity.content, activity.options]); } catch (e) { str = String(Math.random()); }
+  try { str = chuoiXepKhoa([activity.type, activity.content, activity.options]); } catch (e) { str = String(Math.random()); }
   let h = 5381;
   for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
   return activity.type + ":" + (h >>> 0).toString(36) + ":" + str.length;

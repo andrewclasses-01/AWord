@@ -546,6 +546,25 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 486 (05/10/2026) — ⭐⭐⭐ CONTINUE (Đợt 469) GẦN NHƯ KHÔNG BAO GIỜ CHẠY: "dấu vết đề" lệch mỗi lần tải lại vì Firestore trả khoá map NGẪU NHIÊN · phiên MSI
+**Thầy:** dashboard thấy rất nhiều BỎ DỞ (ảnh pop-up em Hà My, FIND THE GAP 5/10) dù Đợt 468 (bỏ ☰) + 469 (giữ lượt dở) đã chặn — "điều tra giúp tôi", rồi "sửa, thử dữ liệu thật, commit + push".
+**Điều tra (chỉ đọc kho):** từ 11:00 5/10 (sau khi 468/469 lên): 387 lượt nộp, **264 nộp dở (68%)**, 30 em. Diệu Chi (`dwyrnk` TTA) 40 lượt dở 1–12/30;
+Hà Phương (`j56ry9` FTG) 17 lượt ~5/55. Mẫu: làm ~1 phút, sai là rời, 7–17 s sau vào lượt MỚI (practiceLog mã mới, `again:false`, score 0 ⇒ đường
+pagehide "giữ lượt"); kết quả nộp dở mang `createdAt` = lúc pagehide (nháp `saveDraft`), về sau `sweepDrafts` đẩy đi.
+**Gốc:** `core/lam-tiep.js dauVet()` băm `JSON.stringify([type, content, options])` — mà Firestore trả khoá map theo THỨ TỰ NGẪU NHIÊN mỗi lần đọc
+(đo: REST 6/6 lần khác thứ tự; **SDK 12.9.0 `getDoc` trên aword.andrewclasses.com 5/5 lần khác dấu vết**). Tải lại ⇒ `s.vet !== vetDe` ⇒ play.js
+`xoaLuot` ⇒ nút START (không CONTINUE), lượt cũ hết được giữ ⇒ nháp nộp dở; lối này lại KHÔNG đếm bỏ cuộc ⇒ né cả tấm nhắc Đợt 424.
+Bàn thử Đợt 469 (`scratch/dot469`) dùng bộ assignments GIẢ (object cố định) nên không bắt được.
+**Sửa:** `dauVet` dùng `chuoiXepKhoa()` (stringify đệ quy, khoá đã sắp, bỏ undefined/function như JSON). Hệ quả một lần: lượt đang giữ trên máy em
+(băm kiểu cũ) lệch ⇒ bỏ một lần như trước, từ lượt sau mới ổn.
+**Thử dữ liệu thật** (devserver cổng 5679, mã em giả `THUCLAUDE01` không vé ⇒ không ghi gì lên kho, không trả lời câu nào):
+· SDK đọc thật 5 lần/bài: cách cũ 5 dấu vết khác nhau, cách mới **1** (`j56ry9` find_the_gap:27xooo:15016 · `dwyrnk` type_the_answer:14vqd6c:312540);
+  đổi `options.timer` hay sửa 1 chữ content ⇒ dấu vết vẫn đổi (thầy sửa đề vẫn bị nhận ra).
+· play.html thật `?g=j56ry9`: START → tải lại ⇒ **CONTINUE · 0 / 55 DONE**; tải lại lần 2 vẫn CONTINUE. `?g=dwyrnk` (TTA): START → tải lại ⇒
+  **CONTINUE · 0 / 30 DONE**. 0 lỗi console. Đã dọn localStorage thử.
+**VIỆC ĐANG CHỜ:** ⬜ ngày mai xem tỉ lệ nộp dở trên dashboard (kỳ vọng giảm mạnh ở mọi template có làm tiếp); ⬜ em còn lối "mở tab thứ hai" (tab kia
+còn sống ⇒ lượt mới) — hiếm, theo dõi; ⬜ mọi phép so/băm dữ liệu Firestore khác nên rà cùng bẫy.
+
 ## Hồ sơ (05/10/2026) — SỔ TAY TỐI ƯU TỐC ĐỘ WEB + BỘ CÔNG CỤ ĐO (cho máy khác / web khác dùng lại) · phiên MSI
 **Thầy:** "ghi và commit cả hồ sơ để ở máy tính khác tôi cũng có thể tiếp tục dùng cách tương tự để tối ưu các trang web khác trong hệ sinh thái".
 **Đã làm:** `docs/TOI-UU-TOC-DO-WEB.md` (bài học, quy trình 5 bước, bảng đọc kết quả `?do=1`, 4 thủ phạm Đợt 481–485 + cách chữa, bẫy của công cụ đo,
