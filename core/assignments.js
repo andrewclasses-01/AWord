@@ -105,6 +105,12 @@ export async function createAssignment(act, { title, deadline = null, endOptions
   const idAct = sourceAct || act;
   const user = await currentUser();
   if (!user) { const e = new Error("Please sign in first."); e.code = "aw/signed-out"; throw e; }
+  // ⭐ Đợt 484 — bảng "Hướng dẫn khi sai" của act có thể còn ở doc riêng (core/store.js napGoiY): ảnh chụp
+  // bài giao PHẢI mang đủ bảng (máy học sinh không đọc kho của thầy). Nạp lỗi ⇒ ném lỗi, không giao bản thiếu.
+  // import động: trang học sinh (play.html) nạp file này nhưng không bao giờ tạo bài giao.
+  for (const a of [act, sourceAct]) {
+    if (a && a.content && a.content.goiYTach && !Array.isArray(a.content.goiY)) await (await import("./store.js")).napGoiY(a);
+  }
   const [d, { doc, getDoc, setDoc }] = await Promise.all([db(), fs()]);
 
   // Collisions are vanishingly unlikely (31^6), but a used code would overwrite

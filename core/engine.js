@@ -289,8 +289,22 @@ function rememberedTemplate(act) {
   try { return switchTargets(act).some(x => x.type === t) ? t : ""; } catch { return ""; }
 }
 
+const GY_DA_THU = new WeakSet();   // Đợt 484 — act đã thử nạp bảng goiY (xem đầu startGame)
 export function startGame(root, libAct, { onExit, session = null, base = null, fight = null, hwPreset = null, noAutoFight = false, noLastTpl = false } = {}) {
   root.innerHTML = "";
+  // ⭐ Đợt 484 — act thư viện mà bảng "Hướng dẫn khi sai" (content.goiY) còn ở doc riêng (dấu `goiYTach`,
+  // xem core/store.js napGoiY): nạp bảng TRƯỚC mọi thứ khác (chuyển template, Fight… đều chép từ libAct).
+  // Chỉ đường của thầy: bài giao (`session`) mang bảng đầy đủ trong ảnh chụp ⇒ play.html không bao giờ nạp store.js.
+  // Nạp lỗi (mất mạng) ⇒ chơi tiếp không có bảng, không thử lại vòng vòng (GY_DA_THU).
+  if (!session && libAct && libAct.content && libAct.content.goiYTach && !Array.isArray(libAct.content.goiY) && !GY_DA_THU.has(libAct)) {
+    GY_DA_THU.add(libAct);
+    const holder = el("div", "aw-lasttpl-wait");
+    root.append(holder);
+    import("./store.js").then(m => m.napGoiY(libAct))
+      .catch(e => console.warn("AWord: could not load the hint table", e))
+      .then(() => { if (holder.isConnected) startGame(root, libAct, { onExit, session, base, fight, hwPreset, noAutoFight, noLastTpl }); });
+    return;
+  }
   // ⭐⭐ Đợt 400 — MỞ ACT = MỞ TEMPLATE CHƠI CUỐI. Một chỗ duy nhất cho MỌI đường mở act
   // thư viện (thư viện, link ?a=, nút chuyển act, quay về sau Edit): act chưa có `base`
   // tức là đang được mở "từ đầu" ⇒ chuyển từ bản gốc sang template đã nhớ rồi mount bản

@@ -123,7 +123,9 @@ async function readAll() {
     // 30–40 s (bảng ?do=1). Không ai đọc chúng qua cache này: core/showdown-history.js tự getDoc từng
     // tháng/lớp, còn ở đây chúng chỉ bị APP_DATA_KINDS lọc bỏ. `!=` loại cả doc THIẾU `kind` — 5/10 mọi
     // doc đều có kind (546/546); doc mới phải luôn có kind. Thử máy chủ: 515 doc, 20,3 MB, đủ mọi kind khác.
-    const snap = await getDocs(query(collection(d, itemsPath(uid)), where("kind", "!=", "showdown-history")));
+    // ⭐ Đợt 484 — + bảng "Hướng dẫn khi sai" của Type the answer (kind "act-goiy", 13,4 MB) cũng ở ngoài:
+    // act chỉ mang dấu `content.goiYTach`, bảng nạp lúc mở act (napGoiY). `not-in` ≤ 10 giá trị.
+    const snap = await getDocs(query(collection(d, itemsPath(uid)), where("kind", "not-in", ["showdown-history", GY_KIND])));
     const map = {};
     snap.forEach(s => { map[s.id] = { ...s.data(), id: s.id }; });
     // Đợt 143 — every act the library hands out arrives on the CURRENT option
@@ -143,6 +145,46 @@ async function readAll() {
   finally { if (inflight && inflight.p === p) inflight = null; }
 }
 
+// ⭐⭐ Đợt 484 (05/10/2026) — BẢNG "HƯỚNG DẪN KHI SAI" (`content.goiY`, Type the answer) Ở DOC RIÊNG.
+// Đo kho thật: 13,4 MB / 20,3 MB lượt đọc đầu là các bảng này, mà chỉ cần lúc CHƠI / SOẠN / GIAO đúng act đó.
+//   Ghi (persist — MỌI đường ghi đi qua đây): act có goiY khác rỗng ⇒ doc act KHÔNG có goiY + dấu
+//     `content.goiYTach: true`, kèm doc `gy_<actId>` {kind:"act-goiy", actId, goiY}. Act chưa nạp bảng
+//     (còn dấu, chưa có goiY) ⇒ ghi nguyên như vậy, KHÔNG đụng doc gy_ ⇒ đổi tên/chuyển/thùng rác an toàn.
+//   Đọc: readAll() bỏ kind "act-goiy"; napGoiY(act) gắn lại `content.goiY` + xoá dấu — gọi ở getItem/getActivity
+//     (main.js playAct/editAct), duplicateItem, core/engine.js đầu startGame (đường của thầy) và
+//     core/assignments.js createAssignment (bài giao chụp ĐỦ bảng ⇒ máy học sinh không đổi gì).
+//   ⛔ KHÔNG bao giờ xoá doc gy_ khi lưu (bảng bị xoá hết ⇒ act mất dấu ⇒ doc gy_ mồ côi, vô hại);
+//     chỉ Delete forever / Empty bin xoá kèm. Doc act PHẢI có `kind` (truy vấn not-in loại doc thiếu kind).
+const GY_KIND = "act-goiy";
+const gyId = actId => "gy_" + actId;
+function tachGoiY(n) {
+  const g = n && n.kind === "act" && n.content && n.content.goiY;
+  if (!Array.isArray(g) || !g.length) return [n, null];
+  const act = { ...n, content: { ...n.content, goiYTach: true } };
+  delete act.content.goiY;
+  return [act, { id: gyId(n.id), kind: GY_KIND, root: "appdata", parentId: null, trashed: false, actId: n.id, goiY: g, updatedAt: now() }];
+}
+const gyDangNap = new Map();   // actId -> Promise<goiY[]> (2 lời gọi cùng lúc dùng chung 1 lượt đọc)
+export async function napGoiY(node) {
+  const c = node && node.content;
+  if (!c || !c.goiYTach || Array.isArray(c.goiY)) return node;
+  const id = node.id;
+  if (!gyDangNap.has(id)) {
+    gyDangNap.set(id, (async () => {
+      const uid = await requireUid();
+      const [d, { doc, getDoc }] = await Promise.all([db(), fs()]);
+      const s = await getDoc(doc(d, itemsPath(uid), gyId(id)));
+      return s.exists() && Array.isArray(s.data().goiY) ? s.data().goiY : [];
+    })().finally(() => gyDangNap.delete(id)));
+  }
+  const g = await gyDangNap.get(id);
+  // gắn cho chính object được đưa vào VÀ bản trong cache (có thể là 2 object khác nhau)
+  [node, cache && cache[id]].forEach(n => {
+    if (n && n.content && n.content.goiYTach && !Array.isArray(n.content.goiY)) { n.content.goiY = g; delete n.content.goiYTach; }
+  });
+  return node;
+}
+
 // Upsert the given nodes (they are already in `cache`). Batched, chunked well
 // under Firestore's 500-writes-per-batch limit.
 async function persist(nodes) {
@@ -150,9 +192,12 @@ async function persist(nodes) {
   const uid = await requireUid();
   const [d, sdk] = await Promise.all([db(), fs()]);
   const { doc, writeBatch } = sdk;
-  for (let i = 0; i < nodes.length; i += 400) {
+  // Đợt 484 — tách bảng goiY ra doc riêng (cache vẫn giữ nguyên node đầy đủ)
+  const docs = [];
+  nodes.forEach(n => { const [a, g] = tachGoiY(n); docs.push(a); if (g) docs.push(g); });
+  for (let i = 0; i < docs.length; i += 400) {
     const batch = writeBatch(d);
-    nodes.slice(i, i + 400).forEach(n => batch.set(doc(d, itemsPath(uid), n.id), clean(n)));
+    docs.slice(i, i + 400).forEach(n => batch.set(doc(d, itemsPath(uid), n.id), clean(n)));
     await batch.commit();
   }
 }
@@ -213,7 +258,9 @@ const APP_DATA_KINDS = new Set(["class", "showdown", "showdown-results", "showdo
                                 // Đợt 385 — My Beat (games/mybeat/mb-store.js): lists doc + one doc per song
                                 "mybeat", "mybeat-song",
                                 // Đợt 480 — STAR LOOT iPad D-pad handshake (templates/maze-chase/sl-pad-signal.js): slpad_host/pad0/pad1
-                                "starloot-pad"]);
+                                "starloot-pad",
+                                // Đợt 484 — bảng "Hướng dẫn khi sai" tách khỏi act (gy_<actId>, xem napGoiY)
+                                "act-goiy"]);
 function isAppData(n) { return APP_DATA_KINDS.has(n.kind); }
 
 export async function ensureNumbers() {
@@ -306,7 +353,12 @@ function isDescendant(map, id, maybeAncestorId) {
 }
 
 // ---- reads ----
-export async function getItem(id) { return (await readAll())[id] || null; }
+// Đợt 484 — act mở từ đây (chơi / soạn / link ?a=) có đủ bảng goiY; nạp lỗi (mất mạng) ⇒ vẫn trả act, chỉ thiếu bảng.
+async function kemGoiY(n) {
+  if (n && n.kind === "act") await napGoiY(n).catch(e => console.warn("AWord: could not load the hint table", e));
+  return n;
+}
+export async function getItem(id) { return kemGoiY((await readAll())[id] || null); }
 
 // Live (non-trashed) children directly under (root, parentId). Folders first.
 export async function listChildren(root, parentId = null) {
@@ -479,7 +531,7 @@ export async function saveActivity(activity, opts = {}) {
   return node;
 }
 // Back-compat alias used by Khối 1 callers.
-export async function getActivity(id) { return (await readAll())[id] || null; }
+export async function getActivity(id) { return kemGoiY((await readAll())[id] || null); }
 
 // ---- BULK IMPORT ----
 // Create many acts at once from a "bundle" produced by a generator (e.g. the
@@ -716,6 +768,9 @@ export async function duplicateItem(id) {
   const map = await readAll();
   const src = map[id]; if (!src) return null;
   const made = [];
+  // Đợt 484 — bản sao phải mang ĐỦ bảng goiY (persist tách lại thành gy_<id MỚI>); nạp lỗi ⇒ dừng, không đẻ bản thiếu.
+  await Promise.all([src, ...(src.kind === "folder" ? descendantsOf(map, id) : [])]
+    .filter(n => n.kind === "act" && !n.trashed).map(n => napGoiY(n)));
 
   // clone one node under `parentId`. Safe against cloning-the-clones: a clone's
   // parentId is always a NEW id, so filtering originals by their original id
@@ -791,7 +846,11 @@ export async function deleteForever(id) {
   const map = await readAll();
   const gone = Object.values(map).filter(n => n.id === id || n.trashRootId === id);
   gone.forEach(n => delete map[n.id]);
-  await persistDelete(gone.map(n => n.id));
+  await persistDelete(idsKemGoiY(gone));
+}
+// Đợt 484 — xoá vĩnh viễn act thì xoá kèm doc gy_<id> (xoá doc không tồn tại là vô hại)
+function idsKemGoiY(gone) {
+  return gone.map(n => n.id).concat(gone.filter(n => n.kind === "act").map(n => gyId(n.id)));
 }
 
 // Permanently delete EVERYTHING in a root's recycle bin (every trashed node —
@@ -804,7 +863,7 @@ export async function emptyTrash(root) {
   if (!gone.length) return 0;
   const entries = gone.filter(n => n.trashRootId === n.id).length;
   gone.forEach(n => delete map[n.id]);
-  await persistDelete(gone.map(n => n.id));
+  await persistDelete(idsKemGoiY(gone));
   return entries;
 }
 

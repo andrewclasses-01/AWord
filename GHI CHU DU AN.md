@@ -546,6 +546,26 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 484 (05/10/2026) — ⭐⭐⭐ BẢNG "HƯỚNG DẪN KHI SAI" (`content.goiY`, 13,4 MB) RA DOC RIÊNG, NẠP KHI MỞ ACT · phiên MSI
+**Thầy (sau bảng ?do=1 thứ 3 — Đợt 483 đã đưa màn chờ từ >30 s xuống 5,23 s):** "Đồng ý tách gợi ý goiY, làm luôn đi".
+**Đo:** lượt đọc đầu sau Đợt 483 = 515 doc 20,3 MB, trong đó `content.goiY` của các act Type the answer = 13,4 MB (chỉ cần lúc CHƠI/SOẠN/GIAO đúng act đó).
+**Đã làm (luật ghi ở đầu `core/HUONG DAN CORE.md`):**
+- `core/store.js`: `readAll()` `where("kind","not-in",["showdown-history","act-goiy"])` · `persist()` tách `content.goiY` khác rỗng ⇒ doc act có dấu `content.goiYTach:true`
+  + doc `gy_<actId>` {kind:"act-goiy", root:"appdata", actId, goiY} · `napGoiY(act)` (export; chống đọc trùng bằng Map; gắn cho cả object truyền vào lẫn bản trong cache)
+  · `getItem`/`getActivity` nạp sẵn (lỗi mạng ⇒ vẫn trả act, chỉ thiếu bảng) · `duplicateItem` nạp cả cây trước khi chép · Delete forever / Empty bin xoá kèm `gy_` · `APP_DATA_KINDS` + "act-goiy".
+  Act chưa nạp (còn dấu) mà bị ghi (đổi tên, chuyển, thùng rác, setLastTemplate…) ⇒ ghi nguyên dấu, KHÔNG đụng `gy_`. Bảng bị xoá hết ⇒ act mất dấu, `gy_` mồ côi (không tự xoá).
+- `core/engine.js` đầu `startGame`: act còn dấu + KHÔNG `session` ⇒ ô giữ chỗ, `import("./store.js").napGoiY` rồi gọi lại startGame (WeakSet `GY_DA_THU` chống lặp khi lỗi).
+  play.html không bao giờ vào nhánh này (bài giao không có dấu) ⇒ luật "trang học sinh không nạp store.js" giữ nguyên.
+- `core/assignments.js` `createAssignment`: act/sourceAct còn dấu ⇒ nạp trước khi chụp; lỗi ⇒ ném (không giao bản thiếu bảng).
+**Kiểm:**
+- Bàn thử Node (`scratchpad/gy/thu.mjs`, store.js + assignments.js THẬT trên Firestore giả): 13 kịch bản **35/35 đạt** — act cũ goiY gộp vẫn chạy · lưu ⇒ tách · mở lại không kéo bảng ·
+  đổi tên khi chưa nạp giữ nguyên gy_ · getItem nạp đúng 1 getDoc · sửa còn 2 dòng · xoá hết ⇒ mồ côi + mở lại không bảng · act không bảng không đẻ gy_ · nhân bản act + cả thư mục ·
+  thùng rác giữ / xoá vĩnh viễn + dọn thùng xoá kèm, bản gốc nguyên · giao bài act CHƯA nạp ⇒ ảnh chụp đủ bảng, không dấu · 2 lời gọi cùng lúc 1 getDoc.
+- Trình duyệt (`scratchpad/gyweb/thu-gy.html`, Firestore giả, Chrome + WebKit): act lấy từ listChildren (chưa nạp) ⇒ startGame hiện ô giữ chỗ ⇒ nạp 1 dòng, hết dấu ⇒ màn READY TTA;
+  `goiYTheoBang` gõ "I like aples" ⇒ đúng câu hướng dẫn, gõ đúng ⇒ "".
+**Bước dữ liệu (sau khi mã LIVE):** sao lưu cả `users/{uid}/items` vào `E:\LAP TRINH APP\_SAO LUU FIRESTORE\` rồi di trú bằng khoá quản trị (ghi gy_ trước, sửa act sau, điều kiện updateTime) — kết quả ghi ở mục dưới.
+⚠️ Tab/app AWord đang mở bằng mã CŨ (myActivity…) sau khi di trú: act TTA mở ra thiếu bảng tới khi tải lại; lưu từ mã cũ vẫn giữ dấu ⇒ không mất bảng. Thầy tải lại app/tab.
+
 ## Đợt 483 (05/10/2026) — ⭐⭐⭐ THƯ VIỆN MỞ CHẬM 30–40 s TRÊN iPAD = KÉO CẢ KHO 33 MB ⇒ BỎ SỔ CÁI SHOWDOWN KHỎI LƯỢT ĐỌC ĐẦU · phiên MSI
 **Thầy gửi bảng `?do=1` lần 2 (sau Đợt 481):** tải trùng 92 → 6 lượt, FCP 5,30 → 3,25 s — nhưng thầy "vẫn thấy lâu": màn chờ `.aw-boot` CÒN HIỆN sau 30 s,
 ảnh đại diện Google (`lh3`, vẽ cùng thanh trên của thư viện) tải lúc 38,9 s, file AWord cuối xong 42,5 s ⇒ thư viện hiện ra sau ~35–40 s.

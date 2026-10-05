@@ -3,6 +3,15 @@
 > Đọc file này TRƯỚC khi build bất kỳ template nào. Đây là "hợp đồng" giữa **core** (lõi dùng chung)
 > và **template** (từng game riêng, vd Quiz, Anagram...).
 
+## 🗂️ Đợt 483–484 — KHO THƯ VIỆN: lượt đọc đầu KHÔNG có sổ cái Showdown và bảng `content.goiY`
+
+iPad chờ thư viện 30–40 s vì `store.js readAll()` kéo cả kho (33 MB). Nay `readAll()` = `where("kind", "not-in", ["showdown-history", "act-goiy"])`:
+- **Doc nào trong `users/{uid}/items` cũng PHẢI có `kind`** — doc thiếu `kind` sẽ biến mất khỏi thư viện (not-in loại doc thiếu trường).
+- **Bảng "Hướng dẫn khi sai" của Type the answer (`content.goiY`) nằm ở doc riêng `gy_<actId>` (kind `act-goiy`)**; doc act chỉ mang dấu `content.goiYTach: true`. `persist()` tự tách khi ghi; `napGoiY(act)` gắn lại `content.goiY` + xoá dấu.
+  Đã nạp sẵn ở: `getItem` / `getActivity` · đầu `startGame` (đường thầy, không `session`) · `createAssignment` (ảnh chụp bài giao luôn ĐỦ bảng) · `duplicateItem`.
+  ⛔ Thêm đường MỚI dùng `content.goiY` của act lấy từ `listChildren`/`searchItems`/`listSwitchActs`… (chưa nạp) ⇒ gọi `await napGoiY(act)` trước. Template / editor nhận act qua startGame/editAct nên không phải làm gì.
+  ⛔ Không bao giờ tự xoá doc `gy_` khi lưu — chỉ Delete forever / Empty bin xoá kèm.
+
 ## ⌨️ Đợt 419 — template CÓ GÕ PHÍM VẬT LÝ: gắn `core/vn-guard.js`
 
 Máy học sinh hay để UniKey/EVKey bật. Chúng không gõ thẳng mà NUỐT phím rồi bơm gói "xoá + chữ có dấu" (keydown keyCode 231, code ""). Lọc ASCII sau khi chữ đã vào ô (kiểu `filterEnglish` cũ) làm MẤT chữ và làm UniKey xoá nhầm về sau. Template mới có ô gõ / nghe phím ở `window` phải gắn:
