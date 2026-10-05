@@ -577,6 +577,7 @@ Thầy xem 2 vòng ảnh thử (chụp từ game thật, đắp CSS tạm) rồi
    (chưa có `.aw-tta-card`), bấm play khung mới cao lên.
    ⚠️ Trình duyệt không hiểu `:has` (Safari < 15.4) ⇒ giữ khung thường, vẫn chơi được.
 
+- ✅ Push `20703ae` + LIVE 8/8 mã băm (no-copy, vn-guard, app.css, TTA css/js, crossword, running-word, find-the-gap).
 - ⬜ Thầy thử trên điện thoại thật: trang bài tập myLesson → READY → Phóng to → gõ; thử giữ lâu ô gõ xem còn hiện "Dán" không.
 
 ---
