@@ -900,7 +900,9 @@
 /* đứng trong khe giữa cảnh 3D và hàng nút (.aw-fight-bottom là hộp tuyệt đối phủ hàng nút ⇒ đặt tuyệt đối, top âm) */
 .aw-rr3d-prog { position: absolute; left: 0; right: 0; top: -17px; height: 6px; border-radius: 99px; background: rgba(125, 211, 252, .14);
   box-shadow: inset 0 0 0 1px rgba(125, 211, 252, .18); }
-.aw-rr3d-prog i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: inherit; transition: width .8s cubic-bezier(.22, .9, .3, 1);
+/* ⭐ Đợt 478: max-width chừa 4px cho chấm sáng ::after (right −4px) — thanh đầy 100% lúc thắng làm chấm lòi ra ngoài ⇒ trang tràn ngang 4px ⇒ hiện
+   2 thanh cuộn ⇒ khung game co 15px ⇒ resize ⇒ dựng lại cả bảng ô (84 ms, đo TOMKO 05/10/2026). */
+.aw-rr3d-prog i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; max-width: calc(100% - 4px); border-radius: inherit; transition: width .8s cubic-bezier(.22, .9, .3, 1);
   background: linear-gradient(90deg, #38bdf8, #7dd3fc 60%, #fde68a); box-shadow: 0 0 10px rgba(56, 189, 248, .7); }
 .aw-rr3d-prog i::after { content: ""; position: absolute; right: -4px; top: 50%; width: 10px; height: 10px; margin-top: -5px; border-radius: 50%;
   background: #fff7d6; box-shadow: 0 0 10px 3px rgba(253, 230, 138, .9); }

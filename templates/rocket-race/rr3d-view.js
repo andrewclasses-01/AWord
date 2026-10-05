@@ -532,6 +532,9 @@ export async function createView(cfg) {
   // ?debug: giữ khung hình đã vẽ để công cụ chụp màn hình đọc được (chỉ dùng khi kiểm thử)
   const debug = /[?&]debug/.test(location.search);
   const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance", preserveDrawingBuffer: debug });
+  // ⭐ Đợt 478 (đo TOMKO 05/10/2026): hỏi log lỗi shader (getProgramInfoLog) ở lần dùng đầu bắt luồng chính CHỜ card dịch xong — 19 ms lúc vào đua,
+  //   63 ms lúc thắng (lần đo đầu có khung 866 ms). Chỉ bật khi ?debug.
+  renderer.debug.checkShaderErrors = debug;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = cfg.exposure ?? 1.05;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -1076,6 +1079,18 @@ export async function createView(cfg) {
   // đèn chớp nổ: LUÔN nằm trong cảnh (cường độ 0 khi rảnh) — thêm/bớt đèn = biên dịch lại mọi shader
   const boomLight = new THREE.PointLight(0xffa860, 0, 70, 2);
   scene.add(boomLight);
+  // ⭐ Đợt 478 — GỐC CÚ KHỰNG LÚC THẮNG (đo TOMKO 05/10/2026: 92 + 174 ms, có lần 300–800 ms; 8 shader mới đúng giây thắng):
+  //   portalFlash() cũ tạo MỚI PointLight + sprite + vòng sáng mỗi lần loé ⇒ SỐ ĐÈN ĐỔI ⇒ three.js dịch lại MỌI vật liệu có chiếu sáng
+  //   (đúng bẫy boomLight ở trên). Nay dựng SẴN một bộ ở đây — TRƯỚC warmBoom — đèn cường độ 0 ⇒ số đèn cố định từ đầu;
+  //   loé = dùng lại bộ này, hết loé = ẩn + tắt đèn (không gỡ, không huỷ).
+  const PF = (() => {
+    const tex = radialTex([[0, "rgba(255,255,255,1)"], [0.18, "rgba(235,245,255,0.95)"], [0.45, "rgba(150,200,255,0.35)"], [1, "rgba(80,120,255,0)"]], 256);
+    const core = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: new THREE.Color(6, 6.5, 8), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.0, 96), new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 4.5, 7), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+    const light = new THREE.PointLight(0xcfe4ff, 0, 60, 1.6);
+    core.visible = false; ring.visible = false; scene.add(core, ring, light);
+    return { core, ring, light };
+  })();
   const cSmokeHot = new THREE.Color(), cSmokeCold = new THREE.Color();
   function explosion(pos, sc = 1) {   // Đợt 407: sc = hệ số cỡ (tên lửa nổ nhỏ hơn tàu nổ)
     // ⭐ Đợt 454: w = độ RỘNG của tia lửa + vòng xung kích theo cỡ (vụ nổ tên lửa nhỏ không còn văng tia rộng bằng nổ tàu); sc ≥ 0,75 như cũ
@@ -1395,6 +1410,10 @@ export async function createView(cfg) {
   // ⚠️ biên dịch với ĐÚNG render target của composer: cảnh thật vẽ vào RT (không tone mapping, không
   //    sRGB) ⇒ biến thể shader khác hẳn bản "vẽ ra màn hình" — compile() với RT null là biên dịch phí,
   //    lúc nổ vẫn khựng ~100 ms (đã đo).
+  // ⭐ Đợt 478: chữ băng rôn (banner) là MeshPhysicalMaterial TRONG SUỐT — biến thể "không đục" chỉ xuất hiện lần đầu ở chữ "… WINS!"
+  //   (đo TOMKO: 1 shader mới đúng lúc thắng, khung ~100 ms). Mẫu ẩn cùng loại vật liệu nằm sẵn trong lớp UI ⇒ warmBoom dịch luôn.
+  const warmBanner = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.01, 0.01), new THREE.MeshPhysicalMaterial({ color: "#ffcf4a", metalness: 1, roughness: 0.18, clearcoat: 1, emissive: new THREE.Color(1.8, 1.0, 0.1), emissiveIntensity: 0.3, transparent: true }));
+  warmBanner.visible = false; ui.add(warmBanner);
   function warmBoom() {
     try {
       const prev = renderer.getRenderTarget();
@@ -1771,15 +1790,13 @@ export async function createView(cfg) {
   // mẫu 5: LOÉ SÁNG CỔNG KHÔNG GIAN khi tàu thắng chui qua — quả cầu sáng nở rồi tắt, vòng sóng sáng loang ra theo mặt cổng,
   // đèn chớp rọi cả cảnh, cổng loé, camera rung nhẹ
   const portalFx = [];
-  const portalTex = radialTex([[0, "rgba(255,255,255,1)"], [0.18, "rgba(235,245,255,0.95)"], [0.45, "rgba(150,200,255,0.35)"], [1, "rgba(80,120,255,0)"]], 256);
   function portalFlash() {
     const c = gate.position.clone(), R = (cfg.gate && cfg.gate.radius) || 5;
-    const core = new THREE.Sprite(new THREE.SpriteMaterial({ map: portalTex, color: new THREE.Color(6, 6.5, 8), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-    core.position.copy(c); scene.add(core);
-    const ringG = new THREE.RingGeometry(0.9, 1.0, 96), ring = new THREE.Mesh(ringG, new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 4.5, 7), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
-    ring.position.copy(c); ring.lookAt(c.clone().add(cfg.gate.normal || new V3(0, 0, 1))); scene.add(ring);
-    const light = new THREE.PointLight(0xcfe4ff, 900, R * 12, 1.6); light.position.copy(c); scene.add(light);
-    portalFx.push({ core, ring, light, t: 0, R });
+    const { core, ring, light } = PF;   // Đợt 478: dùng lại bộ dựng sẵn (không thêm đèn / vật liệu mới)
+    core.position.copy(c); core.visible = true; core.material.opacity = 1;
+    ring.position.copy(c); ring.lookAt(c.clone().add(cfg.gate.normal || new V3(0, 0, 1))); ring.visible = true; ring.material.opacity = 1;
+    light.position.copy(c); light.distance = R * 12; light.intensity = 900;
+    portalFx.length = 0; portalFx.push({ core, ring, light, t: 0, R });
     gate.userData.flash = 1.4; trauma = Math.min(1, trauma + 0.35);
     burst(c, { n: 120, speed: 14, color: new THREE.Color(4, 5, 7), colorEnd: new THREE.Color(0.6, 1.2, 3), size: 0.22, life: 0.9 });
     sfx("portal", 1); sfx("boomlow", 0.5);
@@ -1791,7 +1808,7 @@ export async function createView(cfg) {
       f.core.scale.set(s, s, 1); f.core.material.opacity = Math.max(0, 1 - Math.max(0, k - 0.12) / 0.75);
       const rs = f.R * (1 + k * 6); f.ring.scale.set(rs, rs, rs); f.ring.material.opacity = Math.max(0, 1 - k / 0.9);
       f.light.intensity = 900 * Math.exp(-k * 5);
-      if (k > 1.2) { [f.core, f.ring, f.light].forEach(o => scene.remove(o)); f.core.material.dispose(); f.ring.geometry.dispose(); f.ring.material.dispose(); portalFx.splice(i, 1); }
+      if (k > 1.2) { f.core.visible = false; f.ring.visible = false; f.light.intensity = 0; portalFx.splice(i, 1); }   // Đợt 478: ẩn, không gỡ/huỷ
     }
   }
   function blowUp(r) {
@@ -2024,7 +2041,8 @@ export async function createView(cfg) {
   ro.observe(container);
   var autoRes = null;
   resize();
-  autoRes = makeAutoRes({ max: renderer.getPixelRatio(), min: Math.min(1, renderer.getPixelRatio()), key: "race", apply: applyPR });   // sàn 1,0: chữ ô đáp án vẫn nét
+  autoRes = makeAutoRes({ max: renderer.getPixelRatio(), min: Math.min(1, renderer.getPixelRatio()), key: "race", apply: applyPR,   // sàn 1,0: chữ ô đáp án vẫn nét
+    aa: { on: Q[quality].samples > 0, set: on => { const ns = on ? Q[quality].samples : 0; for (const t of [composer.renderTarget1, composer.renderTarget2]) if (t.samples !== ns) { t.samples = ns; t.dispose(); } } } });   // ⭐ Đợt 478: không kịp ⇒ bỏ MSAA trước rồi mới hạ độ nét
 
   function setQuality(qn) {
     quality = qn;
@@ -2041,8 +2059,12 @@ export async function createView(cfg) {
   let manual = false;       // bàn thử: tự bước khung hình (khung xem trước không chạy rAF đều)
   // Giới hạn khung hình (TOMKO chỉ hiện 60 Hz — vẽ hơn là phí GPU)
   let lastFrame = 0, rafId = 0, destroyed = false;
+  // ⭐ Đợt 478: GHIM shader — +1 lượt dùng cho mỗi program một lần ⇒ three.js không xoá khi vật bị huỷ ⇒ ván sau (Start again) không dịch lại
+  let pinT = 0;
+  function pinPrograms() { const ps = renderer.info.programs; if (ps) for (const p of ps) if (!p.__pin478) { p.__pin478 = true; p.usedTimes++; } }
   function frame(now) {
     if (destroyed) return;
+    if (++pinT >= 30) { pinT = 0; pinPrograms(); }   // Đợt 478
     rafId = requestAnimationFrame(frame);
     if (cfg.maxFps && now - lastFrame < 1000 / cfg.maxFps - 2) return;
     lastFrame = now;
@@ -2359,7 +2381,7 @@ export async function createView(cfg) {
     strike(side) { meteorStrike(rockets[side], 1, 3); const m = meteors[meteors.length - 1]; const f = v => { const q = v.clone().project(camera); return [+q.x.toFixed(2), +q.y.toFixed(2)]; }; return { start: f(m.start), target: f(new V3().setFromMatrixPosition(rockets[side].ship.matrixWorld)), sameMat: m.line.material === dust.material }; },   // bàn thử Đợt 397: một nhát tia sáng kết trận
     dodgeInfo() { return { k: +dodgeK.toFixed(2), rocks: dodgeRocks.length, cam: camMode, dg: rockets.map(r => r.dg ? [+r.dg.x.toFixed(2), +r.dg.y.toFixed(2)] : null) }; },   // bàn thử Đợt 397
     resume() { manual = false; clock.getDelta(); autoRes.pause(); },
-    get res() { return autoRes.info; },
+    get res() { return autoRes.info; }, get renderer() { return renderer; },   // Đợt 478: bàn thử (đếm shader)
     snap() {
       let img = document.getElementById("__snap");
       if (!img) { img = document.createElement("img"); img.id = "__snap"; img.style.cssText = "position:fixed;left:0;top:0;width:100%;z-index:99999;pointer-events:none"; document.body.append(img); }

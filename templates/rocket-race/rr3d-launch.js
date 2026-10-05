@@ -247,7 +247,8 @@ function trussStruts(S, a, b, hgt = 0.45, wid = 0.4, n = 8) {
 
 export async function createLaunch(cfg) {
   const container = cfg.container;
-  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+  const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });   // ⭐ Đợt 478: AA nằm ở composer (MSAA 4) — AA canvas chỉ tốn bộ nhớ
+  renderer.debug.checkShaderErrors = /[?&]debug/.test(location.search);   // ⭐ Đợt 478: không bắt luồng chính chờ card dịch shader
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, cfg.pixelRatio ?? 1.5));
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.9;
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -1193,7 +1194,8 @@ export async function createLaunch(cfg) {
   const clock = new THREE.Clock();
   let raf = 0, manual = false, dead = false, fN = 0, fT = 0, lastFrame = 0;
   // 5c: tự giữ 60 khung — hạ/nâng độ nét (chỉ cấp lại bộ đệm vẽ, không dựng lại cảnh)
-  const autoRes = makeAutoRes({ max: renderer.getPixelRatio(), min: 0.8, key: "launch", apply: pr => { renderer.setPixelRatio(pr); composer.setPixelRatio(pr); resize(); } });
+  const autoRes = makeAutoRes({ max: renderer.getPixelRatio(), min: 0.8, key: "launch", apply: pr => { renderer.setPixelRatio(pr); composer.setPixelRatio(pr); resize(); },
+    aa: { on: 4 > 0, set: on => { const ns = on ? 4 : 0; for (const t of [composer.renderTarget1, composer.renderTarget2]) if (t.samples !== ns) { t.samples = ns; t.dispose(); } } } });   // ⭐ Đợt 478: không kịp ⇒ bỏ MSAA trước rồi mới hạ độ nét
   function frame(now) {
     if (dead) return;
     raf = requestAnimationFrame(frame);

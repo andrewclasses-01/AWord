@@ -848,3 +848,22 @@ khu tên lửa "cột dọc mọc lên" · PEACE bật/tắt trong trận · thi
 
 - **458 (04/10)**: `"reveal"` vẽ như idle · `UI_SHAKE` 0,1 (bảng là con camera — trừ ngược cú rung làm bảng rung MẠNH hơn) · Time delay kéo
   dài khi bị bắn: `ctl.setDelayFloor(msDelayFloorMs)` + `onMissileLaunch → ctl.stretchDelay` (core/fight.js mới), lề `MS_DELAY_MARGIN` 0,35 s.
+
+## 44. Đợt 478 (05/10/2026) — HẾT KHỰNG LÚC THẮNG · THANH % KHÔNG LÒI · NẤC MSAA
+
+Thầy: "check tiếp Rocket race cũng đã tối ưu chưa" (sau TRAIN RUSH / STAR LOOT Đợt 475–477). Đo LIVE trong myActivity (TOMKO, trần `__awMaxPR` = 1):
+màn chờ 60 fps (card 98 %) · phóng 56,8 · đua 59–59,9 — GPU ổn. NHƯNG khựng JS (profiler CDP + đếm shader `__rr3d.view.renderer`):
+- **Lúc THẮNG 92 + 174 ms, lần đầu tới 300–866 ms**: 8 shader mới. Gốc: `portalFlash()` tạo MỚI PointLight (+ sprite + vòng) ⇒ số đèn đổi ⇒ dịch lại
+  mọi vật liệu có chiếu sáng (đúng bẫy boomLight Đợt 399). Sửa: bộ loé cổng `PF` dựng SẴN ngay sau boomLight (trước warmBoom), đèn cường độ 0; loé = dùng lại, xong = ẩn.
+- Còn 1 shader lúc thắng (~100 ms): chữ băng rôn "… WINS!" là MeshPhysicalMaterial TRONG SUỐT — biến thể "không đục" chưa từng xuất hiện trước đó
+  (khoá shader chỉ khác bit opaque). Sửa: mẫu ẩn `warmBanner` cùng loại vật liệu trong lớp UI ⇒ warmBoom dịch luôn.
+- **Màn kết quả hiện 2 thanh cuộn ⇒ khung game co 15 px ⇒ resize ⇒ dựng lại cả bảng ô (84 ms)**: chấm sáng `.aw-rr3d-prog i::after` (right −4px)
+  lòi ra ngoài khi thanh đầy 100 %. Sửa: `max-width: calc(100% - 4px)` cho thanh fill (`rocket-race.css`).
+- `getProgramInfoLog` 17–63 ms mỗi shader dùng lần đầu: `renderer.debug.checkShaderErrors` chỉ bật khi `?debug` (view + launch).
+- `pinPrograms()` (view, mỗi 30 khung) ghim shader ⇒ Start again không dịch lại. Cảnh phóng: canvas `antialias: false` (đã có MSAA 4 ở composer).
+- `rr3d-autores.js`: tuỳ chọn `aa: { on, set }` — máy không kịp ⇒ BỎ MSAA TRƯỚC rồi mới hạ độ nét (chữ ô vẫn nét); thử bật lại khi êm; nhớ `.aa`;
+  rớt 2 lần cùng mức ⇒ chốt trần. Không trần (như Chrome, DPR 1,25) bản cũ chỉ hạ tới 1,05 + MSAA 4 ⇒ 58,6 fps, 10–14 khung > 33 ms / 12 s;
+  nay tự bỏ MSAA ⇒ 59,6–60 fps. Có trần (myActivity) card đủ ⇒ GIỮ MSAA 4.
+- Bàn thử: `__rr3d.view.renderer`, `__rr3d.view.res` thêm `aa`, `aaOK`.
+**Đo sau (bản cục bộ trong myActivity):** trọn ván tới 12 s sau khi thắng: 0 shader mới, 0 khung > 40 ms · có trần: đua 59,6–59,9 fps, khung dài nhất 33 ms ·
+màn kết quả không còn thanh cuộn. Còn: khung đầu cảnh phóng (~230 ms, gần như không phải JS — GPU dựng cảnh) và huỷ cảnh phóng `forceContextLoss` 14–32 ms lúc trao sang đua.

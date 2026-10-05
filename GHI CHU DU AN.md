@@ -546,6 +546,28 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 478 (05/10/2026) — ROCKET RACE 3D: HẾT KHỰNG LÚC THẮNG + NẤC MSAA CHO BỘ TỰ GIỮ 60 KHUNG · phiên máy BOARD
+
+Thầy: "check tiếp Rocket race cũng đã tối ưu chưa" (sau TRAIN RUSH / STAR LOOT Đợt 475–477). Đo LIVE trong myActivity (TOMKO, trần `__awMaxPR` = 1):
+màn chờ 60 fps (card 98 %) · phóng 56,8 · đua 59–59,9 — GPU ổn. NHƯNG khựng JS (profiler CDP + đếm shader `__rr3d.view.renderer`):
+- **Lúc THẮNG 92 + 174 ms, lần đầu tới 300–866 ms**: 8 shader mới. Gốc: `portalFlash()` tạo MỚI PointLight (+ sprite + vòng) ⇒ số đèn đổi ⇒ dịch lại
+  mọi vật liệu có chiếu sáng (đúng bẫy boomLight Đợt 399). Sửa: bộ loé cổng `PF` dựng SẴN ngay sau boomLight (trước warmBoom), đèn cường độ 0; loé = dùng lại, xong = ẩn.
+- Còn 1 shader lúc thắng (~100 ms): chữ băng rôn "… WINS!" là MeshPhysicalMaterial TRONG SUỐT — biến thể "không đục" chưa từng xuất hiện trước đó
+  (khoá shader chỉ khác bit opaque). Sửa: mẫu ẩn `warmBanner` cùng loại vật liệu trong lớp UI ⇒ warmBoom dịch luôn.
+- **Màn kết quả hiện 2 thanh cuộn ⇒ khung game co 15 px ⇒ resize ⇒ dựng lại cả bảng ô (84 ms)**: chấm sáng `.aw-rr3d-prog i::after` (right −4px)
+  lòi ra ngoài khi thanh đầy 100 %. Sửa: `max-width: calc(100% - 4px)` cho thanh fill (`rocket-race.css`).
+- `getProgramInfoLog` 17–63 ms mỗi shader dùng lần đầu: `renderer.debug.checkShaderErrors` chỉ bật khi `?debug` (view + launch).
+- `pinPrograms()` (view, mỗi 30 khung) ghim shader ⇒ Start again không dịch lại. Cảnh phóng: canvas `antialias: false` (đã có MSAA 4 ở composer).
+- `rr3d-autores.js`: tuỳ chọn `aa: { on, set }` — máy không kịp ⇒ BỎ MSAA TRƯỚC rồi mới hạ độ nét (chữ ô vẫn nét); thử bật lại khi êm; nhớ `.aa`;
+  rớt 2 lần cùng mức ⇒ chốt trần. Không trần (như Chrome, DPR 1,25) bản cũ chỉ hạ tới 1,05 + MSAA 4 ⇒ 58,6 fps, 10–14 khung > 33 ms / 12 s;
+  nay tự bỏ MSAA ⇒ 59,6–60 fps. Có trần (myActivity) card đủ ⇒ GIỮ MSAA 4.
+- Bàn thử: `__rr3d.view.renderer`, `__rr3d.view.res` thêm `aa`, `aaOK`.
+**Đo sau (bản cục bộ trong myActivity):** trọn ván tới 12 s sau khi thắng: 0 shader mới, 0 khung > 40 ms · có trần: đua 59,6–59,9 fps, khung dài nhất 33 ms ·
+màn kết quả không còn thanh cuộn. Còn: khung đầu cảnh phóng (~230 ms, gần như không phải JS — GPU dựng cảnh) và huỷ cảnh phóng `forceContextLoss` 14–32 ms lúc trao sang đua.
+- ⬜ Thầy chơi trên TOMKO: lúc thắng (cổng loé, chữ WINS) còn khựng không; màn kết quả không nhảy khung.
+
+---
+
 ## Đợt 477 (05/10/2026) — TRAIN RUSH 60 KHUNG PHẲNG: myGame mẫu 1an (cải tiến STAR LOOT 2p + kho saguaro) · phiên máy BOARD
 
 Thầy: "làm bản 1an cho Train Rush luôn".
@@ -554,6 +576,7 @@ Thầy: "làm bản 1an cho Train Rush luôn".
   khúc cảnh quay vòng. `3d/west-world-1an.js`: kho 10 saguaro dựng sẵn lúc tải + cây bị bỏ vào kho dùng lại (đặt chỗ / xoay / scale mới).
 - myGame `ca4d0ac`, chép bằng `python -X utf8 tools/chep-train-rush.py` (GOC = `fight-1an.js`; script tự xoá bản 1am + west-world-1ah). `balloon-pop.js`: import 1an.
 - Đo (myActivity, `__awMaxPR = 1`): myGame 1an chơi 60,0 fps × 4 đoạn, khung dài nhất 17 ms · Fight 60,0 fps · bản AWord cục bộ chơi 59,9–60,0.
+- ✅ Push `3e28cc9` + LIVE 5/5 mã băm. App thật myActivity + game LIVE (không đặt tay): chơi 60,0 / 60,0 / 59,8 fps.
 - ⬜ Thầy chơi trên TOMKO: xương rồng mọc lại (dùng lại cây từ khúc khác) trông có tự nhiên không.
 
 ---
