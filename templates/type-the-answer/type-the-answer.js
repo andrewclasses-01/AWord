@@ -519,7 +519,15 @@ const ttaTemplate = {
     slot.append(answerBlock);
 
     // ----- the STANDARD on-screen keyboard (core/keyboard.js) -----
+    // ⭐ Đợt 465 — bài giao nhúng myLesson + điện thoại dựng đứng sau khi HS bấm
+    // "Phóng to" (đúng điều kiện @media "kiểu B" của Đợt 464 trong type-the-answer.css)
+    // ⇒ bàn phím xếp kiểu "grid" 5 hàng như bàn phím điện thoại thật. Thu nhỏ / xoay
+    // ngang ⇒ trở lại kiểu cũ. ⚠️ Chuỗi media PHẢI trùng khối CSS kia.
+    const phoneMq = typeof matchMedia === "function"
+      ? matchMedia("(max-width: 700px) and (max-aspect-ratio: 4/5)") : null;
+    const wantGrid = () => !!phoneMq?.matches && document.documentElement.classList.contains("aw-nhung");
     const kbd = createKeyboard({
+      layout: wantGrid() ? "grid" : "classic",
       sound: ui.sound,
       onChar: ch => insertChar(input, ch),
       onBackspace: () => backspace(input),
@@ -542,6 +550,8 @@ const ttaTemplate = {
       }
     });
     if (!keyboardVisible) kbd.setHidden(true);
+    const onPhoneMq = () => { kbd.setLayout(wantGrid() ? "grid" : "classic"); fitLayout(); };
+    phoneMq?.addEventListener?.("change", onPhoneMq);
 
     card.append(qArea, slot, kbd.el);
     const curInput = input;   // single persistent textarea (for autoGrow)
@@ -1522,6 +1532,7 @@ const ttaTemplate = {
       dead = true;   // Đợt 114 — MUST be first; see land() / showScore / pulseScoreTo
       vnGuard.dispose();
       noCopy.dispose();
+      phoneMq?.removeEventListener?.("change", onPhoneMq);
       window.removeEventListener("resize", onResize);
       cancelAnimationFrame(rafFit);
       clearAutoTimer();

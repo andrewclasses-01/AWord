@@ -34,8 +34,18 @@
 //                        //   colours/animation in its own CSS file, keyed off
 //                        //   that class + the is-ready/is-glowing/is-used
 //                        //   state classes this module applies.
+//   layout              // optional "classic" (default, the 4 rows above) |
+//                        //   "grid" — ⭐ Đợt 465: phone grid copied from a real
+//                        //   phone keyboard (10 equal columns, 5 rows):
+//                        //     0: ' , . ? ! - : ; ( )
+//                        //     1: q…p          (numbers: 1…0)
+//                        //     2:  a…l         (numbers: - / : ; ( ) $ & @)
+//                        //     3: caps z…m ⌫   (numbers: ! + = * % # _)
+//                        //     4: 123 [extraKey?] Space [Submit?]
+//                        //   Sizes live in the caller's CSS (`.aw-kbd.is-grid`).
 // })
-//   -> { el, setHidden(bool), isHidden(), refresh() }
+//   -> { el, setHidden(bool), isHidden(), refresh(), setLayout(name) }
+//   `setLayout()` rebuilds the rows only (same `el`, caps/numbers state kept).
 //   `el` is a PERSISTENT node — toggling numbers mode rebuilds only the rows
 //   inside it, never `el` itself, so callers can hold one reference for the
 //   life of the game (position/fit math, is-hidden toggling, etc).
@@ -54,12 +64,14 @@ const L3 = ["z", "x", "c", "v", "b", "n", "m"];
 const N1 = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 const N2 = ["-", "/", ":", ";", "(", ")", "$", "&", "@"];
 const N3 = ["!", "+", "=", "*", "%", "#", "_"];
+const P0 = ["'", ",", ".", "?", "!", "-", ":", ";", "(", ")"];   // Đợt 465 — top row of the "grid" layout
 
-export function createKeyboard({ sound, onChar, onBackspace, submit, extraKey }) {
+export function createKeyboard({ sound, onChar, onBackspace, submit, extraKey, layout = "classic" }) {
   let capsOn = false;
   let numbersMode = false;
+  let grid = layout === "grid";
 
-  const wrap = el("div", "aw-kbd");
+  const wrap = el("div", "aw-kbd" + (grid ? " is-grid" : ""));
   const main = el("div", "aw-kbd-main");
   wrap.append(main);
   renderRows();
@@ -68,7 +80,28 @@ export function createKeyboard({ sound, onChar, onBackspace, submit, extraKey })
     main.innerHTML = "";
     const mkRow = () => el("div", "aw-kbd-row");
 
-    if (!numbersMode) {
+    if (grid) {
+      // ⭐ Đợt 465 — "grid": every letter/punctuation key is the SAME width
+      // (10 equal columns), like a real phone keyboard. Row classes let the
+      // caller's CSS indent row 2 by half a key and widen caps/⌫ on row 3.
+      const r0 = el("div", "aw-kbd-row aw-kbd-r0");
+      P0.forEach(ch => r0.append(charKey(ch)));
+      main.append(r0);
+
+      const r1 = el("div", "aw-kbd-row aw-kbd-r1");
+      (numbersMode ? N1 : L1).forEach(ch => r1.append(numbersMode ? charKey(ch) : letterKey(ch)));
+      main.append(r1);
+
+      const r2 = el("div", "aw-kbd-row aw-kbd-r2");
+      (numbersMode ? N2 : L2).forEach(ch => r2.append(numbersMode ? charKey(ch) : letterKey(ch)));
+      main.append(r2);
+
+      const r3 = el("div", "aw-kbd-row aw-kbd-r3");
+      const mid = el("div", "aw-kbd-r3mid");
+      (numbersMode ? N3 : L3).forEach(ch => mid.append(numbersMode ? charKey(ch) : letterKey(ch)));
+      r3.append(capsKeyEl(), mid, backspaceKey());
+      main.append(r3);
+    } else if (!numbersMode) {
       const r1 = mkRow();
       r1.append(charKey("'"));
       L1.forEach(ch => r1.append(letterKey(ch)));
@@ -109,6 +142,7 @@ export function createKeyboard({ sound, onChar, onBackspace, submit, extraKey })
     }
 
     const r4 = el("div", "aw-kbd-row aw-kbd-spacerow");
+    if (grid) r4.append(numbersKeyEl());
     if (extraKey) r4.append(extraKeyEl());
     const spaceKey = makeKey("Space", () => onChar?.(" "));
     spaceKey.classList.add("aw-kbd-space");
@@ -176,7 +210,7 @@ export function createKeyboard({ sound, onChar, onBackspace, submit, extraKey })
   }
   function numbersKeyEl() {
     const cls = "aw-kbd-key-numbers" + (numbersMode ? " is-active" : "");
-    return fnKey("numbers", cls,
+    return fnKey(grid ? "123" : "numbers", cls,
       () => { numbersMode = !numbersMode; if (numbersMode) capsOn = false; renderRows(); }, false);
   }
   function extraKeyEl() {
@@ -214,7 +248,14 @@ export function createKeyboard({ sound, onChar, onBackspace, submit, extraKey })
     el: wrap,
     setHidden(hidden) { wrap.classList.toggle("is-hidden", hidden); },
     isHidden() { return wrap.classList.contains("is-hidden"); },
-    refresh
+    refresh,
+    setLayout(name) {
+      const g = name === "grid";
+      if (g === grid) return;
+      grid = g;
+      wrap.classList.toggle("is-grid", grid);
+      renderRows();
+    }
   };
 }
 

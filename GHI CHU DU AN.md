@@ -546,6 +546,32 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 465 (05/10/2026) — ⭐ BÀN PHÍM "GRID" KHI PHÓNG TO TRÊN ĐIỆN THOẠI (chép số đo bàn phím điện thoại thật)
+
+Thầy gửi ảnh chụp cùng một điện thoại: bàn phím Laban Key vs bàn phím AWord kiểu B (Đợt 464) — chê AWord "xấu, nút không
+đều, quá dài, khoảng cách không đều". Đo ảnh mẫu (924px ⇒ quy về 390px CSS, màn của thầy 390×844): phím **33×41**
+(cao ≈ 1,24 × rộng), khe ngang 5,5, khe hàng 12 (≈ gấp đôi), 10 cột bằng nhau, hàng A–L lùi nửa phím, Shift/⌫ = 1,25 phím.
+AWord cũ: phím 24×46, hàng Q–P (12 ô: ' + 10 chữ + ⌫) hẹp hơn các hàng dưới. Thầy duyệt mockup bản B (5 hàng), góc bàn phím
+"bo rất ít" (4px), hàng dấu `' , . ? ! - : ; ( )`, chỉ áp khi Phóng to trên điện thoại.
+
+- `core/keyboard.js`: thêm `layout: "grid"` + `setLayout(name)` (mặc định "classic" ⇒ 3 template kia + máy tính KHÔNG đổi).
+  grid: r0 dấu (P0) · r1 q…p / 1…0 · r2 a…l / `- / : ; ( ) $ & @` · r3 caps + `.aw-kbd-r3mid` (z…m / `! + = * % # _`) + ⌫ ·
+  r4 `123` (= phím numbers, nhãn đổi) + Andrew + Space + Submit. Đổi layout chỉ dựng lại hàng, giữ `el` + trạng thái caps/numbers.
+- `type-the-answer.js`: `matchMedia("(max-width: 700px) and (max-aspect-ratio: 4/5)")` + `html.aw-nhung` ⇒ grid; nghe `change`
+  (Phóng to / Thu nhỏ / xoay) ⇒ `setLayout` + `fitLayout`; gỡ trong cleanup. ⚠️ Chuỗi media PHẢI trùng khối CSS kiểu B.
+- `type-the-answer.css` (khối kiểu B): `--kw = (100% − 9 khe)/10` — `flex-basis` % tính theo HÀNG nên không phụ thuộc cửa sổ;
+  nhóm 7 chữ hàng Z–M rộng đúng 7 phím + 6 khe; cao phím `clamp(34px, (100vw − 57,5px)·0,124, 41px)`.
+  ⛔ Bẫy đã cắn: `.aw-playarea` có `overflow:hidden` ⇒ bàn phím tràn mép bằng margin âm bị CẮT hai đầu. Chữa: nới chính
+  `.aw-playarea:has(.aw-tta-card)` ra bằng margin âm 2,2u (= lề `.aw-stage-inner`), bàn phím để `width:100%`.
+- Đo trên game thật: 390×844 ⇒ phím 33,3×41, mọi chữ cùng bề ngang ở cả 3 hàng, hàng A–L lùi 19,4px (= nửa bước), khớp mockup
+  tới 0,1px; 320×560 ⇒ 26,3×34, câu sai 3 dòng vẫn không đè bàn phím. Bấm thật: caps → "H", ' ? ⌫, 123 đổi đủ 3 hàng ký hiệu
+  (caps mờ, 123 sáng chấm). Thu nhỏ khi đang ở trang 123 ⇒ về 4 hàng cũ, chữ đã gõ còn nguyên; phóng to lại ⇒ 5 hàng, vẫn trang 123.
+  Máy tính 1280: vẫn 4 hàng, rộng 906px như Đợt 464.
+- Mockup: scratchpad phiên (kbd-mau/index.html ?v=A|B).
+- ⬜ Thầy thử điện thoại thật.
+
+---
+
 ## Đợt 464 (05/10/2026) — ⭐ CHẶN COPY + DÁN trong 4 game gõ chữ · BÀN PHÍM TYPE THE ANSWER TO THÊM 20 % · ⭐ BÀN PHÍM LỚN KHI HS BẤM "PHÓNG TO" TRÊN ĐIỆN THOẠI (bài giao trong myLesson)
 
 Thầy báo: học sinh copy + dán được vào ô gõ (gian lận); bàn phím Type the answer trên điện thoại quá nhỏ.

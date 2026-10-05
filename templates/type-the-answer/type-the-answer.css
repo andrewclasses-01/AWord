@@ -302,9 +302,19 @@
        hoặc THU NHỎ ⇒ hết khớp, tự về khung thường. Không cần sửa myLesson.
      · khung đang chơi Type the answer (`:has(.aw-tta-card)`; trình duyệt quá cũ
        không hiểu `:has` thì giữ khung thường — vẫn chơi được, chỉ phím nhỏ).
-   Khung cao hết màn (`--ti-le` nhận một ĐỘ DÀI thay cho tỉ lệ %), bàn phím rộng hết
-   bề ngang nằm sát đáy khung, phím chữ tự chia đều (~24×46px ở màn 375px). Cỡ ở đây
-   viết bằng px vì `--aw-u` của khung = 1 % bề ngang (3,75px ở màn 375) — quá nhỏ.
+   Khung cao hết màn (`--ti-le` nhận một ĐỘ DÀI thay cho tỉ lệ %), bàn phím nằm sát đáy.
+   ⭐⭐ Đợt 465 (thầy chốt bản B) — bàn phím đổi sang kiểu "grid" (core/keyboard.js,
+   `.aw-kbd.is-grid`, JS bật bằng `matchMedia` cùng chuỗi điều kiện ở trên) với SỐ ĐO
+   chép từ bàn phím điện thoại thật thầy gửi (Laban Key, ảnh 924px ⇒ quy về 390px):
+   10 cột bằng nhau, phím 33×41 (cao ≈ 1,2 × rộng), khe ngang 5,5px, khe hàng 12px
+   (≈ gấp đôi), hàng A–L lùi nửa phím, caps / ⌫ = 1,25 phím ở hai đầu hàng Z–M.
+   Bề ngang phím = (bề ngang HÀNG − 9 khe) / 10, viết bằng % của hàng (`flex-basis` %
+   tính theo bề ngang hàng chứa nó) — không phụ thuộc cỡ cửa sổ. Hàng Z–M: nhóm 7 chữ
+   `.aw-kbd-r3mid` rộng đúng 7 phím + 6 khe, chữ bên trong chia đều.
+   Bàn phím tràn sát hai mép khung: `.aw-playarea` (overflow:hidden — nó CẮT mọi thứ
+   thò ra, đã cắn ở lần thử đầu) được nới ra bằng margin âm đúng lề 2,2u của
+   `.aw-stage-inner`. Góc bàn phím bo 4px (thầy: "bo rất ít").
+   Cỡ viết bằng px vì `--aw-u` của khung = 1 % bề ngang — quá nhỏ ở đây.
    ============================================================= */
 @media (max-width: 700px) and (max-aspect-ratio: 4/5) {
   html.aw-nhung .aw-stage:has(.aw-tta-card) { --ti-le: 100vh; --ti-le: 100dvh; }
@@ -315,30 +325,47 @@
     padding-top: 46px;
   }
   html.aw-nhung .aw-tta-prompt { font-size: calc(min(7vw, 30px) * var(--qfit)); }
-  html.aw-nhung .aw-tta-card .aw-kbd {
+  html.aw-nhung .aw-stage-inner > .aw-playarea:has(.aw-tta-card) { margin-left: calc(-2.2 * var(--aw-u)); margin-right: calc(-2.2 * var(--aw-u)); }
+  html.aw-nhung .aw-tta-card .aw-kbd.is-grid {
+    --kgx: 5.5px;
+    --kw: calc((100% - 9 * var(--kgx)) / 10);   /* % của HÀNG đang chứa phím */
     width: 100%;
     margin: auto 0 0;
-    padding: 8px 4px;
-    border-radius: 14px 14px 0 0;
+    padding: 8px 4px 10px;
+    border-radius: 4px 4px 0 0;
   }
-  html.aw-nhung .aw-tta-card .aw-kbd-main { gap: 9px; }
-  html.aw-nhung .aw-tta-card .aw-kbd-row { gap: 5px; }
-  html.aw-nhung .aw-tta-card .aw-kbd-key {
-    height: 46px; padding: 0;
-    font-size: 19px;
+  html.aw-nhung .aw-kbd.is-grid .aw-kbd-main { gap: 12px; }
+  html.aw-nhung .aw-kbd.is-grid .aw-kbd-row,
+  html.aw-nhung .aw-kbd.is-grid .aw-kbd-r3mid { display: flex; gap: var(--kgx); justify-content: center; }
+  html.aw-nhung .aw-kbd.is-grid .aw-kbd-r3 { justify-content: space-between; }
+  html.aw-nhung .aw-kbd.is-grid .aw-kbd-r3mid { flex: 0 0 calc(var(--kw) * 7 + 6 * var(--kgx)); }
+  html.aw-nhung .aw-kbd.is-grid .aw-kbd-r3mid > .aw-kbd-key { flex: 1 1 0; }
+  html.aw-nhung .aw-kbd.is-grid .aw-kbd-key {
+    flex: 0 0 var(--kw);
+    /* cao ≈ 1,24 × rộng như phím mẫu (33×41 ở màn 390); màn hẹp co lại, sàn 34px.
+       Bàn phím tràn đủ 100vw nên rộng phím ≈ (100vw − 57,5px) / 10. */
+    height: clamp(34px, calc((100vw - 57.5px) * .124), 41px); padding: 0;
+    font-size: 21px;
     border-radius: 6px;
-    box-shadow: 0 2px 0 #202022;
+    box-shadow: 0 1.5px 0 #18181a;
   }
-  html.aw-nhung .aw-tta-card .aw-kbd-key-back { box-shadow: 0 2px 0 #7f1212; }
-  html.aw-nhung .aw-tta-card .aw-kbd-submit { box-shadow: 0 2px 0 var(--aw-tile-fixed-dark, #2563eb); font-size: 16px; }
-  html.aw-nhung .aw-tta-card .aw-kbd-key-letter { flex: 1 1 0; }
-  html.aw-nhung .aw-tta-card .aw-kbd-row:first-child > .aw-kbd-key:first-child { flex: 0 0 22px; }   /* phím ' */
-  html.aw-nhung .aw-tta-card .aw-kbd-key-fn { padding: 0 6px 6px; }
-  html.aw-nhung .aw-tta-card .aw-kbd-key-fnlabel { font-size: 12px; }
-  html.aw-nhung .aw-tta-card .aw-kbd-key-dot { top: 6px; right: 6px; width: 6px; height: 6px; }
-  html.aw-nhung .aw-tta-card .aw-kbd-key-caps { flex: 0 0 48px; }
-  html.aw-nhung .aw-tta-card .aw-kbd-key-numbers { flex: 0 0 62px; }
-  html.aw-nhung .aw-tta-card .aw-tta-key-andrew { flex: 0 0 70px; }
+  html.aw-nhung .aw-kbd.is-grid .aw-kbd-key:active { box-shadow: none; }
+  html.aw-nhung .aw-kbd.is-grid .aw-kbd-key-back { flex-basis: calc(var(--kw) * 1.25); font-size: 18px; box-shadow: 0 1.5px 0 #7f1212; }
+  html.aw-nhung .aw-kbd.is-grid .aw-kbd-key-fn { padding: 0 6px 7px 8px; }
+  html.aw-nhung .aw-kbd.is-grid .aw-kbd-key-caps,
+  html.aw-nhung .aw-kbd.is-grid .aw-kbd-key-numbers {
+    flex-basis: calc(var(--kw) * 1.25);
+    align-items: center; justify-content: center; padding: 0;
+  }
+  html.aw-nhung .aw-kbd.is-grid .aw-kbd-key-fnlabel { font-size: 13px; }
+  html.aw-nhung .aw-kbd.is-grid .aw-kbd-key-dot { top: 6px; right: 6px; width: 6px; height: 6px; }
+  html.aw-nhung .aw-kbd.is-grid .aw-tta-key-andrew { flex-basis: calc(var(--kw) * 2 + var(--kgx)); }
+  html.aw-nhung .aw-kbd.is-grid .aw-kbd-space { flex: 1 1 0; font-size: 17px; }
+  html.aw-nhung .aw-kbd.is-grid .aw-kbd-submit {
+    flex-basis: calc(var(--kw) * 2.1);
+    font-size: 16px; font-weight: 700;
+    box-shadow: 0 1.5px 0 var(--aw-tile-fixed-dark, #2563eb);
+  }
 }
 
 /* =============================================================
