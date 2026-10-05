@@ -796,3 +796,32 @@
 .mc-outbar .mc-clock b { gap: 3.5px; }
 .mc-outbar .mc-clock svg.ld { width: 16px; height: 28px; }
 .mc-outbar .mc-clock svg.lc { width: 6px; height: 28px; }
+/* ===== 2q: iPAD LÀM D-PAD ===== */
+/* nhãn trên D-pad đội đã nối iPad (anh em của D-pad — Ring có overflow:hidden nên không đặt bên trong) */
+.mc-padtag { position: absolute; z-index: 6; display: flex; align-items: center; gap: calc(.35 * var(--u)); pointer-events: none;
+  padding: calc(.2 * var(--u)) calc(.7 * var(--u)); border-radius: 999px; font: 800 calc(1.05 * var(--u)) "Baloo 2", system-ui, sans-serif; letter-spacing: .04em;
+  color: #dcfce7; background: rgba(22,101,52,.78); border: 1px solid rgba(74,222,128,.75); box-shadow: 0 0 calc(.8 * var(--u)) rgba(74,222,128,.45); }
+.mc-padtag[hidden] { display: none; }
+.mc-padtag svg { width: calc(1.25 * var(--u)); height: calc(1.25 * var(--u)); }
+.mc-padtag[data-s="relay"] { color: #fef9c3; background: rgba(133,77,14,.8); border-color: rgba(250,204,21,.8); box-shadow: 0 0 calc(.8 * var(--u)) rgba(250,204,21,.4); }
+.mc-padtag[data-s="wait"] { color: #e2e8f0; background: rgba(51,65,85,.8); border-color: rgba(148,163,184,.7); box-shadow: none; }
+.mc-padtag.is-l { left: calc(1 * var(--u)); bottom: calc(2.2cqh + 15.6 * var(--u)); }
+.mc-padtag.is-r { right: calc(1 * var(--u)); bottom: calc(2.2cqh + 15.6 * var(--u)); }
+.mc-stage.is-fight .mc-padtag { bottom: auto; top: calc(50% - 4.5 * var(--u) - 2.6 * var(--u)); }
+.mc-stage.is-fight .mc-padtag.is-l { left: calc(1.9 * var(--u)); right: auto; }
+.mc-stage.is-fight .mc-padtag.is-r { right: calc(1.9 * var(--u)); left: auto; }
+/* bảng QR */
+.mc-ov-panel[data-kind="tablet"] .mc-pn { max-width: min(760px, 96vw); }
+.mc-ipad { display: flex; gap: 22px; justify-content: center; flex-wrap: wrap; }
+.mc-ipad-card { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 14px 12px; border-radius: 16px; border: 2px solid var(--tc, #38bdf8); background: rgba(255,255,255,.04); min-width: 240px; }
+.mc-ipad-card h3 { margin: 0; font: 800 20px "Baloo 2", system-ui, sans-serif; letter-spacing: .08em; color: var(--tc, #38bdf8); }
+.mc-ipad-qr { width: 230px; height: 230px; padding: 10px; border-radius: 12px; background: #fff; }
+.mc-ipad-qr svg { display: block; width: 100%; height: 100%; }
+.mc-ipad-st { display: flex; align-items: center; gap: 8px; font: 700 16px "Baloo 2", system-ui, sans-serif; color: #cbd5e1; }
+.mc-ipad-st i { width: 11px; height: 11px; border-radius: 50%; background: #64748b; }
+.mc-ipad-st[data-s="on"] i { background: #4ade80; box-shadow: 0 0 10px #4ade80; } .mc-ipad-st[data-s="on"] { color: #bbf7d0; }
+.mc-ipad-st[data-s="relay"] i { background: #facc15; } .mc-ipad-st[data-s="relay"] { color: #fef08a; }
+.mc-ipad-st[data-s="wait"] i { background: #94a3b8; animation: mcIpadBlink 1s steps(2) infinite; }
+@keyframes mcIpadBlink { 50% { opacity: .2; } }
+.mc-ipad-url { max-width: 250px; font: 600 12px ui-monospace, Consolas, monospace; color: #94a3b8; word-break: break-all; text-align: center; user-select: all; }
+.mc-ipad-err { color: #fca5a5; }

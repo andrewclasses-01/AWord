@@ -1,4 +1,12 @@
-// STAR LOOT — lõi MẪU 2p (05/10/2026): như 2o + HIỆU NĂNG (thầy: "tiếp tục đo đạc và tối ưu tương tự Train Rush với STAR LOOT").
+// STAR LOOT — lõi MẪU 2q (05/10/2026): như 2p + iPAD LÀM D-PAD (thầy: "màn 86 inch quá khổng lồ, học sinh đứng sát màn không thấy toàn cảnh…
+//   điều khiển bằng iPad (2 iPad trong Fight), iPad chỉ mở D-pad, tín hiệu 1 chiều lên game"; chốt: WebRTC · GIỮ D-pad trên màn dự phòng · cả Single lẫn Fight).
+//   • createMazeChase({ …, remote }): `remote` = đường nối iPad (mc3d-padlink-2q.js). Lõi KHÔNG biết mạng — chỉ:
+//       remote.attach({ press(team, key), status(team, s) }) ⇒ iPad bấm = y như bấm D-pad trên màn (key u|d|l|r|bomb, hướng THEO MÀN như D-pad);
+//       Single: chỉ đội 0 (iPad A) lái · Fight: đội 0 = D-pad trái, đội 1 = D-pad phải. Bấm từ iPad ⇒ nút D-pad trên màn cũng sáng (cả lớp thấy).
+//       status(team, "on" | "relay" | "wait" | "") ⇒ nhãn iPad trên D-pad đội đó.
+//   • nút Tablet (giữ chỗ từ 1h) nay mở bảng "iPad D-pad": remote.panel(el, { fight }) vẽ mã QR + trạng thái; đóng bảng ⇒ remote.panelClosed().
+//     Không có `remote` ⇒ nút như cũ (myGame) / ẩn (AWord).
+// ---- ghi chú 2p: STAR LOOT — lõi MẪU 2p (05/10/2026): như 2o + HIỆU NĂNG (thầy: "tiếp tục đo đạc và tối ưu tương tự Train Rush với STAR LOOT").
 //   Đo 2o trên TOMKO (Quadro T2000, 3840×2160, DPR 1,25, trong myActivity): màn chờ 52 fps · chơi 44 fps, 18–20 % khung > 33 ms · card 96–100 % ·
 //   canvas 3840×1780 (bỏ qua trần `__awMaxPR` = 1) · mỗi câu mới khựng 141–264 ms (vẽ lại sàn trong một khung).
 //   Thử: PR 1 + MSAA 4 ⇒ 44 fps (độ nét gần như không ảnh hưởng) · MSAA 0 ⇒ 56–58 fps.
@@ -354,6 +362,7 @@ const HUD_HTML = `
   <div class="mc-fteam is-a" hidden></div><div class="mc-fteam is-b" hidden></div><div class="mc-fbar is-a" hidden></div><div class="mc-fbar is-b" hidden></div>
   <div class="mc-dpad is-l" hidden>${DPAD}</div>
   <div class="mc-dpad is-r" hidden>${DPAD}</div>
+  <div class="mc-padtag is-l" hidden>${IC.tablet}<b></b></div><div class="mc-padtag is-r" hidden>${IC.tablet}<b></b></div>
   <div class="mc-ov mc-ov-start"><div class="mc-card">
     <div class="mc-kicker"></div><h1>STAR LOOT</h1><p class="mc-sub"></p>
     <p class="mc-how">Grab the right word from the enemy base — avoid the enemy robots!</p>
@@ -774,7 +783,7 @@ function makeDrone(color) {
 }
 
 // ================================================================== GAME
-export async function createMazeChase({ mount, view = "tilt", questions, title = "", act = "", intro: introV = null, options = null, host = null }) {
+export async function createMazeChase({ mount, view = "tilt", questions, title = "", act = "", intro: introV = null, options = null, host = null, remote = null }) {
   introV = new URLSearchParams(location.search).get("intro") || introV;   // 1o: bản intro (a | b | c)
   const V = VIEWS[view] || VIEWS.tilt;
   const opt = { ...DEFAULTS };
@@ -1707,6 +1716,7 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
     Object.values(dpads).forEach(dp => { dp.dataset.style = opt.dpadStyle; });
     setShown(dpads.l, on);                                  // 2b: đơn = 1 D-pad ở GIỮA MÉP TRÁI (chỗ đội A của Fight) · 2c: hiện lần lượt
     setShown(dpads.r, on && fight);
+    paintPadTags(on);                                       // 2q: nhãn iPad theo D-pad
     stage.classList.toggle("is-fight", fight); stage.classList.toggle("is-solo", !fight);
     const inGame = phase !== "menu" && phase !== "cine" && phase !== "end";
     teams.forEach((T, i) => { const show = inGame && (fight || i === 0); setShown(T.el, show); setShown(T.bar, show); });
@@ -2383,6 +2393,27 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
     const end = e => { if (drag !== e.pointerId) return; drag = null; dp.classList.remove("is-drag"); knob.style.transform = ""; };
     dp.addEventListener("pointerup", end); dp.addEventListener("pointercancel", end);
   });
+  // 2q: iPAD LÀM D-PAD — đường nối (remote) gọi press(team, key) ⇒ y như bấm D-pad trên màn của đội đó
+  const padSt = ["", ""], padTags = [$(".mc-padtag.is-l"), $(".mc-padtag.is-r")];
+  const PAD_TXT = { on: "iPad", relay: "iPad · slow", wait: "iPad …" };
+  function paintPadTags(on = phase !== "menu" && phase !== "end" && phase !== "cine") {
+    padTags.forEach((el, i) => {
+      const st = padSt[i], show = !!st && (i === 0 || fight) && on;
+      el.hidden = !show; el.dataset.s = st; el.querySelector("b").textContent = PAD_TXT[st] || "";
+    });
+    $$(".mc-tablet").classList.toggle("is-on", padSt.some(st => st === "on" || st === "relay"));
+  }
+  function flashBtn(el, ms) { if (!el) return; el.classList.add("is-on"); clearTimeout(el._padT); el._padT = setTimeout(() => el.classList.remove("is-on"), ms); }
+  function remotePress(t, key) {
+    if (dead || paused) return;
+    t = t ? 1 : 0;
+    if (t === 1 && !fight) return;                          // Single: chỉ iPad đội A lái
+    const T = teams[t], dp = t ? dpads.r : dpads.l;
+    if (key === "bomb") { placeBomb(T); flashBtn(dp.querySelector(".hub"), 160); return; }
+    if (!SCREEN_VEC[key]) return;
+    const g = screenToGrid(...SCREEN_VEC[key], T.pl); if (g) queueDir(g, T.pl);
+    dp.querySelectorAll(`[data-d="${key}"]`).forEach(b => flashBtn(b, 140));
+  }
   // chạm / vuốt trên màn (chơi đơn): vuốt ⇒ theo hướng vuốt; chạm ⇒ theo phía chỗ chạm so với nhân vật
   let touch = null;
   canvas.addEventListener("pointerdown", e => {
@@ -2551,6 +2582,9 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
       pnB.innerHTML = `<div class="mc-pn-list">${atMenu && host.home ? `<button class="mc-pn-row mc-pn-lib">${IC.folder}<span>Library</span></button>` : ""}${list.length ? `<p class="mc-pn-grp">Change template</p>` : ""}${list.map(t => `<button class="mc-pn-row" data-t="${escapeHtml(t.type)}">${IC.mode}<span>${escapeHtml(t.label)}</span></button>`).join("")}</div>`;
       pnB.querySelectorAll(".mc-pn-row[data-t]").forEach(b => b.addEventListener("click", () => { sfx.click(); host.switchTemplate(b.dataset.t); }));
       pnB.querySelector(".mc-pn-lib")?.addEventListener("click", () => { sfx.click(); host.home(); });
+    } else if (kind === "tablet") {                                  // 2q: iPad làm D-pad — mã QR + trạng thái do đường nối vẽ
+      pnT.textContent = "iPad D-pad";
+      try { remote.panel(pnB, { fight }); } catch (e) { pnB.innerHTML = `<p class="mc-pn-note">iPad link is not available.</p>`; }
     } else if (kind === "mode") {
       pnT.textContent = "Mode";
       const can = phase === "menu";
@@ -2561,12 +2595,16 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
   }
   function closePanel() {
     if (ovPanel.dataset.kind === "options") { optsHome.append(optsEl); optsEl.hidden = true; draft = null; }
+    if (ovPanel.dataset.kind === "tablet") { try { remote.panelClosed && remote.panelClosed(); } catch (e) { /* bỏ qua */ } }   // 2q
     ovPanel.hidden = true; ovPanel.dataset.kind = "";
     if (panelPaused) { panelPaused = false; paused = false; sfx.resume(); }
   }
   // 1h: TABLET — nối iPad như Rocket Race; chức năng gán sau, tạm bật/tắt trạng thái nút
-  const tabBtn = $$(".mc-tablet"); if (host) tabBtn.hidden = true;   // 2n: AWord — chưa có iPad cho STAR LOOT ⇒ ẩn nút mẫu
-  tabBtn.addEventListener("click", () => { tabBtn.classList.toggle("is-on"); sfx.unlock(); sfx.click(); });
+  const tabBtn = $$(".mc-tablet"); if (host && !remote) tabBtn.hidden = true;   // 2n: AWord — chưa có iPad cho STAR LOOT ⇒ ẩn nút mẫu · 2q: có đường nối iPad thì hiện
+  tabBtn.addEventListener("click", () => {
+    if (remote) { ovPanel.dataset.kind === "tablet" && !ovPanel.hidden ? closePanel() : openPanel("tablet"); return; }   // 2q: bảng QR nối iPad
+    tabBtn.classList.toggle("is-on"); sfx.unlock(); sfx.click();
+  });
   ["folder", "options", "mode"].forEach(k => $$(".mc-" + k).addEventListener("click", () => {
     if (k === "options" && host && host.options) { openHostOptions(); return; }   // 2o: bảng Options THẬT của AWord
     ovPanel.dataset.kind === k && !ovPanel.hidden ? closePanel() : openPanel(k);
@@ -2713,6 +2751,7 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
       cancelAnimationFrame(rafId);
       if (deckJob) { deckJob.cancel(); deckJob = null; }   // 2p
       offs.splice(0).forEach(f => { try { f(); } catch (e) { /* bỏ qua */ } });
+      try { remote && remote.detach && remote.detach(); } catch (e) { /* bỏ qua */ }   // 2q
       try { closeSnd(); } catch (e) { /* bỏ qua */ }
       try { if (intro && (intro.active || intro.tailing)) intro.abort(); } catch (e) { /* bỏ qua */ }
       try { sfx.close(); } catch (e) { /* bỏ qua */ }
@@ -2736,6 +2775,7 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
     resume() { manual = false; last = performance.now(); },
     snap() { render(); return canvas.toDataURL("image/jpeg", 0.85); },
     go(dir, t = 0) { queueDir(dir, teams[t].pl); },
+    remotePress, padState: () => padSt.slice(),   // 2q: bàn thử iPad
     bomb: (t = 0) => placeBomb(teams[t]), teams, setFight(v) { setFightMode(!!v); },
     detonateAt(r, c) { const b = bombAt(r, c); if (b) detonate(b); },
     dropBomb(r, c) { if (bombAt(r, c)) return; spawnBomb(r, c); },
@@ -2750,6 +2790,15 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
     opt, sfx, maps: MAPS, useMap: i => { useMap(MAPS[i]); wallAnim.dir = 1; wallAnim.t = 99; paintWalls(); }, map: () => curMap && curMap.map.name,
     state: () => ({ phase, qi, fight, teams: fight ? teams.map(T => ({ lives: T.lives, score: T.score, bombs: T.bombs, st: T.status, at: [T.pl.r, T.pl.c] })) : null, lives, score, time: +playT.toFixed(2), player: [pl.r, pl.c, pl.dir, pl.moving], enemies: ens.map(e => [e.r, e.c]), pads: pads.map(p => [p.r, p.c, p.text, p.correct, p.state]) }),
   };
+  // 2q: nối iPad SAU khi mọi thứ đã dựng (nút Tablet, D-pad, teams) — đường nối có thể báo trạng thái ngay lúc attach
+  if (remote) {
+    try {
+      remote.attach({
+        press: remotePress,
+        status(t, st) { if (dead) return; padSt[t ? 1 : 0] = st || ""; paintPadTags(); },
+      });
+    } catch (e) { console.warn("STAR LOOT: iPad link", e); }
+  }
   window.__mc = api;
   return api;
 }

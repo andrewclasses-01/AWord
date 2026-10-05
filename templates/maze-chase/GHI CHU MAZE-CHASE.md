@@ -1,3 +1,5 @@
+## ⭐ Đợt 480 (05/10/2026) — iPAD LÀM D-PAD. Lõi nay là myGame **2q** (`3d/mc3d-2q.*`). Đường nối: `3d/mc3d-padlink-2q.js` (WebRTC, chép) + `sl-pad-signal.js` (Firestore bắt tay, của AWord) + trang `../../pad.html`. Nút Tablet ⇒ QR. Bàn thử không đăng nhập: `test.html?padsig=local&fight=1` + `/pad.html?t=0&padsig=local` (tab khác). Chi tiết + checklist iPad thật: `GHI CHU DU AN.md` Đợt 480.
+
 ## ⛔⛔ Đợt 450 (03/10/2026) — BẢN 2D ĐÃ GỠ HẲN (không còn đường lùi). Máy không có WebGL chỉ thấy một dòng báo. Mục Đợt 91 trở về trước là lịch sử bản 2D.
 
 # GHI CHÚ — MAZE CHASE (game thứ 9)

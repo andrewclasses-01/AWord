@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- Đợt 480 — STAR LOOT iPad D-pad. `user-scalable=no` cố ý: em bấm liên tục, hai ngón chạm nhầm là phóng to giữa trận. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <script src="core/no-zoom.js"></script>
+  <script src="core/app-check.js" defer></script>
+  <title>AWord — iPad D-pad</title>
+  <link rel="icon" href="core/assets/icons/favicon.ico?v=2" sizes="any" />
+  <link rel="apple-touch-icon" href="core/assets/icons/apple-touch-icon-180.png?v=2" />
+  <meta name="theme-color" content="#07060f" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="D-pad" />
+  <link rel="stylesheet" href="core/app.css" />
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://firestore.googleapis.com" />
+  <style>
+    html, body { margin: 0; height: 100%; background: #05040c; overflow: hidden; }
+    .pad-note { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px;
+      text-align: center; color: #e2e8f0; font-family: "Baloo 2", system-ui, sans-serif; background: radial-gradient(120% 90% at 30% 20%, #1a1440 0%, #07060f 60%, #020208 100%); }
+    .pad-note[hidden] { display: none; }
+    .pad-note b { font-size: 34px; } .pad-note p { margin: 0; max-width: 560px; font-size: 20px; color: #94a3b8; }
+    .pad-note.is-bad b { color: #fca5a5; }
+    .pad-note button { font: 800 22px "Baloo 2", system-ui, sans-serif; padding: 12px 34px; border-radius: 14px; border: 0; color: #fff; background: #0ea5e9; cursor: pointer; }
+    .pad-note button[hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <div id="pad"></div>
+  <div class="pad-note" id="note"><b>Loading…</b><p></p><button hidden>Sign in</button></div>
+  <script type="module" src="pad.js"></script>
+</body>
+</html>

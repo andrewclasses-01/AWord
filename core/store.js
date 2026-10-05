@@ -206,7 +206,9 @@ const APP_DATA_KINDS = new Set(["class", "showdown", "showdown-results", "showdo
                                 // Đợt 374 — STATS month docs (core/stats-home.js): st_<CLASS>_<YYYYMM>
                                 "stats-month",
                                 // Đợt 385 — My Beat (games/mybeat/mb-store.js): lists doc + one doc per song
-                                "mybeat", "mybeat-song"]);
+                                "mybeat", "mybeat-song",
+                                // Đợt 480 — STAR LOOT iPad D-pad handshake (templates/maze-chase/sl-pad-signal.js): slpad_host/pad0/pad1
+                                "starloot-pad"]);
 function isAppData(n) { return APP_DATA_KINDS.has(n.kind); }
 
 export async function ensureNumbers() {

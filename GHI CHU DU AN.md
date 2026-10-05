@@ -546,6 +546,37 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 480 (05/10/2026) — STAR LOOT: iPAD LÀM D-PAD (WebRTC) · Single + Fight · phiên MSI
+**Thầy:** "chạy trên màn hình 86 inch quá khổng lồ, học sinh thò tay lên màn hình bấm cũng không nhìn được toàn cảnh do đứng quá sát… Tôi muốn điều khiển
+bằng iPad (2 iPad trong chế độ Fight)… iPad chỉ việc mở D-pad, không cần hiện câu hỏi. Tín hiệu từ iPad đi 1 chiều lên game".
+Thầy chốt (sau khi tôi so 4 đường: Firestore 150–500 ms · Realtime DB · **WebRTC ~10–30 ms** · máy chủ trong myActivity): **WebRTC** · **giữ D-pad trên màn dự phòng** · **cả Single lẫn Fight**.
+**Đã làm** (thiết kế ở myGame mẫu 2q `4023cc8` + `f594ede`, chép bằng `tools/chep-star-loot.py`, BAN 2p ⇒ 2q):
+- `templates/maze-chase/3d/mc3d-2q.js/.css` (lõi, chép): tham số `remote`; phím iPad đi ĐÚNG đường D-pad trên màn (`screenToGrid` + `queueDir` / `placeBomb`),
+  nút D-pad trên màn của đội đó sáng theo. Single: chỉ iPad A lái · Fight: A = D-pad trái, B = D-pad phải · đang dừng ⇒ bỏ phím.
+  Nhãn trên D-pad: xanh "iPad" (nối thẳng) · vàng "iPad · slow" (đường dự phòng) · xám "iPad …" (đang nối). Nút **Tablet** (trước ẩn trên AWord) nay hiện ⇒ bảng QR.
+- `3d/mc3d-padlink-2q.js` (chép): `createPadHost` / `createPadClient`. Phím đi DataChannel thẳng iPad → máy chiếu; kho chỉ để bắt tay + dự phòng.
+  Game dựng lại (Start again không — chỉ khi dựng lại game: đổi act / mở lại) = phiên `sid` mới ⇒ iPad đang mở TỰ NỐI LẠI, không quét lại QR.
+- `3d/mc3d-padui-2q.js` (chép): giao diện D-pad iPad · `3d/mc3d-qr.js` (chép NGUYÊN `core/qr.js` qua myGame).
+- `templates/maze-chase/sl-pad-signal.js` (MỚI): kênh bắt tay Firestore `users/{uid}/items` — `slpad_host` (máy chiếu ghi) · `slpad_pad0` / `slpad_pad1` (iPad đội đó ghi),
+  MỖI TÀI LIỆU MỘT NGƯỜI GHI (như `rr_link`/`rr_view` Đợt 368) ⇒ **KHÔNG đăng luật mới**; iPad phải đăng nhập Google CỦA THẦY. `padUrl` = bản LIVE
+  `https://aword.andrewclasses.com/pad.html?t=0|1` (iPad không vào được localhost). Bàn thử `?padsig=local` (trang game + pad) = kênh cục bộ 2 tab, không đăng nhập.
+- `pad.html` + `pad.js` (MỚI, gốc web/): màn đăng nhập ⇒ D-pad. `maze-chase.js`: nạp 2q + padlink + signal, truyền `remote`. Gỡ `3d/mc3d-2p.js/.css` (không còn ai dùng).
+- ⚠️ SỬA CORE (1 dòng, chờ thầy duyệt như Đợt 368): `core/store.js` APP_DATA_KINDS + `"starloot-pad"` (không thì 3 tài liệu bắt tay ăn số link ?a=).
+**Giá:** mỗi lần nối 1 iPad ≈ 3–4 lượt ghi + 1 lượt ghi mỗi lần game dựng; chơi qua WebRTC = 0 lượt ghi. Đường dự phòng = 1 lượt ghi / phím.
+**Đã kiểm (devserver :5658, `templates/maze-chase/test.html?padsig=local&fight=1` + 2 tab `pad.html?…&padsig=local`):** 2 iPad "on" (DataChannel open, ICE connected) ·
+iPad A "lên" ⇒ robot A (4,4)→(3,4), iPad B "xuống" ⇒ robot B (0,11)→(1,11) · nhãn iPad 2 bên · 3 vòng tải lại trang game ⇒ tự nối lại 4,2 / 5,7 / ~5 s ·
+`pad.html` thật ⇒ màn "Sign in to use this iPad as a D-pad", 0 lỗi · game CHƯA đăng nhập ⇒ vẫn chạy, bảng Tablet: 1 mã QR (Single) + "Sign in to AWord to link an iPad" ·
+`sinh-preload.py --check` KHỚP 3/3. Ở myGame thêm: bom iPad B trừ bom đội B · Single bỏ phím iPad B · chặn WebRTC ⇒ "relay", l/bomb/d/r tới đủ đúng thứ tự.
+**Lỗi gặp & gỡ:** (1) kho bắt tay RƠI một lần báo (game đang nạp lỡ lời chào ⇒ iPad kẹt "Connecting…"; và ngược lại iPad lỡ offer) ⇒ iPad ghi lại `hc` mỗi 4 s
+(tối đa 8), game thấy `hc` tăng mà chưa có answer ⇒ ghi lại offer + `h_t`. (2) đường dự phòng mất phím giữa khi bấm dồn (kho gộp lượt ghi) ⇒ gửi đuôi 4 phím `rq` + số đếm `rs`.
+(3) `__mc.step()` ngay sau `skipIntro()` ném lỗi three.js `toArray` — CHỈ ở bàn thử tự bước khung; để game tự chạy thì vào ván sạch (2q không đụng phần vẽ).
+**⬜ CHƯA KIỂM ĐƯỢC (Claude không đăng nhập được Google của thầy):** đường Firestore thật + 2 iPad thật trên Wi-Fi lớp. Checklist thầy bấm:
+  1) TOMKO mở act STAR LOOT (đã đăng nhập) ⇒ nút Tablet (icon máy tính bảng, hàng nút dưới) ⇒ thấy QR (Fight: 2 mã A/B).
+  2) iPad mở Camera quét mã ⇒ Safari mở pad.html ⇒ Sign in bằng Google của thầy ⇒ thấy D-pad; góc trên phải iPad "Connected" + số ms.
+  3) Trên TOMKO bảng QR đổi "Connected"; vào ván thấy nhãn xanh "iPad" trên D-pad đội đó. Bấm iPad ⇒ robot đi, nút D-pad trên màn sáng theo.
+  4) Nếu nhãn VÀNG "iPad · slow": Wi-Fi lớp chặn nối thẳng ⇒ vẫn chơi được nhưng trễ hơn — báo lại để tính cách khác (máy chủ nội bộ trong myActivity).
+  5) Đổi act / mở lại game ⇒ iPad tự nối lại trong vài giây, không phải quét lại. 💡 iPad: Cài đặt ▸ Màn hình ▸ Tự động khoá = Không bao giờ trong giờ chơi; "Thêm vào MH chính" để toàn màn.
+
 ## Đợt 479 (05/10/2026) — CHẾ ĐỘ ĐO TẢI TRANG `?do=1` (đo Safari iPad thật, chụp ảnh gửi) · phiên MSI
 **Thầy báo:** AWord mở trên iPad (iOS 27) "rất lâu" mỗi lần vào aword.andrewclasses.com.
 **Đo trước (Chrome headless CDP giả lập iPad 1024×768 @2, mobile UA, CPU chậm 4–6×, wifi 40 ms/10 Mbps hoặc 4G 120 ms/6 Mbps, chặn mọi lượt GHI Firestore;

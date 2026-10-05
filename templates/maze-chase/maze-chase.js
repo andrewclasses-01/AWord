@@ -29,6 +29,11 @@
 //   ⚠️ Options lưu PHẲNG trong activity.options (proxy nháp của engine chỉ thấy khoá cấp 1): timer / timerTotalSeconds /
 //   shuffleQuestions / showAnswers / lives của engine + slFight · slDifficulty · slBombs · slBombGift · slDpad.
 //   `activity.options.starLoot` (Đợt 447–451) chỉ còn là giá trị đầu cho act chưa lưu kiểu mới (flatSeed).
+// ⭐⭐ Đợt 480 (thầy 05/10/2026: "màn 86 inch quá khổng lồ, học sinh đứng sát màn không nhìn được toàn cảnh… điều khiển bằng
+//   iPad (2 iPad trong Fight), iPad chỉ mở D-pad"; chốt WebRTC · giữ D-pad trên màn dự phòng · cả Single lẫn Fight):
+//   lõi myGame 2q — nút Tablet ⇒ bảng QR (1 mã Single / 2 mã Fight) ⇒ iPad mở `pad.html?t=0|1` (gốc web/) ⇒ phím đi THẲNG
+//   iPad → máy chiếu qua WebRTC DataChannel. Bắt tay + đường dự phòng = ./sl-pad-signal.js (Firestore users/{uid}/items, tài
+//   khoản thầy, KHÔNG luật mới). Mỗi lần dựng game = một đường nối mới (phiên mới ⇒ iPad đang mở tự nối lại); destroy() ⇒ tháo.
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
@@ -36,7 +41,7 @@ import { openMazeChaseEditor } from "./maze-chase-editor.js";
 import { showLoader3d } from "../../core/loader3d.js";   // Đợt 451 — màn chờ thay khung trắng của AWord lúc nạp 3D
 const loader = () => showLoader3d({ key: "starloot", title: "STAR LOOT", theme: "space" });
 
-const CSS_3D = new URL("./3d/mc3d-2p.css", import.meta.url).href;
+const CSS_3D = new URL("./3d/mc3d-2q.css", import.meta.url).href;
 // Đợt 452 — khoá game (mc3d-2o DEFAULTS) <-> khoá PHẲNG trong activity.options (engine + sl*)
 const SL_DEF = { fight: false, timer: "up", timerSec: 120, lives: 5, difficulty: 6, bombs: 1, bombGift: 3, dpadStyle: "ring", shuffle: true, showAnswers: true };
 const DPADS = [["glass", "Glass"], ["ring", "Ring"], ["keys", "Keys"], ["console", "Console"], ["stick", "Stick"]];
@@ -187,11 +192,12 @@ const starLootTemplate = {
     console.log("MYACT:3D:ON");   // myActivity: nhường card đồ hoạ (như Rocket race 3D)
     // Đợt 452 — Options ▸ Apply của engine => áp ngay trong cảnh (game chưa dựng xong => false => engine dựng lại như thường)
     if (ui.liveOptions) ui.liveOptions(o => (game && !dead ? game.setOptions({ ...SL_DEF, ...gameOpts(o) }) === true : false));
-    import("./3d/mc3d-2p.js")
-      .then(m => m.createMazeChase({
+    Promise.all([import("./3d/mc3d-2q.js"), import("./3d/mc3d-padlink-2q.js"), import("./sl-pad-signal.js")])
+      .then(([m, pl, sg]) => m.createMazeChase({
         mount: box, view: "tilt", questions,
         title: activity.title || "", act: activity.title || "",
         options: slOptions(activity),
+        remote: pl.createPadHost({ signal: sg.firestoreSignal(), padUrl: sg.padUrl }),   // Đợt 480 — iPad làm D-pad
         host: ui.host ? {
           listActs: () => ui.host.listActs(),
           openAct: id => ui.host.openAct(id),
