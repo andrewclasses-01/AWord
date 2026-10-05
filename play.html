@@ -112,7 +112,7 @@
   <script>
     (function () {
       try {
-        // ⭐ Đợt 480 (05/10/2026) — CHỈ CHROMIUM. Safari/WebKit (mọi trình duyệt trên iPad/iPhone) KHÔNG gộp lượt fetch()
+        // ⭐ Đợt 481 (05/10/2026) — CHỈ CHROMIUM. Safari/WebKit (mọi trình duyệt trên iPad/iPhone) KHÔNG gộp lượt fetch()
         // này với modulepreload + import ⇒ tải MỖI FILE 3 LẦN (đo iPad thật ?do=1: engine.js ×3, 156 lượt JS, hình đầu 5,3 s;
         // WebKit thử: modulepreload + import = 1 lần, thêm fetch() = 3 lần). `navigator.userAgentData` chỉ Chromium có.
         if (!navigator.userAgentData) return;

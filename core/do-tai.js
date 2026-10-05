@@ -79,7 +79,7 @@
   function kiem() {
     henKiem = 0;
     var now = T();
-    // Đợt 480: màn chờ còn trong DOM nhưng đã ẨN (khung cha display:none…) cũng tính là hết — iPad đã đăng nhập báo "—" suốt 30 s.
+    // Đợt 481: màn chờ còn trong DOM nhưng đã ẨN (khung cha display:none…) cũng tính là hết — iPad đã đăng nhập báo "—" suốt 30 s.
     var bEl = document.querySelector('.aw-boot');
     var boot = !!bEl && bEl.getClientRects().length > 0;
     if (!boot && moc.hetMauCho == null) moc.hetMauCho = now;
@@ -124,7 +124,7 @@
       if (/\.m?js(\?|$)/.test(r.name)) { js.n++; js.giai += r.decodedBodySize || 0; }
     });
     var cham = res.slice().sort(function (a, b) { return b.duration - a.duration; }).slice(0, 10);
-    // Đợt 480: cùng một đường dẫn bị tải nhiều lần (bẫy Safari + fetch() làm nóng của Đợt 285c)
+    // Đợt 481: cùng một đường dẫn bị tải nhiều lần (bẫy Safari + fetch() làm nóng của Đợt 285c)
     var demUrl = {}, trung = 0, thua = 0;
     res.forEach(function (r) { demUrl[r.name] = (demUrl[r.name] || 0) + 1; });
     Object.keys(demUrl).forEach(function (u) { if (demUrl[u] > 1 && !/Listen\/channel|recaptcha|appcheck/.test(u)) { trung++; thua += demUrl[u] - 1; } });

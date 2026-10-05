@@ -546,6 +546,40 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 482 (05/10/2026) — THU GỌN MÃ KHI XUẤT BẢN (esbuild minify từng file) · ĐÃ THỬ ĐỦ, ⬜ CHỜ THẦY BẬT · phiên MSI
+**Vì sao:** sau Đợt 481 trang chủ vẫn phải tải ~1 MB; JS+CSS trang chủ 837 KB (nén) mà phần lớn là CHÚ THÍCH tiếng Việt ⇒ thu gọn còn ~219 KB.
+**Đã làm (repo, KHÔNG đổi cách xuất bản):**
+- `tools/xuat-ban.mjs` (MỚI): chép mọi file sang `_site`, `.js/.mjs/.css` qua esbuild `transform` minify (KHÔNG format/target ⇒ không đổi cú pháp,
+  không đổi tên biến cấp cao nhất, import/export giữ nguyên; KHÔNG gộp file, KHÔNG đổi đường dẫn). Bỏ qua vendor/, *.min.js, scratch/, _backup/, tools/, docs/.
+  Lỗi hoặc to hơn ⇒ giữ bản gốc. Ghi `build.json` {sha, luc, thuGon, loi, nguon{file: sha256 nguồn CRLF→LF}}. Cần esbuild (đã thử 0.28.2).
+- `tools/kiem-live.py` (MỚI): kiểm live theo `build.json` (sha == HEAD + băm nguồn từng .js/.css); live chưa có build.json ⇒ so byte như cũ. `--cho 300` chờ tới khi khớp.
+**Thử (scratchpad `wk/`, bản dựng từ HEAD `5b1d1ec`: 272 file 7,5 MB → 3,0 MB, 0 lỗi; engine.js 508 → 86 KB):**
+- Tốc độ (máy chủ giả GitHub Pages 3 Mbps, trễ 50 ms): WebKit trang chủ 3,12 → **1,59 s** (1041 → 422 KB), play 2,37 → **1,38 s**; Chrome 2,78 → 1,36 s · 2,22 → 1,26 s.
+  So với trước Đợt 481 (iPad thật 5,3 s): WebKit 6,37 → 1,59 s.
+- Đúng đắn: 21 trang `templates/*/test.html` + `/`, play rf6crd, werewolf, mybeat, kiemtra, source — lỗi console/số nút GIỐNG bản gốc (Chrome 27/27; WebKit 27/27 sau chạy lại 3 trang chập chờn ×3).
+  Chơi thử (START + 15 cú bấm ngẫu nhiên hạt cố định) 21 template: 0 khác biệt cả Chrome lẫn WebKit.
+  So ẢNH từng điểm (Math.random cố định, tắt animation): 19/19 trang KHỚP 0 px cả Chrome lẫn WebKit (bỏ 4 trang 3D/tải mô hình).
+**⬜ CHỜ THẦY (chưa xuất bản thu gọn):** bộ phân quyền tự động của Claude CHẶN tạo `.github/workflows/xuat-ban.yml` (coi là đổi quy trình triển khai) ⇒ thầy quyết:
+  (1) thêm workflow (checkout → setup-node 22 → `npm i --no-save --no-package-lock esbuild@0.28.2` → `node tools/xuat-ban.mjs _site` → upload-pages-artifact@v3 → deploy-pages@v4,
+  permissions pages:write + id-token:write, concurrency pages cancel-in-progress); (2) Settings › Pages › Source = **GitHub Actions** (tài khoản andrewclasses-01 — `gh` máy MSI là andrewclasses-code KHÔNG có quyền admin).
+  ⚠️ Sau khi bật: MỌI phiên kiểm live bằng `python tools/kiem-live.py` (băm .js/.css live ≠ repo là ĐÚNG) — phải sửa mục quy trình kiểm live trong APP_MASTER cùng lúc.
+
+## Đợt 481 (05/10/2026) — ⭐⭐ iPad/SAFARI TẢI MỖI FILE JS 3 LẦN ⇒ fetch() "làm nóng" của Đợt 285c CHỈ CHO CHROMIUM · phiên MSI (đặt nhầm số 480 trong commit `5b1d1ec` — trùng Đợt 480 STAR LOOT của phiên khác, đã đổi thành 481)
+**Thầy gửi bảng `?do=1` iPad thật (iOS 27, `/?r=activities` đã đăng nhập):** chờ trang 50 ms (máy chủ không chậm) nhưng DOM sẵn 5,25 s · FCP 5,30 s ·
+196 file, JS 156 file 4,7 MB mã · `engine.js` tải 3 lần (bắt đầu 0,3 / 1,05 / 1,23 s, mỗi lần đủ 177 KB, mỗi lần ~4–5 s vì 3 bản tranh nhau đường wifi), `showdown-setup.js` ×3…
+**Tái hiện + tách nguyên nhân (Playwright WebKit = nhân Safari trên Windows, máy chủ giả GitHub Pages: max-age=600 + ETag + gzip, 3 Mbps dùng chung, trễ 50 ms; script ở scratchpad `wk/`):**
+- Bản HEAD: WebKit trang chủ 6,37 s, 156 lượt, 46 file ×3 · play.html?g=rf6crd 4,94 s, 39 file ×3. Chrome cùng máy chủ: 2,77 / 2,33 s, 0 trùng.
+- Trang thử tối giản: `modulepreload + import` ⇒ WebKit tải 1 lần ✅ · thêm `fetch()` cùng file ⇒ **3 lần** ❌ · Chrome cả hai 1 lần. ⇒ thủ phạm = khối `fetch(ls[i].href)` của Đợt 285c
+  (Chrome gộp lượt fetch với modulepreload/import đang bay, WebKit KHÔNG gộp).
+- ⚠️ Playwright WebKit trên Windows KHÔNG có cache HTTP (trang thử script thường cũng tải lại 100 %) ⇒ số "mở lại" của WebKit ở bàn thử là VÔ NGHĨA; cache Safari thật phải đo trên iPad.
+**Đã làm:**
+- `index.html` + `play.html`: khối fetch() làm nóng thêm `if (!navigator.userAgentData) return;` — `userAgentData` chỉ Chromium có (Chrome/Edge/TOMKO/Android) ⇒ Safari, MỌI trình duyệt trên iPad/iPhone, Firefox bỏ qua.
+  modulepreload GIỮ NGUYÊN (WebKit dùng lại đúng).
+- `core/do-tai.js?v=2`: màn chờ ẩn (getClientRects rỗng) cũng tính là hết (iPad đã đăng nhập báo "—" suốt 30 s) · thêm LCP · thêm "TẢI TRÙNG n file (thừa m lượt)".
+**Đo sau sửa (cùng bàn thử):** WebKit trang chủ **6,37 → 3,13 s**, 156 → 64 lượt, 2,25 → 1,04 MB, 0 trùng · play **4,94 → 2,46 s**, 134 → 56 lượt · Chrome không đổi (2,85 / 2,32 s).
+**Bước tiếp (Đợt 482, đang làm):** thu gọn mã khi xuất bản — JS+CSS trang chủ 837 KB nén → ~219 KB (esbuild minify từng file, mã nguồn giữ nguyên) ⇒ còn ~1/4 thời gian tải.
+**VIỆC ĐANG CHỜ:** ⬜ thầy đo lại `?do=1` trên iPad (mở 2 lần) — mong: TẢI TRÙNG 0, DOM sẵn ~2–3 s; xem cột "từ cache" lần mở 2.
+
 ## Đợt 480 (05/10/2026) — STAR LOOT: iPAD LÀM D-PAD (WebRTC) · Single + Fight · phiên MSI
 **Thầy:** "chạy trên màn hình 86 inch quá khổng lồ, học sinh thò tay lên màn hình bấm cũng không nhìn được toàn cảnh do đứng quá sát… Tôi muốn điều khiển
 bằng iPad (2 iPad trong chế độ Fight)… iPad chỉ việc mở D-pad, không cần hiện câu hỏi. Tín hiệu từ iPad đi 1 chiều lên game".
@@ -590,22 +624,6 @@ Tôi bấm nút Fight trong Mode thì không chuyển được, tiện kiểm tr
   3) Trên TOMKO bảng QR đổi "Connected"; vào ván thấy nhãn xanh "iPad" trên D-pad đội đó. Bấm iPad ⇒ robot đi, nút D-pad trên màn sáng theo.
   4) Nếu nhãn VÀNG "iPad · slow": Wi-Fi lớp chặn nối thẳng ⇒ vẫn chơi được nhưng trễ hơn — báo lại để tính cách khác (máy chủ nội bộ trong myActivity).
   5) Đổi act / mở lại game ⇒ iPad tự nối lại trong vài giây, không phải quét lại. 💡 iPad: Cài đặt ▸ Màn hình ▸ Tự động khoá = Không bao giờ trong giờ chơi; "Thêm vào MH chính" để toàn màn.
-
-## Đợt 480 (05/10/2026) — ⭐⭐ iPad/SAFARI TẢI MỖI FILE JS 3 LẦN ⇒ fetch() "làm nóng" của Đợt 285c CHỈ CHO CHROMIUM · phiên MSI
-**Thầy gửi bảng `?do=1` iPad thật (iOS 27, `/?r=activities` đã đăng nhập):** chờ trang 50 ms (máy chủ không chậm) nhưng DOM sẵn 5,25 s · FCP 5,30 s ·
-196 file, JS 156 file 4,7 MB mã · `engine.js` tải 3 lần (bắt đầu 0,3 / 1,05 / 1,23 s, mỗi lần đủ 177 KB, mỗi lần ~4–5 s vì 3 bản tranh nhau đường wifi), `showdown-setup.js` ×3…
-**Tái hiện + tách nguyên nhân (Playwright WebKit = nhân Safari trên Windows, máy chủ giả GitHub Pages: max-age=600 + ETag + gzip, 3 Mbps dùng chung, trễ 50 ms; script ở scratchpad `wk/`):**
-- Bản HEAD: WebKit trang chủ 6,37 s, 156 lượt, 46 file ×3 · play.html?g=rf6crd 4,94 s, 39 file ×3. Chrome cùng máy chủ: 2,77 / 2,33 s, 0 trùng.
-- Trang thử tối giản: `modulepreload + import` ⇒ WebKit tải 1 lần ✅ · thêm `fetch()` cùng file ⇒ **3 lần** ❌ · Chrome cả hai 1 lần. ⇒ thủ phạm = khối `fetch(ls[i].href)` của Đợt 285c
-  (Chrome gộp lượt fetch với modulepreload/import đang bay, WebKit KHÔNG gộp).
-- ⚠️ Playwright WebKit trên Windows KHÔNG có cache HTTP (trang thử script thường cũng tải lại 100 %) ⇒ số "mở lại" của WebKit ở bàn thử là VÔ NGHĨA; cache Safari thật phải đo trên iPad.
-**Đã làm:**
-- `index.html` + `play.html`: khối fetch() làm nóng thêm `if (!navigator.userAgentData) return;` — `userAgentData` chỉ Chromium có (Chrome/Edge/TOMKO/Android) ⇒ Safari, MỌI trình duyệt trên iPad/iPhone, Firefox bỏ qua.
-  modulepreload GIỮ NGUYÊN (WebKit dùng lại đúng).
-- `core/do-tai.js?v=2`: màn chờ ẩn (getClientRects rỗng) cũng tính là hết (iPad đã đăng nhập báo "—" suốt 30 s) · thêm LCP · thêm "TẢI TRÙNG n file (thừa m lượt)".
-**Đo sau sửa (cùng bàn thử):** WebKit trang chủ **6,37 → 3,13 s**, 156 → 64 lượt, 2,25 → 1,04 MB, 0 trùng · play **4,94 → 2,46 s**, 134 → 56 lượt · Chrome không đổi (2,85 / 2,32 s).
-**Bước tiếp (Đợt 481, đang làm):** thu gọn mã khi xuất bản — JS+CSS trang chủ 837 KB nén → ~219 KB (esbuild minify từng file, mã nguồn giữ nguyên) ⇒ còn ~1/4 thời gian tải.
-**VIỆC ĐANG CHỜ:** ⬜ thầy đo lại `?do=1` trên iPad (mở 2 lần) — mong: TẢI TRÙNG 0, DOM sẵn ~2–3 s; xem cột "từ cache" lần mở 2.
 
 ## Đợt 479 (05/10/2026) — CHẾ ĐỘ ĐO TẢI TRANG `?do=1` (đo Safari iPad thật, chụp ảnh gửi) · phiên MSI
 **Thầy báo:** AWord mở trên iPad (iOS 27) "rất lâu" mỗi lần vào aword.andrewclasses.com.
