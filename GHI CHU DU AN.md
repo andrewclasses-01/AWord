@@ -562,6 +562,7 @@ Bàn thử Đợt 469 (`scratch/dot469`) dùng bộ assignments GIẢ (object c�
   đổi `options.timer` hay sửa 1 chữ content ⇒ dấu vết vẫn đổi (thầy sửa đề vẫn bị nhận ra).
 · play.html thật `?g=j56ry9`: START → tải lại ⇒ **CONTINUE · 0 / 55 DONE**; tải lại lần 2 vẫn CONTINUE. `?g=dwyrnk` (TTA): START → tải lại ⇒
   **CONTINUE · 0 / 30 DONE**. 0 lỗi console. Đã dọn localStorage thử.
+✅ push `93c50a7` + LIVE 1/1 (`tools/kiem-live.py`, build sha 93c50a7).
 **VIỆC ĐANG CHỜ:** ⬜ ngày mai xem tỉ lệ nộp dở trên dashboard (kỳ vọng giảm mạnh ở mọi template có làm tiếp); ⬜ em còn lối "mở tab thứ hai" (tab kia
 còn sống ⇒ lượt mới) — hiếm, theo dõi; ⬜ mọi phép so/băm dữ liệu Firestore khác nên rà cùng bẫy.
 
