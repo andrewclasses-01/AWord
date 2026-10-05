@@ -568,6 +568,7 @@ Chrome chạy cùng code ⇒ cùng lag. Phần cứng: card 76 °C khi KHÔNG ch
 **Đo sau (bản cục bộ `devserver.py` trong myActivity, `__awMaxPR = 1`):** màn chờ 59,1 fps · chơi 59,6–59,8 fps, 1 khung > 33 ms / 12 s ·
 khựng START 83 ms · Fight (myGame 1am) 58,4 fps, 2 % · bộ tự chỉnh chốt PR 0,9–1 + MSAA 0. Còn 2 shader bóng đổ (depth) dịch giữa ván (~0,1 s, 1 lần/ván).
 Ảnh: bỏ MSAA hơi răng cưa ở mép gò cỏ / bụi cỏ; chữ, tàu, khinh khí cầu nét như cũ.
+- ✅ Push `b8d36b2` + LIVE 4/4 mã băm (balloon-pop.js + 3 file 3d/). App thật myActivity + game LIVE (không đặt tay): `__bp.quality.hostCap` = 1, chơi 59,5–59,6 fps, 1 khung > 33 ms / 12 s.
 - ⬜ Thầy chơi trên TOMKO: độ mượt + độ lấp loá vật mảnh khi máy quay lia.
 
 ---
