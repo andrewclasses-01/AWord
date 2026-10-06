@@ -131,6 +131,16 @@ body {
   color: #23303e;
   min-height: 100vh;
 }
+/* ⭐ Đợt 488 (06/10/2026) — CHẶN BÔI ĐEN CHỮ TOÀN TRANG (thầy chốt, giống myLesson v2.133.0):
+   bấm/kéo chuột trên thẻ act, tên thư mục, thanh nút, Results, Settings… không còn tô xanh chữ.
+   Trước đây chỉ khung game (.aw-stage) + pop-up công cụ (.aw-tool-panel) chặn. Chỉ ô gõ
+   (input/textarea/contenteditable) còn chọn được chữ — ⛔ bỏ dòng mở lại thì Safari iOS không đặt
+   được con trỏ. Chỗ nào cần chép chữ ngoài ô gõ thì đặt `user-select:text|all` riêng (luật class thắng
+   luật này, vd `.mc-ipad-url`, khung đo `#aw-do pre`). kiemtra.css vốn đã chặn y vậy. */
+body { -webkit-user-select: none; user-select: none; }
+input, textarea,
+[contenteditable]:not([contenteditable="false"]),
+[contenteditable]:not([contenteditable="false"]) * { -webkit-user-select: text; user-select: text; }
 
 /* ---------- Page + 16:10.5 stage ----------
    ⭐ SYSTEM-WIDE FRAME STANDARD (teacher, 7/8/2026 — Đợt 86 set it, Đợt 87

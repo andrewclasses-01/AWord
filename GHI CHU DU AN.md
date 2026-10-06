@@ -546,6 +546,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 488 (06/10/2026) — CHẶN BÔI ĐEN CHỮ TOÀN TRANG (giống myLesson v2.133.0)
+**Thầy:** "áp dụng luôn cho app AWord" — bấm/kéo chuột hay tô xanh chữ ở chỗ không cần chọn/chép; chỉ ô gõ mới cần chọn chữ.
+**Đã làm:** `core/app.css` ngay dưới luật `body`: `body{user-select:none}` + mở lại `user-select:text` cho `input, textarea, [contenteditable]` (và con của contenteditable). Trước đây chỉ `.aw-stage` + `.aw-tool-panel` chặn; nay cả thư viện, thanh nút, Results, Settings, STATS, Showdown, play.html, pad, source. Luật class đặt riêng (`.mc-ipad-url` user-select:all, `#aw-do pre`) vẫn thắng. `kiemtra.css` vốn đã chặn y vậy — không đụng.
+**Kiểm (devserver 8488, worktree `web-wt-dot488`):** bấm đúp tiêu đề + kéo qua dòng chữ trang đăng nhập ⇒ không chọn gì; bấm đúp chữ trong ô gõ ⇒ chọn được "world". Chưa đăng nhập được trên bàn thử ⇒ thư viện/game chưa bấm thử (cùng một luật CSS).
+⛔ Chỗ nào sau này CẦN chép chữ ngoài ô gõ ⇒ đặt `user-select:text` riêng. ⬜ thầy thử thư viện + game (máy tính, iPad).
 ## Đợt 487 (06/10/2026) — TRAIN RUSH: hàng nút Fight y hệt Single + BỎ nút GAMES ở mọi màn START
 **Thầy (kèm 2 ảnh):** "Ở chế độ fight, hàng nút chưa được setup chuẩn như các game khác · Thừa nút GAMES khi đã vào game. Trong game rồi thì nút Game không cần nữa".
 Thầy chốt (AskUserQuestion): nút GAMES bỏ ở **MỌI game** (kể cả 2D) · hàng nút Fight **giống hệt Single** (Menu · Sound | Thư mục · Options · Mode).
