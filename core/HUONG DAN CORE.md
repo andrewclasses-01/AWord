@@ -47,6 +47,8 @@ engine tự lùi giờ (`lamTiepBuMs`). Template tự giữ đồng hồ riêng 
 JSON.stringify thường làm CONTINUE gần như không bao giờ hiện. Bàn thử làm tiếp phải đọc bài giao THẬT ≥ 2 lần, đừng dùng object giả cố định.
 ⛔⛔ **Đợt 489:** quyền làm tiếp KHÔNG chốt lúc nạp trang — `play.js xetLamTiep()` xét lại tới lúc ván đầu bắt đầu (`lamTiepNhan` + `playLog.start`),
 engine hỏi lại mỗi 2 s ở màn READY. Hai trang cùng SỐNG vẫn tách ván (`tabKhacDangLam`).
+⛔⛔ **Đợt 490:** mỗi bài giao chỉ MỘT trang giữ chỗ (`chiemTrang`) — đừng dựng ván trước `giuMotTrang`. Trường practiceLog mới phải ĐĂNG LUẬT TRƯỚC
+(hasOnly) và thêm vào `updateMask` (`restUrlPlayLog`) — thiếu một trong hai là 403 / bị bỏ qua.
 ⛔ `khoiPhuc` không bao giờ có trong Fight / Showdown / Start with mistakes / giáo viên. ⛔ Đừng lưu gì nặng (localStorage dùng chung).
 
 ## 🚫 Đợt 464 — game GÕ CHỮ: gắn `core/no-copy.js` (chặn copy + dán)

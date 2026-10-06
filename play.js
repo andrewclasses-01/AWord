@@ -28,7 +28,7 @@ import {
 } from "./core/assignments.js";
 import { ensureTemplate } from "./core/registry.js";
 import { gioChuan } from "./core/gio-chuan.js";   // Đợt 422 — mốc giờ theo máy chủ
-import { khoaLuot, docLuot, ghiLuot, xoaLuot, nhipSong, tabKhacDangLam, dauVet } from "./core/lam-tiep.js";   // Đợt 469 — giữ lượt dở, mở lại làm tiếp
+import { khoaLuot, docLuot, ghiLuot, xoaLuot, nhipSong, tabKhacDangLam, dauVet, trangKhacMo, chiemTrang } from "./core/lam-tiep.js";   // Đợt 469 — giữ lượt dở, mở lại làm tiếp · Đợt 490 — một bài một trang
 import { tiLeDaLam, ghiRoiVan, ghiXongVan, layNhacCho, hienNhac, dangMo, ghiDat100, daDat100, canKiemMayChu, ghiDaKiem } from "./bo-cuoc.js";   // Đợt 424 — "Start Again quá sớm"
 // No template is imported here on purpose. ensureTemplate() fetches the ONE
 // game this assignment uses, right before it starts — so a student on a phone
@@ -261,9 +261,58 @@ function showNameScreen(assignment) {
   setTimeout(() => input.focus(), 30);
 }
 
+// ---------------- một bài một trang (Đợt 490) ----------------
+// ⭐⭐ Đợt 490 (thầy chốt 06/10/2026) — chặn mở CÙNG một bài giao ở nhiều tab/trang (xem core/lam-tiep.js `chiemTrang`).
+// Trả về true khi trang này được làm bài. `?dung=1` = trang vừa NHƯỜNG chỗ (chỉ hiện thông báo); `?gianh=1` = em bấm
+// "PLAY HERE" ở màn thông báo ⇒ giành chỗ ngay. Phụ huynh (`db=1`) không giữ chỗ (không ghi điểm lớp).
+function urlBo(them) {
+  const u = new URL(location.href);
+  u.searchParams.delete("dung"); u.searchParams.delete("gianh");
+  if (them) u.searchParams.set(them, "1");
+  return u.href;
+}
+function manMotTrang(title, sub, nutChu, onNut) {
+  const wrap = shell();
+  const card = el("div", "aw-login");
+  card.append(el("div", "aw-login-title", title));
+  card.append(el("div", "aw-login-sub", sub));
+  const b = el("button", "aw-as-btn aw-as-primary aw-stu-go", nutChu);
+  b.type = "button";
+  b.onclick = onNut;
+  card.append(b);
+  wrap.append(card, footer());
+}
+function giuMotTrang(k) {
+  const q = new URLSearchParams(location.search);
+  if (q.get("dung") === "1") {
+    manMotTrang("This game is now open in another tab",
+      "Bài này vừa được mở ở một trang khác — hãy làm tiếp ở trang đó. Muốn làm ở trang này thì bấm nút dưới.",
+      "PLAY HERE", () => location.replace(urlBo("gianh")));
+    return Promise.resolve(false);
+  }
+  if (q.get("gianh") === "1") { try { history.replaceState(null, "", urlBo()); } catch (e) {} return Promise.resolve(true); }
+  if (!trangKhacMo(k)) return Promise.resolve(true);
+  return new Promise(xong => {
+    let hen = null;
+    const di = () => { clearInterval(hen); xong(true); };
+    manMotTrang("This game is already open in another tab",
+      "Mỗi bài chỉ làm ở MỘT trang. Hãy quay lại trang đang mở bài, hoặc bấm nút dưới để làm ở trang này (trang kia sẽ dừng, bài đang làm dở được giữ nguyên).",
+      "PLAY HERE", di);
+    hen = setInterval(() => { if (!trangKhacMo(k)) di(); }, 1000);   // trang kia đã đóng / chết ⇒ tự vào
+  });
+}
+
 // ---------------- the game ----------------
 async function play(assignment, studentName, className, studentMa) {
   const ma = String(studentMa || "");   // Đợt 367 — mã em, rỗng khi không qua myLesson
+  // ⭐ Đợt 490 — một bài một trang (trước MỌI thứ khác: chưa dựng ván, chưa đọc lượt dở).
+  const khoaTrang = khoaLuot(assignment.code, ma, studentName);
+  const laPhuHuynh = new URLSearchParams(location.search).get("db") === "1";
+  if (!laPhuHuynh) {
+    if (!(await giuMotTrang(khoaTrang))) return;
+    // Bị trang khác giành chỗ ⇒ sang màn thông báo; pagehide của trang này cất lượt dở như tải lại (Đợt 469).
+    chiemTrang(khoaTrang, () => location.replace(urlBo("dung")));
+  }
   // A fresh copy each time so a replay never inherits the previous play's state.
   const activity = JSON.parse(JSON.stringify(assignment.activity));
 
@@ -310,10 +359,21 @@ async function play(assignment, studentName, className, studentMa) {
   let lamTiepCho = null;    // lượt dở đang giữ, chờ ván đầu tiên của trang này
   let lamTiepDung = null;   // playLog.start đã nhận, chờ engine lấy trạng thái ván (begin)
   let lamTiepXet = !dacBiet;   // Đợt 489 — ván đầu của trang CHƯA bắt đầu ⇒ còn xét lại được
+  // 🔎 Đợt 490 — LÝ DO (chẩn đoán, trường `lt` của practiceLog): thầy thấy em vẫn ra ván mới thay vì CONTINUE mà kho không cho biết
+  // vì sao (BẢO NAM, DIỆU CHI NTK9 06/10). `ltMo` = tình trạng lúc MỞ trang: co · khong-co · vet (đề đổi) · khong-tpl · tab-khac,
+  // kèm sức khoẻ localStorage (`ls-loi` = không ghi được; `ls<KB>k` = dung lượng đang dùng — gần 5 MB là đầy).
+  let ltMo = "khong-co", ltLs = "";
+  try {
+    localStorage.setItem("aw-ls-thu", "1"); localStorage.removeItem("aw-ls-thu");
+    let n = 0; for (let i = 0; i < localStorage.length; i++) { const kk = localStorage.key(i) || ""; n += kk.length + (localStorage.getItem(kk) || "").length; }
+    ltLs = "ls" + Math.round(n / 1024) + "k";
+  } catch (e) { ltLs = "ls-loi"; }
   if (!dacBiet) {
     const s = docLuot(khoaLT);
-    if (s && s.vet !== vetDe) xoaLuot(khoaLT);   // thầy đã sửa đề ⇒ không dựng lại được; nháp cũ được nộp dở như trước
-    else if (s && s.tpl && !tabKhacDangLam(khoaLT)) lamTiepCho = s;   // tab khác đang làm chính lượt này ⇒ tab này chơi lượt mới
+    if (s && s.vet !== vetDe) { ltMo = "vet"; xoaLuot(khoaLT); }   // thầy đã sửa đề ⇒ không dựng lại được; nháp cũ được nộp dở như trước
+    else if (s && !s.tpl) ltMo = "khong-tpl";
+    else if (s && tabKhacDangLam(khoaLT)) ltMo = "tab-khac";   // tab khác đang làm chính lượt này ⇒ tab này chơi lượt mới
+    else if (s) { ltMo = "co"; lamTiepCho = s; }
   }
   // ⭐⭐ Đợt 489 (06/10/2026) — XÉT LẠI LÚC BẤM, KHÔNG CHỈ LÚC MỞ TRANG. Trước đây "có làm tiếp không" chốt MỘT lần lúc nạp
   // trang: trang mở ra đúng lúc trang/tab khác cùng bài còn sống (nhịp < 6 s) là mất quyền làm tiếp VĨNH VIỄN — tab kia đóng
@@ -331,9 +391,12 @@ async function play(assignment, studentName, className, studentMa) {
   const tatSong = () => { if (songTimer) { clearInterval(songTimer); songTimer = null; } nhipSong(khoaLT, false); };
   function luuLuot(t) {   // t = { tpl, timeCost } do engine chụp
     if (!t || !t.tpl || !playLog || playLog.done || playLog.mistakes || dacBiet) return false;
-    return ghiLuot(khoaLT, { vet: vetDe, nhapId: playLog.nhapId, logId: playLog.id, createdAt: playLog.createdAt,
+    const ok = ghiLuot(khoaLT, { vet: vetDe, nhapId: playLog.nhapId, logId: playLog.id, createdAt: playLog.createdAt,
                              batDau: playLog.batDau, activeMs: hoatDong ? hoatDong.doc() : (playLog.activeMs || 0),
-                             timeCost: Number(t.timeCost) || 0, tpl: t.tpl });
+                             timeCost: Number(t.timeCost) || 0, tpl: t.tpl, lt: playLog.lt || "" });
+    // 🔎 Đợt 490 — cất lượt dở THẤT BẠI (localStorage đầy / bị chặn) ⇒ đánh dấu vào lý do để thầy thấy trên kho.
+    if (!ok && playLog.lt && playLog.lt.indexOf("luu!") < 0) playLog.lt = (playLog.lt + "|luu!").slice(0, 60);
+    return ok;
   }
   function chupLuot() {
     if (!playLog || playLog.done || playLog.mistakes || !playLog.trangThaiNay) return false;
@@ -498,9 +561,19 @@ async function play(assignment, studentName, className, studentMa) {
       playLog: dacBiet ? null : {
         start: ({ mode, again, mistakes, diemNay, baiLamNay, trangThaiNay }) => {
           // ⭐ Đợt 469 — ván đầu tiên của trang có lượt dở đang giữ ⇒ LÀM TIẾP: mượn lại danh tính của lượt cũ.
+          const vanDau = lamTiepXet;
           if (!mistakes) xetLamTiep();   // Đợt 489 — tab kia vừa đóng ngay trước cú bấm
           lamTiepXet = false;
           const lt = (!mistakes && lamTiepCho) ? lamTiepCho : null;
+          // 🔎 Đợt 490 — lý do của ván này (xem `ltMo`): làm tiếp ⇒ giữ lý do gốc của lượt + ">tiep"; ván đầu không làm tiếp ⇒
+          // tình trạng LÚC BẤM (đọc lại kho) + lúc mở + localStorage; ván sau trong cùng trang (Start again…) ⇒ "sau".
+          let lyDo = "";
+          if (lt) lyDo = ((lt.lt || "?") + ">tiep").slice(-60);
+          else if (vanDau && !mistakes) {
+            const s2 = docLuot(khoaLT);
+            const bam = !s2 ? "khong-co" : s2.vet !== vetDe ? "vet" : !s2.tpl ? "khong-tpl" : tabKhacDangLam(khoaLT) ? "tab-khac" : "bo-qua";
+            lyDo = (bam + "|mo:" + ltMo + "|" + ltLs).slice(0, 60);
+          } else if (!mistakes) lyDo = "sau";
           lamTiepCho = null;
           lamTiepDung = lt;
           playLog = { code: assignment.code, id: lt ? lt.logId : newPlayLogId(), name: studentName, ma, mode,
@@ -511,7 +584,8 @@ async function play(assignment, studentName, className, studentMa) {
                       // + hàm hỏi engine "điểm tới lúc này" (pagehide không chờ engine được).
                       nhapId: lt ? lt.nhapId : newAttemptId(), diemNay: typeof diemNay === "function" ? diemNay : null, daNopDo: false,
                       baiLamNay: typeof baiLamNay === "function" ? baiLamNay : null,   // Đợt 384
-                      trangThaiNay: typeof trangThaiNay === "function" ? trangThaiNay : null };   // Đợt 469
+                      trangThaiNay: typeof trangThaiNay === "function" ? trangThaiNay : null,   // Đợt 469
+                      lt: lyDo };   // 🔎 Đợt 490 — chẩn đoán làm tiếp
           attempt = null;   // ⭐ Đợt 383 — `attempt` của lượt TRƯỚC không được dính sang nhật ký lượt này
           if (hoatDong) hoatDong.dung();
           hoatDong = taoDoHoatDong(choMs, lt ? lt.activeMs : 0);

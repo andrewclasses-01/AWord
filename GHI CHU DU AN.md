@@ -546,6 +546,33 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 490 (06/10/2026) — ⭐⭐ MỘT BÀI CHỈ MỞ Ở MỘT TRANG + 🔎 TRƯỜNG CHẨN ĐOÁN `lt` (vì sao ván có/không LÀM TIẾP) · phiên MSI
+**Thầy:** ảnh pop-up BẢO NAM (NTK9 LESSON 22 BT1 `dwyrnk`) vẫn 5 dòng BỎ DỞ — "tìm hiểu xem ntn" + "muốn chặn mở ở nhiều tab cùng lúc";
+rồi "push cả hai và thêm trường ghi lý do".
+**Điều tra (chỉ đọc kho):** BẢO NAM 20:23 → nhật ký đứng 20:48 nhưng scores NỘP 21/30 lúc 21:00 có `createdAt − timeMs` = 20:23:25 ⇒ CHÍNH ván đó đã
+làm tiếp tới đích, chỉ các nhịp sau không vào được practiceLog (dashboard myLesson v1.261.0 nay gộp). 21:05/21:21/21:32/21:36: mỗi trang ngừng ghi
+giữa chừng (nhịp cuối đúng mốc phút, không có lần ghi pagehide), vài phút sau trang mới ra ván MỚI — DIỆU CHI cùng lớp 13 lần tối 06/10, có ván 20:35
+chen giữa ván 20:29–20:38 (2 trang cùng lúc). Đã loại trừ lỗi mã: Playwright WebKit giả iPad (`scratchpad/pw/thu.mjs`) — tải lại / tải lại trang mẹ
+iframe / Back (bfcache) / đóng tab mở tab mới ⇒ CONTINUE 4/4; luật practiceLog không chặn ghi đè. Kho không ghi lý do ⇒ chưa kết luận được ⇒ thêm `lt`.
+**Đã làm:**
+- `core/lam-tiep.js`: `trangKhacMo(k)` + `chiemTrang(k, khiNhuong)` — chỗ `aword-trang-mo[k] = {tab, t}` nhịp 2 s từ lúc MỞ trang (kể cả màn START);
+  trang khác ghi đè `tab` ⇒ nhịp kế / sự kiện `storage` ⇒ `khiNhuong()`; pagehide trả chỗ, pageshow (bfcache) kiểm lại. `TAB_PHIEN` ở sessionStorage ⇒
+  chính tab đó tải lại (cả Safari tự tải lại khi hết bộ nhớ) KHÔNG bị chặn.
+- `play.js`: đầu `play()` gọi `giuMotTrang(khoaLuot(...))` TRƯỚC mọi thứ: trang khác đang sống ⇒ màn "This game is already open in another tab" (+ dòng tiếng
+  Việt) nút **PLAY HERE** (trang kia đóng/chết ⇒ tự vào, poll 1 s); `?dung=1` = trang vừa nhường (màn "now open in another tab" + PLAY HERE ⇒ `?gianh=1`
+  giành ngay, rồi `history.replaceState` bỏ cờ). Bị giành ⇒ `location.replace(…&dung=1)` ⇒ pagehide cất lượt dở như tải lại ⇒ trang mới CONTINUE
+  (Đợt 489 poll). Phụ huynh `db=1` không giữ chỗ. ⚠️ Chỉ cùng trình duyệt/máy (localStorage) — 2 máy không thấy nhau.
+- 🔎 `lt` (string ≤ 60) vào practiceLog: ván ĐẦU của trang = `<lúc bấm>|mo:<lúc mở>|ls<KB>k` (khong-co · vet · khong-tpl · tab-khac · bo-qua · co;
+  `ls-loi` = localStorage không ghi được); làm tiếp = `<lt gốc của lượt>>tiep` (lt cất kèm lượt giữ); ván sau trong trang = `sau`; cất lượt dở thất bại
+  ⇒ thêm `|luu!`. `core/assignments.js beatPlayLog` gửi `lt` + `updateMask` có `lt` khi có. LUẬT ĐĂNG TRƯỚC (myLesson `tools/dang-luat-ly-do-lam-tiep.js`,
+  ruleset `12a9ff21…`, đường lùi `2d6b9a25…`; `--kiem` 7/7: không lt 200 · lt 200 · 60 ký tự 200 · 61 → 403 · kiểu số 403 · trường lạ 403 · không vé 403).
+**Thử (devserver 5690, mã giả THUCLAUDE01):** `scratchpad/pw/thu-tab.mjs` WebKit + Chrome 8/8 mỗi bên: B mở khi A đang làm ⇒ màn chặn · PLAY HERE ở B ⇒ A
+"now open in another tab", B CONTINUE 1/30 → câu 2 · giành ngược từ A · A tải lại cùng tab không bị chặn · 2 trang mẹ iframe chặn nhau, đóng mẹ 1 ⇒ mẹ 2
+CONTINUE · 0 lỗi trang. `thu-lt.mjs` (trang mẹ giả cổng 8134 cấp vé giả, Playwright CHẶN mọi ghi REST): ván mới `lt=khong-co|mo:khong-co|ls0k` (mask có lt),
+tải lại ⇒ CONTINUE, bấm ⇒ `lt=…>tiep` đúng mã lượt cũ.
+**VIỆC ĐANG CHỜ:** ⬜ mai đọc `lt` các ván mới của BẢO NAM / DIỆU CHI (practiceLog) để kết luận vì sao không làm tiếp; ⬜ 2 máy khác nhau vẫn ra 2 ván
+(cần kho máy chủ nếu muốn chặn).
+
 ## Đợt 489 (06/10/2026) — ⭐⭐ LÀM TIẾP: XÉT LẠI LÚC BẤM START, KHÔNG CHỈ LÚC MỞ TRANG (trang mở khi tab khác cùng bài còn sống mất quyền làm tiếp vĩnh viễn) · phiên MSI
 **Thầy:** "Điều tra lỗi làm tiếp của em Linh Nhi" (dashboard myLesson v1.260.0: ván giữ FTG `j56ry9` 09:42 06/10 không được làm tiếp, 09:49 ra ván mới).
 **Điều tra (chỉ đọc kho):** quét 209 nhật ký `practiceLog` từ khi Đợt 486 lên (5/10 22:38) ⇒ 10 cặp "ván dở rồi ván MỚI (again:false) trong ≤ 3 phút":

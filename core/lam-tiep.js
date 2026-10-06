@@ -93,6 +93,60 @@ export function dauVet(activity) {
   return activity.type + ":" + (h >>> 0).toString(36) + ":" + str.length;
 }
 
+// ⭐⭐ Đợt 490 (thầy chốt 06/10/2026) — MỘT BÀI CHỈ MỞ Ở MỘT TRANG. Đo kho 06/10: em mở cùng bài ở nhiều tab/trang (DIỆU CHI
+// ván 20:35 chen giữa ván 20:29–20:38; HÀ PHƯƠNG 3 tab 11:53–12:12; TUẤN KIỆT 4 ván chồng giờ) ⇒ mỗi trang một ván, lượt dở
+// thành BỎ DỞ. Mỗi trang bài giao (kể cả đang ở màn START) GIỮ CHỖ `aword-trang-mo[k] = {tab, t}`, nhịp 2 s:
+//   · trang mở sau thấy chỗ đang có trang khác sống (< 6 s) ⇒ play.js hiện màn chặn (nút "PLAY HERE"; trang kia chết/đóng
+//     thì tự đi tiếp);
+//   · trang giành chỗ ghi đè `tab` ⇒ trang cũ (nhịp kế hoặc sự kiện `storage`) thấy chỗ không còn là mình ⇒ `khiNhuong()`
+//     (play.js: chuyển sang màn "đã mở ở trang khác" — pagehide cất lượt dở như tải lại, trang mới CONTINUE đúng lượt đó).
+// `TAB_PHIEN` nằm trong sessionStorage ⇒ chính tab đó tải lại (kể cả Safari tự tải lại khi hết bộ nhớ, không kịp pagehide)
+// KHÔNG bị coi là "trang khác". ⚠️ Chỉ chặn trong CÙNG trình duyệt / cùng máy (localStorage) — 2 máy khác nhau không thấy nhau.
+const KHOA_TRANG = "aword-trang-mo";
+const TAB_PHIEN = (() => {
+  try {
+    let id = sessionStorage.getItem("aw-tab-phien");
+    if (!id) { id = Math.random().toString(36).slice(2, 10); sessionStorage.setItem("aw-tab-phien", id); }
+    return id;
+  } catch (e) { return TAB; }
+})();
+export function trangKhacMo(k) {
+  const s = doc(KHOA_TRANG)[k];
+  return !!(s && s.tab !== TAB_PHIEN && Date.now() - (s.t || 0) < SONG_MS);
+}
+let trangHen = null;
+export function chiemTrang(k, khiNhuong) {
+  const ghiCho = () => {
+    const m = doc(KHOA_TRANG);
+    m[k] = { tab: TAB_PHIEN, t: Date.now() };
+    Object.keys(m).forEach(x => { if (Date.now() - (m[x].t || 0) > SONG_MS * 10) delete m[x]; });
+    ghi(KHOA_TRANG, m);
+  };
+  let daNhuong = false;
+  const nhuong = () => {
+    if (daNhuong) return;
+    daNhuong = true;
+    if (trangHen) { clearInterval(trangHen); trangHen = null; }
+    try { khiNhuong && khiNhuong(); } catch (e) { /* trang vẫn dừng nhịp */ }
+  };
+  const kiem = () => {
+    if (daNhuong) return;
+    const s = doc(KHOA_TRANG)[k];
+    if (s && s.tab !== TAB_PHIEN && Date.now() - (s.t || 0) < SONG_MS) { nhuong(); return; }   // trang khác đã giành chỗ
+    ghiCho();
+  };
+  ghiCho();
+  trangHen = setInterval(kiem, 2000);
+  window.addEventListener("storage", e => { if (e.key === KHOA_TRANG) kiem(); });
+  // Rời trang (kể cả vào bfcache) ⇒ trả chỗ; quay lại từ bfcache ⇒ nhịp kế tiếp tự giữ lại hoặc nhường nếu đã có trang khác.
+  window.addEventListener("pagehide", () => {
+    if (daNhuong) return;
+    const m = doc(KHOA_TRANG);
+    if (m[k] && m[k].tab === TAB_PHIEN) { delete m[k]; ghi(KHOA_TRANG, m); }
+  });
+  window.addEventListener("pageshow", e => { if (e.persisted && !daNhuong) kiem(); });
+}
+
 // Template dùng: lượt khôi phục có khớp đề đang dựng không (độ dài + từng phần tử là chỉ số hợp lệ, không trùng).
 export function thuTuHopLe(thuTu, n) {
   if (!Array.isArray(thuTu) || thuTu.length !== n) return false;

@@ -969,10 +969,10 @@ export function newPlayLogId() {
 }
 // ⭐ Đợt 384 — `coReview`: CHỈ lần ghi mang bài làm mới thêm `review` vào updateMask. Nhịp 1 phút (không mang review)
 // để mask như cũ ⇒ KHÔNG xoá mất bài làm đã ghi; luật practiceLog nhận `review` từ ruleset 25/09 (myLesson web v1.148.0).
-function restUrlPlayLog(code, id, coReview) {
+function restUrlPlayLog(code, id, coReview, coLt) {
   const pid = firebaseConfig && firebaseConfig.projectId, key = firebaseConfig && firebaseConfig.apiKey;
   if (!pid || !key || !code || !id) return "";
-  const mask = LOG_FIELDS.concat(coReview ? ["review"] : []).map(f => "updateMask.fieldPaths=" + f).join("&");
+  const mask = LOG_FIELDS.concat(coReview ? ["review"] : [], coLt ? ["lt"] : []).map(f => "updateMask.fieldPaths=" + f).join("&");   // Đợt 490 — lt
   return `https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents/practiceLog/` +
     `${encodeURIComponent(String(code))}/entries/${encodeURIComponent(id)}?key=${encodeURIComponent(key)}&${mask}`;
 }
@@ -1009,10 +1009,10 @@ function fsGiaTri(v) {
   if (typeof v === "object") { const f = {}; Object.keys(v).forEach(k => { f[k] = fsGiaTri(v[k]); }); return { mapValue: { fields: f } }; }
   return { stringValue: String(v) };
 }
-export function beatPlayLog({ code, id, name, ma, mode, again, mistakes, score, total, timeMs, done, attemptId, createdAt, activeMs, review },
+export function beatPlayLog({ code, id, name, ma, mode, again, mistakes, score, total, timeMs, done, attemptId, createdAt, activeMs, review, lt },
                             { keepalive = false } = {}) {
   const baiLam = Array.isArray(review) && review.length ? gonReview(review, keepalive ? 24000 : 200000) : [];   // Đợt 384
-  const url = restUrlPlayLog(code, id, baiLam.length > 0);
+  const url = restUrlPlayLog(code, id, baiLam.length > 0, !!lt);
   if (!url) return Promise.resolve(false);
   const nm = String(name || "Player").trim().replace(/\s+/g, " ").slice(0, 40) || "Player";
   const fields = {
@@ -1035,6 +1035,8 @@ export function beatPlayLog({ code, id, name, ma, mode, again, mistakes, score, 
   // Không đo (lối gọi cũ) ⇒ bỏ trường; mask vẫn có tên nên kho cũng không giữ số cũ nào. Trần = timeMs (≤ 12 giờ, luật).
   if (Number.isFinite(activeMs)) fields.activeMs = { integerValue: String(Math.min(43200000, Math.max(0, Math.round(activeMs)))) };
   if (baiLam.length) fields.review = fsGiaTri(baiLam);   // Đợt 384 — mask có "review" chỉ khi có trường này
+  // 🔎 Đợt 490 — lý do ván đầu của trang có/không LÀM TIẾP (luật practiceLog nhận `lt` string <= 60 từ 06/10/2026).
+  if (lt) fields.lt = { stringValue: String(lt).slice(0, 60) };
   // ⭐ Đợt 411 (27/9/2026) — luật practiceLog đòi VÉ đúng em (như scores/results, Đợt 410). keepalive (đóng tab) lấy vé
   // ĐỒNG BỘ; nhịp thường chờ vé ≤ 3 s. Không vé (chơi ngoài myLesson / mẹ không cấp) ⇒ KHÔNG gửi (luật sẽ chặn).
   const gui = (ve) => {
