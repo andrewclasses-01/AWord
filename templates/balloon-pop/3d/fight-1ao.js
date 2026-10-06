@@ -1,4 +1,10 @@
-// TRAIN RUSH — TRẬN FIGHT mẫu 1an (05/10/2026): y hệt fight-1am, chỉ dùng lõi bp3d-1an.
+// TRAIN RUSH — TRẬN FIGHT mẫu 1ao (06/10/2026, thầy: "ở chế độ fight, hàng nút chưa được setup chuẩn như các game khác"):
+//   hàng nút Fight = Y HỆT hàng nút Single (lớp .bp-outbar/.bp-tool của lõi, 44×44 ở giữa): Menu · Sound | Thư mục · Options · Mode.
+//   Bỏ dòng chữ "TRAIN RUSH · Fight". Bảng nổi .fb-ov-panel cho Thư mục (act cùng thư mục) và Mode (Single / Fight).
+//   createTrainRushFight({..., host }) — host = cầu AWord { listActs(), openAct(id), options(ov) } (giống host của Single):
+//     host null (chạy riêng ở myGame) ⇒ Thư mục / Options hiện bảng mẫu · host thiếu hàm ⇒ ẩn nút đó.
+//   api.setTime(giây) — Options ▸ Apply của AWord: đổi giờ trận; trận đang chạy / intro / đã xong ⇒ chơi lại từ đầu với giờ mới.
+// ---- ghi chú 1an: TRAIN RUSH — TRẬN FIGHT mẫu 1an (05/10/2026): y hệt fight-1am, chỉ dùng lõi bp3d-1an.
 // ---- ghi chú 1am: TRAIN RUSH — TRẬN FIGHT mẫu 1am (05/10/2026): y hệt fight-1al, chỉ dùng lõi bp3d-1am (tự giữ 60 khung, dịch sẵn shader — xem đầu bp3d-1am.js).
 // ---- ghi chú 1al: TRAIN RUSH — TRẬN FIGHT mẫu 1al (03/10/2026): y hệt fight-1ak, chỉ dùng lõi bp3d-1al.
 // ---- ghi chú 1ak: TRAIN RUSH — TRẬN FIGHT mẫu 1ak (03/10/2026): y hệt fight-1aj, chỉ dùng lõi bp3d-1ak.
@@ -10,6 +16,16 @@
 import { createBalloonPop } from "./bp3d-1an.js";
 import { createBpSound } from "./sound-1ah.js";   // 1ah: bộ máy âm thanh CHUNG của trận (nhạc, gió, đếm ngược, thắng)
 
+// 1ao: icon = bộ ICON của lõi bp3d (hàng nút Single) — chép lại vì lõi không xuất ra
+const ICON = {
+  menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  sound: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path class="w" d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/><path class="x" d="m16 9 6 6m0-6-6 6"/></svg>',
+  folder: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>',
+  options: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M10 12h10M4 18h13M21 18h-1"/><circle cx="16" cy="6" r="2.2"/><circle cx="7" cy="12" r="2.2"/><circle cx="17" cy="18" r="2.2"/></svg>',
+  mode: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="1.8"/></svg>',
+  fight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="2.1" y="6" width="7.5" height="12" rx="1.6"/><rect x="14.4" y="6" width="7.5" height="12" rx="1.6"/><path d="M12 6.5v11"/></svg>',
+};
+const esc = v => String(v ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const MARKUP = `
   <div class="fb-hud">
     <div class="fb-team t0"><span>TEAM 1</span><b class="fb-s0">0</b></div>
@@ -40,12 +56,18 @@ const MARKUP = `
       </div>
       <button class="fb-btn fb-again">Start again</button>
     </div></div>
+    <div class="fb-ov fb-ov-panel" hidden><div class="fb-card fb-pn">
+      <button class="fb-pn-x" aria-label="Close">✕</button>
+      <div class="fb-pn-t"></div><div class="fb-pn-b"></div>
+    </div></div>
   </div>
-  <div class="fb-bar">
-    <button class="fb-tool fb-menu" title="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-    <button class="fb-tool fb-sound" title="Sound"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg></button>
-    <button class="fb-tool fb-mode" title="Mode — back to Single"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="2.1" y="6" width="7.5" height="12" rx="1.6"/><rect x="14.4" y="6" width="7.5" height="12" rx="1.6"/><path d="M12 6.5v11"/></svg></button>
-    <div class="fb-kieu"><small>TRAIN RUSH · Fight</small></div>
+  <div class="fb-bar bp-outbar">
+    <button class="bp-tool fb-menu" title="Menu" aria-label="Menu">${ICON.menu}</button>
+    <button class="bp-tool bp-sound fb-sound" title="Sound" aria-label="Sound">${ICON.sound}</button>
+    <i class="bp-tool-gap"></i>
+    <button class="bp-tool fb-folder" title="Switch activity" aria-label="Switch activity">${ICON.folder}</button>
+    <button class="bp-tool fb-options" title="Options" aria-label="Options">${ICON.options}</button>
+    <button class="bp-tool fb-mode" title="Mode" aria-label="Mode">${ICON.fight}</button>
   </div>`;
 const KIEU = 1;   // 1ad: thầy chọn kiểu 1 (hai bàn trái–phải)
 // 1ad: tàu 2 đội khác màu — đầu máy + toa than theo màn (3 sắc độ của màu đội), ván toa hàng + viền bảng định nghĩa màu đội
@@ -56,8 +78,8 @@ const COLORS = [
 const keyOf = w => String(w.keyword).trim().toUpperCase().replace(/\s+/g, " ");
 const shuf = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
-export async function createTrainRushFight({ mount, words, wordsTitle = "", time = 120, onSingle = null, onHome = null }) {
-  const TIME = Math.max(20, Math.min(900, +time || 120));
+export async function createTrainRushFight({ mount, words, wordsTitle = "", time = 120, onSingle = null, onHome = null, host = null }) {
+  let TIME = Math.max(20, Math.min(900, +time || 120));   // 1ao: let — Options ▸ Apply đổi được (api.setTime)
   mount.classList.add("fb-root");
   mount.innerHTML = MARKUP;
   const $ = s => mount.querySelector(s), $$ = s => mount.querySelectorAll(s);
@@ -69,6 +91,8 @@ export async function createTrainRushFight({ mount, words, wordsTitle = "", time
     $(".fb-single").hidden = !onSingle; $(".fb-home").hidden = !onHome;
   }
   if (!onSingle) $(".fb-mode").hidden = true;
+  if (host && !host.listActs) $(".fb-folder").hidden = true;    // 1ao: cầu AWord thiếu đường ⇒ ẩn nút
+  if (host && !host.options) $(".fb-options").hidden = true;
 
   // 1ad: thứ tự từ riêng mỗi đội; vị trí k (toa thứ k tính từ đầu ván) của 2 đội không bao giờ trùng từ
   function makeOrders() {
@@ -195,6 +219,7 @@ export async function createTrainRushFight({ mount, words, wordsTitle = "", time
   $(".fb-resume").addEventListener("click", () => setPaused(false));
   $(".fb-stop").addEventListener("click", () => { setPaused(false); finish("GAME OVER"); });
   $(".fb-menu").addEventListener("click", () => {
+    if (!ovPanel.hidden) closePanel();   // 1ao
     if (G.intro) return G.boards[1].skipIntro();
     if (G.running) return setPaused(!G.paused);
     // 1aj: chưa chơi / đã kết thúc ⇒ bảng PAUSED làm Menu (Single mode · Library) — không thì kẹt, không ra được
@@ -204,12 +229,83 @@ export async function createTrainRushFight({ mount, words, wordsTitle = "", time
     G.muted = !G.muted; $(".fb-sound").classList.toggle("is-off", G.muted);
     mount.querySelectorAll(".fb-board .bp-sound").forEach(b => b.click());
   });
-  $(".fb-mode").addEventListener("click", () => { if (onSingle) onSingle(); });
+  // 1ao: bảng nổi Thư mục / Mode (như Single) — mở giữa trận thì tạm dừng 2 bàn, đóng thì chạy tiếp
+  const ovPanel = $(".fb-ov-panel"), pnT = $(".fb-pn-t"), pnB = $(".fb-pn-b");
+  let panelPaused = false, hostPaused = false, folderTok = 0;
+  function holdFor(on) {   // tạm dừng KHÔNG hiện bảng PAUSED; trả true nếu chính lần này đã dừng trận
+    if (on) {
+      if (!G.running || G.paused) return false;
+      G.paused = true; G.boards.forEach(b => b.setPaused(true)); snd.hold(true); last = 0; return true;
+    }
+    G.paused = false; G.boards.forEach(b => b.setPaused(false)); snd.hold(false); last = 0; return false;
+  }
+  function openPanel(kind) {
+    if (!ovPanel.hidden) closePanel();
+    if (!$(".fb-ov-pause").hidden) setPaused(false);
+    panelPaused = holdFor(true);
+    ovPanel.dataset.kind = kind; pnB.innerHTML = "";
+    if (kind === "folder" && host && host.listActs) {
+      pnT.textContent = "Switch activity";
+      pnB.innerHTML = `<p class="fb-pn-note">Loading…</p>`;
+      const tok = ++folderTok;
+      Promise.resolve().then(() => host.listActs()).then(d => {
+        if (tok !== folderTok || ovPanel.hidden || ovPanel.dataset.kind !== "folder") return;
+        const groups = (d && d.groups) || [];
+        if (d && d.folderName) pnT.textContent = d.folderName;
+        pnB.innerHTML = groups.length ? `<div class="fb-pn-list">${groups.map(g => (g.path ? `<p class="fb-pn-grp">${esc(g.path)}</p>` : "") + g.acts.map(a =>
+          `<button class="fb-pn-row${a.current ? " is-on" : ""}" data-id="${esc(String(a.id))}"${a.current ? " disabled" : ""}>${ICON.folder}<span>${esc(a.title || "Untitled")}</span></button>`).join("")).join("")}</div>`
+          : `<p class="fb-pn-note">No other activities in this folder.</p>`;
+        pnB.querySelectorAll(".fb-pn-row[data-id]").forEach(b => b.addEventListener("click", () => host.openAct(b.dataset.id)));
+      }).catch(() => { if (tok === folderTok) pnB.innerHTML = `<p class="fb-pn-note">Could not load the folder.</p>`; });
+    } else if (kind === "folder") {   // chạy riêng ở myGame: danh sách mẫu
+      pnT.textContent = "Switch activity";
+      pnB.innerHTML = `<div class="fb-pn-list">${["LSA2 S4 T4 — Words", "LSA2 S4 T3 — Words", "LSA2 S4 T2 — Words"].map((t, i) =>
+        `<button class="fb-pn-row${i === 0 ? " is-on" : ""}">${ICON.folder}<span>${t}</span></button>`).join("")}</div><p class="fb-pn-note">Sample list — in AWord this shows the activities in the same folder.</p>`;
+    } else if (kind === "options") {  // chạy riêng ở myGame: AWord mới có bảng Options thật
+      pnT.textContent = "Options";
+      pnB.innerHTML = `<p class="fb-pn-note">In AWord this opens the AWord Options panel (timer, Train rush settings).</p>`;
+    } else if (kind === "mode") {
+      pnT.textContent = "Mode";
+      pnB.innerHTML = `<div class="fb-pn-modes"><button class="fb-pn-mode fb-pn-single">${ICON.mode}<span>Single</span></button><button class="fb-pn-mode is-on">${ICON.fight}<span>Fight</span><small>2 teams</small></button></div>`;
+      pnB.querySelector(".fb-pn-single").addEventListener("click", () => { closePanel(); if (onSingle) onSingle(); });
+      pnB.querySelector(".fb-pn-mode.is-on").addEventListener("click", () => closePanel());
+    }
+    ovPanel.hidden = false;
+  }
+  function closePanel() {
+    ovPanel.hidden = true; ovPanel.dataset.kind = "";
+    if (panelPaused) { panelPaused = false; holdFor(false); }
+  }
+  const togglePanel = k => (ovPanel.dataset.kind === k && !ovPanel.hidden ? closePanel() : openPanel(k));
+  $(".fb-pn-x").addEventListener("click", closePanel);
+  ovPanel.addEventListener("click", e => { if (e.target === ovPanel) closePanel(); });
+  $(".fb-folder").addEventListener("click", () => togglePanel("folder"));
+  $(".fb-mode").addEventListener("click", () => togglePanel("mode"));
+  // Options: AWord ⇒ bảng Options THẬT của AWord gắn lên ô trận, neo trên hàng nút (như Single 1al); trận dừng tới khi bảng đóng
+  $(".fb-options").addEventListener("click", () => {
+    if (!(host && host.options)) return togglePanel("options");
+    if (!ovPanel.hidden) closePanel();
+    if (!$(".fb-ov-pause").hidden) setPaused(false);
+    hostPaused = holdFor(true);
+    const bar = $(".fb-bar");
+    host.options({ layer: mount, top: () => bar.getBoundingClientRect().top - mount.getBoundingClientRect().top,
+      onClose: () => { if (hostPaused) { hostPaused = false; if (!dead && G.running) holdFor(false); } } });
+  });
   $(".fb-single").addEventListener("click", () => { if (onSingle) onSingle(); });
   $(".fb-home").addEventListener("click", () => { if (onHome) onHome(); });
 
   const api = {
     G, get boards() { return G.boards; }, start, finish, countdown, snd,
+    // 1ao: Options ▸ Apply — giờ trận mới. Còn ở màn START ⇒ chỉ đổi đồng hồ; đang chơi / intro / đã xong ⇒ chơi lại từ đầu.
+    setTime(sec) {
+      if (dead) return false;
+      TIME = Math.max(20, Math.min(900, +sec || 120));
+      hostPaused = false; panelPaused = false; ovPanel.hidden = true;
+      if (G.intro) G.timeLeft = TIME;                                   // intro chưa đếm giờ ⇒ chỉ đổi giờ
+      else if (G.running || G.ended) { setPaused(false); start(); }
+      else G.timeLeft = TIME;
+      return true;
+    },
     // 1aj: dỡ hẳn trận — 2 bàn destroy(), đồng hồ / hẹn giờ dừng, nhạc + gió tắt. Gọi lại vô hại.
     destroy() {
       if (dead) return; dead = true;

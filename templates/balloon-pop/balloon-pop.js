@@ -17,6 +17,9 @@
 // ⭐⭐ Đợt 452 (thầy 03/10/2026: "Options… lấy Rocket Race làm mẫu · train rush bị size quá to"): khung + nút = Rocket Race
 //   (myGame 1al); nút Options của game mở ĐÚNG bảng Options của engine (cầu `ui.host.options`) — Timer, bộ nghĩa, nút Template,
 //   Shuffle / Show answers + mục riêng TRAIN RUSH (buildExtraOptions). Apply => `ui.liveOptions` => game.setOptions (không nạp lại 3D).
+// ⭐⭐ Đợt 487 (thầy 06/10/2026): Mode ▸ Fight của game chạy trận NGAY TRONG ô Single (myGame 1ao, `3d/fight-1ao.js`) — hàng nút Fight
+//   y hệt Single: Menu · Sound | Thư mục · Options · Mode. `ownFight` (đường engine.enterFight) vẫn giữ, nhưng hàng nút của nó không có
+//   Thư mục / Options (không có cầu ui.host).
 //   ⚠️ Options lưu PHẲNG trong activity.options (proxy nháp engine chỉ thấy khoá cấp 1): timer / timerTotalSeconds / shuffleQuestions /
 //   showAnswers + trLevels · trPointsOff · trBalloonSpeed · trTrainSpeed · trBonusTime · trBonusPoints · trBonusX2.
 //   `activity.options.trainRush` (Đợt 450–451) + khoá bp* của bản 2D chỉ còn là giá trị đầu (flatSeed).
@@ -30,7 +33,7 @@ const loader = () => { ensureTr3dCss(); return showLoader3d({ key: "trainrush", 
 preloadLoader3d("west");   // Đợt 452 — phông Rye tải ngay lúc nạp template (màn chờ hiện là đã có chữ)
 
 // CSS của game (chép từ myGame) + phông miền Tây; nạp một lần khi game mở lần đầu.
-const TR3D_CSS = ["bp3d.css", "bp3d-1j.css", "bp3d-1p.css", "bp3d-1q.css", "bp3d-1r.css", "bp3d-1ab.css", "fight-cine-1ae.css", "fight-1al.css", "bp3d-1al.css"];
+const TR3D_CSS = ["bp3d.css", "bp3d-1j.css", "bp3d-1p.css", "bp3d-1q.css", "bp3d-1r.css", "bp3d-1ab.css", "fight-cine-1ae.css", "fight-1al.css", "bp3d-1al.css", "fight-1ao.css"];
 const TR3D_FONTS = "https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@1,800;1,900&family=Rye&display=swap";
 // Đợt 452 — khoá game (DEFAULTS trong 3d/bp3d-1an.js) <-> khoá PHẲNG trong activity.options (engine + tr*)
 const TR_DEF = { timerMode: "down", timer: 120, levels: 10, pointsOff: 0, balloonSpeed: 4, trainSpeed: 4, shuffle: true, showAnswers: true, bonusTime: false, bonusPoints: false, bonusX2: false };
@@ -64,6 +67,10 @@ function flatOpts(g) {
   return f;
 }
 const trGame = act => ({ ...TR_DEF, ...gameOpts(act && act.options) });
+// giờ trận Fight (giây) từ bộ Options của game: Count down ⇒ giờ đó, ít nhất 2 phút (mẫu 1ah); kiểu khác ⇒ 2 phút
+const fightTime = o => Math.max(120, o.timerMode === "down" && Number(o.timer) ? Number(o.timer) : 0);
+// ⭐ Đợt 487 — đang ở trận Fight mà chọn act khác ở nút Thư mục ⇒ act đó mở thẳng vào Fight (mount đọc trong 15 s rồi xoá)
+let fightNextAt = 0;
 
 let webglOk = null;
 function canRun3d() {
@@ -187,12 +194,17 @@ const balloonPopTemplate = {
       const d = document.createElement("div"); d.className = "aw-tr-need3d"; d.textContent = "No words yet — add at least 2 keywords with definitions.";
       root.append(d); return () => {};
     }
-    const ld = loader();
     const h = openHost();
-    let dead = false, game = null;
+    let dead = false, game = null, fight = null, tok = 0, poll = 0;
     flatSeed(activity);
     // Đợt 452 — Options ▸ Apply của engine => áp ngay trong cảnh (game chưa dựng xong => false => engine dựng lại như thường)
-    if (ui.liveOptions) ui.liveOptions(o => (game && !dead ? game.setOptions({ ...TR_DEF, ...gameOpts(o) }) === true : false));
+    // Đợt 487 — đang ở trận Fight ⇒ Apply đổi giờ trận (fight.setTime: trận đang chạy / đã xong thì chơi lại từ đầu)
+    if (ui.liveOptions) ui.liveOptions(o => {
+      if (dead) return false;
+      const g = { ...TR_DEF, ...gameOpts(o) };
+      if (fight) return fight.setTime(fightTime(g)) === true;
+      return game ? game.setOptions(g) === true : false;
+    });
     const host = ui.host ? {
       listActs: () => ui.host.listActs(),
       openAct: id => ui.host.openAct(id),
@@ -202,22 +214,65 @@ const balloonPopTemplate = {
       templates: () => ui.host.templates(),
       switchTemplate: t => ui.host.switchTemplate(t)
     } : null;
-    import("./3d/bp3d-1an.js")
-      .then(m => m.createBalloonPop({
-        mount: h.box, view: "side", words, wordsTitle: activity.title || "", options: trGame(activity), host,
-        onEvent: (k, d) => { if (k === "mode" && d === "fight" && ui.host && ui.host.fight) ui.host.fight(); }
-      }))
-      .then(g => { if (dead) g.destroy(); else game = g; ld.done(); })
-      .catch(err => {
-        console.error("Train rush failed to start", err);
-        ld.drop();
-        if (dead) return;
-        h.close(); noWebglMessage(root);
-      });
+    // ⭐ Đợt 487 (thầy 06/10/2026: "ở chế độ fight, hàng nút chưa được setup chuẩn như các game khác") — Mode ▸ Fight chạy trận
+    // NGAY TRONG ô này (như STAR LOOT), không qua engine.enterFight: ván Single của engine vẫn sống ⇒ cầu ui.host còn dùng được
+    // ⇒ hàng nút Fight có đủ Thư mục (act cùng thư mục) + Options (bảng Options thật, Apply ⇒ liveOptions ⇒ fight.setTime).
+    // Chọn act khác từ Thư mục trong trận ⇒ act đó mở thẳng vào Fight (fightNextAt, xem đầu file).
+    const fightHost = ui.host ? {
+      listActs: () => ui.host.listActs(),
+      openAct: id => { fightNextAt = Date.now(); ui.host.openAct(id); },
+      options: ui.host.options ? ov => ui.host.options(ov) : undefined
+    } : {};   // {} ⇒ trận ẩn nút Thư mục / Options (không có cầu)
+    let ld = loader();
+    const drop = () => {
+      clearInterval(poll);
+      if (game) { try { game.destroy(); } catch (e) { console.warn("Train rush destroy", e); } game = null; }
+      if (fight) { try { fight.destroy(); } catch (e) { console.warn("Train rush fight destroy", e); } fight = null; }
+    };
+    const failed = err => {
+      console.error("Train rush failed to start", err);
+      ld.drop();
+      if (dead) return;
+      h.close(); noWebglMessage(root);
+    };
+    function single() {
+      const my = ++tok;
+      drop();
+      import("./3d/bp3d-1an.js")
+        .then(m => m.createBalloonPop({
+          mount: h.box, view: "side", words, wordsTitle: activity.title || "", options: trGame(activity), host,
+          onEvent: (k, d) => { if (k === "mode" && d === "fight") switchTo(toFight); }
+        }))
+        .then(g => { if (dead || my !== tok) { g.destroy(); return; } game = g; ld.done(); })
+        .catch(failed);
+    }
+    function toFight() {
+      const my = ++tok;
+      drop();
+      import("./3d/fight-1ao.js")
+        .then(m => m.createTrainRushFight({ mount: h.box, words, wordsTitle: activity.title || "", time: fightTime(trGame(activity)), host: fightHost,
+          onSingle: () => switchTo(single), onHome: ui.host ? () => ui.host.home() : null }))
+        .then(api => {
+          if (dead || my !== tok) { api.destroy(); return; }
+          fight = api;
+          // Đợt 451 — chờ 2 bàn dựng xong (ô Loading… của trận ẩn) rồi mới mờ màn chờ
+          poll = setInterval(() => { const l = h.box.querySelector(".fb-ov-load"); if (dead || my !== tok || !l || l.hidden) { clearInterval(poll); ld.done(); } }, 100);
+        })
+        .catch(err => { console.error("Train rush fight failed — back to single", err); if (!dead && my === tok) single(); });
+    }
+    // đổi chế độ: hiện màn chờ, chờ nó vẽ xong (dựng cảnh 3D khoá luồng chính ~1–2 s) rồi mới dỡ / dựng
+    function switchTo(fn) {
+      ld = loader();
+      const my = tok;
+      ld.ready.then(() => { if (!dead && my === tok) fn(); });
+    }
+    const wantFight = Date.now() - fightNextAt < 15000;
+    fightNextAt = 0;
+    if (wantFight) toFight(); else single();
     return function cleanup() {
       if (dead) return; dead = true;
       ld.drop();
-      if (game) { try { game.destroy(); } catch (e) { console.warn("Train rush destroy", e); } }
+      drop();
       h.close();
     };
   },
@@ -236,7 +291,7 @@ function mountTrainRushFight(root, act, { single, home }) {
   let dead = false, fightApi = null;
   if (act.options) flatSeed(act);
   const o = trGame(act);
-  const time = Math.max(120, o.timerMode === "down" && Number(o.timer) ? Number(o.timer) : 0);   // trận 2 đội: ít nhất 2 phút (mẫu 1ah)
+  const time = fightTime(o);   // trận 2 đội: ít nhất 2 phút (mẫu 1ah)
   const off = () => {
     if (dead) return; dead = true;
     ld.drop(); clearInterval(poll);
@@ -247,8 +302,8 @@ function mountTrainRushFight(root, act, { single, home }) {
   let poll = 0;   // Đợt 451 — chờ 2 bàn dựng xong (ô Loading… của trận ẩn) rồi mới mờ màn chờ
   const obs = new MutationObserver(() => { if (root.childNodes.length) off(); });
   obs.observe(root, { childList: true });
-  import("./3d/fight-1an.js")
-    .then(m => m.createTrainRushFight({ mount: h.box, words: items, wordsTitle: act.title || "", time, onSingle: () => single(), onHome: () => home() }))
+  import("./3d/fight-1ao.js")   // Đợt 487: host {} ⇒ ẩn Thư mục / Options (đường engine không có cầu ui.host)
+    .then(m => m.createTrainRushFight({ mount: h.box, words: items, wordsTitle: act.title || "", time, host: {}, onSingle: () => single(), onHome: () => home() }))
     .then(api => { if (dead) api.destroy(); else fightApi = api; })
     .then(() => { poll = setInterval(() => { const l = h.box.querySelector(".fb-ov-load"); if (dead || !l || l.hidden) { clearInterval(poll); ld.done(); } }, 100); })
     .catch(err => { console.error("Train rush fight failed — back to single", err); off(); single(); });

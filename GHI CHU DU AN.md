@@ -546,6 +546,28 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 487 (06/10/2026) — TRAIN RUSH: hàng nút Fight y hệt Single + BỎ nút GAMES ở mọi màn START
+**Thầy (kèm 2 ảnh):** "Ở chế độ fight, hàng nút chưa được setup chuẩn như các game khác · Thừa nút GAMES khi đã vào game. Trong game rồi thì nút Game không cần nữa".
+Thầy chốt (AskUserQuestion): nút GAMES bỏ ở **MỌI game** (kể cả 2D) · hàng nút Fight **giống hệt Single** (Menu · Sound | Thư mục · Options · Mode).
+- **myGame 1ao** (`04c499c`, `balloon-pop/core/fight-1ao.js/.css`, trang `mau-1ao-train-rush.html`): hàng nút trận dùng chính lớp `.bp-outbar/.bp-tool`
+  của Single (nút gỗ 44×44 ở giữa) — bỏ thanh gỗ nâu nút 58 px dồn trái + chữ "TRAIN RUSH · Fight". Bảng nổi `.fb-ov-panel` cho Thư mục / Mode
+  (Mode = chọn Single / Fight như Single). `createTrainRushFight({..., host})` — cầu `{ listActs, openAct, options }`; `api.setTime(giây)`.
+  Chép sang `templates/balloon-pop/3d/` bằng `tools/chep-train-rush.py` (GOC = fight-1ao.js, CSS thêm fight-1ao.css).
+- **`balloon-pop.js`**: Mode ▸ Fight của game chạy trận **NGAY TRONG ô Single** (như STAR LOOT), KHÔNG qua `engine.enterFight` nữa ⇒ ván Single của
+  engine còn sống ⇒ cầu `ui.host` dùng được trong trận: Thư mục = act cùng thư mục (act chọn được mở THẲNG vào Fight — `fightNextAt`, 15 s),
+  Options = bảng Options thật của engine, Apply ⇒ `liveOptions` ⇒ `fight.setTime(fightTime(...))` (màn START: đổi giờ; đang chơi / đã xong: chơi lại).
+  Đổi chế độ hiện màn chờ 3D, chờ `ld.ready` rồi mới dỡ / dựng. `ownFight` (đường engine) giữ, trận đó `host: {}` ⇒ ẩn Thư mục / Options.
+  `balloon-pop.css`: `.aw-tr-host.fb-root { background: #10141d }` — hàng nút Fight cùng nền hàng nút Single.
+- **`core/engine.js`**: gỡ khối tạo nút GAMES (`.aw-wp-back`, Đợt 453). Đổi game: Library rồi mở lại act / Options ▸ Template / Menu ▸ Change template.
+  `wordsPickerHook` + CSS `.aw-wp-back` trong words-picker.css còn nằm đó (không dùng) — muốn trả nút lại thì xem lịch sử git Đợt 453.
+- **Thử** (`scratch/dot487-tr.html`, `scratch/dot487-picker.html`, 1600×900): Single 5 nút; Mode ▸ Fight ⇒ 1 ô `.aw-tr-host.fb-root`, 5 nút 44×44 giữa
+  (x 658–942), nền #10141d; Thư mục mở bảng; Options mở bảng AWord thật, +1 phút ⇒ Apply ⇒ `setTime(180)`, trận không dựng lại; Mode ▸ Single ⇒ về
+  Single, Fight lại được, 2 canvas, 0 lỗi console. Màn chọn game ▸ Anagram: màn START không còn nút GAMES. ⚠️ Khung xem ẩn chặn rAF ⇒ màn chờ 3D
+  không mờ đi trong bàn thử (bình thường trên màn thật).
+- ⬜ thầy thử Fight thật: bấm Thư mục chọn act khác (phải vào thẳng Fight), Options đổi giờ, TOMKO.
+
+---
+
 ## Đợt 486 (05/10/2026) — ⭐⭐⭐ CONTINUE (Đợt 469) GẦN NHƯ KHÔNG BAO GIỜ CHẠY: "dấu vết đề" lệch mỗi lần tải lại vì Firestore trả khoá map NGẪU NHIÊN · phiên MSI
 **Thầy:** dashboard thấy rất nhiều BỎ DỞ (ảnh pop-up em Hà My, FIND THE GAP 5/10) dù Đợt 468 (bỏ ☰) + 469 (giữ lượt dở) đã chặn — "điều tra giúp tôi", rồi "sửa, thử dữ liệu thật, commit + push".
 **Điều tra (chỉ đọc kho):** từ 11:00 5/10 (sau khi 468/469 lên): 387 lượt nộp, **264 nộp dở (68%)**, 30 em. Diệu Chi (`dwyrnk` TTA) 40 lượt dở 1–12/30;

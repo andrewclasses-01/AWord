@@ -7,6 +7,8 @@
 /* ⛔ Đợt 452 — trận Fight: ô game CHÍNH LÀ .fb-root (fight-1al.css: cột flex, con kéo giãn hết bề ngang). Từ Đợt 451 CSS của game nạp
    TRƯỚC file này ⇒ `align-items: center` ở trên đè luật của trận ⇒ hàng 2 bàn co về 0 ⇒ hai bàn chơi rộng 1 px (đo live 03/10). */
 .aw-tr-host.fb-root { align-items: stretch; justify-content: flex-start; }
+/* Đợt 487 — hàng nút Fight (nền trong suốt, myGame 1ao) cùng màu nền hàng nút Single; vùng chơi / dải điểm có nền riêng nên không đổi */
+.aw-tr-host.fb-root { background: #10141d; }
 /* trang AWord phía sau không cuộn / không hiện thanh cuộn khi game đang mở */
 html.aw-tr-on, html.aw-tr-on body { overflow: hidden; }
 .aw-tr-need3d { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: #f6e6c4; background: #2c1a0d; font: 700 20px "Baloo 2", system-ui, sans-serif; }

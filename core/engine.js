@@ -2936,32 +2936,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   }
 
   playOverlay.append(readyCenter);
-  // ⭐ Đợt 453 — nút GAMES (chỉ icon) góc dưới trái màn START: quay lại màn chọn template/loại
-  // act. Chỉ khi act mở qua màn chọn, trên bàn đơn của thầy: không học sinh, không trận Fight,
-  // không Showdown (bố cục READY riêng). Dọn ván như switchToAct() rồi dựng lại màn chọn.
-  if (wordsPickerHook && !session && !fight && !showdownPick &&
-      libraryOrigin() && libraryOrigin().id === wordsPickerHook.actId) {
-    const pickBack = el("button", "aw-wp-back", icons.gamesGrid);
-    pickBack.type = "button"; pickBack.title = "Games"; pickBack.setAttribute("aria-label", "Games");
-    pickBack.onclick = () => { sound.click(); const h = wordsPickerHook; cleanupAll(); h.open(root); };
-    // ⚠️ Con của `inner`, KHÔNG phải của playOverlay: game có `tpl.startScreen` (3D, A Show Speed)
-    // giấu mọi con của overlay trừ khung của nó (`.is-custom-start > :not(.aw-start-custom)`),
-    // và game 3D tự bấm Play nên overlay biến mất ngay — màn START thầy thấy là của game.
-    // Nút ở lại cho tới khi thầy CHẠM vào khung (bấm START của READY hay của game 3D đều là một
-    // cú chạm vào khung) — rồi gỡ, để giữa ván không có nút nào làm mất ván vì bấm nhầm.
-    // Capture ở `stage` để nghe được cả khi game chặn nổi bọt.
-    // ⚠️ Game 3D (`tpl.ownFight`: Train Rush, Star Loot) dựng CẢ CỬA SỔ cố định `z-index:1000` trên
-    // body, che luôn khung — nút trong khung nằm dưới nó nên không thấy. Với chúng nút ra body,
-    // `position:fixed` góc dưới trái cửa sổ, z cao hơn (`.is-fixed` trong words-picker.css), và
-    // nghe chạm ở cả trang.
-    const fixedLayer = !!(tpl && tpl.ownFight);
-    const listenOn = fixedLayer ? document : stage;
-    const away = e => { if (!pickBack.contains(e.target)) pickBackOff(); };
-    pickBackOff = () => { listenOn.removeEventListener("pointerdown", away, true); pickBack.remove(); pickBackOff = null; };
-    listenOn.addEventListener("pointerdown", away, true);
-    if (fixedLayer) { pickBack.classList.add("is-fixed"); document.body.append(pickBack); }
-    else inner.append(pickBack);
-  }
+  // ⛔ Đợt 487 (thầy 06/10/2026: "thừa nút GAMES khi đã vào game — trong game rồi thì nút Games không cần nữa", chọn bỏ ở MỌI game):
+  // nút GAMES góc dưới trái màn START (Đợt 453 — quay lại màn chọn template) ĐÃ GỠ. Đổi game: Library rồi mở lại act, hoặc
+  // Options ▸ Template / Menu ▸ Change template của game 3D. `wordsPickerHook` vẫn giữ (màn chọn mở act như cũ).
   inner.append(playOverlay);
   // ⭐ Đợt 472 (thầy chốt) — bài giao NHÚNG trong trang bài tập myLesson (`&nhung=1`): báo trang mẹ game
   // này có BÀN PHÍM AWord không (`tpl.usesKeyboard`: true | fn(activity)) — lúc màn START hiện ra ("nap")

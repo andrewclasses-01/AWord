@@ -1,10 +1,10 @@
 {
  "nguon": "myGame/balloon-pop/core",
- "goc": "fight-1an.js",
- "commit": "ca4d0ac",
+ "goc": "fight-1ao.js",
+ "commit": "04c499c",
  "con_sua_chua_commit": false,
  "js": [
-  "fight-1an.js",
+  "fight-1ao.js",
   "sound-1ah.js",
   "bp3d-1an.js",
   "auto-res-1an.js",
@@ -30,7 +30,8 @@
   "bp3d-1ab.css",
   "fight-cine-1ae.css",
   "fight-1al.css",
-  "bp3d-1al.css"
+  "bp3d-1al.css",
+  "fight-1ao.css"
  ],
  "tieng": "sound-1ah"
 }
