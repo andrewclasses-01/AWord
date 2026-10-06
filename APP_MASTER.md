@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **06/10/2026 Đợt 489 — ⭐⭐ LÀM TIẾP xét lại lúc bấm START**: trang mở khi trang/tab khác cùng bài còn sống trước đây mất quyền làm tiếp VĨNH VIỄN (tab kia đóng vẫn ra ván mới từ câu 1 — LINH NHI, TUẤN KIỆT, HÀ PHƯƠNG 06/10; tái hiện trên live). Nay `play.js xetLamTiep()` + engine hỏi lại `lamTiepNhan` mỗi 2 s ở màn READY ⇒ nút tự thành CONTINUE. Chi tiết GHI CHU Đợt 489.
 > ✏️ **06/10/2026 Đợt 488 — CHẶN BÔI ĐEN CHỮ TOÀN TRANG** (`core/app.css`: `body{user-select:none}`, mở lại cho input/textarea/contenteditable). Cần chép chữ ngoài ô gõ ⇒ đặt `user-select:text` riêng. ⬜ thầy thử. Chi tiết GHI CHU Đợt 488.
 > ✏️ **06/10/2026 Đợt 487 — TRAIN RUSH: hàng nút Fight y hệt Single (Menu · Sound | Thư mục · Options · Mode) + BỎ nút GAMES ở mọi màn START**: myGame 1ao (`3d/fight-1ao.js/.css`); Mode ▸ Fight của game chạy trận NGAY trong ô Single (giữ cầu `ui.host`: Thư mục mở act thẳng vào Fight, Options = bảng thật, Apply ⇒ `fight.setTime`); engine gỡ nút `.aw-wp-back` (Đợt 453). ✅ push `338618e` + LIVE 7/7 · ⬜ thầy thử Fight thật. Chi tiết GHI CHU Đợt 487.
 > ✏️ **05/10/2026 — 📘 SỔ TAY TỐI ƯU TỐC ĐỘ WEB cho cả hệ sinh thái: `docs/TOI-UU-TOC-DO-WEB.md` + công cụ `tools/toc-do/`** (quy trình 5 bước đo `?do=1` → tách mã/dữ liệu → tái hiện bằng WebKit + máy chủ chậm → sửa + so cũ/mới → kiểm live; thủ phạm Đợt 481–485 + bẫy công cụ đo). Web khác muốn tăng tốc ⇒ đọc file này trước.

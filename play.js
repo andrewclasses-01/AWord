@@ -309,10 +309,22 @@ async function play(assignment, studentName, className, studentMa) {
   const vetDe = dauVet(activity);
   let lamTiepCho = null;    // lượt dở đang giữ, chờ ván đầu tiên của trang này
   let lamTiepDung = null;   // playLog.start đã nhận, chờ engine lấy trạng thái ván (begin)
+  let lamTiepXet = !dacBiet;   // Đợt 489 — ván đầu của trang CHƯA bắt đầu ⇒ còn xét lại được
   if (!dacBiet) {
     const s = docLuot(khoaLT);
     if (s && s.vet !== vetDe) xoaLuot(khoaLT);   // thầy đã sửa đề ⇒ không dựng lại được; nháp cũ được nộp dở như trước
     else if (s && s.tpl && !tabKhacDangLam(khoaLT)) lamTiepCho = s;   // tab khác đang làm chính lượt này ⇒ tab này chơi lượt mới
+  }
+  // ⭐⭐ Đợt 489 (06/10/2026) — XÉT LẠI LÚC BẤM, KHÔNG CHỈ LÚC MỞ TRANG. Trước đây "có làm tiếp không" chốt MỘT lần lúc nạp
+  // trang: trang mở ra đúng lúc trang/tab khác cùng bài còn sống (nhịp < 6 s) là mất quyền làm tiếp VĨNH VIỄN — tab kia đóng
+  // rồi em bấm START vẫn ra lượt mới từ câu 1 (đo kho 06/10: LINH NHI FTG 09:42→09:49, TUẤN KIỆT TTA 12:38, HÀ PHƯƠNG nhiều
+  // tab; tái hiện trên bản live: tab 1 đang làm, mở tab 2, đóng tab 1 ⇒ tab 2 START, ván mới). Nay engine hỏi lại
+  // `lamTiepNhan` mỗi 2 s khi còn ở màn READY (nút tự đổi START → CONTINUE) và `playLog.start` hỏi lại lần cuối.
+  function xetLamTiep() {
+    if (!lamTiepXet || lamTiepCho) return lamTiepCho;
+    const s = docLuot(khoaLT);
+    if (s && s.vet === vetDe && s.tpl && !tabKhacDangLam(khoaLT)) lamTiepCho = s;
+    return lamTiepCho;
   }
   let songTimer = null;
   const batSong = () => { if (!songTimer) { nhipSong(khoaLT, true); songTimer = setInterval(() => nhipSong(khoaLT, true), 2000); } };
@@ -437,7 +449,7 @@ async function play(assignment, studentName, className, studentMa) {
       cheDoMenu: () => (dacBiet ? "" : (daDat100(khoaBC) ? "chay" : "an")),
       // ⭐⭐ Đợt 469 — LÀM TIẾP lượt dở (xem khối đầu `khoaLT`). Engine: nhãn nút START · lấy trạng thái ván ĐÚNG một
       // lần lúc dựng (begin) · gửi trạng thái mới sau mỗi câu trả lời.
-      lamTiepNhan: () => (lamTiepCho && lamTiepCho.tpl ? { daLam: lamTiepCho.tpl.daLam, tong: lamTiepCho.tpl.tong } : null),
+      lamTiepNhan: () => { const s = xetLamTiep(); return s && s.tpl ? { daLam: s.tpl.daLam, tong: s.tpl.tong } : null; },   // Đợt 489 — hỏi lại được
       layLamTiep: () => {
         const s = lamTiepDung; lamTiepDung = null;
         return s && s.tpl ? { tpl: s.tpl, timeCost: s.timeCost || 0, daChoiMs: Date.now() - s.batDau } : null;
@@ -486,6 +498,8 @@ async function play(assignment, studentName, className, studentMa) {
       playLog: dacBiet ? null : {
         start: ({ mode, again, mistakes, diemNay, baiLamNay, trangThaiNay }) => {
           // ⭐ Đợt 469 — ván đầu tiên của trang có lượt dở đang giữ ⇒ LÀM TIẾP: mượn lại danh tính của lượt cũ.
+          if (!mistakes) xetLamTiep();   // Đợt 489 — tab kia vừa đóng ngay trước cú bấm
+          lamTiepXet = false;
           const lt = (!mistakes && lamTiepCho) ? lamTiepCho : null;
           lamTiepCho = null;
           lamTiepDung = lt;

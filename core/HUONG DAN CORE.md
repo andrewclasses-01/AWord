@@ -45,6 +45,8 @@ lượt cũ > 0 ⇒ trả đồng hồ về 0) — nên `daLam` PHẢI phản á
 engine tự lùi giờ (`lamTiepBuMs`). Template tự giữ đồng hồ riêng (Whack-a-mole) phải tự lùi.
 ⛔⛔ **Đợt 486:** Firestore trả khoá map THỨ TỰ NGẪU NHIÊN mỗi lần đọc (cả SDK) ⇒ `dauVet` phải băm chuỗi ĐÃ XẾP KHOÁ (`chuoiXepKhoa`) — bản
 JSON.stringify thường làm CONTINUE gần như không bao giờ hiện. Bàn thử làm tiếp phải đọc bài giao THẬT ≥ 2 lần, đừng dùng object giả cố định.
+⛔⛔ **Đợt 489:** quyền làm tiếp KHÔNG chốt lúc nạp trang — `play.js xetLamTiep()` xét lại tới lúc ván đầu bắt đầu (`lamTiepNhan` + `playLog.start`),
+engine hỏi lại mỗi 2 s ở màn READY. Hai trang cùng SỐNG vẫn tách ván (`tabKhacDangLam`).
 ⛔ `khoiPhuc` không bao giờ có trong Fight / Showdown / Start with mistakes / giáo viên. ⛔ Đừng lưu gì nặng (localStorage dùng chung).
 
 ## 🚫 Đợt 464 — game GÕ CHỮ: gắn `core/no-copy.js` (chặn copy + dán)

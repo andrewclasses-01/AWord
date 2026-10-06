@@ -2644,6 +2644,21 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     wrap.append(b);
     if (activity._mistakes) wrap.append(el("div", "aw-ready-mtag", "MISTAKES ONLY"));
     else if (nhan) wrap.append(el("div", "aw-ready-mtag", (nhan.daLam | 0) + " / " + (nhan.tong | 0) + " DONE"));
+    // ⭐ Đợt 489 — chưa có lượt để làm tiếp (vd trang/tab khác cùng bài còn sống lúc mở) ⇒ hỏi lại mỗi 2 s khi còn ở màn
+    // READY; tab kia đóng ⇒ nút tự thành CONTINUE (play.js `lamTiepNhan` xét lại; `playLog.start` vẫn hỏi lần cuối lúc bấm).
+    if (!nhan && !activity._mistakes && !hwPreset && typeof session.lamTiepNhan === "function") {
+      const hoiLai = setInterval(() => {
+        if (playStarted || torndown || !b.isConnected) { clearInterval(hoiLai); return; }
+        let n2 = null;
+        try { n2 = session.lamTiepNhan(); } catch (e) { n2 = null; }
+        if (!n2) return;
+        clearInterval(hoiLai);
+        nhan = n2;
+        const nhanEl = b.querySelector(".aw-startbtn-label");
+        if (nhanEl) nhanEl.textContent = "CONTINUE";
+        wrap.append(el("div", "aw-ready-mtag", (n2.daLam | 0) + " / " + (n2.tong | 0) + " DONE"));
+      }, 2000);
+    }
     practiceBtn = b;
     playControl = wrap;
     readyCenter.append(wrap);

@@ -546,6 +546,23 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 489 (06/10/2026) — ⭐⭐ LÀM TIẾP: XÉT LẠI LÚC BẤM START, KHÔNG CHỈ LÚC MỞ TRANG (trang mở khi tab khác cùng bài còn sống mất quyền làm tiếp vĩnh viễn) · phiên MSI
+**Thầy:** "Điều tra lỗi làm tiếp của em Linh Nhi" (dashboard myLesson v1.260.0: ván giữ FTG `j56ry9` 09:42 06/10 không được làm tiếp, 09:49 ra ván mới).
+**Điều tra (chỉ đọc kho):** quét 209 nhật ký `practiceLog` từ khi Đợt 486 lên (5/10 22:38) ⇒ 10 cặp "ván dở rồi ván MỚI (again:false) trong ≤ 3 phút":
+LINH NHI FTG 09:42→09:49 (nhịp cuối 09:49:09 không trùng nhịp phút ⇒ pagehide; ván mới 27 s sau) · TUẤN KIỆT TTA `dwyrnk` 12:36→12:38:18 (1 s sau) và lặp lại,
+12:44–12:52 có 4 ván CHỒNG GIỜ ⇒ nhiều trang cùng mở · HÀ PHƯƠNG FTG 3 tab chồng giờ 11:53–12:12 · HẢI NAM = Start again (đã 100%) · TRÍ CÔNG Quiz = ván 0 s.
+Đề bài không đổi (assignments không sửa), luồng nhúng iframe (trang mẹ giả cổng 5691 + devserver 5690) và bản LIVE thu gọn: tải lại ⇒ CONTINUE đúng.
+**Gốc (tái hiện trên bản LIVE):** `play.js` chốt `lamTiepCho` MỘT lần lúc nạp trang; trang mở ra khi trang/tab khác cùng bài còn nhịp sống (< 6 s,
+`tabKhacDangLam`) ⇒ `lamTiepCho = null` mãi — tab kia đóng rồi em bấm START vẫn ra ván mới từ câu 1 (live: tab 1 làm 1 câu, mở tab 2 ⇒ START, đóng tab 1 ⇒
+tab 2 vẫn START ⇒ "1 of 30"). Kho không ghi máy nên không biết chắc em mở 2 trang kiểu gì (thêm tab / app màn hình chính + trình duyệt / 2 máy).
+**Sửa:** `play.js` — `xetLamTiep()` đọc lại `docLuot` (đúng `vet`, có `tpl`, không tab nào khác sống) khi ván đầu của trang CHƯA bắt đầu (`lamTiepXet`);
+`lamTiepNhan` gọi nó; `playLog.start` gọi lần cuối rồi tắt `lamTiepXet`. `core/engine.js` — màn READY chưa có nhãn làm tiếp ⇒ `setInterval` 2 s hỏi lại
+`session.lamTiepNhan()`; có ⇒ nút thành CONTINUE + "x / y DONE" (tự dừng khi vào ván / teardown / nút rời DOM). Hai trang CÙNG sống vẫn tách ván như cũ.
+**Thử (devserver 5690, mã giả `THUCLAUDE01` không vé ⇒ không ghi kho):** tab 1 làm 1 câu · mở tab 2 ⇒ START · đóng tab 1 ⇒ ~9 s sau tab 2 tự thành
+**CONTINUE · 1 / 30 DONE** · bấm ⇒ vào **câu 2**, đúng mã lượt cũ `pl…xs5e7` · tải lại thường vẫn CONTINUE · 0 lỗi console. Đã dọn localStorage thử (cả live).
+**VIỆC ĐANG CHỜ:** ⬜ mai xem lại số cặp "ván dở → ván mới" (script quét: practiceLog từ mốc, cặp createdAt(B) − updatedAt(A) ≤ 180 s, again:false);
+⬜ nếu em hay mở nhiều trang cùng bài (HÀ PHƯƠNG, TUẤN KIỆT) — cân nhắc trang thứ hai hiện thông báo "bài đang mở ở trang khác" thay vì lặng lẽ ra ván mới.
+
 ## Đợt 488 (06/10/2026) — CHẶN BÔI ĐEN CHỮ TOÀN TRANG (giống myLesson v2.133.0)
 **Thầy:** "áp dụng luôn cho app AWord" — bấm/kéo chuột hay tô xanh chữ ở chỗ không cần chọn/chép; chỉ ô gõ mới cần chọn chữ.
 **Đã làm:** `core/app.css` ngay dưới luật `body`: `body{user-select:none}` + mở lại `user-select:text` cho `input, textarea, [contenteditable]` (và con của contenteditable). Trước đây chỉ `.aw-stage` + `.aw-tool-panel` chặn; nay cả thư viện, thanh nút, Results, Settings, STATS, Showdown, play.html, pad, source. Luật class đặt riêng (`.mc-ipad-url` user-select:all, `#aw-do pre`) vẫn thắng. `kiemtra.css` vốn đã chặn y vậy — không đụng.
