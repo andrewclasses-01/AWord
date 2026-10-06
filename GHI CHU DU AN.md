@@ -560,6 +560,7 @@ tab 2 vẫn START ⇒ "1 of 30"). Kho không ghi máy nên không biết chắc 
 `session.lamTiepNhan()`; có ⇒ nút thành CONTINUE + "x / y DONE" (tự dừng khi vào ván / teardown / nút rời DOM). Hai trang CÙNG sống vẫn tách ván như cũ.
 **Thử (devserver 5690, mã giả `THUCLAUDE01` không vé ⇒ không ghi kho):** tab 1 làm 1 câu · mở tab 2 ⇒ START · đóng tab 1 ⇒ ~9 s sau tab 2 tự thành
 **CONTINUE · 1 / 30 DONE** · bấm ⇒ vào **câu 2**, đúng mã lượt cũ `pl…xs5e7` · tải lại thường vẫn CONTINUE · 0 lỗi console. Đã dọn localStorage thử (cả live).
+**Đã push `f30ac3d` + LIVE 2/2** (`tools/kiem-live.py`, build sha f30ac3d, 0 lỗi).
 **VIỆC ĐANG CHỜ:** ⬜ mai xem lại số cặp "ván dở → ván mới" (script quét: practiceLog từ mốc, cặp createdAt(B) − updatedAt(A) ≤ 180 s, again:false);
 ⬜ nếu em hay mở nhiều trang cùng bài (HÀ PHƯƠNG, TUẤN KIỆT) — cân nhắc trang thứ hai hiện thông báo "bài đang mở ở trang khác" thay vì lặng lẽ ra ván mới.
 
