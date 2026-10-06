@@ -569,6 +569,7 @@ Thầy chốt (AskUserQuestion): nút GAMES bỏ ở **MỌI game** (kể cả 2
   (x 658–942), nền #10141d; Thư mục mở bảng; Options mở bảng AWord thật, +1 phút ⇒ Apply ⇒ `setTime(180)`, trận không dựng lại; Mode ▸ Single ⇒ về
   Single, Fight lại được, 2 canvas, 0 lỗi console. Màn chọn game ▸ Anagram: màn START không còn nút GAMES. ⚠️ Khung xem ẩn chặn rAF ⇒ màn chờ 3D
   không mờ đi trong bàn thử (bình thường trên màn thật).
+- ✅ push `338618e` + LIVE 7/7 (`tools/kiem-live.py`).
 - ⬜ thầy thử Fight thật: bấm Thư mục chọn act khác (phải vào thẳng Fight), Options đổi giờ, TOMKO.
 
 ---
