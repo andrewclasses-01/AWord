@@ -1,8 +1,9 @@
 // =============================================================
 // TEMPLATE: TRUE FALSE — Wordwall style ("boolean" game), English UI.
 //  • A STATEMENT rides in on a "conveyor belt": it slides in from the left
-//    edge of the stage, arrives at the centre, then (if Speed > 0) keeps
-//    drifting slowly to the right edge — one continuous slow glide. Speed 0
+//    edge of the stage, arrives at the centre, then (if Speed > 0) STOPS DEAD
+//    for a reading time set by Speed, then glides off to the right edge
+//    (Đợt 493 — it used to drift off the instant it arrived). Speed 0
 //    = arrives at centre and waits there until answered (this is how the
 //    real act plays by default). Same motion engine as Find the match. The
 //    slide-in pace was slowed a touch (teacher, 1/8/2026).
@@ -58,13 +59,20 @@ const EXIT_MS = 550;    // wherever it is -> fully off the right edge, once answ
 // as a glitch. Measured against Quiz on the same frame.
 const NAME_MOVE = { outMs: 150, inMs: 200 };
 
-// Speed 0-10 -> how long the CENTRE-to-right-edge drift takes. 0 = no drift
-// at all (frozen at centre, "wait for answer"). Slightly slower curve than
-// before (teacher wanted the glide eased down, 1/8).
-function crawlMsFor(speed) {
+// ⭐⭐ Đợt 493 (thầy, 07/10/2026): Speed is a READING TIME, not a drift speed.
+// ⛔ It used to be one linear drift centre -> right edge that began the instant the
+// statement arrived, so the text was only ever STILL for the ease-out tail of the
+// slide-in — the class could not read a whole sentence, however slow the drift.
+// Now each statement: slides in (ENTER_MS) -> STOPS DEAD at centre for `holdMs`
+// -> glides off (`leaveMs`, ease-in = starts gently). Speed only shortens the
+// stop (and a little the glide). 0 = no plan at all (frozen, "wait for answer").
+function speedPlanFor(speed) {
   if (!speed) return null;
-  const t = (speed - 1) / 9;
-  return Math.round(5600 - t * (5600 - 1100));
+  const t = (speed - 1) / 9;                       // 1 -> 0, 10 -> 1
+  return {
+    holdMs: Math.round(10000 - t * (10000 - 1500)),  // speed 1: 10s still · speed 10: 1.5s
+    leaveMs: Math.round(2400 - t * (2400 - 1000)),
+  };
 }
 
 // Options store lives as: 0 = unlimited (slider's left end), 1..10 = that many
@@ -179,7 +187,7 @@ const tfTemplate = {
     // Points deducted per WRONG answer (0..100 since Dot 143). 0 = no penalty.
     const pointsOff = Math.max(0, Math.min(100, Number(activity.options && activity.options.pointsOff) || 0));
     const speed = Number.isInteger(opt.speed) ? Math.max(0, Math.min(10, opt.speed)) : 0;
-    const crawlMs = crawlMsFor(speed);
+    const speedPlan = speedPlanFor(speed);
     const timerMode = opt.timer ?? "countUp";
     const timerTotal = opt.timerTotalSeconds ?? 120;
     const startLives = normLives(opt.lives);
@@ -617,27 +625,51 @@ const tfTemplate = {
       armFallback(onEntered, ENTER_MS + 100);
     }
 
-    // After arriving at centre: if Speed > 0, keep drifting to the right edge
-    // (unanswered by the time it fully exits = a timeout). Speed 0 = frozen.
+    // After arriving at centre: if Speed > 0, STAND STILL for the reading time,
+    // then glide off to the right edge (unanswered by the time it fully exits =
+    // a timeout). Speed 0 = frozen. Đợt 493.
+    // ⚠️ The stop is an Animation (same keyframe twice), not a setTimeout: it sits
+    // in `promptAnim` like the moves do, so an answer during the stop goes through
+    // the very same `haltPromptAnim()` + one shared fallback timer — nothing new
+    // to clear. Each step checks it is still the CURRENT animation before acting.
     function armCrawl() {
-      if (finished || !queue.length || !crawlMs) return;
+      if (finished || !queue.length || !speedPlan) return;
       const promptEl = root.querySelector(".aw-tf-prompt");
       if (!promptEl) return;
+      const hold = promptEl.animate(
+        [{ transform: "translateX(0px)" }, { transform: "translateX(0px)" }],
+        { duration: speedPlan.holdMs, fill: "forwards" }
+      );
+      promptAnim = hold;
+      let held = false;
+      const onHeld = () => {
+        if (held) return; held = true;
+        if (finished || promptAnim !== hold) return;
+        promptAnim = null;
+        armLeave(promptEl);
+      };
+      hold.onfinish = onHeld;
+      armFallback(onHeld, speedPlan.holdMs + 120);
+    }
+
+    function armLeave(promptEl) {
+      if (finished || !queue.length || !promptEl.isConnected) return;
       const off = offscreenPx();
       tfSound.conveyorLeave();
-      const crawl = promptEl.animate(
+      const leave = promptEl.animate(
         [{ transform: "translateX(0px)" }, { transform: `translateX(${off}px)` }],
-        { duration: crawlMs, easing: "linear", fill: "forwards" }
+        { duration: speedPlan.leaveMs, easing: "ease-in", fill: "forwards" }
       );
-      promptAnim = crawl;
+      promptAnim = leave;
       let done = false;
       const onCrawlDone = () => {
         if (done) return; done = true;
+        if (promptAnim !== leave) return;
         promptAnim = null;
         if (!finished) onTimeUp();
       };
-      crawl.onfinish = onCrawlDone;
-      armFallback(onCrawlDone, crawlMs + 120);
+      leave.onfinish = onCrawlDone;
+      armFallback(onCrawlDone, speedPlan.leaveMs + 120);
     }
 
     // Freezes whatever position the prompt is CURRENTLY at into a real inline

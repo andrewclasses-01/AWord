@@ -14,9 +14,10 @@
 //    a per-tile --tfit shrink (fitTiles), scales the font down until the word
 //    fits inside the tile both ways — it never spills outside its box.
 //  • Prompt ("conveyor belt"): the DEFINITION slides in from the left edge
-//    of the stage, arrives at the centre, then (if Speed > 0) keeps
-//    drifting slowly to the right edge — the whole journey is ONE
-//    continuous slow glide, not a quick fade. Speed 0 = arrives at centre
+//    of the stage, arrives at the centre, then (if Speed > 0) STOPS DEAD
+//    there for a reading time set by Speed, then glides off to the right
+//    edge (Đợt 493 — it used to drift off the instant it arrived, so a long
+//    definition could never be read in full). Speed 0 = arrives at centre
 //    and just waits there (no drift) until answered. A CORRECT tap makes the
 //    prompt lift off and FLY into the score (bursting into little stars, like
 //    True/false); a WRONG tap makes it glide on to the right edge from wherever
@@ -89,14 +90,20 @@ function normLives(v) {
   return DEFAULT_LIVES;                                   // undefined -> default 5
 }
 
-// Speed 0-10 -> how long the CENTRE-to-right-edge drift takes. 0 = no
-// drift at all (frozen at centre, "wait for answer"). Chosen for feel —
-// not measured against real Wordwall timing, revisit if the teacher wants
-// a different pace after trying it on TOMKO.
-function crawlMsFor(speed) {
+// ⭐⭐ Đợt 493 (thầy, 07/10/2026): Speed is a READING TIME, not a drift speed.
+// ⛔ It used to be one linear drift centre -> right edge that began the instant the
+// definition arrived, so the text was only ever STILL for the ease-out tail of the
+// slide-in — nobody could read it in full, however slow the drift.
+// Now: slides in (ENTER_MS) -> STOPS DEAD at centre for `holdMs` -> glides off
+// (`leaveMs`, ease-in = starts gently). Speed only shortens the stop (and a little
+// the glide). 0 = no plan at all (frozen, "wait for answer"). Same as true-false.js.
+function speedPlanFor(speed) {
   if (!speed) return null;
-  const t = (speed - 1) / 9;
-  return Math.round(5000 - t * (5000 - 900));
+  const t = (speed - 1) / 9;                       // 1 -> 0, 10 -> 1
+  return {
+    holdMs: Math.round(8000 - t * (8000 - 1200)),    // speed 1: 8s still · speed 10: 1.2s
+    leaveMs: Math.round(2200 - t * (2200 - 900)),
+  };
 }
 
 const ftmTemplate = {
@@ -204,7 +211,7 @@ const ftmTemplate = {
     const removeCorrects = opt.removeCorrects !== false;
     const repeatUntilCorrect = opt.repeatUntilCorrect === true;
     const speed = Number.isInteger(opt.speed) ? Math.max(0, Math.min(10, opt.speed)) : 0;
-    const crawlMs = crawlMsFor(speed);
+    const speedPlan = speedPlanFor(speed);
     // Penalty subtracted from the live score on each WRONG tap (0..100, 0 = off).
     // When 0, the whole feature is inert and play is byte-identical to before.
     const pointsOff = Math.max(0, Math.min(100, Number(activity.options && activity.options.pointsOff) || 0));
@@ -832,28 +839,51 @@ const ftmTemplate = {
       armFallback(onEntered, ENTER_MS + 100);
     }
 
-    // After arriving at centre: if Speed > 0, keep drifting to the right
-    // edge (unanswered by the time it fully exits = a timeout). Speed 0 =
-    // stays frozen at centre — no crawl armed at all.
+    // After arriving at centre: if Speed > 0, STAND STILL for the reading
+    // time, then glide off to the right edge (unanswered by the time it fully
+    // exits = a timeout). Speed 0 = stays frozen at centre — nothing armed.
+    // ⚠️ Đợt 493 — the stop is an Animation (same keyframe twice), not a
+    // setTimeout: it sits in `promptAnim` like the moves do, so a tap during the
+    // stop goes through the same `haltPromptAnim()` + one shared fallback timer.
+    // Each step checks it is still the CURRENT animation before acting.
     function armCrawl() {
-      if (finished || !queue.length || !crawlMs) return;
+      if (finished || !queue.length || !speedPlan) return;
       const promptEl = root.querySelector(".aw-ftm-prompt");
       if (!promptEl) return;
+      const hold = promptEl.animate(
+        [{ transform: "translateX(0px)" }, { transform: "translateX(0px)" }],
+        { duration: speedPlan.holdMs, fill: "forwards" }
+      );
+      promptAnim = hold;
+      let held = false;
+      const onHeld = () => {
+        if (held) return; held = true;
+        if (finished || promptAnim !== hold) return;
+        promptAnim = null;
+        armLeave(promptEl);
+      };
+      hold.onfinish = onHeld;
+      armFallback(onHeld, speedPlan.holdMs + 120);
+    }
+
+    function armLeave(promptEl) {
+      if (finished || !queue.length || !promptEl.isConnected) return;
       const off = offscreenPx();
       ftmSound.conveyorLeave();
-      const crawl = promptEl.animate(
+      const leave = promptEl.animate(
         [{ transform: "translateX(0px)" }, { transform: `translateX(${off}px)` }],
-        { duration: crawlMs, easing: "linear", fill: "forwards" }
+        { duration: speedPlan.leaveMs, easing: "ease-in", fill: "forwards" }
       );
-      promptAnim = crawl;
+      promptAnim = leave;
       let done = false;
       const onCrawlDone = () => {
         if (done) return; done = true;
+        if (promptAnim !== leave) return;
         promptAnim = null;
         if (!finished) onTimeUp();
       };
-      crawl.onfinish = onCrawlDone;
-      armFallback(onCrawlDone, crawlMs + 120);
+      leave.onfinish = onCrawlDone;
+      armFallback(onCrawlDone, speedPlan.leaveMs + 120);
     }
 
     // Freezes whatever position the prompt is CURRENTLY at (mid-entrance or

@@ -1,5 +1,12 @@
 # GHI CHÚ — TEMPLATE FIND THE MATCH
 
+## Đợt 493 (07/10/2026) — SPEED = THỜI GIAN ĐỨNG YÊN ĐỂ ĐỌC
+
+Thầy: chữ chỉ dừng ở giữa "một chút rất nhanh" rồi trôi ra ngay ⇒ không đọc hết được. Gốc: `crawlMsFor()` cũ là MỘT lần trôi thẳng giữa → mép phải, bắt đầu NGAY khi định nghĩa vào giữa — chữ chỉ đứng yên trong đuôi ease-out của lúc chạy vào.
+Nay `speedPlanFor(speed)` → `{holdMs, leaveMs}`: chạy vào (0,9s, như cũ) → **ĐỨNG YÊN HOÀN TOÀN 8s (tốc độ 1) → 1,2s (tốc độ 10)** → trôi ra từ từ (ease-in, 2,2s → 0,9s) → hết giờ câu đó. Tốc độ 0 = đứng chờ như cũ.
+- Bước đứng yên là một `.animate()` hai khung giống nhau (không phải setTimeout) ⇒ trả lời giữa lúc đứng đi qua đúng `haltPromptAnim()` + một `fallbackTimer` chung; mỗi bước kiểm `promptAnim === chính nó` trước khi đi tiếp (chặn fallback cũ bắn nhầm sang câu sau).
+- Đo bằng `scratch/dot493/ban.html?t=<template>&s=<tốc độ>` (ghi lại mọi `.animate()` lên chữ): tốc độ 1 và 10 đúng chu trình; bấm trả lời giữa lúc đứng yên ⇒ câu sau vẫn đứng đủ giờ; 0 lỗi console.
+
 ## Đợt 470 (05/10/2026) — LÀM TIẾP lượt dở bài giao (core/lam-tiep.js)
 
 `ui.setLuuTrangThai` + `ui.daDoiBaiLam` + đọc `ui.khoiPhuc` (hợp đồng ở `core/HUONG DAN CORE.md`, mục Đợt 469). Lưu: `order` + bố cục ô `choiceOrder` (⇒ cùng phép chia trang, cùng chỗ đứng từng ô) + hàng chờ từng trang + trang đang đứng + solved/skipped từng cặp + `playOrder`/`turnSolved` (bỏ lượt đang trên màn — `luotDangMo`) + `sai` (số cú chạm sai; trôi khỏi băng không tính) + `t0`. Tim/điểm phạt TÍNH LẠI từ `sai`. Làm tiếp: bỏ 3-2-1, vào lời nhắc đầu hàng chờ của trang đang đứng. Kiểm khớp (kể cả hàng chờ nằm gọn trong trang) ở `docKhoiPhuc` cuối file. Thử `?g=B2FTM&t=find-the-match`: 3 lượt (1 sai) ⇒ tải lại ⇒ "3 / 8 DONE", bố cục ô y hệt (ô đã bắt để lại lỗ), cùng lời nhắc, điểm 2, 4 tim ⇒ làm hết ⇒ sendAttempt 7/8.

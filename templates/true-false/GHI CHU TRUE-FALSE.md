@@ -1,5 +1,12 @@
 # GHI CHÚ — TRUE FALSE (True or false)
 
+## Đợt 493 (07/10/2026) — SPEED = THỜI GIAN ĐỨNG YÊN ĐỂ ĐỌC
+
+Thầy: chữ chỉ dừng ở giữa "một chút rất nhanh" rồi trôi ra ngay ⇒ không đọc hết được. Gốc: `crawlMsFor()` cũ là MỘT lần trôi thẳng giữa → mép phải, bắt đầu NGAY khi câu vào giữa — chữ chỉ đứng yên trong đuôi ease-out của lúc chạy vào.
+Nay `speedPlanFor(speed)` → `{holdMs, leaveMs}`: chạy vào (1,3s, như cũ) → **ĐỨNG YÊN HOÀN TOÀN 10s (tốc độ 1) → 1,5s (tốc độ 10)** → trôi ra từ từ (ease-in, 2,4s → 1,0s) → hết giờ câu đó. Tốc độ 0 = đứng chờ như cũ.
+- Bước đứng yên là một `.animate()` hai khung giống nhau (không phải setTimeout) ⇒ trả lời giữa lúc đứng đi qua đúng `haltPromptAnim()` + một `fallbackTimer` chung; mỗi bước kiểm `promptAnim === chính nó` trước khi đi tiếp (chặn fallback cũ bắn nhầm sang câu sau).
+- Đo bằng `scratch/dot493/ban.html?t=<template>&s=<tốc độ>` (ghi lại mọi `.animate()` lên chữ): tốc độ 1 và 10 đúng chu trình; bấm trả lời giữa lúc đứng yên ⇒ câu sau vẫn đứng đủ giờ; 0 lỗi console.
+
 ## Đợt 470 (05/10/2026) — LÀM TIẾP lượt dở bài giao (core/lam-tiep.js)
 
 `ui.setLuuTrangThai` + `ui.daDoiBaiLam` + đọc `ui.khoiPhuc` (hợp đồng ở `core/HUONG DAN CORE.md`, mục Đợt 469). Lưu: `order` đã xáo + hàng chờ còn lại (`queue`, kể cả câu Repeat chèn lại) + answered/correct/chosen/timedOut từng câu + `turnLog` (bỏ hàng của câu ĐANG trên màn chưa chạm — cờ `luotDangMo`) + mốc giờ `t0`. Tim + điểm phạt TÍNH LẠI = số lượt sai/hết-giờ-lượt × (1 tim, pointsOff). Làm tiếp: bỏ 3-2-1, `ui.startTimer()` ngay, vào câu đầu hàng chờ; hàng rỗng ⇒ complete, hết tim ⇒ gameover. Tiếng tích Count down lùi theo `t0`. Kiểm khớp đề ở `docKhoiPhuc` cuối file. Thử bàn `scratch/dot469/ban.html?g=B2TF&t=true-false`: làm 4/8 (1 sai) ⇒ tải lại ⇒ CONTINUE "4 / 8 DONE", đúng câu kế, điểm 3, 4 tim, đồng hồ 0:23→0:38 (giờ thật) ⇒ làm hết ⇒ 1 lần sendAttempt 5/8, lượt giữ được xoá.
