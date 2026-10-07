@@ -419,8 +419,8 @@ async function play(assignment, studentName, className, studentMa) {
       playLog.timeMs = Math.max(playLog.timeMs, Date.now() - playLog.batDau);
       try {
         const d = playLog.diemNay ? playLog.diemNay() : null;
-        if (d && Number(d.score) >= 1) saveDraft({ code: assignment.code, studentName, ma, score: d.score, total: d.total,
-                                                   timeMs: gioLuotDo(Date.now() - playLog.batDau), review: [], doDang: true, attemptId: playLog.nhapId });
+        if (d && Number(d.score) >= 1 && !khongNopDo()) saveDraft({ code: assignment.code, studentName, ma, score: d.score, total: d.total,
+                                                   timeMs: gioLuotDo(Date.now() - playLog.batDau), review: [], doDang: true, attemptId: playLog.nhapId });   // Đợt 491 — em đã 100%: không nháp
       } catch (e) { /* nháp chỉ là lưới an toàn */ }
       beatPlayLog(playLog, { keepalive: true });
       return;
@@ -452,8 +452,13 @@ async function play(assignment, studentName, className, studentMa) {
     return Number.isFinite(hd) && hd >= 0 ? Math.min(tuong | 0, Math.round(hd)) : (tuong | 0);
   }
   // ⚠️ Khai bằng `function` (không phải const) vì listener pagehide ở trên gọi nó.
+  // ⭐ Đợt 491 (thầy chốt 07/10/2026) — em ĐÃ đạt 100% ở act này (`daDat100`) chơi lại để đua thời gian: bỏ giữa ván KHÔNG
+  // nộp dở nữa (đo 06–07/10: 173/175 ván bỏ dở là của em đã 100% — ĐĂNG KHOA B1B Quiz 152 ván vài giây ⇒ hơn trăm dòng
+  // `doDang` rác trong scores; lượt dở không bao giờ hơn được 100% đã có). Nhật ký practiceLog vẫn ghi như cũ (giờ luyện).
+  function khongNopDo() { return !dacBiet && daDat100(khoaBC); }   // function: listener pagehide ở trên gọi nó
   function nopLuotDo({ gap = false, score = null, total = null, timeMs = null, review = null } = {}) {
     if (!playLog || playLog.done || playLog.mistakes || playLog.daNopDo) return;
+    if (khongNopDo()) { dropDraft(playLog.nhapId); return; }   // Đợt 491
     let d = { score, total, timeMs };
     if (d.score == null && playLog.diemNay) { try { d = playLog.diemNay() || d; } catch (e) {} }
     const diem = Math.round(Number(d.score)) || 0;
@@ -600,8 +605,8 @@ async function play(assignment, studentName, className, studentMa) {
           if (!dacBiet && !playLog.mistakes && playLog.diemNay) {
             try {
               const d = playLog.diemNay();
-              if (d && Number(d.score) >= 1) saveDraft({ code: assignment.code, studentName, ma, score: d.score, total: d.total,
-                                                         timeMs: gioLuotDo(d.timeMs), review: [], doDang: true, attemptId: playLog.nhapId });   // Đợt 418
+              if (d && Number(d.score) >= 1 && !khongNopDo()) saveDraft({ code: assignment.code, studentName, ma, score: d.score, total: d.total,
+                                                         timeMs: gioLuotDo(d.timeMs), review: [], doDang: true, attemptId: playLog.nhapId });   // Đợt 418 · Đợt 491
             } catch (e) { /* nháp chỉ là lưới an toàn */ }
           }
           if (hoatDong) {

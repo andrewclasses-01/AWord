@@ -546,6 +546,16 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 491 (07/10/2026) — EM ĐÃ 100% BỎ GIỮA VÁN KHÔNG NỘP DỞ NỮA · phiên MSI
+**Thầy:** "tại sao đến hôm nay học sinh vẫn còn hiện tượng bỏ dở" (ảnh pop-up HÀ MY A2B FTG `j56ry9`).
+**Điều tra (chỉ đọc kho, practiceLog từ 22:50 06/10 = 262 ván):** 175 ván dở rồi ra ván mới — **173 là của em ĐÃ 100%** đua thời
+gian (ĐĂNG KHOA B1B Quiz `bwga3h` 152 ván vài giây, Đức Trí 11, Thảo Nhi 5…; đúng luật Đợt 468: em 100% có ☰ Start again, `lt=sau`).
+Bỏ dở THẬT còn 2: HÀ MY 22:54 06/10 (`tab-khac`, tab cũ chạy code trước Đợt 490) · ÁNH NGỌC NTK9 `dwyrnk` 11:32 07/10 (`khong-co`, làm
+tiếp 4 lần rồi mất — dung lượng ls1k→ls2k ⇒ nhiều khả năng ĐỔI MÁY/trình duyệt, giới hạn đã biết). 6 dòng BỎ DỞ "12:53–13:11 07/10" trong
+ảnh là lượt 22:36–22:54 06/10 gửi bù lên máy chủ 13:16 07/10 ⇒ myLesson dashboard tưởng máy lệch giờ (lỗi bên đó, sửa web v1.263.3).
+**Đã làm (thầy chốt "giữ luật em 100% được chơi lại"):** `play.js khongNopDo()` = `daDat100(khoaBC)` ⇒ `nopLuotDo` bỏ nháp + không nộp,
+2 chỗ `saveDraft` (pagehide giữ lượt · nhịp beat) không cất nháp. practiceLog vẫn ghi (giờ luyện, nhãn ĐUA TOP bên dashboard).
+
 ## Đợt 490 (06/10/2026) — ⭐⭐ MỘT BÀI CHỈ MỞ Ở MỘT TRANG + 🔎 TRƯỜNG CHẨN ĐOÁN `lt` (vì sao ván có/không LÀM TIẾP) · phiên MSI
 **Thầy:** ảnh pop-up BẢO NAM (NTK9 LESSON 22 BT1 `dwyrnk`) vẫn 5 dòng BỎ DỞ — "tìm hiểu xem ntn" + "muốn chặn mở ở nhiều tab cùng lúc";
 rồi "push cả hai và thêm trường ghi lý do".
