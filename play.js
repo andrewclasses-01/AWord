@@ -393,7 +393,8 @@ async function play(assignment, studentName, className, studentMa) {
     if (!t || !t.tpl || !playLog || playLog.done || playLog.mistakes || dacBiet) return false;
     const ok = ghiLuot(khoaLT, { vet: vetDe, nhapId: playLog.nhapId, logId: playLog.id, createdAt: playLog.createdAt,
                              batDau: playLog.batDau, activeMs: hoatDong ? hoatDong.doc() : (playLog.activeMs || 0),
-                             timeCost: Number(t.timeCost) || 0, tpl: t.tpl, lt: playLog.lt || "" });
+                             timeCost: Number(t.timeCost) || 0, tpl: t.tpl, lt: playLog.lt || "",
+                             gioMs: Number.isFinite(Number(t.gioMs)) ? Math.max(0, Number(t.gioMs)) : null });   // Đợt 492 — số đồng hồ ván
     // 🔎 Đợt 490 — cất lượt dở THẤT BẠI (localStorage đầy / bị chặn) ⇒ đánh dấu vào lý do để thầy thấy trên kho.
     if (!ok && playLog.lt && playLog.lt.indexOf("luu!") < 0) playLog.lt = (playLog.lt + "|luu!").slice(0, 60);
     return ok;
@@ -520,7 +521,10 @@ async function play(assignment, studentName, className, studentMa) {
       lamTiepNhan: () => { const s = xetLamTiep(); return s && s.tpl ? { daLam: s.tpl.daLam, tong: s.tpl.tong } : null; },   // Đợt 489 — hỏi lại được
       layLamTiep: () => {
         const s = lamTiepDung; lamTiepDung = null;
-        return s && s.tpl ? { tpl: s.tpl, timeCost: s.timeCost || 0, daChoiMs: Date.now() - s.batDau } : null;
+        // ⛔ Đợt 492 (thầy chốt 07/10) — đồng hồ chạy tiếp từ SỐ ĐỒNG HỒ lúc cất (`gioMs`), không tính lúc tắt máy. Lượt cất
+        // trước Đợt 492 không có `gioMs` ⇒ lấy THỜI GIAN HOẠT ĐỘNG đã đo (activeMs) — cũng là giờ làm thật.
+        const gio = s && Number.isFinite(s.gioMs) ? s.gioMs : (s && Number.isFinite(s.activeMs) ? s.activeMs : 0);
+        return s && s.tpl ? { tpl: s.tpl, timeCost: s.timeCost || 0, daChoiMs: gio } : null;
       },
       luuLamTiep: (t) => { luuLuot(t); },
       // What the screenshot fallback board prints (engine side, Đợt 246).

@@ -546,6 +546,15 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 492 (07/10/2026) — ⛔ LÀM TIẾP: ĐỒNG HỒ = GIỜ LÀM THẬT (thôi tính lúc tắt máy) · phiên MSI
+**Thầy:** "bạn Minh Thư có thời gian lạ" — MINH THƯ A2B FTG `j56ry9` bắt đầu 22:15 06/10, tắt máy, 14:07 07/10 CONTINUE làm xong 40/55
+⇒ scores `timeMs` 952 phút (luật Đợt 469 "giờ thật từ lúc lượt bắt đầu"), activeMs chỉ 31,6 phút. Thầy chốt (AskUserQuestion): **chỉ tính giờ làm thật**.
+**Đã làm:** `engine.js trangThaiNay()` thêm `gioMs` = số đồng hồ ván đang hiện (`performance.now() − startedAt`); `play.js luuLuot` cất `gioMs`;
+`layLamTiep` ⇒ `daChoiMs = gioMs` (lượt cất trước Đợt 492 không có ⇒ `activeMs`). Đồng hồ chạy tiếp từ số lúc cất (pagehide/ẩn tab đều chụp lại).
+practiceLog `timeMs` (đồng hồ tường, "mở tab") giữ nguyên. Điểm cũ 952:08 KHÔNG sửa (thầy: giữ số).
+**Thử:** bàn thử `scratch/dot469/ban.html?t=quiz` (play.js thật, kho giả): làm 1 câu → gioMs 10 s; tải lại, sửa `batDau` lùi 10 giờ, tải lại
+⇒ CONTINUE 1/6, đồng hồ 0:20 (bản cũ ≈ 600:00); làm hết ⇒ `sendAttempt` 6/6 timeMs 77 s.
+
 ## Đợt 491 (07/10/2026) — EM ĐÃ 100% BỎ GIỮA VÁN KHÔNG NỘP DỞ NỮA · phiên MSI
 **Thầy:** "tại sao đến hôm nay học sinh vẫn còn hiện tượng bỏ dở" (ảnh pop-up HÀ MY A2B FTG `j56ry9`).
 **Điều tra (chỉ đọc kho, practiceLog từ 22:50 06/10 = 262 ván):** 175 ván dở rồi ra ván mới — **173 là của em ĐÃ 100%** đua thời

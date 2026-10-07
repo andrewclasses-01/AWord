@@ -4054,8 +4054,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     }
     startedAt = performance.now();   // baseline (kept sane even if a manual-start template never starts the clock)
     timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
-    // ⭐⭐ Đợt 469 — LÀM TIẾP lượt dở (play.js đưa đúng MỘT lần, ngay ván đầu sau khi mở trang). Đồng hồ = GIỜ THẬT từ lúc
-    // lượt bắt đầu (thầy chốt): `lamTiepBuMs` — startTimerNow tự trừ vào mốc (Đợt 470, kể cả template bật đồng hồ
+    // ⭐⭐ Đợt 469 — LÀM TIẾP lượt dở (play.js đưa đúng MỘT lần, ngay ván đầu sau khi mở trang). ⛔ Đợt 492 (thầy chốt 07/10):
+    // đồng hồ = GIỜ LÀM THẬT — chạy tiếp từ số đồng hồ lúc cất lượt (`gioMs`), KHÔNG cộng lúc tắt máy (trước đây = giờ thật
+    // từ lúc lượt bắt đầu: MINH THƯ A2B FTG bắt đầu 22:15 06/10, làm tiếp xong 14:07 07/10 ⇒ 952 phút, làm thật ~32 phút).
+    // `lamTiepBuMs` — startTimerNow tự trừ vào mốc (Đợt 470, kể cả template bật đồng hồ
     // sau intro); Time cost đã trừ giữ nguyên, khôi phục TRƯỚC mount (scoreNow của template đọc timeCostTotal ngay lúc dựng).
     let lamTiep = null;
     if (session && !fight && !activity._mistakes && typeof session.layLamTiep === "function") {
@@ -6101,7 +6103,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   }
   function trangThaiNay() {
     if (!laVanGiuDuoc()) return null;
-    try { const t = trangThaiProvider(); return t && typeof t === "object" ? { tpl: t, timeCost: timeCostTotal } : null; }
+    // ⭐ Đợt 492 — `gioMs` = số đồng hồ ván ĐANG HIỆN: làm tiếp chạy tiếp từ đây (chỉ tính giờ làm thật, không tính lúc tắt máy).
+    try { const t = trangThaiProvider(); return t && typeof t === "object" ? { tpl: t, timeCost: timeCostTotal, gioMs: Math.max(0, Math.round(performance.now() - startedAt)) } : null; }
     catch (e) { return null; }
   }
   function luuLamTiep() {
