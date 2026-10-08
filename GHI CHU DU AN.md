@@ -563,7 +563,7 @@ Cùng kiểu: HÀ VY, TƯỜNG VY. Toàn hệ 7–8/10: 84 lượt `>tiep` của
 làm 3 câu ⇒ kho `lamTiep` có bản; XOÁ kho máy + mở lại ⇒ START→CONTINUE 1/30 sau ~1,5 s, ván dựng đúng câu 2, đồng hồ chạy tiếp; làm hết ⇒ nộp 21/30,
 bản máy chủ bị xoá, practiceLog CÙNG mã lượt `…|mc>tiep` DONE; nhịp phút lượt dở ghi 3/0 (trước đây 0/0); máy cũ còn bản `mc` mà máy chủ đã xoá ⇒ CONTINUE→START;
 bấm START ngay khi kho máy rỗng (nhãn còn START) ⇒ vẫn làm tiếp đúng lượt (2/30).
-⬜ Mở 2 máy CÙNG LÚC: thầy muốn "đăng nhập máy 2 là đăng xuất máy 1" — việc của myLesson, chưa làm (đang khảo sát).
+✅ Mở 2 máy CÙNG LÚC: thầy chốt "đăng nhập máy 2 = máy 1 tự đăng xuất NGAY" ⇒ myLesson web v1.268.0 `801506f` (phienHs/{uid}, luật `tools/dang-luat-phien-hs.js`). Thầy "ok được rồi" 08/10. ⬜ Thử trên điện thoại thật.
 
 
 ## Đợt 494 (08/10/2026) — ⭐⭐ TIME LIMIT DÙNG CHUNG: Type the answer · Unjumble · Find the gap · Anagram + Quiz lên 30 s
