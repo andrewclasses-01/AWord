@@ -38,6 +38,15 @@
   position: relative;   /* containment for .aw-tta-listenbtn below (10/8/2026) */
 }
 
+/* ⭐⭐ TIME LIMIT (Đợt 494) — hàng [số giây][thanh] dùng chung (.aw-tl* trong
+   core/app.css), đặt NGAY DƯỚI câu hỏi, rộng bằng bàn phím (84 %) cho thẳng cột.
+   Nằm trong luồng, nên khi câu hỏi co (--qfit) thanh đi lên theo; type-the-answer.js
+   questionBottom() lấy MÉP DƯỚI THANH làm mép trên vùng căn giữa cụm trả lời. */
+.aw-tta-tl {
+  width: 84%;
+  margin: calc(0.8 * var(--aw-u)) auto 0;
+}
+
 /* Listen button (10/8/2026) — absolute-positioned rather than a flow child
    of .aw-tta-prompt, and sized in fixed cqw rather than `em`: the prompt's
    own font-size is dynamically fit (--qfit shrinks the fixed 2-line box's

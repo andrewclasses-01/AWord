@@ -50,6 +50,7 @@ import { openFtgEditor } from "./find-the-gap-editor.js";
 import { ftgSound } from "./ftg-sound.js";
 import { loadAudio, createSegmentPlayer } from "./ftg-audio.js";
 import { mkRangeCell } from "./ftg-range.js";
+import { createTimeLimit, timeLimitCell, pauseTimeLimits } from "../../core/time-limit.js";   // Đợt 494
 import {
   normalizeItems, answersOf, isRightAnswer, buildChoices, answerPool, gapEnd, gappable,
   audioUrlOf, escapeHtml, MAX_CHOICES, MIN_CHOICES
@@ -215,6 +216,7 @@ const ftgTemplate = {
   },
 
   onPause(paused) {
+    pauseTimeLimits(paused);   // Đợt 494 — đồng hồ Time limit (core/time-limit.js)
     if (!ftgPauseHandlers) return;
     if (paused) ftgPauseHandlers.pause(); else ftgPauseHandlers.resume();
   },
@@ -265,7 +267,11 @@ const ftgTemplate = {
     });
     lives.cell.title = "0 = unlimited lives";
 
-    panel.append(mode.cell, scoring.cell, choices.cell, gapsCell.cell, lives.cell);
+    // ⭐⭐ Đợt 494 (thầy 08/10/2026) — TIME LIMIT mỗi DÒNG, y như Quiz: 1..30s, nấc cuối ∞
+    // (mặc định ⇒ act cũ y như xưa). Đồng hồ chỉ chạy SAU khi tiếng của dòng đọc xong.
+    const tlCell = timeLimitCell(mkSliderCell, draft, "Seconds for each line, counted after its audio has played (∞ = no limit). Out of time = the gaps left are wrong.");
+
+    panel.append(mode.cell, scoring.cell, choices.cell, gapsCell.cell, lives.cell, tlCell);
 
     addCheck("Random gaps", draft.randomGaps === true, v => { draft.randomGaps = v; },
       { key: "randomGaps", title: "Every play (Start again too) blanks DIFFERENT words of the same line — for real listening, not memory" });
@@ -382,6 +388,16 @@ const ftgTemplate = {
       penalty = pointsOff * state.reduce((n, x) => n + x.chosen.filter((c, k) => c != null && x.done[k] && !x.ok[k]).length + (x.timedOut ? 1 : 0), 0);
       if (livesLeft != null && Number.isInteger(kp.mang)) livesLeft = Math.max(0, Math.min(livesLeft, kp.mang));
     }
+    // ⭐⭐ TIME LIMIT (Đợt 494) — đồng hồ MỖI DÒNG dùng chung với Quiz (core/time-limit.js).
+    // Chỉ tính khi em làm được VÀ tiếng của dòng đã đọc xong (tlBusy); hết giờ ⇒
+    // roundTimeUp() — các ô còn trống tính sai, Points off một lần, mất tim, tự sang dòng.
+    const tl = createTimeLimit({
+      seconds: opt.timeLimit, count: items.length, used: kp && kp.tl,
+      getIndex: () => index, isBusy: () => tlBusy(), onTimeUp: () => roundTimeUp(),
+      className: "aw-ftg-tl"
+    });
+    let tlLineAt = 0;     // lúc dòng đang đứng hiện ra (performance.now)
+    let tlHeard = -1;     // dòng gần nhất đã NGHE thấy tiếng bắt đầu
     let curPage = -1;
     const timers = new Set();
     const later = (fn, ms) => { const t = setTimeout(() => { timers.delete(t); if (!dead) fn(); }, ms); timers.add(t); return t; };
@@ -458,7 +474,8 @@ const ftgTemplate = {
     top.append(speakerEl, sentenceEl, listenBtn);
     const divider = el("div", "aw-ftg-divider");
     const area = el("div", "aw-ftg-area");
-    card.append(top, divider, area);
+    if (tl.on) { card.classList.add("has-tl"); card.append(top, tl.row, divider, area); }   // Đợt 494
+    else card.append(top, divider, area);
     root.append(card);
 
     // TYPE mode: keyboard + the ⌨ toggle in the engine's slot next to Menu
@@ -509,7 +526,8 @@ const ftgTemplate = {
     ui.setLuuTrangThai?.(() => ({
       v: 1, daLam: state.filter(x => x.settled).length, tong: total, i: index, mang: livesLeft,
       thuTu: thuTuGoc.slice(), gaps: items.map(it => it.gaps),
-      st: state.map(x => ({ d: x.done, c: x.chosen, o: x.ok, ty: x.typed, cur: x.cur, s: x.settled, k: x.correct, t: x.timedOut }))
+      st: state.map(x => ({ d: x.done, c: x.chosen, o: x.ok, ty: x.typed, cur: x.cur, s: x.settled, k: x.correct, t: x.timedOut })),
+      tl: tl.used()   // Đợt 494 — giờ đã tiêu từng dòng (∞ ⇒ undefined, không ghi)
     }));
     let dauTien = 0;
     if (kp) {   // vào dòng CHƯA xong đầu tiên kể từ dòng đang đứng lúc rời
@@ -522,6 +540,7 @@ const ftgTemplate = {
     ui.setScore(scoreNow());
     showItemNow(dauTien);
     later(() => playLine(index), INTRO_DELAY_MS);
+    tl.start();   // Đợt 494 — tlBusy() giữ đồng hồ đứng yên tới khi tiếng của dòng đọc xong
     // Lượt cũ đã làm HẾT mà chưa tới màn kết thúc (tải lại đúng lúc chờ) ⇒ kết thúc luôn.
     if (kp && state.every(x => x.settled) && !fightCtl) autoTimer = later(() => finish("complete"), 700);
 
@@ -876,8 +895,23 @@ const ftgTemplate = {
       later(() => host.remove(), ok ? 900 : 1400);
     }
 
+    // ⭐⭐ TIME LIMIT (Đợt 494) — "em có làm dòng này được lúc này không?" Thêm một vế
+    // riêng của game nghe: tiếng của dòng còn đang đọc (bàn không sở hữu tiếng trong
+    // Fight hỏi trọng tài), hoặc CHƯA bắt đầu đọc — chờ tối đa 3 s (tải chậm / dòng
+    // không có tiếng thì đồng hồ vẫn chạy, không treo mãi).
+    function tlBusy() {
+      const st = state[index];
+      if (finished || ending || dead || animating || fightLocked() || !st || st.settled) return true;
+      const vs = fightCtl && !speaks() && fightCtl.voiceState ? fightCtl.voiceState() : null;
+      if ((player && player.isPlaying()) || (vs && vs.playing)) { tlHeard = index; return true; }
+      return !!audioUrl && tlHeard !== index && performance.now() - tlLineAt < 3000;
+    }
+
     // TIME EACH ROUND (Showdown) — out of time: every gap still open counts
-    // wrong, one Points-off charge, one heart. Fight never calls this.
+    // wrong, one Points-off charge, one heart.
+    // ⭐ Đợt 494 — Time limit gọi hàm này ở MỌI mode, kể cả Fight: trong trận dấu
+    // đúng/sai bị GIẤU tới reveal() (fightPendingReveal), settleLine() báo trọng tài
+    // wordDone({correct:false}) và để trọng tài chuyển cả hai bàn.
     function roundTimeUp() {
       const it = items[index], st = state[index];
       if (st.settled || finished || ending || fightLocked()) return;
@@ -885,6 +919,7 @@ const ftgTemplate = {
       st.cur = it.gaps.length;
       st.timedOut = true;
       ui.daDoiBaiLam?.();   // Đợt 469
+      if (fightCtl) fightPendingReveal = true;   // Đợt 494 — giấu dấu tới reveal()
       ftgSound.wrong();
       const willFly = pointsOff > 0;
       ui.setScore(scoreNow());
@@ -983,6 +1018,8 @@ const ftgTemplate = {
 
     function showItemNow(i) {
       index = i;
+      tlLineAt = performance.now();   // Đợt 494 — bắt đầu chờ tiếng của dòng này
+      tl.enterItem();
       ui.daDoiBaiLam?.();   // Đợt 469 — nhớ dòng đang đứng
       fightPendingReveal = fightCtl ? (state[i].settled && !state[i].revealed) : false;
       renderItem();
@@ -1078,6 +1115,7 @@ const ftgTemplate = {
     // =================================================================
     function fitNow() {
       if (dead) return;
+      tl.fitNum();   // Đợt 494 — ô số Time limit rộng đúng số dài nhất
       card.style.setProperty("--sfit", "1");
       const topH = top.clientHeight;
       const fits = () => sentenceEl.scrollHeight + speakerEl.offsetHeight <= topH - root.clientWidth * 0.01;
@@ -1136,6 +1174,7 @@ const ftgTemplate = {
       if (finished) return;
       finished = true;
       clearAutoTimer();
+      tl.stop();   // Đợt 494
       stopAudio();
       ui.flushPenalties?.();
       if (reason === "gameover") ftgSound.gameOver(); else ftgSound.gameCompleted();
@@ -1164,6 +1203,7 @@ const ftgTemplate = {
       if (ro) ro.disconnect();
       timers.forEach(clearTimeout); timers.clear();
       if (player) { player.destroy(); player = null; }
+      tl.destroy();   // Đợt 494 — dừng + rời tập Menu pause
       ftgPauseHandlers = null;
       if (ui.livesSlot) ui.livesSlot.innerHTML = "";
       if (ui.kbdSlot) ui.kbdSlot.innerHTML = "";

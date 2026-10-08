@@ -43,6 +43,7 @@ import { guardNoCopy } from "../../core/no-copy.js";   // Đợt 464 — chặn 
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { openTypeTheAnswerEditor } from "./type-the-answer-editor.js";
 import { ttaSound } from "./type-the-answer-sound.js";
+import { createTimeLimit, timeLimitCell, pauseTimeLimits } from "../../core/time-limit.js";   // Đợt 494
 
 function normalize(str) {
   let s = String(str ?? "").trim().replace(/\s+/g, " ");
@@ -332,7 +333,10 @@ const ttaTemplate = {
         tone: "green", offAt: 0,
         fmt: v => (v === 0 ? "∞" : String(v)),
         onInput: v => { draft.lives = v; }   // 0 stored = unlimited
-      }).cell
+      }).cell,
+      // ⭐⭐ Đợt 494 (thầy 08/10/2026) — TIME LIMIT mỗi câu, y như Quiz: 1..30s, nấc
+      // cuối ∞ (mặc định ⇒ act cũ y như xưa). Hết giờ = roundTimeUp() (chấm sai).
+      timeLimitCell(mkSliderCell, draft)
     );
 
     // ⭐ Đợt 213b (thầy, 20/8/2026) — nhãn đổi thành "Show corrects".
@@ -347,6 +351,10 @@ const ttaTemplate = {
     addCheck("Allow skip", draft.allowSkip === true, v => draft.allowSkip = v,
       { title: "Allow skip (move on without answering)" });
   },
+
+  // ☰ Menu pause (Đợt 494) — đồng hồ Time limit là timer RIÊNG (core/time-limit.js),
+  // engine không chạm tới được nên phải tự đóng băng. Cùng hợp đồng như quiz.js.
+  onPause(paused) { pauseTimeLimits(paused); },
 
   mount(root, activity, ui) {
     const opt = activity.options || {};
@@ -410,6 +418,15 @@ const ttaTemplate = {
       return o && o.g === true
         ? { typed: typeof o.ty === "string" ? o.ty : "", graded: true, correct: o.k === true, timedOut: o.t === true }
         : { typed: null, graded: false, correct: null, timedOut: false };
+    });
+    // ⭐⭐ TIME LIMIT (Đợt 494) — đồng hồ MỖI CÂU dùng chung với Quiz (core/time-limit.js).
+    // Chỉ tính khi em gõ được (tlBusy); hết giờ ⇒ roundTimeUp() = câu sai "No answer",
+    // hiện đáp án, mất tim, Points off; tự sang câu CHỈ khi Auto next bật (thầy chốt).
+    // ∞ ⇒ `tl.on === false`, không dựng gì.
+    const tl = createTimeLimit({
+      seconds: opt.timeLimit, count: items.length, used: kp && kp.tl,
+      getIndex: () => index, isBusy: () => tlBusy(), onTimeUp: () => roundTimeUp(),
+      className: "aw-tta-tl"
     });
     let index = 0;
     let finished = false;
@@ -583,7 +600,11 @@ const ttaTemplate = {
     const onPhoneMq = () => { kbd.setLayout(wantGrid() ? "grid" : "classic"); fitLayout(); };
     phoneMq?.addEventListener?.("change", onPhoneMq);
 
-    card.append(qArea, slot, kbd.el);
+    // Đợt 494 — hàng Time limit nằm NGAY DƯỚI câu hỏi, TRÊN cụm trả lời: mọi phép đo
+    // "mép dưới câu hỏi" bên dưới đọc qua questionBottom() nên cụm trả lời được căn
+    // giữa giữa THANH và bàn phím, không bao giờ đè lên thanh.
+    if (tl.on) card.append(qArea, tl.row, slot, kbd.el);
+    else card.append(qArea, slot, kbd.el);
     const curInput = input;   // single persistent textarea (for autoGrow)
 
     // ⭐⭐ Đợt 467 — "GÕ CHỮ ĐẦU TIÊN, CẢ MÀN GIẬT LÊN RỒI HẠ XUỐNG" (thầy, iPhone, bài giao phóng to).
@@ -662,7 +683,8 @@ const ttaTemplate = {
     ui.setLuuTrangThai?.(() => ({
       v: 1, daLam: state.filter(x => x.graded).length, tong: total, i: index, mang: livesLeft, andrew: andrewUsed,
       thuTu: items.map(it => goc.indexOf(it)),
-      st: state.map(x => (x.graded ? { g: true, ty: String(x.typed || ""), k: x.correct === true, t: x.timedOut === true } : { g: false }))
+      st: state.map(x => (x.graded ? { g: true, ty: String(x.typed || ""), k: x.correct === true, t: x.timedOut === true } : { g: false })),
+      tl: tl.used()   // Đợt 494 — giờ đã tiêu từng câu (∞ ⇒ undefined, không ghi)
     }));
     let dauTien = 0;
     if (kp) {   // vào câu CHƯA làm đầu tiên kể từ câu đang đứng lúc rời
@@ -676,6 +698,7 @@ const ttaTemplate = {
     if (kp && state.every(x => x.graded) && !fightCtl) autoTimer = setTimeout(() => { if (!dead) finish("complete"); }, 700);
     showScore(scoreNow());
     renderLives();
+    tl.start();   // Đợt 494 — Time limit: câu đầu bắt đầu tính giờ từ đây
 
     // ----- TIME COST wiring (Đợt 143) — see core/engine.js's ui.setIdleGuard.
     // The guard answers ONE question: "could the student act right now?" Here
@@ -730,7 +753,12 @@ const ttaTemplate = {
     // The vertical space available to hold the answer, centred: from the QUESTION's
     // bottom edge to the KEYBOARD's top edge.
     function regionHeight() {
-      return keyboardTopLayout() - promptEl.getBoundingClientRect().bottom;
+      return keyboardTopLayout() - questionBottom();
+    }
+    // Đợt 494 — mép dưới của phần "câu hỏi": thanh Time limit (nếu có, nó nằm ngay
+    // dưới câu hỏi trong luồng nên đi theo khi câu co lại) hoặc chính câu hỏi.
+    function questionBottom() {
+      return (tl.on ? tl.row : promptEl).getBoundingClientRect().bottom;
     }
     // Height the region must have to hold the centred cluster: simply the
     // cluster's visible height. Invariant under the block's translate.
@@ -743,6 +771,7 @@ const ttaTemplate = {
     // in the available region does the QUESTION give way: shrinking --qfit makes
     // the (content-sized) question area shorter, growing the region.
     function fitLayout() {
+      tl.fitNum();   // Đợt 494 — ô số Time limit rộng đúng số dài nhất (cỡ chữ theo --aw-u)
       autoGrow(curInput);
       card.style.setProperty("--qfit", "1");
       if (neededHeight() > regionHeight() - 2) {
@@ -793,7 +822,7 @@ const ttaTemplate = {
     // the keys.
     function centerBlock() {
       answerBlock.style.transform = "none";
-      const qBottom = promptEl.getBoundingClientRect().bottom;
+      const qBottom = questionBottom();
       const kbdTop = keyboardTopLayout();
       const e = blockEdges();
       let shift = (qBottom + kbdTop) / 2 - (e.top + e.bottom) / 2;
@@ -858,6 +887,7 @@ const ttaTemplate = {
       // to another one clears it (same reset point as quiz.js's applyQuestion).
       fightPendingReveal = false;
       fightPenaltyFlown = false;   // ⭐ Đợt 256 — câu mới, sổ phạt của câu cũ đóng lại
+      tl.enterItem();              // Đợt 494 — vẽ ngay giờ còn lại của CÂU NÀY
 
       // --- answer block, in place ---
       input.value = st.typed || "";
@@ -1137,6 +1167,22 @@ const ttaTemplate = {
       fitLayout();
     }
 
+    // ⭐⭐ TIME LIMIT (Đợt 494) — "em có gõ được câu này lúc này không?". Không ⇒ quãng
+    // đó không tính giờ: ván xong, câu đã chấm, bàn bị trọng tài khoá, clip đang đọc
+    // (bàn không sở hữu tiếng trong Fight hỏi trọng tài — y như quiz.js voiceBusy).
+    function voiceBusy() {
+      if (voicePlayer.isPlaying()) return true;
+      if (fightCtl && !fightCtl.speaks(fightSide)) {
+        const vs = fightCtl.voiceState && fightCtl.voiceState();
+        return !!(vs && vs.playing);
+      }
+      return false;
+    }
+    function tlBusy() {
+      const st = state[index];
+      return finished || dead || !st || st.graded || fightLocked() || voiceBusy();
+    }
+
     /**
      * ⭐⭐ TIME EACH ROUND — OUT OF TIME (Đợt 174, teacher 17/8/2026).
      * Registered with ui.setRoundTimeout(); the engine calls it when the
@@ -1163,6 +1209,12 @@ const ttaTemplate = {
      * with it the only case that lock needed a "treat as wrong" reaction — the
      * referee now locks that board silently (see core/fight.js's
      * finalizeSingleWinner/silentLose). This function is single-mode only again.
+     *
+     * ⭐⭐ Đợt 494 — BUT THE TIME LIMIT (core/time-limit.js, mọi mode) DOES fire this
+     * in Fight too, same as quiz.js Đợt 363: in a match the ✓/✗ + answer key stay
+     * WITHHELD (fightPendingReveal, painted by revealFightMarks), the penalty flies
+     * at once (Đợt 256), and the referee hears `wordDone({correct:false})` — this
+     * board is done and wrong, the round stays open for the other team.
      */
     function roundTimeUp() {
       const it = items[index];
@@ -1173,6 +1225,7 @@ const ttaTemplate = {
       st.timedOut = true;
       st.correct = false;
       ui.daDoiBaiLam?.();   // Đợt 469
+      ui.roundDone?.();     // Đợt 494 — lượt đã xong: đồng hồ lượt Showdown (nếu có) đứng ở đây
       input.disabled = true;
       syncSubmitEnabled();
       updateNav();
@@ -1182,6 +1235,22 @@ const ttaTemplate = {
         kbd.refresh();
       }
       const revealShown = opt.showAnswerWhenWrong !== false;
+      if (fightCtl) {
+        // Đợt 494 — FIGHT: giấu kết quả tới lúc trọng tài reveal(); điểm phạt bay ngay.
+        fightPendingReveal = true;
+        syncFightLock();
+        const pen = Math.max(0, Math.min(POINTS_MAX, Number(opt.minusAmount) || 0));
+        if (pen > 0) {
+          fightPenaltyFlown = true;
+          ui.flyPenalty?.(null, pen, () => { livePoints -= pen; return scoreNow(); });
+        }
+        // (tiếng ✗ kêu lúc reveal — applyGradeVisuals — như câu nộp sai trong trận)
+        const outOfLivesF = loseLife();
+        fightCtl.wordDone(fightSide, { index, correct: false });
+        clearAutoTimer();
+        if (outOfLivesF) autoTimer = setTimeout(() => finish("gameover"), 1500);
+        return;   // trọng tài tự chuyển vòng cho CẢ HAI bàn
+      }
       applyGradeVisuals(st, it, revealShown);
       const outOfLives = loseLife();
       // ⚠️ Đợt 222 — ĐỪNG THÊM `showScore()` Ở ĐÂY. Đã thử và đã sai: game này chỉ
@@ -1590,6 +1659,7 @@ const ttaTemplate = {
       const answeredNow = state.filter(s => s.graded).length;
       if (answeredNow === 0) { ui.toast?.("Answer at least one question first."); return; }   // don't latch finished
       finished = true;
+      tl.stop();   // Đợt 494 — không ticker nào sống lâu hơn ván của nó
       // ⚠️⚠️ Đợt 256 — CHỐT SỔ TRƯỚC KHI ĐỌC ĐIỂM (xem core/engine.js, ui.flushPenalties).
       ui.flushPenalties?.();
       clearAutoTimer();
@@ -1624,6 +1694,7 @@ const ttaTemplate = {
       window.removeEventListener("resize", onResize);
       cancelAnimationFrame(rafFit);
       clearAutoTimer();
+      tl.destroy();   // Đợt 494 — dừng + rời tập Menu pause
       activeFlyNodes.forEach(n => n.remove());
       activeFlyNodes.clear();
       voicePlayer.stop();

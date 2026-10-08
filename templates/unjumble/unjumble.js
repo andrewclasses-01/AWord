@@ -45,6 +45,7 @@ import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { unjumbleSound } from "./unjumble-sound.js";
 import { openUnjumbleEditor } from "./unjumble-editor.js";
+import { createTimeLimit, timeLimitCell, pauseTimeLimits } from "../../core/time-limit.js";   // Đợt 494
 
 const STAGGER_MS = 120;     // ms — gap between each position's reveal in "submit" mode
 // ⭐ Đợt 430 (thầy, 30/9/2026) — cùng gốc bệnh Anagram On submit: lật nhanh GẤP ĐÔI
@@ -191,7 +192,10 @@ const unjumbleTemplate = {
         tone: "green", offAt: 0,
         fmt: v => (v === 0 ? "∞" : String(v)),
         onInput: v => { draft.lives = v; }
-      }).cell
+      }).cell,
+      // ⭐⭐ Đợt 494 (thầy 08/10/2026) — TIME LIMIT mỗi câu, y như Quiz: 1..30s, nấc cuối
+      // ∞ (mặc định ⇒ act cũ y như xưa). Hết giờ = roundTimeUp() (Đợt 265).
+      timeLimitCell(mkSliderCell, draft, "Seconds for each sentence (∞ = no limit). Out of time = wrong.")
     );
 
     // On-submit mode: whether a wrong submission reveals the correct sentence.
@@ -219,6 +223,9 @@ const unjumbleTemplate = {
   // Any Options change restarts the act (the 3 marking models are not
   // compatible mid-play), same as Anagram.
   optionsNeedRestart() { return true; },
+
+  // ☰ Menu pause (Đợt 494) — đồng hồ Time limit là timer RIÊNG (core/time-limit.js).
+  onPause(paused) { pauseTimeLimits(paused); },
 
   // Engine lifecycle sounds — real Whiteboard-theme mp3s.
   sounds: {
@@ -309,6 +316,15 @@ const unjumbleTemplate = {
       if (livesLeft != null) livesLeft = Math.max(0, livesLeft - matMang);
     }
 
+    // ⭐⭐ TIME LIMIT (Đợt 494) — đồng hồ MỖI CÂU dùng chung với Quiz (core/time-limit.js).
+    // Chỉ tính khi em kéo được (tlBusy: không intro, không đang lật đáp án, câu chưa
+    // xong); hết giờ ⇒ roundTimeUp() — ĐÚNG đường hết giờ Đợt 265 (submit: sai + hiện
+    // câu đúng + Points off; bonus: câu không ăn điểm). Cả hai: mất tim. ∞ ⇒ không dựng.
+    const tl = createTimeLimit({
+      seconds: opt.timeLimit, count: items.length, used: kp && kp.tl,
+      getIndex: () => index, isBusy: () => tlBusy(), onTimeUp: () => roundTimeUp(),
+      className: "aw-unj-tl"
+    });
     let index = 0;
     let finished = false;
     // "this mount was thrown away" — set ONLY by cleanup(). Separate from
@@ -433,7 +449,8 @@ const unjumbleTemplate = {
       v: 1, daLam: state.filter(doneCheck).length, tong: total, i: index,
       thuTu: items.map(it => goc.indexOf(it.src)),
       xao: items.map(it => it.order.slice()),
-      st: state.map(st => ({ o: st.order.slice(), m: st.moveCount, g: st.graded, t: st.timedOut === true }))
+      st: state.map(st => ({ o: st.order.slice(), m: st.moveCount, g: st.graded, t: st.timedOut === true })),
+      tl: tl.used()   // Đợt 494 — giờ đã tiêu từng câu (∞ ⇒ undefined, không ghi)
     }));
     // ⭐ Đợt 470 — làm tiếp: vào câu CHƯA xong đầu tiên kể từ câu đang đứng lúc rời (hết thì câu chưa xong bất kỳ).
     if (kp) {
@@ -453,6 +470,13 @@ const unjumbleTemplate = {
     // (manualTimerStart defers it in the engine).
     if (introActive) runIntro(() => ui.startTimer());
     else ui.startTimer();
+    tl.start();   // Đợt 494 — tlBusy() giữ đồng hồ đứng yên suốt intro
+
+    // ⭐⭐ TIME LIMIT (Đợt 494) — "em có kéo được câu này lúc này không?"
+    function tlBusy() {
+      const st = state[index];
+      return finished || dead || busy || introActive || !st || st.graded || doneCheck(st);
+    }
 
     // ⭐ Đợt 265 — a sentence the buzzer took is DEALT WITH, in both modes. Without the
     // `timedOut` arm, "Letters with bonus" (whose done-test is `correct === true`) would
@@ -508,6 +532,9 @@ const unjumbleTemplate = {
       // clue at the TOP of the card, under the slogan (teacher, Đợt 40)
       let clueLineEl = null;
       if (it.clue) { clueLineEl = el("div", "aw-unj-clue", escapeHtml(it.clue)); card.append(clueLineEl); }
+      // ⭐ Đợt 494 — hàng Time limit (MỘT phần tử dùng suốt ván) dời sang thẻ mới,
+      // ngay dưới câu gợi ý, trên bảng chữ; vẽ ngay giờ còn lại của câu này.
+      if (tl.on) { card.append(tl.row); tl.enterItem(); }
 
       boardEl = el("div", "aw-unj-board" + (align === "center" ? " is-centered" : ""));
       card.append(boardEl);
@@ -534,6 +561,8 @@ const unjumbleTemplate = {
       if (clueLineEl) fitOneLine(clueLineEl, card);
 
       const clueH = clueLineEl ? clueLineEl.offsetHeight + (parseFloat(getComputedStyle(clueLineEl).marginBottom) || 0) : 0;
+      tl.fitNum();
+      const tlH = tl.on ? tl.row.offsetHeight + (parseFloat(getComputedStyle(tl.row).marginBottom) || 0) : 0;   // Đợt 494
       const boardMarginBottom = parseFloat(getComputedStyle(boardEl).marginBottom) || 0;
       const revealMarginTop = revealEl ? parseFloat(getComputedStyle(revealEl).marginTop) || 0 : 0;
       const btnMarginTop = submitBtnEl ? parseFloat(getComputedStyle(submitBtnEl).marginTop) || 0 : 0;
@@ -541,7 +570,7 @@ const unjumbleTemplate = {
       const cardPad = (parseFloat(getComputedStyle(card).paddingTop) || 0) + (parseFloat(getComputedStyle(card).paddingBottom) || 0);
       fitter = autoFit(root, card, s => card.style.setProperty("--fit", s), {
         slack: root.clientWidth * 0.05,
-        measure: () => clueH + boardEl.offsetHeight + boardMarginBottom +
+        measure: () => clueH + tlH + boardEl.offsetHeight + boardMarginBottom +
           (revealEl ? revealEl.offsetHeight + revealMarginTop : 0) +
           (submitBtnEl ? submitBtnEl.offsetHeight + btnMarginTop : 0) + movesH + cardPad
       });
@@ -1113,6 +1142,7 @@ const unjumbleTemplate = {
       ui.flushPenalties?.();
       if (finished) return;
       finished = true;
+      tl.stop();   // Đợt 494 — không ticker nào sống lâu hơn ván của nó
       // ⭐ Đợt 311 — câu CUỐI còn đang lộ đáp án / điểm còn đang bay: chốt ngay rồi
       // vẽ lại chip cho khớp bảng kết quả (xem chú thích ở `pendingSettle`).
       if (pendingSettle) { pendingSettle(); ui.setScore(scoreNow()); }
@@ -1250,6 +1280,7 @@ const unjumbleTemplate = {
       dead = true;   // Đợt 114 — MUST be first; see finishIntro / doSubmit / pulseScoreTo
       if (fitter) fitter.destroy();
       if (autoTimer) clearTimeout(autoTimer);
+      tl.destroy();   // Đợt 494 — dừng + rời tập Menu pause
       if (stageEl) stageEl.classList.remove("aw-unj-active");
       if (sloganEl) sloganEl.remove();
       activeFlyNodes.forEach(n => n.remove());

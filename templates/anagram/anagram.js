@@ -73,6 +73,7 @@ import { getVoiceClip } from "../../core/voice-clips.js";
 import { voiceView } from "../../core/voice-playback.js";
 import { anagramSound } from "./anagram-sound.js";
 import { openAnagramEditor } from "./anagram-editor.js";
+import { createTimeLimit, timeLimitCell, pauseTimeLimits } from "../../core/time-limit.js";   // Đợt 494
 
 // Tile clone colors for the flying-letter animation — MUST stay in sync
 // with the --aw-ana-origin-bg / --aw-ana-result-bg / --aw-ana-wrong-bg
@@ -295,6 +296,9 @@ const anagramTemplate = {
   // with everything else, and the whole panel stopped being 22px too tall for
   // the screen (which is what forced `.is-compact-opts` to shrink every label
   // to 9.5px whenever this game's Options were opened).
+  // ☰ Menu pause (Đợt 494) — đồng hồ Time limit là timer RIÊNG (core/time-limit.js).
+  onPause(paused) { pauseTimeLimits(paused); },
+
   buildExtraOptions({ panel, draft, mkCell, mkSeg, mkSliderCell, addCheck }) {
     const curMode = draft.anagramMode === "submit" ? "submit"
       : draft.anagramMode === "bonusMinus" ? "bonusMinus" : "bonus";
@@ -442,7 +446,11 @@ const anagramTemplate = {
     });
     lives.cell.title = "0 = unlimited lives";
 
-    panel.append(modeCell.cell, penHost, lives.cell);
+    // ⭐⭐ Đợt 494 (thầy 08/10/2026) — TIME LIMIT mỗi từ, y như Quiz: 1..30s, nấc cuối ∞
+    // (mặc định ⇒ act cũ y như xưa). Hết giờ = roundTimeUp() (Đợt 174).
+    const tlCell = timeLimitCell(mkSliderCell, draft, "Seconds for each word (∞ = no limit). Out of time = wrong.");
+
+    panel.append(modeCell.cell, penHost, lives.cell, tlCell);
 
     addCheck("All caps", draft.allCaps === true, v => draft.allCaps = v, { key: "allCaps" });
     // ⭐⭐ Đợt 220 (thầy, 21/8/2026) — MẶC ĐỊNH TẮT, THỐNG NHẤT CẢ BỐN TEMPLATE.
@@ -574,6 +582,15 @@ const anagramTemplate = {
       points: 0,
       sai: 0              // Đợt 470 — số lần chạm SAI chữ (Bonus and minus trừ letterPenalty mỗi lần) — để tính lại điểm phạt khi làm tiếp
     }));
+    // ⭐⭐ TIME LIMIT (Đợt 494) — đồng hồ MỖI TỪ dùng chung với Quiz (core/time-limit.js).
+    // Chỉ tính khi em xếp được (tlBusy); hết giờ ⇒ roundTimeUp() — ĐÚNG đường hết giờ
+    // Đợt 174 (submit: sai + hiện từ + Points off; bonus: từ không ăn điểm). Cả hai: mất
+    // tim. ∞ ⇒ `tl.on === false`, không dựng gì.
+    const tl = createTimeLimit({
+      seconds: opt.timeLimit, count: items.length, used: kp && kp.tl,
+      getIndex: () => index, isBusy: () => tlBusy(), onTimeUp: () => roundTimeUp(),
+      className: "aw-anagram-tl"
+    });
     let index = 0;
     // ⭐ Đợt 470 — làm tiếp: dựng lại bài làm từng từ. Đúng/sai, điểm thưởng, điểm phạt, mạng đều TÍNH LẠI từ chữ đã đặt
     // (đúng công thức bonusEarned / doSubmit / roundTimeUp) — phép cộng/trừ đang bay lúc chụp có thể chưa hạ cánh.
@@ -834,7 +851,8 @@ const anagramTemplate = {
       v: 1, daLam: state.filter(doneCheck).length, tong: total, i: index,
       thuTu: items.map(it => goc.indexOf(it.src)),
       xao: items.map(it => it.tileOrder.slice()),
-      st: state.map(s => ({ p: s.placed.slice(), m: s.hadMistake, t: s.timedOut, g: s.graded, s: s.sai }))
+      st: state.map(s => ({ p: s.placed.slice(), m: s.hadMistake, t: s.timedOut, g: s.graded, s: s.sai })),
+      tl: tl.used()   // Đợt 494 — giờ đã tiêu từng từ (∞ ⇒ undefined, không ghi)
     }));
     // ⭐⭐⭐ Đợt 266 — vế "clip còn đang đọc" ĐI RIÊNG qua ui.setVoiceGuard, không
     // nằm trong idleGuard nữa: trong Fight chỉ bàn 0 có <audio> thật (core/fight.js
@@ -856,6 +874,7 @@ const anagramTemplate = {
     }
     renderLives();
     render();
+    tl.start();   // Đợt 494 — Time limit: từ đầu bắt đầu tính giờ từ đây
     // ⭐ Đợt 470 — lượt cũ đã hết mạng / đã làm HẾT mà chưa kịp tới màn kết thúc (tải lại đúng lúc chờ) ⇒ kết thúc luôn.
     if (kp && livesLeft === 0) autoTimer = setTimeout(() => finish({ gameover: true }), 700);
     else if (kp && state.every(doneCheck)) autoTimer = setTimeout(finish, 700);
@@ -1038,6 +1057,9 @@ const anagramTemplate = {
       // `.aw-anagram-card`'s own `padding-top` keeps that same headroom — see
       // `cardPaddingTop` in autoFit's `measure` below.
       card.append(clueEl);
+      // ⭐ Đợt 494 — hàng Time limit (MỘT phần tử dùng suốt ván) ngay dưới gợi ý; vẽ
+      // ngay giờ còn lại của từ này. autoFit cộng chiều cao nó (xem `measure` dưới).
+      if (tl.on) { card.append(tl.row); tl.enterItem(); }
 
       // Flexible slack, split 1:2 — see anagram.css's comment on these two
       // classes for why (teacher, 8/8/2026: tile rows should lean higher
@@ -1135,9 +1157,11 @@ const anagramTemplate = {
       const btnMarginTop = submitBtnEl ? parseFloat(getComputedStyle(submitBtnEl).marginTop) || 0 : 0;
       const cardPaddingBottom = parseFloat(getComputedStyle(card).paddingBottom) || 0;
       const cardPaddingTop = parseFloat(getComputedStyle(card).paddingTop) || 0;
+      tl.fitNum();
+      const tlH = tl.on ? tl.row.offsetHeight + (parseFloat(getComputedStyle(tl.row).marginTop) || 0) + (parseFloat(getComputedStyle(tl.row).marginBottom) || 0) : 0;   // Đợt 494
       fitter = autoFit(root, card, s => card.style.setProperty("--fit", s), {
         slack: root.clientWidth * 0.045,
-        measure: () => cardPaddingTop +
+        measure: () => cardPaddingTop + tlH +
           clueEl.offsetHeight + group.offsetHeight + groupMarginBottom +
           (revealSlot ? revealSlot.offsetHeight + revealMarginTop : 0) +
           (submitBtnEl ? submitBtnEl.offsetHeight + btnMarginTop : 0) + cardPaddingBottom
@@ -1334,6 +1358,20 @@ const anagramTemplate = {
      * referee now locks that board silently (see core/fight.js's
      * finalizeSingleWinner/silentLose). This function is single-mode only again.
      */
+    // ⭐⭐ TIME LIMIT (Đợt 494) — "em có xếp từ này được lúc này không?" Không ⇒ quãng đó
+    // không tính giờ: hoạt ảnh đang chạy, ván xong, bàn bị trọng tài khoá, từ đã xong,
+    // clip đang đọc / sắp tự đọc (bàn không sở hữu tiếng trong Fight hỏi trọng tài).
+    function tlBusy() {
+      const st = state[index];
+      if (busy || finished || dead || fightLocked() || !st || doneCheck(st)) return true;
+      if (voiceIntroTimeoutId || (voiceAudioEl && !voiceAudioEl.paused)) return true;
+      if (fightCtl && !fightCtl.speaks(fightSide)) {
+        const vs = fightCtl.voiceState && fightCtl.voiceState();
+        if (vs && vs.playing) return true;
+      }
+      return false;
+    }
+
     function roundTimeUp() {
       const st = state[index];
       const it = items[index];
@@ -1341,6 +1379,26 @@ const anagramTemplate = {
       if (doneCheck(st)) return;                 // already solved/submitted/timed out
       st.timedOut = true;
       ui.daDoiBaiLam?.();   // Đợt 470
+      ui.roundDone?.();     // Đợt 494 — lượt đã xong: đồng hồ lượt Showdown (nếu có) đứng ở đây
+      if (fightCtl) {
+        // ⭐ Đợt 494 — Time limit chạy cả trong Fight (y như quiz.js Đợt 363). Luật "GIẤU
+        // ĐÁP ÁN KHI VÒNG CÒN MỞ": không vẽ dấu, không in từ — revealFightResult() thấy
+        // `fightPendingReveal` rỗng thì chỉ in đáp án lúc trọng tài lật. Điểm phạt bay
+        // ngay (Đợt 256), trọng tài nghe "bàn này xong, sai".
+        if (!isBonusFamily) {
+          st.graded = true;
+          st.correct = false;
+          st.revealed = true;
+          if (pointsOff) ui.flyPenalty?.(null, pointsOff, () => { penalty += pointsOff; return scoreNow(); });
+          updateSubmitButtonState();
+        }
+        const outOfLivesF = loseLife();
+        updateNav();
+        syncFightLock();
+        fightCtl.wordDone(fightSide, { index, correct: false });
+        if (outOfLivesF) autoTimer = setTimeout(() => finish({ gameover: true }), 1500);
+        return;
+      }
       if (!isBonusFamily) {
         st.graded = true;
         st.correct = false;
@@ -2519,6 +2577,7 @@ const anagramTemplate = {
     function finish(opts) {
       if (finished) return;
       finished = true;
+      tl.stop();   // Đợt 494 — không ticker nào sống lâu hơn ván của nó
       // ⚠️⚠️ Đợt 256 — CHỐT SỔ TRƯỚC KHI ĐỌC ĐIỂM. Một con số "−N" còn đang bay là
       // một phép trừ CHƯA áp vào `penalty`, mà `score` dưới đây đọc thẳng ra từ đó.
       ui.flushPenalties?.();
@@ -2566,6 +2625,7 @@ const anagramTemplate = {
       if (fitter) fitter.destroy();
       if (autoTimer) clearTimeout(autoTimer);
       if (voiceIntroTimeoutId) clearTimeout(voiceIntroTimeoutId);
+      tl.destroy();   // Đợt 494 — dừng + rời tập Menu pause
       activeFlyNodes.forEach(n => n.remove());
       activeFlyNodes.clear();
       if (voiceAudioEl) voiceAudioEl.pause();

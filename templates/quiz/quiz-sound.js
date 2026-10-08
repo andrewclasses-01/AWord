@@ -9,7 +9,6 @@
 
 import { createPack } from "../../core/sfx.js";
 import { wrapWrong } from "../../core/wrong-sound.js";
-import { sound as coreSound } from "../../core/sound.js";
 
 // Đợt 85 (7/8/2026) — the pack is now fetched AT IMPORT TIME (prime() below),
 // which `ensureTemplate()` runs before the READY screen is drawn, instead of
@@ -45,15 +44,6 @@ export const quizSound = {
   // Đợt 364 — cắt nhạc 5-giây-cuối nếu nó còn đang chạy lúc ván KẾT THÚC (hết mạng
   // giữa lúc đồng hồ tổng đang báo 5 s cuối, hoặc nộp bài lúc còn 3 s): ván đã xong
   // thì "sắp hết giờ" không còn nghĩa gì nữa.
-  stopWarning: () => pack.stop("blockgametimeout"),
-  // ⭐ Đợt 364 — TÍCH DỒN DẬP 5 GIÂY CUỐI của thanh Time limit (thầy: "trong 5s cuối
-  // của thanh thời gian cần có âm thanh dồn dập"). Tổng hợp bằng core/sound.js
-  // (tôn trọng nút loa chung) chứ không dùng "blockgametimeout": clip đó dài 6 s+,
-  // mỗi câu lại kêu một lần suốt 30 câu thì phải cắt dở liên tục. `urgency` 0..1
-  // (0 = còn 5 s, 1 = sắp hết): blip vuông ngắn, cao dần theo mức gấp.
-  tick: (urgency = 0) => {
-    const u = Math.max(0, Math.min(1, urgency));
-    const f = 880 + 520 * u;
-    coreSound.glide({ freq: f, freqEnd: f * 0.9, dur: 55, gain: 0.10 + 0.06 * u, type: "square" });
-  }
+  stopWarning: () => pack.stop("blockgametimeout")
+  // (Đợt 364 `tick` — tích 5 giây cuối của Time limit — Đợt 494 dời sang core/time-limit.js.)
 };

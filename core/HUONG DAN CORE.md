@@ -4253,6 +4253,12 @@ const xxTemplate = {
 };
 ```
 
+> ⭐ **Đợt 494 — đồng hồ MỖI CÂU "Time limit" đã có sẵn: `core/time-limit.js`** (Quiz · TTA · Unjumble · Find the gap · Anagram).
+> Template mới cần nó thì KHÔNG tự viết: `timeLimitCell(mkSliderCell, draft)` trong `buildExtraOptions`, `onPause(p){ pauseTimeLimits(p); }`,
+> `createTimeLimit({ seconds: opt.timeLimit, count, used: kp?.tl, getIndex, isBusy, onTimeUp: roundTimeUp, className })` trong mount, đặt `tl.row`
+> vào sân, `tl.start()` / `tl.enterItem()` khi sang câu / `tl.used()` trong `setLuuTrangThai` / `tl.stop()` ở finish / `tl.destroy()` ở cleanup.
+> `isBusy` = "em có làm được câu này lúc này không" (câu đã chấm, hoạt ảnh, clip đang đọc, bàn Fight bị khoá…). ⛔ Template đã có Speed thì không thêm.
+
 **3 kiểu `pauseGame`/`resumeGame` đã dùng, chọn đúng kiểu theo cách timer của bạn tính giờ:**
 
 1. **Đồng hồ đếm tới hạn tuyệt đối** (`deadline = performance.now() + N`, kiểu Gameshow `qDeadline`, Open

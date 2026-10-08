@@ -159,6 +159,13 @@
    the TOP spacer still keeps a real (if smaller) gap under the clue. Both
    use flex-basis:0 so they shrink to nothing first when the card is tight on
    height, never fighting the fixed-content rows for space. */
+/* ⭐⭐ TIME LIMIT (Đợt 494) — hàng [số giây][thanh] dùng chung (.aw-tl* trong
+   core/app.css), ngay dưới gợi ý, trên khoảng trống co giãn. anagram.js render()
+   cộng chiều cao + lề của nó vào autoFit. */
+.aw-anagram-tl {
+  width: 70%;
+  margin: calc(1 * var(--aw-u)) auto calc(1.4 * var(--aw-u));
+}
 .aw-anagram-topspace { flex: 1 1 0; min-height: 0; }
 .aw-anagram-botspace { flex: 2 1 0; min-height: 0; }
 

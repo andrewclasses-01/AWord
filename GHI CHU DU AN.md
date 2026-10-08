@@ -546,6 +546,34 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 494 (08/10/2026) — ⭐⭐ TIME LIMIT DÙNG CHUNG: Type the answer · Unjumble · Find the gap · Anagram + Quiz lên 30 s
+**Thầy:** "các template khác cũng có Time limit tương tự (ví dụ type the answer)". Đã rà cả 21 template (bảng phân loại ở cuối mục).
+Thầy chốt (AskUserQuestion): đợt này **TTA · Unjumble · Find the gap · Anagram**, **Quiz nâng 1..30 s** (nấc cuối vẫn ∞);
+⛔ **LUẬT: template ĐÃ CÓ "Speed" (tốc độ câu) trong Options thì KHÔNG thêm Time limit** ⇒ True or false, Find the match bị loại;
+TTA hết giờ **theo Auto next** (tắt ⇒ đứng lại cho em đọc đáp án).
+**Đã làm:**
+- `core/time-limit.js` MỚI — tách nguyên đồng hồ Quiz Đợt 363/364: `timeLimitCell()` (ô Options 1..30 + ∞, lưu `options.timeLimit`,
+  0/thiếu = ∞ ⇒ act cũ y như xưa; act Quiz cũ 1..20 đọc ra đúng số), `createTimeLimit({seconds,count,used,getIndex,isBusy,onTimeUp,className})`
+  (đồng hồ DELTA 50 ms, chỉ tính khi `isBusy()` false, tích 5 s cuối, `used()` cho làm tiếp, `destroy()`), `pauseTimeLimits()` cho `tpl.onPause`
+  (tập đồng hồ sống — Fight 2 bàn). CSS chung `.aw-tl*` dời từ quiz.css sang `core/app.css` (trước khối cuối file Đợt 258).
+- Quiz: dùng bộ chung (`tl.row` mang thêm `.aw-quiz-tl` = vị trí riêng), bỏ `quizSound.tick`. Hành vi y như cũ.
+- Type the answer: hàng giờ dưới câu hỏi (rộng 84 % = bàn phím); `questionBottom()` = mép dưới THANH ⇒ cụm trả lời căn giữa thanh↔bàn phím.
+  `roundTimeUp()` nay chạy cả **Fight** (giấu kết quả tới reveal, phạt bay ngay, `wordDone(correct:false)`) + `ui.roundDone()`.
+- Unjumble: hàng giờ dưới câu gợi ý, dời theo thẻ mới mỗi câu; đứng yên suốt intro bảng trắng; cộng vào autoFit.
+- Find the gap: hàng giờ giữa câu nghe và đường kẻ (`.has-tl` thu `.aw-ftg-top` 21→17,5u / 16→12,5u); **chỉ đếm SAU khi tiếng của dòng
+  đọc xong** (chờ tiếng bắt đầu tối đa 3 s — không có tiếng/tải chậm vẫn chạy); Fight: `fightPendingReveal` khi hết giờ.
+- Anagram: hàng giờ dưới gợi ý; đứng yên lúc clip đọc/sắp tự đọc; `roundTimeUp()` chạy cả Fight (submit: phạt bay ngay, reveal in từ).
+**Bẫy bắt được:** ô số chốt bằng px lúc khung chưa đủ cỡ (Unjumble dựng thẻ trước) ⇒ thanh đè phần lẻ "17,8|5". Sửa: `fitNum()` ghi `em`
+(tỉ lệ cỡ chữ) + tự đo lại ở `start()` và `document.fonts.ready`. ⚠️ Đo layout khi khung Browser đang ẨN ra số rác (rộng 0, chữ 16px) — chụp màn trước rồi đo.
+**Thử (trang `templates/*/test.html`, server `devserver.py` 5694, khởi động lại ván với options bằng JS):** TTA 4 s ⇒ sai + hiện "gray" + 3→2 tim, đứng câu 1
+(Auto next tắt); Auto next bật ⇒ tự sang câu, giờ mới; nộp ⇒ đồng hồ đứng; Menu mở 2 s ⇒ 8,89 đứng yên; Quiz 25 s/2 s hết giờ mất tim;
+Unjumble intro 3,3 s đồng hồ đứng 4,00 ⇒ hết giờ hiện câu đúng; Anagram hết giờ hiện KANGAROO, tự sang từ 2; FTG 3 s đứng yên suốt audio rồi mới đếm;
+**Fight TTA + Anagram (startFight thật):** hai bàn cùng hết giờ ⇒ trọng tài lật đáp án ⇒ cùng sang câu 2. Console 0 lỗi. `sinh-preload.py` KHỚP.
+**Bảng rà 21 template:** đã có tương đương — Rocket race (Question time), Gameshow (Time per question), Running team, Running word, Open the box (hết giờ = hết ván, giữ);
+có Speed ⇒ không làm — True or false, Find the match (+ Group sort, Whack, Flying fruit…); không hợp — Speaking cards, Train Rush 3D, Star Loot 3D;
+để sau — Crossword (giờ tính từ lúc MỞ từ), Speaking (dừng khi thu âm/chấm), Wordshake mode one.
+**⬜ Thầy thử tay** (điện thoại + TOMKO): bố cục thanh ở TTA bàn phím ẩn/hiện, FTG chế độ Find, Unjumble câu dài.
+
 ## Đợt 492 (07/10/2026) — ⛔ LÀM TIẾP: ĐỒNG HỒ = GIỜ LÀM THẬT (thôi tính lúc tắt máy) · phiên MSI
 **Thầy:** "bạn Minh Thư có thời gian lạ" — MINH THƯ A2B FTG `j56ry9` bắt đầu 22:15 06/10, tắt máy, 14:07 07/10 CONTINUE làm xong 40/55
 ⇒ scores `timeMs` 952 phút (luật Đợt 469 "giờ thật từ lúc lượt bắt đầu"), activeMs chỉ 31,6 phút. Thầy chốt (AskUserQuestion): **chỉ tính giờ làm thật**.

@@ -8295,6 +8295,56 @@ body.aw-khung-mode{background:#fff; min-height:0}
    myLesson. Chế độ ?giao= thường (không &khung=) vẫn giữ nền + nút như cũ. */
 body.aw-khung-mode .aw-giao-nen{display:none}
 
+/* ===== ⭐⭐ TIME LIMIT DÙNG CHUNG (Đợt 494, thầy 08/10/2026) — core/time-limit.js
+   Hàng [số giây][thanh] mỗi câu: Quiz · Type the answer · Unjumble · Find the gap ·
+   Anagram. Dời nguyên từ quiz.css (Đợt 363/364, `.aw-quiz-tl*`); vị trí/bề rộng
+   riêng của từng game nằm trong CSS của game đó (class thêm qua `className`).
+   Cùng ngôn ngữ xanh → cam → đỏ của .aw-roundbar-fill / Miss wait — MỘT cách nói
+   "sắp hết giờ" cho cả app. Số "7,45": giây to + phần trăm nhỏ. ===== */
+.aw-tl {
+  --tl-c1: #6cd06a; --tl-c2: #3fae5a; --tl-num: #2f9a4a;
+  flex: 0 0 auto;
+  width: 100%;
+  position: relative;
+  display: flex; align-items: center;
+  gap: calc(1.4 * var(--aw-u));
+  height: calc(3 * var(--aw-u));
+  box-sizing: border-box;
+}
+.aw-tl.is-orange { --tl-c1: #ffb24d; --tl-c2: #ff8c1a; --tl-num: #e0761a; }
+.aw-tl.is-red    { --tl-c1: #ff7a5c; --tl-c2: #e0453f; --tl-num: #d63a34; }
+.aw-tl-num {
+  flex: 0 0 auto;
+  text-align: left;
+  white-space: nowrap;
+  font-size: calc(2.9 * var(--aw-u));
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--tl-num);
+  transition: color .3s ease;
+}
+.aw-tl-dec { font-size: .55em; font-weight: 700; opacity: .85; }
+/* Bản nháp đo bề rộng số dài nhất — ngoài luồng, vô hình, không bắt chạm. */
+.aw-tl-probe {
+  position: absolute; left: 0; top: 0;
+  visibility: hidden; pointer-events: none;
+  width: auto !important;
+}
+.aw-tl-bar {
+  flex: 1 1 auto; min-width: 0; position: relative;
+  height: calc(1.2 * var(--aw-u)); border-radius: calc(1 * var(--aw-u));
+  background: rgba(0, 0, 0, .18);
+  overflow: hidden;
+}
+.aw-tl-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 100%;
+  border-radius: calc(1 * var(--aw-u));
+  background: linear-gradient(90deg, var(--tl-c1), var(--tl-c2));
+  /* Bề rộng ghi lại mỗi 50ms; transition chỉ làm mượt giữa 2 nhịp. */
+  transition: width .08s linear, background .3s ease;
+}
+
 /* =============================================================================
    ⭐⭐⭐ Đợt 258 (25/8/2026) — KHỐI CUỐI FILE: ĐIỆN THOẠI TRÀN VIỀN + FULLSCREEN
    DẠNG ZOOM DÙNG CHUNG.

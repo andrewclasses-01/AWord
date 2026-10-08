@@ -40,6 +40,7 @@ import { icons } from "../../core/icons.js";
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { openQuizEditor } from "./quiz-editor.js";
 import { quizSound } from "./quiz-sound.js";
+import { createTimeLimit, timeLimitCell, pauseTimeLimits } from "../../core/time-limit.js";   // Đợt 494
 
 // Modern answer-tile palette (8 well-separated colors), each with a darker
 // shade for the 3D shadow lip. Per GAME START we shuffle this and assign a
@@ -70,25 +71,12 @@ function normLives(v) {
 // MỌI mode của Quiz (đơn · Fight · Showdown). Khác hẳn "Time each round" của engine
 // (Đợt 174, chỉ Showdown, 3..599s, có đếm lên): đây là của riêng Quiz, đặt trong
 // Options của template, thanh + số giây vẽ NGAY TRONG SÂN (giữa câu hỏi và các ô).
-// Thanh trượt: 1s → 20s từng nấc 1s, NẤC CUỐI (21) = ∞ không giới hạn (thầy chốt
-// "nấc cuối cùng là không giới hạn"). Lưu `options.timeLimit` = 1..20; 0 / null /
-// undefined = không giới hạn — mọi act cũ không có khoá này ⇒ chơi y như xưa.
-const TL_MAX_S = 20;
-function normTimeLimit(v) {
-  const n = Number(v);
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return Math.min(TL_MAX_S, Math.max(1, Math.round(n)));
-}
-
-// Cầu nối ☰ Menu pause cho đồng hồ Time limit (hợp đồng `tpl.onPause`, core/HUONG
-// DAN CORE.md mục 3). ⚠️ Là SET chứ không phải một biến: Fight mount HAI bàn cùng
-// lúc từ cùng module này (luật Đợt 351). Mỗi mount thêm handler của mình vào rồi
-// gỡ ra trong cleanup().
-const quizPauseHandlers = new Set();
-// Đợt 364 — tích dồn dập 5 giây cuối của Time limit: bắt đầu từ mốc này, và dấu
-// thời gian tiếng gần nhất (cấp module: hai bàn Fight chung một trang chỉ một tiếng).
-const TL_BEEP_FROM_MS = 5000;
-let tlBeepStamp = 0;
+// Thanh trượt: NẤC CUỐI = ∞ không giới hạn (thầy chốt "nấc cuối cùng là không giới
+// hạn"). 0 / null / undefined = không giới hạn — act cũ không có khoá này ⇒ y như xưa.
+// ⭐⭐ Đợt 494 (thầy 08/10/2026) — nâng lên 1..30s, và cả bộ đồng hồ (thanh trượt,
+// hàng số + thanh, tích 5 giây cuối, Menu pause) DỜI SANG core/time-limit.js để Type
+// the answer · Unjumble · Find the gap · Anagram dùng chung. Act Quiz cũ đặt 1..20s
+// đọc ra y nguyên số đó.
 
 const quizTemplate = {
   type: "quiz",
@@ -192,19 +180,8 @@ const quizTemplate = {
     lives.cell.title = "0 = unlimited lives";
     panel.append(lives.cell);
 
-    // ⭐⭐ TIME LIMIT (Đợt 363) — 1s..20s từng nấc 1s, nấc cuối (21) hiện "∞" = không
-    // giới hạn. Thanh trượt đi 1..21 nhưng options chỉ lưu 1..20 hoặc 0 (= ∞): mọi
-    // act cũ không có khoá này đọc ra ∞, y như xưa. `offAt` là nấc ∞ để chip xám đi.
-    // Tone "blue" = một đại lượng thuần (luật 3 màu Đợt 143), không phải thưởng/phạt.
-    const tlCur = normTimeLimit(draft.timeLimit);
-    const tl = mkSliderCell({
-      label: "Time limit", min: 1, max: TL_MAX_S + 1, step: 1,
-      value: tlCur == null ? TL_MAX_S + 1 : tlCur, tone: "blue", offAt: TL_MAX_S + 1,
-      fmt: v => (v > TL_MAX_S ? "∞" : v + "s"),
-      onInput: v => { draft.timeLimit = v > TL_MAX_S ? 0 : v; }   // 0 stored = unlimited
-    });
-    tl.cell.title = "Seconds to answer each question (∞ = no limit). Out of time = wrong.";
-    panel.append(tl.cell);
+    // ⭐⭐ TIME LIMIT (Đợt 363 · Đợt 494: 1..30s + ∞, ô dùng chung core/time-limit.js).
+    panel.append(timeLimitCell(mkSliderCell, draft));
 
     addCheck("Allow skip", draft.allowSkip === true, v => draft.allowSkip = v,
       { key: "allowSkip", title: "Allow skip (move on without answering)" });
@@ -212,10 +189,8 @@ const quizTemplate = {
 
   // ☰ Menu pause (Đợt 363) — engine gọi onPause(true) lúc mở Menu / bảng công cụ,
   // onPause(false) lúc đóng. Đồng hồ Time limit là timer RIÊNG của template (không
-  // đi qua đồng hồ chung) nên phải tự đóng băng; xem `quizPauseHandlers` ở đầu file.
-  onPause(paused) {
-    quizPauseHandlers.forEach(h => { try { if (paused) h.pause(); else h.resume(); } catch { /* mount đã dọn */ } });
-  },
+  // đi qua đồng hồ chung) nên phải tự đóng băng — core/time-limit.js giữ tập đồng hồ.
+  onPause(paused) { pauseTimeLimits(paused); },
 
   mount(root, activity, ui) {
     const opt = activity.options || {};
@@ -228,11 +203,6 @@ const quizTemplate = {
     // thì nó hiện ra như "game không lên".
     let pendingPenalty = 0;
     const allowSkip = opt.allowSkip === true;                                // move on without answering (default off)
-    // ⭐⭐ TIME LIMIT (Đợt 363) — giây cho mỗi câu; null = ∞ (thanh không dựng, đồng hồ
-    // không chạy, mọi thứ y như trước đợt này).
-    const timeLimitS = normTimeLimit(opt.timeLimit);
-    const tlOn = timeLimitS != null;
-    const tlTotalMs = tlOn ? timeLimitS * 1000 : 0;
 
     // ----- FIGHT MODE (12/8/2026, trial) — this play is one of two boards
     // racing. `_fight` is put here by core/fight.js; everything below falls
@@ -291,14 +261,16 @@ const quizTemplate = {
       return o ? { chosen: Number.isInteger(o.c) ? o.c : null, correct: typeof o.k === "boolean" ? o.k : null, timedOut: o.t === true }
                : { chosen: null, correct: null, timedOut: false };
     });
-    // TIME LIMIT (Đợt 363) — ms đã TIÊU của từng câu. Cộng dồn theo CÂU, không theo
-    // lượt xem (cùng luật với đồng hồ lượt của engine): quay lại câu chưa trả lời
-    // bằng ‹ thì đồng hồ chạy tiếp từ chỗ còn lại, không nạp lại từ đầu.
-    const tlUsed = questions.map((_, qi) => (kp && Array.isArray(kp.tl) ? Math.max(0, Number(kp.tl[qi]) || 0) : 0));
-    let tlId = null;        // ticker 50ms, chỉ tồn tại khi tlOn
-    let tlLast = 0;         // performance.now() của nhịp trước (đồng hồ kiểu DELTA)
-    let tlPaused = false;   // ☰ Menu / bảng công cụ đang mở (qua tpl.onPause)
-    let tlBeepAtMs = Infinity;   // Đợt 364 — mốc ms-còn-lại đã tích gần nhất (∞ = chưa tích câu này)
+    // ⭐⭐ TIME LIMIT (Đợt 363 · Đợt 494 dời sang core/time-limit.js) — ms đã TIÊU của
+    // từng câu, cộng dồn theo CÂU: quay lại câu chưa trả lời bằng ‹ thì đồng hồ chạy
+    // tiếp từ chỗ còn lại. `tl.on === false` (∞) ⇒ không dựng gì, y như trước đợt này.
+    // Chỉ tính khi em thật sự trả lời được — xem tlBusy() bên dưới; hết giờ ⇒
+    // roundTimeUp(), ĐÚNG con đường "hết giờ = sai" Đợt 174.
+    const tl = createTimeLimit({
+      seconds: opt.timeLimit, count: questions.length, used: kp && kp.tl,
+      getIndex: () => index, isBusy: () => tlBusy(), onTimeUp: () => roundTimeUp(),
+      className: "aw-quiz-tl"
+    });
     let index = 0;
     let finished = false;
     let autoTimer = null;   // pending "auto game complete" timer
@@ -346,24 +318,10 @@ const quizTemplate = {
     const answersRow = el("div", "aw-quiz-answers");
     // ⭐⭐ TIME LIMIT (Đợt 363) — hàng [số giây][thanh] nằm GIỮA câu hỏi và các ô đáp
     // án (thanh mang `margin-top:auto`, ô đáp án theo sau — xem quiz.css `.has-tl`).
-    // Dựng MỘT LẦN như card/tiles; sang câu chỉ vẽ lại số, không dựng lại.
-    let tlRow = null, tlNum = null, tlFill = null, tlProbe = null;
-    if (tlOn) {
-      tlRow = el("div", "aw-quiz-tl");
-      tlNum = el("span", "aw-quiz-tl-num");
-      const tlBar = el("div", "aw-quiz-tl-bar");
-      tlFill = el("div", "aw-quiz-tl-fill");
-      tlBar.append(tlFill);
-      // ⭐ Đợt 364 (thầy: cụm số + thanh "có lúc hơi chưa cân đối") — ô số từng có
-      // `min-width` cố định + `text-align:right`, nên với số ngắn ("8,59") có một
-      // khoảng TRỐNG VÔ HÌNH bên trái: cụm vẫn cân theo khung nhưng MẮT thấy lệch.
-      // Nay ô số rộng ĐÚNG BẰNG số dài nhất có thể của giới hạn này ("88,88" hay
-      // "8,88"), đo bằng một bản nháp ẩn cùng font/cỡ (đo lại trong fitNow() vì cỡ
-      // chữ theo --aw-u), và cả cụm được đặt đúng mép khối ô đáp án — xem fitNow().
-      tlProbe = el("span", "aw-quiz-tl-num aw-quiz-tl-probe", (timeLimitS >= 10 ? "88" : "8"));
-      tlProbe.append(el("span", "aw-quiz-tl-dec", ",88"));
-      tlProbe.setAttribute("aria-hidden", "true");
-      tlRow.append(tlNum, tlBar, tlProbe);
+    // Dựng MỘT LẦN như card/tiles; sang câu chỉ vẽ lại số, không dựng lại. Cụm được
+    // đặt đúng mép khối ô đáp án — xem fitNow() (Đợt 364).
+    const tlRow = tl.row;
+    if (tl.on) {
       card.classList.add("has-tl");
       card.append(questionEl, tlRow, answersRow);
     } else {
@@ -396,7 +354,7 @@ const quizTemplate = {
       thuTu: questions.map(q => goc.indexOf(q.src)),
       dapAn: questions.map(q => q.answers.map(a => q.src.answers.indexOf(a))),
       st: state.map(x => ({ c: x.chosen, k: x.correct, t: x.timedOut })),
-      tl: tlUsed.map(x => Math.round(x))
+      tl: tl.used()
     }));
     // ⭐⭐⭐ Đợt 266 — vế "clip còn đang đọc" ĐI RIÊNG qua ui.setVoiceGuard, không
     // nằm trong idleGuard nữa: trong Fight chỉ bàn 0 có <audio> thật (core/fight.js
@@ -412,12 +370,12 @@ const quizTemplate = {
     ui.setRoundTimeout?.(roundTimeUp);
 
     // =============================================================
-    // ⭐⭐ TIME LIMIT (Đợt 363) — đồng hồ MỖI CÂU của riêng Quiz, mọi mode
+    // ⭐⭐ TIME LIMIT (Đợt 363) — đồng hồ MỖI CÂU, mọi mode (bộ máy: core/time-limit.js)
     // =============================================================
     // Đồng hồ kiểu DELTA (core/HUONG DAN CORE.md, onPause kiểu 2): mỗi nhịp cộng
-    // `now - tlLast` vào `tlUsed[index]` — nhưng CHỈ khi em thật sự có thể trả lời.
+    // quãng vừa qua vào giờ đã tiêu của câu — nhưng CHỈ khi tlBusy() trả false.
     // Lúc không thể (đang trượt sang câu, Menu mở, câu đã chốt, bàn bị trọng tài khoá,
-    // clip đang đọc) thì `tlLast` vẫn được dời lên nên quãng ấy KHÔNG tính — cùng
+    // clip đang đọc) thì quãng ấy KHÔNG tính — cùng
     // câu hỏi mà idleGuard của Time cost trả lời: "em có thể hành động lúc này không?".
     // Hết giờ ⇒ `roundTimeUp()` — ĐÚNG con đường "hết giờ = sai" Đợt 174 đã có, không
     // viết luật thứ hai (điểm trừ, mất tim, auto next, Fight báo trọng tài đều ở đó).
@@ -436,69 +394,9 @@ const quizTemplate = {
       return false;
     }
     function tlBusy() {
-      return tlPaused || animating || finished || ending || fightLocked() ||
+      return animating || finished || ending || fightLocked() ||
         settled(state[index]) || voiceBusy();
     }
-    function tlPaint() {
-      if (!tlOn || !tlFill) return;
-      const leftMs = Math.max(0, tlTotalMs - (tlUsed[index] || 0));
-      const pct = (leftMs / tlTotalMs) * 100;
-      tlFill.style.width = pct + "%";
-      // Cùng ngôn ngữ xanh→cam→đỏ của `.aw-roundbar-fill` / Miss wait: MỘT cách nói
-      // "sắp hết giờ" cho cả app. Mốc theo %, vì 1..20s thì mốc giây cố định vô nghĩa.
-      tlRow.classList.toggle("is-orange", pct <= 50 && pct > 20);
-      tlRow.classList.toggle("is-red", pct <= 20);
-      // Số giây kiểu "7,45" (giây + phần trăm nhỏ) — cùng dáng đồng hồ lượt Đợt 176.
-      // Tính từ ms NGUYÊN, không từ float giây (bẫy `,39` đã ghi trong HUONG DAN CORE).
-      const ms = Math.round(leftMs);
-      const whole = Math.floor(ms / 1000);
-      const cents = Math.floor((ms % 1000) / 10);
-      tlNum.textContent = String(whole);
-      tlNum.append(el("span", "aw-quiz-tl-dec", "," + String(cents).padStart(2, "0")));
-    }
-    function tlTick() {
-      const now = performance.now();
-      const dt = now - tlLast;
-      tlLast = now;
-      if (tlBusy()) return;                 // quãng này không tính, và số đã đứng yên
-      tlUsed[index] = (tlUsed[index] || 0) + dt;
-      if (tlUsed[index] >= tlTotalMs) {
-        tlUsed[index] = tlTotalMs;
-        tlPaint();
-        roundTimeUp();                      // hết giờ = sai, đúng đường Đợt 174
-        return;
-      }
-      tlPaint();
-      tlBeep(tlTotalMs - tlUsed[index]);
-    }
-    // ⭐ Đợt 364 — TÍCH DỒN DẬP 5 GIÂY CUỐI (thầy). Mốc theo ms CÒN LẠI, không theo
-    // nhịp ticker: 5 s → 1 s tích mỗi 500 ms, giây cuối mỗi 250 ms, cao dần (xem
-    // quizSound.tick). `tlBeepAtMs` là mốc đã tích gần nhất — reset ở applyQuestion()
-    // nên quay lại câu cũ bằng ‹ thì tích lại từ đúng chỗ còn lại, không dồn một tràng.
-    // ⚠️ Trong Fight hai bàn cùng trang cùng đếm ⇒ khử trùng bằng dấu thời gian cấp
-    // module (`tlBeepStamp`): hai bàn tích cùng mốc thì chỉ một tiếng kêu.
-    function tlBeep(leftMs) {
-      if (leftMs > TL_BEEP_FROM_MS) return;
-      const step = leftMs > 1000 ? 500 : 250;
-      if (tlBeepAtMs - leftMs < step) return;   // ∞ − x là ∞ ⇒ lần đầu luôn qua
-      // Mốc lượng tử hoá (mốc TRÊN gần nhất) để hai bàn Fight lệch nhau vài ms ra
-      // CÙNG một mốc, và tiếng kế đúng `step` sau đó.
-      tlBeepAtMs = Math.ceil(leftMs / step) * step;
-      const now = performance.now();
-      if (now - tlBeepStamp < 120) return;
-      tlBeepStamp = now;
-      quizSound.tick(1 - leftMs / TL_BEEP_FROM_MS);
-    }
-    function tlStart() {
-      if (!tlOn || tlId) return;
-      tlLast = performance.now();
-      tlId = setInterval(tlTick, 50);       // 20Hz: số phần trăm không giật (bài học Đợt 176)
-    }
-    function tlStop() { if (tlId) clearInterval(tlId); tlId = null; }
-    // ☰ Menu pause — chỉ đổi cờ; nhịp kế tiếp thấy cờ là bỏ qua quãng đó. Không cần
-    // clearInterval/dịch hạn vì đồng hồ tính theo DELTA (kiểu 2 trong HUONG DAN CORE).
-    const tlPauseHandler = { pause: () => { tlPaused = true; }, resume: () => { tlPaused = false; } };
-    if (tlOn) quizPauseHandlers.add(tlPauseHandler);
 
     // ⭐ Đợt 469 — làm tiếp: vào câu CHƯA làm đầu tiên kể từ câu đang đứng lúc rời (hết thì câu chưa làm bất kỳ).
     if (kp) {
@@ -511,7 +409,7 @@ const quizTemplate = {
     ui.setScore(scoreNow());
     updateNav();
     renderLives();
-    tlStart();          // TIME LIMIT (Đợt 363) — câu 1 bắt đầu tính giờ từ đây
+    tl.start();         // TIME LIMIT (Đợt 363) — câu 1 bắt đầu tính giờ từ đây
     // ⭐ Đợt 469 — lượt cũ đã làm HẾT mà chưa kịp tới màn kết thúc (tải lại đúng lúc chờ) ⇒ kết thúc luôn.
     if (kp && state.every(settled) && !fightCtl) autoTimer = setTimeout(() => finish("complete"), 700);
 
@@ -671,8 +569,7 @@ const quizTemplate = {
       // TIME LIMIT (Đợt 363) — vẽ ngay số/thanh của CÂU NÀY: nhịp ticker bỏ qua lúc
       // `animating` nên không có dòng này thì thanh còn mang số của câu cũ suốt 190ms
       // trượt vào.
-      tlBeepAtMs = Infinity;   // Đợt 364 — câu mới (hay quay lại câu cũ) tích lại từ chỗ còn lại
-      tlPaint();
+      tl.enterItem();   // Đợt 364 — vẽ số của câu này + tích lại từ chỗ còn lại
     }
 
     // Apply a lock change WITHOUT rebuilding anything — used by the fight
@@ -762,8 +659,8 @@ const quizTemplate = {
       //    b) bề rộng cụm = từ mép TRÁI ô đầu tới mép PHẢI ô cuối của HÀNG TRÊN
       //       (hàng 3 ô co 30 % mỗi ô nên khối hẹp hơn card; hàng 4 ô thì đầy card),
       //       cụm tự cân giữa nhờ margin auto ⇒ trùng mép khối ô ở mọi bố cục.
-      if (tlRow && tlProbe) {
-        tlNum.style.width = Math.ceil(tlProbe.offsetWidth) + "px";
+      if (tl.on) {
+        tl.fitNum();
         const per = Math.max(1, Number(answersRow.style.getPropertyValue("--per-row")) || tiles.length);
         const first = tiles[0], last = tiles[Math.min(tiles.length, per) - 1];
         if (first && last) {
@@ -1207,7 +1104,7 @@ const quizTemplate = {
       if (finished) return;
       finished = true;
       clearAutoTimer();
-      tlStop();   // TIME LIMIT (Đợt 363) — no ticker may outlive its play (Đợt 112/131 ghost-clock lesson)
+      tl.stop();   // TIME LIMIT (Đợt 363) — no ticker may outlive its play (Đợt 112/131 ghost-clock lesson)
       // Đợt 364 — nhạc 5-giây-cuối của đồng hồ tổng (6 s+) không được kêu tiếp sau khi
       // ván đã xong: thầy nghe nó chạy thừa trên màn Game over + leaderboard.
       quizSound.stopWarning();
@@ -1251,8 +1148,7 @@ const quizTemplate = {
       cancelAnimationFrame(fitRaf);
       if (autoTimer) clearTimeout(autoTimer);
       if (heartTimer) clearTimeout(heartTimer);
-      tlStop();                                    // TIME LIMIT (Đợt 363)
-      quizPauseHandlers.delete(tlPauseHandler);    // BẮT BUỘC — kẻo lượt sau gọi handler của ván đã dọn
+      tl.destroy();   // TIME LIMIT (Đợt 363/494) — dừng + rời tập Menu pause, kẻo lượt sau gọi đồng hồ của ván đã dọn
       voicePlayer.stop();
       if (ui.livesSlot) ui.livesSlot.innerHTML = "";   // hearts must not survive into the next game
     };

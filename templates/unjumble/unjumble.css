@@ -150,6 +150,15 @@
   font-size: calc(calc(2.9 * var(--aw-u)) * var(--fit));
 }
 
+/* ⭐⭐ TIME LIMIT (Đợt 494) — hàng [số giây][thanh] dùng chung (.aw-tl* trong
+   core/app.css): ngay dưới câu gợi ý, trên bảng chữ. Nằm trên ảnh bảng trắng nên
+   z-index như .aw-unj-clue; unjumble.js render() cộng chiều cao nó vào autoFit. */
+.aw-unj-tl {
+  z-index: 1;
+  width: 80%;
+  margin: 0 auto calc(0.6 * var(--aw-u));
+}
+
 /* ---------- the words board (handwriting on ruled lines) ---------- */
 .aw-unj-board {
   --unj-row: calc(calc(8.4 * var(--aw-u)) * var(--fit));   /* rows a bit closer together (teacher, Đợt 38) */

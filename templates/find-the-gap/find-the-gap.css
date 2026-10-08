@@ -106,6 +106,17 @@
 .aw-ftg-listen.is-playing svg { display: none; }
 .aw-ftg-listen.is-playing .aw-ftg-wave { display: flex; }
 
+/* ⭐⭐ TIME LIMIT (Đợt 494) — hàng [số giây][thanh] dùng chung (.aw-tl* trong
+   core/app.css), giữa câu nghe và đường kẻ. Vùng câu (.aw-ftg-top, cao cố định)
+   nhường lại đúng phần nó chiếm (3 + 0,5 aw-u) để vùng trả lời / bàn phím không
+   bị đẩy xuống; câu dài tự co qua --sfit như cũ (find-the-gap.js fitNow). */
+.aw-ftg-tl {
+  width: 70%;
+  margin: 0 auto calc(0.5 * var(--aw-u));
+}
+.aw-ftg-card.has-tl .aw-ftg-top { height: calc(17.5 * var(--aw-u)); }
+.aw-ftg-card.is-type.has-tl .aw-ftg-top { height: calc(12.5 * var(--aw-u)); }
+
 .aw-ftg-divider {
   flex: 0 0 auto;
   height: 0;
