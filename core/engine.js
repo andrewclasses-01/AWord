@@ -2642,21 +2642,24 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     if (!activity._mistakes && !hwPreset && typeof session.lamTiepNhan === "function") { try { nhan = session.lamTiepNhan(); } catch (e) { nhan = null; } }
     b.append(el("span", "aw-startbtn-ic", icons.practiceBig), el("span", "aw-startbtn-label", nhan ? "CONTINUE" : "START"));
     wrap.append(b);
+    let tagLT = null;
     if (activity._mistakes) wrap.append(el("div", "aw-ready-mtag", "MISTAKES ONLY"));
-    else if (nhan) wrap.append(el("div", "aw-ready-mtag", (nhan.daLam | 0) + " / " + (nhan.tong | 0) + " DONE"));
+    else if (nhan) wrap.append(tagLT = el("div", "aw-ready-mtag", (nhan.daLam | 0) + " / " + (nhan.tong | 0) + " DONE"));
     // ⭐ Đợt 489 — chưa có lượt để làm tiếp (vd trang/tab khác cùng bài còn sống lúc mở) ⇒ hỏi lại mỗi 2 s khi còn ở màn
     // READY; tab kia đóng ⇒ nút tự thành CONTINUE (play.js `lamTiepNhan` xét lại; `playLog.start` vẫn hỏi lần cuối lúc bấm).
-    if (!nhan && !activity._mistakes && !hwPreset && typeof session.lamTiepNhan === "function") {
+    // ⭐ Đợt 495 — hỏi lại CẢ KHI đang ghi CONTINUE: bản giữ trên MÁY CHỦ tới sau (1–2 s) có thể đổi ý — lượt đã xong ở máy
+    // khác ⇒ về START; bản máy chủ mới hơn ⇒ số "x / n DONE" mới. Nhãn luôn khớp thứ sẽ chạy khi bấm.
+    if (!activity._mistakes && !hwPreset && typeof session.lamTiepNhan === "function") {
       const hoiLai = setInterval(() => {
         if (playStarted || torndown || !b.isConnected) { clearInterval(hoiLai); return; }
         let n2 = null;
         try { n2 = session.lamTiepNhan(); } catch (e) { n2 = null; }
-        if (!n2) return;
-        clearInterval(hoiLai);
+        if (!n2 === !nhan && (!n2 || ((n2.daLam | 0) === (nhan.daLam | 0) && (n2.tong | 0) === (nhan.tong | 0)))) return;
         nhan = n2;
         const nhanEl = b.querySelector(".aw-startbtn-label");
-        if (nhanEl) nhanEl.textContent = "CONTINUE";
-        wrap.append(el("div", "aw-ready-mtag", (n2.daLam | 0) + " / " + (n2.tong | 0) + " DONE"));
+        if (nhanEl) nhanEl.textContent = n2 ? "CONTINUE" : "START";
+        if (tagLT) { tagLT.remove(); tagLT = null; }
+        if (n2) wrap.append(tagLT = el("div", "aw-ready-mtag", (n2.daLam | 0) + " / " + (n2.tong | 0) + " DONE"));
       }, 2000);
     }
     practiceBtn = b;
@@ -3246,7 +3249,19 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   }
   // ⭐ Đợt 383 — MỘT nút: chế độ do ván quyết, không do em chọn.
   const hwModeCuaVan = () => activity._mistakes ? "practice" : "submit";
-  if (practiceBtn) press(practiceBtn, () => { hwMode = hwModeCuaVan(); startPressed(); });
+  // ⭐ Đợt 495 — play.js còn đang hỏi MÁY CHỦ có lượt dở để làm tiếp không (`session.choLamTiep` = Promise, ≤ 4 s) ⇒ nút
+  // tạm khoá, có câu trả lời rồi mới vào ván — em bấm START ngay khi trang vừa mở không bị ra ván mới oan.
+  if (practiceBtn) press(practiceBtn, () => {
+    let cho = null;
+    try { cho = !activity._mistakes && typeof session.choLamTiep === "function" ? session.choLamTiep() : null; } catch (e) { cho = null; }
+    if (!cho) { hwMode = hwModeCuaVan(); startPressed(); return; }
+    practiceBtn.disabled = true; practiceBtn.classList.add("is-cho");
+    Promise.resolve(cho).catch(() => {}).then(() => {
+      if (torndown || playStarted) return;
+      practiceBtn.disabled = false; practiceBtn.classList.remove("is-cho");
+      hwMode = hwModeCuaVan(); startPressed();
+    });
+  });
   // ⭐ Đợt 366 — lối vào thẳng ván (Start again · Start with mistakes trên màn kết thúc): chờ cổng
   // chuẩn bị (Đợt 122) xong rồi tự START. Đợt 383: `hwPreset` chỉ còn nghĩa "tự bấm START".
   if (session && hwPreset) {

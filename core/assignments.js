@@ -1052,6 +1052,82 @@ export function beatPlayLog({ code, id, name, ma, mode, again, mistakes, score, 
   return xinVe(String(ma).slice(0, 60), 3000).then(gui);
 }
 
+// ═══════════ LƯỢT DỞ GIỮ TRÊN MÁY CHỦ `lamTiep` (Đợt 495, thầy chốt 08/10/2026) ═══════════
+// Đợt 469 chỉ cất lượt dở trong localStorage của máy em. Đo 08/10: BẢO NAM · HÀ VY · TƯỜNG VY (NTK9) mở bài trên trình duyệt
+// KHÔNG GIỮ kho máy (lt = "khong-co|mo:khong-co|ls0k" mọi lần mở, kể cả mở lại sau 1,5 phút — nghi trình duyệt trong Zalo /
+// ẩn danh) ⇒ chưa lần nào được CONTINUE, lượt nào cũng BỎ DỞ. Nay lượt đang giữ có thêm một bản trên máy chủ:
+//
+//   lamTiep/{ma}/bai/{code}   CHỈ ĐÚNG EM (vé đăng nhập, claim `ma`) đọc/ghi/xoá; thầy đọc được. Một em một bài một tài liệu.
+//
+// ⇒ máy nào (kể cả máy khác, Zalo, ẩn danh) mở bài cũng thấy CONTINUE. Trạng thái ván (`tpl`) cất dạng CHUỖI JSON `tplJ`
+// (luật chỉ cần đo độ dài). Không vé (chơi ngoài myLesson / phụ huynh) ⇒ không gọi, chỉ còn bản trên máy như cũ.
+// Luật đăng TRƯỚC bằng myLesson app `tools/dang-luat-lam-tiep.js`.
+const LT_CHUOI = ["vet", "nhapId", "logId", "lt", "tplJ"];
+const LT_SO = ["createdAt", "batDau", "activeMs", "timeCost", "gioMs", "luc"];
+export const LT_TRAN_KEEPALIVE = 56000;   // trình duyệt chỉ cho ~64 KB cho mọi gói keepalive đang chờ
+function urlLuotGiu(code, ma) {
+  const pid = firebaseConfig && firebaseConfig.projectId, key = firebaseConfig && firebaseConfig.apiKey;
+  if (!pid || !key || !code || !ma) return "";
+  return `https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents/lamTiep/` +
+    `${encodeURIComponent(String(ma).slice(0, 60))}/bai/${encodeURIComponent(String(code))}?key=${encodeURIComponent(key)}`;
+}
+// Lượt đang giữ trên máy chủ: Promise<{...} | null (chắc chắn KHÔNG có) | undefined (không hỏi được: không vé, mạng, luật)>.
+export function docLuotGiu(code, ma) {
+  const url = urlLuotGiu(code, ma);
+  if (!url) return Promise.resolve(undefined);
+  return xinVe(String(ma).slice(0, 60), 4000).then(ve => {
+    if (!ve) return undefined;
+    return fetch(url, { headers: { Authorization: "Bearer " + ve }, cache: "no-store" }).then(r => {
+      if (r.status === 404) return null;
+      if (!r.ok) return undefined;
+      return r.json().then(j => {
+        const f = (j && j.fields) || {}, o = {};
+        LT_CHUOI.forEach(k => { if (f[k] && typeof f[k].stringValue === "string") o[k] = f[k].stringValue; });
+        LT_SO.forEach(k => { const v = f[k]; if (v && (v.integerValue != null || v.doubleValue != null)) o[k] = Number(v.integerValue != null ? v.integerValue : v.doubleValue); });
+        return o;
+      });
+    });
+  }).catch(() => undefined);
+}
+// Ghi đè lượt đang giữ. `s` = bản ghi play.js cất vào localStorage (tpl là object). Promise<boolean>, không reject.
+export function ghiLuotGiu(code, ma, s, { keepalive = false } = {}) {
+  const url = urlLuotGiu(code, ma);
+  if (!url || !s || !s.tpl) return Promise.resolve(false);
+  let tplJ = "";
+  try { tplJ = JSON.stringify(s.tpl); } catch (e) { return Promise.resolve(false); }
+  const fields = { ma: { stringValue: String(ma).slice(0, 60) } };
+  LT_CHUOI.forEach(k => { const v = k === "tplJ" ? tplJ : s[k]; if (v != null && v !== "") fields[k] = { stringValue: String(v).slice(0, k === "tplJ" ? 900000 : 120) }; });
+  LT_SO.forEach(k => {
+    const raw = k === "luc" ? now() : s[k];
+    if (raw == null || raw === "") return;   // gioMs null (lượt trước Đợt 492) ⇒ bỏ trường, KHÔNG ghi thành 0
+    const v = Number(raw);
+    if (Number.isFinite(v)) fields[k] = { integerValue: String(Math.max(0, Math.round(v))) };
+  });
+  const body = JSON.stringify({ fields });
+  if (keepalive && body.length > LT_TRAN_KEEPALIVE) keepalive = false;   // quá cỡ keepalive ⇒ gửi thường (tab còn sống thì vẫn tới)
+  const gui = ve => {
+    if (!ve) return false;
+    try {
+      return fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: "Bearer " + ve }, body, keepalive })
+        .then(r => !!r.ok).catch(() => false);
+    } catch (e) { return false; }
+  };
+  if (keepalive) return Promise.resolve(gui(veConHan(String(ma).slice(0, 60))));
+  return xinVe(String(ma).slice(0, 60), 3000).then(gui);
+}
+// Lượt xong / em tự bỏ / đề đổi ⇒ xoá bản trên máy chủ. Promise<boolean>.
+export function xoaLuotGiu(code, ma, { keepalive = false } = {}) {
+  const url = urlLuotGiu(code, ma);
+  if (!url) return Promise.resolve(false);
+  const gui = ve => {
+    if (!ve) return false;
+    try { return fetch(url, { method: "DELETE", headers: { Authorization: "Bearer " + ve }, keepalive }).then(r => !!r.ok).catch(() => false); }
+    catch (e) { return false; }
+  };
+  if (keepalive) return Promise.resolve(gui(veConHan(String(ma).slice(0, 60))));
+  return xinVe(String(ma).slice(0, 60), 3000).then(gui);
+}
+
 // Deliver whatever previous visits still owe — run on every play.html load,
 // in the background, never blocking anything. Sequential on purpose: these are
 // leftovers on a possibly-bad connection, not a race.

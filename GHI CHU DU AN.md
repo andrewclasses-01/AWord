@@ -545,6 +545,26 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
+
+## Đợt 495 (08/10/2026) — ⭐⭐ LƯỢT DỞ GIỮ TRÊN MÁY CHỦ (đổi máy / trình duyệt không giữ kho vẫn CONTINUE) + nhịp phút mang SỐ CÂU ĐÚNG · phiên ANDREW CLASSES
+**Thầy:** ảnh hồ sơ BẢO NAM NTK9 L22 — "vẫn có lượt bỏ dở dù đã nhiều phiên chặn". **Điều tra (chỉ đọc practiceLog 6–8/10):** 8/10 sáng 7 lượt BT2
+`ggscqv` dở, lượt nào `lt` cũng `khong-co|mo:khong-co|ls0k` (kho máy GẦN RỖNG mỗi lần mở, kể cả mở lại sau 1,5 phút; không `|luu!`) ⇒ trình duyệt
+XOÁ localStorage giữa các lần mở (nghi Zalo/ẩn danh). 9/10 lượt dở mất nhịp cuối (updatedAt − createdAt tròn phút) ⇒ bảng ghi 0/30 dù làm 13 phút.
+Cùng kiểu: HÀ VY, TƯỜNG VY. Toàn hệ 7–8/10: 84 lượt `>tiep` của 44 em ⇒ CONTINUE chạy đúng ở máy giữ kho. Thầy chốt: **giữ lượt trên máy chủ**, mở máy khác vẫn tiếp tục.
+**Đã làm:**
+- `core/assignments.js` `docLuotGiu / ghiLuotGiu / xoaLuotGiu` — REST + VÉ em, kho `lamTiep/{ma}/bai/{code}` (một em một bài một tài liệu, `tplJ` = trạng thái ván chuỗi JSON).
+  Luật: myLesson app `tools/dang-luat-lam-tiep.js` (ĐĂNG 08/10 ruleset `74309f93…`, lùi về `12a9ff21…`; --kiem 18/18).
+- `play.js`: mở trang ⇒ hỏi máy chủ (1 lượt đọc); bản máy chủ mới hơn / máy không có ⇒ chép vào kho máy (đường cũ xetLamTiep/CONTINUE dùng y nguyên,
+  `lt` thêm `|mc`); máy chủ báo KHÔNG CÒN mà bản máy đã từng lên (`mc`) ⇒ bỏ bản máy (lượt đã xong ở máy khác). `luuLuot` gửi máy chủ tối đa 15 s/lần,
+  tab ẩn / pagehide gửi ngay (keepalive khi gói < 56 KB). Lượt xong / em tự bỏ ⇒ xoá bản máy chủ. Nhịp phút + pagehide mang `score` = số câu đúng tới lúc đó.
+- `core/engine.js` màn READY: hỏi lại `lamTiepNhan` CẢ KHI đang ghi CONTINUE (nhãn đổi theo bản máy chủ, hai chiều); bấm START lúc còn đang hỏi máy chủ
+  ⇒ chờ `session.choLamTiep()` (≤ 4 s) rồi mới vào ván.
+**Thử thật** (bài giao thử `ztlg495` chép từ ggscqv + tài khoản em thử `ZTEST495`, trang mẹ giả cấp vé `scratch/dot495/me.html` cổng 8135 — đã dọn):
+làm 3 câu ⇒ kho `lamTiep` có bản; XOÁ kho máy + mở lại ⇒ START→CONTINUE 1/30 sau ~1,5 s, ván dựng đúng câu 2, đồng hồ chạy tiếp; làm hết ⇒ nộp 21/30,
+bản máy chủ bị xoá, practiceLog CÙNG mã lượt `…|mc>tiep` DONE; nhịp phút lượt dở ghi 3/0 (trước đây 0/0); máy cũ còn bản `mc` mà máy chủ đã xoá ⇒ CONTINUE→START;
+bấm START ngay khi kho máy rỗng (nhãn còn START) ⇒ vẫn làm tiếp đúng lượt (2/30).
+⬜ Mở 2 máy CÙNG LÚC: thầy muốn "đăng nhập máy 2 là đăng xuất máy 1" — việc của myLesson, chưa làm (đang khảo sát).
+
 
 ## Đợt 494 (08/10/2026) — ⭐⭐ TIME LIMIT DÙNG CHUNG: Type the answer · Unjumble · Find the gap · Anagram + Quiz lên 30 s
 **Thầy:** "các template khác cũng có Time limit tương tự (ví dụ type the answer)". Đã rà cả 21 template (bảng phân loại ở cuối mục).
