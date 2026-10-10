@@ -567,7 +567,8 @@ bật ⇒ CUỘN MƯỢT từ mép trên khung game xuống, tắt ⇒ cuộn ng
 nhỏ co theo; trả lời 1 câu ⇒ khung xem dựng lại (điểm 1, 2 of 6, đồng hồ chạy tiếp); bấm vào khung xem không ăn; tắt ⇒ viên cuộn lên mất. `play.html?g=q2p5e6&xem=1`
 THẬT + tpl thật (đọc lamTiep bằng khoá quản trị, CHỈ ĐỌC) ⇒ dựng đúng câu đang làm, đồng hồ 23:16 chạy tiếp, không lỗi console.
 ⚠️ Giới hạn: Quiz khôi phục nhảy tới câu CHƯA làm kế tiếp (thầy thấy câu em sắp làm, không thấy đáp án em vừa chọn); 5 template chưa lưu ván (balloon-pop, maze-chase,
-running-team, running-word, speaking-cards) ⇒ khung xem báo không có ván. ⬜ thầy thử thật (cần luật đăng + 2 repo live).
+running-team, running-word, speaking-cards) ⇒ khung xem báo không có ván.
+✅ PUSH `f517acf` + LIVE 5/5 (kiem-live) · web `88398ef` LIVE · luật quanSat ĐĂNG ruleset `457bda1f…` (--kiem 15/15). ⬜ thầy bấm XEM ở dòng ĐANG LÀM thật + em xác nhận thấy viên.
 
 ---
 
