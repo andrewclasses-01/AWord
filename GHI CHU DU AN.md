@@ -546,6 +546,31 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 496 (10/10/2026) — ⭐⭐ THẦY QUAN SÁT TRỰC TIẾP: viên "Thầy Andrew đang quan sát trực tiếp" TRONG khung game + CHẾ ĐỘ XEM của thầy (`?xem=1`) · phiên MSI
+**Thầy:** dashboard có dòng ĐANG LÀM (ảnh Chấn Phong QUIZ 09:53) — "có cách nào stream thẳng nội dung học sinh đang làm sang cho tôi xem". Rồi chốt: làm,
+bật cả cờ cho em biết thầy đang quan sát. Thiết kế qua 5 vòng mẫu (`D:\OTHERS\CLAUDE\myLesson - thiet ke thay dang quan sat\`, bản chốt `THIET KE CHOT.md`):
+viên NHỎ nằm TRONG khung game giữa thanh trên, nền TRẮNG, "Andrew" xanh ngọc #0E7C6E, ảnh thầy 24px với 2 vòng sóng ĐỎ, không LIVE, không logo, không màn chào;
+bật ⇒ CUỘN MƯỢT từ mép trên khung game xuống, tắt ⇒ cuộn ngược lên.
+**Cách làm (không quay màn hình — dựng lại ván từ trạng thái làm tiếp có sẵn):**
+- `quan-sat.js` MỚI (trang học sinh, KHÔNG core): `ngheQuanSat(code, khiDoi)` nghe `{type:'AWORD:QUAN_SAT', code, dang}` từ `VE_NGUON` ⇒ viên `.aw-qs` gắn vào
+  `.aw-stage-inner` (gắn lại mỗi 0,5 s khi ván dựng lại), canh tâm theo chữ đồng hồ (+3px vì Baloo), co theo cỡ khung (`--qs-k` = cao thanh trên/34, và co thêm nếu
+  khoảng đồng hồ↔điểm hẹp; sàn 0,55), ẩn = translateY ra ngoài mép trên (`.aw-stage` overflow:hidden cắt); báo `AWORD:QS_SAN` để trang mẹ gửi trạng thái hiện tại.
+  `xemVan(app, assignment)` = chế độ xem: tắt tiếng (sound.toggle + mọi media muted), tấm chắn chuột/phím, nghe `{type:'AWORD:XEM_TT', code, tt:{tplJ,timeCost,gioMs,activeMs}}`
+  ⇒ `startGame(..., {hwPreset:'submit', session: GIẢ})` với `layLamTiep` trả đúng tpl (đường LÀM TIẾP Đợt 469), `playLog:null`, submit giả; `html.aw-xem` ẩn READY.
+  Trạng thái mới (tplJ khác) ⇒ dựng lại ván. Không có ván ⇒ "Em không có ván đang làm dở".
+- `play.js`: `&xem=1` ⇒ KHÔNG flushOutbox, tải template rồi `xemVan` (không vé, không chiếm trang, không lamTiep, không bo-cuoc). Bài giao thường: sau `startGame`
+  gọi `ngheQuanSat` (chỉ em có mã, không phụ huynh) — đang bị quan sát ⇒ `nhipMc()` 1 s thay 15 s (`MC_NHIP_XEM_MS`) + lúc bật gửi ngay `chupLuot(false)`.
+- `core/assignments.js`: `export const VE_NGUON` (quan-sat.js dùng chung danh sách origin được tin). `play.html` + modulepreload `quan-sat.js`. Ảnh `core/assets/thay-quan-sat.jpg` (96px).
+**Đi cùng:** myLesson web v1.294.0 (dashboard nút XEM ở dòng ĐANG LÀM ⇒ khung xem; bai.html nghe cờ `quanSat/{ma}`), luật `quanSat/{ma}` myLesson app
+`tools/dang-luat-quan-sat.js` (chỉ thầy ghi/xoá, `luc == request.time`; đúng em + thầy đọc).
+**Thử (máy, không đụng kho):** trang mẹ giả cổng 8135 + `scratch/qs-thu.html` (Quiz mẫu, khung em ⇄ khung xem): bật ⇒ viên cuộn xuống đúng giữa thanh trên, khung
+nhỏ co theo; trả lời 1 câu ⇒ khung xem dựng lại (điểm 1, 2 of 6, đồng hồ chạy tiếp); bấm vào khung xem không ăn; tắt ⇒ viên cuộn lên mất. `play.html?g=q2p5e6&xem=1`
+THẬT + tpl thật (đọc lamTiep bằng khoá quản trị, CHỈ ĐỌC) ⇒ dựng đúng câu đang làm, đồng hồ 23:16 chạy tiếp, không lỗi console.
+⚠️ Giới hạn: Quiz khôi phục nhảy tới câu CHƯA làm kế tiếp (thầy thấy câu em sắp làm, không thấy đáp án em vừa chọn); 5 template chưa lưu ván (balloon-pop, maze-chase,
+running-team, running-word, speaking-cards) ⇒ khung xem báo không có ván. ⬜ thầy thử thật (cần luật đăng + 2 repo live).
+
+---
+
 ## Đợt 495 (08/10/2026) — ⭐⭐ LƯỢT DỞ GIỮ TRÊN MÁY CHỦ (đổi máy / trình duyệt không giữ kho vẫn CONTINUE) + nhịp phút mang SỐ CÂU ĐÚNG · phiên ANDREW CLASSES
 **Thầy:** ảnh hồ sơ BẢO NAM NTK9 L22 — "vẫn có lượt bỏ dở dù đã nhiều phiên chặn". **Điều tra (chỉ đọc practiceLog 6–8/10):** 8/10 sáng 7 lượt BT2
 `ggscqv` dở, lượt nào `lt` cũng `khong-co|mo:khong-co|ls0k` (kho máy GẦN RỖNG mỗi lần mở, kể cả mở lại sau 1,5 phút; không `|luu!`) ⇒ trình duyệt

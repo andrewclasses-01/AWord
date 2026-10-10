@@ -661,7 +661,8 @@ function sweepDrafts() {
 // ⇒ bỏ khỏi outbox (không bao giờ giao được — thầy chốt 27/09: chơi ngoài myLesson không lên bảng lớp nữa).
 // ⛔ Vé sống 1 giờ: đừng cất vào localStorage/outbox; chỉ giữ trong bộ nhớ trang (`_ve`).
 // ⭐ Đợt 440 — + trang KIỂM TRA ĐẦU VÀO kiemtra.andrewclasses.com (cùng nw-phien.js cấp vé) + máy thử cổng 8135.
-const VE_NGUON = ["https://andrewclasses.com", "https://kiemtra.andrewclasses.com", "http://localhost:8134", "http://127.0.0.1:8134", "http://localhost:8135", "http://127.0.0.1:8135"];
+// Đợt 496 — export: quan-sat.js (thầy quan sát trực tiếp) cũng chỉ nhận tin từ ĐÚNG danh sách này.
+export const VE_NGUON = ["https://andrewclasses.com", "https://kiemtra.andrewclasses.com", "http://localhost:8134", "http://127.0.0.1:8134", "http://localhost:8135", "http://127.0.0.1:8135"];
 let _ve = null;                 // { ma, token, het(ms) }
 const _choVe = [];
 let _ngheVe = false;

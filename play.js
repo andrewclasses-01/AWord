@@ -31,6 +31,7 @@ import { ensureTemplate } from "./core/registry.js";
 import { gioChuan } from "./core/gio-chuan.js";   // Đợt 422 — mốc giờ theo máy chủ
 import { khoaLuot, docLuot, ghiLuot, xoaLuot, nhipSong, tabKhacDangLam, dauVet, trangKhacMo, chiemTrang } from "./core/lam-tiep.js";   // Đợt 469 — giữ lượt dở, mở lại làm tiếp · Đợt 490 — một bài một trang
 import { tiLeDaLam, ghiRoiVan, ghiXongVan, layNhacCho, hienNhac, dangMo, ghiDat100, daDat100, canKiemMayChu, ghiDaKiem } from "./bo-cuoc.js";   // Đợt 424 — "Start Again quá sớm"
+import { ngheQuanSat, xemVan } from "./quan-sat.js";   // Đợt 496 — thầy quan sát trực tiếp (viên trong khung game + chế độ xem)
 // No template is imported here on purpose. ensureTemplate() fetches the ONE
 // game this assignment uses, right before it starts — so a student on a phone
 // downloads one game, not the whole catalogue.
@@ -115,7 +116,9 @@ async function start() {
   // ⭐ Đợt 246 — deliver whatever an earlier visit still owes (a SUBMIT that
   // never got its confirmation before the tab died). Background, best-effort:
   // the outbox keeps anything that still fails.
-  flushOutbox().catch(() => {});
+  // ⭐ Đợt 496 — `&xem=1` = khung XEM của thầy (dashboard myLesson): KHÔNG ghi gì, kể cả outbox của máy thầy.
+  const laXem = new URLSearchParams(location.search).get("xem") === "1";
+  if (!laXem) flushOutbox().catch(() => {});
   const code = new URLSearchParams(location.search).get("g");
   if (!code) return showMessage("This link is incomplete", "Ask your teacher for the full link.");
 
@@ -162,6 +165,12 @@ async function start() {
   // Ghi vào scores / results / practiceLog để đổi TÊN em bên myStudent không làm điểm cũ "lạc":
   // myLesson khớp theo mã trước, tên sau. Link không có `ma` (chơi tự do) ⇒ chuỗi rỗng, không ghi.
   const ma = (q.get("ma") || "").trim().replace(/[^A-Za-z0-9_.-]/g, "").slice(0, 60);
+  if (laXem) {   // Đợt 496 — thầy xem ván em đang làm (quan-sat.js): tải game rồi chờ trạng thái từ dashboard
+    try { await ensureTemplate(assignment.activity.type); }
+    catch (e) { return showMessage("This game could not be opened", "Check your connection and open the link again.", true); }
+    app.innerHTML = "";
+    return xemVan(app, assignment, { ten: handed.slice(0, 40), lop });
+  }
   if (handed.length >= 2) {
     try { localStorage.setItem(REMEMBER_KEY, handed); } catch (e) { /* private mode: fine */ }
     return play(assignment, handed.slice(0, 40), lop, ma);
@@ -385,6 +394,10 @@ async function play(assignment, studentName, className, studentMa) {
   let mcCoBai = false;       // lúc mở trang máy chủ có bản giữ của bài này
   let mcHen = null, mcLan = 0, mcCho = null;   // hẹn gửi · lúc gửi gần nhất · bản chờ gửi
   const MC_NHIP_MS = 15000;  // gửi lên máy chủ tối đa 15 s một lần (lượt ghi Firestore), tab ẩn / rời trang gửi ngay
+  // ⭐ Đợt 496 — THẦY ĐANG QUAN SÁT (quan-sat.js): gửi sau MỖI câu, tối đa 1 s một lần ⇒ khung xem của thầy gần như tức thì.
+  const MC_NHIP_XEM_MS = 1000;
+  let biXem = () => false;
+  const nhipMc = () => (biXem() ? MC_NHIP_XEM_MS : MC_NHIP_MS);
   const lucCua = s => Number(s && (s.lc || s.luc)) || 0;
   let mcHoi = null;          // đang hỏi máy chủ (Promise) — engine chờ nó khi em bấm START sớm (session.choLamTiep)
   if (!dacBiet && ma) {
@@ -430,7 +443,7 @@ async function play(assignment, studentName, className, studentMa) {
       });
     };
     if (gap) { gui(true); return; }
-    const con = MC_NHIP_MS - (Date.now() - mcLan);
+    const con = nhipMc() - (Date.now() - mcLan);
     if (con <= 0) gui(false);
     else if (!mcHen) mcHen = setTimeout(() => { mcHen = null; gui(false); }, con);
   }
@@ -798,6 +811,16 @@ async function play(assignment, studentName, className, studentMa) {
       }
     }
   });
+  // ⭐⭐ Đợt 496 (thầy chốt 10/10/2026) — THẦY QUAN SÁT TRỰC TIẾP: trang mẹ báo cờ ⇒ viên "Thầy Andrew đang quan sát trực
+  // tiếp" cuộn xuống trong khung game + gửi trạng thái ván NGAY (bỏ hẹn 15 s đang chờ). Chỉ em có mã (không phụ huynh).
+  if (!dacBiet && ma) {
+    biXem = ngheQuanSat(assignment.code, dang => {
+      if (!dang) return;
+      if (mcHen) { clearTimeout(mcHen); mcHen = null; }
+      mcLan = 0;
+      chupLuot(false);
+    });
+  }
   // ⭐ Đợt 424 — lần trước em bỏ cuộc bằng tải lại / đóng tab tới ngưỡng ⇒ hiện tấm hướng dẫn ngay khi mở bài.
   if (!dacBiet) { try { const n = layNhacCho(khoaBC); if (n) hienNhac({ lan: n, coShow: coShowBC }); } catch (e) {} }
   // ⭐ Đợt 456 — đã đạt 100% ở MÁY KHÁC? Hỏi bảng điểm tốt nhất của máy chủ một lần cho mỗi act/máy (1 lượt đọc).
