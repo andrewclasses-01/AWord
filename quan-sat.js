@@ -148,7 +148,7 @@ export function xemVan(app, assignment, { ten = "", lop = "" } = {}) {
     w.firstChild.lastChild.textContent = phu || "";
     app.appendChild(w);
   };
-  let cuoi = "";
+  let cuoi = "", soLuot = 0;
   function dung(tt) {
     if (!tt || !tt.tplJ) {
       cuoi = "";
@@ -162,6 +162,34 @@ export function xemVan(app, assignment, { ten = "", lop = "" } = {}) {
     cuoi = tt.tplJ;
     const gio = Number.isFinite(Number(tt.gioMs)) ? Number(tt.gioMs) : (Number(tt.activeMs) || 0);
     let lay = { tpl, timeCost: Number(tt.timeCost) || 0, daChoiMs: Math.max(0, gio) };
+    // ⭐ Đợt 497 — BÀI LÀM TỪNG CÂU cho dashboard (thầy thấy đáp án em VỪA chọn — ván khôi phục đã nhảy sang câu kế):
+    // playLog GIẢ (mọi hàm rỗng, KHÔNG ghi gì) chỉ để engine trao `baiLamNay` (= template buildReview, Đợt 384); ván dựng
+    // xong ⇒ đọc bài làm, rút gọn, gửi trang mẹ {type:'AWORD:XEM_BL', code, rv:[{q,a,y,ok,c,o}]}. Template không có
+    // buildReview (Gameshow, Open the box…) ⇒ rv null.
+    const luot = ++soLuot;
+    let docBL = null;
+    const guiBL = (rv) => {
+      if (window.parent === window) return;
+      try { window.parent.postMessage({ type: "AWORD:XEM_BL", code: assignment.code, rv }, "*"); } catch (_) {}
+    };
+    const rutGon = (r) => r.map(q => ({
+      q: String((q && q.question) || "").slice(0, 400),
+      a: !!(q && q.answered),
+      y: q && q.yourText != null ? String(q.yourText).slice(0, 300) : null,
+      ok: !!(q && q.yourCorrect),
+      c: String((q && q.correctText) || "").slice(0, 300),
+      o: q && q.src && Array.isArray(q.src.answers) ? q.src.answers.map(x => String((x && x.text) || "").slice(0, 120)).slice(0, 8)
+         : (q && Array.isArray(q.opts) ? q.opts.map(x => String(x).slice(0, 120)).slice(0, 8) : null)
+    }));
+    let thu = 0;
+    const doiBL = () => {
+      if (luot !== soLuot) return;
+      let r = null;
+      try { r = docBL ? docBL() : null; } catch (_) { r = null; }
+      if (Array.isArray(r) && r.length) { guiBL(rutGon(r)); return; }
+      if (++thu < 25) setTimeout(doiBL, 200); else guiBL(null);
+    };
+    setTimeout(doiBL, 300);
     startGame(app, JSON.parse(JSON.stringify(assignment.activity)), {
       hwPreset: "submit",   // tự bấm START (READY bị ẩn bằng html.aw-xem)
       session: {
@@ -177,7 +205,7 @@ export function xemVan(app, assignment, { ten = "", lop = "" } = {}) {
         submit: () => Promise.resolve({ ok: true }),
         retrySubmit: () => Promise.resolve({ ok: true }),
         attemptId: () => "",
-        playLog: null,
+        playLog: { start: (o) => { docBL = o && typeof o.baiLamNay === "function" ? o.baiLamNay : null; }, beat() {}, end() {}, leave() {} },   // Đợt 497 — GIẢ, không ghi
         entries: async () => []
       }
     });

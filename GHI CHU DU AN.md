@@ -546,6 +546,19 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 497 (10/10/2026) — KHUNG XEM CỦA THẦY GỬI BÀI LÀM TỪNG CÂU (thầy thấy đáp án em VỪA chọn) · phiên MSI
+**Thầy:** "Làm tiếp phần hiện đáp án em vừa chọn" (Đợt 496: Quiz khôi phục nhảy sang câu chưa làm ⇒ khung xem không thấy đáp án em vừa bấm).
+**Đã làm (`quan-sat.js` xemVan):** session của khung xem có `playLog` GIẢ (start/beat/end/leave rỗng — KHÔNG ghi gì) chỉ để engine trao `baiLamNay`
+(= `buildReview()` của template, Đợt 384). Mỗi lần dựng lại ván: chờ ván mount (thử 25 × 200 ms), đọc bài làm, rút gọn
+`[{q, a, y, ok, c, o}]` (câu · đã trả lời · em chọn · đúng? · đáp án · lựa chọn ≤ 8) rồi gửi trang mẹ `{type:'AWORD:XEM_BL', code, rv}`;
+template không có buildReview ⇒ `rv:null`. Có buildReview: Quiz · Type the answer · Find the gap · Anagram · Find the match · True/false · Wordshake.
+Đã soát engine: `session.playLog` chỉ dùng để gọi start/beat/leave/end + chụp điểm/bài làm lúc restart ⇒ playLog rỗng không đổi hành vi ván.
+**Đi cùng:** myLesson web v1.295.0 — cột BÀI LÀM TRỰC TIẾP bên phải khung xem.
+**Thử:** bàn thử 8135 (khung em Quiz mẫu ⇄ khung xem + cột BÀI LÀM lấy NGUYÊN CSS/hàm từ dashboard.html): câu 1 chọn "going" ⇒ thẻ ✗, gạch đỏ "going",
+Đáp án "went"; câu 2 "banana" ⇒ thẻ mới trên cùng "CÂU 2 · VỪA LÀM" viền đỏ, ✓, ô số 2 nháy; khung xem trái đã ở câu 3.
+
+---
+
 ## Đợt 496 (10/10/2026) — ⭐⭐ THẦY QUAN SÁT TRỰC TIẾP: viên "Thầy Andrew đang quan sát trực tiếp" TRONG khung game + CHẾ ĐỘ XEM của thầy (`?xem=1`) · phiên MSI
 **Thầy:** dashboard có dòng ĐANG LÀM (ảnh Chấn Phong QUIZ 09:53) — "có cách nào stream thẳng nội dung học sinh đang làm sang cho tôi xem". Rồi chốt: làm,
 bật cả cờ cho em biết thầy đang quan sát. Thiết kế qua 5 vòng mẫu (`D:\OTHERS\CLAUDE\myLesson - thiet ke thay dang quan sat\`, bản chốt `THIET KE CHOT.md`):
