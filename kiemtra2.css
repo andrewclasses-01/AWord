@@ -1,0 +1,66 @@
+/* kiemtra2.css — bổ sung cho bộ đề LỚP 3–4 (Đợt 498). Nạp SAU kiemtra.css (dùng chung khung, nút, ô gõ). */
+
+.k2 .kt-dongho { min-width: 64px; text-align: center; }
+
+/* ----- thanh thời gian từng câu ----- */
+.k2-gio-cho { width: 100%; }
+.k2-gio { position: relative; height: 16px; border-radius: 999px; background: #e7eef6; overflow: hidden; }
+.k2-gio i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: linear-gradient(90deg, #13a58f, #2fcf8f); transition: width .1s linear; }
+.k2-gio.cam i { background: linear-gradient(90deg, #f08a24, #f6b23c); }
+.k2-gio-so { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: .78rem; font-weight: 800; color: #24425f; font-variant-numeric: tabular-nums; }
+
+/* ----- câu ----- */
+.k2-cau { gap: 12px; }
+.k2-vung { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.k2-o-hinh { background: #fff; border: 2px solid var(--vien); border-radius: 18px; padding: 8px 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.k2-o-hinh.mot { padding: 10px 26px; }
+.k2-hinh { width: 150px; height: 150px; object-fit: contain; pointer-events: none; -webkit-user-drag: none; }
+.k2-hinh-nho { width: 56px; height: 56px; object-fit: contain; }
+.k2-de-nho { font-size: 1.55rem; padding: 4px 6px; }
+.k2-hai { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }
+.k2-hai .k2-o-hinh { flex: 0 1 auto; min-width: 0; }
+.k2-hang { display: flex; align-items: center; justify-content: center; gap: 2px; }
+.k2-hang .k2-hinh { width: 118px; height: 118px; }
+.k2-hang.nhieu .k2-hinh { width: 96px; height: 96px; }
+.k2-hang.nhieu.bon .k2-hinh { width: 74px; height: 74px; }
+.k2-chu { font-weight: 800; font-size: 1.3rem; color: var(--chu); }
+.k2-mui { font-size: 1.8rem; font-weight: 800; color: var(--xanh); }
+
+/* ----- ô chọn (Quiz) ----- */
+.k2-chon { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.k2-chon.hai { grid-template-columns: 1fr 1fr; max-width: 420px; width: 100%; margin: 0 auto; }
+.k2-o-chon { background: #1e4f9c; color: #fff; font-size: 1.3rem; padding: 14px 10px; border-radius: 16px; box-shadow: 0 4px 0 #143a75; min-height: 62px; letter-spacing: .01em; }
+.k2-chon.hai .k2-o-chon { font-size: 1.9rem; padding: 12px 10px; }
+.k2-o-chon:hover { background: #2660b8; }
+.k2-o-chon:disabled { cursor: default; }
+.k2-o-chon.chon { background: #f2b33d; color: #2b1d00; box-shadow: 0 4px 0 #b9821f; }
+.k2-o-chon.dung { background: var(--dung); color: #fff; box-shadow: 0 4px 0 #0f7a40; }
+
+/* ----- hướng dẫn ----- */
+.k2-hd .kt-dan li { font-size: 1.02rem; }
+.k2-vidu { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+.k2-vidu .kt-vidu-trai { flex-direction: row; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* ----- phim ----- */
+.k2-phim-khung { position: relative; flex: 1; min-height: 260px; display: flex; align-items: center; justify-content: center; background: #0d1b2a; border-radius: 14px; overflow: hidden; }
+.k2-phim-san { position: absolute; inset: 0; }
+.k2-phim-che { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(9, 20, 34, .82); z-index: 3; }
+.k2-phim-hop { background: #fff; border-radius: 18px; padding: 22px 26px; max-width: 440px; width: 90%; text-align: center; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.kt-than:has(.k2-phim-khung) { padding: 10px; }
+
+@media (max-width: 560px) {
+  .k2-hinh { width: 120px; height: 120px; }
+  .k2-hang .k2-hinh { width: 84px; height: 84px; }
+  .k2-hang.nhieu .k2-hinh { width: 62px; height: 62px; }
+  .k2-hang.nhieu.bon .k2-hinh { width: 46px; height: 46px; }
+  .k2-hai { gap: 4px; }
+  .k2-hai .k2-o-hinh { padding: 6px 6px; }
+  .k2-chu { font-size: 1.05rem; }
+  .k2-mui { font-size: 1.3rem; }
+  .k2-o-chon { font-size: 1.12rem; padding: 12px 6px; min-height: 54px; }
+  .k2-de-nho { font-size: 1.3rem; }
+}
+@media (max-height: 620px) {
+  .k2-hinh { width: 110px; height: 110px; }
+  .k2-hang.nhieu .k2-hinh { width: 72px; height: 72px; }
+}

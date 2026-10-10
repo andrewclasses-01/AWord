@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Thử phim Tom's Sunday Picnic</title>
+<style>
+  body{margin:0;padding:16px;background:#1d1a26;color:#eee;font:15px/1.4 system-ui,sans-serif}
+  #hop{width:960px;height:540px;max-width:100%;background:#000;border-radius:12px;overflow:hidden}
+  button{margin:12px 0;padding:10px 22px;font:700 18px system-ui;border:0;border-radius:10px;background:#60a5fa;color:#fff;cursor:pointer}
+  #log{white-space:pre-wrap;font:13px/1.45 ui-monospace,monospace;color:#b9f6ca}
+</style>
+</head>
+<body>
+<div id="hop"></div>
+<button id="xem" disabled>Đang tải…</button>
+<div id="log"></div>
+<script type="module">
+  // Trang thử riêng: ?canh=N (0–11) để bắt đầu từ cảnh N.
+  import { taoPhim, TONG_GIAY, SO_CANH } from './phim.js';
+  const log = (s) => { document.getElementById('log').textContent += new Date().toLocaleTimeString() + '  ' + s + '\n'; console.log('[thu]', s); };
+  const canh = +(new URLSearchParams(location.search).get('canh') || 0);
+  log(`TONG_GIAY=${TONG_GIAY} SO_CANH=${SO_CANH} tu=${canh}`);
+  const p = taoPhim(document.getElementById('hop'), {
+    tu: canh,
+    onCanh: (i) => log('onCanh ' + i),
+    onXong: () => log('onXong'),
+  });
+  window.__phim = p;
+  const b = document.getElementById('xem');
+  p.san().then(() => { b.disabled = false; b.textContent = 'XEM PHIM'; log('san() xong'); });
+  b.onclick = () => { b.disabled = true; p.chay().then(() => log('chay')); };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { p.dung(); log('dung'); } else { p.tiep(); log('tiep'); } });
+</script>
+</body>
+</html>

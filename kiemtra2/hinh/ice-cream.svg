@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><clipPath id="ice-cream-c"><path d="M64 98h72l-36 88z"/></clipPath></defs>
+<path d="M64 98h72l-36 88z" fill="#f4b860"/>
+<g clip-path="url(#ice-cream-c)" stroke="#c2853a" stroke-width="2.5"><path d="M40 110l100 80M40 130l100 80M40 90l100 80M60 70l100 80M160 110L60 190M160 90L60 170M160 70L60 150M150 50L50 130"/></g>
+<path d="M64 98h72l-36 88z" fill="none" stroke="#b9772e" stroke-width="3" stroke-linejoin="round"/>
+<path d="M56 96c-10-44 20-70 44-70s54 26 44 70c-6 6-12-2-18 4-6 8-2 18-10 18-8 0-6-14-14-14-8 0-8 10-16 8-6-2-4-12-10-14-8-2-14 4-20-2z" fill="#f9a8d4" stroke="#db2777" stroke-width="3" stroke-linejoin="round"/>
+<ellipse cx="78" cy="56" rx="8" ry="13" fill="#fff" opacity=".5" transform="rotate(30 78 56)"/>
+<circle cx="102" cy="20" r="10" fill="#ef4444" stroke="#b91c1c" stroke-width="2.5"/>
+<path d="M104 12c4-8 10-10 16-10" stroke="#15803d" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+<g stroke-width="4" stroke-linecap="round"><path d="M96 50l6 3" stroke="#facc15"/><path d="M118 62l4-5" stroke="#60a5fa"/><path d="M88 76l6-2" stroke="#4ade80"/><path d="M122 84l5 3" stroke="#facc15"/><path d="M106 72l2 6" stroke="#fff"/></g></svg>

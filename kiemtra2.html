@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="core/app-check.js" defer></script>
+  <title>Kiểm tra đầu vào — Andrew Classes</title>
+  <link rel="icon" href="core/assets/icons/favicon.ico?v=2" sizes="any" />
+  <meta name="robots" content="noindex" />
+  <!-- Đợt 498 — trang làm bài KIỂM TRA ĐẦU VÀO bộ đề LỚP 3–4 (kiemtra2.js: giờ từng câu, Quiz, hình, phim). Nhúng trong kiemtra.andrewclasses.com. -->
+  <link rel="stylesheet" href="kiemtra.css" />
+  <link rel="stylesheet" href="kiemtra2.css" />
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://firestore.googleapis.com" />
+  <link rel="preload" href="core/assets/fonts/baloo-2-800.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="core/assets/fonts/baloo-2-vi.woff2" as="font" type="font/woff2" crossorigin />
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import("./core/firebase.js").then(m => m.db()).catch(() => {});
+    const g = new URLSearchParams(location.search).get("g");
+    if (g) import("./core/assignments.js").then(m => m.warmUpAssignment(g)).catch(() => {});
+  </script>
+  <script type="module" src="kiemtra2.js"></script>
+</body>
+</html>
