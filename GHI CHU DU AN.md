@@ -556,6 +556,9 @@ template không có buildReview ⇒ `rv:null`. Có buildReview: Quiz · Type the
 **Đi cùng:** myLesson web v1.295.0 — cột BÀI LÀM TRỰC TIẾP bên phải khung xem.
 **Thử:** bàn thử 8135 (khung em Quiz mẫu ⇄ khung xem + cột BÀI LÀM lấy NGUYÊN CSS/hàm từ dashboard.html): câu 1 chọn "going" ⇒ thẻ ✗, gạch đỏ "going",
 Đáp án "went"; câu 2 "banana" ⇒ thẻ mới trên cùng "CÂU 2 · VỪA LÀM" viền đỏ, ✓, ô số 2 nháy; khung xem trái đã ở câu 3.
+✅ PUSH `0c50443` + LIVE 1/1 (kiem-live) · web `ac8dc65` LIVE (băm khớp). Phiên kết thúc 10/10 theo lời thầy ("tạm thế đã").
+**VIỆC ĐANG CHỜ (Đợt 496–497):** ⬜ thầy bấm XEM ở dòng ĐANG LÀM thật (Ctrl+Shift+R dashboard) + nhờ em xác nhận thấy viên · ⬜ (tuỳ) 5 template chưa lưu ván
+(balloon-pop, maze-chase, running-team, running-word, speaking-cards) và template không có buildReview (Gameshow, Open the box, Group sort, Unjumble…) chưa có cột BÀI LÀM.
 
 ---
 
