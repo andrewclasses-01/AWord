@@ -546,6 +546,15 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 499 (10/10/2026) — CỬA `__awordLib.moImport` CHO myLesson "Tạo AWord" · phiên ANDREW CLASSES
+**Thầy:** pop-up xem thư mục của myLesson (v2.146.0) ▸ chuột phải file Excel ▸ "Tạo AWord": chưa có thư mục AWord trùng tên file thì mở khung AWord
+bên trái + mở luôn hộp Import với file đó — "coi như vừa kéo file vào Quick access" — phần còn lại thầy tự làm.
+- `main.js` `window.__awordLib.moImport(tenFile, base64)`: dựng `File` từ base64 (webview không đọc được ổ đĩa) ⇒ `importFlow(file, { fromRoot: true })`
+  = đúng đường thả file vào Quick access (cây thư mục dựng theo tên file). Chỉ MỞ HỘP, không tạo gì ⇒ không phá luật "khối này không có hàm GHI".
+  Chưa đăng nhập ⇒ `{ok:false, loi:'chua-dang-nhap'}` (myLesson chờ thầy đăng nhập rồi gọi lại).
+**Thử:** devserver 5699 (worktree `web-wt-dot499`): chưa đăng nhập ⇒ trả chua-dang-nhap. Móc thử TẠM (bỏ qua kiểm đăng nhập, đã gỡ trước commit) + file thật
+`D:\4. LISTENING\...\LSB1-S3.T3.P3-4.xlsm` (base64) ⇒ hộp "Import activities · LSB1-S3.T3.P3-4.xlsm — 2 activities" + nhắc FILLGAP, y ảnh thầy chụp.
+
 ## Đợt 497 (10/10/2026) — KHUNG XEM CỦA THẦY GỬI BÀI LÀM TỪNG CÂU (thầy thấy đáp án em VỪA chọn) · phiên MSI
 **Thầy:** "Làm tiếp phần hiện đáp án em vừa chọn" (Đợt 496: Quiz khôi phục nhảy sang câu chưa làm ⇒ khung xem không thấy đáp án em vừa bấm).
 **Đã làm (`quan-sat.js` xemVan):** session của khung xem có `playLog` GIẢ (start/beat/end/leave rỗng — KHÔNG ghi gì) chỉ để engine trao `baiLamNay`

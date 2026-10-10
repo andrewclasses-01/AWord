@@ -195,6 +195,20 @@ let sdHomeBtnSetAnalyse = null;
 // quyết định options/optVer/xếp thư mục Results.
 window.__awordLib = {
   daDangNhap: () => !!state.user,
+  // ⭐ Đợt 499 (thầy chốt 10/10/2026, đi cặp myLesson v2.146.0) — pop-up thư mục myLesson ▸ chuột phải file Excel ▸
+  // "Tạo AWord" khi CHƯA có thư mục trùng tên file: mở HỘP IMPORT với file đó y như thả file vào Quick access
+  // (`importFlow(file, { fromRoot: true })` — cây thư mục dựng theo tên file). CHỈ MỞ HỘP, thầy tự tick + bấm tạo
+  // ⇒ không phải hàm GHI, đúng luật khối này. myLesson gửi nội dung file dạng base64 (webview không đọc được ổ đĩa).
+  moImport(tenFile, base64) {
+    if (!state.user) return { ok: false, loi: "chua-dang-nhap" };
+    try {
+      const bin = atob(String(base64 || ""));
+      const u8 = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      importFlow(new File([u8], String(tenFile || "lesson.xlsm")), { fromRoot: true });
+      return { ok: true };
+    } catch (e) { return { ok: false, loi: e.message || "loi" }; }
+  },
   // ⭐ Đợt 325 (thầy 14/9/2026) — `chiCay` giới hạn tìm trong MỘT cây thôi:
   // "activities" cho tab LESSON, "courses" cho tab COURSE — hai tab của
   // myLesson không còn thấy thư mục trùng tên của cây kia nữa. Gọi KHÔNG kèm
