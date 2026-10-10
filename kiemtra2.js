@@ -335,7 +335,7 @@ function dungCau(c, { nhan, onChon }) {
   k.append(vung);
   const r = { k, o: null, nuts: [] };
   if (c.kieu === "chon") {
-    const luoi = h("div", "k2-chon" + (c.chon.length === 2 ? " hai" : ""));
+    const luoi = h("div", "k2-chon" + (c.chon.length === 2 ? " hai" : c.chon.length === 3 ? " ba" : ""));
     c.chon.forEach((txt, i) => {
       const b = nut(txt, "k2-o-chon", () => onChon && onChon(i, b));
       luoi.append(b); r.nuts.push(b);
@@ -503,8 +503,28 @@ async function xemPhim(act, kt, ds, s) {
 }
 
 // ================= BÀI THẬT =================
+// ⭐ 11/10/2026 (thầy) — XÁO thứ tự câu RIÊNG cho từng em (kiemTra.xao: phần a/an, số nhiều): thứ tự lưu trong tiến độ (tải lại
+//   không đổi), bài làm gửi kho vẫn theo THỨ TỰ GỐC (dashboard đối chiếu đáp án theo số câu) + `viTri` = câu thứ mấy em thấy.
+//   Tránh chuỗi 4 câu liền cùng đáp án (a, a, a, a…) để em không đoán theo nhịp.
+function xaoThuTu(ds) {
+  const n = ds.length, rnd = k => { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % k; };
+  let tot = null;
+  for (let lan = 0; lan < 60; lan++) {
+    const t = ds.map((_, i) => i);
+    for (let i = n - 1; i > 0; i--) { const j = rnd(i + 1); [t[i], t[j]] = [t[j], t[i]]; }
+    let chuoi = 1, dai = 1;
+    for (let i = 1; i < n; i++) { chuoi = ds[t[i]].dapDung === ds[t[i - 1]].dapDung && ds[t[i]].kieu === "chon" ? chuoi + 1 : 1; dai = Math.max(dai, chuoi); }
+    tot = t;
+    if (dai < 4) break;
+  }
+  return tot;
+}
 function lamBai(act, kt, ds, s) {
   if (!s) { s = moiTrangThai(ds); chepThu(s); }
+  const goc = ds;
+  if (kt.xao && !(Array.isArray(s.thuTu) && s.thuTu.length === goc.length)) s.thuTu = xaoThuTu(goc);
+  if (Array.isArray(s.thuTu) && s.thuTu.length === goc.length) ds = s.thuTu.map(k => goc[k]);
+  const dungReview = (d, st, opt) => dungReviewGoc(d, st, opt);
   s.pha = "lam";
   const { than, so } = khung;
   so.hidden = false;
@@ -703,6 +723,16 @@ function lamBai(act, kt, ds, s) {
 }
 
 // ---------- bài làm gửi kho ----------
+// thứ tự đã xáo ⇒ trả về theo THỨ TỰ GỐC của act (+ viTri = câu thứ mấy em thấy), `kt` luôn ở hàng đầu
+function dungReviewGoc(ds, s, opt) {
+  const r = dungReview(ds, s, opt);
+  if (!Array.isArray(s.thuTu) || s.thuTu.length !== r.length) return r;
+  const kt = r[0].kt; delete r[0].kt;
+  const ra = [];
+  s.thuTu.forEach((k, pos) => { ra[k] = Object.assign(r[pos], { viTri: pos + 1 }); });
+  ra[0].kt = Object.assign(kt, { xao: true });
+  return ra;
+}
 function dungReview(ds, s, { doDang = false } = {}) {
   const review = ds.map((c, i) => {
     const st = s.ds[i];

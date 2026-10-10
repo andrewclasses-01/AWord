@@ -31,6 +31,10 @@
 .k2-chon.hai { grid-template-columns: 1fr 1fr; max-width: 420px; width: 100%; margin: 0 auto; }
 .k2-o-chon { background: #1e4f9c; color: #fff; font-size: 1.3rem; padding: 14px 10px; border-radius: 16px; box-shadow: 0 4px 0 #143a75; min-height: 62px; letter-spacing: .01em; }
 .k2-chon.hai .k2-o-chon { font-size: 1.9rem; padding: 12px 10px; }
+/* 11/10: a / an / không đếm được — hàng trên a | an (chữ to), hàng dưới ô "không đếm được" trải cả hàng */
+.k2-chon.ba { grid-template-columns: 1fr 1fr; max-width: 460px; width: 100%; margin: 0 auto; }
+.k2-chon.ba .k2-o-chon { font-size: 1.9rem; padding: 10px 10px; }
+.k2-chon.ba .k2-o-chon:nth-child(3) { grid-column: 1 / -1; font-size: 1.25rem; min-height: 54px; }
 .k2-o-chon:hover { background: #2660b8; }
 .k2-o-chon:disabled { cursor: default; }
 .k2-o-chon.chon { background: #f2b33d; color: #2b1d00; box-shadow: 0 4px 0 #b9821f; }

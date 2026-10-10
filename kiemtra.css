@@ -49,7 +49,11 @@ html:not(.kt-nhung) .kt { max-width: 900px; margin: 16px auto; height: calc(100%
 .kt-do.kt-chinh { background: var(--sai); box-shadow: 0 4px 0 #b9343a; }
 .kt-do.kt-phu-btn { color: var(--sai); }
 .kt-lon { font-size: 1.3rem; padding: 12px 40px; margin-top: 12px; }
-.kt-nuts { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+.kt-nuts { display: flex; gap: 12px; justify-content: center; align-items: stretch; flex-wrap: wrap; margin-top: 16px; }
+/* 11/10/2026 (thầy báo nút lệch): trong hàng nút, nút to KHÔNG đẩy xuống (margin-top của .kt-lon chỉ dùng khi đứng một mình),
+   nút phụ có đế bóng như nút chính ⇒ hai nút cùng một đường đáy. */
+.kt-nuts .kt-lon { margin-top: 0; }
+.kt-nuts .kt-phu-btn { box-shadow: 0 4px 0 #d3dceb; }
 
 /* ----- giới thiệu ----- */
 /* 02/10 (thầy: "không muốn có phần cuộn"): mỗi thẻ ví dụ còn MỘT hàng — ghi chú nằm ngay dưới chữ tiếng Việt
