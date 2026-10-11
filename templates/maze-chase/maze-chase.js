@@ -34,6 +34,9 @@
 //   lõi myGame 2q — nút Tablet ⇒ bảng QR (1 mã Single / 2 mã Fight) ⇒ iPad mở `pad.html?t=0|1` (gốc web/) ⇒ phím đi THẲNG
 //   iPad → máy chiếu qua WebRTC DataChannel. Bắt tay + đường dự phòng = ./sl-pad-signal.js (Firestore users/{uid}/items, tài
 //   khoản thầy, KHÔNG luật mới). Mỗi lần dựng game = một đường nối mới (phiên mới ⇒ iPad đang mở tự nối lại); destroy() ⇒ tháo.
+// ⭐ Đợt 503 (thầy 11/10/2026): lõi myGame 2r — 3 thanh Options mới: ENEMIES 0–10 (`slEnemies`, số robot địch; Difficulty nay chỉ
+//   còn là TỐC ĐỘ địch) · LIVES thêm nấc cuối ∞ (lives = 10) · BOMB TIMER 1–10 s (`slFuse`, giây bom tự nổ, trước cố định 5 s).
+//   Act đã lưu chưa có `slEnemies` ⇒ suy từ slDifficulty đúng luật cũ (enemiesFor) ⇒ chơi y như trước.
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
@@ -41,9 +44,12 @@ import { openMazeChaseEditor } from "./maze-chase-editor.js";
 import { showLoader3d } from "../../core/loader3d.js";   // Đợt 451 — màn chờ thay khung trắng của AWord lúc nạp 3D
 const loader = () => showLoader3d({ key: "starloot", title: "STAR LOOT", theme: "space" });
 
-const CSS_3D = new URL("./3d/mc3d-2q.css", import.meta.url).href;
+const CSS_3D = new URL("./3d/mc3d-2r.css", import.meta.url).href;
 // Đợt 452 — khoá game (mc3d-2o DEFAULTS) <-> khoá PHẲNG trong activity.options (engine + sl*)
-const SL_DEF = { fight: false, timer: "up", timerSec: 120, lives: 5, difficulty: 6, bombs: 1, bombGift: 3, dpadStyle: "ring", shuffle: true, showAnswers: true };
+const SL_DEF = { fight: false, timer: "up", timerSec: 120, lives: 5, difficulty: 6, enemies: 2, fuse: 5, bombs: 1, bombGift: 3, dpadStyle: "ring", shuffle: true, showAnswers: true };
+// Đợt 503 — lives 10 = ∞ (LIVES_INF của lõi 2r) · số địch khi act chưa có slEnemies = luật cũ của difficulty (khớp enemiesFor trong lõi)
+const LIVES_INF = 10, MAX_ENEMIES = 10;
+const enemiesFor = diff => (diff <= 3 ? 1 : diff <= 6 ? 2 : diff <= 8 ? 3 : 4);
 const DPADS = [["glass", "Glass"], ["ring", "Ring"], ["keys", "Keys"], ["console", "Console"], ["stick", "Stick"]];
 const TM_TO_GAME = { none: "none", countUp: "up", countDown: "down" }, TM_TO_AW = { none: "none", up: "countUp", down: "countDown" };
 const clampN = (v, lo, hi, d) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d; };
@@ -55,9 +61,12 @@ function gameOpts(o) {
   if (typeof o.timerTotalSeconds === "number") g.timerSec = clampN(o.timerTotalSeconds, 5, 3599, 120);
   if (typeof o.shuffleQuestions === "boolean") g.shuffle = o.shuffleQuestions;
   if (typeof o.showAnswers === "boolean") g.showAnswers = o.showAnswers;
-  if (typeof o.lives === "number") g.lives = clampN(o.lives, 1, 9, 5);
+  if (typeof o.lives === "number") g.lives = clampN(o.lives, 1, LIVES_INF, 5);
   if (typeof o.slFight === "boolean") g.fight = o.slFight;
   if (typeof o.slDifficulty === "number") g.difficulty = clampN(o.slDifficulty, 1, 10, 6);
+  if (typeof o.slEnemies === "number") g.enemies = clampN(o.slEnemies, 0, MAX_ENEMIES, 2);
+  else if (typeof g.difficulty === "number") g.enemies = enemiesFor(g.difficulty);   // Đợt 503 — act cũ: số địch như trước
+  if (typeof o.slFuse === "number") g.fuse = clampN(o.slFuse, 1, 10, 5);
   if (typeof o.slBombs === "number") g.bombs = clampN(o.slBombs, 0, 10, 1);
   if (typeof o.slBombGift === "number") g.bombGift = clampN(o.slBombGift, 0, 10, 3);
   if (DPADS.some(d => d[0] === o.slDpad)) g.dpadStyle = o.slDpad;
@@ -73,6 +82,8 @@ function flatOpts(g) {
   if (typeof g.lives === "number") f.lives = g.lives;
   if (typeof g.fight === "boolean") f.slFight = g.fight;
   if (typeof g.difficulty === "number") f.slDifficulty = g.difficulty;
+  if (typeof g.enemies === "number") f.slEnemies = g.enemies;
+  if (typeof g.fuse === "number") f.slFuse = g.fuse;
   if (typeof g.bombs === "number") f.slBombs = g.bombs;
   if (typeof g.bombGift === "number") f.slBombGift = g.bombGift;
   if (typeof g.dpadStyle === "string") f.slDpad = g.dpadStyle;
@@ -86,11 +97,12 @@ function flatSeed(activity) {
   const old = o.starLoot && typeof o.starLoot === "object" ? o.starLoot : {};
   const base = { ...SL_DEF };
   Object.keys(SL_DEF).forEach(k => { if (k in old && typeof old[k] === typeof SL_DEF[k]) base[k] = old[k]; });
-  if (!("lives" in old) && typeof o.lives === "number") base.lives = clampN(o.lives, 1, 9, 5);
+  if (!("lives" in old) && typeof o.lives === "number") base.lives = clampN(o.lives, 1, LIVES_INF, 5);
+  if (!("enemies" in old)) base.enemies = enemiesFor(typeof o.slDifficulty === "number" ? clampN(o.slDifficulty, 1, 10, 6) : base.difficulty);   // Đợt 503
   const f = flatOpts(base);
   // ⚠️ Act chưa từng lưu kiểu Đợt 452 (không có khoá sl*): `timer` ở gốc không phải giờ của STAR LOOT (bản 2D / mặc định Settings)
   // ⇒ lấy giờ của game (starLoot cũ / mặc định Count up 2:00).
-  const fresh = !["slFight", "slDifficulty", "slBombs", "slBombGift", "slDpad"].some(k => k in o);
+  const fresh = !["slFight", "slDifficulty", "slBombs", "slBombGift", "slDpad", "slEnemies", "slFuse"].some(k => k in o);
   Object.keys(f).forEach(k => { if (!(k in o) || (fresh && (k === "timer" || k === "timerTotalSeconds"))) o[k] = f[k]; });
 }
 
@@ -154,13 +166,18 @@ const starLootTemplate = {
     dpad.ctl.append(mkSeg(DPADS.map(([value, label]) => ({ value, label })), g.dpadStyle, v => { draft.slDpad = v; }));
     panel.append(
       mode.cell,
-      mkSliderCell({ label: "Lives", min: 1, max: 9, step: 1, value: g.lives, tone: "green", onInput: v => { draft.lives = v; } }).cell,
-      mkSliderCell({ label: "Difficulty", sub: "enemies", min: 1, max: 10, step: 1, value: g.difficulty, tone: "blue",
+      mkSliderCell({ label: "Lives", min: 1, max: LIVES_INF, step: 1, value: g.lives, tone: "green",
+        fmt: v => (v >= LIVES_INF ? "∞" : String(v)), onInput: v => { draft.lives = v; } }).cell,   // Đợt 503 — nấc cuối = không giới hạn
+      mkSliderCell({ label: "Enemies", sub: "robots", min: 0, max: MAX_ENEMIES, step: 1, value: g.enemies, tone: "blue", offAt: 0,
+        fmt: v => (v === 0 ? "Off" : String(v)), onInput: v => { draft.slEnemies = v; } }).cell,   // Đợt 503
+      mkSliderCell({ label: "Difficulty", sub: "enemy speed", min: 1, max: 10, step: 1, value: g.difficulty, tone: "blue",
         fmt: v => v + "/10", onInput: v => { draft.slDifficulty = v; } }).cell,
       mkSliderCell({ label: "Bombs", sub: "each player", min: 0, max: 10, step: 1, value: g.bombs, tone: "amber", offAt: 0,
         fmt: v => (v === 0 ? "Off" : String(v)), onInput: v => { draft.slBombs = v; } }).cell,
       mkSliderCell({ label: "Bomb gift", sub: "every N correct", min: 0, max: 10, step: 1, value: g.bombGift, tone: "amber", offAt: 0,
         fmt: v => (v === 0 ? "Off" : String(v)), onInput: v => { draft.slBombGift = v; } }).cell,
+      mkSliderCell({ label: "Bomb timer", sub: "seconds", min: 1, max: 10, step: 1, value: g.fuse, tone: "amber",
+        fmt: v => v + "s", onInput: v => { draft.slFuse = v; } }).cell,   // Đợt 503
       dpad.cell
     );
   },
@@ -192,7 +209,7 @@ const starLootTemplate = {
     console.log("MYACT:3D:ON");   // myActivity: nhường card đồ hoạ (như Rocket race 3D)
     // Đợt 452 — Options ▸ Apply của engine => áp ngay trong cảnh (game chưa dựng xong => false => engine dựng lại như thường)
     if (ui.liveOptions) ui.liveOptions(o => (game && !dead ? game.setOptions({ ...SL_DEF, ...gameOpts(o) }) === true : false));
-    Promise.all([import("./3d/mc3d-2q.js"), import("./3d/mc3d-padlink-2q.js"), import("./sl-pad-signal.js")])
+    Promise.all([import("./3d/mc3d-2r.js"), import("./3d/mc3d-padlink-2q.js"), import("./sl-pad-signal.js")])
       .then(([m, pl, sg]) => m.createMazeChase({
         mount: box, view: "tilt", questions,
         title: activity.title || "", act: activity.title || "",

@@ -546,6 +546,34 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 503 (11/10/2026) — STAR LOOT: 3 THANH OPTIONS MỚI (Enemies 0–10 · Lives ∞ · Bomb timer 1–10 s) · phiên MSI
+
+**Thầy:** "Đọc game STAR LOOT trên cả myGame và AWord, sửa options trên AWord: thêm một thanh Enemy để quyết định số Robot địch, 0 đến 10 ·
+thanh Lives thêm một nấc cuối là không giới hạn · thêm một thanh thời gian nổ bom, kéo từ 1s đến 10s".
+
+**Đã làm** (theo quy tắc đồng bộ: STAR LOOT gốc ở myGame ⇒ dựng **mẫu 2r** ở myGame rồi chép bằng `tools/chep-star-loot.py`, BAN 2q ⇒ **2r**):
+- Lõi `3d/mc3d-2r.js` (chép từ myGame `maze-chase/core/mc3d-2r.js`):
+  - `opt.enemies` 0..10 = SỐ robot địch. Trước: gắn cứng theo Difficulty (1–3 ⇒ 1, 4–6 ⇒ 2, 7–8 ⇒ 3, 9–10 ⇒ 4). **Difficulty nay chỉ còn là TỐC ĐỘ địch**
+    (nhãn phụ "enemy speed"). Dựng sẵn 10 robot (trước 4). 4 robot đầu ra ở 4 góc như cũ (Fight vẫn chọn bộ góc công bằng `pickFightSpots`);
+    robot thứ 5+ ra ở ô XA (`extraSpots`: có sàn, ngoài sân xuất phát, cách ô xuất phát + 2 ô đội Fight ≥ 5 ô, chọn tham lam ô xa mọi ô đã lấy ⇒ trải đều).
+    0 địch ⇒ không còi báo địch.
+  - `opt.lives` 10 = ∞ (`LIVES_INF`): bị trúng vẫn ngã + đổi người (Single) / hồi sinh (Fight) như thường, nhưng không trừ mạng, không hiện "−1", ô tim hiện "♥ ∞".
+  - `opt.fuse` 1..10 = giây bom tự nổ (trước hằng `FUSE_S = 5`); mỗi quả bom giữ ngòi lúc đặt (`b.fuse`), thanh ngòi trên bom chạy theo đúng số giây.
+- `templates/maze-chase/maze-chase.js`: khoá phẳng mới `slEnemies` (0–10) + `slFuse` (1–10); `lives` kẹp 1..10 (trước 1..9). Bảng Options: Lives có nấc ∞,
+  thanh **Enemies** (xanh, 0 = Off), **Bomb timer** (vàng, "Ns"). Bảng tự xếp theo màu (luật Đợt 213) ⇒ Lives | Bombs · Bomb gift | Bomb timer · Enemies | Difficulty.
+- ⭐ **Act đã lưu chưa có `slEnemies` ⇒ suy từ `slDifficulty` đúng luật cũ** (`enemiesFor`, ở cả `gameOpts`/`flatSeed` lẫn lõi khi options thiếu `enemies`)
+  ⇒ act cũ chơi y như trước (đo: act lưu Difficulty 9 ⇒ 4 địch, `slEnemies` gieo = 4).
+- Gỡ `3d/mc3d-2q.js/.css` (không ai import nữa; `pad.js` vẫn dùng `mc3d-padlink-2q.js` + `mc3d-padui-2q.js`, không đổi).
+
+**Đã kiểm** (myGame `localhost:8866/maze-chase/mau-2r-…` + AWord devserver `:5591/templates/maze-chase/test.html`, 0 lỗi console):
+10 địch ở 10 ô khác nhau (Single + Fight) · ∞: bị đâm ⇒ pha swap, mạng vẫn 10, không thua; Fight 2 đội "10/in" · mạng thường 3 ⇒ bom sát người còn 2 ·
+0 địch ⇒ 0 robot · ngòi 2 s ⇒ nổ sau 2,1 s, 10 s ⇒ 10,0 s, 3 s qua bảng AWord ⇒ 3,1 s (bước đo 0,1 s) · bảng AWord kéo Lives ∞ / Enemies 7 / Bomb timer 3s ⇒ Apply ⇒ START AGAIN ⇒ đúng 7 địch.
+⚠️ Chưa đo fps trên TOMKO với 10 địch (mỗi robot thêm vài lượt vẽ; robot ẩn không tốn gì).
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy chơi thử trên TOMKO: 10 địch có quá rối/khó không, tốc độ khung hình khi 10 địch · ngòi 1 s có kịp chạy không.
+
+---
+
 ## Đợt 502 (11/10/2026) — DẢI ĐIỂM FIGHT CAO ×1,5 + SỐ FONT RUBIK · phiên MSI
 
 **Bối cảnh:** thầy chụp màn TOMKO (Fight 2 bảng trong myActivity): dải điểm `.aw-fight.is-strip2` quá bé. Muốn dải cao gấp 1,5 lần

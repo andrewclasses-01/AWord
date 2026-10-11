@@ -1,4 +1,11 @@
-// STAR LOOT — lõi MẪU 2q (05/10/2026): như 2p + iPAD LÀM D-PAD (thầy: "màn 86 inch quá khổng lồ, học sinh đứng sát màn không thấy toàn cảnh…
+// STAR LOOT — lõi MẪU 2r (11/10/2026): như 2q + 3 tuỳ chọn mới (thầy: "thêm thanh Enemy quyết định số robot địch 0–10 · Lives thêm nấc cuối
+//   không giới hạn · thêm thanh thời gian nổ bom 1–10 s").
+//   • opt.enemies 0..10 = SỐ robot địch (trước gắn cứng theo Difficulty: 1–4). Difficulty nay chỉ còn là TỐC ĐỘ địch.
+//     Options cũ không có `enemies` ⇒ suy từ difficulty đúng như luật cũ (enemiesFor) ⇒ act đã lưu chơi y như trước.
+//     4 robot đầu ra ở 4 góc (espots, Fight vẫn chọn bộ góc công bằng); robot thứ 5+ ra ở ô xa (xspots, chọn trải đều, xa ô xuất phát).
+//   • opt.lives 10 = ∞ (LIVES_INF): bị trúng vẫn ngã / đổi người, nhưng không trừ mạng, không hiện "−1".
+//   • opt.fuse 1..10 = giây bom tự nổ (trước cố định 5 s) — mỗi quả bom giữ ngòi lúc đặt (b.fuse).
+// ---- ghi chú 2q: STAR LOOT — lõi MẪU 2q (05/10/2026): như 2p + iPAD LÀM D-PAD (thầy: "màn 86 inch quá khổng lồ, học sinh đứng sát màn không thấy toàn cảnh…
 //   điều khiển bằng iPad (2 iPad trong Fight), iPad chỉ mở D-pad, tín hiệu 1 chiều lên game"; chốt: WebRTC · GIỮ D-pad trên màn dự phòng · cả Single lẫn Fight).
 //   • createMazeChase({ …, remote }): `remote` = đường nối iPad (mc3d-padlink-2q.js). Lõi KHÔNG biết mạng — chỉ:
 //       remote.attach({ press(team, key), status(team, s) }) ⇒ iPad bấm = y như bấm D-pad trên màn (key u|d|l|r|bomb, hướng THEO MÀN như D-pad);
@@ -197,7 +204,7 @@ const WALL_T = 0.72, WALL_H = 1.6;
 const PLAYER_SPEED = 3;                          // ô/giây (thầy 29/9: "quá nhanh, giảm khá nhiều"; mẫu 1 là 5, bản 2D 6,25)
 const SPEED_SCALE = PLAYER_SPEED / 6.25;         // địch giữ đúng tỉ lệ tốc độ với người như bản 2D
 const GRACE = 1.9, INVULN = 1.4, HOLD = 1.7, EJECT = 0.5;   // 1h: HOLD 0.9 → 1.7 cho kịp đứng chào
-const FUSE_S = 5, SHIELD_S = 5;                             // 1l: hào quang 3 ⇒ 5 s ·                             // 1h: bom tự nổ sau 5 s · hào quang bảo vệ 3 s khi robot mới xuất hiện
+const SHIELD_S = 5; /* 2r: ngòi bom = opt.fuse (trước FUSE_S = 5) */                            // 1l: hào quang 3 ⇒ 5 s ·                             // 1h: bom tự nổ sau 5 s · hào quang bảo vệ 3 s khi robot mới xuất hiện
 
 const DIRS = {
   u: { dr: -1, dc: 0, opp: "d" }, d: { dr: 1, dc: 0, opp: "u" },
@@ -214,7 +221,9 @@ const VIEWS = {
   chase: { label: "Bám sau lưng", kind: "chase", overview: [0, 1.5, 1], fov: 52, back: 11, height: 11.5, ahead: 7, labelY: 4.6, labelW: 2.1, minimap: true },
   top:   { label: "Thẳng từ trên xuống", kind: "fixed", dir: [0, 1, 0.1], fov: 30, labelY: 1.3, labelW: 2.0 },
 };
-const DEFAULTS = { lives: 5, difficulty: 6, dpad: "r", dpadStyle: "ring", shuffle: true, bombs: 1, bombGift: 3, fight: false, timer: "up", timerSec: 120, showAnswers: true };   // 2d: + timer, showAnswers (như AWord)
+const DEFAULTS = { lives: 5, difficulty: 6, enemies: 2, fuse: 5, dpad: "r", dpadStyle: "ring", shuffle: true, bombs: 1, bombGift: 3, fight: false, timer: "up", timerSec: 120, showAnswers: true };   // 2d: + timer, showAnswers (như AWord) · 2r: + enemies, fuse
+const MAX_ENEMIES = 10, LIVES_INF = 10;   // 2r: thanh Enemy 0..10 · Lives nấc 10 = không giới hạn
+export const enemiesFor = diff => (diff <= 3 ? 1 : diff <= 6 ? 2 : diff <= 8 ? 3 : 4);   // 2r: luật cũ difficulty ⇒ số địch (Options chưa có `enemies`)
 const SWAP_S = 3;                          // 1e: giây chờ đổi học sinh · 1k: 3 ⇒ 5 s · 1m: thầy đổi lại 3-2-1
 const BLAST_R = 1.8 * 4, NEAR_R = 1.15 * 4; // tầm nổ hạ robot ĐỊCH · tầm làm robot MÌNH mất mạng (đơn vị thế giới; ô = 4) — 2b: địch 1,6 ⇒ 1,8 ô, mình 1,25 ⇒ 1,15 ô
 // 2b: robot MÌNH còn được TƯỜNG che: bên kia vách (vách lúc CHƯA nổ) thì không sao; robot địch thì vẫn chết xuyên vách
@@ -789,6 +798,7 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
   const opt = { ...DEFAULTS };
   // 2n: Options đã lưu của act (AWord) — chỉ nhận đúng khoá + đúng kiểu, sai thì giữ mặc định
   if (options && typeof options === "object") Object.keys(DEFAULTS).forEach(k => { if (k in options && typeof options[k] === typeof DEFAULTS[k]) opt[k] = options[k]; });
+  if (options && typeof options === "object" && typeof options.enemies !== "number") opt.enemies = enemiesFor(opt.difficulty);   // 2r: act cũ ⇒ số địch như trước
   if (new URLSearchParams(location.search).get("fight") === "1") opt.fight = true;
   let fight = opt.fight;                           // 1u: Fight 2 đội
   // 2n: mọi listener gắn lên window/document đi qua on() ⇒ destroy() gỡ sạch; `dead` chặn vòng vẽ + hẹn giờ còn sót
@@ -1188,7 +1198,7 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
   const tpBeam = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 12, 32, 1, true).translate(0, 6, 0),
     new THREE.ShaderMaterial({ ...BEAM_SHADER, uniforms: THREE.UniformsUtils.clone(BEAM_SHADER.uniforms), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
   tpBeam.visible = false; station.add(tpBeam);
-  const drones = [0xe53935, 0xa855f7, 0xe53935, 0xa855f7].map(c => { const d = makeDrone(c); d.color = c; d.g.visible = false; station.add(d.g); return d; });
+  const drones = Array.from({ length: MAX_ENEMIES }, (_, i) => (i % 2 ? 0xa855f7 : 0xe53935)).map(c => { /* 2r: 4 ⇒ MAX_ENEMIES robot dựng sẵn */ const d = makeDrone(c); d.color = c; d.g.visible = false; station.add(d.g); return d; });
   // 1j: robot (mình + địch) cũng hiện trong ảnh "nhìn xuống hầm" ⇒ thấy nó đứng trên bệ nâng dưới giếng
   [astro.g, astro2.g, ...drones.map(d => d.g)].forEach(o => o.traverse(m => m.layers.enable(UNDER)));
 
@@ -1653,6 +1663,7 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
   }
 
   // ---------------------------------------------------------------- HUD phụ
+  const infLives = () => opt.lives >= LIVES_INF;              // 2r: nấc cuối thanh Lives = không giới hạn (vạch năng lượng luôn đầy)
   function renderSolo() {                                    // 2b: chế độ ĐƠN dùng đúng bộ HUD đội A của Fight: điểm LED góc trên trái + vạch năng lượng dọc (tim)
     const T = teams[0]; if (fight || !T || !T.el) return;
     T.el.innerHTML = `<div class="ft-led led"></div>`; ledSet(T.el.querySelector(".ft-led"), String(score).padStart(2, "0"));
@@ -1664,7 +1675,7 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
   }
   function renderLives() {   // nhiều tim quá thì gọn thành "♥ N" cho khỏi tràn dải trên
     renderSolo();
-    livesEl.innerHTML = opt.lives > 6 ? `<i>${HEART}</i><span>${lives}</span>`
+    livesEl.innerHTML = opt.lives > 6 ? `<i>${HEART}</i><span>${infLives() ? "∞" : lives}</span>`
       : Array.from({ length: opt.lives }, (_, i) => `<i class="${i < lives ? "" : "is-lost"}">${HEART}</i>`).join("");
   }
   function renderTeams() {                                   // 1v: điểm LED ở góc trên · vạch năng lượng dọc sát viền (thay tim) · số bom nằm trong nút giữa D-pad
@@ -1763,7 +1774,7 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
     winner = teams[0];
     bombsLeft = opt.bombs; correctSinceGift = 0; clearBombs(); paintBombs(); swapEl.hidden = true; invulnUntil = 0;
     const diff = opt.difficulty;
-    enemyCount = diff <= 3 ? 1 : diff <= 6 ? 2 : diff <= 8 ? 3 : 4;
+    enemyCount = clamp(Math.round(opt.enemies), 0, MAX_ENEMIES);   // 2r: thanh Enemy (trước: suy từ difficulty)
     enemySpeed = 1000 / Math.max(230, 400 - diff * 14) * SPEED_SCALE;
     ovStart.hidden = ovEnd.hidden = ovPause.hidden = true;
     setShown(topEl, true); bar.hidden = false; mini.hidden = !V.minimap;   // 2c: thanh câu hỏi cũng hiện theo lượt
@@ -1809,14 +1820,33 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
   // 2f: robot địch trồi lên qua nắp boong ở các góc (tách khỏi buildMaze để cuối intro gọi sớm)
   let enemiesUp = false, introWallsUp = false;
   function raiseWallsIntro() { introWallsUp = true; wallAnim.dir = 1; wallAnim.t = 0; wallAnim.ox = cellX(START.c); wallAnim.oz = cellZ(START.r); sfx.build(); }
+  // 2r: robot thứ 5+ (vượt 4 góc) ra ở ô XA: có sàn, ngoài sân xuất phát, cách ô xuất phát ≥ 5 ô (+ 2 ô đội Fight), trải đều — chọn tham lam ô xa mọi ô đã lấy nhất
+  let xspots = [];
+  function extraSpots(n) {
+    const out = [], taken = [...espots, [START.r, START.c]], keep = [[START.r, START.c], ...(fight ? SPAWN.filter(Boolean).map(s => [s.r, s.c]) : [])];
+    for (let k = 0; k < n; k++) {
+      let best = null, bd = -1;
+      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+        const g = grid[r][c]; if (!g.on || g.plaza) continue;
+        if (keep.some(([kr, kc]) => Math.abs(kr - r) + Math.abs(kc - c) < 5)) continue;
+        const md = Math.min(...taken.map(([tr, tc]) => Math.abs(tr - r) + Math.abs(tc - c)));
+        if (md > bd) { bd = md; best = [r, c]; }
+      }
+      if (!best || bd < 1) break;
+      out.push(best); taken.push(best);
+    }
+    return out;
+  }
+  const enemySpot = i => (i < espots.length ? espots[i] : xspots[i - espots.length] || espots[i % espots.length]);
   function spawnEnemies(fromBuild) {
     ens = [];
+    xspots = enemyCount > espots.length ? extraSpots(enemyCount - espots.length) : [];
     for (let i = 0; i < enemyCount; i++) {
-      const [r, c] = espots[i % espots.length], d = drones[i];
+      const [r, c] = enemySpot(i), d = drones[i];
       const e = { r, c, nr: r, nc: c, t: 0, moving: false, dir: "u", speed: enemySpeed, drone: d, color: i % 2 ? "#c084fc" : "#ef4444", born: gameT + 1.3 + i * 0.12, heading: 0, fly: null, lift: -E_DEPTH, hold: null };
       ens.push(e); later(i * 0.12, () => enemyRise(e));
     }
-    sfx.enemy(); if (!fromBuild) enemiesUp = true;
+    if (enemyCount) sfx.enemy(); if (!fromBuild) enemiesUp = true;   // 2r: 0 địch ⇒ không còi
   }
   function flyBigq() {
     const bs = bigq.querySelector("span");
@@ -1872,11 +1902,11 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
     const bg = new THREE.Mesh(fbBgGeo, new THREE.MeshBasicMaterial({ color: 0x0b1020, transparent: true, opacity: 0.85, depthTest: false, toneMapped: false }));
     const fill = new THREE.Mesh(fbGeo, new THREE.MeshBasicMaterial({ color: 0x4ade80, transparent: true, depthTest: false, toneMapped: false }));   // cùng nhóm "trong suốt" với nền ⇒ thứ tự vẽ đúng, nền không phủ lên
     fill.position.set(-FB_W / 2, 0, 0.01); bg.renderOrder = 8; fill.renderOrder = 9; bar.add(bg, fill);
-    const o = { r, c, obj: b, t: 0, gone: false, bar, fill, sec: 0 }; bombs.push(o); return o;
+    const o = { r, c, obj: b, t: 0, gone: false, bar, fill, sec: 0, fuse: clamp(Math.round(opt.fuse) || DEFAULTS.fuse, 1, 10) }; bombs.push(o); return o;   // 2r: ngòi theo Options lúc đặt
   }
   const _fc = new THREE.Color();
   function paintFuse(b) {
-    const f = Math.max(0, 1 - b.t / FUSE_S);
+    const f = Math.max(0, 1 - b.t / b.fuse);
     b.fill.scale.x = Math.max(0.001, f);
     _fc.setHex(f > 0.5 ? 0x4ade80 : 0xfacc15).lerp(new THREE.Color(f > 0.5 ? 0xfacc15 : 0xef4444), f > 0.5 ? (1 - f) * 2 : (0.5 - f) * 2);
     b.fill.material.color.copy(_fc);
@@ -1942,7 +1972,7 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
       // robot bay về góc xuất phát (theo đường cong); người: ô sai ⇒ hiện lại ĐÚNG chỗ đó (giữ hướng mặt), còn lại ⇒ về giữa sân
       // 1i: địch — nắp boong mở ngay dưới robot, hạ xuống, đóng; rồi nắp ở góc xuất phát mở, đưa robot lên
       ens.forEach((e, i) => {
-        const [x, z] = entityPos(e), [r, c] = espots[i % espots.length];
+        const [x, z] = entityPos(e), [r, c] = enemySpot(i);
         e.hold = [x, z]; Object.assign(e, { r, c, nr: r, nc: c, t: 0, moving: false });
         hatches.run(x, z, { mode: "sink", depth: E_DEPTH, speed: 1.25, onLift: v => { e.lift = v; }, onHidden: () => { e.hold = null; enemyRise(e, 1.25); } });
       });
@@ -1967,8 +1997,8 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
     T.invuln = gameT + 99; p.eject = EJECT; p.down = true; T.status = "down";
     if (why === "enemy") { p.hurt = "red"; p.redT = 0; T.setRed(true); }   // 2b: bỏ tia đỏ bắn ra
     else { p.hurt = "blast"; p.moving = false; p.blastT = 0; }
-    minus(new THREE.Vector3(x, 3.4, z), "−1");
-    T.lives = Math.max(0, T.lives - 1); renderTeams();
+    if (!infLives()) { minus(new THREE.Vector3(x, 3.4, z), "−1"); T.lives = Math.max(0, T.lives - 1); }   // 2r: ∞ mạng ⇒ không trừ
+    renderTeams();
     const g = ++T.gen;
     if (T.lives <= 0) {
       later(0.9, () => {
@@ -2087,7 +2117,7 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
     return false;
   }
   function loseLife(spot) {
-    lives = Math.max(0, lives - 1); renderLives();
+    if (!infLives()) lives = Math.max(0, lives - 1); renderLives();   // 2r: ∞ mạng ⇒ vẫn đổi người, không trừ
     if (lives <= 0) { phase = "dead"; later(0.9, () => endGame("over")); return; }
     startSwap(0.9, spot);                                        // 1e: mỗi mạng một học sinh ⇒ đổi người
   }
@@ -2330,7 +2360,7 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
       b.t += dt; b.obj.g.scale.setScalar(1.25 * Math.min(1, easeOutBack(Math.min(1, b.t / 0.35))));
       paintFuse(b);
       if (phase === "play" && Math.floor(b.t) > b.sec) { b.sec = Math.floor(b.t); sfx.tick(); }
-      if (b.t >= FUSE_S) { if (phase === "play" || phase === "swap" || phase === "hold") detonate(b); continue; }   // 1h: hết 5 s tự nổ
+      if (b.t >= b.fuse) { if (phase === "play" || phase === "swap" || phase === "hold") detonate(b); continue; }   // 1h: hết 5 s tự nổ · 2r: hết b.fuse giây
       b.obj.spark.scale.setScalar(0.45 + Math.random() * 0.35); b.obj.spark.material.opacity = 0.7 + Math.random() * 0.3;
       b.obj.led.material.emissiveIntensity = Math.sin(gameT * 8) > 0 ? 4 : 0.3;
       b.obj.warn.material.opacity = 0.25 + 0.25 * (0.5 + 0.5 * Math.sin(gameT * 5));
@@ -2440,8 +2470,10 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
   // 2d: bảng OPTIONS đúng kiểu AWord (core/options-panel.js + app.css): nền trắng, 2 cột, nhãn chữ hoa xám, thanh chọn viên thuốc, thanh trượt màu
   //     + số, ô tick; sửa trên BẢN NHÁP, bấm Apply mới áp dụng (bấm ra ngoài = bỏ). Nhóm xanh lá trên cùng: Mode + Timer.
   let draft = null;
-  const SL = { lives: { lab: "Lives", min: 1, max: 9, tone: "green", chip: v => v },
-    difficulty: { lab: "Difficulty", sub: "enemies", min: 1, max: 10, tone: "blue", chip: v => v + "/10" },
+  const SL = { lives: { lab: "Lives", min: 1, max: LIVES_INF, tone: "green", chip: v => (v >= LIVES_INF ? "∞" : v) },   // 2r: nấc cuối = ∞
+    enemies: { lab: "Enemies", sub: "robots", min: 0, max: MAX_ENEMIES, tone: "blue", chip: v => v || "Off", off: 0 },   // 2r
+    difficulty: { lab: "Difficulty", sub: "enemy speed", min: 1, max: 10, tone: "blue", chip: v => v + "/10" },   // 2r: chỉ còn tốc độ
+    fuse: { lab: "Bomb timer", sub: "seconds", min: 1, max: 10, tone: "amber", chip: v => v + "s" },   // 2r
     bombs: { lab: "Bombs", sub: "each player", min: 0, max: 10, tone: "amber", chip: v => v ? v : "Off", off: 0 },
     bombGift: { lab: "Bomb gift", sub: "every N correct", min: 0, max: 10, tone: "amber", chip: v => v ? v : "Off", off: 0 } };
   const segHtml = (k, items, cur, dim) => `<div class="mco-seg${dim ? " is-dim" : ""}" data-seg="${k}" style="--n:${items.length};--i:${Math.max(0, items.findIndex(it => it[0] === cur))}"><div class="mco-seg-thumb"></div>${
@@ -2459,7 +2491,7 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
       <div class="mco-optc mco-optc-wide mco-opt-top"><div class="mco-optc-ctl">${segHtml("timer", [["none", "None"], ["up", "Count up"], ["down", "Count down"]], draft.timer)}
         <div class="mco-tstep${draft.timer === "down" ? "" : " is-dim"}"><button data-ts="-1">−</button><b>${fmt(draft.timerSec)}</b><button data-ts="1">+</button></div></div></div>
       <div class="mco-optc-dash"></div>
-      ${sliderHtml("lives")}${sliderHtml("difficulty")}${sliderHtml("bombs")}${sliderHtml("bombGift")}
+      ${sliderHtml("lives")}${sliderHtml("enemies")}${sliderHtml("difficulty")}${sliderHtml("bombs")}${sliderHtml("bombGift")}${sliderHtml("fuse")}
       <div class="mco-optc mco-optc-wide"><div class="mco-optc-lab">D-pad style</div><div class="mco-optc-ctl">${segHtml("dpadStyle", DPAD_STYLES.map(k => [k, DPAD_STYLE_NAMES[k].split("· ")[1]]), draft.dpadStyle)}</div></div>
       <div class="mco-optc-sep"></div>
       <div class="mco-optc mco-optc-wide"><div class="mco-checks">${checkHtml("shuffle", "Shuffle questions")}${checkHtml("showAnswers", "Show answers at end")}</div></div>
@@ -2476,7 +2508,7 @@ export async function createMazeChase({ mount, view = "tilt", questions, title =
     optsEl.querySelector(".mco-opt-apply").addEventListener("click", applyOpts);
   }
   const saveOpts = () => { if (host && host.saveOptions) { try { host.saveOptions(pickOpt(opt)); } catch (e) { console.warn("STAR LOOT: save options", e); } } };   // 2n
-  const OPT_KEYS = ["fight", "timer", "timerSec", "lives", "difficulty", "bombs", "bombGift", "dpadStyle", "shuffle", "showAnswers"];
+  const OPT_KEYS = ["fight", "timer", "timerSec", "lives", "enemies", "difficulty", "bombs", "bombGift", "fuse", "dpadStyle", "shuffle", "showAnswers"];   // 2r: + enemies, fuse
   const pickOpt = o => Object.fromEntries(OPT_KEYS.map(k => [k, o[k]]));
   const dimApply = () => { const a = optsEl.querySelector(".mco-opt-apply"); if (a) a.classList.toggle("is-dim", JSON.stringify(draft) === JSON.stringify(pickOpt(opt))); };
   function applyOpts() { applyFrom(draft, true); }

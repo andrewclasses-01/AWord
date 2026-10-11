@@ -1,11 +1,11 @@
 {
  "nguon": "myGame/maze-chase/core",
- "ban": "2q",
- "commit": "ea20330",
+ "ban": "2r",
+ "commit": "1fd3173",
  "con_sua_chua_commit": false,
  "files": [
-  "mc3d-2q.js",
-  "mc3d-2q.css",
+  "mc3d-2r.js",
+  "mc3d-2r.css",
   "mc3d-audio-2n.js",
   "mc3d-intro-2m.js",
   "mc3d-maps-1t.js",
