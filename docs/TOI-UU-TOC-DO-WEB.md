@@ -112,7 +112,7 @@ Khoá quản trị: `%LOCALAPPDATA%\AndrewClasses\firebase-admin.json` (chép b�
 | `fonts.css` base64 → woff2 rời | KHÔNG làm — base64 nén gzip ≈ woff2 (không bớt byte), đổi lại nguy cơ nháy phông |
 | Dashboard đọc điểm song song | đã có sẵn (6 luồng) — audit nói sai |
 
-**Lợi lớn nhất còn lại: thu gọn mã myLesson Web khi xuất bản** (bai.html 132 KB nén / 30 % chú thích, chung.js 72 KB / 47 %, dashboard.html
+**✅ ĐÃ LÀM cùng ngày (myLesson web v1.305.0 `85e4ec4`): bai.html 132 → 53 KB nén, lop.html 94 → 33, dashboard.html 339 → 188, chung.js 72 → 20.** Ghi chép cũ bên dưới giữ làm kế hoạch gốc — **Lợi lớn nhất còn lại (lúc viết): thu gọn mã myLesson Web khi xuất bản** (bai.html 132 KB nén / 30 % chú thích, chung.js 72 KB / 47 %, dashboard.html
 343 KB). Chép đường AWord Đợt 482 (`.github/workflows/xuat-ban.yml` + `tools/xuat-ban.mjs`), thêm minify khối `<script>`/`<style>` nhúng
 (SOM do `tools/sinh-som.py` dập — thu gọn SAU khi dập). ⛔ Ba điều kiện trước khi bật: (1) chủ repo đổi Settings › Pages › Source = GitHub
 Actions; (2) workflow `on: push` ngay từ đầu — app myLesson đẩy bài lên đó mỗi buổi, thiếu là Pages không cập nhật; (3) có công cụ kiểm
