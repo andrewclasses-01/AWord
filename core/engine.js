@@ -243,7 +243,7 @@ const WORD_POOL_MAX_LEN = 24;
 //                          the same id, so a re-send can never write twice
 //   session.attemptId()    that id, printed on the screenshot fallback board
 //   session.meta           { assignmentTitle, code } — for the same board
-//   session.entries()    the class ranking -> Promise<[{name,score,total,timeMs,mine}]>
+//   session.entries()    the class ranking -> Promise<[{name,score,total,timeMs,mine,thu?}]> (thu = trial student: last, grey, no rank)
 // ⭐⭐ Đợt 246 — a student play starts as PRACTICE or SUBMIT (two buttons on the
 // READY screen, `hwMode`). PRACTICE never calls submit and may drill mistakes;
 // SUBMIT uploads at finish() and confirms via the SUBMIT HOMEWORK ceremony.
@@ -4157,7 +4157,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // phantom fanfare AND a phantom leaderboard row / session.submit() for a game
     // nobody was playing. Every restart stacked one more. See GHI CHU DU AN.md.
     if (torndown) return;
-    // ⛔ Đợt 500 — ván đã KẾT trong lúc đang tạm dừng (thầy mở Options trong cửa sổ setTimeout câu cuối) ⇒ đóng bảng mà
+    // ⛔ Đợt 504 — ván đã KẾT trong lúc đang tạm dừng (thầy mở Options trong cửa sổ setTimeout câu cuối) ⇒ đóng bảng mà
     //    chạy lại đồng hồ là "đồng hồ ma" trên màn tổng kết: tiếng cảnh báo kêu, chạm 0 gọi submitHandler lần 2.
     if (playEnded) return;
     if (timerStarted && timerMode() !== "none") timerId = setInterval(tickTimer, 500);
@@ -6686,12 +6686,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // are being fixed one by one too, but this is the single place that
       // protects ALL of them, including any template written later.
       if (torndown) return;
-      // ⛔ Đợt 500 (audit 11/10/2026) — MỘT VÁN CHỈ KẾT MỘT LẦN. Template không có cờ `finished` riêng (Gameshow, Open the box,
+      // ⛔ Đợt 504 (audit 11/10/2026) — MỘT VÁN CHỈ KẾT MỘT LẦN. Template không có cờ `finished` riêng (Gameshow, Open the box,
       //    Balloon pop, Maze…) có thể gọi finish() hai lần (hết giờ trùng hoạt ảnh câu cuối) ⇒ hai lượt nộp, hai dòng điểm.
       //    `playEnded` chỉ đặt ở đây và không bao giờ trả về false trong một ván. Fight để nguyên (onFinish lặp vô hại).
       if (playEnded && !fight) return;
       stopTimer();
-      pausedClockAt = 0;  // Đợt 500 — ván kết khi đang ☰/Options: đóng bảng KHÔNG được hồi sinh đồng hồ
+      pausedClockAt = 0;  // Đợt 504 — ván kết khi đang ☰/Options: đóng bảng KHÔNG được hồi sinh đồng hồ
       playEnded = true;   // ⭐ Đợt 400
       // FIGHT MODE: a board running out of words (or lives) ends the MATCH —
       // the winner comes from the two scoreboards, so this play doesn't draw
@@ -6935,7 +6935,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     inner.append(cover);
     confettiBurst(cover);
     (tpl.sounds?.complete || sound.fanfare)();
-    // Đợt 500 — rời ván trong 2,2 s pháo hoa ⇒ đừng dựng màn tổng kết trên closure đã gỡ (gửi lại lượt hỏng từ ván chết).
+    // Đợt 504 — rời ván trong 2,2 s pháo hoa ⇒ đừng dựng màn tổng kết trên closure đã gỡ (gửi lại lượt hỏng từ ván chết).
     setTimeout(() => {
       if (torndown) { cover.remove(); return; }
       text.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: "forwards" });
@@ -7272,8 +7272,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       table.append(el("div", "aw-lb-row is-note", "No plays yet — be the first!"));
       return entries;
     }
-    entries.forEach((e, i) => {
-      const row = el("div", "aw-lb-row" + (e.mine ? " is-you" : ""));
+    let hang = 0;
+    entries.forEach((e) => {
+      const row = el("div", "aw-lb-row" + (e.mine ? " is-you" : "") + (e.thu ? " is-thu" : ""));
+      if (!e.thu) hang++;
       const tp = fmtSecsParts(e.timeMs);
       // The name TEXT gets its own inline span so the fit below can measure the
       // real text width (fractional, via getBoundingClientRect). The cell's own
@@ -7283,7 +7285,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       const nameCell = el("span", "aw-lb-name");
       nameCell.append(el("span", "aw-lb-nametext", escapeText(e.name)));
       row.append(
-        el("span", "aw-lb-rank", ordinal(i + 1).toLowerCase()),
+        el("span", "aw-lb-rank", e.thu ? "–" : ordinal(hang).toLowerCase()),
         nameCell,
         el("span", "aw-lb-score", escapeText(hwScoreText(e))),
         el("span", "aw-lb-time", `${tp.big}${tp.small}`)

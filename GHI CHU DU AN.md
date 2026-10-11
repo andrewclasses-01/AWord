@@ -546,6 +546,18 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 504 (11/10/2026) — HỌC SINH HỌC THỬ: CUỐI BẢNG XẾP HẠNG, CHỮ XÁM
+
+**Thầy (myLesson):** học sinh học thử "xuất hiện ở leaderboard của mọi người nhưng ở dạng chữ nhạt, luôn xếp cuối" — áp cả bảng xếp hạng bài giao AWord.
+
+**Đã làm:** myLesson web v1.309.0 đưa cờ `thu:1` vào `lessonWeb/lop` `hocSinh[]` (roster status 'thu').
+- `core/assignments.js tenTheoMa`: Map tên theo mã nay mang thêm `m.thu` (Set mã em học thử) — cùng MỘT lượt đọc, không tốn thêm.
+- `play.js session.entries()`: mỗi mục thêm `thu` (chỉ dòng CÓ mã — dòng cũ không mã không xét), sắp `(a.thu - b.thu) || rankCompare`.
+- `core/engine.js hwRenderLeaderboard`: hạng đếm riêng em không học thử; dòng học thử hạng "–" + class `.is-thu` (`core/app.css` opacity .45 + grayscale).
+- Phụ huynh (`dacBiet`) vẫn chỉ thấy dòng mình như cũ.
+
+---
+
 ## Đợt 503 (11/10/2026) — STAR LOOT: 3 THANH OPTIONS MỚI (Enemies 0–10 · Lives ∞ · Bomb timer 1–10 s) · phiên MSI
 
 **Thầy:** "Đọc game STAR LOOT trên cả myGame và AWord, sửa options trên AWord: thêm một thanh Enemy để quyết định số Robot địch, 0 đến 10 ·

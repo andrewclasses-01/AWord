@@ -405,7 +405,7 @@ async function play(assignment, studentName, className, studentMa) {
       if (sv === undefined || !lamTiepXet) return;   // không hỏi được / ván đầu đã bắt đầu ⇒ thôi
       const loc = docLuot(khoaLT);
       if (sv === null) {
-        // ⛔ Đợt 500 (audit 11/10) — bỏ luôn NHÁP của lượt đó (saveDraft mỗi phút + pagehide cất với attemptId = nhapId):
+        // ⛔ Đợt 504 (audit 11/10) — bỏ luôn NHÁP của lượt đó (saveDraft mỗi phút + pagehide cất với attemptId = nhapId):
         //    máy chủ chỉ xoá lượt giữ khi lượt đã XONG hoặc em tự rời ván ở máy khác ⇒ nháp trên máy này hết việc. Trước đây
         //    chỉ xoá kho làm tiếp ⇒ `maLuotDangGiu()` mất nhapId ⇒ `sweepDrafts` đẩy nháp cũ thành dòng NỘP DỞ ma (cũ hơn
         //    dòng NỘP thật) trên dashboard.
@@ -440,7 +440,7 @@ async function play(assignment, studentName, className, studentMa) {
       if (mcHen) { clearTimeout(mcHen); mcHen = null; }
       if (!b) return;
       ghiLuotGiu(assignment.code, ma, b, { keepalive }).then(ok => {
-        // ⛔ Đợt 500 — PATCH này tới SAU khi lượt đã bỏ/xong (DELETE của boMayChu đi trước, hoặc chưa từng có DELETE vì PATCH
+        // ⛔ Đợt 504 — PATCH này tới SAU khi lượt đã bỏ/xong (DELETE của boMayChu đi trước, hoặc chưa từng có DELETE vì PATCH
         //    đầu còn bay nên mcCo chưa bật) ⇒ lượt đã nộp "sống lại" trên máy chủ ⇒ lần mở sau CONTINUE một lượt đã nộp và
         //    playLog.start mượn logId đè practiceLog done:true thành done:false. Xoá lại ngay.
         if (ok && daBoMc.has(b.nhapId)) { xoaLuotGiu(assignment.code, ma); return; }
@@ -455,7 +455,7 @@ async function play(assignment, studentName, className, studentMa) {
     if (con <= 0) gui(false);
     else if (!mcHen) mcHen = setTimeout(() => { mcHen = null; gui(false); }, con);
   }
-  const daBoMc = new Set();   // Đợt 500 — nhapId các lượt đã thôi giữ (xem ghiLuotGiu ở guiMayChu)
+  const daBoMc = new Set();   // Đợt 504 — nhapId các lượt đã thôi giữ (xem ghiLuotGiu ở guiMayChu)
   function boMayChu(keepalive) {   // lượt xong / em tự bỏ ⇒ thôi giữ trên máy chủ
     if (mcHen) { clearTimeout(mcHen); mcHen = null; }
     mcCho = null;
@@ -591,7 +591,7 @@ async function play(assignment, studentName, className, studentMa) {
   // NTK9 LESSON 21). Trang mẹ chỉ gỡ khung nào đã báo `dangChoi:false` — gỡ giữa ván là mất lượt dở + tính "bỏ cuộc"
   // (Đợt 383/424). Chỉ là tin báo: không đổi gì trong game; không nhúng (parent === window) thì không bắn.
   // HS đặc biệt không có `playLog` ⇒ không báo ⇒ trang mẹ để nguyên khung như trước.
-  // ⛔ Đợt 500 (audit 11/10/2026) — lượt NỘP đang gửi. `end()` chạy NGAY sau session.submit() (chưa chờ máy chủ) mà báo
+  // ⛔ Đợt 504 (audit 11/10/2026) — lượt NỘP đang gửi. `end()` chạy NGAY sau session.submit() (chưa chờ máy chủ) mà báo
   //    `dangChoi:false` liền thì trang mẹ được phép gỡ khung (bấm READY act khác) giữa lúc đang tải lên ⇒ fetch bị cắt,
   //    AWORD:NOP không bao giờ bắn (bảng xếp hạng không tự làm mới, em không thấy xác nhận). Nay chờ lượt gửi xong rồi mới báo.
   let dangNop = null;
@@ -736,7 +736,7 @@ async function play(assignment, studentName, className, studentMa) {
           // ⭐ Đợt 384 — lượt KHÔNG nộp (Start with mistakes, 0 điểm) ⇒ bài làm vào practiceLog; lượt nộp đã có ở results.
           if (!playLog.attemptId && Array.isArray(review) && review.length) playLog.review = review;
           beatPlayLog(playLog);
-          // Đợt 445 · Đợt 500 — báo "đã rời ván" SAU khi lượt nộp gửi xong (hay hỏng hẳn — bài đã nằm trong hộp thư đi)
+          // Đợt 445 · Đợt 504 — báo "đã rời ván" SAU khi lượt nộp gửi xong (hay hỏng hẳn — bài đã nằm trong hộp thư đi)
           //   (chỉ báo khi chưa có ván MỚI đang chạy — em bấm chơi lại lúc lượt cũ còn đang gửi thì tin trễ không được rơi giữa ván)
           const p = dangNop; dangNop = null;
           const bao = () => { if (!playLog || playLog.done) baoVanChoTrangMe(false); };
@@ -823,9 +823,11 @@ async function play(assignment, studentName, className, studentMa) {
           .map(([key, r]) => ({
             name: (r.ma && tenMa.get(chuanMaEm(r.ma))) || prettiestName(names.get(key) || [r.name]),
             score: r.score, total: r.total, timeMs: r.timeMs,
-            mine: key === mineKey
+            mine: key === mineKey,
+            // ⭐ Đợt 504 (11/10/2026) — em HỌC THỬ: luôn cuối bảng, chữ xám, không đánh số hạng (engine hwRenderLeaderboard)
+            thu: !!(r.ma && tenMa.thu && tenMa.thu.has(chuanMaEm(r.ma)))
           }))
-          .sort(rankCompare);
+          .sort((a, b) => (a.thu - b.thu) || rankCompare(a, b));
       }
     }
   });

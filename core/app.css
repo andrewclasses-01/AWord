@@ -968,6 +968,8 @@ html.aw-nhung .aw-below { display: none; }
 }
 .aw-lb-row:nth-child(odd) { background: rgba(255,255,255,.04); }
 .aw-lb-row.is-you { background: rgba(53,177,240,.16); outline: 1px solid rgba(53,177,240,.5); }
+/* Đợt 504 — học sinh học thử (myLesson): chữ xám, cuối bảng */
+.aw-lb-row.is-thu { opacity: .45; filter: grayscale(1); }
 .aw-lb-rank { color: #9aa0a8; font-weight: 700; text-align: left; }
 .aw-lb-name { text-align: left; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .aw-lb-score { font-weight: 800; }

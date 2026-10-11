@@ -488,6 +488,7 @@ export function tenTheoMa(ma = "") {
   if (!_tenTheoMaP) {
     _tenTheoMaP = (async () => {
       const m = new Map();
+      m.thu = new Set();   // ⭐ Đợt 504 — mã các em HỌC THỬ (myLesson v1.309.0, `h.thu`): bảng xếp hạng để cuối, chữ xám
       const url = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/lessonWeb/lop?key=${firebaseConfig.apiKey}`;
       // Đợt 439 — danh sách lớp sắp thôi đọc công khai (myLesson GĐ5) ⇒ kèm vé em khi có
       const ve = await veDocDiem(ma);
@@ -497,6 +498,7 @@ export function tenTheoMa(ma = "") {
       [...(j.lop || []), ...(j.khoa || [])].forEach(l => (l.hocSinh || []).forEach(h => {
         const k = chuanMaEm(h.ma);
         if (k && h.ten && !m.has(k)) m.set(k, String(h.ten));
+        if (k && h.thu) m.thu.add(k);
       }));
       return m;
     })().catch(() => new Map());
@@ -580,7 +582,7 @@ export function newAttemptId() {
 // ⭐ Đợt 383 — `doDang: true` = a round the student LEFT midway (Start again / reload / close tab) with a score
 // ≥ 1: the score is real but its denominator is only the round's item count, so myLesson never uses it as the
 // act's standard denominator (rules ruleset 3bf38eaa accept the optional bool). `attemptId` may be handed in.
-// ⛔⛔ Đợt 500 (audit 11/10/2026) — LƯỢT NỘP PHẢI LỌT LUẬT. Luật scores/results (myLesson `_luat-moi-firestore.rules`) từ chối
+// ⛔⛔ Đợt 504 (audit 11/10/2026) — LƯỢT NỘP PHẢI LỌT LUẬT. Luật scores/results (myLesson `_luat-moi-firestore.rules`) từ chối
 //    bằng 403 ⇒ `guiBangVe` coi là "hard": `scores` đã lên mà `results` hỏng VĨNH VIỄN (outbox thử lại mỗi lần mở, em kẹt màn
 //    GỬI LẠI, dashboard có điểm mà không có bài làm). Ba chỗ code từng vượt luật mà không biết:
 //    · `review` > 300 câu hoặc doc > 1 MiB (act dài kèm `src`) ⇒ chỉ khi VƯỢT mới thu gọn bằng gonReview (lượt thường GIỮ
@@ -782,7 +784,7 @@ const isDenied = e => e && e.code === "permission-denied";
  * that). NEVER throws, and never double-writes: see the header above.
  */
 export async function sendAttempt(entry, { tries = 3, tryTimeoutMs = 6000 } = {}) {
-  // ⛔ Đợt 500 — lượt CŨ nằm trong hộp thư đi (dựng trước khi makeAttempt biết luật) cũng phải lọt luật khi gửi lại;
+  // ⛔ Đợt 504 — lượt CŨ nằm trong hộp thư đi (dựng trước khi makeAttempt biết luật) cũng phải lọt luật khi gửi lại;
   //    cùng `attemptId` nên lượt đã lên một nửa (scores) vẫn chỉ ghi nốt phần còn thiếu.
   lamSachLuot(entry);
   // ⭐ Đợt 410 — lượt MANG MÃ em chỉ đi bằng VÉ (xem khối VÉ ĐĂNG NHẬP ở trên).
