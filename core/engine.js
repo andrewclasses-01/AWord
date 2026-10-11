@@ -69,16 +69,15 @@ import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
 // core/showdown-setup.js, which is `await import`-ed from the teacher's button
 // only — same discipline as fight.js and store.js below.
 import { readPick, writePick, clearPick, memberAt, stampReview, groupByMember, readPendingResult, SOLO_TEAM_ID, browserId, dealQuestions, SD_FREE_CAP, formatActDisplayName, SD_PLAN_KEYS, findPlanClash, stdSignature, roundMissingTeams, roundReadyTeamIds, ROUND_BEAT_MS, assignFullLabels } from "./showdown.js";
-// The Showdown "Show answers" screen. Static like the line above and for the
-// same reason — it is DOM only, with no Firestore and no library layer; the one
-// thing it needs from the network arrives as the `loadTeams` callback below.
-import { mountShowdownReview } from "./showdown-review.js";
+// The Showdown "Show answers" screen — DOM only, no Firestore, no library layer.
+// ⚡ Đợt 501 (tốc độ) — tải LƯỜI ở chỗ dùng (chỉ Showdown của thầy): trang học sinh không còn kéo nó + avatar.js.
 // store.js (the teacher's library) is imported LAZILY for the same reason as
 // assignment-ui.js: the student page must not even load code that can reach it.
 import { TEMPLATES, templateLabel, templateIcon } from "./catalog.js";
 import { fitOnce } from "./fit.js";
 import { THEMES, loadTheme } from "./themes/manifest.js";
-import { openPrintPopup, withVariant } from "./print.js";
+// ⚡ Đợt 501 (tốc độ) — print.js (+ print-quest, qr, lop-dashboard) tải LƯỜI khi bấm nút In: học sinh không bao giờ in,
+//    mà bốn file này nằm trên đường tải play.html (~25 KB nén, 4 lượt tải). Xem printBtn.onclick.
 // Đợt 143 — the Options panel's BODY lives here now, shared with Settings >
 // "Default activity options" so the teacher meets the same controls in both
 // places. This file keeps the other half: the draft model, Apply, and
@@ -2366,10 +2365,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   printBtn.onclick = () => {
     sound.click();
     const fromOrigin = base && !variantsOf(libAct.content) && libAct._mode !== "ipa" && variantsOf(originAct.content);
-    openPrintPopup(resolveActivity(libAct), libAct, fromOrigin ? {
+    import("./print.js").then(({ openPrintPopup, withVariant }) => openPrintPopup(resolveActivity(libAct), libAct, fromOrigin ? {
       variantAct: originAct,
       resolveVariant: key => convertActivity(withVariant(originAct, key), libAct.type)
-    } : {});
+    } : {})).catch(e => { console.warn("AWord: could not load Print", e); toast("Could not open Print — check the connection."); });
   };
 
   // ⭐⭐ Đợt 400 (thầy, 26/9/2026) — NÚT CHUYỂN ACT. Single: bên trái tên act, cùng cỡ nút
@@ -7700,7 +7699,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // unsubscribe the review can hold. The dynamic import is done INSIDE it and
       // the real unsubscribe is chained on afterwards.
       const sd = () => import("./showdown-setup.js");
-      sdReviewStop = mountShowdownReview({
+      // ⚡ Đợt 501 — showdown-review.js tải lười. stopShowdownReview() có thể chạy TRƯỚC khi module về ⇒ cờ `ve.bo`
+      //    chặn mount muộn; về rồi thì gọi đúng hàm huỷ mount trả lại (listener Firestore của review).
+      const ve = { stop: null, bo: false };
+      sdReviewStop = () => { ve.bo = true; if (typeof ve.stop === "function") ve.stop(); };
+      import("./showdown-review.js").then(({ mountShowdownReview }) => {
+      if (ve.bo || torndown) return;
+      ve.stop = mountShowdownReview({
         head, before: closeBtn, host: rv,
         pick: showdownPick,
         review: reviewData,
@@ -7748,6 +7753,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         },
         toast
       });
+      }).catch(e => { console.warn("AWord: could not load the Showdown review", e); });
       inner.append(rv);
       return;
     }

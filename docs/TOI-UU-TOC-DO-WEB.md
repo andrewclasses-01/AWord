@@ -101,3 +101,19 @@ Mở thư mục ⇒ `listAllAssignments()` 147 bài giao ≈ 3,9 MB (98 % ảnh 
 | `do-kho.js` | CHỈ ĐỌC: kích thước kho `users/{uid}/items` theo kind / trường / doc to nhất (khoá quản trị) |
 | `di-tru-484.js` · `kiem-484.js` | mẫu DI TRÚ dữ liệu an toàn (`--thu` / `--sao-luu` / `--lam` / `--hoan`) + kiểm sâu so sao lưu |
 Khoá quản trị: `%LOCALAPPDATA%\AndrewClasses\firebase-admin.json` (chép bằng `D:\APP AND DATA\_KHOA\CAI KHOA FIREBASE.bat`) — KHÔNG đưa lên git.
+
+## Đợt 501 (11/10/2026) — kết quả đợt tốc độ sau audit
+
+| Việc | Kết quả |
+|---|---|
+| AWord: `print.js` + `showdown-review.js` tải lười | play.html 40 → 34 module preload, −29,6 KB nén, −6 lượt tải mỗi lần mở bài lạnh |
+| myLesson web v1.304.0: `lop.json`/`bai.json` 'no-cache' không `?t=` | file không đổi ⇒ 304 thay vì ~20 KB nén + đọc lại 166 KB JSON (trang lớp còn nạp dữ liệu 2 lần ⇒ lần 2 nay rẻ) |
+| Gói tiếng hoãn tới START | KHÔNG làm — Đợt 122 cố ý giữ PLAY tới khi tiếng xong |
+| `fonts.css` base64 → woff2 rời | KHÔNG làm — base64 nén gzip ≈ woff2 (không bớt byte), đổi lại nguy cơ nháy phông |
+| Dashboard đọc điểm song song | đã có sẵn (6 luồng) — audit nói sai |
+
+**Lợi lớn nhất còn lại: thu gọn mã myLesson Web khi xuất bản** (bai.html 132 KB nén / 30 % chú thích, chung.js 72 KB / 47 %, dashboard.html
+343 KB). Chép đường AWord Đợt 482 (`.github/workflows/xuat-ban.yml` + `tools/xuat-ban.mjs`), thêm minify khối `<script>`/`<style>` nhúng
+(SOM do `tools/sinh-som.py` dập — thu gọn SAU khi dập). ⛔ Ba điều kiện trước khi bật: (1) chủ repo đổi Settings › Pages › Source = GitHub
+Actions; (2) workflow `on: push` ngay từ đầu — app myLesson đẩy bài lên đó mỗi buổi, thiếu là Pages không cập nhật; (3) có công cụ kiểm
+live kiểu `tools/kiem-live.py` (băm nguồn trong build.json) vì quy trình bảo mật "so mã băm live" sẽ luôn lệch.

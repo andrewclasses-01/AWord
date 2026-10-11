@@ -8,6 +8,9 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **11/10/2026 Đợt 501 — ĐỢT TỐC ĐỘ + DỌN DẸP**: `print.js` + `showdown-review.js` tải lười (play.html 40 → 34 module preload, −29,6 KB
+> nén, −6 lượt tải mỗi lần học sinh mở bài lạnh) · xoá worktree cũ Đợt 372. ⛔ Thêm import TĨNH module chỉ-thầy vào engine.js/play.js là kéo nó
+> lại về máy học sinh — dùng `import()` tại chỗ dùng + `python tools/sinh-preload.py --write`. Chi tiết + các việc CỐ Ý không làm: GHI CHU Đợt 501.
 > ✏️ **11/10/2026 Đợt 500 — SỬA LỖI THEO AUDIT (phần AWord)**: nháp lượt giữ không còn sinh NỘP DỞ ma (`play.js` dropDraft) · `persist()`
 > có lưới chống mất bảng goiY (gộp, không ghi đè mù) · lượt nộp tự lọt luật (review/timeMs/tên, cả lượt cũ trong outbox) · Fight kết trận khi
 > một bàn hết (`henKetTran`) · engine `finish()` một lần/ván + không hồi sinh đồng hồ sau khi kết lúc pause · `?giao=` chặn act thùng rác ·

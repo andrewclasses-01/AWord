@@ -546,6 +546,29 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 501 (11/10/2026) — ĐỢT TỐC ĐỘ sau audit + DỌN DẸP · phiên MSI
+
+**Bối cảnh:** thầy giao "Đợt tối ưu tốc độ + Dọn dẹp, rồi ghi hồ sơ và kết thúc phiên". Đi cùng myLesson web v1.304.0 `b3f8501`.
+
+**Đã làm:**
+1. ⚡ `core/engine.js` — `print.js` (nút In) và `showdown-review.js` (màn Show answers của Showdown) tải LƯỜI ở chỗ dùng thay vì import
+   tĩnh. Kéo theo `print-quest.js`, `qr.js`, `lop-dashboard.js`, `avatar.js` rời đường học sinh. `python tools/sinh-preload.py --write`:
+   play.html 40 → **34** module preload. Đo bản live thu gọn: 6 file = **29,6 KB nén + 6 lượt tải** bớt mỗi lần học sinh mở bài lạnh.
+   Review Showdown: `stopShowdownReview()` có thể chạy TRƯỚC khi module về ⇒ cờ `ve.bo` chặn mount muộn. Nút In lỗi tải ⇒ toast.
+   Thử: play.html (dev :5700) không tải module nào của thầy, 0 lỗi; `import()` hai module ra đúng hàm; index.html nạp sạch.
+2. 🧹 Xoá worktree cũ `.claude/worktrees/frosty-solomon-4d3edd` (Đợt 372, không file dở) — `git worktree list` chỉ còn main.
+
+**Cân nhắc rồi KHÔNG làm (ghi để phiên sau khỏi đề xuất lại):**
+- `options-panel.js` lười: Options dựng ĐỒNG BỘ khi mở bảng, đổi sang async dễ vỡ; 6 template (anagram, crossword, TTA, unjumble, whack,
+  wordshake) import tĩnh nó để lấy hằng số ⇒ lợi chỉ ~6 KB cho Quiz. Muốn làm: dời `POINTS_MAX/POINTS_STEP/mkCell/mkSeg` sang file nhỏ riêng trước.
+- Hoãn tải gói tiếng (quiz 11 mp3, 145 KB): Đợt 122 CỐ Ý giữ PLAY tới khi tiếng tải xong (tiếng đầu không trễ), tải song song lúc READY.
+- Editor của 20 template (import tĩnh, ~3 KB nén/game): lợi nhỏ, phải sửa 20 file.
+- Nhịp `lamTiep` 15 s: thầy chốt ở Đợt 495, là chi phí ghi chứ không phải tốc độ trang.
+- Audit nói SAI: dashboard `docDiemCuaCacBai` đã song song 6 luồng từ trước.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy (máy có quyền Settings GitHub) quyết thu gọn mã myLesson Web khi xuất bản (lợi lớn nhất còn lại ~150 KB nén/lần mở
+bài — phải đổi Pages Source sang GitHub Actions + dùng công cụ kiểm live kiểu `kiem-live.py`, xem `docs/TOI-UU-TOC-DO-WEB.md` mục Đợt 501).
+
 ## Đợt 500 (11/10/2026) — SỬA LỖI THEO AUDIT 11/10 (phần AWord) · phiên MSI
 
 **Bối cảnh:** thầy giao "bắt đầu fix các lỗi, từ nặng đến nhẹ" sau bản audit (`D:\OTHERS\CLAUDE\AWord - audit 11-10-2026\BAO CAO AUDIT.md`). Đợt này là phần AWord; đi cùng
