@@ -569,6 +569,9 @@ thanh Lives thêm một nấc cuối là không giới hạn · thêm một than
 10 địch ở 10 ô khác nhau (Single + Fight) · ∞: bị đâm ⇒ pha swap, mạng vẫn 10, không thua; Fight 2 đội "10/in" · mạng thường 3 ⇒ bom sát người còn 2 ·
 0 địch ⇒ 0 robot · ngòi 2 s ⇒ nổ sau 2,1 s, 10 s ⇒ 10,0 s, 3 s qua bảng AWord ⇒ 3,1 s (bước đo 0,1 s) · bảng AWord kéo Lives ∞ / Enemies 7 / Bomb timer 3s ⇒ Apply ⇒ START AGAIN ⇒ đúng 7 địch.
 ⚠️ Chưa đo fps trên TOMKO với 10 địch (mỗi robot thêm vài lượt vẽ; robot ẩn không tốn gì).
+**Kiểm riêng FIGHT** (thầy hỏi lại; đặt qua bảng Options AWord: Mode Fight + Lives ∞ + Enemies 8 + Bomb timer 3s): 8 địch / 8 ô · ∞: 90 s cả 2 đội bị đâm ngã nhiều lần,
+vẫn 10/10 · 0 địch + ngòi 3 s: bom đội A và đội B đều nổ 3,1 s · mạng 3 ⇒ dính bom còn 2 cả 2 đội. (Một lần đo 0,2 s = robot địch giẫm vào bom — luật cũ, không phải lỗi.)
+✅ **ĐÃ PUSH + LIVE** `1a5afe2` (myGame `1fd3173`), `tools/kiem-live.py` 4/4 ✅.
 
 **VIỆC ĐANG CHỜ:** ⬜ thầy chơi thử trên TOMKO: 10 địch có quá rối/khó không, tốc độ khung hình khi 10 địch · ngòi 1 s có kịp chạy không.
 

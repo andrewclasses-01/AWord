@@ -8,7 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> ✏️ **11/10/2026 Đợt 503 — STAR LOOT: 3 thanh Options mới** (myGame mẫu 2r, `tools/chep-star-loot.py` BAN 2r): **Enemies** 0–10 (`slEnemies`, số robot địch; Difficulty nay chỉ là tốc độ địch; act cũ thiếu khoá ⇒ suy từ Difficulty như trước) · **Lives** nấc cuối ∞ (lives = 10) · **Bomb timer** 1–10 s (`slFuse`, trước cố định 5 s). ⬜ thầy chơi TOMKO. Chi tiết GHI CHU Đợt 503.
+> ✏️ **11/10/2026 Đợt 503 — STAR LOOT: 3 thanh Options mới** (myGame mẫu 2r, `tools/chep-star-loot.py` BAN 2r): **Enemies** 0–10 (`slEnemies`, số robot địch; Difficulty nay chỉ là tốc độ địch; act cũ thiếu khoá ⇒ suy từ Difficulty như trước) · **Lives** nấc cuối ∞ (lives = 10) · **Bomb timer** 1–10 s (`slFuse`, trước cố định 5 s). Single + Fight đều đã kiểm. ✅ PUSH `1a5afe2` + LIVE 4/4 · ⬜ thầy chơi TOMKO. Chi tiết GHI CHU Đợt 503.
 > ✏️ **11/10/2026 Đợt 502 — DẢI ĐIỂM FIGHT CAO ×1,5 + SỐ RUBIK** (thầy chọn mẫu B trong `D:\OTHERS\CLAUDE\AWord - thiet ke Dai diem Fight\e1-mau-font-cao-hon.html`): `core/app.css` `.aw-fight.is-strip2` `--s2-sz` .97 → 1.53, số + đồng hồ font Rubik 800 tự host (`core/assets/fonts/rubik-800.woff2`), ô chữ số .73em. ⬜ thầy xem TOMKO. Chi tiết GHI CHU Đợt 502.
 > ✏️ **11/10/2026 Đợt 501 — ĐỢT TỐC ĐỘ + DỌN DẸP**: `print.js` + `showdown-review.js` tải lười (play.html 40 → 34 module preload, −29,6 KB
 > nén, −6 lượt tải mỗi lần học sinh mở bài lạnh) · xoá worktree cũ Đợt 372. ⛔ Thêm import TĨNH module chỉ-thầy vào engine.js/play.js là kéo nó
