@@ -193,6 +193,14 @@ let sdHomeBtnSetAnalyse = null;
 // ⛔ KHÔNG thêm hàm GHI vào đây — tạo assignment đi qua đường bridge `giaoBai`
 // (core/engine.js) để form Set assignment THẬT của AWord vẫn là nơi duy nhất
 // quyết định options/optVer/xếp thư mục Results.
+// ⛔ Đợt 500 (audit 11/10/2026) — myLesson CHECK gọi timThuMuc rồi lietKeAct liền nhau, mỗi hàm từng resetCache() ⇒ tải lại CẢ
+//    thư viện (~20 MB) HAI lần; mạng lớp chậm thì vượt trần 15 s của myLesson (awGoi), thầy bấm lại là reset lần nữa ⇒ CHECK không
+//    bao giờ xong. Nay chỉ bỏ cache khi lần bỏ trước đã quá 15 s: một lượt CHECK = một lượt đọc, bấm lại dùng chung lượt đang chạy
+//    (readAll nhớ `inflight`). Vẫn giữ ý gốc: thư mục/act thầy vừa tạo bên AWord hiện ra ở lần CHECK kế (sau 15 s).
+let lanBoCacheML = 0;
+function boCacheChoMyLesson() {
+  if (Date.now() - lanBoCacheML > 15000) { resetCache(); lanBoCacheML = Date.now(); }
+}
 window.__awordLib = {
   daDangNhap: () => !!state.user,
   // ⭐ Đợt 499 (thầy chốt 10/10/2026, đi cặp myLesson v2.146.0) — pop-up thư mục myLesson ▸ chuột phải file Excel ▸
@@ -205,7 +213,9 @@ window.__awordLib = {
       const bin = atob(String(base64 || ""));
       const u8 = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-      importFlow(new File([u8], String(tenFile || "lesson.xlsm")), { fromRoot: true });
+      // Đợt 500 (audit 11/10) — luôn nhập vào cây ACTIVITIES (bước tìm trùng của myLesson chỉ tìm ở đó): trước đây theo cây đang
+      // mở ở khung trái ⇒ thầy đang đứng ở Courses là act rơi sang Courses, lần sau "Tạo AWord" báo chưa có ⇒ nhập đôi.
+      importFlow(new File([u8], String(tenFile || "lesson.xlsm")), { fromRoot: true, root: "activities" });
       return { ok: true };
     } catch (e) { return { ok: false, loi: e.message || "loi" }; }
   },
@@ -213,6 +223,7 @@ window.__awordLib = {
   // "activities" cho tab LESSON, "courses" cho tab COURSE — hai tab của
   // myLesson không còn thấy thư mục trùng tên của cây kia nữa. Gọi KHÔNG kèm
   // tham số (mọi chỗ khác) vẫn tìm cả hai cây như trước, không đổi hành vi.
+  // (boCacheChoMyLesson khai ngay trên khối __awordLib)
   async timThuMuc(chuoi, chiCay) {
     if (!state.user) return { ok: false, loi: "chua-dang-nhap" };
     const q = String(chuoi || "").trim().toLowerCase();
@@ -223,7 +234,7 @@ window.__awordLib = {
       // thư mục thầy vừa tạo bên AWord thật sẽ không có trong đó. CHECK là hành
       // động thầy chủ động bấm (không lặp lại liên tục), nên cứ bỏ cache trước,
       // đổi lấy một lượt đọc Firestore để chắc chắn thấy thư mục MỚI NHẤT.
-      resetCache();
+      boCacheChoMyLesson();   // Đợt 500 — chỉ bỏ khi cache đã cũ > 15 s (xem hàm)
       // ⭐ Đợt 287 — tìm ở CẢ HAI cây có act: Activities rồi Courses (thầy chốt
       // 03/9). Mục thuộc Courses có đường dẫn mở đầu "Courses / " để myLesson
       // phân biệt được với thư mục trùng tên bên Activities; kèm khoá `root`.
@@ -248,7 +259,7 @@ window.__awordLib = {
     try {
       // Cùng lý do với timThuMuc ở trên: bỏ cache để thấy act mới nhất trong
       // thư mục, không phải danh sách chụp từ lúc webview này mở lên.
-      resetCache();
+      boCacheChoMyLesson();   // Đợt 500
       // ⭐ Đợt 287 — thư mục có thể thuộc Courses: hỏi chính nó xem thuộc cây nào.
       const fld = folderId ? await getItem(folderId) : null;
       const items = await listChildren(fld && fld.root ? fld.root : "activities", folderId || null);
@@ -468,7 +479,10 @@ async function routeFromLocation() {
   //     mã, không chết trắng trong webview của myLesson.
   if (p.get("giao")) {
     const node = await getByNum(p.get("giao")).catch(() => null);
-    if (node && node.kind === "act") {
+    // ⛔ Đợt 500 (audit 11/10/2026) — act ĐÃ VÀO THÙNG RÁC không được giao: getByNum trả cả act trong thùng rác (khi không có
+    //    act sống cùng số), myLesson giữ danh sách act từ lần CHECK cũ ⇒ bài giao chụp act đã xoá, Delete forever sau đó làm
+    //    bài giao mất gốc. Rơi xuống trang chủ như mã sai (myLesson báo hết giờ chờ ⇒ thầy CHECK lại).
+    if (node && node.kind === "act" && !node.trashed) {
       let tpl = null;
       try { tpl = await ensureTemplate(node.type); } catch (e) { /* rơi xuống trang chủ */ }
       if (tpl && !tpl.noAssignment) {
@@ -2030,7 +2044,7 @@ function importFlow(initialFile, opts = {}) {
   // ⭐ Đợt 287 — remember the TREE too: acts imported inside Courses must be
   // Courses acts (store.importBundle takes `root`), and the folder opened at
   // the end is in that same tree.
-  const importRoot = holdsActs(state.root) ? state.root : "activities";
+  const importRoot = opts.root || (holdsActs(state.root) ? state.root : "activities");   // Đợt 500 — nơi gọi chỉ định được cây
   openModal("Import activities", (body, close) => {
     if (body.parentElement) body.parentElement.classList.add("is-import");
     let acts = [], sourceName = "", sourcePath = [], pathKnown = false;

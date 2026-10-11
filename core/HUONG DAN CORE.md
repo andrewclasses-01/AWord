@@ -3,6 +3,17 @@
 > Đọc file này TRƯỚC khi build bất kỳ template nào. Đây là "hợp đồng" giữa **core** (lõi dùng chung)
 > và **template** (từng game riêng, vd Quiz, Anagram...).
 
+## 🧯 Đợt 500 (audit 11/10/2026) — BỐN LUẬT MỚI CỦA CORE
+
+- **`ui.finish()` chỉ có tác dụng MỘT lần mỗi ván** (engine rào `playEnded`, trừ Fight). Template đừng dựa vào việc gọi finish lần hai để
+  "sửa" kết quả. Vẫn nên giữ cờ `finished` riêng (chặn hoạt ảnh/điểm bay sau khi kết).
+- **Ván kết khi đang tạm dừng (☰ / Options / relay / stolen) KHÔNG chạy lại đồng hồ** khi đóng bảng (`resumeClockForMenu` rào `playEnded`).
+- **`persist()` (store.js) không bao giờ ghi đè mù bảng `goiY`**: act còn dấu `goiYTach` mà mang dòng ⇒ đọc `gy_<id>` và gộp; đọc lỗi ⇒ ném.
+  Đường mới lưu act TTA không cần làm gì thêm — nhưng đừng tự xoá dấu `goiYTach` trước khi nạp bảng thật.
+- **Lượt nộp phải lọt luật Firestore** (`makeAttempt`/`lamSachLuot` ở assignments.js): review > 300 câu / > 600 KB ⇒ thu gọn; `timeMs` < 48 h;
+  tên chỉ chữ/số/khoảng trắng/`.,!?()'_-`. ⚠️ Luật còn đòi `score <= total`: template có điểm THƯỞNG vượt số câu (Gameshow, Anagram bonus)
+  nộp bài giao sẽ bị từ chối — chờ thầy chọn cách vá (GHI CHU Đợt 500), đừng giao các chế độ đó.
+
 ## 🗂️ Đợt 483–484 — KHO THƯ VIỆN: lượt đọc đầu KHÔNG có sổ cái Showdown và bảng `content.goiY`
 
 iPad chờ thư viện 30–40 s vì `store.js readAll()` kéo cả kho (33 MB). Nay `readAll()` = `where("kind", "not-in", ["showdown-history", "act-goiy"])`:

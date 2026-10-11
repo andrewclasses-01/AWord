@@ -191,7 +191,22 @@ async function persist(nodes) {
   if (!nodes.length) return;
   const uid = await requireUid();
   const [d, sdk] = await Promise.all([db(), fs()]);
-  const { doc, writeBatch } = sdk;
+  const { doc, writeBatch, getDoc } = sdk;
+  // ⛔⛔ Đợt 500 (audit 11/10/2026) — LƯỚI CHỐNG MẤT BẢNG goiY. Act đã nạp bảng thì napGoiY XOÁ dấu `goiYTach`; nên act còn
+  //    dấu MÀ mang dòng goiY = bảng CHƯA nạp được (kemGoiY nuốt lỗi mạng) rồi editor Type the answer mở ra bảng rỗng, thầy thêm
+  //    dòng + Save ⇒ tachGoiY ghi đè gy_<id> bằng vài dòng mới ⇒ MẤT cả bảng cũ. Nay: đọc bảng cũ và GỘP (cũ trước, dòng mới
+  //    sau, bỏ trùng); đọc không được ⇒ NÉM (Save báo lỗi, bảng cũ còn nguyên) — không bao giờ ghi đè mù.
+  //    Còn dấu mà goiY RỖNG ⇒ bỏ mảng rỗng, giữ dấu (không thì lần mở sau napGoiY thấy mảng rỗng tưởng đã nạp ⇒ bảng ẩn mãi).
+  for (const n of nodes) {
+    const c = n && n.kind === "act" && n.content;
+    if (!c || c.goiYTach !== true || !Array.isArray(c.goiY)) continue;
+    if (!c.goiY.length) { delete c.goiY; continue; }
+    const s = await getDoc(doc(d, itemsPath(uid), gyId(n.id)));
+    const cu = s.exists() && Array.isArray(s.data().goiY) ? s.data().goiY : [];
+    const moi = new Set(c.goiY.map(x => JSON.stringify(x)));
+    c.goiY = cu.filter(x => !moi.has(JSON.stringify(x))).concat(c.goiY);
+    delete c.goiYTach;
+  }
   // Đợt 484 — tách bảng goiY ra doc riêng (cache vẫn giữ nguyên node đầy đủ)
   const docs = [];
   nodes.forEach(n => { const [a, g] = tachGoiY(n); docs.push(a); if (g) docs.push(g); });

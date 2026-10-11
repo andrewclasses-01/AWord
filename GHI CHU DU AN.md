@@ -546,6 +546,100 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 500 (11/10/2026) — SỬA LỖI THEO AUDIT 11/10 (phần AWord) · phiên MSI
+
+**Bối cảnh:** thầy giao "bắt đầu fix các lỗi, từ nặng đến nhẹ" sau bản audit (`D:\OTHERS\CLAUDE\AWord - audit 11-10-2026\BAO CAO AUDIT.md`). Đợt này là phần AWord; đi cùng
+myLesson web v1.302.0 + v1.303.0 và app v2.154.0 (hồ sơ bên đó). Không đụng luật Firestore (cần thầy cho phép riêng).
+
+**Đã sửa (mỗi chỗ có chú thích "Đợt 500" trong mã):**
+1. 🔴 `play.js` — máy chủ báo KHÔNG còn lượt giữ mà bản máy có `mc` ⇒ nay `dropDraft(loc.nhapId)` cùng `xoaLuot`. Trước: chỉ xoá kho làm
+   tiếp ⇒ `maLuotDangGiu()` mất nhapId ⇒ `sweepDrafts` đẩy nháp cũ thành dòng **NỘP DỞ ma** (làm dở ở iPad lớp, xong ở điện thoại).
+2. 🔴 `core/store.js persist()` — **lưới chống mất bảng goiY**: act còn dấu `goiYTach` mà mang dòng goiY = bảng chưa nạp được (kemGoiY nuốt
+   lỗi mạng) ⇒ đọc `gy_<id>` và GỘP (cũ trước, mới sau, bỏ trùng); đọc không được ⇒ NÉM (Save báo lỗi, bảng cũ nguyên). Còn dấu + mảng rỗng
+   ⇒ bỏ mảng, giữ dấu. Trước: editor Type the answer mở bảng rỗng, thầy thêm 1 dòng + Save ⇒ ghi đè cả bảng.
+3. 🟠 `core/assignments.js makeAttempt` + `sendAttempt` — **lượt nộp phải lọt luật**: `review` > 300 câu hoặc > 600 KB ⇒ `gonReview` (lượt
+   thường giữ NGUYÊN — KTĐV cần viTri/phan); `timeMs` kẹp < 48 h; tên thay ký tự ngoài `tenSach` bằng khoảng trắng. `lamSachLuot()` chạy
+   cả cho lượt CŨ trong hộp thư đi. Trước: 403 "hard" ⇒ `scores` lên mà `results` hỏng mãi, em kẹt màn GỬI LẠI.
+4. 🟠 `core/fight.js` — cờ `henKetTran`: một bàn `onFinish` ⇒ `advanceRound` kết trận thay vì sang câu. Trước: bàn kia trả lời trong 2,1 s
+   thì `later(advanceRound)` huỷ `later(endMatch)` ⇒ bàn Game over bị mở khoá, trận chạy tiếp (Quiz + Lives, chế độ chung câu).
+5. 🟠 `core/engine.js` — `finish()` rào `playEnded && !fight` (một ván chỉ kết một lần ⇒ template thiếu cờ `finished` không nộp đôi);
+   `pausedClockAt = 0` lúc finish + `resumeClockForMenu` rào `playEnded` (ván kết khi đang ☰/Options không hồi sinh đồng hồ trên màn tổng
+   kết); `celebrate` rào `torndown` (rời ván trong 2,2 s pháo hoa không dựng tổng kết trên ván chết).
+6. 🟠 `main.js ?giao=` — act ĐÃ VÀO THÙNG RÁC không mở form giao (getByNum trả cả act trong thùng rác).
+7. 🟡 `play.js` — `AWORD:VAN {dangChoi:false}` chờ lượt nộp gửi xong mới báo (và chỉ khi chưa có ván mới) ⇒ trang mẹ không gỡ khung giữa lúc
+   đang tải lên. Cờ `daBoMc`: PATCH `lamTiep` tới SAU khi lượt đã bỏ/xong ⇒ xoá lại (trước: lượt đã nộp "sống lại" ⇒ CONTINUE lượt đã nộp,
+   practiceLog done:true bị đè). Lưu ý cùng gốc: `boMayChu` cũ không DELETE khi PATCH đầu còn bay (`mcCo` chưa bật).
+8. 🟡 `main.js __awordLib` — `boCacheChoMyLesson()`: timThuMuc/lietKeAct chỉ bỏ cache khi đã cũ > 15 s (một lượt CHECK myLesson = một lượt đọc
+   thư viện ~20 MB thay vì hai; bấm lại dùng chung lượt đang chạy). `moImport` luôn nhập vào cây Activities (`importFlow` nhận `opts.root`).
+9. 🟡 `tools/xuat-ban.mjs` — KHÔNG xuất bản `*.md` (trừ `GHI CONG.md`), `tools/`, `docs/`, `devserver.py` (`KHONG_XUAT_BAN`, `build.json.boQua`).
+   `tools/kiem-live.py` cùng luật: file không xuất bản ⇒ live phải 404. Dựng thử: 0 lỗi, không còn .md/tools/docs.
+
+**Thử:** bàn thử store.js thật + Firestore giả (scratchpad `thu-goiy/chay.mjs`) 11/11 · reviewLotLuat/tenLotLuat/kẹp giờ trích từ file thật
+13/13 · `node --input-type=module --check` mọi file sửa · play.html nạp tới màn START (dev server :5700), 0 lỗi console. ⛔ KHÔNG chơi trọn ván
+trên trình duyệt có phiên Google của thầy (sẽ ghi điểm thật vào bài giao).
+
+**Dữ liệu thật (chỉ đọc) — lỗi đang NGỦ, cần thầy chọn cách:** luật scores/results đòi `score <= total` (27/09) mà Gameshow nộp `score` = điểm
+(hàng trăm) / `total` = số câu, Anagram chế độ bonus nộp điểm ×2 ⇒ mọi lượt nộp loại đó bị 403. Hiện KHÔNG có bài giao Gameshow; 12 bài
+giao Anagram chế độ bonus đều tạo trước 27/09, từ đó thầy giao chế độ submit ⇒ chưa ai dính. Cách vá: (a) luật cho `score <= total * 20`
+với kiểu bài có thưởng, hoặc (b) form giao bài chặn/đổi chế độ.
+
+**Không sửa (có chủ đích):** `VE_NGUON` còn localhost (vé giả vô giá trị, bỏ là gãy bàn thử nhúng AWord thật) · A2 "đã 100 %" lệch dashboard
+(chờ thầy định nghĩa) · mọi mục luật Firestore (chờ thầy cho phép).
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy thử: sửa act TTA có bảng gợi ý khi mạng chập chờn · Fight Quiz + Lives một bàn hết tim · mở Options đúng lúc câu
+cuối ⇒ đóng ⇒ đồng hồ không chạy lại · CHECK trong myLesson nhanh hơn. ⬜ chọn cách vá Gameshow/Anagram bonus. ⬜ duyệt các đợt luật trong báo cáo.
+
+## 🔎 AUDIT 11/10/2026 — TOÀN HỆ AWord + myLesson (CHỈ ĐỌC, KHÔNG sửa code) · phiên MSI
+
+**Bối cảnh / yêu cầu:** thầy mở một đợt audit AWord để tìm lỗi và tối ưu, lưu ý AWord gắn chặt với dashboard và myLesson
+(tạo nhiệm vụ, bài tập cho học sinh). Audit tại HEAD `93f6078` (Đợt 498c, live khớp 22/22 bằng `tools/kiem-live.py`),
+myLesson Web `ae9fdf6` (v1.301.0), myLesson app `34f1ba7`; cả ba repo sạch, khớp origin, không file sửa dở.
+
+**Cách làm:** 5 mảng chạy song song bằng 5 subagent chỉ đọc — (A) hợp đồng bài giao AWord ⇄ bai.html/dashboard (tin
+`AWORD:*`, kho `scores/results/practiceLog/lamTiep/quanSat`), (B) app myLesson Electron → AWord (`__awordLib`, `?giao=`,
+`bai.json`), (C) lõi engine (teardown, finish, Fight, store), (D) bảo mật + luật Firestore đang chạy, (E) tốc độ (đo gzip live
+bằng curl, đồ thị import). Kiểm tĩnh thêm: 253 file ESM `node --input-type=module --check` 0 lỗi; hàm trùng tên cùng scope
+0 ca thật (19 cặp quét được đều ở hàm bao khác nhau); `aword-tim.js` ×3 app, `ktdv-bc.js` ×2, `mylink-ui.js`/`namer.js`
+khớp băm; tag `?v=` myLesson Web (công cụ `kiem-v-tag.py` lưu cùng báo cáo).
+
+**Kết quả — báo cáo đầy đủ + 5 bản chi tiết ở `D:\OTHERS\CLAUDE\AWord - audit 11-10-2026\BAO CAO AUDIT.md` (ổ D riêng tư; mục bảo mật
+KHÔNG chép vào kho public này).** Phần AWord, tóm tắt:
+- 🔴 Nháp `aword-hw-draft` của lượt GIỮ máy chủ không bị xoá khi em làm xong ở máy khác ⇒ `sweepDrafts` đẩy ⇒ dòng NỘP DỞ ma trên
+  dashboard (`play.js:388-397` `xoaLuot` không `dropDraft`; `core/assignments.js:637-651`).
+- 🔴 Editor Type the answer: `kemGoiY` nuốt lỗi `napGoiY` (`core/store.js:357-361`) ⇒ bảng hiện rỗng ⇒ thầy thêm dòng + Save ⇒
+  `tachGoiY` ghi đè `gy_<id>` ⇒ MẤT bảng cũ.
+- 🟠 `results.review` gửi THÔ không trần (`core/assignments.js:853`; luật `review ≤ 300`, doc ≤ 1 MiB) ⇒ `scores` lên trước, `results`
+  hỏng vĩnh viễn ⇒ em kẹt màn GỬI LẠI, bảng có điểm, thầy không có bài làm. Cùng họ: `timeMs > 48 h`, tên có ký tự ngoài `tenSach`
+  ⇒ 403 hard.
+- 🟠 Fight chung câu: `onFinish` (`core/fight.js:2248-2252`) đặt `later(endMatch)` vào ô hẹn giờ duy nhất, bàn kia trả lời trong 2,1 s ⇒
+  `later(advanceRound)` huỷ ⇒ bàn Game over bị mở khoá, trận không kết (Quiz + Lives).
+- 🟠 Ván kết thúc khi đang pause (thầy mở Options trong cửa sổ setTimeout câu cuối) ⇒ đóng panel `resumeClockForMenu`
+  (`core/engine.js:4144-4162`) hồi sinh đồng hồ trên màn tổng kết, `submitHandler` lần 2; `ui.finish` không rào `playEnded`,
+  `celebrate` (`:6932`) không rào `torndown`.
+- 🟠 `?giao=<num>` nhận act ĐÃ VÀO THÙNG RÁC (`main.js:469-471`, `core/store.js:278-285`), app myLesson giữ `r.awActs` cũ.
+- 🟠 Dashboard bấm XEM 2 lần khi SDK chưa nạp ⇒ listener `lamTiep` rò + `AWORD:XEM_TT` mang `tt` của act khác (`quan-sat.js:211` chỉ
+  so `code`).
+- 🟡 `AWORD:VAN {dangChoi:false}` bắn ngay lúc `finish()` trước khi nộp xong ⇒ trang mẹ gỡ khung giữa lúc tải lên, `AWORD:NOP` không
+  bao giờ bắn (`play.js:726`, `bai.html:2930-2938`).
+- 🟡 Hai định nghĩa "đã 100 %" lệch nhau: AWord `score>=total` (`play.js:724`) vs dashboard `chuanTuDoc` (Anagram bonus 200 %, Gameshow
+  xong khi có lượt) ⇒ ☰ ẩn mãi / nhắc bỏ cuộc sai.
+- 🟡 `__awordLib.timThuMuc` `resetCache()` mỗi lần (`main.js:226,249`) ⇒ app CHECK tải lại cả thư viện 20 MB, trần 15 s không huỷ.
+- Tốc độ (số gzip đo live): đường học sinh 41 module 181 KB gz trong đó ~50 KB + 10 request chỉ cho thầy (`engine.js:71/75/81/86` import
+  tĩnh showdown/showdown-review/print/options-panel; 20/21 template import tĩnh editor) · gói tiếng Quiz 11 mp3 145 KB `prime()` lúc
+  import · `lamTiep` PATCH cả `tplJ` ≤ 900 KB mỗi 15 s = > 50 % lượt ghi của một buổi · xuất bản chép cả 50 file `.md` 5,6 MB + `tools/`
+  + `docs/` + `test.html` lên Pages (`tools/xuat-ban.mjs:28`). myLesson Web: chưa thu gọn (bai.html 132 KB gz, 30 % chú thích),
+  `bai.json` no-store tải cả 10 lớp, `suoiAWord()` thiếu cờ `navigator.userAgentData` (tái phạm Đợt 481 trên Safari).
+- Vệ sinh: worktree lạ `.claude/worktrees/frosty-solomon-4d3edd` (Đợt 372, không file dở, đã gitignore) ⇒ `git worktree remove`.
+- Đã kiểm đứng vững: attemptId cố định + outbox dedup; `daNopDo`; mọi listener `message` kiểm origin (+ `e.source`); XSS sạch;
+  READY poll/playLogTimer/nhịp quan sát đều dừng đúng; `press()` chống bấm đúp; Apply luôn `replayCurrent()`.
+
+**Quyết định kỹ thuật:** KHÔNG sửa dòng nào trong đợt này — audit là bản đánh giá để thầy chốt. Mục bảo mật (luật Firestore, dữ
+liệu trẻ em, KTĐV) chỉ nằm ở ổ D, theo luật "không chép lỗ còn hở sang kho public" của `HO SO BAO MAT.md`.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy đọc `BAO CAO AUDIT.md` mục 0 (12 việc) + mục V (6 đợt đề xuất) rồi chốt thứ tự; ⬜ trả lời 6 câu xác nhận
+mục II (N1 template thiếu cờ `finished`, N4 có chặn nộp sau hạn?, N9 giữ dữ liệu web qua năm học?, N11, N13, A2 định nghĩa "xong");
+⬜ dọn worktree lạ; ⬜ myLesson Web bump `config.js?v=` (v1.301.0 đổi config.js mà 7 trang còn `?v=250`).
+
 ## Đợt 499 (10/10/2026) — CỬA `__awordLib.moImport` CHO myLesson "Tạo AWord" · phiên ANDREW CLASSES
 **Thầy:** pop-up xem thư mục của myLesson (v2.146.0) ▸ chuột phải file Excel ▸ "Tạo AWord": chưa có thư mục AWord trùng tên file thì mở khung AWord
 bên trái + mở luôn hộp Import với file đó — "coi như vừa kéo file vào Quick access" — phần còn lại thầy tự làm.

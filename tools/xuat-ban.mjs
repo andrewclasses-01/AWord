@@ -27,6 +27,11 @@ import { transform } from 'esbuild';
 const GOC = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
 const RA = path.resolve(GOC, process.argv[2] || '_site');
 const BO_QUA_THU_MUC = new Set(['.git', '.github', 'node_modules', '_site']);
+// ⛔ Đợt 500 (audit 11/10/2026) — KHÔNG XUẤT BẢN ghi chú nội bộ + công cụ: trước đây mọi file trong repo đều lên Pages ⇒
+//    50 file .md (5,6 MB: GHI CHU DU AN, APP_MASTER, HUONG DAN CORE…), tools/, docs/ công khai ở aword.andrewclasses.com/…
+//    (đường dẫn khoá quản trị, bản đồ luật). Không trang nào tải chúng (mọi chỗ nhắc tới đều là chú thích). GIỮ `GHI CONG.md`
+//    (ghi công giấy phép âm thanh/hình — kiemtra2/phim). ⛔ Sửa danh sách này thì sửa cả `KHONG_XUAT_BAN` trong tools/kiem-live.py.
+const KHONG_XUAT_BAN = /^(tools|docs)\/|^devserver\.py$|(^|\/)(?!GHI CONG\.md$)[^/]*\.md$/i;
 const KHONG_THU_GON = /(^|\/)(vendor|scratch|_backup|tools|docs)\//;
 
 let sha = process.env.GITHUB_SHA || '';
@@ -46,7 +51,9 @@ function* duyet(thuMuc, tuongDoi = '') {
 }
 
 if (fs.existsSync(RA)) fs.rmSync(RA, { recursive: true, force: true });
+let boQua = 0;
 for (const [p, td] of duyet(GOC)) {
+  if (KHONG_XUAT_BAN.test(td)) { boQua++; continue; }   // Đợt 500
   const dich = path.join(RA, td);
   fs.mkdirSync(path.dirname(dich), { recursive: true });
   const buf = fs.readFileSync(p);
@@ -63,6 +70,6 @@ for (const [p, td] of duyet(GOC)) {
     loi.push(td + ': ' + String(e.message || e).split('\n')[0].slice(0, 160));
   }
 }
-fs.writeFileSync(path.join(RA, 'build.json'), JSON.stringify({ sha, luc: new Date().toISOString(), thuGon, giuNguyen, loi, nguon }, null, 0));
+fs.writeFileSync(path.join(RA, 'build.json'), JSON.stringify({ sha, luc: new Date().toISOString(), thuGon, giuNguyen, boQua, loi, nguon }, null, 0));
 console.log(`xuat-ban: ${thuGon} file thu gọn (${Math.round(truoc / 1024)} KB → ${Math.round(sau / 1024)} KB), ${giuNguyen} giữ nguyên, ${loi.length} lỗi → ${RA}`);
 for (const l of loi) console.log('  ⚠️ ' + l);

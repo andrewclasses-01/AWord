@@ -4158,6 +4158,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // phantom fanfare AND a phantom leaderboard row / session.submit() for a game
     // nobody was playing. Every restart stacked one more. See GHI CHU DU AN.md.
     if (torndown) return;
+    // ⛔ Đợt 500 — ván đã KẾT trong lúc đang tạm dừng (thầy mở Options trong cửa sổ setTimeout câu cuối) ⇒ đóng bảng mà
+    //    chạy lại đồng hồ là "đồng hồ ma" trên màn tổng kết: tiếng cảnh báo kêu, chạm 0 gọi submitHandler lần 2.
+    if (playEnded) return;
     if (timerStarted && timerMode() !== "none") timerId = setInterval(tickTimer, 500);
   }
 
@@ -6684,7 +6687,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // are being fixed one by one too, but this is the single place that
       // protects ALL of them, including any template written later.
       if (torndown) return;
+      // ⛔ Đợt 500 (audit 11/10/2026) — MỘT VÁN CHỈ KẾT MỘT LẦN. Template không có cờ `finished` riêng (Gameshow, Open the box,
+      //    Balloon pop, Maze…) có thể gọi finish() hai lần (hết giờ trùng hoạt ảnh câu cuối) ⇒ hai lượt nộp, hai dòng điểm.
+      //    `playEnded` chỉ đặt ở đây và không bao giờ trả về false trong một ván. Fight để nguyên (onFinish lặp vô hại).
+      if (playEnded && !fight) return;
       stopTimer();
+      pausedClockAt = 0;  // Đợt 500 — ván kết khi đang ☰/Options: đóng bảng KHÔNG được hồi sinh đồng hồ
       playEnded = true;   // ⭐ Đợt 400
       // FIGHT MODE: a board running out of words (or lives) ends the MATCH —
       // the winner comes from the two scoreboards, so this play doesn't draw
@@ -6928,9 +6936,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     inner.append(cover);
     confettiBurst(cover);
     (tpl.sounds?.complete || sound.fanfare)();
+    // Đợt 500 — rời ván trong 2,2 s pháo hoa ⇒ đừng dựng màn tổng kết trên closure đã gỡ (gửi lại lượt hỏng từ ván chết).
     setTimeout(() => {
+      if (torndown) { cover.remove(); return; }
       text.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: "forwards" });
-      setTimeout(() => { cover.remove(); showSummary(result, entryId); }, 300);
+      setTimeout(() => { cover.remove(); if (!torndown) showSummary(result, entryId); }, 300);
     }, 1900);
   }
 

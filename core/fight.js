@@ -998,6 +998,11 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   let roundDone = [false, false];
   let roundTimer = null;
   let matchOver = false;
+  // ⛔ Đợt 500 (audit 11/10/2026) — MỘT BÀN ĐÃ HẾT (onFinish) ⇒ trận PHẢI kết. `later(endMatch)` của onFinish nằm trong ô hẹn
+  //    giờ DUY NHẤT của vòng; bàn kia trả lời trong 2,1 s đó ⇒ finalizeSingleWinner/nhánh sai gọi `later(advanceRound)` ⇒
+  //    HUỶ endMatch ⇒ advanceRound mở khoá cả bàn đã Game over, trận chạy tiếp (Quiz + Lives). Cờ này bắt advanceRound kết
+  //    trận thay vì sang câu, dù ô hẹn giờ đã bị ai đè.
+  let henKetTran = false;
   // Đợt 354 (Rocket race, thầy 20/9/2026: "hết mạng thì nổ tung") — a board that
   // FORFEITED (ctl.forfeit) has lost whatever the points say; showResult reads this.
   const forfeited = [false, false];
@@ -1533,6 +1538,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
 
   function advanceRound() {
     if (matchOver || torndown || raceEnding) return;
+    if (henKetTran) { endMatch(); return; }   // Đợt 500 — một bàn đã hết: không sang câu nữa
     // ⭐⭐ Đợt 219 — GỠ CHE Ở ĐÂY, không ở `revealBoards()` nữa (xem chú thích dài
     // trong hàm đó). Đặt trên cùng nên nó phủ CẢ HAI nhánh bên dưới — vòng thường và
     // pick mode — và nằm cùng một nhịp đồng bộ với `goToIndex()` phía dưới, nên
@@ -2248,7 +2254,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     onFinish(side) {
       // One board ran out of words/lives on its own — the match is over for
       // both, and the winner is simply whoever has more points.
-      if (!matchOver) later(endMatch, ROUND_HOLD_MS);
+      if (!matchOver) { henKetTran = true; later(endMatch, ROUND_HOLD_MS); }
     },
     // Options panel: pane 0's engine hands us its draft so the fight settings
     // live in the SAME panel as everything else (see engine.buildOptionsPanel).

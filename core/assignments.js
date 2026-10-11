@@ -580,10 +580,35 @@ export function newAttemptId() {
 // ⭐ Đợt 383 — `doDang: true` = a round the student LEFT midway (Start again / reload / close tab) with a score
 // ≥ 1: the score is real but its denominator is only the round's item count, so myLesson never uses it as the
 // act's standard denominator (rules ruleset 3bf38eaa accept the optional bool). `attemptId` may be handed in.
+// ⛔⛔ Đợt 500 (audit 11/10/2026) — LƯỢT NỘP PHẢI LỌT LUẬT. Luật scores/results (myLesson `_luat-moi-firestore.rules`) từ chối
+//    bằng 403 ⇒ `guiBangVe` coi là "hard": `scores` đã lên mà `results` hỏng VĨNH VIỄN (outbox thử lại mỗi lần mở, em kẹt màn
+//    GỬI LẠI, dashboard có điểm mà không có bài làm). Ba chỗ code từng vượt luật mà không biết:
+//    · `review` > 300 câu hoặc doc > 1 MiB (act dài kèm `src`) ⇒ chỉ khi VƯỢT mới thu gọn bằng gonReview (lượt thường GIỮ
+//      NGUYÊN mọi trường — báo cáo KTĐV cần viTri/phan… mà gonReview bỏ);
+//    · `timeMs` > 48 giờ (tab bỏ quên 2 ngày) ⇒ kẹp;
+//    · tên có ký tự ngoài `tenSach` (chữ mọi thứ tiếng, số, khoảng trắng, . , ! ? ( ) ' _ -) ⇒ thay bằng khoảng trắng.
+const TRAN_TIME_MS = 172800000 - 1000;
+const TRAN_REVIEW_BYTES = 600000;   // doc ≤ 1 MiB gồm cả mã hoá Firestore ⇒ chừa rộng
+function reviewLotLuat(rv) {
+  if (!Array.isArray(rv) || !rv.length) return [];
+  let bytes = 0;
+  try { bytes = new TextEncoder().encode(JSON.stringify(rv)).length; } catch (e) { bytes = Infinity; }
+  return (rv.length <= 300 && bytes <= TRAN_REVIEW_BYTES) ? rv : gonReview(rv, 200000);
+}
+function tenLotLuat(t) {
+  return String(t).replace(/[^\p{L}\p{M}\p{N} .,!?()'_-]/gu, " ").replace(/\s+/g, " ").trim();
+}
+function lamSachLuot(e) {
+  if (!e) return e;
+  if (typeof e.name === "string") e.name = tenLotLuat(e.name).slice(0, 40) || "Player";
+  if (Number.isFinite(e.timeMs)) e.timeMs = Math.min(TRAN_TIME_MS, Math.max(0, Math.round(e.timeMs)));
+  if (Array.isArray(e.review)) e.review = reviewLotLuat(e.review);
+  return e;
+}
 function makeAttempt({ code, studentName, ma, score, total, timeMs, review, doDang = false, attemptId = "" }) {
   // Collapse runs of spaces too (play.js does the same at the name screen) so
   // the stored spelling always matches what nameKey() groups by.
-  const name = String(studentName || "Player").trim().replace(/\s+/g, " ").slice(0, 40) || "Player";
+  const name = tenLotLuat(String(studentName || "Player").trim().replace(/\s+/g, " ")).slice(0, 40) || "Player";
   // Đợt 367 — mã học sinh (myLesson `&ma=`); rỗng = không ghi trường này (tài liệu y hệt đời cũ).
   const maHs = String(ma || "").slice(0, 60);
   const createdAt = now();
@@ -595,8 +620,8 @@ function makeAttempt({ code, studentName, ma, score, total, timeMs, review, doDa
     ...(doDang ? { doDang: true } : {}),
     score: Math.round(score) | 0,
     total: Math.round(total) | 0,
-    timeMs: Math.round(timeMs) | 0,
-    review: clean(review || []),
+    timeMs: Math.min(TRAN_TIME_MS, Math.max(0, Math.round(timeMs) | 0)),
+    review: reviewLotLuat(clean(review || [])),
     createdAt,
     scoreOk: false, resultOk: false,
     mayExistScore: false, mayExistResult: false
@@ -757,6 +782,9 @@ const isDenied = e => e && e.code === "permission-denied";
  * that). NEVER throws, and never double-writes: see the header above.
  */
 export async function sendAttempt(entry, { tries = 3, tryTimeoutMs = 6000 } = {}) {
+  // ⛔ Đợt 500 — lượt CŨ nằm trong hộp thư đi (dựng trước khi makeAttempt biết luật) cũng phải lọt luật khi gửi lại;
+  //    cùng `attemptId` nên lượt đã lên một nửa (scores) vẫn chỉ ghi nốt phần còn thiếu.
+  lamSachLuot(entry);
   // ⭐ Đợt 410 — lượt MANG MÃ em chỉ đi bằng VÉ (xem khối VÉ ĐĂNG NHẬP ở trên).
   if (entry.ma) return guiBangVe(entry, { tries, tryTimeoutMs });
   let d, sdk;

@@ -38,6 +38,11 @@ def tai(duong):
         return None if e.code == 404 else b''
 
 
+# ⛔ Đợt 500 — file KHÔNG xuất bản (cùng luật `KHONG_XUAT_BAN` trong tools/xuat-ban.mjs): 404 trên live là ĐÚNG.
+import re as _re
+KHONG_XUAT_BAN = _re.compile(r'^(tools|docs)/|^devserver\.py$|(^|/)(?!GHI CONG\.md$)[^/]*\.md$', _re.I)
+
+
 def kiem(files):
     head = git('rev-parse', 'HEAD').decode().strip()
     bj = tai('build.json')
@@ -50,6 +55,10 @@ def kiem(files):
     else:
         print('build.json: chưa có trên live ⇒ chế độ cũ (so byte trực tiếp)')
     for f in files:
+        if KHONG_XUAT_BAN.search(f):
+            khop = tai(f) is None
+            ok += khop
+            print(f"  {'✅' if khop else '❌'} {f} (không xuất bản — live phải 404)"); continue
         try:
             nguon = git('show', f'HEAD:{f}')
         except subprocess.CalledProcessError:
@@ -75,7 +84,7 @@ if __name__ == '__main__':
     if '--cho' in a:
         i = a.index('--cho'); cho = int(a[i + 1]); del a[i:i + 2]
     files = a or [x for x in git('diff', '--name-only', 'HEAD~1', 'HEAD').decode('utf-8').splitlines()
-                  if x and not x.startswith(('.github/', 'scratch/', '_backup/')) and not x.endswith('.md')]
+                  if x and not x.startswith(('.github/', 'scratch/', '_backup/')) and not KHONG_XUAT_BAN.search(x)]
     het = time.time() + cho
     while True:
         if kiem(files) or time.time() > het:
