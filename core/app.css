@@ -30,8 +30,10 @@
 @font-face { font-family: "Baloo 2"; font-weight: 700; src: url("assets/fonts/baloo-2-700.woff2") format("woff2"); font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 @font-face { font-family: "Baloo 2"; font-weight: 800; src: url("assets/fonts/baloo-2-800.woff2") format("woff2"); font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 /* ⭐ Đợt 462 — số của dải điểm Fight kiểu mới (`.aw-fight.is-strip2`). TỰ HOST (bản latin của Google
-   Fonts, 18 KB) để màn lớp mất mạng vẫn đúng font. Chỉ dùng cho chữ số ⇒ không cần bản tiếng Việt. */
-@font-face { font-family: "Saira Condensed"; font-weight: 800; src: url("assets/fonts/saira-condensed-800.woff2") format("woff2"); font-display: swap; unicode-range: U+0000-00FF, U+2212; }
+   Fonts) để màn lớp mất mạng vẫn đúng font. Chỉ dùng cho chữ số ⇒ không cần bản tiếng Việt.
+   Đợt 502 (thầy chọn mẫu B, 11/10/2026): Saira Condensed → RUBIK 800 (tròn, rộng, dễ đọc từ xa; 19 KB).
+   saira-condensed-800.woff2 vẫn nằm trong assets/fonts (không còn ai dùng) — muốn quay lại thì đổi ở đây. */
+@font-face { font-family: "Rubik"; font-weight: 800; src: url("assets/fonts/rubik-800.woff2") format("woff2"); font-display: swap; unicode-range: U+0000-00FF, U+2212; }
 
 /* ⚠️ VIETNAMESE — the four files above are Google's `latin` subset ONLY (230
    characters). They are missing 102 of the 178 letters of the Vietnamese
@@ -4913,9 +4915,9 @@ body.aw-page-dragover::after {
    thanh không còn là vạch mảnh trên/dưới số nữa, nên không phải chừa chỗ.
    ============================================================= */
 .aw-fight.is-strip2 {
-  --s2-sz: .97;                                   /* thầy chốt dải 68px (đo trên 1920) */
+  --s2-sz: 1.53;                                  /* Đợt 502: dải CAO ×1,5 (48 → 72px CSS ở 1920; Đợt 462 là .97) */
   --s2-num: calc(clamp(18px, 3.12vw, 40.8px) * var(--s2-sz));
-  --s2-k: .915;                                   /* co Saira cho CAO CHỮ SỐ = Baloo 2 800 (đo canvas) */
+  --s2-k: .9;                                     /* Rubik: cao chữ số = Saira cũ (cap Rubik .72 / Saira .71, đo canvas) */
   --s2-blur: 24px;
   --s2-sink: calc(var(--s2-blur) * 1.5);
 }
@@ -4937,7 +4939,7 @@ body.aw-page-dragover::after {
 .aw-fight.is-strip2 .aw-fight-score {
   display: flex; justify-content: center;
   min-width: 0;
-  font-family: "Saira Condensed", "Baloo 2", sans-serif;
+  font-family: "Rubik", "Baloo 2", sans-serif;
   font-weight: 800;
   font-size: calc(var(--s2-num) * var(--s2-k));
   line-height: calc(var(--s2-num) * 1.06);
@@ -4950,9 +4952,10 @@ body.aw-page-dragover::after {
   text-shadow: 0 .07em 0 #7f1d1d, 0 .1em .03em rgba(0, 0, 0, .3),
     0 0 .06em #fff, 0 0 .14em #fff, 0 0 .26em rgba(255, 255, 255, .95), 0 0 .42em rgba(255, 255, 255, .8);
 }
-/* ô chữ số rộng cố định (core/fight.js `setNum`) — Saira không có tabular-nums */
-.aw-fight.is-strip2 .aw-s2d { display: inline-block; width: .52em; text-align: center; }
-.aw-fight.is-strip2 .aw-s2p { display: inline-block; width: .33em; text-align: center; }
+/* ô chữ số rộng cố định (core/fight.js `setNum`) — đồng hồ không giật ngang. Đợt 502: số đo theo Rubik 800
+   (chữ số rộng nhất .709em + .02; ô dấu = dấu trừ .644em + .04) — y bản mẫu thầy chốt e1-mau-font-cao-hon.html */
+.aw-fight.is-strip2 .aw-s2d { display: inline-block; width: .73em; text-align: center; }
+.aw-fight.is-strip2 .aw-s2p { display: inline-block; width: .68em; text-align: center; }
 
 /* đồng hồ: ô trắng viền đen, cao hơn dải 8px (lòi đều trên/dưới) */
 .aw-fight.is-strip2 .aw-fight-middle { top: 0; bottom: 0; transform: translateX(-50%); z-index: 3; }
@@ -4968,7 +4971,7 @@ body.aw-page-dragover::after {
 }
 .aw-fight.is-strip2 .aw-fight-clock {
   display: flex;
-  font-family: "Saira Condensed", "Baloo 2", sans-serif;
+  font-family: "Rubik", "Baloo 2", sans-serif;
   font-weight: 800;
   font-size: calc(var(--s2-num) * var(--s2-k));
   line-height: calc(var(--s2-num) * 1.06);

@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **11/10/2026 Đợt 502 — DẢI ĐIỂM FIGHT CAO ×1,5 + SỐ RUBIK** (thầy chọn mẫu B trong `D:\OTHERS\CLAUDE\AWord - thiet ke Dai diem Fight\e1-mau-font-cao-hon.html`): `core/app.css` `.aw-fight.is-strip2` `--s2-sz` .97 → 1.53, số + đồng hồ font Rubik 800 tự host (`core/assets/fonts/rubik-800.woff2`), ô chữ số .73em. ⬜ thầy xem TOMKO. Chi tiết GHI CHU Đợt 502.
 > ✏️ **11/10/2026 Đợt 501 — ĐỢT TỐC ĐỘ + DỌN DẸP**: `print.js` + `showdown-review.js` tải lười (play.html 40 → 34 module preload, −29,6 KB
 > nén, −6 lượt tải mỗi lần học sinh mở bài lạnh) · xoá worktree cũ Đợt 372. ⛔ Thêm import TĨNH module chỉ-thầy vào engine.js/play.js là kéo nó
 > lại về máy học sinh — dùng `import()` tại chỗ dùng + `python tools/sinh-preload.py --write`. Chi tiết + các việc CỐ Ý không làm: GHI CHU Đợt 501.

@@ -546,6 +546,25 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 502 (11/10/2026) — DẢI ĐIỂM FIGHT CAO ×1,5 + SỐ FONT RUBIK · phiên MSI
+
+**Bối cảnh:** thầy chụp màn TOMKO (Fight 2 bảng trong myActivity): dải điểm `.aw-fight.is-strip2` quá bé. Muốn dải cao gấp 1,5 lần
++ font số dễ nhìn hơn, xem mẫu rồi chọn. Mẫu 8 font (cùng cao chữ số, dải ×1,5): `D:\OTHERS\CLAUDE\AWord - thiet ke Dai diem Fight\e1-mau-font-cao-hon.html`
+(A Saira Condensed cũ · **B Rubik** · C Lexend · D Fredoka · E Barlow Condensed · F Oswald · G Bebas Neue · H Chakra Petch). Thầy chọn **B. Rubik**.
+
+**Đã làm (chỉ `core/app.css` + 1 font mới):**
+- `core/assets/fonts/rubik-800.woff2` MỚI — bản latin tĩnh của Google Fonts (19 KB, có đủ 0–9 `:` `-` `−`), `@font-face "Rubik"` thay `"Saira Condensed"`
+  (file Saira vẫn để trong assets, không còn ai dùng — muốn quay lại thì đổi `@font-face` + 2 dòng `font-family`).
+- `.aw-fight.is-strip2`: `--s2-sz` .97 → **1.53** (dải 48 → 72px CSS ở bề ngang 1920 = ×1,5; số + ô đồng hồ to theo cùng tỉ lệ) · `--s2-k` .915 → .9
+  (cap Rubik .72 / Saira .71, đo canvas) · `font-family` số + đồng hồ = `"Rubik", "Baloo 2"` · ô chữ số `.aw-s2d` .52 → .73em, `.aw-s2p` .33 → .68em
+  (Rubik rộng hơn: chữ số rộng nhất .709em, dấu trừ .644em) — y bản mẫu thầy chốt.
+- `core/fight.js` KHÔNG đổi (setNum vẫn bọc từng ký tự). myActivity không đổi: `AWORD_CSS` tự đo `.aw-fight-top` ⇒ khung game tự nhường chỗ.
+
+**Thử:** `scratch/dot462-fight.html` (devserver, Edge headless 1920×1080): dải ~70px, số Rubik xanh lá + quầng trắng như cũ, đồng hồ ô trắng viền đen 00:07.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy xem trên TOMKO (Fight 2 bảng trong myActivity, cả 3/4/5 cột): dải cao vừa chưa, khung game còn đủ chỗ không, thanh Miss wait / Pick time
+vẫn phủ kín ô.
+
 ## Đợt 501 (11/10/2026) — ĐỢT TỐC ĐỘ sau audit + DỌN DẸP · phiên MSI
 
 **Bối cảnh:** thầy giao "Đợt tối ưu tốc độ + Dọn dẹp, rồi ghi hồ sơ và kết thúc phiên". Đi cùng myLesson web v1.304.0 `b3f8501`.
