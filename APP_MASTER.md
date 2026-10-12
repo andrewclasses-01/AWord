@@ -7587,7 +7587,7 @@ act nào gọi tên HS thì đọc từ đó.
 
 > ⭐ **(Đợt 509, 12/10/2026) — Fight + Lives Quiz: đội hết mạng GAME OVER, đội kia chơi tiếp.** ⬜ thầy chơi TOMKO · ⬜ có muốn áp dụng cho Anagram/True-false/… không.
 >
-> ⭐ **(Đợt 508, 12/10/2026) — iPad tự đổi màn theo game.** ⬜ thầy thử 2 máy thật (STAR LOOT ⇄ Rocket Race Question screen ⇄ game khác) · ⬜ chép Rocket Race sang myGame phải tính import `core/ipad-now.js`.
+> ⭐ **(Đợt 508, 12/10/2026) — iPad tự đổi màn theo game.** ⬜ thầy thử 2 máy thật (STAR LOOT ⇄ Rocket Race Question screen ⇄ game khác) · ✅ myGame không cần chép lại (công cụ không chép rocket-race.js; 3 game AWord⇄myGame đã soát khớp 12/10).
 >
 
 > ⭐ **(Đợt 404, 26/9/2026) — A SHOW SPEED Fight Mode 1: bàn thua hiện từ đúng của đội kia.** ⬜ thầy bấm tay TOMKO (độ rõ chữ trắng trên bàn xám, nhịp giữ 2,1 s).

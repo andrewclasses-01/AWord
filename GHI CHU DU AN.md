@@ -598,7 +598,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 **Trạng thái:** ✅ push `e88c379` + LIVE 8/8 (`tools/kiem-live.py`).
 
-**VIỆC ĐANG CHỜ:** ⬜ thầy thử thật: iPad mở nút iPad trang chủ (đăng nhập) ⇒ màn "iPad ready"; máy chiếu mở STAR LOOT ⇒ iPad tự ra D-pad; đổi Fight ⇒ iPad hỏi đội một lần; mở Rocket Race bật Question screen ⇒ iPad tự ra câu hỏi; mở game khác ⇒ iPad về màn chờ. ⬜ myGame: Rocket Race gốc ở AWord — Đợt này chỉ thêm 2 dòng claim (import `../../core/ipad-now.js`, myGame không có file này ⇒ chép sang myGame phải bỏ/giả module đó).
+**VIỆC ĐANG CHỜ:** ⬜ thầy thử thật: iPad mở nút iPad trang chủ (đăng nhập) ⇒ màn "iPad ready"; máy chiếu mở STAR LOOT ⇒ iPad tự ra D-pad; đổi Fight ⇒ iPad hỏi đội một lần; mở Rocket Race bật Question screen ⇒ iPad tự ra câu hỏi; mở game khác ⇒ iPad về màn chờ. ✅ myGame KHÔNG cần chép lại: `tools/chep-aword-sang-game.py` chỉ chép file 3D (rr3d-*, launch/, sfx/, sfx-intro/), không chép `rocket-race.js` — đã soát 12/10 cuối phiên: STAR LOOT 2r · TRAIN RUSH 1ao · Rocket Race game8 = AWord `156cf57` đều khớp nội dung (chỉ khác đường import three).
 
 ---
 
