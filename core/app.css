@@ -5170,6 +5170,26 @@ body.aw-page-dragover::after {
    Thầy chốt: chuyển mượt giữa có màu và đen trắng, và trả lại màu ngay khi
    sang câu khác (clearSilentLose() gọi cùng chỗ với unconcealAll()). */
 .aw-fight-board.is-fight-silentlost { filter: grayscale(1); transition: filter .4s ease; }
+/* ⭐ Đợt 509 (thầy, 12/10/2026) — BÀN HẾT MẠNG: chỉ bàn đó dừng, phủ chữ GAME OVER; bàn kia chơi tiếp
+   (core/fight.js ctl.boardOut). Lớp phủ nằm TRONG `.aw-fight-board` (position:relative chỉ bật khi out,
+   để không đổi gì ở mọi trận khác). Chặn luôn mọi cú chạm xuống bàn bên dưới. */
+.aw-fight-board.is-fight-out { position: relative; }
+.aw-fight-out {
+  position: absolute; inset: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(15, 18, 30, 0); border-radius: 14px;
+  pointer-events: auto; transition: background .45s ease;
+}
+.aw-fight-out-txt {
+  font-family: "Rubik", system-ui, sans-serif; font-weight: 800;
+  font-size: clamp(28px, 6.2vw, 110px); line-height: 1; letter-spacing: .04em;
+  color: #fff; -webkit-text-stroke: .04em #c62828; paint-order: stroke fill;
+  text-shadow: 0 .06em 0 #7f1010, 0 .14em .3em rgba(0,0,0,.45);
+  opacity: 0; transform: scale(1.6); transition: opacity .35s ease, transform .45s cubic-bezier(.2,1.4,.4,1);
+  white-space: nowrap; pointer-events: none;
+}
+.aw-fight-out.is-on { background: rgba(15, 18, 30, .62); }
+.aw-fight-out.is-on .aw-fight-out-txt { opacity: 1; transform: scale(1); }
 /* `.aw-page` normally caps itself at 1000px and centres — inside a fight board
    it must simply fill its half. */
 .aw-fight-board .aw-page { max-width: none; width: 100%; padding: 0; }

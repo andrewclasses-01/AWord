@@ -757,6 +757,7 @@ const quizTemplate = {
         updateNav();          // grey the arrows out too — `ending` already blocks their handlers,
                               // but a live-looking Next during the last 1.5s is just confusing
         clearAutoTimer();
+        if (fightBoardOut()) return;   // Đợt 509 — FIGHT: chỉ bàn này dừng, bàn kia chơi tiếp
         autoTimer = setTimeout(() => finish("gameover"), 1500);
         return;
       }
@@ -863,6 +864,7 @@ const quizTemplate = {
         tiles.forEach(t => (t.tile.disabled = true));
         updateNav();
         clearAutoTimer();
+        if (fightBoardOut()) return;   // Đợt 509
         autoTimer = setTimeout(() => finish("gameover"), 1500);
         return;
       }
@@ -876,6 +878,18 @@ const quizTemplate = {
       if (opt.autoSwitch === true && index < total - 1) {
         autoTimer = setTimeout(() => { autoTimer = null; goNext(); }, 1500);
       }
+    }
+
+    // ⭐ Đợt 509 (thầy, 12/10/2026) — FIGHT + Lives: "đội nào hết mạng trước sẽ ngừng lại và màn hình có chữ GAME OVER,
+    // đội còn lại vẫn tiếp tục cho đến khi hết mạng". Báo trọng tài `boardOut` THAY cho finish("gameover") (finish ở Fight
+    // = kết CẢ trận). `ending` đã bật ⇒ bàn này khoá vĩnh viễn, không tính idle cost. Trọng tài trả false (pick mode / bản
+    // fight.js cũ trong cache) ⇒ đi đường cũ. ⛔ KHÔNG gọi quizSound.stopWarning() ở đây: gói tiếng là module DÙNG CHUNG
+    // hai bàn, cắt là cắt luôn nhạc 5 giây cuối của bàn còn đang chơi.
+    function fightBoardOut() {
+      if (!fightCtl || typeof fightCtl.boardOut !== "function") return false;
+      if (!fightCtl.boardOut(fightSide)) return false;
+      tl.stop();
+      return true;
     }
 
     // ===== LIVES (opt-in via Options; ui.livesSlot is a span left of the score,

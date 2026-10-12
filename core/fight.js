@@ -64,6 +64,9 @@
 //     ctl.finishRace(winner, holdMs) decide NOW: freeze every clock, lock both
 //        boards, endMatch() after holdMs with `winner` on top.
 //     ctl.suddenDeath(sides)       tie: one random ALREADY-PLAYED question.
+//     ctl.boardOut(side)           (Đợt 509) this board is OUT OF LIVES: only it
+//        stops (locked + GAME OVER overlay), the other plays on; both out / out of
+//        questions / clock ⇒ endMatch by points. false = unsupported (pick mode).
 //   A template that does none of this still works — it just runs twice with no
 //   round logic, which is why the flag is opt-in rather than automatic.
 //   ⚠️ Đợt 222 had also added an optional `timeUp()` (fight referee calls it
@@ -1003,6 +1006,13 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   //    HUỶ endMatch ⇒ advanceRound mở khoá cả bàn đã Game over, trận chạy tiếp (Quiz + Lives). Cờ này bắt advanceRound kết
   //    trận thay vì sang câu, dù ô hẹn giờ đã bị ai đè.
   let henKetTran = false;
+  // ⭐ Đợt 509 (thầy, 12/10/2026, Quiz + Lives: "đội nào hết mạng trước sẽ ngừng lại và màn hình có chữ GAME OVER, đội còn
+  //    lại vẫn tiếp tục cho đến khi hết mạng") — `ctl.boardOut(side)`: bàn này HẾT MẠNG ⇒ chỉ CHÍNH nó dừng (khoá vĩnh viễn,
+  //    phủ GAME OVER), trận chạy tiếp với bàn kia. Vòng chung coi bàn out là "đã xong" ngay từ đầu mỗi câu (roundDone = true)
+  //    nên bàn còn sống trả lời là chốt vòng, không chờ ai. Hết câu / hết giờ / bàn kia cũng hết mạng ⇒ kết trận, thắng theo điểm.
+  const outSides = [false, false];
+  const outEls = [null, null];
+  function markOutDone() { outSides.forEach((o, i) => { if (o) roundDone[i] = true; }); }
   // Đợt 354 (Rocket race, thầy 20/9/2026: "hết mạng thì nổ tung") — a board that
   // FORFEITED (ctl.forfeit) has lost whatever the points say; showResult reads this.
   const forfeited = [false, false];
@@ -1506,7 +1516,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // ⭐⭐ Đợt 370 — ONE board moves on, alone. The other board is not consulted,
   // not locked, not revealed and not waited for — that is the whole point.
   function advanceBoard(side) {
-    if (matchOver || torndown || raceEnding || boardOver[side]) return;
+    if (matchOver || torndown || raceEnding || boardOver[side] || outSides[side]) return;   // Đợt 509 — bàn đã GAME OVER đứng yên
     const b = boards[side];
     if (!b) return;
     // Đợt 382 — a sudden-death question is a one-off: the template decides what
@@ -1566,6 +1576,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     cancelPending();
     pendingWinner = null;
     roundDone = [false, false];
+    markOutDone();   // Đợt 509 — bàn GAME OVER coi như đã xong câu mới ngay từ đầu
     // The winner's glow belongs to the word that was just won, not to the next
     // one — leaving it on made one team look permanently ahead.
     teams.forEach(t => t.el.classList.remove("is-won"));
@@ -1583,6 +1594,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     snapRoundBase();   // Đợt 183 — what a "slower team" freeze will pin them to
     boards.forEach((b, i) => {
       if (!b) return;
+      if (outSides[i]) return;   // Đợt 509 — bàn GAME OVER không sang câu, giữ nguyên lớp phủ
       // ⭐ Đợt 202 — an ODD pool leaves one board a question short (81 dealt out is
       // 41 vs 40) and the teacher's rule is that the spare is PLAYED, not dropped
       // ("nếu lẻ thì lệch 1 cũng ok, không bỏ") — so the match runs to the LONGER
@@ -1648,7 +1660,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // Only board 0 is allowed to speak: both boards show the same word, and two
     // copies of one clip starting a few ms apart is an echo, not a reading.
     speaks(side) { return side === 0; },
-    isLocked(side) { return matchOver || raceEnding || (roundWinner !== null && roundWinner !== side && lockLoser()); },
+    isLocked(side) { return matchOver || raceEnding || !!outSides[side] || (roundWinner !== null && roundWinner !== side && lockLoser()); },
     // The frames have no score chip in fight mode, so a template's "+N" flies
     // all the way out to this team's number on the strip above its board.
     scoreTarget(side) { return teams[side].value; },
@@ -2095,7 +2107,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       // ⭐ Đợt 370 — độc lập: ‹ › chỉ dời CHÍNH bàn bấm. Đường cũ bên dưới kéo bàn
       // kia về cùng chỉ số, đúng thứ phải không xảy ra ở chế độ này.
       if (soloBoards) {
-        if (matchOver || torndown || index === boardIdx[side]) return;
+        if (matchOver || torndown || outSides[side] || index === boardIdx[side]) return;
         boardIdx[side] = index;
         recycleDeck[side] = null;   // Đợt 391 — the teacher's ‹ › puts it back on its first pass
         if (soloTimers[side]) { clearTimeout(soloTimers[side]); soloTimers[side] = null; }
@@ -2118,12 +2130,13 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       cancelPending();
       pendingWinner = null;
       roundDone = [false, false];
+      markOutDone();   // Đợt 509
       cancelRound();
       teams.forEach(t => t.el.classList.remove("is-won"));
       snapRoundBase();   // Đợt 183 — a new round starts here too
       const other = side === 0 ? 1 : 0;
-      if (boards[other]) { boards[other].lock(false); boards[other].goToIndex(index); }
-      if (boards[side]) boards[side].lock(false);
+      if (boards[other] && !outSides[other]) { boards[other].lock(false); boards[other].goToIndex(index); }   // Đợt 509 — bàn GAME OVER đứng yên
+      if (boards[side] && !outSides[side]) boards[side].lock(false);
       syncNavGates();   // Đợt 220 — vòng mới mở ⇒ mờ lại hai mũi tên trên cả hai bàn
     },
 
@@ -2255,6 +2268,51 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       // One board ran out of words/lives on its own — the match is over for
       // both, and the winner is simply whoever has more points.
       if (!matchOver) { henKetTran = true; later(endMatch, ROUND_HOLD_MS); }
+    },
+    // ⭐ Đợt 509 — `ctl.boardOut(side)`: bàn này HẾT MẠNG (xem `outSides`). Template gọi NGAY sau wordDone(correct:false) của câu
+    // làm nó mất mạng cuối, thay cho ui.finish("gameover"). Trả false = trận này không hỗ trợ (pick mode: lượt chọn xoay vòng
+    // giữa hai đội, một đội vắng là kẹt lượt) ⇒ template đi đường cũ ui.finish (cả trận kết như trước).
+    boardOut(side) {
+      if (matchOver || torndown || raceEnding || pickMode || (side !== 0 && side !== 1)) return false;
+      if (outSides[side]) return true;
+      outSides[side] = true;
+      const other = side === 0 ? 1 : 0;
+      try { boards[side] && boards[side].lock(true); } catch { /* gone */ }
+      // Lớp phủ GAME OVER trên chính khung bàn này (CSS `.aw-fight-out`, core/app.css). Hiện trễ một nhịp để ✗ của câu sai
+      // cuối kịp hiện ra trước, đúng nhịp 1,5 s Quiz vẫn chờ trước màn "Game over" ở single.
+      const host = boardEls[side];
+      if (host && !outEls[side]) {
+        const ov = el("div", "aw-fight-out");
+        ov.append(el("div", "aw-fight-out-txt", "GAME OVER"));
+        host.classList.add("is-fight-out");
+        host.append(ov);
+        outEls[side] = ov;
+        setTimeout(() => { if (!torndown) ov.classList.add("is-on"); }, 1200);
+      }
+      // Hai bàn đều hết mạng ⇒ hết người chơi, kết trận (thắng theo điểm). Hẹn giờ RIÊNG, không qua `later()` — cùng lý do
+      // forfeit(): ô hẹn giờ của vòng có thể bị wordDone của chính cú bấm này đè mất.
+      if (outSides[other] || !boards[other]) {
+        henKetTran = true;
+        setTimeout(() => { if (!torndown) endMatch(); }, ROUND_HOLD_MS);
+        syncNavGates();
+        return true;
+      }
+      if (soloBoards) {
+        if (soloTimers[side]) { clearTimeout(soloTimers[side]); soloTimers[side] = null; }
+        boardOver[side] = true;
+        if (boardOver[other] && !roundsOverHook(null)) setTimeout(() => { if (!torndown) endMatch(); }, ROUND_HOLD_MS);
+        syncNavGates();
+        return true;
+      }
+      // Vòng chung: thường wordDone(sai) đã chạy trước ⇒ roundDone[side] đã true, vòng tự chốt khi bàn kia xong. Phòng
+      // ca template gọi lạc nhịp (bàn này chưa báo xong câu hiện tại): coi như nó xong-sai ngay bây giờ.
+      if (!roundDone[side]) {
+        roundDone[side] = true;
+        if (pendingWinner === other) { cancelPending(); pendingWinner = null; finalizeSingleWinner(other); }
+        else if (roundDone[other] || roundWinner !== null) { revealBoards(); later(advanceRound, ROUND_HOLD_MS); }
+      }
+      syncNavGates();
+      return true;
     },
     // Options panel: pane 0's engine hands us its draft so the fight settings
     // live in the SAME panel as everything else (see engine.buildOptionsPanel).
