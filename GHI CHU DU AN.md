@@ -546,6 +546,25 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 509b (12/10/2026) — FIGHT + LIVES CHO 5 TEMPLATE CÒN LẠI (Anagram · True/false · Type the answer · Find the gap · Find the match) · phiên MSI
+
+**Thầy:** hỏi còn game nào giống Quiz (hết mạng là dừng cả trận) ⇒ Claude rà: 5 template Fight có Lives đều đi `finish(gameover)` ⇒ `onFinish` ⇒ kết cả trận. Không cần sửa: STAR LOOT (đã loại từng đội, `T.status = "dead"`, hết đội mới kết) · Rocket Race (hết mạng = nổ + đội kia THẮNG NGAY, luật thầy Đợt 354) · Train Rush (trận riêng không có Lives). Thầy: "Áp dụng luôn cho cả 5 game".
+
+**Làm:** mỗi template thêm `fightBoardOut()` (ngay trên `loseLife()`, cùng thân như Quiz Đợt 509; Anagram/FTG/TTA còn `tl.stop()`), các nhánh hết mạng TRONG FIGHT gọi nó thay `finish("gameover")`; trả false ⇒ đường cũ.
+- Anagram: 3 nhánh — từ giải xong có lỗi (bonus family, sau wordDone correct:true) · hết giờ mỗi câu · nộp sai (submit mode).
+- True/false: nhánh Fight của choose(). (onTimeUp Fight không trừ mạng — giữ nguyên.)
+- Type the answer: nộp sai + hết giờ mỗi câu.
+- Find the gap: chọn sai một ô + hết giờ. ⚠️ Ô sai GIỮA DÒNG chưa gọi wordDone (dòng chưa xong) ⇒ boardOut đi nhánh dự phòng "roundDone[side] chưa true" đã viết sẵn ở Đợt 509 — đã thử thật: bàn kia làm nốt dòng rồi sang dòng mới bình thường.
+- **Find the match — LỖI CŨ:** nhánh Fight gọi `loseLife()` mà BỎ kết quả ⇒ hết tim trận vẫn chạy như không có Lives. Nay `fightHetMang = loseLife()` ⇒ sau wordDone gọi boardOut (false ⇒ finish("gameover")).
+
+**Kiểm (devserver :5609, bàn thử chung mới `scratch/dot509b-fight-lives.html?t=<template>&lives=2[&turns=1]`, nạp sample của template):** cả 5: bàn trái hết 2 mạng ⇒ GAME OVER, bàn phải chơi tiếp một mình qua 2–3 câu. True/false thêm ca bàn phải cũng hết mạng ⇒ bảng kết quả. Find the gap thử ca out giữa dòng. 0 lỗi console.
+
+**Trạng thái:** ✅ push `eef7864` + LIVE 5/5.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy chơi thử Fight + Lives ở 6 game (Quiz + 5) trên TOMKO.
+
+---
+
 ## Đợt 509 (12/10/2026) — FIGHT + LIVES (Quiz): ĐỘI HẾT MẠNG DỪNG + GAME OVER, ĐỘI KIA CHƠI TIẾP · phiên MSI
 
 **Thầy:** "Khi đấu fight và giới hạn lives (số mạng), thì đội nào hết live trước sẽ ngừng lại và màn hình có chữ GAME OVER, đội còn lại vẫn tiếp tục cho đến khi hết mạng chứ không dừng lại."

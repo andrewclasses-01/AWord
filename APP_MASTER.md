@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **12/10/2026 Đợt 509b — FIGHT + LIVES CHO 5 TEMPLATE NỮA** (Anagram · True/false · Type the answer · Find the gap · Find the match): `fightBoardOut()` gọi `ctl.boardOut` thay finish(gameover); Find the match vá lỗi cũ Fight bỏ qua hết tim. Bàn thử `scratch/dot509b-fight-lives.html?t=<template>`. ✅ push `eef7864` + LIVE 5/5. Chi tiết GHI CHU Đợt 509b.
 > ✏️ **12/10/2026 Đợt 509 — FIGHT + LIVES (Quiz): ĐỘI HẾT MẠNG DỪNG + GAME OVER, ĐỘI KIA CHƠI TIẾP**: `ctl.boardOut(side)` mới (core/fight.js) — khoá bàn out + lớp phủ `.aw-fight-out`, vòng chung coi bàn out đã xong (`markOutDone`), cả hai out / hết câu / hết giờ ⇒ kết trận theo điểm; pick mode trả false (đường cũ). Quiz gọi thay `finish("gameover")`. Template Lives khác chưa nối. Bàn thử `scratch/dot509-fight-lives.html`. ✅ push `40d7943` + LIVE 3/3 · ⬜ thầy chơi TOMKO. Chi tiết GHI CHU Đợt 509.
 > ✏️ **12/10/2026 Đợt 508 — iPAD TỰ ĐỔI MÀN THEO GAME**: máy chiếu ghi `users/{uid}/items/ipad_now` {game: starloot|rocketrace|"", fight} (`core/ipad-now.js`, kind `ipad-now`); STAR LOOT + Rocket Race (Fight bật Question screen) giữ claim, engine báo mọi game mở (game khác ⇒ ""). `pad.html` = cổng chung: D-pad (Fight ⇒ đội iPad đã nhớ) / sang source.html / màn chờ "iPad ready"; source.html tự về khi đổi game. Bàn thử `scratch/dot508-ipad-rr.html?padsig=local&raf=1`. ✅ push `e88c379` + LIVE 8/8 · ⬜ thầy thử 2 máy thật. Chi tiết GHI CHU Đợt 508.
 > ✏️ **12/10/2026 Đợt 507 — WEREWOLF Ở APP MÀN HÌNH CHÍNH**: iOS standalone vẽ trang dưới thanh trạng thái ⇒ dải trên game mờ + không bấm được; `sbFit()` + `.ww.ww-sb` chừa max(env(safe-area-inset-top), 24px iPad). Chi tiết GHI CHU Đợt 507.
@@ -7585,6 +7586,8 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
+> ⭐ **(Đợt 509b, 12/10/2026) — Fight + Lives thêm 5 game** (Anagram, True/false, Type the answer, Find the gap, Find the match). ⬜ thầy chơi TOMKO.
+>
 > ⭐ **(Đợt 509, 12/10/2026) — Fight + Lives Quiz: đội hết mạng GAME OVER, đội kia chơi tiếp.** ⬜ thầy chơi TOMKO · ⬜ có muốn áp dụng cho Anagram/True-false/… không.
 >
 > ⭐ **(Đợt 508, 12/10/2026) — iPad tự đổi màn theo game.** ⬜ thầy thử 2 máy thật (STAR LOOT ⇄ Rocket Race Question screen ⇄ game khác) · ✅ myGame không cần chép lại (công cụ không chép rocket-race.js; 3 game AWord⇄myGame đã soát khớp 12/10).
