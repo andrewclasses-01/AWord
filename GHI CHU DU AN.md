@@ -546,6 +546,34 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 509 (12/10/2026) — FIGHT + LIVES (Quiz): ĐỘI HẾT MẠNG DỪNG + GAME OVER, ĐỘI KIA CHƠI TIẾP · phiên MSI
+
+**Thầy:** "Khi đấu fight và giới hạn lives (số mạng), thì đội nào hết live trước sẽ ngừng lại và màn hình có chữ GAME OVER, đội còn lại vẫn tiếp tục cho đến khi hết mạng chứ không dừng lại."
+
+**Trước đây:** bàn hết mạng gọi `finish("gameover")` ⇒ engine `ui.finish` ở Fight = `ctl.onFinish` ⇒ `henKetTran` + `endMatch` ⇒ CẢ TRẬN kết sau 2,1 s.
+
+**Làm:**
+- `core/fight.js` — hàm trọng tài mới **`ctl.boardOut(side)`** + mảng `outSides` + `markOutDone()`:
+  - khoá vĩnh viễn bàn đó (`isLocked` trả true), phủ lớp **GAME OVER** (`.aw-fight-out` gắn vào `boardEls[side]`, hiện sau 1,2 s để ✗ của câu sai cuối kịp hiện).
+  - Vòng chung: mỗi lần reset `roundDone` (advanceRound, boardMoved) gọi `markOutDone()` ⇒ bàn out coi như ĐÃ XONG từ đầu câu ⇒ bàn còn sống trả lời là chốt vòng, không chờ, không che. advanceRound/boardMoved KHÔNG `lock(false)`/`goToIndex` bàn out (đứng yên ở câu cuối của nó, giữ lớp phủ).
+  - Hai bàn đều out ⇒ `henKetTran` + setTimeout RIÊNG `endMatch` 2,1 s (không qua `later()` — cùng lý do `forfeit`). Hết câu / hết giờ ⇒ đường cũ. **Thắng theo điểm** (không xử thua tự động — thầy không yêu cầu; đội còn sống thường hơn điểm vì chơi thêm).
+  - Bàn độc lập (soloBoards) cũng xử lý (boardOver), `advanceBoard` bỏ qua bàn out. **Pick mode ⇒ trả false** (lượt chọn xoay vòng, thiếu một đội là kẹt) ⇒ template đi đường cũ.
+- `templates/quiz/quiz.js` — `fightBoardOut()`: 2 chỗ hết mạng (chọn sai + hết giờ mỗi câu) gọi `boardOut` THAY cho `finish("gameover")`; dừng `tl` (đồng hồ mỗi câu) của bàn đó. ⛔ KHÔNG gọi `quizSound.stopWarning()` — gói tiếng là module DÙNG CHUNG 2 bàn.
+  `ending` vẫn true ⇒ bàn out không tính idle cost, phím/nút ‹ › chết. Submit ở ☰ hoặc đồng hồ tổng của bàn out hết vẫn gọi finish ⇒ kết trận (đúng: hết giờ là hết trận).
+- `core/app.css` — `.aw-fight-board.is-fight-out` (position:relative CHỈ khi out) + `.aw-fight-out` (nền tối .62, chữ Rubik 800 trắng viền đỏ, nảy vào).
+- Template khác (Anagram, True/false…) chưa gọi `boardOut` ⇒ y như cũ (hết mạng = kết trận). Muốn áp dụng = thay `finish({gameover})` ở nhánh Fight bằng `ctl.boardOut`.
+
+**Kiểm (devserver :5609, bàn thử mới `scratch/dot509-fight-lives.html`, lives 2, 6 câu; `?turns=1` = In turns):**
+- Bàn trái sai 2 câu ⇒ GAME OVER ở Q2, bàn phải chạy tiếp Q3→Q6 một mình, mỗi câu trả lời là sang câu (không chờ) · hết Q6 ⇒ bảng kết quả "TEAM RIGHT WINS 0 — 6".
+- Bàn trái out, bàn phải sau đó sai 2 câu ⇒ cả hai GAME OVER ⇒ bảng kết quả sau 2,1 s.
+- In turns: bàn trái out, bàn phải chơi tiếp bình thường. 0 lỗi console.
+
+**Trạng thái:** ✅ push `40d7943` + LIVE 3/3 (`tools/kiem-live.py`, chạy với `PYTHONIOENCODING=utf-8` — không có thì in lỗi cp1252).
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy chơi thử Quiz Fight bật Lives trên TOMKO (độ lớn chữ GAME OVER, nhịp 1,2 s) · ⬜ nếu muốn: áp dụng cho Anagram / True-false / Type the answer… (các template có Lives khác).
+
+---
+
 ## Đợt 508 (12/10/2026) — iPAD TỰ ĐỔI MÀN THEO GAME ĐANG MỞ (STAR LOOT D-pad ⇄ Rocket Race màn câu hỏi ⇄ màn chờ) · phiên MSI
 
 **Thầy:** hỏi "khi chọn game bất kỳ và bật game đó, thì ipad chọn vào có tự động đổi màn hình phù hợp với game đang được chọn chưa?" — Claude đọc code: **CHƯA** (pad.html và source.html là 2 trang không biết nhau; đổi game thì iPad đứng "Waiting for the game", phải cầm iPad bấm Back chọn lại). Thầy: "Có, làm cho iPad tự đổi theo game đi".
