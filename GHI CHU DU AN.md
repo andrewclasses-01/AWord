@@ -558,7 +558,9 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 **Kiểm:** test.html trình duyệt thường ⇒ `.app` top 0 (không đổi); giả `navigator.standalone=true` ⇒ padding 24px, `.app` 24→768 vừa khít màn.
 
-**VIỆC ĐANG CHỜ:** ⬜ thầy mở lại app AWord trên iPad (tắt hẳn app rồi mở để lấy bản mới) — dải trên phải trắng, hàng NIGHT/Undo bấm được. Nếu thư viện
+**Trạng thái:** ✅ push `9e3efc2` + LIVE 2/2 · ✅ **thầy xác nhận trên iPad (12/10): hết viền mờ, bấm được.**
+
+**VIỆC ĐANG CHỜ:** Nếu thư viện
 AWord ngoài game cũng bị che đầu trang ở chế độ app ⇒ báo để sửa chung (`viewport-fit=cover` + safe-area cho cả trang).
 
 ---
