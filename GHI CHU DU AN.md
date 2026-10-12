@@ -564,6 +564,8 @@ bảng trong game vẫn chỉ 1 dòng (đúng ảnh ca Diễm My).
 **Bàn thử** `scratch/dot505b-giao-muon.html` (ván Quiz bài giao, session giả: nộp hỏng ⇒ màn lỗi ⇒ sự kiện giao ở 4 mặt + lượt gốc về muộn 20 s
 khi ở mặt guide): **33/33 OK**; lượt của mã KHÁC không làm gì. Đối chứng ngược `?cu=1` (engine trước Đợt 505b chép tạm) ⇒ 13 FAIL đúng các ca cần sửa.
 
+**Trạng thái:** ✅ push `bf4f890` + LIVE 2/2. **VIỆC ĐANG CHỜ:** ⬜ thầy để ý lần sau em gặp màn GỬI BÀI CHƯA THÀNH CÔNG trên điện thoại thật — phải tự thành SUBMITTED trong ~20 s khi mạng ổn.
+
 ---
 
 ## Đợt 505 (12/10/2026) — LƯỢT NỘP KẸT TỰ GỬI LẠI + GỬI BÙ XONG BÁO TRANG MẸ LÀM MỚI BẢNG
