@@ -115,8 +115,11 @@ const CLASSES_DEMO = {
   'CLASS 20':['An Nhiên','Bình Minh','Chi Mai','Duy Anh','Giang Sơn','Hà Linh','Hải Đăng','Hằng Nga','Hiếu Minh','Hoa Mai','Gia Huy','Khánh Vy','Lâm Phong','Linh Chi','Long Nhật','Mai Anh','Nam Khánh','Ngân Hà','Phong Vũ','Quân Bảo']
 };
 
-// Class rolls come from Settings › Classes ({className: [{id, name}]}); the
-// demo roll is only for the standalone test page.
+// Class rolls come from Settings › Classes ({className: [{id, name}]}) — since
+// Đợt 435 that is the myLesson dashboard (lessonWeb/lop + temporary pupils).
+// The WHOLE roll is loaded: a class over MAX_PLAYERS is trimmed by the teacher
+// on the Roster step (remove the absent pupils), never silently cut at #20.
+// The demo roll is only a fallback for the test page when offline.
 const CLASSES = ctx.classes || Object.fromEntries(Object.entries(CLASSES_DEMO).map(([k,v])=>[k, v.map((n,i)=>({id:k+'_'+i, name:n}))]));
 const SEATS = (ctx.data && ctx.data.seats) || {};
 let S, uid = Date.now() % 1e6;
@@ -126,7 +129,7 @@ function seatOrder(cls, players){
 }
 function saveSeats(){ if (!S.cls) return; SEATS[S.cls] = S.order.slice(); ctx.saveSeats && ctx.saveSeats(S.cls, S.order.slice()); }
 function fresh(cls){
-  const players = (cls ? CLASSES[cls] || [] : []).slice(0, MAX_PLAYERS).map(st=>({id:String(st.id || ('p'+(uid++))), name:st.name, benched:false, role:null, dead:false, out:false, died:''}));
+  const players = (cls ? CLASSES[cls] || [] : []).map(st=>({id:String(st.id || ('p'+(uid++))), name:st.name, benched:false, role:null, dead:false, out:false, died:''}));
   return { screen:'setup', setupStep:'roster', verdict:null, cls, players, order:seatOrder(cls, players), outSeq:[], sizeN:0,
     cfg:{wolf:3, witch:true, seer:true, guard:true, hunter:true},
     night:0, stepIdx:0, phase:'', n:{}, used:{save:false, poison:false}, lastGuard:null,
@@ -213,7 +216,7 @@ function topHTML(){
   if (S.screen==='setup'){
     title = `${ic('cards')} Setup`;
     list = [`<div class="clsbox"><button class="clsbtn ${S.cls?'':'empty'}" id="clsBtn">${S.cls?`Class <b>${esc(S.cls)}</b>`:'Choose class'}<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
-      <div class="clsmenu" id="clsMenu" hidden>${Object.keys(CLASSES).map(c=>`<button class="clsopt ${c===S.cls?'on':''}" data-cls="${esc(c)}"><b>${esc(c)}</b><small>${Math.min(CLASSES[c].length,MAX_PLAYERS)} pupils</small></button>`).join('')}</div></div>`];
+      <div class="clsmenu" id="clsMenu" hidden>${Object.keys(CLASSES).map(c=>`<button class="clsopt ${c===S.cls?'on':''}" data-cls="${esc(c)}"><b>${esc(c)}</b><small>${CLASSES[c].length} pupils</small></button>`).join('')}</div></div>`];
   }
   else if (S.screen==='night'){
     title = `${ic('moon')} NIGHT ${S.night}`;
@@ -345,7 +348,8 @@ function setupHub(){
     return `<h2>Class ${esc(S.cls)} · <span class="count">${S.players.length}</span> pupils</h2>
       <div class="roster">${S.players.map(p=>`<span class="rchip">${esc(p.name)}<button data-del="${p.id}" aria-label="Remove ${esc(p.name)}">${ic('x')}</button></span>`).join('')}</div>
       <form class="addrow" id="addForm"><input id="addName" placeholder="Add a name" autocomplete="off" ${full?'disabled':''}><button class="btn" type="submit" ${full?'disabled':''}>Add</button></form>
-      <div class="hbtns"><button class="btn pri" id="rosterOk" ${S.players.length>=4?'':'disabled'}>${ic('check')}Confirm</button></div>`;
+      ${S.players.length>MAX_PLAYERS?`<p class="overcap">Max ${MAX_PLAYERS} players — remove ${S.players.length-MAX_PLAYERS} name${S.players.length-MAX_PLAYERS>1?'s':''} (absent pupils) to continue.</p>`:''}
+      <div class="hbtns"><button class="btn pri" id="rosterOk" ${S.players.length>=4 && S.players.length<=MAX_PLAYERS?'':'disabled'}>${ic('check')}Confirm</button></div>`;
   }
   const on = inGame().length;
   const special = ['witch','seer','guard','hunter'].filter(r=>S.cfg[r]).length;
@@ -401,15 +405,15 @@ function drawLines(){
 
 // ================================================================ SOUND — a very soft "tick" on every pick
 let actx;
-function ctx(){ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==='suspended') actx.resume(); return actx; }
+function audioCtx(){ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==='suspended') actx.resume(); return actx; }
 function tick(){
-  try{ const c=ctx(), t=c.currentTime, o=c.createOscillator(), g=c.createGain(), f=c.createBiquadFilter();
+  try{ const c=audioCtx(), t=c.currentTime, o=c.createOscillator(), g=c.createGain(), f=c.createBiquadFilter();
     o.type='triangle'; o.frequency.setValueAtTime(2400,t); o.frequency.exponentialRampToValueAtTime(1300,t+.025);
     f.type='highpass'; f.frequency.value=900;
     g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.05,t+.003); g.gain.exponentialRampToValueAtTime(.0001,t+.045);
     o.connect(f).connect(g).connect(c.destination); o.start(t); o.stop(t+.05); }catch{}
 }
-function beep(){ try{ const c=ctx(); [0,.35,.7].forEach(t=>{ const o=c.createOscillator(), g=c.createGain(); o.frequency.value=880; g.gain.setValueAtTime(.0001,c.currentTime+t); g.gain.exponentialRampToValueAtTime(.3,c.currentTime+t+.02); g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+t+.3); o.connect(g).connect(c.destination); o.start(c.currentTime+t); o.stop(c.currentTime+t+.32); }); }catch{} }
+function beep(){ try{ const c=audioCtx(); [0,.35,.7].forEach(t=>{ const o=c.createOscillator(), g=c.createGain(); o.frequency.value=880; g.gain.setValueAtTime(.0001,c.currentTime+t); g.gain.exponentialRampToValueAtTime(.3,c.currentTime+t+.02); g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+t+.3); o.connect(g).connect(c.destination); o.start(c.currentTime+t); o.stop(c.currentTime+t+.32); }); }catch{} }
 
 // ================================================================ ACTIONS
 function wire(){
@@ -743,12 +747,12 @@ const music = {
   tracks:[{name:'Night forest (sample)', kind:'synth', base:110},{name:'Wind & crickets (sample)', kind:'synth', base:146.8}],
   idx:0, playing:false, vol:.7, fade:1, audio:new Audio(), nodes:null, fT:null,
   out(){ return this.vol*this.fade; },
-  apply(){ this.audio.volume=Math.min(1,this.out()); if(this.nodes) this.nodes.g.gain.setTargetAtTime(this.out()*.35, ctx().currentTime, .05); },
+  apply(){ this.audio.volume=Math.min(1,this.out()); if(this.nodes) this.nodes.g.gain.setTargetAtTime(this.out()*.35, audioCtx().currentTime, .05); },
   stopAll(){ this.audio.pause(); if(this.nodes){ try{this.nodes.src.forEach(s=>s.stop());}catch{} this.nodes=null; } },
   startTrack(){
     this.stopAll(); const t=this.tracks[this.idx];
     if (t.kind==='file'){ this.audio.src=t.url; this.audio.loop=true; this.apply(); this.audio.play().catch(()=>{}); return; }
-    const c=ctx(), g=c.createGain(); g.gain.value=0; g.connect(c.destination);
+    const c=audioCtx(), g=c.createGain(); g.gain.value=0; g.connect(c.destination);
     const lp=c.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=900; lp.connect(g);
     const src=[];
     [1,1.5,2,3].forEach((m,i)=>{ const o=c.createOscillator(); o.type=i%2?'triangle':'sine'; o.frequency.value=t.base*m; o.detune.value=(i-1.5)*6;

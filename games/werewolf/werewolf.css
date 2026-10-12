@@ -184,6 +184,7 @@ body.ww-open{overflow:hidden}
 .ww .tog.on{background:var(--rc)}
 .ww .tog.on::after{left:21px}
 .ww .addrow{display:flex;gap:6px;margin-top:10px}
+.ww .overcap{margin:10px 0 0;font-size:13px;font-weight:700;color:var(--wolf)}
 .ww .addrow input{flex:1;min-width:0;padding:9px 12px;border-radius:12px;border:1.5px solid var(--line);font:inherit;font-size:13.5px;background:#fff}
 .ww .sumline{margin-top:10px;font-size:13px;color:var(--muted)}
 .ww .sumline b{font-family:var(--disp);font-size:17px;color:var(--ink)}

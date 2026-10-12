@@ -37,7 +37,8 @@ Màn chỉ quản trò nhìn (hiện tên + vai của mọi em). Toàn bộ ch�
 | `core/store.js` | thêm `"werewolf"` vào `APP_DATA_KINDS` (tài liệu chỗ ngồi không được ăn số link). |
 
 ## 4. Dữ liệu
-- **Lớp**: đọc từ Settings ▸ Classes (`listClasses()`). Thêm/bỏ tên ở màn chuẩn bị chỉ cho ván đó.
+- **Lớp**: đọc từ Settings ▸ Classes (`listClasses()` = lớp + khoá dashboard myLesson từ Đợt 435). Thêm/bỏ tên ở màn chuẩn bị chỉ cho ván đó.
+  Nạp ĐỦ cả lớp; lớp >20 em ⇒ màn Roster bắt bỏ bớt em vắng mới Confirm được (Đợt 506). `test.html` cũng đọc lớp dashboard thật (lùi lớp mẫu khi mất mạng).
 - **Chỗ ngồi**: lưu theo TÊN LỚP mỗi lần kéo đổi chỗ + lúc READY ⇒ máy nào mở cũng thấy.
 - **Nhạc**: 2 bài mẫu tạo bằng WebAudio (không file). Nút *+ Add mp3* lưu file vào **IndexedDB của máy đó**
   (Firestore giới hạn 1 MB/tài liệu, AWord chưa có Storage) ⇒ iPad nào phát nhạc thì thêm nhạc trên iPad đó.
@@ -53,7 +54,9 @@ từ nay sửa THẲNG file trong repo, đừng sinh lại từ mẫu.
 - Thẻ đang nhấc che ô OUT ⇒ `elementFromPoint` trúng chính thẻ ⇒ `.card.lift{pointer-events:none}`.
 - Thiếu `box-sizing:border-box` ⇒ thẻ cao hơn ô, chồng nhau.
 - Ảnh chụp Browser pane chỉ vẽ một phần lớp `position:fixed` — đo `getBoundingClientRect` trước khi tin ảnh.
+- ⛔ **Đợt 506:** `function ctx()` (AudioContext) trong thân `mountWerewolf(root, ctx)` được hoist ĐÈ tham số `ctx` ⇒ mọi `ctx.*` undefined
+  (lớp mẫu, không lưu chỗ ngồi, Home chết) suốt từ Đợt 373. Nay là `audioCtx()`. Đừng đặt tên hàm/biến nội bộ trùng `root`/`ctx`.
 
 ## 7. Việc chờ
-- ⬜ Thầy bấm tay trên iPad thật: kéo xếp chỗ, âm lượng qua bluetooth, thêm mp3.
+- ⬜ Thầy bấm tay trên iPad thật: chọn lớp thật (Đợt 506), kéo xếp chỗ (mở máy khác phải thấy cùng chỗ), âm lượng qua bluetooth, thêm mp3.
 - ⬜ Nếu thầy gửi mp3 muốn có sẵn trên mọi máy: bỏ vào `games/werewolf/music/` + thêm vào danh sách bài trong `werewolf.js`.

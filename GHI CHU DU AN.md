@@ -546,6 +546,32 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 506 (12/10/2026) — WEREWOLF NẠP LỚP THẬT (gỡ hàm `ctx()` đè tham số `ctx`) · phiên MSI
+
+**Thầy:** "Đọc game Werewolf trong thư mục game trên AWord, hãy nạp các lớp học thật vào game."
+
+**Thủ phạm:** `main.js renderFixedGame` vốn ĐÃ đưa lớp dashboard (`listClasses()`) vào `mountWerewolf(host, ctx)`, nhưng bên trong
+`games/werewolf/werewolf.js` có `function ctx()` (tạo AudioContext cho tiếng đêm/bíp). Khai báo hàm trong thân hàm được HOIST và
+ĐÈ MẤT tham số `ctx` ⇒ `ctx.classes` / `ctx.data` / `ctx.saveSeats` / `ctx.onExit` / `ctx.listTracks|addTrack|removeTrack` đều `undefined`
+từ ngày dựng (Đợt 373). Hệ quả trên AWord thật: menu lớp LUÔN là 3 lớp mẫu (A1C 18 · B1B 14 · CLASS 20), chỗ ngồi không lưu Firestore,
+nút Home không về GAMES, mp3 thêm vào không lưu IndexedDB. (Đúng bẫy [[ham-trung-ten-thang-am-tham]] — lần này là hàm đè THAM SỐ.)
+
+**Đã làm:**
+- `werewolf.js`: đổi `function ctx()` → `audioCtx()` (5 chỗ gọi). Không còn tên `ctx` nào ngoài tham số.
+- `werewolf.js`: nạp ĐỦ cả lớp (bỏ `.slice(0, MAX_PLAYERS)` — trước lớp 21 em bị cắt im lặng em thứ 21). Màn Roster: >20 em ⇒ dòng đỏ
+  "Max 20 players — remove N name(s) (absent pupils) to continue." + nút Confirm khoá tới khi bỏ bớt em vắng. Menu lớp hiện sĩ số thật.
+  CSS `.ww .overcap`.
+- `games/werewolf/test.html`: nạp lớp THẬT từ dashboard (`dsLopDashboard()`, `lessonWeb/lop` công khai, không cần đăng nhập); mất mạng ⇒ lớp mẫu.
+
+**Kiểm (localhost test.html):** menu = 10 lớp thật A1A 18 · A1B 18 · A1C 19 · A2B 18 · B1B 18 · B2A 17 · B2B 18 · NNTNG4 19 · NNTNGK10 21 · NNTNGK9 21;
+chọn NNTNGK10 ⇒ 21 tên thật, Confirm khoá + dòng nhắc; bỏ 1 tên ⇒ Confirm mở; nút Home gọi `onExit` (trước chết); nhạc mẫu Play ⇒ "Playing",
+0 lỗi console. Trang thật cần đăng nhập Google nên chưa bấm thử trên `aword.andrewclasses.com/?g=werewolf`.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy mở GAMES ▸ Werewolf trên iPad (đã đăng nhập) — menu phải là lớp thật; kéo xếp chỗ rồi mở máy khác phải thấy cùng chỗ ngồi
+(lần đầu chỗ ngồi thật sự được lưu).
+
+---
+
 ## Đợt 505b (12/10/2026) — MÀN LỖI NỘP BÀI TỰ CHUYỂN SANG SUBMITTED KHI LƯỢT LÊN MUỘN
 
 **Thầy:** "Sửa luôn màn lỗi tự chuyển sang đã nộp" (phần Đợt 505 cố ý chưa làm).

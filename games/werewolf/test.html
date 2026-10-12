@@ -8,15 +8,24 @@
   <link rel="stylesheet" href="werewolf.css" />
 </head>
 <body>
-  <!-- Standalone test page: demo class rolls, no sign-in, nothing written to
-       Firestore (seating kept in memory, music in this browser's IndexedDB). -->
+  <!-- Standalone test page: no sign-in, nothing written to Firestore (seating
+       kept in memory, music in this browser's IndexedDB). Class rolls are the
+       REAL ones from the myLesson dashboard (lessonWeb/lop is public); offline
+       it falls back to the demo rolls inside werewolf.js. -->
   <div id="app"></div>
   <script type="module">
     import { mountWerewolf } from "./werewolf.js";
     import { listTracks, addTrack, removeTrack } from "./ww-store.js";
+    import { dsLopDashboard } from "../../core/lop-dashboard.js";
+    let classes;
+    try {
+      const { lop } = await dsLopDashboard();
+      classes = Object.fromEntries(lop.filter(c => c.students.length).map(c => [c.maLop, c.students.map(s => ({ id: s.id, name: s.name }))]));
+    } catch (e) { console.warn("Werewolf test: dashboard classes unavailable — demo rolls", e); }
     const host = document.createElement("div");
     document.getElementById("app").append(host);
     window.__ww = mountWerewolf(host, {
+      classes,
       data: { seats: {} },
       saveSeats: (c, order) => console.log("saveSeats", c, order.length),
       listTracks, addTrack, removeTrack,
