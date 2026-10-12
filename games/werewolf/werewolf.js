@@ -790,6 +790,12 @@ $('#mp3').onchange=async e=>{ const files=[...e.target.files]; e.target.value=''
   saved.forEach(r=>music.tracks.push({id:r.id, name:r.name, kind:'file', url:URL.createObjectURL(r.blob)})); music.paint(); })();
 
 root.addEventListener('pointerdown', e=>{ const m=$('#clsMenu'); if (m && !m.hidden && !e.target.closest('.clsbox')) m.hidden=true; });
+// Đợt 507 — opened as the AWord HOME-SCREEN APP on iPad (iOS standalone), the page is drawn under the
+// status bar: our fixed full-screen root put its top row under the blurred bar, and taps there went to the
+// system (pull-down gestures). Keep the game below the bar: env() when iOS reports it, else the iPad bar (24px).
+const sbFit = () => { const ios = navigator.standalone === true, iPad = ios && !/iPhone|iPod/.test(navigator.userAgent);
+  root.classList.toggle('ww-sb', ios); root.style.setProperty('--ww-sb', iPad ? '24px' : '0px'); };
+sbFit(); addEventListener('resize', sbFit);
 let rsT; const ro = new ResizeObserver(()=>{ clearTimeout(rsT); rsT=setTimeout(()=>{ if(!drag) render(); },80); }); ro.observe(ringEl);
 $('#wwHome').onclick = ()=>{ tick(); ctx.onExit && ctx.onExit(); };
 timer.set(180); music.paint();
@@ -804,6 +810,7 @@ return function dispose(){
   if (dead) return; dead = true;
   timer.pause(); clearInterval(music.fT); music.stopAll(); clearTimeout(rsT); clearTimeout(toastT);
   try { ro.disconnect(); } catch {}
+  removeEventListener('resize', sbFit); root.classList.remove('ww-sb'); root.style.removeProperty('--ww-sb');
   try { actx && actx.close(); } catch {}
   music.tracks.forEach(t=>{ if (t.url) try { URL.revokeObjectURL(t.url); } catch {} });
   root.innerHTML = ''; root.classList.remove('ww'); document.body.classList.remove('ww-open');

@@ -546,6 +546,23 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 507 (12/10/2026) — WEREWOLF Ở APP MÀN HÌNH CHÍNH: CHỪA THANH TRẠNG THÁI · phiên MSI
+
+**Thầy (ảnh iPad, mở AWord dạng app ở Màn hình chính):** "có viền mờ bên trên và không bấm được".
+
+**Nguyên nhân:** chế độ app (iOS standalone) vẽ trang tràn lên dưới thanh trạng thái (giờ/pin). Game là lớp `position:fixed; inset:0`
+⇒ dải trên cùng nằm dưới thanh trạng thái: bị làm mờ, chạm vào thì hệ thống nhận (cử chỉ kéo xuống), hàng NIGHT/nút Undo sát mép khó bấm.
+
+**Đã làm:** `werewolf.js sbFit()` — chỉ khi `navigator.standalone === true` gắn class `ww-sb` + biến `--ww-sb` (iPad 24px, iPhone 0 và dựa vào env);
+`werewolf.css .ww.ww-sb{padding-top:max(env(safe-area-inset-top),var(--ww-sb)); background:#fff}`; dispose gỡ lại. Không đụng viewport chung của AWord.
+
+**Kiểm:** test.html trình duyệt thường ⇒ `.app` top 0 (không đổi); giả `navigator.standalone=true` ⇒ padding 24px, `.app` 24→768 vừa khít màn.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy mở lại app AWord trên iPad (tắt hẳn app rồi mở để lấy bản mới) — dải trên phải trắng, hàng NIGHT/Undo bấm được. Nếu thư viện
+AWord ngoài game cũng bị che đầu trang ở chế độ app ⇒ báo để sửa chung (`viewport-fit=cover` + safe-area cho cả trang).
+
+---
+
 ## Đợt 506 (12/10/2026) — WEREWOLF NẠP LỚP THẬT (gỡ hàm `ctx()` đè tham số `ctx`) · phiên MSI
 
 **Thầy:** "Đọc game Werewolf trong thư mục game trên AWord, hãy nạp các lớp học thật vào game."

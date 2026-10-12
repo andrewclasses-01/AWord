@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **12/10/2026 Đợt 507 — WEREWOLF Ở APP MÀN HÌNH CHÍNH**: iOS standalone vẽ trang dưới thanh trạng thái ⇒ dải trên game mờ + không bấm được; `sbFit()` + `.ww.ww-sb` chừa max(env(safe-area-inset-top), 24px iPad). Chi tiết GHI CHU Đợt 507.
 > ✏️ **12/10/2026 Đợt 506 — WEREWOLF NẠP LỚP THẬT**: `function ctx()` (AudioContext) trong `games/werewolf/werewolf.js` đè tham số `ctx` ⇒ từ Đợt 373 game luôn dùng 3 lớp mẫu, không lưu chỗ ngồi, nút Home chết. Đổi thành `audioCtx()`; nạp đủ lớp >20 em (Roster bắt bỏ bớt em vắng); test.html dùng lớp dashboard thật. Chi tiết GHI CHU Đợt 506.
 > ✏️ **12/10/2026 Đợt 505b — MÀN LỖI NỘP BÀI TỰ CHUYỂN SUBMITTED** khi lượt lên muộn (lượt gốc về trễ ở BẤT KỲ mặt nào, hoặc nhịp gửi bù giao hộ — sự kiện `aw:luot-da-giao {attemptId}` từ play.js): còn lớp phủ ⇒ SUBMITTING + bay vào bảng; đã XONG ⇒ bật dải SUBMITTED + đọc lại bảng. Bàn thử `scratch/dot505b-giao-muon.html` 33/33. Chi tiết GHI CHU Đợt 505b.
 > ✏️ **12/10/2026 Đợt 505 — LƯỢT NỘP KẸT TỰ GỬI LẠI + BÁO TRANG MẸ** (ca Diễm My: game 30/30, bảng myLesson 29 — lượt lên trễ 98 s, kho vẫn đúng): `flushOutbox({daGiao, quet, chiMa})` + `conNoGui(ma)` (core/assignments.js); play.js `batNhipGuiBu` thử lại mỗi 20 s / khi `online` khi nhúng, giao xong bắn `AWORD:NOP` (cả gửi bù lúc tải trang). myLesson không đổi. ✅ push `bcf624e` + LIVE 2/2. Chi tiết GHI CHU Đợt 505.

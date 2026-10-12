@@ -54,6 +54,8 @@ từ nay sửa THẲNG file trong repo, đừng sinh lại từ mẫu.
 - Thẻ đang nhấc che ô OUT ⇒ `elementFromPoint` trúng chính thẻ ⇒ `.card.lift{pointer-events:none}`.
 - Thiếu `box-sizing:border-box` ⇒ thẻ cao hơn ô, chồng nhau.
 - Ảnh chụp Browser pane chỉ vẽ một phần lớp `position:fixed` — đo `getBoundingClientRect` trước khi tin ảnh.
+- ⛔ **Đợt 507:** mở AWord dạng app Màn hình chính (iOS standalone) ⇒ trang tràn dưới thanh trạng thái; lớp fixed inset:0 phải chừa
+  `padding-top:max(env(safe-area-inset-top), 24px)` (class `ww-sb`, chỉ khi `navigator.standalone`).
 - ⛔ **Đợt 506:** `function ctx()` (AudioContext) trong thân `mountWerewolf(root, ctx)` được hoist ĐÈ tham số `ctx` ⇒ mọi `ctx.*` undefined
   (lớp mẫu, không lưu chỗ ngồi, Home chết) suốt từ Đợt 373. Nay là `audioCtx()`. Đừng đặt tên hàm/biến nội bộ trùng `root`/`ctx`.
 

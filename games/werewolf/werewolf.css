@@ -6,6 +6,8 @@
    — see GHI CHU WEREWOLF.md before changing the look.
    ============================================================= */
 .ww{position:fixed;inset:0;z-index:40}
+/* Đợt 507 — iOS home-screen app: keep the game below the status bar (see sbFit in werewolf.js) */
+.ww.ww-sb{box-sizing:border-box;padding-top:max(env(safe-area-inset-top,0px),var(--ww-sb,0px));background:#fff}
 body.ww-open{overflow:hidden}
 .ww{--bg:#EDF1F8; --surface:#FFFFFF; --surface2:#F5F7FB; --ink:#1A2238; --muted:#667090; --line:#DCE2EE;
   --primary:#3346C9; --moon:#F4C95D; --night1:#172247; --night2:#2B3A6E;
