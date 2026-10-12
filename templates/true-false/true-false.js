@@ -496,6 +496,16 @@ const tfTemplate = {
 
     // Costs one life; pops the LEFTMOST heart out (when hearts are shown
     // individually) then re-renders. Returns true if that was the last life.
+    // ⭐ Đợt 509b (thầy, 12/10/2026) — FIGHT + Lives: bàn HẾT MẠNG chỉ mình nó dừng (GAME OVER), bàn kia chơi tiếp tới khi
+    // hết mạng / hết câu / hết giờ. Báo trọng tài `boardOut` THAY cho finish("gameover") (finish ở Fight = kết CẢ trận).
+    // Gọi SAU wordDone của câu làm mất mạng cuối. Trọng tài trả false (pick mode / fight.js cũ trong cache) ⇒ đường cũ.
+    // Sau đó `ctl.isLocked(side)` luôn true ⇒ fightLocked() chặn mọi thao tác + idle cost của bàn này.
+    function fightBoardOut() {
+      if (!fightCtl || typeof fightCtl.boardOut !== "function") return false;
+      if (!fightCtl.boardOut(fightSide)) return false;
+      return true;
+    }
+
     function loseLife() {
       if (livesLeft == null) return false;           // unlimited -> can't lose
       const slot = ui.livesSlot;
@@ -923,7 +933,7 @@ const tfTemplate = {
         // `curRow` is the row this statement occupies in `review`, i.e. exactly
         // the round number the match is on — the same number goToIndex is given.
         fightCtl.wordDone(fightSide, { index: curRow, correct: isRight });
-        if (outOfLives) armFallback(() => finish("gameover"), 1200);
+        if (outOfLives && !fightBoardOut()) armFallback(() => finish("gameover"), 1200);   // Đợt 509b
         return;
       }
 

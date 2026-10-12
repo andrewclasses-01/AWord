@@ -916,6 +916,17 @@ const anagramTemplate = {
     // individually) then re-renders. Returns true if that was the last life —
     // called at the SAME granularity as the pointsOff penalty (once per WORD
     // that had a mistake / was submitted wrong), not per keypress.
+    // ⭐ Đợt 509b (thầy, 12/10/2026) — FIGHT + Lives: bàn HẾT MẠNG chỉ mình nó dừng (GAME OVER), bàn kia chơi tiếp tới khi
+    // hết mạng / hết câu / hết giờ. Báo trọng tài `boardOut` THAY cho finish("gameover") (finish ở Fight = kết CẢ trận).
+    // Gọi SAU wordDone của câu làm mất mạng cuối. Trọng tài trả false (pick mode / fight.js cũ trong cache) ⇒ đường cũ.
+    // Sau đó `ctl.isLocked(side)` luôn true ⇒ fightLocked() chặn mọi thao tác + idle cost của bàn này.
+    function fightBoardOut() {
+      if (!fightCtl || typeof fightCtl.boardOut !== "function") return false;
+      if (!fightCtl.boardOut(fightSide)) return false;
+      tl.stop();   // đồng hồ mỗi câu của bàn này
+      return true;
+    }
+
     function loseLife() {
       if (livesLeft == null) return false;           // unlimited -> can't lose
       const slot = ui.livesSlot;
@@ -1319,7 +1330,8 @@ const anagramTemplate = {
       // simply refused), so getting here always means correct. Mistakes along
       // the way cost the multiplier, not the round — see `perfect`.
       if (fightCtl) fightCtl.wordDone(fightSide, { index, earned, perfect, correct: true });
-      if (outOfLives) autoTimer = setTimeout(() => finish({ gameover: true }), finishDelay);
+      if (outOfLives && fightBoardOut()) { /* Đợt 509b — chỉ bàn này dừng */ }
+      else if (outOfLives) autoTimer = setTimeout(() => finish({ gameover: true }), finishDelay);
       // In a fight the controller drives the last word too (it ends the match
       // once both boards are done), so don't race it with a local finish().
       else if (!fightCtl && state.every(doneCheck)) autoTimer = setTimeout(finish, finishDelay);
@@ -1396,7 +1408,7 @@ const anagramTemplate = {
         updateNav();
         syncFightLock();
         fightCtl.wordDone(fightSide, { index, correct: false });
-        if (outOfLivesF) autoTimer = setTimeout(() => finish({ gameover: true }), 1500);
+        if (outOfLivesF && !fightBoardOut()) autoTimer = setTimeout(() => finish({ gameover: true }), 1500);   // Đợt 509b
         return;
       }
       if (!isBonusFamily) {
@@ -1829,7 +1841,7 @@ const anagramTemplate = {
         updateNav();
         syncFightLock();
         fightCtl.wordDone(fightSide, { index, correct: allCorrect });
-        if (outOfLivesFight) autoTimer = setTimeout(() => finish({ gameover: true }), 1500);
+        if (outOfLivesFight && !fightBoardOut()) autoTimer = setTimeout(() => finish({ gameover: true }), 1500);   // Đợt 509b
         return;
       }
 

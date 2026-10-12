@@ -700,6 +700,16 @@ const ftmTemplate = {
 
     // Drops one life, popping the leftmost heart (when 1..5 are shown
     // individually) then re-rendering. Returns true if that was the last life.
+    // ⭐ Đợt 509b (thầy, 12/10/2026) — FIGHT + Lives: bàn HẾT MẠNG chỉ mình nó dừng (GAME OVER), bàn kia chơi tiếp tới khi
+    // hết mạng / hết câu / hết giờ. Báo trọng tài `boardOut` THAY cho finish("gameover") (finish ở Fight = kết CẢ trận).
+    // Gọi SAU wordDone của câu làm mất mạng cuối. Trọng tài trả false (pick mode / fight.js cũ trong cache) ⇒ đường cũ.
+    // Sau đó `ctl.isLocked(side)` luôn true ⇒ fightLocked() chặn mọi thao tác + idle cost của bàn này.
+    function fightBoardOut() {
+      if (!fightCtl || typeof fightCtl.boardOut !== "function") return false;
+      if (!fightCtl.boardOut(fightSide)) return false;
+      return true;
+    }
+
     function loseLife() {
       if (livesLeft == null) return false;           // unlimited -> can't lose
       const slot = ui.livesSlot;
@@ -1135,6 +1145,7 @@ const ftmTemplate = {
       if (fightCtl) {
         ui.noteActivity?.();
         lockTiles();
+        let fightHetMang = false;
         const correct = idx === target;
         fightPendingReveal = { idx, tile, correct };
         if (correct) {
@@ -1142,7 +1153,7 @@ const ftmTemplate = {
           ftmSound.correct();
         } else {
           ftmSound.wrong();
-          loseLife();
+          fightHetMang = loseLife();   // Đợt 509b — trước đây bỏ qua kết quả ⇒ hết tim mà trận vẫn chạy như không
         }
         ui.setScore(scoreNow());
         // ⭐⭐⭐ Đợt 256 (thầy, 24/8/2026) — "−N" BAY VÀO Ô ĐIỂM RỒI MỚI TRỪ.
@@ -1165,6 +1176,7 @@ const ftmTemplate = {
         // `index` is the ROW in `review` — `order` is identity in a match, so
         // the prompt's own pair index IS that row (same contract as True/false).
         fightCtl.wordDone(fightSide, { index: target, correct });
+        if (fightHetMang && !fightBoardOut()) finish("gameover");   // Đợt 509b
         return;   // the MATCH decides what happens next
       }
       // TIME COST (Dot 143): tapping a tile IS the progress this game measures,

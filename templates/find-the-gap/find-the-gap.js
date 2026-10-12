@@ -830,6 +830,7 @@ const ftgTemplate = {
         lockAll();
         updateNav();
         clearAutoTimer();
+        if (fightBoardOut()) return;   // Đợt 509b
         autoTimer = later(() => finish("gameover"), 1500);
       }
     }
@@ -927,6 +928,7 @@ const ftgTemplate = {
       settleLine();
       if (loseLife()) {
         ending = true; lockAll(); updateNav(); clearAutoTimer();
+        if (fightBoardOut()) return;   // Đợt 509b
         autoTimer = later(() => finish("gameover"), 1500);
       }
     }
@@ -973,6 +975,17 @@ const ftgTemplate = {
       if (livesLeft <= 5) for (let i = 0; i < livesLeft; i++) slot.append(el("span", "aw-top-heart", "&#9829;"));
       else { slot.append(el("span", "aw-top-heartcount", String(livesLeft))); slot.append(el("span", "aw-top-heart", "&#9829;")); }
     }
+    // ⭐ Đợt 509b (thầy, 12/10/2026) — FIGHT + Lives: bàn HẾT MẠNG chỉ mình nó dừng (GAME OVER), bàn kia chơi tiếp tới khi
+    // hết mạng / hết câu / hết giờ. Báo trọng tài `boardOut` THAY cho finish("gameover") (finish ở Fight = kết CẢ trận).
+    // Gọi SAU wordDone của câu làm mất mạng cuối. Trọng tài trả false (pick mode / fight.js cũ trong cache) ⇒ đường cũ.
+    // Sau đó `ctl.isLocked(side)` luôn true ⇒ fightLocked() chặn mọi thao tác + idle cost của bàn này.
+    function fightBoardOut() {
+      if (!fightCtl || typeof fightCtl.boardOut !== "function") return false;
+      if (!fightCtl.boardOut(fightSide)) return false;
+      tl.stop();   // đồng hồ mỗi câu của bàn này
+      return true;
+    }
+
     function loseLife() {
       if (livesLeft == null) return false;
       const slot = ui.livesSlot;

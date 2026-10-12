@@ -1024,7 +1024,7 @@ const ttaTemplate = {
         // board's go; the round stays open for the other team (core/HUONG DAN
         // CORE.md, "XONG TRƯỚC ≠ THẮNG").
         fightCtl.wordDone(fightSide, { index, correct: st.correct === true });
-        if (outOfLives) autoTimer = setTimeout(() => finish("gameover"), 1500);
+        if (outOfLives && !fightBoardOut()) autoTimer = setTimeout(() => finish("gameover"), 1500);   // Đợt 509b
         // No auto-advance here: the match controller moves BOTH boards
         // together once the round settles (advanceRound()/jumpTo) — a board
         // walking off on its own would desynchronise the two frames, same
@@ -1248,7 +1248,7 @@ const ttaTemplate = {
         const outOfLivesF = loseLife();
         fightCtl.wordDone(fightSide, { index, correct: false });
         clearAutoTimer();
-        if (outOfLivesF) autoTimer = setTimeout(() => finish("gameover"), 1500);
+        if (outOfLivesF && !fightBoardOut()) autoTimer = setTimeout(() => finish("gameover"), 1500);   // Đợt 509b
         return;   // trọng tài tự chuyển vòng cho CẢ HAI bàn
       }
       applyGradeVisuals(st, it, revealShown);
@@ -1427,6 +1427,17 @@ const ttaTemplate = {
     // Costs one life on a wrong answer; pops the LEFTMOST heart out, then
     // re-renders. Returns true once that was the last life (the game ends
     // immediately — see submitAnswer/finish("gameover")).
+    // ⭐ Đợt 509b (thầy, 12/10/2026) — FIGHT + Lives: bàn HẾT MẠNG chỉ mình nó dừng (GAME OVER), bàn kia chơi tiếp tới khi
+    // hết mạng / hết câu / hết giờ. Báo trọng tài `boardOut` THAY cho finish("gameover") (finish ở Fight = kết CẢ trận).
+    // Gọi SAU wordDone của câu làm mất mạng cuối. Trọng tài trả false (pick mode / fight.js cũ trong cache) ⇒ đường cũ.
+    // Sau đó `ctl.isLocked(side)` luôn true ⇒ fightLocked() chặn mọi thao tác + idle cost của bàn này.
+    function fightBoardOut() {
+      if (!fightCtl || typeof fightCtl.boardOut !== "function") return false;
+      if (!fightCtl.boardOut(fightSide)) return false;
+      tl.stop();   // đồng hồ mỗi câu của bàn này
+      return true;
+    }
+
     function loseLife() {
       if (livesLeft == null) return false;            // unlimited -> can't lose
       const slot = ui.livesSlot;
