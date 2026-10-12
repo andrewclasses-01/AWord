@@ -568,6 +568,8 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 **Kiểm (devserver :5605, `?padsig=local` = kênh cục bộ 2 tab, không đăng nhập):** màn chờ hiện đúng · mở `templates/maze-chase/test.html` ⇒ iPad tự sang D-pad TEAM A, DataChannel open/ICE connected · claim fight ⇒ màn chọn đội ⇒ chọn B ⇒ D-pad B nối được, nhớ `aw.ipadTeam=1` · claim rocketrace ⇒ sang source.html · gỡ ⇒ về D-pad A · máy chiếu sang Quiz ⇒ ghi "" ⇒ màn chờ · **trận Rocket Race Fight thật** (bàn thử mới `scratch/dot508-ipad-rr.html?padsig=local&raf=1` — `raf=1` thay rAF bằng setTimeout vì bảng trình duyệt ẩn thì cảnh phóng đứng) ⇒ ghi `rocketrace` ⇒ iPad sang source.html · máy chiếu sang STAR LOOT ⇒ iPad về D-pad A (đội B vẫn nhớ) · nút ‹ ⇒ chọn đội đứng yên 4 s ⇒ chọn A ⇒ D-pad. 0 lỗi console.
 ⚠️ Đường Firestore THẬT (2 máy cùng tài khoản thầy) Claude không đăng nhập được ⇒ chỉ thử kênh cục bộ (cùng giao thức, khác kho).
 
+**Trạng thái:** ✅ push `e88c379` + LIVE 8/8 (`tools/kiem-live.py`).
+
 **VIỆC ĐANG CHỜ:** ⬜ thầy thử thật: iPad mở nút iPad trang chủ (đăng nhập) ⇒ màn "iPad ready"; máy chiếu mở STAR LOOT ⇒ iPad tự ra D-pad; đổi Fight ⇒ iPad hỏi đội một lần; mở Rocket Race bật Question screen ⇒ iPad tự ra câu hỏi; mở game khác ⇒ iPad về màn chờ. ⬜ myGame: Rocket Race gốc ở AWord — Đợt này chỉ thêm 2 dòng claim (import `../../core/ipad-now.js`, myGame không có file này ⇒ chép sang myGame phải bỏ/giả module đó).
 
 ---
