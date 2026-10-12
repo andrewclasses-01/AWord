@@ -7385,8 +7385,37 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       overlay.showError(sent);   // Đợt 412 — `canVe` ⇒ lỗi vì THIẾU VÉ đăng nhập, không phải lỗi mạng
       // ⭐ Đợt 383 — lượt gửi vẫn chạy ngầm sau mốc 10 giây: nó về tới nơi trong lúc màn lỗi đang hiện
       // thì tự chuyển sang SUBMITTED (em khỏi phải bấm GỬI LẠI). Cùng mã lượt ⇒ không bao giờ ghi đôi.
-      dangGui.then(r => { if (r && r.ok && overlay.face === "error") { overlay.showSending(); xongTot(); } }).catch(() => {});
+      dangGui.then(r => { if (r && r.ok) daGiaoMuon(); }).catch(() => {});
     }
+    // ⭐ Đợt 505b (12/10/2026) — lượt này lên máy chủ MUỘN (lượt gửi gốc về trễ, hoặc nhịp gửi bù của play.js giao hộ —
+    // sự kiện `aw:luot-da-giao`) ⇒ tự chuyển sang SUBMITTED dù em đang ở mặt nào: màn lỗi / hướng dẫn chụp / thẻ chụp màn
+    // hình ⇒ SUBMITTING rồi bay vào bảng như thường; đã bấm XONG (lớp phủ đã gỡ) ⇒ bật dải SUBMITTED + đọc lại bảng xếp hạng.
+    // Mặt "sending" (đang GỬI LẠI) thì để lượt gửi đó tự về (409 = ok). Trước: chỉ mặt "error" + chỉ lượt gửi gốc.
+    function daGiaoMuon() {
+      if (thanhCong || hwConfirmed || torndown) return;
+      submission = Promise.resolve({ ok: true });
+      hwSendState = { ok: true };
+      if (overlay.root.isConnected) {
+        if (overlay.face === "sending") return;
+        overlay.showSending();
+        xongTot();
+        return;
+      }
+      thanhCong = true;
+      hwConfirmed = true;
+      const p = pill && pill.isConnected ? pill : inner.querySelector(".aw-hw-pill");
+      if (p) markHwDone(p);
+      hwRenderLeaderboard().catch(() => {});
+    }
+    const maLuot = session.attemptId?.() || "";
+    const ngheGiao = (e) => {
+      if (thanhCong || hwConfirmed || torndown || (session.attemptId?.() || "") !== maLuot) {
+        window.removeEventListener("aw:luot-da-giao", ngheGiao);
+        return;
+      }
+      if (maLuot && e.detail && e.detail.attemptId === maLuot) daGiaoMuon();
+    };
+    if (maLuot) window.addEventListener("aw:luot-da-giao", ngheGiao);
     doSend();
   }
 

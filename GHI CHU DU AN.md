@@ -546,6 +546,26 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 505b (12/10/2026) — MÀN LỖI NỘP BÀI TỰ CHUYỂN SANG SUBMITTED KHI LƯỢT LÊN MUỘN
+
+**Thầy:** "Sửa luôn màn lỗi tự chuyển sang đã nộp" (phần Đợt 505 cố ý chưa làm).
+
+**Trước:** `startHomeworkSubmit` chỉ tự chuyển khi CHÍNH lượt gửi gốc về muộn VÀ em còn đứng ở mặt `error`. Em đã bấm CHỤP ẢNH MÀN HÌNH
+(mặt guide) / ĐÃ RÕ (mặt board) / XONG (gỡ lớp phủ) — hoặc lượt do nhịp gửi bù Đợt 505 giao hộ — thì màn vẫn báo chưa nộp, không có dải SUBMITTED,
+bảng trong game vẫn chỉ 1 dòng (đúng ảnh ca Diễm My).
+
+**Đã làm:**
+- `core/engine.js startHomeworkSubmit`: hàm `daGiaoMuon()` — lớp phủ còn (error/guide/board) ⇒ `showSending()` + `xongTot()` (đầy thanh, bay vào bảng như
+  nộp thường); lớp phủ đã gỡ (XONG) ⇒ `hwConfirmed`, bật dải `.aw-hw-pill`, `hwRenderLeaderboard()` đọc lại bảng; mặt `sending` (đang GỬI LẠI) ⇒ để lượt
+  gửi đó tự về. Đặt `submission`/`hwSendState` = ok. Gọi từ: lượt gửi gốc về muộn (mọi mặt, trước chỉ `error`) + sự kiện cửa sổ `aw:luot-da-giao {attemptId}`
+  (chỉ nhận đúng `session.attemptId()` của ván; ván khác / đã xong ⇒ tự gỡ bộ nghe).
+- `play.js baoGuiBu`: bắn `aw:luot-da-giao` cho engine của chính trang (cả khi không nhúng), rồi mới `AWORD:NOP` cho trang mẹ.
+
+**Bàn thử** `scratch/dot505b-giao-muon.html` (ván Quiz bài giao, session giả: nộp hỏng ⇒ màn lỗi ⇒ sự kiện giao ở 4 mặt + lượt gốc về muộn 20 s
+khi ở mặt guide): **33/33 OK**; lượt của mã KHÁC không làm gì. Đối chứng ngược `?cu=1` (engine trước Đợt 505b chép tạm) ⇒ 13 FAIL đúng các ca cần sửa.
+
+---
+
 ## Đợt 505 (12/10/2026) — LƯỢT NỘP KẸT TỰ GỬI LẠI + GỬI BÙ XONG BÁO TRANG MẸ LÀM MỚI BẢNG
 
 **Thầy gửi ảnh:** em Diễm My (B2B, bài giao `dh2hvr` DS-S5.I1.W1 READING QUIZ) — game báo 30/30 (1:48.4s), bảng QUIZ trên trang bài

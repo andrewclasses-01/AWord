@@ -108,7 +108,10 @@ start();
 // (cùng tin AWORD:NOP như lúc nộp thường; trang mẹ chỉ làm mới thẻ act có mã trùng, act không có trên trang thì bỏ qua).
 // Trước: gửi bù im lặng ⇒ bảng hiện lượt CŨ tới khi em tải lại trang (ca Diễm My: game 30/30, bảng 29, lượt lên trễ 98 s).
 function baoGuiBu(entry) {
-  if (window.parent === window || !entry || !entry.code) return;
+  if (!entry || !entry.code) return;
+  // Đợt 505b — báo engine của CHÍNH trang này: lượt đang ở màn lỗi / thẻ chụp màn hình ⇒ tự chuyển SUBMITTED.
+  try { window.dispatchEvent(new CustomEvent("aw:luot-da-giao", { detail: { attemptId: entry.attemptId, code: entry.code } })); } catch (_) { /* thôi */ }
+  if (window.parent === window) return;
   try { window.parent.postMessage({ type: "AWORD:NOP", code: entry.code, name: entry.name || "" }, "*"); } catch (_) { /* thôi */ }
 }
 // ⭐ Đợt 505 — NHỊP GỬI BÙ khi trang còn mở: lượt nộp hỏng lúc kết ván (mạng chập, chưa kịp vé) trước đây nằm chờ tới lần
