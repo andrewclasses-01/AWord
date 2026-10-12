@@ -576,6 +576,8 @@ ghi đôi · submitCount +1 đúng 1 lần. Đối chứng mã cũ: không có `
 **Chưa làm (cố ý):** màn lỗi "GỬI BÀI CHƯA THÀNH CÔNG" của engine không tự chuyển sang SUBMITTED khi NHỊP GỬI BÙ giao được (chỉ tự chuyển khi
 chính lượt gửi gốc về muộn); em bấm GỬI LẠI là qua ngay (409). Dữ liệu cũ không cần sửa (kho đã 30).
 
+**Trạng thái:** ✅ push `bcf624e` + LIVE 2/2 (kiem-live.py).
+
 **VIỆC ĐANG CHỜ:** ⬜ thầy để ý ca "game X mà bảng thấp hơn" lần sau — giờ bảng phải tự lên trong ≤ ~25 s sau khi mạng ổn.
 
 ---
