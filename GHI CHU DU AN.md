@@ -567,6 +567,8 @@ nút Home không về GAMES, mp3 thêm vào không lưu IndexedDB. (Đúng bẫy
 chọn NNTNGK10 ⇒ 21 tên thật, Confirm khoá + dòng nhắc; bỏ 1 tên ⇒ Confirm mở; nút Home gọi `onExit` (trước chết); nhạc mẫu Play ⇒ "Playing",
 0 lỗi console. Trang thật cần đăng nhập Google nên chưa bấm thử trên `aword.andrewclasses.com/?g=werewolf`.
 
+**Trạng thái:** ✅ push `d3e5746` + LIVE 3/3 (kiem-live.py).
+
 **VIỆC ĐANG CHỜ:** ⬜ thầy mở GAMES ▸ Werewolf trên iPad (đã đăng nhập) — menu phải là lớp thật; kéo xếp chỗ rồi mở máy khác phải thấy cùng chỗ ngồi
 (lần đầu chỗ ngồi thật sự được lưu).
 
