@@ -546,6 +546,40 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 505 (12/10/2026) — LƯỢT NỘP KẸT TỰ GỬI LẠI + GỬI BÙ XONG BÁO TRANG MẸ LÀM MỚI BẢNG
+
+**Thầy gửi ảnh:** em Diễm My (B2B, bài giao `dh2hvr` DS-S5.I1.W1 READING QUIZ) — game báo 30/30 (1:48.4s), bảng QUIZ trên trang bài
+myLesson hiện **29**. Thầy nhớ từng có một lần như vậy và đã sửa (đó là Đợt 311 — Anagram/Unjumble ghi 29 THẬT vì cửa sổ nộp).
+
+**Soi kho (khoá quản trị, chỉ đọc):** lượt 30/30 `createdAt` 13:50:49 nhưng `createTime` máy chủ **13:52:27 — trễ 98 s**; 12 lượt khác
+của em trễ ~1 s. Ảnh chụp 13:51 ⇒ đúng lúc lượt chưa lên; 29 là lượt THẬT lúc 13:44. Bảng xếp hạng trong game chỉ có 1 dòng của em =
+nhánh `dongToi()` ⇒ lúc đó khung không đọc/ghi được máy chủ (mạng chập hoặc chưa kịp vé). Kho đúng 30 — KHÔNG phải bệnh Đợt 311.
+Cùng ngày em Bình Minh có một lượt trễ 177 s. (Độ lệch HẰNG 20 s / 37 s ở mọi lượt của Mạnh Tiến / Đăng Minh là đồng hồ máy, không phải trễ.)
+
+**Lỗ hổng thật:** lượt hỏng lúc kết ván nằm lại outbox, chỉ được gửi bù ở **lần mở bài SAU** (`flushOutbox` lúc tải play.html),
+và gửi bù thì **không bắn `AWORD:NOP`** ⇒ trang mẹ không làm mới bảng tới khi em tải lại trang.
+
+**Đã làm:**
+- `core/assignments.js`: `sendAttempt` bọc thân cũ (`guiMotLuot`) + ghi mã lượt đang gửi vào `_dangGui`. `flushOutbox({ daGiao, quet, chiMa })`:
+  gọi `daGiao(entry)` cho mỗi lượt giao xong; `quet:false` bỏ `sweepDrafts`; `chiMa` chỉ gửi lượt của em đó; một lượt flush mỗi lúc
+  (`_dangXa`, gọi chồng trả chung promise); bỏ qua lượt đang gửi dở trong trang. `conNoGui(ma)` mới (chỉ đọc localStorage).
+  kiemtra.js / kiemtra2.js gọi `flushOutbox()` không tham số — y như cũ.
+- `play.js`: `baoGuiBu(entry)` bắn `AWORD:NOP {code}` khi nhúng; lần tải trang `flushOutbox({ daGiao: baoGuiBu })`;
+  `batNhipGuiBu(ma)` (bật trong `play()` cạnh `sanVe`, chỉ khi nhúng + có mã + không phụ huynh): mỗi 20 s (tab đang hiện) và khi có sự kiện
+  `online`, còn nợ thì gửi bù rồi báo trang mẹ. **myLesson web KHÔNG cần sửa** — bộ nghe `AWORD:NOP` trong bai.html làm mới thẻ act đúng mã.
+- Không ghi đôi: vẫn cùng `attemptId` (REST `?documentId=` ⇒ 409 = đã có). GỬI LẠI sau khi nhịp gửi bù đã giao ⇒ 409 ⇒ ok ngay.
+
+**Bàn thử** (Node, stub firebase/fetch/vé, `scratchpad/t505/test.mjs` — không đưa vào kho): 12/12 ĐẠT — mạng chết ⇒ còn nợ, không báo ·
+mạng có lại ⇒ giao + báo đúng 1 lần mã act · 2 flush song song chung 1 lượt · lượt đang gửi không bị flush chen · GỬI LẠI sau gửi bù không
+ghi đôi · submitCount +1 đúng 1 lần. Đối chứng mã cũ: không có `conNoGui`/`daGiao` ⇒ HỎNG. play.html chạy local tới màn nhập tên, 0 lỗi console.
+
+**Chưa làm (cố ý):** màn lỗi "GỬI BÀI CHƯA THÀNH CÔNG" của engine không tự chuyển sang SUBMITTED khi NHỊP GỬI BÙ giao được (chỉ tự chuyển khi
+chính lượt gửi gốc về muộn); em bấm GỬI LẠI là qua ngay (409). Dữ liệu cũ không cần sửa (kho đã 30).
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy để ý ca "game X mà bảng thấp hơn" lần sau — giờ bảng phải tự lên trong ≤ ~25 s sau khi mạng ổn.
+
+---
+
 ## Đợt 504 (11/10/2026) — HỌC SINH HỌC THỬ: CUỐI BẢNG XẾP HẠNG, CHỮ XÁM
 
 **Thầy (myLesson):** học sinh học thử "xuất hiện ở leaderboard của mọi người nhưng ở dạng chữ nhạt, luôn xếp cuối" — áp cả bảng xếp hạng bài giao AWord.

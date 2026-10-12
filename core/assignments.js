@@ -783,7 +783,15 @@ const isDenied = e => e && e.code === "permission-denied";
  * hard:true} when the rules rejected a first-time write (retrying cannot fix
  * that). NEVER throws, and never double-writes: see the header above.
  */
-export async function sendAttempt(entry, { tries = 3, tryTimeoutMs = 6000 } = {}) {
+// ⭐ Đợt 505 — mã lượt ĐANG gửi trong trang này: flushOutbox() bỏ qua để nhịp gửi bù không chạy song song với lượt vừa nộp.
+const _dangGui = new Set();
+export async function sendAttempt(entry, opts) {
+  const id = entry && entry.attemptId;
+  if (id) _dangGui.add(id);
+  try { return await guiMotLuot(entry, opts); }
+  finally { if (id) _dangGui.delete(id); }
+}
+async function guiMotLuot(entry, { tries = 3, tryTimeoutMs = 6000 } = {}) {
   // ⛔ Đợt 504 — lượt CŨ nằm trong hộp thư đi (dựng trước khi makeAttempt biết luật) cũng phải lọt luật khi gửi lại;
   //    cùng `attemptId` nên lượt đã lên một nửa (scores) vẫn chỉ ghi nốt phần còn thiếu.
   lamSachLuot(entry);
@@ -1162,12 +1170,33 @@ export function xoaLuotGiu(code, ma, { keepalive = false } = {}) {
 // Deliver whatever previous visits still owe — run on every play.html load,
 // in the background, never blocking anything. Sequential on purpose: these are
 // leftovers on a possibly-bad connection, not a race.
-export async function flushOutbox() {
-  sweepDrafts();   // ⭐ Đợt 383 — lượt dở của một tab đã chết (không kịp pagehide) ⇒ outbox
-  for (const entry of readOutbox()) {
-    try { await sendAttempt(entry, { tries: 2, tryTimeoutMs: 8000 }); }
-    catch (e) { /* still owed — the outbox keeps it */ }
-  }
+// ⭐⭐ Đợt 505 (12/10/2026, ca Diễm My B2B: game 30/30, bảng myLesson 29) — lượt nộp hỏng lúc kết ván (mạng chập / chưa kịp
+// vé) nằm lại outbox và chỉ được gửi bù ở lần MỞ SAU, mà gửi bù thì KHÔNG ai báo trang mẹ ⇒ bảng xếp hạng hiện lượt cũ
+// tới khi em tải lại trang. Nay:
+//   · `daGiao(entry)` gọi cho MỖI lượt giao xong — play.js bắn AWORD:NOP {code} cho trang mẹ làm mới đúng act đó.
+//   · `quet:false` (nhịp gửi bù khi trang còn mở, play.js) bỏ sweepDrafts — chỉ gửi lượt đã nằm trong outbox.
+//   · `chiMa` — chỉ gửi lượt của em này (lượt của em khác cùng máy không có vé ở trang này ⇒ chờ 4 s vô ích mỗi nhịp).
+//   · Một lượt flush mỗi lúc (`_dangXa`); bỏ qua lượt đang gửi dở trong trang (`_dangGui`). Cùng mã lượt ⇒ không ghi đôi.
+let _dangXa = null;
+export function flushOutbox({ daGiao = null, quet = true, chiMa = "" } = {}) {
+  if (_dangXa) return _dangXa;
+  _dangXa = (async () => {
+    if (quet) sweepDrafts();   // ⭐ Đợt 383 — lượt dở của một tab đã chết (không kịp pagehide) ⇒ outbox
+    for (const entry of readOutbox()) {
+      if (_dangGui.has(entry.attemptId)) continue;
+      if (chiMa && String(entry.ma || "") !== String(chiMa)) continue;
+      try {
+        const kq = await sendAttempt(entry, { tries: 2, tryTimeoutMs: 8000 });
+        if (kq && kq.ok && daGiao) { try { daGiao(entry); } catch (e) { /* tin báo thôi */ } }
+      }
+      catch (e) { /* still owed — the outbox keeps it */ }
+    }
+  })().finally(() => { _dangXa = null; });
+  return _dangXa;
+}
+// Đợt 505 — còn lượt của em `ma` chưa giao? (nhịp gửi bù của play.js hỏi trước khi chạy, rẻ: chỉ đọc localStorage)
+export function conNoGui(ma = "") {
+  return readOutbox().some(e => !_dangGui.has(e.attemptId) && (!ma || String(e.ma || "") === String(ma)));
 }
 
 // ---- shared helpers ---------------------------------------------------------

@@ -18,7 +18,7 @@
 import { startGame } from "./core/engine.js";
 import { el } from "./core/utils.js";
 import {
-  getAssignment, queueAttempt, sendAttempt, flushOutbox,
+  getAssignment, queueAttempt, sendAttempt, flushOutbox, conNoGui,
   listScores, isLate, nameKey, prettiestName, rankCompare,
   tenTheoMa, chuanMaEm, docBangDiem,   // Đợt 432/433 — bảng xếp hạng gộp theo MÃ em, tên thật từ danh sách lớp
   sendSpecialAttempt,  // myLesson "HỌC SINH ĐẶC BIỆT" — kho điểm RIÊNG, xem assignments.js
@@ -104,6 +104,27 @@ function taoDoHoatDong(choMs, goc = 0) {   // Đợt 469 — `goc`: giờ hoạt
 
 start();
 
+// ⭐ Đợt 505 (12/10/2026) — lượt GỬI BÙ (outbox) vừa lên máy chủ ⇒ báo trang mẹ myLesson làm mới bảng của ĐÚNG act đó
+// (cùng tin AWORD:NOP như lúc nộp thường; trang mẹ chỉ làm mới thẻ act có mã trùng, act không có trên trang thì bỏ qua).
+// Trước: gửi bù im lặng ⇒ bảng hiện lượt CŨ tới khi em tải lại trang (ca Diễm My: game 30/30, bảng 29, lượt lên trễ 98 s).
+function baoGuiBu(entry) {
+  if (window.parent === window || !entry || !entry.code) return;
+  try { window.parent.postMessage({ type: "AWORD:NOP", code: entry.code, name: entry.name || "" }, "*"); } catch (_) { /* thôi */ }
+}
+// ⭐ Đợt 505 — NHỊP GỬI BÙ khi trang còn mở: lượt nộp hỏng lúc kết ván (mạng chập, chưa kịp vé) trước đây nằm chờ tới lần
+// mở bài SAU. Nay cứ 20 s (và ngay khi máy có mạng lại) thử giao lượt của em này còn trong outbox; giao xong ⇒ báo trang mẹ.
+// Chỉ khi NHÚNG trong myLesson (có nguồn vé) + có mã em. Không có gì nợ ⇒ chỉ đọc localStorage, không gọi mạng.
+let _nhipGuiBu = null;
+function batNhipGuiBu(ma) {
+  if (_nhipGuiBu || !ma || window.parent === window) return;
+  const thu = () => {
+    if (document.hidden || !conNoGui(ma)) return;
+    flushOutbox({ daGiao: baoGuiBu, quet: false, chiMa: ma }).catch(() => {});
+  };
+  _nhipGuiBu = setInterval(thu, 20000);
+  window.addEventListener("online", thu);
+}
+
 async function start() {
   // ⭐ Đợt 200 — CHẾ ĐỘ NHÚNG (`&nhung=1`): trang bài tập của myLesson mở bài
   // giao trong một ô đúng bằng khung game, nên trang này phải bỏ lề và ẩn dải
@@ -118,7 +139,7 @@ async function start() {
   // the outbox keeps anything that still fails.
   // ⭐ Đợt 496 — `&xem=1` = khung XEM của thầy (dashboard myLesson): KHÔNG ghi gì, kể cả outbox của máy thầy.
   const laXem = new URLSearchParams(location.search).get("xem") === "1";
-  if (!laXem) flushOutbox().catch(() => {});
+  if (!laXem) flushOutbox({ daGiao: baoGuiBu }).catch(() => {});
   const code = new URLSearchParams(location.search).get("g");
   if (!code) return showMessage("This link is incomplete", "Ask your teacher for the full link.");
 
@@ -346,6 +367,7 @@ async function play(assignment, studentName, className, studentMa) {
   const dacBiet = new URLSearchParams(location.search).get("db") === "1";
   // ⭐ Đợt 410 — xin VÉ đăng nhập ngay khi vào ván (keepalive lúc đóng tab KHÔNG chờ được vé). Phụ huynh không có mã.
   if (ma && !dacBiet) sanVe(ma);
+  if (ma && !dacBiet) batNhipGuiBu(ma);   // Đợt 505 — lượt nộp hỏng tự gửi lại khi trang còn mở
   // ⭐ Đợt 424 — đếm BỎ CUỘC liên tiếp (bo-cuoc.js). Bước "Xem các câu sai" chỉ khi bài bật Show answers.
   const khoaBC = { code: assignment.code, ma, ten: studentName };
   const coShowBC = (assignment.endOptions || {}).showAnswers !== false;
