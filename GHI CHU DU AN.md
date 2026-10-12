@@ -546,6 +546,32 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 508 (12/10/2026) — iPAD TỰ ĐỔI MÀN THEO GAME ĐANG MỞ (STAR LOOT D-pad ⇄ Rocket Race màn câu hỏi ⇄ màn chờ) · phiên MSI
+
+**Thầy:** hỏi "khi chọn game bất kỳ và bật game đó, thì ipad chọn vào có tự động đổi màn hình phù hợp với game đang được chọn chưa?" — Claude đọc code: **CHƯA** (pad.html và source.html là 2 trang không biết nhau; đổi game thì iPad đứng "Waiting for the game", phải cầm iPad bấm Back chọn lại). Thầy: "Có, làm cho iPad tự đổi theo game đi".
+
+**Thiết kế — MỘT tài liệu `users/{uid}/items/ipad_now` = "lúc này iPad nên hiện gì"** (`core/ipad-now.js`, kind `ipad-now` đã thêm vào `APP_DATA_KINDS`):
+- `{ game: "starloot" | "rocketrace" | "", fight, at }`. MÁY CHIẾU ghi, iPad nghe. Không luật Firestore mới (cùng đường `users/{uid}/items` như slpad_* / rr_link).
+- **Claim:** template cần iPad giữ claim suốt lúc sống — STAR LOOT (`maze-chase.js` mount → cleanup; cập nhật `fight` khi đổi Mode trong game qua `host.saveOptions` và khi Options ▸ Apply qua `ui.liveOptions`) · Rocket Race CHỈ trận Fight bật Question screen (`rrLinkStart` → `rrLinkStop`). Claim mới nhất còn sống thắng.
+- **"Game bất kỳ":** `engine.startGame` gọi `ipadSurface(!session)` mỗi lần dựng game ⇒ game không claim ⇒ ghi `game:""` ⇒ iPad về màn chờ. Bài giao của em (`session`) KHÔNG nạp module (import động, chỉ khi !session).
+- **Gộp ghi:** có claim ⇒ 250 ms; về "" ⇒ 1,5 s (đổi act = gỡ game cũ rồi dựng mới — không cho iPad nháy). Chỉ ghi khi khác lần trước của tab ⇒ mở game ≈ 0–1 lượt ghi.
+
+**iPad:**
+- `pad.html` = CỔNG CHUNG (nút iPad trang chủ vẫn mở trang này): starloot ⇒ D-pad (Single ⇒ TEAM A; Fight ⇒ đội iPad này đã nhớ — `localStorage aw.ipadTeam`, quét QR `?t=` đội nào = nhớ đội đó; chưa nhớ ⇒ màn chọn đội một lần) · rocketrace ⇒ `location.replace(source.html)` · "" ⇒ màn chờ mới "iPad ready" (giữ Wake Lock — ngủ thì JS dừng, không đổi được). Đổi đội/đổi chế độ ngay trong trang, không tải lại. Vào màn game sau 0,5 s ổn định, về màn chờ sau 2,5 s.
+- Nút ‹ trên D-pad ⇒ màn chọn đội ĐỨNG YÊN tới khi chọn (không bị kéo về D-pad). Rocket Race vẫn kéo đi được (game đã đổi).
+- `source.js`: nghe ipad_now — starloot ⇒ về pad.html; "" ⇒ về pad.html CHỈ KHI trang này đã thấy claim rocketrace (mở tay từ link ở màn chờ thì đứng yên). Không có tài liệu (máy chiếu bản cũ) ⇒ đứng yên như trước.
+- Tương thích: chưa có `ipad_now` + URL có `?t` ⇒ D-pad như Đợt 480; đọc ipad_now lỗi ⇒ chạy như Đợt 480.
+- Chữ bảng Question screen (engine) đổi: "tap the iPad button on its AWord page — it switches to the questions by itself".
+
+**Lỗi tự bắt khi thử:** ban đầu D-pad ghi `?t=0` vào URL khi Single ⇒ tải lại trang là `saveTeam(0)` đè mất đội Fight đã nhớ (B). Sửa: không ghi `t` vào URL nữa (chỉ QR mới mang `t`).
+
+**Kiểm (devserver :5605, `?padsig=local` = kênh cục bộ 2 tab, không đăng nhập):** màn chờ hiện đúng · mở `templates/maze-chase/test.html` ⇒ iPad tự sang D-pad TEAM A, DataChannel open/ICE connected · claim fight ⇒ màn chọn đội ⇒ chọn B ⇒ D-pad B nối được, nhớ `aw.ipadTeam=1` · claim rocketrace ⇒ sang source.html · gỡ ⇒ về D-pad A · máy chiếu sang Quiz ⇒ ghi "" ⇒ màn chờ · **trận Rocket Race Fight thật** (bàn thử mới `scratch/dot508-ipad-rr.html?padsig=local&raf=1` — `raf=1` thay rAF bằng setTimeout vì bảng trình duyệt ẩn thì cảnh phóng đứng) ⇒ ghi `rocketrace` ⇒ iPad sang source.html · máy chiếu sang STAR LOOT ⇒ iPad về D-pad A (đội B vẫn nhớ) · nút ‹ ⇒ chọn đội đứng yên 4 s ⇒ chọn A ⇒ D-pad. 0 lỗi console.
+⚠️ Đường Firestore THẬT (2 máy cùng tài khoản thầy) Claude không đăng nhập được ⇒ chỉ thử kênh cục bộ (cùng giao thức, khác kho).
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy thử thật: iPad mở nút iPad trang chủ (đăng nhập) ⇒ màn "iPad ready"; máy chiếu mở STAR LOOT ⇒ iPad tự ra D-pad; đổi Fight ⇒ iPad hỏi đội một lần; mở Rocket Race bật Question screen ⇒ iPad tự ra câu hỏi; mở game khác ⇒ iPad về màn chờ. ⬜ myGame: Rocket Race gốc ở AWord — Đợt này chỉ thêm 2 dòng claim (import `../../core/ipad-now.js`, myGame không có file này ⇒ chép sang myGame phải bỏ/giả module đó).
+
+---
+
 ## Đợt 507 (12/10/2026) — WEREWOLF Ở APP MÀN HÌNH CHÍNH: CHỪA THANH TRẠNG THÁI · phiên MSI
 
 **Thầy (ảnh iPad, mở AWord dạng app ở Màn hình chính):** "có viền mờ bên trên và không bấm được".

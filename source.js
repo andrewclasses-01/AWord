@@ -16,6 +16,7 @@
 
 import { onUser, signIn } from "./core/firebase.js";
 import { subscribeStage, touchViewer, VIEWER_BEAT_MS } from "./templates/rocket-race/rr-link.js";
+import { watchIpadNow } from "./core/ipad-now.js";
 
 const $ = id => document.getElementById(id);
 const rrs = $("rrs");
@@ -259,8 +260,27 @@ els.noteBtn.addEventListener("click", async () => {
 });
 
 showNote("🚀", "Loading…", "");
+// ---- ⭐ Đợt 508 — follow the classroom screen (core/ipad-now.js) ----
+// Thầy: the iPad must switch by itself to whatever game is open. STAR LOOT opens
+// ⇒ go to pad.html (its D-pad). The match goes away (another game / Home) ⇒ go
+// back to pad.html's waiting screen — but ONLY after this page has seen a Rocket
+// race claim: opened by hand from the waiting screen's link, it stays put.
+// No document at all (classroom screen on an older build) ⇒ stay, as before.
+let unwatchNow = null, leaveT = 0, sawRace = false;
+function followProjector() {
+  if (unwatchNow) return;
+  unwatchNow = watchIpadNow(s => {
+    clearTimeout(leaveT);
+    if (!s) return;
+    if (s.game === "rocketrace") { sawRace = true; return; }
+    if (s.game === "" && !sawRace) return;
+    leaveT = setTimeout(() => location.replace("pad.html" + location.search), s.game ? 500 : 2500);
+  }, () => { /* read failed — stay on this screen, its own note says what is wrong */ });
+}
+if (new URLSearchParams(location.search).get("padsig") === "local") followProjector();
+
 onUser(user => {
-  if (user) { startListening(); return; }
+  if (user) { startListening(); followProjector(); return; }
   if (unsubStage) { unsubStage(); unsubStage = null; }
   if (beatTimer) { clearInterval(beatTimer); beatTimer = null; }
   stage = null;

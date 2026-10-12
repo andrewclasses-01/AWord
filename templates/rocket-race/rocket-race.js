@@ -1089,6 +1089,7 @@ function rrLinkStart(meta) {
     round: 0, same: true, goAt: 0, over: false,
     viewerAt: 0, alive: false,
     writeTimer: null, poll: null, unsub: null,
+    ipad: null,                      // Đợt 508 — claim "iPad hiện màn câu hỏi" (core/ipad-now.js)
     onAlive: null                    // set by the mount: repaint when the iPad comes/goes
   };
   own.unsub = subscribeViewer(at => {
@@ -1100,6 +1101,8 @@ function rrLinkStart(meta) {
   // needs its own slow clock. 5 s is far finer than VIEWER_STALE_MS needs.
   own.poll = setInterval(() => { if (rrLinkOwner === own) rrLinkSyncAlive(own); }, 5000);
   rrLinkOwner = own;
+  // ⭐ Đợt 508 — iPad tự đổi sang màn câu hỏi (source.html) khi trận Question screen mở, về màn chờ khi trận gỡ.
+  import("../../core/ipad-now.js").then(m => { if (rrLinkOwner === own && !own.over) own.ipad = m.claimIpad({ game: "rocketrace", fight: true }); }).catch(() => {});
   return own;
 }
 
@@ -1140,6 +1143,7 @@ function rrLinkStop() {
   if (own.writeTimer) { clearTimeout(own.writeTimer); own.writeTimer = null; }
   if (own.poll) { clearInterval(own.poll); own.poll = null; }
   if (own.unsub) { try { own.unsub(); } catch { /* already gone */ } }
+  if (own.ipad) { own.ipad.release(); own.ipad = null; }   // Đợt 508
   rrLinkWord[0] = rrLinkWord[1] = "";
   rrLinkVoiceOnly[0] = rrLinkVoiceOnly[1] = false;
   rrLinkNum[0] = rrLinkNum[1] = 0;

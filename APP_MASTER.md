@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **12/10/2026 Đợt 508 — iPAD TỰ ĐỔI MÀN THEO GAME**: máy chiếu ghi `users/{uid}/items/ipad_now` {game: starloot|rocketrace|"", fight} (`core/ipad-now.js`, kind `ipad-now`); STAR LOOT + Rocket Race (Fight bật Question screen) giữ claim, engine báo mọi game mở (game khác ⇒ ""). `pad.html` = cổng chung: D-pad (Fight ⇒ đội iPad đã nhớ) / sang source.html / màn chờ "iPad ready"; source.html tự về khi đổi game. Bàn thử `scratch/dot508-ipad-rr.html?padsig=local&raf=1`. ⬜ thầy thử 2 máy thật. Chi tiết GHI CHU Đợt 508.
 > ✏️ **12/10/2026 Đợt 507 — WEREWOLF Ở APP MÀN HÌNH CHÍNH**: iOS standalone vẽ trang dưới thanh trạng thái ⇒ dải trên game mờ + không bấm được; `sbFit()` + `.ww.ww-sb` chừa max(env(safe-area-inset-top), 24px iPad). Chi tiết GHI CHU Đợt 507.
 > ✏️ **12/10/2026 Đợt 506 — WEREWOLF NẠP LỚP THẬT**: `function ctx()` (AudioContext) trong `games/werewolf/werewolf.js` đè tham số `ctx` ⇒ từ Đợt 373 game luôn dùng 3 lớp mẫu, không lưu chỗ ngồi, nút Home chết. Đổi thành `audioCtx()`; nạp đủ lớp >20 em (Roster bắt bỏ bớt em vắng); test.html dùng lớp dashboard thật. Chi tiết GHI CHU Đợt 506.
 > ✏️ **12/10/2026 Đợt 505b — MÀN LỖI NỘP BÀI TỰ CHUYỂN SUBMITTED** khi lượt lên muộn (lượt gốc về trễ ở BẤT KỲ mặt nào, hoặc nhịp gửi bù giao hộ — sự kiện `aw:luot-da-giao {attemptId}` từ play.js): còn lớp phủ ⇒ SUBMITTING + bay vào bảng; đã XONG ⇒ bật dải SUBMITTED + đọc lại bảng. Bàn thử `scratch/dot505b-giao-muon.html` 33/33. Chi tiết GHI CHU Đợt 505b.
@@ -7582,6 +7583,9 @@ Ngoài ra: Settings có mục **Classes** (lớp + học sinh, `core/classes.js`
 act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
+
+> ⭐ **(Đợt 508, 12/10/2026) — iPad tự đổi màn theo game.** ⬜ thầy thử 2 máy thật (STAR LOOT ⇄ Rocket Race Question screen ⇄ game khác) · ⬜ chép Rocket Race sang myGame phải tính import `core/ipad-now.js`.
+>
 
 > ⭐ **(Đợt 404, 26/9/2026) — A SHOW SPEED Fight Mode 1: bàn thua hiện từ đúng của đội kia.** ⬜ thầy bấm tay TOMKO (độ rõ chữ trắng trên bàn xám, nhịp giữ 2,1 s).
 >

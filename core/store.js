@@ -274,6 +274,8 @@ const APP_DATA_KINDS = new Set(["class", "showdown", "showdown-results", "showdo
                                 "mybeat", "mybeat-song",
                                 // Đợt 480 — STAR LOOT iPad D-pad handshake (templates/maze-chase/sl-pad-signal.js): slpad_host/pad0/pad1
                                 "starloot-pad",
+                                // Đợt 508 — iPad tự đổi màn theo game (core/ipad-now.js): ipad_now
+                                "ipad-now",
                                 // Đợt 484 — bảng "Hướng dẫn khi sai" tách khỏi act (gy_<actId>, xem napGoiY)
                                 "act-goiy"]);
 function isAppData(n) { return APP_DATA_KINDS.has(n.kind); }

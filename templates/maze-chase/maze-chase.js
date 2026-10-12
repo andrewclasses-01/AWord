@@ -206,19 +206,24 @@ const starLootTemplate = {
     document.documentElement.classList.add("aw-sl-on");
     live3d++;
     let dead = false, game = null;
+    // ⭐ Đợt 508 — iPad tự đổi màn theo game (core/ipad-now.js): STAR LOOT giữ claim suốt lúc sống (+ Single/Fight để iPad chọn đội)
+    const slOpts = slOptions(activity);
+    let ipad = null;
+    import("../../core/ipad-now.js").then(m => { if (!dead) ipad = m.claimIpad({ game: "starloot", fight: slOpts.fight }); }).catch(() => {});
+    const ipadFight = f => { if (ipad && typeof f === "boolean") ipad.update({ fight: f }); };
     console.log("MYACT:3D:ON");   // myActivity: nhường card đồ hoạ (như Rocket race 3D)
     // Đợt 452 — Options ▸ Apply của engine => áp ngay trong cảnh (game chưa dựng xong => false => engine dựng lại như thường)
-    if (ui.liveOptions) ui.liveOptions(o => (game && !dead ? game.setOptions({ ...SL_DEF, ...gameOpts(o) }) === true : false));
+    if (ui.liveOptions) ui.liveOptions(o => { const g = gameOpts(o); ipadFight(g.fight); return game && !dead ? game.setOptions({ ...SL_DEF, ...g }) === true : false; });
     Promise.all([import("./3d/mc3d-2r.js"), import("./3d/mc3d-padlink-2q.js"), import("./sl-pad-signal.js")])
       .then(([m, pl, sg]) => m.createMazeChase({
         mount: box, view: "tilt", questions,
         title: activity.title || "", act: activity.title || "",
-        options: slOptions(activity),
+        options: slOpts,
         remote: pl.createPadHost({ signal: sg.firestoreSignal(), padUrl: sg.padUrl }),   // Đợt 480 — iPad làm D-pad
         host: ui.host ? {
           listActs: () => ui.host.listActs(),
           openAct: id => ui.host.openAct(id),
-          saveOptions: o => ui.host.saveOptions(flatOpts(o)),   // Mode trong game (Single/Fight) => khoá phẳng
+          saveOptions: o => { ipadFight(o && o.fight); return ui.host.saveOptions(flatOpts(o)); },   // Mode trong game (Single/Fight) => khoá phẳng
           options: ui.host.options ? ov => ui.host.options(ov) : undefined,   // Đợt 452 — bảng Options thật của engine
           home: () => ui.host.home(),
           templates: () => ui.host.templates(),
@@ -240,6 +245,7 @@ const starLootTemplate = {
       if (dead) return;
       dead = true;
       ld.drop();
+      if (ipad) { ipad.release(); ipad = null; }   // Đợt 508
       if (game) { try { game.destroy(); } catch (e) { console.warn("Star loot destroy", e); } }
       if (box.isConnected) {
         box.remove();

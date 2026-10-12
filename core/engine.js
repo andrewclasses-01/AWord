@@ -61,6 +61,7 @@ const NO_TEMPLATE_TYPES = new Set(["running_word", "running_team"]);
 const START_GUARD_MS = 500;
 import { sound } from "./sound.js";
 import { setAssignmentMode } from "./wrong-sound.js";
+let ipadNowLoaded = false;   // Đợt 508 — core/ipad-now.js đã nạp trên trang này chưa (xem startGame)
 import { confettiBurst } from "./confetti.js";
 import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
 // SHOWDOWN (Đợt 155) — this import is SAFE to take statically: core/showdown.js
@@ -332,6 +333,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // Set fresh on every launch, since one page can host both a normal play and
   // (via a different route) a student session.
   setAssignmentMode(!!session);
+  // ⭐ Đợt 508 — iPAD TỰ ĐỔI MÀN THEO GAME (core/ipad-now.js): mỗi lần dựng game trên trang thầy ⇒ báo "game mới mở"
+  // (game không cần iPad ⇒ iPad về màn chờ; STAR LOOT / Rocket Race Question screen tự giữ claim). Bài giao của em: KHÔNG
+  // nạp module (chỉ tắt nếu trang này đã nạp nó trước đó).
+  if (!session || ipadNowLoaded) import("./ipad-now.js").then(m => { ipadNowLoaded = true; m.ipadSurface(!session); }).catch(() => {});
 
   // ⭐ Đợt 145 — TWO NAMES FOR ONE ACT, and the difference matters.
   //   `libAct`   the object that came from the library. For a vocabulary act it
@@ -4681,7 +4686,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     panel.append(el("div", "aw-tool-panel-head", on ? "Turn the question screen off?" : "Turn the question screen on?"));
     panel.append(el("div", "aw-mode-confirm-text", on
       ? "Questions come back to this screen. The match restarts from the start screen."
-      : "Questions move to the iPad (open source.html there). This screen keeps the race and the answer tiles. The match restarts from the start screen."));
+      : "Questions move to the iPad (tap the iPad button on its AWord page — it switches to the questions by itself). This screen keeps the race and the answer tiles. The match restarts from the start screen."));
     const row = el("div", "aw-mode-confirm-row");
     const cancelBtn = el("button", "aw-btn aw-mode-confirm-btn", "Cancel");
     cancelBtn.type = "button";
