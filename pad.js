@@ -12,6 +12,11 @@
 //     "" / chưa có tài liệu ⇒ màn CHỜ chung. (Chưa có tài liệu = máy chiếu còn bản cũ: có ?t thì vẫn mở D-pad như Đợt 480.)
 //   Nút ‹ trên D-pad ⇒ màn chọn đội (đứng yên ở đó tới khi chọn — không bị kéo về D-pad giữa chừng).
 //   Đọc `ipad_now` hỏng ⇒ chạy như Đợt 480 (có ?t ⇒ D-pad, không ⇒ chọn đội).
+// ⭐ Đợt 511 (thầy 13/10/2026) — ROCKET RACE "GAME CONTROLLER": máy chiếu bật nút iPad ▸ Game controller ⇒ `ipad_now` {game:"rocketrace", ctl:true}
+//   ⇒ iPad này mở BẢNG TÊN LỬA của đội đã nhớ (cùng khoá đội với STAR LOOT — aw.ipadTeam) = chính bảng 3D của game (rr-padui.js / rr-padscene.js),
+//   nối WebRTC qua kênh templates/rocket-race/rr-pad-signal.js. Chưa chọn đội ⇒ màn chọn đội của Rocket Race (ghi "iPad already connected"
+//   dưới đội đã có iPad). 2 iPad chọn trùng đội ⇒ iPad sau giành, iPad trước hiện "IS ON ANOTHER iPAD" + Take it back / Choose team.
+//   Không QR (thầy): iPad đã đăng nhập cùng tài khoản AWord, bấm nút iPad trên trang chủ là vào đây.
 // =============================================================
 
 import { onUser, signIn } from "./core/firebase.js";
@@ -38,9 +43,45 @@ function urlWith(page, t) {
 
 // ---------------------------------------------------------------- các màn
 let view = "", curTeam = -1, client = null, ui = null, manual = false;
+let rr = null, rrBusyOff = null;                 // Đợt 511: { client, ui } bảng tên lửa Rocket Race · huỷ nghe "đội đã có iPad"
 function stopPad() {
   if (client) { client.destroy(); client = null; }
+  if (rr) { try { rr.client.destroy(); rr.ui.destroy(); } catch (e) { /* */ } rr = null; }
+  if (rrBusyOff) { rrBusyOff(); rrBusyOff = null; }
   ui = null; curTeam = -1;
+}
+const rrCtl = () => !!(now && now.game === "rocketrace" && now.ctl);
+const rrMods = () => Promise.all([import("./templates/rocket-race/rr-padlink.js"), import("./templates/rocket-race/rr-padui.js"),
+  import("./templates/rocket-race/rr-pad-signal.js")]);
+// ⭐ Đợt 511 — bảng tên lửa Rocket Race (Game controller) cho đội `team`
+async function showRR(team) {
+  note.hidden = true;
+  if (view === "rr" + team) return;
+  stopPad(); view = "rr" + team; curTeam = team;
+  history.replaceState(null, "", urlWith("pad.html", null));
+  padEl.innerHTML = "";
+  let mods;
+  try { mods = await rrMods(); } catch (e) { console.warn("Rocket Race pad", e); showNote("Could not load", "Check the network and reload this page.", { bad: true }); return; }
+  if (view !== "rr" + team) return;                    // đã đổi màn trong lúc nạp
+  const [L, U, S] = mods;
+  let rui = null;
+  const c = L.createPadClient({ signal: S.rrPadSignal(), team,
+    onState: x => rui && rui.setState(x), onInfo: i => rui && rui.setInfo(i), onEvent: e => rui && rui.event(e) });
+  rui = U.mountMissilePad(padEl, { team, client: c, onBack: () => { manual = true; showChooser(); } });
+  rui.setState(c.state);
+  rr = { client: c, ui: rui };
+  window.__padc = c; window.__padui = rui;   // bàn thử
+}
+// màn chọn đội của Rocket Race: ghi chú đội đang có iPad (máy chiếu ghi c0/c1 vào rrpad_host)
+async function showRRChooser() {
+  note.hidden = true;
+  stopPad(); view = "chooser";
+  history.replaceState(null, "", urlWith("pad.html", null));
+  let mods; try { mods = await rrMods(); } catch (e) { showNote("Could not load", "Check the network and reload this page.", { bad: true }); return; }
+  if (view !== "chooser") return;
+  const [, U, S] = mods;
+  const ch = U.mountPadChooser(padEl, { current: savedTeam(), onPick: t => { saveTeam(t); manual = false; apply(true); } });
+  rrBusyOff = S.rrPadSignal().listen("host", d => ch.setBusy([d && d.sid ? +d.c0 || 0 : 0, d && d.sid ? +d.c1 || 0 : 0]));
 }
 function showDpad(team) {
   note.hidden = true;
@@ -54,6 +95,7 @@ function showDpad(team) {
   window.__padc = client;   // bàn thử
 }
 function showChooser() {
+  if (rrCtl()) { showRRChooser(); return; }           // Đợt 511: đang Rocket Race Game controller ⇒ màn chọn đội của RR
   note.hidden = true;
   stopPad(); view = "chooser";
   history.replaceState(null, "", urlWith("pad.html", null));
@@ -66,7 +108,7 @@ function showHub() {
   stopPad(); view = "hub";
   history.replaceState(null, "", urlWith("pad.html", null));
   padEl.innerHTML = `<div class="pad-hub"><b>iPad ready</b>
-    <p>Open <span>STAR LOOT</span> — or <span>Rocket race</span> with Question screen on — on the classroom screen.<br>This iPad switches by itself.</p>
+    <p>Open <span>STAR LOOT</span> — or <span>Rocket race</span> with the iPad button on (Question screen or Game controller) — on the classroom screen.<br>This iPad switches by itself.</p>
     <p class="pad-hub-x"><a href="#" data-k="team">Choose team</a> · <a href="${urlWith("source.html", null)}">Rocket Race question screen</a></p></div>`;
   padEl.querySelector('[data-k="team"]').addEventListener("click", e => { e.preventDefault(); manual = true; showChooser(); });
   keepAwake();
@@ -87,8 +129,13 @@ function apply(force) {
   if (followBroken) { if (manual || urlTeam === null) showChooser(); else showDpad(urlTeam); return; }
   if (now === undefined) return;
   const g = now ? now.game : "";
-  if (g === "rocketrace") { location.replace(urlWith("source.html", null)); return; }
+  if (g === "rocketrace" && !now.ctl) { location.replace(urlWith("source.html", null)); return; }
   if (manual && !force) { if (view !== "chooser") showChooser(); return; }
+  if (g === "rocketrace") {                              // Đợt 511: Game controller ⇒ bảng tên lửa của đội đã nhớ
+    const t = savedTeam();
+    if (t === null) { if (view !== "chooser") showChooser(); } else showRR(t);
+    return;
+  }
   if (g === "starloot") {
     const t = now.fight ? savedTeam() : 0;
     if (t === null) showChooser(); else showDpad(t);

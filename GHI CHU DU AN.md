@@ -546,6 +546,32 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 511 (13/10/2026) — ROCKET RACE: iPAD "GAME CONTROLLER" — MỖI ĐỘI 1 iPAD BẮN TÊN LỬA + BOOST (ghép myGame mẫu 9 `4755fe1`) · phiên MSI
+**Bối cảnh:** thầy muốn nút iPad trong trận Rocket Race có thêm chế độ "tham gia game": chuyển toàn bộ phần bắn tên lửa + né sang iPad, màn lớn vẫn hiển thị.
+Làm mẫu ở myGame trước (mẫu 9, 5 vòng chỉnh: bỏ QR ⇒ chọn đội từ nút iPad trang chủ; bảng iPad = 3D giống hệt game; số tên lửa "+X"; tên lửa 2D trên đường đua mini;
+cột vạch 4 ô cả màn lớn; icon BOOST bỏ 3 vạch; % tàu dẫn đầu). Thầy: *"Commit + push myGame đi. Và đưa lên Aword đi."*
+**Làm:**
+- `core/engine.js` — nút iPad (trước "Question screen") mở bảng 3 thẻ **Off · Questions · Controller** (`buildQScreenConfirmPanel` + `buildIpadConfirm`, lưới
+  `aw-mp-grid`), thẻ đang dùng tô xanh `is-cur`; chọn thẻ khác ⇒ hỏi xác nhận ⇒ `ctl.applyOptions({ fightScreen, fightPad })` (dựng lại trận như Đợt 370).
+  Option CORE mới `fightPad`. `core/app.css` `.aw-ipad-cur`.
+- `core/ipad-now.js` — claim + tài liệu `ipad_now` thêm `ctl`; `?padsig=local` ⇒ đội iPad lưu sessionStorage (bàn thử 2 tab chung trình duyệt).
+- `core/store.js` — kind `rocketrace-pad` vào APP_DATA_KINDS.
+- `pad.js` — nhánh rocketrace + ctl ⇒ `showRR(team)` (bảng tên lửa, nạp động rr-padlink/rr-padui/rr-pad-signal) · chưa có đội ⇒ `showRRChooser` (ghi đội đã có
+  iPad) · rocketrace không ctl ⇒ source.html như cũ.
+- `templates/rocket-race/` — MỚI `rr-padlink.js` (WebRTC 2 chiều) · `rr-padui.js` (màn iPad) · `rr-padscene.js` (bảng 3D = createMissiles chế độ gương, vendor three)
+  — 3 file CHÉP myGame `core/*-9.js` (chỉ đổi import) · `rr-pad-signal.js` (Firestore rrpad_host/pad0/pad1, khuôn sl-pad-signal). `rr3d-missile.js` = myGame game9
+  (chế độ gương + cột vạch 4 ô + icon BOOST). `rr3d-view.js` thêm getter `trackLen`. `rocket-race.js` khối iPad (rrPadStart/rrPadState/padEvent/rrPadWin/chip) +
+  sự kiện trong msCorrect/msFire/msBoost/msEnd/raceWon. `rocket-race.css` chip "iPad ●". Chi tiết: `templates/rocket-race/GHI CHU ROCKET-RACE.md` mục 46.
+- Bàn thử MỚI `scratch/dot511-ipad-ctl.html?padsig=local&raf=1` + tab `pad.html?padsig=local`.
+**Tự kiểm (Browser pane, dev server 5511):** mở trận ⇒ `ipad_now` = {rocketrace, fight, ctl:true} ⇒ iPad đang ở màn chờ tự sang màn chọn đội RR ⇒ chọn TEAM 1 ⇒
+nối thẳng (3 ms), chip TEAM 1 xanh, nút iPad sáng · START ⇒ đội 1 đúng 3 câu ⇒ iPad hiện bảng 3D (1 quả sẵn sàng + bóng ô 2, BOOST 3/5, 60%) · iPad bắn ⇒ quả bay
+sang đội 2, tên lửa 2D trên đường đua mini, trúng ⇒ iPad nhận "fire" + "boom:1" · nút iPad ⇒ bảng 3 thẻ (Controller xanh) ⇒ Questions ⇒ xác nhận ⇒ fightScreen
+true / fightPad false, chip gỡ · Controller lại ⇒ iPad tự về bảng tên lửa TEAM 1, nối lại · 0 lỗi console cả 2 tab.
+**Lỗi gặp:** `.mp-3d-err{display:grid}` đè thuộc tính `hidden` ⇒ dòng "3D is not available" luôn có trong trang (nằm dưới canvas nên không thấy) ⇒ thêm
+`.mp-3d-err[hidden]{display:none}` (sửa cả myGame). ⬜ Chưa thử 2 iPad thật (Firestore + Wi-Fi lớp), chưa đo khung hình bảng 3D trên iPad.
+
+---
+
 ## Đợt 510 (13/10/2026) — KIỂM TRA ĐẦU VÀO BỘ ĐỀ C (B1): PHẦN NGHE 2 LẦN + 7 PHẦN NGỮ PHÁP · phiên Claude 4731ce42
 
 **Thầy giao:** bộ đề kiểm tra đầu vào trình độ cao hơn (B1) dựa đề giấy "A2 to B1 ENTRANCE" + một bài NGHE (mỗi PART nghe 2 lần rồi mới trả lời). Thầy duyệt bản nháp `D:\OTHERS\CLAUDE\Kiem tra dau vao - thiet ke\DE XUAT BO DE B1 v2.html` ⇒ "ok build".

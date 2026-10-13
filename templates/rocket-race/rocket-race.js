@@ -461,7 +461,7 @@ function msCorrect(side) {
   if (st.msMax > 0 && msTotal(a) < st.msMax) {        // Đợt 417: 2 thanh Options (số câu liên tiếp / số quả tối đa)
     if (++a.ms >= st.msStreak) {
       a.ms = 0; a.reserve++;
-      msLater(st, () => { if (!msLocked()) v3(v => v.missile.chargeFx(side)); }, 450);   // sau nhịp TURBO ⇒ không chồng hiệu ứng
+      msLater(st, () => { if (!msLocked()) { v3(v => v.missile.chargeFx(side)); padEvent(side, "mplus"); } }, 450);   // sau nhịp TURBO ⇒ không chồng hiệu ứng · Đợt 511: báo iPad
       // ⭐ Đợt 413 (thầy): "khi có tên lửa con, tên lửa con sẽ được nạp ngay để chuẩn bị bắn luôn, không cần thêm 1 lần bấm"
       // ⇒ nạp tự động ngay sau hiệu ứng MISSILE +1 (bỏ nạp tay của Đợt 409; chạm hàng quả nhỏ vẫn nạp được, vô hại).
       msLater(st, () => msLoad(st, side), 1000);
@@ -494,12 +494,13 @@ function msFire(side) {
   const st = rr3d; if (!st || !st.ms) return;
   const a = st.ms[side], v = st.view;
   if (v && v.missile && !msLocked() && !a.loaded && a.reserve > 0 && v.phase === "play") return msLoad(st, side);   // (PEACE vẫn nạp được)   // Đợt 409: ô to trống mà còn quả nhỏ ⇒ nạp
-  if (!v || !v.missile || msLocked() || st.peace || !a.loaded || v.phase !== "play") { if (v && v.missile) v.missile.refuse(side, "fire"); return; }   // 441: PEACE ⇒ không bắn
+  if (!v || !v.missile || msLocked() || st.peace || !a.loaded || v.phase !== "play") { if (v && v.missile) v.missile.refuse(side, "fire"); padEvent(side, "refuse-fire"); return; }   // 441: PEACE ⇒ không bắn
   // ⭐ Đợt 454: view từ chối khi chưa có quả NẠP XONG, hoặc đã có 1 quả chờ phóng. Quả trước còn gần (< 2 lần dài tàu; 2 quả cùng
   // sẵn sàng thì được NỐI ĐUÔI) ⇒ view nhận lệnh, giữ quả ở ô sẵn sàng rồi tự phóng khi đủ xa.
-  if (!v.missile.launch(side, 1 - side)) { v.missile.refuse(side, "fire"); return; }
+  if (!v.missile.launch(side, 1 - side)) { v.missile.refuse(side, "fire"); padEvent(side, "refuse-fire"); return; }
   a.loaded--; msSync(st, side);
   st.msWideReady = false;
+  padEvent(side, "fire");                      // Đợt 511: tiếng/rung trên iPad của đội bắn
   msLater(st, () => msLoad(st, side), 700);    // ⭐ Đợt 413: còn quả dự phòng ⇒ tự lên nòng quả kế
 }
 // ⭐ Đợt 417 (mẫu 7b): BOOST đầy ⇒ bấm LÚC NÀO CŨNG ĐƯỢC — tàu tiến THẬT 1 nấc (board.boostStep). Tên lửa địch đang ở 1,25 s cuối
@@ -507,15 +508,24 @@ function msFire(side) {
 function msBoost(side) {
   const st = rr3d; if (!st || !st.ms) return;
   const a = st.ms[side], v = st.view, b = st.boards[side];
-  if (!v || !v.missile || msLocked() || !a.boost || v.phase !== "play" || !b || !b.boostStep) { if (v && v.missile) v.missile.refuse(side, "boost"); return; }
+  if (!v || !v.missile || msLocked() || !a.boost || v.phase !== "play" || !b || !b.boostStep) { if (v && v.missile) v.missile.refuse(side, "boost"); padEvent(side, "refuse-boost"); return; }
   a.boost = false; a.bs = 0; msSync(st, side);
   const dodged = msIncoming(side) <= MS_WINDOW && v.missile.dodge(side);
   if (!dodged && v.missile.boostFx) v.missile.boostFx(side);
+  padEvent(side, dodged ? "dodge" : "boost");   // Đợt 511
   b.boostStep();
 }
 function msEnd(to, res, tag) {
   const st = rr3d; if (!st || !st.ms) return;
   st.msWideReady = true;
+  // ⭐ Đợt 511 — đường đua mini trên CẢ 2 iPad nổ đúng chỗ: 2 quả đâm nhau ⇒ "clash" (clash() gọi onEnd cho CẢ 2 tàu cùng lúc ⇒ chỉ báo
+  // 1 lần, nhận ra qua lastClash đổi) · trúng tàu ⇒ "boom:<tàu>" · iPad của tàu bị trúng thêm "hit" (tiếng + rung).
+  if (st.pad) {
+    const lc = st.view && st.view.missile && st.view.missile.lastClash;
+    if (lc && lc.at !== st.padClashAt) { st.padClashAt = lc.at; st.padClashT = performance.now(); padBoth("clash"); }
+    else if (res === "hit" && performance.now() - (st.padClashT || 0) > 60) padBoth("boom:" + to);
+    if (res === "hit" && !msLocked()) padEvent(to, "hit");
+  }
   if (res !== "hit" || msLocked()) return;
   const b = st.boards[to];
   // ⭐ Đợt 454 (thầy 03/10/2026) — bỏ "×1,5 khi đâm nhau" của Đợt 441. Tag "half" = 50 % thiệt hại (làm tròn LÊN; ∞ ⇒ nửa
@@ -527,6 +537,63 @@ function msOver(keepWide) {
   const st = rr3d; if (!st || !st.ms) return;
   [0, 1].forEach(side => msSync(st, side));
   v3(v => { if (!v.missile) return; v.missile.clearAll(); if (!keepWide) v.missile.setWide(false); });
+}
+
+// =========================================================
+// ⭐⭐ Đợt 511 (thầy 13/10/2026, thiết kế + thử ở myGame mẫu 9 `4755fe1`) — iPAD "GAME CONTROLLER": nút iPad ▸ Controller (cờ `fightPad`,
+// core/engine.js) ⇒ MỖI ĐỘI 1 iPad bắn tên lửa + BOOST. Thầy chốt: không QR — iPad đã đăng nhập cùng tài khoản AWord, bấm nút iPad trên trang
+// chủ (pad.html) ⇒ chọn đội 1 lần ⇒ tự vào bảng tên lửa khi máy chiếu bật Controller (claim `ipad_now` {ctl:true}) · màn lớn VẪN bấm được
+// (cả hai cùng điều khiển) · bảng trên iPad = CHÍNH bảng 3D của game (rr-padscene.js chạy createMissiles ở chế độ GƯƠNG) + đường đua mini
+// có tên lửa 2D bay/nổ theo game + % tàu dẫn đầu · tiếng + rung trên iPad.
+// Máy chủ: rr-padlink.js createPadHost (WebRTC, bắt tay qua rr-pad-signal.js). iPad gửi "fire"/"boost"/"load" ⇒ ĐÚNG msFire/msBoost/msLoadTap
+// (như chạm màn lớn). Máy chủ gửi trạng thái (rrPadState, 10 lần/giây, chỉ khi đổi) + sự kiện (padEvent).
+// =========================================================
+function padEvent(side, name) { const st = rr3d; if (st && st.pad && st.pad.attached) st.pad.event(side, name); }
+function padBoth(name) { padEvent(0, name); padEvent(1, name); }
+// giây tới lúc tên lửa nổ ở tàu t (chưa né / chưa bay qua) — kể cả quả bay vào tàu KIA khi 2 tàu cùng nấc (trúng lan). −1 = không có.
+function rrPadThreat(M, t) {
+  let m = Infinity; const splash = M.inSplash(t);
+  M.flights.forEach(f => { if (f.dodged || f.passed) return; if (f.to === t || (splash && f.to === 1 - t)) m = Math.min(m, f.left); });
+  return m === Infinity ? -1 : Math.max(0, Math.round(m * 10) / 10);
+}
+function rrPadState(st, t) {
+  const v = st.view, M = v.missile, a = st.ms[t], steps = M.steps;
+  return { ph: v.phase, L: v.trackLen || 1, p: [Math.round(steps[0] || 0), Math.round(steps[1] || 0)], thr: rrPadThreat(M, t), win: MS_WINDOW,
+    pc: st.peace ? 1 : 0, w: st.padWinner == null ? -1 : st.padWinner,
+    // ar = ĐÚNG đối tượng msSync đưa cho setArsenal (∞ gửi −1) · sl = [trạng thái ô, k nạp] · fl = tên lửa đang bay [id, từ, tới, t, dur]
+    ar: { on: st.msMax > 0, max: st.msMax === Infinity ? -1 : st.msMax, reserve: a.reserve, loaded: a.loaded, pips: a.ms, pipsMax: st.msStreak,
+      full: msTotal(a) >= st.msMax, boost: a.boost, boostPips: a.bs, boostMax: MS_BOOST_STREAK, locked: msLocked() },
+    sl: M.slots[t].map(x => [x.st, x.st === "charge" ? Math.round(x.k * 20) / 20 : 0]),
+    fl: M.flights.map(f => [f.id, f.from, f.to, Math.round(f.t * 10) / 10, Math.round((f.t + f.left) * 10) / 10]) };
+}
+// trận đã phân thắng thua (raceWon) ⇒ iPad đội thắng "YOU WIN!", đội thua "YOU LOSE"
+function rrPadWin(w) { const st = rr3d; if (!st || !st.pad) return; st.padWinner = w; padEvent(w, "win"); padEvent(1 - w, "lose"); }
+// chip "iPad ●" góc trên mỗi đội trên màn lớn: đội nào có iPad đang nối
+function rrPadChips(st) {
+  const chips = [0, 1].map(t => { const c = el("div", "aw-rr3d-ipchip is-t" + t); c.innerHTML = "<i></i>iPad"; st.root.append(c); return c; });
+  return {
+    paint(t, s) { chips[t].className = "aw-rr3d-ipchip is-t" + t + (s ? " is-" + s : ""); },
+    remove() { chips.forEach(c => c.remove()); },
+  };
+}
+function rrPadStart(st) {
+  Promise.all([import("./rr-padlink.js"), import("./rr-pad-signal.js"), import("../../core/ipad-now.js")]).then(([L, S, N]) => {
+    if (st.dead || rr3d !== st) return;
+    const host = L.createPadHost({ signal: S.rrPadSignal() });
+    const chips = rrPadChips(st);
+    st.pad = host;
+    host.attach({
+      press(t, k) { if (st.dead) return; if (k === "fire") msFire(t); else if (k === "boost") msBoost(t); else if (k === "load") msLoadTap(t); },
+      status(t, s) { chips.paint(t, s); },
+    });
+    const tick = setInterval(() => {
+      if (st.dead || !st.view || !st.view.missile) return;
+      [0, 1].forEach(t => { if (host.status(t) === "on") host.state(t, rrPadState(st, t)); });
+    }, 100);
+    const claim = N.claimIpad({ game: "rocketrace", fight: true, ctl: true });   // iPad đang ở pad.html tự sang bảng tên lửa
+    st.offs.push(() => { clearInterval(tick); try { host.detach(); } catch { /* ignore */ } claim.release(); chips.remove(); st.pad = null; });
+    window.__rrpad = host;                    // bàn thử
+  }).catch(e => console.warn("[rocket-race iPad]", e));
 }
 
 // ⭐ Đợt 409 — THANH MISS WAIT GIỮA MÀN. Đồng hồ + thanh DOM `.aw-fight-missbar` (mỗi nửa một cái, half0 = đội 0) là của trọng tài
@@ -579,6 +646,7 @@ function rr3dScene({ root, ctl, title, play }) {
     st.msPush = missilePushOf(a && a.options);       // ⭐ Đợt 407 — Options "Missile" (trúng lùi mấy nấc)
     st.msStreak = msStreakOf(a && a.options);        // ⭐ Đợt 417 — "Missile streak" / "Missiles max"
     st.msMax = msMaxOf(a && a.options);
+    st.padMode = !!(a && a.options && a.options.fightPad === true);   // ⭐ Đợt 511 — nút iPad ▸ Controller
   } catch { /* bàn sẽ tự báo khi mount */ }
   if (st.msPush == null) st.msPush = MS_DEFAULT;
   if (st.msStreak == null) st.msStreak = MS_STREAK_DEFAULT;
@@ -616,7 +684,8 @@ function rr3dScene({ root, ctl, title, play }) {
     if (st.dead) { view.destroy(); return; }
     st.view = view;
     window.__rr3d = st;
-    if (st.ms) [0, 1].forEach(side => msSync(st, side));   // Đợt 407                       // bàn thử: __rr3d.view.step()/snap() khi khung xem trước bị ẩn
+    if (st.ms) [0, 1].forEach(side => msSync(st, side));   // Đợt 407
+    if (st.padMode) rrPadStart(st);           // ⭐ Đợt 511 — 2 iPad điều khiển tên lửa                       // bàn thử: __rr3d.view.step()/snap() khi khung xem trước bị ẩn
     const q = st.pending.splice(0);
     q.forEach(fn => { try { fn(view); } catch (e) { console.warn("[rocket-race 3D]", e); } });
     rr3dLaunch(st, play);                     // ⭐ Đợt 398: cảnh phóng từ mặt đất phủ lên, hoà cảnh xong mới vào trận (Đợt 413: cả khi Apply)
@@ -2506,6 +2575,7 @@ const rocketRaceTemplate = {
       // Đợt 393 — trận đã phân thắng thua: đồng hồ trận dừng (trước đây vẫn chạy trên bảng kết quả)
       if (on3d) rr3d.boards.forEach(b => { try { b && b.stopClock && b.stopClock(); } catch { /* ignore */ } });
       if (on3d) msOver(false);             // Đợt 407: khoá tên lửa, quả đang bay nổ giữa đường
+      if (on3d) rrPadWin(w.id);            // Đợt 511: iPad đội thắng / thua
       if (typeof fightCtl.finishRace === "function") fightCtl.finishRace(w.id, holdMs);
       else if (loser && typeof fightCtl.forfeit === "function") fightCtl.forfeit(loser.id);
       locked = true;

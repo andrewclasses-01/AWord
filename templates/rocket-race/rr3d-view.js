@@ -2322,6 +2322,7 @@ export async function createView(cfg) {
   return {
     // --- dựng / nhịp trận ---
     setTrack(n) { L = Math.max(1, n | 0); cfg.onMove && cfg.onMove(); },
+    get trackLen() { return L; },                         // Đợt 511: bảng tên lửa iPad (Game controller) vẽ đường đua mini theo số nấc
     // ⭐ Đợt 444 (thầy): thanh % = vị trí tàu GẦN ĐÍCH HƠN trên đường đua (0..1) — lùi nấc thì thanh tụt theo
     lead() { return Math.max(0, Math.min(1, Math.max(rockets[0].p || 0, rockets[1].p || 0) / L)); },
     setLivesMax(n) {

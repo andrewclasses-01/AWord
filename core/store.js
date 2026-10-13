@@ -276,6 +276,8 @@ const APP_DATA_KINDS = new Set(["class", "showdown", "showdown-results", "showdo
                                 "starloot-pad",
                                 // Đợt 508 — iPad tự đổi màn theo game (core/ipad-now.js): ipad_now
                                 "ipad-now",
+                                // Đợt 511 — Rocket Race iPad "Game controller" handshake (templates/rocket-race/rr-pad-signal.js): rrpad_host/pad0/pad1
+                                "rocketrace-pad",
                                 // Đợt 484 — bảng "Hướng dẫn khi sai" tách khỏi act (gy_<actId>, xem napGoiY)
                                 "act-goiy"]);
 function isAppData(n) { return APP_DATA_KINDS.has(n.kind); }

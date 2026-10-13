@@ -873,3 +873,26 @@ Thầy: "myGame cũng phải có các bản mới nhất đồng bộ với AWor
 ⭐ MỖI Đợt Rocket Race xong push ⇒ ở myGame: `python -X utf8 tools/chep-aword-sang-game.py gameN` (thư mục mới, lấy từ origin/main — chép cả
 cảnh đua, tên lửa, MISS WAIT, tự giữ 60 khung, cảnh phóng `rr3d-launch.js` + `launch/`, tiếng intro + `sfx-intro/`) + trang `mau-N-…html`
 (chép trang mẫu gần nhất, đổi import sang gameN) ⇒ commit + push myGame. Hiện: game8 / mau-8-khop-aword.html = AWord `156cf57` (Đợt 478), myGame `9bd8b9c`.
+
+## 46. Đợt 511 (13/10/2026) — iPAD "GAME CONTROLLER": MỖI ĐỘI 1 iPAD BẮN TÊN LỬA + BOOST (ghép MẪU 9 myGame `4755fe1`)
+Thầy: *"thêm một chế độ cho tính năng điều khiển bằng ipad · bấm vào nút ipad ở game sẽ hiện tùy chọn, làm nơi đọc câu hỏi hay tham gia game · tham gia game thì
+chuyển toàn bộ phần bắn tên lửa và tránh vào ipad. Trên màn hình game vẫn hiển thị nhưng điều khiển ở ipad"*. Thiết kế ở myGame mẫu 9 qua 5 vòng thầy chỉnh
+(chi tiết myGame `GHI CHU DU AN.md` chặng "Rocket Race mẫu 9" + sửa 1–5), rồi *"Commit + push myGame đi. Và đưa lên Aword đi"*.
+- **Chốt của thầy**: 2 iPad, mỗi đội 1 · màn lớn VẪN bấm được tên lửa/BOOST (cả hai cùng điều khiển) · KHÔNG QR — iPad đã đăng nhập cùng tài khoản AWord,
+  trang chủ ▸ nút iPad (pad.html) ▸ chọn đội 1 lần ⇒ tự vào bảng tên lửa khi máy chiếu bật Controller · bảng trên iPad = thiết kế 3D GIỐNG HỆT game.
+- **Nút iPad** (core/engine.js): bảng 3 thẻ Off · Questions · Controller. Cờ `fightPad` (option, loại trừ `fightScreen`); đổi ⇒ applyOptions ⇒ dựng lại trận.
+- **Máy chủ** (`rocket-race.js` khối "Đợt 511" sau msOver): `st.padMode` đọc lúc dựng cảnh; view sẵn sàng ⇒ `rrPadStart` — `rr-padlink.js` createPadHost
+  (WebRTC, bắt tay `rr-pad-signal.js`: rrpad_host/pad0/pad1, kind `rocketrace-pad`) · lệnh iPad "fire"/"boost"/"load" ⇒ ĐÚNG msFire/msBoost/msLoadTap ·
+  `rrPadState` 10 lần/giây (chỉ gửi khi đổi): ph, L (`view.trackLen` mới), p (`missile.steps`), thr (giây tới lúc nổ ở tàu mình, cộng trúng lan cùng nấc),
+  ar (= đối tượng msSync), sl (`missile.slots`), fl (`missile.flights`), pc (PEACE), w (đội thắng) · sự kiện `padEvent`: mplus · fire · boost · dodge · hit ·
+  refuse-fire · refuse-boost · win · lose · `boom:<tàu>` / `clash` gửi CẢ 2 iPad (clash nhận ra qua `lastClash.at` đổi, bỏ "boom" trong 60 ms của cùng vụ) ·
+  claim `ipad_now` {ctl:true} · chip "iPad ●" góc trên mỗi đội (`.aw-rr3d-ipchip`). Mọi thứ gỡ trong `st.offs` (destroy).
+- **iPad** (`pad.js` nhánh rocketrace+ctl): `rr-padui.js` (thanh trên: đội · đèn · đường đua mini có tên lửa 2D bay/nổ theo game · % tàu dẫn đầu; báo động
+  "INCOMING x s · BOOST NOW!", bíp nhanh dần, tiếng Web Audio, rung khi có) + `rr-padscene.js` = CHÍNH bảng của game: `createMissiles({rockets: []})
+  .buildConsole` + hậu kỳ y view (ACES, bloom, lọc NaN) — chạm = raycast vùng chạm game. Màn chọn đội ghi "iPad already connected" (host ghi c0/c1); 2 iPad trùng
+  đội ⇒ iPad sau giành, iPad trước nhận "k:" ⇒ "IS ON ANOTHER iPAD" + Take it back / Choose team (không giành qua lại).
+- **`rr3d-missile.js`** (= myGame game9): chế độ GƯƠNG (`mirror` / `mirrorTick` / `mirrorFlash` / `ui`; `threatFor` đọc MIR — máy chiếu MIR luôn null ⇒ không
+  đổi) · cột vạch năng lượng LUÔN cao 4 ô dự phòng (thầy: "sửa cả màn lớn cho cột vạch cao 4 ô luôn" — trước max 3 chỉ 1 ô) · icon BOOST bỏ 3 vạch tốc độ ở đáy.
+- Bàn thử: `scratch/dot511-ipad-ctl.html?padsig=local&raf=1` + tab `pad.html?padsig=local` (mỗi tab 1 iPad — `?padsig=local` lưu đội ở sessionStorage).
+  Bàn thử tay: `__rr3d`, `__rrpad` (host), ở tab iPad `__padc` / `__padui`.
+- ⬜ Chưa thử 2 iPad THẬT (Firestore + WebRTC qua Wi-Fi lớp) · chưa đo khung hình iPad (bảng dùng bloom + MSAA HalfFloat — nặng thì bỏ MSAA / hạ pixelRatio).

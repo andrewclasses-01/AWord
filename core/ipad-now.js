@@ -6,7 +6,9 @@
 // Race) — đổi game trên máy chiếu thì iPad đứng "Waiting for the game", phải cầm lên bấm Back chọn lại.
 //
 // MỘT tài liệu `users/{uid}/items/ipad_now` = "lúc này iPad nên hiện gì":
-//     { game: "starloot" | "rocketrace" | "", fight, at }
+//     { game: "starloot" | "rocketrace" | "", fight, ctl, at }
+//   ⭐ Đợt 511 — `ctl`: Rocket Race đang ở chế độ iPad GAME CONTROLLER (iPad = bảng tên lửa của đội, templates/rocket-race/rr-padui.js)
+//     thay vì Question screen (source.html). pad.html rẽ theo trường này.
 //   • MÁY CHIẾU ghi (trang thầy, KHÔNG BAO GIỜ trang bài giao của em — engine chỉ gọi ipadSurface(true) khi !session).
 //     - Template cần iPad giữ một "claim" suốt lúc nó sống: STAR LOOT (mọi lúc mở) · Rocket Race (chỉ trận Fight bật
 //       Question screen — rrLinkStart/rrLinkStop). Claim MỚI NHẤT còn sống thắng.
@@ -48,7 +50,7 @@ async function flush() {
   timer = null;
   if (!surface) return;
   const cur = current();
-  const payload = cur ? { game: cur.game, fight: !!cur.fight } : { game: "", fight: false };
+  const payload = cur ? { game: cur.game, fight: !!cur.fight, ctl: !!cur.ctl } : { game: "", fight: false, ctl: false };
   const key = JSON.stringify(payload);
   if (key === lastSent) return;
   try {
@@ -74,12 +76,13 @@ export function ipadSurface(on) {
 /** Template cần iPad: giữ claim suốt lúc sống. Trả { update(patch), release() }. */
 export function claimIpad(info) {
   const token = ++seq;
-  claims.set(token, { game: String(info.game || ""), fight: !!info.fight });
+  claims.set(token, { game: String(info.game || ""), fight: !!info.fight, ctl: !!info.ctl });
   schedule();
   return {
     update(patch) {
       const c = claims.get(token); if (!c) return;
       if ("fight" in patch) c.fight = !!patch.fight;
+      if ("ctl" in patch) c.ctl = !!patch.ctl;
       schedule();
     },
     release() { if (claims.delete(token)) schedule(); },
@@ -90,10 +93,10 @@ export function claimIpad(info) {
 function norm(raw) {
   if (!raw) return null;
   const g = raw.game === "starloot" || raw.game === "rocketrace" ? raw.game : "";
-  return { game: g, fight: !!raw.fight, at: Number(raw.at) || 0 };
+  return { game: g, fight: !!raw.fight, ctl: !!raw.ctl, at: Number(raw.at) || 0 };
 }
 
-/** cb({game, fight, at} | null — null = chưa từng có tài liệu, vd. máy chiếu còn bản cũ). onError(e) khi ĐỌC hỏng. */
+/** cb({game, fight, ctl, at} | null — null = chưa từng có tài liệu, vd. máy chiếu còn bản cũ). onError(e) khi ĐỌC hỏng. */
 export function watchIpadNow(cb, onError) {
   let stop = null, dead = false;
   if (LOCAL) {
@@ -119,5 +122,7 @@ export function watchIpadNow(cb, onError) {
 
 // Đội iPad này chọn cho Fight (mỗi iPad nhớ đội của chính nó). Single luôn TEAM A.
 const TEAM_KEY = "aw.ipadTeam";
-export function savedTeam() { try { const v = localStorage.getItem(TEAM_KEY); return v === "0" || v === "1" ? +v : null; } catch (e) { return null; } }
-export function saveTeam(t) { try { localStorage.setItem(TEAM_KEY, t ? "1" : "0"); } catch (e) { /* chế độ riêng tư */ } }
+// Đợt 511: bàn thử ?padsig=local ⇒ 2 tab "iPad" cùng trình duyệt chung localStorage ⇒ đội lưu sessionStorage (mỗi tab một iPad). iPad thật: localStorage.
+const teamStore = () => (LOCAL ? sessionStorage : localStorage);
+export function savedTeam() { try { const v = teamStore().getItem(TEAM_KEY); return v === "0" || v === "1" ? +v : null; } catch (e) { return null; } }
+export function saveTeam(t) { try { teamStore().setItem(TEAM_KEY, t ? "1" : "0"); } catch (e) { /* chế độ riêng tư */ } }

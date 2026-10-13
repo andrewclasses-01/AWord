@@ -2688,6 +2688,8 @@ html.aw-nhung .aw-below { display: none; }
    identical buttons. The tile stacks instead of centring only when it has one. */
 .aw-mp-tile:has(.aw-mp-label) { flex-direction: column; gap: 4px; }
 .aw-mp-label { font-size: 11.5px; font-weight: 700; letter-spacing: .01em; }
+/* ⭐ Đợt 511 — bảng 3 chế độ của nút iPad (Off · Questions · Controller), core/engine.js buildQScreenConfirmPanel */
+.aw-ipad-cur { margin-top: 10px; text-align: center; max-width: none; }
 .aw-mp-tile:has(.aw-mp-label) .aw-mp-icon svg { width: 38px; }
 
 /* Đợt 228 — the old "IPA mode hides the Template button" rule lived here

@@ -907,3 +907,14 @@
 .aw-rr3d-prog i::after { content: ""; position: absolute; right: -4px; top: 50%; width: 10px; height: 10px; margin-top: -5px; border-radius: 50%;
   background: #fff7d6; box-shadow: 0 0 10px 3px rgba(253, 230, 138, .9); }
 /* ⭐ Đợt 441 (MỌI game Fight) — Fight content trải hết bề ngang ngay dưới vạch đứt: luật ở core/app.css */
+/* ⭐ Đợt 511 — iPad GAME CONTROLLER: chip "iPad ●" góc trên mỗi đội (rocket-race.js rrPadChips) — chỉ hiện khi iPad đội đó đang nối / đang nối lại */
+.aw-rr3d-ipchip { position: absolute; top: 10px; z-index: 6; display: none; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+  background: rgba(2, 6, 23, .72); border: 1.5px solid var(--tc); color: #e2e8f0; font: 800 12px "Exo 2", "Baloo 2", sans-serif; letter-spacing: .08em; pointer-events: none; }
+.aw-rr3d-ipchip.is-t0 { left: 12px; --tc: #3b8cff; }
+.aw-rr3d-ipchip.is-t1 { right: 12px; --tc: #ff7a00; }
+.aw-rr3d-ipchip i { width: 8px; height: 8px; border-radius: 50%; background: #64748b; }
+.aw-rr3d-ipchip.is-on, .aw-rr3d-ipchip.is-relay, .aw-rr3d-ipchip.is-wait { display: flex; }
+.aw-rr3d-ipchip.is-on i { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+.aw-rr3d-ipchip.is-relay i { background: #f59e0b; }
+.aw-rr3d-ipchip.is-wait i { animation: aw-rr3d-ipblink 1s infinite; }
+@keyframes aw-rr3d-ipblink { 50% { opacity: .2; } }

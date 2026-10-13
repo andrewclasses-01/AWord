@@ -1820,8 +1820,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // Rocket race alone. `is-active` is the same "something is on" glow the Mode
   // button uses, so a lit button means the same thing everywhere on this row.
   const qScreenTpl = !!modeTpl.fightScreen;
-  const qScreenBtn = (fight && fight.side === 0 && qScreenTpl) ? toolBtn(icons.follow, "Question screen") : null;
-  if (qScreenBtn && activity.options && activity.options.fightScreen === true) qScreenBtn.classList.add("is-active");
+  const qScreenBtn = (fight && fight.side === 0 && qScreenTpl) ? toolBtn(icons.follow, "iPad") : null;
+  // Đợt 511: sáng khi iPad đang dùng ở BẤT KỲ chế độ nào (Question screen hoặc Game controller — xem buildQScreenConfirmPanel)
+  if (qScreenBtn && activity.options && (activity.options.fightScreen === true || activity.options.fightPad === true)) qScreenBtn.classList.add("is-active");
   // Đợt 192 — THREE buttons now, not four: Style folded into Template above.
   if (qScreenBtn) belowCenter.append(optionsBtn, qScreenBtn, modeBtn);
   else belowCenter.append(optionsBtn, modeBtn);
@@ -4681,23 +4682,55 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // first, because a restart in the middle of a match costs the class the round.
   // `ctl.applyOptions` already does all three right things: write the flag onto
   // the real act, save it, and rebuild BOTH boards back to the READY screen.
+  // ⭐⭐ Đợt 511 (thầy 13/10/2026: "bấm vào nút ipad ở game sẽ hiện tùy chọn nào, làm nơi đọc câu hỏi hay tham gia game") — nút iPad
+  // mở BẢNG 3 CHẾ ĐỘ (cùng lưới thẻ của Mode): Off · Question screen (`fightScreen`, Đợt 368) · Game controller (`fightPad` MỚI — mỗi đội
+  // 1 iPad bắn tên lửa + BOOST, xem templates/rocket-race/rr-pad*.js). Hai cờ loại trừ nhau. Chạm thẻ KHÁC chế độ đang chạy ⇒ hỏi xác nhận
+  // (giữ luật Đợt 370: đổi là dựng lại trận về màn START — cờ đọc 1 lần lúc mount) ⇒ `ctl.applyOptions` ghi cả 2 cờ lên act thật.
+  const ipadModeOf = () => {
+    const o = activity.options || {};
+    return o.fightPad === true ? "ctl" : o.fightScreen === true ? "question" : "off";
+  };
+  const IPAD_MODES = [
+    { k: "off", label: "Off", icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2.2"/><line x1="4" y1="22" x2="20" y2="2"/></svg>`,
+      head: "Turn the iPad off?", text: "Questions, answers, missiles and BOOST all stay on this screen. The match restarts from the start screen." },
+    { k: "question", label: "Questions", icon: icons.follow,
+      head: "Use the iPad as the question screen?", text: "Questions move to the iPad (tap the iPad button on its AWord page — it switches to the questions by itself). This screen keeps the race and the answer tiles. The match restarts from the start screen." },
+    { k: "ctl", label: "Controller", icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c2.5 2 3.6 5 3.6 8.6V16H8.4v-5.4C8.4 7 9.5 4 12 2z"/><path d="M8.4 12.5 5.5 15.5V19l2.9-1.6M15.6 12.5l2.9 3V19l-2.9-1.6"/><path d="M10.5 19.5 12 22l1.5-2.5"/></svg>`,
+      head: "Use 2 iPads as game controllers?", text: "Each team plays on its own iPad: fire missiles and BOOST from it. On each iPad: AWord home ▸ iPad button ▸ choose the team. This screen keeps showing everything — its buttons still work. The match restarts from the start screen." },
+  ];
   function buildQScreenConfirmPanel(panel) {
-    const on = !!(activity.options && activity.options.fightScreen === true);
-    panel.append(el("div", "aw-tool-panel-head", on ? "Turn the question screen off?" : "Turn the question screen on?"));
-    panel.append(el("div", "aw-mode-confirm-text", on
-      ? "Questions come back to this screen. The match restarts from the start screen."
-      : "Questions move to the iPad (tap the iPad button on its AWord page — it switches to the questions by itself). This screen keeps the race and the answer tiles. The match restarts from the start screen."));
+    const cur = ipadModeOf();
+    panel.append(el("div", "aw-tool-panel-head", "iPad"));
+    const grid = el("div", "aw-mp-grid aw-ipad-grid");
+    IPAD_MODES.forEach(m => {
+      const tile = el("button", "aw-mp-tile" + (m.k === cur ? " is-cur" : ""),
+        `<span class="aw-mp-icon">${m.icon}</span><span class="aw-mp-label">${escapeText(m.label)}</span>`);
+      tile.type = "button"; tile.title = m.head; tile.setAttribute("aria-label", m.label);
+      tile.onclick = () => {
+        sound.click();
+        if (m.k === cur) { closeToolPanel(false); return; }
+        switchToolPanel(p => buildIpadConfirm(p, m));
+      };
+      grid.append(tile);
+    });
+    panel.append(grid);
+    const cm = IPAD_MODES.find(m => m.k === cur);
+    panel.append(el("div", "aw-mode-confirm-text aw-ipad-cur", "Now: " + escapeText(cm.k === "off" ? "iPad off" : cm.k === "question" ? "question screen" : "game controllers (2 iPads)")));
+  }
+  function buildIpadConfirm(panel, m) {
+    panel.append(el("div", "aw-tool-panel-head", m.head));
+    panel.append(el("div", "aw-mode-confirm-text", m.text));
     const row = el("div", "aw-mode-confirm-row");
-    const cancelBtn = el("button", "aw-btn aw-mode-confirm-btn", "Cancel");
+    const cancelBtn = el("button", "aw-btn aw-mode-confirm-btn", "Back");
     cancelBtn.type = "button";
-    cancelBtn.onclick = () => { sound.click(); closeToolPanel(false); };
+    cancelBtn.onclick = () => { sound.click(); switchToolPanel(buildQScreenConfirmPanel); };
     row.append(cancelBtn);
-    const goBtn = el("button", "aw-btn aw-btn-primary aw-mode-confirm-btn", on ? "Turn off" : "Turn on");
+    const goBtn = el("button", "aw-btn aw-btn-primary aw-mode-confirm-btn", m.k === "off" ? "Turn off" : "Switch");
     goBtn.type = "button";
     goBtn.onclick = () => {
       sound.click();
       closeToolPanel(false);
-      if (fight) fight.ctl.applyOptions({ fightScreen: !on });
+      if (fight) fight.ctl.applyOptions({ fightScreen: m.k === "question", fightPad: m.k === "ctl" });
     };
     row.append(goBtn);
     panel.append(row);

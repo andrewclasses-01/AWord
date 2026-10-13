@@ -427,9 +427,8 @@ export function createMissiles(X) {
     const cv = document.createElement("canvas"); cv.width = cv.height = 256;
     const g = cv.getContext("2d");
     g.strokeStyle = "#fff"; g.lineCap = "round"; g.lineJoin = "round"; g.lineWidth = 30;
-    [[150, 0], [96, 1]].forEach(([y]) => { g.beginPath(); g.moveTo(66, y + 42); g.lineTo(128, y - 20); g.lineTo(190, y + 42); g.stroke(); });
-    g.lineWidth = 12; g.globalAlpha = 0.75;
-    [[92, 196, 214], [128, 206, 236], [164, 196, 214]].forEach(([x, y0, y1]) => { g.beginPath(); g.moveTo(x, y0); g.lineTo(x, y1); g.stroke(); });
+    // ⭐ mẫu 9 (thầy 13/10): bỏ 3 vạch tốc độ dưới đáy — chỉ còn 2 mũi tên kép, căn giữa ô (trước: y 150/96 + vạch 196–236)
+    [[166, 0], [112, 1]].forEach(([y]) => { g.beginPath(); g.moveTo(66, y + 42); g.lineTo(128, y - 20); g.lineTo(190, y + 42); g.stroke(); });
     boostIconTex = new THREE.CanvasTexture(cv); boostIconTex.colorSpace = THREE.SRGBColorSpace;
     return boostIconTex;
   }
@@ -514,7 +513,9 @@ export function createMissiles(X) {
     if (n <= 0) return;
     // ⭐ Đợt 441 — cột vạch cao ĐÚNG bằng cột quả dự phòng của trận (số ô theo Missiles max), đáy thẳng đáy ô dưới cùng;
     // không có ô dự phòng (max 1) ⇒ cao bằng quả to.
-    const nS = Math.max(1, slots), H = U.ammoH * MINI_PITCH * nS * 1.05 + (slots >= 1 ? 0 : U.ammoH * 0.2), y0 = slots >= 1 ? (slotY(0) - MINI_PITCH * 0.52) * U.ammoH : -H / 2;
+    // ⭐ mẫu 9 (thầy 13/10: "sửa cả màn lớn cho cột vạch cao 4 ô luôn") — cột vạch LUÔN cao đúng 4 ô dự phòng (MINI_N), đáy thẳng đáy ô dưới cùng,
+    // bất kể Missiles max (trước: max 3 ⇒ 1 ô ⇒ cột rất ngắn). Màn lớn + bảng iPad dùng chung công thức này.
+    const H = U.ammoH * MINI_PITCH * MINI_N * 1.05, y0 = (slotY(0) - MINI_PITCH * 0.52) * U.ammoH;
     const gap = Math.min(H * 0.035, H / n * 0.18), h = (H - gap * (n - 1)) / n, w = U.msColW;
     for (let i = 0; i < n; i++) {
       const y = y0 + h / 2 + i * (h + gap);                               // i = 0 ở DƯỚI
@@ -969,7 +970,39 @@ export function createMissiles(X) {
     }
   }
   // khung đỏ + BOOST nhấp nháy cả ở tàu CÙNG NẤC khi tên lửa đang bay vào tàu kia (để kịp chạy)
-  function threatFor(side) { const m = incoming(side); return inSplash(side) ? Math.min(m, incoming(1 - side)) : m; }
+  function threatFor(side) {
+    if (MIR[side]) return MIR[side].threat;                   // mẫu 9: bảng GƯƠNG trên iPad — giây tới lúc nổ do máy chiếu gửi
+    const m = incoming(side); return inSplash(side) ? Math.min(m, incoming(1 - side)) : m;
+  }
+  // ⭐ MẪU 9 (13/10/2026, thầy: "vạch, tên lửa, nút boost cần có thiết kế 3D giống hệt trên game thật") — BẢNG GƯƠNG cho iPad:
+  // iPad dựng CHÍNH bảng này (buildConsole) trong cảnh riêng không có tàu, rồi mỗi lần máy chiếu gửi trạng thái thì gọi mirror():
+  // ô sẵn sàng lấy đúng trạng thái máy chiếu (empty/shuttle/charge/ready/queued/firing + k), chuyển trạng thái ⇒ chạy đúng hoạt ảnh
+  // của game (quả nhỏ bay sang ô · loé khi nạp xong · quả lùi khỏi màn khi bắn). Giữa 2 lần gửi, iPad tự chạy tiếp thanh nạp (mirrorTick).
+  const MIR = [null, null];
+  function mirror(side, m) {
+    const U = UI[side];
+    (m.sl || []).forEach(([st, k], j) => {
+      const S = SL[side][j]; if (!S) return;
+      const prev = S.st;
+      if (prev === st) { if (st === "charge" && Math.abs((k || 0) - S.k) > 0.15) S.k = k || 0; return; }
+      S.st = st; S.k = st === "charge" ? (k || 0) : st === "ready" || st === "queued" ? 1 : 0;
+      if (!U) return;
+      if (st === "shuttle" && (prev === "empty" || prev === undefined)) U.load = { t: 0, j, fy: slotY(clamp(A[side].reserve, 0, MINI_N - 1)) };
+      if (st === "firing" && U.bigs[j]) U.bigs[j].fireK = 1;
+      if (st === "ready" && prev === "charge" && U.bigs[j]) U.bigs[j].flash = 1;
+    });
+    MIR[side] = { threat: m.threat == null || m.threat < 0 ? Infinity : m.threat };
+  }
+  function mirrorTick(side, dt) {                             // thay tick(): không tàu, không đường bay — chỉ bảng
+    if (!MIR[side]) MIR[side] = { threat: Infinity };         // chưa nhận trạng thái máy chiếu ⇒ threatFor KHÔNG được hỏi tàu (iPad không có tàu)
+    SL[side].forEach(S => {
+      if (S.st === "shuttle") { S.t = (S.t || 0) + dt; if (S.t >= SHUTTLE) { S.st = "charge"; S.k = 0; S.t = 0; } }
+      else if (S.st === "charge") S.k = Math.min(1, S.k + dt / MC.charge);
+      else S.t = 0;
+    });
+    if (MIR[side] && MIR[side].threat < Infinity) MIR[side].threat = Math.max(0, MIR[side].threat - dt);
+    tickUI(side, dt);
+  }
   function tick(dt) {
     for (let i = pending.length - 1; i >= 0; i--) { const p = pending[i]; p.t -= dt; if (p.t <= 0) { pending.splice(i, 1); p.fn(); } }
     [0, 1].forEach(side => tickSlots(side, dt));      // Đợt 454: ô sẵn sàng (nạp / chờ nối đuôi) — trước poseMount
@@ -1000,6 +1033,8 @@ export function createMissiles(X) {
       get nearWin() { return rockets.map(r => !!r.nearWin); },
       inSplash,                                         // 7d: bàn thử
       chargeFx, loadFx, launch, dodge, incoming, clearAll, refuse,
+      mirror, mirrorTick, mirrorFlash: side => { if (UI[side]) UI[side].flash = 1; },   // mẫu 9: bảng gương trên iPad
+      get ui() { return UI; },
       // 6b: góc nhìn rộng — bật khi bắn; trang game tắt ở câu trả lời KẾ TIẾP khi không còn quả nào đang bay
       setWide(on) { G.wideCam = !!on; },
       get wide() { return !!G.wideCam; },
