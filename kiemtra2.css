@@ -52,7 +52,28 @@
 .k2-phim-hop { background: #fff; border-radius: 18px; padding: 22px 26px; max-width: 440px; width: 90%; text-align: center; display: flex; flex-direction: column; gap: 8px; align-items: center; }
 .kt-than:has(.k2-phim-khung) { padding: 10px; }
 
+/* ----- Đợt 510: bộ đề B1 — câu dài + phần NGHE ----- */
+.k2-de-vua { font-size: 1.4rem; }
+.k2-de-dai { font-size: 1.18rem; line-height: 1.4; text-align: left; }
+.k2-nghe { gap: 10px; width: 100%; max-width: 620px; }
+.k2-nghe-dan { font-size: 1.02rem; line-height: 1.45; color: var(--chu); background: #f5f9ff; border: 2px solid var(--vien); border-radius: 14px; padding: 10px 14px; text-align: left; }
+.k2-nghe-form { background: #fff; border: 2px solid var(--vien); border-radius: 14px; padding: 10px 14px; text-align: left; font-size: .98rem; line-height: 1.6; width: 100%; box-sizing: border-box; }
+.k2-nghe-form-to { font-weight: 800; letter-spacing: .06em; text-align: center; color: var(--xanh-dam); }
+.k2-nghe-vach { width: 100%; height: 20px; }
+.k2-nghe-vach i { background: linear-gradient(90deg, #2d7fd3, #13a58f); }
+.k2-chon-anh { grid-template-columns: repeat(3, 1fr); width: 100%; max-width: 620px; margin: 0 auto; gap: 10px; }
+.k2-o-chon.k2-o-anh { background: #fff; color: var(--chu); border: 3px solid var(--vien); box-shadow: 0 4px 0 #d3dceb; padding: 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 1.2rem; }
+.k2-o-chon.k2-o-anh:hover { background: #f5f9ff; }
+.k2-o-anh img { width: 100%; height: auto; aspect-ratio: 190 / 157; object-fit: contain; pointer-events: none; -webkit-user-drag: none; border-radius: 8px; }
+.k2-chon-doc { grid-template-columns: 1fr; width: 100%; max-width: 560px; margin: 0 auto; gap: 10px; }
+.k2-chon-doc .k2-o-chon { text-align: left; font-size: 1.15rem; min-height: 54px; padding: 10px 16px; }
+.k2-o-chon.k2-o-anh.chon { background: #fff4d6; border-color: #f2b33d; box-shadow: 0 4px 0 #b9821f; color: #2b1d00; }
+
 @media (max-width: 560px) {
+  .k2-de-vua { font-size: 1.2rem; }
+  .k2-de-dai { font-size: 1.05rem; }
+  .k2-chon-anh { gap: 6px; }
+  .k2-o-chon.k2-o-anh { padding: 3px; font-size: 1rem; }
   .k2-hinh { width: 120px; height: 120px; }
   .k2-hang .k2-hinh { width: 84px; height: 84px; }
   .k2-hang.nhieu .k2-hinh { width: 62px; height: 62px; }

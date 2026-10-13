@@ -546,6 +546,15 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 510 (13/10/2026) — KIỂM TRA ĐẦU VÀO BỘ ĐỀ C (B1): PHẦN NGHE 2 LẦN + 7 PHẦN NGỮ PHÁP · phiên Claude 4731ce42
+
+**Thầy giao:** bộ đề kiểm tra đầu vào trình độ cao hơn (B1) dựa đề giấy "A2 to B1 ENTRANCE" + một bài NGHE (mỗi PART nghe 2 lần rồi mới trả lời). Thầy duyệt bản nháp `D:\OTHERS\CLAUDE\Kiem tra dau vao - thiet ke\DE XUAT BO DE B1 v2.html` ⇒ "ok build".
+**Làm:** `kiemtra2.js` thêm loai `nghe` (màn nghe `ngheDoan` trong `lamBai`, tải trước blob mp3 `taiAm`, câu chọn TRANH `c.anh`, câu A/B/C một cột `k2-chon-doc`, câu gõ trong act quiz `go:true`), `kt.bo` lấy từ act; `kiemtra2.css` phần Đợt 510; tài nguyên `kiemtra2/nghe/` (4 mp3 ≈4,6 MB + 21 webp ≈0,2 MB). 8 act #562–569 + 8 bài giao — bảng mã ở `kiemtra2/GHI CHU KIEM TRA 2.md`.
+**Thử:** bàn thử `scratch/kiemtra3-thu.html` — bấm THẬT trọn phần nghe 4 PART (2 lần tự nối, tải lại giữa lúc nghe ⇒ nghe tiếp đúng chỗ + taiLai, hết giờ khi tải lại ⇒ sang câu sau), nộp: Part 2/3/4 chấm đúng, "4 a.m." nhận, "foriegn" sai; C7 trên khổ điện thoại 375 px; phép chấm 20 ca biến thể học sinh 0 lệch.
+**VIỆC ĐANG CHỜ:** ⬜ thầy thử thật trên điện thoại (âm thanh + tranh) sau khi phát bộ C cho một hồ sơ thử.
+
+---
+
 ## Đợt 509b (12/10/2026) — FIGHT + LIVES CHO 5 TEMPLATE CÒN LẠI (Anagram · True/false · Type the answer · Find the gap · Find the match) · phiên MSI
 
 **Thầy:** hỏi còn game nào giống Quiz (hết mạng là dừng cả trận) ⇒ Claude rà: 5 template Fight có Lives đều đi `finish(gameover)` ⇒ `onFinish` ⇒ kết cả trận. Không cần sửa: STAR LOOT (đã loại từng đội, `T.status = "dead"`, hết đội mới kết) · Rocket Race (hết mạng = nổ + đội kia THẮNG NGAY, luật thầy Đợt 354) · Train Rush (trận riêng không có Lives). Thầy: "Áp dụng luôn cho cả 5 game".

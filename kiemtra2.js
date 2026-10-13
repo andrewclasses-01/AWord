@@ -12,6 +12,11 @@
 //   Type the answer               : content.items[{ prompt, acceptedAnswers[], hinh?, so?, mot?, giay? }]
 //     so-nhieu: hinh = tên hình (kiemtra2/hinh/<hinh>.svg), mot = từ số ít ("rabbit"), so = số lượng hình bên phải (2/3/4).
 //   tri-nho: kiemTra.phim = "kiemtra2/phim/phim.js" (module taoPhim) — xem xong (không tua, không dừng) mới tới câu hỏi.
+//   ⭐ Đợt 510 (13/10/2026) — BỘ ĐỀ C (B1): 7 phần ngữ pháp (Type the answer, giờ từng câu) + loai 'nghe' (Quiz):
+//     kiemTra.doan = [{ ten:'PART 1', am:'p1.mp3' (kiemtra2/nghe/), giay, dan, form?[] }] · mỗi câu hỏi có `doan` (0..3),
+//     `anh` = 3 tên hình (kiemtra2/nghe/) cho câu chọn tranh, `go:true` + acceptedAnswers cho câu gõ (Part 3).
+//     Mỗi PART: nghe 2 LẦN (nghỉ 5 s giữa 2 lần, KHÔNG tua/dừng/nghe lại) ⇒ mới tới câu hỏi của PART đó ⇒ PART kế.
+//     Tải lại trang giữa lúc nghe ⇒ nghe TIẾP từ chỗ đang nghe (không nghe lại từ đầu), ghi taiLai.
 //
 // Luật làm bài (thầy chốt): mỗi câu có GIỜ riêng (thanh thời gian hiện cho em thấy, cam khi còn 1/3) · hết giờ tự sang câu sau
 //   (Type: lấy chữ đang có trong ô) · làm MỘT lần · không báo đúng/sai · tải lại trang ⇒ về đúng câu đang làm, đồng hồ của câu
@@ -56,6 +61,9 @@ function baoMe(trangThai, them) {
 }
 // tên hình an toàn ⇒ đường dẫn trong kho AWord (chỉ chữ thường, số, gạch ngang)
 const hinhUrl = ten => new URL("kiemtra2/hinh/" + String(ten || "").toLowerCase().replace(/[^a-z0-9-]/g, "") + ".svg", import.meta.url).href;
+// bài nghe + hình chọn tranh của phần NGHE (Đợt 510): chỉ tên file an toàn trong kiemtra2/nghe/
+const ngheUrl = ten => new URL("kiemtra2/nghe/" + String(ten || "").toLowerCase().replace(/[^a-z0-9.-]/g, ""), import.meta.url).href;
+let BO = "B";   // bộ đề của act (kiemTra.bo) — ghi vào review[0].kt
 function anh(ten, cls) {
   const i = h("img", cls || "k2-hinh");
   i.alt = ""; i.draggable = false; i.decoding = "async";
@@ -84,10 +92,18 @@ function cauTuAct(act, kt) {
   const g0 = Math.max(3, Math.min(120, +kt.giay || 10));
   const giay = x => Math.max(3, Math.min(180, +x || g0));
   if (act.type === "quiz") {
+    const nghe = kt.loai === "nghe";
     return (act.content && Array.isArray(act.content.questions) ? act.content.questions : [])
       .filter(q => q && q.question && Array.isArray(q.answers) && q.answers.some(a => a && a.correct))
-      .map(q => ({ kieu: "chon", de: String(q.question), hinh: q.hinh || "", chon: q.answers.map(a => String(a.text || "")),
-        dapDung: q.answers.findIndex(a => a && a.correct), giay: giay(q.giay) }));
+      .map(q => {
+        const c = { kieu: "chon", de: String(q.question), hinh: q.hinh || "", chon: q.answers.map(a => String(a.text || "")),
+          dapDung: q.answers.findIndex(a => a && a.correct), giay: giay(q.giay) };
+        if (!nghe) return c;
+        c.doan = Math.max(0, +q.doan || 0);
+        if (Array.isArray(q.anh) && q.anh.length === c.chon.length) c.anh = q.anh.map(String);
+        if (q.go && Array.isArray(q.acceptedAnswers) && q.acceptedAnswers.length) { c.kieu = "go"; c.dap = q.acceptedAnswers.map(String); }
+        return c;
+      });
   }
   return (act.content && Array.isArray(act.content.items) ? act.content.items : [])
     .filter(it => it && it.prompt && Array.isArray(it.acceptedAnswers) && it.acceptedAnswers.length)
@@ -149,6 +165,11 @@ async function start() {
   if (MA) sanVe(MA);
   // tải trước hình (câu có hình hiện ngay, không nháy trống giữa giờ)
   ds.concat(cauThu(kt, act)).forEach(c => { if (c.hinh) { const i = new Image(); i.src = hinhUrl(c.hinh); } });
+  BO = String(kt.bo || "B").toUpperCase().slice(0, 2);
+  if (kt.loai === "nghe") {   // Đợt 510: tải trước TOÀN BỘ bài nghe + hình chọn tranh (không khựng giữa lúc nghe trên điện thoại)
+    taiAm(kt);
+    ds.forEach(c => (c.anh || []).forEach(t => { const i = new Image(); i.src = ngheUrl(t); }));
+  }
 
   let xong = false;
   try { xong = localStorage.getItem(KHOA_XONG) === "1"; } catch (e) { /* thôi */ }
@@ -171,6 +192,35 @@ async function start() {
   manReady(act, kt, ds);
 }
 
+// ================= TẢI BÀI NGHE (Đợt 510) =================
+// Mỗi file tải MỘT lần thành blob trong bộ nhớ (≈1–1,5 MB/PART, 64 kbps) ⇒ phát không phụ thuộc mạng nữa.
+// Tải lỗi ⇒ dùng thẳng đường dẫn (trình duyệt tự tải dần) — vẫn nghe được, chỉ có thể khựng nếu mạng yếu.
+const AM = {};
+function taiAm(kt) {
+  (Array.isArray(kt.doan) ? kt.doan : []).forEach(d => {
+    if (!d || !d.am || AM[d.am]) return;
+    const o = AM[d.am] = { tl: 0, url: "" };
+    o.p = (async () => {
+      try {
+        const r = await fetch(ngheUrl(d.am));
+        if (!r.ok) throw new Error("tải " + r.status);
+        const tong = +r.headers.get("content-length") || 0;
+        let b;
+        if (tong && r.body && r.body.getReader) {
+          const rd = r.body.getReader(), khuc = [];
+          let co = 0;
+          for (;;) { const { done, value } = await rd.read(); if (done) break; khuc.push(value); co += value.length; o.tl = Math.min(.99, co / tong); }
+          b = new Blob(khuc, { type: "audio/mpeg" });
+        } else b = await r.blob();
+        o.url = URL.createObjectURL(b);
+      } catch (e) { o.url = ngheUrl(d.am); }
+      o.tl = 1;
+      return o.url;
+    })();
+  });
+}
+const tlTaiAm = () => { const v = Object.values(AM); return v.length ? v.reduce((t, o) => t + o.tl, 0) / v.length : 1; };
+
 // ================= READY + HƯỚNG DẪN =================
 const LOI_CHUNG = [
   "Mỗi câu có thời gian riêng — thanh màu dưới câu hỏi ngắn dần. Hết giờ máy TỰ sang câu sau.",
@@ -186,6 +236,7 @@ function manReady(act, kt, ds) {
   c.append(h("div", "kt-to", act.title || ""));
   const gMin = Math.min(...ds.map(x => x.giay)), gMax = Math.max(...ds.map(x => x.giay));
   c.append(h("div", "kt-phu", `${ds.length} câu · mỗi câu ${gMin === gMax ? gMin : gMin + "–" + gMax} giây`));
+  if (kt.loai === "nghe" && Array.isArray(kt.doan)) c.append(h("div", "kt-phu", `${kt.doan.length} PART nghe · mỗi PART nghe 2 lần rồi mới trả lời`));
   if (TEN) c.append(h("div", "kt-chao", `Chào ${TEN}!`));
   c.append(nut("READY", "kt-chinh kt-lon", () => { mocHd = Date.now(); huongDan(act, kt, ds); }));
   than.append(c);
@@ -205,7 +256,20 @@ function huongDan(act, kt, ds) {
   c.append(dan);
   const chan = h("div", "kt-chan");
   const thu = cauThu(kt, act);
-  if (kt.loai === "tri-nho") chan.append(nut("XEM PHIM ›", "kt-chinh kt-lon", () => { ghiHd(); xemPhim(act, kt, ds, null); }));
+  if (kt.loai === "nghe") {
+    // THỬ LOA: phát 3 giây đầu PART 1 (chỉ là lời giới thiệu "Part one") để em chỉnh âm lượng trước khi bắt đầu
+    const d0 = (kt.doan || [])[0];
+    const loa = nut("🔊 THỬ LOA", "kt-phu-btn", async () => {
+      if (!d0 || !AM[d0.am]) return;
+      loa.disabled = true;
+      const a = new Audio();
+      const xong = () => { try { a.pause(); } catch (e) { /* thôi */ } loa.disabled = false; };
+      try { a.src = await AM[d0.am].p; await a.play(); } catch (e) { return xong(); }
+      setTimeout(xong, 3200);
+    });
+    chan.append(loa, nut("BẮT ĐẦU LÀM BÀI", "kt-chinh kt-lon", () => { ghiHd(); lamBai(act, kt, ds, null); }));
+  }
+  else if (kt.loai === "tri-nho") chan.append(nut("XEM PHIM ›", "kt-chinh kt-lon", () => { ghiHd(); xemPhim(act, kt, ds, null); }));
   else if (thu.length) chan.append(nut("LÀM THỬ ›", "kt-chinh", () => { ghiHd(); lamThu(act, kt, ds, thu); }));
   else chan.append(nut("BẮT ĐẦU LÀM BÀI", "kt-chinh kt-lon", () => { ghiHd(); lamBai(act, kt, ds, null); }));
   c.append(chan);
@@ -330,11 +394,29 @@ function dungCau(c, { nhan, onChon }) {
     vung.append(hai);
   } else {
     if (c.hinh) { const o = h("div", "k2-o-hinh mot"); o.append(anh(c.hinh)); vung.append(o); }
-    vung.append(h("div", "kt-de-cau" + (c.hinh ? " k2-de-nho" : ""), c.de));
+    // Đợt 510: câu dài (viết lại câu, dịch, B1) chữ nhỏ hơn cho vừa màn điện thoại
+    vung.append(h("div", "kt-de-cau" + (c.hinh ? " k2-de-nho" : c.de.length > 70 ? " k2-de-dai" : c.de.length > 40 ? " k2-de-vua" : ""), c.de));
   }
   k.append(vung);
   const r = { k, o: null, nuts: [] };
-  if (c.kieu === "chon") {
+  if (c.kieu === "chon" && c.anh) {   // Đợt 510 — phần NGHE, PART 1: chọn 1 trong 3 TRANH (A/B/C)
+    const luoi = h("div", "k2-chon k2-chon-anh");
+    c.chon.forEach((txt, i) => {
+      const b = nut("", "k2-o-chon k2-o-anh", () => onChon && onChon(i, b));
+      const im = h("img"); im.alt = txt; im.draggable = false; im.src = ngheUrl(c.anh[i]);
+      b.append(im, h("span", "", txt));
+      luoi.append(b); r.nuts.push(b);
+    });
+    k.append(luoi);
+  } else if (c.kieu === "chon" && c.doan != null && c.chon.length > 2) {   // Đợt 510 — phần NGHE: A/B/C một cột, có chữ cái
+    const luoi = h("div", "k2-chon k2-chon-doc");
+    c.chon.forEach((txt, i) => {
+      const b = nut("", "k2-o-chon", () => onChon && onChon(i, b));
+      b.append(h("b", "", "ABCDEF"[i] + ". "), document.createTextNode(txt));
+      luoi.append(b); r.nuts.push(b);
+    });
+    k.append(luoi);
+  } else if (c.kieu === "chon") {
     const luoi = h("div", "k2-chon" + (c.chon.length === 2 ? " hai" : c.chon.length === 3 ? " ba" : ""));
     c.chon.forEach((txt, i) => {
       const b = nut(txt, "k2-o-chon", () => onChon && onChon(i, b));
@@ -538,12 +620,13 @@ function lamBai(act, kt, ds, s) {
   if (!THU_MAY || !window.__KT_THU) beatPlayLog(log()).catch(() => {});
   const nhip = setInterval(() => { if (!daNop) { luu(); if (!window.__KT_THU) beatPlayLog(log()).catch(() => {}); } }, 60000);
 
+  let ngheDang = false;   // Đợt 510: đang ở màn NGHE ⇒ rời trang tính vào s.nghe[d] (màn nghe tự đếm), không tính vào câu hỏi
   const onVis = () => {
-    if (daNop) return;
+    if (daNop || ngheDang) return;
     if (document.visibilityState === "hidden") { if (!anTu) { anTu = Date.now(); cau().roi++; } }
     else if (anTu) { cau().anMs += Date.now() - anTu; anTu = 0; luu(); }
   };
-  const onBlur = () => { if (!daNop && !matTu) { matTu = Date.now(); cau().mat++; } };
+  const onBlur = () => { if (!daNop && !ngheDang && !matTu) { matTu = Date.now(); cau().mat++; } };
   const onFocus = () => { if (matTu) { cau().matMs += Date.now() - matTu; matTu = 0; } };
   document.addEventListener("visibilitychange", onVis);
   window.addEventListener("blur", onBlur);
@@ -581,6 +664,10 @@ function lamBai(act, kt, ds, s) {
   }
 
   function ve() {
+    if (kt.loai === "nghe") {   // câu đầu của một PART chưa nghe xong ⇒ nghe trước (2 lần) rồi mới hỏi
+      const d = ds[s.i].doan || 0;
+      if (!(s.nghe && s.nghe[d] && s.nghe[d].xong)) return ngheDoan(d);
+    }
     const c = ds[s.i], st = cau();
     // mốc hết giờ: câu mới ⇒ đặt; tải lại trang ⇒ giữ mốc cũ (không được thêm giờ)
     if (!s.het || s.hetCau !== s.i) { s.het = Date.now() + c.giay * 1000; s.hetCau = s.i; }
@@ -588,7 +675,8 @@ function lamBai(act, kt, ds, s) {
     so.textContent = `${s.i + 1}/${ds.length}`;
     than.innerHTML = "";
     dangChuyen = false; choHet = false;
-    r = dungCau(c, { nhan: `CÂU ${s.i + 1}/${ds.length}`, onChon: (j, b) => chon(j, b) });
+    const tenDoan = kt.loai === "nghe" && Array.isArray(kt.doan) && kt.doan[c.doan || 0] ? kt.doan[c.doan || 0].ten + " · " : "";
+    r = dungCau(c, { nhan: `${tenDoan}CÂU ${s.i + 1}/${ds.length}`, onChon: (j, b) => chon(j, b) });
     const gioCho = h("div", "k2-gio-cho");
     r.k.insertBefore(gioCho, r.k.children[1] || null);
     nhacEl = h("div", "kt-nhac");
@@ -607,6 +695,128 @@ function lamBai(act, kt, ds, s) {
     luu();
   }
   const laCuoi = () => s.i === ds.length - 1;
+
+  // ---------- MÀN NGHE một PART (Đợt 510) ----------
+  // Nghe 2 lần liền (nghỉ 5 giây giữa 2 lần). Không có nút tua/dừng/nghe lại. Rời trang: tiếng vẫn chạy (trình duyệt tự dừng
+  // thì quay lại phát tiếp ngay, không bù). Vị trí đang nghe lưu trên máy ⇒ tải lại trang thì nghe TIẾP từ đó.
+  function ngheDoan(d) {
+    ngheDang = true;
+    gio && gio.dung();
+    r = null;   // ô gõ của câu trước không còn (onHide đừng chép chữ cũ sang câu đầu PART mới)
+    const D = (Array.isArray(kt.doan) && kt.doan[d]) || {};
+    s.nghe = s.nghe || {};
+    const n = s.nghe[d] = s.nghe[d] || { lan: 1, t: 0, xong: false, roi: 0, anMs: 0, taiLai: 0, ms: 0 };
+    if (n.daMo) n.taiLai++;
+    luu();
+    so.textContent = D.ten || "";
+    than.innerHTML = "";
+    const k = h("div", "kt-giua k2-nghe");
+    k.append(h("div", "kt-nhan", "PHẦN NGHE · " + (D.ten || "")));
+    const lanEl = h("div", "kt-to", "");
+    k.append(lanEl, h("div", "k2-nghe-dan", D.dan || ""));
+    if (Array.isArray(D.form) && D.form.length) {
+      const f = h("div", "k2-nghe-form");
+      D.form.forEach((x, i) => f.append(h("div", i ? "" : "k2-nghe-form-to", x)));
+      k.append(f);
+    }
+    const vach = h("div", "k2-gio k2-nghe-vach"), ruot = h("i"), soEl = h("span", "k2-gio-so");
+    vach.append(ruot, soEl);
+    const tt = h("div", "kt-phu", "");
+    const chan = h("div", "kt-nuts");
+    k.append(vach, tt, chan);
+    than.append(k);
+
+    if (!AM[D.am]) taiAm(kt);
+    const am = AM[D.am] || { tl: 1, url: ngheUrl(D.am), p: Promise.resolve(ngheUrl(D.am)) };
+    const a = new Audio();
+    a.preload = "auto";
+    let chay = false, moc = 0, anTu = 0, ghiLuc = 0, xongHet = false, hen = 0;
+    const dai = () => (isFinite(a.duration) && a.duration > 0 ? a.duration : (+D.giay || 120));
+    const viTri = () => (a.src ? a.currentTime : n.t) || 0;
+    function veLan() { lanEl.textContent = n.lan === 1 ? "🎧 Nghe lần 1" : "🎧 Nghe lần 2 (lần cuối)"; }
+    function veVach() {
+      ruot.style.width = (Math.min(1, viTri() / dai()) * 100).toFixed(1) + "%";
+      soEl.textContent = "Lần " + n.lan + "/2";
+      if (chay) tt.textContent = "Còn " + Math.max(0, Math.ceil(dai() - viTri())) + " giây — hãy tập trung nghe";
+    }
+    function dongHo() { if (chay) { n.ms += Date.now() - moc; moc = Date.now(); } }
+    function nutPhat(chu) {
+      chan.innerHTML = "";
+      const b = nut(chu, "kt-chinh kt-lon", () => { b.disabled = true; phat(); });
+      chan.append(b);
+    }
+    // ⛔ play() gọi NGAY trong cú bấm (src là blob đã tải sẵn) — chờ mạng trước đó thì điện thoại hết "lượt cho phép phát tiếng"
+    function phat() {
+      try {
+        if (!a.src) { a.src = am.url; if (n.t > 0) a.currentTime = n.t; }
+        const p = a.play();
+        chay = true; moc = Date.now(); n.daMo = true;
+        chan.innerHTML = ""; veVach(); luu();
+        if (p && p.catch) p.catch(() => { dongHo(); chay = false; nutPhat("▶ NGHE TIẾP"); });
+      } catch (e) { chay = false; nutPhat("▶ NGHE TIẾP"); }
+    }
+    a.addEventListener("loadedmetadata", () => { if (n.t > 0 && Math.abs(a.currentTime - n.t) > 1) { try { a.currentTime = n.t; } catch (e) { /* thôi */ } } veVach(); });
+    a.addEventListener("timeupdate", () => {
+      if (!chay) return;
+      n.t = a.currentTime; veVach();
+      if (Date.now() - ghiLuc > 2000) { ghiLuc = Date.now(); dongHo(); luu(); }
+    });
+    // trình duyệt / tai nghe tự dừng (không phải hết bài) ⇒ hiện nút nghe tiếp
+    a.addEventListener("pause", () => {
+      if (!chay || a.ended || xongHet) return;
+      if (document.visibilityState === "hidden") return;   // quay lại trang sẽ tự phát tiếp
+      dongHo(); chay = false; n.t = a.currentTime; luu();
+      nutPhat("▶ NGHE TIẾP");
+    });
+    a.addEventListener("ended", () => {
+      dongHo(); chay = false; n.t = 0;
+      if (n.lan === 1) {
+        n.lan = 2; luu(); veLan(); ruot.style.width = "0%";
+        let con = 5;
+        const dem = () => {
+          tt.textContent = `Chuẩn bị nghe lần 2... ${con}`;
+          if (con-- > 0) { hen = setTimeout(dem, 1000); return; }
+          try { a.currentTime = 0; } catch (e) { /* thôi */ }
+          phat();
+        };
+        dem();
+        return;
+      }
+      xongHet = true; n.xong = true; n.t = 0; luu();
+      donDep();
+      ruot.style.width = "100%";
+      lanEl.textContent = "Hết phần nghe " + (D.ten || "");
+      let con = 3;
+      const dem = () => {
+        tt.textContent = `Bây giờ là câu hỏi! ${con}`;
+        if (con-- > 0) { hen = setTimeout(dem, 1000); return; }
+        ngheDang = false;
+        ve();
+      };
+      dem();
+    });
+    const onVisN = () => {
+      if (document.visibilityState === "hidden") { if (!anTu) { anTu = Date.now(); n.roi++; luu(); } return; }
+      if (anTu) { n.anMs += Date.now() - anTu; anTu = 0; }
+      if (chay && a.paused && !a.ended) a.play().catch(() => { dongHo(); chay = false; n.t = a.currentTime; luu(); nutPhat("▶ NGHE TIẾP"); });
+      luu();
+    };
+    document.addEventListener("visibilitychange", onVisN);
+    function donDep() { document.removeEventListener("visibilitychange", onVisN); clearTimeout(hen); }
+
+    veLan(); veVach();
+    const chuNut = n.daMo ? (n.t > 0 ? "▶ NGHE TIẾP" : "▶ NGHE LẦN " + n.lan) : "▶ BẮT ĐẦU NGHE " + (D.ten || "");
+    const loiNut = n.daMo ? "Em nghe tiếp từ chỗ đang nghe (không nghe lại từ đầu được)." : "Bấm nút để bắt đầu nghe.";
+    if (am.url) { tt.textContent = loiNut; nutPhat(chuNut); }
+    else {
+      const cho2 = () => {
+        if (am.url) { tt.textContent = loiNut; return nutPhat(chuNut); }
+        tt.textContent = `Đang tải bài nghe... ${Math.round(tlTaiAm() * 100)}%`;
+        hen = setTimeout(cho2, 300);
+      };
+      cho2();
+    }
+  }
 
   async function chon(j, b) {
     if (daNop || dangChuyen) return;
@@ -745,11 +955,15 @@ function dungReview(ds, s, { doDang = false } = {}) {
       ms: Math.round(st.ms), giay: c.giay, ...(st.hetGio ? { hetGio: true } : {}),
       anMs: Math.round(st.anMs), roi: st.roi, mat: st.mat, matMs: Math.round(st.matMs), dan: st.dan, phim: st.phim,
       boQua: !yourText, ...(c.kieu === "chon" ? { chon: st.chon } : {}), ...(c.hinh ? { hinh: c.hinh } : {}),
-      ...(st.ghep ? { ghep: st.ghep } : {}), ...(st.tre ? { tre: st.tre } : {})
+      ...(st.ghep ? { ghep: st.ghep } : {}), ...(st.tre ? { tre: st.tre } : {}), ...(c.doan != null ? { doan: c.doan } : {})
     };
   });
+  // Đợt 510 — phần NGHE: mỗi PART nghe mấy lần / xong chưa / rời trang / tải lại / thời gian nghe
+  const nghe = s.nghe ? Object.fromEntries(Object.entries(s.nghe).map(([k, v]) => [k, {
+    lan: v.lan || 1, xong: !!v.xong, roi: v.roi || 0, anMs: Math.round(v.anMs || 0), taiLai: v.taiLai || 0, ms: Math.round(v.ms || 0) }])) : null;
   review[0].kt = {
-    bo: "B", taiLai: s.taiLai || 0, gioiThieuMs: Math.round(s.hdMs || 0), thuSai: s.thuSai || 0, thuMs: Math.round(s.thuMs || 0), thuHet: s.thuHet || 0,
+    ...(nghe ? { nghe } : {}),
+    bo: BO, taiLai: s.taiLai || 0, gioiThieuMs: Math.round(s.hdMs || 0), thuSai: s.thuSai || 0, thuMs: Math.round(s.thuMs || 0), thuHet: s.thuHet || 0,
     hetGio: s.ds.filter(x => x.hetGio).length, may: thietBi(),
     ...(s.phim ? { phim: { ms: Math.round(s.phim.ms || 0), roi: s.phim.roi || 0, anMs: Math.round(s.phim.anMs || 0), taiLai: s.phim.taiLai || 0, xong: !!s.phim.xong } } : {}),
     luotSo: 1, ...(doDang ? { doDang: true, dangCau: s.i + 1 } : {}), phienBan: 3
