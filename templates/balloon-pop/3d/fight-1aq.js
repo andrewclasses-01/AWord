@@ -1,3 +1,5 @@
+// TRAIN RUSH — TRẬN FIGHT MỘT MÀN mẫu 1aq (14/10/2026): như 1ap, lõi bp3d-1aq (tàu to hơn, khinh khí cầu nhỏ hơn, 2 tàu nâng lên chừa tiền cảnh,
+//   máy bay kéo băng bay thấp, thú đuổi nhau gần nhau 1/2).
 // TRAIN RUSH — TRẬN FIGHT MỘT MÀN mẫu 1ap (14/10/2026). Thầy duyệt bản phác thiet-ke-fight-1-man.html (2 vòng) rồi "ok build":
 //   • MỘT cảnh, 2 ray: TEAM 1 đỏ ray gần · TEAM 2 xanh ray xa (lõi bp3d-1ap.js, duo: true). Góc máy quay A.
 //   • Ô điểm đỏ / xanh = THANH GIỜ của màn: đầy = Time round (Options), rút khi đội còn chơi, DỪNG khi đội đầy toa (tàu PHÓNG đi).
@@ -11,7 +13,7 @@
 //     host = cầu AWord { listActs, openAct, options(ov) } (như 1ao) · padSignal = kho bắt tay iPad { write, listen } (myGame: localSignal)
 //   ⇒ api { destroy(), setOptions(o), start(), G, core, pad }
 // Hàng nút, bảng Thư mục / Mode / PAUSED / kết quả: như fight-1ao (CSS fight-1al + fight-1ao + fight-1ap).
-import { createBalloonPop, DUO_COLORS } from "./bp3d-1ap.js";
+import { createBalloonPop, DUO_COLORS } from "./bp3d-1aq.js";
 import { createBpSound } from "./sound-1ah.js";
 import { createPadHost } from "./tr-padlink-1ap.js";
 
@@ -128,7 +130,8 @@ export async function createTrainRushFight({ mount, words, wordsTitle = "", opti
       const L = core.padLayout(t), S0 = core.padState(t);
       if (!L || !S0) continue;
       if (padSent[t].lv !== L.v) { if (pad.raw(t, "l:" + JSON.stringify(L))) padSent[t].lv = L.v; }
-      pad.state(t, { ...S0, tl: Math.ceil(G.t[t].shown), tt: G.lvTime, out: G.t[t].out ? 1 : 0, sc: total(t), ph: G.phase, lvn: G.level + 1, mode: padMode });
+      pad.state(t, { ...S0, tl: Math.ceil(G.t[t].shown), tt: G.lvTime, out: G.t[t].out ? 1 : 0, sc: total(t), ph: G.phase, lvn: G.level + 1, mode: padMode,
+        os: total(1 - t), lvc: OPT.levelCount || 0, cd: G.phase === "count" ? G.cd || 0 : 0, bn: G.phase === "countup" ? Math.ceil(G.t[t].bonus || 0) : 0 });   // 1aq: iPad kiểu A — điểm đội bạn, LEVEL k/n, số đếm, thưởng giờ
     }
   }
   const padEvent = (t, e) => { if (pad && padMode !== "off") pad.event(t, e); };
@@ -181,9 +184,9 @@ export async function createTrainRushFight({ mount, words, wordsTitle = "", opti
     G.phase = "count";
     const ov = $(".fb-ov-count"), num = $(".fb-count");
     ov.hidden = false;
-    let n = 3; num.textContent = n; snd.count(3);
+    let n = 3; G.cd = 3; num.textContent = n; snd.count(3);   // 1aq: G.cd gửi iPad
     const tick = () => {
-      n--;
+      n--; G.cd = n;
       if (n > 0) { num.textContent = n; snd.count(n); later(tick, 700); return; }
       num.textContent = "GO!"; snd.count(0); snd.music("play", 1.2);
       core.applyOpt(OPT);

@@ -35,6 +35,9 @@
 //     Mặc định LEVELS 5 · TIME ROUND 2 phút. KHOÁ MỚI trLevelCount (0–20) · trRound (0 Off · 1–10 · 11 = ∞) — KHÔNG dùng lại trLevels
 //     (nghĩa cũ = Max cars) hay timer (nghĩa cũ = giờ cả ván). Act chưa có khoá mới ⇒ trRound suy từ timer cũ (None ⇒ Off, Count up ⇒ ∞,
 //     Count down ⇒ số phút, kẹp 1–10); trLevelCount ⇒ 5.
+// ⭐ Đợt 517 (thầy 14/10/2026 — myGame 1aq, thầy thử 1ap): Fight 1 màn chỉnh cỡ — tàu TO hơn, khinh khí cầu NHỎ hơn, 2 tàu nâng lên chừa đất +
+//   cỏ tiền cảnh, máy bay kéo băng điểm bay THẤP (giữa 2 ray), thú đuổi nhau gần nhau 1/2. Single y hệt (lõi ./3d/bp3d-1aq.js, nhánh không duo).
+//   iPad vẽ lại kiểu A "Miền Tây hoàng hôn" (pad.js ⇒ 3d/tr-padui-1aq.js); game gửi thêm điểm đội bạn · số màn · số đếm · thưởng giờ.
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
@@ -261,7 +264,7 @@ const balloonPopTemplate = {
     function single() {
       const my = ++tok;
       drop();
-      import("./3d/bp3d-1ap.js")
+      import("./3d/bp3d-1aq.js")
         .then(m => m.createBalloonPop({
           mount: h.box, view: "side", words, wordsTitle: activity.title || "", options: trGame(activity), host,
           onEvent: (k, d) => { if (k === "mode" && d === "fight") switchTo(toFight); }
@@ -272,7 +275,7 @@ const balloonPopTemplate = {
     function toFight() {
       const my = ++tok;
       drop();
-      Promise.all([import("./3d/fight-1ap.js"), trPadLink()])
+      Promise.all([import("./3d/fight-1aq.js"), trPadLink()])
         .then(([m, L]) => {
           if (dead || my !== tok) { L.release(); return null; }
           link = L;
@@ -330,7 +333,7 @@ function mountTrainRushFight(root, act, { single, home }) {
   let poll = 0;   // Đợt 451 — chờ trận dựng xong (ô Loading… ẩn) rồi mới mờ màn chờ
   const obs = new MutationObserver(() => { if (root.childNodes.length) off(); });
   obs.observe(root, { childList: true });
-  Promise.all([import("./3d/fight-1ap.js"), trPadLink()])   // Đợt 487: host {} ⇒ ẩn Thư mục / Options (đường engine không có cầu ui.host)
+  Promise.all([import("./3d/fight-1aq.js"), trPadLink()])   // Đợt 487: host {} ⇒ ẩn Thư mục / Options (đường engine không có cầu ui.host)
     .then(([m, L]) => {
       if (dead) { L.release(); return null; }
       link = L;

@@ -546,6 +546,31 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 517 (14/10/2026) — TRAIN RUSH FIGHT 1 MÀN CHỈNH CỠ + MÀN iPAD KIỂU A "MIỀN TÂY HOÀNG HÔN"
+
+**Thầy thử Đợt 515 (14/10) ⇒ 5 ý:** (1) máy bay kéo băng điểm bay quá cao, không nhìn rõ ⇒ hạ thấp · (2) thú đuổi nhau xa nhau ⇒ còn 1/2 ·
+(3) 2 tàu sát mép dưới, chật ⇒ nâng lên, chừa đất + cỏ tiền cảnh trước tàu đỏ · (4) tàu to hơn, khinh khí cầu nhỏ hơn · (5) màn iPad xấu ⇒ thiết kế lại để duyệt.
+Làm ở myGame **1aq** (`f1d8750`, `bb3a0ab`; hồ sơ myGame `balloon-pop/NGHIEN CUU GAMEPLAY.md` mục 41). Bản phác iPad `thiet-ke-ipad-1aq.html` 3 kiểu × 9 màn
+⇒ thầy chọn **A Miền Tây hoàng hôn** (dặn: bánh xe đang quay ngược ⇒ sửa) + "chờ iPad xong, lên AWord 1 lần".
+
+- `tools/chep-train-rush.py`: GOC `fight-1aq.js` · GOC_THEM `tr-padui-1aq.js` ⇒ `3d/` nay bp3d-1aq · fight-1aq · west-world-1aq · animals-1aq · sign-chase-1aq · tr-padui-1aq
+  (bỏ 1ap/1ah cũ; NGUON.json = myGame `bb3a0ab`). Lõi 1aq (chỉ Fight; Single y hệt): tàu ×0,86 (cũ 0,74) · khinh khí cầu ×0,66 (cũ 0,84) · máy quay nhìn thấp
+  hơn (look y 5,7 → 3,7) + làn bay hạ · máy bay băng điểm y 9,6 z −5 (giữa 2 ray; cũ y 13,4 sát mép trên) · cặp thú đuổi nhau khoảng hở × 0,5.
+- `templates/balloon-pop/balloon-pop.js`: Single `./3d/bp3d-1aq.js` · Fight (toFight + ownFight) `./3d/fight-1aq.js`.
+- `pad.js`: `trMods` ⇒ `3d/tr-padui-1aq.js` — màn chơi kiểu A (trời chiều, núi đỏ thị sai, đầu máy hơi nước chi tiết, bánh quay ĐÚNG chiều, toa gỗ bảng
+  định nghĩa viền màu đội, khinh khí cầu vỏ vải màu đội, thùng nghiêng theo vật lý, thanh gỗ: đội · LEVEL k/n + thanh giờ · điểm đội bạn · điểm mình,
+  thẻ bảng truy nã GET READY / 3-2-1 / TIME'S UP / YOU WIN + 2 điểm, dải TRAIN FULL / LEVEL COMPLETE +thưởng / GET READY LEVEL n) · `showTRChooser` ⇒
+  `mountTrainChooser` (màn chọn đội vẽ cùng kiểu; đội đã có iPad ghi "● iPad already connected", chạm chỉ báo).
+  Game gửi thêm cho iPad: `os` điểm đội bạn · `lvc` số màn · `cd` số đếm · `bn` thưởng giờ · góc nghiêng thùng.
+
+**Đã kiểm (worktree web-wt-dot517, `scratch/dot517-tr.html?padsig=local` + `pad.html?padsig=local`, 14/10):** Single mở màn chờ TRAIN RUSH (lõi 1aq) ·
+Mode ▸ Fight ⇒ trận 1 màn · pad.html ⇒ màn chọn đội kiểu A ⇒ chạm THẬT TEAM 2 ⇒ nối "on" ⇒ START ⇒ iPad thấy tàu xanh #2 + bảng định nghĩa + quả BAR ⇒
+chạm THẬT quả BAR ⇒ thùng rơi đúng toa trên màn lớn (0:5) ⇒ iPad "TRAIN FULL!" · 0 lỗi console 2 tab. myGame (2 tab) đã chạy đủ: GET READY ⇒ chơi ⇒
+LEVEL COMPLETE thưởng giờ ⇒ màn 2 (LV.2, toa than) ⇒ End game ⇒ YOU WIN 112 : 93.
+⬜ thầy thử TOMKO + 2 iPad thật.
+
+---
+
 ## Đợt 516 (14/10/2026) — QUICK ACCESS KHÔNG KHUNG (kiểu B nền nhạt) · THƯ MỤC CHỈ ICON + TÊN · ACT THẤP "LOẠI / TÊN" · CHUỘT PHẢI / GIỮ THAY ⁝
 
 Thầy duyệt mẫu `D:\OTHERS\CLAUDE\myLesson - thiet ke khung explorer\mau-v5.html` (đi cặp myLesson app v2.163.0 — khung Explorer dùng cùng kiểu cột).

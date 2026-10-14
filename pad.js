@@ -21,6 +21,9 @@
 //   ⇒ iPad này mở CẢNH 2D của đội đã nhớ (aw.ipadTeam — chung với STAR LOOT / Rocket Race): tàu + khinh khí cầu của RIÊNG đội, khớp màn lớn,
 //   chạm quả = quả đó nổ trên màn lớn (templates/balloon-pop/3d/tr-padui-1ap.js, chép myGame). Bắt tay: templates/balloon-pop/tr-pad-signal.js.
 //   Chưa chọn đội ⇒ màn chọn đội chung. Đội đã có iPad ⇒ iPad sau báo "TEAM x already has an iPad" (như Rocket Race Đợt 514).
+// ⭐ Đợt 517 (thầy 14/10/2026) — màn iPad TRAIN RUSH vẽ lại kiểu A "Miền Tây hoàng hôn" (thầy chọn từ bản phác myGame thiet-ke-ipad-1aq.html):
+//   3d/tr-padui-1aq.js — mountTrainPad (tàu hơi nước chi tiết, bánh quay đúng chiều, khinh khí cầu màu đội, thanh gỗ LEVEL k/n + giờ + điểm 2 đội,
+//   thẻ bảng truy nã) + mountTrainChooser (màn chọn đội cùng kiểu, thay khung HTML Đợt 515).
 // =============================================================
 
 import { onUser, signIn } from "./core/firebase.js";
@@ -90,7 +93,7 @@ async function showRRChooser() {
   rrBusyOff = S.rrPadSignal().listen("host", d => ch.setBusy([d && d.sid ? +d.c0 || 0 : 0, d && d.sid ? +d.c1 || 0 : 0]));
 }
 // ⭐ Đợt 515 — cảnh 2D TRAIN RUSH (Fight 1 màn) cho đội `team`
-const trMods = () => Promise.all([import("./templates/balloon-pop/3d/tr-padui-1ap.js"), import("./templates/balloon-pop/tr-pad-signal.js")]);
+const trMods = () => Promise.all([import("./templates/balloon-pop/3d/tr-padui-1aq.js"), import("./templates/balloon-pop/tr-pad-signal.js")]);   // Đợt 517: kiểu A
 async function showTR(team) {
   note.hidden = true;
   if (view === "tr" + team) return;
@@ -121,8 +124,14 @@ async function showTRChooser() {
   note.hidden = true;
   stopPad(); view = "chooser";
   history.replaceState(null, "", urlWith("pad.html", null));
-  let S; try { [, S] = await trMods(); } catch (e) { showNote("Could not load", "Check the network and reload this page.", { bad: true }); return; }
+  let U, S; try { [U, S] = await trMods(); } catch (e) { showNote("Could not load", "Check the network and reload this page.", { bad: true }); return; }
   if (view !== "chooser") return;
+  if (U.mountTrainChooser) {   // Đợt 517: màn chọn đội vẽ kiểu A (canvas); `tr` giữ nó ⇒ stopPad dỡ
+    tr = U.mountTrainChooser(padEl, { cur: savedTeam(), onPick: t => { saveTeam(t); manual = false; apply(true); } });
+    rrBusyOff = S.trPadSignal().listen("host", d => tr && tr.setBusy && tr.setBusy([d && d.sid ? +d.c0 || 0 : 0, d && d.sid ? +d.c1 || 0 : 0]));
+    window.__padtr = tr;   // bàn thử
+    return;
+  }
   const cur = savedTeam(), T = [["TEAM 1", "#e2402f"], ["TEAM 2", "#2f7fe2"]];
   padEl.innerHTML = `<div style="position:fixed;inset:0;display:grid;place-content:center;gap:22px;text-align:center;background:#120c07;color:#f6e6c4;font-family:'Baloo 2',system-ui,sans-serif">
     <h2 style="margin:0;font:400 clamp(24px,4.4vw,40px) Rye,serif;color:#ffd98a">TRAIN RUSH · CHOOSE YOUR TEAM</h2>

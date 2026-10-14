@@ -1,3 +1,5 @@
+// 1aq (14/10/2026): createChase(scene, hook, { gapK }) — thầy: "các con vật đuổi nhau hơi xa nhau, gần bằng 1/2" ⇒ Fight 1 màn gapK 0,5
+//   (khoảng hở mõm con đuổi ↔ đuôi con trốn + tốc độ giãn ra đều nhân gapK). Còn lại y hệt 1ah.
 // CON VẬT — bản 1ag (30/9/2026), thầy: "quá nhiều con vật trên mặt đất":
 //  • Mặt đất tại một lúc: TỐI ĐA 1 cặp đuổi nhau (cặp dải xa HOẶC cặp húc chữ — west-world-1ag điều phối) + TỐI ĐA 2 con ra xem tàu
 //    (đàn ra xem ≤ 2 con; con húc chữ tính vào suất này). Trên trời giữ nguyên.
@@ -806,9 +808,9 @@ const BIG = ["elephant", "cow", "camel", "horse"];
 // Luật: con TRƯỚC luôn nhanh hơn (con đuổi chậm hơn 0,3 m/s ⇒ khoảng cách chỉ giãn) · khoảng hở mõm con sau ↔ đuôi con trước ≥ 2,5 m
 // · các con đi cùng một đường lượn (con sau đi lại đúng vết con trước, trễ theo khoảng cách) · con đuổi lệch 1,3 về phía máy quay.
 // Sinh ra và xoá đi đều NGOÀI khung hình của máy quay thật (setCamera).
-export function createChase(scene, hook = null) {
+export function createChase(scene, hook = null, { gapK = 1 } = {}) {   // 1aq: gapK = hệ số khoảng hở (Fight 1 màn: 0,5)
   let C = null, t = 0, wait = 10 + Math.random() * 10, cam = null;
-  const Z = -118, GAP = 2.5, SLOWER = 0.3;
+  const Z = -118, GAP = 2.5 * gapK, SLOWER = 0.3 * gapK;
   const V3 = new THREE.Vector3(), BOX = new THREE.Box3();
   const dustTex = (() => { const c = document.createElement("canvas"); c.width = c.height = 64; const x = c.getContext("2d"), gr = x.createRadialGradient(32, 32, 2, 32, 32, 31); gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.5, "rgba(255,255,255,.45)"); gr.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); return t; })();
   const puffs = [];
@@ -845,7 +847,7 @@ export function createChase(scene, hook = null) {
     // xếp hàng dọc theo hướng chạy: con đầu đàn ở 0, mỗi con sau cách con trước (đuôi trước + mõm sau + khoảng hở)
     const all = [...preys, chaser]; let off = 0;
     all.forEach((A, i) => {
-      if (i > 0) { const P = all[i - 1]; off += P.tailX + A.nose + (A === chaser ? GAP + 1 + Math.random() * 2 : 1.2 + Math.random() * 1.5); }
+      if (i > 0) { const P = all[i - 1]; off += P.tailX + A.nose + (A === chaser ? GAP + (1 + Math.random() * 2) * gapK : 1.2 + Math.random() * 1.5); }
       A.off = off; A.zo = A === chaser ? 1.3 : (i % 2 ? -1.6 : 0.4);   // con đuổi lệch về phía máy quay
     });
     // 1ag: chọn đường xa→gần mà 3 điểm giữa đường đều THẤY RÕ (không khuất sau đồi/đụn cát chữ)

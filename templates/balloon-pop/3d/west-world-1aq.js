@@ -1,3 +1,4 @@
+// Cảnh viễn tây — bản 1aq (14/10/2026): như 1ap + { chaseGap } (Fight 1 màn 0,5: thú đuổi nhau gần nhau hơn — animals-1aq / sign-chase-1aq).
 // Cảnh viễn tây — bản 1ap (14/10/2026): như 1an + createWestWorld(scene, renderer, { tracks: [0, −10] }) — NHIỀU đường ray cố định
 //   (Fight 1 màn: TEAM 1 ray gần z 0, TEAM 2 ray xa). Cỏ/đá/mô đất tránh lòng mọi ray. Mặc định [0] = y hệt 1an.
 // ---- ghi chú 1an: Cảnh viễn tây — bản 1an (05/10/2026): như 1ah + hết khựng khi khúc cảnh MỌC LẠI saguaro giữa ván.
@@ -52,8 +53,8 @@ import { mergeGeometries } from "../../rocket-race/vendor/three/addons/BufferGeo
 import * as P from "./west-props-1ag.js";
 import { DUNE_GLSL, DUNES, DUNE_N } from "./dune-1z.js";
 import { nearMoundKit } from "./near-mounds-1v.js";
-import { createFarAnimals, createSignCharger, createChase, groundBaseHeight } from "./animals-1ah.js";
-import { createSignChase } from "./sign-chase-1ah.js";
+import { createFarAnimals, createSignCharger, createChase, groundBaseHeight } from "./animals-1aq.js";
+import { createSignChase } from "./sign-chase-1aq.js";
 import { makeBunchKit, GRASS_STYLES } from "./bunchgrass-1n.js";
 
 export const SUN_DIR = new THREE.Vector3(-0.32, 0.13, -0.94).normalize();
@@ -100,7 +101,7 @@ float groundH(vec2 w){
   return duneApply(hills + mid + near, w);   /* 1x: đụn cát đỡ chữ */
 }`;
 
-export function createWestWorld(scene, renderer, { tracks = [0] } = {}) {
+export function createWestWorld(scene, renderer, { tracks = [0], chaseGap = 1 } = {}) {   // 1aq: chaseGap — khoảng hở thú đuổi nhau
   const TRACKS = tracks.slice();   // 1ap: z các đường ray (Fight 1 màn: [0, −10])
   const rnd = mulberry(11);
   const N = makeNoise(5);
@@ -456,12 +457,12 @@ export function createWestWorld(scene, renderer, { tracks = [0] } = {}) {
   };
   const animals = createFarAnimals(scene, hillMat, hook);
   const charger = createSignCharger(scene, signs);
-  const chase = createChase(scene, hook);
+  const chase = createChase(scene, hook, { gapK: chaseGap });
   let viewCam = null; const _fr = new THREE.Frustum(), _pm = new THREE.Matrix4(), _bx = new THREE.Box3();   // 1ag
   { const knock0 = signs.knock, _gp = new THREE.Vector3();   // 1ah: chữ bị húc ⇒ gãy gỗ + chữ nặng đổ xuống cát
     signs.knock = i => { const ok = knock0(i); const sg = signs.current(); const m = sg && sg.userData.glyphs[i];
       if (ok && m && sfxW) { m.getWorldPosition(_gp); sfxW.knock(camD(_gp.x, _gp.y, _gp.z)); } return ok; }; }
-  const signChase = createSignChase(scene, signs, hook);   // 1w: cặp thú đuổi nhau trên gờ chữ — chạy vòng quanh chữ / húc đổ chữ
+  const signChase = createSignChase(scene, signs, hook, { gapK: chaseGap });   // 1w: cặp thú đuổi nhau trên gờ chữ — chạy vòng quanh chữ / húc đổ chữ
   const flocks = P.createBirdFlocks(scene);
 
   // ------------------------------------------------------------ dựng

@@ -1,3 +1,4 @@
+// 1aq (14/10/2026): createSignChase(..., { gapK }) — khoảng hở con đuổi ↔ con trốn nhân gapK (Fight 1 màn 0,5); dùng animals-1aq.
 // THÚ ĐUỔI NHAU TRÊN GỜ CHỮ — bản 1ag (30/9/2026): CHỈ kiểu "húc" (chạy phía TRƯỚC dãy chữ, húc đổ một chữ) — bỏ kiểu "vòng" chạy ra
 // SAU chữ (bị khuất; thầy: con vật phải luôn nhìn rõ). Chỉ sinh khi west-world cho phép (1 cặp đuổi nhau trên mặt đất một lúc).
 // (1x: dùng animals-1x — chạy trên đụn cát)
@@ -8,13 +9,13 @@
 //  · "húc": chạy dọc phía trước, con chạy trốn ngoặt gấp va vào một chữ ⇒ chữ đổ (bụi tung), loạng choạng rồi chạy tiếp.
 // Chữ đổ nằm một lát rồi tự dựng lại (west-props-1w).
 import * as THREE from "../../rocket-race/vendor/three/three.module.min.js";
-import { buildReal, animateReal } from "./animals-1ah.js";
+import { buildReal, animateReal } from "./animals-1aq.js";
 
 const PAIRS = [["pronghorn", "lioness"], ["horse", "wolf"], ["pronghorn", "wolf"], ["horse", "lioness"], ["pig", "wolf"]];   // [chạy trốn, đuổi]
 const K = 1.6;                     // phóng to (xa ~230 đơn vị)
 const FRONT = 14.4, BACK = 10.0;   // làn chạy trước / sau dãy chữ (toạ độ trong nhóm bảng chữ; chữ ở z ≈ 12)
 
-export function createSignChase(scene, signs, hook = null) {
+export function createSignChase(scene, signs, hook = null, { gapK = 1 } = {}) {   // 1aq: gapK như createChase
   let C = null, t = 0, wait = 5 + Math.random() * 5;
   const puffs = [];
   const dustTex = (() => { const c = document.createElement("canvas"); c.width = c.height = 64; const x = c.getContext("2d"), gr = x.createRadialGradient(32, 32, 2, 32, 32, 31); gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.5, "rgba(255,255,255,.45)"); gr.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
@@ -25,7 +26,8 @@ export function createSignChase(scene, signs, hook = null) {
       puffs.push({ sp, t: 0, life: 1 + Math.random() * 0.8, s0: (0.8 + Math.random() * 0.6) * s, vx: (Math.random() - 0.5) * 1.5, vy: 0.5 + Math.random() * 0.8 });
     }
   }
-  const mk = kind => { const A = buildReal(kind); A.g.scale.multiplyScalar(K); A.g.rotation.order = "YZX"; scene.add(A.g); return A; };
+  const mk = kind => { const A = buildReal(kind); A.g.scale.multiplyScalar(K); A.g.rotation.order = "YZX"; scene.add(A.g);
+    const bx = new THREE.Box3().setFromObject(A.g); A.nose = bx.max.x; A.tailX = -bx.min.x; return A; };   // 1aq: mõm / đuôi (đo khoảng hở)
   const kill = () => { for (const A of [C.prey, C.chaser]) { scene.remove(A.g); A.g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); } C = null; };
 
   // đường chạy (toạ độ trong nhóm bảng chữ) theo quãng đường s
@@ -93,7 +95,8 @@ export function createSignChase(scene, signs, hook = null) {
       }
       place(C.prey, px, pz, dt, sp, "pd");
       // con đuổi: bám theo đường của con chạy trốn, lúc áp sát lúc bị bỏ lại
-      const gap = 5 + 2.5 * Math.sin(C.t * 0.7 + 1);
+      const raw = 5 + 2.5 * Math.sin(C.t * 0.7 + 1), body = C.prey.tailX + C.chaser.nose;
+      const gap = gapK === 1 ? raw : body + Math.max(0.4, raw - body) * gapK;   // 1aq: thu KHOẢNG HỞ (không thu thân con vật ⇒ không chồng lên nhau)
       let [cx, cz] = path(Math.max(0, C.s - gap));
       if (C.mode === "bump" && C.hit && C.hit.done) cz = FRONT + 0.6;   // né chữ đổ
       place(C.chaser, cx, cz, dt, C.s - gap > 0 ? sp * (C.stagger > 0 ? 3 : 1) : 0, "cd");
