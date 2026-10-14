@@ -23,9 +23,9 @@ import json, os, re, shutil, subprocess, sys
 SRC = r"E:/LAP TRINH APP/myGame/balloon-pop"
 WEB = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DST = os.path.join(WEB, "templates", "balloon-pop")
-GOC = "fight-1ar.js"   # Đợt 518: 1ar — iPad hết giật · Đợt 517: 1aq — Fight chỉnh cỡ (tàu to, khinh khí cầu nhỏ, máy bay thấp, tiền cảnh, thú gần) + màn iPad kiểu A · Đợt 515: 1ap — FIGHT MỘT MÀN 2 tàu song song + iPad + Options LEVELS/TIME ROUND (Single cũng dùng lõi bp3d-1ap) · Đợt 487: 1ao — hàng nút Fight y hệt Single + cầu host cho Fight · Đợt 477: 1an — 60 khung phẳng (chốt trần, ghim shader, kho saguaro) · Đợt 475: 1am — tự giữ 60 khung + dịch sẵn shader (TOMKO 36 → 59 fps) · Đợt 452: 1al — khung + nút Rocket Race, Options = bảng thật của AWord (host.options) · Đợt 450: 1ak
+GOC = "fight-1as.js"   # Đợt 519: 1as — điểm ngay, thùng trượt, iPad mượt hơn · Đợt 518: 1ar — iPad hết giật · Đợt 517: 1aq — Fight chỉnh cỡ (tàu to, khinh khí cầu nhỏ, máy bay thấp, tiền cảnh, thú gần) + màn iPad kiểu A · Đợt 515: 1ap — FIGHT MỘT MÀN 2 tàu song song + iPad + Options LEVELS/TIME ROUND (Single cũng dùng lõi bp3d-1ap) · Đợt 487: 1ao — hàng nút Fight y hệt Single + cầu host cho Fight · Đợt 477: 1an — 60 khung phẳng (chốt trần, ghim shader, kho saguaro) · Đợt 475: 1am — tự giữ 60 khung + dịch sẵn shader (TOMKO 36 → 59 fps) · Đợt 452: 1al — khung + nút Rocket Race, Options = bảng thật của AWord (host.options) · Đợt 450: 1ak
 CSS = ["bp3d.css", "bp3d-1j.css", "bp3d-1p.css", "bp3d-1q.css", "bp3d-1r.css", "bp3d-1ab.css", "fight-cine-1ae.css", "fight-1al.css", "bp3d-1al.css", "fight-1ao.css", "fight-1ap.css"]
-GOC_THEM = ["tr-padui-1ar.js"]   # Đợt 518: hết giật · Đợt 517: màn iPad kiểu A Miền Tây (+ màn chọn đội mountTrainChooser) · Đợt 515: màn iPad (pad.html nạp) — không nằm trong cây import của GOC
+GOC_THEM = ["tr-padui-1as.js"]   # Đợt 519 · Đợt 518: hết giật · Đợt 517: màn iPad kiểu A Miền Tây (+ màn chọn đội mountTrainChooser) · Đợt 515: màn iPad (pad.html nạp) — không nằm trong cây import của GOC
 SOUND = "sound-1ah"
 VENDOR = "../../rocket-race/vendor/three"
 FONT_CDN = "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/fonts/helvetiker_bold.typeface.json"

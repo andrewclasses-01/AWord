@@ -264,7 +264,7 @@ const balloonPopTemplate = {
     function single() {
       const my = ++tok;
       drop();
-      import("./3d/bp3d-1ar.js")
+      import("./3d/bp3d-1as.js")
         .then(m => m.createBalloonPop({
           mount: h.box, view: "side", words, wordsTitle: activity.title || "", options: trGame(activity), host,
           onEvent: (k, d) => { if (k === "mode" && d === "fight") switchTo(toFight); }
@@ -275,7 +275,7 @@ const balloonPopTemplate = {
     function toFight() {
       const my = ++tok;
       drop();
-      Promise.all([import("./3d/fight-1ar.js"), trPadLink()])
+      Promise.all([import("./3d/fight-1as.js"), trPadLink()])
         .then(([m, L]) => {
           if (dead || my !== tok) { L.release(); return null; }
           link = L;
@@ -333,7 +333,7 @@ function mountTrainRushFight(root, act, { single, home }) {
   let poll = 0;   // Đợt 451 — chờ trận dựng xong (ô Loading… ẩn) rồi mới mờ màn chờ
   const obs = new MutationObserver(() => { if (root.childNodes.length) off(); });
   obs.observe(root, { childList: true });
-  Promise.all([import("./3d/fight-1ar.js"), trPadLink()])   // Đợt 487: host {} ⇒ ẩn Thư mục / Options (đường engine không có cầu ui.host)
+  Promise.all([import("./3d/fight-1as.js"), trPadLink()])   // Đợt 487: host {} ⇒ ẩn Thư mục / Options (đường engine không có cầu ui.host)
     .then(([m, L]) => {
       if (dead) { L.release(); return null; }
       link = L;

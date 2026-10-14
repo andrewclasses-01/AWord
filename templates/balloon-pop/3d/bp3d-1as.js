@@ -1,3 +1,5 @@
+// TRAIN RUSH — lõi MẪU 1as (14/10/2026): như 1ar + (thầy) thùng đúng chạm toa là TÍNH ĐIỂM NGAY · thùng sắp chạm toa giữ đà NHANH HƠN tàu (SLIDE_V) ⇒
+//   chạm xong còn trượt tới trước rồi ma sát mới dừng (trần theo chỗ trống tới mép trước toa) · padState gửi số hiệu thùng (iPad làm mượt).
 // TRAIN RUSH — lõi MẪU 1ar (14/10/2026): như 1aq + padState gửi thêm giờ game `t` và vận tốc thùng (thầy: thùng trên iPad giật ngang).
 // TRAIN RUSH — lõi MẪU 1aq (14/10/2026): thầy thử Fight 1 màn 1ap ⇒ 4 ý (CHỈ duo; bản đơn y hệt 1ap):
 //   1) máy bay kéo băng điểm bay THẤP (VIEWS.duo.plane = [y 9,6, z −5] giữa 2 ray; 1ap bay y 13,4 sát mép trên) ·
@@ -137,6 +139,7 @@ const ASPECT = 16 / 10.5;                       // đúng khung act đơn của 
 const PALETTE = [0x7a1a14, 0x1d4a2f, 0x1f3a6b, 0x4a1d3a, 0x2a2a2c, 0x16404a, 0x6b3a12, 0x243d5c, 0x5a2a14, 0x3d5a1f];
 const CART_W = 6.2, CART_GAP = 0.45, CART_PITCH = CART_W + CART_GAP, ENGINE_LEN = 6.4, TENDER_LEN = 3.4;
 const HEAD = ENGINE_LEN / 2 + CART_GAP + TENDER_LEN + CART_GAP;   // từ tâm đầu máy tới đầu toa hàng thứ nhất
+const SLIDE_V = 2.6, SLIDE_DEC = 4;                               // 1as: thùng sắp chạm toa nhanh hơn tàu SLIDE_V (m/s) ⇒ trượt tới, giảm tốc đều SLIDE_DEC (m/s²) rồi dừng
 const TS0 = 0.74, BS0 = 0.84, RAIL_TOP = 0.62;                    // tỉ lệ tàu, tỉ lệ khinh khí cầu, mặt ray (bản đơn)
 export const DUO_TS = 0.86, DUO_BS = 0.66;                        // 1aq: Fight 1 màn — tàu TO hơn, khinh khí cầu NHỎ hơn (thầy 14/10)
 const ROOF_Y = 3.72, CRATE = 1.5, CRATE_W = 2.9, GRAV = 15;
@@ -173,7 +176,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   const opt = { ...DEFAULTS, guide: V.guide, ...options };
   const timed = () => !duo && opt.roundMin >= 1 && opt.roundMin <= 10;   // 1ap: thanh giờ màn (Single) — Fight 1 màn do trang Fight giữ giờ
   const countUp = () => !duo && opt.roundMin >= 11;                      // 1ap: ∞ = đồng hồ đếm lên
-  let blimpSeq = 0;   // 1ap: số hiệu khinh khí cầu (iPad bấm theo số)
+  let blimpSeq = 0, crateSeq = 0;   // 1as: crateSeq — số hiệu thùng (iPad làm mượt theo từng thùng)   // 1ap: số hiệu khinh khí cầu (iPad bấm theo số)
   // 1ac: hạt giống chung ⇒ 2 bàn Fight cùng thứ tự từ / toa phụ / làn bay (phần trang trí vẫn ngẫu nhiên)
   const rnd = seed != null ? mulberry(seed) : Math.random;
   const shuffleR = (a, r = rnd) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -853,7 +856,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     body.quaternion.setFromEuler((Math.random() - 0.5) * 0.06, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.2);   // nghiêng chủ yếu dọc đoàn tàu (thùng hẹp theo bề ngang toa, dễ lật khỏi toa)
     body.angularVelocity.set((Math.random() - 0.5) * 0.25, (Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 1.0);
     body.allowSleep = false;
-    const c = { mesh, body, label, word, team, key: norm(word), onTrain: false, judged: false, kicked: false, settle: 0, thudT: 0, nudgeT: 0, touch: new Set(), lostT: 0, rig: S };   // 1ap: thùng thuộc bộ đội nào
+    const c = { id: ++crateSeq, mesh, body, label, word, team, key: norm(word), onTrain: false, judged: false, kicked: false, settle: 0, thudT: 0, nudgeT: 0, touch: new Set(), lostT: 0, rig: S };   // 1ap: thùng thuộc bộ đội nào
     body.userData = { crate: c };
     // sự kiện "collide" của cannon-es dùng lại 1 đối tượng ⇒ chép ngay các giá trị cần (vận tốc va chạm tính TRƯỚC khi giải)
     body.addEventListener("collide", e => { const eq = e.contact; contactQ.push({ c, other: e.body, shape: eq.bi === e.body ? eq.si : eq.sj, imp: Math.abs(eq.getImpactVelocityAlongNormal()) }); });
@@ -895,7 +898,11 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
       // thùng gỗ cứng tiếp đất: chỉ trượt + lắc RẤT nhẹ theo quán tính còn lại
       c.body.collisionFilterGroup = 3;   // đã nằm trên tàu: khinh khí cầu bay sát sẽ húc phải
       const v = c.body.velocity, tv = S.trainVel;
-      v.x = tv + Math.max(-1.3, Math.min(1.3, (v.x - tv) * 0.6)) + (Math.random() - 0.5) * 0.6;   // 1j: cú chạm bằng góc thùng không biến thành cú văng ngang quá mạnh v.z *= 0.5;   // xê dịch thêm chút theo hướng ngẫu nhiên
+      // 1as: đà TỚI (nhanh hơn tàu) giữ ~90 % để trượt; trần theo chỗ còn trống tới mép trước toa (ma sát μ 0,5 ⇒ hãm 7,5 m/s²) — không trượt rơi khỏi toa
+      const ex = v.x - tv;
+      if (car || ex > 0) { let cap = 2.6;   // 1as: chạm toa đáp án ⇒ LUÔN trượt tới (kể cả thùng tới chậm hơn tàu) if (car) { const front = S.train.position.x + (car.localX + car.len / 2) * TS, room = front - (c.body.position.x + CRATE_W * TS / 2) - 0.15; cap = Math.sqrt(2 * SLIDE_DEC * Math.max(0, room)); }
+        const e2 = Math.min(Math.max(ex * 0.9, SLIDE_V * 0.75), cap); v.x = tv + e2; if (e2 > 0.2) c.slide = { ex: e2, t: 0 }; }   // trượt: updateCrates giữ giảm tốc đều (ma sát vật lý hãm quá gắt — đo trượt chỉ 0,06)
+      else v.x = tv + Math.max(-1.3, ex * 0.6) + (Math.random() - 0.5) * 0.6;   // 1j: cú chạm bằng góc thùng không biến thành cú văng ngang quá mạnh v.z *= 0.5;   // xê dịch thêm chút theo hướng ngẫu nhiên
       const w = c.body.angularVelocity, kk = Math.min(1, imp / 9);
       w.x = w.x * 0.5 + (Math.random() - 0.5) * 0.5 * kk; w.y *= 0.7; w.z = Math.max(-2.6, Math.min(2.6, w.z * 0.6 + (Math.random() - 0.5) * 3 * kk));   // chúi, lắc nhẹ
       sfx.thud(); startle(c.body.position.x);
@@ -904,6 +911,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     if (!c.judged && car && S.state === "play") {
       c.judged = true;
       if (car.key !== c.key) { wrongCrate(c); kick(c, 1); }   // thầy chốt 29/9: thùng SAI văng khỏi toa như Wordwall
+      else if (!c.scoredCart) scoreCart(car, c);              // 1as (thầy): chạm đúng toa là TÍNH ĐIỂM NGAY (trước: chờ thùng nằm yên 0,3 s)
     }
   }
   function kick(c, strength) {
@@ -966,8 +974,15 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
       if (!c.onTrain && !c.kicked && b.velocity.y < 0 && S.train) {
         // sắp chạm nóc toa: đà ngang ngược chiều tàu (quán tính khinh khí cầu) giảm dần ⇒ chạm toa chỉ nảy + xê dịch, không lật văng
         const car = S.cars.find(k => !k.pruned && Math.abs(S.train.position.x + k.localX * TS - p.x) <= k.len * TS / 2 + 0.6);
-        if (car && p.y - (RAIL_TOP + car.roof * TS) < 2.8) { const k = Math.exp(-dt * 7); b.velocity.x = S.trainVel + (b.velocity.x - S.trainVel) * k; }
+        // 1as (thầy): KHÔNG hãm hết đà — giữ thùng NHANH HƠN tàu một chút (SLIDE_V) ⇒ chạm toa còn trượt tới trước rồi ma sát mới dừng
+        if (car && p.y - (RAIL_TOP + car.roof * TS) < 2.8) { const k = Math.exp(-dt * 7), want = S.trainVel + SLIDE_V; b.velocity.x = want + (b.velocity.x - want) * k; }
       }
+      if (c.slide) {   // 1as: đang trượt trên nóc toa — tốc độ hơn tàu giảm đều SLIDE_DEC rồi dừng (quãng ≈ ex² / 2·SLIDE_DEC)
+        c.slide.t += dt; c.slide.ex = Math.max(0, c.slide.ex - SLIDE_DEC * dt);
+        if (!c.onTrain || c.kicked || c.slide.ex <= 0 || c.slide.t > 1.2) c.slide = null; else b.velocity.x = S.trainVel + c.slide.ex;
+      }
+      if (c.onTrain && !c.kicked && !c.slide && c.scoredCart && Math.abs(b.velocity.x - S.trainVel) < 1.2 && Math.abs(b.velocity.y) < 0.6)
+        b.velocity.x += (S.trainVel - b.velocity.x) * Math.min(1, dt * 12);   // 1as: thùng đúng đã yên BÁM tàu khi tàu tăng tốc sang toa kế (ma sát hãm không kịp ⇒ tụt lùi); húc mạnh (> 1,2) vẫn văng
       if (c.onTrain && !c.kicked) {
         // nóc toa hẹp theo bề ngang: giữ thùng không trôi ra mép trước/sau (bập bênh rồi lật) — chỉ nảy/xê dịch dọc toa
         b.velocity.z = b.velocity.z * Math.exp(-dt * 6) - (p.z - S.z) * dt * 6;   // 1ap: giữa nóc toa của ray đội mình
@@ -999,7 +1014,15 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
         c.lostT = away ? c.lostT + dt : 0;
         if (c.lostT > (p.y < 2.2 ? 0 : 0.6)) unscore(c);
       }
+      if (sc && sc.hold > 0) {   // 1as: thùng đã yên trên toa (hết trượt, không nảy) ⇒ thả tàu sớm
+        sc.hold -= dt;
+        if (!c.slide && c.onTrain && Math.hypot(b.velocity.x - S.trainVel, b.velocity.y) < 0.3) sc.hold = Math.min(sc.hold, 0.08);
+      }
       if (p.x < S.camX - S.HALF - 14 || p.y < -5) { removeCrate(c); S.crates.splice(i, 1); }
+    }
+    if (S.clearPend) {   // 1as
+      if (S.state !== "play" || !levelFull()) S.clearPend = false;
+      else if (!S.carts.some(k => k.hold > 0)) { S.clearPend = false; levelClear(); }
     }
   }
   function unscore(c) {
@@ -1033,6 +1056,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     const gain = S.x2 > 0 ? 10 : 5;
     if (!cart.filled) { cart.crate = c.mesh; cart.crateObj = c; }
     cart.filled = true; c.scoredCart = cart; c.gain = gain;
+    cart.hold = 0.9;   // 1as: điểm NGAY, nhưng tàu / máy quay / qua màn đợi thùng trượt xong (≤ 0,9 s) — tàu lao tới toa kế khi thùng còn nảy ⇒ thùng tụt lùi
     if (S.x2 > 0) { S.x2--; if (!S.x2) clockEl.classList.remove("is-x2"); }
     addScore(gain, c.team);
     if (share) claim(cart, c.team);
@@ -1042,7 +1066,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     S.deck = [];
     updateHud();
     if (duo) onEvent("hit", { team: S.team, ok: true });   // 1ap: iPad kêu / rung
-    if (S.state === "play" && levelFull()) levelClear();
+    if (S.state === "play" && levelFull()) S.clearPend = true;   // 1as: qua màn khi thùng cuối đã yên (updateCrates)
   }
   // 1ac: cộng/trừ điểm — share thì vào điểm đội, còn lại vào điểm bàn
   function addScore(d, team) {
@@ -1470,7 +1494,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
       let v = 0;
       if (duo) {
         if (st === "intro" || st === "play") {
-          const cur = S.carts.find(c => !c.filled);
+          const cur = S.carts.find(c => !c.filled || c.hold > 0);   // 1as: toa vừa có điểm vẫn là đích tới khi thùng yên
           const want = cur ? S.camX - cur.localX * TS + ENGINE_LEN / 2 * TS : S.trainX;   // mũi đầu máy để toa chờ đúng giữa màn
           const K = 1.1, a = K * K * (want - S.trainX) + 2 * K * (S.camV - S.trainV);
           S.trainV = Math.max(S.camV * 0.25, Math.min(30, S.trainV + a * dt));   // không bao giờ chạy lùi
@@ -1652,7 +1676,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   function updateCamera(dt) {
     let tv = 0;   // vận tốc của đích (toa đang chờ chạy theo tàu)
     if (S.train && S.state === "play") {
-      const cur = S.carts.find(c => !c.filled);
+      const cur = S.carts.find(c => !c.filled || c.hold > 0);   // 1as
       if (cur) {
         // đích chưa tới (toa chờ mới còn ở phía sau): máy quay ĐỨNG CHỜ tàu chạy tới; tới rồi thì bám theo.
         // Chỉ khi một toa TRƯỚC bị mở lại (thùng đúng rơi mất) mới lia ngược về.
@@ -2037,7 +2061,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
         x: R.train ? r2(R.train.position.x) : null, tv: r2(R.trainV), st: R.state, sc: R.score, lv: R.layoutV || 0, ps: SH.paused ? 1 : 0,
         f: R.carts.map(c => (c.filled ? 1 : 0)).join(""), bv: r2(withRig(R, blimpV)),
         b: R.blimps.filter(b => !b.leaving).map(b => [b.id, r2(b.x), r2(b.y), b.word || "", b.bonus || ""]),
-        c: R.crates.filter(c => !c.removed && c.body).map(c => { const q = c.body.quaternion; return [r2(c.body.position.x), r2(c.body.position.y), c.word, c.kicked ? 1 : 0, r2(2 * Math.atan2(q.z, q.w)), r2(c.body.velocity.x), r2(c.body.velocity.y)]; }) };   // 1aq: + góc nghiêng · 1ar: + vận tốc (iPad cho thùng chạy theo tàu giữa 2 tin)
+        c: R.crates.filter(c => !c.removed && c.body).map(c => { const q = c.body.quaternion; return [r2(c.body.position.x), r2(c.body.position.y), c.word, c.kicked ? 1 : 0, r2(2 * Math.atan2(q.z, q.w)), r2(c.body.velocity.x), r2(c.body.velocity.y), c.id]; }) };   // 1as: + số hiệu thùng   // 1aq: + góc nghiêng · 1ar: + vận tốc (iPad cho thùng chạy theo tàu giữa 2 tin)
     },
     popById(team, id) {
       const R = RIGS[team]; if (!R || R.state !== "play" || SH.paused) return false;

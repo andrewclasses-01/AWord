@@ -1,4 +1,6 @@
-// TRAIN RUSH 1ar (14/10/2026) — = 1aq + hết giật (ghi chú 1ar bên dưới). ---- 1aq: MÀN iPAD KIỂU A "MIỀN TÂY HOÀNG HÔN". Thầy duyệt bản phác thiet-ke-ipad-1aq.html (3 kiểu) ⇒ chọn A,
+// TRAIN RUSH 1as (14/10/2026) — = 1ar + LÀM MƯỢT CHỖ NỐI: tin mới tới mà vị trí đoán lệch vị trí đang vẽ ⇒ không nhảy, bù phần lệch rồi
+//   tan dần trong ~0,12 s; Wi-Fi khựng tới 0,6 s vẫn đoán tiếp (1ar dừng ở 0,25 s ⇒ đứng hình rồi nhảy) (theo từng vật: máy quay, tàu, mỗi khinh khí cầu, mỗi thùng — game 1as gửi số hiệu thùng); game gửi 30 tin/giây.
+// ---- 1ar (14/10/2026) — = 1aq + hết giật (ghi chú 1ar bên dưới). ---- 1aq: MÀN iPAD KIỂU A "MIỀN TÂY HOÀNG HÔN". Thầy duyệt bản phác thiet-ke-ipad-1aq.html (3 kiểu) ⇒ chọn A,
 // dặn: bánh xe phải quay ĐÚNG CHIỀU (tàu chạy sang phải ⇒ bánh quay xuôi chiều kim đồng hồ).
 //   • Cảnh 2D của RIÊNG đội mình: trời chiều + núi đỏ 2 lớp thị sai + bụi/xương rồng + đường ray tà vẹt + cỏ tiền cảnh; đầu máy hơi nước vẽ
 //     chi tiết (nồi hơi, ống khói, đèn, gạt bò, buồng lái, bánh có nan + thanh truyền), toa than LV.n, toa hàng gỗ có bảng định nghĩa viền
@@ -101,25 +103,41 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
   const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) { /* */ } };
   const roofX = () => (P ? P.cx : 0);
 
-  const client = createPadClient({ signal, team: team ? 1 : 0,
-    onState: s => { link = s; },
-    onLayout: d => { L = d; },
-    onInfo: d => { if (d.mode && d.x === undefined) { St = { ...(St || {}), mode: d.mode, ph: d.ph }; return; }
+  function onInfo(d) {
+      if (d.mode && d.x === undefined) { St = { ...(St || {}), mode: d.mode, ph: d.ph }; return; }
+      if (St && St.t != null && d.t != null && d.t < St.t) return;   // 1as: tin cũ tới muộn ⇒ bỏ
       const nowS = performance.now() / 1000;
+      const before = clk != null ? predict(St, nowS + clk) : null;   // 1as: vị trí đang vẽ (theo tin cũ)
       if (d.t != null) {   // 1ar: độ lệch giờ game − giờ iPad; lấy đường bao trên (tin ít trễ nhất), trôi chậm xuống để theo kịp lệch đồng hồ
         const off = d.t - nowS;
         if (clk == null || off > clk || off < clk - 1.5) clk = off; else clk += (off - clk) * 0.01;
       }
       if (stat.lastAt) { const g = (nowS - stat.lastAt) * 1000; stat.gaps.push(g); if (stat.gaps.length > 60) stat.gaps.shift(); }
       stat.lastAt = nowS;
-      St = { ...d, at: performance.now() }; popped = new Set([...popped].filter(id => d.b && d.b.some(b => b[0] === id))); },
-    onEvent: e => {
+      St = { ...d, at: performance.now() };
+      if (before && clk != null) {   // 1as: phần lệch giữa tin cũ và tin mới ⇒ cộng vào độ bù, tan dần khi vẽ
+        const after = predict(St, nowS + clk), keep = new Map();
+        for (const [key, n] of after) {
+          const o = before.get(key); if (!o) continue;
+          const pv = sm.get(key) || [0, 0], ox = pv[0] + o[0] - n[0], oy = pv[1] + o[1] - n[1];
+          if (Math.abs(ox) < 1.5 && Math.abs(oy) < 1.5) keep.set(key, [ox, oy]);   // lệch lớn = dịch chuyển thật (màn mới…) ⇒ không bù
+        }
+        sm.clear(); for (const [key, v] of keep) sm.set(key, v);
+      }
+      popped = new Set([...popped].filter(id => d.b && d.b.some(b => b[0] === id)));
+  }
+  function onEvent(e) {
       if (e === "ok") { flash = { ok: true, t: 0 }; fx.push({ type: "ok", x: roofX(), y: (L ? L.roof : 3.8) + 2.4, t: 0, text: "+5" }); beep(880, 0.15); beep(1320, 0.18, "sine", 0.12); buzz(40); }
       else if (e === "wrong") { flash = { ok: false, t: 0 }; fx.push({ type: "bad", x: roofX(), y: (L ? L.roof : 3.8) + 2.4, t: 0, text: "✗" }); beep(180, 0.25, "square", 0.12); buzz([60, 40, 60]); }
       else if (e === "done") { beep(660, 0.2); beep(990, 0.3); buzz(80); }
       else if (e === "out") { beep(140, 0.5, "sawtooth", 0.14); buzz(300); }
       else if (e === "win" || e === "lose" || e === "draw") endEv = e;
-    } });
+  }
+  const client = createPadClient({ signal, team: team ? 1 : 0,
+    onState: s => { link = s; },
+    onLayout: d => { L = d; },
+    onInfo: d => { if (window.__trpadLag > 0) setTimeout(() => onInfo(d), Math.random() * window.__trpadLag); else onInfo(d); },   // bàn thử: window.__trpadLag = giả lập Wi-Fi trễ thất thường (ms)
+    onEvent });
 
   function fit() {
     const r = el.querySelector(".trp").getBoundingClientRect(), pr = Math.min(2, window.devicePixelRatio || 1);   // đo chính màn iPad (phủ cả màn) — ô chứa AWord #pad cao 0
@@ -129,10 +147,21 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
   fit();
   window.addEventListener("resize", fit);
 
+  // 1as: đoán vị trí mọi vật của trạng thái s ở giờ game g (để đo phần lệch khi tin mới tới)
+  const sm = new Map(), Z0 = [0, 0], so = key => sm.get(key) || Z0;
+  function predict(s, g) {
+    const out = new Map(); if (!s || s.cx == null || s.t == null) return out;
+    const dt = Math.max(0, Math.min(0.6, g - s.t)) * (s.ps ? 0 : 1);
+    out.set("cam", [s.cx + s.cv * dt, 0]);
+    if (s.x != null) out.set("tr", [s.x + s.tv * dt, 0]);
+    for (const b of s.b || []) out.set("b" + b[0], [b[1] + (s.cv - s.bv) * dt, b[2]]);
+    for (const c of s.c || []) if (c[7] != null) out.set("c" + c[7], [c[0] + (c[5] || 0) * dt, c[1] + (c[6] || 0) * dt - (c[6] ? 7.5 * dt * dt : 0)]);
+    return out;
+  }
   // vị trí hiện tại (đẩy tiếp theo vận tốc kể từ lần nhận trạng thái)
   function now() {
     if (!St || St.x == null) return St && St.cx != null ? { cx: St.cx, x: null, bdx: 0, dt: 0 } : null;
-    const dt = Math.max(0, Math.min(0.25, St.t != null && clk != null ? performance.now() / 1000 + clk - St.t : (performance.now() - St.at) / 1000)) * (St.ps ? 0 : 1);   // 1ar: theo giờ game
+    const dt = Math.max(0, Math.min(0.6, St.t != null && clk != null ? performance.now() / 1000 + clk - St.t : (performance.now() - St.at) / 1000)) * (St.ps ? 0 : 1);   // 1ar: theo giờ game
     return { cx: St.cx + St.cv * dt, x: St.x + St.tv * dt, bdx: (St.cv - St.bv) * dt, dt };
   }
   const X = wx => W / 2 + (wx - P.cx) * ppu, Y = wy => GY - (wy - rail()) * ppu;
@@ -363,13 +392,15 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     const lanes = L && L.lanes ? L.lanes : [7.2, 8.6, 10.0];
     ppu = (H - HEAD) / ((lanes[2] + BH / 2 + 0.7) - (rail() - 1.5)); GY = H - 1.5 * ppu;
     hits = [];
-    P = now() || { cx: P ? P.cx : 0, x: null, bdx: 0 };
+    { const f = Math.exp(-dt / 0.12); for (const v of sm.values()) { v[0] *= f; v[1] *= f; } }   // 1as: độ bù tan dần
+    const P0 = now(); if (P0) P0.cx += so("cam")[0];
+    P = P0 || { cx: P ? P.cx : 0, x: null, bdx: 0, dt: 0 };
     backdrop(); track();
     const st = St ? St.st : "", ph = St ? St.ph : "";
     const live = St && (ph === "play" || ph === "countup" || ph === "between" || ph === "over");
     if (live && L && P.x != null && st !== "gone" && st !== "attract" && st !== "ready") {
-      for (const [id, x, y, word, bonus] of St.b || []) if (!popped.has(id)) blimp(id, x + P.bdx, y, word, bonus);
-      const ox = P.x, filled = St.f || "", waitIdx = filled.indexOf("0");
+      for (const [id, x, y, word, bonus] of St.b || []) if (!popped.has(id)) { const o = so("b" + id); blimp(id, x + P.bdx + o[0], y + o[1], word, bonus); }
+      const ox = P.x + so("tr")[0], filled = St.f || "", waitIdx = filled.indexOf("0");
       // khói ống khói (toạ độ thế giới)
       smokeT -= dt; if (smokeT <= 0) { smokeT = 0.11; smoke.push({ x: ox + L.eng * 0.33, y: roof() + 0.9, t: 0, vx: (St.tv || 0) - 2.4, s: 0.35 + Math.random() * 0.2 }); }
       let ai = 0;
@@ -380,8 +411,8 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
       }
       tender(ox - L.eng / 2 - L.gap - L.ten / 2); engine(ox);
       if (St.out) { ctx.fillStyle = "rgba(60,60,70,.45)"; ctx.fillRect(0, Y(roof() + 1.2), W, Y(rail() - 0.3) - Y(roof() + 1.2)); }
-      for (const [x, y, word, kicked, rot, vx = 0, vy = 0] of St.c || []) if (!kicked) crate(x + vx * P.dt, Math.max(roof() - 2, y + vy * P.dt - 7.5 * P.dt * P.dt * (vy !== 0 ? 1 : 0)), word, rot);   // 1ar: đẩy tiếp theo vận tốc
-    } else if (live && St) for (const [id, x, y, word, bonus] of St.b || []) if (!popped.has(id)) blimp(id, x + P.bdx, y, word, bonus);
+      for (const [x, y, word, kicked, rot, vx = 0, vy = 0, id] of St.c || []) if (!kicked) { const o = so("c" + id); crate(x + vx * P.dt + o[0], Math.max(roof() - 2, y + vy * P.dt - 7.5 * P.dt * P.dt * (vy !== 0 ? 1 : 0) + o[1]), word, rot); }   // 1ar: đẩy tiếp theo vận tốc · 1as: + độ bù
+    } else if (live && St) for (const [id, x, y, word, bonus] of St.b || []) if (!popped.has(id)) { const o = so("b" + id); blimp(id, x + P.bdx + o[0], y + o[1], word, bonus); }
     effects(dt);
     header();
     // lời nhắc / dải / thẻ theo trạng thái
@@ -444,7 +475,7 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     }
   });
   return {
-    get state() { return { link, St, L, clk, stat }; },
+    get state() { return { link, St, L, clk, stat, sm }; },
     get hits() { return hits; },   // bàn thử: vùng chạm khinh khí cầu (toạ độ canvas)
     tap(id) { const h = hits.find(q => q.id === id); if (!h) return false; const r = cv.getBoundingClientRect();   // bàn thử: chạm THẬT (pointerdown) vào giữa quả
       cv.dispatchEvent(new PointerEvent("pointerdown", { clientX: r.left + h.x / cv.width * r.width, clientY: r.top + h.y / cv.height * r.height, bubbles: true })); return true; },

@@ -1,3 +1,4 @@
+// TRAIN RUSH — Fight 1 màn mẫu 1as (14/10/2026): như 1ar, lõi bp3d-1as (điểm ngay khi chạm, thùng trượt), gửi iPad 30 lần/giây.
 // TRAIN RUSH — Fight 1 màn mẫu 1ar (14/10/2026): như 1aq, lõi bp3d-1ar (iPad hết giật: giờ game + vận tốc thùng).
 // TRAIN RUSH — TRẬN FIGHT MỘT MÀN mẫu 1aq (14/10/2026): như 1ap, lõi bp3d-1aq (tàu to hơn, khinh khí cầu nhỏ hơn, 2 tàu nâng lên chừa tiền cảnh,
 //   máy bay kéo băng bay thấp, thú đuổi nhau gần nhau 1/2).
@@ -14,7 +15,7 @@
 //     host = cầu AWord { listActs, openAct, options(ov) } (như 1ao) · padSignal = kho bắt tay iPad { write, listen } (myGame: localSignal)
 //   ⇒ api { destroy(), setOptions(o), start(), G, core, pad }
 // Hàng nút, bảng Thư mục / Mode / PAUSED / kết quả: như fight-1ao (CSS fight-1al + fight-1ao + fight-1ap).
-import { createBalloonPop, DUO_COLORS } from "./bp3d-1ar.js";
+import { createBalloonPop, DUO_COLORS } from "./bp3d-1as.js";
 import { createBpSound } from "./sound-1ah.js";
 import { createPadHost } from "./tr-padlink-1ap.js";
 
@@ -77,7 +78,7 @@ const MARKUP = `
 const COLORS = DUO_COLORS;
 const keyOf = w => String(w.keyword).trim().toUpperCase().replace(/\s+/g, " ");
 const shuf = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-const PAD_HZ = 20;   // trạng thái xuống iPad mỗi giây
+const PAD_HZ = 30;   // trạng thái xuống iPad mỗi giây (1as: 20 ⇒ 30 cho mượt)
 
 export async function createTrainRushFight({ mount, words, wordsTitle = "", options = {}, onSingle = null, onHome = null, host = null, padSignal = null, padMode = "both", onPad = null }) {
   // onPad({ mode, linked: [s0, s1] }) — AWord: báo khi đổi chế độ iPad / iPad nối-rời (claim ipad_now: iPad đi theo game, hold khi có iPad nối)

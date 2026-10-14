@@ -546,6 +546,21 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 519 (14/10/2026) — TRAIN RUSH: ĐIỂM NGAY KHI CHẠM · THÙNG TRƯỢT TỚI · iPAD MƯỢT HƠN NỮA
+
+**Thầy thử Đợt 518:** iPad "tốt hơn rất nhiều nhưng vẫn hơi giật nhẹ" · "thùng xác định được vị trí là tính điểm luôn (đang delay)" · "đoạn cuối trước khi chạm tàu
+thùng bị giảm lực văng — cần trượt thêm một chút như tốc độ thùng cao hơn tàu, rồi do ma sát mới dừng". myGame **1as** (`a2f6808`, hồ sơ mục 43):
+- Điểm NGAY khi thùng đúng chạm toa đúng (trước chờ nằm yên 0,3 s; đo trễ 0 ms). Tàu / máy quay / qua màn đợi thùng trượt xong (≤ 0,9 s) — không thì tàu lao tới
+  toa kế lúc thùng còn nảy, thùng tụt lùi. Thùng đúng đã yên bám tàu khi tàu tăng tốc.
+- Thùng sắp chạm giữ nhanh hơn tàu 2,6 m/s; chạm toa ⇒ trượt tới, giảm tốc đều 4 m/s², không trượt quá mép trước toa (đo 0,3–0,8 đơn vị). Áp cho CẢ Single.
+- iPad (`3d/tr-padui-1as.js`): 30 tin/giây · tin mới lệch vị trí đang vẽ ⇒ bù rồi tan dần 0,12 s · Wi-Fi khựng tới 0,6 s vẫn đoán tiếp (trước 0,25 s ⇒ đứng hình
+  rồi nhảy) · bỏ tin cũ tới muộn. Đo với Wi-Fi giả trễ 0–350 ms: cú nhảy lớn nhất 12,4 px → 2,5 px.
+- `tools/chep-train-rush.py` GOC fight-1as / tr-padui-1as · `balloon-pop.js` + `pad.js` ⇒ 1as.
+- Đã kiểm: bàn thử Single lõi 1as (điểm trễ 0 ms, trượt 0,78), mô-đun Fight + iPad 1as nạp được, 0 lỗi console; myGame đo đủ cả Fight 2 đội + iPad.
+⬜ thầy thử lại TOMKO + iPad thật.
+
+---
+
 ## Đợt 518 (14/10/2026) — TRAIN RUSH: iPAD HẾT GIẬT
 
 **Thầy thử Đợt 517 trên iPad thật:** "cứ giật giật, hộp thả xuống kể cả khi nằm trên tàu rồi vẫn giật 2 bên theo chiều ngang — do hạ tầng hay do game?"
