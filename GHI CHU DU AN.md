@@ -546,6 +546,29 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 516 (14/10/2026) — QUICK ACCESS KHÔNG KHUNG (kiểu B nền nhạt) · THƯ MỤC CHỈ ICON + TÊN · ACT THẤP "LOẠI / TÊN" · CHUỘT PHẢI / GIỮ THAY ⁝
+
+Thầy duyệt mẫu `D:\OTHERS\CLAUDE\myLesson - thiet ke khung explorer\mau-v5.html` (đi cặp myLesson app v2.163.0 — khung Explorer dùng cùng kiểu cột).
+- **Cột Quick access** (`quickAccess()`): KHÔNG còn hộp trắng — nền nhạt `#f3f7fc` kéo dài từ dưới thanh công cụ tới hết trang
+  (`.aw-lib > .aw-fm-body` + `.aw-fm-withqa` giãn, `align-items: stretch`) + MỘT nét mảnh dọc `#d7e0ec` ở mép phải (`.aw-qa::after`).
+  Ruột nằm trong `.aw-qa-in` DÍNH trên cùng (`position: sticky; max-height: 100vh`) khi cuộn lưới dài. Dòng đang đứng = viên trắng.
+  Recent nằm ngay dưới ghim (bỏ `margin-top:auto`). Cột 214 px, cách lưới 22 px.
+- **Thẻ thư mục (lưới)**: bỏ khung — chỉ icon 2 lớp `FOLDER_CARD_SVG` (theo màu thư mục) + tên dưới; số act | thư mục con VẪN trên icon
+  (thầy chọn). Danh sách (list view) giữ hàng ngang như cũ.
+- **Thẻ act (`actCard`, kiểu A thầy chốt v4)**: khối màu TRÊN = LOẠI act, dải trắng DƯỚI = TÊN act (≤ 2 dòng khi chật); bỏ xem trước nội dung.
+  LOẠI đọc từ tên act "<bài> / <loại>" (`loaiCuaAct`): WORDS · QUIZ · FIND THE GAP · TRUE FALSE · FILLING · RD QUIZ (= READING QUIZ),
+  bỏ số đầu "1. ". ⛔ Mọi game WORDS chỉ ghi WORDS (không ghi template). Act không có "/" (BT1. … ngữ pháp) ⇒ tên template, màu xám.
+  Bấm thẻ = chơi (`playAct`; trước đây chỉ nút ▶ giữa thẻ chơi được) — ▶ nhỏ góc dưới hiện khi rê chuột / luôn hiện trên màn cảm ứng.
+- **Bỏ nút ⁝** ở thẻ thư mục + act: `attachContextMenu(card, itemsFn)` — chuột phải (cả màn cảm ứng Windows/Android: giữ = `contextmenu`)
+  + GIỮ 0,55 s cho iPad/iPhone (Safari không bắn `contextmenu`); hai đường gác nhau bằng `_menuLuc`; mở bằng giữ thì NUỐT cú bấm sau đó.
+  Menu mở tại con trỏ (`openMenuAt`), `openMenu` nay kéo menu vào trong màn khi sát đáy/mép phải. Thẻ bài giao (Results) vẫn giữ ⁝.
+- Lưới thư viện act gọn hơn: `.aw-fm-grid.is-gon` (`minmax(clamp(112px, 11vw, 142px), 1fr)`) — không áp cho Results/Courses (thẻ bài giao
+  cần rộng) và Thùng rác.
+- **Thử:** bàn thử Firebase GIẢ (import map trỏ 3 module SDK sang `_thu516/fb-*.js`, kho trong bộ nhớ — KHÔNG commit, đã xoá) cổng 8516:
+  khổ 1280 + 655 (khung trái myLesson), click thật mở thư mục, chuột phải thật ⇒ menu ⇒ Pin (ghim lên cột), giữ cảm ứng giả ⇒ menu + nuốt bấm,
+  bấm act ⇒ `?a=` (chơi), kéo act vào thư mục (dời đúng), list view, Results trống; console 0 lỗi.
+- ⬜ thầy thử thật: chuột phải / giữ trên iPad, màn 86", khung trái myLesson.
+
 ## Đợt 515 (14/10/2026) — TRAIN RUSH: FIGHT MỘT MÀN 2 TÀU SONG SONG + iPAD (như Rocket Race) + OPTIONS LEVELS / TIME ROUND
 
 **Thầy giao (14/10):** "màn Fight là 1 màn hình duy nhất, 2 tàu chạy song song; tàu xa có khinh khí cầu xa hơn, nhỏ hơn; tàu xong màn phóng lên trước,

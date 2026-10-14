@@ -3092,6 +3092,11 @@ body.aw-page-dragover::after {
    and an empty folder would give Quick access the height of a drop zone.     */
 .aw-fm-withqa { display: flex; align-items: flex-start; gap: 16px; }
 .aw-fm-withqa > .aw-qa { flex: 0 0 238px; }
+/* ⭐ Đợt 516 — cột kéo dài HẾT trang: thân trang + hàng chứa cột giãn theo `.aw-lib` (min-height 100vh, cột flex) */
+.aw-lib > .aw-fm-body { flex: 1 0 auto; display: flex; flex-direction: column; }
+.aw-fm-body > .aw-fm-withqa { flex: 1 0 auto; align-items: stretch; gap: 22px; }
+.aw-fm-withqa > .aw-fm-qamain { align-self: flex-start; }
+.aw-fm-withqa > .aw-qa { flex-basis: 214px; }
 .aw-fm-withqa > .aw-fm-qamain { flex: 1 1 auto; min-width: 0; }
 
 /* ---------- Home: the teacher's game library ---------- */
@@ -8581,3 +8586,91 @@ body.aw-khung-mode .aw-giao-nen{display:none}
    trình duyệt, nên thứ tự trong file mới là thứ quyết định ai thắng; không
    viết rõ ra đây thì một ngày ai đó dời khối CSS này là icon hết ẩn được. */
 .aw-seg-voiceic[hidden] { display: none; }
+
+/* ==========================================================================
+   ⭐⭐ Đợt 516 (thầy chốt 14/10/2026) — QUICK ACCESS KIỂU B "NỀN NHẠT" · THƯ MỤC KHÔNG KHUNG · ACT THẤP
+   Mẫu: D:\OTHERS\CLAUDE\myLesson - thiet ke khung explorer\mau-v5.html (cùng kiểu cột với khung Explorer myLesson v2.163.0).
+   ⚠️ Khối này đứng CUỐI file để đè các luật cũ của `.aw-qa` (Đợt 218–221) và thẻ `.aw-card-folder` mà không phải
+   xoá chúng (bàn thử cũ vẫn đọc được lịch sử). Danh sách (list view) giữ hàng ngang như cũ.
+   ========================================================================== */
+/* ---- cột Quick access: KHÔNG khung, nền nhạt, MỘT nét mảnh dọc chạy hết chiều cao ---- */
+.aw-qa {
+  background: #f3f7fc; border: none; border-radius: 0; box-shadow: none;
+  padding: 0; max-height: none; display: block;
+}
+.aw-qa::after { top: 0; bottom: 0; right: 0; width: 1px; background: #d7e0ec; }
+.aw-qa-in {
+  position: sticky; top: 0; max-height: 100vh; display: flex; flex-direction: column; min-height: 0;
+  padding: 4px 0 14px;
+}
+.aw-qa-head { border-bottom: none; margin: 0; padding: 14px 14px 6px; }
+.aw-qa-title { font-size: .72rem; letter-spacing: 1.1px; color: #8a97ab; }
+.aw-qa-list { flex: 0 1 auto; }
+.aw-qa-row { margin: 1px 8px; border-radius: 8px; }
+.aw-qa-row:hover { background: #e6edf6; }
+.aw-qa-row.is-current { background: #fff; box-shadow: 0 1px 3px rgba(30,50,80,.10); }
+.aw-qa-row.is-current .aw-qa-label { color: #1d4ed8; }
+.aw-qa-empty { margin: 2px 14px 6px; padding: 8px; border: 1.5px dashed #dfe6ef; border-radius: 8px; font-size: .78rem; }
+.aw-qa-recent { margin-top: 8px; padding-top: 0; border-top: none; }
+.aw-qa-rhead { padding: 14px 10px 6px 14px; }
+.aw-qa.is-fileover { border: none; background: #eaf2ff; box-shadow: inset 0 0 0 2px #2f7bff; }
+
+/* ---- THƯ MỤC (lưới): bỏ khung, chỉ icon + tên; số act | thư mục con vẫn TRÊN icon ---- */
+.aw-fm-grid.is-gon { grid-template-columns: repeat(auto-fill, minmax(clamp(112px, 11vw, 142px), 1fr)); gap: 14px 10px; }
+.aw-fm-grid .aw-card-folder {
+  background: transparent; border: none; box-shadow: none; border-radius: 14px; overflow: visible;
+  align-items: center; padding: 10px 6px; gap: 6px; -webkit-touch-callout: none;
+}
+.aw-fm-grid .aw-card-folder:hover { background: #dde8f6; box-shadow: none; transform: none; }
+.aw-fm-grid .aw-card-folder:active { transform: scale(.97); }
+.aw-fm-grid .aw-card-folder .aw-fp { background: none; width: 96px; height: 80px; overflow: visible; flex: 0 0 auto; }
+.aw-fm-grid .aw-card-folder .aw-fp-icon { width: 96px; height: 80px; filter: drop-shadow(0 3px 4px rgba(120,90,20,.16)); }
+.aw-fm-grid .aw-card-folder .aw-fp-count { top: 57%; padding: 1px 8px; gap: 5px; border-radius: 9px; box-shadow: 0 1px 4px rgba(60,45,15,.22); line-height: 1.45; }
+.aw-fm-grid .aw-card-folder .aw-fp-n { font-size: .95rem; }
+.aw-fm-grid .aw-card-folder .aw-fp-div { width: 1.5px; height: 11px; }
+.aw-fm-grid .aw-card-folder .aw-card-foot { padding: 0; margin: 0; width: 100%; justify-content: center; }
+.aw-fm-grid .aw-card-folder .aw-card-info { align-items: center; }
+.aw-fm-grid .aw-card-folder .aw-card-name { text-align: center; font-size: .92rem; font-weight: 700; line-height: 1.3; }
+.aw-fm-grid .aw-card-folder .aw-newdot { top: 10px; right: calc(50% - 50px); }
+.aw-fm-grid .aw-card-folder.is-dropok { background: #dce9ff; outline: 2px dashed #2f7bff; outline-offset: -2px; box-shadow: none; }
+.aw-fm-grid .aw-card-folder.is-dragging { opacity: .45; }
+
+/* ---- ACT THẤP (kiểu A): khối màu = LOẠI, dải trắng = TÊN ---- */
+.aw-act-gon { cursor: pointer; border-radius: 14px; height: 126px; -webkit-touch-callout: none; }
+.aw-act-gon:active { transform: scale(.97); }
+.aw-ag-tren {
+  position: relative; flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center;
+  padding: 8px 10px; text-align: center; color: #fff;
+}
+.aw-ag-loai {
+  font-size: .92rem; font-weight: 700; line-height: 1.25; letter-spacing: .2px; word-break: break-word; text-transform: uppercase;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.aw-ag-loai.is-xam { opacity: .85; }
+/* dải TÊN: một dòng khi đủ chỗ; khung hẹp (khung trái myLesson 655 px) thì xuống tối đa 2 dòng, khối màu nhường chỗ */
+.aw-ag-ten {
+  flex: 0 0 auto; min-height: 30px; padding: 8px 8px 7px; border-top: 1px solid #eef2f7; line-height: 1.2;
+  text-align: center; font-size: .72rem; font-weight: 800; letter-spacing: .4px; text-transform: uppercase;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; word-break: break-word;
+}
+.aw-ag-play {
+  position: absolute; right: 7px; bottom: 7px; width: 26px; height: 26px; border-radius: 50%; border: none; padding: 0;
+  background: rgba(255,255,255,.95); color: #23303e; display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,.18); cursor: pointer; opacity: 0; transition: opacity .15s ease;
+}
+.aw-ag-play svg { width: 11px; height: 11px; margin-left: 2px; }
+.aw-act-gon:hover .aw-ag-play { opacity: 1; }
+@media (hover: none) { .aw-ag-play { opacity: .9; } }   /* màn cảm ứng không có "rê chuột" */
+.aw-ag-voice {
+  position: absolute; left: 7px; top: 7px; width: 20px; height: 20px; border-radius: 50%;
+  background: rgba(255,255,255,.28); color: #fff; display: inline-flex; align-items: center; justify-content: center;
+}
+.aw-ag-voice svg { width: 11px; height: 11px; }
+.aw-act-gon .aw-newdot { top: 7px; right: 7px; }
+/* danh sách: hàng ngang — viên màu LOẠI bên trái + TÊN */
+.aw-fm-list .aw-act-gon { height: auto; flex-direction: row; align-items: center; padding: 6px; gap: 10px; }
+.aw-fm-list .aw-ag-tren { flex: 0 0 116px; height: 44px; border-radius: 10px; padding: 4px 8px; }
+.aw-fm-list .aw-ag-loai { font-size: .78rem; }
+.aw-fm-list .aw-ag-play { display: none; }   /* hàng danh sách: bấm cả hàng là chơi */
+.aw-fm-list .aw-ag-ten { flex: 1 1 auto; border-top: none; text-align: left; font-size: .86rem; min-height: 0; padding: 0 8px; line-height: 1.35; }
+.aw-fm-list .aw-act-gon .aw-newdot { top: 50%; right: 12px; transform: translateY(-50%); }

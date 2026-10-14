@@ -106,6 +106,9 @@ const FOLDER_SVG = '<svg viewBox="0 0 24 24" width="100%" height="100%" fill="cu
 const DOTS = '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
 const PREVIEW_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
 const FOLDER_DEFAULT_COLOR = "#f5b13b";
+// ⭐ Đợt 516 (thầy chốt 14/10/2026, mẫu `D:\OTHERS\CLAUDE\myLesson - thiet ke khung explorer\mau-v5.html`) — thẻ thư mục
+// BỎ KHUNG: chỉ icon + tên. Icon 2 lớp (tấm sau tối hơn) theo màu thư mục (`currentColor`); số act | thư mục con vẫn nằm TRÊN icon.
+const FOLDER_CARD_SVG = '<svg viewBox="0 0 64 54" width="100%" height="100%"><path d="M4 8a5 5 0 0 1 5-5h15.5a5 5 0 0 1 3.6 1.5L31.5 8H55a5 5 0 0 1 5 5v32a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5Z" fill="currentColor"/><path d="M4 8a5 5 0 0 1 5-5h15.5a5 5 0 0 1 3.6 1.5L31.5 8H55a5 5 0 0 1 5 5v32a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5Z" fill="#000" opacity=".13"/><path d="M4 18a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5Z" fill="currentColor"/><path d="M4 18a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v2H4Z" fill="#fff" opacity=".22"/></svg>';
 // Modern 8-color set for the folder-color picker.
 const FOLDER_COLORS = ["#ef4444", "#f97316", "#f5b13b", "#22c55e", "#14b8a6", "#3b82f6", "#8b5cf6", "#ec4899"];
 
@@ -937,6 +940,8 @@ async function renderInside() {
   const resultFolders = holdsAssignments(state.root) ? await listFolders(state.root) : [];
 
   const list = el("div", state.mode === "grid" ? "aw-fm-grid" : "aw-fm-list");
+  // ⭐ Đợt 516 — thư mục không khung + act thấp ⇒ ô lưới hẹp hơn (thầy chốt mẫu v5)
+  if (state.mode === "grid" && state.view !== "trash" && !holdsAssignments(state.root)) list.classList.add("is-gon");
   fixedHere.forEach(g => list.append(fixedGameCard(g)));
   for (const node of items) {
     let card;
@@ -1133,10 +1138,14 @@ function qaSaveOpen(set) {
 
 async function quickAccess() {
   const aside = el("aside", "aw-qa");
-  aside.append(el("div", "aw-qa-head", '<span class="aw-qa-title">Quick access</span>'));
+  // ⭐ Đợt 516 (thầy chốt 14/10/2026, kiểu B "nền nhạt") — cột KHÔNG còn khung: nền nhạt kéo dài từ dưới thanh công cụ tới hết
+  // trang + một nét mảnh dọc ngăn với thư mục. Ruột nằm trong `.aw-qa-in` DÍNH trên cùng khi cuộn lưới dài.
+  const ruot = el("div", "aw-qa-in");
+  aside.append(ruot);
+  ruot.append(el("div", "aw-qa-head", '<span class="aw-qa-title">Quick access</span>'));
 
   const list = el("div", "aw-qa-list");
-  aside.append(list);
+  ruot.append(list);
 
   // ONE snapshot of the folder table feeds both halves of the panel.
   const all = await listFolders(state.root);
@@ -1147,7 +1156,7 @@ async function quickAccess() {
     // An empty panel must SAY how to fill it — the pin lives in a folder card's
     // ⁝ menu, which is not a place anyone would guess at.
     list.append(el("div", "aw-qa-empty",
-      "No folders pinned yet.<br>Open a folder's ⁝ menu and choose <b>Pin to Quick access</b>."));
+      "No folders pinned yet.<br>Right-click a folder (or hold it) and choose <b>Pin to Quick access</b>."));
   } else {
     const kidsOf = new Map();
     all.forEach(f => {
@@ -1169,7 +1178,7 @@ async function quickAccess() {
     pinned.forEach(node => list.append(qaBranch(node, 0, ctx)));
   }
 
-  aside.append(qaRecentSection(byId));
+  ruot.append(qaRecentSection(byId));
   qaAcceptFiles(aside);
   return aside;
 }
@@ -1578,7 +1587,7 @@ function folderCard(node, counts, assignmentCount = 0, hasNews = false) {
   card.onclick = () => enterFolder(node.root, node.id);
 
   const preview = el("div", "aw-fp");
-  const ic = el("div", "aw-fp-icon", FOLDER_SVG);
+  const ic = el("div", "aw-fp-icon", FOLDER_CARD_SVG);   // ⭐ Đợt 516
   ic.style.color = node.color || FOLDER_DEFAULT_COLOR;
   preview.append(ic);
 
@@ -1607,8 +1616,9 @@ function folderCard(node, counts, assignmentCount = 0, hasNews = false) {
   const foot = el("div", "aw-card-foot");
   const info = el("div", "aw-card-info");
   info.append(el("div", "aw-card-name", escapeText(itemName(node))));
-  foot.append(info, menuButton(node, folderMenuItems));
+  foot.append(info);                           // ⭐ Đợt 516 — bỏ ⋮: chuột phải (máy tính) / giữ (điện thoại, iPad)
   card.append(foot);
+  attachContextMenu(card, () => folderMenuItems(node));
 
   makeDraggable(card, node);
   makeDropTarget(card, () => node.id, node);   // drop another item INTO this folder
@@ -1667,48 +1677,55 @@ function actFullyVoiced(node) {
   return list.length > 0 && list.every(it => it && it.voice);
 }
 
+// ⭐⭐ Đợt 516 (thầy chốt 14/10/2026, mẫu `myLesson - thiet ke khung explorer\mau-v4/v5.html` kiểu A) — THẺ ACT THẤP:
+// khối màu TRÊN = LOẠI act (WORDS · QUIZ · TRUE FALSE · FILLING · RD QUIZ · FIND THE GAP), dải trắng DƯỚI = TÊN act;
+// bỏ xem trước nội dung câu hỏi, bỏ nút ⋮ (chuột phải / giữ). Bấm thẻ = chơi (nút ▶ nhỏ chỉ là dấu hiệu).
+// LOẠI đọc từ chính TÊN act: "<bài> / <loại>" — tên thật của thầy: "7 JOB / WORDS", "DS-S5.I1.W1 / 1. TRUE FALSE",
+// "… / 2. FILLING", "… / 3. READING QUIZ", "… / FIND THE GAP", "… / QUIZ" (đo trên bản sao lưu bài giao 13/10/2026).
+// ⛔ Mọi game WORDS (anagram, quiz, type the answer…) đều chỉ ghi WORDS — KHÔNG ghi template nữa. Act không có "/"
+// (bài ngữ pháp "BT1. …") ⇒ ghi tên template màu xám (thầy chốt).
+const LOAI_ACT = {
+  "WORDS": ["WORDS", "#2f7bff"], "QUIZ": ["QUIZ", "#10b981"], "FIND THE GAP": ["FIND THE GAP", "#8b5cf6"],
+  "TRUE FALSE": ["TRUE FALSE", "#f59e0b"], "TRUE OR FALSE": ["TRUE FALSE", "#f59e0b"], "TF": ["TRUE FALSE", "#f59e0b"],
+  "FILLING": ["FILLING", "#06b6d4"], "FILL": ["FILLING", "#06b6d4"],
+  "READING QUIZ": ["RD QUIZ", "#ef4444"], "RD QUIZ": ["RD QUIZ", "#ef4444"], "RDQUIZ": ["RD QUIZ", "#ef4444"],
+};
+const LOAI_ACT_XAM = "#64748b";
+function loaiCuaAct(node) {
+  const ten = String(itemName(node) || "").trim();
+  const m = /^(.*\S)\s*\/\s*([^/]+)$/.exec(ten);
+  if (!m) return { ten, loai: templateLabel(node.lastTpl || node.type), mau: LOAI_ACT_XAM, xam: true };
+  const k = m[2].replace(/^\d+\s*\.\s*/, "").trim().toUpperCase().replace(/\s+/g, " ");
+  const l = LOAI_ACT[k];
+  return l ? { ten: m[1].trim(), loai: l[0], mau: l[1] } : { ten: m[1].trim(), loai: k, mau: LOAI_ACT_XAM };
+}
 function actCard(node) {
-  const card = el("div", "aw-card aw-card-act");
+  const card = el("div", "aw-card aw-card-act aw-act-gon");
   card.dataset.actId = node.id;   // ⭐ Đợt 485 — capNhatChamDo gắn chấm đỏ sau khi bài giao tải ngầm xong
+  const l = loaiCuaAct(node);
+  card.title = itemName(node);
+  card.onclick = () => playAct(node.id);
 
-  const preview = el("div", "aw-cp");
-  const pick = previewPick(node);
-  if (pick) {
-    preview.append(el("div", "aw-cp-q", escapeText(pick.question)));
-    const chips = el("div", "aw-cp-answers");
-    pick.answers.slice(0, 4).forEach((text, i) => {
-      const chip = el("div", "aw-cp-chip", escapeText(text));
-      chip.style.background = PREVIEW_COLORS[i % PREVIEW_COLORS.length];
-      chips.append(chip);
-    });
-    preview.append(chips);
-  } else {
-    preview.append(el("div", "aw-cp-empty", "No questions yet"));
-  }
-  const playBtn = el("button", "aw-cp-play", icons.playBig);
+  const tren = el("div", "aw-ag-tren");
+  tren.style.background = l.mau;
+  tren.append(el("div", "aw-ag-loai" + (l.xam ? " is-xam" : ""), escapeText(l.loai)));
+  const playBtn = el("button", "aw-ag-play", icons.playBig);
   playBtn.type = "button"; playBtn.title = "Play";
   playBtn.onclick = e => { e.stopPropagation(); playAct(node.id); };
-  preview.append(playBtn);
+  tren.append(playBtn);
   if (actFullyVoiced(node)) {
-    const voiceBadge = el("div", "aw-cp-voice", icons.soundOn);
+    const voiceBadge = el("div", "aw-ag-voice", icons.soundOn);
     voiceBadge.title = "Every word in this act has a voice clip";
-    preview.append(voiceBadge);
-    // `has-voice` is what lets the CSS start the question's FIRST line clear
-    // of the badge — the badge is absolutely positioned, so without it the
-    // text runs underneath (seen on the very first screenshot of this build).
-    preview.classList.add("has-voice");
+    tren.append(voiceBadge);
   }
-  card.append(preview);
+  card.append(tren);
+  const ten = el("div", "aw-ag-ten", escapeText(l.ten));
+  ten.style.color = l.xam ? LOAI_ACT_XAM : l.mau;
+  card.append(ten);
   // an act wears the dot when one of ITS assignments has new results
   if (actHasNews(node.id)) card.append(newDot("New results in an assignment"));
 
-  const foot = el("div", "aw-card-foot");
-  const info = el("div", "aw-card-info");
-  // name on TOP, template type BELOW it (matches the agreed card layout)
-  info.append(el("div", "aw-card-name", escapeText(itemName(node))), el("span", "aw-card-type", escapeText(templateLabel(node.lastTpl || node.type))));   // ⭐ Đợt 400 — template chơi cuối
-  foot.append(info, menuButton(node, actMenuItems));
-  card.append(foot);
-
+  attachContextMenu(card, () => actMenuItems(node));
   makeDraggable(card, node);   // an act can be dragged into a folder / breadcrumb
   return card;
 }
@@ -2907,8 +2924,45 @@ function openMenu(anchor, items) {
   let left = r.right - mw; if (left < 8) left = 8;
   menu.style.left = left + "px";
   menu.style.top = (r.bottom + 4) + "px";
+  // ⭐ Đợt 516 — menu mở ở chỗ chuột phải/giữ có thể sát đáy/mép phải ⇒ kéo vào trong màn
+  const mr = menu.getBoundingClientRect();
+  if (mr.bottom > innerHeight - 8) menu.style.top = Math.max(8, innerHeight - 8 - mr.height) + "px";
+  if (mr.right > innerWidth - 8) menu.style.left = Math.max(8, innerWidth - 8 - mr.width) + "px";
   openMenuEl = menu;
   setTimeout(() => document.addEventListener("pointerdown", onMenuOutside), 0);
+}
+// ⭐ Đợt 516 — menu tại một ĐIỂM (chuột phải / giữ) thay vì neo dưới nút ⋮.
+function openMenuAt(x, y, items) {
+  openMenu({ getBoundingClientRect: () => ({ right: x + 190, bottom: y - 4 }) }, items);
+}
+// Chuột phải (máy tính, màn cảm ứng Windows/Android tự bắn `contextmenu` khi giữ) + GIỮ ~0,55 s cho iPad/iPhone
+// (Safari không bắn `contextmenu`). Hai đường gác nhau bằng mốc `_menuLuc` ⇒ không mở hai lần. Mở bằng cách giữ thì
+// NUỐT cú bấm ngay sau đó (không vào thư mục / không chơi act).
+function attachContextMenu(card, itemsFn) {
+  card.style.webkitTouchCallout = "none";
+  const mo = (x, y) => { card._menuLuc = Date.now(); openMenuAt(x, y, itemsFn()); };
+  card.addEventListener("contextmenu", e => {
+    e.preventDefault(); e.stopPropagation();
+    if (Date.now() - (card._menuLuc || 0) < 700) return;
+    mo(e.clientX, e.clientY);
+  });
+  let hen = 0, x0 = 0, y0 = 0;
+  const huy = () => clearTimeout(hen);
+  card.addEventListener("pointerdown", e => {
+    if (e.pointerType === "mouse" || e.button > 0) return;
+    x0 = e.clientX; y0 = e.clientY; huy();
+    hen = setTimeout(() => {
+      if (Date.now() - (card._menuLuc || 0) < 700) return;
+      card._nuot = true;
+      try { navigator.vibrate?.(15); } catch { /* bỏ */ }
+      mo(x0, y0);
+    }, 550);
+  });
+  card.addEventListener("pointermove", e => { if (Math.hypot(e.clientX - x0, e.clientY - y0) > 10) huy(); });
+  ["pointerup", "pointercancel", "pointerleave", "dragstart"].forEach(ev => card.addEventListener(ev, huy));
+  card.addEventListener("click", e => {
+    if (card._nuot || Date.now() - (card._menuLuc || 0) < 600) { card._nuot = false; e.preventDefault(); e.stopImmediatePropagation(); }
+  }, true);
 }
 function onMenuOutside(e) { if (openMenuEl && !openMenuEl.contains(e.target)) closeMenu(); }
 function closeMenu() { if (openMenuEl) { openMenuEl.remove(); openMenuEl = null; document.removeEventListener("pointerdown", onMenuOutside); } }
