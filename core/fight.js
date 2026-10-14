@@ -312,8 +312,11 @@ export function fightOptionsFrom(options = {}) {
 // each hop (anagram -> quiz invents distractors; quiz -> anagram then keeps
 // only the right answer, and so on).
 // ---------------------------------------------------------------
-export function startFight(root, activity, { onExit, base = null } = {}) {
+export function startFight(root, activity, { onExit, base = null, keepIpad = false } = {}) {
   root.innerHTML = "";
+  // ⭐ Đợt 514 (thầy 14/10/2026: "mặc định mở act mới là ipad luôn tắt") — trận MỚI (mở act, đổi act trong trận) ⇒ iPad Off. Chỉ dựng lại
+  // CÙNG trận (Start again / Options ▸ Apply / Change template — restartMatch) mới giữ chế độ iPad đang chạy. Chỉ xoá trong bộ nhớ.
+  if (!keepIpad && activity && activity.options) { delete activity.options.fightScreen; delete activity.options.fightPad; }
   const fo = fightOptionsFrom(activity.options || {});
   const originAct = base || activity;
 
@@ -2378,7 +2381,24 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // words with one of the scoreboards stuck. Also how a mid-match TEMPLATE
     // CHANGE lands: the engine converts the act, then hands the whole thing
     // over here so BOTH boards are rebuilt onto it together.
-    restartMatch(nextActivity) { teardown(); startFight(root, nextActivity || activity, { onExit, base: originAct }); },
+    restartMatch(nextActivity) {
+      // Đợt 514: dựng lại CÙNG trận ⇒ giữ chế độ iPad đang chạy (act chuyển template mới chưa có cờ ⇒ chép sang)
+      if (nextActivity && nextActivity !== activity && activity.options) {
+        nextActivity.options = nextActivity.options || {};
+        ["fightScreen", "fightPad"].forEach(k => { if (activity.options[k] === true) nextActivity.options[k] = true; else delete nextActivity.options[k]; });
+      }
+      teardown(); startFight(root, nextActivity || activity, { onExit, base: originAct, keepIpad: true });
+    },
+    // ⭐ Đợt 514 — đổi chế độ iPad NGAY TRONG TRẬN (không dựng lại): ghi cờ lên act của trận (bộ nhớ, không lưu — mở lại act là Off)
+    // rồi để template tự đổi (`tpl.ipadLive`). Template không hỗ trợ ⇒ false ⇒ engine dựng lại như cũ (applyOptions).
+    canIpadLive() { const t = getTemplate(activity.type); return !!(t && typeof t.ipadLive === "function"); },
+    setIpadLive(flags) {
+      const tpl = getTemplate(activity.type);
+      if (!tpl || typeof tpl.ipadLive !== "function") return false;
+      if (!activity.options) activity.options = {};
+      ["fightScreen", "fightPad"].forEach(k => { if (flags[k]) activity.options[k] = true; else delete activity.options[k]; });
+      return tpl.ipadLive({ fightScreen: !!flags.fightScreen, fightPad: !!flags.fightPad }) === true;
+    },
     // What a NEW act must be derived from (Change template). Two things make
     // this the right source rather than what a board is holding:
     //  • each board only ever sees a frozen COPY of the match act (its own

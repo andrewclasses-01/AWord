@@ -896,3 +896,14 @@ chuyển toàn bộ phần bắn tên lửa và tránh vào ipad. Trên màn hì
 - Bàn thử: `scratch/dot511-ipad-ctl.html?padsig=local&raf=1` + tab `pad.html?padsig=local` (mỗi tab 1 iPad — `?padsig=local` lưu đội ở sessionStorage).
   Bàn thử tay: `__rr3d`, `__rrpad` (host), ở tab iPad `__padc` / `__padui`.
 - ⬜ Chưa thử 2 iPad THẬT (Firestore + WebRTC qua Wi-Fi lớp) · chưa đo khung hình iPad (bảng dùng bloom + MSAA HalfFloat — nặng thì bỏ MSAA / hạ pixelRatio).
+
+## 47. Đợt 514 (14/10/2026) — BẢNG iPAD MỚI (mẫu 11) · ĐỔI CHẾ ĐỘ iPAD TẠI CHỖ · CHẶN iPAD THỨ 2 · MISSILES MAX 0–10/∞
+
+- Bảng iPad = `rr-padscene.js` VIẾT LẠI (bản tra ở myGame `rocket-race/core/rr-padscene-11.js`) — KHÔNG còn bảng gương buildConsole của Đợt 511.
+  BOOST sát mép trái · cột vạch mảnh giữa · 2 tên lửa to mũi lên sát mép phải (ô trống không bóng mờ) · hàng con đáy: ∞ 10 ô căn trái + "+x",
+  giới hạn (max − 2) ô căn giữa + bóng mờ ô trống. Chạm quả nào bắn quả đó (`fire0`/`fire1` ⇒ `msFire(side, want)` ⇒ `launch(from, to, want)`).
+- Nhịp: game `firing` ⇒ iPad phóng 2,1 s (đánh lửa + khói bệ + bay lên quá mép trên + khói mù ~5 s); quả mới chỉ vút lên khi quả cũ đã ra khỏi màn,
+  độ đầy đuổi kịp game ⇒ sẵn sàng đúng lúc game (tổng như kiểu cũ ~3,6 s từ lúc bắn).
+- Đổi chế độ iPad giữa trận: `tpl.ipadLive` (xem GHI CHU Đợt 514). Mở trận mới ⇒ iPad Off.
+- Missiles max: khoá `rrMsCap` 0–10 · 11 = ∞ (tổng cả 2 quả to); khoá cũ `rrMsMax` 6 = ∞ vẫn đọc.
+- Đội có iPad ⇒ iPad khác bị từ chối (`x<t>` trong tài liệu host), tự vào khi iPad kia rời.

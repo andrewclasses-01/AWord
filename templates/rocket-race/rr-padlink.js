@@ -17,7 +17,8 @@
 // vẫn bắn/BOOST được nhưng không thấy trạng thái (hiện "slow link"). ⛔ Không so đồng hồ 2 máy — chỉ so sid/nonce/số đếm.
 
 const ICE = [{ urls: "stun:stun.l.google.com:19302" }];
-export const PAD_KEYS = new Set(["fire", "boost", "load"]);
+// ⭐ Đợt 514: "fire0"/"fire1" = bắn ĐÚNG quả to ô 0 / ô 1 (bảng iPad mới — chạm quả nào bắn quả đó)
+export const PAD_KEYS = new Set(["fire", "fire0", "fire1", "boost", "load"]);
 const rid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 function gather(pc, ms) {
   return new Promise(res => {
@@ -47,8 +48,7 @@ export function createPadHost({ signal, padUrl }) {
 
   async function offerTo(t, nonce) {
     const x = st[t];
-    // ⭐ 2 iPad chọn CÙNG đội ⇒ iPad đến SAU giành quyền; báo iPad cũ "k:" để nó KHÔNG tự chào lại (không thì 2 máy giành nhau mãi)
-    if (x.dc && x.dc.readyState === "open") { try { x.dc.send("k:"); } catch (e) { /* */ } }
+    // (Đợt 511 cũ: iPad đến sau giành quyền + báo "k:" — Đợt 514 bỏ: đội đang có iPad thì onPad đã từ chối trước khi tới đây)
     closePc(t);
     x.served = nonce; x.offered = ""; x.hc = 0; x.rs = 0; setS(t, "wait");
     const pc = new RTCPeerConnection({ iceServers: ICE }); x.pc = pc;
@@ -71,7 +71,11 @@ export function createPadHost({ signal, padUrl }) {
   async function onPad(t, d) {
     const x = st[t];
     if (!d || !sid || d.sid !== sid || !d.nonce) return;               // chào của phiên game cũ ⇒ bỏ
-    if (d.nonce !== x.served) { offerTo(t, d.nonce).catch(e => console.warn("iPad offer", e)); return; }
+    if (d.nonce !== x.served) {
+      // ⭐ Đợt 514 (thầy 14/10): đội đang có iPad khác nối (còn nghe tiếng trong 4 s) ⇒ TỪ CHỐI, không giành (ghi x<t> = nonce bị từ chối)
+      if (x.served && busy(x.s) && performance.now() - x.last < 4000) { if (x.rejected !== d.nonce) { x.rejected = d.nonce; signal.write("host", { sid, ["x" + t]: d.nonce }).catch(() => {}); } return; }
+      offerTo(t, d.nonce).catch(e => console.warn("iPad offer", e)); return;
+    }
     // iPad "đá lại" (hc tăng) mà chưa có answer ⇒ nó chưa thấy offer (lần báo bị rơi) ⇒ ghi lại offer + h_t mới
     if (!d.answer && x.offered && (+d.hc || 0) > x.hc) { x.hc = +d.hc; signal.write("host", { sid, ["n" + t]: x.served, ["o" + t]: x.offered, ["h" + t]: x.hc }).catch(() => {}); }
     if (d.answer && x.pc && !x.pc.remoteDescription) {
@@ -99,7 +103,7 @@ export function createPadHost({ signal, padUrl }) {
     attach(c) {
       if (ctl) return;
       ctl = c; sid = rid();
-      signal.write("host", { sid, n0: "", o0: "", n1: "", o1: "", c0: 0, c1: 0 }).catch(e => { failMsg = (e && e.message) || "iPad link unavailable"; paintPanel(); console.warn("iPad link", e); });
+      signal.write("host", { sid, n0: "", o0: "", n1: "", o1: "", c0: 0, c1: 0, x0: "", x1: "" }).catch(e => { failMsg = (e && e.message) || "iPad link unavailable"; paintPanel(); console.warn("iPad link", e); });
       [0, 1].forEach(t => unsubs.push(signal.listen("pad" + t, d => onPad(t, d))));
       tick = setInterval(() => {                                    // im quá 4 s (iPad ngủ / rớt Wi-Fi) ⇒ "đang nối"
         st.forEach((x, t) => { if ((x.s === "on" || x.s === "relay") && performance.now() - x.last > 4000) setS(t, "wait"); });
@@ -183,14 +187,16 @@ export function createPadClient({ signal, team, onState, onInfo, onEvent }) {
     if (dead) return;
     if (!d || !d.sid) { sid = ""; closePc(); set("nogame"); return; }
     if (d.sid !== sid) { sid = d.sid; kicked = false; hello(); return; }   // trận mới ⇒ bỏ trạng thái bị giành (chỉ 1 lần giành, không lặp)
-    if (!answered && nonce && d["n" + t] === nonce && d["o" + t]) answer(d["o" + t]).catch(e => { console.warn("pad answer", e); set("relay"); });
+    if (!answered && nonce && d["n" + t] === nonce && d["o" + t]) { answer(d["o" + t]).catch(e => { console.warn("pad answer", e); set("relay"); }); return; }
+    // ⭐ Đợt 514: máy chủ từ chối (đội đã có iPad) ⇒ "taken"; vẫn đá lại mỗi 4 s, iPad kia rời là tự vào
+    if (!answered && nonce && d["x" + t] === nonce && s !== "taken") { set("taken"); tries = 0; }
   });
   const beat = setInterval(() => {
     if (dc && dc.readyState === "open") { const n = String(++ping); pingAt.set(n, performance.now()); if (pingAt.size > 20) pingAt.delete(pingAt.keys().next().value); try { dc.send("p:" + n); } catch (e) { /* */ } }
   }, 1000);
   // ĐÁ LẠI: kho bắt tay có thể làm rơi MỘT lần báo ⇒ chưa nối thẳng thì cứ 4 s ghi lại tài liệu của mình (cùng nonce, tăng `hc`), tối đa 8 lần
   const nudge = setInterval(() => {
-    if (dead || kicked || !sid || !nonce || s === "on" || tries >= 8) return;
+    if (dead || kicked || !sid || !nonce || s === "on" || (tries >= 8 && s !== "taken")) return;   // Đợt 514: "taken" ⇒ đá lại mãi
     tries++; signal.write(me, { sid, nonce, hc: tries }).catch(() => {});
   }, 4000);
   const onVis = () => { if (document.visibilityState === "visible" && sid && !(dc && dc.readyState === "open")) hello(); };

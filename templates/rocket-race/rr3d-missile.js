@@ -655,11 +655,12 @@ export function createMissiles(X) {
   // quay lại; tàu địch phía trước ⇒ ra trước một chút rồi lượn lên. Nhịp tham số u(k) bậc 3: tốc độ đầu pha 2 khớp cuối pha 1,
   // cuối đường lao nhanh (u'(1) = 1,6).
   let gen = 0;                                     // clearAll() tăng ⇒ lần phóng đang chờ bị huỷ
-  function launch(from, to) {
+  function launch(from, to, want) {
     const r = rockets[from]; if (!r.mis) return 0;
     const S = SL[from];
     if (S.some(s => s.st === "queued")) return 0;  // đã có 1 quả chờ phóng
-    const j = [1, 0].find(i => S[i].st === "ready");   // bắn ô 1 (hông khuất) trước ⇒ còn 1 quả thì nó ở hông phía người xem
+    // ⭐ Đợt 514: `want` = ô iPad chạm (0/1) ⇒ chỉ bắn ĐÚNG ô đó; không có ⇒ ô 1 (hông khuất) trước ⇒ còn 1 quả thì nó ở hông phía người xem
+    const j = want === 0 || want === 1 ? (S[want].st === "ready" ? want : null) : [1, 0].find(i => S[i].st === "ready");
     if (j == null) return 0;                       // chưa có quả nạp xong
     const L = lastF[from];
     S[j].to = to; S[j].pair = false;

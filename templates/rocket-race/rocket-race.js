@@ -316,6 +316,9 @@ function fightTrackLength(n) { return Math.max(1, Math.ceil(n / 2)); }
 
 // Menu pause (Đợt 91) bridge — one handler per live mount (a match has TWO).
 const rrPauseHandlers = new Set();
+// ⭐ Đợt 514 (thầy 14/10/2026: "khi chuyển chế độ ipad, không chạy lại game mà tiếp tục ở đó luôn") — mỗi bàn đăng ký 1 hàm đổi
+// Question screen NGAY trong trận (rrIpadLive); Controller đổi ở cảnh 3D (rrPadStart / rrPadStop). core/fight.js gọi tpl.ipadLive().
+const rrIpadLive = new Set();
 
 // ⭐⭐ Đợt 392 (thầy, 26/9/2026) — FIGHT 3D. Trận dựng `fightFrame.fullscene` ⇒ core/fight.js
 // gọi `tpl.fightScene()` ngay khi khung dựng xong (trước READY): ở đây ta dựng một cảnh
@@ -398,13 +401,20 @@ function msStreakOf(opt) {
   return Number.isFinite(n) ? Math.max(1, Math.min(10, n)) : MS_STREAK_DEFAULT;
 }
 // ⭐ Đợt 441 (thầy 02/10/2026) — Missiles max 0–5, nấc cuối (6) = ∞ (giữ không giới hạn). Act cũ 0–3 giữ nguyên số.
-const MS_MAX_INF = 6, MS_MAX_SHOW = 5;
+// ⭐ Đợt 514 (thầy 14/10/2026) — Missiles max 0–10, nấc cuối (11) = ∞. Tính TỔNG cả 2 quả to (như trước). KHOÁ MỚI `rrMsCap`: khoá cũ
+//   `rrMsMax` dùng 6 = ∞ ⇒ đọc lại khoá cũ ĐÚNG luật cũ (act đang để ∞ vẫn là ∞, không thành 6). Kéo thanh là ghi khoá mới.
+const MS_MAX_INF_OLD = 6, MS_MAX_INF = 11;
 function msMaxOf(opt) {
+  const v2 = opt ? opt.rrMsCap : undefined;
+  if (v2 != null && v2 !== "") {
+    const n = Math.round(Number(v2));
+    if (Number.isFinite(n)) return n >= MS_MAX_INF ? Infinity : Math.max(0, Math.min(10, n));
+  }
   const v = opt ? opt.rrMsMax : undefined;
   if (v == null || v === "") return opt && Number(opt.rrMissile) === 0 && opt.rrMissile !== "" && opt.rrMissile != null ? 0 : MS_MAX_DEFAULT;
   const n = Math.round(Number(v));
   if (!Number.isFinite(n)) return MS_MAX_DEFAULT;
-  return n >= MS_MAX_INF ? Infinity : Math.max(0, n);
+  return n >= MS_MAX_INF_OLD ? Infinity : Math.max(0, n);
 }
 // ⭐ Đợt 441 (thầy) — POINTS OFF RIÊNG CỦA FIGHT: trả lời sai lùi mấy nấc, 0–20, nấc cuối (21) = MAX (về vạch xuất phát).
 // Khoá riêng `rrStepsOff` ⇒ chỉnh trong trận KHÔNG đụng `pointsOff` (điểm trừ của bài giao / chế độ thường).
@@ -490,14 +500,15 @@ function msLoadTap(side) {
   if (!v || !v.missile || msLocked() || a.loaded >= msCap(st) || a.reserve <= 0 || v.phase !== "play") { if (v && v.missile) v.missile.refuse(side, "load"); return; }
   msLoad(st, side);
 }
-function msFire(side) {
+// `want` (Đợt 514, bảng iPad mới) = ô 0/1 được chạm ⇒ bắn ĐÚNG quả đó (ô đó chưa nạp xong ⇒ từ chối). Không có ⇒ như cũ (ô nào sẵn sàng).
+function msFire(side, want) {
   const st = rr3d; if (!st || !st.ms) return;
   const a = st.ms[side], v = st.view;
   if (v && v.missile && !msLocked() && !a.loaded && a.reserve > 0 && v.phase === "play") return msLoad(st, side);   // (PEACE vẫn nạp được)   // Đợt 409: ô to trống mà còn quả nhỏ ⇒ nạp
   if (!v || !v.missile || msLocked() || st.peace || !a.loaded || v.phase !== "play") { if (v && v.missile) v.missile.refuse(side, "fire"); padEvent(side, "refuse-fire"); return; }   // 441: PEACE ⇒ không bắn
   // ⭐ Đợt 454: view từ chối khi chưa có quả NẠP XONG, hoặc đã có 1 quả chờ phóng. Quả trước còn gần (< 2 lần dài tàu; 2 quả cùng
   // sẵn sàng thì được NỐI ĐUÔI) ⇒ view nhận lệnh, giữ quả ở ô sẵn sàng rồi tự phóng khi đủ xa.
-  if (!v.missile.launch(side, 1 - side)) { v.missile.refuse(side, "fire"); padEvent(side, "refuse-fire"); return; }
+  if (!v.missile.launch(side, 1 - side, want)) { v.missile.refuse(side, "fire"); padEvent(side, "refuse-fire"); return; }
   a.loaded--; msSync(st, side);
   st.msWideReady = false;
   padEvent(side, "fire");                      // Đợt 511: tiếng/rung trên iPad của đội bắn
@@ -577,13 +588,16 @@ function rrPadChips(st) {
   };
 }
 function rrPadStart(st) {
+  if (st.padOn) return;                       // Đợt 514: bật lại giữa trận ⇒ không mở 2 lần
+  st.padOn = true; const tok = st.padTok = (st.padTok || 0) + 1;
   Promise.all([import("./rr-padlink.js"), import("./rr-pad-signal.js"), import("../../core/ipad-now.js")]).then(([L, S, N]) => {
-    if (st.dead || rr3d !== st) return;
+    if (st.dead || rr3d !== st || st.padTok !== tok || !st.padOn) return;
     const host = L.createPadHost({ signal: S.rrPadSignal() });
     const chips = rrPadChips(st);
     st.pad = host;
     host.attach({
-      press(t, k) { if (st.dead) return; if (k === "fire") msFire(t); else if (k === "boost") msBoost(t); else if (k === "load") msLoadTap(t); },
+      press(t, k) { if (st.dead) return; if (k === "fire") msFire(t); else if (k === "fire0" || k === "fire1") msFire(t, k === "fire1" ? 1 : 0);   // Đợt 514: bắn ĐÚNG quả
+        else if (k === "boost") msBoost(t); else if (k === "load") msLoadTap(t); },
       status(t, s) { chips.paint(t, s); },
     });
     const tick = setInterval(() => {
@@ -592,10 +606,13 @@ function rrPadStart(st) {
     }, 100);
     // Đợt 513: hold — AWord mở ở nơi khác (ghi game:"") không được kéo iPad khỏi trận đang chơi
     const claim = N.claimIpad({ game: "rocketrace", fight: true, ctl: true, hold: true });   // iPad đang ở pad.html tự sang bảng tên lửa
-    st.offs.push(() => { clearInterval(tick); try { host.detach(); } catch { /* ignore */ } claim.release(); chips.remove(); st.pad = null; });
+    const stop = () => { if (st.padStopFn !== stop) return; st.padStopFn = null; clearInterval(tick); try { host.detach(); } catch { /* ignore */ } claim.release(); chips.remove(); st.pad = null; };
+    st.padStopFn = stop; st.offs.push(stop);
     window.__rrpad = host;                    // bàn thử
   }).catch(e => console.warn("[rocket-race iPad]", e));
 }
+// ⭐ Đợt 514 — tắt Controller GIỮA TRẬN (không dựng lại trận): gỡ máy chủ iPad + claim + chip
+function rrPadStop(st) { st.padOn = false; st.padTok = (st.padTok || 0) + 1; if (st.padStopFn) st.padStopFn(); }
 
 // ⭐ Đợt 409 — THANH MISS WAIT GIỮA MÀN. Đồng hồ + thanh DOM `.aw-fight-missbar` (mỗi nửa một cái, half0 = đội 0) là của trọng tài
 // core/fight.js (KHÔNG sửa). Skin rr3d ẩn thanh đó bằng `visibility:hidden` (rocket-race.css — transition bề rộng VẪN chạy), còn đây
@@ -1282,6 +1299,17 @@ const rocketRaceTemplate = {
     fullscene: true, skin: "rr3d"
   },
   fightScene(opts) { return rr3dScene(opts); },
+  // ⭐ Đợt 514 — core/fight.js ctl.setIpadLive: đổi chế độ iPad NGAY TRONG TRẬN. Trả true = đã đổi tại chỗ (không cần dựng lại trận).
+  ipadLive({ fightScreen, fightPad }) {
+    const st = rr3d;
+    if (!rrIpadLive.size) return false;       // chưa có bàn nào ⇒ để core dựng lại như cũ
+    if (st && !st.dead) {
+      st.padMode = !!fightPad;
+      if (fightPad && st.view) rrPadStart(st); else if (!fightPad) rrPadStop(st);
+    }
+    rrIpadLive.forEach(fn => { try { fn(!!fightScreen); } catch (e) { console.warn("[rocket-race iPad live]", e); } });
+    return true;
+  },
 
   edit: openRocketRaceEditor,
 
@@ -1343,9 +1371,9 @@ const rocketRaceTemplate = {
       const msMax = mkSliderCell({
         label: "Missiles max", min: 0, max: MS_MAX_INF, step: 1, value: mmax === Infinity ? MS_MAX_INF : mmax, tone: "red", offAt: 0,
         fmt: v => (v === 0 ? "Off" : v >= MS_MAX_INF ? "∞" : String(v)),
-        onInput: v => { draft.rrMsMax = v; if (draft.rrMissile === 0) draft.rrMissile = MS_DEFAULT; }
+        onInput: v => { draft.rrMsCap = v; if (draft.rrMissile === 0) draft.rrMissile = MS_DEFAULT; }   // Đợt 514: khoá mới 0–10 · 11 = ∞
       });
-      msMax.cell.title = "Most missiles a team can hold (∞ = no limit). 0 = no missiles (BOOST still works)";
+      msMax.cell.title = "Most missiles a team can hold, the 2 big ones included (∞ = no limit). 0 = no missiles (BOOST still works)";
       // ⭐ Đợt 441 — Points off của TRẬN: số nấc lùi khi trả lời sai, 0–20 + MAX (về vạch xuất phát). Khoá riêng rrStepsOff.
       const so = stepsOffOf(draft);
       const stepsOff = mkSliderCell({
@@ -1406,6 +1434,7 @@ const rocketRaceTemplate = {
 
   mount(root, activity, ui) {
     const opt = activity.options || {};
+    let lastRep = null, boardGoAt = 0;     // Đợt 514: câu đang hiện + giờ GO (bật Question screen giữa trận) — khai báo ĐẦU hàm (tránh TDZ)
     const pointsOff = Math.max(0, Math.min(100, Number(opt.pointsOff) || 0));
     const stepsOff = stepsOffOf(opt);       // ⭐ Đợt 441 — chỉ dùng trong trận (Fight)
 
@@ -1454,7 +1483,7 @@ const rocketRaceTemplate = {
     // Đợt 370 — the flag is now a CORE option (`fightScreen`), set by the toolbar
     // button, not a Rocket-race-only one. Read once per mount, which is why
     // flipping it restarts the match.
-    const twoDevice = !!fightCtl && opt.fightScreen === true;
+    let twoDevice = !!fightCtl && opt.fightScreen === true;   // Đợt 514: đổi được giữa trận (setTwoDevice dưới)
 
     // ---- scene ----
     root.innerHTML = "";
@@ -1625,6 +1654,23 @@ const rocketRaceTemplate = {
       own.onAlive = paintLink;
     }
     if (twoDevice) paintLink(false);
+    // ⭐ Đợt 514 — bật/tắt Question screen GIỮA TRẬN: bàn 0 mở/đóng đường nối, mỗi bàn ẩn/hiện thanh câu hỏi + gửi câu đang hiện
+    function setTwoDevice(on) {
+      on = !!on && !!fightCtl;
+      if (dead || on === twoDevice) return;
+      twoDevice = on;
+      if (rr3d) rr3d.twoDevice = on;
+      if (fightSide === 0) {
+        if (on) {
+          const own = rrLinkStart({ actTitle: activity.title || "", teams: FIGHT_TEAMS.map(t => ({ name: t.name, color: t.hull.c })) });
+          own.onAlive = paintLink;
+          if (boardGoAt) own.goAt = boardGoAt;
+        } else rrLinkStop();
+      }
+      paintLink(false);
+      if (on && lastRep) setTimeout(() => { if (!dead && twoDevice) reportLink(lastRep[0], lastRep[1]); }, fightSide === 0 ? 0 : 30);   // bàn 1 sau bàn 0 (đường nối đã mở)
+    }
+    if (fightCtl) rrIpadLive.add(setTwoDevice);
     renderLives();
     ui.setScore(kp ? scoreNow() : 0);   // Đợt 470 — làm tiếp: điểm của lượt cũ
     ui.onSubmit(finish, () => state.filter(s => s.attempts > 0).length);
@@ -1768,6 +1814,7 @@ const rocketRaceTemplate = {
     // Hand this board's WORD to the link. Both boards call it; only board 0
     // actually writes (rrLinkQueueWrite coalesces the two into one packet).
     function reportLink(idx, q) {
+      lastRep = [idx, q];                     // Đợt 514: nhớ câu đang hiện ⇒ bật Question screen giữa trận gửi ngay câu này
       if (!twoDevice || !rrLinkOwner) return;
       // Đợt 370 — the WORD (the correct answer), not the clue. A voice-only act
       // still has a written answer, so `hideText` no longer matters here; the
@@ -1904,7 +1951,8 @@ const rocketRaceTemplate = {
           // match has been running", and the iPad counts on from it by itself:
           // no per-second writes, and no dependence on the two devices' clocks
           // agreeing (only on the elapsed time, which both measure the same).
-          if (twoDevice && fightSide === 0 && rrLinkOwner) rrLinkOwner.goAt = Date.now();
+          boardGoAt = Date.now();             // Đợt 514: bật Question screen GIỮA trận ⇒ đồng hồ trên iPad vẫn đúng
+          if (twoDevice && fightSide === 0 && rrLinkOwner) rrLinkOwner.goAt = boardGoAt;
           running = true;
           started = true;
           last = performance.now();
@@ -2684,6 +2732,7 @@ const rocketRaceTemplate = {
       // Đợt 368 — board 0 opened the link, board 0 closes it (and drops the
       // document, so tomorrow's iPad never reads today's match).
       if (twoDevice && fightSide === 0) rrLinkStop();
+      rrIpadLive.delete(setTwoDevice);       // Đợt 514
       window.removeEventListener("keydown", onKey);
       if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
       timers.forEach(id => clearTimeout(id)); timers.clear();

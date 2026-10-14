@@ -546,6 +546,42 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 514 (14/10/2026) — ROCKET RACE iPAD: MẶC ĐỊNH OFF · ĐỔI CHẾ ĐỘ KHÔNG CHẠY LẠI · CHẶN iPAD THỨ 2 · BẢNG iPAD MỚI · MISSILES MAX 0–10/∞
+
+**Thầy giao (14/10, sau Đợt 513):** mở act mới iPad luôn tắt · đổi chế độ iPad không chạy lại game · 1 đội đã có iPad thì iPad khác không nối đè
+(báo đã có iPad) · thiết kế lại cả màn iPad (duyệt qua 3 vòng mẫu 11 myGame: `7000e06` → `999fc71` → `fdc7fa3`, "ok build"). Thầy chốt: Missiles max
+tính TỔNG cả 2 quả to; màn lớn vốn đã tự nạp (Đợt 413) ⇒ giữ.
+
+**1. Mặc định Off** — `core/fight.js startFight(..., { keepIpad })`: không keepIpad ⇒ `delete options.fightScreen/fightPad` (bộ nhớ, không lưu). `restartMatch`
+(Start again · Options ▸ Apply · Change template) truyền `keepIpad: true` + chép cờ sang act chuyển template. `switchAct` (đổi act trong trận) = trận mới ⇒ Off.
+
+**2. Đổi chế độ tại chỗ** — `ctl.canIpadLive()` / `ctl.setIpadLive(flags)` (ghi cờ lên act của trận, không lưu) ⇒ `tpl.ipadLive({fightScreen, fightPad})`.
+engine.js: chạm thẻ Off/Questions/Controller ⇒ `applyIpadMode` đổi NGAY (bỏ bước hỏi "trận sẽ chạy lại"), tô nút iPad; template không có `ipadLive` ⇒
+hỏi + `applyOptions` như cũ. rocket-race.js: Controller ⇒ `rrPadStart(st)` (chống mở 2 lần: padOn/padTok) / `rrPadStop(st)` (gỡ host + claim + chip);
+Questions ⇒ mỗi bàn đăng ký `setTwoDevice` vào `rrIpadLive`: bàn 0 `rrLinkStart` (goAt = `boardGoAt` giờ GO thật) / `rrLinkStop`, mỗi bàn `paintLink`,
+gửi lại câu đang hiện (`lastRep`). `twoDevice` thành `let`; `lastRep/boardGoAt` khai đầu `mount` (tránh TDZ).
+
+**3. Chặn iPad thứ 2** — rr-padlink.js host `onPad`: nonce mới mà đội đang `on/relay` và còn nghe tiếng < 4 s ⇒ ghi `x<t>` = nonce, KHÔNG offer (bỏ "k:" giành
+của Đợt 511). Client thấy `x<t>` = nonce ⇒ `s = "taken"` và đá lại mãi (nudge không giới hạn ở "taken") ⇒ iPad kia rời (Back/tắt/im 4 s) là tự vào
+(đo bàn thử: 4,1 s). rr-padui.js: màn "TEAM X ALREADY HAS AN iPAD" + Try again / Choose team; màn chọn đội: đội có iPad mờ + chạm chỉ báo.
+⚠️ Chính iPad đang nối mà TẢI LẠI trang ⇒ vài giây đầu thấy "already has" (máy chủ còn nhớ kênh cũ ≤ 4 s) rồi tự vào.
+
+**4. Bảng iPad mới** — `rr-padscene.js` viết lại (không còn dùng buildConsole/mirror của rr3d-missile.js): mô hình tên lửa + shader nạp đỏ CHÉP game;
+khói = 1 hệ Points 900 hạt (1 lần vẽ). Ánh xạ trạng thái game (`sl`): `firing` ⇒ phóng (FLY 0,5 s đánh lửa + 1,6 s bay) · trong lúc quả còn trên màn ô đó
+không hiện quả mới · quả bay khỏi màn + game đang/đã nạp ô đó ⇒ quả con cuối hàng vút lên 0,32 s (vệt mờ + kéo dài thân), độ đầy từ đuôi (0,14) đuổi
+kịp `k` của game trong 0,9 s ⇒ sẵn sàng cùng lúc game (nhịp game: bắn ⇒ 0,75 s xoay ⇒ nạp 0,5 + 2 s). `rr-padui.js`: canvas phủ cả màn (`.mp-3d` absolute),
+`topEl` cho bố cục; viền đỏ báo động bằng HTML `.mp::after`; đường đua mini 2 chấm tròn + tên lửa 2D phẳng nằm dưới chấm, lớn dần 12 % đầu.
+Lệnh mới `fire0`/`fire1` (PAD_KEYS) ⇒ `msFire(side, want)` ⇒ `missile.launch(from, to, want)` (ô đó chưa sẵn sàng ⇒ từ chối; màn lớn vẫn ô 1 trước như cũ).
+
+**5. Missiles max** 0–10 + ∞: khoá mới `rrMsCap` (11 = ∞); `msMaxOf` đọc `rrMsCap` trước, không có ⇒ khoá cũ `rrMsMax` với 6 = ∞ (act cũ đang ∞ vẫn ∞).
+Màn lớn giữ 4 ô dự phòng + "+X".
+
+**Bàn thử** `scratch/dot514/ban.html?padsig=local&rrMsCap=11&rrMsStreak=1` (fake-firebase, trận thật) + `pad.html?padsig=local` (sessionStorage
+`aw.ipadTeam`=0). Tab nền dừng rAF ⇒ tab game tự tua `setInterval(() => __rr3d.view.step(k))`, tab iPad `__padui.scene.step(s)`. ✅ mở trận iPad Off ·
+✅ bật Controller giữa màn START không dựng lại, iPad nối · ✅ bắn `fire1` chỉ quả phải · ✅ nạp lại: game shuttle ⇒ iPad load 0,14 → bám k ⇒ cùng ready ·
+✅ Controller → Questions → Controller giữa trận: cùng cảnh, nấc tàu 4/0 + kho tên lửa giữ nguyên, iPad tự sang source.html rồi về · ✅ iPad B cùng đội
+⇒ "taken", iPad A vẫn on; A rời ⇒ B vào sau 4,1 s · ✅ màn chọn đội chặn đội có iPad · 0 lỗi console. ⬜ Thầy thử 2 iPad thật (TOMKO + iPad).
+
 ## Đợt 513 (14/10/2026) — iPAD KHÔNG BỊ AWORD Ở NƠI KHÁC KÉO KHỎI TRẬN (claim `hold`)
 
 **Thầy báo (ảnh):** Rocket Race Fight, iPad ▸ Controller, 2 iPad điều khiển — ~3 phút thì iPad mất bảng, hiện màn chờ "iPad ready";

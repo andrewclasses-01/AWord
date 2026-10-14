@@ -4727,6 +4727,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       tile.onclick = () => {
         sound.click();
         if (m.k === cur) { closeToolPanel(false); return; }
+        // ⭐ Đợt 514: template đổi được NGAY TRONG TRẬN ⇒ đổi luôn, không hỏi (trận không chạy lại). Không được ⇒ hỏi như cũ (dựng lại).
+        if (ipadLiveOk()) { applyIpadMode(m); closeToolPanel(false); return; }
         switchToolPanel(p => buildIpadConfirm(p, m));
       };
       grid.append(tile);
@@ -4734,6 +4736,16 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     panel.append(grid);
     const cm = IPAD_MODES.find(m => m.k === cur);
     panel.append(el("div", "aw-mode-confirm-text aw-ipad-cur", "Now: " + escapeText(cm.k === "off" ? "iPad off" : cm.k === "question" ? "question screen" : "game controllers (2 iPads)")));
+  }
+  const ipadLiveOk = () => !!(fight && fight.ctl.canIpadLive && fight.ctl.canIpadLive());
+  function applyIpadMode(m) {
+    const flags = { fightScreen: m.k === "question", fightPad: m.k === "ctl" };
+    // ⭐ Đợt 514 (thầy 14/10/2026): đổi chế độ iPad KHÔNG chạy lại trận — template đổi tại chỗ; không hỗ trợ ⇒ dựng lại như cũ
+    if (fight && fight.ctl.setIpadLive && fight.ctl.setIpadLive(flags)) {
+      if (!activity.options) activity.options = {};
+      ["fightScreen", "fightPad"].forEach(k => { if (flags[k]) activity.options[k] = true; else delete activity.options[k]; });
+      if (qScreenBtn) qScreenBtn.classList.toggle("is-active", m.k !== "off");
+    } else if (fight) fight.ctl.applyOptions(flags);
   }
   function buildIpadConfirm(panel, m) {
     panel.append(el("div", "aw-tool-panel-head", m.head));
@@ -4748,7 +4760,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     goBtn.onclick = () => {
       sound.click();
       closeToolPanel(false);
-      if (fight) fight.ctl.applyOptions({ fightScreen: m.k === "question", fightPad: m.k === "ctl" });
+      applyIpadMode(m);
     };
     row.append(goBtn);
     panel.append(row);

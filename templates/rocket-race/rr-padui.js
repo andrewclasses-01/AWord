@@ -8,6 +8,10 @@
 //   Tên lửa ĐANG BAY TỚI (kể cả bay vào tàu kia mà 2 tàu cùng nấc — trúng lan) ⇒ viền đỏ nhấp nháy + đếm giây + bíp nhanh dần;
 //   vào 1,25 s cuối mà có BOOST ⇒ nút BOOST chớp "BOOST NOW!" (né được). Đứng dọc vẫn dùng được (FIRE trên, BOOST dưới).
 // Tiếng tự tổng hợp Web Audio (iOS: mở khoá ở lần chạm đầu tiên). Rung: navigator.vibrate — Safari iPad KHÔNG hỗ trợ (bỏ qua êm).
+// ⭐⭐ ĐỢT 514 (thầy 14/10/2026, duyệt MẪU 11 ở myGame): bảng 3D MỚI (rr-padscene.js) PHỦ CẢ MÀN sau thanh trên (tên lửa phóng bay qua thanh
+//   lên tới mép trên) · đường đua mini: 2 CHẤM TRÒN (như mẫu) + tên lửa 2D NHỎ, PHẲNG, CHUI RA từ chấm tàu bắn (lớn dần, không hiện đột ngột)
+//   · viền đỏ báo động = HTML (bảng mới không có khung 3D) · chạm quả to nào bắn quả đó ("fire0"/"fire1")
+//   · đội đã có iPad ⇒ iPad này hiện "<ĐỘI> ALREADY HAS AN iPAD" (Try again / Choose team), không giành nữa; màn chọn đội chặn luôn đội đó.
 import { TEAM_META } from "./rr-padlink.js";
 import { createPadScene } from "./rr-padscene.js";
 
@@ -16,7 +20,9 @@ html,body{margin:0;height:100%;overflow:hidden;background:#05060a;overscroll-beh
 .mp,.mpc{position:fixed;inset:0;font-family:"Exo 2",system-ui,sans-serif;color:#e2e8f0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
   background:radial-gradient(120% 90% at 50% 0%,#17203a 0%,#07090f 60%,#030408 100%)}
 .mp{touch-action:none;display:grid;grid-template-rows:auto 1fr;gap:2.4vmin;padding:max(2.4vmin,env(safe-area-inset-top)) max(2.4vmin,env(safe-area-inset-right)) max(2.4vmin,env(safe-area-inset-bottom)) max(2.4vmin,env(safe-area-inset-left));box-sizing:border-box}
-.mp::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;box-shadow:inset 0 0 20vmin rgba(255,30,20,.95)}
+.mp::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;z-index:3;box-shadow:inset 0 0 0 1.1vmin rgba(255,40,30,.95),inset 0 0 14vmin rgba(255,30,20,.7)}
+.mp[data-alarm="1"]::after{animation:mpa .5s ease-in-out infinite alternate;opacity:.45}
+.mp[data-alarm="2"]::after{animation:mpa .09s linear infinite alternate}
 /* mẫu 9 · 3D: viền đỏ báo động = khung cảnh báo 3D của chính bảng game (không vẽ thêm viền HTML) */
 @keyframes mpa{from{opacity:.15}to{opacity:1}}
 .mp-top{display:flex;align-items:center;gap:2vmin;min-height:12vmin}
@@ -30,11 +36,12 @@ html,body{margin:0;height:100%;overflow:hidden;background:#05060a;overscroll-beh
 @keyframes mpb{50%{opacity:.25}}
 .mp-track{position:relative;flex:1;height:12vmin;min-width:20vmin}
 /* ⭐ (thầy 13/10) tên lửa 2D bay trên đường đua mini theo ĐÚNG tên lửa trong game + nổ chỗ trúng / chỗ 2 quả đâm nhau */
-.mp-fly{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:visible}
-.mp-ms{position:absolute;left:0;top:0;width:4.6vmin;height:1.5vmin;margin:-.75vmin 0 0 -2.3vmin;will-change:transform}
-.mp-ms svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 .8vmin rgba(255,70,40,.9))}
-.mp-ms.peace svg{filter:drop-shadow(0 0 .8vmin rgba(60,255,120,.9))}
-.mp-boom{position:absolute;width:9vmin;height:9vmin;margin:-4.5vmin 0 0 -4.5vmin;border-radius:50%;pointer-events:none;
+.mp-fly{position:absolute;inset:0;pointer-events:none;overflow:visible}
+/* Đợt 514: tên lửa 2D NHỎ, PHẲNG (không bóng/sáng), nằm DƯỚI chấm tàu ⇒ lúc phóng như chui ra từ chấm */
+.mp-ms{position:absolute;left:0;top:0;width:2.8vmin;height:.9vmin;margin:-.45vmin 0 0 -1.4vmin;will-change:transform;z-index:1}
+.mp-ms svg{width:100%;height:100%;overflow:visible;display:block}
+.mp-ms.peace path.b{fill:#22c55e}
+.mp-boom{position:absolute;z-index:3;width:9vmin;height:9vmin;margin:-4.5vmin 0 0 -4.5vmin;border-radius:50%;pointer-events:none;
   background:radial-gradient(circle,#fff 0%,#ffe08a 18%,#ff8a2a 40%,rgba(255,60,20,.6) 58%,rgba(255,40,10,0) 72%);animation:mpboom .7s ease-out forwards}
 .mp-boom.big{width:14vmin;height:14vmin;margin:-7vmin 0 0 -7vmin}
 .mp-boom::after{content:"";position:absolute;inset:-20%;border-radius:50%;border:.5vmin solid rgba(255,190,120,.9);animation:mpring .7s ease-out forwards}
@@ -46,17 +53,19 @@ html,body{margin:0;height:100%;overflow:hidden;background:#05060a;overscroll-beh
 .mp-flag{position:absolute;right:0;top:50%;transform:translateY(-50%);width:3vmin;height:5vmin;
   background:conic-gradient(#fff 25%,#111 0 50%,#fff 0 75%,#111 0) 0 0/1.5vmin 1.25vmin;border-radius:.4vmin}
 /* ⭐ (thầy 13/10) 2 tàu trên đường đua mini CÙNG CỠ (trước: tàu mình to hơn, tàu địch mờ) */
-.mp-ship{position:absolute;top:50%;width:5.8vmin;height:5.8vmin;margin-left:-2.9vmin;transform:translateY(-50%);transition:left .45s cubic-bezier(.3,.8,.3,1)}
-.mp-ship svg{width:100%;height:100%;overflow:visible}
-.mp-ship.me{z-index:2}
+/* Đợt 514: 2 tàu = 2 CHẤM TRÒN màu đội (như mẫu 11) */
+.mp-ship{position:absolute;top:50%;width:3.6vmin;height:3.6vmin;margin-left:-1.8vmin;transform:translateY(-50%);transition:left .45s cubic-bezier(.3,.8,.3,1);
+  border-radius:50%;background:var(--c);box-shadow:0 0 1.6vmin var(--c);z-index:2}
 .mp-ship.foe{top:calc(50% + 1.6vmin)}
 .mp-ship.me{top:calc(50% - 1.4vmin)}
 .mp-steps{font:900 3vmin/1 "Exo 2",sans-serif;color:#e2e8f0;white-space:nowrap}
-.mp-main{display:grid;grid-template-columns:1fr 1fr;gap:2.4vmin;min-height:0}
+.mp-top{position:relative;z-index:2}
+/* Đợt 514: bảng 3D phủ CẢ MÀN phía sau thanh trên (tên lửa phóng bay lên tới mép trên màn) */
+.mp-main.mp-3d{position:absolute;inset:0;z-index:0}
 .mp-3d{display:block;position:relative;border-radius:3vmin;overflow:hidden;background:#03050b;touch-action:none}
 .mp-3d-err{position:absolute;inset:0;display:grid;place-items:center;font:800 3vmin "Exo 2",sans-serif;color:#fca5a5}
 .mp-3d-err[hidden]{display:none}
-@media (orientation:portrait){.mp-main{grid-template-columns:1fr;grid-template-rows:1fr 1fr}}
+
 /* (mẫu 9 · 3D) nút FIRE / BOOST HTML cũ đã bỏ — bảng 3D của game thay thế, xem rr-padscene-9.js */
 /* báo động + màn phủ */
 .mp-inc{position:absolute;left:50%;top:13vmin;transform:translateX(-50%);z-index:3;padding:1.2vmin 3vmin;border-radius:2.4vmin;background:rgba(127,29,29,.92);
@@ -69,8 +78,8 @@ html,body{margin:0;height:100%;overflow:hidden;background:#05060a;overscroll-beh
 .mp-cover.win b{color:#fde047;text-shadow:0 0 4vmin rgba(253,224,71,.6)}
 .mp-cover.lose b{color:#f87171}
 .mp-cover b{max-width:92vw}
-.mp-cover.kicked{pointer-events:auto}.mp-cover.kicked b{font-size:6vmin;color:#fcd34d}
-.mp-cbtns{display:none;gap:3vmin;margin-top:2vmin}.mp-cover.kicked .mp-cbtns{display:flex}
+.mp-cover.kicked,.mp-cover.taken{pointer-events:auto}.mp-cover.kicked b,.mp-cover.taken b{font-size:6vmin;color:#fcd34d}
+.mp-cbtns{display:none;gap:3vmin;margin-top:2vmin}.mp-cover.kicked .mp-cbtns,.mp-cover.taken .mp-cbtns{display:flex}
 .mp-cbtns button{border:0;border-radius:2.4vmin;padding:2vmin 4vmin;font:900 3.4vmin "Exo 2",sans-serif;letter-spacing:.06em;color:#fff;background:var(--tc);cursor:pointer}
 .mp-cbtns button+button{background:rgba(255,255,255,.12)}
 /* màn chờ chung (như pad.html của AWord) */
@@ -99,7 +108,7 @@ function css() {
   const s = document.createElement("style"); s.id = "mp-css"; s.textContent = CSS; document.head.append(s);
 }
 
-const SHIP = c => `<svg viewBox="-12 -6 24 12"><path d="M11 0 L5 -3.6 L-7 -3.6 L-10 -6 L-9.5 -2.6 L-9.5 2.6 L-10 6 L-7 3.6 L5 3.6 Z" fill="${c}" stroke="#fff" stroke-width=".9"/></svg>`;
+const SHIP = () => "";   // Đợt 514: tàu = chấm tròn (CSS .mp-ship, màu --c)
 
 // ---------------------------------------------------------------- tiếng (Web Audio tổng hợp — không file)
 function makeSound() {
@@ -147,13 +156,13 @@ export function mountMissilePad(mount, { team, client, onBack }) {
       <button class="mp-back" type="button" aria-label="Back">‹</button>
       <div class="mp-team">${meta.name}</div>
       <div class="mp-link"><i></i><span>Connecting…</span></div>
-      <div class="mp-track"><div class="mp-ship foe">${SHIP(foe.color)}</div><div class="mp-ship me">${SHIP(meta.color)}</div><div class="mp-flag"></div><div class="mp-fly"></div></div>
+      <div class="mp-track"><div class="mp-ship foe" style="--c:${foe.color}">${SHIP()}</div><div class="mp-ship me" style="--c:${meta.color}">${SHIP()}</div><div class="mp-flag"></div><div class="mp-fly"></div></div>
       <div class="mp-steps">0%</div>
     </div>
     <div class="mp-main mp-3d"><div class="mp-3d-err" hidden>3D is not available on this device.</div></div>
     <div class="mp-inc">⚠ INCOMING <span></span></div>
     <div class="mp-cover on"><b>WAITING</b><p>Open Rocket Race on the classroom screen and choose iPad ▸ Game controller.</p>
-      <div class="mp-cbtns"><button type="button" data-k="take">Take it back</button><button type="button" data-k="team">Choose team</button></div></div>
+      <div class="mp-cbtns"><button type="button" data-k="take">Try again</button><button type="button" data-k="team">Choose team</button></div></div>
     <div class="mp-relay">Slow link (no direct connection) — buttons work, status is not shown</div>
   </div>`;
   const root = mount.firstElementChild, q = s => root.querySelector(s);
@@ -164,7 +173,8 @@ export function mountMissilePad(mount, { team, client, onBack }) {
   const track = q(".mp-track"), flyEl = q(".mp-fly");
   const shipPct = [50, 50];                         // % ngang tâm tàu đội 0 / đội 1 (theo setInfo)
   const shipDy = s => (s === team ? -1.4 : 1.6);    // vmin lệch dọc so với giữa đường (tàu mình ở trên)
-  const MS_SVG = `<svg viewBox="0 0 46 15"><path d="M45 7.5 L37 3 L8 3 L2 0 L4 5.5 L4 9.5 L2 15 L8 12 L37 12 Z" fill="#e2333d" stroke="#ffd3c4" stroke-width="1"/><path d="M2 7.5 L-7 7.5" stroke="#ffb347" stroke-width="3" stroke-linecap="round"/></svg>`;
+  // Đợt 514: phẳng 2D — lửa đuôi vàng · thân đỏ một màu mũi bo · cánh sẫm (không viền, không bóng)
+  const MS_SVG = `<svg viewBox="0 0 30 10"><path d="M-7 5 L1 2.6 L1 7.4 Z" fill="#ffc23a"/><path class="b" d="M1 2 H20 Q29 2.4 30 5 Q29 7.6 20 8 H1 Z" fill="#ef2b2b"/><path d="M1 2 L-1 -1 L6 2 Z M1 8 L-1 11 L6 8 Z" fill="#9f1018"/></svg>`;
   const flights = new Map();                        // id → { el, from, to, t, dur, x, y }
   let peaceNow = false;
   const vmin = () => Math.min(innerWidth, innerHeight) / 100;
@@ -204,7 +214,8 @@ export function mountMissilePad(mount, { team, client, onBack }) {
       const a = flyPos(f); f.t += dt; const b = flyPos(f);
       f.x = b.x; f.y = b.y;
       const ang = Math.atan2(b.y - a.y, b.x - a.x) || (shipPct[f.to] >= shipPct[f.from] ? 0 : Math.PI);
-      f.el.style.transform = `translate(${b.x}px,${b.y}px) rotate(${ang}rad)`;
+      const k = f.t / f.dur, g = Math.max(0, Math.min(1, k / 0.12)), em = g * g * (3 - 2 * g);   // Đợt 514: CHUI RA từ chấm tàu — lớn dần 12 % đầu đường
+      f.el.style.transform = `translate(${b.x}px,${b.y}px) rotate(${ang}rad) scale(${0.25 + 0.75 * em})`;
     });
   })(flyLast);
   const snd = makeSound();
@@ -214,7 +225,7 @@ export function mountMissilePad(mount, { team, client, onBack }) {
   // quả to = bắn · hàng quả nhỏ = nạp · BOOST. Không gửi được (chưa nối) ⇒ bảng lắc từ chối như game.
   let scene = null;
   try {
-    scene = createPadScene({ mount: q(".mp-3d"), team, onKey: k => {
+    scene = createPadScene({ mount: q(".mp-3d"), team, topEl: q(".mp-top"), onKey: k => {   // k = "fire0" | "fire1" | "boost"
       snd.unlock();
       if (!client.send(k)) scene && scene.event(k === "boost" ? "refuse-boost" : "refuse-fire");
     } });
@@ -226,7 +237,8 @@ export function mountMissilePad(mount, { team, client, onBack }) {
 
   function paintCover() {
     let cls = "", title = "", text = "";
-    if (conn === "kicked") { cls = "kicked"; title = meta.name + " IS ON ANOTHER iPAD"; text = "Another iPad chose this team. Take it back, or choose the other team."; }
+    if (conn === "taken" || conn === "kicked") { cls = "taken"; title = meta.name + " ALREADY HAS AN iPAD";
+      text = "Another iPad is connected to this team. Choose the other team, or keep this screen open: it joins by itself when that iPad leaves."; }
     else if (conn === "nogame") { title = "WAITING"; text = "Open Rocket Race on the classroom screen and choose iPad ▸ Game controller."; }
     else if (conn !== "on" && conn !== "relay") { title = "CONNECTING…"; text = "Same Wi-Fi as the classroom screen."; }
     else if (conn === "on" && !info) { title = "CONNECTED"; text = "Waiting for the race."; }
@@ -292,7 +304,7 @@ export function mountMissilePad(mount, { team, client, onBack }) {
   return {
     setState({ s, rtt }) {
       conn = s; root.dataset.s = s;
-      linkS.textContent = s === "on" ? "" : s === "relay" ? "Slow link" : s === "nogame" ? "No game" : s === "kicked" ? "Taken by another iPad" : "Connecting…";
+      linkS.textContent = s === "on" ? "" : s === "relay" ? "Slow link" : s === "nogame" ? "No game" : s === "kicked" || s === "taken" ? "Team already has an iPad" : "Connecting…";
       if (s !== "on") { info = null; root.dataset.alarm = "0"; alarmT = -1; }
       paintCover();
     },
@@ -303,15 +315,27 @@ export function mountMissilePad(mount, { team, client, onBack }) {
 }
 
 // Màn chọn đội. current = đội iPad này đã chọn trước đó (viền sáng) · setBusy([0|1, 0|1]) = đội nào ĐANG có iPad khác nối (ghi nhỏ dưới nút —
-// vẫn chọn được: chọn trùng thì iPad này giành quyền, iPad kia hiện "IS ON ANOTHER iPAD").
+// Đợt 514: đội đó KHÔNG chọn được nữa (mờ + báo), trừ đội iPad này đang giữ).
 export function mountPadChooser(mount, { onPick, current = null }) {
   css();
   mount.innerHTML = `<div class="mpc"><h2>ROCKET RACE · CHOOSE YOUR TEAM</h2><div>${TEAM_META.map((m, t) =>
     `<button type="button" data-t="${t}" class="${t === current ? "cur" : ""}" style="--tc:${m.color}">${m.name}<small></small></button>`).join("")}</div>
     <p class="mpc-x">This iPad remembers its team. Change it any time with ‹ on the missile console.</p></div>`;
   const btns = [...mount.querySelectorAll("button")];
-  btns.forEach(b => b.addEventListener("click", () => onPick(+b.dataset.t)));
-  return { setBusy(busy) { btns.forEach((b, t) => { b.querySelector("small").textContent = busy && busy[t] ? "iPad already connected" : ""; }); } };
+  // ⭐ Đợt 514 (thầy 14/10): đội ĐÃ có iPad ⇒ không cho chọn — chạm vào chỉ báo, không giành
+  let busyNow = [0, 0], noteT = 0;
+  const note = mount.querySelector(".mpc-x"), noteText = note.textContent;
+  btns.forEach(b => b.addEventListener("click", () => {
+    const t = +b.dataset.t;
+    if (busyNow[t] && t !== current) {
+      note.textContent = TEAM_META[t].name + " already has an iPad connected. Choose the other team."; note.style.color = "#fcd34d";
+      clearTimeout(noteT); noteT = setTimeout(() => { note.textContent = noteText; note.style.color = ""; }, 3500);
+      return;
+    }
+    onPick(t);
+  }));
+  return { setBusy(busy) { busyNow = [busy && busy[0] ? 1 : 0, busy && busy[1] ? 1 : 0];
+    btns.forEach((b, t) => { b.querySelector("small").textContent = busyNow[t] ? "iPad already connected" : ""; b.style.opacity = busyNow[t] && t !== current ? ".45" : ""; }); } };
 }
 // Màn chờ chung (AWord: màn "iPad ready" của pad.html) — html do trang gọi truyền vào
 export function mountPadHub(mount, { title, html, onTeam }) {

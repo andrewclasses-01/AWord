@@ -15,7 +15,7 @@
 // ⭐ Đợt 511 (thầy 13/10/2026) — ROCKET RACE "GAME CONTROLLER": máy chiếu bật nút iPad ▸ Game controller ⇒ `ipad_now` {game:"rocketrace", ctl:true}
 //   ⇒ iPad này mở BẢNG TÊN LỬA của đội đã nhớ (cùng khoá đội với STAR LOOT — aw.ipadTeam) = chính bảng 3D của game (rr-padui.js / rr-padscene.js),
 //   nối WebRTC qua kênh templates/rocket-race/rr-pad-signal.js. Chưa chọn đội ⇒ màn chọn đội của Rocket Race (ghi "iPad already connected"
-//   dưới đội đã có iPad). 2 iPad chọn trùng đội ⇒ iPad sau giành, iPad trước hiện "IS ON ANOTHER iPAD" + Take it back / Choose team.
+//   dưới đội đã có iPad). Đợt 514: đội đã có iPad ⇒ iPad khác KHÔNG giành được (màn chọn đội chặn + máy chủ từ chối ⇒ "<ĐỘI> ALREADY HAS AN iPAD", iPad kia rời là tự vào).
 //   Không QR (thầy): iPad đã đăng nhập cùng tài khoản AWord, bấm nút iPad trên trang chủ là vào đây.
 // =============================================================
 
