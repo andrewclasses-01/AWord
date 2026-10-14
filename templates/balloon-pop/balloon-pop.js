@@ -23,6 +23,18 @@
 //   ⚠️ Options lưu PHẲNG trong activity.options (proxy nháp engine chỉ thấy khoá cấp 1): timer / timerTotalSeconds / shuffleQuestions /
 //   showAnswers + trLevels · trPointsOff · trBalloonSpeed · trTrainSpeed · trBonusTime · trBonusPoints · trBonusX2.
 //   `activity.options.trainRush` (Đợt 450–451) + khoá bp* của bản 2D chỉ còn là giá trị đầu (flatSeed).
+// ⭐⭐⭐ Đợt 515 (thầy 14/10/2026 — myGame 1ap, duyệt bản phác thiet-ke-fight-1-man.html rồi "ok build"):
+//   • FIGHT MỘT MÀN: 2 tàu song song trong MỘT cảnh (TEAM 1 đỏ ray gần, TEAM 2 xanh ray xa, góc máy quay A) — ./3d/fight-1ap.js.
+//     Ô điểm đỏ/xanh = THANH GIỜ của màn; đội đầy toa ⇒ tàu phóng đi, đội kia làm nốt (chờ thoải mái); cả 2 xong ⇒ giờ thừa đổi
+//     điểm (1 giây = 1 điểm) ⇒ màn mới. Thanh rút hết khi chưa xong ⇒ tàu dừng, OUT ⇒ đội kia làm nốt màn đó ⇒ hết trận.
+//   • iPad như Rocket Race: mỗi đội 1 iPad (trang chủ ▸ nút iPad ▸ chọn đội) thấy cảnh 2D của RIÊNG đội mình, chạm quả = nổ trên màn lớn.
+//     Nút iPad trong trận: Off · iPad + màn lớn (MẶC ĐỊNH) · Chỉ iPad. Bắt tay ./tr-pad-signal.js; iPad đi theo game qua core/ipad-now.js
+//     (claim game "trainrush" khi nút iPad không Off; `hold` từ lúc có iPad nối — AWord mở nơi khác không kéo iPad khỏi trận).
+//   • OPTIONS MỚI cho CẢ Single lẫn Fight (thầy chốt): LEVELS Off / 1–20 (Off = 1 màn chứa đủ cả bộ từ) THAY Max cars ·
+//     TIME ROUND Off / 1–10 phút MỖI MÀN / ∞ (đếm lên) THAY None / Count up / Count down (hàng Timer của engine ẩn: hideTimerOption).
+//     Mặc định LEVELS 5 · TIME ROUND 2 phút. KHOÁ MỚI trLevelCount (0–20) · trRound (0 Off · 1–10 · 11 = ∞) — KHÔNG dùng lại trLevels
+//     (nghĩa cũ = Max cars) hay timer (nghĩa cũ = giờ cả ván). Act chưa có khoá mới ⇒ trRound suy từ timer cũ (None ⇒ Off, Count up ⇒ ∞,
+//     Count down ⇒ số phút, kẹp 1–10); trLevelCount ⇒ 5.
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
@@ -33,42 +45,56 @@ const loader = () => { ensureTr3dCss(); return showLoader3d({ key: "trainrush", 
 preloadLoader3d("west");   // Đợt 452 — phông Rye tải ngay lúc nạp template (màn chờ hiện là đã có chữ)
 
 // CSS của game (chép từ myGame) + phông miền Tây; nạp một lần khi game mở lần đầu.
-const TR3D_CSS = ["bp3d.css", "bp3d-1j.css", "bp3d-1p.css", "bp3d-1q.css", "bp3d-1r.css", "bp3d-1ab.css", "fight-cine-1ae.css", "fight-1al.css", "bp3d-1al.css", "fight-1ao.css"];
+const TR3D_CSS = ["bp3d.css", "bp3d-1j.css", "bp3d-1p.css", "bp3d-1q.css", "bp3d-1r.css", "bp3d-1ab.css", "fight-cine-1ae.css", "fight-1al.css", "bp3d-1al.css", "fight-1ao.css", "fight-1ap.css"];
 const TR3D_FONTS = "https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@1,800;1,900&family=Rye&display=swap";
-// Đợt 452 — khoá game (DEFAULTS trong 3d/bp3d-1an.js) <-> khoá PHẲNG trong activity.options (engine + tr*)
-const TR_DEF = { timerMode: "down", timer: 120, levels: 10, pointsOff: 0, balloonSpeed: 4, trainSpeed: 4, shuffle: true, showAnswers: true, bonusTime: false, bonusPoints: false, bonusX2: false };
-const TM_TO_GAME = { none: "none", countUp: "up", countDown: "down" }, TM_TO_AW = { none: "none", up: "countUp", down: "countDown" };
+// Đợt 515 — khoá game (DEFAULTS trong 3d/bp3d-1ap.js) <-> khoá PHẲNG trong activity.options (engine + tr*)
+const TR_DEF = { levelCount: 5, roundMin: 2, pointsOff: 0, balloonSpeed: 4, trainSpeed: 4, shuffle: true, showAnswers: true, bonusTime: false, bonusPoints: false, bonusX2: false };
 const clampN = (v, lo, hi, d) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d; };
 // [khoá phẳng, khoá game, kiểu, min, max]
-const TR_FLAT = [["trLevels", "levels", "n", 3, 21], ["trPointsOff", "pointsOff", "n", 0, 10], ["trBalloonSpeed", "balloonSpeed", "n", 1, 10],
-  ["trTrainSpeed", "trainSpeed", "n", 1, 10], ["trBonusTime", "bonusTime", "b"], ["trBonusPoints", "bonusPoints", "b"], ["trBonusX2", "bonusX2", "b"]];
+const TR_FLAT = [["trLevelCount", "levelCount", "n", 0, 20], ["trRound", "roundMin", "n", 0, 11], ["trPointsOff", "pointsOff", "n", 0, 10],
+  ["trBalloonSpeed", "balloonSpeed", "n", 1, 10], ["trTrainSpeed", "trainSpeed", "n", 1, 10],
+  ["trBonusTime", "bonusTime", "b"], ["trBonusPoints", "bonusPoints", "b"], ["trBonusX2", "bonusX2", "b"]];
+// Đợt 515 — act chưa có trRound: suy từ đồng hồ CŨ (None ⇒ Off · Count up ⇒ ∞ · Count down ⇒ số phút, kẹp 1–10). Giờ cũ là của cả ván,
+// nay là MỖI MÀN — chỉ là giá trị đầu cho bảng Options, thầy chỉnh lại bằng thanh TIME ROUND.
+function roundFromOld(o) {
+  // chỉ act ĐÃ TỪNG lưu Options Train rush (khoá tr* Đợt 452 / trainRush Đợt 450) mới có đồng hồ là ý thầy; act khác mang timer mặc định
+  // của AWord ("none") ⇒ dùng mặc định thầy chốt (2 phút), không suy thành Off
+  const savedTR = (o.trainRush && typeof o.trainRush === "object") || ["trLevels", "trPointsOff", "trBalloonSpeed", "trTrainSpeed", "trBonusTime", "trBonusPoints", "trBonusX2"].some(k => k in o);
+  if (!savedTR) return TR_DEF.roundMin;
+  const tm = o.timer ?? (o.trainRush && o.trainRush.timerMode === "down" ? "countDown" : o.trainRush && o.trainRush.timerMode === "up" ? "countUp" : o.trainRush && o.trainRush.timerMode === "none" ? "none" : undefined);
+  const sec = typeof o.timerTotalSeconds === "number" ? o.timerTotalSeconds : o.trainRush && typeof o.trainRush.timer === "number" ? o.trainRush.timer : typeof o.bpTimerSeconds === "number" ? o.bpTimerSeconds : 120;
+  if (tm === "none") return 0;
+  if (tm === "countUp") return 11;
+  if (tm === "countDown") return clampN(sec / 60, 1, 10, 2);
+  return TR_DEF.roundMin;
+}
 // khoá phẳng => bộ Options của game
 function gameOpts(o) {
   o = o || {};
   const g = {};
-  if (TM_TO_GAME[o.timer]) g.timerMode = TM_TO_GAME[o.timer];
-  if (typeof o.timerTotalSeconds === "number") g.timer = clampN(o.timerTotalSeconds, 5, 3599, 120);
   if (typeof o.shuffleQuestions === "boolean") g.shuffle = o.shuffleQuestions;
   if (typeof o.showAnswers === "boolean") g.showAnswers = o.showAnswers;
+  // tốc độ / bonus đã lưu kiểu Đợt 450–451 (activity.options.trainRush) hoặc bản 2D (bp*) ⇒ giá trị đầu
+  const old = o.trainRush && typeof o.trainRush === "object" ? o.trainRush : {};
+  if (typeof old.balloonSpeed === "number") g.balloonSpeed = clampN(old.balloonSpeed, 1, 10, 4); else if (typeof o.bpSpeed === "number") g.balloonSpeed = clampN(o.bpSpeed, 1, 10, 4);
+  if (typeof old.trainSpeed === "number") g.trainSpeed = clampN(old.trainSpeed, 1, 10, 4);
+  for (const k of ["bonusTime", "bonusPoints", "bonusX2"]) if (typeof old[k] === "boolean") g[k] = old[k];
   TR_FLAT.forEach(([f, k, t, lo, hi]) => {
     if (t === "n" && typeof o[f] === "number") g[k] = clampN(o[f], lo, hi, TR_DEF[k]);
     if (t === "b" && typeof o[f] === "boolean") g[k] = o[f];
   });
+  if (typeof o.trRound !== "number") g.roundMin = roundFromOld(o);
   return g;
 }
-// bộ Options của game => khoá phẳng
+// bộ Options của game => khoá phẳng (không đụng timer / timerTotalSeconds / trLevels cũ)
 function flatOpts(g) {
   const f = {};
-  if (TM_TO_AW[g.timerMode]) f.timer = TM_TO_AW[g.timerMode];
-  if (typeof g.timer === "number") f.timerTotalSeconds = g.timer;
   if (typeof g.shuffle === "boolean") f.shuffleQuestions = g.shuffle;
   if (typeof g.showAnswers === "boolean") f.showAnswers = g.showAnswers;
   TR_FLAT.forEach(([fk, k]) => { if (typeof g[k] === typeof TR_DEF[k]) f[fk] = g[k]; });
   return f;
 }
 const trGame = act => ({ ...TR_DEF, ...gameOpts(act && act.options) });
-// giờ trận Fight (giây) từ bộ Options của game: Count down ⇒ giờ đó, ít nhất 2 phút (mẫu 1ah); kiểu khác ⇒ 2 phút
-const fightTime = o => Math.max(120, o.timerMode === "down" && Number(o.timer) ? Number(o.timer) : 0);
 // ⭐ Đợt 487 — đang ở trận Fight mà chọn act khác ở nút Thư mục ⇒ act đó mở thẳng vào Fight (mount đọc trong 15 s rồi xoá)
 let fightNextAt = 0;
 
@@ -90,33 +116,12 @@ function wordsOf(act) {
     .filter(it => it && String(it.keyword || "").trim() && String(it.definition || "").trim())
     .map(it => ({ keyword: String(it.keyword).trim(), definition: String(it.definition).trim() }));
 }
-// Đợt 452 — act chưa có khoá phẳng: rải giá trị đầu (mặc định < trainRush cũ / bp* bản 2D) vào activity.options TRONG BỘ NHỚ (không
-// lưu) để bảng Options của engine hiện đúng thứ game đang chơi. Khoá đã có (kể cả timer… bản 2D đã lưu) thì giữ nguyên.
+// Đợt 452/515 — act chưa có khoá phẳng tr*: rải giá trị đầu vào activity.options TRONG BỘ NHỚ (không lưu) để bảng Options của engine
+// hiện đúng thứ game đang chơi. Khoá đã có thì giữ nguyên.
 function flatSeed(act) {
   if (!act.options) act.options = {};
-  const base = { ...TR_DEF };
-  const old = trOptions(act);
-  Object.keys(TR_DEF).forEach(k => { if (k in old && typeof old[k] === typeof TR_DEF[k]) base[k] = old[k]; });
-  const f = flatOpts(base);
-  // ⚠️ Act chưa từng lưu kiểu Đợt 452 (không có khoá tr*): `timer` ở gốc là của bản 2D — luôn "none" vì Balloon pop 2D tự đếm giờ
-  // (bpTimerSeconds) ⇒ KHÔNG phải giờ thật của act; lấy giờ của game (trainRush cũ / bp* / mặc định Count down 2:00).
-  const fresh = !TR_FLAT.some(([fk]) => fk in act.options);
-  Object.keys(f).forEach(k => { if (!(k in act.options) || (fresh && (k === "timer" || k === "timerTotalSeconds"))) act.options[k] = f[k]; });
-}
-// Options đã lưu kiểu cũ. Act Balloon pop cũ (2D) chỉ có bp* ở gốc ⇒ lấy làm giá trị đầu.
-function trOptions(act) {
-  const o = (act && act.options) || {};
-  if (o.trainRush && typeof o.trainRush === "object") return { ...o.trainRush };
-  const seed = {};
-  if (typeof o.bpTimerSeconds === "number") { seed.timerMode = "down"; seed.timer = o.bpTimerSeconds; }
-  if (typeof o.bpSpeed === "number") seed.balloonSpeed = o.bpSpeed;
-  if (typeof o.bpLevels === "number") seed.levels = Math.max(3, Math.min(21, o.bpLevels));
-  if (typeof o.shuffleQuestions === "boolean") seed.shuffle = o.shuffleQuestions;
-  if (typeof o.showAnswers === "boolean") seed.showAnswers = o.showAnswers;
-  if (typeof o.bpBonusTime === "boolean") seed.bonusTime = o.bpBonusTime;
-  if (typeof o.bpBonusPoints === "boolean") seed.bonusPoints = o.bpBonusPoints;
-  if (typeof o.bpBonusX2 === "boolean") seed.bonusX2 = o.bpBonusX2;
-  return seed;
+  const f = flatOpts(trGame(act));
+  Object.keys(f).forEach(k => { if (!(k in act.options)) act.options[k] = f[k]; });
 }
 function noWebglMessage(root) {
   root.innerHTML = "";
@@ -144,6 +149,23 @@ function openHost() {
     }
   };
 }
+// ⭐ Đợt 515 — iPad của trận Fight 1 màn: kênh bắt tay + claim ipad_now (iPad ở pad.html tự sang cảnh 2D của đội mình).
+//   Nút iPad Off ⇒ thả claim (iPad về màn chờ chung). `hold` từ lúc có iPad nối (như STAR LOOT Đợt 513).
+//   Trả { signal, onPad, release } — signal null nếu kênh không nạp được (trận vẫn chơi bằng màn lớn).
+async function trPadLink() {
+  let signal = null, claim = null, N = null, dead = false, last = null;
+  try { const S = await import("./tr-pad-signal.js"); signal = S.trPadSignal(); } catch (e) { console.warn("Train rush iPad link", e); }
+  import("../../core/ipad-now.js").then(m => { N = m; if (!dead && last) onPad(last); }).catch(() => {});
+  function onPad(info) {
+    last = info;
+    if (dead || !N) return;
+    const on = info.mode !== "off", hold = on && info.linked.some(s => s === "on" || s === "relay");
+    if (!on) { if (claim) { claim.release(); claim = null; } return; }
+    if (!claim) claim = N.claimIpad({ game: "trainrush", fight: true, ctl: false, hold });
+    else claim.update({ hold });
+  }
+  return { signal, onPad, release() { dead = true; if (claim) { claim.release(); claim = null; } } };
+}
 
 const balloonPopTemplate = {
   type: "balloon_pop",
@@ -151,17 +173,20 @@ const balloonPopTemplate = {
   itemsKey: "items",
   timeCost: false,
   hidePointsOff: true,      // Points off của TRAIN RUSH thang 0–10 riêng (trPointsOff, bên dưới)
+  hideTimerOption: true,    // ⭐ Đợt 515 — đồng hồ = thanh TIME ROUND riêng (mỗi màn), không dùng None / Count up / Count down
   manualTimerStart: true,
-  // ⭐ Đợt 452 — mục riêng của TRAIN RUSH trong bảng Options THẬT của engine (nút Options của game mở bảng này qua ui.host.options).
+  // ⭐ Đợt 452/515 — mục riêng của TRAIN RUSH trong bảng Options THẬT của engine (nút Options của game mở bảng này qua ui.host.options).
   buildExtraOptions({ panel, draft, mkSliderCell, addCheck }) {
     const g = { ...TR_DEF, ...gameOpts(draft) };
     panel.append(
-      mkSliderCell({ label: "Max cars", sub: "per train", min: 3, max: 21, step: 1, value: g.levels, tone: "green",
-        fmt: v => (v >= 21 ? "∞" : String(v)), onInput: v => { draft.trLevels = v; } }).cell,
+      mkSliderCell({ label: "Levels", sub: "Off = all words, one train", min: 0, max: 20, step: 1, value: g.levelCount, tone: "green", offAt: 0,
+        fmt: v => (v === 0 ? "Off" : String(v)), onInput: v => { draft.trLevelCount = v; } }).cell,
+      mkSliderCell({ label: "Time round", sub: "minutes per level", min: 0, max: 11, step: 1, value: g.roundMin, tone: "green", offAt: 0,
+        fmt: v => (v === 0 ? "Off" : v >= 11 ? "∞" : v + "'"), onInput: v => { draft.trRound = v; } }).cell,
       mkSliderCell({ label: "Balloon speed", min: 1, max: 10, step: 1, value: g.balloonSpeed, tone: "blue", onInput: v => { draft.trBalloonSpeed = v; } }).cell,
+      mkSliderCell({ label: "Train speed", min: 1, max: 10, step: 1, value: g.trainSpeed, tone: "blue", onInput: v => { draft.trTrainSpeed = v; } }).cell,
       mkSliderCell({ label: "Points off", sub: "wrong answer", min: 0, max: 10, step: 1, value: g.pointsOff, tone: "red", offAt: 0,
-        fmt: v => (v === 0 ? "Off" : "-" + v), onInput: v => { draft.trPointsOff = v; } }).cell,
-      mkSliderCell({ label: "Train speed", min: 1, max: 10, step: 1, value: g.trainSpeed, tone: "blue", onInput: v => { draft.trTrainSpeed = v; } }).cell
+        fmt: v => (v === 0 ? "Off" : "-" + v), onInput: v => { draft.trPointsOff = v; } }).cell
     );
     addCheck("Bonus: extra time", g.bonusTime, v => { draft.trBonusTime = v; }, { key: "trBonusTime" });
     addCheck("Bonus: points", g.bonusPoints, v => { draft.trBonusPoints = v; }, { key: "trBonusPoints" });
@@ -195,14 +220,14 @@ const balloonPopTemplate = {
       root.append(d); return () => {};
     }
     const h = openHost();
-    let dead = false, game = null, fight = null, tok = 0, poll = 0;
+    let dead = false, game = null, fight = null, tok = 0, poll = 0, link = null;
     flatSeed(activity);
-    // Đợt 452 — Options ▸ Apply của engine => áp ngay trong cảnh (game chưa dựng xong => false => engine dựng lại như thường)
-    // Đợt 487 — đang ở trận Fight ⇒ Apply đổi giờ trận (fight.setTime: trận đang chạy / đã xong thì chơi lại từ đầu)
+    // Options ▸ Apply của engine => áp ngay trong cảnh (game chưa dựng xong => false => engine dựng lại như thường)
+    // Đợt 515 — Fight: setOptions(Options của game) ⇒ trận chơi lại từ đếm 3-2-1
     if (ui.liveOptions) ui.liveOptions(o => {
       if (dead) return false;
       const g = { ...TR_DEF, ...gameOpts(o) };
-      if (fight) return fight.setTime(fightTime(g)) === true;
+      if (fight) return fight.setOptions(g) === true;
       return game ? game.setOptions(g) === true : false;
     });
     const host = ui.host ? {
@@ -214,10 +239,7 @@ const balloonPopTemplate = {
       templates: () => ui.host.templates(),
       switchTemplate: t => ui.host.switchTemplate(t)
     } : null;
-    // ⭐ Đợt 487 (thầy 06/10/2026: "ở chế độ fight, hàng nút chưa được setup chuẩn như các game khác") — Mode ▸ Fight chạy trận
-    // NGAY TRONG ô này (như STAR LOOT), không qua engine.enterFight: ván Single của engine vẫn sống ⇒ cầu ui.host còn dùng được
-    // ⇒ hàng nút Fight có đủ Thư mục (act cùng thư mục) + Options (bảng Options thật, Apply ⇒ liveOptions ⇒ fight.setTime).
-    // Chọn act khác từ Thư mục trong trận ⇒ act đó mở thẳng vào Fight (fightNextAt, xem đầu file).
+    // ⭐ Đợt 487 — Mode ▸ Fight chạy trận NGAY TRONG ô này (như STAR LOOT), không qua engine.enterFight ⇒ cầu ui.host còn dùng được.
     const fightHost = ui.host ? {
       listActs: () => ui.host.listActs(),
       openAct: id => { fightNextAt = Date.now(); ui.host.openAct(id); },
@@ -228,6 +250,7 @@ const balloonPopTemplate = {
       clearInterval(poll);
       if (game) { try { game.destroy(); } catch (e) { console.warn("Train rush destroy", e); } game = null; }
       if (fight) { try { fight.destroy(); } catch (e) { console.warn("Train rush fight destroy", e); } fight = null; }
+      if (link) { link.release(); link = null; }
     };
     const failed = err => {
       console.error("Train rush failed to start", err);
@@ -238,7 +261,7 @@ const balloonPopTemplate = {
     function single() {
       const my = ++tok;
       drop();
-      import("./3d/bp3d-1an.js")
+      import("./3d/bp3d-1ap.js")
         .then(m => m.createBalloonPop({
           mount: h.box, view: "side", words, wordsTitle: activity.title || "", options: trGame(activity), host,
           onEvent: (k, d) => { if (k === "mode" && d === "fight") switchTo(toFight); }
@@ -249,13 +272,18 @@ const balloonPopTemplate = {
     function toFight() {
       const my = ++tok;
       drop();
-      import("./3d/fight-1ao.js")
-        .then(m => m.createTrainRushFight({ mount: h.box, words, wordsTitle: activity.title || "", time: fightTime(trGame(activity)), host: fightHost,
-          onSingle: () => switchTo(single), onHome: ui.host ? () => ui.host.home() : null }))
+      Promise.all([import("./3d/fight-1ap.js"), trPadLink()])
+        .then(([m, L]) => {
+          if (dead || my !== tok) { L.release(); return null; }
+          link = L;
+          return m.createTrainRushFight({ mount: h.box, words, wordsTitle: activity.title || "", options: trGame(activity), host: fightHost,
+            onSingle: () => switchTo(single), onHome: ui.host ? () => ui.host.home() : null, padSignal: L.signal, onPad: L.onPad });
+        })
         .then(api => {
+          if (!api) return;
           if (dead || my !== tok) { api.destroy(); return; }
           fight = api;
-          // Đợt 451 — chờ 2 bàn dựng xong (ô Loading… của trận ẩn) rồi mới mờ màn chờ
+          // Đợt 451 — chờ trận dựng xong (ô Loading… ẩn) rồi mới mờ màn chờ
           poll = setInterval(() => { const l = h.box.querySelector(".fb-ov-load"); if (dead || my !== tok || !l || l.hidden) { clearInterval(poll); ld.done(); } }, 100);
         })
         .catch(err => { console.error("Train rush fight failed — back to single", err); if (!dead && my === tok) single(); });
@@ -288,23 +316,27 @@ function mountTrainRushFight(root, act, { single, home }) {
   if (!canRun3d() || items.length < 2) { setTimeout(() => single(), 0); return () => {}; }
   const ld = loader();
   const h = openHost();
-  let dead = false, fightApi = null;
+  let dead = false, fightApi = null, link = null;
   if (act.options) flatSeed(act);
   const o = trGame(act);
-  const time = fightTime(o);   // trận 2 đội: ít nhất 2 phút (mẫu 1ah)
   const off = () => {
     if (dead) return; dead = true;
     ld.drop(); clearInterval(poll);
     obs.disconnect();
     try { fightApi && fightApi.destroy(); } catch (e) { console.warn("Train rush destroy", e); }
+    if (link) { link.release(); link = null; }
     h.close();
   };
-  let poll = 0;   // Đợt 451 — chờ 2 bàn dựng xong (ô Loading… của trận ẩn) rồi mới mờ màn chờ
+  let poll = 0;   // Đợt 451 — chờ trận dựng xong (ô Loading… ẩn) rồi mới mờ màn chờ
   const obs = new MutationObserver(() => { if (root.childNodes.length) off(); });
   obs.observe(root, { childList: true });
-  import("./3d/fight-1ao.js")   // Đợt 487: host {} ⇒ ẩn Thư mục / Options (đường engine không có cầu ui.host)
-    .then(m => m.createTrainRushFight({ mount: h.box, words: items, wordsTitle: act.title || "", time, host: {}, onSingle: () => single(), onHome: () => home() }))
-    .then(api => { if (dead) api.destroy(); else fightApi = api; })
+  Promise.all([import("./3d/fight-1ap.js"), trPadLink()])   // Đợt 487: host {} ⇒ ẩn Thư mục / Options (đường engine không có cầu ui.host)
+    .then(([m, L]) => {
+      if (dead) { L.release(); return null; }
+      link = L;
+      return m.createTrainRushFight({ mount: h.box, words: items, wordsTitle: act.title || "", options: o, host: {}, onSingle: () => single(), onHome: () => home(), padSignal: L.signal, onPad: L.onPad });
+    })
+    .then(api => { if (!api) return; if (dead) api.destroy(); else fightApi = api; })
     .then(() => { poll = setInterval(() => { const l = h.box.querySelector(".fb-ov-load"); if (dead || !l || l.hidden) { clearInterval(poll); ld.done(); } }, 100); })
     .catch(err => { console.error("Train rush fight failed — back to single", err); off(); single(); });
   return off;

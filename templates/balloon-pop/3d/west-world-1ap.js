@@ -1,4 +1,6 @@
-// Cảnh viễn tây — bản 1an (05/10/2026): như 1ah + hết khựng khi khúc cảnh MỌC LẠI saguaro giữa ván.
+// Cảnh viễn tây — bản 1ap (14/10/2026): như 1an + createWestWorld(scene, renderer, { tracks: [0, −10] }) — NHIỀU đường ray cố định
+//   (Fight 1 màn: TEAM 1 ray gần z 0, TEAM 2 ray xa). Cỏ/đá/mô đất tránh lòng mọi ray. Mặc định [0] = y hệt 1an.
+// ---- ghi chú 1an: Cảnh viễn tây — bản 1an (05/10/2026): như 1ah + hết khựng khi khúc cảnh MỌC LẠI saguaro giữa ván.
 //   Đo TRAIN RUSH 1an trên TOMKO (profiler CDP): mỗi ~12 s một khung 70–130 ms = regrow → tallSaguaro → cactus.saguaro dựng lưới mới
 //   (ống 40×80 đoạn + cành + mergeVertices) ngay trong khung vẽ. Nay: KHO 10 cây dựng sẵn lúc tải (màn chờ nạp đang che) + cây bị bỏ
 //   không huỷ mà vào kho DÙNG LẠI (trộn từ nhiều khúc). Mọc lại = lấy cây trong kho, đặt chỗ mới, xoay mới, scale theo chiều cao mới
@@ -98,7 +100,8 @@ float groundH(vec2 w){
   return duneApply(hills + mid + near, w);   /* 1x: đụn cát đỡ chữ */
 }`;
 
-export function createWestWorld(scene, renderer) {
+export function createWestWorld(scene, renderer, { tracks = [0] } = {}) {
+  const TRACKS = tracks.slice();   // 1ap: z các đường ray (Fight 1 màn: [0, −10])
   const rnd = mulberry(11);
   const N = makeNoise(5);
   const U = { time: { value: 0 }, camX: { value: 0 } };
@@ -285,20 +288,27 @@ export function createWestWorld(scene, renderer) {
   function buildChunk(seed) {
     const r = mulberry(seed), g = new THREE.Group();
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s3 = new THREE.Vector3(), p3 = new THREE.Vector3(), e = new THREE.Euler();
-    // đường ray: nền đá dăm + tà vẹt + đệm ray + 2 ray
-    const ballast = new THREE.Mesh(ballastGeo, ballastMat); ballast.receiveShadow = true; g.add(ballast);
-    const nS = Math.round(CHUNK / 0.62);
-    const sleepers = new THREE.InstancedMesh(sleeperGeo, sleeperMat, nS);
-    const plates = new THREE.InstancedMesh(plateGeo, rockMat, nS * 2);
-    for (let i = 0; i < nS; i++) {
-      const x = i * 0.62 + 0.31 + (r() - 0.5) * 0.04;
-      m4.compose(p3.set(x, 0.41, (r() - 0.5) * 0.05), q.setFromEuler(e.set(0, (r() - 0.5) * 0.05, 0)), s3.set(1, 1, 1)); sleepers.setMatrixAt(i, m4);
-      for (const k of [0, 1]) { m4.compose(p3.set(x, 0.49, k ? 0.68 : -0.68), q.identity(), s3.set(1, 1, 1)); plates.setMatrixAt(i * 2 + k, m4); plates.setColorAt(i * 2 + k, new THREE.Color(0x3a3430)); }
+    // đường ray: nền đá dăm + tà vẹt + đệm ray + 2 ray — 1ap: MỖI ray một nhóm con đặt ở z của ray đó (Fight 1 màn có 2 ray)
+    for (const tz of TRACKS) {
+      const tg = new THREE.Group(); tg.position.z = tz;
+      const ballast = new THREE.Mesh(ballastGeo, ballastMat); ballast.receiveShadow = true; tg.add(ballast);
+      const nS = Math.round(CHUNK / 0.62);
+      const sleepers = new THREE.InstancedMesh(sleeperGeo, sleeperMat, nS);
+      const plates = new THREE.InstancedMesh(plateGeo, rockMat, nS * 2);
+      for (let i = 0; i < nS; i++) {
+        const x = i * 0.62 + 0.31 + (r() - 0.5) * 0.04;
+        m4.compose(p3.set(x, 0.41, (r() - 0.5) * 0.05), q.setFromEuler(e.set(0, (r() - 0.5) * 0.05, 0)), s3.set(1, 1, 1)); sleepers.setMatrixAt(i, m4);
+        for (const k of [0, 1]) { m4.compose(p3.set(x, 0.49, k ? 0.68 : -0.68), q.identity(), s3.set(1, 1, 1)); plates.setMatrixAt(i * 2 + k, m4); plates.setColorAt(i * 2 + k, new THREE.Color(0x3a3430)); }
+      }
+      sleepers.receiveShadow = true; sleepers.castShadow = true; plates.receiveShadow = true; tg.add(sleepers, plates);
+      for (const z of [-0.68, 0.68]) { const rl = new THREE.Mesh(railGeo, railMat); rl.position.set(0, 0.46 + 0.005, z); rl.castShadow = true; rl.receiveShadow = true; tg.add(rl); }
+      g.add(tg);
     }
-    sleepers.receiveShadow = true; sleepers.castShadow = true; plates.receiveShadow = true; g.add(sleepers, plates);
-    for (const z of [-0.68, 0.68]) { const rl = new THREE.Mesh(railGeo, railMat); rl.position.set(0, 0.46 + 0.005, z); rl.castShadow = true; rl.receiveShadow = true; g.add(rl); }
     g.userData.nTrack = g.children.length;   // 1aa: con từ đây trở đi là cây cỏ/đá (đặt theo mặt đất)
-    const zOk = z => Math.abs(z) > 2.3;
+    const zOk = z => TRACKS.every(t => Math.abs(z - t) > 2.3);   // 1ap: tránh lòng MỌI đường ray
+    // 1ap: vật CAO (bụi ngải, đá, mô đất, xương rồng) không mọc GIỮA 2 ray — che tàu ray xa; giữa 2 ray chỉ còn cỏ thấp, sỏi
+    const zMid = z => TRACKS.length > 1 && z < Math.max(...TRACKS) + 2.3 && z > Math.min(...TRACKS) - 2.3;
+    const zTall = z => zOk(z) && !zMid(z);
     // 1n: BỤI CỎ SA MẠC như ảnh thầy gửi — thay toàn bộ lau, cỏ, bụi (giữ xương rồng). Gần: bụi nhiều lá; xa: bụi ít lá.
     {
       const lists = [[], [], [], [], []];
@@ -333,7 +343,7 @@ export function createWestWorld(scene, renderer) {
     if (GR2.sage) [[0, GR2.sage], [1, Math.round(GR2.sage * 0.3)]].forEach(([k, n]) => {
       const bush = new THREE.InstancedMesh(bushGeo, bushMats[k], n);
       for (let i = 0; i < n; i++) {
-        let z; do { z = 12 - 88 * Math.pow(r(), 0.9); } while (!zOk(z) || (z > 1.5 && z < 11));
+        let z; do { z = 12 - 88 * Math.pow(r(), 0.9); } while (!zTall(z) || (z > 1.5 && z < 11));
         const x = r() * CHUNK, sc = 0.6 + r() * 0.8;
         m4.compose(p3.set(x, -0.05, z), q.setFromEuler(e.set(0, r() * 6, 0)), s3.set(sc * (1.1 + r() * 0.5), sc * (0.6 + r() * 0.35), sc)); bush.setMatrixAt(i, m4);
         bush.setColorAt(i, new THREE.Color(0xffffff).offsetHSL(0, 0, (r() - 0.5) * 0.14));
@@ -344,7 +354,7 @@ export function createWestWorld(scene, renderer) {
     ROCK.protos.forEach((geo, k) => {
       const n = Math.max(1, Math.round(GS.veg.rock * (Z_FRONT + 71) / 85)), inst = new THREE.InstancedMesh(geo, ROCK.mat, n);
       for (let i = 0; i < n; i++) {
-        let z; do { z = Z_FRONT - (Z_FRONT + 71) * r(); } while (!zOk(z));
+        let z; do { z = Z_FRONT - (Z_FRONT + 71) * r(); } while (!(k === 3 ? zTall(z) : zOk(z)));
         const sc = 0.18 + Math.pow(r(), 2.5) * (k === 3 ? 1.6 : 0.9);
         m4.compose(p3.set(r() * CHUNK, sc * 0.12, z), q.setFromEuler(e.set((r() - 0.5) * 0.3, r() * 6, (r() - 0.5) * 0.3)), s3.set(sc, sc * (0.8 + r() * 0.5), sc * (0.8 + r() * 0.5)));
         inst.setMatrixAt(i, m4);
@@ -372,7 +382,7 @@ export function createWestWorld(scene, renderer) {
     if (NM) for (const it of NM.items) {   /* 1u: mô đất chi tiết, rải gần + trung cảnh (tránh lòng đường ray) */
       const nM = Math.round(it.n * (Z_FRONT + 48) / 60), inst = new THREE.InstancedMesh(it.geo, it.mat, nM);   // 1aa: đống đá cả dải sát máy quay
       for (let i = 0; i < nM; i++) {
-        let z; do { z = Z_FRONT - (Z_FRONT + 48) * Math.pow(r(), 1.2); } while (Math.abs(z) < 3.2 || (z > 5 && z < 12 && r() < 0.6));
+        let z; do { z = Z_FRONT - (Z_FRONT + 48) * Math.pow(r(), 1.2); } while (TRACKS.some(t => Math.abs(z - t) < 3.2) || zMid(z) || (z > 5 && z < 12 && r() < 0.6));
         const w = it.w[0] + r() * (it.w[1] - it.w[0]), h = it.h ? it.h[0] + r() * (it.h[1] - it.h[0]) : w * (0.85 + r() * 0.3), k = z > 1.5 && z < 11 ? 0.6 : 1;
         m4.compose(p3.set(r() * CHUNK, -0.08, z), q.setFromEuler(e.set(0, r() * 6, 0)), s3.set(w * k, h * k, w * (0.7 + r() * 0.4) * k)); inst.setMatrixAt(i, m4);
       }
@@ -388,7 +398,7 @@ export function createWestWorld(scene, renderer) {
     // xương rồng: saguaro CAO ở trung/xa cảnh, tai thỏ mọc nối nhau, thỉnh thoảng một cây ở tiền cảnh
     const nSag = 2 + Math.floor(r() * 2);
     for (let i = 0; i < nSag; i++) g.add(tallSaguaro(r));
-    for (let i = 0; i < 3; i++) { let z; do { z = 3 - r() * 38; } while (!zOk(z)); g.add(cactus.opuntia(r() * CHUNK, z, (0.9 + r() * 0.8) * (z > -10 ? 0.6 : 1), r)); }   // 1ab: gần ray nhỏ lại (che bánh tàu); trả vùng cũ (1aa rải tới sát máy quay ⇒ bụi tai thỏ to chình ình góc dưới màn chơi)
+    for (let i = 0; i < 3; i++) { let z; do { z = 3 - r() * 38; } while (!zTall(z)); g.add(cactus.opuntia(r() * CHUNK, z, (0.9 + r() * 0.8) * (z > -10 ? 0.6 : 1), r)); }   // 1ab: gần ray nhỏ lại (che bánh tàu); trả vùng cũ (1aa rải tới sát máy quay ⇒ bụi tai thỏ to chình ình góc dưới màn chơi)
     if (r() < 0.35) { const fx = 8 + r() * (CHUNK - 16); // tiền cảnh chỉ cây THẤP (dưới tầm bảng chữ toa đáp án đang ở giữa màn)
       if (r() < 0.5) g.add(cactus.saguaro(fx, 9 + r() * 4, (2.1 + r() * 0.5) * 0.7, r)); else g.add(cactus.opuntia(fx, 6 + r() * 5, (0.9 + r() * 0.3) * 0.65, r)); }   // 1ab: tiền cảnh nhỏ lại
     keepBase(g);

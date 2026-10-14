@@ -278,6 +278,8 @@ const APP_DATA_KINDS = new Set(["class", "showdown", "showdown-results", "showdo
                                 "ipad-now",
                                 // Đợt 511 — Rocket Race iPad "Game controller" handshake (templates/rocket-race/rr-pad-signal.js): rrpad_host/pad0/pad1
                                 "rocketrace-pad",
+                                // Đợt 515 — TRAIN RUSH iPad (Fight 1 màn) handshake (templates/balloon-pop/tr-pad-signal.js): trpad_host/pad0/pad1
+                                "trainrush-pad",
                                 // Đợt 484 — bảng "Hướng dẫn khi sai" tách khỏi act (gy_<actId>, xem napGoiY)
                                 "act-goiy"]);
 function isAppData(n) { return APP_DATA_KINDS.has(n.kind); }

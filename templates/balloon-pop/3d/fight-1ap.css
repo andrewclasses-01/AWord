@@ -1,0 +1,42 @@
+/* TRAIN RUSH — trận FIGHT MỘT MÀN mẫu 1ap (14/10/2026). Nạp SAU fight-1al.css + fight-1ao.css.
+   Một bàn phủ cả vùng chơi (2 ray trong cùng cảnh) · ô điểm đội = THANH GIỜ của màn (phần đã rút để nền tối) · bảng iPad 3 chế độ. */
+.fb-one .fb-area.k1m { display: block; }
+.fb-one .fb-duo { position: absolute; inset: 0; }
+.fb-one .fb-duo::after { display: none; }
+
+/* ô đội = thanh giờ: nền tối + lớp màu đội co lại theo giờ còn (TEAM 1 rút từ phải sang trái, TEAM 2 ngược lại) */
+.fb-one .fb-team { position: relative; overflow: hidden; background: #2a1a10; }
+.fb-one .fb-team > :not(.fb-fill) { position: relative; z-index: 1; }
+.fb-one .fb-fill { position: absolute; top: 0; bottom: 0; width: 100%; transition: filter .2s; }
+.fb-one .fb-team.t0 .fb-fill { left: 0; background: linear-gradient(90deg, #8f1f14, #c73526); }
+.fb-one .fb-team.t1 .fb-fill { right: 0; background: linear-gradient(270deg, #143f8f, #2769c7); }
+.fb-one .fb-team em { font: 800 15px "Baloo 2", system-ui, sans-serif; font-style: normal; letter-spacing: .06em; color: #ffe9b0; text-shadow: 0 1px 0 #000; white-space: nowrap; }
+.fb-one .fb-team.is-out { border-color: #ff7b6b; }
+.fb-one .fb-team.is-out em { color: #ffb3a8; }
+.fb-one .fb-team.is-count .fb-fill { filter: brightness(1.4) saturate(1.2); }
+.fb-one .fb-team.is-count b { color: #ffe08a; }
+
+.fb-hint { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 25; font: 700 18px "Baloo 2", system-ui, sans-serif; padding: 4px 18px;
+  border-radius: 12px; background: rgba(0, 0, 0, .62); color: #fff; pointer-events: none; }
+.fb-hint[hidden] { display: none; }
+.fb-bar .bp-tool.is-on { box-shadow: inset 0 0 0 2px #ffd98a; }
+
+/* bảng Options mẫu (myGame) */
+.fb-sl { display: grid; grid-template-columns: 170px 1fr 58px; align-items: center; gap: 12px; margin: 8px 0; }
+.fb-sl label { font: 800 15px "Baloo 2", system-ui, sans-serif; letter-spacing: .06em; color: #3a1f0e; }
+.fb-sl label small { display: block; font: 600 12px "Baloo 2", system-ui, sans-serif; letter-spacing: 0; opacity: .75; }
+.fb-sl input { width: 100%; accent-color: #b8541f; }
+.fb-sl b { font: 800 18px "Baloo 2", system-ui, sans-serif; text-align: center; padding: 2px 0; border-radius: 8px; background: #3a1f0e; color: #ffd98a; }
+.fb-pn-act { text-align: center; margin-top: 10px; }
+
+/* bảng iPad */
+.fb-pad-modes { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.fb-pad-m { font: 800 18px "Baloo 2", system-ui, sans-serif; padding: 10px 18px; border-radius: 12px; cursor: pointer; color: #3a1f0e; background: rgba(255, 255, 255, .5); border: 2px solid rgba(122, 74, 34, .4); }
+.fb-pad-m.is-on { background: #b8541f; color: #fff; border-color: #7d2f10; }
+.fb-pad-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0 6px; }
+.fb-pad-t { padding: 10px 14px; border-radius: 12px; color: #fff; display: grid; gap: 4px; }
+.fb-pad-t.t0 { background: linear-gradient(#c73526, #8f1f14); } .fb-pad-t.t1 { background: linear-gradient(#2769c7, #143f8f); }
+.fb-pad-t b { font: 800 18px "Baloo 2", system-ui, sans-serif; letter-spacing: .08em; }
+.fb-pad-t span { font: 600 15px "Baloo 2", system-ui, sans-serif; display: flex; align-items: center; gap: 8px; }
+.fb-pad-t i { width: 11px; height: 11px; border-radius: 50%; background: #888; box-shadow: 0 0 0 2px rgba(255, 255, 255, .5); }
+.fb-pad-t[data-s="on"] i { background: #5dff7a; } .fb-pad-t[data-s="relay"] i { background: #ffd34d; } .fb-pad-t[data-s="wait"] i { background: #ffa04d; }

@@ -17,6 +17,10 @@
 //   nối WebRTC qua kênh templates/rocket-race/rr-pad-signal.js. Chưa chọn đội ⇒ màn chọn đội của Rocket Race (ghi "iPad already connected"
 //   dưới đội đã có iPad). Đợt 514: đội đã có iPad ⇒ iPad khác KHÔNG giành được (màn chọn đội chặn + máy chủ từ chối ⇒ "<ĐỘI> ALREADY HAS AN iPAD", iPad kia rời là tự vào).
 //   Không QR (thầy): iPad đã đăng nhập cùng tài khoản AWord, bấm nút iPad trên trang chủ là vào đây.
+// ⭐ Đợt 515 (thầy 14/10/2026) — TRAIN RUSH FIGHT 1 MÀN: máy chiếu mở Train rush ▸ Fight (nút iPad không Off) ⇒ `ipad_now` {game:"trainrush"}
+//   ⇒ iPad này mở CẢNH 2D của đội đã nhớ (aw.ipadTeam — chung với STAR LOOT / Rocket Race): tàu + khinh khí cầu của RIÊNG đội, khớp màn lớn,
+//   chạm quả = quả đó nổ trên màn lớn (templates/balloon-pop/3d/tr-padui-1ap.js, chép myGame). Bắt tay: templates/balloon-pop/tr-pad-signal.js.
+//   Chưa chọn đội ⇒ màn chọn đội chung. Đội đã có iPad ⇒ iPad sau báo "TEAM x already has an iPad" (như Rocket Race Đợt 514).
 // =============================================================
 
 import { onUser, signIn } from "./core/firebase.js";
@@ -43,11 +47,13 @@ function urlWith(page, t) {
 
 // ---------------------------------------------------------------- các màn
 let view = "", curTeam = -1, client = null, ui = null, manual = false;
+let tr = null;                                   // Đợt 515: cảnh 2D Train Rush
 let rr = null, rrBusyOff = null;                 // Đợt 511: { client, ui } bảng tên lửa Rocket Race · huỷ nghe "đội đã có iPad"
 function stopPad() {
   if (client) { client.destroy(); client = null; }
   if (rr) { try { rr.client.destroy(); rr.ui.destroy(); } catch (e) { /* */ } rr = null; }
   if (rrBusyOff) { rrBusyOff(); rrBusyOff = null; }
+  if (tr) { try { tr.destroy(); } catch (e) { /* */ } tr = null; }
   ui = null; curTeam = -1;
 }
 const rrCtl = () => !!(now && now.game === "rocketrace" && now.ctl);
@@ -83,6 +89,22 @@ async function showRRChooser() {
   const ch = U.mountPadChooser(padEl, { current: savedTeam(), onPick: t => { saveTeam(t); manual = false; apply(true); } });
   rrBusyOff = S.rrPadSignal().listen("host", d => ch.setBusy([d && d.sid ? +d.c0 || 0 : 0, d && d.sid ? +d.c1 || 0 : 0]));
 }
+// ⭐ Đợt 515 — cảnh 2D TRAIN RUSH (Fight 1 màn) cho đội `team`
+const trMods = () => Promise.all([import("./templates/balloon-pop/3d/tr-padui-1ap.js"), import("./templates/balloon-pop/tr-pad-signal.js")]);
+async function showTR(team) {
+  note.hidden = true;
+  if (view === "tr" + team) return;
+  stopPad(); view = "tr" + team; curTeam = team;
+  history.replaceState(null, "", urlWith("pad.html", null));
+  padEl.innerHTML = "";
+  let mods;
+  try { mods = await trMods(); } catch (e) { console.warn("Train Rush pad", e); showNote("Could not load", "Check the network and reload this page.", { bad: true }); return; }
+  if (view !== "tr" + team) return;                    // đã đổi màn trong lúc nạp
+  const [U, S] = mods;
+  tr = U.mountTrainPad(padEl, { signal: S.trPadSignal(), team, onBack: () => { manual = true; showChooser(); } });
+  window.__padtr = tr;   // bàn thử
+  keepAwake();
+}
 function showDpad(team) {
   note.hidden = true;
   if (view === "dpad" && curTeam === team) return;
@@ -94,8 +116,30 @@ function showDpad(team) {
   ui.setState(client.state);
   window.__padc = client;   // bàn thử
 }
+// ⭐ Đợt 515 — màn chọn đội của TRAIN RUSH (đỏ / xanh); đội đang có iPad (trpad_host c0/c1) ⇒ chạm chỉ báo, không giành (như RR Đợt 514)
+async function showTRChooser() {
+  note.hidden = true;
+  stopPad(); view = "chooser";
+  history.replaceState(null, "", urlWith("pad.html", null));
+  let S; try { [, S] = await trMods(); } catch (e) { showNote("Could not load", "Check the network and reload this page.", { bad: true }); return; }
+  if (view !== "chooser") return;
+  const cur = savedTeam(), T = [["TEAM 1", "#e2402f"], ["TEAM 2", "#2f7fe2"]];
+  padEl.innerHTML = `<div style="position:fixed;inset:0;display:grid;place-content:center;gap:22px;text-align:center;background:#120c07;color:#f6e6c4;font-family:'Baloo 2',system-ui,sans-serif">
+    <h2 style="margin:0;font:400 clamp(24px,4.4vw,40px) Rye,serif;color:#ffd98a">TRAIN RUSH · CHOOSE YOUR TEAM</h2>
+    <div style="display:flex;gap:24px;justify-content:center">${T.map(([n, c], t) => `<button data-t="${t}" style="font:400 clamp(26px,4.6vw,40px) Rye,serif;color:#fff;padding:26px 44px;border-radius:18px;cursor:pointer;background:${c};border:4px solid ${t === cur ? "#ffd98a" : "rgba(255,255,255,.35)"}">${n}<small style="display:block;font:600 16px 'Baloo 2',sans-serif"></small></button>`).join("")}</div>
+    <p class="trc-x" style="margin:0;font:600 17px 'Baloo 2',sans-serif;opacity:.85">This iPad remembers its team. Change it any time with ‹ on the train screen.</p></div>`;
+  const btns = [...padEl.querySelectorAll("button[data-t]")], noteEl = padEl.querySelector(".trc-x");
+  let busy = [0, 0];
+  btns.forEach(b => b.addEventListener("click", () => {
+    const t = +b.dataset.t;
+    if (busy[t] && t !== cur) { noteEl.textContent = T[t][0] + " already has an iPad connected. Choose the other team."; noteEl.style.color = "#fcd34d"; return; }
+    saveTeam(t); manual = false; apply(true);
+  }));
+  rrBusyOff = S.trPadSignal().listen("host", d => { busy = [d && d.sid ? +d.c0 || 0 : 0, d && d.sid ? +d.c1 || 0 : 0]; btns.forEach((b, t) => { b.querySelector("small").textContent = busy[t] ? "iPad already connected" : ""; }); });
+}
 function showChooser() {
-  if (rrCtl()) { showRRChooser(); return; }           // Đợt 511: đang Rocket Race Game controller ⇒ màn chọn đội của RR
+  if (rrCtl()) { showRRChooser(); return; }
+  if (now && now.game === "trainrush") { showTRChooser(); return; }   // Đợt 515           // Đợt 511: đang Rocket Race Game controller ⇒ màn chọn đội của RR
   note.hidden = true;
   stopPad(); view = "chooser";
   history.replaceState(null, "", urlWith("pad.html", null));
@@ -108,7 +152,7 @@ function showHub() {
   stopPad(); view = "hub";
   history.replaceState(null, "", urlWith("pad.html", null));
   padEl.innerHTML = `<div class="pad-hub"><b>iPad ready</b>
-    <p>Open <span>STAR LOOT</span> — or <span>Rocket race</span> with the iPad button on (Question screen or Game controller) — on the classroom screen.<br>This iPad switches by itself.</p>
+    <p>Open <span>STAR LOOT</span>, <span>Train rush</span> Fight — or <span>Rocket race</span> with the iPad button on (Question screen or Game controller) — on the classroom screen.<br>This iPad switches by itself.</p>
     <p class="pad-hub-x"><a href="#" data-k="team">Choose team</a> · <a href="${urlWith("source.html", null)}">Rocket Race question screen</a></p></div>`;
   padEl.querySelector('[data-k="team"]').addEventListener("click", e => { e.preventDefault(); manual = true; showChooser(); });
   keepAwake();
@@ -136,6 +180,11 @@ function apply(force) {
     if (t === null) { if (view !== "chooser") showChooser(); } else showRR(t);
     return;
   }
+  if (g === "trainrush") {                              // Đợt 515: Train Rush Fight 1 màn ⇒ cảnh 2D của đội đã nhớ
+    const t = savedTeam();
+    if (t === null) { if (view !== "chooser") showChooser(); } else showTR(t);
+    return;
+  }
   if (g === "starloot") {
     const t = now.fight ? savedTeam() : 0;
     if (t === null) showChooser(); else showDpad(t);
@@ -154,8 +203,8 @@ function startFollow() {
     // ⭐ Đợt 513: đang làm tay cầm mà tài liệu báo game KHÁC ⇒ chờ 1,5 s — nếu đó chỉ là AWord mở ở nơi khác, máy chiếu (claim hold,
     //   core/ipad-now.js) ghi lại ngay và lượt đọc kế tiếp huỷ hẹn này ⇒ bảng tên lửa / D-pad không bị gỡ, không phải nối lại
     clearTimeout(applyT);
-    const busy = view.startsWith("rr") || view === "dpad";
-    const same = s && s.game && (view.startsWith("rr") ? s.game === "rocketrace" && s.ctl : view === "dpad" ? s.game === "starloot" : false);
+    const busy = view.startsWith("rr") || view.startsWith("tr") || view === "dpad";
+    const same = s && s.game && (view.startsWith("rr") ? s.game === "rocketrace" && s.ctl : view.startsWith("tr") ? s.game === "trainrush" : view === "dpad" ? s.game === "starloot" : false);
     if (first) apply(); else applyT = setTimeout(apply, !(s && s.game) ? 2500 : busy && !same ? 1500 : 500);
   }, e => {
     console.warn("iPad follow", e);

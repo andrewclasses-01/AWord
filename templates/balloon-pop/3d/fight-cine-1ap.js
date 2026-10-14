@@ -1,4 +1,5 @@
-// TRAIN RUSH — INTRO ĐIỆN ẢNH CHẾ ĐỘ FIGHT (mẫu 1af, 30/9/2026: toa hàng gỗ khắc hoa văn thay toa bảng TEAM 1/2; còn lại như 1ae)
+// TRAIN RUSH — INTRO ĐIỆN ẢNH CHẾ ĐỘ FIGHT bản 1ap (14/10/2026): như 1ah, thêm k.zFar / k.ownTrack cho Fight 1 màn (2 ray thật trong cảnh).
+// ---- ghi chú 1ah: TRAIN RUSH — INTRO ĐIỆN ẢNH CHẾ ĐỘ FIGHT (mẫu 1af, 30/9/2026: toa hàng gỗ khắc hoa văn thay toa bảng TEAM 1/2; còn lại như 1ae)
 // Thầy: "làm intro điện ảnh cho chế độ Fight — thể hiện 2 tàu, 2 team thi đua với nhau".
 // Quay trong cảnh của MỘT bàn (trang Fight cho bàn đó phủ cả màn trong lúc intro). Cùng phong cách intro bản đơn 1ab
 // (mở đầu từ khung màn chờ, ngả nâu, cắt cảnh LIA VỤT), ~11 s:
@@ -17,10 +18,12 @@ const Eo = x => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
 const lerp = (a, b, t) => a + (b - a) * t;
 const pose = (p, l, fov = 38) => ({ p, l, fov });
 const DUR = 11.0, LEAD = 1.4, FADE = 0.6, WHIP = 0.16;
-const Z_FAR = -5.2, LIFT = 0.28;   // ray thứ hai: sau ray chính 5,2; đắp nền cao thêm 0,28 (vùi bụi cỏ mọc sẵn trên đất)
+const Z_FAR0 = -5.2, LIFT0 = 0.28;   // ray thứ hai: sau ray chính 5,2; đắp nền cao thêm 0,28 (vùi bụi cỏ mọc sẵn trên đất)
 const V = 15;                      // tốc độ đua (đơn vị thế giới / giây)
 
+// 1ap (14/10/2026, Fight 1 màn): k.zFar = z ray xa THẬT của cảnh (−10) + k.ownTrack = false ⇒ không dựng ray tạm, tàu xanh chạy trên ray thật.
 export function createFightCine(k) {
+  const Z_FAR = k.zFar ?? Z_FAR0, OWN_TRACK = k.ownTrack !== false, LIFT = OWN_TRACK ? LIFT0 : 0;
   // k: { scene, camera, gradeU, sfx, stage, S, TS, RAIL_TOP, CART_W, ENGINE_LEN, TENDER_LEN, CART_GAP,
   //      makeEngine, makeTender, makeCart, makeFiller, weather, smokeTex, fxRoot, boardTexture }
   const { scene, camera, gradeU, sfx, stage, S, TS, RAIL_TOP } = k;
@@ -146,7 +149,7 @@ export function createFightCine(k) {
   function begin(ctx) {
     if (active) return;
     done = ctx.onDone; idle = ctx.idle; X0 = ctx.x0; T = 0; active = true; finished = false; shake = 0; cues = []; fired = new Set();
-    track = buildTrack(X0 - 60, 420);
+    track = OWN_TRACK ? buildTrack(X0 - 60, 420) : null;
     tr = [buildShow(0, ctx.colors[0]), buildShow(1, ctx.colors[1])];
     tr.forEach((o, i) => { o.x = headOf(i, 0); });
     stepTrains(0);

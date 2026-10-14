@@ -1,4 +1,16 @@
-// TRAIN RUSH — lõi MẪU 1an (05/10/2026): như 1am + 3 cải tiến rút từ STAR LOOT 2p (thầy: "làm bản 1an cho Train Rush luôn"):
+// TRAIN RUSH — lõi MẪU 1ap (14/10/2026): thầy chốt FIGHT MỘT MÀN (bản phác thiet-ke-fight-1-man.html) + Options mới cho CẢ Single lẫn Fight.
+//   • duo: true — MỘT cảnh, 2 đường ray cố định (TEAM 1 đỏ ray gần z 0, TEAM 2 xanh ray xa z −10), góc máy quay A (cao 13, xa 24, fov 28,
+//     nhìn chéo xuống — máy quay thấp như bản đơn thì tàu gần che tàu xa). Mỗi đội một BỘ RIÊNG (rig): tàu, toa, khinh khí cầu (làn riêng,
+//     vỏ nhuộm màu đội), thùng, điểm, thứ tự từ. Máy quay TRÔI ĐỀU; mỗi tàu tự nhanh/chậm (lò xo) giữ toa đang chờ ở giữa màn.
+//     Đội đầy toa ⇒ tàu PHÓNG ra khỏi màn (onEvent "team" gone); trang Fight (fight-1ap.js) lo thanh giờ, OUT, đếm thưởng, màn kế (api.duo*).
+//   • Kỹ thuật: biến S trỏ vào bộ của đội đang xử lý (đổi S trước mỗi lượt) — mọi hàm luật chơi cũ chạy y nguyên cho từng đội;
+//     các khoá DÙNG CHUNG (máy quay, thời gian, hiệu ứng, máy bay, tạm dừng) là get/set về một chỗ (SH).
+//   • Options MỚI (thầy 14/10): levelCount 0 = Off (1 màn chứa ĐỦ cả bộ từ) / 1–20 màn (màn k có k toa) — THAY Max cars ·
+//     roundMin 0 = Off (không đồng hồ, không thanh giờ) / 1–10 phút MỖI MÀN / 11 = ∞ (đếm lên) — THAY None/Count up/Count down.
+//     Single: mỗi màn thanh giờ đầy lại; qua màn cộng số giây còn lại; hết giờ ⇒ hết ván. Mặc định Levels 5 · Time round 2 phút.
+//   • Đoàn tàu DỰNG DẦN: chỉ dựng ≤ 5 toa đáp án đầu, toa sau gắn thêm vào đuôi khi toa chờ tới gần; toa đã qua xa bên phải thì gỡ
+//     (Levels Off = cả bộ 55 từ cũng không dựng 160 toa một lúc).
+// ---- ghi chú 1an: TRAIN RUSH — lõi MẪU 1an (05/10/2026): như 1am + 3 cải tiến rút từ STAR LOOT 2p (thầy: "làm bản 1an cho Train Rush luôn"):
 //   • auto-res-1an.js: nấc nào RỚT 2 LẦN ⇒ chốt trần dưới nó (1am: màn chờ / intro nhẹ ⇒ thử lại MSAA 4 ⇒ vào chơi rớt ⇒ lặp; mỗi lần đổi MSAA
 //     cấp lại bộ đệm ⇒ khựng; đo 1am trên TOMKO: drops 5 / ~50 s, PR nhảy 0,9 ↔ 1).
 //   • GHIM shader (pinPrograms mỗi 30 khung: +1 usedTimes cho mỗi program một lần) ⇒ không shader nào bị xoá rồi dịch lại giữa ván.
@@ -108,11 +120,11 @@ import { ShaderPass } from "../../rocket-race/vendor/three/addons/ShaderPass.js"
 import { OutputPass } from "../../rocket-race/vendor/three/addons/OutputPass.js";
 import { createBpSound } from "./sound-1ah.js";
 import * as CANNON from "../vendor/cannon-es.js";
-import { createWestWorld, normalFromNoise, TRACK_TOP } from "./west-world-1an.js";   // 1an: kho saguaro
+import { createWestWorld, normalFromNoise, TRACK_TOP } from "./west-world-1ap.js";   // 1ap: nhiều đường ray
 import { makeCoach, addPassengers, animatePassengers, makeCoalCar, COACH_LEN, COAL_LEN, COAL_LUMP, coalMaterial } from "./coach-1i.js";
 import { weather } from "./grime-1i.js";
 import { createCine, INTROS, INTRO_ID } from "./cine-1ah.js";
-import { createFightCine } from "./fight-cine-1ah.js";
+import { createFightCine } from "./fight-cine-1ap.js";   // 1ap: intro chạy trên ray xa thật
 import { makeAutoQuality } from "./auto-res-1an.js";   // 1an: + chốt trần khi rớt 2 lần
 
 const FONT = '"Baloo 2", system-ui, sans-serif';
@@ -129,17 +141,29 @@ const BAR_H = 80;                                                 // 1h: hàng n
 const VIEWS = {
   side: { cam: [0, 4.6, 25], look: [0, 6.1, 0], fov: 36, lanes: [7.3, 9.1, 10.9], guide: false },
   top:  { cam: [0, 21, 19.5], look: [0, 5.5, -2.4], fov: 40, lanes: [8.0, 9.8, 11.6], guide: true },
+  // 1ap: Fight 1 màn — góc A thầy chọn (bản phác 14/10). lanes = làn khinh khí cầu ray gần; far = làn ray xa
+  duo:  { cam: [0, 13, 24], look: [0, 5.7, -5], fov: 28, lanes: [8.6, 10.4, 12.2], far: [7.6, 9.2, 10.8], guide: false },
 };
+export const DUO_Z = -10;   // 1ap: z ray xa (TEAM 2)
+export const DUO_COLORS = [   // 1ap: = COLORS của fight-1ao (đầu máy theo màn, ván toa, viền bảng) + vỏ khinh khí cầu
+  { engine: [0x8f1d14, 0xa3281a, 0x7a1810], box: ["#9c3424", "#7c2618"], frame: "#b0281a", env: 0xe0796c },
+  { engine: [0x1d3f7a, 0x1f4f8f, 0x183466], box: ["#35608f", "#264a73"], frame: "#1f5fb8", env: 0x7aa6e6 },
+];
 
-const DEFAULTS = { timerMode: "down", timer: 120, levels: 10, pointsOff: 0, balloonSpeed: 4, trainSpeed: 4, shuffle: true, showAnswers: true, bonusTime: false, bonusPoints: false, bonusX2: false };   // 1j: tốc độ 1–10, Points off 0–10, Max cars 3–20 + 21 = ∞   // 1i: Points off thang AWord 0–100
+// 1ap: levelCount 0 = Off (1 màn đủ bộ từ) · 1–20 ; roundMin 0 = Off · 1–10 phút/màn · 11 = ∞ (đếm lên) — thay timerMode/timer/levels(Max cars)
+const DEFAULTS = { levelCount: 5, roundMin: 2, pointsOff: 0, balloonSpeed: 4, trainSpeed: 4, shuffle: true, showAnswers: true, bonusTime: false, bonusPoints: false, bonusX2: false };   // 1j: tốc độ 1–10, Points off 0–10, Max cars 3–20 + 21 = ∞   // 1i: Points off thang AWord 0–100
 
 export const TEAM_COLORS = ["#e2402f", "#2f7fe2"];   // 1ac: đội 1 đỏ · đội 2 xanh
-export async function createBalloonPop({ mount, view = "side", words, wordsTitle = "", embed = false, share = false, seed = null, mirror = false, trainColors = null, options = {}, onEvent = () => {}, host = null }) {
+export async function createBalloonPop({ mount, view = "side", words, wordsTitle = "", embed = false, share = false, seed = null, mirror = false, trainColors = null, options = {}, onEvent = () => {}, host = null, duo = false }) {
+  if (duo) { embed = true; view = "duo"; share = false; mirror = false; trainColors = null; }   // 1ap: Fight 1 màn luôn nằm trong trang Fight
   const V0 = VIEWS[view] || VIEWS.side;
   // 1ac: bàn Fight DẸT (tầng trên–dưới) ⇒ máy quay tiến gần 28 % — khung dọc chỉ ôm từ mặt ray tới làn khinh khí cầu cao nhất
-  const wide = embed && mount.clientWidth / Math.max(1, mount.clientHeight) > 2.6;
+  const wide = !duo && embed && mount.clientWidth / Math.max(1, mount.clientHeight) > 2.6;
   const V = wide ? { ...V0, cam: [V0.cam[0], V0.look[1] + (V0.cam[1] - V0.look[1]) * 0.72, V0.cam[2] * 0.72], look: [V0.look[0], V0.look[1] + 0.3, V0.look[2]] } : V0;
   const opt = { ...DEFAULTS, guide: V.guide, ...options };
+  const timed = () => !duo && opt.roundMin >= 1 && opt.roundMin <= 10;   // 1ap: thanh giờ màn (Single) — Fight 1 màn do trang Fight giữ giờ
+  const countUp = () => !duo && opt.roundMin >= 11;                      // 1ap: ∞ = đồng hồ đếm lên
+  let blimpSeq = 0;   // 1ap: số hiệu khinh khí cầu (iPad bấm theo số)
   // 1ac: hạt giống chung ⇒ 2 bàn Fight cùng thứ tự từ / toa phụ / làn bay (phần trang trí vẫn ngẫu nhiên)
   const rnd = seed != null ? mulberry(seed) : Math.random;
   const shuffleR = (a, r = rnd) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -180,13 +204,15 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
 
   // nửa bề ngang nhìn thấy: HALF ở độ cao nóc toa (cho tàu), SKY ở làn khinh khí cầu cao nhất (cho trời)
   // 1ac: đo bằng máy quay phụ đặt đúng góc chơi (máy quay thật có thể đang ở màn chờ); khung đổi tỉ lệ thì đo lại
-  let HALF = 18, SKY = 18, aspect = ASPECT;
-  const halfAt = y => {
+  // 1ap: HALF / SKY nay là của TỪNG đội (S.HALF, S.SKY — ray xa nhìn rộng hơn); RIGS = các bộ đội (Single: 1 bộ)
+  let aspect = ASPECT, RIGS = [];
+  const halfAt = (y, z = 0) => {
     const cam = new THREE.PerspectiveCamera(V.fov, aspect, 0.5, 4000); cam.position.set(...V.cam); cam.lookAt(...V.look); cam.updateMatrixWorld();
-    const v = new THREE.Vector3(0, y, 0).project(cam), rc = new THREE.Raycaster(), p = new THREE.Vector3();
+    const v = new THREE.Vector3(0, y, z).project(cam), rc = new THREE.Raycaster(), p = new THREE.Vector3();
     rc.setFromCamera(new THREE.Vector2(1, v.y), cam);
-    return rc.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), p) ? Math.abs(p.x) : 18;
+    return rc.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 0, 1), -z), p) ? Math.abs(p.x) : 18;
   };
+  const measureRig = r => { r.HALF = halfAt(ROOF_W, r.z); r.SKY = Math.max(r.HALF, halfAt(r.lanes[2] + 1.5, r.z)); };
   function fit() {
     let w, h;
     if (embed) { w = Math.max(1, mount.clientWidth); h = Math.max(1, mount.clientHeight); }   // 1ac: bàn Fight lấp đầy ô chứa
@@ -200,7 +226,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     if (composer) { composer.setPixelRatio(PR); composer.setSize(Math.floor(w), Math.floor(h)); }
     aspect = Math.floor(w) / Math.floor(h);
     if (Math.abs(camera.aspect - aspect) > 1e-4) { camera.aspect = aspect; camera.updateProjectionMatrix(); }
-    HALF = halfAt(ROOF_W); SKY = Math.max(HALF, halfAt(V.lanes[2] + 1.5));
+    RIGS.forEach(measureRig);
   }
   let composer = null;
   fit();
@@ -208,7 +234,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   document.addEventListener("fullscreenchange", fit);
   let dead = false;   // 1aj: destroy() ⇒ thôi vẽ, gỡ listener (AWord dỡ bàn khi đổi chế độ / rời act)
 
-  const world = createWestWorld(scene, renderer);
+  const world = createWestWorld(scene, renderer, { tracks: duo ? [0, DUO_Z] : [0] });   // 1ap
   world.setSound(sfx);   // 1ah: tiếng con vật, chữ đổ
   world.setCamera(camera);   // 1af: cặp thú đuổi nhau chỉ sinh/xoá NGOÀI khung hình thật
   // quét 1 lượt: sửa mọi pháp tuyến bằng 0 còn sót trong cảnh
@@ -295,18 +321,34 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
 
   const viewDir = new THREE.Vector3();   // 1aa: hướng nhìn máy quay — khúc cảnh phủ theo chỗ máy quay nhìn
   // ------------------------------------------------------------------ trạng thái
-  const S = {
-    state: "attract", paused: false, level: 0, timeLeft: opt.timer, score: 0, x2: 0,
-    train: null, carts: [], trainX: 0, trainLen: 0, trainV: 0, introT: 0, clearT: 0,
-    blimps: [], crates: [], fx: [], spawnT: 0, deck: [], levels: [], bag: [], lastTick: 99, chugT: 0,
-    plane: null, time: 0, camX: 0, camTarget: 0, camV: 0, shake: 0, cars: [], coaches: [], trainVel: 0, entry: 0,
-    teams: [0, 0], nextDir: 1,   // 1ac: điểm 2 đội (share) · hướng bay khinh khí cầu kế tiếp
-  };
+  // 1ap: phần DÙNG CHUNG mọi đội (máy quay, thời gian, hiệu ứng, máy bay, tạm dừng, intro bản đơn)
+  const SH = { paused: false, time: 0, fx: [], plane: null, camX: 0, camTarget: 0, camV: 0, shake: 0, idleX: null, cineC: 0, cineV0: 0, cineFocus: 0, signSwap: false, finalMus: false };
+  // 1ap: một BỘ cho mỗi đội — khoá chung là get/set về SH ⇒ hàm cũ ghi S.camX vẫn đúng một chỗ
+  function makeRig(team, z, lanes, colors) {
+    const r = {
+      state: "attract", level: 0, timeLeft: 0, timeCap: 0, score: 0, x2: 0,
+      train: null, carts: [], trainX: 0, trainLen: 0, trainV: 0, introT: 0, clearT: 0,
+      blimps: [], crates: [], spawnT: 0, deck: [], levels: [], bag: [], lastTick: 99, chugT: 0,
+      cars: [], coaches: [], trainVel: 0, entry: 0,
+      teams: [0, 0], nextDir: 1,   // 1ac: điểm 2 đội (share) · hướng bay khinh khí cầu kế tiếp
+      team, z, lanes, colors, HALF: 18, SKY: 18, trainBody: null, shapes: [], order: null, pend: [], tx0: 0, sndV: 0,
+      boxMat: colors && colors.box ? new THREE.MeshStandardMaterial({ map: plankTexture(...colors.box, true), normalMap: woodN, roughness: 0.82 }) : M.boxcar,
+      envMat: colors && colors.env != null ? M.envelope.clone() : M.envelope,
+    };
+    if (r.envMat !== M.envelope) r.envMat.color.set(colors.env);
+    for (const m of [r.boxMat, r.envMat]) { m.userData.shared = true; if (m.map) m.map.userData.shared = true; }
+    for (const k of Object.keys(SH)) Object.defineProperty(r, k, { get: () => SH[k], set: v => { SH[k] = v; }, enumerable: true });
+    return r;
+  }
+  RIGS = duo ? [makeRig(0, 0, V.lanes, DUO_COLORS[0]), makeRig(1, DUO_Z, V.far, DUO_COLORS[1])] : [makeRig(null, 0, V.lanes, trainColors)];
+  RIGS.forEach(measureRig);
+  let S = RIGS[0];   // 1ap: bộ đội đang xử lý (đổi trước mỗi lượt cập nhật / chạm / va chạm)
+  const withRig = (r, fn) => { const keep = S; S = r; try { return fn(); } finally { S = keep; } };
   const sky = new THREE.Group(); scene.add(sky);
   const fxRoot = new THREE.Group(); scene.add(fxRoot);
   FC = createFightCine({ scene, camera, gradeU: grade.uniforms, sfx, stage, S, TS, RAIL_TOP, CART_W, ENGINE_LEN, TENDER_LEN, CART_GAP,
     makeEngine: (...a) => makeEngine(...a), makeTender: (...a) => makeTender(...a), makeCart: (...a) => makeCart(...a), makeFiller: (...a) => makeFiller(...a),
-    weather, smokeTex, fxRoot, plankTexture, animatePassengers });
+    weather, smokeTex, fxRoot, plankTexture, animatePassengers, ...(duo ? { zFar: DUO_Z, ownTrack: false } : {}) });   // 1ap: duo ⇒ tàu xanh chạy trên ray xa thật
 
   // ------------------------------------------------------------------ bộ câu theo màn
   const norm = s => String(s).trim().toUpperCase().replace(/\s+/g, " ");
@@ -328,9 +370,9 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   function buildTrain(items, levelIdx) {
     if (S.train) { scene.remove(S.train); disposeTree(S.train); }
     // thùng còn nằm trên đoàn tàu cũ (đã chạy khỏi màn) đi theo tàu cũ
-    for (const c of S.crates.slice()) if (c.onTrain || c.mesh.position.x > S.camX + HALF) { removeCrate(c); S.crates.splice(S.crates.indexOf(c), 1); }
+    for (const c of S.crates.slice()) if (c.onTrain || c.mesh.position.x > S.camX + S.HALF) { removeCrate(c); S.crates.splice(S.crates.indexOf(c), 1); }
     const train = new THREE.Group();
-    const pal = trainColors && trainColors.engine ? trainColors.engine : PALETTE;   // 1ad: mỗi đội một bộ màu
+    const pal = S.colors && S.colors.engine ? S.colors.engine : PALETTE;   // 1ad: mỗi đội một bộ màu (1ap: theo bộ đội)
     const paintHex = pal[levelIdx % pal.length];
     const engine = makeEngine(paintHex, levelIdx + 1);
     train.add(engine);
@@ -339,12 +381,26 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     train.add(tender);
     // Sau toa than củi: [toa đáp án] · 2 toa phụ · [toa đáp án] · 2 toa phụ · ... Toa phụ = toa khách có người (62%)
     // hoặc toa than đen. 2 toa phụ đủ dài để toa đáp án kế tiếp luôn nằm NGOÀI mép trái khi toa trước ở giữa màn.
-    let cursor = -HEAD;
-    S.cars = []; S.coaches = [];
-    const fr = seed != null ? mulberry(seed * 31 + levelIdx * 977 + (S.round || 0)) : Math.random;   // 1ac: 2 đội cùng màn ⇒ cùng toa khách/toa than
+    S.cursor = -HEAD;
+    S.cars = []; S.coaches = []; S.carts = []; S.pend = items.slice(); S.pruneT = 0;
+    S.fr = seed != null ? mulberry(seed * 31 + levelIdx * 977 + (S.round || 0)) : Math.random;   // 1ac: 2 đội cùng màn ⇒ cùng toa khách/toa than
+    S.train = train; S.engine = engine; S.wheelA = 0;
+    appendCarts(STREAM0, true);   // 1ap: dựng DẦN — chỉ vài toa đáp án đầu, còn lại gắn vào đuôi khi tới lượt
+    S.wheels = []; S.rods = [];
+    train.traverse(o => { if (o.userData.wheelR) S.wheels.push(o); if (o.userData.rod) S.rods.push(o); });
+    train.scale.setScalar(TS);
+    train.position.y = RAIL_TOP; train.position.z = S.z;
+    weather(train);   // 1i: bụi bẩn, trầy xước, gồ ghề — hết bóng nhựa
+    scene.add(train);
+    buildTrainBody();
+  }
+  const STREAM0 = 5;   // 1ap: số toa đáp án dựng ngay đầu màn
+  // 1ap: gắn thêm n toa đáp án (kèm 2 toa phụ đứng trước mỗi toa) vào ĐUÔI tàu — toa chờ còn ≥ 2 toa đáp án phía sau thì đuôi luôn ngoài màn
+  function appendCarts(n, initial = false) {
+    const train = S.train, fresh = [];
     const addFiller = () => {
       let car;
-      if (fr() < 0.62) {
+      if (S.fr() < 0.62) {
         const co = makeCoach([0x1f4a33, 0x5a1a1a, 0x1f3050, 0x4a3a1a][Math.floor(Math.random() * 4)], meshAdder, M);
         car = { type: "coach", group: co.group, len: COACH_LEN, roof: co.roof, bogies: co.bogies, people: addPassengers(co.group, co.y0), startleT: null };
         S.coaches.push(car);
@@ -353,28 +409,53 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
         car = { type: "coal", group: cc.group, len: COAL_LEN, roof: cc.roof, bogies: cc.bogies };
       }
       for (const bx of car.bogies) for (const s of [-1, 1]) for (const dx of [-0.52, 0.52]) wheel(car.group, 0.38, bx + dx, s * 0.82, false);
-      car.localX = cursor - car.len / 2; car.group.position.x = car.localX;
-      train.add(car.group); S.cars.push(car); cursor -= car.len + CART_GAP;
+      car.localX = S.cursor - car.len / 2; car.group.position.x = car.localX;
+      train.add(car.group); S.cars.push(car); fresh.push(car.group); S.cursor -= car.len + CART_GAP;
     };
-    S.carts = items.map((it, i) => {
-      if (i > 0) { addFiller(); addFiller(); }
-      const cart = makeCart(it.definition, i);
-      const localX = cursor - CART_W / 2; cart.position.x = localX; cursor -= CART_W + CART_GAP;
-      train.add(cart);
+    for (let k = 0; k < n && S.pend.length; k++) {
+      const it = S.pend.shift();
+      if (S.carts.length) { addFiller(); addFiller(); }
+      const cart = makeCart(it.definition, S.colors ? S.colors.frame : undefined);
+      const localX = S.cursor - CART_W / 2; cart.position.x = localX; S.cursor -= CART_W + CART_GAP;
+      train.add(cart); fresh.push(cart);
       const c = { type: "answer", group: cart, item: it, key: norm(it.keyword), filled: false, localX, len: CART_W, roof: ROOF_Y };
-      S.cars.push(c);
-      return c;
-    });
-    S.wheels = []; S.rods = [];
-    train.traverse(o => { if (o.userData.wheelR) S.wheels.push(o); if (o.userData.rod) S.rods.push(o); });
-    train.scale.setScalar(TS);
-    train.position.y = RAIL_TOP;
-    S.train = train; S.engine = engine; S.wheelA = 0;
-    S.trainLen = (ENGINE_LEN / 2 - cursor - CART_GAP) * TS;
-    weather(train);   // 1i: bụi bẩn, trầy xước, gồ ghề — hết bóng nhựa
-    scene.add(train);
+      S.cars.push(c); S.carts.push(c);
+    }
+    S.trainLen = (ENGINE_LEN / 2 - S.cursor - CART_GAP) * TS;
+    S.layoutV = (S.layoutV || 0) + 1;   // 1ap: iPad biết bố cục tàu đổi
+    if (initial) return;
+    for (const g of fresh) { weather(g); g.traverse(o => { if (o.userData.wheelR) S.wheels.push(o); if (o.userData.rod) S.rods.push(o); }); }
     buildTrainBody();
   }
+  // 1ap: toa đã qua xa bên PHẢI (trước toa chờ, ngoài màn > 30 đv) ⇒ gỡ hình + thùng trên đó (giữ dữ liệu toa cho bảng kết quả)
+  function pruneCars() {
+    const cur = S.carts.find(c => !c.filled), lim = S.camX + S.HALF + 30;
+    let any = false;
+    for (const car of S.cars) {
+      if (car.pruned || !car.group || (cur && car.localX <= cur.localX)) continue;
+      if (S.train.position.x + (car.localX - car.len / 2) * TS <= lim) continue;
+      for (const c of S.crates.slice()) if (c.scoredCart === car || (c.onTrain && Math.abs(c.mesh.position.x - (S.train.position.x + car.localX * TS)) < car.len * TS / 2 + 0.5)) { removeCrate(c); S.crates.splice(S.crates.indexOf(c), 1); }
+      S.train.remove(car.group); disposeTree(car.group); car.pruned = true;
+      if (car.type === "coach") S.coaches.splice(S.coaches.indexOf(car), 1);
+      any = true;
+    }
+    if (!any) return;
+    S.layoutV = (S.layoutV || 0) + 1;
+    S.wheels = []; S.rods = [];
+    S.train.traverse(o => { if (o.userData.wheelR) S.wheels.push(o); if (o.userData.rod) S.rods.push(o); });
+    buildTrainBody();
+  }
+  // 1ap: mỗi khung khi đang chơi — gắn toa mới vào đuôi khi toa chờ gần cuối phần đã dựng; thỉnh thoảng gỡ toa đã qua
+  function streamTrain(dt) {
+    if (!S.train) return;
+    if (S.pend.length) {
+      const idx = S.carts.findIndex(c => !c.filled);
+      if (idx === -1 || S.carts.length - idx <= 2) appendCarts(2);
+    }
+    S.pruneT = (S.pruneT || 0) + dt;
+    if (S.pruneT > 0.7) { S.pruneT = 0; pruneCars(); }
+  }
+  const levelFull = () => !S.pend.length && S.carts.every(k => k.filled);   // 1ap: đủ toa = mọi toa đã dựng đầy + không còn toa chờ dựng
   // trainX = mũi đầu máy (thế giới); gốc nhóm tàu = tâm đầu máy
   function placeTrain() { S.train.position.x = S.trainX - ENGINE_LEN / 2 * TS; }
   const cartWorldX = c => S.train.position.x + c.localX * TS;
@@ -503,7 +584,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     return g;
   }
 
-  function makeCart(definition, frame = trainColors && trainColors.frame, boxMat = M.boxcar) {   // 1ae: tàu trình diễn intro dùng màu đội kia
+  function makeCart(definition, frame = S.colors && S.colors.frame, boxMat = S.boxMat || M.boxcar) {   // 1ap: màu theo bộ đội   // 1ae: tàu trình diễn intro dùng màu đội kia
     const g = new THREE.Group(), add = meshAdder(g);
     add(new THREE.BoxGeometry(CART_W, 0.26, 1.5), M.iron, 0, 0.95);
     add(new THREE.BoxGeometry(CART_W - 0.1, 2.4, 1.95), [boxMat, boxMat, M.woodDark, M.woodDark, boxMat, boxMat], 0, 2.3);
@@ -552,30 +633,30 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     return k;
   }
   function spawnBlimp(x, attract) {
-    const lanes = shuffleR(V.lanes.slice());
+    const lanes = shuffleR(S.lanes.slice());   // 1ap: làn của bộ đội (ray xa có làn riêng)
     // luôn NGOÀI mép phải (kể cả khi máy quay đang lia tới) và luôn SAU quả đang bay cuối cùng (không chen/đè nhau)
     // 1ac share: xen kẽ bay phải→trái (dir 1) và trái→phải (dir −1) ⇒ hai nửa màn gặp khinh khí cầu như nhau
     const dir = share && x == null && !attract ? (S.nextDir = -S.nextDir) : 1;
     const same = S.blimps.filter(b => !b.leaving && !b.attract && (b.dir || 1) === dir);
     const lastX = dir > 0 ? same.reduce((m, b) => Math.max(m, b.x), -Infinity) : same.reduce((m, b) => Math.min(m, b.x), Infinity);
-    const spawnX = x ?? (dir > 0 ? Math.max(Math.max(S.camX, S.camTarget) + SKY + 7, lastX + 8.5) : Math.min(Math.min(S.camX, S.camTarget) - SKY - 7, lastX - 8.5));
+    const spawnX = x ?? (dir > 0 ? Math.max(Math.max(S.camX, S.camTarget) + S.SKY + 7, lastX + 8.5) : Math.min(Math.min(S.camX, S.camTarget) - S.SKY - 7, lastX - 8.5));
     const y = lanes.find(l => x != null || laneFree(l, spawnX));
     if (y == null) return false;
-    const bonusTypes = [opt.bonusTime && opt.timerMode === "down" && "time", opt.bonusPoints && "points", opt.bonusX2 && "x2"].filter(Boolean);
+    const bonusTypes = [opt.bonusTime && timed() && !duo && "time", opt.bonusPoints && "points", opt.bonusX2 && "x2"].filter(Boolean);   // 1ap: duo — giờ do trang Fight giữ
     const bonus = !attract && bonusTypes.length && Math.random() < 0.11 ? bonusTypes[Math.floor(Math.random() * bonusTypes.length)] : null;
     const word = bonus ? null : (attract ? words[Math.floor(Math.random() * words.length)].keyword : drawKeyword());
     const obj = bonus ? makeBonusBalloon(bonus) : makeBlimp(word);
     const boost = !attract && S.entry > 0 ? (S.entry--, 3.2) : 0;   // đầu màn: bay vào nhanh hơn chút rồi chậm dần về tốc độ thường
-    const b = { obj, word, bonus, x: spawnX, baseY: y, y, phase: Math.random() * 6, attract: !!attract, leaving: false, vy: 0, boost, dir };
+    const b = { obj, word, bonus, x: spawnX, baseY: y, y, phase: Math.random() * 6, attract: !!attract, leaving: false, vy: 0, boost, dir, id: ++blimpSeq, rig: S };   // 1ap: id cho iPad
     if (dir < 0) obj.rotation.y = Math.PI;   // 1ac: mũi khinh khí cầu quay sang phải
-    obj.position.set(b.x, y, 0);
+    obj.position.set(b.x, y, S.z);
     obj.userData.blimp = b;
     sky.add(obj);
     // thân va chạm: 3 cầu dọc thân khí cầu + 1 cầu khoang lái (chỉ va thùng đang nằm trên tàu)
     const bb = new CANNON.Body({ mass: 0, type: CANNON.Body.KINEMATIC, collisionFilterGroup: 4, collisionFilterMask: 2 });
     if (bonus) bb.addShape(new CANNON.Sphere(1.15 * BS));
     else { for (const x of [-1.7, 0, 1.7]) bb.addShape(new CANNON.Sphere(0.98 * BS * (x ? 0.85 : 1)), new CANNON.Vec3(x * BS, 0, 0)); bb.addShape(new CANNON.Sphere(0.42 * BS), new CANNON.Vec3(-0.3 * BS, -1.35 * BS, 0)); }
-    bb.position.set(b.x, y, 0);
+    bb.position.set(b.x, y, S.z);
     bb.addEventListener("collide", () => { if (S.time - (b.bumpT || -9) > 0.4) { b.bumpT = S.time; b.bump = 1; sfx.bump(); } });
     PH.addBody(bb); b.body = bb; b.bump = 0;
     if (opt.guide && !bonus && !attract) b.guide = makeGuide(y);
@@ -585,7 +666,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   }
   function makeBlimp(word) {
     const g = new THREE.Group();
-    const env = new THREE.Mesh(G.envelope, M.envelope); env.castShadow = true; env.receiveShadow = true; g.add(env);
+    const env = new THREE.Mesh(G.envelope, S.envMat || M.envelope); env.castShadow = true; env.receiveShadow = true; g.add(env);   // 1ap: vỏ nhuộm màu đội
     // 4 cánh đuôi
     for (let i = 0; i < 4; i++) {
       const pivot = new THREE.Group(); pivot.rotation.x = i * Math.PI / 2 + Math.PI / 4;
@@ -644,15 +725,20 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
 
   // ------------------------------------------------------------------ bấm
   const rc = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  let touchOK = true;   // 1ap: Fight — nút iPad "Chỉ iPad" ⇒ màn lớn chỉ để xem (api.setTouch)
   canvas.addEventListener("pointerdown", e => {
-    if (S.state !== "play" || S.paused) return;
+    if (SH.paused) return;
     const r = canvas.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     if (mirror) ndc.x = -ndc.x;   // 1ad: khung hình lật ngang
     rc.setFromCamera(ndc, camera);
-    const hits = rc.intersectObjects(S.blimps.filter(b => !b.leaving && !b.attract).map(b => b.obj.userData.hit), false);
+    // 1ap: duo — chạm quả của ĐỘI NÀO thì thùng rơi xuống tàu đội đó (thầy chấp nhận bấm được quả đội bạn)
+    const live = RIGS.filter(R => R.state === "play").flatMap(R => R.blimps.filter(b => !b.leaving && !b.attract));
+    if (!live.length) return;
+    if (!touchOK) { onEvent("touchBlocked"); return; }
+    const hits = rc.intersectObjects(live.map(b => b.obj.userData.hit), false);
     const team = share ? ((e.clientX - r.left) < r.width / 2 ? 0 : 1) : null;   // 1ac: nửa trái = đội 1, nửa phải = đội 2
-    if (hits.length) popBlimp(hits[0].object.parent.userData.blimp, team);
+    if (hits.length) { const b = hits[0].object.parent.userData.blimp; withRig(b.rig, () => popBlimp(b, team)); }
   });
 
   function popBlimp(b, team = null) {
@@ -689,65 +775,75 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   ballastBody.addShape(new CANNON.Box(new CANNON.Vec3(1e4, 0.2, 1.35))); ballastBody.position.set(0, 0.2, 0);
   PH.addBody(ballastBody);
   const CRATE_HALF = new CANNON.Vec3(CRATE_W * TS / 2, CRATE * TS / 2, CRATE * TS / 2);
-  let trainBody = null;
+  if (duo) { const bb2 = new CANNON.Body({ mass: 0, material: pmGround }); bb2.addShape(new CANNON.Box(new CANNON.Vec3(1e4, 0.2, 1.35))); bb2.position.set(0, 0.2, DUO_Z); PH.addBody(bb2); }   // 1ap: nền đá dăm ray xa
   const shapeInfo = new Map(), contactQ = [];
-  // cả đoàn tàu = MỘT vật động học ghép nhiều khối (mỗi khối biết mình thuộc toa nào)
+  // cả đoàn tàu = MỘT vật động học ghép nhiều khối (mỗi khối biết mình thuộc toa nào) — 1ap: thân tàu của TỪNG bộ đội (S.trainBody)
   function buildTrainBody() {
-    if (trainBody) PH.removeBody(trainBody);
-    shapeInfo.clear();
+    if (S.trainBody) PH.removeBody(S.trainBody);
+    for (const s of S.shapes) shapeInfo.delete(s);
+    S.shapes = [];
     const b = new CANNON.Body({ mass: 0, type: CANNON.Body.KINEMATIC, material: pmCar });
+    b.userData = { trainRig: S };
+    const rig = S;
     const box = (info, cx, y0, y1, hx, hz) => {
       const s = new CANNON.Box(new CANNON.Vec3(hx * TS, (y1 - y0) / 2 * TS, hz * TS));
-      b.addShape(s, new CANNON.Vec3(cx * TS, (y0 + y1) / 2 * TS, 0)); shapeInfo.set(s, info);
+      b.addShape(s, new CANNON.Vec3(cx * TS, (y0 + y1) / 2 * TS, 0)); shapeInfo.set(s, { ...info, rig }); rig.shapes.push(s);
     };
     box({ type: "head" }, -1.95, 0.9, 3.62, 1.2, 1.1);                 // cabin
     box({ type: "head" }, 1.0, 0.9, 2.9, 2.2, 0.9);                    // nồi hơi
     box({ type: "head" }, -ENGINE_LEN / 2 - CART_GAP - TENDER_LEN / 2, 0.9, 2.6, TENDER_LEN / 2, 1.0);
     for (const car of S.cars) {
+      if (car.pruned) continue;   // 1ap: toa đã gỡ
       if (car.type === "answer") {
         box({ type: "answer", car }, car.localX, ROOF_Y - 0.16, ROOF_Y, CART_W / 2 + 0.12, 1.1);
         box({ type: "answer", car }, car.localX, 0.9, ROOF_Y - 0.16, CART_W / 2 - 0.05, 0.98);
       } else box({ type: car.type, car }, car.localX, 0.9, car.roof, car.len / 2, 0.98);
     }
-    b.position.set(S.train.position.x, RAIL_TOP, 0);
-    PH.addBody(b); trainBody = b;
+    b.position.set(S.train.position.x, RAIL_TOP, S.z);
+    PH.addBody(b); S.trainBody = b;
   }
+  function dropTrainBody() { if (S.trainBody) { PH.removeBody(S.trainBody); S.trainBody = null; } for (const s of S.shapes) shapeInfo.delete(s); S.shapes = []; }
   // bước vật lý: đoàn tàu đi đúng quãng nó vừa chạy trong khung hình này (không lệch pha giữa thùng và toa)
-  function stepPhysics(dt, tx0) {
+  // 1ap: MỘT thế giới vật lý cho mọi đội — mỗi thân tàu đặt theo quãng chạy của đội mình (R.tx0 = vị trí đầu khung)
+  function stepPhysics(dt) {
     if (dt <= 0) return;
     const n = Math.max(1, Math.ceil(dt / (1 / 120))), h = dt / n;
-    if (trainBody) { trainBody.position.set(tx0, RAIL_TOP, 0); trainBody.velocity.set((S.train.position.x - tx0) / dt, 0, 0); }
-    for (const c of S.crates) c.touch.clear();
+    for (const R of RIGS) {
+      if (R.trainBody && R.train) { R.trainBody.position.set(R.tx0, RAIL_TOP, R.z); R.trainBody.velocity.set((R.train.position.x - R.tx0) / dt, 0, 0); }
+      for (const c of R.crates) c.touch.clear();
+    }
     for (let i = 0; i < n; i++) { PH.step(h); handleContacts(); collectTouches(); }
-    if (trainBody) trainBody.position.x = S.train.position.x;
+    for (const R of RIGS) if (R.trainBody && R.train) R.trainBody.position.x = R.train.position.x;
   }
   function collectTouches() {
     for (const eq of PH.contacts) {
       let crateB = null, shape = null;
-      if (eq.bi === trainBody && eq.bj.userData && eq.bj.userData.crate) { crateB = eq.bj; shape = eq.si; }
-      else if (eq.bj === trainBody && eq.bi.userData && eq.bi.userData.crate) { crateB = eq.bi; shape = eq.sj; }
+      if (eq.bi.userData && eq.bi.userData.trainRig && eq.bj.userData && eq.bj.userData.crate) { crateB = eq.bj; shape = eq.si; }
+      else if (eq.bj.userData && eq.bj.userData.trainRig && eq.bi.userData && eq.bi.userData.crate) { crateB = eq.bi; shape = eq.sj; }
       if (!crateB) continue;
-      const info = shapeInfo.get(shape);
-      if (info && info.type === "answer") crateB.userData.crate.touch.add(info.car);
+      const info = shapeInfo.get(shape), c = crateB.userData.crate;
+      if (info && info.type === "answer" && info.rig === c.rig) c.touch.add(info.car);
     }
   }
-  const cartUnder = x => S.carts.find(k => Math.abs(cartWorldX(k) - x) <= CART_W * TS / 2 + 0.05);
-  const GROUND_Y = z => (Math.abs(z) < 1.35 ? 0.34 + Math.max(0, 0.14 * (1 - Math.abs(z) / 1.35)) : 0);
+  const cartUnder = x => S.carts.find(k => !k.pruned && Math.abs(cartWorldX(k) - x) <= CART_W * TS / 2 + 0.05);
+  // 1ap: nền đá dăm của ray GẦN NHẤT (duo có 2 ray)
+  const TRACK_Z = duo ? [0, DUO_Z] : [0];
+  const GROUND_Y = z => { const d = Math.min(...TRACK_Z.map(t => Math.abs(z - t))); return d < 1.35 ? 0.34 + Math.max(0, 0.14 * (1 - d / 1.35)) : 0; };
   function dropCrate(word, x, y, vx = 0, team = null) {
     const label = new THREE.MeshStandardMaterial({ map: tx(crateTexture(word, team)), normalMap: M.crateSide.normalMap, roughness: 0.85 });
     const mesh = new THREE.Mesh(G.crate, [M.crateSide, M.crateSide, label, M.crateSide, label, M.crateSide]);
     mesh.scale.setScalar(TS);
     mesh.castShadow = true; mesh.receiveShadow = true;
-    mesh.position.set(x, y, 0);
+    mesh.position.set(x, y, S.z);   // 1ap: rơi trên ray của đội mình
     scene.add(mesh);
     const body = new CANNON.Body({ mass: 1, material: pmCrate, linearDamping: 0.02, angularDamping: 0.06, collisionFilterGroup: 1 });
     body.addShape(new CANNON.Box(CRATE_HALF.clone()));
     // 1i: thùng lủng lẳng dưới khinh khí cầu nên rơi ra hơi NGHIÊNG + xoay nhẹ ⇒ chạm toa bằng một góc/cạnh: nảy, chúi, lắc, xê dịch như thật
-    body.position.set(x, y, 0); body.velocity.set(vx, 0.3, 0);
+    body.position.set(x, y, S.z); body.velocity.set(vx, 0.3, 0);
     body.quaternion.setFromEuler((Math.random() - 0.5) * 0.06, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.2);   // nghiêng chủ yếu dọc đoàn tàu (thùng hẹp theo bề ngang toa, dễ lật khỏi toa)
     body.angularVelocity.set((Math.random() - 0.5) * 0.25, (Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 1.0);
     body.allowSleep = false;
-    const c = { mesh, body, label, word, team, key: norm(word), onTrain: false, judged: false, kicked: false, settle: 0, thudT: 0, nudgeT: 0, touch: new Set(), lostT: 0 };
+    const c = { mesh, body, label, word, team, key: norm(word), onTrain: false, judged: false, kicked: false, settle: 0, thudT: 0, nudgeT: 0, touch: new Set(), lostT: 0, rig: S };   // 1ap: thùng thuộc bộ đội nào
     body.userData = { crate: c };
     // sự kiện "collide" của cannon-es dùng lại 1 đối tượng ⇒ chép ngay các giá trị cần (vận tốc va chạm tính TRƯỚC khi giải)
     body.addEventListener("collide", e => { const eq = e.contact; contactQ.push({ c, other: e.body, shape: eq.bi === e.body ? eq.si : eq.sj, imp: Math.abs(eq.getImpactVelocityAlongNormal()) }); });
@@ -756,9 +852,12 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     return c;
   }
   function handleContacts() {
+    const keep = S;
     for (const { c, other, shape, imp } of contactQ) {
       if (c.removed || c.locked) continue;
-      if (other === trainBody) {
+      S = c.rig;   // 1ap: xử lý va chạm trong bộ đội của thùng
+      if (other.userData && other.userData.trainRig && other !== S.trainBody) { if (imp > 2.2) sfx.thud(); continue; }   // 1ap: (hiếm) chạm tàu đội kia ⇒ chỉ tiếng
+      if (other === S.trainBody) {
         const info = shapeInfo.get(shape) || { type: "head" };
         if (info.type === "answer") touchTrain(c, info.car, imp);
         else if (info.type === "coach") { if (!c.kicked) touchTrain(c, null, imp); }
@@ -777,6 +876,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
       }
     }
     contactQ.length = 0;
+    S = keep;
   }
   // chạm toa đáp án (nóc toa, hoặc thùng đang nằm trên toa)
   function touchTrain(c, car, imp) {
@@ -855,12 +955,12 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
       c.mesh.quaternion.set(b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w);
       if (!c.onTrain && !c.kicked && b.velocity.y < 0 && S.train) {
         // sắp chạm nóc toa: đà ngang ngược chiều tàu (quán tính khinh khí cầu) giảm dần ⇒ chạm toa chỉ nảy + xê dịch, không lật văng
-        const car = S.cars.find(k => Math.abs(S.train.position.x + k.localX * TS - p.x) <= k.len * TS / 2 + 0.6);
+        const car = S.cars.find(k => !k.pruned && Math.abs(S.train.position.x + k.localX * TS - p.x) <= k.len * TS / 2 + 0.6);
         if (car && p.y - (RAIL_TOP + car.roof * TS) < 2.8) { const k = Math.exp(-dt * 7); b.velocity.x = S.trainVel + (b.velocity.x - S.trainVel) * k; }
       }
       if (c.onTrain && !c.kicked) {
         // nóc toa hẹp theo bề ngang: giữ thùng không trôi ra mép trước/sau (bập bênh rồi lật) — chỉ nảy/xê dịch dọc toa
-        b.velocity.z = b.velocity.z * Math.exp(-dt * 6) - p.z * dt * 6;
+        b.velocity.z = b.velocity.z * Math.exp(-dt * 6) - (p.z - S.z) * dt * 6;   // 1ap: giữa nóc toa của ray đội mình
         b.angularVelocity.x *= Math.exp(-dt * 5);
       }
       if (c.onTrain) {
@@ -876,10 +976,10 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
             if (cart) scoreCart(cart, c);
           }
         } else c.settle = 0;
-      } else if (p.y < 1.9 && Math.abs(p.z) < 1.9 && Math.abs(b.velocity.y) < 1 && S.time - c.nudgeT > 0.5) {
+      } else if (p.y < 1.9 && Math.abs(p.z - S.z) < 1.9 && Math.abs(b.velocity.y) < 1 && S.time - c.nudgeT > 0.5) {
         // nằm trên đường ray: hất ra lề (không nằm chắn đường tàu)
         c.nudgeT = S.time;
-        b.velocity.z = (p.z >= 0 ? 1 : -1) * (2.6 + Math.random()); b.velocity.y = 2.4; b.velocity.x *= 0.7;
+        b.velocity.z = (p.z - S.z >= 0 ? 1 : -1) * (2.6 + Math.random()); b.velocity.y = 2.4; b.velocity.x *= 0.7;
         b.angularVelocity.x += (Math.random() - 0.5) * 6;
       }
       // thùng đúng đã tính điểm bị húc/đẩy rơi xuống đất (hoặc văng hẳn sang toa khác) ⇒ trừ lại điểm, toa mở lại
@@ -889,7 +989,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
         c.lostT = away ? c.lostT + dt : 0;
         if (c.lostT > (p.y < 2.2 ? 0 : 0.6)) unscore(c);
       }
-      if (p.x < S.camX - HALF - 14 || p.y < -5) { removeCrate(c); S.crates.splice(i, 1); }
+      if (p.x < S.camX - S.HALF - 14 || p.y < -5) { removeCrate(c); S.crates.splice(i, 1); }
     }
   }
   function unscore(c) {
@@ -910,7 +1010,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   function lockCrate(c, cart) {
     const q = c.body.quaternion, p = c.body.position;
     const s = new CANNON.Box(CRATE_HALF.clone());
-    trainBody.addShape(s, new CANNON.Vec3(p.x - trainBody.position.x, p.y - trainBody.position.y, p.z), new CANNON.Quaternion(q.x, q.y, q.z, q.w));
+    S.trainBody.addShape(s, new CANNON.Vec3(p.x - S.trainBody.position.x, p.y - S.trainBody.position.y, p.z - S.z), new CANNON.Quaternion(q.x, q.y, q.z, q.w));
     shapeInfo.set(s, { type: "answer", car: cart });
     PH.removeBody(c.body); c.body = null; c.locked = true;
     const m = c.mesh, local = cart.group.worldToLocal(m.position.clone());
@@ -931,7 +1031,8 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     floatText("+" + gain, wp.clone().add(new THREE.Vector3(0, 1.3, 0)), "#9dffa9");
     S.deck = [];
     updateHud();
-    if (S.state === "play" && S.carts.every(k => k.filled)) levelClear();
+    if (duo) onEvent("hit", { team: S.team, ok: true });   // 1ap: iPad kêu / rung
+    if (S.state === "play" && levelFull()) levelClear();
   }
   // 1ac: cộng/trừ điểm — share thì vào điểm đội, còn lại vào điểm bàn
   function addScore(d, team) {
@@ -1029,7 +1130,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
         const gy = GROUND_Y(o.position.z) + 0.1;
         if (o.position.y < gy) { o.position.y = gy; if (Math.abs(f.v.y) > 1.5) { f.v.y *= -0.32; f.v.x *= 0.6; f.v.z *= 0.6; } else { f.v.y = 0; f.v.x *= 0.85; f.v.z *= 0.85; f.w.multiplyScalar(0.85); } }
         if (k > 0.8) o.scale.setScalar(Math.max(0.001, (1 - k) / 0.2) * TS);
-        if (k >= 1 || o.position.x < S.camX - HALF - 14) { scene.remove(o); S.fx.splice(i, 1); }
+        if (k >= 1 || o.position.x < S.camX - S.HALF - 14) { scene.remove(o); S.fx.splice(i, 1); }
         continue;
       }
       if (k >= 1) { fxRoot.remove(f.obj); f.obj.material.map && f.obj.kind !== "keep" && f.kind !== "smoke" && f.obj.material.map.dispose(); f.obj.material.dispose(); S.fx.splice(i, 1); continue; }
@@ -1145,7 +1246,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   function flyPlane(text) {
     removePlane();
     const bp = makeBiplane(); weather(bp.g, { bump: 0.02 });
-    bp.g.position.set(S.camX - SKY - 16, V.lanes[2] + 1.2, -3);
+    bp.g.position.set(S.camX - S.SKY - 16, V.lanes[2] + 1.2, -3);
     scene.add(bp.g);
     const banner = makeBanner(text); scene.add(banner.grp);
     const rope = new THREE.Group(); scene.add(rope);
@@ -1205,7 +1306,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
       ga.setXYZ(i, x * (1 - 0.03 * Math.abs(Math.sin(ph))), y - u * u * 0.16 + Math.sin(t * 3 + u * 4) * 0.05 * u + Math.cos(ph) * amp * 0.28 * (0.35 + Math.abs(v)), z);
     }
     ga.needsUpdate = true; p.banner.geo.computeVertexNormals();
-    if (bg.position.x - BAN_W - 1 > S.camX + SKY + 4) removePlane();
+    if (bg.position.x - BAN_W - 1 > S.camX + S.SKY + 4) removePlane();
   }
 
   // ------------------------------------------------------------------ nhịp ván
@@ -1219,8 +1320,9 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     clearSky();
     removePlane();
     { const seen = new Set(), uniq = words.filter(w => { const k = norm(w.keyword); if (seen.has(k)) return false; seen.add(k); return true; });
-      S.bag = order ? order.slice().reverse() : opt.shuffle ? shuffleR(uniq, seed != null ? mulberry(seed + 7919 * (S.round = (S.round || 0) + 1)) : Math.random) : uniq.reverse(); S.total = uniq.length; }
-    S.levels = []; S.score = 0; S.teams = [0, 0]; S.nextDir = 1; S.x2 = 0; S.timeLeft = opt.timer; S.timeCap = opt.timer; S.elapsed = 0; S.level = 0; S.lastTick = 99;
+      const ord = S.order || order;
+      S.bag = ord ? ord.slice().reverse() : opt.shuffle ? shuffleR(uniq, seed != null ? mulberry(seed + 7919 * (S.round = (S.round || 0) + 1)) : Math.random) : uniq.reverse(); S.total = uniq.length; }
+    S.levels = []; S.score = 0; S.teams = [0, 0]; S.nextDir = 1; S.x2 = 0; S.timeLeft = roundSecs(); S.timeCap = roundSecs(); S.elapsed = 0; S.level = 0; S.lastTick = 99;
     clockEl.classList.remove("is-x2");
     clockEl.classList.remove("is-warn");
     [ovStart, ovEnd, ovPause, ovAns].forEach(o => o.hidden = true);
@@ -1264,16 +1366,25 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     stage.querySelector(".bp-top").style.visibility = "";
     signEl.classList.remove("is-in"); void signEl.offsetWidth; signEl.classList.add("is-in");
   }
+  const roundSecs = () => (timed() ? opt.roundMin * 60 : 0);   // 1ap: giây của thanh giờ MỖI MÀN
+  // 1ap: số toa màn i — Levels Off ⇒ một màn chứa đủ cả bộ từ; 1–20 ⇒ màn k có k toa
+  const levelSizeOf = i => (opt.levelCount === 0 ? Infinity : i + 1);
   function beginLevel(i) {
     S.level = i;
-    const cap = opt.levels >= 21 ? Infinity : opt.levels;   // Max cars: 3–20, nấc cuối = ∞
-    const items = nextLevelItems(Math.min(i + 1, cap));
-    if (!items.length) { endGame("done"); return; }         // hết từ ⇒ xong ván
+    if (opt.levelCount > 0 && i >= opt.levelCount) { endGame("levels"); return false; }   // 1ap: đủ số màn ⇒ xong ván
+    const items = nextLevelItems(levelSizeOf(i));
+    if (!items.length) { endGame("done"); return false; }         // hết từ ⇒ xong ván
+    S.levelSize = items.length;
     buildTrain(items, i);
     S.levels[i] = S.carts;
     S.deck = [];
+    if (duo) return duoEnter();   // 1ap: Fight 1 màn — tàu vào theo lò xo (máy quay trôi đều), không tính khung như bản đơn
+    if (timed()) {   // 1ap: thanh giờ đầy lại mỗi màn
+      S.timeLeft = S.timeCap = roundSecs(); S.lastTick = 99; clockEl.classList.remove("is-warn");
+      if (S.finalMus && !embed) { S.finalMus = false; sfx.music("play", 2); }
+    }
     // tàu chạy nhanh vào tới vị trí rồi mới tính giờ
-    S.trainX = S.camX - HALF - 1;
+    S.trainX = S.camX - S.HALF - 1;
     S.introFrom = S.trainX;
     S.introTo = S.camX - frameRel(S.carts[0]);   // 1af: tàu dừng đúng khung (toa cuối sát mép / toa chờ giữa màn / đầu máy trọn)
     S.introDur = 3.4; S.introVc = cruiseV(); S.camIdx = null;
@@ -1287,34 +1398,44 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     signEl.classList.remove("is-in"); void signEl.offsetWidth; signEl.classList.add("is-in");
     sfx.whistle();
     updateHud();
+    return true;
+  }
+  // 1ap: Fight 1 màn — tàu mới chạy nhanh vào từ NGOÀI mép trái rồi lò xo kéo về đúng khung (toa chờ giữa màn)
+  function duoEnter() {
+    S.trainX = S.camX - S.HALF - 4; placeTrain();   // mũi đầu máy ngoài mép trái ⇒ cả đoàn ngoài màn
+    S.trainV = S.camV + 9; S.introT = 0; S.state = "intro";
+    sfx.whistle();
+    onEvent("team", { team: S.team, state: "intro", level: S.level });
+    return true;
   }
   // tàu thật: lúc nhanh lúc chậm nhẹ (2 sóng chậm chồng nhau)
   // 1ab: nấc 1 giữ nguyên, nấc 10 nhanh GẤP ĐÔI 1aa, các nấc giữa chia đều (tàu 1,35 → 9,0 · khinh khí cầu 0,85 → 6,2)
   const speedStep = (s, v1, v10) => v1 + (v10 - v1) * (s - 1) / 9;
-  function cruiseV() { return speedStep(opt.trainSpeed, 1.35, 9.0) * (1 + 0.04 * (S.carts.length - 1)) * (1 + 0.11 * Math.sin(S.time * 0.21) + 0.05 * Math.sin(S.time * 0.57 + 1.3)); }
+  function cruiseV() { return speedStep(opt.trainSpeed, 1.35, 9.0) * (1 + 0.04 * (Math.min(S.levelSize || S.carts.length, 10) - 1)) *   /* 1ap: theo số toa CỦA MÀN (tàu dựng dần), tối đa như 10 toa */ (1 + 0.11 * Math.sin(S.time * 0.21) + 0.05 * Math.sin(S.time * 0.57 + 1.3)); }
   function blimpV() { return speedStep(opt.balloonSpeed, 0.85, 6.2) * 1.1 * (1 + 0.06 * (S.level || 0)); }   // 1af: +10 %, mỗi màn +6 % (tàu chỉ +4 %/toa)
 
   function levelClear() {
     S.state = "clear"; S.clearT = 0;
-    const bonus = opt.timerMode === "down" ? Math.ceil(S.timeLeft) : 0;
-    S.score += bonus;
-    S.timeLeft += 5;
-    flashClock("+5s");
     S.blimps.forEach(b => { b.leaving = true; b.vy = 0; });
     sfx.levelUp(); setTimeout(() => sfx.whistle(), 350);
+    if (duo) { onEvent("team", { team: S.team, state: "clear", level: S.level }); return; }   // 1ap: tàu PHÓNG đi; thưởng giờ do trang Fight đếm
+    // 1ap: thưởng = số giây còn trên thanh giờ của màn (1 giây = 1 điểm); màn sau thanh đầy lại (bỏ "+5s" cũ)
+    const bonus = timed() ? Math.ceil(S.timeLeft) : 0;
+    S.score += bonus;
+    if (bonus) flashClock("+" + bonus);
     flyPlane(share ? S.teams[0] + " : " + S.teams[1] : "Score " + S.score);
     updateHud();
   }
-  function endGame(why) {   // why: "time" hết giờ · "done" hết từ · "ended" thầy bấm End game
+  function endGame(why) {   // why: "time" hết giờ · "done" hết từ · "levels" đủ số màn (1ap) · "ended" thầy bấm End game
     if (S.state === "over") return;
     if (cine.active) { cine.finish(); if (S.signSwap) { world.signs.swapAhead(S.cineC + 10); S.signSwap = false; } world.signs.commitAhead(); S.camX = S.cineC; S.camTarget = S.cineC; S.camV = 0; stage.querySelector(".bp-top").style.visibility = ""; }
     const wasState = S.state;
     S.state = "over";
     if (embed) { S.blimps.forEach(b => { b.frozen = true; }); onEvent("end", why); return; }   // 1ac: trang Fight tự báo kết quả 2 đội
-    if (why === "done") sfx.win(); else sfx.timesUp();
+    if (why === "done" || why === "levels") sfx.win(); else sfx.timesUp();
     S.blimps.forEach(b => { b.frozen = true; });
     setTimeout(() => {
-      $(".bp-end-title").textContent = why === "done" ? "ALL WORDS DONE!" : why === "time" ? "TIME'S UP!" : "GAME OVER";
+      $(".bp-end-title").textContent = why === "done" ? "ALL WORDS DONE!" : why === "levels" ? "ALL LEVELS DONE!" : why === "time" ? "TIME'S UP!" : "GAME OVER";
       $(".bp-end-score").textContent = S.score;
       const done = S.levels.flat().filter(c => c.filled).length, e = Math.floor(S.elapsed || 0);
       $(".bp-end-time").textContent = Math.floor(e / 60) + ":" + String(e % 60).padStart(2, "0");
@@ -1331,14 +1452,33 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   }
 
   // ------------------------------------------------------------------ vòng lặp
-  function update(dt) {
-    S.time += dt;
+  // 1ap: phần TÀU + ĐỒNG HỒ + KHINH KHÍ CẦU của bộ đội S (bản đơn: y như 1an · duo: lò xo giữ toa chờ giữa màn / phóng / dừng)
+  function moveRig(dt) {
     const st = S.state;
-    const tx0 = S.train ? S.train.position.x : 0;
-    // tàu
     if (S.train) {
       let v = 0;
-      if (st === "cine") {
+      if (duo) {
+        if (st === "intro" || st === "play") {
+          const cur = S.carts.find(c => !c.filled);
+          const want = cur ? S.camX - cur.localX * TS + ENGINE_LEN / 2 * TS : S.trainX;   // mũi đầu máy để toa chờ đúng giữa màn
+          const K = 1.1, a = K * K * (want - S.trainX) + 2 * K * (S.camV - S.trainV);
+          S.trainV = Math.max(S.camV * 0.25, Math.min(30, S.trainV + a * dt));   // không bao giờ chạy lùi
+          if (st === "intro") {
+            S.introT += dt;
+            if ((S.introT > 1.6 && Math.abs(want - S.trainX) < 1.5) || S.introT > 5) {   // đã về khung ⇒ vào chơi, 2 khinh khí cầu bay vào
+              S.state = "play"; S.entry = 2;
+              const x0 = S.camX + S.SKY + 7; spawnBlimp(x0); spawnBlimp(x0 + 9.5); S.spawnT = 6.5 / (blimpV() + 1);
+              onEvent("team", { team: S.team, state: "play", level: S.level });
+            }
+          }
+        } else if (st === "clear") {   // đầy toa ⇒ PHÓNG ra khỏi màn
+          S.clearT += dt; S.trainV = Math.min(30, S.trainV + dt * 7);
+          if (S.trainX - S.trainLen > S.camX + S.HALF + 2) { S.state = "gone"; onEvent("team", { team: S.team, state: "gone", level: S.level }); }
+        } else if (st === "gone") S.trainV = Math.min(34, S.trainV + dt * 7);
+        else if (st === "out" || st === "over") S.trainV = Math.max(0, S.trainV - dt * 3.2);   // hết giờ / hết trận: phanh dừng, bị bỏ lại
+        else S.trainV = 0;
+        v = S.trainV; S.trainX += v * dt;
+      } else if (st === "cine") {
         const nx = S.introFrom - S.cineV0 * (INTROS[INTRO_ID].dur - cine.t);
         v = S.cineV0; S.trainX = nx;
       } else if (st === "intro") {
@@ -1347,7 +1487,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
         const nx = S.introFrom + S.introV0 * tt + (S.introVc - S.introV0) * tt * tt / (2 * T);
         v = (nx - S.trainX) / Math.max(dt, 1e-4); S.trainX = nx;
         // 2 khinh khí cầu đầu màn cùng bay vào từ ngoài mép phải, cách nhau đều (quả sau không đuổi kịp quả trước)
-        if (k >= 1) { S.state = "play"; S.entry = 2; const x0 = Math.max(S.camX, S.camTarget) + SKY + 7; if (share) { spawnBlimp(); spawnBlimp(); } else { spawnBlimp(x0); spawnBlimp(x0 + 9.5); } S.spawnT = 6.5 / (blimpV() + 1); }
+        if (k >= 1) { S.state = "play"; S.entry = 2; const x0 = Math.max(S.camX, S.camTarget) + S.SKY + 7; if (share) { spawnBlimp(); spawnBlimp(); } else { spawnBlimp(x0); spawnBlimp(x0 + 9.5); } S.spawnT = 6.5 / (blimpV() + 1); }
       } else if (st === "play" || st === "over") {
         v = st === "play" ? cruiseV() : 0;
         S.trainX += v * dt;
@@ -1355,49 +1495,54 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
         S.clearT += dt;
         S.trainV = Math.min(26, (S.trainV || cruiseV()) + dt * 6);   // tăng tốc êm hơn để thùng trên nóc không trượt văng
         v = S.trainV; S.trainX += v * dt;
-        if (S.trainX - S.trainLen > S.camX + HALF + 2 && S.clearT > 3.2) {
+        if (S.trainX - S.trainLen > S.camX + S.HALF + 2 && S.clearT > 3.2) {
           beginLevel(S.level + 1);
         }
       }
-      if (st !== "clear") S.trainV = v;
-      placeTrain();
-      S.trainVel = dt > 0 ? (S.train.position.x - tx0) / dt : v;
-      const dx = v * dt;
-      for (const w of S.wheels) w.rotation.y -= dx / (w.userData.wheelR * TS);
-      S.wheelA -= dx / (0.82 * TS);
-      for (const r of S.rods) { const u = r.userData.rod, a = S.wheelA + u.ph; r.position.x = u.x0 + Math.cos(a) * u.r; r.position.y = u.y0 + Math.sin(a) * u.r * (u.tilt ? 0.5 : 1); if (u.tilt) r.rotation.z = Math.sin(a) * 0.12; }
-      if (v > 0.05) {
-        S.smokeT = (S.smokeT || 0) - dt;
-        if (S.smokeT <= 0) { smokePuff(); S.smokeT = Math.max(0.07, 0.26 - v * 0.02); }
-        sfx.train(v);   // 1ah: tiếng tàu hơi nước THẬT lặp liên tục, nhịp theo tốc độ (dừng hẳn ⇒ xì hơi)
+      if (!duo && st !== "clear") S.trainV = v;
+      if (S.train) {
+        placeTrain();
+        S.trainVel = dt > 0 ? (S.train.position.x - S.tx0) / dt : v;
+        const dx = v * dt;
+        for (const w of S.wheels) w.rotation.y -= dx / (w.userData.wheelR * TS);
+        S.wheelA -= dx / (0.82 * TS);
+        for (const r of S.rods) { const u = r.userData.rod, a = S.wheelA + u.ph; r.position.x = u.x0 + Math.cos(a) * u.r; r.position.y = u.y0 + Math.sin(a) * u.r * (u.tilt ? 0.5 : 1); if (u.tilt) r.rotation.z = Math.sin(a) * 0.12; }
+        if (v > 0.05) {
+          S.smokeT = (S.smokeT || 0) - dt;
+          if (S.smokeT <= 0) { smokePuff(); S.smokeT = Math.max(0.07, 0.26 - v * 0.02); }
+          S.sndV = v;   // 1ah: tiếng tàu THẬT lặp theo tốc độ — 1ap: phát MỘT lần theo đoàn nhanh nhất (update)
+        }
       }
     }
-    // đồng hồ
-    if (st === "play" || st === "intro" || st === "clear") S.elapsed += dt;
-    if (st === "play" && opt.timerMode === "down") {
-      S.timeLeft -= dt;
-      const s = Math.ceil(S.timeLeft);
-      if (s <= 10 && s < S.lastTick && s > 0) { sfx.tick(); S.lastTick = s; clockEl.classList.add("is-warn"); }
-      if (s <= 30 && !S.finalMus && S.timeCap > 40) { S.finalMus = true; sfx.music("final", 2); }   // 1ah: 30 giây cuối nhạc dồn dập
-      if (s > 10) { clockEl.classList.remove("is-warn"); S.lastTick = 99; }
-      if (S.timeLeft <= 0) { S.timeLeft = 0; endGame("time"); }
+    // đồng hồ (bản đơn) — 1ap: thanh giờ MỖI MÀN (Time round 1–10 phút) · ∞ = đếm lên · Off = không
+    if (!duo) {
+      if (st === "play" || st === "intro" || st === "clear") S.elapsed += dt;
+      if (st === "play" && timed()) {
+        S.timeLeft -= dt;
+        const s = Math.ceil(S.timeLeft);
+        if (s <= 10 && s < S.lastTick && s > 0) { sfx.tick(); S.lastTick = s; clockEl.classList.add("is-warn"); }
+        if (s <= 30 && !S.finalMus && S.timeCap > 40) { S.finalMus = true; sfx.music("final", 2); }   // 1ah: 30 giây cuối nhạc dồn dập
+        if (s > 10) { clockEl.classList.remove("is-warn"); S.lastTick = 99; }
+        if (S.timeLeft <= 0) { S.timeLeft = 0; endGame("time"); }
+      }
     }
     // khinh khí cầu
     const bv = blimpV();
-    if (st !== "cine") updateCamera(dt);
-    if (st === "play") {   // 1q: màn chờ không thả khinh khí cầu (máy quay trên cao)
+    if (!duo && S.state !== "cine") updateCamera(dt);
+    if (S.state === "play") {   // 1q: màn chờ không thả khinh khí cầu (máy quay trên cao)
       S.spawnT -= dt;
       const live = S.blimps.filter(b => !b.leaving).length;
       // khoảng cách giữa 2 khinh khí cầu tính theo tốc độ trôi TRÊN MÀN (bóng trôi + máy quay lia)
       const rel = bv;   // 1j: khinh khí cầu trôi đều TRÊN MÀN
-      if (S.spawnT <= 0 && live < MAX_BLIMPS + (S.camV > 0.5 ? 1 : 0)) { if (spawnBlimp(undefined, st === "attract")) S.spawnT = (st === "attract" ? 11 : 6.5) / rel; else S.spawnT = 0.25; }
+      const cap = duo ? 4 : MAX_BLIMPS + (S.camV > 0.5 ? 1 : 0);   // 1ap: 2 đội cùng màn ⇒ mỗi đội tối đa 4 quả
+      if (S.spawnT <= 0 && live < cap) { if (spawnBlimp(undefined, false)) S.spawnT = 6.5 / rel; else S.spawnT = 0.25; }
     }
     for (const b of S.blimps.slice()) {
       if (b.frozen) { if (b.body) b.body.velocity.set(0, 0, 0); continue; }
       if (b.leaving) { b.vy += dt * 9; b.baseY += b.vy * dt; if (b.baseY > 30) { removeBlimp(b); continue; } }
       else { b.x -= ((b.dir || 1) * (bv + b.boost) - S.camV) * dt; b.boost *= Math.exp(-dt * 0.55); }   // 1j: tốc độ trên màn không đổi khi máy quay lia/dừng
       b.y = b.baseY + Math.sin(S.time * 1.3 + b.phase) * 0.22;
-      b.obj.position.set(b.x, b.y, 0);
+      b.obj.position.set(b.x, b.y, S.z);
       b.bump *= Math.exp(-dt * 2.5);   // vừa húc phải chồng thùng: khinh khí cầu chòng chành
       b.obj.rotation.z = Math.sin(S.time * 0.9 + b.phase) * 0.04 + Math.sin(S.time * 9) * 0.12 * b.bump;
       b.obj.rotation.x = Math.sin(S.time * 7 + 1) * 0.1 * b.bump;
@@ -1411,20 +1556,44 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
         b.obj.userData.banner.position.set(0, 0, 1.32);
       }
       if (b.obj.userData.props) for (const pr of b.obj.userData.props) pr.rotation.x += dt * 30;
-      if (b.guide) { b.guide.position.x = b.x; b.guide.visible = !b.leaving; }
-      if ((b.dir !== -1 && b.x < S.camX - SKY - 8) || (b.dir === -1 && b.x > S.camX + SKY + 8)) removeBlimp(b);
+      if (b.guide) { b.guide.position.x = b.x; b.guide.position.z = S.z; b.guide.visible = !b.leaving; }
+      if ((b.dir !== -1 && b.x < S.camX - S.SKY - 8) || (b.dir === -1 && b.x > S.camX + S.SKY + 8)) removeBlimp(b);
     }
-    stepPhysics(dt, tx0);
-    updateCrates(dt);
-    updateFx(dt);
-    updatePlane(dt);
-    // đám mây trôi
+  }
+  function updateCoaches(dt) {
+    if (!S.train) return;
     for (const co of S.coaches) {
       if (co.startleT != null) { co.startleT += dt; if (co.startleT > 5.2) co.startleT = null; }
       if (co.chaosT != null) { co.chaosT += dt; if (co.chaosT > 7) co.chaosT = null; }
       if (Math.abs(S.train.position.x + co.localX * TS - S.camX) < 24) animatePassengers(co.people, S.time, co.startleT, co.chaosT, dt);
     }
-    // 1aa: khúc cảnh (cỏ, cây, đá, ray) phủ quanh chỗ MÁY QUAY THẬT đang nhìn (intro/màn chờ nhìn xa, nhìn ngược), không chỉ quanh S.camX
+  }
+  // 1ap: duo — máy quay TRÔI ĐỀU (tốc độ tàu theo Options + số toa của màn); trước trận / sau intro thì đứng yên
+  function duoCamera(dt) {
+    const moving = RIGS.some(R => R.state === "intro" || R.state === "play" || R.state === "clear" || R.state === "gone" || R.state === "out");
+    const L = RIGS[0].levelSize || 1, tv = moving ? speedStep(opt.trainSpeed, 1.35, 9.0) * (1 + 0.04 * (Math.min(L, 10) - 1)) : 0;
+    SH.camV += (tv - SH.camV) * (1 - Math.exp(-dt * 1.5));
+    SH.camX += SH.camV * dt; SH.camTarget = SH.camX;
+  }
+
+  // ------------------------------------------------------------------ vòng lặp
+  function update(dt) {
+    SH.time += dt;
+    if (duo && RIGS[0].state !== "fcine") duoCamera(dt);
+    let sndV = 0;
+    for (const R of RIGS) {
+      S = R; R.tx0 = R.train ? R.train.position.x : 0; R.sndV = 0;
+      moveRig(dt);
+      if (S.state === "play") streamTrain(dt);   // 1ap: tàu dựng dần
+      sndV = Math.max(sndV, R.sndV);
+    }
+    S = RIGS[0];
+    if (sndV > 0.05) sfx.train(sndV);
+    stepPhysics(dt);
+    for (const R of RIGS) { S = R; updateCrates(dt); updateCoaches(dt); }
+    S = RIGS[0];
+    updateFx(dt);
+    updatePlane(dt);
     camera.getWorldDirection(viewDir);
     world.update(dt, S.time, S.camX, S.trainX, camera.position.x + viewDir.x * 80, S.state === "play" || S.state === "intro");
     if (mirror) for (const b of [world.signs.current(), world.signs.extra]) if (b && b.userData.letters) b.userData.letters.scale.x = -1;   // 1ad: chữ đồi đọc xuôi
@@ -1464,9 +1633,9 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   // (Bàn soi gương chỉ lật hình ⇒ cùng một phép tính.)
   function frameRel(cur) {
     const rc = (cur.localX - ENGINE_LEN / 2) * TS, hw = CART_W * TS / 2;
-    const engineNeed = 1.0 - HALF;                 // mũi + gạt trâu cách mép phải ≥ 0,35
-    const cartKeep = rc + HALF - hw - 0.4;         // dịch phải tối đa mà toa chờ vẫn trọn trong khung
-    const tailNeed = HALF - S.trainLen;            // mép trái không vượt quá đuôi tàu
+    const engineNeed = 1.0 - S.HALF;                 // mũi + gạt trâu cách mép phải ≥ 0,35
+    const cartKeep = rc + S.HALF - hw - 0.4;         // dịch phải tối đa mà toa chờ vẫn trọn trong khung
+    const tailNeed = S.HALF - S.trainLen;            // mép trái không vượt quá đuôi tàu
     return Math.max(rc, Math.min(engineNeed, cartKeep), tailNeed);
   }
   function updateCamera(dt) {
@@ -1487,15 +1656,16 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     S.camV += a * dt; S.camX += S.camV * dt;
   }
   function updateHud() {
-    const tm = opt.timerMode, t = tm === "up" ? Math.floor(S.elapsed || 0) : Math.max(0, Math.ceil(S.timeLeft));
+    if (duo) { onEvent("hud", { duo: true, scores: RIGS.map(R => R.score), states: RIGS.map(R => R.state), level: RIGS[0].level }); return; }   // 1ap: trang Fight vẽ HUD
+    const tm = timed() ? "down" : countUp() ? "up" : "none";   // 1ap: Time round 1–10 = thanh giờ màn · ∞ = đếm lên · Off = ẩn
+    const t = tm === "up" ? Math.floor(S.elapsed || 0) : Math.max(0, Math.ceil(S.timeLeft));
     clockEl.textContent = Math.floor(t / 60) + ":" + String(t % 60).padStart(2, "0");
     clockEl.hidden = tm !== "down"; progEl.parentElement.hidden = tm !== "down";
     const up = mount.querySelector(".bp-uptime"); up.hidden = tm !== "up"; const e = Math.floor(S.elapsed || 0); up.lastChild.textContent = Math.floor(e / 60) + ":" + String(e % 60).padStart(2, "0");
     scoreEl.textContent = S.score;
     if (embed) onEvent("hud", { score: S.score, teams: S.teams, level: S.level, state: S.state });
-    const lv = S.carts.length ? S.carts.filter(c => c.filled).length / S.carts.length : 0;
     // 1h: thanh THỜI GIAN — vơi dần theo giờ còn lại (cộng giờ thì dài ra); ≤ 10 giây chuyển đỏ
-    S.timeCap = Math.max(S.timeCap || opt.timer, S.timeLeft);
+    S.timeCap = Math.max(S.timeCap || roundSecs() || 1, S.timeLeft);
     const p = S.state === "attract" ? 1 : Math.max(0, S.timeLeft) / S.timeCap;
     progEl.style.width = (p * 100).toFixed(2) + "%";
     progEl.parentElement.classList.toggle("is-warn", S.state !== "attract" && S.timeLeft <= 10);
@@ -1506,7 +1676,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   }
 
   // 1am: tự giữ 60 khung — đổi độ nét / MSAA chỉ cấp lại bộ đệm vẽ (không dựng lại cảnh)
-  const AQ = makeAutoQuality({ max: PR_MAX, min: Math.min(0.8, PR_MAX), key: embed ? "fight" : "single", apply: ({ pr, msaa }) => {
+  const AQ = makeAutoQuality({ max: PR_MAX, min: Math.min(0.8, PR_MAX), key: duo ? "duo" : embed ? "fight" : "single", apply: ({ pr, msaa }) => {
     if (dead) return;
     PR = pr; renderer.setPixelRatio(pr);
     for (const rt of [composer.renderTarget1, composer.renderTarget2]) if (rt.samples !== msaa) { rt.samples = msaa; rt.dispose(); }
@@ -1612,32 +1782,30 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   const AW_BALLOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5a6 6 0 0 0-6 6c0 3.7 3 6.8 6 7.2 3-.4 6-3.5 6-7.2a6 6 0 0 0-6-6z"/><path d="M11 17.6h2l-1-1.9zM12 17.6c.6 1.2-.8 2.2 0 3.9"/></svg>';
   const awHost = host;   // 1ak: buildAwOptions dùng tên `host` cho ô chứa bảng — giữ cầu AWord ở tên khác
   function buildAwOptions(host) {
+    // 1ap (thầy 14/10): bỏ hàng Timer (None / Count up / Count down + ô giờ) và thanh Max cars ⇒ 2 thanh mới:
+    //   LEVELS Off · 1–20 (Off = 1 màn chứa đủ cả bộ từ) · TIME ROUND Off · 1–10 phút mỗi màn · ∞ (đếm lên)
     const d = { ...opt };
     const slider = (k, label, sub, min, max, off) => `<div class="aw-o-cell"><div class="aw-o-lab">${label}${sub ? ` <small>${sub}</small>` : ""}</div>
       <div class="aw-o-sl${off ? " is-offable" : ""}"><input type="range" min="${min}" max="${max}" step="1" data-s="${k}"><b></b></div></div>`;
     host.innerHTML = `<div class="aw-o">
-      <div class="aw-o-timer"><div class="aw-o-seg">${[["none", "None"], ["up", "Count up"], ["down", "Count down"]].map(([k, l]) => `<button data-tm="${k}">${l}</button>`).join("")}</div>
-        <div class="aw-o-tstep"><button data-ts="-1">−</button><div class="aw-o-tmid"><div class="aw-o-zone" data-z="m" title="Tap or swipe up: +1 min · swipe down: −1 min"><span>02</span></div><i>:</i><div class="aw-o-zone" data-z="s" title="Tap or swipe up: +10 s · swipe down: −10 s"><span>00</span></div></div><button data-ts="1">+</button></div></div>
-      <div class="aw-o-dash"></div>
       <div class="aw-o-grid">
-        <div class="aw-o-col">${slider("levels", "MAX CARS", "per train", 3, 21)}${slider("pointsOff", "POINTS OFF", "wrong answer", 0, 10, true)}</div>
+        <div class="aw-o-col">${slider("levelCount", "LEVELS", "Off = all words, one train", 0, 20, true)}${slider("roundMin", "TIME ROUND", "minutes per level", 0, 11, true)}</div>
         <div class="aw-o-col">${slider("balloonSpeed", "BALLOON SPEED", "", 1, 10)}${slider("trainSpeed", "TRAIN SPEED", "", 1, 10)}</div>
       </div>
+      <div class="aw-o-grid"><div class="aw-o-col">${slider("pointsOff", "POINTS OFF", "wrong answer", 0, 10, true)}</div><div class="aw-o-col"></div></div>
       <div class="aw-o-sep"></div>
       <div class="aw-o-checks">${[["shuffle", "Shuffle questions"], ["showAnswers", "Show answers at end"], ["bonusTime", "Bonus: extra time"], ["bonusPoints", "Bonus: points"], ["bonusX2", "Bonus: x2 score"]].map(([k, l]) =>
         `<label class="aw-o-chk${k.startsWith("bonus") ? " is-green" : ""}"><input type="checkbox" data-c="${k}"><i></i><span>${l}</span></label>`).join("")}</div>
       <div class="aw-o-foot"><button class="aw-o-tpl" title="In AWord this switches the game template">${AW_BALLOON}<span>Balloon pop</span></button><button class="aw-o-apply">Apply</button></div>
     </div>`;
     const q = sel => host.querySelector(sel), qa = sel => host.querySelectorAll(sel);
-    const mmss = v => String(Math.floor(v / 60)).padStart(2, "0") + " : " + String(v % 60).padStart(2, "0");
+    const valTxt = (k, v) => (k === "roundMin" ? (v >= 11 ? "∞" : v + "'") : String(v));
     function paint() {
-      qa("[data-tm]").forEach(b => b.classList.toggle("is-on", b.dataset.tm === d.timerMode));
-      q(".aw-o-tstep").classList.toggle("is-dis", d.timerMode !== "down");
       qa("[data-s]").forEach(inp => {
         const k = inp.dataset.s, v = d[k]; inp.value = v;
         const p = (v - inp.min) / (inp.max - inp.min) * 100; inp.style.setProperty("--p", p + "%");
         const off = inp.parentElement.classList.contains("is-offable") && v === 0;
-        inp.parentElement.classList.toggle("is-off", off); inp.nextElementSibling.textContent = off ? "OFF" : k === "levels" && v >= 21 ? "∞" : v;
+        inp.parentElement.classList.toggle("is-off", off); inp.nextElementSibling.textContent = off ? "OFF" : valTxt(k, v);
       });
       qa("[data-c]").forEach(c => { c.checked = !!d[c.dataset.c]; });
       q(".aw-o-apply").disabled = Object.keys(d).every(k => d[k] === opt[k]);
@@ -1645,46 +1813,9 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     host.onclick = e => {
       const b = e.target.closest("button"); if (!b) return;
       if (b.classList.contains("aw-o-tpl")) { if (awHost && awHost.templates) { closePanel(); openPanel("tpl"); } return; }   // 1ak: AWord — đổi template
-      if (b.dataset.tm) d.timerMode = b.dataset.tm;
-      else if (b.dataset.ts && d.timerMode === "down") { setTime(d.timer + +b.dataset.ts); return; }
-      else if (b.classList.contains("aw-o-apply")) { Object.assign(opt, d); if (awHost && awHost.saveOptions) { try { awHost.saveOptions({ ...opt }); } catch (e) { console.warn("TRAIN RUSH: save options", e); } } closePanel(); toStart(); return; }   // 1ak: AWord lưu Options theo act
+      if (b.classList.contains("aw-o-apply")) { Object.assign(opt, d); if (awHost && awHost.saveOptions) { try { awHost.saveOptions({ ...opt }); } catch (e) { console.warn("TRAIN RUSH: save options", e); } } closePanel(); toStart(); return; }   // 1ak: AWord lưu Options theo act
       paint();
     };
-    // ô giờ kiểu AWord: chạm / vuốt lên số phút = +1 phút, vuốt xuống = −1 phút; số giây: lên +10, xuống −10 (bám mốc :10);
-    // − / + hai bên: ±1 giây (giữ để chạy nhanh). Số cũ trượt ra, số mới trượt vào theo hướng đổi.
-    const zm = q('[data-z="m"]'), zs = q('[data-z="s"]');
-    const two = v => String(v).padStart(2, "0");
-    zm.firstChild.textContent = two(Math.floor(d.timer / 60)); zs.firstChild.textContent = two(d.timer % 60);
-    function slide(zone, text, dir) {
-      const old = zone.lastChild; if (old.textContent === text) return;
-      const nw = document.createElement("span"); nw.textContent = text; zone.append(nw);
-      const ms = 180, ez = "cubic-bezier(.22,.9,.3,1)";
-      old.animate([{ transform: "translateY(0)" }, { transform: `translateY(${dir > 0 ? -100 : 100}%)` }], { duration: ms, easing: ez, fill: "forwards" });
-      nw.animate([{ transform: `translateY(${dir > 0 ? 100 : -100}%)` }, { transform: "translateY(0)" }], { duration: ms, easing: ez, fill: "forwards" });
-      setTimeout(() => { zone.querySelectorAll("span").forEach(sp => { if (sp !== nw) sp.remove(); }); }, ms + 60);
-    }
-    function setTime(v) {
-      v = Math.max(10, Math.min(3599, Math.round(v))); if (v === d.timer) return;
-      const dir = v > d.timer ? 1 : -1; d.timer = v;
-      slide(zm, two(Math.floor(v / 60)), dir); slide(zs, two(v % 60), dir); paint();
-    }
-    for (const z of [zm, zs]) {
-      let y0 = null;
-      z.addEventListener("pointerdown", e => { if (d.timerMode !== "down") return; y0 = e.clientY; z.setPointerCapture(e.pointerId); });
-      z.addEventListener("pointerup", e => {
-        if (y0 == null) return; const dy = e.clientY - y0; y0 = null;
-        const down = dy > 10;   // vuốt xuống quá 10px mới là "giảm"; còn lại (chạm / vuốt lên) là "tăng"
-        if (z.dataset.z === "m") setTime(d.timer + (down ? -60 : 60));
-        else { const s = d.timer % 60, base = d.timer - s; setTime(down ? (s % 10 ? base + Math.floor(s / 10) * 10 : d.timer - 10) : base + (Math.floor(s / 10) + 1) * 10); }
-      });
-    }
-    // giữ − / + để chạy nhanh
-    for (const bt of host.querySelectorAll("[data-ts]")) {
-      let hold = null;
-      const stop = () => { clearTimeout(hold); clearInterval(hold); hold = null; };
-      bt.addEventListener("pointerdown", () => { hold = setTimeout(() => { hold = setInterval(() => setTime(d.timer + +bt.dataset.ts * 5), 90); }, 380); });
-      ["pointerup", "pointerleave", "pointercancel"].forEach(ev => bt.addEventListener(ev, stop));
-    }
     host.oninput = e => { const t = e.target; if (t.dataset.s) d[t.dataset.s] = +t.value; if (t.dataset.c) d[t.dataset.c] = t.checked; paint(); };
     host.onchange = host.oninput;
     paint();
@@ -1694,9 +1825,13 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     camera.fov = V.fov; camera.updateProjectionMatrix();
     if (cine.active) { cine.finish(); S.signSwap = false; world.signs.commitAhead(); stage.querySelector(".bp-top").style.visibility = ""; }   // 1aa: không để kẹt bảng dựng sẵn
     clearSky(); removePlane();
-    if (S.train) { scene.remove(S.train); disposeTree(S.train); S.train = null; }
-    if (trainBody) { PH.removeBody(trainBody); trainBody = null; }
-    S.carts = []; S.cars = []; S.coaches = []; S.state = "attract"; S.paused = false; S.timeLeft = opt.timer; S.timeCap = opt.timer; S.elapsed = 0;
+    for (const R of RIGS) withRig(R, () => {   // 1ap: mọi bộ đội
+      if (S !== RIGS[0]) clearSky();
+      if (S.train) { scene.remove(S.train); disposeTree(S.train); S.train = null; }
+      dropTrainBody();
+      S.carts = []; S.cars = []; S.coaches = []; S.state = "attract"; S.timeLeft = roundSecs(); S.timeCap = roundSecs(); S.elapsed = 0;
+    });
+    S.paused = false;
     [ovEnd, ovPause, ovAns].forEach(o => o.hidden = true); ovStart.hidden = false;
     if (!embed) sfx.music("menu");
     clockEl.classList.remove("is-warn", "is-x2");
@@ -1720,8 +1855,8 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
 
   // bảng Options trên màn bắt đầu
   const OPT_ROWS = [
-    ["timer", "Timer", 30, 600, 15, v => Math.floor(v / 60) + ":" + String(v % 60).padStart(2, "0")],
-    ["levels", "Max cars", 1, 10, 1, v => v],
+    ["roundMin", "Time round", 0, 11, 1, v => (v === 0 ? "Off" : v >= 11 ? "∞" : v + "'")],   // 1ap
+    ["levelCount", "Levels", 0, 20, 1, v => v || "Off"],
     ["pointsOff", "Points off", 0, 5, 1, v => v],
     ["balloonSpeed", "Balloon speed", 1, 5, 1, v => v],
     ["trainSpeed", "Train speed", 1, 5, 1, v => v],
@@ -1765,9 +1900,10 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   } catch (e) { console.warn("TRAIN RUSH prewarm", e); }
 
   // bàn thử cho máy (khi khung xem trước bị ẩn rAF đứng)
+  const r2 = v => Math.round(v * 100) / 100;
   const api = window.__bp = {
     get quality() { return AQ.info; }, renderer,   // 1am
-    sfx, S, opt, get HALF() { return HALF; }, get SKY() { return SKY; }, camera, PH, world, cine, get cineOn() { return cine.active; }, get trainBody() { return trainBody; }, dropCrate, cartWorldX, spawnBlimp,
+    sfx, get S() { return S; }, SH, get rigs() { return RIGS; }, opt, get HALF() { return RIGS[0].HALF; }, get SKY() { return RIGS[0].SKY; }, camera, PH, world, cine, get cineOn() { return cine.active; }, get trainBody() { return RIGS[0].trainBody; }, dropCrate, cartWorldX, spawnBlimp,
     start: startGame,
     // 1al: AWord ▸ Options ▸ Apply (bảng thật của AWord) ⇒ áp + về màn START (như Apply bảng riêng; AWord đã lưu). Chỉ nhận đúng khoá + kiểu.
     setOptions(o) {
@@ -1776,6 +1912,12 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
       hostPaused = false;
       if (!ovPanel.hidden) closePanel();
       toStart(); paintOpts();
+      return true;
+    },
+    // 1ap: chỉ ghi Options (không về màn START) — trang Fight 1 màn tự chơi lại trận
+    applyOpt(o) {
+      if (dead || !o || typeof o !== "object") return false;
+      Object.keys(DEFAULTS).forEach(k => { if (k in o && typeof o[k] === typeof DEFAULTS[k]) opt[k] = o[k]; });
       return true;
     },
     // 1aj: dỡ hẳn bàn chơi — vòng vẽ dừng, listener gỡ, tiếng của bàn tắt, card đồ hoạ trả lại (dispose + forceContextLoss). Gọi lại vô hại.
@@ -1792,36 +1934,104 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     },
     get dead() { return dead; },
     // 1ae: intro điện ảnh Fight — 2 tàu màu 2 đội đua nhau; xong thì bàn về màn chờ và gọi onDone
+    // 1ap: duo — tàu xanh chạy trên ray xa THẬT; xong intro ⇒ mọi đội "ready" (máy quay đã ở góc chơi, chờ đếm 3-2-1)
     fightIntro({ colors, onDone }) {
       if (FC.active) return;
       if (cine.active) cine.finish();
-      clearSky(); removePlane();
-      if (S.train) { scene.remove(S.train); disposeTree(S.train); S.train = null; }
-      if (trainBody) { PH.removeBody(trainBody); trainBody = null; }
-      S.carts = []; S.cars = []; S.coaches = []; S.paused = false;
+      removePlane();
+      for (const R of RIGS) withRig(R, () => {
+        clearSky();
+        if (S.train) { scene.remove(S.train); disposeTree(S.train); S.train = null; }
+        dropTrainBody();
+        S.carts = []; S.cars = []; S.coaches = []; S.state = "attract";
+      });
+      S.paused = false;
       const cd = new THREE.Vector3(); camera.getWorldDirection(cd); const cp = camera.position;
       const idle = { p: [cp.x, cp.y, cp.z], l: [cp.x + cd.x * 300, cp.y + cd.y * 300, cp.z + cd.z * 300], fov: camera.fov };
       const x0 = (S.idleX ?? S.camX) + 40;
       S.state = "fcine";
-      world.setClearBand([-9.5, -2.0]);   // 1af: dọn đá/cỏ trên dải ray thứ hai
-      FC.begin({ colors, idle, x0, onDone: () => { world.setClearBand(null); S.state = "attract"; camera.fov = 40; camera.updateProjectionMatrix(); if (onDone) onDone(); } });
+      if (!duo) world.setClearBand([-9.5, -2.0]);   // 1af: dọn đá/cỏ trên dải ray thứ hai (duo: ray xa là ray thật, cảnh đã chừa chỗ)
+      FC.begin({ colors: colors || DUO_COLORS, idle, x0, onDone: () => {
+        world.setClearBand(null);
+        if (duo) { for (const R of RIGS) R.state = "ready"; SH.camV = 0; camera.fov = V.fov; }
+        else { S.state = "attract"; camera.fov = 40; }
+        camera.updateProjectionMatrix();
+        if (onDone) onDone();
+      } });
     },
     skipIntro() { FC.skip(); },
     get fightCine() { return FC; },
-    setOrder(items) { order = items ? items.slice() : null; },   // 1ad: bag rút từ CUỐI ⇒ đảo ngược lúc bắt đầu
-    setPaused(p) { if (S.state === "attract" || S.state === "over") return; S.paused = !!p; last = 0; },   // 1ac: trang Fight tạm dừng cả 2 bàn
+    setOrder(items) { order = items ? items.slice() : null; RIGS[0].order = order; },   // 1ad: bag rút từ CUỐI ⇒ đảo ngược lúc bắt đầu
+    setPaused(p) { if (!duo && (S.state === "attract" || S.state === "over")) return; S.paused = !!p; last = 0; },   // 1ac: trang Fight tạm dừng cả 2 bàn
     end: endGame,
     fit,
     step(n = 1, dt = 1 / 60) { manual = true; for (let i = 0; i < n; i++) if (!S.paused) update(dt); composer.render(dt); return S.state; },
 
     resume() { manual = false; last = 0; },
     render() { composer.render(0); },   // soi cận: đặt __bp.camera rồi gọi render()
-    // thả thùng mang `word` ngay trên toa thứ `cartIdx`, có tính trước quãng tàu chạy trong lúc rơi
-    testDrop(word, cartIdx = 0, fromY = 11) {
-      const c = S.carts[cartIdx]; const tFall = Math.sqrt(2 * (fromY - ROOF_W - CRATE_H) / GRAV);
-      dropCrate(word, cartWorldX(c) + cruiseV() * tFall, fromY, 0);
+    // thả thùng mang `word` ngay trên toa thứ `cartIdx`, có tính trước quãng tàu chạy trong lúc rơi (1ap: team = bộ đội)
+    testDrop(word, cartIdx = 0, fromY = 11, team = 0) {
+      withRig(RIGS[team] || RIGS[0], () => {
+        const c = S.carts[cartIdx]; const tFall = Math.sqrt(2 * (fromY - ROOF_W - CRATE_H) / GRAV);
+        dropCrate(word, cartWorldX(c) + (duo ? S.trainV : cruiseV()) * tFall, fromY, 0);
+      });
     },
-    popWord(word) { const b = S.blimps.find(x => x.word && norm(x.word) === norm(word)); if (b) popBlimp(b); return !!b; },
+    popWord(word, team = 0) { const R = RIGS[team] || RIGS[0]; const b = R.blimps.find(x => x.word && norm(x.word) === norm(word)); if (b) withRig(R, () => popBlimp(b)); return !!b; },
+
+    // ================================================================ 1ap: FIGHT MỘT MÀN (duo) — trang fight-1ap.js điều khiển
+    // duoReady(): về góc chơi, chờ (sau intro / Start again không intro) · duoStart(orders): thứ tự từ 2 đội ⇒ màn 1 (true nếu vào được)
+    duoReady() {
+      if (!duo) return;
+      removePlane();
+      for (const R of RIGS) withRig(R, () => { clearSky(); if (S.train) { scene.remove(S.train); disposeTree(S.train); S.train = null; } dropTrainBody(); S.carts = []; S.cars = []; S.coaches = []; S.state = "ready"; });
+      SH.paused = false; SH.camV = 0; camera.fov = V.fov; camera.updateProjectionMatrix();
+    },
+    duoStart(orders) {
+      if (!duo) return false;
+      sfx.unlock(); removePlane();
+      const seen = new Set(), uniq = words.filter(w => { const k = norm(w.keyword); if (seen.has(k)) return false; seen.add(k); return true; });
+      RIGS.forEach((R, i) => withRig(R, () => {
+        clearSky();
+        S.order = orders && orders[i] ? orders[i].slice() : null;
+        S.bag = S.order ? S.order.slice().reverse() : shuffleR(uniq.slice());
+        S.total = uniq.length; S.levels = []; S.score = 0; S.x2 = 0; S.level = 0; S.state = "ready";
+      }));
+      SH.paused = false; camera.fov = V.fov; camera.updateProjectionMatrix();
+      return api.duoLevel(0);
+    },
+    // màn i cho CẢ 2 đội (tàu mới chạy vào từ mép trái). false = hết từ / đủ số màn ⇒ trang Fight kết thúc trận
+    duoLevel(i) {
+      let ok = true;
+      for (const R of RIGS) withRig(R, () => { if (ok && !beginLevel(i)) ok = false; });
+      return ok;
+    },
+    // thanh giờ của đội rút hết ⇒ tàu phanh DỪNG, khinh khí cầu bay đi, không nhận điểm nữa
+    duoOut(team) {
+      const R = RIGS[team]; if (!R || !(R.state === "play" || R.state === "intro")) return false;
+      withRig(R, () => { S.state = "out"; S.blimps.forEach(b => { b.leaving = true; b.vy = 0; }); try { sfx.brake && sfx.brake(); } catch (e) { /* */ } });
+      return true;
+    },
+    duoEnd() { for (const R of RIGS) if (R.state !== "gone") { R.state = "over"; R.blimps.forEach(b => { b.leaving = true; b.vy = 0; }); } },
+    duoBanner(text) { withRig(RIGS[0], () => flyPlane(text)); },
+    setTouch(ok) { touchOK = !!ok; },   // nút iPad "Chỉ iPad" ⇒ false
+    // ---- iPad: bố cục tàu (gửi khi đổi) + trạng thái (gửi ~20 lần/giây) — toạ độ x THẾ GIỚI (iPad đặt giữa màn = camX)
+    padLayout(team) {
+      const R = RIGS[team]; if (!R) return null;
+      return { v: R.layoutV || 0, lv: R.level, roof: r2(ROOF_W), rail: RAIL_TOP, lanes: R.lanes, eng: r2(ENGINE_LEN * TS), ten: r2(TENDER_LEN * TS), gap: r2(CART_GAP * TS),
+        cars: R.train ? R.cars.map(c => [c.type === "answer" ? "a" : c.type === "coach" ? "p" : "c", r2(c.localX * TS), r2(c.len * TS), c.type === "answer" ? c.item.definition : "", c.pruned ? 1 : 0]) : [] };
+    },
+    padState(team) {
+      const R = RIGS[team]; if (!R) return null;
+      return { cx: r2(SH.camX), cv: r2(SH.camV), x: R.train ? r2(R.train.position.x) : null, tv: r2(R.trainV), st: R.state, sc: R.score, lv: R.layoutV || 0, ps: SH.paused ? 1 : 0,
+        f: R.carts.map(c => (c.filled ? 1 : 0)).join(""), bv: r2(withRig(R, blimpV)),
+        b: R.blimps.filter(b => !b.leaving).map(b => [b.id, r2(b.x), r2(b.y), b.word || "", b.bonus || ""]),
+        c: R.crates.filter(c => !c.removed && c.body).map(c => [r2(c.body.position.x), r2(c.body.position.y), c.word, c.kicked ? 1 : 0]) };
+    },
+    popById(team, id) {
+      const R = RIGS[team]; if (!R || R.state !== "play" || SH.paused) return false;
+      const b = R.blimps.find(x => x.id === +id && !x.leaving); if (!b) return false;
+      withRig(R, () => popBlimp(b)); return true;
+    },
   };
   return api;
 }

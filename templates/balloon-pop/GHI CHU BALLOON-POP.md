@@ -148,3 +148,40 @@ sau 18 s) — chỉ lệch hình một nhịp, không ảnh hưởng điểm/gi�
 
 Backup trước sửa: `_backup/dot349/`. Danh sách "7 game đã nối onPause" ở `core/HUONG DAN CORE.md` nay thực tế là 8 —
 KHÔNG sửa vì đợt này không đụng `core/`; phụ trách tổng cập nhật khi tiện.
+
+---
+
+## Đợt 515 (chép từ GHI CHU DU AN.md) (14/10/2026) — TRAIN RUSH: FIGHT MỘT MÀN 2 TÀU SONG SONG + iPAD (như Rocket Race) + OPTIONS LEVELS / TIME ROUND
+
+**Thầy giao (14/10):** "màn Fight là 1 màn hình duy nhất, 2 tàu chạy song song; tàu xa có khinh khí cầu xa hơn, nhỏ hơn; tàu xong màn phóng lên trước,
+tàu sau ở lại làm nốt, xong cũng phóng đi rồi báo điểm; điều khiển bằng iPad như ROCKET RACE". Thiết kế trước ở myGame (bản phác
+`balloon-pop/thiet-ke-fight-1-man.html`, 2 vòng, chốt bằng AskUserQuestion) ⇒ "ok build" ⇒ myGame **1ap** (`eb51ace` … `4c6b706`, hồ sơ myGame
+`balloon-pop/NGHIEN CUU GAMEPLAY.md` mục 40) ⇒ "ok tiếp chặng 2" ⇒ ghép AWord đợt này.
+
+**Thầy chốt:** góc máy quay A · ô điểm đỏ/xanh = THANH GIỜ của màn (đầy = Time round, rút khi đội còn chơi, dừng khi đội xong; cả 2 xong ⇒ phần còn
+lại rút về 0, điểm tăng — 1 giây = 1 điểm) · chờ đội kia thoải mái · thanh rút hết khi chưa xong ⇒ tàu DỪNG, OUT, đội kia làm nốt màn đó rồi HẾT TRẬN ·
+LEVELS Off/1–20 thay Max cars · TIME ROUND Off/1–10 phút/∞ thay None/Count up/Count down (CẢ Single) · mặc định LEVELS 5 · TIME ROUND 2 phút ·
+chạm màn lớn được cả quả đội bạn; nút iPad Off / iPad + màn lớn (MẶC ĐỊNH) / Chỉ iPad.
+
+**1. Chép game** — `tools/chep-train-rush.py`: GOC `fight-1ap.js` + `GOC_THEM` [`tr-padui-1ap.js`] (màn iPad, pad.html nạp) + CSS `fight-1ap.css`.
+`3d/` nay: bp3d-1ap, fight-1ap, fight-cine-1ap, west-world-1ap (2 ray), tr-padlink-1ap (= rr-padlink Đợt 514, lệnh `pop:<số>`), tr-padui-1ap… (NGUON.json = myGame `4c6b706`).
+
+**2. `templates/balloon-pop/balloon-pop.js`** — Single + Fight dùng lõi 1ap. Options PHẲNG MỚI `trLevelCount` (0–20) · `trRound` (0 Off · 1–10 · 11 = ∞)
+— KHÔNG dùng lại `trLevels` (nghĩa cũ Max cars) / `timer` (nghĩa cũ giờ cả ván). `hideTimerOption: true` (ẩn hàng Timer của engine); `buildExtraOptions`
+thêm 2 thanh LEVELS / TIME ROUND (xanh lá, Off ở 0, ∞ ở 11), bỏ Max cars. Act chưa có `trRound`: ĐÃ TỪNG lưu Options Train rush (tr* Đợt 452 /
+trainRush Đợt 450) ⇒ suy từ timer cũ (None ⇒ Off · Count up ⇒ ∞ · Count down ⇒ số phút kẹp 1–10); act khác (timer mặc định "none" của AWord) ⇒ 2 phút.
+Fight: `createTrainRushFight({ options, padSignal, onPad })`; Options ▸ Apply (liveOptions) ⇒ `fight.setOptions` ⇒ chơi lại từ đếm 3-2-1.
+`trPadLink()`: kênh bắt tay + claim `ipad_now` { game: "trainrush", fight } khi nút iPad không Off; `hold` từ lúc có iPad nối (Đợt 513); Off / rời trận ⇒ thả.
+
+**3. iPad** — `templates/balloon-pop/tr-pad-signal.js` (chép khuôn rr-pad-signal: trpad_host / trpad_pad0 / trpad_pad1, kind `trainrush-pad` ⇒ thêm
+APP_DATA_KINDS `core/store.js`) · `core/ipad-now.js` nhận game "trainrush" · `pad.js`: game "trainrush" ⇒ `showTR(team)` = `mountTrainPad` (cảnh 2D đội mình,
+nút ‹ về chọn đội) · `showTRChooser` (TRAIN RUSH · CHOOSE YOUR TEAM, đỏ/xanh, đội đã có iPad ⇒ chỉ báo, không giành) · màn chờ chung nhắc Train rush Fight.
+
+**Đã kiểm (worktree web-wt-dot515, `scratch/dot515-tr.html?padsig=local` + `pad.html?padsig=local`, 14/10):** Single lõi 1ap · act kiểu cũ (Count down 3 phút,
+trLevels 8) ⇒ TIME ROUND 3 · LEVELS 5 · act mẫu ⇒ 5 · 2 phút · bảng Options THẬT: không còn hàng Timer, có LEVELS / TIME ROUND, kéo Off / ∞ ⇒ Apply ⇒ game nhận
++ act lưu `trLevelCount 0 / trRound 11` · Mode ▸ Fight ⇒ `ipad_now` trainrush · pad.html ⇒ màn chọn đội TRAIN RUSH ⇒ chạm TEAM 1 ⇒ nối thẳng ("on"), claim
+`hold: true` · iPad nhận trạng thái + bố cục · chạm THẬT quả DESCRIBE trên pad.html ⇒ thùng rơi trúng toa, +5, tàu phóng đi · nút iPad Off ⇒ ipad_now ""
+· bật lại ⇒ trainrush hold · Mode ▸ Single ⇒ thả · đường engine `ownFight` mở / dỡ sạch + thả claim · 0 lỗi console. Hàm suy Options thử 4 kiểu act (node).
+Bẫy gặp: ô `#pad` của pad.html cao 0 ⇒ màn iPad đo nhầm ⇒ myGame `4c6b706` màn iPad `position: fixed` + đo chính nó.
+⬜ thầy thử TOMKO + 2 iPad thật (đăng nhập cùng tài khoản; trang chủ ▸ iPad ▸ chọn đội).
+
