@@ -752,6 +752,52 @@ html.aw-nhung .aw-below { display: none; }
 }
 .aw-menu-item:hover { background: #f0f4f9; }
 
+/* ---------- ⭐ Đợt 512 — CHẾ ĐỘ QUAY VIDEO (bài giao mở với &quay=1) ----------
+   ⚠️ Mọi cỡ đo bằng var(--aw-u) (≈ 1% bề ngang khung, khung được dựng to rồi thu lại) — px ở đây sẽ ra tí hon. */
+.aw-iconbtn.aw-quay-lai, .aw-quay-lai {
+  display: inline-flex; align-items: center; justify-content: center; gap: calc(0.6 * var(--aw-u));
+  width: auto; height: calc(3.5 * var(--aw-u)); padding: 0 calc(1.2 * var(--aw-u)) 0 calc(0.9 * var(--aw-u));
+  border-radius: calc(1 * var(--aw-u)); background: #fff; border: calc(0.15 * var(--aw-u)) solid #F3C08A; color: #C2410C;
+  font-family: inherit; font-weight: 800; font-size: calc(1.35 * var(--aw-u)); letter-spacing: .04em; white-space: nowrap;
+  box-shadow: 0 calc(0.2 * var(--aw-u)) calc(0.6 * var(--aw-u)) rgba(194,65,12,.1); cursor: pointer;
+}
+.aw-iconbtn.aw-quay-lai svg, .aw-quay-lai svg { width: calc(1.8 * var(--aw-u)); height: calc(1.8 * var(--aw-u)); flex: none; }
+.aw-iconbtn.aw-quay-lai:hover, .aw-quay-lai:hover { background: #FFF7ED; color: #C2410C; }
+.aw-nav-label.aw-quay-nav { font-weight: 900; color: #1E3A8A; letter-spacing: .04em; font-size: calc(2.2 * var(--aw-u)); min-width: calc(12 * var(--aw-u)); }
+.aw-topbar.aw-quay-top { position: relative; min-height: calc(3 * var(--aw-u)); }
+.aw-quay-nhan {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none;
+  display: flex; align-items: center; gap: calc(0.7 * var(--aw-u)); white-space: nowrap;
+  font-weight: 800; font-size: calc(1.45 * var(--aw-u)); letter-spacing: .14em; color: #B91C1C;
+}
+.aw-quay-nhan::before { content: ''; width: calc(1.1 * var(--aw-u)); height: calc(1.1 * var(--aw-u)); border-radius: 50%; background: #DC2626; }
+.aw-quay-hoi {
+  position: absolute; inset: 0; z-index: 30; display: grid; place-items: center;
+  background: rgba(15,23,42,.45); backdrop-filter: blur(2px); animation: aw-fadein .15s ease;
+}
+.aw-quay-hop {
+  width: min(86%, calc(46 * var(--aw-u))); background: #fff; border-radius: calc(1.8 * var(--aw-u)); text-align: center;
+  padding: calc(3 * var(--aw-u)) calc(3 * var(--aw-u)) calc(2.4 * var(--aw-u));
+  box-shadow: 0 calc(2 * var(--aw-u)) calc(5 * var(--aw-u)) rgba(0,0,0,.3); animation: aw-pop .18s cubic-bezier(.22,.9,.3,1);
+}
+.aw-quay-hop h3 { margin: 0 0 calc(0.8 * var(--aw-u)); font-weight: 900; font-size: calc(2.6 * var(--aw-u)); letter-spacing: .03em; color: var(--aw-text); }
+.aw-quay-hop p { margin: 0 0 calc(2.4 * var(--aw-u)); font-size: calc(1.9 * var(--aw-u)); font-weight: 600; color: var(--aw-muted); line-height: 1.5; }
+.aw-quay-hang { display: flex; gap: calc(1.4 * var(--aw-u)); justify-content: center; }
+.aw-quay-hang button {
+  flex: 1; border: none; cursor: pointer; font-family: inherit; font-weight: 800; border-radius: calc(1.4 * var(--aw-u));
+  padding: calc(1.5 * var(--aw-u)) calc(1 * var(--aw-u)); font-size: calc(1.9 * var(--aw-u));
+}
+.aw-quay-o { background: #EEF2F6; color: #334155; }
+.aw-quay-di { background: #EA580C; color: #fff; }
+.aw-quay-het {
+  position: absolute; inset: 0; z-index: 25; background: #fff; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: calc(2 * var(--aw-u)); text-align: center; animation: aw-fadein .2s ease;
+}
+.aw-quay-het b { font-weight: 900; font-size: calc(3.4 * var(--aw-u)); color: #18A957; letter-spacing: .04em; }
+.aw-quay-het span { font-weight: 700; color: var(--aw-muted); font-size: calc(1.9 * var(--aw-u)); }
+.aw-quay-het .aw-quay-lai { margin-top: calc(1.4 * var(--aw-u)); height: calc(4.6 * var(--aw-u)); font-size: calc(1.8 * var(--aw-u)); padding: 0 calc(1.8 * var(--aw-u)) 0 calc(1.4 * var(--aw-u)); }
+.aw-quay-het .aw-quay-lai svg { width: calc(2.3 * var(--aw-u)); height: calc(2.3 * var(--aw-u)); }
+
 /* ---------- Toast ---------- */
 .aw-toast {
   /* raised with .aw-menu above — the bottom bar grew with the Back/Next plates */

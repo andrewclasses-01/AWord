@@ -342,13 +342,19 @@ async function play(assignment, studentName, className, studentMa) {
   // ⭐ Đợt 490 — một bài một trang (trước MỌI thứ khác: chưa dựng ván, chưa đọc lượt dở).
   const khoaTrang = khoaLuot(assignment.code, ma, studentName);
   const laPhuHuynh = new URLSearchParams(location.search).get("db") === "1";
-  if (!laPhuHuynh) {
+  // ⭐⭐ Đợt 512 (thầy chốt 14/10/2026) — CHẾ ĐỘ QUAY VIDEO (`&quay=1`, myLesson web gắn cho bước QUAY VIDEO của lesson CHƯƠNG):
+  // phụ huynh hỏi – con trả lời trước máy quay. Câu đi LẦN LƯỢT 1 → N (chỉ xáo đáp án), không đồng hồ, nút BẮT ĐẦU LẠI
+  // thay ☰ (engine `session.quay`), KHÔNG lưu điểm (không scores/results/leaderboard, không nộp dở, không nháp), KHÔNG giữ
+  // lượt dở (tải lại = từ câu 1), không tấm nhắc bỏ cuộc. CHỈ ghi THỜI GIAN LUYỆN vào practiceLog (mode "practice").
+  const quay = new URLSearchParams(location.search).get("quay") === "1";
+  if (!laPhuHuynh && !quay) {
     if (!(await giuMotTrang(khoaTrang))) return;
     // Bị trang khác giành chỗ ⇒ sang màn thông báo; pagehide của trang này cất lượt dở như tải lại (Đợt 469).
     chiemTrang(khoaTrang, () => location.replace(urlBo("dung")));
   }
   // A fresh copy each time so a replay never inherits the previous play's state.
   const activity = JSON.parse(JSON.stringify(assignment.activity));
+  if (quay) activity.options = Object.assign({}, activity.options || {}, { shuffleQuestions: false, shuffleAnswers: true, timer: "none" });   // Đợt 512
 
   // Fetch this one game before wiping the screen, so a slow classroom
   // connection shows "Loading..." instead of a blank page. Every act type in
@@ -393,7 +399,7 @@ async function play(assignment, studentName, className, studentMa) {
   const vetDe = dauVet(activity);
   let lamTiepCho = null;    // lượt dở đang giữ, chờ ván đầu tiên của trang này
   let lamTiepDung = null;   // playLog.start đã nhận, chờ engine lấy trạng thái ván (begin)
-  let lamTiepXet = !dacBiet;   // Đợt 489 — ván đầu của trang CHƯA bắt đầu ⇒ còn xét lại được
+  let lamTiepXet = !dacBiet && !quay;   // Đợt 489 · Đợt 512 quay video không làm tiếp — ván đầu của trang CHƯA bắt đầu ⇒ còn xét lại được
   // 🔎 Đợt 490 — LÝ DO (chẩn đoán, trường `lt` của practiceLog): thầy thấy em vẫn ra ván mới thay vì CONTINUE mà kho không cho biết
   // vì sao (BẢO NAM, DIỆU CHI NTK9 06/10). `ltMo` = tình trạng lúc MỞ trang: co · khong-co · vet (đề đổi) · khong-tpl · tab-khac,
   // kèm sức khoẻ localStorage (`ls-loi` = không ghi được; `ls<KB>k` = dung lượng đang dùng — gần 5 MB là đầy).
@@ -403,7 +409,7 @@ async function play(assignment, studentName, className, studentMa) {
     let n = 0; for (let i = 0; i < localStorage.length; i++) { const kk = localStorage.key(i) || ""; n += kk.length + (localStorage.getItem(kk) || "").length; }
     ltLs = "ls" + Math.round(n / 1024) + "k";
   } catch (e) { ltLs = "ls-loi"; }
-  if (!dacBiet) {
+  if (!dacBiet && !quay) {
     const s = docLuot(khoaLT);
     if (s && s.vet !== vetDe) { ltMo = "vet"; xoaLuot(khoaLT); }   // thầy đã sửa đề ⇒ không dựng lại được; nháp cũ được nộp dở như trước
     else if (s && !s.tpl) ltMo = "khong-tpl";
@@ -425,7 +431,7 @@ async function play(assignment, studentName, className, studentMa) {
   const nhipMc = () => (biXem() ? MC_NHIP_XEM_MS : MC_NHIP_MS);
   const lucCua = s => Number(s && (s.lc || s.luc)) || 0;
   let mcHoi = null;          // đang hỏi máy chủ (Promise) — engine chờ nó khi em bấm START sớm (session.choLamTiep)
-  if (!dacBiet && ma) {
+  if (!dacBiet && !quay && ma) {
     mcHoi = docLuotGiu(assignment.code, ma).then(sv => {
       if (sv === undefined || !lamTiepXet) return;   // không hỏi được / ván đầu đã bắt đầu ⇒ thôi
       const loc = docLuot(khoaLT);
@@ -503,7 +509,7 @@ async function play(assignment, studentName, className, studentMa) {
   const batSong = () => { if (!songTimer) { nhipSong(khoaLT, true); songTimer = setInterval(() => nhipSong(khoaLT, true), 2000); } };
   const tatSong = () => { if (songTimer) { clearInterval(songTimer); songTimer = null; } nhipSong(khoaLT, false); };
   function luuLuot(t, gap) {   // t = { tpl, timeCost } do engine chụp · gap = tab ẩn / rời trang ⇒ gửi máy chủ ngay
-    if (!t || !t.tpl || !playLog || playLog.done || playLog.mistakes || dacBiet) return false;
+    if (!t || !t.tpl || !playLog || playLog.done || playLog.mistakes || dacBiet || quay) return false;
     const s = { vet: vetDe, nhapId: playLog.nhapId, logId: playLog.id, createdAt: playLog.createdAt,
                 batDau: playLog.batDau, activeMs: hoatDong ? hoatDong.doc() : (playLog.activeMs || 0),
                 timeCost: Number(t.timeCost) || 0, tpl: t.tpl, lt: playLog.lt || "",
@@ -527,6 +533,12 @@ async function play(assignment, studentName, className, studentMa) {
   // đồng hồ tường từ mốc `batDau` (đo thật 22/09: gửi lại gói cũ thì thiếu cả phút cuối).
   window.addEventListener("pagehide", () => {
     if (!playLog || playLog.done) return;
+    if (quay) {   // Đợt 512 — chỉ nhịp cuối của giờ luyện; không nộp dở, không giữ lượt, không tính bỏ cuộc
+      if (hoatDong) playLog.activeMs = hoatDong.doc();
+      playLog.timeMs = Math.max(playLog.timeMs, Date.now() - playLog.batDau);
+      beatPlayLog(playLog, { keepalive: true });
+      return;
+    }
     // ⭐ Đợt 469 — lượt GIỮ được ⇒ chụp lần cuối, cất NHÁP (em không bao giờ quay lại thì hết hạn giữ nó vẫn được
     // nộp dở như cũ — core/assignments.js sweepDrafts), ghi nhịp nhật ký, KHÔNG nộp dở, KHÔNG đếm bỏ cuộc.
     const giu = chupLuot(true);   // Đợt 495 — gửi máy chủ ngay (keepalive)
@@ -573,10 +585,10 @@ async function play(assignment, studentName, className, studentMa) {
   // ⭐ Đợt 491 (thầy chốt 07/10/2026) — em ĐÃ đạt 100% ở act này (`daDat100`) chơi lại để đua thời gian: bỏ giữa ván KHÔNG
   // nộp dở nữa (đo 06–07/10: 173/175 ván bỏ dở là của em đã 100% — ĐĂNG KHOA B1B Quiz 152 ván vài giây ⇒ hơn trăm dòng
   // `doDang` rác trong scores; lượt dở không bao giờ hơn được 100% đã có). Nhật ký practiceLog vẫn ghi như cũ (giờ luyện).
-  function khongNopDo() { return !dacBiet && daDat100(khoaBC); }   // function: listener pagehide ở trên gọi nó
+  function khongNopDo() { return quay || (!dacBiet && daDat100(khoaBC)); }   // Đợt 512 — quay video: không bao giờ nộp   // function: listener pagehide ở trên gọi nó
   function nopLuotDo({ gap = false, score = null, total = null, timeMs = null, review = null } = {}) {
     if (!playLog || playLog.done || playLog.mistakes || playLog.daNopDo) return;
-    if (khongNopDo()) { dropDraft(playLog.nhapId); return; }   // Đợt 491
+    if (khongNopDo()) { dropDraft(playLog.nhapId); return; }   // Đợt 491 · Đợt 512
     let d = { score, total, timeMs };
     if (d.score == null && playLog.diemNay) { try { d = playLog.diemNay() || d; } catch (e) {} }
     const diem = Math.round(Number(d.score)) || 0;
@@ -636,10 +648,11 @@ async function play(assignment, studentName, className, studentMa) {
       // ⭐⭐ Đợt 468 (thầy chốt 05/10/2026) — ÉP LÀM HẾT BÀI: chưa từng đạt 100% ở act này ⇒ ☰ ẩn ("an");
       // đã đạt 100% ⇒ ☰ có nhưng mở ra đồng hồ vẫn chạy ("chay"). Phụ huynh (`db=1`) giữ như cũ.
       // Cờ 100% = `daDat100` của bo-cuoc.js (Đợt 456: ghi khi làm hết đạt điểm tối đa, hoặc đọc bảng máy chủ).
-      cheDoMenu: () => (dacBiet ? "" : (daDat100(khoaBC) ? "chay" : "an")),
+      cheDoMenu: () => (dacBiet || quay ? "" : (daDat100(khoaBC) ? "chay" : "an")),
+      quay,   // ⭐ Đợt 512 — engine: nút BẮT ĐẦU LẠI thay ☰, nhãn "CÂU x / N", không nộp, màn kết thúc riêng
       // ⭐⭐ Đợt 469 — LÀM TIẾP lượt dở (xem khối đầu `khoaLT`). Engine: nhãn nút START · lấy trạng thái ván ĐÚNG một
       // lần lúc dựng (begin) · gửi trạng thái mới sau mỗi câu trả lời.
-      lamTiepNhan: () => { const s = xetLamTiep(); return s && s.tpl ? { daLam: s.tpl.daLam, tong: s.tpl.tong } : null; },   // Đợt 489 — hỏi lại được
+      lamTiepNhan: () => { if (quay) return null; const s = xetLamTiep(); return s && s.tpl ? { daLam: s.tpl.daLam, tong: s.tpl.tong } : null; },   // Đợt 489 — hỏi lại được
       layLamTiep: () => {
         const s = lamTiepDung; lamTiepDung = null;
         // ⛔ Đợt 492 (thầy chốt 07/10) — đồng hồ chạy tiếp từ SỐ ĐỒNG HỒ lúc cất (`gioMs`), không tính lúc tắt máy. Lượt cất
@@ -661,6 +674,7 @@ async function play(assignment, studentName, className, studentMa) {
       // Không nhúng (mở tab thường, parent === window) thì không bắn gì.
       // ⛔ Chỉ bắn khi kq.ok — nộp treo/hỏng mà báo là bảng bên kia làm mới vô ích.
       submit: ({ score, total, timeMs, review }) => {
+        if (quay) return Promise.resolve({ ok: true });   // Đợt 512 — lưới an toàn: engine vốn không gọi khi quay
         if (dacBiet) {
           // KHÔNG queueAttempt(): entry đó rơi vào outbox CHUNG cho mọi lượt chơi
           // trên máy, và flushOutbox() (dòng ~45, chạy ở MỌI lần mở trang) sẽ âm
@@ -707,7 +721,7 @@ async function play(assignment, studentName, className, studentMa) {
           } else if (!mistakes) lyDo = "sau";
           lamTiepCho = null;
           lamTiepDung = lt;
-          playLog = { code: assignment.code, id: lt ? lt.logId : newPlayLogId(), name: studentName, ma, mode,
+          playLog = { code: assignment.code, id: lt ? lt.logId : newPlayLogId(), name: studentName, ma, mode: quay ? "practice" : mode,
                       again: !!again, mistakes: !!mistakes, score: 0, total: 0, timeMs: lt ? Math.max(0, Date.now() - lt.batDau) : 0,
                       done: false, attemptId: "", createdAt: lt ? lt.createdAt : gioChuan(), batDau: lt ? lt.batDau : Date.now(),   // Đợt 422 — createdAt theo máy chủ, batDau đo thời lượng
                       activeMs: lt ? (lt.activeMs || 0) : 0,
@@ -722,7 +736,7 @@ async function play(assignment, studentName, className, studentMa) {
           attempt = null;   // ⭐ Đợt 383 — `attempt` của lượt TRƯỚC không được dính sang nhật ký lượt này
           if (hoatDong) hoatDong.dung();
           hoatDong = taoDoHoatDong(choMs, lt ? lt.activeMs : 0);
-          if (!mistakes && !dacBiet) batSong();   // Đợt 469
+          if (!mistakes && !dacBiet && !quay) batSong();   // Đợt 469
           beatPlayLog(playLog);
           baoVanChoTrangMe(true);   // Đợt 445
         },
@@ -730,7 +744,7 @@ async function play(assignment, studentName, className, studentMa) {
           if (!playLog || playLog.done) return;
           playLog.timeMs = timeMs;
           // ⭐ Đợt 383 — nháp lượt đang chơi (máy tắt ngang không kịp pagehide ⇒ lần mở sau gửi bù, xem assignments.js).
-          if (!dacBiet && !playLog.mistakes && playLog.diemNay) {
+          if (!dacBiet && !quay && !playLog.mistakes && playLog.diemNay) {
             try {
               const d = playLog.diemNay();
               // ⭐ Đợt 495 (thầy chốt 08/10) — nhịp phút mang SỐ CÂU ĐÚNG tới lúc này: máy tắt ngang (không kịp nhịp cuối) thì
@@ -751,7 +765,7 @@ async function play(assignment, studentName, className, studentMa) {
           dropDraft(playLog.nhapId);   // Đợt 383 — lượt đã tới đích, nháp hết việc
           if (!playLog.mistakes) { xoaLuot(khoaLT); tatSong(); boMayChu(false); }   // Đợt 469 — lượt xong: thôi giữ · Đợt 495 cả máy chủ
           playLog.score = score; playLog.total = total; playLog.timeMs = timeMs; playLog.done = true;
-          if (!dacBiet && !playLog.mistakes) {
+          if (!dacBiet && !quay && !playLog.mistakes) {
             ghiXongVan(khoaBC);   // ⭐ Đợt 424 — làm HẾT ván ⇒ chuỗi bỏ cuộc về 0
             // ⭐ Đợt 456 — đạt 100% (điểm = số câu của đề) ⇒ từ nay em cày xếp hạng: bỏ hẳn tấm nhắc ở act này.
             if (Number(total) > 0 && Number(score) >= Number(total)) ghiDat100(khoaBC);
@@ -783,7 +797,7 @@ async function play(assignment, studentName, className, studentMa) {
           beatPlayLog(playLog, { keepalive: true });
           // ⭐ Đợt 424 — rời ván khi mới làm < 50% ⇒ một lần BỎ CUỘC; tới ngưỡng thì hiện tấm hướng dẫn NGAY (ván kế tiếp
           // chờ em đóng tấm — engine hỏi `session.choVaoVan`). Ván Start with mistakes / phụ huynh không tính.
-          if (!dacBiet && !playLog.mistakes) {
+          if (!dacBiet && !quay && !playLog.mistakes) {
             try {
               const n = ghiRoiVan({ ...khoaBC, tiLe: tiLeDaLam({ review, score, total }) });
               if (n) hienNhac({ lan: n, coShow: coShowBC });
@@ -867,7 +881,7 @@ async function play(assignment, studentName, className, studentMa) {
     });
   }
   // ⭐ Đợt 424 — lần trước em bỏ cuộc bằng tải lại / đóng tab tới ngưỡng ⇒ hiện tấm hướng dẫn ngay khi mở bài.
-  if (!dacBiet) { try { const n = layNhacCho(khoaBC); if (n) hienNhac({ lan: n, coShow: coShowBC }); } catch (e) {} }
+  if (!dacBiet && !quay) { try { const n = layNhacCho(khoaBC); if (n) hienNhac({ lan: n, coShow: coShowBC }); } catch (e) {} }
   // ⭐ Đợt 456 — đã đạt 100% ở MÁY KHÁC? Hỏi bảng điểm tốt nhất của máy chủ một lần cho mỗi act/máy (1 lượt đọc).
   // Chạy nền, lỗi/không có thì thôi (lần sau hỏi lại). Chỉ trang có mã em (phụ huynh `db=1` không nhắc nên khỏi hỏi).
   if (!dacBiet && ma && canKiemMayChu(khoaBC)) {

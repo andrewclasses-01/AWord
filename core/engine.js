@@ -59,6 +59,8 @@ const NO_TEMPLATE_TYPES = new Set(["running_word", "running_team"]);
 // is done — the shield has to outlast what the eye is watching. The teacher
 // picked 0,5s out of 0,3 / 0,5 / 0,8 / 1,0.
 const START_GUARD_MS = 500;
+// ⭐ Đợt 512 — biểu tượng nút BẮT ĐẦU LẠI của chế độ quay video (mũi tên vòng ngược).
+const QUAY_IC_LAI = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>`;
 import { sound } from "./sound.js";
 import { setAssignmentMode } from "./wrong-sound.js";
 let ipadNowLoaded = false;   // Đợt 508 — core/ipad-now.js đã nạp trên trang này chưa (xem startGame)
@@ -444,6 +446,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
 
   const tpl = getTemplate(activity.type);
   const { page, stage, inner, below } = buildStage(activity.theme || "classic");
+  // ⭐⭐ Đợt 512 (thầy chốt 14/10/2026) — CHẾ ĐỘ QUAY VIDEO của bài giao (play.js `&quay=1` ⇒ `session.quay`): nút BẮT ĐẦU LẠI
+  // (hỏi lại 1 lần) đứng chỗ ☰ · nhãn giữa đáy "CÂU x / N" · không chip điểm · làm xong KHÔNG nộp, màn "ĐÃ ĐI HẾT N CÂU".
+  const quay = !!(session && session.quay && !fight);
   if (toastOnMount && !fight) { const m = toastOnMount; toastOnMount = ""; setTimeout(() => toast(m), 250); }   // ⭐ Đợt 400
   // Activity-type class on the stage, present from the very first paint (READY
   // screen included) — before tpl.mount() ever runs. A template stylesheet can
@@ -1324,9 +1329,14 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // ----- Bottom bar -----
   const bottombar = el("div", "aw-bottombar");
   const menuBtn = iconBtn("aw-iconbtn", icons.menu, "Menu");
+  if (quay) {   // Đợt 512
+    menuBtn.classList.add("aw-quay-lai");
+    menuBtn.innerHTML = QUAY_IC_LAI + "<span>BẮT ĐẦU LẠI</span>";
+    menuBtn.title = "Bắt đầu lại từ câu 1"; menuBtn.setAttribute("aria-label", "Bắt đầu lại từ câu 1");
+  }
   const navWrap = el("div", "aw-nav");
   const navPrev = iconBtn("aw-navbtn", icons.prev, "Previous");
-  const navLabel = el("span", "aw-nav-label", "");
+  const navLabel = el("span", "aw-nav-label" + (quay ? " aw-quay-nav" : ""), "");
   const navNext = iconBtn("aw-navbtn", icons.next, "Next");
   navWrap.append(navPrev, navLabel, navNext);
   // ⭐⭐⭐ Đợt 220 (thầy, 21/8/2026) — HAI MŨI TÊN BỊ KHOÁ KHI BÀN KIA CÒN ĐANG LÀM.
@@ -1638,6 +1648,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   }
 
   inner.append(topbar, playArea, bottombar);
+  if (quay) {   // Đợt 512 — nhãn giữa hàng trên, bỏ chip điểm (không chấm điểm khi quay video)
+    topbar.classList.add("aw-quay-top");
+    topbar.append(el("div", "aw-quay-nhan", "CHẾ ĐỘ QUAY VIDEO"));
+    scoreEl.style.display = "none";
+  }
 
   // ----- Below the stage: TITLE (left) · Options/Style/Mode (center) ·
   // Edit/Assignment/Print (right) — Đợt 228 dropped the standalone Template
@@ -5842,7 +5857,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // register one keep the old behavior — the guard simply doesn't apply.
   let answeredCounter = null;
   let menuEl = null;
-  menuBtn.onclick = () => { if (cheDoMenuHs() === "an") return; (menuEl ? closeMenu() : openMenu()); };
+  menuBtn.onclick = () => { if (quay) { hoiBatDauLaiQuay(); return; } if (cheDoMenuHs() === "an") return; (menuEl ? closeMenu() : openMenu()); };
   // ⭐⭐ Đợt 468 (thầy chốt 05/10/2026) — ÉP HỌC SINH LÀM HẾT BÀI. Đo thật 25/9–4/10: 76% lượt bài giao là
   // BỎ DỞ (Start again sau 1–2 câu sai), lượt dở ngốn 197 giờ > 179 giờ lượt làm hết; tấm nhắc Đợt 424 chỉ đỡ
   // vài ngày. Trang học sinh (play.js) trả lời `session.cheDoMenu()`:
@@ -6174,6 +6189,39 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   function diemBoDo() {
     try { const v = scoreProvider ? scoreProvider() : lastShownScore; return (v == null || !isFinite(Number(v))) ? null : Math.max(0, Math.round(Number(v))); }
     catch (e) { return null; }
+  }
+  // ⭐ Đợt 512 — CHẾ ĐỘ QUAY VIDEO: hộp hỏi lại trước khi bắt đầu lại (ván đứng yên trong lúc hỏi) + màn kết thúc riêng.
+  let quayHoiEl = null;
+  function hoiBatDauLaiQuay() {
+    if (quayHoiEl || torndown) return;
+    const dangChoi = playStarted && !playEnded;
+    if (dangChoi) enterPause("menu");
+    const bd = el("div", "aw-quay-hoi");
+    const hop = el("div", "aw-quay-hop");
+    hop.append(el("h3", "", "BẮT ĐẦU LẠI TỪ CÂU 1?"), el("p", "", "Lượt đang làm sẽ bỏ đi và quay về câu 1."));
+    const hang = el("div", "aw-quay-hang");
+    const oLai = el("button", "aw-quay-o", "Ở LẠI"), lai = el("button", "aw-quay-di", "BẮT ĐẦU LẠI");
+    oLai.type = lai.type = "button";
+    const dong = () => { bd.remove(); quayHoiEl = null; if (dangChoi) exitPause("menu"); };
+    oLai.onclick = () => { sound.click(); dong(); };
+    lai.onclick = () => { sound.click(); bd.remove(); quayHoiEl = null; if (dangChoi) exitPause("menu"); restart(); };
+    bd.onclick = (e) => { if (e.target === bd) dong(); };
+    hang.append(oLai, lai);
+    hop.append(hang);
+    bd.append(hop);
+    inner.append(bd);
+    quayHoiEl = bd;
+  }
+  function ketThucQuay(result) {
+    (tpl.sounds?.complete || sound.fanfare)();
+    const n = result.items ?? result.total ?? 0;
+    const man = el("div", "aw-quay-het");
+    const nut = el("button", "aw-quay-lai aw-quay-lai-to");
+    nut.type = "button";
+    nut.innerHTML = QUAY_IC_LAI + "<span>BẮT ĐẦU LẠI</span>";
+    nut.onclick = () => { sound.click(); restart(); };
+    man.append(el("b", "", `ĐÃ ĐI HẾT ${n} CÂU`), el("span", "", "Lượt quay video không lưu điểm."), nut);
+    inner.append(man);
   }
   function restart() {
     if (session && session.playLog && playStarted && !playLogDone && !fight && !activity._mistakes) playLogDiemBoDo = diemBoDo();
@@ -6667,6 +6715,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // ⭐ Đợt 220 — FREE: một con số duy nhất tăng dần từ 1 (thầy chốt). Tổng của
       // mảng đã nối dài (500…) là con số kỹ thuật, lớp nhìn thấy chỉ hoảng.
       navLabel.textContent = label != null ? label
+        : quay ? `CÂU ${index} / ${total}`   // Đợt 512 — số câu MỘT chỗ, chữ đậm cho máy quay thấy
         : (sdDealMode === "free" ? String(index) : `${index} of ${total}`);
       // Đợt 220 — mốc xa nhất ván đã đi tới, mẫu số của Free lúc Submit.
       if (typeof index === "number" && index - 1 > sdMaxIndex0) sdMaxIndex0 = index - 1;
@@ -6807,7 +6856,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         // lượt 0 điểm — hay âm, khi có trừ điểm — không nộp, chỉ còn trong nhật ký thời gian). Lượt Start
         // with mistakes ("practice") không bao giờ nộp. Lượt HẾT GIỜ đi đúng đường này (template tự finish)
         // ⇒ mẫu số chuẩn, KHÔNG phải lượt dở.
-        if (hwMode === "submit" && Number(result.score) > 0) {
+        if (hwMode === "submit" && Number(result.score) > 0 && !quay) {   // Đợt 512 — quay video không nộp
           hwFinishedAt = gioChuan();   // Đợt 422 — giờ chuẩn (máy chủ)
           // ⭐⭐ Đợt 294 — MẪU SỐ NỘP LÊN LÀ SỐ CÂU CỦA ĐỀ (`result.items`), KHÔNG PHẢI
           // SỐ LƯỢT (`result.total`). Xem ghi chú dài ở `items` trong core/scoring.js:
@@ -6828,6 +6877,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
           if (playLogTimer) { clearInterval(playLogTimer); playLogTimer = null; }
           try { session.playLog.end({ score: result.score, total: result.items ?? result.total, timeMs, review: reviewData }); } catch (e) {}   // Đợt 384 — + bài làm
         }
+        if (quay) { ketThucQuay(result); return; }   // Đợt 512
         celebrate(result, null);
         return;
       }

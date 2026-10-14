@@ -546,6 +546,24 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 512 (14/10/2026) — CHẾ ĐỘ QUAY VIDEO CHO BÀI GIAO (`&quay=1`) · cùng myLesson web (lesson CHƯƠNG)
+**Bối cảnh:** lesson CHƯƠNG của khóa NỀN TẢNG (myLesson web, `bai.html` kiểu CHƯƠNG) có bước cuối "quay video gửi Zalo": phụ huynh hỏi, con trả
+lời đủ N câu trước máy quay. Trước đây bước đó bảo "làm giống Bước 3" (dùng lại act Bước 3) ⇒ người mới lẫn lộn. Thầy chốt (mẫu
+`DU LIEU TONG HOP\MAU KHOA HOC\MAU BUOC QUAY VIDEO v4 14-10-2026.html`): bước quay video có **bài giao THỨ 3 riêng** (cùng act) mở ở chế độ quay video.
+**Làm:**
+- `play.js`: `quay = ?quay=1`. Options ép `shuffleQuestions:false, shuffleAnswers:true, timer:"none"`. Không khoá một-bài-một-trang, không đọc/ghi
+  lượt dở (máy + máy chủ `lamTiep`), không nháp, không nộp dở (`khongNopDo()` ⇒ true), không tấm nhắc bỏ cuộc / đạt 100%. `session.quay = true`,
+  `cheDoMenu` ⇒ "". practiceLog VẪN ghi (đo giờ luyện), `mode: "practice"` để không bị coi là lượt nộp. `pagehide` chỉ gửi nhịp cuối.
+- `core/engine.js`: `session.quay` ⇒ nút BẮT ĐẦU LẠI chỗ ☰ (hỏi lại 1 lần, `hoiBatDauLaiQuay`), nhãn "CÂU x / N", nhãn "● CHẾ ĐỘ QUAY VIDEO", ẩn chip
+  điểm, không `session.submit`, màn kết thúc `ketThucQuay` "ĐÃ ĐI HẾT N CÂU" + BẮT ĐẦU LẠI (vào thẳng ván mới).
+- `core/app.css`: khối `.aw-quay-*` (mọi cỡ theo `--aw-u`).
+**Đã thử (bàn thử `scratch/dot512/`, play.js thật + kho giả ghi `window.__mang`):** quiz mẫu 6 câu đi đúng 1→6, đáp án xáo mỗi lượt; hộp hỏi Ở LẠI/BẮT
+ĐẦU LẠI; làm hết ⇒ màn kết thúc; cả phiên chỉ có `beat` (practiceLog) — KHÔNG `sendAttempt`/`queueAttempt`/`saveDraft`/`docLuotGiu`; tải lại giữa bài
+⇒ START (không CONTINUE). Không cờ `quay` ⇒ y như cũ (đồng hồ, chip điểm, "1 of 6", ☰ ẩn theo Đợt 468).
+**VIỆC ĐANG CHỜ:** thầy thử thật trên trang bài Chương 1/2 K10 (bước quay video).
+
+---
+
 ## Đợt 511 (13/10/2026) — ROCKET RACE: iPAD "GAME CONTROLLER" — MỖI ĐỘI 1 iPAD BẮN TÊN LỬA + BOOST (ghép myGame mẫu 9 `4755fe1`) · phiên MSI
 **Bối cảnh:** thầy muốn nút iPad trong trận Rocket Race có thêm chế độ "tham gia game": chuyển toàn bộ phần bắn tên lửa + né sang iPad, màn lớn vẫn hiển thị.
 Làm mẫu ở myGame trước (mẫu 9, 5 vòng chỉnh: bỏ QR ⇒ chọn đội từ nút iPad trang chủ; bảng iPad = 3D giống hệt game; số tên lửa "+X"; tên lửa 2D trên đường đua mini;
