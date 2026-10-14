@@ -19,6 +19,13 @@
 //   Một người ghi về mặt thiết kế (máy chiếu); hai tab máy chiếu cùng mở thì tab ghi SAU thắng — chính là "game đang được chọn".
 //   ⚠️ Đóng tab máy chiếu không kịp gỡ claim ⇒ iPad còn đứng ở màn game đó (tự báo "Waiting for the game") cho tới lần mở
 //   game kế tiếp — y như trước đợt này, không tệ hơn.
+// ⭐ Đợt 513 (thầy 14/10/2026: Rocket Race Controller chơi được ~3 phút thì 2 iPad về "iPad ready" — thầy "thường chạy nhiều AWord
+//   ở nhiều nơi … không thể để việc này gây ảnh hưởng tới game đang chơi"): mọi game AWord mở ở tab/máy/myActivity/myLesson KHÁC đều
+//   ghi game:"" ⇒ đè claim của trận đang chơi; máy chiếu chỉ ghi khi CHÍNH nó đổi (lastSent) nên không bao giờ ghi lại ⇒ iPad kẹt
+//   màn chờ tới khi thầy tắt/bật iPad. Nay claim có `hold` = "trận này đang dùng iPad thật" (Rocket Race: bật Questions/Controller là
+//   hold ngay · STAR LOOT: từ lúc có iPad nối lần đầu). Tab đang giữ claim hold thì NGHE tài liệu: ai khác ghi mà không hold
+//   (game "" hay một STAR LOOT chỉ đang mở) ⇒ ghi lại NGAY. Hai tab cùng hold ⇒ tab ghi sau thắng, không giành qua lại.
+//   Tài liệu có thêm `hold` + `src` (mã tab ghi — để tab tự nhận ra lượt ghi của chính mình).
 // ⚠️ kind "ipad-now" PHẢI có trong APP_DATA_KINDS (core/store.js), không thì ăn mất số link ?a=.
 // Bàn thử: `?padsig=local` (cả trang game lẫn pad.html/source.html) ⇒ kênh cục bộ 2 tab cùng trình duyệt, không đăng nhập.
 // =============================================================
@@ -33,35 +40,50 @@ const LKEY = "awipad:now";
 
 // ---------------------------------------------------------------- MÁY CHIẾU
 let surface = false;            // trang thầy đang trình chiếu (engine đặt mỗi lần dựng game)
-const claims = new Map();       // token → { game, fight }
+const claims = new Map();       // token → { game, fight, ctl, hold }
 let seq = 0, timer = null, lastSent = "";
+const TAB = Math.random().toString(36).slice(2, 10);   // Đợt 513 — mã tab này (trường `src`)
+let guardOff = null;            // Đợt 513 — huỷ nghe tài liệu (chỉ nghe khi claim hiện hành đang hold)
 
 function current() {
   let best = null, bt = 0;
   for (const [t, c] of claims) if (t > bt) { bt = t; best = c; }
   return best;
 }
-function schedule() {
+function schedule(ms) {
+  syncGuard();
   if (!surface) return;
   clearTimeout(timer);
-  timer = setTimeout(flush, current() ? 250 : 1500);
+  timer = setTimeout(flush, ms != null ? ms : current() ? 250 : 1500);
+}
+// ⭐ Đợt 513 — trận đang dùng iPad thật: tab khác ghi đè mà không hold ⇒ ghi lại ngay (iPad chờ 2,5 s mới về màn chờ ⇒ không kịp nháy)
+function syncGuard() {
+  const cur = current(), want = !!(surface && cur && cur.hold);
+  if (want && !guardOff) {
+    guardOff = watchIpadNow(r => {
+      const c = current();
+      if (!r || !c || !c.hold || r.src === TAB || r.hold) return;
+      if (r.game === c.game && r.fight === !!c.fight && r.ctl === !!c.ctl) return;
+      lastSent = ""; schedule(0);
+    }, e => console.warn("iPad guard", e));
+  } else if (!want && guardOff) { guardOff(); guardOff = null; }
 }
 async function flush() {
   timer = null;
   if (!surface) return;
   const cur = current();
-  const payload = cur ? { game: cur.game, fight: !!cur.fight, ctl: !!cur.ctl } : { game: "", fight: false, ctl: false };
+  const payload = cur ? { game: cur.game, fight: !!cur.fight, ctl: !!cur.ctl, hold: !!cur.hold } : { game: "", fight: false, ctl: false, hold: false };
   const key = JSON.stringify(payload);
   if (key === lastSent) return;
   try {
     if (LOCAL) {
-      localStorage.setItem(LKEY, JSON.stringify({ ...payload, at: Date.now() }));
+      localStorage.setItem(LKEY, JSON.stringify({ ...payload, src: TAB, at: Date.now() }));
       try { new BroadcastChannel("awipad").postMessage("now"); } catch (e) { /* trình duyệt cũ */ }
     } else {
       const user = await currentUser();
       if (!user) return;                          // chưa đăng nhập: không có kho để ghi, iPad cũng không nghe được
       const [d, { doc, setDoc }] = await Promise.all([db(), fs()]);
-      await setDoc(doc(d, `users/${user.uid}/items`, DOC), { ...envelope(), ...payload, at: Date.now() });
+      await setDoc(doc(d, `users/${user.uid}/items`, DOC), { ...envelope(), ...payload, src: TAB, at: Date.now() });
     }
     lastSent = key;
   } catch (e) { console.warn("iPad follow", e); }
@@ -70,19 +92,20 @@ async function flush() {
 /** Engine, mỗi lần dựng game: `on` = trang thầy (không phải bài giao). Cũng là nhịp "có game mới mở" ⇒ ghi lại trạng thái. */
 export function ipadSurface(on) {
   surface = !!on;
-  if (surface) schedule(); else clearTimeout(timer);
+  if (surface) schedule(); else { clearTimeout(timer); syncGuard(); }
 }
 
-/** Template cần iPad: giữ claim suốt lúc sống. Trả { update(patch), release() }. */
+/** Template cần iPad: giữ claim suốt lúc sống. Trả { update(patch), release() }. `hold` (Đợt 513) = trận đang dùng iPad thật. */
 export function claimIpad(info) {
   const token = ++seq;
-  claims.set(token, { game: String(info.game || ""), fight: !!info.fight, ctl: !!info.ctl });
+  claims.set(token, { game: String(info.game || ""), fight: !!info.fight, ctl: !!info.ctl, hold: !!info.hold });
   schedule();
   return {
     update(patch) {
       const c = claims.get(token); if (!c) return;
       if ("fight" in patch) c.fight = !!patch.fight;
       if ("ctl" in patch) c.ctl = !!patch.ctl;
+      if ("hold" in patch) c.hold = !!patch.hold;
       schedule();
     },
     release() { if (claims.delete(token)) schedule(); },
@@ -93,7 +116,7 @@ export function claimIpad(info) {
 function norm(raw) {
   if (!raw) return null;
   const g = raw.game === "starloot" || raw.game === "rocketrace" ? raw.game : "";
-  return { game: g, fight: !!raw.fight, ctl: !!raw.ctl, at: Number(raw.at) || 0 };
+  return { game: g, fight: !!raw.fight, ctl: !!raw.ctl, hold: !!raw.hold, src: String(raw.src || ""), at: Number(raw.at) || 0 };
 }
 
 /** cb({game, fight, ctl, at} | null — null = chưa từng có tài liệu, vd. máy chiếu còn bản cũ). onError(e) khi ĐỌC hỏng. */

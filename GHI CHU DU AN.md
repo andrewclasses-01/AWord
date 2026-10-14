@@ -546,6 +546,31 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 513 (14/10/2026) — iPAD KHÔNG BỊ AWORD Ở NƠI KHÁC KÉO KHỎI TRẬN (claim `hold`)
+
+**Thầy báo (ảnh):** Rocket Race Fight, iPad ▸ Controller, 2 iPad điều khiển — ~3 phút thì iPad mất bảng, hiện màn chờ "iPad ready";
+phải tắt/bật iPad trên game, ~20 s sau iPad mới có lại bảng. Thầy xác nhận lúc đó CÓ mở AWord ở chỗ khác: "tôi thường chạy nhiều
+AWord ở nhiều nơi, nên không thể để việc này gây ảnh hưởng tới game đang chơi … chỉ kết nối ipad và chơi ở 1 game".
+
+**Nguyên nhân (Đợt 508):** mọi trang thầy dựng game ⇒ `ipadSurface(true)` ⇒ tab không có claim ghi `ipad_now` {game:""}. Tab máy chiếu
+chỉ ghi khi CHÍNH nó đổi (`lastSent`) ⇒ bị đè là iPad kẹt màn chờ tới khi thầy đổi gì đó trên trận (tắt/bật iPad).
+Màn "iPad ready" (showHub) chỉ hiện khi tài liệu báo không có game ⇒ không phải lỗi WebRTC.
+
+**Sửa (`core/ipad-now.js`):** claim nhận `hold` (claimIpad({…, hold}) / update({hold})). Tài liệu thêm `hold` + `src` (mã tab ngẫu nhiên;
+luật `users/{uid}/items` cho ghi mọi trường — không cần đăng luật). Claim hiện hành có hold ⇒ tab NGHE tài liệu (watchIpadNow, cả
+`?padsig=local`); lượt ghi của tab khác mà KHÔNG hold (game "" hay STAR LOOT chỉ đang mở) ⇒ `lastSent=""` + ghi lại ngay (0 ms).
+Hai tab cùng hold ⇒ ghi sau thắng, không giành qua lại. Hết claim / hết hold ⇒ thôi nghe.
+- Rocket Race: claim Controller (`rrPadStart`) và Questions (`rrLinkStart`) đều `hold: true` từ đầu — bật nút iPad là ý thầy.
+- STAR LOOT (`maze-chase.js`): mở là có claim (kể cả cột myActivity) ⇒ chỉ hold từ lúc host báo iPad "on"/"relay" lần đầu — bọc
+  `remote.attach` (padHost) thay vì sửa `mc3d-padlink-2q.js` (chép từ myGame).
+- `pad.js`: đang ở bảng tên lửa / D-pad mà tài liệu báo game KHÁC ⇒ chờ 1,5 s (trước 0,5 s) — lượt ghi lại của máy chiếu huỷ hẹn ⇒
+  bảng không bị gỡ, WebRTC không phải nối lại. `source.js`: sang game khác chờ 1,5 s.
+
+**Bàn thử** `scratch/dot513/may.html?padsig=local&vai=chieu|chieu-khong-hold|khac|starloot` (máy chiếu / tab khác) + `pad.html?padsig=local`
+(sessionStorage `aw.ipadTeam`=0): ✅ tab "khac" ghi "" ⇒ máy chiếu ghi lại cùng ms, bảng iPad vẫn là CÙNG phần tử · ✅ tab STAR LOOT
+không hold ⇒ bị ghi lại · ✅ máy chiếu release ⇒ "" ⇒ iPad về màn chờ sau 2,5 s · ✅ bọc padHost: "wait" không hold, "on" ⇒ hold,
+rồi tab khác ghi "" ⇒ bị ghi lại · import 3 module không lỗi. ⬜ Thầy chơi lại 2 iPad thật + mở AWord nơi khác.
+
 ## Đợt 512 (14/10/2026) — CHẾ ĐỘ QUAY VIDEO CHO BÀI GIAO (`&quay=1`) · cùng myLesson web (lesson CHƯƠNG)
 **Bối cảnh:** lesson CHƯƠNG của khóa NỀN TẢNG (myLesson web, `bai.html` kiểu CHƯƠNG) có bước cuối "quay video gửi Zalo": phụ huynh hỏi, con trả
 lời đủ N câu trước máy quay. Trước đây bước đó bảo "làm giống Bước 3" (dùng lại act Bước 3) ⇒ người mới lẫn lộn. Thầy chốt (mẫu

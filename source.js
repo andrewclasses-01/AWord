@@ -274,7 +274,8 @@ function followProjector() {
     if (!s) return;
     if (s.game === "rocketrace") { sawRace = true; return; }
     if (s.game === "" && !sawRace) return;
-    leaveT = setTimeout(() => location.replace("pad.html" + location.search), s.game ? 500 : 2500);
+    // Đợt 513: sang game khác chờ 1,5 s (trước 0,5 s) — AWord mở ở nơi khác thì máy chiếu ghi lại ngay, lượt đọc kế tiếp huỷ hẹn này
+    leaveT = setTimeout(() => location.replace("pad.html" + location.search), s.game ? 1500 : 2500);
   }, () => { /* read failed — stay on this screen, its own note says what is wrong */ });
 }
 if (new URLSearchParams(location.search).get("padsig") === "local") followProjector();

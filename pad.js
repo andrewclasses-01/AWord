@@ -151,8 +151,12 @@ function startFollow() {
     const first = now === undefined;
     now = s; followBroken = false;
     // vào màn game nhanh (0,5 s); về màn chờ chậm (2,5 s) — đổi act = gỡ game cũ rồi dựng game mới, không cho iPad nháy
+    // ⭐ Đợt 513: đang làm tay cầm mà tài liệu báo game KHÁC ⇒ chờ 1,5 s — nếu đó chỉ là AWord mở ở nơi khác, máy chiếu (claim hold,
+    //   core/ipad-now.js) ghi lại ngay và lượt đọc kế tiếp huỷ hẹn này ⇒ bảng tên lửa / D-pad không bị gỡ, không phải nối lại
     clearTimeout(applyT);
-    if (first) apply(); else applyT = setTimeout(apply, s && s.game ? 500 : 2500);
+    const busy = view.startsWith("rr") || view === "dpad";
+    const same = s && s.game && (view.startsWith("rr") ? s.game === "rocketrace" && s.ctl : view === "dpad" ? s.game === "starloot" : false);
+    if (first) apply(); else applyT = setTimeout(apply, !(s && s.game) ? 2500 : busy && !same ? 1500 : 500);
   }, e => {
     console.warn("iPad follow", e);
     followBroken = true; apply();

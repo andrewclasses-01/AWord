@@ -590,7 +590,8 @@ function rrPadStart(st) {
       if (st.dead || !st.view || !st.view.missile) return;
       [0, 1].forEach(t => { if (host.status(t) === "on") host.state(t, rrPadState(st, t)); });
     }, 100);
-    const claim = N.claimIpad({ game: "rocketrace", fight: true, ctl: true });   // iPad đang ở pad.html tự sang bảng tên lửa
+    // Đợt 513: hold — AWord mở ở nơi khác (ghi game:"") không được kéo iPad khỏi trận đang chơi
+    const claim = N.claimIpad({ game: "rocketrace", fight: true, ctl: true, hold: true });   // iPad đang ở pad.html tự sang bảng tên lửa
     st.offs.push(() => { clearInterval(tick); try { host.detach(); } catch { /* ignore */ } claim.release(); chips.remove(); st.pad = null; });
     window.__rrpad = host;                    // bàn thử
   }).catch(e => console.warn("[rocket-race iPad]", e));
@@ -1171,7 +1172,7 @@ function rrLinkStart(meta) {
   own.poll = setInterval(() => { if (rrLinkOwner === own) rrLinkSyncAlive(own); }, 5000);
   rrLinkOwner = own;
   // ⭐ Đợt 508 — iPad tự đổi sang màn câu hỏi (source.html) khi trận Question screen mở, về màn chờ khi trận gỡ.
-  import("../../core/ipad-now.js").then(m => { if (rrLinkOwner === own && !own.over) own.ipad = m.claimIpad({ game: "rocketrace", fight: true }); }).catch(() => {});
+  import("../../core/ipad-now.js").then(m => { if (rrLinkOwner === own && !own.over) own.ipad = m.claimIpad({ game: "rocketrace", fight: true, hold: true }); }).catch(() => {});   // Đợt 513: hold
   return own;
 }
 

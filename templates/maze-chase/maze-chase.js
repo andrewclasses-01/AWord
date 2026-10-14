@@ -209,8 +209,18 @@ const starLootTemplate = {
     // ⭐ Đợt 508 — iPad tự đổi màn theo game (core/ipad-now.js): STAR LOOT giữ claim suốt lúc sống (+ Single/Fight để iPad chọn đội)
     const slOpts = slOptions(activity);
     let ipad = null;
-    import("../../core/ipad-now.js").then(m => { if (!dead) ipad = m.claimIpad({ game: "starloot", fight: slOpts.fight }); }).catch(() => {});
+    import("../../core/ipad-now.js").then(m => { if (!dead) ipad = m.claimIpad({ game: "starloot", fight: slOpts.fight, hold: padUsed }); }).catch(() => {});
     const ipadFight = f => { if (ipad && typeof f === "boolean") ipad.update({ fight: f }); };
+    // ⭐ Đợt 513 — từ lúc có iPad nối lần đầu, claim thành `hold`: AWord mở ở nơi khác không kéo iPad khỏi trận (core/ipad-now.js)
+    let padUsed = false;
+    const padHost = pad => {
+      const attach = pad.attach;
+      pad.attach = ctl => attach.call(pad, { ...ctl, status(t, s) {
+        if (!padUsed && (s === "on" || s === "relay")) { padUsed = true; if (ipad) ipad.update({ hold: true }); }
+        if (ctl.status) ctl.status(t, s);
+      } });
+      return pad;
+    };
     console.log("MYACT:3D:ON");   // myActivity: nhường card đồ hoạ (như Rocket race 3D)
     // Đợt 452 — Options ▸ Apply của engine => áp ngay trong cảnh (game chưa dựng xong => false => engine dựng lại như thường)
     if (ui.liveOptions) ui.liveOptions(o => { const g = gameOpts(o); ipadFight(g.fight); return game && !dead ? game.setOptions({ ...SL_DEF, ...g }) === true : false; });
@@ -219,7 +229,7 @@ const starLootTemplate = {
         mount: box, view: "tilt", questions,
         title: activity.title || "", act: activity.title || "",
         options: slOpts,
-        remote: pl.createPadHost({ signal: sg.firestoreSignal(), padUrl: sg.padUrl }),   // Đợt 480 — iPad làm D-pad
+        remote: padHost(pl.createPadHost({ signal: sg.firestoreSignal(), padUrl: sg.padUrl })),   // Đợt 480 — iPad làm D-pad
         host: ui.host ? {
           listActs: () => ui.host.listActs(),
           openAct: id => ui.host.openAct(id),
