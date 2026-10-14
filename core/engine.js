@@ -4215,6 +4215,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // `exitAnyFullscreen()` gọi: một phiên có thể đang ở fullscreen thật do
   // trận Fight bật, hoặc do một bản cũ còn mở trong tab.
   fsBtn.onclick = () => {
+    // ⭐ Đợt 512b — chế độ quay video NHÚNG trong myLesson: ⛶ phóng to CẢ KHUNG ở trang mẹ (bai.html v1.328.0 nghe AWORD:PHONG);
+    //    phóng trong iframe thì không thấy gì đổi (khung đã vừa iframe).
+    if (quay && nhungTrongKhung) { try { window.parent.postMessage({ type: "AWORD:PHONG" }, "*"); } catch (e) {} return; }
     setZoomed(root, fsBtn, !root.classList.contains("aw-zoomed"));
     placeBoardTools();   // Đợt 389 — zoom hides the row outside the frame
   };
