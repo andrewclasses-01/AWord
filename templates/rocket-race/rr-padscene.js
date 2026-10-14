@@ -1,3 +1,7 @@
+// ⭐ ĐỢT 523 (thầy 14/10/2026: "iPad khá nóng khi chơi Rocket Race — trên iPad không cần mượt") — GIẢM TẢI GPU (đo scratch/dot523-nhiet-ipad.html,
+//   bảng 1024×768 ×2, truy vấn giờ GPU): vẽ PAD_FPS = 25 khung/giây (trước 60 — hoạt cảnh theo dt nên chỉ thưa khung) · độ nét tối đa PR_MAX = 1,5
+//   (trước 2 ⇒ ít hơn 44 % điểm ảnh; ms GPU/khung 0,549 → 0,30) · TẮT antialias của canvas (ảnh đã qua bloom/OutputPass, khử răng cưa ở khung
+//   cuối chỉ tốn thêm ~27 %: 0,549 → 0,401). Gộp lại: tải GPU mỗi giây ≈ 0,225 ms × 25 so với 0,549 ms × 60 ⇒ còn ~17 %.
 // ⭐ ĐỢT 514 (thầy 14/10/2026, duyệt MẪU 11 ở myGame `fdc7fa3`) — BẢNG TÊN LỬA TRÊN iPAD THIẾT KẾ LẠI (thay bảng gương mẫu 9 của Đợt 511).
 // Bản chép để tra ở myGame: rocket-race/core/rr-padscene-11.js (chỉ khác đường import three).
 //   · BOOST sát mép TRÁI · cột vạch năng lượng (mảnh) ở giữa · 2 tên lửa to MŨI LÊN TRÊN sát mép PHẢI (ô trống để trống, không bóng mờ)
@@ -46,8 +50,9 @@ function roundRectGeo(w, h, r) {
   return new THREE.ShapeGeometry(sh, 8);
 }
 
+const PAD_FPS = 25, PR_MAX = 1.5;   // Đợt 523: iPad nóng ⇒ thưa khung + bớt điểm ảnh
 export function createPadScene({ mount, team, onKey, topEl }) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+  const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });   // Đợt 523: tắt — ảnh đã qua bloom
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.domElement.style.cssText = "position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block";
@@ -341,7 +346,7 @@ export function createPadScene({ mount, team, onKey, topEl }) {
   // ---------------------------------------------------------------- bố cục theo khung màn
   let VW = 133;
   function layout() {
-    const w = Math.max(1, mount.clientWidth), h = Math.max(1, mount.clientHeight), pr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.max(1, mount.clientWidth), h = Math.max(1, mount.clientHeight), pr = Math.min(window.devicePixelRatio || 1, PR_MAX);
     renderer.setPixelRatio(pr); renderer.setSize(w, h, false);
     composer.setPixelRatio(pr); composer.setSize(w, h); bloom.resolution.set(w * pr, h * pr);
     camera.aspect = w / h; camera.updateProjectionMatrix();
@@ -526,7 +531,9 @@ export function createPadScene({ mount, team, onKey, topEl }) {
   function frame(now) {
     if (dead) return;
     raf = requestAnimationFrame(frame);
-    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (now < last) last = now;                                    // giờ rAF có thể sớm hơn performance.now() lúc dựng ⇒ không dt âm
+    if (now - last < 1000 / PAD_FPS - 2) return;                  // Đợt 523: bỏ khung — 25 khung/giây (−2 ms: rAF 60 Hz rơi đúng nhịp)
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
     update(dt); composer.render();
   }
   raf = requestAnimationFrame(frame);

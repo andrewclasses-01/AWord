@@ -1,10 +1,10 @@
 {
  "nguon": "myGame/balloon-pop/core",
  "goc": "fight-1au.js",
- "commit": "9c88ad3",
+ "commit": "95d0c15",
  "con_sua_chua_commit": false,
  "js": [
-  "tr-padui-1au.js",
+  "tr-padui-1av.js",
   "tr-padlink-1ap.js",
   "fight-1au.js",
   "sound-1ah.js",

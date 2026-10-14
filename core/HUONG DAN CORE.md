@@ -5387,3 +5387,14 @@ khớp nhau ở 13 em còn bảng thứ tư ngồi riêng với 5 em. Những lu
   (`setNum`) — `textContent` không đổi. ⚠️ Template đọc số bằng `textContent` thì vẫn đúng; đừng đọc `firstChild.nodeValue`.
 - ⛔ `aw-waitbreathe` (filter brightness) không được gắn lên fill ở strip2 — nó đè mất blur; dùng `aw-s2-breathe`.
 - ⛔ Tên lớp ngắn phải grep cả app: `.aw-fp` là ô xem trước thư mục (cao 118px).
+
+## ⭐ MÀN iPAD (màn phụ của game) — LUẬT HIỆU NĂNG (Đợt 523, 14/10/2026)
+iPad cầm tay suốt trận ⇒ nóng nhanh (thầy phản ánh với Rocket Race). Mọi màn iPad (Rocket Race `rr-padscene.js`, Train Rush `3d/tr-padui-*.js`, game MỚI) theo khuôn:
+- **Bỏ khung trong vòng rAF**: `PAD_FPS = 25` khi đang chơi, ~8 khi màn đứng (chờ / thẻ / chưa nối); hoạt cảnh tính theo `dt` (chặn ~0,1–0,15 s) ⇒ chỉ thưa khung,
+  không chậm. Chốt `if (now < last) last = now;` trước phép so (giờ khung đầu có thể sớm hơn `performance.now()` lúc dựng).
+- **Độ nét ≤ 1,5** (`Math.min(devicePixelRatio, 1.5)`) — Retina ×2 tốn thêm 78 % điểm ảnh, nhìn trên màn phụ không khác mấy.
+- WebGL qua EffectComposer ⇒ `antialias: false` (khử răng cưa khung cuối vô ích, tốn ~27 %). Không vẽ 3D nặng (bloom, MSAA) nếu không cần.
+- Canvas 2D: đắt là TÔ mảng chuyển màu / mảng phủ cả màn, không phải số lệnh. Bớt tô chồng; gradient tạo 1 lần dùng lại (vô hại). ⛔ Canvas nền đệm + `drawImage`
+  phủ cả màn mỗi khung lại CHẬM HƠN (đo Chrome).
+- **Đo trước khi tin** (bàn đo `scratch/dot523-*`): 3D bằng `EXT_disjoint_timer_query_webgl2`; 2D phải ép vẽ xong (`getImageData(0,0,1,1)`) — đo JS-only thấy 2 ms
+  trong khi thật 15,6 ms. Khung xem ẩn ⇒ rAF đứng ⇒ giữ callback rAF rồi tự gọi từng khung (giờ giả phải tăng liên tục, không lùi).

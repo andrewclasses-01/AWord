@@ -1,3 +1,9 @@
+// TRAIN RUSH 1av (14/10/2026) — thầy: "iPad nóng — trên iPad không cần mượt" ⇒ GIẢM TẢI (đo AWord scratch/dot523-tr.html, khung 1024×768 ×2):
+//   1as–1au vẽ lại cả màn 60 khung/giây ở độ nét ×2 (2048×1536) và mỗi khung TẠO LẠI ~17 gradient ⇒ ~17 ms/khung NGAY TRÊN MÁY TÍNH MẠNH
+//   (ghi lệnh 2 ms, phần tô điểm ảnh 15,6 ms; bỏ gradient còn 9,7). Nay: (1) PAD_FPS = 25 khung/giây khi đang chơi, IDLE_FPS = 8 khi màn đứng
+//   (chờ START / thẻ thông báo / chưa nối) — hoạt cảnh theo dt nên chỉ thưa khung, không chậm lại; (2) độ nét tối đa PR_MAX = 1,5 (Retina ×2 ⇒
+//   ít hơn 44 % điểm ảnh); (3) gradient TẠO MỘT LẦN rồi dùng lại (D.lg / D.rg nhớ theo toạ độ + màu; khinh khí cầu vẽ quanh gốc toạ độ riêng
+//   để gradient không đổi khi quả bập bềnh); (4) màn chọn đội 10 khung/giây. Giao diện y hệt 1au.
 // TRAIN RUSH 1au (14/10/2026) — thầy: "iPad hiển thị được ít quá" ⇒ (1) THU NHỎ: bề ngang thấy VIS = 40 đơn vị (1as chỉ ~19 — khung chỉ khớp theo
 //   chiều cao) ⇒ thấy toa đáp án đang chờ + nửa toa đáp án kế phía sau ở mép trái (cách 2 toa phụ ~18 đơn vị, đúng như màn lớn); bảng định nghĩa phủ kín hông toa (như màn lớn) để chữ đủ to; (2) toa chưa đầy ĐẦU TIÊN
 //   (≈ giữa màn lớn = camX) đặt ở FOC = 46 % ⇒ từ mép phải (khinh khí cầu hiện ra) tới toa đó ~22 đơn vị (1as ~9) — kịp đọc chữ; (3) đoàn tàu vẽ Y HỆT
@@ -26,7 +32,8 @@ import { createPadClient } from "./tr-padlink-1ap.js";
 const TEAM = [
   { name: "TEAM 1", main: "#d8392a", dark: "#7c1a10", env: ["#f2a092", "#d4513f", "#9a2b1f"], eng: "#8f1d14" },
   { name: "TEAM 2", main: "#2a72d8", dark: "#123d80", env: ["#a9c8f5", "#3f7fd6", "#1f4c94"], eng: "#1d3f7a" }];
-const BW = 6.0, BH = 2.0, VIS = 40, FOC = 0.46;   // 1au: khinh khí cầu to hơn 1as (4,2 × 1,4) — khung thu nhỏ ⇒ chữ vẫn đọc rõ   // 1au: VIS bề ngang thấy (đơn vị) · FOC chỗ đặt camX (toa mở đầu tiên) tính từ trái
+const BW = 6.0, BH = 2.0, VIS = 40, FOC = 0.46;
+const PAD_FPS = 25, IDLE_FPS = 8, CHOOSER_FPS = 10, PR_MAX = 1.5;   // 1av: giảm tải (iPad nóng)   // 1au: khinh khí cầu to hơn 1as (4,2 × 1,4) — khung thu nhỏ ⇒ chữ vẫn đọc rõ   // 1au: VIS bề ngang thấy (đơn vị) · FOC chỗ đặt camX (toa mở đầu tiên) tính từ trái
            // cỡ khinh khí cầu trên iPad (đơn vị thế giới) — to hơn màn lớn cho dễ đọc / dễ chạm
 const CRW = 2.9 * 0.86, CR = 1.5 * 0.86;   // thùng (bp3d-1aq DUO_TS)
 
@@ -46,8 +53,12 @@ const fmt = s => { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ":
 
 // bộ vẽ dùng chung (màn chơi + màn chọn đội)
 function painter(ctx) {
+  const GC = new Map();   // 1av: gradient dùng lại giữa các khung (khoá = toạ độ làm tròn + màu)
+  const grad = (key, make) => { let g = GC.get(key); if (!g) { if (GC.size > 400) GC.clear(); g = make(); GC.set(key, g); } return g; };
   const D = {
     k: 1, W: 1024, H: 768,
+    lg(x0, y0, x1, y1, stops) { return grad("l" + [x0, y0, x1, y1].map(Math.round).join(",") + stops.join(), () => { const g = ctx.createLinearGradient(x0, y0, x1, y1); stops.forEach(([p, c]) => g.addColorStop(p, c)); return g; }); },
+    rg(x0, y0, r0, x1, y1, r1, stops) { return grad("r" + [x0, y0, r0, x1, y1, r1].map(Math.round).join(",") + stops.join(), () => { const g = ctx.createRadialGradient(x0, y0, r0, x1, y1, r1); stops.forEach(([p, c]) => g.addColorStop(p, c)); return g; }); },
     rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); },
     wrapFit(text, maxW, maxH, maxPx, minPx, weight = 800, font = "Baloo 2", lh = 1.05) {   // 1au: lh = khoảng dòng (Baloo cao chữ ~1,15 cỡ)
       const fit = px => { ctx.font = `${weight} ${px}px "${font}"`; const words = String(text).split(/\s+/), lines = []; let cur = "";
@@ -62,7 +73,7 @@ function painter(ctx) {
       const { W, H, k } = D;
       if (o.dim !== false) { ctx.fillStyle = "rgba(20,10,4,.55)"; ctx.fillRect(0, top, W, H - top); }
       const cw = Math.min(W * 0.74, 660 * k), ch = (o.h || 230) * k, cx = W / 2 - cw / 2, cy = top + (H - top) / 2 - ch / 2;
-      const g = ctx.createLinearGradient(0, cy, 0, cy + ch); g.addColorStop(0, "#f6e6c2"); g.addColorStop(1, "#e2c48e");
+      const g = D.lg(0, cy, 0, cy + ch, [[0, "#f6e6c2"], [1, "#e2c48e"]]);
       ctx.save(); ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 24 * k; ctx.fillStyle = g; D.rr(cx, cy, cw, ch, 10 * k); ctx.fill(); ctx.restore();
       ctx.strokeStyle = "#7a4a22"; ctx.lineWidth = 5 * k; D.rr(cx + 8 * k, cy + 8 * k, cw - 16 * k, ch - 16 * k, 6 * k); ctx.stroke();
       ctx.fillStyle = "#7a4a22"; for (const [x, y] of [[cx + 20 * k, cy + 20 * k], [cx + cw - 20 * k, cy + 20 * k], [cx + 20 * k, cy + ch - 20 * k], [cx + cw - 20 * k, cy + ch - 20 * k]]) { ctx.beginPath(); ctx.arc(x, y, 5 * k, 0, 7); ctx.fill(); }
@@ -145,7 +156,7 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     onEvent });
 
   function fit() {
-    const r = el.querySelector(".trp").getBoundingClientRect(), pr = Math.min(2, window.devicePixelRatio || 1);   // đo chính màn iPad (phủ cả màn) — ô chứa AWord #pad cao 0
+    const r = el.querySelector(".trp").getBoundingClientRect(), pr = Math.min(PR_MAX, window.devicePixelRatio || 1);   // 1av: tối đa 1,5 (iPad ×2 ⇒ ít hơn 44 % điểm ảnh) · đo chính màn iPad (phủ cả màn) — ô chứa AWord #pad cao 0
     W = cv.width = Math.max(320, Math.round(r.width * pr)); H = cv.height = Math.max(240, Math.round(r.height * pr));
     k = Math.min(W / 1024, H / 700); HEAD = 84 * k; D.W = W; D.H = H; D.k = k;
   }
@@ -178,12 +189,9 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
   // ---------------------------------------------------------------- nền
   function backdrop() {
     const hz = Y(roof() + 0.9), cx = P ? P.cx : 0;
-    const sg = ctx.createLinearGradient(0, HEAD, 0, hz);
-    sg.addColorStop(0, "#e7895c"); sg.addColorStop(0.6, "#f5b97a"); sg.addColorStop(1, "#fbe0ae");
-    ctx.fillStyle = sg; ctx.fillRect(0, HEAD, W, hz - HEAD);
-    const sx = W * 0.78, sy = hz - 70 * k, gl = ctx.createRadialGradient(sx, sy, 10 * k, sx, sy, 160 * k);
-    gl.addColorStop(0, "rgba(255,245,200,.9)"); gl.addColorStop(0.3, "rgba(255,220,150,.35)"); gl.addColorStop(1, "rgba(255,200,120,0)");
-    ctx.fillStyle = gl; ctx.fillRect(sx - 160 * k, sy - 160 * k, 320 * k, 320 * k);
+    ctx.fillStyle = D.lg(0, HEAD, 0, hz, [[0, "#e7895c"], [0.6, "#f5b97a"], [1, "#fbe0ae"]]); ctx.fillRect(0, HEAD, W, hz - HEAD);
+    const sx = W * 0.78, sy = hz - 70 * k;
+    ctx.fillStyle = D.rg(sx, sy, 10 * k, sx, sy, 160 * k, [[0, "rgba(255,245,200,.9)"], [0.3, "rgba(255,220,150,.35)"], [1, "rgba(255,200,120,0)"]]); ctx.fillRect(sx - 160 * k, sy - 160 * k, 320 * k, 320 * k);
     ctx.fillStyle = "#fff3c4"; ctx.beginPath(); ctx.arc(sx, sy, 34 * k, 0, 7); ctx.fill();
     const layer = (par, col, hBase, hAmp, flat) => {
       ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, hz);
@@ -197,8 +205,7 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     };
     layer(0.08, "#c97a5e", 1.4, 2.6, true);
     layer(0.18, "#a65a3f", 0.5, 1.5, false);
-    const gg = ctx.createLinearGradient(0, hz, 0, H); gg.addColorStop(0, "#d99660"); gg.addColorStop(1, "#c27445");
-    ctx.fillStyle = gg; ctx.fillRect(0, hz, W, H - hz);
+    ctx.fillStyle = D.lg(0, hz, 0, H, [[0, "#d99660"], [1, "#c27445"]]); ctx.fillRect(0, hz, W, Y(rail()) - 2 * k - hz);   // 1av: chỉ tới nền đá ray (dưới đó đất ray phủ kín — đỡ tô 2 lần)
     for (let i = -9; i < 11; i++) {   // 1au: khung rộng hơn
       const base = Math.floor(cx * 0.6 / 4) + i, wx = base * 4 + hash(base) * 3, x = W * FOC + (wx - cx * 0.6) * ppu;
       const y = hz + (8 * k + hash(base + 7) * (Y(rail() + 0.6) - hz - 18 * k));
@@ -236,7 +243,7 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     ctx.strokeStyle = "#8a8f96"; ctx.lineWidth = 4 * k; ctx.beginPath();
     ctx.moveTo(X(ox - 0.3 * ENG) + Math.cos(ang) * 0.35 * u, Y(R0 + 0.62) + Math.sin(ang) * 0.35 * u); ctx.lineTo(X(ox + 0.05 * ENG) + Math.cos(ang) * 0.35 * u, Y(R0 + 0.62) + Math.sin(ang) * 0.35 * u); ctx.stroke();
     const bx0 = X(ox - ENG * 0.18), bx1 = X(ox + ENG * 0.47), by0 = Y(R0 + 2.55), by1 = Y(R0 + 1.35);
-    const bg = ctx.createLinearGradient(0, by0, 0, by1); bg.addColorStop(0, shade(T.eng, 0.35)); bg.addColorStop(0.45, T.eng); bg.addColorStop(1, shade(T.eng, -0.45));
+    const bg = D.lg(0, by0, 0, by1, [[0, shade(T.eng, 0.35)], [0.45, T.eng], [1, shade(T.eng, -0.45)]]);
     ctx.fillStyle = bg; D.rr(bx0, by0, bx1 - bx0, by1 - by0, (by1 - by0) / 2.2); ctx.fill();
     ctx.fillStyle = "#c9a25a"; for (const f of [0.05, 0.25, 0.45]) ctx.fillRect(X(ox + ENG * f) - 2 * k, by0, 4 * k, by1 - by0);
     ctx.fillStyle = "#1d1d20"; D.rr(bx1 - 6 * k, by0 + 3 * k, 14 * k, by1 - by0 - 6 * k, 6 * k); ctx.fill();
@@ -268,7 +275,7 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     for (const dx of [-0.36, -0.22, 0.22, 0.36]) D.wheel(X(cx + dx * len), Y(R0 + 0.36), 0.36 * u, cx / 0.36);
     ctx.fillStyle = "#2a2220"; ctx.fillRect(x0, Y(R0 + 0.95), x1 - x0, 0.25 * u);
     if (type === "p") {   // toa khách
-      const g = ctx.createLinearGradient(0, Y(RF), 0, Y(R0 + 0.9)); g.addColorStop(0, "#3e6a4f"); g.addColorStop(1, "#2a4a38");
+      const g = D.lg(0, Y(RF), 0, Y(R0 + 0.9), [[0, "#3e6a4f"], [1, "#2a4a38"]]);
       ctx.fillStyle = g; D.rr(x0, Y(RF - 0.05), x1 - x0, Y(R0 + 0.95) - Y(RF - 0.05), 6 * k); ctx.fill();
       ctx.fillStyle = "#1c1410"; D.rr(x0 - 4 * k, Y(RF + 0.25), x1 - x0 + 8 * k, 0.3 * u, 6 * k); ctx.fill();
       for (let i = 0; i < 5; i++) {
@@ -284,7 +291,7 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
       ctx.lineTo(x1 - 3 * k, Y(R0 + 2.3)); ctx.fill();
       return;
     }
-    const g = ctx.createLinearGradient(0, Y(RF), 0, Y(R0 + 0.95)); g.addColorStop(0, "#8a5a32"); g.addColorStop(1, "#5c3a1e");
+    const g = D.lg(0, Y(RF), 0, Y(R0 + 0.95), [[0, "#8a5a32"], [1, "#5c3a1e"]]);
     ctx.fillStyle = g; D.rr(x0, Y(RF), x1 - x0, Y(R0 + 0.95) - Y(RF), 5 * k); ctx.fill();
     ctx.strokeStyle = "rgba(0,0,0,.25)"; ctx.lineWidth = 1.5 * k;
     for (let i = 1; i < 5; i++) { const yy = Y(R0 + 0.95 + (RF - R0 - 0.95) * i / 5); ctx.beginPath(); ctx.moveTo(x0 + 3 * k, yy); ctx.lineTo(x1 - 3 * k, yy); ctx.stroke(); }
@@ -311,7 +318,7 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
   function crate(x, y, word, rot) {
     const u = ppu, w = CRW * u, h = CR * u;
     ctx.save(); ctx.translate(X(x), Y(y)); ctx.rotate(-(rot || 0));
-    const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2); g.addColorStop(0, "#d8a266"); g.addColorStop(1, "#a8723e");
+    const g = D.lg(0, -h / 2, 0, h / 2, [[0, "#d8a266"], [1, "#a8723e"]]);
     ctx.fillStyle = g; ctx.fillRect(-w / 2, -h / 2, w, h);
     ctx.strokeStyle = "#6b4426"; ctx.lineWidth = 3 * k; ctx.strokeRect(-w / 2, -h / 2, w, h);
     ctx.lineWidth = 2 * k; ctx.globalAlpha = 0.35; ctx.beginPath(); ctx.moveTo(-w / 2, -h / 2); ctx.lineTo(w / 2, h / 2); ctx.moveTo(w / 2, -h / 2); ctx.lineTo(-w / 2, h / 2); ctx.stroke(); ctx.globalAlpha = 1;
@@ -337,8 +344,8 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     ctx.beginPath(); ctx.moveTo(sx + rx * 0.7, sy + ry * 0.2); ctx.lineTo(sx + rx * 1.12, sy + ry * 1.05); ctx.lineTo(sx + rx * 1.12, sy + ry * 0.1); ctx.fill();
     ctx.strokeStyle = "#3a2a1a"; ctx.lineWidth = 1.5 * k; ctx.beginPath(); ctx.moveTo(sx - rx * 0.25, sy + ry * 0.85); ctx.lineTo(sx - rx * 0.15, sy + ry * 1.35); ctx.moveTo(sx + rx * 0.25, sy + ry * 0.85); ctx.lineTo(sx + rx * 0.15, sy + ry * 1.35); ctx.stroke();
     ctx.fillStyle = "#5a3a1e"; D.rr(sx - rx * 0.2, sy + ry * 1.3, rx * 0.4, ry * 0.42, 3 * k); ctx.fill();
-    const g = ctx.createLinearGradient(0, sy - ry, 0, sy + ry); g.addColorStop(0, l); g.addColorStop(0.45, m); g.addColorStop(1, d);
-    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(sx, sy, rx, ry, 0, 0, 7); ctx.fill();
+    const g = D.lg(0, -ry, 0, ry, [[0, l], [0.45, m], [1, d]]);   // 1av: gradient quanh gốc riêng ⇒ dùng lại dù quả bập bềnh
+    ctx.save(); ctx.translate(sx, sy); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, 7); ctx.fill(); ctx.restore();
     ctx.strokeStyle = "rgba(0,0,0,.18)"; ctx.lineWidth = 1.5 * k;
     for (const f of [-0.6, -0.2, 0.2, 0.6]) { ctx.beginPath(); ctx.ellipse(sx, sy, rx * Math.abs(f) + 1, ry, 0, f < 0 ? Math.PI / 2 : -Math.PI / 2, f < 0 ? Math.PI * 1.5 : Math.PI / 2); ctx.stroke(); }
     ctx.fillStyle = "rgba(255,255,255,.35)"; ctx.beginPath(); ctx.ellipse(sx - rx * 0.25, sy - ry * 0.55, rx * 0.45, ry * 0.18, -0.08, 0, 7); ctx.fill();
@@ -369,7 +376,7 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
   // ---------------------------------------------------------------- thanh đầu
   function header() {
     const h = HEAD, tt = St && St.tt ? St.tt : 0, f = tt ? Math.max(0, Math.min(1, St.tl / tt)) : 0, out = St && St.out;
-    const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "#6b3d1f"); g.addColorStop(1, "#3e220f"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, h);
+    ctx.fillStyle = D.lg(0, 0, 0, h, [[0, "#6b3d1f"], [1, "#3e220f"]]); ctx.fillRect(0, 0, W, h);
     ctx.strokeStyle = "rgba(0,0,0,.25)"; ctx.lineWidth = 1; for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.moveTo(0, 10 * k + i * h / 6); ctx.bezierCurveTo(W * 0.3, 4 * k + i * h / 6, W * 0.6, 16 * k + i * h / 6, W, 8 * k + i * h / 6); ctx.stroke(); }
     ctx.fillStyle = "#c9a25a"; ctx.fillRect(0, h - 4 * k, W, 4 * k);
     const pad = 20 * k;
@@ -459,10 +466,14 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
       ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(tx, W / 2, H - 25 * k);
     }
   }
+  // 1av: màn ĐỨNG (chưa nối / chờ START / đếm / thẻ kết thúc / iPad tắt / tạm dừng) ⇒ IDLE_FPS; đang chơi ⇒ PAD_FPS
+  const idle = () => !St || St.ps || St.mode === "off" || !(St.ph === "play" || St.ph === "countup" || St.ph === "between") || link.s !== "on" && link.s !== "relay";
   function loop(ts) {
     if (dead) return;
     raf = requestAnimationFrame(loop);
-    const dt = last ? Math.min(0.05, (ts - last) / 1000) : 0; last = ts;
+    if (ts < last) last = ts;   // giờ lùi (không xảy ra với rAF thật) ⇒ không để vòng vẽ đứng hẳn / dt âm
+    if (last && ts - last < 1000 / (idle() && !fx.length && !flash ? IDLE_FPS : PAD_FPS) - 2) return;   // bỏ khung (−2 ms: rAF 60 Hz rơi đúng nhịp 25)
+    const dt = last ? Math.min(0.15, (ts - last) / 1000) : 0; last = ts;
     const t0 = performance.now(); draw(dt); const ms = performance.now() - t0;
     stat.drawMs += (ms - stat.drawMs) * 0.1; stat.frames++;
     if (ts - stat.fpsT >= 1000) { stat.fps = Math.round(stat.frames * 1000 / (ts - stat.fpsT || 1000)); stat.frames = 0; stat.fpsT = ts; }
@@ -507,13 +518,13 @@ export function mountTrainChooser(el, { cur = null, onPick }) {
   el.innerHTML = `<div class="trp"><canvas class="trp-cv"></canvas></div>`;
   const cv = el.querySelector(".trp-cv"), ctx = cv.getContext("2d"), D = painter(ctx);
   let W = 1024, H = 768, k = 1, busy = [0, 0], msg = "", dead = false, raf = 0, boxes = [];
-  function fit() { const r = el.querySelector(".trp").getBoundingClientRect(), pr = Math.min(2, window.devicePixelRatio || 1); W = cv.width = Math.max(320, Math.round(r.width * pr)); H = cv.height = Math.max(240, Math.round(r.height * pr)); k = Math.min(W / 1024, H / 700); D.W = W; D.H = H; D.k = k; }
+  function fit() { const r = el.querySelector(".trp").getBoundingClientRect(), pr = Math.min(PR_MAX, window.devicePixelRatio || 1); W = cv.width = Math.max(320, Math.round(r.width * pr)); H = cv.height = Math.max(240, Math.round(r.height * pr)); k = Math.min(W / 1024, H / 700); D.W = W; D.H = H; D.k = k; }
   fit(); window.addEventListener("resize", fit);
   function miniEngine(cx, cy, w, t) {
     const tm = TEAM[t], u = w / 6.4, x0 = cx - w / 2;
     for (const [dx, r] of [[1.0, 0.62], [2.3, 0.62], [4.4, 0.4], [5.4, 0.4]]) D.wheel(x0 + dx * u, cy + 1.25 * u - r * u + 0.62 * u, r * u, performance.now() / 600 / r);
     ctx.fillStyle = "#2a2220"; ctx.fillRect(x0 + 0.2 * u, cy + 0.45 * u, 5.8 * u, 0.3 * u);
-    const bg = ctx.createLinearGradient(0, cy - 0.9 * u, 0, cy + 0.45 * u); bg.addColorStop(0, shade(tm.eng, 0.4)); bg.addColorStop(0.45, shade(tm.eng, 0.1)); bg.addColorStop(1, shade(tm.eng, -0.45));
+    const bg = D.lg(0, cy - 0.9 * u, 0, cy + 0.45 * u, [[0, shade(tm.eng, 0.4)], [0.45, shade(tm.eng, 0.1)], [1, shade(tm.eng, -0.45)]]);
     ctx.fillStyle = bg; D.rr(x0 + 2.1 * u, cy - 0.9 * u, 3.9 * u, 1.35 * u, 0.6 * u); ctx.fill();
     ctx.fillStyle = "#c9a25a"; for (const f of [2.6, 3.6, 4.6]) ctx.fillRect(x0 + f * u, cy - 0.9 * u, 3 * k, 1.35 * u);
     ctx.fillStyle = "#1c1c1f"; ctx.beginPath(); ctx.moveTo(x0 + 4.9 * u, cy - 0.9 * u); ctx.lineTo(x0 + 4.6 * u, cy - 2.1 * u); ctx.lineTo(x0 + 5.6 * u, cy - 2.1 * u); ctx.lineTo(x0 + 5.3 * u, cy - 0.9 * u); ctx.fill();
@@ -523,8 +534,7 @@ export function mountTrainChooser(el, { cur = null, onPick }) {
     ctx.fillStyle = "#ffe08a"; D.rr(x0 + 5.95 * u, cy - 0.7 * u, 0.4 * u, 0.35 * u, 3 * k); ctx.fill();
   }
   function draw() {
-    const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#e7895c"); g.addColorStop(0.55, "#f5b97a"); g.addColorStop(0.56, "#c27445"); g.addColorStop(1, "#8a4a28");
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = D.lg(0, 0, 0, H, [[0, "#e7895c"], [0.55, "#f5b97a"], [0.56, "#c27445"], [1, "#8a4a28"]]); ctx.fillRect(0, 0, W, H);
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillStyle = "#5a1e0e"; ctx.font = `400 ${Math.round(68 * k)}px Rye`; ctx.fillText("TRAIN RUSH", W / 2, 100 * k);
     ctx.font = `700 ${Math.round(26 * k)}px "Baloo 2"`; ctx.fillStyle = "#5a2a10"; ctx.fillText("CHOOSE YOUR TEAM", W / 2, 158 * k);
@@ -544,7 +554,8 @@ export function mountTrainChooser(el, { cur = null, onPick }) {
     ctx.font = `600 ${Math.round(17 * k)}px "Baloo 2"`; ctx.fillStyle = msg ? "#ffe08a" : "#f6e6c4";
     ctx.fillText(msg || "This iPad remembers its team. Change it any time with ‹ on the train screen.", W / 2, by + bh + 40 * k);
   }
-  function loop() { if (dead) return; raf = requestAnimationFrame(loop); draw(); }
+  let lastC = 0;
+  function loop(ts) { if (dead) return; raf = requestAnimationFrame(loop); if (ts - lastC < 1000 / CHOOSER_FPS - 2) return; lastC = ts; draw(); }   // 1av: 10 khung/giây
   raf = requestAnimationFrame(loop);
   cv.addEventListener("pointerdown", e => {
     const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H;

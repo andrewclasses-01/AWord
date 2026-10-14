@@ -546,6 +546,25 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 523 (14/10/2026) — MÀN iPAD BỚT NÓNG: ROCKET RACE + TRAIN RUSH (đo GPU, 25 khung/giây, độ nét 1,5)
+
+**Thầy:** "chơi Rocket Race với iPad thấy khá nóng — nghiên cứu, đo đạc phương án (vd giảm fps xuống 25), trên iPad không cần mượt" (+ Train Rush).
+**Đo** (`scratch/dot523-nhiet-ipad.html` 3D, `scratch/dot523-tr.html` + `dot523-tr-pad.html` 2D — gitignore): đúng mô-đun iPad, khung 1024×768 × độ nét 2 (= Retina
+iPad 2048×1536). 3D: bọc `composer.render()` trong truy vấn giờ GPU `EXT_disjoint_timer_query_webgl2`. 2D: game thật + iPad trong iframe, tự gọi từng khung rồi ép vẽ
+xong bằng `getImageData(0,0,1,1)`. Tải/giây = ms/khung × khung/giây; số tuyệt đối của card máy soạn, TỈ LỆ mới mang sang iPad.
+- **Rocket Race** `templates/rocket-race/rr-padscene.js` (gốc ở AWord; bản chép tra myGame `rocket-race/core/rr-padscene-12.js`): `PAD_FPS = 25` (bỏ khung trong
+  rAF, hoạt cảnh theo dt), `PR_MAX = 1.5` (trước 2), `antialias: false` (ảnh đã qua bloom/OutputPass — khử răng cưa khung cuối thừa, tốn ~27 %). 0,549 ms × 60 ⇒
+  0,25 ms × 25 ⇒ còn **~19 %**. Bloom nửa độ nét: lợi lẫn trong nhiễu ⇒ không làm.
+- **Train Rush** `3d/tr-padui-1av.js` (myGame 1av `95d0c15`, pad.js nạp): nặng hơn Rocket Race — 1au ~15,5 ms/khung × 60 (GPU gần chạy kín), đắt ở các mảng tô
+  CHUYỂN MÀU phủ cả màn. 25 khung/giây · 8 khi màn đứng (chưa nối / chờ START / thẻ / iPad tắt / tạm dừng) · màn chọn đội 10 · độ nét ≤ 1,5 ⇒ ~9,5 ms × 25 ⇒ còn **~26 %**.
+  ⛔ Không ăn thua: dùng lại gradient (Chrome không nhanh hơn — đắt là TÔ); canvas nền đệm + drawImage (CHẬM HƠN 12–19 ms) ⇒ bỏ.
+- Chốt an toàn: giờ rAF lùi (vd giờ khung đầu sớm hơn `performance.now()` lúc dựng) ⇒ đặt lại mốc, không để vòng vẽ đứng / dt âm.
+- `tools/chep-train-rush.py` GOC_THEM tr-padui-1av · `pad.js` ⇒ tr-padui-1av. Kiểm khớp: chạy lại công cụ chép không đổi gì; rr-padscene AWord = bản chép myGame (trừ import).
+- Đã kiểm: hình 2 màn iPad y cũ (chụp), mô-đun nạp trên devserver, pad.html sạch, bàn đo 1av 9,5 ms/khung không lỗi.
+⬜ thầy chơi vài trận với iPad thật: còn nóng không, 25 khung/giây có khó chịu không. Còn nóng ⇒ 20 khung/giây + độ nét 1,25 (hằng PAD_FPS / PR_MAX đầu 2 file).
+
+---
+
 ## Đợt 522 (14/10/2026) — TRAIN RUSH: THẢ 2 TOA CÙNG LÚC · iPAD THU NHỎ, TOA CHỜ LÙI TRÁI · CHỮ TRÊN TOA RÕ
 
 **Thầy (sau Đợt 521):** "màn iPad hiển thị được ít quá" ⇒ mọi thứ nhỏ hơn để nhìn toàn cảnh các ô tàu, thả thùng vào nhiều ô cùng lúc, không phải lần lượt (đổi cả game
