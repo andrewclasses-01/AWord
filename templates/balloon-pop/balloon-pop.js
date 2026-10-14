@@ -44,6 +44,9 @@
 //   tốc của tàu (không văng đổi kết quả, chỉ lung lay nhẹ) · điểm chỉ khi CHẮC CHẮN không rơi (bị bật ra ⇒ trừ lại) · khinh khí cầu nhỏ + cao,
 //   chỉ chồng ≥ 3 tầng mới va · tốc độ khinh khí cầu tối đa ×2 · máy bay kéo băng "LEVEL k" trước mỗi màn (bỏ băng điểm) · Fight: thú đuổi
 //   nhau chạy ngay sau ray xa. VÁ kèm: dòng chặn thùng trượt quá mép trước toa (1as) nằm lọt sau chú thích `//` nên chưa từng chạy.
+// ⭐ Đợt 522 (thầy 14/10/2026 — myGame 1au): Fight thả được 2 toa đáp án cùng lúc (khinh khí cầu mang từ 2 toa chưa đầy đầu tiên; đoàn tàu giữ
+//   nguyên 2 toa phụ); iPad (pad.js ⇒ 3d/tr-padui-1au.js) thu nhỏ — toa mở đầu ở 46 % từ trái để kịp đọc chữ khinh khí cầu, bảng định nghĩa phủ kín
+//   hông toa (chữ rõ, không tràn), bỏ khung vàng ▼. Single y hệt 1at.
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
@@ -272,7 +275,7 @@ const balloonPopTemplate = {
     function single() {
       const my = ++tok;
       drop();
-      import("./3d/bp3d-1at.js")
+      import("./3d/bp3d-1au.js")
         .then(m => m.createBalloonPop({
           mount: h.box, view: "side", words, wordsTitle: activity.title || "", options: trGame(activity), host,
           onEvent: (k, d) => { if (k === "mode" && d === "fight") { singleFor = ""; switchTo(toFight); } }
@@ -283,7 +286,7 @@ const balloonPopTemplate = {
     function toFight() {
       const my = ++tok;
       drop();
-      Promise.all([import("./3d/fight-1at.js"), trPadLink()])
+      Promise.all([import("./3d/fight-1au.js"), trPadLink()])
         .then(([m, L]) => {
           if (dead || my !== tok) { L.release(); return null; }
           link = L;
@@ -344,7 +347,7 @@ function mountTrainRushFight(root, act, { single, home }) {
   let poll = 0;   // Đợt 451 — chờ trận dựng xong (ô Loading… ẩn) rồi mới mờ màn chờ
   const obs = new MutationObserver(() => { if (root.childNodes.length) off(); });
   obs.observe(root, { childList: true });
-  Promise.all([import("./3d/fight-1at.js"), trPadLink()])   // Đợt 487: host {} ⇒ ẩn Thư mục / Options (đường engine không có cầu ui.host)
+  Promise.all([import("./3d/fight-1au.js"), trPadLink()])   // Đợt 487: host {} ⇒ ẩn Thư mục / Options (đường engine không có cầu ui.host)
     .then(([m, L]) => {
       if (dead) { L.release(); return null; }
       link = L;

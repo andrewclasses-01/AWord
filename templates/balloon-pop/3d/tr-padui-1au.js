@@ -1,3 +1,7 @@
+// TRAIN RUSH 1au (14/10/2026) — thầy: "iPad hiển thị được ít quá" ⇒ (1) THU NHỎ: bề ngang thấy VIS = 40 đơn vị (1as chỉ ~19 — khung chỉ khớp theo
+//   chiều cao) ⇒ thấy toa đáp án đang chờ + nửa toa đáp án kế phía sau ở mép trái (cách 2 toa phụ ~18 đơn vị, đúng như màn lớn); bảng định nghĩa phủ kín hông toa (như màn lớn) để chữ đủ to; (2) toa chưa đầy ĐẦU TIÊN
+//   (≈ giữa màn lớn = camX) đặt ở FOC = 46 % ⇒ từ mép phải (khinh khí cầu hiện ra) tới toa đó ~22 đơn vị (1as ~9) — kịp đọc chữ; (3) đoàn tàu vẽ Y HỆT
+//   màn lớn (toa phụ, toa than…) và KHÔNG có khung vàng + mũi tên ▼ trên toa (thầy bỏ). Vùng trời dãn dọc cho khinh khí cầu to, cách nhau rõ.
 // TRAIN RUSH 1as (14/10/2026) — = 1ar + LÀM MƯỢT CHỖ NỐI: tin mới tới mà vị trí đoán lệch vị trí đang vẽ ⇒ không nhảy, bù phần lệch rồi
 //   tan dần trong ~0,12 s; Wi-Fi khựng tới 0,6 s vẫn đoán tiếp (1ar dừng ở 0,25 s ⇒ đứng hình rồi nhảy) (theo từng vật: máy quay, tàu, mỗi khinh khí cầu, mỗi thùng — game 1as gửi số hiệu thùng); game gửi 30 tin/giây.
 // ---- 1ar (14/10/2026) — = 1aq + hết giật (ghi chú 1ar bên dưới). ---- 1aq: MÀN iPAD KIỂU A "MIỀN TÂY HOÀNG HÔN". Thầy duyệt bản phác thiet-ke-ipad-1aq.html (3 kiểu) ⇒ chọn A,
@@ -22,7 +26,8 @@ import { createPadClient } from "./tr-padlink-1ap.js";
 const TEAM = [
   { name: "TEAM 1", main: "#d8392a", dark: "#7c1a10", env: ["#f2a092", "#d4513f", "#9a2b1f"], eng: "#8f1d14" },
   { name: "TEAM 2", main: "#2a72d8", dark: "#123d80", env: ["#a9c8f5", "#3f7fd6", "#1f4c94"], eng: "#1d3f7a" }];
-const BW = 4.2, BH = 1.4;            // cỡ khinh khí cầu trên iPad (đơn vị thế giới) — to hơn màn lớn cho dễ đọc / dễ chạm
+const BW = 6.0, BH = 2.0, VIS = 40, FOC = 0.46;   // 1au: khinh khí cầu to hơn 1as (4,2 × 1,4) — khung thu nhỏ ⇒ chữ vẫn đọc rõ   // 1au: VIS bề ngang thấy (đơn vị) · FOC chỗ đặt camX (toa mở đầu tiên) tính từ trái
+           // cỡ khinh khí cầu trên iPad (đơn vị thế giới) — to hơn màn lớn cho dễ đọc / dễ chạm
 const CRW = 2.9 * 0.86, CR = 1.5 * 0.86;   // thùng (bp3d-1aq DUO_TS)
 
 const CSS = `.trp { position: fixed; inset: 0; z-index: 1; background: #120c07; touch-action: none; user-select: none; -webkit-user-select: none; }
@@ -44,14 +49,14 @@ function painter(ctx) {
   const D = {
     k: 1, W: 1024, H: 768,
     rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); },
-    wrapFit(text, maxW, maxH, maxPx, minPx, weight = 800, font = "Baloo 2") {
+    wrapFit(text, maxW, maxH, maxPx, minPx, weight = 800, font = "Baloo 2", lh = 1.05) {   // 1au: lh = khoảng dòng (Baloo cao chữ ~1,15 cỡ)
       const fit = px => { ctx.font = `${weight} ${px}px "${font}"`; const words = String(text).split(/\s+/), lines = []; let cur = "";
         for (const w of words) { const t = cur ? cur + " " + w : w; if (ctx.measureText(t).width <= maxW || !cur) cur = t; else { lines.push(cur); cur = w; } }
         if (cur) lines.push(cur); return lines; };
-      for (let px = Math.round(maxPx); px >= minPx; px -= 1) { const lines = fit(px); if (lines.length * px * 1.05 <= maxH && lines.every(l => ctx.measureText(l).width <= maxW)) return { lines, px }; }
-      return { lines: fit(minPx), px: minPx };   // không vừa ⇒ vẫn NGẮT DÒNG ở cỡ nhỏ nhất
+      for (let px = Math.round(maxPx); px >= minPx; px -= 1) { const lines = fit(px); if (lines.length * px * lh <= maxH && lines.every(l => ctx.measureText(l).width <= maxW)) return { lines, px, lh }; }
+      return { lines: fit(minPx), px: minPx, lh };   // không vừa ⇒ vẫn NGẮT DÒNG ở cỡ nhỏ nhất
     },
-    lines(f, cx, cy) { const n = f.lines.length; f.lines.forEach((l, i) => ctx.fillText(l, cx, cy + (i - (n - 1) / 2) * f.px * 1.05)); },
+    lines(f, cx, cy) { const n = f.lines.length, g = f.px * (f.lh || 1.05); f.lines.forEach((l, i) => ctx.fillText(l, cx, cy + (i - (n - 1) / 2) * g)); },
     // thẻ bảng truy nã giữa màn
     card(top, big, small, o = {}) {
       const { W, H, k } = D;
@@ -164,7 +169,10 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     const dt = Math.max(0, Math.min(0.6, St.t != null && clk != null ? performance.now() / 1000 + clk - St.t : (performance.now() - St.at) / 1000)) * (St.ps ? 0 : 1);   // 1ar: theo giờ game
     return { cx: St.cx + St.cv * dt, x: St.x + St.tv * dt, bdx: (St.cv - St.bv) * dt, dt };
   }
-  const X = wx => W / 2 + (wx - P.cx) * ppu, Y = wy => GY - (wy - rail()) * ppu;
+  const X = wx => W * FOC + (wx - P.cx) * ppu;
+  // 1au: trên đáy làn khinh khí cầu (SB) dãn dọc SK lần — khung thu nhỏ theo bề ngang để dư chiều cao ⇒ dồn cho vùng trời (quả to, cách nhau rõ)
+  let SB = 7.6, SK = 1;
+  const Y = wy => (wy <= SB ? GY - (wy - rail()) * ppu : GY - (SB - rail()) * ppu - (wy - SB) * ppu * SK);
   const rail = () => (L ? L.rail : 0.62), roof = () => (L ? L.roof : 3.82);
 
   // ---------------------------------------------------------------- nền
@@ -180,7 +188,7 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     const layer = (par, col, hBase, hAmp, flat) => {
       ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, hz);
       for (let x = 0; x <= W + 8; x += 8 * k) {
-        const wx = cx * par + (x - W / 2) / ppu;
+        const wx = cx * par + (x - W * FOC) / ppu;
         let h = hBase + hAmp * (0.5 + 0.3 * Math.sin(wx * 0.21) + 0.2 * Math.sin(wx * 0.53 + 1.3));
         if (flat) { const m = Math.sin(wx * 0.17 + 0.4); h = m > 0.35 ? hBase + hAmp * 1.15 : m > 0.1 ? hBase + hAmp * (0.3 + (m - 0.1) * 3.4) : hBase + hAmp * 0.3 * (0.6 + 0.4 * Math.sin(wx * 0.9)); }
         ctx.lineTo(x, hz - h * ppu);
@@ -191,8 +199,8 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     layer(0.18, "#a65a3f", 0.5, 1.5, false);
     const gg = ctx.createLinearGradient(0, hz, 0, H); gg.addColorStop(0, "#d99660"); gg.addColorStop(1, "#c27445");
     ctx.fillStyle = gg; ctx.fillRect(0, hz, W, H - hz);
-    for (let i = -6; i < 8; i++) {
-      const base = Math.floor(cx * 0.6 / 4) + i, wx = base * 4 + hash(base) * 3, x = W / 2 + (wx - cx * 0.6) * ppu;
+    for (let i = -9; i < 11; i++) {   // 1au: khung rộng hơn
+      const base = Math.floor(cx * 0.6 / 4) + i, wx = base * 4 + hash(base) * 3, x = W * FOC + (wx - cx * 0.6) * ppu;
       const y = hz + (8 * k + hash(base + 7) * (Y(rail() + 0.6) - hz - 18 * k));
       if (hash(base + 3) < 0.25) cactus(x, y, (16 + hash(base) * 12) * k); else bush(x, y, (7 + hash(base + 1) * 8) * k);
     }
@@ -205,16 +213,16 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     ctx.moveTo(x, y - h * 0.6); ctx.lineTo(x + h * 0.28, y - h * 0.6); ctx.lineTo(x + h * 0.28, y - h * 0.85); ctx.stroke();
   }
   function track() {
-    const by = Y(rail()), half = W / 2 / ppu;
+    const by = Y(rail()), lw = W * FOC / ppu, rw = W * (1 - FOC) / ppu;
     ctx.fillStyle = "#7d6a5a"; ctx.fillRect(0, by - 2 * k, W, 18 * k);
     ctx.fillStyle = "#4a3020"; const tw = 0.25 * ppu, step = 0.9;
-    for (let wx = Math.floor((P.cx - half) / step) * step; wx < P.cx + half + 1; wx += step) ctx.fillRect(X(wx) - tw / 2, by + 1 * k, tw, 9 * k);
+    for (let wx = Math.floor((P.cx - lw) / step) * step; wx < P.cx + rw + 1; wx += step) ctx.fillRect(X(wx) - tw / 2, by + 1 * k, tw, 9 * k);
     ctx.fillStyle = "#d9d4cc"; ctx.fillRect(0, by - 4 * k, W, 5 * k);
     ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(0, by + 1 * k, W, 2 * k);
     ctx.fillStyle = "#a85e37"; ctx.fillRect(0, by + 16 * k, W, H - by - 16 * k);
     ctx.strokeStyle = "#6d5b2c"; ctx.lineWidth = 2 * k;
-    for (let i = -4; i < 16; i++) {
-      const base = Math.floor(P.cx * 1.25 / 2.2) + i, wx = base * 2.2 + hash(base + 11) * 1.6, x = W / 2 + (wx - P.cx * 1.25) * ppu, y = by + 26 * k + hash(base + 5) * (H - by - 30 * k);
+    for (let i = -10; i < 20; i++) {   // 1au
+      const base = Math.floor(P.cx * 1.25 / 2.2) + i, wx = base * 2.2 + hash(base + 11) * 1.6, x = W * FOC + (wx - P.cx * 1.25) * ppu, y = by + 26 * k + hash(base + 5) * (H - by - 30 * k);
       for (let j = -3; j <= 3; j++) { ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + j * 3 * k, y - 10 * k, x + j * 5 * k, y - (14 + hash(base + j) * 10) * k); ctx.stroke(); }
     }
   }
@@ -280,11 +288,15 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     ctx.fillStyle = g; D.rr(x0, Y(RF), x1 - x0, Y(R0 + 0.95) - Y(RF), 5 * k); ctx.fill();
     ctx.strokeStyle = "rgba(0,0,0,.25)"; ctx.lineWidth = 1.5 * k;
     for (let i = 1; i < 5; i++) { const yy = Y(R0 + 0.95 + (RF - R0 - 0.95) * i / 5); ctx.beginPath(); ctx.moveTo(x0 + 3 * k, yy); ctx.lineTo(x1 - 3 * k, yy); ctx.stroke(); }
-    const bx0 = x0 + 0.22 * u, bx1 = x1 - 0.22 * u, by0 = Y(RF - 0.18), by1 = Y(R0 + 1.15);
-    ctx.fillStyle = T.main; D.rr(bx0, by0, bx1 - bx0, by1 - by0, 8 * k); ctx.fill();
-    ctx.fillStyle = "#fdf6e3"; D.rr(bx0 + 5 * k, by0 + 5 * k, bx1 - bx0 - 10 * k, by1 - by0 - 10 * k, 6 * k); ctx.fill();
+    // 1au: bảng PHỦ KÍN hông toa như màn lớn (1as chỉ cao 1,9 đv ⇒ khung thu nhỏ thì chữ bé tí); viền theo cỡ toa
+    const bx0 = x0 + 0.1 * u, bx1 = x1 - 0.1 * u, by0 = Y(RF - 0.06), by1 = Y(R0 + 1.0), fw = Math.max(2 * k, 0.13 * u);
+    ctx.fillStyle = T.main; D.rr(bx0, by0, bx1 - bx0, by1 - by0, 0.22 * u); ctx.fill();
+    ctx.fillStyle = "#fdf6e3"; D.rr(bx0 + fw, by0 + fw, bx1 - bx0 - 2 * fw, by1 - by0 - 2 * fw, 0.16 * u); ctx.fill();
     ctx.fillStyle = "#2a1608"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    D.lines(D.wrapFit(def, bx1 - bx0 - 26 * k, by1 - by0 - 18 * k, 34 * k, 12 * k, 700), (bx0 + bx1) / 2, (by0 + by1) / 2 + 1 * k);
+    // 1au: khung thu nhỏ ⇒ lề + cỡ tối thiểu theo CỠ TOA (cỡ tối thiểu cố định 12·k lớn hơn ô bảng ⇒ chữ tràn viền đỏ); khoảng dòng thật của Baloo 1,15
+    const ip = fw, pd = Math.max(1.5 * k, 0.08 * u);
+    const df = D.wrapFit(def, bx1 - bx0 - 2 * ip - 2 * pd, by1 - by0 - 2 * ip - 2 * pd, 34 * k, Math.max(5, 0.16 * u), 700, "Baloo 2", 1.15);
+    ctx.font = `700 ${df.px}px "Baloo 2"`; D.lines(df, (bx0 + bx1) / 2, (by0 + by1) / 2 + df.px * 0.06);
     if (isWait) waitMark(x0, x1, Y(RF), Y(R0 + 0.9));
   }
   function waitMark(x0, x1, top, bot) {
@@ -304,7 +316,7 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     ctx.strokeStyle = "#6b4426"; ctx.lineWidth = 3 * k; ctx.strokeRect(-w / 2, -h / 2, w, h);
     ctx.lineWidth = 2 * k; ctx.globalAlpha = 0.35; ctx.beginPath(); ctx.moveTo(-w / 2, -h / 2); ctx.lineTo(w / 2, h / 2); ctx.moveTo(w / 2, -h / 2); ctx.lineTo(-w / 2, h / 2); ctx.stroke(); ctx.globalAlpha = 1;
     ctx.fillStyle = "#fff7e6"; D.rr(-w * 0.42, -h * 0.26, w * 0.84, h * 0.52, 5 * k); ctx.fill();
-    ctx.fillStyle = "#2a1608"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; D.lines(D.wrapFit(word, w * 0.78, h * 0.46, 26 * k, 9 * k), 0, 1 * k);
+    ctx.fillStyle = "#2a1608"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; D.lines(D.wrapFit(word, w * 0.78, h * 0.46, 26 * k, Math.max(5, 0.14 * u), 800, "Baloo 2", 1.15), 0, 1 * k);   // 1au: cỡ tối thiểu theo cỡ thùng
     ctx.restore();
   }
   let hits = [];
@@ -390,7 +402,12 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     t += dt;
     ctx.clearRect(0, 0, W, H);
     const lanes = L && L.lanes ? L.lanes : [7.2, 8.6, 10.0];
-    ppu = (H - HEAD) / ((lanes[2] + BH / 2 + 0.7) - (rail() - 1.5)); GY = H - 1.5 * ppu;
+    const span = (lanes[2] + BH / 2 + 0.7) - (rail() - 1.5);
+    ppu = Math.min((H - HEAD) / span, W / VIS);                         // 1au: khớp bề ngang VIS (thường hẹp hơn chiều cao)
+    GY = H - 1.6 * ppu - 46 * k;   // chừa dải nhắc ở đáy (không đè bánh xe)
+    SB = lanes[0] - 0.4;                                                // dưới SB (tàu, chồng thùng) tỉ lệ thật
+    const skyTop = lanes[2] + BH / 2 + 0.5, room = (GY - (SB - rail()) * ppu) - (HEAD + 10 * k);
+    SK = Math.max(1, Math.min(4, room / ((skyTop - SB) * ppu)));
     hits = [];
     { const f = Math.exp(-dt / 0.12); for (const v of sm.values()) { v[0] *= f; v[1] *= f; } }   // 1as: độ bù tan dần
     const P0 = now(); if (P0) P0.cx += so("cam")[0];
@@ -400,14 +417,14 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     const live = St && (ph === "play" || ph === "countup" || ph === "between" || ph === "over");
     if (live && L && P.x != null && st !== "gone" && st !== "attract" && st !== "ready") {
       for (const [id, x, y, word, bonus] of St.b || []) if (!popped.has(id)) { const o = so("b" + id); blimp(id, x + P.bdx + o[0], y + o[1], word, bonus); }
-      const ox = P.x + so("tr")[0], filled = St.f || "", waitIdx = filled.indexOf("0");
+      const ox = P.x + so("tr")[0];
       // khói ống khói (toạ độ thế giới)
       smokeT -= dt; if (smokeT <= 0) { smokeT = 0.11; smoke.push({ x: ox + L.eng * 0.33, y: roof() + 0.9, t: 0, vx: (St.tv || 0) - 2.4, s: 0.35 + Math.random() * 0.2 }); }
       let ai = 0;
       for (const [type, lx, len, def, pruned] of L.cars) {
         if (type !== "a") { if (!pruned) car(type, ox + lx, len, def, false); continue; }
         const idx = ai++; if (pruned) continue;
-        car("a", ox + lx, len, def, idx === waitIdx && st === "play" && !St.out);
+        car("a", ox + lx, len, def, false);   // 1au: thầy bỏ khung vàng + ▼ trên toa
       }
       tender(ox - L.eng / 2 - L.gap - L.ten / 2); engine(ox);
       if (St.out) { ctx.fillStyle = "rgba(60,60,70,.45)"; ctx.fillRect(0, Y(roof() + 1.2), W, Y(rail() - 0.3) - Y(roof() + 1.2)); }
@@ -436,7 +453,7 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     else if (St && ph === "between") D.banner(top, `GET READY — LEVEL ${(St.lvn || 1) + 1}`, "New trains are coming!");
     else if (St && ph === "play" && (st === "clear" || st === "gone")) D.banner(top, "TRAIN FULL! ✓", `Bonus time saved: ${fmt(St.tl || 0)} · waiting for ${O.name} to finish…`);
     if (!shown && St && ph === "play" && st === "play" && !St.out) {
-      const tx = "Tap the balloon with the RIGHT word — its box drops onto the glowing car ▼";
+      const tx = "Tap the balloon with the RIGHT word when it is above its car";
       ctx.font = `700 ${Math.round(17 * k)}px "Baloo 2"`; const tw = ctx.measureText(tx).width + 30 * k;
       ctx.fillStyle = "rgba(62,34,15,.78)"; D.rr(W / 2 - tw / 2, H - 40 * k, tw, 30 * k, 15 * k); ctx.fill();
       ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(tx, W / 2, H - 25 * k);

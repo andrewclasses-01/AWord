@@ -1,3 +1,7 @@
+// TRAIN RUSH — lõi MẪU 1au (14/10/2026): thầy "iPad hiển thị ít quá ⇒ mọi thứ nhỏ hơn, nhìn toàn cảnh các ô tàu, thả thùng vào NHIỀU ô cùng lúc,
+//   không phải lần lượt (đổi cả game chính)". Fight 1 màn (duo): đoàn tàu GIỮ NGUYÊN như 1at (2 toa phụ giữa 2 toa đáp án — thầy: màn lớn hiện toa thế
+//   nào thì iPad hiện y hệt; bản nháp đầu nối liền toa đáp án đã bị thầy bác). Khinh khí cầu mang từ của OPEN_N = 2 toa CHƯA ĐẦY đầu tiên (toa tàu
+//   đang canh + toa đáp án kế phía sau) ⇒ thả đúng vào toa nào cũng được điểm; tàu vẫn canh toa chưa đầy đầu tiên ở giữa màn lớn. Single giữ y 1at.
 // TRAIN RUSH — lõi MẪU 1at (14/10/2026), thầy giao 7 ý (cùng AWord):
 //   1) thùng ĐÃ NẰM trên tàu đi theo GIA TỐC của tàu (khung toa) ⇒ tàu lao tới / phóng đi không văng thùng; chỉ lung lay nhẹ (thùng nằm phẳng tầng 1) ·
 //   2) khinh khí cầu NHỎ hơn (BS 0,84 → 0,72 · Fight 0,66 → 0,55) và bay CAO hơn: đáy khoang lái luôn trên nóc chồng 2 thùng;
@@ -418,7 +422,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     scene.add(train);
     buildTrainBody();
   }
-  const STREAM0 = 5;   // 1ap: số toa đáp án dựng ngay đầu màn
+  const STREAM0 = 5, OPEN_N = 2;   // 1ap: số toa đáp án dựng ngay đầu màn · 1au: duo — khinh khí cầu mang từ 2 toa mở đầu tiên
   // 1ap: gắn thêm n toa đáp án (kèm 2 toa phụ đứng trước mỗi toa) vào ĐUÔI tàu — toa chờ còn ≥ 2 toa đáp án phía sau thì đuôi luôn ngoài màn
   function appendCarts(n, initial = false) {
     const train = S.train, fresh = [];
@@ -641,20 +645,24 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     const dy = duo && S.lanes[1] - S.lanes[0] < 1 ? 0.95 : 0.5;   // 1at: làn xa cách nhau 0,8 ⇒ 2 làn kề cũng tính là chung (không chồng khoang lái lên vỏ quả dưới)
     return !S.blimps.some(b => Math.abs(b.baseY - y) < dy && (b.dir || 1) === dir && (dir > 0 ? b.x > fromX - 8.5 : b.x < fromX + 8.5));
   }
+  // 1au: toa CÒN MỞ = OPEN_N toa chưa đầy đầu tiên (duo); Single = chỉ toa chờ như cũ
+  const openCarts = () => S.carts.filter(c => !c.filled).slice(0, duo ? OPEN_N : 1);
   function drawKeyword() {
-    const first = S.carts.find(c => !c.filled);
-    const open = first ? [first.item.keyword] : [];
+    const oc = openCarts();
+    const open = oc.map(c => c.item.keyword);
     if (!S.deck.length) {
-      const inLevel = new Set(S.carts.map(c => c.key));
+      const inLevel = new Set([...S.carts.map(c => c.key), ...(S.pend || []).map(it => norm(it.keyword))]);   // 1au: từ của toa chưa dựng cũng không làm từ nhiễu
       const others = shuffleR(words.filter(w => !inLevel.has(norm(w.keyword))).map(w => w.keyword));
       const nDis = Math.max(1, Math.min(3, Math.ceil(open.length * 0.6)));
-      S.deck = shuffleR([...open, ...open, ...others.slice(0, nDis)]);
+      // 1au: mỗi toa mở 1 quả, toa đầu (tàu đang canh) thêm 1 quả ⇒ toa đầu không bị bỏ đói
+      S.deck = shuffleR([...open, ...open.slice(0, duo ? 1 : open.length), ...others.slice(0, nDis)]);
     }
     let k = S.deck.pop();
     // từ của toa đã đầy thì đổi sang từ còn mở (không để trời đầy từ đã xong)
     const openSet = new Set(open.map(norm));
     const done = new Set(S.carts.filter(c => c.filled).map(c => c.key));
-    if (done.has(norm(k)) && !openSet.has(norm(k)) && open.length) k = open[0];
+    if (done.has(norm(k)) && !openSet.has(norm(k)) && open.length) k = open[Math.floor(Math.random() * open.length)];
+    if (duo && open.length && !openSet.has(norm(k)) && S.carts.some(c => c.key === norm(k))) k = open[0];   // 1au: từ của toa còn xa phía sau (chưa mở) ⇒ đổi
     return k;
   }
   function spawnBlimp(x, attract) {
@@ -2096,7 +2104,8 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     // ---- iPad: bố cục tàu (gửi khi đổi) + trạng thái (gửi ~20 lần/giây) — toạ độ x THẾ GIỚI (iPad đặt giữa màn = camX)
     padLayout(team) {
       const R = RIGS[team]; if (!R) return null;
-      return { v: R.layoutV || 0, lv: R.level, roof: r2(ROOF_W), rail: RAIL_TOP, lanes: R.lanes, eng: r2(ENGINE_LEN * TS), ten: r2(TENDER_LEN * TS), gap: r2(CART_GAP * TS),
+      return { v: R.layoutV || 0, lv: R.level, on: OPEN_N,   // 1au: on = số toa mở (iPad sáng đủ các toa đó)
+        roof: r2(ROOF_W), rail: RAIL_TOP, lanes: R.lanes, eng: r2(ENGINE_LEN * TS), ten: r2(TENDER_LEN * TS), gap: r2(CART_GAP * TS),
         cars: R.train ? R.cars.map(c => [c.type === "answer" ? "a" : c.type === "coach" ? "p" : "c", r2(c.localX * TS), r2(c.len * TS), c.type === "answer" ? c.item.definition : "", c.pruned ? 1 : 0]) : [] };
     },
     padState(team) {

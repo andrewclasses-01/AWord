@@ -1,3 +1,4 @@
+// TRAIN RUSH — Fight 1 màn mẫu 1au (14/10/2026): lõi bp3d-1au — thả được vào 2 toa đáp án cùng lúc (iPad tr-padui-1au thu nhỏ).
 // TRAIN RUSH — Fight 1 màn mẫu 1at (14/10/2026): lõi bp3d-1at (thùng đi theo gia tốc tàu, điểm chỉ khi chắc chắn, khinh khí cầu nhỏ + cao, nhanh ×2,
 //   thú chạy gần ray) · máy bay KHÔNG kéo băng điểm — kéo "LEVEL k" trước mỗi màn (lúc GO! và lúc giữa 2 màn).
 // TRAIN RUSH — Fight 1 màn mẫu 1as (14/10/2026): như 1ar, lõi bp3d-1as (điểm ngay khi chạm, thùng trượt), gửi iPad 30 lần/giây.
@@ -17,7 +18,7 @@
 //     host = cầu AWord { listActs, openAct, options(ov) } (như 1ao) · padSignal = kho bắt tay iPad { write, listen } (myGame: localSignal)
 //   ⇒ api { destroy(), setOptions(o), start(), G, core, pad }
 // Hàng nút, bảng Thư mục / Mode / PAUSED / kết quả: như fight-1ao (CSS fight-1al + fight-1ao + fight-1ap).
-import { createBalloonPop, DUO_COLORS } from "./bp3d-1at.js";
+import { createBalloonPop, DUO_COLORS } from "./bp3d-1au.js";
 import { createBpSound } from "./sound-1ah.js";
 import { createPadHost } from "./tr-padlink-1ap.js";
 
@@ -89,7 +90,7 @@ export async function createTrainRushFight({ mount, words, wordsTitle = "", opti
   mount.innerHTML = MARKUP;
   const $ = s => mount.querySelector(s), $$ = s => mount.querySelectorAll(s);
   const area = $(".fb-area"), boardEl = $(".fb-duo");
-  $(".fb-desc").textContent = "Two trains, one screen. TEAM 1 on the near track, TEAM 2 on the far track. Fill your cars before your time bar runs out!";
+  $(".fb-desc").textContent = "Two trains, one screen. TEAM 1 on the near track, TEAM 2 on the far track. Drop boxes on the next cars too — fill them all before your time bar runs out!";
   if (onSingle || onHome) { $(".fb-hostrow").hidden = false; $(".fb-single").hidden = !onSingle; $(".fb-home").hidden = !onHome; }
   if (!onSingle) $(".fb-mode").hidden = true;
   if (host && !host.listActs) $(".fb-folder").hidden = true;

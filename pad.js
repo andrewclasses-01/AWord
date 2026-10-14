@@ -24,6 +24,7 @@
 // ⭐ Đợt 517 (thầy 14/10/2026) — màn iPad TRAIN RUSH vẽ lại kiểu A "Miền Tây hoàng hôn" (thầy chọn từ bản phác myGame thiet-ke-ipad-1aq.html):
 //   3d/tr-padui-1aq.js — mountTrainPad (tàu hơi nước chi tiết, bánh quay đúng chiều, khinh khí cầu màu đội, thanh gỗ LEVEL k/n + giờ + điểm 2 đội,
 //   thẻ bảng truy nã) + mountTrainChooser (màn chọn đội cùng kiểu, thay khung HTML Đợt 515).
+// ⭐ Đợt 522 — 3d/tr-padui-1au.js: thu nhỏ (thấy ~40 đơn vị), toa mở đầu ở 46 % từ trái, bảng định nghĩa phủ kín hông toa, không khung vàng ▼.
 // ⭐ Đợt 519 — 3d/tr-padui-1as.js: 30 tin/giây, bù lệch tan dần, đoán tiếp 0,6 s khi Wi-Fi khựng.
 // ⭐ Đợt 518 — iPad hết giật (3d/tr-padui-1ar.js): thùng đẩy tiếp theo vận tốc, vị trí tính theo giờ game; chạm 3 lần góc phải dưới = bảng đo.
 // =============================================================
@@ -95,7 +96,7 @@ async function showRRChooser() {
   rrBusyOff = S.rrPadSignal().listen("host", d => ch.setBusy([d && d.sid ? +d.c0 || 0 : 0, d && d.sid ? +d.c1 || 0 : 0]));
 }
 // ⭐ Đợt 515 — cảnh 2D TRAIN RUSH (Fight 1 màn) cho đội `team`
-const trMods = () => Promise.all([import("./templates/balloon-pop/3d/tr-padui-1as.js"), import("./templates/balloon-pop/tr-pad-signal.js")]);   // Đợt 517: kiểu A
+const trMods = () => Promise.all([import("./templates/balloon-pop/3d/tr-padui-1au.js"), import("./templates/balloon-pop/tr-pad-signal.js")]);   // Đợt 517: kiểu A
 async function showTR(team) {
   note.hidden = true;
   if (view === "tr" + team) return;

@@ -263,3 +263,19 @@ Làm ở myGame **1at** (hồ sơ myGame `balloon-pop/NGHIEN CUU GAMEPLAY.md` m�
 - Đã kiểm (myGame bàn thử + AWord devserver): mount với cầu host ⇒ Fight · bấm Single ⇒ Single · mount lại cùng act ⇒ Single · act khác ⇒ Fight · học sinh ⇒ Single;
   mô-đun 1at nạp trong AWord; Fight 2 đội qua màn: tàu phóng đi thùng không rơi, băng LEVEL 1 / LEVEL 2; Single băng LEVEL 1 sau phim; thú giữa màn z −26; 0 lỗi console.
 ⬜ thầy thử TOMKO + iPad thật (iPad không đổi: tr-padui-1as, làn khinh khí cầu iPad tự theo bố cục `l:`).
+
+## Đợt 522 (chép từ GHI CHU DU AN.md) (14/10/2026) — TRAIN RUSH: THẢ 2 TOA CÙNG LÚC · iPAD THU NHỎ, TOA CHỜ LÙI TRÁI · CHỮ TRÊN TOA RÕ
+
+**Thầy (sau Đợt 521):** "màn iPad hiển thị được ít quá" ⇒ mọi thứ nhỏ hơn để nhìn toàn cảnh các ô tàu, thả thùng vào nhiều ô cùng lúc, không phải lần lượt (đổi cả game
+chính) · toa cần từ đầu tiên lùi về trái để từ lúc khinh khí cầu xuất hiện tới toa đó đủ xa đọc chữ. Làm ở myGame **1au** (`9c88ad3`, hồ sơ myGame mục 45), thầy
+duyệt qua 2 lần sửa: ⛔ bản nháp nối liền toa đáp án + khung vàng ▼ ⇒ thầy bác ("màn hình hiển thị các toa như thế nào thì iPad hiển thị y hệt", "không được đánh dấu
+vàng với mũi tên") · chữ trên toa iPad tràn viền ⇒ sửa.
+- Lõi `3d/bp3d-1au.js` (Fight / duo; Single y 1at): đoàn tàu GIỮ NGUYÊN (toa đáp án · 2 toa phụ · …); khinh khí cầu mang từ của 2 toa chưa đầy đầu tiên (`OPEN_N`,
+  `openCarts()`) ⇒ thả đúng vào toa đang chờ HOẶC toa đáp án kế phía sau đều được điểm; tàu vẫn canh toa chưa đầy đầu tiên ở giữa màn lớn.
+- iPad `3d/tr-padui-1au.js` (pad.js nạp): bề ngang thấy 40 đơn vị (1as ~19), toa mở đầu ở 46 % từ trái ⇒ từ mép phải tới toa đó ~22 đơn vị (1as ~9); vùng trời dãn dọc
+  (khinh khí cầu to 6,0 × 2,0, cách nhau rõ); bảng định nghĩa PHỦ KÍN hông toa như màn lớn + cỡ chữ tối thiểu theo cỡ toa, khoảng dòng 1,15 (gốc lỗi tràn: cỡ tối
+  thiểu cố định 12·k lớn hơn ô bảng); không khung vàng ▼.
+- `tools/chep-train-rush.py` GOC fight-1au / GOC_THEM tr-padui-1au · `balloon-pop.js` ⇒ bp3d-1au / fight-1au · `pad.js` ⇒ tr-padui-1au.
+- Đã kiểm: myGame — iPad giả gắn trong trang game ở khổ 1024×768: đoàn tàu iPad = danh sách toa của game, thả đúng toa đáp án thứ 2 khi toa đầu còn mở ⇒ +5, chữ trên
+  toa rõ gọn trong khung; AWord devserver — mount Train rush có cầu host ⇒ Fight dựng xong với lõi 1au, pad.html chạy sạch (dừng ở đăng nhập), 0 lỗi console.
+⬜ thầy thử TOMKO + 2 iPad thật (cỡ chữ trên iPad thật, có cần thấy trọn toa đáp án kế không).
