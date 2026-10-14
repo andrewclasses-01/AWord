@@ -1,4 +1,4 @@
-// TRAIN RUSH 1aq (14/10/2026) — MÀN iPAD KIỂU A "MIỀN TÂY HOÀNG HÔN". Thầy duyệt bản phác thiet-ke-ipad-1aq.html (3 kiểu) ⇒ chọn A,
+// TRAIN RUSH 1ar (14/10/2026) — = 1aq + hết giật (ghi chú 1ar bên dưới). ---- 1aq: MÀN iPAD KIỂU A "MIỀN TÂY HOÀNG HÔN". Thầy duyệt bản phác thiet-ke-ipad-1aq.html (3 kiểu) ⇒ chọn A,
 // dặn: bánh xe phải quay ĐÚNG CHIỀU (tàu chạy sang phải ⇒ bánh quay xuôi chiều kim đồng hồ).
 //   • Cảnh 2D của RIÊNG đội mình: trời chiều + núi đỏ 2 lớp thị sai + bụi/xương rồng + đường ray tà vẹt + cỏ tiền cảnh; đầu máy hơi nước vẽ
 //     chi tiết (nồi hơi, ống khói, đèn, gạt bò, buồng lái, bánh có nan + thanh truyền), toa than LV.n, toa hàng gỗ có bảng định nghĩa viền
@@ -9,6 +9,12 @@
 //   • Vị trí ngang = vị trí THẾ GIỚI tính từ giữa màn lớn (camX) ⇒ canh thả trên iPad = canh trên màn lớn. Giữa 2 trạng thái iPad tự đẩy tiếp.
 //   mountTrainPad(el, { signal, team, onLeave, onBack }) ⇒ { state, hits, tap(id), destroy() }
 //   mountTrainChooser(el, { cur, onPick }) ⇒ { setBusy([b0, b1]), note(text), destroy() } — màn CHỌN ĐỘI cùng kiểu (AWord pad.html)
+// ---- 1ar (14/10/2026) thầy thử iPad thật: "giật giật, hộp nằm trên tàu rồi vẫn giật 2 bên theo chiều ngang". Nguyên nhân (code, không phải hạ tầng):
+//   (1) thùng vẽ ở vị trí của tin cuối, KHÔNG đẩy tiếp theo vận tốc, trong khi máy quay iPad đẩy tiếp ⇒ giữa 2 tin (50 ms) thùng trôi lùi
+//       ~0,2 đơn vị (~12 px) rồi giật về ⇒ răng cưa 20 lần/giây; tin đến trễ (Wi-Fi) ⇒ giật mạnh hơn. Nay game gửi vận tốc thùng, iPad đẩy tiếp.
+//   (2) mọi thứ đẩy tiếp tính từ LÚC TIN TỚI ⇒ tin tới không đều (Wi-Fi 30–150 ms) làm cả cảnh nhảy. Nay game gửi giờ game `t`, iPad ước giờ game
+//       (đường bao trên của độ lệch giờ — tin tới sớm nhất = ít trễ nhất) ⇒ vị trí tính theo giờ game, không lệ thuộc lúc tin tới.
+//   (3) bỏ shadowBlur (đắt trên Safari iPad) ở khung toa chờ; chạm 3 lần góc phải dưới ⇒ bảng đo: FPS · thời gian vẽ · nhịp tin · trễ mạng.
 import { createPadClient } from "./tr-padlink-1ap.js";
 
 const TEAM = [
@@ -85,6 +91,7 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
   el.innerHTML = `<div class="trp"><canvas class="trp-cv"></canvas><button class="trp-back" title="Choose team" hidden>‹</button></div>`;
   if (onBack) { const bk = el.querySelector(".trp-back"); bk.hidden = false; bk.addEventListener("click", () => onBack()); }
   const cv = el.querySelector(".trp-cv"), ctx = cv.getContext("2d"), D = painter(ctx);
+  let clk = null; const stat = { on: false, gaps: [], lastAt: 0, frames: 0, fps: 0, fpsT: 0, drawMs: 0, taps: [] };   // 1ar
   let L = null, St = null, link = { s: "connecting", rtt: 0 }, dead = false, raf = 0, last = 0, flash = null, popped = new Set(), endEv = "";
   let W = 1024, H = 768, k = 1, ppu = 50, HEAD = 84, GY = 600, P = null, t = 0;
   const fx = [], smoke = []; let smokeT = 0;
@@ -97,7 +104,15 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
   const client = createPadClient({ signal, team: team ? 1 : 0,
     onState: s => { link = s; },
     onLayout: d => { L = d; },
-    onInfo: d => { if (d.mode && d.x === undefined) { St = { ...(St || {}), mode: d.mode, ph: d.ph }; return; } St = { ...d, at: performance.now() }; popped = new Set([...popped].filter(id => d.b && d.b.some(b => b[0] === id))); },
+    onInfo: d => { if (d.mode && d.x === undefined) { St = { ...(St || {}), mode: d.mode, ph: d.ph }; return; }
+      const nowS = performance.now() / 1000;
+      if (d.t != null) {   // 1ar: độ lệch giờ game − giờ iPad; lấy đường bao trên (tin ít trễ nhất), trôi chậm xuống để theo kịp lệch đồng hồ
+        const off = d.t - nowS;
+        if (clk == null || off > clk || off < clk - 1.5) clk = off; else clk += (off - clk) * 0.01;
+      }
+      if (stat.lastAt) { const g = (nowS - stat.lastAt) * 1000; stat.gaps.push(g); if (stat.gaps.length > 60) stat.gaps.shift(); }
+      stat.lastAt = nowS;
+      St = { ...d, at: performance.now() }; popped = new Set([...popped].filter(id => d.b && d.b.some(b => b[0] === id))); },
     onEvent: e => {
       if (e === "ok") { flash = { ok: true, t: 0 }; fx.push({ type: "ok", x: roofX(), y: (L ? L.roof : 3.8) + 2.4, t: 0, text: "+5" }); beep(880, 0.15); beep(1320, 0.18, "sine", 0.12); buzz(40); }
       else if (e === "wrong") { flash = { ok: false, t: 0 }; fx.push({ type: "bad", x: roofX(), y: (L ? L.roof : 3.8) + 2.4, t: 0, text: "✗" }); beep(180, 0.25, "square", 0.12); buzz([60, 40, 60]); }
@@ -116,9 +131,9 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
 
   // vị trí hiện tại (đẩy tiếp theo vận tốc kể từ lần nhận trạng thái)
   function now() {
-    if (!St || St.x == null) return St && St.cx != null ? { cx: St.cx, x: null, bdx: 0 } : null;
-    const dt = Math.min(0.25, (performance.now() - St.at) / 1000) * (St.ps ? 0 : 1);
-    return { cx: St.cx + St.cv * dt, x: St.x + St.tv * dt, bdx: (St.cv - St.bv) * dt };
+    if (!St || St.x == null) return St && St.cx != null ? { cx: St.cx, x: null, bdx: 0, dt: 0 } : null;
+    const dt = Math.max(0, Math.min(0.25, St.t != null && clk != null ? performance.now() / 1000 + clk - St.t : (performance.now() - St.at) / 1000)) * (St.ps ? 0 : 1);   // 1ar: theo giờ game
+    return { cx: St.cx + St.cv * dt, x: St.x + St.tv * dt, bdx: (St.cv - St.bv) * dt, dt };
   }
   const X = wx => W / 2 + (wx - P.cx) * ppu, Y = wy => GY - (wy - rail()) * ppu;
   const rail = () => (L ? L.rail : 0.62), roof = () => (L ? L.roof : 3.82);
@@ -245,8 +260,9 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
   }
   function waitMark(x0, x1, top, bot) {
     const p = 0.5 + 0.5 * Math.sin(t * 6);
-    ctx.save(); ctx.shadowColor = "#ffd34d"; ctx.shadowBlur = (14 + 10 * p) * k;
-    ctx.strokeStyle = `rgba(255,214,77,${0.75 + 0.25 * p})`; ctx.lineWidth = 5 * k; D.rr(x0 - 5 * k, top - 6 * k, x1 - x0 + 10 * k, bot - top + 12 * k, 10 * k); ctx.stroke(); ctx.restore();
+    D.rr(x0 - 5 * k, top - 6 * k, x1 - x0 + 10 * k, bot - top + 12 * k, 10 * k);   // 1ar: quầng sáng = nét to mờ (shadowBlur đắt trên iPad)
+    ctx.strokeStyle = `rgba(255,214,77,${0.18 + 0.14 * p})`; ctx.lineWidth = (14 + 8 * p) * k; ctx.stroke();
+    ctx.strokeStyle = `rgba(255,214,77,${0.75 + 0.25 * p})`; ctx.lineWidth = 5 * k; ctx.stroke();
     const cx = (x0 + x1) / 2, ay = top - (22 + 8 * Math.abs(Math.sin(t * 4))) * k;
     ctx.fillStyle = "#ffd34d"; ctx.strokeStyle = "#7a4a10"; ctx.lineWidth = 2.5 * k;
     ctx.beginPath(); ctx.moveTo(cx - 16 * k, ay - 14 * k); ctx.lineTo(cx + 16 * k, ay - 14 * k); ctx.lineTo(cx, ay + 6 * k); ctx.closePath(); ctx.fill(); ctx.stroke();
@@ -364,7 +380,7 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
       }
       tender(ox - L.eng / 2 - L.gap - L.ten / 2); engine(ox);
       if (St.out) { ctx.fillStyle = "rgba(60,60,70,.45)"; ctx.fillRect(0, Y(roof() + 1.2), W, Y(rail() - 0.3) - Y(roof() + 1.2)); }
-      for (const [x, y, word, kicked, rot] of St.c || []) if (!kicked) crate(x, y, word, rot);
+      for (const [x, y, word, kicked, rot, vx = 0, vy = 0] of St.c || []) if (!kicked) crate(x + vx * P.dt, Math.max(roof() - 2, y + vy * P.dt - 7.5 * P.dt * P.dt * (vy !== 0 ? 1 : 0)), word, rot);   // 1ar: đẩy tiếp theo vận tốc
     } else if (live && St) for (const [id, x, y, word, bonus] of St.b || []) if (!popped.has(id)) blimp(id, x + P.bdx, y, word, bonus);
     effects(dt);
     header();
@@ -399,12 +415,27 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     if (dead) return;
     raf = requestAnimationFrame(loop);
     const dt = last ? Math.min(0.05, (ts - last) / 1000) : 0; last = ts;
-    draw(dt);
+    const t0 = performance.now(); draw(dt); const ms = performance.now() - t0;
+    stat.drawMs += (ms - stat.drawMs) * 0.1; stat.frames++;
+    if (ts - stat.fpsT >= 1000) { stat.fps = Math.round(stat.frames * 1000 / (ts - stat.fpsT || 1000)); stat.frames = 0; stat.fpsT = ts; }
+    if (stat.on) statBox();
   }
   raf = requestAnimationFrame(loop);
+  function statBox() {   // 1ar: bảng đo (chạm 3 lần góc phải dưới)
+    const g = stat.gaps, avg = g.length ? g.reduce((a, b) => a + b, 0) / g.length : 0, mx = g.length ? Math.max(...g) : 0;
+    const lines = [`FPS ${stat.fps} · draw ${stat.drawMs.toFixed(1)} ms`, `msg every ${avg.toFixed(0)} ms (max ${mx.toFixed(0)})`, `link ${link.s} · ping ${Math.round(link.rtt || 0)} ms`];
+    ctx.font = `700 ${Math.round(15 * k)}px "Baloo 2"`; const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 20 * k, h = lines.length * 20 * k + 12 * k;
+    ctx.fillStyle = "rgba(0,0,0,.72)"; D.rr(W - w - 28 * k, H - h - 28 * k, w, h, 8 * k); ctx.fill();
+    ctx.fillStyle = "#9dff9d"; ctx.textAlign = "left"; ctx.textBaseline = "top"; lines.forEach((l, i) => ctx.fillText(l, W - w - 18 * k, H - h - 22 * k + i * 20 * k));
+  }
   cv.addEventListener("pointerdown", e => {
     if (link.s === "kicked") { client.reconnect(); return; }
     const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * cv.width, y = (e.clientY - r.top) / r.height * cv.height;
+    if (x > W - 90 * k && y > H - 90 * k) {   // 1ar: chạm 3 lần trong 1,2 s ⇒ bật/tắt bảng đo
+      const n = performance.now(); stat.taps = stat.taps.filter(q => n - q < 1200); stat.taps.push(n);
+      if (stat.taps.length >= 3) { stat.on = !stat.on; stat.taps = []; }
+      return;
+    }
     const h = hits.find(q => ((x - q.x) / q.rx) ** 2 + ((y - q.y) / q.ry) ** 2 <= 1);
     if (!h || !St || St.st !== "play" || St.mode === "off") return;
     if (client.send("pop:" + h.id)) {
@@ -413,7 +444,7 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     }
   });
   return {
-    get state() { return { link, St, L }; },
+    get state() { return { link, St, L, clk, stat }; },
     get hits() { return hits; },   // bàn thử: vùng chạm khinh khí cầu (toạ độ canvas)
     tap(id) { const h = hits.find(q => q.id === id); if (!h) return false; const r = cv.getBoundingClientRect();   // bàn thử: chạm THẬT (pointerdown) vào giữa quả
       cv.dispatchEvent(new PointerEvent("pointerdown", { clientX: r.left + h.x / cv.width * r.width, clientY: r.top + h.y / cv.height * r.height, bubbles: true })); return true; },

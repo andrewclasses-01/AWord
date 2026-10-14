@@ -546,6 +546,21 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 518 (14/10/2026) — TRAIN RUSH: iPAD HẾT GIẬT
+
+**Thầy thử Đợt 517 trên iPad thật:** "cứ giật giật, hộp thả xuống kể cả khi nằm trên tàu rồi vẫn giật 2 bên theo chiều ngang — do hạ tầng hay do game?"
+⇒ **Do code game, không phải hạ tầng.** (1) iPad đẩy tiếp máy quay / tàu / khinh khí cầu theo vận tốc giữa 2 tin, nhưng THÙNG đứng yên ở vị trí tin cuối
+⇒ thùng trôi lùi so với tàu rồi giật về ~20 lần/giây (đo: biên độ 20 px khi tàu chạy đều, 160 px lúc tàu phóng đi). (2) đẩy tiếp tính từ lúc tin TỚI ⇒ Wi-Fi làm
+tin tới không đều ⇒ cả cảnh nhảy. (3) shadowBlur khung toa chờ đắt trên Safari iPad.
+- myGame **1ar** (`e98164e`, hồ sơ mục 42): lõi gửi thêm giờ game `t` + vận tốc thùng; iPad (`3d/tr-padui-1ar.js`) tính vị trí theo GIỜ GAME (đường bao trên độ lệch
+  giờ = tin ít trễ nhất), thùng đẩy theo vận tốc; quầng sáng toa chờ = nét to mờ. **Chạm 3 lần góc phải dưới iPad ⇒ bảng đo** (FPS · ms vẽ · nhịp tin · ping).
+  Đo lại: thùng↔tàu biên độ 0,7 px (cũ 20 px), lúc phóng 1,3 px (cũ 160 px).
+- `tools/chep-train-rush.py` GOC fight-1ar / GOC_THEM tr-padui-1ar · `balloon-pop.js` 1ar · `pad.js` tr-padui-1ar.
+- Đã kiểm: bàn thử `scratch/dot517-tr.html?padsig=local` Single + Mode ▸ Fight (lõi 1ar), iPad nối nhận giờ game, 0 lỗi console.
+⬜ thầy thử lại iPad thật; còn giật thì chạm 3 lần góc phải dưới, chụp bảng đo gửi em.
+
+---
+
 ## Đợt 517 (14/10/2026) — TRAIN RUSH FIGHT 1 MÀN CHỈNH CỠ + MÀN iPAD KIỂU A "MIỀN TÂY HOÀNG HÔN"
 
 **Thầy thử Đợt 515 (14/10) ⇒ 5 ý:** (1) máy bay kéo băng điểm bay quá cao, không nhìn rõ ⇒ hạ thấp · (2) thú đuổi nhau xa nhau ⇒ còn 1/2 ·

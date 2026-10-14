@@ -1,3 +1,4 @@
+// TRAIN RUSH — lõi MẪU 1ar (14/10/2026): như 1aq + padState gửi thêm giờ game `t` và vận tốc thùng (thầy: thùng trên iPad giật ngang).
 // TRAIN RUSH — lõi MẪU 1aq (14/10/2026): thầy thử Fight 1 màn 1ap ⇒ 4 ý (CHỈ duo; bản đơn y hệt 1ap):
 //   1) máy bay kéo băng điểm bay THẤP (VIEWS.duo.plane = [y 9,6, z −5] giữa 2 ray; 1ap bay y 13,4 sát mép trên) ·
 //   2) thú đuổi nhau gần nhau 1/2 (west-world-1aq chaseGap 0,5) · 3) 2 tàu nâng lên (look y 5,7 → 3,7) chừa đất + cỏ tiền cảnh ·
@@ -2032,10 +2033,11 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     },
     padState(team) {
       const R = RIGS[team]; if (!R) return null;
-      return { cx: r2(SH.camX), cv: r2(SH.camV), x: R.train ? r2(R.train.position.x) : null, tv: r2(R.trainV), st: R.state, sc: R.score, lv: R.layoutV || 0, ps: SH.paused ? 1 : 0,
+      return { t: Math.round(SH.time * 1000) / 1000, cx: r2(SH.camX), cv: r2(SH.camV),   // 1ar: t = giờ GAME của trạng thái (iPad tính theo giờ này, không theo lúc tin tới)
+        x: R.train ? r2(R.train.position.x) : null, tv: r2(R.trainV), st: R.state, sc: R.score, lv: R.layoutV || 0, ps: SH.paused ? 1 : 0,
         f: R.carts.map(c => (c.filled ? 1 : 0)).join(""), bv: r2(withRig(R, blimpV)),
         b: R.blimps.filter(b => !b.leaving).map(b => [b.id, r2(b.x), r2(b.y), b.word || "", b.bonus || ""]),
-        c: R.crates.filter(c => !c.removed && c.body).map(c => { const q = c.body.quaternion; return [r2(c.body.position.x), r2(c.body.position.y), c.word, c.kicked ? 1 : 0, r2(2 * Math.atan2(q.z, q.w))]; }) };   // 1aq: + góc nghiêng (iPad vẽ thùng nghiêng)
+        c: R.crates.filter(c => !c.removed && c.body).map(c => { const q = c.body.quaternion; return [r2(c.body.position.x), r2(c.body.position.y), c.word, c.kicked ? 1 : 0, r2(2 * Math.atan2(q.z, q.w)), r2(c.body.velocity.x), r2(c.body.velocity.y)]; }) };   // 1aq: + góc nghiêng · 1ar: + vận tốc (iPad cho thùng chạy theo tàu giữa 2 tin)
     },
     popById(team, id) {
       const R = RIGS[team]; if (!R || R.state !== "play" || SH.paused) return false;

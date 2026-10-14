@@ -1,3 +1,4 @@
+// TRAIN RUSH — Fight 1 màn mẫu 1ar (14/10/2026): như 1aq, lõi bp3d-1ar (iPad hết giật: giờ game + vận tốc thùng).
 // TRAIN RUSH — TRẬN FIGHT MỘT MÀN mẫu 1aq (14/10/2026): như 1ap, lõi bp3d-1aq (tàu to hơn, khinh khí cầu nhỏ hơn, 2 tàu nâng lên chừa tiền cảnh,
 //   máy bay kéo băng bay thấp, thú đuổi nhau gần nhau 1/2).
 // TRAIN RUSH — TRẬN FIGHT MỘT MÀN mẫu 1ap (14/10/2026). Thầy duyệt bản phác thiet-ke-fight-1-man.html (2 vòng) rồi "ok build":
@@ -13,7 +14,7 @@
 //     host = cầu AWord { listActs, openAct, options(ov) } (như 1ao) · padSignal = kho bắt tay iPad { write, listen } (myGame: localSignal)
 //   ⇒ api { destroy(), setOptions(o), start(), G, core, pad }
 // Hàng nút, bảng Thư mục / Mode / PAUSED / kết quả: như fight-1ao (CSS fight-1al + fight-1ao + fight-1ap).
-import { createBalloonPop, DUO_COLORS } from "./bp3d-1aq.js";
+import { createBalloonPop, DUO_COLORS } from "./bp3d-1ar.js";
 import { createBpSound } from "./sound-1ah.js";
 import { createPadHost } from "./tr-padlink-1ap.js";
 
