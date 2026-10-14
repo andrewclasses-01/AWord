@@ -773,13 +773,15 @@ function openStatsHome(opts = {}) {
   render();
 }
 async function renderStatsHome() {
-  const wrap = el("div", "aw-lib aw-st-page");
-  wrap.append(topbar(false));
+  // ⭐ Đợt 520 (thầy 14/10/2026) — STATS takes the whole window: no AWord logo
+  // (the page's own rail has a home button with an "A"), no footer, and the
+  // usual right-hand buttons move into the page's single top row.
+  const wrap = el("div", "aw-st-page");
+  const right = topbar(false).querySelector(".aw-appbar-right");
+  right?.querySelector(".aw-st-homebtn")?.classList.add("is-on");
   const mount = el("div");
   wrap.append(mount);
-  wrap.append(footer());
   app.append(wrap);
-  requestAnimationFrame(() => sizeBrand(wrap));
   let mod;
   try { mod = await import("./core/stats-home.js"); }
   catch (e) { console.warn("AWord: STATS failed to load", e); mount.append(el("div", "aw-empty", "STATS could not load — check the connection and try again.")); return; }
@@ -787,6 +789,9 @@ async function renderStatsHome() {
   statsHandle = mod.mountStatsHome(mount, {
     classId: state.statsClassId,
     toast: toastMsg,
+    rightCluster: right,
+    folderSvg: FOLDER_SVG,
+    onHome: () => goTop(),
     onClassChange: (classId) => {
       if (state.statsClassId === classId) return;
       state.statsClassId = classId;

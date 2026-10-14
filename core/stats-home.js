@@ -25,6 +25,25 @@
 //   • 📊 per test (evaluation popup) and ANALYSE over several days — the SAME
 //     stacked chart + PNG download as Showdown's Analyse (reused, not copied).
 //
+// ⭐⭐ Đợt 520 (14/10/2026, thầy "ok build" — mockups stats-v5.html (entry) +
+// stats-v7.html (page), same folder):
+//   • PAGE: no AWord logo / footer. A left rail in the Quick-access "B" look
+//     (light, frameless, hairline) carries a HOME button with an "A" in it +
+//     XEM NHANH / LƯU TRỮ; ONE top row holds class · Số gốc/% · Excel ·
+//     ANALYSE · Chấm tay + the app's own right-hand buttons (main.js hands
+//     them over as opts.rightCluster). Four summary tiles, then the table:
+//     avatar + sparkline + average per pupil, compact column heads with a
+//     class-average bar, sortable A→Z / by average. Clicking a pupil slides a
+//     300px detail panel in on the right (replaces the old progress popup).
+//   • HAND ENTRY: no more tap/swipe — a FIXED HORIZONTAL NUMPAD (+ the
+//     keyboard). Cells start EMPTY; a value that cannot take another digit
+//     moves on by itself. Saving with an empty cell is REFUSED (thầy).
+//     Title comes from the class's lesson cards on the dashboard
+//     (lessonWeb/bai_<CLASS>): "<lesson code> / <type>", a LISTENING lesson
+//     (code LS…) marked by hand is a dictation ⇒ "/ DICTS". Editable.
+//     TOTAL is never pre-filled; left empty (total 0) the test keeps only the
+//     mistake counts — no %, no colour, footer "TB x lỗi".
+//
 // STORAGE — one doc per class per month, teacher-only:
 //   users/{uid}/items/st_<CLASS>_<YYYYMM>   kind "stats-month" (store.js
 //   APP_DATA_KINDS lists it so it never eats a ?a= link number)
@@ -175,6 +194,54 @@ async function loadRoster() {
   try { return await rosterPromise; } catch (e) { rosterPromise = null; throw e; }
 }
 
+// ⭐ Đợt 520 — the class's LESSON CARDS on the dashboard, to name a hand test.
+// lessonWeb/bai_<CLASS> = { json: '{"lop","capNhat","bai":[{ngay:"4.9", dang:"WORDS",
+// maLesson:"LSA2-S2.T2.P4-5", tenHien:"A1C_4.9_WORDS LSA2-…", taoLuc, giaoLuc, han}]}' }
+// — public, the same document andrewclasses.com reads (js/chung.js docKhoWeb).
+// The card's day "d.m" takes its year from when it was made (nearest year).
+const cardCache = new Map();
+export function lessonCardTitle(c) {
+  const dang = /^LS/i.test(c.ma) ? "DICTS" : (c.dang || "");     // a LISTENING lesson marked by hand = dictation (thầy)
+  return dang ? `${c.ma} / ${dang}` : c.ma;
+}
+export function cardsFromBai(bai) {
+  return (Array.isArray(bai) ? bai : []).map(b => {
+    const ma = String(b.maLesson || String(b.tenHien || b.tieuDe || "").trim().split(/\s+/)[1] || "").trim();
+    const m = /^(\d{1,2})\.(\d{1,2})$/.exec(String(b.ngay || "").trim());
+    if (!ma || !m) return null;
+    const base = new Date(String(b.giaoLuc || b.taoLuc || b.han || "").slice(0, 10) || Date.now());
+    const d = +m[1], mo = +m[2];
+    let y = isNaN(base) ? new Date().getFullYear() : base.getFullYear();
+    const at = new Date(y, mo - 1, d);
+    if (at.getMonth() !== mo - 1) return null;
+    if (!isNaN(base)) { const diff = at - base; if (diff > 183 * 864e5) y--; else if (diff < -183 * 864e5) y++; }
+    return { date: ymdOf(new Date(y, mo - 1, d).getTime()), ma, dang: String(b.dang || "").toUpperCase() };
+  }).filter(Boolean);
+}
+async function loadLessonCards(classId) {
+  if (!cardCache.has(classId)) cardCache.set(classId, (async () => {
+    const [d, { doc, getDoc }] = await Promise.all([db(), fs()]);
+    const snap = await getDoc(doc(d, "lessonWeb", "bai_" + classId));
+    const j = snap.exists() ? JSON.parse(snap.data().json || "null") : null;
+    return cardsFromBai(j && j.bai);
+  })().catch(e => { console.warn("AWord STATS: lesson cards", classId, e); cardCache.delete(classId); return []; }));
+  return cardCache.get(classId);
+}
+// Cards to offer for a day: that day's (one button per distinct title); none ⇒
+// the three nearest days' cards. Returns { same, list }.
+export function cardsForDay(cards, date) {
+  const uniq = a => a.filter((c, i) => a.findIndex(x => lessonCardTitle(x) === lessonCardTitle(c)) === i);
+  const same = uniq(cards.filter(c => c.date === date));
+  if (same.length) return { same: true, list: same };
+  const t = dayMs(date);
+  const near = uniq(cards.slice().sort((a, b) => Math.abs(dayMs(a.date) - t) - Math.abs(dayMs(b.date) - t) || b.date.localeCompare(a.date)));
+  return { same: false, list: near.slice(0, 3) };
+}
+// "12/10.22:01_LSB1-S1.T2.P1-2" / "12.10_…" → "LSB1-S1.T2.P1-2": the day is the column group already.
+export function dispTitle(t) {
+  return String(t || "").replace(/^\d{1,2}[./]\d{1,2}(?:\.\d{1,2}:\d{2})?[\s_]+/, "") || String(t || "");
+}
+
 // ---------------------------------------------------------------- Firestore (month docs)
 async function requireUid() {
   const u = await currentUser();
@@ -259,21 +326,63 @@ export function mountStatsHome(mount, opts = {}) {
     return tests.filter(f).sort((a, b) => b.date.localeCompare(a.date) || (a.kind === b.kind ? (a.createdAt || 0) - (b.createdAt || 0) : a.kind === "aw" ? -1 : 1));
   }
 
+  // ⭐ Đợt 520 — a hand test WITHOUT a total keeps only the mistake counts.
+  const noTotal = t => t.kind === "hand" && !(t.total > 0);
+  function errAvg(t) {
+    const vs = peopleFor([t]).map(s => cellOf(t, s)).filter(c => c.k === "n").map(c => c.v);
+    return vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null;
+  }
+  const fmt1 = x => (Math.round(x * 10) / 10).toString().replace(".", ",");
+  const mean = a => { a = a.filter(x => x != null); return a.length ? a.reduce((x, y) => x + y, 0) / a.length : null; };
+  // one pupil over a list of tests: average % (tests that have a %), done / due
+  function personStat(s, list) {
+    let done = 0, due = 0, abs = 0; const ps = [];
+    list.forEach(t => { const c = cellOf(t, s); if (c.k === "pre" || c.k === "na") return; due++;
+      if (c.k === "n") { done++; const p = pct(t, c); if (p != null) ps.push(p); } else if (c.k === "abs") abs++; });
+    return { avg: mean(ps), done, due, abs };
+  }
+  const pcol = p => p == null ? "var(--st-faint)" : p >= .85 ? "var(--st-g1t)" : p >= .7 ? "var(--st-g2t)" : p >= .5 ? "var(--st-g3t)" : "var(--st-g4t)";
+  const AV = ["#6366f1", "#0ea5e9", "#14b8a6", "#f59e0b", "#ec4899", "#8b5cf6", "#22c55e", "#ef4444", "#06b6d4", "#f97316"];
+  const avColor = k => { let h = 0; for (const ch of String(k)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return AV[h % AV.length]; };
+  const initials = n => String(n || "?").trim().split(/\s+/).map(w => w[0] || "").slice(-2).join("").toUpperCase();
+  const avatar = (s, cls_ = "") => `<span class="aw-st-av ${cls_}" style="background:${s.guest ? "var(--st-guest)" : avColor(s.key)}">${esc(initials(s.name))}</span>`;
+  function spark(vals, w, h, col) {
+    const n = vals.length, pts = vals.map((v, i) => v == null ? null : [n < 2 ? w / 2 : 2 + i * (w - 4) / (n - 1), h - 3 - v * (h - 6)]).filter(Boolean);
+    if (!pts.length) return `<svg class="aw-st-sk" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"></svg>`;
+    const last = pts[pts.length - 1];
+    return `<svg class="aw-st-sk" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true">${pts.length > 1 ? `<polyline points="${pts.map(p => p.join(",")).join(" ")}" fill="none" stroke="${col}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>` : ""}<circle cx="${last[0]}" cy="${last[1]}" r="2.4" fill="${col}"/></svg>`;
+  }
+  let sortBy = "name", selKey = null;
+
   // ---------------------------------------------------------------- skeleton
   root.innerHTML = `
-    <div class="aw-st-bar">
-      <div class="aw-st-title">${icons.barChart || ""}STATS</div>
-      <div class="aw-st-pick"><select aria-label="Chọn lớp" data-st="class"><option>…</option></select></div>
-      <div class="aw-st-seg" role="group" aria-label="Cách hiện ô">
-        <button type="button" data-st="raw" aria-pressed="true">Số gốc</button><button type="button" data-st="pct" aria-pressed="false">%</button>
+    <aside class="aw-st-rail"><div class="aw-st-railin">
+      <div class="aw-st-home"><button type="button" class="aw-st-abtn" data-st="home" title="Về trang chủ AWord" aria-label="Trang chủ AWord">A</button><span class="aw-st-hometxt">STATS</span></div>
+      <nav class="aw-st-tree" aria-label="Các buổi theo ngày"></nav>
+    </div></aside>
+    <div class="aw-st-body">
+      <div class="aw-st-top">
+        <label class="aw-st-cls" title="Đổi lớp"><span class="aw-st-clsname">…</span>${I.chev}<select aria-label="Chọn lớp" data-st="class"><option>…</option></select></label>
+        <span class="aw-st-csub"></span>
+        <span class="aw-st-sp"></span>
+        <div class="aw-st-seg" role="group" aria-label="Cách hiện ô">
+          <button type="button" data-st="raw" aria-pressed="true">Số gốc</button><button type="button" data-st="pct" aria-pressed="false">%</button>
+        </div>
+        <button type="button" class="aw-st-btn" data-st="xls" title="Xuất Excel">${icons.download || ""}Excel</button>
+        <button type="button" class="aw-st-btn is-analyse" data-st="analyse">${I.an}ANALYSE</button>
+        <button type="button" class="aw-st-btn is-hand" data-st="add">${I.plus}Chấm tay</button>
+        <span class="aw-st-vsep"></span>
       </div>
-      <button type="button" class="aw-st-btn" data-st="xls">${icons.download || ""}Xuất Excel</button>
-    </div>
-    <div class="aw-st-layout">
-      <nav class="aw-st-panel aw-st-tree" aria-label="Các buổi theo ngày"></nav>
-      <section class="aw-st-panel aw-st-main"><div class="aw-st-loading">Đang tải danh sách lớp…</div></section>
+      <div class="aw-st-kpis"></div>
+      <div class="aw-st-wrap">
+        <section class="aw-st-card aw-st-main"><div class="aw-st-loading">Đang tải danh sách lớp…</div></section>
+        <aside class="aw-st-drawer" aria-label="Chi tiết học sinh"></aside>
+      </div>
     </div>`;
+  if (opts.rightCluster) root.querySelector(".aw-st-top").append(opts.rightCluster);
+  else root.querySelector(".aw-st-vsep").remove();
   const $tree = root.querySelector(".aw-st-tree"), $main = root.querySelector(".aw-st-main"), $sel = root.querySelector('[data-st="class"]');
+  const $kpis = root.querySelector(".aw-st-kpis"), $drawer = root.querySelector(".aw-st-drawer"), $csub = root.querySelector(".aw-st-csub"), $cname = root.querySelector(".aw-st-clsname");
 
   // ---------------------------------------------------------------- loading
   async function start() {
@@ -292,7 +401,8 @@ export function mountStatsHome(mount, opts = {}) {
     const seq = ++loadSeq;
     try { localStorage.setItem("aword-stats-class", cls.id); } catch { /* ignore */ }
     opts.onClassChange?.(cls.id);
-    tests = []; guests = {};
+    tests = []; guests = {}; selKey = null;
+    $cname.textContent = cls.name; $csub.textContent = ""; $kpis.innerHTML = ""; root.classList.remove("has-sel");
     $tree.innerHTML = ""; $main.innerHTML = `<div class="aw-st-loading">Đang tải điểm lớp ${esc(cls.name)}…</div>`;
     try {
       const docs = await loadMonthDocs(cls.id);
@@ -366,72 +476,154 @@ export function mountStatsHome(mount, opts = {}) {
     return ["pointsOff", "minusAmount", "letterPenalty", "timeCost"].some(k => Number(o[k]) > 0);
   }
 
-  // ---------------------------------------------------------------- tree
+  // ---------------------------------------------------------------- left rail (Quick-access look, Đợt 520)
   function paintTree() {
     const days = allDays(); const Y = {};
     days.forEach(d => { const y = d.slice(0, 4), ym = d.slice(0, 7); (Y[y] = Y[y] || {}); (Y[y][ym] = Y[y][ym] || []).push(d); });
     const nRecent = new Set(testsIn({ type: "recent" }).map(t => t.date)).size;
-    let h = `<button type="button" class="aw-st-node is-recent ${view.type === "recent" ? "is-sel" : ""}" data-view="recent">${I.clock}30 ngày gần nhất<span class="aw-st-cnt">${nRecent} ngày</span></button><div class="aw-st-sep"></div><h3>LƯU TRỮ</h3>`;
+    const FOLDER = opts.folderSvg || I.folder;
+    let h = `<div class="aw-st-qdau">Xem nhanh</div>
+      <button type="button" class="aw-st-qh ${view.type === "recent" ? "is-on" : ""}" data-view="recent"><span class="aw-st-mui"></span><span class="aw-st-fi is-clock">${I.clock}</span><span class="aw-st-qt">30 ngày gần nhất</span><span class="aw-st-qn">${nRecent}</span></button>
+      <div class="aw-st-qdau">Lưu trữ</div>`;
     if (!days.length) h += `<div class="aw-st-treeempty">Chưa có bài nào.</div>`;
     Object.keys(Y).sort().reverse().forEach(y => {
       const n = Object.values(Y[y]).reduce((a, b) => a + b.length, 0);
-      h += `<div class="${openY[y] ? "aw-st-open" : ""}"><button type="button" class="aw-st-node" data-year="${y}" aria-expanded="${!!openY[y]}">${I.car}${I.folder}${y}<span class="aw-st-cnt">${n}</span></button><div class="aw-st-kids">`;
+      h += `<button type="button" class="aw-st-qh ${openY[y] ? "is-open" : ""}" data-year="${y}" aria-expanded="${!!openY[y]}"><span class="aw-st-mui">${I.car}</span><span class="aw-st-fi">${FOLDER}</span><span class="aw-st-qt">${y}</span><span class="aw-st-qn">${n}</span></button><div class="aw-st-qkids ${openY[y] ? "is-open" : ""}">`;
       Object.keys(Y[y]).sort().reverse().forEach(ym => {
-        h += `<div class="${openM[ym] ? "aw-st-open" : ""}"><button type="button" class="aw-st-node ${view.type === "month" && view.ym === ym ? "is-sel" : ""}" data-ym="${ym}" aria-expanded="${!!openM[ym]}">${I.car}${I.cal}Tháng ${+ym.slice(5)}<span class="aw-st-cnt">${Y[y][ym].length}</span></button><div class="aw-st-kids">`;
+        const on = view.type === "month" && view.ym === ym;
+        h += `<button type="button" class="aw-st-qh is-l2 ${openM[ym] ? "is-open" : ""} ${on ? "is-on" : ""}" data-ym="${ym}" aria-expanded="${!!openM[ym]}"><span class="aw-st-mui">${I.car}</span><span class="aw-st-fi">${FOLDER}</span><span class="aw-st-qt">Tháng ${+ym.slice(5)}</span><span class="aw-st-qn">${Y[y][ym].length}</span></button><div class="aw-st-qkids ${openM[ym] ? "is-open" : ""}">`;
         Y[y][ym].forEach(d => {
           const its = tests.filter(t => t.date === d);
-          h += `<button type="button" class="aw-st-node is-day ${view.type === "day" && view.date === d ? "is-sel" : ""}" data-day="${d}"><span class="aw-st-wd">${wdOf(d)}</span>${dshort(d)}<span class="aw-st-dots">${its.map(t => `<i class="aw-st-dot is-${t.kind}"></i>`).join("")}</span></button>`;
+          const bars = its.map(t => { const a = avgTest(t); return `<i class="${t.kind === "hand" ? "is-hand" : ""}" style="height:${a == null ? 7 : 4 + Math.round(a * 10)}px"></i>`; }).join("");
+          h += `<button type="button" class="aw-st-qh is-day ${view.type === "day" && view.date === d ? "is-on" : ""}" data-day="${d}"><span class="aw-st-wd">${wdOf(d)}</span><span class="aw-st-qt">${dshort(d)}</span><span class="aw-st-mini" title="${its.length} bài">${bars}</span></button>`;
         });
-        h += `</div></div>`;
+        h += `</div>`;
       });
-      h += `</div></div>`;
+      h += `</div>`;
     });
     $tree.innerHTML = h;
   }
 
+  // ---------------------------------------------------------------- summary tiles
+  function paintKpis(list) {
+    if (!list.length) { $kpis.innerHTML = ""; return; }
+    const roster = cls.students;
+    const stats = roster.map(s => ({ s, ...personStat(s, list) }));
+    const days = [...new Set(list.map(t => t.date))].sort();
+    const dayAvg = days.map(d => mean(roster.map(s => mean(list.filter(t => t.date === d).map(t => pct(t, cellOf(t, s)))))));
+    const avg = mean(stats.map(x => x.avg));
+    const lastTwo = dayAvg.filter(x => x != null).slice(-2);
+    const diff = lastTwo.length === 2 ? Math.round((lastTwo[1] - lastTwo[0]) * 100) : null;
+    const done = stats.reduce((a, x) => a + x.done, 0), due = stats.reduce((a, x) => a + x.due, 0);
+    const rate = due ? done / due : null;
+    const nAw = list.filter(t => t.kind === "aw").length;
+    const low = stats.filter(x => (x.avg != null && x.avg < .6) || (x.due >= 2 && x.done / x.due < .6))
+      .sort((a, b) => (a.avg ?? 0) - (b.avg ?? 0)).slice(0, 5);
+    const r = 24, C = 2 * Math.PI * r;
+    $kpis.innerHTML = `
+      <div class="aw-st-kpi"><span class="aw-st-kl">Điểm TB lớp</span><div class="aw-st-krow"><div><div class="aw-st-kv">${avg == null ? "—" : P(avg)}${diff == null ? "" : `<small class="${diff >= 0 ? "is-up" : "is-down"}">${diff >= 0 ? "▲" : "▼"} ${Math.abs(diff)}%</small>`}</div><span class="aw-st-ks">${diff == null ? "trung bình các bài có %" : "so với buổi trước"}</span></div>${spark(dayAvg, 110, 40, "#2f7bff")}</div></div>
+      <div class="aw-st-kpi"><span class="aw-st-kl">Tỉ lệ làm bài</span><div class="aw-st-krow"><div><div class="aw-st-kv">${rate == null ? "—" : P(rate)}</div><span class="aw-st-ks">${done}/${due} lượt</span></div>
+        <svg class="aw-st-ring" viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="${r}" fill="none" stroke="#eef2f7" stroke-width="7"/><circle cx="30" cy="30" r="${r}" fill="none" stroke="#2f7bff" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C * (rate || 0)} ${C}" transform="rotate(-90 30 30)"/></svg></div></div>
+      <div class="aw-st-kpi"><span class="aw-st-kl">Bài đã chấm</span><div class="aw-st-kv">${list.length}</div><span class="aw-st-ks">${nAw} AWord · ${list.length - nAw} chấm tay · ${days.length} buổi</span></div>
+      <div class="aw-st-kpi"><span class="aw-st-kl">Cần kèm thêm</span>${low.length
+        ? `<div class="aw-st-who">${low.map(x => `<button type="button" data-row="${esc(x.s.key)}">${avatar(x.s, "is-xs")}${esc(x.s.name)} · ${x.avg == null ? x.done + "/" + x.due + " bài" : P(x.avg)}</button>`).join("")}</div><span class="aw-st-ks">TB dưới 60% hoặc bỏ nhiều bài</span>`
+        : `<div class="aw-st-kv is-ok">Không em nào 🎉</div><span class="aw-st-ks">mọi em TB ≥ 60% và làm đủ bài</span>`}</div>`;
+  }
+
   // ---------------------------------------------------------------- main table
+  // plain colours for the little SVG lines (an SVG stroke cannot read a CSS var from here)
+  const pHex = p => p == null ? "#c3ccd8" : p >= .85 ? "#137a43" : p >= .7 ? "#4f7a12" : p >= .5 ? "#9a6200" : "#b42318";
   function paintMain() {
     const list = testsIn(view);
     const title = view.type === "recent" ? "30 ngày gần nhất" : view.type === "month" ? `Tháng ${+view.ym.slice(5)} / ${view.ym.slice(0, 4)}` : `${wdOf(view.date)} · ${dlong(view.date)}`;
     const days = [...new Set(list.map(t => t.date))];
-    const who = peopleFor(list);
     const nAw = list.filter(t => t.kind === "aw").length;
-    let h = `<div class="aw-st-mhead"><h2>${title}</h2>
-      <button type="button" class="aw-st-btn is-analyse" data-st="analyse">${I.an}ANALYSE</button>
-      <button type="button" class="aw-st-btn is-hand" data-st="add">${I.plus}Thêm bài chấm tay</button></div>
-      <div class="aw-st-msub"><span>Lớp <b>${esc(cls.name)}</b> · <b>${cls.students.length}</b> học sinh</span><span><b>${days.length}</b> ngày · <b>${list.length}</b> bài (${nAw} AWord · ${list.length - nAw} chấm tay)</span></div>
-      <div class="aw-st-legend"><span class="aw-st-chip is-aw">AWord · điểm</span><span class="aw-st-chip is-hand">✎ Chấm tay · số lỗi</span>
-      <span><i class="aw-st-sw" style="background:var(--st-h-great)"></i>≥ 85%</span><span><i class="aw-st-sw" style="background:var(--st-h-good)"></i>70–84%</span><span><i class="aw-st-sw" style="background:var(--st-h-mid)"></i>50–69%</span><span><i class="aw-st-sw" style="background:var(--st-h-low)"></i>&lt; 50%</span><span>— chưa làm · <b style="color:var(--st-bad)">V</b> vắng</span></div>`;
+    $csub.innerHTML = `${title} · <b>${cls.students.length}</b> học sinh`;
+    paintKpis(list);
+    let h = `<div class="aw-st-chead"><h2>${title}</h2><span class="aw-st-cmeta"><b>${days.length}</b> ngày · <b>${list.length}</b> bài (${nAw} AWord · ${list.length - nAw} chấm tay)</span><span class="aw-st-sp"></span>
+      <div class="aw-st-legend"><span><i class="aw-st-sw b1"></i>≥ 85%</span><span><i class="aw-st-sw b2"></i>70–84</span><span><i class="aw-st-sw b3"></i>50–69</span><span><i class="aw-st-sw b4"></i>&lt; 50</span><span><i class="aw-st-sw is-err"></i>chấm tay · số lỗi</span><span><b style="color:var(--st-bad)">V</b> vắng · — chưa làm</span></div></div>`;
     if (!list.length) {
       $main.innerHTML = h + `<div class="aw-st-empty">Chưa có bài nào trong khoảng này.<br>Bài giao AWord của lớp (tên bắt đầu bằng <b>${esc(cls.id)}_</b>, từ 22/9/2026) sẽ tự hiện ở đây.</div>`;
+      if (selKey) paintDrawer();
       return;
     }
-    h += `<div class="aw-st-tablewrap"><table><thead><tr><th class="aw-st-namecol" rowspan="2">HỌC SINH</th>`;
+    const who = peopleFor(list).map((s, i) => ({ s, i, ...personStat(s, list) }));
+    if (sortBy === "avg") who.sort((a, b) => (b.avg ?? -1) - (a.avg ?? -1) || a.i - b.i);
+    const asc = days.slice().sort();
+    h += `<div class="aw-st-tablewrap"><table><thead><tr><th class="aw-st-namecol aw-st-nameh" rowspan="2"><span>HỌC SINH</span><button type="button" class="aw-st-sort" data-st="sort" title="Đổi cách xếp">${sortBy === "avg" ? "↓ điểm TB" : "A→Z"}</button></th>`;
     days.forEach(d => { const n = list.filter(t => t.date === d).length;
-      h += `<th class="aw-st-dayh aw-st-g0" colspan="${n}"><span class="aw-st-dd">${dshort(d)}<span class="aw-st-yy">/${d.slice(0, 4)}</span></span><span class="aw-st-wd2">${wdOf(d)}</span><span class="aw-st-nb">${n} bài</span></th>`; });
+      h += `<th class="aw-st-dayh aw-st-g0" colspan="${n}"><span class="aw-st-wdc">${wdOf(d)}</span>${dshort(d)}<span class="aw-st-yy">/${d.slice(0, 4)}</span><span class="aw-st-nb">${n} bài</span></th>`; });
     h += `</tr><tr>`;
-    list.forEach((t, i) => { const g0 = i === 0 || list[i - 1].date !== t.date;
-      h += `<th class="aw-st-bh ${g0 ? "aw-st-g0" : ""}"><div class="aw-st-colhead is-${t.kind}"><span class="aw-st-k">${t.kind === "aw" ? "AWORD" : "CHẤM TAY"}</span>
-        <span class="aw-st-t" title="${esc(t.fullTitle || t.title)}">${esc(t.title)}</span>${t.sub ? `<span class="aw-st-t2">${esc(t.sub)}</span>` : ""}
-        <span class="aw-st-n">${t.kind === "aw" ? "/" + t.total + " điểm" : t.total + " câu"}</span>
-        <div class="aw-st-hbtns"><button type="button" class="aw-st-ibtn is-chart" data-chart="${esc(t.id)}" title="Đánh giá bài này">${I.chart}Đánh giá</button>${t.kind === "hand" ? `<button type="button" class="aw-st-ibtn" data-edit="${esc(t.id)}" title="Sửa bài" aria-label="Sửa bài">${I.pen}</button>` : ""}</div></div></th>`; });
+    list.forEach((t, i) => { const g0 = i === 0 || list[i - 1].date !== t.date; const a = avgTest(t);
+      const sub = t.kind === "aw" ? `${t.sub ? esc(t.sub) + " · " : ""}/${t.total}` : noTotal(t) ? "số lỗi" : `lỗi / ${t.total} câu`;
+      const bar = a == null ? (noTotal(t) ? `width:100%;background:#f5dca6` : `width:0`) : `width:${Math.round(a * 100)}%;background:${pHex(a)}`;
+      h += `<th class="aw-st-bh ${g0 ? "aw-st-g0" : ""}" title="${esc(t.fullTitle || t.title)}"><div class="aw-st-colhead">
+        <span class="aw-st-k ${t.kind === "hand" ? "is-hand" : ""}">${t.kind === "aw" ? "AWORD" : "✎ TAY"}</span>
+        <span class="aw-st-t">${esc(dispTitle(t.title))}</span><span class="aw-st-n">${sub}</span>
+        <span class="aw-st-hbar"><i style="${bar}"></i></span>
+        <span class="aw-st-hic"><button type="button" class="aw-st-ibtn" data-chart="${esc(t.id)}" title="Đánh giá bài này" aria-label="Đánh giá">${I.chart}</button>${t.kind === "hand" ? `<button type="button" class="aw-st-ibtn" data-edit="${esc(t.id)}" title="Sửa bài" aria-label="Sửa bài">${I.pen}</button>` : ""}</span></div></th>`; });
     h += `</tr></thead><tbody>`;
-    who.forEach(s => {
-      const tag = s.guest ? `<small class="is-guest">tạm${s.note ? " · " + esc(s.note) : ""}</small>` : s.left ? `<small>không còn trong lớp</small>` : s.vao && s.vao >= (list[list.length - 1]?.date || "") ? `<small>vào lớp ${dlong(s.vao)}</small>` : "";
-      h += `<tr class="${s.guest ? "is-guest" : s.left ? "is-left" : ""}"><th class="aw-st-namecol"><button type="button" class="aw-st-rowbtn" data-row="${esc(s.key)}">${esc(s.name)}${tag}</button></th>`;
+    who.forEach(({ s, avg, done, due }) => {
+      const tag = s.guest ? `<small class="is-guest">tạm${s.note ? " · " + esc(s.note) : ""}</small>` : s.left ? `<small>không còn trong lớp</small>` : s.vao && s.vao >= (list[list.length - 1]?.date || "") ? `<small>vào lớp ${dlong(s.vao)}</small>` : `<small>${done}/${due} bài</small>`;
+      const tr = asc.map(d => mean(list.filter(t => t.date === d).map(t => pct(t, cellOf(t, s)))));
+      h += `<tr class="${s.guest ? "is-guest" : s.left ? "is-left" : ""} ${selKey === s.key ? "is-sel" : ""}" data-row="${esc(s.key)}"><th class="aw-st-namecol"><div class="aw-st-nmw">${avatar(s)}<span class="aw-st-nmt"><b>${esc(s.name)}</b>${tag}</span>${spark(tr, 44, 20, pHex(avg))}<span class="aw-st-pc" style="color:${pcol(avg)}">${avg == null ? "—" : P(avg)}</span></div></th>`;
       list.forEach((t, i) => { const g0 = i === 0 || list[i - 1].date !== t.date; const c = cellOf(t, s), p = pct(t, c);
-        const inner = c.k === "n" ? `<span style="background:${heat(p)}">${mode === "raw" ? c.v : P(p)}</span>`
-          : c.k === "abs" ? `<span class="is-abs" style="background:var(--st-h-none)">V</span>`
+        const inner = c.k === "n" ? (p == null ? `<span class="is-err">${c.v}</span>` : `<span class="b${band(p) + 1}">${mode === "raw" ? c.v : P(p)}</span>`)
+          : c.k === "abs" ? `<span class="is-abs">V</span>`
           : c.k === "pre" ? `<span class="is-pre" title="Chưa vào lớp">·</span>`
           : c.k === "na" ? `<span class="is-na">·</span>`
-          : `<span class="is-none" style="background:var(--st-h-none)">—</span>`;
+          : `<span class="is-none">—</span>`;
         h += `<td class="aw-st-v ${g0 ? "aw-st-g0" : ""}">${inner}</td>`; });
       h += `</tr>`;
     });
-    h += `</tbody><tfoot><tr><td class="aw-st-namecol">TB LỚP</td>${list.map((t, i) => { const a = avgTest(t); return `<td class="${i === 0 || list[i - 1].date !== t.date ? "aw-st-g0" : ""}">${a == null ? "—" : P(a)}</td>`; }).join("")}</tr></tfoot></table></div>`;
+    h += `</tbody><tfoot><tr><td class="aw-st-namecol">TRUNG BÌNH LỚP</td>${list.map((t, i) => { const g0 = i === 0 || list[i - 1].date !== t.date;
+      if (noTotal(t)) { const e = errAvg(t); return `<td class="${g0 ? "aw-st-g0" : ""}" style="color:var(--st-hand-ink)">${e == null ? "—" : "TB " + fmt1(e) + " lỗi"}</td>`; }
+      const a = avgTest(t); return `<td class="${g0 ? "aw-st-g0" : ""}" style="color:${pcol(a)}">${a == null ? "—" : P(a)}</td>`; }).join("")}</tr></tfoot></table></div>`;
     $main.innerHTML = h;
+    if (selKey) paintDrawer();
   }
   function paint() { if (!alive) return; paintTree(); paintMain(); }
+
+  // ---------------------------------------------------------------- pupil detail panel (Đợt 520, replaces the old progress popup)
+  function openRow(key) {
+    selKey = selKey === key ? null : key;
+    root.classList.toggle("has-sel", !!selKey);
+    $main.querySelectorAll("tbody tr").forEach(r => r.classList.toggle("is-sel", r.dataset.row === selKey));
+    if (selKey) paintDrawer();
+  }
+  function closeRow() { if (selKey) openRow(selKey); }
+  function paintDrawer() {
+    const s = allPeople().find(x => x.key === selKey);
+    if (!s) { selKey = null; root.classList.remove("has-sel"); return; }
+    const list = testsIn(view);
+    const me = personStat(s, list);
+    const ranked = cls.students.map(x => ({ x, a: personStat(x, list).avg })).filter(r => r.a != null).sort((a, b) => b.a - a.a);
+    const rank = ranked.findIndex(r => r.x.key === s.key) + 1;
+    // the line: the pupil's last 12 lesson days that have a % (all time), against the class
+    const pts = allDays().slice().reverse().map(d => ({ d, p: dayPct(d, s), a: avgDay(d) })).filter(r => r.p != null).slice(-12);
+    const W = 268, H = 124, L = 12, R = 12, T = 10, B = 20, n = pts.length;
+    const x = i => L + (n < 2 ? (W - L - R) / 2 : i * (W - L - R) / (n - 1)), y = p => T + (1 - p) * (H - T - B);
+    const col = s.guest ? "#7c3aed" : avColor(s.key);
+    let g = [0, .5, 1].map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#eef2f7"/>`).join("");
+    if (n) {
+      const cl = pts.map((r, i) => r.a == null ? null : `${x(i)},${y(r.a)}`).filter(Boolean).join(" ");
+      if (cl) g += `<polyline points="${cl}" fill="none" stroke="#c3ccd8" stroke-width="2" stroke-dasharray="4 4"/>`;
+      g += `<polyline points="${pts.map((r, i) => `${x(i)},${y(r.p)}`).join(" ")}" fill="none" stroke="${col}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+      g += pts.map((r, i) => `<circle cx="${x(i)}" cy="${y(r.p)}" r="3.6" fill="#fff" stroke="${col}" stroke-width="2.2"><title>${dshort(r.d)} · ${P(r.p)}</title></circle>`).join("");
+      const every = Math.max(1, Math.ceil(n / 6));
+      g += pts.map((r, i) => (i % every === 0 || i === n - 1) ? `<text x="${x(i)}" y="${H - 4}" font-size="10" fill="#97a3b4" text-anchor="middle" font-weight="700">${dshort(r.d)}</text>` : "").join("");
+    }
+    const tag = s.guest ? "Người tạm" + (s.note ? " · " + esc(s.note) : "") : s.left ? "Không còn trong lớp" : rank ? `Hạng ${rank}/${ranked.length} trong lớp` : "Chưa có điểm %";
+    const span = view.type === "recent" ? "30 ngày" : view.type === "month" ? "tháng " + (+view.ym.slice(5)) : dshort(view.date);
+    $drawer.innerHTML = `
+      <div class="aw-st-dhead">${avatar(s, "is-lg")}<div class="aw-st-dname"><h3>${esc(s.name)}</h3><small>${tag}</small></div><button type="button" class="aw-st-x" data-st="dclose" title="Đóng (Esc)" aria-label="Đóng">${I.x}</button></div>
+      <div class="aw-st-dstat"><div><b style="color:${pcol(me.avg)}">${me.avg == null ? "—" : P(me.avg)}</b><span>ĐIỂM TB</span></div><div><b>${me.done}/${me.due}</b><span>ĐÃ LÀM</span></div><div><b>${me.abs}</b><span>VẮNG</span></div></div>
+      ${n ? `<svg class="aw-st-dchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Điểm theo buổi">${g}</svg><div class="aw-st-dleg"><i style="background:${col}"></i>em · <i class="is-dash"></i>cả lớp · ${n} buổi gần nhất có điểm</div>` : `<div class="aw-st-note" style="margin:0">Chưa có buổi nào có điểm %.</div>`}
+      <div class="aw-st-dsec">TỪNG BÀI · ${esc(span)}</div>
+      <ul class="aw-st-dlist">${list.map(t => { const c = cellOf(t, s), p = pct(t, c);
+        const v = c.k === "n" ? (p == null ? `<span class="is-err">${c.v}</span>` : `<span class="b${band(p) + 1}">${mode === "raw" ? c.v : P(p)}</span>`) : c.k === "abs" ? `<span class="is-abs">V</span>` : c.k === "pre" || c.k === "na" ? `<span class="is-na">·</span>` : `<span class="is-none">—</span>`;
+        return `<li><span class="aw-st-dl">${dshort(t.date)} · ${esc(dispTitle(t.title))}${t.sub ? " · " + esc(t.sub) : ""}</span><span class="aw-st-dv">${v}</span></li>`; }).join("")}</ul>`;
+  }
 
   // ---------------------------------------------------------------- overlays
   // `keepOnBackdrop` — the hand-entry sheet holds unsaved taps, so a stray
@@ -460,6 +652,7 @@ export function mountStatsHome(mount, opts = {}) {
   // ---- 📊 one test
   function openEval(id) {
     const t = tests.find(x => x.id === id); if (!t) return;
+    if (noTotal(t)) { openEvalErrors(t); return; }
     const T = t.total;
     const rows = peopleFor([t]).map(s => { const c = cellOf(t, s); return { s, c, p: pct(t, c) }; }).filter(r => r.c.k !== "na");
     const done = rows.filter(r => r.p != null).sort((a, b) => b.p - a.p);
@@ -471,14 +664,14 @@ export function mountStatsHome(mount, opts = {}) {
     const groups = [[], [], [], []]; done.forEach(r => groups[band(r.p)].push(r));
     const lab = r => t.kind === "aw" ? `${r.c.v}/${T} · ${P(r.p)}` : `đúng ${T - r.c.v}/${T} · ${P(r.p)} · ${r.c.v} lỗi`;
     let h = `<div class="aw-st-sheet" role="dialog" aria-modal="true" aria-label="Đánh giá bài">
-      <div class="aw-st-shead"><span class="aw-st-chip is-${t.kind}">${t.kind === "aw" ? "AWord · điểm" : "✎ Chấm tay · số lỗi"}</span><h3>${esc(t.title)}${t.sub ? " · " + esc(t.sub) : ""}</h3><button type="button" class="aw-st-x" data-close aria-label="Đóng">${I.x}</button></div>
+      <div class="aw-st-shead"><span class="aw-st-chip is-${t.kind}">${t.kind === "aw" ? "AWord · điểm" : "✎ Chấm tay · số lỗi"}</span><h3>${esc(dispTitle(t.title))}${t.sub ? " · " + esc(t.sub) : ""}</h3><button type="button" class="aw-st-x" data-close aria-label="Đóng">${I.x}</button></div>
       <div class="aw-st-ssub">${wdOf(t.date)} ${dlong(t.date)} · ${t.kind === "aw" ? `lượt SUBMIT tốt nhất của mỗi em${t.penal ? " · bài có trừ điểm: ô là tổng điểm" : ""}${t.code ? ` · mã bài ${esc(t.code)}` : ""}` : `tổng ${T} câu, đúng = tổng − số lỗi`}</div>
-      <div class="aw-st-kpis">
-        <div class="aw-st-kpi"><small>ĐÃ LÀM</small><b>${done.length}/${rows.length - preN}</b><em>${absN} vắng · ${noneN} chưa làm</em></div>
-        <div class="aw-st-kpi"><small>TRUNG BÌNH</small><b>${a == null ? "—" : P(a)}</b><em>trung vị ${med == null ? "—" : P(med)}</em></div>
-        <div class="aw-st-kpi"><small>CAO NHẤT</small><b>${done[0] ? P(done[0].p) : "—"}</b><em>${done[0] ? esc(done[0].s.name) : ""}</em></div>
-        <div class="aw-st-kpi"><small>THẤP NHẤT</small><b>${done.length ? P(done[done.length - 1].p) : "—"}</b><em>${done.length ? esc(done[done.length - 1].s.name) : ""}</em></div>
-        <div class="aw-st-kpi"><small>SO VỚI BÀI TRƯỚC</small><b style="color:${diff == null ? "var(--st-ink)" : diff >= 0 ? "var(--st-good)" : "var(--st-bad)"}">${diff == null ? "—" : (diff >= 0 ? "▲ " : "▼ ") + Math.abs(Math.round(diff * 100))}</b><em>${prev ? esc(prev.title) + " · " + dshort(prev.date) : ""}</em></div></div>
+      <div class="aw-st-kpis2">
+        <div class="aw-st-kpi2"><small>ĐÃ LÀM</small><b>${done.length}/${rows.length - preN}</b><em>${absN} vắng · ${noneN} chưa làm</em></div>
+        <div class="aw-st-kpi2"><small>TRUNG BÌNH</small><b>${a == null ? "—" : P(a)}</b><em>trung vị ${med == null ? "—" : P(med)}</em></div>
+        <div class="aw-st-kpi2"><small>CAO NHẤT</small><b>${done[0] ? P(done[0].p) : "—"}</b><em>${done[0] ? esc(done[0].s.name) : ""}</em></div>
+        <div class="aw-st-kpi2"><small>THẤP NHẤT</small><b>${done.length ? P(done[done.length - 1].p) : "—"}</b><em>${done.length ? esc(done[done.length - 1].s.name) : ""}</em></div>
+        <div class="aw-st-kpi2"><small>SO VỚI BÀI TRƯỚC</small><b style="color:${diff == null ? "var(--st-ink)" : diff >= 0 ? "var(--st-good)" : "var(--st-bad)"}">${diff == null ? "—" : (diff >= 0 ? "▲ " : "▼ ") + Math.abs(Math.round(diff * 100))}</b><em>${prev ? esc(dispTitle(prev.title)) + " · " + dshort(prev.date) : ""}</em></div></div>
       <div class="aw-st-sec">PHÂN LOẠI</div><div class="aw-st-stack">${groups.map((g, i) => g.length ? `<div style="flex:${g.length};background:${BANDS[i][2]}">${g.length}</div>` : "").join("")}</div>
       <div class="aw-st-groups">${groups.map((g, i) => `<div class="aw-st-grp" style="background:${BANDS[i][3]}"><b>${BANDS[i][0]} · ${BANDS[i][1]} · ${g.length} em</b>${g.length ? g.map(r => esc(r.s.name)).join(", ") : "—"}</div>`).join("")}</div>
       <div class="aw-st-sec">TỪNG EM · CAO → THẤP</div><div class="aw-st-bars">`;
@@ -491,6 +684,29 @@ export function mountStatsHome(mount, opts = {}) {
     h += `</div>`;
     const { layer } = openLayer(h);
     if (t.kind === "aw") loadWrongQuestions(t, layer.querySelector("[data-qs]"));
+  }
+  // ⭐ Đợt 520 — a hand test with no total: only mistake counts, fewest first.
+  function openEvalErrors(t) {
+    const rows = peopleFor([t]).map(s => ({ s, c: cellOf(t, s) })).filter(r => r.c.k !== "na");
+    const done = rows.filter(r => r.c.k === "n").sort((a, b) => a.c.v - b.c.v);
+    const max = Math.max(1, ...done.map(r => r.c.v));
+    const e = errAvg(t);
+    const absN = rows.filter(r => r.c.k === "abs").length, noneN = rows.filter(r => r.c.k === "none").length, preN = rows.filter(r => r.c.k === "pre").length;
+    let h = `<div class="aw-st-sheet" role="dialog" aria-modal="true" aria-label="Đánh giá bài">
+      <div class="aw-st-shead"><span class="aw-st-chip is-hand">✎ Chấm tay · số lỗi</span><h3>${esc(dispTitle(t.title))}</h3><button type="button" class="aw-st-x" data-close aria-label="Đóng">${I.x}</button></div>
+      <div class="aw-st-ssub">${wdOf(t.date)} ${dlong(t.date)} · bài không ghi tổng số câu ⇒ chỉ so số lỗi, không tính %</div>
+      <div class="aw-st-kpis2">
+        <div class="aw-st-kpi2"><small>ĐÃ LÀM</small><b>${done.length}/${rows.length - preN}</b><em>${absN} vắng · ${noneN} chưa làm</em></div>
+        <div class="aw-st-kpi2"><small>TRUNG BÌNH</small><b>${e == null ? "—" : fmt1(e)}</b><em>lỗi mỗi em</em></div>
+        <div class="aw-st-kpi2"><small>ÍT LỖI NHẤT</small><b>${done[0] ? done[0].c.v : "—"}</b><em>${done[0] ? esc(done[0].s.name) : ""}</em></div>
+        <div class="aw-st-kpi2"><small>NHIỀU LỖI NHẤT</small><b>${done.length ? done[done.length - 1].c.v : "—"}</b><em>${done.length ? esc(done[done.length - 1].s.name) : ""}</em></div></div>
+      <div class="aw-st-sec">TỪNG EM · ÍT LỖI → NHIỀU LỖI</div><div class="aw-st-bars">`;
+    done.concat(rows.filter(r => r.c.k !== "n")).forEach(r => {
+      const l = r.c.k === "n" ? `${r.c.v} lỗi` : r.c.k === "abs" ? "vắng" : r.c.k === "pre" ? "chưa vào lớp" : "chưa làm";
+      h += `<div class="aw-st-nm">${esc(r.s.name)}${r.s.guest ? ' <span class="aw-st-chip is-guest">tạm</span>' : ""}</div><div class="aw-st-track">${r.c.k === "n" ? `<div class="aw-st-fill" style="width:${Math.max(2, r.c.v / max * 100)}%;background:#f5c56a"></div>` : ""}<span class="aw-st-lab" style="${r.c.k !== "n" ? "color:var(--st-faint);font-weight:600" : ""}">${l}</span></div>`;
+    });
+    h += `</div></div>`;
+    openLayer(h);
   }
   async function loadWrongQuestions(t, box) {
     const ids = Object.values(t.values || {}).filter(v => v.k === "n" && v.id).map(v => v.id);
@@ -513,29 +729,6 @@ export function mountStatsHome(mount, opts = {}) {
     box.innerHTML = top.length
       ? top.map((s, i) => `<div class="aw-st-q"><i>${i + 1}</i><span>${esc(s.q)}${s.answer ? ` <span style="color:var(--st-muted)">→ ${esc(s.answer)}</span>` : ""}</span><b>${s.wrong}/${s.n} em sai</b></div>`).join("") + `<div class="aw-st-note">Tính trên lượt tốt nhất của ${got} em.</div>`
       : `<div class="aw-st-note" style="margin:0">${got ? "Không câu nào có em sai. 🎉" : "Không đọc được bài làm chi tiết."}</div>`;
-  }
-
-  // ---- progress of one pupil
-  function openRow(key) {
-    const s = allPeople().find(x => x.key === key); if (!s) return;
-    const pts = allDays().slice().reverse().map(d => ({ d, p: dayPct(d, s), abs: tests.some(t => t.date === d && cellOf(t, s).k === "abs") })).filter(r => r.p != null || r.abs);
-    const W = 900, H = 300, L = 44, R = 16, T = 16, B = 58, n = pts.length;
-    const x = i => L + (n < 2 ? (W - L - R) / 2 : i * (W - L - R) / (n - 1)), y = p => T + (1 - p) * (H - T - B);
-    let g = ""; [0, .25, .5, .75, 1].forEach(v => { g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#e3e9f1"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end" font-size="12" fill="#8b93a1">${v * 100}%</text>`; });
-    let ap = ""; pts.forEach((r, i) => { const a = avgDay(r.d); if (a != null) ap += (ap ? "L" : "M") + x(i) + " " + y(a); });
-    if (ap) g += `<path d="${ap}" fill="none" stroke="#8b93a1" stroke-width="1.5" stroke-dasharray="5 5"/>`;
-    let path = "", f = null, l = null; pts.forEach((r, i) => { if (r.p == null) return; path += (path ? "L" : "M") + x(i) + " " + y(r.p); if (f == null) f = i; l = i; });
-    if (path) g += `<path d="${path}L${x(l)} ${y(0)}L${x(f)} ${y(0)}Z" fill="#2f7bff" opacity=".08"/><path d="${path}" fill="none" stroke="#2f7bff" stroke-width="2.5" stroke-linejoin="round"/>`;
-    const every = Math.max(1, Math.ceil(n / 24));
-    pts.forEach((r, i) => { const lx = x(i);
-      if (i % every === 0 || i === n - 1) g += `<text x="${lx}" y="${H - B + 18}" text-anchor="middle" font-size="11" fill="#55657a">${dshort(r.d)}</text>`;
-      if (i === 0 || r.d.slice(0, 4) !== pts[i - 1].d.slice(0, 4)) g += `<text x="${lx}" y="${H - B + 32}" text-anchor="middle" font-size="10" fill="#8b93a1">${r.d.slice(0, 4)}</text>`;
-      if (r.p == null) { g += `<text x="${lx}" y="${y(0) - 6}" text-anchor="middle" font-size="11" font-weight="700" fill="#dc2626">V</text>`; return; }
-      g += `<circle cx="${lx}" cy="${y(r.p)}" r="5.5" fill="#2f7bff" stroke="#fff" stroke-width="2"><title>${dshort(r.d)} · ${P(r.p)}</title></circle>`; });
-    const got = pts.filter(r => r.p != null), mean = got.length ? got.reduce((a, r) => a + r.p, 0) / got.length : null;
-    openLayer(`<div class="aw-st-sheet" role="dialog" aria-modal="true"><div class="aw-st-shead"><h3>${esc(s.name)} · đường tiến bộ</h3><button type="button" class="aw-st-x" data-close aria-label="Đóng">${I.x}</button></div>
-      <div class="aw-st-ssub">${got.length} ngày có điểm · TB <b>${mean == null ? "—" : P(mean)}</b> · mỗi chấm = % trung bình các bài trong ngày · vạch đứt = TB lớp</div>
-      ${n ? `<svg class="aw-st-line" viewBox="0 0 ${W} ${H}" role="img" aria-label="Đường tiến bộ">${g}</svg>` : `<div class="aw-st-empty">Chưa có điểm nào.</div>`}</div>`);
   }
 
   // ---- ANALYSE: pick days, then Showdown's own stacked chart
@@ -641,94 +834,160 @@ export function mountStatsHome(mount, opts = {}) {
   const chartClosers = new Set();
 
   // ---- ✎ hand-marked test: add / edit / delete
+  // ⭐ Đợt 520 (mockup stats-v5.html) — a FIXED HORIZONTAL NUMPAD instead of
+  // tap/swipe pads. Each pupil's cell starts EMPTY ("" = not entered yet); the
+  // highlighted pupil takes the digits; a value that cannot take one more digit
+  // (total 20: "3" → 30 > 20) moves to the next pupil by itself, otherwise
+  // TIẾP / Enter. With no total the cap is 99 (2 digits). Save is REFUSED while
+  // any cell is empty (thầy). Keyboard: 0–9 ⌫ V (vắng) C (chưa làm) Enter
+  // ←/→ ↑/↓ — ignored while typing in a text box.
   function openPads(editId, presetDate) {
     const ed = editId ? tests.find(t => t.id === editId) : null;
-    let total = ed ? ed.total : 20;
+    let total = ed && ed.total > 0 ? ed.total : 0;
     const roster = cls.students;
     const st = {};
-    roster.forEach(s => { const c = ed && ed.values[s.key]; st[s.key] = c && (c.k === "n" || c.k === "abs" || c.k === "none") ? { k: c.k, v: c.v } : { k: "n", v: 0 }; });
-    // temporary people already in this test
+    roster.forEach(s => { const c = ed && ed.values[s.key]; st[s.key] = c && (c.k === "n" || c.k === "abs" || c.k === "none") ? { k: c.k, v: c.v } : { k: ed ? "none" : "" }; });
     let tmp = ed ? Object.keys(ed.values).filter(k => k.startsWith("g:")).map(k => ({ key: k, gid: k.slice(2), name: guests[k.slice(2)]?.name || ed.values[k].name || "?", note: guests[k.slice(2)]?.note || "" })) : [];
     tmp.forEach(g => { const c = ed.values[g.key]; st[g.key] = { k: c.k, v: c.v }; });
     const d0 = ed ? ed.date : (presetDate || today());
-    const { layer, close } = openLayer(`<form class="aw-st-sheet" novalidate role="dialog" aria-modal="true">
-      <div class="aw-st-shead"><span class="aw-st-chip is-hand">✎ Chấm tay</span><h3>${ed ? "Sửa bài " + esc(ed.title) : "Thêm bài chấm tay"} · ${esc(cls.name)}</h3><button type="button" class="aw-st-x" data-close aria-label="Đóng">${I.x}</button></div>
-      <div class="aw-st-frow"><label>NGÀY (ngày/tháng/năm)<span class="aw-st-dateline"><input type="text" data-f="date" inputmode="numeric" value="${dlong(d0)}" placeholder="21/12/2026" maxlength="10"><button type="button" class="aw-st-btn is-sm" data-f="today">Hôm nay</button></span></label>
-        <label>TÊN BÀI<input type="text" data-f="title" value="${ed ? esc(ed.title) : ""}" placeholder="LSB1, FINAL, Dictation…"></label>
-        <label>TỔNG SỐ CÂU<input type="number" data-f="total" min="1" inputmode="numeric" value="${total}"></label></div>
-      <div class="aw-st-hint"><span>Nhập <b>số lỗi</b>:</span><span>${I.tap} Chạm = +1</span><span>${I.up} Vuốt lên = +5</span><span>${I.down} Vuốt xuống = −5</span></div>
-      <div class="aw-st-pads"></div>
-      <div class="aw-st-mfoot"><span class="aw-st-err"></span>${ed ? `<button type="button" class="aw-st-btn is-danger" data-f="del">Xoá bài</button>` : ""}<button type="button" class="aw-st-btn" data-close>Huỷ</button><button type="submit" class="aw-st-btn is-primary" data-f="save">Lưu</button></div></form>`, { keepOnBackdrop: true });
-    const form = layer.querySelector("form"), pads = form.querySelector(".aw-st-pads"), err = form.querySelector(".aw-st-err");
+    let cur = 0, buf = "", typing = false, titleTouched = !!ed, addOpen = false;
+    const miss = new Set();
+    const KEYS = `${[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map(n => `<button type="button" class="aw-st-key" data-k="${n}">${n}</button>`).join("")}
+      <button type="button" class="aw-st-key" data-k="bs" title="Xoá số" aria-label="Xoá số">${I.bs}</button><span class="aw-st-kgap"></span>
+      <button type="button" class="aw-st-key is-t is-abs" data-k="abs">VẮNG</button><button type="button" class="aw-st-key is-t" data-k="none">CHƯA LÀM</button><span class="aw-st-kgap"></span>
+      <button type="button" class="aw-st-key" data-k="prev" title="Em trước" aria-label="Em trước">${I.left}</button><button type="button" class="aw-st-key is-go" data-k="next">TIẾP${I.right}</button>`;
+    const { layer, close } = openLayer(`<form class="aw-st-sheet aw-st-entry" novalidate role="dialog" aria-modal="true">
+      <div class="aw-st-shead"><span class="aw-st-chip is-hand">✎ Chấm tay</span><h3>${ed ? "Sửa bài " + esc(dispTitle(ed.title)) : "Thêm bài chấm tay"} · ${esc(cls.name)}</h3><button type="button" class="aw-st-x" data-close aria-label="Đóng">${I.x}</button></div>
+      <div class="aw-st-frow">
+        <label>NGÀY<span class="aw-st-dateline"><input type="text" data-f="date" inputmode="numeric" value="${dlong(d0)}" placeholder="21/12/2026" maxlength="10"><button type="button" class="aw-st-btn is-sm" data-f="today">Hôm nay</button></span></label>
+        <label>TÊN BÀI <span class="aw-st-lhint">— lấy từ thẻ bài của lớp trên dashboard, sửa được</span>
+          <span class="aw-st-cards" data-f="cards"><span class="aw-st-lcnone">Đang đọc thẻ bài…</span></span>
+          <span class="aw-st-titlein"><input type="text" data-f="title" value="${ed ? esc(ed.title) : ""}" placeholder="Gõ tên bài…"><span class="aw-st-ttag" data-f="tag" hidden></span></span></label>
+        <label>TỔNG SỐ CÂU <span class="aw-st-lhint">(không bắt buộc)</span><input type="number" data-f="total" min="1" inputmode="numeric" value="${total || ""}" placeholder="để trống"><span class="aw-st-nopct" data-f="nopct">Không có tổng ⇒ chỉ ghi số lỗi, không tính %</span></label>
+      </div>
+      <div class="aw-st-prog"><span><b data-f="done">0</b>/<span data-f="all">0</span> đã nhập</span><span class="aw-st-pbar"><i data-f="pbar"></i></span><span class="aw-st-pnow" data-f="now"></span><span class="aw-st-sp"></span><button type="button" class="aw-st-btn is-sm" data-f="fill0">Ô còn trống = 0 lỗi</button></div>
+      <div class="aw-st-egrid" data-f="grid"></div>
+      <div class="aw-st-pad">
+        <div class="aw-st-keys" data-f="keys">${KEYS}</div>
+        <div class="aw-st-pfoot"><span class="aw-st-khelp">Bàn phím máy: <kbd>0–9</kbd> <kbd>⌫</kbd> <kbd>V</kbd> vắng <kbd>C</kbd> chưa làm <kbd>Enter</kbd> tiếp <kbd>←↑↓→</kbd> đổi em</span><span class="aw-st-sp"></span><span class="aw-st-err"></span>
+          ${ed ? `<button type="button" class="aw-st-btn is-danger" data-f="del">Xoá bài</button>` : ""}<button type="button" class="aw-st-btn" data-close>Huỷ</button><button type="submit" class="aw-st-btn is-primary" data-f="save">Lưu</button></div>
+      </div></form>`, { keepOnBackdrop: true, onClose: () => document.removeEventListener("keydown", onKey, true) });
+    const form = layer.querySelector("form"), err = form.querySelector(".aw-st-err");
     const f = k => form.querySelector(`[data-f="${k}"]`);
-    const cardHTML = s => `<div class="aw-st-card ${s.guest ? "is-guest" : ""}"><div class="aw-st-who">${esc(s.name)}${s.guest ? '<span class="aw-st-chip is-guest">tạm</span>' : ""}</div>${s.guest ? `<button type="button" class="aw-st-rm" data-rm="${esc(s.key)}" aria-label="Bỏ ${esc(s.name)}">×</button>` : ""}
-      <div class="aw-st-pad" data-pad="${esc(s.key)}" tabindex="0" role="spinbutton" aria-label="Số lỗi của ${esc(s.name)}"></div>
-      <div class="aw-st-cardbtns"><button type="button" data-m="${esc(s.key)}">−1</button><button type="button" data-v="${esc(s.key)}" aria-pressed="false">Vắng</button><button type="button" data-n="${esc(s.key)}" aria-pressed="false">—</button></div></div>`;
-    const known = () => Object.entries(guests).filter(([gid]) => !tmp.some(g => g.gid === gid));
-    const addHTML = () => `<div class="aw-st-addcard" data-add><button type="button" class="aw-st-btn" data-addg style="border-color:#c9b3f7;color:var(--st-guest)">${I.person}Thêm người</button>
-      ${known().length ? `<small>hoặc chọn lại:</small><div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center">${known().map(([gid, g]) => `<button type="button" class="aw-st-btn is-sm" data-reg="${esc(gid)}" style="color:var(--st-guest)">${esc(g.name)}</button>`).join("")}</div>` : ""}
-      <small>người học thử, học bù… chỉ tính trong bài này</small></div>`;
-    const sel = k => pads.querySelector(`[data-pad="${CSS.escape(k)}"]`);
-    const draw = key => {
-      const c = st[key], el = sel(key); if (!el) return;
-      const p = c.k === "n" ? Math.max(0, (total - c.v) / total) : null;
-      el.className = "aw-st-pad " + (c.k === "abs" ? "is-abs" : c.k === "none" ? "is-none" : ""); el.style.background = heat(p);
-      el.innerHTML = c.k === "n" ? `<span class="aw-st-num">${c.v}</span><span class="aw-st-sub">lỗi · đúng ${Math.max(0, total - c.v)}/${total}</span>` : `<span class="aw-st-num">${c.k === "abs" ? "VẮNG" : "CHƯA LÀM"}</span><span class="aw-st-sub">chạm để nhập lại</span>`;
-      pads.querySelector(`[data-v="${CSS.escape(key)}"]`)?.setAttribute("aria-pressed", c.k === "abs");
-      pads.querySelector(`[data-n="${CSS.escape(key)}"]`)?.setAttribute("aria-pressed", c.k === "none");
-    };
+    const grid = f("grid");
     const everyone = () => roster.map(s => ({ key: s.key, name: s.name })).concat(tmp.map(g => ({ ...g, guest: true })));
-    const drawAll = () => { pads.innerHTML = everyone().map(cardHTML).join("") + addHTML(); everyone().forEach(s => draw(s.key)); };
-    const bump = (key, dl) => {
-      const c = st[key];
-      if (c.k !== "n") { st[key] = { k: "n", v: 0 }; draw(key); return; }
-      const nv = Math.max(0, Math.min(total, c.v + dl)), real = nv - c.v; c.v = nv; draw(key);
-      const fl = document.createElement("span"); fl.className = "aw-st-fly"; fl.textContent = (real >= 0 ? "+" : "") + real;
-      fl.style.color = real >= 0 ? "var(--st-bad)" : "var(--st-good)";
-      sel(key)?.append(fl); setTimeout(() => fl.remove(), 650);
-    };
-    drawAll();
-    pads.addEventListener("pointerdown", e => {
-      const pad = e.target.closest(".aw-st-pad"); if (!pad || e.button > 0) return;
-      const y0 = e.clientY, key = pad.dataset.pad;
-      try { pad.setPointerCapture(e.pointerId); } catch { /* old browser */ }
-      pad.classList.add("is-drag");
-      const up = ev => {
-        pad.removeEventListener("pointerup", up); pad.removeEventListener("pointercancel", up); pad.classList.remove("is-drag");
-        if (ev.type === "pointercancel") return;
-        const dy = ev.clientY - y0; bump(key, dy < -28 ? 5 : dy > 28 ? -5 : 1);
-      };
-      pad.addEventListener("pointerup", up); pad.addEventListener("pointercancel", up);
-    });
-    pads.addEventListener("keydown", e => {
-      const pad = e.target.closest(".aw-st-pad"); if (!pad) return; const key = pad.dataset.pad;
-      if (e.key === "ArrowUp") { e.preventDefault(); bump(key, 5); } else if (e.key === "ArrowDown") { e.preventDefault(); bump(key, -5); }
-      else if (e.key === " " || e.key === "Enter") { e.preventDefault(); bump(key, 1); } else if (e.key === "Backspace") { e.preventDefault(); bump(key, -1); }
-    });
-    pads.addEventListener("click", e => {
-      const m = e.target.closest("[data-m]"), v = e.target.closest("[data-v]"), n = e.target.closest("[data-n]"), rm = e.target.closest("[data-rm]"),
-        addg = e.target.closest("[data-addg]"), reg = e.target.closest("[data-reg]"), gok = e.target.closest("[data-gok]"), gno = e.target.closest("[data-gno]");
-      if (m) bump(m.dataset.m, -1);
-      else if (v) { const k = v.dataset.v; st[k] = st[k].k === "abs" ? { k: "n", v: 0 } : { k: "abs" }; draw(k); }
-      else if (n) { const k = n.dataset.n; st[k] = st[k].k === "none" ? { k: "n", v: 0 } : { k: "none" }; draw(k); }
-      else if (rm) { tmp = tmp.filter(g => g.key !== rm.dataset.rm); delete st[rm.dataset.rm]; drawAll(); }
-      else if (reg) { const gid = reg.dataset.reg, g = guests[gid]; tmp.push({ key: "g:" + gid, gid, name: g.name, note: g.note || "" }); st["g:" + gid] = { k: "n", v: 0 }; drawAll(); }
-      else if (addg) {
-        const box = pads.querySelector("[data-add]");
-        box.innerHTML = `<b>Tên người tạm</b><input type="text" data-gname placeholder="VD: BẢO"><input type="text" data-gnote placeholder="Ghi chú: học thử, lớp khác…"><span style="display:flex;gap:6px;margin-top:6px"><button type="button" class="aw-st-btn is-sm" data-gno>Huỷ</button><button type="button" class="aw-st-btn is-sm is-primary" data-gok>Thêm</button></span>`;
-        box.querySelector("[data-gname]").focus();
-      } else if (gno) drawAll();
-      else if (gok) addGuest();
-    });
-    pads.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches("[data-gname],[data-gnote]")) { e.preventDefault(); addGuest(); } });
-    function addGuest() {
-      const box = pads.querySelector("[data-add]"), ni = box.querySelector("[data-gname]");
-      const name = ni.value.trim().toUpperCase(); if (!name) { ni.classList.add("is-bad"); return; }
-      const gid = "g" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-      tmp.push({ key: "g:" + gid, gid, name, note: box.querySelector("[data-gnote]").value.trim(), fresh: true });
-      st["g:" + gid] = { k: "n", v: 0 }; drawAll();
+    const cap = () => total || 99;
+
+    // ---- the grid
+    function valOf(p, i) {
+      const c = st[p.key], on = i === cur;
+      if (on && typing) return { cls: "is-typing", txt: esc(buf), bg: "#fff" };
+      if (c.k === "n") { const pp = total ? Math.max(0, (total - c.v) / total) : null; return { cls: pp == null ? "is-err" : "b" + (band(pp) + 1), txt: c.v }; }
+      if (c.k === "abs") return { cls: "is-abs", txt: "VẮNG" };
+      if (c.k === "none") return { cls: "is-none", txt: "CHƯA<br>LÀM" };
+      return { cls: on ? "is-typing" : "is-empty", txt: on ? "" : "·" };
     }
-    const fd = f("date");
+    function drawGrid() {
+      const ps = everyone();
+      if (cur > ps.length - 1) cur = Math.max(0, ps.length - 1);
+      grid.innerHTML = ps.map((p, i) => { const v = valOf(p, i), c = st[p.key];
+        const small = p.guest ? `<small class="is-guest">tạm${p.note ? " · " + esc(p.note) : ""}</small>` : c.k === "n" ? `<small>${total ? `đúng ${Math.max(0, total - c.v)}/${total}` : `${c.v} lỗi`}</small>` : "";
+        return `<div class="aw-st-ec ${i === cur ? "is-on" : ""} ${p.guest ? "is-guest" : ""} ${miss.has(p.key) && !c.k ? "is-miss" : ""}" data-i="${i}">
+          <span class="aw-st-ecn"><b>${esc(p.name)}</b>${small}</span><span class="aw-st-ecv ${v.cls}">${v.txt}</span>
+          ${p.guest ? `<button type="button" class="aw-st-ecrm" data-rm="${esc(p.key)}" aria-label="Bỏ ${esc(p.name)}">×</button>` : ""}</div>`; }).join("") + addHTML();
+      const done = ps.filter(p => st[p.key].k).length;
+      f("done").textContent = done; f("all").textContent = ps.length; f("pbar").style.width = (ps.length ? done / ps.length * 100 : 0) + "%";
+      f("now").innerHTML = ps[cur] ? `Đang nhập: <b>${esc(ps[cur].name)}</b>` : "";
+      f("nopct").hidden = !!total;
+      grid.querySelector(".aw-st-ec.is-on")?.scrollIntoView({ block: "nearest" });
+      if (addOpen) grid.querySelector("[data-gname]")?.focus();
+    }
+    const known = () => Object.entries(guests).filter(([gid]) => !tmp.some(g => g.gid === gid));
+    const addHTML = () => addOpen
+      ? `<div class="aw-st-eadd is-open"><input type="text" data-gname placeholder="Tên người tạm"><input type="text" data-gnote placeholder="Ghi chú: học thử, lớp khác…"><span class="aw-st-eaddb"><button type="button" class="aw-st-btn is-sm" data-gno>Huỷ</button><button type="button" class="aw-st-btn is-sm is-primary" data-gok>Thêm</button></span></div>`
+      : `<div class="aw-st-eadd"><button type="button" class="aw-st-eaddbtn" data-addg>${I.person}Thêm người</button>${known().length ? `<span class="aw-st-eaddre">${known().map(([gid, g]) => `<button type="button" data-reg="${esc(gid)}">${esc(g.name)}</button>`).join("")}</span>` : `<small>học thử, học bù… chỉ tính trong bài này</small>`}</div>`;
+
+    // ---- typing
+    function commit() {
+      const p = everyone()[cur];
+      if (typing && buf !== "" && p) { st[p.key] = { k: "n", v: Math.min(cap(), +buf) }; miss.delete(p.key); }
+      typing = false; buf = "";
+    }
+    function go(d) { commit(); cur = Math.max(0, Math.min(everyone().length - 1, cur + d)); err.textContent = ""; drawGrid(); }
+    function press(k) {
+      const ps = everyone(), p = ps[cur]; if (!p) return;
+      if (/^\d$/.test(k)) {
+        if (!typing) { typing = true; buf = ""; }
+        buf = (buf === "0" ? "" : buf) + k;
+        if (+buf > cap()) buf = k;                        // over the total ⇒ start again with this digit
+        if (+buf * 10 > cap()) { commit(); cur = Math.min(ps.length - 1, cur + 1); }
+      } else if (k === "bs") {
+        if (typing && buf) buf = buf.slice(0, -1);
+        else { st[p.key] = { k: "" }; typing = true; buf = ""; }
+      } else if (k === "abs" || k === "none") {
+        typing = false; buf = ""; st[p.key] = { k }; miss.delete(p.key); cur = Math.min(ps.length - 1, cur + 1);
+      } else if (k === "next") { go(1); return; }
+      else if (k === "prev") { go(-1); return; }
+      err.textContent = "";
+      drawGrid();
+    }
+    const flash = k => { const b = form.querySelector(`.aw-st-key[data-k="${k}"]`); if (b) { b.classList.add("is-hit"); setTimeout(() => b.classList.remove("is-hit"), 110); } };
+    // pointerdown (not click): the key must never steal focus from nothing / fire twice on touch
+    f("keys").addEventListener("pointerdown", e => { const b = e.target.closest("[data-k]"); if (!b || e.button > 0) return; e.preventDefault(); press(b.dataset.k); });
+    function onKey(e) {
+      if (!layer.isConnected || e.isComposing) return;
+      if (e.target.matches?.("input, textarea, select")) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const cols = Math.max(1, getComputedStyle(grid).gridTemplateColumns.split(" ").length);
+      const map = { Backspace: "bs", Enter: "next", ArrowRight: "next", ArrowLeft: "prev", v: "abs", V: "abs", c: "none", C: "none" };
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); go(e.key === "ArrowDown" ? cols : -cols); return; }
+      const k = /^\d$/.test(e.key) ? e.key : map[e.key];
+      if (!k) return;
+      e.preventDefault(); flash(k); press(k);
+    }
+    document.addEventListener("keydown", onKey, true);
+
+    grid.addEventListener("click", e => {
+      const rm = e.target.closest("[data-rm]"), addg = e.target.closest("[data-addg]"), reg = e.target.closest("[data-reg]"),
+        gok = e.target.closest("[data-gok]"), gno = e.target.closest("[data-gno]"), cell = e.target.closest(".aw-st-ec");
+      if (rm) { commit(); tmp = tmp.filter(g => g.key !== rm.dataset.rm); delete st[rm.dataset.rm]; drawGrid(); }
+      else if (addg) { commit(); addOpen = true; drawGrid(); }
+      else if (gno) { addOpen = false; drawGrid(); }
+      else if (gok) addGuest();
+      else if (reg) { commit(); const gid = reg.dataset.reg, g = guests[gid]; tmp.push({ key: "g:" + gid, gid, name: g.name, note: g.note || "" }); st["g:" + gid] = { k: "" }; cur = everyone().length - 1; drawGrid(); }
+      else if (cell) { commit(); cur = +cell.dataset.i; drawGrid(); }
+    });
+    grid.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches("[data-gname],[data-gnote]")) { e.preventDefault(); addGuest(); } });
+    function addGuest() {
+      const ni = grid.querySelector("[data-gname]");
+      const name = ni.value.trim().toUpperCase(); if (!name) { ni.classList.add("is-bad"); ni.focus(); return; }
+      const gid = "g" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+      tmp.push({ key: "g:" + gid, gid, name, note: grid.querySelector("[data-gnote]").value.trim(), fresh: true });
+      st["g:" + gid] = { k: "" }; addOpen = false; cur = everyone().length - 1; drawGrid();
+    }
+    f("fill0").onclick = () => { commit(); everyone().forEach(p => { if (!st[p.key].k) { st[p.key] = { k: "n", v: 0 }; miss.delete(p.key); } }); err.textContent = ""; drawGrid(); };
+
+    // ---- lesson cards → title
+    const fd = f("date"), ft = f("title"), tag = f("tag"), cardsBox = f("cards");
+    let cards = [];
+    const setTag = (txt, sua) => { tag.hidden = !txt; tag.textContent = txt || ""; tag.classList.toggle("is-sua", !!sua); };
+    function drawCards() {
+      const date = parseDMY(fd.value);
+      if (!date) { cardsBox.innerHTML = `<span class="aw-st-lcnone">Gõ ngày để xem thẻ bài.</span>`; return; }
+      const { same, list } = cardsForDay(cards, date);
+      if (!list.length) { cardsBox.innerHTML = `<span class="aw-st-lcnone">Lớp này chưa có thẻ bài trên dashboard — gõ tên bài.</span>`; return; }
+      cardsBox.innerHTML = (same ? "" : `<span class="aw-st-lcnone">Ngày ${dshort(date)} chưa có thẻ bài — gần nhất:</span>`) +
+        list.map((c, i) => { const ttl = lessonCardTitle(c), dang = ttl.split(" / ")[1] || "";
+          return `<button type="button" class="aw-st-lc ${ft.value.trim() === ttl ? "is-on" : ""}" data-card="${esc(ttl)}"><span class="aw-st-lcd is-${esc(dang)}">${esc(dang || "—")}</span>${esc(c.ma)}${same ? "" : `<span class="aw-st-lcday">${dshort(c.date)}</span>`}</button>`; }).join("");
+      if (same && !titleTouched) { ft.value = lessonCardTitle(list[0]); setTag("TỪ THẺ BÀI"); cardsBox.querySelector(".aw-st-lc")?.classList.add("is-on"); }
+    }
+    cardsBox.addEventListener("click", e => { const b = e.target.closest("[data-card]"); if (!b) return;
+      ft.value = b.dataset.card; titleTouched = false; setTag("TỪ THẺ BÀI");
+      cardsBox.querySelectorAll(".aw-st-lc").forEach(x => x.classList.toggle("is-on", x === b)); });
+    ft.addEventListener("input", () => { titleTouched = true; setTag(ft.value.trim() ? "ĐÃ SỬA" : "", true); cardsBox.querySelectorAll(".aw-st-lc").forEach(x => x.classList.remove("is-on")); });
+    loadLessonCards(cls.id).then(c => { cards = c; if (layer.isConnected) drawCards(); });
+
+    // ---- date / total
     // Keep what thầy types (digits + "/"), so "22/9/2026" works as typed; only
     // ADD the slash after a full 2-digit day / month (never re-slice the digits —
     // a 1-digit month would be torn apart: "2292026" → "22/92/026").
@@ -736,20 +995,32 @@ export function mountStatsHome(mount, opts = {}) {
       let v = fd.value.replace(/[^\d/]/g, "").replace(/\/{2,}/g, "/");
       if (e.inputType === "insertText" && (/^\d{2}$/.test(v) || /^\d{1,2}\/\d{2}$/.test(v))) v += "/";
       fd.value = v.slice(0, 10); fd.classList.remove("is-bad");
+      if (parseDMY(fd.value)) drawCards();
     });
-    f("today").onclick = () => { fd.value = dlong(today()); fd.classList.remove("is-bad"); };
-    f("total").addEventListener("input", () => { const tt = +f("total").value; if (tt > 0) { total = tt; everyone().forEach(s => { if (st[s.key].k === "n" && st[s.key].v > tt) st[s.key].v = tt; draw(s.key); }); } });
+    f("today").onclick = () => { fd.value = dlong(today()); fd.classList.remove("is-bad"); drawCards(); };
+    f("total").addEventListener("input", () => {
+      const tt = Math.floor(+f("total").value);
+      total = tt > 0 ? tt : 0;
+      if (total) everyone().forEach(p => { if (st[p.key].k === "n" && st[p.key].v > total) st[p.key].v = total; });
+      drawGrid();
+    });
     if (ed) f("del").onclick = async () => {
       if (f("del").dataset.sure !== "1") { f("del").dataset.sure = "1"; f("del").textContent = "Bấm lần nữa để xoá"; return; }
-      try { await removeTest(cls.id, ed.date.slice(0, 7), ed.id); tests = tests.filter(t => t.id !== ed.id); close(); paint(); toast("Đã xoá bài " + ed.title + "."); }
+      try { await removeTest(cls.id, ed.date.slice(0, 7), ed.id); tests = tests.filter(t => t.id !== ed.id); close(); paint(); toast("Đã xoá bài " + dispTitle(ed.title) + "."); }
       catch (e2) { err.textContent = "Chưa xoá được: " + (e2.message || e2); }
     };
     form.addEventListener("submit", async ev => {
       ev.preventDefault();
+      commit();
       const date = parseDMY(fd.value);
-      if (!date) { fd.classList.add("is-bad"); err.textContent = "Ngày chưa đúng. Gõ theo dạng 21/12/2026."; return; }
-      if (!(total > 0)) { err.textContent = "Nhập tổng số câu."; return; }
-      const title = f("title").value.trim() || "(chưa ghi tên bài)";
+      if (!date) { fd.classList.add("is-bad"); err.textContent = "Ngày chưa đúng. Gõ theo dạng 21/12/2026."; drawGrid(); return; }
+      const empty = everyone().filter(p => !st[p.key].k);
+      if (empty.length) {     // thầy: còn ô trống thì KHÔNG cho lưu
+        empty.forEach(p => miss.add(p.key));
+        cur = everyone().findIndex(p => p.key === empty[0].key);
+        drawGrid(); err.textContent = `Chưa lưu: còn ${empty.length} em chưa nhập (viền đỏ).`; return;
+      }
+      const title = ft.value.trim() || "(chưa ghi tên bài)";
       const values = {};
       roster.forEach(s => { values[s.key] = { ...st[s.key], name: s.name }; if (values[s.key].v == null) delete values[s.key].v; });
       const newGuests = {};
@@ -766,6 +1037,8 @@ export function mountStatsHome(mount, opts = {}) {
       view = date >= cutoff() && view.type === "recent" ? view : { type: "day", date };
       close(); paint(); toast((ed ? "Đã sửa bài ngày " : "Đã lưu bài ngày ") + dlong(date) + ".");
     });
+    if (ed) setTag("ĐÃ SỬA", true);
+    drawGrid();
   }
 
   // ---- Excel: one sheet per month (raw cells, like thầy's own files) + one % sheet
@@ -779,11 +1052,11 @@ export function mountStatsHome(mount, opts = {}) {
       const people = peopleFor(list);
       const aoa = [
         [cls.name, ...list.map(t => `${dshort(t.date)}/${t.date.slice(0, 4)}`)],
-        ["", ...list.map(t => (t.kind === "aw" ? "AWord · " : "Chấm tay · ") + t.title)],
-        ["HỌC SINH", ...list.map(t => t.kind === "aw" ? `điểm /${t.total}` : `số lỗi / ${t.total} câu`)]
+        ["", ...list.map(t => (t.kind === "aw" ? "AWord · " : "Chấm tay · ") + dispTitle(t.title))],
+        ["HỌC SINH", ...list.map(t => t.kind === "aw" ? `điểm /${t.total}` : noTotal(t) ? "số lỗi" : `số lỗi / ${t.total} câu`)]
       ];
       people.forEach(s => aoa.push([s.name + (s.guest ? " (tạm)" : s.left ? " (đã rời lớp)" : ""), ...list.map(t => cellTxt(cellOf(t, s)))]));
-      aoa.push(["TB LỚP (%)", ...list.map(t => { const a = avgTest(t); return a == null ? "" : Math.round(a * 100); })]);
+      aoa.push(["TB LỚP (%)", ...list.map(t => { if (noTotal(t)) { const e = errAvg(t); return e == null ? "" : "TB " + fmt1(e) + " lỗi"; } const a = avgTest(t); return a == null ? "" : Math.round(a * 100); })]);
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       ws["!cols"] = [{ wch: 22 }, ...list.map(() => ({ wch: 14 }))];
       return ws;
@@ -795,7 +1068,7 @@ export function mountStatsHome(mount, opts = {}) {
     });
     const all = tests.slice().sort((a, b) => b.date.localeCompare(a.date));
     const people = peopleFor(all);
-    const aoa = [["% ĐÚNG", ...all.map(t => `${dshort(t.date)}/${t.date.slice(0, 4)} ${t.title}`)]];
+    const aoa = [["% ĐÚNG", ...all.map(t => `${dshort(t.date)}/${t.date.slice(0, 4)} ${dispTitle(t.title)}`)]];
     people.forEach(s => aoa.push([s.name, ...all.map(t => { const p = pct(t, cellOf(t, s)); return p == null ? "" : Math.round(p * 100); })]));
     const ws = XLSX.utils.aoa_to_sheet(aoa); ws["!cols"] = [{ wch: 22 }, ...all.map(() => ({ wch: 14 }))];
     XLSX.utils.book_append_sheet(wb, ws, "TONG HOP %");
@@ -812,20 +1085,26 @@ export function mountStatsHome(mount, opts = {}) {
       root.querySelector('[data-st="pct"]').setAttribute("aria-pressed", mode === "pct");
       if (cls) paintMain(); return;
     }
+    if (b("home")) { opts.onHome?.(); return; }
     if (b("xls")) { exportXlsx(); return; }
     if (!cls) return;
     if (b("analyse")) { if (!tests.length) toast("Chưa có bài nào để phân tích."); else openAnalysePicker(); return; }
     if (b("add")) { openPads(null, view.type === "day" ? view.date : null); return; }
+    if (b("sort")) { sortBy = sortBy === "avg" ? "name" : "avg"; paintMain(); return; }
+    if (b("dclose")) { closeRow(); return; }
     const vr = t.closest("[data-view]"), yr = t.closest("[data-year]"), ym = t.closest("[data-ym]"), dy = t.closest("[data-day]"),
       ch = t.closest("[data-chart]"), ed = t.closest("[data-edit]"), row = t.closest("[data-row]");
     if (vr) { view = { type: "recent" }; paint(); }
+    else if (ch) openEval(ch.dataset.chart);
+    else if (ed) openPads(ed.dataset.edit);
     else if (yr) { const y = yr.dataset.year; openY[y] = !openY[y]; paintTree(); }
     else if (ym) { const k = ym.dataset.ym; const isSel = view.type === "month" && view.ym === k; openM[k] = isSel ? !openM[k] : true; view = { type: "month", ym: k }; paint(); }
     else if (dy) { view = { type: "day", date: dy.dataset.day }; paint(); }
-    else if (ch) openEval(ch.dataset.chart);
-    else if (ed) openPads(ed.dataset.edit);
     else if (row) openRow(row.dataset.row);
   });
+  // Esc closes the pupil panel (only when no popup is open — the popups own Esc then)
+  const onPageKey = e => { if (e.key === "Escape" && selKey && !layers.size && !document.querySelector(".aw-modal, .aw-sd-rec-chart")) closeRow(); };
+  document.addEventListener("keydown", onPageKey);
   $sel.addEventListener("change", () => {
     cls = classes.find(c => c.id === $sel.value) || cls;
     view = { type: "recent" }; openY = {}; openM = {};
@@ -836,6 +1115,7 @@ export function mountStatsHome(mount, opts = {}) {
 
   function dispose() {
     alive = false;
+    document.removeEventListener("keydown", onPageKey);
     closeLayers();
     [...chartClosers].forEach(f => f());
     document.querySelectorAll(".aw-st-toast").forEach(n => n.remove());
@@ -861,8 +1141,9 @@ const I = {
   plus: sv('<path d="M12 5v14M5 12h14"/>'),
   person: sv('<circle cx="10" cy="8" r="4"/><path d="M3 21c0-4 3-6 7-6s7 2 7 6M19 8v6M16 11h6"/>'),
   x: sv('<path d="M6 6l12 12M18 6 6 18"/>'),
-  tap: sv('<circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="8.5" opacity=".45"/>'),
-  up: sv('<path d="M12 19V5m0 0-5 5m5-5 5 5"/>'),
-  down: sv('<path d="M12 5v14m0 0-5-5m5 5 5-5"/>'),
-  an: sv('<path d="M4 20V10M9 20V4M14 20v-7M19 20V8"/>')
+  an: sv('<path d="M4 20V10M9 20V4M14 20v-7M19 20V8"/>'),
+  chev: sv('<path d="m6 9 6 6 6-6"/>', 'class="aw-st-chev"'),
+  bs: sv('<path d="M9 5h11v14H9l-6-7z"/><path d="m12.5 9.5 5 5m0-5-5 5"/>'),
+  left: sv('<path d="m15 6-6 6 6 6"/>'),
+  right: sv('<path d="m9 6 6 6-6 6"/>')
 };

@@ -546,6 +546,37 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 520 (14/10/2026) — STATS LÀM LẠI: TRANG MỚI (A + KHUNG CHI TIẾT EM) · CHẤM TAY BẰNG NUMPAD NGANG
+
+**Thầy (14/10):** "phần chấm tay khó nhập quá" (chạm +1 / vuốt ±5) · tên bài lấy tự động từ thẻ bài của lớp trên dashboard (sửa được) · numpad ngang cố
+định · trang STATS: logo AWord thu thành nút home chữ "A", dải nút lên cao, cột Lưu trữ kiểu Quick access mới · rồi "trang STATS trông xấu quá" ⇒ 3 hướng,
+thầy chọn **A + khung chi tiết em của B**. Mẫu duyệt: `D:\OTHERS\CLAUDE\AWord - thiet ke Stats\stats-v5.html` (hộp chấm tay) + `stats-v7.html` (trang).
+- **Trang** (`core/stats-home.js` + `core/stats.css`, `main.js renderStatsHome`): bỏ logo + chân trang; cột trái kiểu Quick access B (nền #f3f7fc, không
+  khung, nét mảnh) = nút home "A" (`opts.onHome` ⇒ `goTop`) + XEM NHANH / LƯU TRỮ (thư mục = `FOLDER_SVG` qua `opts.folderSvg`, ngày = thứ + cột nhỏ TB
+  từng bài). MỘT hàng trên: tên lớp to (select trong suốt phủ lên) · Số gốc/% · Excel · ANALYSE · Chấm tay · cụm nút phải CỦA APP (main.js lấy
+  `.aw-appbar-right` từ `topbar(false)` đưa vào `opts.rightCluster`, nút Stats tô `is-on`). 4 ô tổng quan: Điểm TB lớp (+▲▼ so buổi trước + đường) ·
+  Tỉ lệ làm bài (vòng) · Bài đã chấm · Cần kèm thêm (TB < 60% hoặc làm < 60% bài; bấm = mở em). Bảng: cột tên = chữ tắt tròn màu + x/N bài + đường
+  nhỏ + TB%; đầu cột gọn 100px (AWORD/✎ TAY · tên bỏ tiền tố ngày-giờ `dispTitle` · loại/tổng · thanh TB lớp · icon Đánh giá + Sửa); xếp A→Z / điểm
+  TB; dòng TB lớp + đầu bảng dính khi cuộn (khung bảng tự cuộn, cao `max(420px, 100vh−252px)`).
+- **Khung chi tiết em** (thay pop-up "đường tiến bộ" — `openRow` cũ ĐÃ GỠ, không còn 2 hàm trùng tên): bấm hàng ⇒ khung 300px trượt vào phải
+  (hạng · TB · đã làm · vắng · đường em vs lớp 12 buổi gần nhất có % · từng bài trong khoảng đang xem); bấm lại / ✕ / Esc = đóng. ≤ 1200px khung NỔI đè.
+- **Chấm tay** (`openPads` viết lại): ô mỗi em mặc định TRỐNG; numpad NGANG cố định đáy hộp `1–0 ⌫ | VẮNG CHƯA LÀM | ◀ TIẾP` (+ bàn phím máy
+  0–9 ⌫ V C Enter ←↑↓→, bỏ qua khi đang gõ ô chữ); không gõ thêm chữ số được nữa ⇒ tự sang em kế (tổng 20: "3" ⇒ đi; không tổng: 2 chữ số).
+  **Còn ô trống ⇒ KHÔNG cho lưu** (viền đỏ + nhảy tới em trống). Nút "Ô còn trống = 0 lỗi". **Tổng số câu KHÔNG điền sẵn**: để trống ⇒ `total: 0`
+  ⇒ không %, ô màu kem `is-err`, dòng TB "TB x lỗi", Đánh giá riêng `openEvalErrors` (ít lỗi → nhiều lỗi), Excel ghi "số lỗi".
+  **Tên bài** = thẻ bài của lớp `lessonWeb/bai_<LỚP>` (công khai, như andrewclasses.com đọc; `json` = `{lop, bai:[{ngay:"d.m", dang, maLesson…}]}`):
+  nút thẻ của NGÀY đang chọn (một nút mỗi tên), không có ⇒ 3 thẻ gần nhất; tên = `<maLesson> / <dang>`, mã **LS…** ⇒ `/ DICTS` (thầy: bài nghe chấm tay
+  là bài viết). Sửa tay ⇒ nhãn "ĐÃ SỬA". Hàm `cardsFromBai` / `cardsForDay` / `lessonCardTitle` export để thử.
+- ⛔ Bẫy gặp khi làm: `.aw-st-k` là nhãn AWORD/✎ TAY ở đầu cột ⇒ phím numpad đặt tên `.aw-st-key` (đặt trùng là đầu cột phình to 25px).
+  Pop-up Đánh giá dùng `.aw-st-kpis2/.aw-st-kpi2` (tên `.aw-st-kpi` nay là ô tổng quan của trang).
+- Bàn thử `scratch/dot520-stats.html` (Firestore giả `scratch/fake-firebase374.js` — đã thêm `orderBy`/`limit` no-op vì `listScores` dùng từ sau Đợt 374):
+  18 em, 5 bài AWord + 2 bài tay (1 không tổng), thẻ bài A1A. Đã thử bằng click/phím THẬT: mở khung em · gõ 3,1 (tự sang) · V · Enter · Lưu khi thiếu
+  (bị chặn, 14 em viền đỏ) · Ô trống = 0 ⇒ Lưu (ghi `total:0`, TB "2,4 lỗi") · Sửa bài tổng 20 (gõ 3 tự sang) · Đánh giá bài không tổng · xếp · Esc ·
+  ngày ở cây · nút home; 1440 / 1100 (hàng trên 1 dòng, khung em nổi) / 768 (numpad 6 cột). 0 lỗi console.
+⬜ Chưa chạy đường đăng nhập thật (pane không có Google) — thầy mở STATS thật xem lớp + thử chấm tay 1 bài.
+
+---
+
 ## Đợt 519 (14/10/2026) — TRAIN RUSH: ĐIỂM NGAY KHI CHẠM · THÙNG TRƯỢT TỚI · iPAD MƯỢT HƠN NỮA
 
 **Thầy thử Đợt 518:** iPad "tốt hơn rất nhiều nhưng vẫn hơi giật nhẹ" · "thùng xác định được vị trí là tính điểm luôn (đang delay)" · "đoạn cuối trước khi chạm tàu
