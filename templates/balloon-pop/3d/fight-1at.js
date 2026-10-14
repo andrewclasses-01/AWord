@@ -1,3 +1,5 @@
+// TRAIN RUSH — Fight 1 màn mẫu 1at (14/10/2026): lõi bp3d-1at (thùng đi theo gia tốc tàu, điểm chỉ khi chắc chắn, khinh khí cầu nhỏ + cao, nhanh ×2,
+//   thú chạy gần ray) · máy bay KHÔNG kéo băng điểm — kéo "LEVEL k" trước mỗi màn (lúc GO! và lúc giữa 2 màn).
 // TRAIN RUSH — Fight 1 màn mẫu 1as (14/10/2026): như 1ar, lõi bp3d-1as (điểm ngay khi chạm, thùng trượt), gửi iPad 30 lần/giây.
 // TRAIN RUSH — Fight 1 màn mẫu 1ar (14/10/2026): như 1aq, lõi bp3d-1ar (iPad hết giật: giờ game + vận tốc thùng).
 // TRAIN RUSH — TRẬN FIGHT MỘT MÀN mẫu 1aq (14/10/2026): như 1ap, lõi bp3d-1aq (tàu to hơn, khinh khí cầu nhỏ hơn, 2 tàu nâng lên chừa tiền cảnh,
@@ -15,7 +17,7 @@
 //     host = cầu AWord { listActs, openAct, options(ov) } (như 1ao) · padSignal = kho bắt tay iPad { write, listen } (myGame: localSignal)
 //   ⇒ api { destroy(), setOptions(o), start(), G, core, pad }
 // Hàng nút, bảng Thư mục / Mode / PAUSED / kết quả: như fight-1ao (CSS fight-1al + fight-1ao + fight-1ap).
-import { createBalloonPop, DUO_COLORS } from "./bp3d-1as.js";
+import { createBalloonPop, DUO_COLORS } from "./bp3d-1at.js";
 import { createBpSound } from "./sound-1ah.js";
 import { createPadHost } from "./tr-padlink-1ap.js";
 
@@ -105,6 +107,7 @@ export async function createTrainRushFight({ mount, words, wordsTitle = "", opti
     return [A, B];
   }
   const timed = () => OPT.roundMin >= 1 && OPT.roundMin <= 10;
+  const levelText = i => "LEVEL " + (i + 1);   // 1at: băng máy bay
   const lvSecs = () => (timed() ? OPT.roundMin * 60 : 0);
   // G.t[i]: left = giây còn trên thanh giờ màn · shown = phần thanh đang vẽ · done = đầy toa · gone = tàu đã ra khỏi màn · out = hết giờ
   const G = { phase: "load", level: 0, lvTime: 0, lvClock: 0, elapsed: 0, countT: 0, paused: false, muted: false, lastTick: 99, finalMus: false, why: "",
@@ -193,6 +196,7 @@ export async function createTrainRushFight({ mount, words, wordsTitle = "", opti
       num.textContent = "GO!"; snd.count(0); snd.music("play", 1.2);
       core.applyOpt(OPT);
       if (!core.duoStart(makeOrders())) { finish("NO WORDS"); return; }
+      core.duoBanner(levelText(0));   // 1at: máy bay mang LEVEL 1 bay qua lúc 2 tàu chạy vào
       beginLevelBars(0);
       later(() => { ov.hidden = true; }, 550);
     };
@@ -213,7 +217,9 @@ export async function createTrainRushFight({ mount, words, wordsTitle = "", opti
     const outs = G.t.map((t, i) => (t.out ? i : -1)).filter(i => i >= 0);
     if (outs.length) return finish(outs.length === 2 ? "BOTH TEAMS RAN OUT OF TIME" : `TEAM ${outs[0] + 1} RAN OUT OF TIME`);
     G.phase = "between";
-    core.duoBanner(`L${G.level + 1}  ${total(0)} : ${total(1)}`);
+    // 1at (thầy): máy bay không kéo băng điểm nữa — kéo băng LEVEL của màn KẾ, bay qua trước khi 2 tàu mới chạy vào
+    const nx = G.level + 1;
+    if (!(OPT.levelCount > 0 && nx >= OPT.levelCount) && core.duoHasLevel(nx)) core.duoBanner(levelText(nx));
     later(() => {
       if (G.phase !== "between") return;
       const next = G.level + 1;

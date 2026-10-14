@@ -1,3 +1,11 @@
+// TRAIN RUSH — lõi MẪU 1at (14/10/2026), thầy giao 7 ý (cùng AWord):
+//   1) thùng ĐÃ NẰM trên tàu đi theo GIA TỐC của tàu (khung toa) ⇒ tàu lao tới / phóng đi không văng thùng; chỉ lung lay nhẹ (thùng nằm phẳng tầng 1) ·
+//   2) khinh khí cầu NHỎ hơn (BS 0,84 → 0,72 · Fight 0,66 → 0,55) và bay CAO hơn: đáy khoang lái luôn trên nóc chồng 2 thùng;
+//      chỉ thùng TẦNG 3 trở lên mới va được khinh khí cầu (nhóm va chạm theo độ cao, updateCrates) ·
+//   3) điểm chỉ khi CHẮC CHẮN không rơi: chạm thẳng nóc toa đúng VÀ chỗ thùng dừng (sau trượt) nằm TRỌN trên nóc ⇒ điểm ngay; còn lại chờ thùng nằm yên
+//      (settle 0,3 s) mới tính. Đã có điểm mà bị bật ra ⇒ trừ lại (unscore, có từ 1f) ·
+//   4) tốc độ khinh khí cầu tối đa ×2 (nấc 10: 6,2 → 12,4) · 5) máy bay KHÔNG kéo băng điểm nữa — kéo băng "LEVEL k" trước mỗi màn ·
+//   6) (west-world-1at) Fight: thú đuổi nhau chạy ngay sau ray xa, xuất hiện dày hơn.
 // TRAIN RUSH — lõi MẪU 1as (14/10/2026): như 1ar + (thầy) thùng đúng chạm toa là TÍNH ĐIỂM NGAY · thùng sắp chạm toa giữ đà NHANH HƠN tàu (SLIDE_V) ⇒
 //   chạm xong còn trượt tới trước rồi ma sát mới dừng (trần theo chỗ trống tới mép trước toa) · padState gửi số hiệu thùng (iPad làm mượt).
 // TRAIN RUSH — lõi MẪU 1ar (14/10/2026): như 1aq + padState gửi thêm giờ game `t` và vận tốc thùng (thầy: thùng trên iPad giật ngang).
@@ -127,7 +135,7 @@ import { ShaderPass } from "../../rocket-race/vendor/three/addons/ShaderPass.js"
 import { OutputPass } from "../../rocket-race/vendor/three/addons/OutputPass.js";
 import { createBpSound } from "./sound-1ah.js";
 import * as CANNON from "../vendor/cannon-es.js";
-import { createWestWorld, normalFromNoise, TRACK_TOP } from "./west-world-1aq.js";   // 1ap: nhiều đường ray · 1aq: chaseGap
+import { createWestWorld, normalFromNoise, TRACK_TOP } from "./west-world-1at.js";   // 1at: chaseNear   // 1ap: nhiều đường ray · 1aq: chaseGap
 import { makeCoach, addPassengers, animatePassengers, makeCoalCar, COACH_LEN, COAL_LEN, COAL_LUMP, coalMaterial } from "./coach-1i.js";
 import { weather } from "./grime-1i.js";
 import { createCine, INTROS, INTRO_ID } from "./cine-1ah.js";
@@ -140,20 +148,22 @@ const PALETTE = [0x7a1a14, 0x1d4a2f, 0x1f3a6b, 0x4a1d3a, 0x2a2a2c, 0x16404a, 0x6
 const CART_W = 6.2, CART_GAP = 0.45, CART_PITCH = CART_W + CART_GAP, ENGINE_LEN = 6.4, TENDER_LEN = 3.4;
 const HEAD = ENGINE_LEN / 2 + CART_GAP + TENDER_LEN + CART_GAP;   // từ tâm đầu máy tới đầu toa hàng thứ nhất
 const SLIDE_V = 2.6, SLIDE_DEC = 4;                               // 1as: thùng sắp chạm toa nhanh hơn tàu SLIDE_V (m/s) ⇒ trượt tới, giảm tốc đều SLIDE_DEC (m/s²) rồi dừng
-const TS0 = 0.74, BS0 = 0.84, RAIL_TOP = 0.62;                    // tỉ lệ tàu, tỉ lệ khinh khí cầu, mặt ray (bản đơn)
-export const DUO_TS = 0.86, DUO_BS = 0.66;                        // 1aq: Fight 1 màn — tàu TO hơn, khinh khí cầu NHỎ hơn (thầy 14/10)
+const TS0 = 0.74, BS0 = 0.72, RAIL_TOP = 0.62;   // 1at: khinh khí cầu nhỏ hơn (1as 0,84)
+                   // tỉ lệ tàu, tỉ lệ khinh khí cầu, mặt ray (bản đơn)
+export const DUO_TS = 0.86, DUO_BS = 0.55;   // 1at: 0,66 → 0,55
+                       // 1aq: Fight 1 màn — tàu TO hơn, khinh khí cầu NHỎ hơn (thầy 14/10)
 const ROOF_Y = 3.72, CRATE = 1.5, CRATE_W = 2.9, GRAV = 15;
 // 1aq: TS / BS / ROOF_W / CRATE_H nay tính TRONG createBalloonPop (Fight 1 màn khác bản đơn)
 const MAX_BLIMPS = 5;
 const BAR_H = 80;                                                 // 1h: hàng nút ngoài màn chơi (như Rocket Race)
 
 export const VIEWS = {   // 1aq: export cho bàn thử chỉnh góc
-  side: { cam: [0, 4.6, 25], look: [0, 6.1, 0], fov: 36, lanes: [7.3, 9.1, 10.9], guide: false },
+  side: { cam: [0, 4.6, 25], look: [0, 6.1, 0], fov: 36, lanes: [7.7, 9.35, 11.0], guide: false },   // 1at: cao hơn (1as 7,3/9,1/10,9) — đáy khoang lái trên chồng 2 thùng
   top:  { cam: [0, 21, 19.5], look: [0, 5.5, -2.4], fov: 40, lanes: [8.0, 9.8, 11.6], guide: true },
   // 1ap: Fight 1 màn — góc A thầy chọn (bản phác 14/10). lanes = làn khinh khí cầu ray gần; far = làn ray xa
   // 1aq: 2 tàu nâng lên khỏi mép dưới (thấy đất + cây cỏ tiền cảnh trước tàu đỏ) · máy bay kéo băng bay THẤP (plane: y, z)
   //   (1ap: look y 5.7 · lanes 8.6/10.4/12.2 · far 7.6/9.2/10.8 · máy bay y = lanes[2] + 1.2 = 13.4 sát mép trên)
-  duo:  { cam: [0, 13, 24], look: [0, 3.7, -5], fov: 28, lanes: [7.2, 8.6, 10.0], far: [6.4, 7.6, 8.8], plane: [9.6, -5], guide: false },
+  duo:  { cam: [0, 13, 24], look: [0, 3.7, -5], fov: 28, lanes: [7.9, 9.05, 10.2], far: [7.8, 8.6, 9.4], plane: [9.6, -5], guide: false },   // 1at: làn cao hơn (1aq 7,2/8,6/10,0 · xa 6,4/7,6/8,8); làn xa sát nhau hơn để không lòi mép trên (laneFree giãn)
 };
 export const DUO_Z = -10;   // 1ap: z ray xa (TEAM 2)
 export const DUO_COLORS = [   // 1ap: = COLORS của fight-1ao (đầu máy theo màn, ván toa, viền bảng) + vỏ khinh khí cầu
@@ -247,7 +257,8 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   document.addEventListener("fullscreenchange", fit);
   let dead = false;   // 1aj: destroy() ⇒ thôi vẽ, gỡ listener (AWord dỡ bàn khi đổi chế độ / rời act)
 
-  const world = createWestWorld(scene, renderer, { tracks: duo ? [0, DUO_Z] : [0], chaseGap: duo ? 0.5 : 1 });   // 1ap · 1aq: Fight thú đuổi nhau gần nhau 1/2
+  const world = createWestWorld(scene, renderer, { tracks: duo ? [0, DUO_Z] : [0], chaseGap: duo ? 0.5 : 1,
+    chaseNear: duo ? { walls: [{ z: 0, h: 4.6 }, { z: DUO_Z, h: 4.6 }] } : null });   // 1at: Fight — thú chạy ngay sau ray xa (nóc tàu + 1 thùng ≈ 4,6)   // 1ap · 1aq: Fight thú đuổi nhau gần nhau 1/2
   world.setSound(sfx);   // 1ah: tiếng con vật, chữ đổ
   world.setCamera(camera);   // 1af: cặp thú đuổi nhau chỉ sinh/xoá NGOÀI khung hình thật
   // quét 1 lượt: sửa mọi pháp tuyến bằng 0 còn sót trong cảnh
@@ -627,7 +638,8 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   // ------------------------------------------------------------------ khinh khí cầu
   function laneFree(y, fromX) {
     const dir = fromX >= S.camX ? 1 : -1;   // 1ac: chỉ xét quả cùng chiều bay
-    return !S.blimps.some(b => Math.abs(b.baseY - y) < 0.5 && (b.dir || 1) === dir && (dir > 0 ? b.x > fromX - 8.5 : b.x < fromX + 8.5));
+    const dy = duo && S.lanes[1] - S.lanes[0] < 1 ? 0.95 : 0.5;   // 1at: làn xa cách nhau 0,8 ⇒ 2 làn kề cũng tính là chung (không chồng khoang lái lên vỏ quả dưới)
+    return !S.blimps.some(b => Math.abs(b.baseY - y) < dy && (b.dir || 1) === dir && (dir > 0 ? b.x > fromX - 8.5 : b.x < fromX + 8.5));
   }
   function drawKeyword() {
     const first = S.carts.find(c => !c.filled);
@@ -822,7 +834,20 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     if (dt <= 0) return;
     const n = Math.max(1, Math.ceil(dt / (1 / 120))), h = dt / n;
     for (const R of RIGS) {
-      if (R.trainBody && R.train) { R.trainBody.position.set(R.tx0, RAIL_TOP, R.z); R.trainBody.velocity.set((R.train.position.x - R.tx0) / dt, 0, 0); }
+      if (R.trainBody && R.train) {
+        const vF = (R.train.position.x - R.tx0) / dt;
+        R.trainBody.position.set(R.tx0, RAIL_TOP, R.z); R.trainBody.velocity.set(vF, 0, 0);
+        // 1at (thầy): thùng ĐÃ NẰM trên tàu đi theo gia tốc của tàu (khung toa) — tàu lao tới toa kế / phóng đi không làm thùng trượt, đổ, văng
+        // (trước: chỉ ma sát kéo ⇒ lò xo tàu tới 20 m/s² ⇒ thùng tụt lùi, thùng gần mép rơi ⇒ đổi kết quả). Chỉ còn LUNG LAY nhẹ: thùng tầng 1
+        // nằm phẳng nhận một chút xoay ngược chiều gia tốc (quán tính), trần 0,45 rad/s — xa ngưỡng lật (cần ~60°).
+        const dv = R.ptv == null ? 0 : vF - R.ptv; R.ptv = vF;
+        if (dv) for (const c of R.crates) {
+          const b = c.body; if (!b || !c.onTrain || c.kicked) continue;
+          b.velocity.x += dv;
+          const q = b.quaternion;
+          if (!c.slide && q.x * q.x + q.z * q.z < 0.004 && b.position.y < ROOF_W + 2.6 * CRATE_H) b.angularVelocity.z = Math.max(-0.45, Math.min(0.45, b.angularVelocity.z + dv * 0.12));
+        }
+      } else R.ptv = null;
       for (const c of R.crates) c.touch.clear();
     }
     for (let i = 0; i < n; i++) { PH.step(h); handleContacts(); collectTouches(); }
@@ -872,7 +897,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
       if (other.userData && other.userData.trainRig && other !== S.trainBody) { if (imp > 2.2) sfx.thud(); continue; }   // 1ap: (hiếm) chạm tàu đội kia ⇒ chỉ tiếng
       if (other === S.trainBody) {
         const info = shapeInfo.get(shape) || { type: "head" };
-        if (info.type === "answer") touchTrain(c, info.car, imp);
+        if (info.type === "answer") touchTrain(c, info.car, imp, true);   // 1at: chạm thẳng nóc toa
         else if (info.type === "coach") { if (!c.kicked) touchTrain(c, null, imp); }
         else if (!c.kicked && !c.onTrain) {
           startle(c.body.position.x);
@@ -892,16 +917,19 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     S = keep;
   }
   // chạm toa đáp án (nóc toa, hoặc thùng đang nằm trên toa)
-  function touchTrain(c, car, imp) {
+  function touchTrain(c, car, imp, direct = false) {   // 1at: direct = chạm THẲNG nóc toa (không qua thùng khác)
+    let landX = null;   // 1at: chỗ thùng sẽ dừng sau cú trượt (ước) — để biết chắc nằm trọn trên nóc
     if (!c.onTrain) {
       c.onTrain = true;
       // thùng gỗ cứng tiếp đất: chỉ trượt + lắc RẤT nhẹ theo quán tính còn lại
-      c.body.collisionFilterGroup = 3;   // đã nằm trên tàu: khinh khí cầu bay sát sẽ húc phải
+      // 1at: nhóm va chạm khinh khí cầu nay theo TẦNG (updateCrates) — chỉ thùng tầng 3 trở lên mới húc được
       const v = c.body.velocity, tv = S.trainVel;
       // 1as: đà TỚI (nhanh hơn tàu) giữ ~90 % để trượt; trần theo chỗ còn trống tới mép trước toa (ma sát μ 0,5 ⇒ hãm 7,5 m/s²) — không trượt rơi khỏi toa
       const ex = v.x - tv;
-      if (car || ex > 0) { let cap = 2.6;   // 1as: chạm toa đáp án ⇒ LUÔN trượt tới (kể cả thùng tới chậm hơn tàu) if (car) { const front = S.train.position.x + (car.localX + car.len / 2) * TS, room = front - (c.body.position.x + CRATE_W * TS / 2) - 0.15; cap = Math.sqrt(2 * SLIDE_DEC * Math.max(0, room)); }
-        const e2 = Math.min(Math.max(ex * 0.9, SLIDE_V * 0.75), cap); v.x = tv + e2; if (e2 > 0.2) c.slide = { ex: e2, t: 0 }; }   // trượt: updateCrates giữ giảm tốc đều (ma sát vật lý hãm quá gắt — đo trượt chỉ 0,06)
+      if (car || ex > 0) { let cap = 2.6;   // 1as: chạm toa đáp án ⇒ LUÔN trượt tới (kể cả thùng tới chậm hơn tàu)
+        // 1at: VÁ — từ 1as dòng chặn trượt dưới đây nằm lọt sau chú thích `//` nên KHÔNG chạy (thùng trượt được quá mép trước toa)
+        if (car) { const front = S.train.position.x + (car.localX + car.len / 2) * TS, room = front - (c.body.position.x + CRATE_W * TS / 2) - 0.15; cap = Math.sqrt(2 * SLIDE_DEC * Math.max(0, room)); }
+        const e2 = Math.min(Math.max(ex * 0.9, SLIDE_V * 0.75), cap); v.x = tv + e2; if (e2 > 0.2) c.slide = { ex: e2, t: 0 }; landX = e2 * e2 / (2 * SLIDE_DEC); }   // trượt: updateCrates giữ giảm tốc đều (ma sát vật lý hãm quá gắt — đo trượt chỉ 0,06)
       else v.x = tv + Math.max(-1.3, ex * 0.6) + (Math.random() - 0.5) * 0.6;   // 1j: cú chạm bằng góc thùng không biến thành cú văng ngang quá mạnh v.z *= 0.5;   // xê dịch thêm chút theo hướng ngẫu nhiên
       const w = c.body.angularVelocity, kk = Math.min(1, imp / 9);
       w.x = w.x * 0.5 + (Math.random() - 0.5) * 0.5 * kk; w.y *= 0.7; w.z = Math.max(-2.6, Math.min(2.6, w.z * 0.6 + (Math.random() - 0.5) * 3 * kk));   // chúi, lắc nhẹ
@@ -911,8 +939,20 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     if (!c.judged && car && S.state === "play") {
       c.judged = true;
       if (car.key !== c.key) { wrongCrate(c); kick(c, 1); }   // thầy chốt 29/9: thùng SAI văng khỏi toa như Wordwall
-      else if (!c.scoredCart) scoreCart(car, c);              // 1as (thầy): chạm đúng toa là TÍNH ĐIỂM NGAY (trước: chờ thùng nằm yên 0,3 s)
+      else if (!c.scoredCart && direct && surelyOn(c, car, landX)) scoreCart(car, c);   // 1at (thầy): điểm NGAY chỉ khi CHẮC CHẮN không rơi
+      // còn lại (rơi lệch mép, rơi lên thùng khác, nảy…) ⇒ chờ thùng nằm yên trên toa (settle 0,3 s trong updateCrates) mới tính
     }
+  }
+  // 1at: thùng CHẮC CHẮN nằm lại trên nóc toa: chỗ dừng (vị trí + quãng trượt còn lại) để cả thân thùng trọn trên nóc (lề 0,2) và
+  // gần như không xoay ngang; đà tới đã bị chặn theo chỗ trống (cap trong touchTrain), tàu tăng tốc không văng (khung toa — stepPhysics)
+  function surelyOn(c, car, slideLeft) {
+    if (!S.train || !c.body) return false;
+    const cx = S.train.position.x + car.localX * TS, half = (CART_W / 2 + 0.12) * TS - CRATE_W * TS / 2;   // tâm thùng còn lệch được bao nhiêu mà thân vẫn trọn trên nóc
+    const q = c.body.quaternion, tilt = q.x * q.x + q.z * q.z;   // sin²(nửa góc nghiêng): 0,012 ≈ 12° · 0,04 ≈ 23°
+    const allow = tilt < 0.012 ? half + 0.1 : tilt < 0.04 ? half - 0.5 : -1;   // chạm bằng góc thùng (nghiêng) có thể lật sang bên ⇒ đòi nằm gần giữa hơn
+    const x = c.body.position.x - cx, x1 = x + (slideLeft || 0);   // cú trượt tới đã bị chặn theo chỗ trống tới mép trước (touchTrain) ⇒ chỉ đi VÀO nóc
+    c.sure = { x0: +x.toFixed(2), x1: +x1.toFixed(2), allow: +allow.toFixed(2), tilt: +tilt.toFixed(4) };   // bàn thử
+    return Math.abs(x) <= allow && x1 <= half + 0.15 && Math.abs(c.body.position.z - S.z) < 0.4;
   }
   function kick(c, strength) {
     c.kicked = true;
@@ -983,6 +1023,8 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
       }
       if (c.onTrain && !c.kicked && !c.slide && c.scoredCart && Math.abs(b.velocity.x - S.trainVel) < 1.2 && Math.abs(b.velocity.y) < 0.6)
         b.velocity.x += (S.trainVel - b.velocity.x) * Math.min(1, dt * 12);   // 1as: thùng đúng đã yên BÁM tàu khi tàu tăng tốc sang toa kế (ma sát hãm không kịp ⇒ tụt lùi); húc mạnh (> 1,2) vẫn văng
+      // 1at: chỉ thùng TẦNG 3 trở lên (tâm cao hơn nóc + 2 thùng) mới va được khinh khí cầu; tầng 1–2 và thùng đang rơi / bị văng thì không
+      if (b) { const g = c.onTrain && !c.kicked && p.y > ROOF_W + 4 * CRATE_H ? 3 : 1; if (b.collisionFilterGroup !== g) b.collisionFilterGroup = g; }
       if (c.onTrain && !c.kicked) {
         // nóc toa hẹp theo bề ngang: giữ thùng không trôi ra mép trước/sau (bập bênh rồi lật) — chỉ nảy/xê dịch dọc toa
         b.velocity.z = b.velocity.z * Math.exp(-dt * 6) - (p.z - S.z) * dt * 6;   // 1ap: giữa nóc toa của ray đội mình
@@ -1400,6 +1442,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     S.state = "intro"; S.introT = 0; S.camX = S.cineC; S.camTarget = S.cineC; S.camV = 0; S.trainX = S.introFrom; placeTrain();
     stage.querySelector(".bp-top").style.visibility = "";
     signEl.classList.remove("is-in"); void signEl.offsetWidth; signEl.classList.add("is-in");
+    if (S.level === 0) flyPlane("LEVEL 1");   // 1at
   }
   const roundSecs = () => (timed() ? opt.roundMin * 60 : 0);   // 1ap: giây của thanh giờ MỖI MÀN
   // 1ap: số toa màn i — Levels Off ⇒ một màn chứa đủ cả bộ từ; 1–20 ⇒ màn k có k toa
@@ -1431,6 +1474,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     S.state = "intro";
     signEl.textContent = "Level " + (i + 1);
     signEl.classList.remove("is-in"); void signEl.offsetWidth; signEl.classList.add("is-in");
+    if (i > 0 || !INTRO_ID || embed) flyPlane("LEVEL " + (i + 1));   // 1at: máy bay mang LEVEL trước mỗi màn (màn 1 có phim intro ⇒ bay lúc hết phim, endCine)
     sfx.whistle();
     updateHud();
     return true;
@@ -1447,7 +1491,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   // 1ab: nấc 1 giữ nguyên, nấc 10 nhanh GẤP ĐÔI 1aa, các nấc giữa chia đều (tàu 1,35 → 9,0 · khinh khí cầu 0,85 → 6,2)
   const speedStep = (s, v1, v10) => v1 + (v10 - v1) * (s - 1) / 9;
   function cruiseV() { return speedStep(opt.trainSpeed, 1.35, 9.0) * (1 + 0.04 * (Math.min(S.levelSize || S.carts.length, 10) - 1)) *   /* 1ap: theo số toa CỦA MÀN (tàu dựng dần), tối đa như 10 toa */ (1 + 0.11 * Math.sin(S.time * 0.21) + 0.05 * Math.sin(S.time * 0.57 + 1.3)); }
-  function blimpV() { return speedStep(opt.balloonSpeed, 0.85, 6.2) * 1.1 * (1 + 0.06 * (S.level || 0)); }   // 1af: +10 %, mỗi màn +6 % (tàu chỉ +4 %/toa)
+  function blimpV() { return speedStep(opt.balloonSpeed, 0.85, 12.4) * 1.1 * (1 + 0.06 * (S.level || 0)); }   // 1at (thầy): tối đa ×2 (nấc 10: 6,2 → 12,4)   // 1af: +10 %, mỗi màn +6 % (tàu chỉ +4 %/toa)
 
   function levelClear() {
     S.state = "clear"; S.clearT = 0;
@@ -1457,8 +1501,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     // 1ap: thưởng = số giây còn trên thanh giờ của màn (1 giây = 1 điểm); màn sau thanh đầy lại (bỏ "+5s" cũ)
     const bonus = timed() ? Math.ceil(S.timeLeft) : 0;
     S.score += bonus;
-    if (bonus) flashClock("+" + bonus);
-    flyPlane(share ? S.teams[0] + " : " + S.teams[1] : "Score " + S.score);
+    if (bonus) flashClock("+" + bonus);   // 1at: máy bay không kéo băng điểm nữa — kéo "LEVEL k" lúc màn mới bắt đầu (beginLevel)
     updateHud();
   }
   function endGame(why) {   // why: "time" hết giờ · "done" hết từ · "levels" đủ số màn (1ap) · "ended" thầy bấm End game
@@ -2048,6 +2091,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     },
     duoEnd() { for (const R of RIGS) if (R.state !== "gone") { R.state = "over"; R.blimps.forEach(b => { b.leaving = true; b.vy = 0; }); } },
     duoBanner(text) { withRig(RIGS[0], () => flyPlane(text)); },
+    duoHasLevel() { return RIGS.every(R => R.bag.length > 0); },   // 1at: còn từ cho màn kế (trang Fight chỉ cho máy bay mang LEVEL khi màn đó có thật)
     setTouch(ok) { touchOK = !!ok; },   // nút iPad "Chỉ iPad" ⇒ false
     // ---- iPad: bố cục tàu (gửi khi đổi) + trạng thái (gửi ~20 lần/giây) — toạ độ x THẾ GIỚI (iPad đặt giữa màn = camX)
     padLayout(team) {

@@ -1,3 +1,4 @@
+// 1at (14/10/2026): y hệt 1aq, chỉ đổi import sang animals-1at (cùng mô-đun với cặp thú đuổi nhau gần ray).
 // 1aq (14/10/2026): createSignChase(..., { gapK }) — khoảng hở con đuổi ↔ con trốn nhân gapK (Fight 1 màn 0,5); dùng animals-1aq.
 // THÚ ĐUỔI NHAU TRÊN GỜ CHỮ — bản 1ag (30/9/2026): CHỈ kiểu "húc" (chạy phía TRƯỚC dãy chữ, húc đổ một chữ) — bỏ kiểu "vòng" chạy ra
 // SAU chữ (bị khuất; thầy: con vật phải luôn nhìn rõ). Chỉ sinh khi west-world cho phép (1 cặp đuổi nhau trên mặt đất một lúc).
@@ -9,7 +10,7 @@
 //  · "húc": chạy dọc phía trước, con chạy trốn ngoặt gấp va vào một chữ ⇒ chữ đổ (bụi tung), loạng choạng rồi chạy tiếp.
 // Chữ đổ nằm một lát rồi tự dựng lại (west-props-1w).
 import * as THREE from "../../rocket-race/vendor/three/three.module.min.js";
-import { buildReal, animateReal } from "./animals-1aq.js";
+import { buildReal, animateReal } from "./animals-1at.js";
 
 const PAIRS = [["pronghorn", "lioness"], ["horse", "wolf"], ["pronghorn", "wolf"], ["horse", "lioness"], ["pig", "wolf"]];   // [chạy trốn, đuổi]
 const K = 1.6;                     // phóng to (xa ~230 đơn vị)

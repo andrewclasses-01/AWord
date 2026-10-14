@@ -626,6 +626,7 @@ function seen(cam, x, z, lim = 1) {
 // không bị mặt đất / đoàn tàu che (không xét khung hình)
 function clear(cam, x, z) {
   if (!cam) return true;
+  if (WALLS) return clearWalls(cam, x, z);   // 1at: Fight 1 màn — 2 đoàn tàu (ray gần + ray xa) cùng che
   const y = groundHeight(x, z) + 1.1;
   const c = cam.position, N = 24;
   for (let k = 2; k < N; k++) {
@@ -637,9 +638,20 @@ function clear(cam, x, z) {
   return true;
 }
 const TRAIN_WALL = 3.75;
+// 1at: createChase({ near }) đặt các bức tường tàu (z, cao) — đường ngắm phải vượt qua nóc MỌI đoàn tàu
+let WALLS = null, ZNEAR = -30, ZFAR = -170;
+function clearWalls(cam, x, z) {
+  const y = groundHeight(x, z) + 1.1, c = cam.position, N = 24;
+  for (let k = 2; k < N; k++) {
+    const u = k / N, px = c.x + (x - c.x) * u, py = c.y + (y - c.y) * u, pz = c.z + (z - c.z) * u;
+    if (groundHeight(px, pz) > py + 0.05) return false;
+  }
+  for (const w of WALLS) if (c.z > w.z + 1.2 && z < w.z - 1.2) { const u0 = (c.z - w.z) / (c.z - z), yl = c.y + (y - c.y) * u0; if (yl < w.h) return false; }
+  return true;
+}
 // chỗ không bị che GẦN làn zp nhất (dò cả phía gần lẫn phía xa, trong z −30 … −170)
 function nearestClear(cam, x, zp) {
-  for (let d = 3; d <= 140; d += 3) for (const z of [zp - d, zp + d]) if (z <= -30 && z >= -170 && clear(cam, x, z)) return z;
+  for (let d = 3; d <= 140; d += 3) for (const z of [zp - d, zp + d]) if (z <= ZNEAR && z >= ZFAR && clear(cam, x, z)) return z;   // 1at: ZNEAR/ZFAR theo near
   return null;
 }
 
@@ -808,8 +820,11 @@ const BIG = ["elephant", "cow", "camel", "horse"];
 // Luật: con TRƯỚC luôn nhanh hơn (con đuổi chậm hơn 0,3 m/s ⇒ khoảng cách chỉ giãn) · khoảng hở mõm con sau ↔ đuôi con trước ≥ 2,5 m
 // · các con đi cùng một đường lượn (con sau đi lại đúng vết con trước, trễ theo khoảng cách) · con đuổi lệch 1,3 về phía máy quay.
 // Sinh ra và xoá đi đều NGOÀI khung hình của máy quay thật (setCamera).
-export function createChase(scene, hook = null, { gapK = 1 } = {}) {   // 1aq: gapK = hệ số khoảng hở (Fight 1 màn: 0,5)
-  let C = null, t = 0, wait = 10 + Math.random() * 10, cam = null;
+export function createChase(scene, hook = null, { gapK = 1, near = null } = {}) {   // 1aq: gapK = hệ số khoảng hở (Fight 1 màn: 0,5)
+  // 1at (thầy 14/10): near = { walls: [{ z, h }] } ⇒ Fight 1 màn — thú chạy NGAY SAU ray xa (z ≈ −24 … −38, chỗ thấy được qua nóc 2 đoàn tàu)
+  //   thay vì từ tận z −150 chạy chéo về −34; xuất hiện dày hơn (chờ 4–8 s đầu, 8–16 s giữa các lượt)
+  if (near) { WALLS = near.walls; ZNEAR = -22; ZFAR = -50; } else { WALLS = null; ZNEAR = -30; ZFAR = -170; }
+  let C = null, t = 0, wait = near ? 4 + Math.random() * 4 : 10 + Math.random() * 10, cam = null;
   const Z = -118, GAP = 2.5 * gapK, SLOWER = 0.3 * gapK;
   const V3 = new THREE.Vector3(), BOX = new THREE.Box3();
   const dustTex = (() => { const c = document.createElement("canvas"); c.width = c.height = 64; const x = c.getContext("2d"), gr = x.createRadialGradient(32, 32, 2, 32, 32, 31); gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.5, "rgba(255,255,255,.45)"); gr.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); return t; })();
@@ -854,9 +869,10 @@ export function createChase(scene, hook = null, { gapK = 1 } = {}) {   // 1aq: g
     const cx0 = cam ? cam.position.x : camX;
     let z0 = -140, z1 = -95;   // dự phòng: làn xa (thường đã thấy qua nóc tàu)
     const pathOK = (a, b) => [0.3, 0.5, 0.7].every(u => seen(cam, cx0 + dir * (u - 0.5) * 40, a + (b - a) * (u * u * (3 - 2 * u)), 1));
+    if (near) { z0 = -36; z1 = -27; }   // 1at: dự phòng gần
     search: for (let k = 0; k < 6; k++) {
-      const a = -150 + Math.random() * 30;
-      for (let b = -34; b >= a + 20; b -= 4) if (pathOK(a, b)) { z0 = a; z1 = b; break search; }   // đầu gần: gần nhất còn thấy rõ
+      const a = near ? -38 + Math.random() * 6 : -150 + Math.random() * 30;
+      for (let b = near ? -24 : -34; b >= a + (near ? 6 : 20); b -= near ? 2 : 4) if (pathOK(a, b)) { z0 = a; z1 = b; break search; }   // đầu gần: gần nhất còn thấy rõ
     }
     // chỗ xuất phát: NGOÀI khung hình (lùi xa dần tới khi cả đoàn khuất) — ở làn xa z0
     let start = 40;
@@ -913,7 +929,7 @@ export function createChase(scene, hook = null, { gapK = 1 } = {}) {   // 1aq: g
       // xoá khi cả đoàn đã chạy qua xa VÀ khuất khỏi khung hình (hoặc quá xa hẳn)
       const tail = C.x0 - C.dir * (C.chaser.off + C.gapGrow);
       const past = (tail - camX) * C.dir;
-      if ((past > 60 && !C.all.some(A => inView(A.px, A.pz))) || past > 480) { kill(); wait = 18 + Math.random() * 20; }
+      if ((past > 60 && !C.all.some(A => inView(A.px, A.pz))) || past > 480) { kill(); wait = near ? 8 + Math.random() * 8 : 18 + Math.random() * 20; }   // 1at: near ⇒ dày hơn
     },
   };
 }

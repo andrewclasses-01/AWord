@@ -545,7 +545,39 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
-
+
+## Đợt 521 (14/10/2026) — TRAIN RUSH: MỞ VÀO THẲNG FIGHT · THÙNG KHÔNG VĂNG THEO TÀU · ĐIỂM CHỈ KHI CHẮC CHẮN · MÁY BAY MANG LEVEL
+
+**Thầy giao 8 ý (đọc Train Rush myGame + AWord chế độ Fight rồi sửa cùng):** (1) mở Train Rush mặc định vào Fight như Rocket Race · (2) thùng đã rơi xuống
+tàu thì tàu tăng tốc cũng không được văng đủ để đổi kết quả (lung lay nhẹ được, nhưng thùng gần rơi không được rơi) · (3) khinh khí cầu nhỏ hơn, cao hơn
+khỏi toa — chỉ chồng từ 3 tầng mới va được · (4) thùng chỉ tính điểm khi CHẮC CHẮN không rơi; điểm ngay chỉ khi chắc chắn · (5) đã có điểm mà bị bật ra
+⇒ trừ lại · (6) tốc độ tối đa khinh khí cầu ×2 · (7) máy bay không kéo băng điểm nữa, kéo LEVEL trước mỗi màn · (8) thú đuổi nhau chạy gần đường đua hơn.
+Làm ở myGame **1at** (`30030dc`, hồ sơ myGame `balloon-pop/NGHIEN CUU GAMEPLAY.md` mục 44) rồi `tools/chep-train-rush.py` (GOC fight-1at).
+- (1) `balloon-pop.js` mount: có cầu `ui.host` (thầy) và không phải "Start with mistakes" ⇒ `toFight()` ngay. Thầy bấm Single (Mode ▸ Single / PAUSED ▸
+  Single mode) ⇒ biến mô-đun `singleFor` = act đó ⇒ mount lại act đó vẫn Single; mở act KHÁC ⇒ xoá ⇒ lại vào Fight (cùng luật `autoFightOffFor` Đợt 394 của
+  Rocket Race). Học sinh (`ui.host` null) vẫn Single. KHÔNG dùng cờ engine `fightByDefault` vì nó đi đường `enterFight ⇒ ownFight` (hàng nút không có
+  Thư mục / Options — Đợt 487).
+- (2) lõi `stepPhysics`: mỗi khung lấy Δv của tàu cộng thẳng vào vận tốc mọi thùng đang nằm trên tàu (khung toa — trước chỉ ma sát kéo, lò xo tàu tới
+  ~20 m/s² khi lao sang toa kế, phóng đi 7 m/s² ⇒ thùng tụt, thùng sát mép rơi). Lung lay: thùng tầng 1 nằm phẳng nhận thêm xoay ±0,45 rad/s ngược chiều gia tốc
+  (xa ngưỡng lật ~60°).
+- (3) BS 0,84 → 0,72 (Single) · 0,66 → 0,55 (Fight); làn Single 7,7/9,35/11,0 · Fight gần 7,9/9,05/10,2 · xa 7,8/8,6/9,4 (xa thấp hơn để không lòi mép trên;
+  2 làn xa kề nhau tính chung trong `laneFree`). Đáy khoang lái luôn trên nóc chồng 2 thùng. Nhóm va chạm thùng nay theo ĐỘ CAO (`updateCrates`): chỉ tâm thùng
+  cao hơn nóc + 4 nửa-thùng (tầng 3) mới vào nhóm 3 (khinh khí cầu va được); trước: cứ chạm tàu là nhóm 3.
+- (4) `touchTrain(c, car, imp, direct)` + `surelyOn`: điểm NGAY chỉ khi chạm THẲNG nóc toa đúng, tâm thùng nằm sao cho cả thân trọn trên nóc (nghiêng < 12°;
+  nghiêng 12–23° phải gần giữa hơn 0,5), chỗ dừng sau trượt vẫn trên nóc. Còn lại ⇒ chờ nằm yên 0,3 s (settle cũ). Đo: thùng phẳng điểm ở đúng khung chạm,
+  thùng nghiêng điểm sau ~0,6 s. (5) `unscore` có từ 1f — kiểm lại: đẩy thùng đã có điểm sang toa khác ⇒ −5, toa mở lại.
+- ⛔ VÁ lỗi cũ 1as (AWord Đợt 519): dòng chặn trượt theo chỗ trống tới mép trước toa nằm LỌT SAU chú thích `//` trên cùng dòng ⇒ chưa từng chạy, thùng trượt được
+  quá mép trước. Đúng bẫy "chú thích `//` giữa dòng JS nhiều lệnh" đã ghi ở myGame CLAUDE.md.
+- (6) `blimpV` nấc 10: 6,2 → 12,4 (nấc 1 giữ 0,85). (7) Fight: `core.duoBanner("LEVEL k")` lúc GO! (màn 1) và lúc giữa 2 màn (màn kế, chỉ khi còn màn — `duoHasLevel`);
+  Single: `beginLevel` bay "LEVEL k" (màn 1 có phim intro ⇒ bay lúc hết phim `endCine`); bỏ băng "Score n" / "L1 58 : 55".
+- (8) `west-world-1at` `{ chaseNear: { walls } }` ⇒ `animals-1at` createChase near: đường chạy z ≈ −24 … −38 ngay sau ray xa (trước: từ −150 chạy chéo về −34, giữa
+  màn ở ~−90); tầm nhìn tính qua nóc CẢ 2 đoàn tàu; chờ 4–8 s đầu, 8–16 s giữa các lượt (trước 10–20 / 18–38 s). Single giữ nguyên (máy quay thấp, tàu che).
+- Đã kiểm (myGame bàn thử + AWord devserver): mount với cầu host ⇒ Fight · bấm Single ⇒ Single · mount lại cùng act ⇒ Single · act khác ⇒ Fight · học sinh ⇒ Single;
+  mô-đun 1at nạp trong AWord; Fight 2 đội qua màn: tàu phóng đi thùng không rơi, băng LEVEL 1 / LEVEL 2; Single băng LEVEL 1 sau phim; thú giữa màn z −26; 0 lỗi console.
+⬜ thầy thử TOMKO + iPad thật (iPad không đổi: tr-padui-1as, làn khinh khí cầu iPad tự theo bố cục `l:`).
+
+---
+
 ## Đợt 520 (14/10/2026) — STATS LÀM LẠI: TRANG MỚI (A + KHUNG CHI TIẾT EM) · CHẤM TAY BẰNG NUMPAD NGANG
 
 **Thầy (14/10):** "phần chấm tay khó nhập quá" (chạm +1 / vuốt ±5) · tên bài lấy tự động từ thẻ bài của lớp trên dashboard (sửa được) · numpad ngang cố
@@ -1232,7 +1264,7 @@ bản máy chủ bị xoá, practiceLog CÙNG mã lượt `…|mc>tiep` DONE; nh
 bấm START ngay khi kho máy rỗng (nhãn còn START) ⇒ vẫn làm tiếp đúng lượt (2/30).
 ✅ Mở 2 máy CÙNG LÚC: thầy chốt "đăng nhập máy 2 = máy 1 tự đăng xuất NGAY" ⇒ myLesson web v1.268.0 `801506f` (phienHs/{uid}, luật `tools/dang-luat-phien-hs.js`). Thầy "ok được rồi" 08/10. ⬜ Thử trên điện thoại thật.
 
-
+
 ## Đợt 494 (08/10/2026) — ⭐⭐ TIME LIMIT DÙNG CHUNG: Type the answer · Unjumble · Find the gap · Anagram + Quiz lên 30 s
 **Thầy:** "các template khác cũng có Time limit tương tự (ví dụ type the answer)". Đã rà cả 21 template (bảng phân loại ở cuối mục).
 Thầy chốt (AskUserQuestion): đợt này **TTA · Unjumble · Find the gap · Anagram**, **Quiz nâng 1..30 s** (nấc cuối vẫn ∞);

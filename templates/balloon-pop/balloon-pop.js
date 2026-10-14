@@ -38,6 +38,12 @@
 // ⭐ Đợt 517 (thầy 14/10/2026 — myGame 1aq, thầy thử 1ap): Fight 1 màn chỉnh cỡ — tàu TO hơn, khinh khí cầu NHỎ hơn, 2 tàu nâng lên chừa đất +
 //   cỏ tiền cảnh, máy bay kéo băng điểm bay THẤP (giữa 2 ray), thú đuổi nhau gần nhau 1/2. Single y hệt (lõi ./3d/bp3d-1aq.js, nhánh không duo).
 //   iPad vẽ lại kiểu A "Miền Tây hoàng hôn" (pad.js ⇒ 3d/tr-padui-1aq.js); game gửi thêm điểm đội bạn · số màn · số đếm · thưởng giờ.
+// ⭐⭐ Đợt 521 (thầy 14/10/2026 — myGame 1at): MỞ TRAIN RUSH ⇒ VÀO THẲNG FIGHT như Rocket Race (thầy có cầu ui.host; học sinh / "Start with
+//   mistakes" vẫn Single). Thầy chủ động bấm Single (Mode ▸ Single / PAUSED ▸ Single mode) ⇒ act đó ở lại Single (`singleFor`), mở act KHÁC
+//   thì luật vào Fight chạy lại — cùng luật `autoFightOffFor` của engine cho Rocket Race (Đợt 394). Lõi 1at: thùng đã nằm trên tàu đi theo gia
+//   tốc của tàu (không văng đổi kết quả, chỉ lung lay nhẹ) · điểm chỉ khi CHẮC CHẮN không rơi (bị bật ra ⇒ trừ lại) · khinh khí cầu nhỏ + cao,
+//   chỉ chồng ≥ 3 tầng mới va · tốc độ khinh khí cầu tối đa ×2 · máy bay kéo băng "LEVEL k" trước mỗi màn (bỏ băng điểm) · Fight: thú đuổi
+//   nhau chạy ngay sau ray xa. VÁ kèm: dòng chặn thùng trượt quá mép trước toa (1as) nằm lọt sau chú thích `//` nên chưa từng chạy.
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
@@ -100,6 +106,8 @@ function flatOpts(g) {
 const trGame = act => ({ ...TR_DEF, ...gameOpts(act && act.options) });
 // ⭐ Đợt 487 — đang ở trận Fight mà chọn act khác ở nút Thư mục ⇒ act đó mở thẳng vào Fight (mount đọc trong 15 s rồi xoá)
 let fightNextAt = 0;
+// ⭐ Đợt 521 — act mà thầy đã chủ động chuyển về Single (mở act khác thì xoá ⇒ lại vào thẳng Fight)
+let singleFor = "";
 
 let webglOk = null;
 function canRun3d() {
@@ -264,10 +272,10 @@ const balloonPopTemplate = {
     function single() {
       const my = ++tok;
       drop();
-      import("./3d/bp3d-1as.js")
+      import("./3d/bp3d-1at.js")
         .then(m => m.createBalloonPop({
           mount: h.box, view: "side", words, wordsTitle: activity.title || "", options: trGame(activity), host,
-          onEvent: (k, d) => { if (k === "mode" && d === "fight") switchTo(toFight); }
+          onEvent: (k, d) => { if (k === "mode" && d === "fight") { singleFor = ""; switchTo(toFight); } }
         }))
         .then(g => { if (dead || my !== tok) { g.destroy(); return; } game = g; ld.done(); })
         .catch(failed);
@@ -275,12 +283,12 @@ const balloonPopTemplate = {
     function toFight() {
       const my = ++tok;
       drop();
-      Promise.all([import("./3d/fight-1as.js"), trPadLink()])
+      Promise.all([import("./3d/fight-1at.js"), trPadLink()])
         .then(([m, L]) => {
           if (dead || my !== tok) { L.release(); return null; }
           link = L;
           return m.createTrainRushFight({ mount: h.box, words, wordsTitle: activity.title || "", options: trGame(activity), host: fightHost,
-            onSingle: () => switchTo(single), onHome: ui.host ? () => ui.host.home() : null, padSignal: L.signal, onPad: L.onPad });
+            onSingle: () => { singleFor = actKey; switchTo(single); }, onHome: ui.host ? () => ui.host.home() : null, padSignal: L.signal, onPad: L.onPad });
         })
         .then(api => {
           if (!api) return;
@@ -297,7 +305,10 @@ const balloonPopTemplate = {
       const my = tok;
       ld.ready.then(() => { if (!dead && my === tok) fn(); });
     }
-    const wantFight = Date.now() - fightNextAt < 15000;
+    // Đợt 521 — mặc định vào Fight (thầy); Đợt 487 — chọn act khác giữa trận Fight ⇒ act đó cũng vào Fight
+    const actKey = String(activity.id || activity.title || "");
+    if (singleFor && singleFor !== actKey) singleFor = "";
+    const wantFight = Date.now() - fightNextAt < 15000 || (!!ui.host && !activity._mistakes && singleFor !== actKey);
     fightNextAt = 0;
     if (wantFight) toFight(); else single();
     return function cleanup() {
@@ -333,7 +344,7 @@ function mountTrainRushFight(root, act, { single, home }) {
   let poll = 0;   // Đợt 451 — chờ trận dựng xong (ô Loading… ẩn) rồi mới mờ màn chờ
   const obs = new MutationObserver(() => { if (root.childNodes.length) off(); });
   obs.observe(root, { childList: true });
-  Promise.all([import("./3d/fight-1as.js"), trPadLink()])   // Đợt 487: host {} ⇒ ẩn Thư mục / Options (đường engine không có cầu ui.host)
+  Promise.all([import("./3d/fight-1at.js"), trPadLink()])   // Đợt 487: host {} ⇒ ẩn Thư mục / Options (đường engine không có cầu ui.host)
     .then(([m, L]) => {
       if (dead) { L.release(); return null; }
       link = L;
