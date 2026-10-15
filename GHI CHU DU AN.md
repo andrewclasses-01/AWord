@@ -546,6 +546,25 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 532 (15/10/2026) — TRAIN RUSH: 1 ĐIỂM/THÙNG · TỐC ĐỘ +5 %/MÀN TỪ NẤC OPTIONS · BỎ NGƯỜI TRONG TOA (myGame mẫu 1aw)
+
+**Thầy:** (1) mỗi hộp rơi trúng đích chỉ tính 1 điểm · (2) sau mỗi màn tốc độ tăng một chút tính từ tốc độ Options đặt ban đầu · (3) bỏ hẳn người chạy trong toa để tiết kiệm hiệu năng. Sửa cả myGame và AWord.
+
+**Game (myGame mẫu 1aw `f32004b`, hồ sơ `myGame/balloon-pop/NGHIEN CUU GAMEPLAY.md` mục 47; chép `tools/chep-train-rush.py` GOC `fight-1aw.js`):**
+- `scoreCart`: thùng đúng 5 → **1 điểm** (đang x2 ⇒ 2); bị bật khỏi toa ⇒ trừ lại đúng số đó. Cả Single lẫn Fight.
+- `levelBoost(lv) = min(1,75; 1 + 0,05·lv)` nhân cho tàu (`cruiseV` + máy quay Fight `duoCamera`) và khinh khí cầu (`blimpV`): màn 1 = đúng nấc Options, mỗi màn +5 %.
+  Bỏ +4 %/toa (Levels Off trước chạy nhanh hơn nấc tới +36 %) và +6 %/màn riêng của khinh khí cầu.
+- Toa khách không còn người (không dựng, không hoạt cảnh hoảng / chạy lung tung); rèm toa `coach-1aw.js` đổi kính mờ truyền sáng (transmission ⇒ three.js vẽ thêm cả cảnh mỗi khung) sang vải đục sáng ấm.
+- Files 3d/: + `bp3d-1aw.js` `fight-1aw.js` `coach-1aw.js`; công cụ tự xoá `bp3d-1au.js` `fight-1au.js` `coach-1i.js`. `balloon-pop.js` import 1aw. iPad giữ `tr-padui-1av.js`.
+
+**Đã kiểm:** myGame Single — thùng đúng ⇒ 1 điểm; nấc 4 tàu 3,900 → 4,095 → 4,290 đv/s ở màn 1–2–3; không còn người trong toa. Fight (myGame + AWord `3d/fight-1aw.js` qua máy chủ thử cổng 8532) — 2 tàu vào chơi, thùng đúng ⇒ đội 1 = 1 điểm, máy quay 3,9 màn 1, console sạch.
+
+**Chưa đổi, chờ thầy:** thưởng giờ thừa khi qua màn (1 giây = 1 điểm) nay lấn át điểm thùng · Points off tối đa −10 · toa than −2 · quả thưởng điểm +10.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy chơi Train Rush trên TOMKO: +5 %/màn đủ chưa · rèm toa ổn không · fps · quyết thang thưởng giờ / Points off. ⬜ việc chờ Đợt 531.
+
+---
+
 ## Đợt 531 (15/10/2026) — RACING WORDS: FIGHT KIỂU ROCKET RACE · CẢNH XA ĐÚNG VẬT LÝ · 35 km/h · MẶC ĐỊNH FIGHT (myGame mẫu 3q)
 
 **Thầy:** (1) núi / cảnh xa đổi bất hợp lý khi xe đổi góc ⇒ chóng mặt, cần đúng vật lý · (2) tốc độ thường ~35 km/h; dưới 40 km/h lên ramp không đổi góc, chạy qua như đường

@@ -1,3 +1,4 @@
+// COACH 1aw (15/10/2026): như coach-1i, rèm vải đục thay kính mờ truyền sáng (không còn người trong toa — bp3d-1aw không gọi addPassengers).
 // TOA KHÁCH + TOA THAN — bản 1i (29/9/2026): hoảng loạn LÂU hơn (2–2,8 s mỗi người, run tay run người); thùng rơi liên tiếp
 // (≥ 2 lần trong 5 s) ⇒ toa LOẠN: 1–2 người bật dậy chạy lung tung dọc lối đi (giơ tay, ngoái lại), hết loạn thì về chỗ ngồi.
 // Bản 1g: cổ nối liền thân–đầu (trước bị hở), rèm là kính mờ thật
@@ -13,7 +14,8 @@ import * as THREE from "../../rocket-race/vendor/three/three.module.min.js";
 
 export const COACH_LEN = 7.2, COAL_LEN = 6.6;
 // rèm kính mờ: nhìn xuyên nhưng nhoè (độ nhám cao ⇒ ảnh phía sau bị làm mờ)
-const CURTAIN = new THREE.MeshPhysicalMaterial({ color: 0xf3e2bf, transmission: 1, roughness: 0.48, thickness: 0.04, ior: 1.25, metalness: 0, emissive: 0x2a1c0c, emissiveIntensity: 0.4 });
+// 1aw (thầy 15/10): bỏ hẳn người trong toa ⇒ rèm KHÔNG còn kính truyền sáng (transmission bắt three.js vẽ cả cảnh thêm 1 lần mỗi khung) — rèm vải đục sáng ấm
+const CURTAIN = new THREE.MeshStandardMaterial({ color: 0xe9d3a6, roughness: 0.85, metalness: 0, emissive: 0x6a4a22, emissiveIntensity: 0.55 });
 
 export function makeCoach(paintHex, meshAdder, M) {
   const g = new THREE.Group(), add = meshAdder(g);

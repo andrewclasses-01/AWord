@@ -1,3 +1,7 @@
+// TRAIN RUSH — lõi MẪU 1aw (15/10/2026), thầy 3 ý (cả Single lẫn Fight):
+//   1) mỗi thùng rơi trúng toa đúng chỉ tính 1 ĐIỂM (trước 5; đang x2 ⇒ 2) ·
+//   2) tốc độ TÀU + KHINH KHÍ CẦU: màn 1 = đúng nấc Options, mỗi màn sau +5 % (levelBoost, tối đa ×1,75) — thay kiểu cũ tàu +4 %/toa · khinh khí cầu +6 %/màn ·
+//   3) BỎ HẲN người trong toa khách (không dựng, không hoạt cảnh hoảng/chạy) + rèm toa không còn kính truyền sáng (coach-1aw) ⇒ nhẹ máy.
 // TRAIN RUSH — lõi MẪU 1au (14/10/2026): thầy "iPad hiển thị ít quá ⇒ mọi thứ nhỏ hơn, nhìn toàn cảnh các ô tàu, thả thùng vào NHIỀU ô cùng lúc,
 //   không phải lần lượt (đổi cả game chính)". Fight 1 màn (duo): đoàn tàu GIỮ NGUYÊN như 1at (2 toa phụ giữa 2 toa đáp án — thầy: màn lớn hiện toa thế
 //   nào thì iPad hiện y hệt; bản nháp đầu nối liền toa đáp án đã bị thầy bác). Khinh khí cầu mang từ của OPEN_N = 2 toa CHƯA ĐẦY đầu tiên (toa tàu
@@ -140,7 +144,7 @@ import { OutputPass } from "../../rocket-race/vendor/three/addons/OutputPass.js"
 import { createBpSound } from "./sound-1ah.js";
 import * as CANNON from "../vendor/cannon-es.js";
 import { createWestWorld, normalFromNoise, TRACK_TOP } from "./west-world-1at.js";   // 1at: chaseNear   // 1ap: nhiều đường ray · 1aq: chaseGap
-import { makeCoach, addPassengers, animatePassengers, makeCoalCar, COACH_LEN, COAL_LEN, COAL_LUMP, coalMaterial } from "./coach-1i.js";
+import { makeCoach, makeCoalCar, COACH_LEN, COAL_LEN, COAL_LUMP, coalMaterial } from "./coach-1aw.js";   // 1aw: không còn người trong toa
 import { weather } from "./grime-1i.js";
 import { createCine, INTROS, INTRO_ID } from "./cine-1ah.js";
 import { createFightCine } from "./fight-cine-1ap.js";   // 1ap: intro chạy trên ray xa thật
@@ -376,7 +380,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   const fxRoot = new THREE.Group(); scene.add(fxRoot);
   FC = createFightCine({ scene, camera, gradeU: grade.uniforms, sfx, stage, S, TS, RAIL_TOP, CART_W, ENGINE_LEN, TENDER_LEN, CART_GAP,
     makeEngine: (...a) => makeEngine(...a), makeTender: (...a) => makeTender(...a), makeCart: (...a) => makeCart(...a), makeFiller: (...a) => makeFiller(...a),
-    weather, smokeTex, fxRoot, plankTexture, animatePassengers, ...(duo ? { zFar: DUO_Z, ownTrack: false } : {}) });   // 1ap: duo ⇒ tàu xanh chạy trên ray xa thật
+    weather, smokeTex, fxRoot, plankTexture, ...(duo ? { zFar: DUO_Z, ownTrack: false } : {}) });   // 1ap: duo ⇒ tàu xanh chạy trên ray xa thật
 
   // ------------------------------------------------------------------ bộ câu theo màn
   const norm = s => String(s).trim().toUpperCase().replace(/\s+/g, " ");
@@ -430,7 +434,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
       let car;
       if (S.fr() < 0.62) {
         const co = makeCoach([0x1f4a33, 0x5a1a1a, 0x1f3050, 0x4a3a1a][Math.floor(Math.random() * 4)], meshAdder, M);
-        car = { type: "coach", group: co.group, len: COACH_LEN, roof: co.roof, bogies: co.bogies, people: addPassengers(co.group, co.y0), startleT: null };
+        car = { type: "coach", group: co.group, len: COACH_LEN, roof: co.roof, bogies: co.bogies, people: null };   // 1aw: bỏ người trong toa
         S.coaches.push(car);
       } else {
         const cc = makeCoalCar(meshAdder, M, [0x2c2c2e, 0x3a2a22, 0x2a3036][Math.floor(Math.random() * 3)]);
@@ -493,7 +497,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     let car;
     if (type === "coach") {
       const co = makeCoach([0x1f4a33, 0x1f3050][team] ?? 0x1f4a33, meshAdder, M);
-      car = { group: co.group, len: COACH_LEN, bogies: co.bogies, people: addPassengers(co.group, co.y0) };
+      car = { group: co.group, len: COACH_LEN, bogies: co.bogies, people: null };   // 1aw: bỏ người trong toa
     } else {
       const cc = makeCoalCar(meshAdder, M, 0x2c2c2e);
       car = { group: cc.group, len: COAL_LEN, bogies: cc.bogies, people: null };
@@ -971,13 +975,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
     c.body.angularVelocity.set((Math.random() - 0.5) * 9, (Math.random() - 0.5) * 5, -(v.x - tv) * 1.6 - 3);
   }
   // người trong các toa khách gần chỗ va chạm giật mình
-  function startle(x = S.camX) {
-    for (const co of S.coaches) if (Math.abs(S.train.position.x + co.localX * TS - x) < 20) {
-      co.startleT = 0;
-      co.hits = (co.hits || []).filter(t => S.time - t < 4.5); co.hits.push(S.time);
-      if (co.hits.length >= 2) co.chaosT = 0;   // 1i: thùng rơi liên tiếp ⇒ toa loạn, có người chạy lung tung
-    }
-  }
+  function startle() {}   // 1aw: không còn người trong toa để giật mình
   // thùng rơi vào TOA THAN: thùng văng, than bắn tung toé, trừ điểm
   function coalHit(c, car, impact) {
     sfx.wrong(); sfx.coalHit();   // 1ah: than bắn tung (tiếng thật)
@@ -1103,7 +1101,7 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   }
   function scoreCart(cart, c) {
     if (share && cart.filled) return;   // 1ac share: toa đã có đội chiếm — thùng đúng đến sau chỉ nằm đó, không điểm
-    const gain = S.x2 > 0 ? 10 : 5;
+    const gain = S.x2 > 0 ? 2 : 1;   // 1aw (thầy): mỗi thùng trúng đích 1 điểm (x2 ⇒ 2)
     if (!cart.filled) { cart.crate = c.mesh; cart.crateObj = c; }
     cart.filled = true; c.scoredCart = cart; c.gain = gain;
     cart.hold = 0.9;   // 1as: điểm NGAY, nhưng tàu / máy quay / qua màn đợi thùng trượt xong (≤ 0,9 s) — tàu lao tới toa kế khi thùng còn nảy ⇒ thùng tụt lùi
@@ -1498,8 +1496,9 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
   // tàu thật: lúc nhanh lúc chậm nhẹ (2 sóng chậm chồng nhau)
   // 1ab: nấc 1 giữ nguyên, nấc 10 nhanh GẤP ĐÔI 1aa, các nấc giữa chia đều (tàu 1,35 → 9,0 · khinh khí cầu 0,85 → 6,2)
   const speedStep = (s, v1, v10) => v1 + (v10 - v1) * (s - 1) / 9;
-  function cruiseV() { return speedStep(opt.trainSpeed, 1.35, 9.0) * (1 + 0.04 * (Math.min(S.levelSize || S.carts.length, 10) - 1)) *   /* 1ap: theo số toa CỦA MÀN (tàu dựng dần), tối đa như 10 toa */ (1 + 0.11 * Math.sin(S.time * 0.21) + 0.05 * Math.sin(S.time * 0.57 + 1.3)); }
-  function blimpV() { return speedStep(opt.balloonSpeed, 0.85, 12.4) * 1.1 * (1 + 0.06 * (S.level || 0)); }   // 1at (thầy): tối đa ×2 (nấc 10: 6,2 → 12,4)   // 1af: +10 %, mỗi màn +6 % (tàu chỉ +4 %/toa)
+  const levelBoost = lv => Math.min(1.75, 1 + 0.05 * (lv || 0));   // 1aw (thầy): màn 1 = đúng nấc Options, mỗi màn sau +5 % (tàu + khinh khí cầu), trần ×1,75
+  function cruiseV() { return speedStep(opt.trainSpeed, 1.35, 9.0) * levelBoost(S.level) *   /* 1aw: theo MÀN (trước: +4 %/toa) */ (1 + 0.11 * Math.sin(S.time * 0.21) + 0.05 * Math.sin(S.time * 0.57 + 1.3)); }
+  function blimpV() { return speedStep(opt.balloonSpeed, 0.85, 12.4) * 1.1 * levelBoost(S.level); }   // 1aw: +5 %/màn chung với tàu   // 1at (thầy): tối đa ×2 (nấc 10: 6,2 → 12,4)   // 1af: +10 %, mỗi màn +6 % (tàu chỉ +4 %/toa)
 
   function levelClear() {
     S.state = "clear"; S.clearT = 0;
@@ -1646,18 +1645,11 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
       if ((b.dir !== -1 && b.x < S.camX - S.SKY - 8) || (b.dir === -1 && b.x > S.camX + S.SKY + 8)) removeBlimp(b);
     }
   }
-  function updateCoaches(dt) {
-    if (!S.train) return;
-    for (const co of S.coaches) {
-      if (co.startleT != null) { co.startleT += dt; if (co.startleT > 5.2) co.startleT = null; }
-      if (co.chaosT != null) { co.chaosT += dt; if (co.chaosT > 7) co.chaosT = null; }
-      if (Math.abs(S.train.position.x + co.localX * TS - S.camX) < 24) animatePassengers(co.people, S.time, co.startleT, co.chaosT, dt);
-    }
-  }
+  function updateCoaches() {}   // 1aw: không còn người trong toa (trước: hoạt cảnh hoảng / chạy lung tung mỗi khung)
   // 1ap: duo — máy quay TRÔI ĐỀU (tốc độ tàu theo Options + số toa của màn); trước trận / sau intro thì đứng yên
   function duoCamera(dt) {
     const moving = RIGS.some(R => R.state === "intro" || R.state === "play" || R.state === "clear" || R.state === "gone" || R.state === "out");
-    const L = RIGS[0].levelSize || 1, tv = moving ? speedStep(opt.trainSpeed, 1.35, 9.0) * (1 + 0.04 * (Math.min(L, 10) - 1)) : 0;
+    const tv = moving ? speedStep(opt.trainSpeed, 1.35, 9.0) * levelBoost(RIGS[0].level) : 0;   // 1aw: theo màn
     SH.camV += (tv - SH.camV) * (1 - Math.exp(-dt * 1.5));
     SH.camX += SH.camV * dt; SH.camTarget = SH.camX;
   }

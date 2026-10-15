@@ -1,3 +1,4 @@
+// TRAIN RUSH — Fight 1 màn mẫu 1aw (15/10/2026): lõi bp3d-1aw — thùng trúng 1 điểm, tốc độ +5 %/màn từ nấc Options, bỏ người trong toa.
 // TRAIN RUSH — Fight 1 màn mẫu 1au (14/10/2026): lõi bp3d-1au — thả được vào 2 toa đáp án cùng lúc (iPad tr-padui-1au thu nhỏ).
 // TRAIN RUSH — Fight 1 màn mẫu 1at (14/10/2026): lõi bp3d-1at (thùng đi theo gia tốc tàu, điểm chỉ khi chắc chắn, khinh khí cầu nhỏ + cao, nhanh ×2,
 //   thú chạy gần ray) · máy bay KHÔNG kéo băng điểm — kéo "LEVEL k" trước mỗi màn (lúc GO! và lúc giữa 2 màn).
@@ -18,7 +19,7 @@
 //     host = cầu AWord { listActs, openAct, options(ov) } (như 1ao) · padSignal = kho bắt tay iPad { write, listen } (myGame: localSignal)
 //   ⇒ api { destroy(), setOptions(o), start(), G, core, pad }
 // Hàng nút, bảng Thư mục / Mode / PAUSED / kết quả: như fight-1ao (CSS fight-1al + fight-1ao + fight-1ap).
-import { createBalloonPop, DUO_COLORS } from "./bp3d-1au.js";
+import { createBalloonPop, DUO_COLORS } from "./bp3d-1aw.js";
 import { createBpSound } from "./sound-1ah.js";
 import { createPadHost } from "./tr-padlink-1ap.js";
 
