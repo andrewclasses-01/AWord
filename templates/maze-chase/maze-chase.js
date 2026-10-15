@@ -41,7 +41,8 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { openMazeChaseEditor } from "./maze-chase-editor.js";
-import { showLoader3d } from "../../core/loader3d.js";   // Đợt 451 — màn chờ thay khung trắng của AWord lúc nạp 3D
+import { showLoader3d } from "../../core/loader3d.js";
+import { block3dHere, block3dMessage } from "../../core/myact-board.js";   // ⭐ Đợt 530 — game 3D chỉ chạy ở bảng 1 của myActivity   // Đợt 451 — màn chờ thay khung trắng của AWord lúc nạp 3D
 const loader = () => showLoader3d({ key: "starloot", title: "STAR LOOT", theme: "space" });
 
 const CSS_3D = new URL("./3d/mc3d-2r.css", import.meta.url).href;
@@ -186,6 +187,7 @@ const starLootTemplate = {
   // Bỏ màn READY của engine: bấm Play ngay khi engine chuẩn bị xong ⇒ thầy thấy thẳng màn START của STAR LOOT.
   // Không chạy được 3D ⇒ NÉM để engine giữ màn READY thường; bấm Play ra dòng báo thiếu WebGL (Đợt 450: không còn bản 2D).
   startScreen({ play, ready }) {
+    if (block3dHere()) { ready().then(() => play()); return { dispose() {} }; }   // Đợt 530: bảng 2..5
     if (!canRun3d()) throw new Error("Star loot: no WebGL");
     const ld = loader();   // Đợt 451 — hiện NGAY khung đầu (che màn READY + khung trống của engine trong lúc nạp)
     let gone = false;
@@ -195,6 +197,7 @@ const starLootTemplate = {
   },
   mount(root, activity, ui) {
     const questions = playable(activity);
+    if (block3dHere()) { root.innerHTML = ""; return block3dMessage(root, "Star loot"); }   // Đợt 530
     if (!canRun3d()) { needMessage(root, "Star loot needs 3D graphics (WebGL), which this browser or device cannot run."); return () => {}; }
     if (!questions.length) { loader().drop(); needMessage(root, "No questions yet — add questions with one correct answer."); return () => {}; }
     const ld = loader();   // Đợt 451 — cùng màn chờ từ startScreen (hoặc mới nếu vào thẳng mount)

@@ -19,6 +19,7 @@
 import { registerTemplate } from "../../core/registry.js";
 import { openQuizEditor } from "../quiz/quiz-editor.js";
 import { showLoader3d, preloadLoader3d } from "../../core/loader3d.js";
+import { block3dHere, block3dMessage } from "../../core/myact-board.js";   // ⭐ Đợt 530 — game 3D chỉ chạy ở bảng 1 của myActivity
 const loader = () => { ensureCss(); return showLoader3d({ key: "racingwords", title: "RACING WORDS", theme: "space" }); };
 preloadLoader3d("space");
 
@@ -122,6 +123,7 @@ const racingWordsTemplate = {
   noAssignment: "Racing words is a classroom game for now — it cannot be set as homework yet.",
   // bỏ màn READY: Play ngay ⇒ thầy thấy thẳng xưởng ANDREW STUDIO. Không chạy được 3D ⇒ NÉM để engine giữ màn READY thường.
   startScreen({ play, ready }) {
+    if (block3dHere()) { ready().then(() => play()); return { dispose() {} }; }   // Đợt 530: bảng 2..5 — không màn chờ 3D, không thử WebGL
     if (!canRun3d()) throw new Error("Racing words: no WebGL");
     const ld = loader();
     let gone = false;
@@ -129,6 +131,7 @@ const racingWordsTemplate = {
     return { dispose() { gone = true; } };
   },
   mount(root, activity, ui) {
+    if (block3dHere()) { root.innerHTML = ""; return block3dMessage(root, "Racing words"); }   // Đợt 530
     const questions = playable(activity);
     if (!canRun3d()) { needMessage(root, "Racing words needs 3D graphics (WebGL), which this browser or device cannot run."); return () => {}; }
     if (!questions.length) { loader().drop(); needMessage(root, "No questions yet — add questions with one correct answer."); return () => {}; }

@@ -52,6 +52,7 @@ import { icons } from "../../core/icons.js";
 import { fitOnce } from "../../core/fit.js";
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { rrSound } from "./rr-sound.js";
+import { block3dHere, block3dMessage } from "../../core/myact-board.js";   // ⭐ Đợt 530 — game 3D chỉ chạy ở bảng 1 của myActivity
 import { openRocketRaceEditor } from "./rocket-race-editor.js";
 import { publishStage, clearStage, subscribeViewer, mintMatchId, VIEWER_STALE_MS } from "./rr-link.js";
 
@@ -649,6 +650,7 @@ function rr3dMissWait(st, wrap) {
 
 function rr3dScene({ root, ctl, title, play }) {
   root.innerHTML = "";
+  if (block3dHere()) { const off = block3dMessage(root, "Rocket race"); return { destroy: off }; }   // Đợt 530: Fight 3D chỉ ở bảng 1 (Solo 2D vẫn chạy mọi bảng)
   root.classList.add("aw-rr3d-root");
   const host3d = el("div", "aw-rr3d-canvas");
   const host2d = el("div", "aw-rr3d-hidden2d");

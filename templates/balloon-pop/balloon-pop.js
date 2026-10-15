@@ -52,7 +52,8 @@
 import { registerTemplate } from "../../core/registry.js";
 import { resolveActivity } from "../../core/content-view.js";   // act từ vựng nhiều bộ nghĩa ⇒ đúng bộ đang chọn
 import { openBalloonPopEditor } from "./balloon-pop-editor.js";
-import { showLoader3d, preloadLoader3d } from "../../core/loader3d.js";   // Đợt 451 — màn chờ thay khung trống lúc nạp 3D
+import { showLoader3d, preloadLoader3d } from "../../core/loader3d.js";
+import { block3dHere, block3dMessage } from "../../core/myact-board.js";   // ⭐ Đợt 530 — game 3D chỉ chạy ở bảng 1 của myActivity   // Đợt 451 — màn chờ thay khung trống lúc nạp 3D
 const loader = () => { ensureTr3dCss(); return showLoader3d({ key: "trainrush", title: "TRAIN RUSH", theme: "west" }); };
 preloadLoader3d("west");   // Đợt 452 — phông Rye tải ngay lúc nạp template (màn chờ hiện là đã có chữ)
 
@@ -219,6 +220,7 @@ const balloonPopTemplate = {
   // Bỏ màn READY của engine: bấm Play ngay khi engine chuẩn bị xong ⇒ thầy thấy thẳng màn START của TRAIN RUSH.
   // Không chạy được 3D ⇒ NÉM để engine giữ màn READY thường; bấm Play sẽ ra dòng báo thiếu WebGL (mount).
   startScreen({ play, ready }) {
+    if (block3dHere()) { ready().then(() => play()); return { dispose() {} }; }   // Đợt 530: bảng 2..5
     if (!canRun3d()) throw new Error("Train rush: no WebGL");
     const ld = loader();   // Đợt 451 — hiện NGAY khung đầu
     let gone = false;
@@ -228,6 +230,7 @@ const balloonPopTemplate = {
   },
   mount(root, activity, ui) {
     root.innerHTML = "";
+    if (block3dHere()) { root.innerHTML = ""; return block3dMessage(root, "Train rush"); }   // Đợt 530
     if (!canRun3d()) { noWebglMessage(root); return () => {}; }
     const words = wordsOf(activity);
     if (words.length < 2) {
@@ -336,6 +339,7 @@ const balloonPopTemplate = {
 // dựng lại `root` vì lý do khác (◀ trình duyệt, đổi act…) — MutationObserver trên root bắt việc đó.
 function mountTrainRushFight(root, act, { single, home }) {
   const items = wordsOf(act);
+  if (block3dHere()) { root.innerHTML = ""; return block3dMessage(root, "Train rush"); }   // Đợt 530: trận riêng cũng chỉ ở bảng 1
   if (!canRun3d() || items.length < 2) { setTimeout(() => single(), 0); return () => {}; }
   const ld = loader();
   const h = openHost();

@@ -546,6 +546,25 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 530 (15/10/2026) — GAME 3D CHỈ CHẠY Ở BẢNG 1 CỦA myActivity (đi cặp myActivity v2.34.0)
+
+**Thầy:** "Với myActivity, khi mở game có bị mở ở nhiều bảng gây lag và khựng không? Tôi muốn các game 3D trên AWord chỉ được mở ở bảng 1 và chặn các bảng khác".
+**Trả lời (soi myActivity):** chế độ ĐƠN thì không (act không chép sang bảng ẩn). Chế độ 2–5 bảng thì CÓ: `mirrorAword` mở cùng act ở mọi bảng (`f=1`),
+mỗi bảng là phiên riêng ⇒ tải lại, dịch lại shader (tiến trình GPU chung, dịch nối đuôi ⇒ bảng 1 chờ) và vẽ thêm cả cảnh 3D mỗi khung.
+
+**Làm:**
+- myActivity v2.34.0: UA trang AWord thêm ` myActivityCol/N` (N = bảng 1..5).
+- `core/myact-board.js` (MỚI): `myActBoard()` · `block3dHere()` (= bảng > 1) · `block3dMessage(root, tên)` — khung tối "<tên> plays on board 1 / Other boards
+  stay off so board 1 runs smoothly." (CSS tự chèn 1 lần, console `MYACT:3D:BLOCKED`).
+- Chặn TRƯỚC khi đụng WebGL ở 4 game: Racing words (startScreen ⇒ Play ngay không màn chờ 3D, mount ⇒ khung báo) · Star loot (như trên) · Train rush
+  (startScreen, mount, `mountTrainRushFight`) · Rocket race (`rr3dScene` = Fight 3D ⇒ khung báo, handle `{destroy}`; Solo 2D không đổi).
+- Không có token (Chrome thường, myLesson, popup) / bảng 1 ⇒ y như cũ.
+
+**Đã kiểm:** Chrome giả UA (CDP) trên `scratch/dot529-rw.html` + gọi thẳng hook 3 game kia: bảng 2 ⇒ 4/4 khung báo, 0 canvas, không ô 3D ở `<body>`;
+bảng 1 / không token ⇒ game dựng như cũ. myActivity thật: 5 bảng nhận đúng `myActivityCol/1..5`.
+
+**VIỆC ĐANG CHỜ:** ⬜ TOMKO: myActivity 3 bảng ⇒ game 3D chỉ chạy bảng 1, bảng 2–3 hiện khung báo · ⬜ việc chờ Đợt 529 / 528.
+
 ## Đợt 529 (15/10/2026) — RACING WORDS MƯỢT (myGame mẫu 3p) + CHẠM ĐÚP BỎ INTRO
 
 **Thầy** (sau Đợt 528): "double tap vào intro để vào màn chuẩn bị start luôn" · "game chạy được nhưng khá lag — tham khảo cách tối ưu của Train Rush, trải nghiệm mượt nhất".
