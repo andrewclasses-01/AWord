@@ -58,8 +58,14 @@ export function groundH(x, z) {
 }
 
 // ---------- cong thế giới ----------
+// 3q (thầy 15/10: "núi và cảnh phía xa thay đổi rất bất hợp lý … chóng mặt"): bản cũ lệch = b·d² ở MỌI khoảng cách ⇒ núi 1.000 m lệch
+//   tới ~1.800 m mỗi lần độ cong đổi. Nay CONG THẬT trong BEND_D0 = 150 m (đúng tầm đọc khúc cua 30–150 m của bendFor), xa hơn đi theo
+//   TIẾP TUYẾN ⇒ cảnh xa chỉ XOAY một góc atan(2·b·D0) như khi xe quay đầu thật; bầu trời xoay cùng góc (skyRot). bendQ JS = cùng công thức.
+export const BEND_D0 = 150;
+export const bendQ = d => { const a = -Math.min(d, 0); return a <= BEND_D0 ? a * a : BEND_D0 * (2 * a - BEND_D0); };
 const BEND_GLSL = `uniform vec2 uBend; uniform float uBendZ;
-vec4 bendW(vec4 w){ float d = min(w.z - uBendZ, 0.0); w.x += uBend.x*d*d; w.y -= uBend.y*d*d; return w; }`;
+float bendQ(float d){ float a = -d; return a <= 150.0 ? a*a : 150.0*(2.0*a - 150.0); }
+vec4 bendW(vec4 w){ float d = min(w.z - uBendZ, 0.0); float q = bendQ(d); w.x += uBend.x*q; w.y -= uBend.y*q; return w; }`;
 export function makeBend(U) {
   return mat => {
     const prev = mat.onBeforeCompile;
@@ -92,8 +98,8 @@ export const SUN_DIR = new THREE.Vector3(0.38, 0.085, -0.92).normalize();   // m
 export const HAZE = new THREE.Color("#e7a982");
 function makeSky() {
   const mat = new THREE.ShaderMaterial({
-    uniforms: { uSun: { value: SUN_DIR }, uHaze: { value: HAZE }, uT: { value: 0 } },
-    vertexShader: `varying vec3 vDir; void main(){ vDir = normalize((modelMatrix * vec4(position,1.0)).xyz - cameraPosition); gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position,1.0); gl_Position.z = gl_Position.w; }`,
+    uniforms: { uSun: { value: SUN_DIR }, uHaze: { value: HAZE }, uT: { value: 0 }, uRot: { value: new THREE.Matrix3() } },
+    vertexShader: `uniform mat3 uRot; varying vec3 vDir; void main(){ vDir = uRot * normalize((modelMatrix * vec4(position,1.0)).xyz - cameraPosition); gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position,1.0); gl_Position.z = gl_Position.w; }`,
     fragmentShader: NOISE_GLSL + `uniform vec3 uSun; uniform vec3 uHaze; uniform float uT; varying vec3 vDir;
       void main(){ vec3 d = normalize(vDir); float e = d.y;
         vec3 zen = vec3(0.13,0.19,0.40), mid = vec3(0.55,0.42,0.62), low = vec3(0.98,0.60,0.40), hor = vec3(1.0,0.80,0.56);
@@ -234,6 +240,10 @@ export function createWorld({ scene, U, bend, keyDir }) {
   const own = [], ownM = [], ownT = [];
   const keep = (o) => { o.traverse(x => { if (x.geometry) own.push(x.geometry); if (x.material) (Array.isArray(x.material) ? x.material : [x.material]).forEach(m => { ownM.push(m); ["map", "alphaMap"].forEach(k => m[k] && ownT.push(m[k])); }); }); return o; };
   const sky = keep(makeSky()); scene.add(sky);
+  // 3q: cảnh xa (theo tiếp tuyến) lệch về +x một góc φ = atan(2·bx·D0) và chúc xuống α = atan(2·by·D0) ⇒ pixel nhìn hướng v phải lấy màu trời
+  //   ở hướng R⁻¹·v (R = xoay đưa cảnh xa tới chỗ mới) ⇒ mặt trời, mây, chân trời đi cùng núi.
+  const SE = new THREE.Euler(0, 0, 0, "YXZ"), SM = new THREE.Matrix4();
+  function skyRot(bx, by) { SE.set(-Math.atan(2 * by * BEND_D0), -Math.atan(2 * bx * BEND_D0), 0, "YXZ"); SM.makeRotationFromEuler(SE).transpose(); sky.material.uniforms.uRot.value.setFromMatrix4(SM); }
   const ground = keep(makeGround(U, keyDir)); scene.add(ground);
   const sea = keep(makeSea(U)); scene.add(sea);
 
@@ -338,6 +348,7 @@ export function createWorld({ scene, U, bend, keyDir }) {
     setFog(n, f) { FOGU.uFogNear.value = n; FOGU.uFogFar.value = f; },
     /** camPos: vị trí máy quay (chưa cong) · t: giây · sMin/sMax: đoạn đường cần có cây/cột (m) */
     update(camPos, t, sMin, sMax) {
+      skyRot(U.uBend.value.x, U.uBend.value.y);                // 3q: trời xoay CÙNG góc với cảnh xa
       sky.position.copy(camPos); sky.material.uniforms.uT.value = t; sea.material.uniforms.uT.value = t;
       const zc = Math.round(camPos.z / 10) * 10; ground.position.z = zc - 450; sea.position.z = zc - 450;
       const snap = Math.floor(camPos.z / TILE) * TILE; road.position.z = snap - ROAD_LEN / 2 + 200; rails.forEach(r => r.position.z = road.position.z);

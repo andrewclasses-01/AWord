@@ -42,6 +42,7 @@ import * as THREE from "../../rocket-race/vendor/three/three.module.min.js";
 import { DecalGeometry } from "../../rocket-race/vendor/three/addons/DecalGeometry.js";
 import { XE, buildXe, setPaint } from "./sr3d-xe3d-3o.js";
 import { CAR_META } from "./sr3d-carmeta-3p.js";
+// 3q: = sr3d-car-3p.js, lửa pô cong theo tiếp tuyến như sr3d-world-3q.js
 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -94,7 +95,7 @@ function shadowTex() {
   return (SHADOW = new THREE.CanvasTexture(c));
 }
 const FLAME_VS = `uniform vec2 uBend; uniform float uBendZ; varying vec2 vUv;
-void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position,1.0); float d = min(w.z - uBendZ, 0.0); w.x += uBend.x*d*d; w.y -= uBend.y*d*d; gl_Position = projectionMatrix * viewMatrix * w; }`;
+void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position,1.0); float d = min(w.z - uBendZ, 0.0); float a = -d; float q = a <= 150.0 ? a*a : 150.0*(2.0*a - 150.0); w.x += uBend.x*q; w.y -= uBend.y*q; gl_Position = projectionMatrix * viewMatrix * w; }`;
 // 3l: lửa thật — uEnd 0 = tấm dọc (vUv.y = dọc luồng lửa từ miệng ống), 1 = đĩa nhìn từ sau (toạ độ cực)
 const FLAME_FS = `uniform float uT; uniform float uK; uniform float uPop; uniform float uSeed; uniform float uEnd; varying vec2 vUv;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }

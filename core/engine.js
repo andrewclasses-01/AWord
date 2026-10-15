@@ -1953,6 +1953,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       originType: originAct.type,
       mode: fight ? "fight" : (playMode || "single"),
       ownFight: !!modeTpl.ownFight,
+      fightOnly: !!modeTpl.fightOnly,          // ⭐ Đợt 531 — Racing words: chỉ có Fight ⇒ màn chọn làm mờ SINGLE
       fightFirst: !!modeTpl.fightByDefault,   // Rocket race / Train rush: khung mở sẵn ở FIGHT
       can: {
         fight: canFight,

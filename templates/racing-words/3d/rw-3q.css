@@ -1,0 +1,34 @@
+/* RACING WORDS mẫu 3q (= rw-3o.css + vạch LIVES · thanh Time delay / Miss wait · chấm chuỗi nhiều) — mẫu 3o: khung của GÓI NHÚNG (rw-3o.js): phủ trọn ô mount (AWord: ô .aw-rw-host phủ trang), game tỉ lệ ≤ 2:1 giữa theo chiều dọc + hàng nút 60 px ngay dưới.
+   Không đụng html/body (AWord). Dùng chung CSS game sr3d-3g.css + sr3d-3l.css + sr3d-intro-3o.css. */
+.rw-root { position: absolute; inset: 0; background: #04060d; overflow: hidden; container-type: size; font-family: "Exo 2", "Segoe UI", sans-serif; color: #e8eefc; }
+.rw-wrap { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); height: min(calc(50cqw + 60px), 100cqh); display: flex; flex-direction: column; }
+.rw-frame { position: relative; flex: 1; min-height: 0; }
+.rw-bar { position: relative; height: 60px; flex: none; z-index: 10; }
+.rw-load { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #8893a3; font: 600 15px "Exo 2", sans-serif; letter-spacing: 1px; }
+.rw-after { position: absolute; inset: 0; z-index: 49; background: #fff; opacity: 0; pointer-events: none; }
+/* 3o: nút Thư mục (act cùng thư mục) + MENU ▸ CHANGE TEMPLATE */
+.sr-fd { display: flex; flex-direction: column; gap: 6px; max-height: 52cqh; overflow-y: auto; min-width: 300px; }
+.sr-fd-grp { margin: 8px 0 2px; font: 800 12px "Exo 2"; letter-spacing: .14em; color: #8ea6d6; text-transform: uppercase; }
+.sr-fd-row { text-align: left; border: 1px solid rgba(140, 200, 255, .25); background: rgba(255, 255, 255, .05); color: #e8f4ff; border-radius: 10px; padding: 9px 12px; font: 700 15px "Exo 2"; cursor: pointer; }
+.sr-fd-row:hover { background: rgba(120, 190, 255, .14); }
+.sr-fd-row.is-on { border-color: #ffcf4a; color: #ffe39a; cursor: default; }
+.sr-fd-note { color: #9fb4e0; font: 600 14px "Exo 2"; }
+.sr-pm-tpl { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; max-height: 34cqh; overflow-y: auto; }
+.sr-pm-tpl button { font: 700 1.9cqh "Exo 2" !important; padding: .9cqh 1.4cqh !important; text-transform: none !important; }
+
+/* 3q: LIVES — vạch năng lượng MẢNH dọc cột kính (A-pillar) mép NGOÀI mỗi nửa: đội 1 mép trái, đội 2 mép phải; mỗi bậc = 1 mạng, mất từ trên xuống */
+.rw-lives { position: absolute; top: 14%; bottom: calc(27cqh + 3cqh); width: .62cqw; min-width: 5px; display: flex; flex-direction: column-reverse; gap: .45cqh; z-index: 3; pointer-events: none;
+  padding: .35cqh .18cqw; border-radius: 99px; background: rgba(4, 8, 14, .55); box-shadow: 0 0 0 1px rgba(255, 255, 255, .08); }
+.sr-half0 .rw-lives { left: .7%; } .sr-half1 .rw-lives { right: .7%; }
+.rw-lives i { flex: 1; border-radius: 99px; background: linear-gradient(180deg, #8dffb0, #22c55e); box-shadow: 0 0 .9cqh rgba(34, 197, 94, .75); transition: background .25s, box-shadow .25s, opacity .25s; }
+.rw-lives i.off { background: rgba(255, 255, 255, .08); box-shadow: none; }
+.rw-lives.is-low i:not(.off) { background: linear-gradient(180deg, #ffb4a8, #ef4444); box-shadow: 0 0 1.1cqh rgba(239, 68, 68, .9); animation: rw-low 0.9s ease-in-out infinite; }
+.rw-lives.hit { animation: rw-hit .5s ease-out; }
+@keyframes rw-low { 50% { opacity: .55; } }
+@keyframes rw-hit { 0% { transform: scaleX(1); filter: brightness(1); } 25% { transform: scaleX(2.2); filter: brightness(2.2); } 100% { transform: scaleX(1); filter: brightness(1); } }
+/* 3q: thanh ĐẾM NGƯỢC Time delay / Miss wait dưới chân ô câu hỏi của đội đang được chờ */
+.rw-wait { position: absolute; left: 6%; right: 6%; bottom: .35cqh; height: .5cqh; border-radius: 99px; background: rgba(255, 255, 255, .12); overflow: hidden; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.rw-wait.on { opacity: 1; }
+.rw-wait em { position: absolute; inset: 0; transform-origin: left center; background: linear-gradient(90deg, #ffd36a, #ff8a3d); box-shadow: 0 0 1cqh #ffb13a; }
+/* 3q: Missile streak tới 10 câu ⇒ chấm nhỏ lại */
+.sr-streak.is-many { gap: .18cqw; } .sr-streak.is-many i { width: .9cqh; height: .9cqh; }

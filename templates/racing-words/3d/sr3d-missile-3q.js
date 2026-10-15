@@ -1,3 +1,4 @@
+// 3q: bendW = công thức cong theo tiếp tuyến của sr3d-world-3q.js (cảnh xa không quét ngang).
 // =============================================================
 // SPEED RUN 3D — TÊN LỬA + HẠT (mẫu 3e = 3c bay chậm hơn, 15/10/2026) = sr3d-missile-2.js sửa theo thầy (15/10):
 //   "Tên lửa to và thô quá, cần làm lại đẹp, nhỏ hơn và tinh tế hơn" ⇒ thân mảnh Ø 0,11 m dài ~1,2 m, mũi ogive, đai màu đội, 4 cánh đuôi + 4 cánh mũi nhỏ, loa phụt;
@@ -20,7 +21,8 @@ export const MS = { T: 2.45, LOCK: 1.0 };                // 3e: bay CHẬM hơn 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
 const BEND_VS = `uniform vec2 uBend; uniform float uBendZ;
-vec4 bendW(vec4 w){ float d = min(w.z - uBendZ, 0.0); w.x += uBend.x*d*d; w.y -= uBend.y*d*d; return w; }`;
+float bendQ(float d){ float a = -d; return a <= 150.0 ? a*a : 150.0*(2.0*a - 150.0); }
+vec4 bendW(vec4 w){ float d = min(w.z - uBendZ, 0.0); float q = bendQ(d); w.x += uBend.x*q; w.y -= uBend.y*q; return w; }`;
 
 // ---------- hạt điểm có cong (khói xám / lửa cộng sáng) ----------
 export function makeParticles({ U, n = 400, additive = false, color = "#d2ccc6" }) {

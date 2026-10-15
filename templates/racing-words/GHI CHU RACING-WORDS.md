@@ -2,6 +2,10 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
+## Đợt 531 (15/10/2026) — myGame mẫu 3q (Fight options · cảnh xa · 35 km/h) + chỉ có Fight
+- GOC `rw-3q.js`, CSS `rw-3q.css`. Khoá phẳng mới: srLives · srMsDmg · srTie (0 = ∞) · srMissWait (−1 = ∞) · srMsStreak · srMsMax 0–10. Cờ `fightOnly` + `boxMode` + `ownFight`.
+- Bàn thử `scratch/dot531-rw.html` (engine thật + preflight + act có sẵn Options). Chi tiết GHI CHU DU AN Đợt 531.
+
 ## Đợt 529 (15/10/2026) — myGame mẫu 3p (mượt + chạm đúp bỏ intro)
 - GOC công cụ = `rw-3p.js`; `GAME = "./3d/rw-3p.js"`. File 3p: rw · sr3d · sr3d-car · sr3d-intro · sr3d-carmeta (bảng số đo 13 xe — thêm xe mới ở myGame thì sinh lại bảng, xem đầu file).
 - Đo / sửa: GHI CHU DU AN Đợt 529 + myGame `speed-run/NGHIEN CUU GAMEPLAY.md` mục 28. Bàn thử `scratch/dot529-rw.html` (engine thật, act giả).

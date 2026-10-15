@@ -546,6 +546,34 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 531 (15/10/2026) — RACING WORDS: FIGHT KIỂU ROCKET RACE · CẢNH XA ĐÚNG VẬT LÝ · 35 km/h · MẶC ĐỊNH FIGHT (myGame mẫu 3q)
+
+**Thầy:** (1) núi / cảnh xa đổi bất hợp lý khi xe đổi góc ⇒ chóng mặt, cần đúng vật lý · (2) tốc độ thường ~35 km/h; dưới 40 km/h lên ramp không đổi góc, chạy qua như đường
+thường, tiếp đất rung lắc hơn · (3) Options như Fight Rocket Race: Lives (vạch năng lượng mảnh ở góc lái, mép màn mỗi bên; sai −1, trúng tên lửa −1) · Missile damages ·
+Time delay · Miss wait · Missile streak · "Missiles" ⇒ "Missiles max" · (4) game là FIGHT ⇒ mặc định Fight ở màn chọn template, tạm tắt Single.
+Chốt (AskUserQuestion): Same = THEO LƯỢT (Different giữ nhịp riêng) · hết mạng = xe nổ, đội kia thắng · Missile damages = mức 1–5.
+
+**Game (myGame mẫu 3q `3a4d228`, hồ sơ `myGame/speed-run/NGHIEN CUU GAMEPLAY.md` mục 29; chép `tools/chep-racing-words.py` GOC `rw-3q.js`, CSS `rw-3q.css`):**
+- Cảnh xa: cong `b·d²` ⇒ cong thật trong 150 m, xa hơn theo TIẾP TUYẾN (`bendQ`) ở mọi shader (world · missile · lửa pô) + nhãn HUD + BẦU TRỜI xoay cùng góc (`uRot`);
+  độ cong vào dần theo giây thật. Núi 1.000 m trước lệch tới ~1.800 m, nay chỉ xoay đúng góc khúc cua.
+- 35 km/h (VBASE 9,72 m/s) · dưới 40 km/h tới mép dốc ⇒ `lowDrop` (không camera bay, không lộn, chạm đất rung 0,95).
+- Same = theo LƯỢT: đúng trước ⇒ đội kia còn Time delay (0,1 = khoá ngay · ∞); sai trước ⇒ đội kia còn Miss wait (0–20 s · ∞); thanh đếm ngược dưới ô câu hỏi.
+- Lives: vạch `.rw-lives` dọc cột kính mép ngoài; hết ⇒ nổ, đội kia thắng. Missile damages 1–5 (xoay + đứng yên ≈ L s, khói 0,8 + 0,75·L s). Streak 1–10. Missiles max 0–10.
+- Files 3d/: + `rw-3q.js` `sr3d-3q.js` `sr3d-car-3q.js` `sr3d-intro-3q.js` `sr3d-world-3q.js` `sr3d-missile-3q.js` `rw-3q.css`; công cụ tự xoá bản 3p + `sr3d-world-3.js` + `sr3d-missile-3e.js` + `rw-3o.css`.
+
+**AWord:**
+- `templates/racing-words/racing-words.js`: khoá phẳng mới `srLives` (0–10, 0 = ∞) · `srMsDmg` (1–5) · `srTie` (thang nấc Fight 0,1…10 s, 0 = ∞) · `srMissWait` (0–20, −1 = ∞) ·
+  `srMsStreak` (1–10) · `srMsMax` nay 0–10 (0 = Off); bảng Options: Questions (Same · in turns / Different) · Lives (xanh lá) · Missile damages · Missile streak · Missiles max
+  (đỏ) · Time delay · Miss wait (xanh dương, như Fight). Cờ mới `fightOnly: true` + `boxMode` (Fight trong ô, READY là chơi) + `ownFight` (engine biết game có Fight).
+- `core/engine.js` preflightApi + `fightOnly`; `core/words-picker.js` `modeOk("single")` = `!avail.fightOnly` ⇒ màn chọn: FIGHT sáng mặc định, SINGLE mờ ("Not for this game").
+
+**Đã kiểm:** myGame (Chrome CDP): 35 km/h · cùng câu · Time delay 0,1 khoá đội chậm ⇒ câu mới · Miss wait hiện thanh chờ bên kia · Lives tới 0 ⇒ đội kia thắng · ramp chậm
+jk 0 + rung 0,86 · ramp nhanh bay như cũ · ván tự động 112–146 khung/giây, 0 lỗi. AWord `scratch/dot531-rw.html` (engine thật + preflight): `can.fight` true, `fightOnly` true ·
+bảng Options nhúng có đủ mục, giá trị đúng (Lives 3, Time delay ∞, Miss wait 5s, Missile damages 4, Missile streak 2, Missiles max Off) · trận: cùng câu, vạch 3 mạng mỗi bên, 35 km/h.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy chơi trên TOMKO: cảnh xa hết chóng mặt chưa · 35 km/h · ramp chậm + rung · Lives / Time delay / Miss wait / Missile damages · màn chọn FIGHT sáng, SINGLE mờ ·
+⬜ việc chờ Đợt 530 / 529.
+
 ## Đợt 530 (15/10/2026) — GAME 3D CHỈ CHẠY Ở BẢNG 1 CỦA myActivity (đi cặp myActivity v2.34.0)
 
 **Thầy:** "Với myActivity, khi mở game có bị mở ở nhiều bảng gây lag và khựng không? Tôi muốn các game 3D trên AWord chỉ được mở ở bảng 1 và chặn các bảng khác".

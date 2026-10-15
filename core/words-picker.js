@@ -499,7 +499,7 @@ export async function openWordsPicker(root, node, { onExit, onBack } = {}) {
       runAfter(me, api);
       return;
     }
-    if (!me.avail) me.avail = { fight: api.can.fight, showdown: api.can.showdown, running: api.can.running.slice(), ipa: api.can.ipa, ownFight: api.ownFight };
+    if (!me.avail) me.avail = { fight: api.can.fight, showdown: api.can.showdown, running: api.can.running.slice(), ipa: api.can.ipa, ownFight: api.ownFight, fightOnly: !!api.fightOnly };
     if (me.boot) {
       me.boot = false;
       // ⭐ Đợt 526 (thầy): MẶC ĐỊNH của MỌI template là FIGHT (game không có Fight ⇒ SINGLE).
@@ -544,7 +544,7 @@ export async function openWordsPicker(root, node, { onExit, onBack } = {}) {
   function modeOk(k) {
     const a = pre && pre.avail;
     if (!a) return k === "single";
-    if (k === "single") return true;
+    if (k === "single") return !a.fightOnly;   // ⭐ Đợt 531 — template chỉ có Fight (Racing words)
     if (k === "fight") return a.fight;
     if (k === "showdown") return a.showdown;
     if (k === "running") return a.running.length > 0;

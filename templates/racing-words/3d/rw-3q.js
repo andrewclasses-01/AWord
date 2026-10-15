@@ -1,3 +1,5 @@
+// RACING WORDS — GÓI NHÚNG mẫu 3q (15/10/2026) = rw-3p.js + lõi sr3d-3q.js (cảnh xa đúng vật lý · 35 km/h · cầu nhảy chậm · FIGHT: Lives / Missile damages /
+//   Time delay / Miss wait / Missile streak / Missiles max). options thêm: lives · msDmg · tieWait · missWait · streak (Infinity = chờ mãi).
 // =============================================================
 // RACING WORDS — GÓI NHÚNG mẫu 3p (15/10/2026) = rw-3o.js + (thầy: "double tap vào intro để vào màn chuẩn bị start luôn" · "khá lag, tham khảo Train Rush"):
 //   · CHẠM ĐÚP lúc phim intro đang chiếu ⇒ bỏ phim, vào thẳng 5 đèn xuất phát (intro.skip = handoff)
@@ -17,9 +19,9 @@
 //   onEvent   : (k, v) — "pad" (iPad nối / mất nối), "padMode", "end", …
 // ⇒ { setOptions(o) (true = áp ngay, false = AWord dựng lại), destroy(), game, intro }
 // =============================================================
-import { createSpeedRun } from "./sr3d-3p.js";
+import { createSpeedRun } from "./sr3d-3q.js";
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
-import { createIntro } from "./sr3d-intro-3p.js";
+import { createIntro } from "./sr3d-intro-3q.js";
 import { createSound } from "./sr3d-sound-3o.js";
 
 const CARS_KEY = "speedrun.cars";            // xe 2 đội nhớ THEO MÁY (thầy chọn ở màn chờ xưởng)
@@ -127,6 +129,7 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
     else if (k === "impact") { if (v.kind === "hit") S.play("boom", { pan: PAN[v.to] }); else S.play("boom", { gain: 0.55, rate: 1.15, pan: PAN[v.to] }); }
     else if (k === "land") S.play("land", { pan: PAN[v.team], gain: v.kind === "bad" ? 1 : 0.8 });
     else if (k === "bump") S.play("crash", { gain: 0.8 });
+    else if (k === "knockout") { S.play("boom", { gain: 1.2, rate: 0.85 }); S.play("crash", { pan: PAN[v.team] }); }   // 3q: hết mạng ⇒ xe nổ
     else if (k === "takeoff") S.play("flyby", { gain: 0.5, rate: 1.2, pan: PAN[v.team ?? 0] });
     else if (k === "menu" && intro) { introOn = true; game.hold(true); intro.show(); }
     else if (k === "car" && intro && intro.cars[v.team] !== v.id) intro.setCar(v.team, v.id, false);
