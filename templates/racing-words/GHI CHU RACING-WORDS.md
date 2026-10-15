@@ -2,6 +2,9 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
+## Đợt 528 (15/10/2026) — sửa ở màn chọn Options
+- Xưởng xe đè màn chọn (thiếu `.aw-rw-host` trong luật giấu `core/words-picker.css`) · game kẹt 5 đèn đỏ (`ui.host.options` không gọi `ov.onClose` khi bảng nhúng màn chọn đang mở ⇒ `G.paused` mãi). Chi tiết GHI CHU DU AN Đợt 528.
+
 ## Đợt 527 (15/10/2026) — đưa lên AWord (myGame mẫu 3o)
 - Chép: `python tools/chep-racing-words.py` ⇒ `3d/` (gói nhúng `rw-3o.js` + lõi + CSS), `xe3d/` (13 xe, BỎ H3 Bugatti Divo CC-BY-NC), `sfx/` (29 tiếng + NGUON AM THANH.md). ⛔ Không sửa tay 3d/.
   Sửa game: làm ở myGame (mẫu mới = tên mới, vd 3p), thầy OK ⇒ đổi `GOC` trong công cụ + `GAME` / `CSS` trong racing-words.js ⇒ chạy lại công cụ.

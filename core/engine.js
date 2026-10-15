@@ -6659,7 +6659,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       //   ov = { layer: ô game (bảng + lớp mờ gắn vào đây), top(): toạ độ y mép trên hàng nút game, onClose(): bảng đã đóng }
       options(ov) {
         if (torndown) return;
-        if (activeToolBtn === optionsBtn) { closeToolPanel(true); return; }
+        // ⭐ Đợt 528 — bảng ĐANG mở không phải của lần gọi này (bảng nhúng của màn chọn, Đợt 525, hay bảng mở từ nút khác)
+        // ⇒ closeToolPanel chỉ gọi onClose của CHỦ bảng, game gọi lần này đã tự dừng (G.paused) mà không bao giờ được báo ⇒
+        // đứng hình mãi (Racing words kẹt 5 đèn đỏ). Báo onClose cho game; bảng nhúng của màn chọn thì để nguyên.
+        if (activeToolBtn === optionsBtn) {
+          const mine = ovlPanel === ov, embed = !!(ovlPanel && ovlPanel.embed);
+          if (!embed) closeToolPanel(true);
+          if (!mine && ov && typeof ov.onClose === "function") ov.onClose();
+          return;
+        }
         pendingOvl = ov && ov.layer ? ov : null;
         openToolPanelFor(optionsBtn, buildOptionsPanel);
         pendingOvl = null;

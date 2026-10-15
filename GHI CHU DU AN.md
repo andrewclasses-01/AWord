@@ -546,6 +546,39 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 528 (15/10/2026) — RACING WORDS TRONG MÀN CHỌN OPTIONS: XƯỞNG XE ĐÈ MÀN CHỌN · GAME KẸT 5 ĐÈN ĐỎ
+
+**Thầy** (chạy trong myActivity, kèm ảnh 2 đội đứng ở 5 đèn đỏ, 0 km/h): nạp xe rất lâu · đứng hình ở khung đó, không chơi được ·
+rất lag · ở màn chọn template không chọn được options mà vào game luôn ⇒ "Sửa 2 lỗi, ghi hồ sơ, push AWord".
+
+**Gốc rễ (myActivity không có lỗi — cả hai ở AWord, Đợt 525 × Đợt 527):**
+1. **Vào game luôn** — màn chọn dựng game NGẦM rồi giấu ô 3D ở `<body>` tới READY, nhưng luật giấu `core/words-picker.css`
+   chỉ có `.aw-tr-host` / `.aw-sl-host` / `.aw-ld3d`. `.aw-rw-host` (fixed, z 1000) SÓT ⇒ Racing Words (startScreen tự Play) hiện
+   xưởng chọn xe ĐÈ khung Options + nút READY. Luật trả cuộn `html.aw-rw-on` cũng sót.
+2. **Kẹt 5 đèn đỏ** — không thấy Options, thầy bấm nút Options của game ⇒ game `openHostOptions()` đặt `G.paused = true` RỒI mới
+   gọi `ui.host.options(ov)`. Bảng Options của engine lúc đó ĐANG MỞ (nhúng trong màn chọn, `pendingOvl.embed`) ⇒ nhánh
+   `activeToolBtn === optionsBtn` chỉ `closeToolPanel(true)` — hàm này gọi `onClose` của CHỦ bảng (bảng nhúng, không có onClose),
+   KHÔNG BAO GIỜ gọi `ov.onClose` của game ⇒ game dừng mãi: vẫn vẽ (composer.render) nhưng `frame()` không chạy ⇒ `G.t` đứng ⇒
+   hàng đợi `later()` thắp đèn không bao giờ tới (START vẫn vào pha "count" vì start() không xét paused). Đúng ảnh thầy gửi.
+
+**Sửa:**
+- `core/words-picker.css`: thêm `.aw-rw-host` vào luật giấu lúc ngầm + `html.aw-rw-on` vào luật trả cuộn (như Train Rush / Star Loot).
+- `core/engine.js` `ui.host.options(ov)`: bảng đang mở KHÔNG phải của `ov` ⇒ vẫn gọi `ov.onClose()` (game chạy tiếp); bảng đang mở
+  là bảng NHÚNG của màn chọn ⇒ để nguyên (không gỡ khỏi màn chọn). Bảng của chính `ov` ⇒ như cũ (closeToolPanel gọi onClose 1 lần).
+  Áp cho mọi game 3D dùng `ui.host.options` (Star Loot, Train Rush, Racing Words).
+
+**Đã kiểm** (devserver, Chrome trong app): `scratch/dot528-css.html` — lúc ngầm `.aw-rw-host` hidden/none + body overflow visible; bỏ
+`aw-wp-ngam` ⇒ visible/auto. `scratch/dot528-opt.html` (template giả bắt `ui.host`): (a) mở rồi bấm lại Options của chính game ⇒
+đóng + onClose 1 lần; (b) bảng nhúng đang mở + game gọi Options ⇒ onClose 1 lần, bảng nhúng còn nguyên. Đối chứng mã CŨ: (b) onClose 0 lần
+(= game kẹt) ⇒ bàn thử bắt đúng lỗi.
+
+**Chưa sửa — nạp lâu / lag (chưa đo trên máy thật):** mạng không phải lý do (2 xe mặc định Y2 + H4 tải live ~0,7 s mỗi xe). Nghi:
+game tự nặng (2 cảnh đua + bloom + radial blur, chưa đo TOMKO), lúc kẹt thì cả màn chọn (lớp mờ backdrop-filter, nút READY ánh
+sáng chạy mãi) còn sống dưới game; game chỉ được import sau khi màn chờ 3D xong. Cần đo fps + thời gian nạp trong myActivity.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy thử lại Racing Words trong myActivity: chạm ô ⇒ thấy Options + READY, READY ⇒ xưởng ⇒ START ⇒ đèn thắp ·
+⬜ đo fps / thời gian nạp Racing Words trên TOMKO (nếu vẫn lag) · ⬜ việc chờ của Đợt 527.
+
 ## Đợt 527 (15/10/2026) — TEMPLATE MỚI RACING WORDS: ĐUA SIÊU XE 3D 2 ĐỘI (myGame speed-run 3o) · OPTIONS AWORD · iPAD THẬT
 
 **Thầy:** "đưa lên AWord, sử dụng options của AWord" ⇒ chốt (AskUserQuestion): Options = **Cùng/khác câu hỏi · Số tên lửa tối đa · Độ dài đường + số vòng · Cầu nhảy bật/tắt** ·

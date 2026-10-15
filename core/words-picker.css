@@ -230,9 +230,12 @@
 @keyframes wpHostIn { from { opacity: 0; } to { opacity: 1; } }
 /* ô 3D trọn màn của game dựng ngầm (gắn ở <body>, ngoài container) — giấu tới READY. `:has` = chỉ khi container ngầm còn trên trang (lớp html có sót lại cũng vô hại) */
 html.aw-wp-ngam:has(.aw-wp-gamehost) .aw-tr-host, html.aw-wp-ngam:has(.aw-wp-gamehost) .aw-sl-host,
+html.aw-wp-ngam:has(.aw-wp-gamehost) .aw-rw-host,
 html.aw-wp-ngam:has(.aw-wp-gamehost) .aw-ld3d { visibility: hidden !important; pointer-events: none !important; }
 /* ⭐ Đợt 526 — màn chờ 3D (`.aw-ld3d`, core/loader3d.js) cũng ở <body> ⇒ giấu luôn: game 3D nạp NGẦM trong lúc thầy chọn options.
    Train Rush / Star Loot khoá cuộn bằng `html.aw-tr-on` / `aw-sl-on` (overflow:hidden) ⇒ thanh cuộn biến mất ⇒ khung nhảy. Lúc ngầm
    trả lại cuộn như thường. */
 html.aw-wp-ngam.aw-tr-on:has(.aw-wp-gamehost), html.aw-wp-ngam.aw-tr-on:has(.aw-wp-gamehost) body,
-html.aw-wp-ngam.aw-sl-on:has(.aw-wp-gamehost), html.aw-wp-ngam.aw-sl-on:has(.aw-wp-gamehost) body { overflow: visible !important; }
+html.aw-wp-ngam.aw-sl-on:has(.aw-wp-gamehost), html.aw-wp-ngam.aw-sl-on:has(.aw-wp-gamehost) body,
+html.aw-wp-ngam.aw-rw-on:has(.aw-wp-gamehost), html.aw-wp-ngam.aw-rw-on:has(.aw-wp-gamehost) body { overflow: visible !important; }
+/* ⭐ Đợt 528 — RACING WORDS (`.aw-rw-host` fixed z 1000 ở <body>, khoá cuộn `html.aw-rw-on`) bị sót ở 2 luật trên ⇒ xưởng chọn xe đè màn chọn. */
