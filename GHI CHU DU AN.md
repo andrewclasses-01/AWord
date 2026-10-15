@@ -546,6 +546,32 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 527 (15/10/2026) — TEMPLATE MỚI RACING WORDS: ĐUA SIÊU XE 3D 2 ĐỘI (myGame speed-run 3o) · OPTIONS AWORD · iPAD THẬT
+
+**Thầy:** "đưa lên AWord, sử dụng options của AWord" ⇒ chốt (AskUserQuestion): Options = **Cùng/khác câu hỏi · Số tên lửa tối đa · Độ dài đường + số vòng · Cầu nhảy bật/tắt** ·
+**13 xe** (BỎ Bugatti Divo — giấy phép CC-BY-NC, lớp học có thu phí) · **iPad thật làm luôn** ⇒ "ok build".
+
+- **Game** thiết kế ở myGame `speed-run` (tên cũ SPEED RUN; mẫu 3o = GÓI NHÚNG `core/rw-3o.js` ⇒ `createRacingWords`): màn chờ XƯỞNG ANDREW STUDIO (chọn xe + START) ⇒ phim intro 12 s ⇒
+  trận 2 đội chia đôi màn, buồng lái thật, câu đúng nạp BOOST, chuỗi đúng được tên lửa, cầu nhảy, 29 tiếng thật + nhạc. Chép bằng **`python tools/chep-racing-words.py`** ⇒
+  `templates/racing-words/3d/` (14 js + 4 css, three đổi sang `rocket-race/vendor/three`) + `xe3d/` 13 glb (30 MB) + `sfx/` 29 mp3 + NGUON AM THANH.md. ⛔ Không sửa tay 3d/.
+- **Template** `templates/racing-words/racing-words.js` — khuôn STAR LOOT: ô `.aw-rw-host` phủ trang · `startScreen` bỏ màn READY · không `ui.finish` · `hidePointsOff` / `hideTimerOption` /
+  `manualTimerStart` / `noAssignment` · editor = Quiz (badge RACING WORDS). Câu hỏi = `content.questions[]` như Quiz.
+- **Options THẬT của engine** (`buildExtraOptions`): Questions Same/Different (`srSameQ`) · Missiles 1–10 (`srMsMax`) · Track length 3–20 (`srSteps`) · Laps Auto/1–6 (`srLaps`) · Jump ramps (`srRamps`).
+  Nút Options của game ⇒ `ui.host.options` (game dừng tới khi đóng). Apply ⇒ `ui.liveOptions` ⇒ `game.setOptions`: câu hỏi + tên lửa áp NGAY; đường/vòng/cầu nhảy đổi ⇒ false ⇒ engine dựng lại.
+  Nút Thư mục = act cùng thư mục (`host.listActs/openAct`) · MENU ▸ CHANGE TEMPLATE = `host.templates/switchTemplate` + LIBRARY (`host.home`).
+- **iPad** `templates/racing-words/rw-pad-signal.js` (Firestore `users/{uid}/items` rwpad_host|pad0|pad1, kind **`racingwords-pad`** ⇒ thêm vào `APP_DATA_KINDS` core/store.js).
+  Nút iPad của game ≠ Off ⇒ claim `ipad_now` {game:"racingwords"} (`core/ipad-now.js` thêm vào danh sách), `hold` từ lúc có iPad nối. `pad.js`: nhánh `showRW` / `showRWChooser`
+  (màn iPad `3d/sr3d-padui-3m.js` — trả lời câu hỏi hoặc vô lăng + bàn đạp + tên lửa, màn lớn quyết). Mặc định iPad OFF (Đợt 514), không nhớ theo máy.
+- **Đăng ký**: `core/catalog.js` (racing_words "Racing words", icon fmtRace) · `core/convert.js` (QA_TARGETS + NEED_CLUE + buildMc như rocket_race) · `core/words-picker.js` G3 + cảnh
+  `race` (words-picker-art.js) + khu 3D 4 cột (words-picker.css) · `tools/sinh-preload.py --write`.
+- **three vendor** (`templates/rocket-race/vendor/three/addons/`): + GLTFLoader.js · meshopt_decoder.module.js · DecalGeometry.js · RectAreaLightUniformsLib.js · RectAreaLightTexturesLib.js
+  (r170 jsDelivr, import đổi sang `../three.module.min.js` / `./BufferGeometryUtils.js`).
+- **Ghi công**: 13 xe CC-BY 4.0 — tên mẫu + tác giả hiện dưới ô chọn xe (xưởng); tiếng Pixabay/Mixkit (không cần ghi công) — `templates/racing-words/sfx/NGUON AM THANH.md`.
+- **Đã kiểm** (`scratch/dot527-rw.html?padsig=local` + `pad.html?padsig=local`): game dựng trong AWord không lỗi, màn chờ 3D tự tắt · nút Options mở bảng thật có đủ 4 mục ·
+  Different + Apply ⇒ `srSameQ:false` lưu, áp ngay không dựng lại · iPad: bật "Drive on iPad" ⇒ pad.html tự sang màn RACING WORDS TEAM 1 "Connected"; Off ⇒ về màn chờ chung.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy thử trên máy chiếu + iPad thật (đăng nhập cùng tài khoản) · ⬜ màn chọn WORDS: xem ô thứ 4 RACING WORDS (khu 3D 4 cột) trên máy tính + điện thoại.
+
 ## Đợt 526 (15/10/2026) — MÀN CHỌN OPTIONS: GAME 3D NẠP NGẦM · KHUNG HẾT NHẢY · BACK VỀ MÀN CHỌN · MẶC ĐỊNH FIGHT
 
 Thầy thử Đợt 525 live, báo 4 việc:

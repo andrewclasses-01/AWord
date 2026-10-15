@@ -31,6 +31,7 @@ const QA_TARGETS = [
   "quiz", "gameshow", "maze_chase", "open_the_box", "type_the_answer",
   "whack_a_mole", "speaking_cards", "running_team", "running_word",
   "rocket_race",  // Đợt 350 — same question shape as Quiz / Maze chase
+  "racing_words", // Đợt 527 — same question shape as Quiz / Rocket race
   "wordshake"     // Đợt 386 — same {word, clue} shape as Anagram
 ];
 // Running team needs SIX words to fill a round (one answer + five look-alike
@@ -50,7 +51,7 @@ const SENTENCE_TARGETS = ["speaking_cards", "type_the_answer"];
 // nếu bộ nguồn không có clue (vd Anagram withClues:false) thì loại chúng ra.
 const NEED_CLUE = new Set([
   "crossword", "find_the_match", "balloon_pop", "quiz", "gameshow",
-  "maze_chase", "open_the_box", "whack_a_mole", "type_the_answer", "rocket_race"
+  "maze_chase", "open_the_box", "whack_a_mole", "type_the_answer", "rocket_race", "racing_words"
 ]);
 
 // =============================================================
@@ -369,6 +370,7 @@ function buildContent(targetType, kind, records, style) {
     case "gameshow":
     case "maze_chase":
     case "rocket_race":
+    case "racing_words":   // Đợt 527
       return { questions: records.map(r => buildMc(r, records, kind)) };
     case "open_the_box":
       return { items: records.map(r => buildMc(r, records, kind)) };

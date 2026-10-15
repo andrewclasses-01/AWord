@@ -50,8 +50,8 @@ import { startGame, setWordsPickerHook, setPreflight } from "./engine.js";
 import { iconSvg, sceneSvg, SC } from "./words-picker-art.js";
 import { dropAllLoader3d } from "./loader3d.js";
 
-// 3 game 3D (khu trên) → cảnh trong words-picker-art.js
-const G3 = [["rocket_race", "rocket"], ["balloon_pop", "train"], ["maze_chase", "loot"]];
+// 4 game 3D (khu trên) → cảnh trong words-picker-art.js (Đợt 527: thêm RACING WORDS)
+const G3 = [["rocket_race", "rocket"], ["balloon_pop", "train"], ["maze_chase", "loot"], ["racing_words", "race"]];   // Đợt 527: + RACING WORDS
 // game thường (khu dưới), THEO THỨ TỰ HIỆN. Ba game cuối cùng là thầy dặn xuống dưới cùng.
 // Running word/team/IPA KHÔNG ở đây: chúng là MODE trong game (Đợt 400), không phải template.
 const G2 = [

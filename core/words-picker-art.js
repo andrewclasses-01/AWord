@@ -27,7 +27,7 @@ speed:`<rect class="f" x="28.5" y="6" width="9" height="7" rx="2.5"/><rect class
 const COL={quiz:["#6c4ff5","#ffc928","#b9a8ff","#ece8ff"],anagram:["#2f7bff","#ff5d8f","#9cc3ff","#e4eeff"],match:["#ff8a1f","#1fbf75","#ffc58a","#ffeedc"],type:["#4a47d9","#ffc928","#b5b3f5","#e9e8ff"],box:["#ff7a2f","#ffd23f","#ffbf94","#ffeadb"],show:["#e91e78","#ffd23f","#f7a3c8","#ffe3ef"],mole:["#8a5a2b","#ff8fb0","#c9a066","#e2f5dc"],fruit:["#ff8a1f","#4cc36b","#ffc58a","#fff0dc"],cross:["#12a594","#ffc928","#8adcd0","#dff6f2"],speak:["#f0345f","#ffc928","#ffa0b4","#ffe4ea"],speed:["#12a8c9","#ffc928","#8ddcee","#ddf5fa"]};
 const iconSvg=k=>{const [c,c2,c3,tint]=COL[k];return `<svg viewBox="0 0 64 64" style="--ln:${c};--c:${c};--c2:${c2};--c3:${c3};--tint:${tint}"><rect class="plate pr" x="2" y="2" width="60" height="60" rx="17"/><circle class="plate pc" cx="32" cy="32" r="30"/>${G[k]}</svg>`};
 
-/* ---- 3 flat scenes on a 360×190 grid ---- */
+/* ---- 4 flat scenes on a 360×190 grid (Đợt 527: + race = RACING WORDS) ---- */
 const SC={
 rocket:{name:"Rocket Race",v:"--ln:#5b3df0;--tint:#ece8ff;--c:#fff;--c2:#ff4d6d;--c3:#ffb347;--bg:#2a2f86;--sa:#ff9f43;--sb:#4b53c9;--gr:#2a2f86;--kd:#2a2f86",
  svg:()=>{let st="";[[22,24,1.8],[64,66,1.4],[112,30,1.8],[170,16,1.4],[236,40,2],[318,24,1.6],[344,76,1.4],[18,112,1.4],[88,98,1.2],[270,98,1.4],[206,66,1.2]].forEach(([x,y,r])=>st+=`<circle class="w" cx="${x}" cy="${y}" r="${r}"/>`);
@@ -48,7 +48,15 @@ loot:{name:"Star Loot",v:"--ln:#0f9d8a;--tint:#dcf6f1;--c:#fff;--c2:#ffd23f;--c3
 <rect class="sa" x="60" y="14" width="240" height="14" rx="7"/><rect class="sa" x="60" y="162" width="240" height="14" rx="7"/><rect class="sa" x="60" y="14" width="14" height="162" rx="7"/><rect class="sa" x="286" y="14" width="14" height="162" rx="7"/>
 <rect class="sa" x="104" y="28" width="14" height="70" rx="7"/><rect class="sa" x="104" y="84" width="54" height="14" rx="7"/><rect class="sa" x="204" y="92" width="52" height="14" rx="7"/><rect class="sa" x="242" y="92" width="14" height="70" rx="7"/><rect class="sa" x="150" y="140" width="62" height="14" rx="7"/>
 <circle class="a" cx="89" cy="56" r="6"/><circle class="a" cx="89" cy="104" r="6"/><circle class="a" cx="150" cy="52" r="6"/><circle class="a" cx="212" cy="52" r="6"/><circle class="a" cx="272" cy="122" r="6"/><circle class="a" cx="130" cy="122" r="6"/>
-<polygon class="a" points="${star(180,100,27,11.5)}"/>${S(228,52,7,"w")}${S(136,76,5,"w")}<circle class="f" cx="89" cy="150" r="10"/><circle class="kd" cx="86" cy="148" r="2"/><circle class="kd" cx="93" cy="148" r="2"/>`}
+<polygon class="a" points="${star(180,100,27,11.5)}"/>${S(228,52,7,"w")}${S(136,76,5,"w")}<circle class="f" cx="89" cy="150" r="10"/><circle class="kd" cx="86" cy="148" r="2"/><circle class="kd" cx="93" cy="148" r="2"/>`},
+race:{name:"Racing Words",v:"--ln:#3b8cff;--tint:#e4eeff;--c:#3b8cff;--c2:#ffd23f;--c3:#1d4fae;--bg:#ff9a5a;--sa:#ff6f61;--sb:#c2486b;--gr:#2b2440;--kd:#1a1d2b",
+ svg:()=>`<rect class="bg" width="360" height="190"/><circle class="a" cx="252" cy="76" r="30"/>
+<path class="sa" d="M0 112L70 84L130 104L200 76L270 100L360 80V190H0Z"/><path class="sb" d="M0 128L90 108L170 124L260 104L360 120V190H0Z"/>
+<path class="gr" d="M0 190L150 120H210L360 190Z"/><path class="r" d="M180 124V130M180 138V150M180 160V182" style="stroke:#ffd23f;stroke-width:3"/>
+<path class="rg" d="M18 150L84 140M8 170L76 160M292 148L352 140M300 168L356 160"/>
+<path class="a" d="M112 156L90 151L112 148Z"/><path class="f" d="M112 162Q112 148 130 144L160 132Q178 124 204 126L236 132Q258 136 262 150L264 162Z"/>
+<path class="kd" d="M164 134Q181 127 202 128L222 135H170Z"/><rect class="s" x="118" y="155" width="140" height="4" rx="2"/>
+<rect class="a" x="250" y="145" width="12" height="4" rx="2"/><circle class="kd" cx="143" cy="163" r="12"/><circle class="kd" cx="236" cy="163" r="12"/><circle class="w" cx="143" cy="163" r="4"/><circle class="w" cx="236" cy="163" r="4"/>`},
 };
 const sceneSvg=k=>`<svg class="art" viewBox="0 0 360 190" preserveAspectRatio="xMidYMid slice">${SC[k].svg()}</svg>`;
 

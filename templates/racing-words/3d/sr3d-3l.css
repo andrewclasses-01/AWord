@@ -1,0 +1,80 @@
+/* SPEED RUN mẫu 3l = sr3d-3k.css (không đổi) */
+/* SPEED RUN mẫu 3k — = sr3d-3j.css + hiệu ứng NÚT TRẢ LỜI: bùng nổ sáng (đúng + nhanh) · toả sáng (đúng) · khói xịt + rung (sai) */
+/* gốc 3j: */
+/* SPEED RUN mẫu 3j — = sr3d-3i.css (ô chọn xe) + danh sách xe sổ xuống + bảng MENU giữa màn (kiểu Rocket Race) */
+/* gốc 3i: */
+/* SPEED RUN mẫu 3i — thêm vào sr3d-3g.css: ô CHỌN XE mỗi đội ở màn chờ (◀ tên xe ▶), máy quay màn chờ đang quay quanh xe của đội ⇒ thấy xe luôn */
+.sr-pick { position: absolute; left: 50%; top: 7%; transform: translateX(-50%); z-index: 6; display: none; align-items: stretch; gap: .8cqh;
+  pointer-events: auto; filter: drop-shadow(0 .8cqh 1.6cqh rgba(0, 0, 0, .55)); }
+.sr-root.is-menu .sr-pick { display: flex; }
+.sr-pick-b { width: 6.4cqh; border: 1px solid rgba(255, 255, 255, .22); border-radius: 1.4cqh; background: rgba(8, 11, 16, .72); color: #fff;
+  font: 900 2.6cqh "Exo 2", sans-serif; cursor: pointer; backdrop-filter: blur(6px); transition: background .15s, transform .1s; }
+.sr-pick-b:hover { background: color-mix(in srgb, var(--team) 45%, rgba(8, 11, 16, .8)); }
+.sr-pick-b:active { transform: scale(.94); }
+.sr-pick-n { min-width: 34cqh; padding: 1cqh 2.4cqh 1.1cqh; border-radius: 1.4cqh; text-align: center; background: rgba(8, 11, 16, .72);
+  border: 1px solid rgba(255, 255, 255, .14); border-bottom: .45cqh solid var(--team); backdrop-filter: blur(6px); display: flex; flex-direction: column; gap: .3cqh; }
+.sr-pick-n small { font: 800 1.35cqh "Exo 2", sans-serif; letter-spacing: .25cqh; color: var(--team); }
+.sr-pick-n b { font: italic 900 3.2cqh/1.05 "Exo 2", sans-serif; color: #fff; letter-spacing: .1cqh; white-space: nowrap; }
+.sr-pick-n em { font: 700 1.3cqh "Exo 2", sans-serif; font-style: normal; color: rgba(255, 255, 255, .55); }
+.sr-half.is-loading .sr-pick-n b { opacity: .45; }
+.sr-half.is-loading .sr-pick-n em::after { content: " · loading…"; }
+
+/* 3j: tên xe là NÚT ⇒ sổ danh sách */
+button.sr-pick-n { font: inherit; color: inherit; cursor: pointer; }
+button.sr-pick-n:hover { background: rgba(14, 19, 27, .82); }
+.sr-pick-list { position: absolute; left: 50%; top: calc(100% + .8cqh); transform: translateX(-50%); width: 46cqh; max-height: 60cqh; overflow-y: auto;
+  display: none; flex-direction: column; gap: .35cqh; padding: 1cqh; border-radius: 1.4cqh; background: rgba(8, 11, 16, .92);
+  border: 1px solid rgba(255, 255, 255, .16); backdrop-filter: blur(8px); scrollbar-width: thin; }
+.sr-half.is-list .sr-pick-list { display: flex; }
+.sr-pl-h { font: 800 1.25cqh "Exo 2", sans-serif; letter-spacing: .25cqh; color: var(--team); padding: .9cqh .8cqh .3cqh; }
+.sr-pick-list button { text-align: left; font: italic 800 2cqh "Exo 2", sans-serif; color: #e9eef5; background: rgba(255, 255, 255, .04);
+  border: 1px solid transparent; border-radius: .9cqh; padding: .75cqh 1.2cqh; cursor: pointer; }
+.sr-pick-list button:hover { background: color-mix(in srgb, var(--team) 30%, transparent); }
+.sr-pick-list button.is-on { border-color: var(--team); background: color-mix(in srgb, var(--team) 22%, transparent); color: #fff; }
+
+/* 3j: bảng MENU giữa màn (như Rocket Race): nền mờ, khung xanh đậm viền sáng, RESUME vàng */
+.sr-pmenu { position: absolute; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(2, 6, 18, .45), rgba(2, 6, 18, .72)); backdrop-filter: blur(3px); animation: srPmFade .18s ease-out; }
+.sr-pmenu[hidden] { display: none; }
+.sr-pmenu-box { min-width: clamp(260px, 34cqh, 520px); display: flex; flex-direction: column; gap: 1.2cqh; padding: 2.6cqh 2.6cqh 2.2cqh; border-radius: 2.4cqh;
+  background: linear-gradient(180deg, rgba(22, 40, 78, .94), rgba(6, 10, 24, .96)); border: 1px solid rgba(120, 190, 255, .5);
+  box-shadow: 0 0 4cqh rgba(60, 140, 255, .35), 0 2cqh 5cqh rgba(0, 0, 0, .6); animation: srPmIn .22s cubic-bezier(.22, .9, .3, 1); }
+.sr-pmenu-title { text-align: center; font: 800 2.4cqh "Exo 2", sans-serif; letter-spacing: .22em; color: #9ee7ff; text-shadow: 0 0 1.4cqh rgba(80, 200, 255, .7);
+  padding-bottom: 1.2cqh; border-bottom: 1px solid rgba(120, 190, 255, .25); margin-bottom: .4cqh; }
+.sr-pmenu-box button { font: 800 2.3cqh "Exo 2", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #e8f4ff; cursor: pointer;
+  background: rgba(255, 255, 255, .05); border: 1px solid rgba(140, 200, 255, .35); border-radius: 1.3cqh; padding: 1.3cqh 2cqh; transition: box-shadow .15s, background .15s; }
+.sr-pmenu-box button:hover { background: rgba(120, 190, 255, .14); box-shadow: 0 0 1.6cqh rgba(80, 170, 255, .45); }
+.sr-pmenu-box button.is-resume { color: #ffe39a; border-color: rgba(255, 207, 74, .75); }
+.sr-pmenu-box button.is-resume:hover { background: rgba(255, 207, 74, .12); box-shadow: 0 0 1.6cqh rgba(255, 200, 80, .45); }
+.sr-pmenu-note { min-height: 1.6cqh; text-align: center; font: 600 1.45cqh "Exo 2", sans-serif; color: rgba(232, 244, 255, .6); }
+@keyframes srPmFade { from { opacity: 0; } }
+@keyframes srPmIn { from { opacity: 0; transform: translateY(10px) scale(.95); } }
+
+/* 3k: hiệu ứng nút trả lời (lớp .sr-afx do lõi chèn vào nút, tự gỡ sau 1,6 s) */
+.sr-ans button { position: relative; overflow: visible; }
+.sr-afx { position: absolute; inset: 0; pointer-events: none; border-radius: inherit; z-index: 3; }
+.sr-afx b { position: absolute; display: block; }
+/* ĐÚNG + NHANH: chớp trắng → xanh, 2 vòng sóng lan ra, 16 tia lửa bắn toả */
+.sr-ans button.is-ok:has(.k-burst) { animation: srAnsPop .5s cubic-bezier(.2, 1.6, .4, 1); box-shadow: 0 0 2.4cqh rgba(80, 255, 160, .85), 0 0 5cqh rgba(80, 255, 160, .5); }
+.sr-afx.k-burst::before { content: ""; position: absolute; inset: -.4cqh; border-radius: inherit; background: radial-gradient(circle, #fff 0%, rgba(190, 255, 220, .9) 35%, rgba(60, 255, 150, 0) 75%);
+  animation: srAnsFlash .55s ease-out forwards; mix-blend-mode: screen; }
+.sr-afx.k-burst::after { content: ""; position: absolute; left: 50%; top: 50%; width: 100%; height: 100%; border-radius: 50%; transform: translate(-50%, -50%) scale(.3);
+  border: .5cqh solid rgba(140, 255, 200, .95); box-shadow: 0 0 2cqh rgba(80, 255, 170, .9), inset 0 0 1.5cqh rgba(80, 255, 170, .6); animation: srAnsRing .7s cubic-bezier(.15, .7, .3, 1) forwards; }
+.sr-afx.k-burst b { left: 50%; top: 50%; width: .55cqh; height: 2.4cqh; margin: -1.2cqh 0 0 -.27cqh; border-radius: .3cqh;
+  background: linear-gradient(#fff, #9dffc6 40%, rgba(60, 255, 150, 0)); box-shadow: 0 0 1cqh #7dffb0;
+  transform: rotate(var(--a)) translateY(0) scaleY(.4); opacity: 0; animation: srAnsSpark .62s cubic-bezier(.1, .8, .3, 1) forwards; }
+/* ĐÚNG thường: toả sáng xanh một nhịp */
+.sr-afx.k-glow { box-shadow: 0 0 0 0 rgba(80, 255, 160, .9); animation: srAnsGlow .7s ease-out forwards; }
+/* SAI: nút rung mạnh + khói xám xịt ra quanh mép, bay lên rồi tan */
+.sr-ans button.is-bad:has(.k-smoke) { animation: srAnsShake .5s cubic-bezier(.36, .07, .19, .97); }
+.sr-afx.k-smoke b { left: var(--x); top: var(--y); width: 7cqh; height: 7cqh; margin: -3.5cqh 0 0 -3.5cqh; border-radius: 50%;
+  background: radial-gradient(circle at 45% 40%, rgba(150, 146, 140, 1), rgba(78, 74, 70, .9) 45%, rgba(40, 38, 36, 0) 72%);
+  filter: blur(.25cqh); opacity: 0; transform: scale(.3); animation: srAnsSmoke 1.25s ease-out var(--dl) forwards; }
+@keyframes srAnsPop { 0% { transform: scale(.94); } 45% { transform: scale(1.09); } 100% { transform: scale(1); } }
+@keyframes srAnsFlash { 0% { opacity: 1; transform: scale(.9); } 100% { opacity: 0; transform: scale(1.25); } }
+@keyframes srAnsRing { 0% { opacity: 1; transform: translate(-50%, -50%) scale(.3); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(2.1); } }
+@keyframes srAnsSpark { 0% { opacity: 1; transform: rotate(var(--a)) translateY(0) scaleY(.4); } 70% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(-1 * var(--d))) scaleY(1); } }
+@keyframes srAnsGlow { 0% { box-shadow: 0 0 0 0 rgba(80, 255, 160, .9); } 100% { box-shadow: 0 0 0 1.6cqh rgba(80, 255, 160, 0); } }
+@keyframes srAnsShake { 0%, 100% { transform: translateX(0); } 15% { transform: translateX(-1cqh) rotate(-1.5deg); } 30% { transform: translateX(.9cqh) rotate(1.2deg); }
+  45% { transform: translateX(-.7cqh); } 60% { transform: translateX(.5cqh); } 75% { transform: translateX(-.25cqh); } }
+@keyframes srAnsSmoke { 0% { opacity: 0; transform: translate(0, 0) scale(.3); } 18% { opacity: .95; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.9); } }

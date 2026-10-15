@@ -27,6 +27,9 @@
 // ⭐ Đợt 523 — 3d/tr-padui-1av.js: GIẢM TẢI (iPad nóng) — 25 khung/giây (8 khi màn đứng), độ nét ≤ 1,5. Bảng Rocket Race cùng đợt: rr-padscene.js.
 // ⭐ Đợt 522 — 3d/tr-padui-1au.js: thu nhỏ (thấy ~40 đơn vị), toa mở đầu ở 46 % từ trái, bảng định nghĩa phủ kín hông toa, không khung vàng ▼.
 // ⭐ Đợt 519 — 3d/tr-padui-1as.js: 30 tin/giây, bù lệch tan dần, đoán tiếp 0,6 s khi Wi-Fi khựng.
+// ⭐ Đợt 527 (thầy 15/10/2026) — RACING WORDS: máy chiếu mở Racing words, nút iPad của game ≠ Off ⇒ `ipad_now` {game:"racingwords"}
+//   ⇒ iPad này mở màn iPad của đội đã nhớ (templates/racing-words/3d/sr3d-padui-3m.js, chép myGame): trả lời câu hỏi (chế độ 2) hoặc vô lăng +
+//   bàn đạp + tên lửa (chế độ 3) — màn lớn quyết. Bắt tay: templates/racing-words/rw-pad-signal.js. Chưa chọn đội ⇒ màn chọn đội của RACING WORDS.
 // ⭐ Đợt 518 — iPad hết giật (3d/tr-padui-1ar.js): thùng đẩy tiếp theo vận tốc, vị trí tính theo giờ game; chạm 3 lần góc phải dưới = bảng đo.
 // =============================================================
 
@@ -55,12 +58,14 @@ function urlWith(page, t) {
 // ---------------------------------------------------------------- các màn
 let view = "", curTeam = -1, client = null, ui = null, manual = false;
 let tr = null;                                   // Đợt 515: cảnh 2D Train Rush
+let rw = null;                                   // Đợt 527: màn iPad RACING WORDS { client, ui }
 let rr = null, rrBusyOff = null;                 // Đợt 511: { client, ui } bảng tên lửa Rocket Race · huỷ nghe "đội đã có iPad"
 function stopPad() {
   if (client) { client.destroy(); client = null; }
   if (rr) { try { rr.client.destroy(); rr.ui.destroy(); } catch (e) { /* */ } rr = null; }
   if (rrBusyOff) { rrBusyOff(); rrBusyOff = null; }
   if (tr) { try { tr.destroy(); } catch (e) { /* */ } tr = null; }
+  if (rw) { try { rw.client.destroy(); } catch (e) { /* */ } rw = null; }
   ui = null; curTeam = -1;
 }
 const rrCtl = () => !!(now && now.game === "rocketrace" && now.ctl);
@@ -112,6 +117,36 @@ async function showTR(team) {
   window.__padtr = tr;   // bàn thử
   keepAwake();
 }
+// ⭐ Đợt 527 — màn iPad RACING WORDS cho đội `team`
+const rwMods = () => Promise.all([import("./templates/racing-words/3d/sr3d-padlink-3e.js"), import("./templates/racing-words/3d/sr3d-padui-3m.js"), import("./templates/racing-words/rw-pad-signal.js")]);
+async function showRW(team) {
+  note.hidden = true;
+  if (view === "rw" + team) return;
+  stopPad(); view = "rw" + team; curTeam = team;
+  history.replaceState(null, "", urlWith("pad.html", null));
+  padEl.innerHTML = "";
+  let mods;
+  try { mods = await rwMods(); } catch (e) { console.warn("Racing words pad", e); showNote("Could not load", "Check the network and reload this page.", { bad: true }); return; }
+  if (view !== "rw" + team) return;                    // đã đổi màn trong lúc nạp
+  const [L, U, S] = mods;
+  let rui = null; const pend = {};
+  const call = (k, v) => rui ? rui[k](v) : (pend[k] = v);
+  const c = L.createPadClient({ signal: S.rwPadSignal(), team,
+    onState: x => call("setState", x), onInfo: i => call("setInfo", i), onMode: m => call("setMode", m), onQ: x => call("setQ", x) });
+  rui = U.mountPadApp(padEl, { team, client: c, onBack: () => { manual = true; showChooser(); } });
+  rui.setState(c.state); Object.entries(pend).forEach(([k, v]) => rui[k](v));
+  rw = { client: c, ui: rui };
+  window.__padc = c; window.__padui = rui;   // bàn thử
+  keepAwake();
+}
+async function showRWChooser() {
+  note.hidden = true;
+  stopPad(); view = "chooser";
+  history.replaceState(null, "", urlWith("pad.html", null));
+  let U; try { [, U] = await rwMods(); } catch (e) { showNote("Could not load", "Check the network and reload this page.", { bad: true }); return; }
+  if (view !== "chooser") return;
+  U.mountPadChooser(padEl, { onPick: t => { saveTeam(t); manual = false; apply(true); } });
+}
 function showDpad(team) {
   note.hidden = true;
   if (view === "dpad" && curTeam === team) return;
@@ -152,7 +187,8 @@ async function showTRChooser() {
 }
 function showChooser() {
   if (rrCtl()) { showRRChooser(); return; }
-  if (now && now.game === "trainrush") { showTRChooser(); return; }   // Đợt 515           // Đợt 511: đang Rocket Race Game controller ⇒ màn chọn đội của RR
+  if (now && now.game === "trainrush") { showTRChooser(); return; }   // Đợt 515
+  if (now && now.game === "racingwords") { showRWChooser(); return; }   // Đợt 527           // Đợt 511: đang Rocket Race Game controller ⇒ màn chọn đội của RR
   note.hidden = true;
   stopPad(); view = "chooser";
   history.replaceState(null, "", urlWith("pad.html", null));
@@ -165,7 +201,7 @@ function showHub() {
   stopPad(); view = "hub";
   history.replaceState(null, "", urlWith("pad.html", null));
   padEl.innerHTML = `<div class="pad-hub"><b>iPad ready</b>
-    <p>Open <span>STAR LOOT</span>, <span>Train rush</span> Fight — or <span>Rocket race</span> with the iPad button on (Question screen or Game controller) — on the classroom screen.<br>This iPad switches by itself.</p>
+    <p>Open <span>STAR LOOT</span>, <span>Train rush</span> Fight, <span>Racing words</span> (iPad button on) — or <span>Rocket race</span> with the iPad button on (Question screen or Game controller) — on the classroom screen.<br>This iPad switches by itself.</p>
     <p class="pad-hub-x"><a href="#" data-k="team">Choose team</a> · <a href="${urlWith("source.html", null)}">Rocket Race question screen</a></p></div>`;
   padEl.querySelector('[data-k="team"]').addEventListener("click", e => { e.preventDefault(); manual = true; showChooser(); });
   keepAwake();
@@ -198,6 +234,11 @@ function apply(force) {
     if (t === null) { if (view !== "chooser") showChooser(); } else showTR(t);
     return;
   }
+  if (g === "racingwords") {                            // Đợt 527: RACING WORDS ⇒ màn iPad của đội đã nhớ
+    const t = savedTeam();
+    if (t === null) { if (view !== "chooser") showChooser(); } else showRW(t);
+    return;
+  }
   if (g === "starloot") {
     const t = now.fight ? savedTeam() : 0;
     if (t === null) showChooser(); else showDpad(t);
@@ -216,8 +257,8 @@ function startFollow() {
     // ⭐ Đợt 513: đang làm tay cầm mà tài liệu báo game KHÁC ⇒ chờ 1,5 s — nếu đó chỉ là AWord mở ở nơi khác, máy chiếu (claim hold,
     //   core/ipad-now.js) ghi lại ngay và lượt đọc kế tiếp huỷ hẹn này ⇒ bảng tên lửa / D-pad không bị gỡ, không phải nối lại
     clearTimeout(applyT);
-    const busy = view.startsWith("rr") || view.startsWith("tr") || view === "dpad";
-    const same = s && s.game && (view.startsWith("rr") ? s.game === "rocketrace" && s.ctl : view.startsWith("tr") ? s.game === "trainrush" : view === "dpad" ? s.game === "starloot" : false);
+    const busy = view.startsWith("rr") || view.startsWith("tr") || view.startsWith("rw") || view === "dpad";
+    const same = s && s.game && (view.startsWith("rr") ? s.game === "rocketrace" && s.ctl : view.startsWith("tr") ? s.game === "trainrush" : view.startsWith("rw") ? s.game === "racingwords" : view === "dpad" ? s.game === "starloot" : false);
     if (first) apply(); else applyT = setTimeout(apply, !(s && s.game) ? 2500 : busy && !same ? 1500 : 500);
   }, e => {
     console.warn("iPad follow", e);

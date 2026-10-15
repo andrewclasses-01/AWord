@@ -40,7 +40,7 @@
 .aw-wp-sets.is-voice .wp-spk { width: calc(22 * var(--p)); margin-left: calc(7 * var(--p)); opacity: 1; transform: none; }
 
 /* zones */
-.aw-wp-z3 { position: absolute; left: calc(80 * var(--p)); right: calc(80 * var(--p)); top: calc(236 * var(--p)); display: grid; grid-template-columns: repeat(3, 1fr); gap: calc(20 * var(--p)); }
+.aw-wp-z3 { position: absolute; left: calc(80 * var(--p)); right: calc(80 * var(--p)); top: calc(236 * var(--p)); display: grid; grid-template-columns: repeat(4, 1fr);   /* Đợt 527: 4 game 3D */ gap: calc(20 * var(--p)); }
 .aw-wp-rule { position: absolute; left: calc(80 * var(--p)); right: calc(80 * var(--p)); top: calc(448 * var(--p)); height: 1px; background: linear-gradient(90deg, transparent, #cfdbea 18%, #cfdbea 82%, transparent); }
 .aw-wp-z2 { position: absolute; left: calc(80 * var(--p)); right: calc(80 * var(--p)); top: calc(474 * var(--p)); display: grid; grid-template-columns: repeat(12, 1fr); gap: calc(14 * var(--p)); }
 .aw-wp-z2 .wp-tile { grid-column: span 2; }

@@ -1,0 +1,443 @@
+/* SPEED RUN 3D — mẫu 3g (15/10/2026) = CSS 3e + khối "MẪU 3g" cuối file (vô lăng đáy phẳng).
+   Gốc: SPEED RUN 3D — mẫu 3e (15/10/2026) = CSS 3d + khối "MẪU 3e" cuối file.
+   Gốc: SPEED RUN 3D — mẫu 3d (15/10/2026) = CSS 3c + khối "MẪU 3d" cuối file.
+   Gốc: SPEED RUN 3D — mẫu 3c (15/10/2026) = CSS 3b + khối "MẪU 3c" cuối file.
+   Gốc: SPEED RUN 3D — mẫu 3b (15/10/2026) = CSS mẫu 3 + khối "MẪU 3b" ở CUỐI (bàn đạp thật 2 bên vô lăng, dải nút 60 px, ANDREW STUDIO, 3 chế độ iPad).
+   Gốc: SPEED RUN 3D — mẫu 3 "ĐUA VÒNG" (15/10/2026) = CSS mẫu 2 + khối "MẪU 3" ở CUỐI file (dải trên thấp, bản đồ giữa, BOOST/PHANH,
+   vô lăng bấm 2 bên, vạch tốc độ khi bay, hàng nút gom 1 nút góc phải).
+   Gốc mẫu 2 "BUỒNG LÁI": dải trên (câu hỏi 2 đội + bản đồ) + 2 nửa màn trong xe (cột kính, gương, tap-lô DOM).
+   Mọi cỡ theo khung game (container query cqw/cqh của .sr-root) ⇒ TOMKO 86" hay laptop cùng tỉ lệ. Tap-lô 2 đội ĐỐI XỨNG: màn đáp án ở MÉP NGOÀI. */
+.sr-root { position: relative; overflow: hidden; background: #05070b; container-type: size; font-family: "Exo 2", "Segoe UI", sans-serif;
+  user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+.sr2 { display: grid; grid-template-rows: 15cqh 1fr; }
+
+/* ---------- dải trên ---------- */
+.sr-strip { position: relative; display: grid; grid-template-columns: 1fr 31cqw 1fr; gap: .7cqw; padding: 1cqh .8cqw; box-sizing: border-box; min-height: 0;
+  background: linear-gradient(180deg, #0d1322, #070a12); border-bottom: .3cqh solid rgba(255,255,255,.08); z-index: 3; }
+.sr-qbox { position: relative; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 2.6cqh 1.4cqw 1cqh; box-sizing: border-box; border-radius: 1.6cqh;
+  background: linear-gradient(180deg, rgba(20,30,52,.95), rgba(10,15,28,.95)); border: .3cqh solid color-mix(in srgb, var(--team) 55%, transparent);
+  box-shadow: inset 0 0 3cqh color-mix(in srgb, var(--team) 14%, transparent); }
+.sr-qtag { position: absolute; top: .7cqh; left: 1.1cqw; font: italic 900 2cqh "Exo 2", sans-serif; letter-spacing: .16em; color: var(--team); }
+.sr-qbox1 .sr-qtag { left: auto; right: 1.1cqw; }
+.sr-q { color: #fff; text-align: center; font: 700 3.6cqh/1.18 "Exo 2", sans-serif; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.sr-q[data-len="s"] { font-size: 4.6cqh; } .sr-q[data-len="m"] { font-size: 3.7cqh; } .sr-q[data-len="l"] { font-size: 3.05cqh; } .sr-q[data-len="xl"] { font-size: 2.6cqh; }
+.sr-qbox.fx-ok { animation: sr-okq .7s; } .sr-qbox.fx-bad { animation: sr-badq .7s; }
+@keyframes sr-okq { 30% { box-shadow: 0 0 3cqh #3fd884, inset 0 0 3cqh rgba(63,216,132,.4); border-color: #7dffb0; } }
+@keyframes sr-badq { 30% { box-shadow: 0 0 3cqh #ff4a4a, inset 0 0 3cqh rgba(255,74,74,.4); border-color: #ff9a9a; } }
+.sr-map { position: relative; min-width: 0; border-radius: 1.6cqh; background: radial-gradient(120% 140% at 50% 30%, #18263b, #0a0f19); border: .3cqh solid rgba(255,255,255,.1); overflow: hidden; }
+.sr-map svg { position: absolute; left: 0; right: 0; top: 0; height: 80%; width: 100%; }
+.sr-map .m-edge { fill: none; stroke: #04060a; stroke-width: 30; stroke-linecap: round; stroke-linejoin: round; }
+.sr-map .m-road { fill: none; stroke: #4a5160; stroke-width: 22; stroke-linecap: round; stroke-linejoin: round; }
+.sr-map .m-mid { fill: none; stroke: #f2c230; stroke-width: 2.4; stroke-dasharray: 10 10; }
+.sr-map .m-tick { fill: #bfe9ff; opacity: .85; }
+.sr-map .m-start { fill: #f4f4f2; stroke: #111; stroke-width: 3; }
+.sr-map .m-flag path { stroke: #e8eefc; stroke-width: 4; }
+.sr-map .m-chk { fill: #f4f4f2; stroke: #111; stroke-width: 3; }
+.sr-map .m-car circle { stroke: #fff; stroke-width: 4; filter: drop-shadow(0 0 6px rgba(0,0,0,.6)); }
+.sr-map .m-car text { fill: #fff; font: italic 900 24px "Exo 2", sans-serif; }
+.sr-map .m-msdot { fill: #ff3b30; stroke: #fff; stroke-width: 3; animation: sr-blink .35s steps(2) infinite; }
+.sr-gap { position: absolute; left: 0; right: 0; bottom: .5cqh; text-align: center; color: #cfe0ff; font: 800 2.1cqh "Exo 2", sans-serif; letter-spacing: .06em; white-space: nowrap; }
+.sr-gap b { font-style: italic; font-weight: 900; }
+.sr-ipadbtn { position: absolute; left: .6cqh; top: .6cqh; width: 4.4cqh; height: 4.4cqh; padding: .8cqh; border-radius: 50%; border: .2cqh solid rgba(140,210,255,.4);
+  background: rgba(255,255,255,.06); color: #cbd5e1; cursor: pointer; display: grid; place-items: center; }
+.sr-ipadbtn svg { width: 100%; height: 100%; }
+
+/* ---------- 2 nửa màn trong xe ---------- */
+.sr-stage { position: relative; min-height: 0; overflow: hidden; }
+.sr-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.sr-half { position: absolute; top: 0; bottom: 0; width: 50%; overflow: hidden; pointer-events: none; }
+.sr-half0 { left: 0; } .sr-half1 { right: 0; }
+.sr-frame { position: absolute; left: 0; right: 0; top: 0; bottom: 27cqh; width: 100%; height: calc(100% - 27cqh); }
+.sr-frame .roof { fill: #0a0b0e; }
+.sr-frame .pil { fill: #0c0d11; }
+.sr-frame .edge { stroke: rgba(255,255,255,.12); stroke-width: .25; vector-effect: non-scaling-stroke; fill: none; }
+.sr-mirror { position: absolute; left: 50%; top: .6cqh; transform: translateX(-50%); min-width: 15cqw; height: 4.6cqh; padding: 0 1.2cqw; box-sizing: border-box; border-radius: 1.2cqh 1.2cqh 2.4cqh 2.4cqh;
+  display: flex; align-items: center; justify-content: center; gap: .6cqw; background: linear-gradient(180deg, #2a313c, #11151b); border: .35cqh solid #050608;
+  box-shadow: 0 .5cqh 1cqh rgba(0,0,0,.5), inset 0 0 1.6cqh rgba(120,170,255,.12); color: #dfe8f8; font: 800 2cqh "Exo 2", sans-serif; white-space: nowrap; }
+.sr-mir-dir { font-size: 1.8cqh; color: #9fb4e0; }
+.sr-mir-txt b { font-style: italic; }
+.sr-root.is-menu .sr-mirror, .sr-root.is-count .sr-mirror { opacity: 0; }
+
+/* nhãn xe đối thủ */
+.sr-tag { position: absolute; left: 0; top: 0; opacity: 0; transform: translate(-50%, -115%); display: flex; align-items: center; gap: .4cqw; padding: .3cqh .8cqh .3cqh .3cqh;
+  border-radius: 99px; background: rgba(6,10,20,.75); border: .25cqh solid rgba(255,255,255,.5); color: #fff; font: 800 1.9cqh "Exo 2", sans-serif; white-space: nowrap; }
+.sr-tag b { width: 3cqh; height: 3cqh; border-radius: 50%; background: var(--team); display: grid; place-items: center; font: italic 900 2cqh "Exo 2", sans-serif; }
+.sr-half0 .sr-tag b { background: #ff7a00; } .sr-half1 .sr-tag b { background: #3b8cff; }
+
+/* báo động tên lửa */
+.sr-half::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; box-shadow: inset 0 0 9cqh rgba(255,30,20,.85); transition: opacity .2s; }
+.sr-half.is-alarm::after { animation: sr-alarm .5s ease-in-out infinite alternate; }
+.sr-half.is-locked::after { animation-duration: .16s; }
+@keyframes sr-alarm { from { opacity: .25; } to { opacity: .9; } }
+.sr-alarm { position: absolute; left: 50%; bottom: 29cqh; transform: translateX(-50%) scale(.9);   /* trên capô — không che chỗ tên lửa lao xuống */ opacity: 0; display: flex; flex-direction: column; align-items: center; gap: .3cqh;
+  padding: .5cqh 1.6cqw .7cqh; border-radius: 1.6cqh; background: rgba(60,0,0,.75); border: .3cqh solid #ff5a4a; color: #fff; transition: opacity .15s, transform .15s; }
+.sr-alarm b { font: italic 900 2.6cqh "Exo 2", sans-serif; letter-spacing: .1em; color: #ffd2cc; }
+.sr-alarm-t { font: 900 2.4cqh "Exo 2", sans-serif; }
+.sr-alarm-bar { display: block; width: 13cqw; height: .8cqh; border-radius: 9px; background: rgba(255,255,255,.18); overflow: hidden; }
+.sr-alarm-bar em { display: block; height: 100%; background: #ff5a4a; transform-origin: left; }
+.sr-half.is-alarm .sr-alarm { opacity: 1; transform: translateX(-50%); }
+.sr-half.is-locked .sr-alarm { background: rgba(170,0,0,.88); animation: sr-blink .25s steps(2) infinite; }
+.sr-half.is-locked .sr-alarm-t { font-size: 3.4cqh; color: #fff36a; }
+
+/* thông báo nổi giữa kính */
+.sr-toast { position: absolute; left: 50%; top: 17cqh; transform: translate(-50%, -50%); opacity: 0; font: italic 900 6cqh "Exo 2", sans-serif; letter-spacing: .04em; color: #fff; white-space: nowrap;
+  text-shadow: 0 0 2.4cqh rgba(0,0,0,.6), 0 .4cqh 1cqh rgba(0,0,0,.7); }
+.sr-toast.on { animation: sr-toast 1.5s ease-out forwards; }
+.sr-toast.k-ok { color: #9dffc6; } .sr-toast.k-bad { color: #ff8a80; } .sr-toast.k-ms { color: #ffd36a; } .sr-toast.k-info { color: #cfe6ff; }
+@keyframes sr-toast { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -80%) scale(.95); } }
+@keyframes sr-blink { 50% { opacity: .35; } }
+
+/* ---------- tap-lô ---------- */
+.sr-dash { position: absolute; left: 0; right: 0; bottom: 0; height: 27cqh; display: flex; gap: .8cqw; padding: 1.4cqh 1cqw 1.2cqh; box-sizing: border-box; pointer-events: auto;
+  background: linear-gradient(180deg, #23272e 0, #15181d 9%, #0c0e11 100%); border-top: .35cqh solid #2f353f; border-radius: 2.4cqh 2.4cqh 0 0;
+  box-shadow: 0 -1.4cqh 2.4cqh rgba(0,0,0,.55), inset 0 .25cqh 0 rgba(255,255,255,.06); }
+.sr-half1 .sr-dash { flex-direction: row-reverse; }
+.sr-console { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .9cqh; padding: 1cqh .7cqw; box-sizing: border-box; border-radius: 1.6cqh;
+  background: linear-gradient(160deg, #0f1828, #070b13); border: .3cqh solid #000; box-shadow: inset 0 0 0 .2cqh rgba(255,255,255,.07), inset 0 0 3cqh rgba(60,120,220,.12); }
+.sr-ans { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: .8cqh .5cqw; }
+.sr-ans[data-n="3"] button:last-child { grid-column: 1 / -1; }
+.sr-ans[data-n="2"] { grid-template-columns: 1fr; }
+.sr-ans button { min-height: 0; min-width: 0; border-radius: 1.2cqh; border: .3cqh solid color-mix(in srgb, var(--team) 45%, rgba(255,255,255,.2)); cursor: pointer; padding: 0 .5cqw;
+  background: linear-gradient(180deg, rgba(26,42,72,.95), rgba(12,20,38,.97)); color: #fff; font: 800 3.4cqh "Exo 2", sans-serif;
+  box-shadow: inset 0 .2cqh 0 rgba(255,255,255,.12), 0 .3cqh .8cqh rgba(0,0,0,.4); transition: transform .08s, background .2s, opacity .3s; touch-action: manipulation; }
+.sr-ans[data-len="m"] button { font-size: 2.9cqh; } .sr-ans[data-len="l"] button { font-size: 2.35cqh; }
+.sr-ans button:active { transform: scale(.97); }
+.sr-ans button span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.1; }
+.sr-ans button.is-ok { background: linear-gradient(180deg, #2cc06d, #178a49); border-color: #9dffc6; }
+.sr-ans button.is-bad { background: linear-gradient(180deg, #e0413f, #a3201f); border-color: #ffb0a8; animation: sr-shake .35s; }
+.sr-ans button.is-reveal { border-color: #7dffb0; box-shadow: inset 0 0 0 .45cqh #3fd884; }
+.sr-half.is-qlock .sr-ans button:not(.is-ok):not(.is-bad):not(.is-reveal) { opacity: .4; }
+@keyframes sr-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-.5cqw); } 75% { transform: translateX(.5cqw); } }
+.sr-arms { flex: none; height: 5.4cqh; display: flex; align-items: center; gap: .8cqw; }
+.sr-half1 .sr-arms { flex-direction: row-reverse; }
+.sr-ms { display: flex; gap: .3cqw; }
+.sr-ms svg { width: 3.6cqh; height: 3.6cqh; color: #2a3140; transform: rotate(45deg); transition: color .2s, filter .2s; }
+.sr-ms svg.on { color: #ff5a3c; filter: drop-shadow(0 0 .8cqh rgba(255,90,60,.8)); }
+.sr-fire { flex: 1; height: 100%; display: flex; align-items: center; justify-content: center; gap: .6cqw; border-radius: 1.2cqh; border: .3cqh solid #3a2a2a; cursor: pointer;
+  background: linear-gradient(180deg, #2a1c1c, #160d0d); color: #6e5555; font: italic 900 2.9cqh "Exo 2", sans-serif; letter-spacing: .14em; touch-action: manipulation; }
+.sr-fire svg { width: 3.2cqh; height: 3.2cqh; transform: rotate(45deg); }
+.sr-fire.ready { color: #fff; border-color: #ffb27a; background: linear-gradient(180deg, #ff5a2c, #b3230e); box-shadow: 0 0 2.4cqh rgba(255,90,40,.7); animation: sr-firepulse .9s ease-in-out infinite alternate; }
+.sr-fire.ready:active { transform: scale(.96); }
+@keyframes sr-firepulse { to { box-shadow: 0 0 .6cqh rgba(255,90,40,.4); filter: brightness(1.15); } }
+.sr-streak { display: flex; gap: .35cqw; }
+.sr-streak i { width: 1.4cqh; height: 1.4cqh; border-radius: 50%; background: #2a3140; transition: background .2s, box-shadow .2s; }
+.sr-streak i.on { background: #ffd36a; box-shadow: 0 0 1cqh #ffb13a; }
+
+/* vô lăng có màn hình (kiểu F1): quay theo tay lái; màn hiện nguồn lái + km/h + 4 ô năng lượng */
+.sr-wheelbox { flex: none; width: 19cqw; position: relative; }
+.sr-wheel { position: absolute; left: 50%; bottom: -9cqh; width: 37cqh; height: 37cqh; margin-left: -18.5cqh; transform-origin: 50% 50%; transition: transform .05s linear;
+  filter: drop-shadow(0 1cqh 1.6cqh rgba(0,0,0,.6)); }
+.sr-wheel > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.sr-screen { position: absolute; left: 25%; right: 25%; top: 26%; height: 31%; border-radius: 1.4cqh; background: linear-gradient(180deg, #050a12, #0b1422);
+  border: .3cqh solid #000; box-shadow: 0 0 0 .25cqh color-mix(in srgb, var(--team) 70%, transparent), inset 0 0 2cqh rgba(80,150,255,.15);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .3cqh; }
+.sr-src { font: 900 1.35cqh "Exo 2", sans-serif; letter-spacing: .2em; color: #7f93b8; }
+.sr-src[data-s="on"] { color: #4ade80; } .sr-src[data-s="relay"] { color: #facc15; }
+.sr-kmh { display: flex; align-items: baseline; gap: .3cqh; color: #fff; }
+.sr-kmh span { font: italic 900 5.6cqh/1 "Exo 2", sans-serif; min-width: 2.1em; text-align: right; }
+.sr-kmh small { font: 800 1.4cqh "Exo 2", sans-serif; color: #9fb4e0; }
+.sr-cells { display: flex; gap: .35cqh; width: 78%; }
+.sr-cells i { flex: 1; height: 1.5cqh; border-radius: .4cqh; background: linear-gradient(90deg, #ffd23f calc(var(--f, 0) * 100%), rgba(255,255,255,.12) 0); box-shadow: inset 0 0 0 .15cqh rgba(255,255,255,.18); }
+.sr-half.is-empty .sr-cells i { animation: sr-blink .5s steps(2) infinite; box-shadow: inset 0 0 0 .2cqh #ff5a4a; }
+
+.sr-divider { position: absolute; left: 50%; top: 0; bottom: 0; width: .55cqw; transform: translateX(-50%); z-index: 2; pointer-events: none;
+  background: linear-gradient(90deg, #3b8cff 0, #05070b 22%, #05070b 78%, #ff7a00 100%); box-shadow: 0 0 1.4cqh rgba(0,0,0,.9); }
+
+/* ---------- màn chờ / đếm / kết (giữa sân khấu) ---------- */
+.sr-center { position: absolute; left: 0; right: 0; top: 0; bottom: 27cqh; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; z-index: 4; }
+.sr-title { font: italic 900 12cqh "Exo 2", sans-serif; letter-spacing: .06em; color: #fff3dd; text-shadow: 0 0 3cqh rgba(255,150,60,.75), 0 .6cqh 1.6cqh rgba(0,0,0,.55); }
+.sr-sub { margin-top: .2cqh; font: 700 3cqh "Exo 2", sans-serif; letter-spacing: .1em; color: #ffd9a8; text-shadow: 0 .3cqh 1cqh rgba(0,0,0,.6); }
+.sr-menu-btns { display: flex; gap: 2cqw; margin-top: 3cqh; }
+.sr-start, .sr-ipadbig { pointer-events: auto; padding: .5em 1.6em; font: 900 3.6cqh "Exo 2", sans-serif; letter-spacing: .12em; cursor: pointer; border-radius: 2cqh; display: flex; align-items: center; gap: .5em; }
+.sr-start { color: #ffe39a; background: linear-gradient(180deg, rgba(120,76,0,.85), rgba(60,34,0,.9)); border: .3cqh solid #ffcf4a; box-shadow: 0 0 3cqh rgba(255,190,60,.55); }
+.sr-ipadbig { color: #cdeaff; background: linear-gradient(180deg, rgba(14,50,90,.85), rgba(6,22,44,.9)); border: .3cqh solid #6cc4ff; font-size: 2.8cqh; }
+.sr-ipadbig svg { width: 1.2em; height: 1.2em; }
+.sr-start:active, .sr-ipadbig:active { transform: scale(.95); }
+.sr-help { margin-top: 2.2cqh; padding: .6cqh 1.4cqw; border-radius: 99px; background: rgba(6,10,20,.7); color: #dfe8f8; font: 700 2.2cqh "Exo 2", sans-serif; }
+.sr-lights { display: none; gap: 2cqh; padding: 2cqh 3cqh; border-radius: 3cqh; background: rgba(10,10,14,.85); border: .3cqh solid rgba(255,255,255,.12); }
+.sr-lights i { width: 8cqh; height: 8cqh; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #4a1416, #1e0708); box-shadow: inset 0 0 1cqh rgba(0,0,0,.8); transition: background .08s, box-shadow .08s; }
+.sr-lights i.on { background: radial-gradient(circle at 40% 35%, #ffd0c8, #ff2a1f 45%, #b00c06); box-shadow: 0 0 4cqh #ff2a1f, inset 0 0 1cqh rgba(255,255,255,.4); }
+.sr-go { position: absolute; font: italic 900 18cqh "Exo 2", sans-serif; color: #b9ff6a; text-shadow: 0 0 4cqh rgba(130,255,80,.8), 0 .8cqh 2cqh rgba(0,0,0,.5); opacity: 0; }
+.sr-go.pop { animation: sr-pop 1s ease-out forwards; }
+@keyframes sr-pop { 0% { opacity: 0; transform: scale(1.7); } 15% { opacity: 1; transform: scale(1); } 65% { opacity: 1; } 100% { opacity: 0; transform: scale(.9); } }
+.sr-banner { position: absolute; left: 0; right: 0; top: 14cqh; text-align: center; font: italic 900 10cqh "Exo 2", sans-serif; color: var(--team, #fff); letter-spacing: .05em; z-index: 5; pointer-events: none;
+  text-shadow: 0 0 3cqh var(--team, #fff), 0 .6cqh 1.6cqh rgba(0,0,0,.6); opacity: 0; transform: scale(.8); transition: opacity .5s, transform .6s cubic-bezier(.2,1.6,.4,1); }
+.sr-banner.on { opacity: 1; transform: none; }
+.sr-result { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); display: none; flex-direction: column; align-items: center; gap: 2cqh; pointer-events: auto; z-index: 6;
+  padding: 3cqh 3cqw; border-radius: 3cqh; background: rgba(7,12,24,.92); border: .3cqh solid rgba(255,255,255,.18); min-width: 48cqw; }
+.sr-result.on { display: flex; }
+.sr-res-title { font: italic 900 6cqh "Exo 2", sans-serif; color: #fff; }
+.sr-res-rows { display: flex; flex-direction: column; gap: 1cqh; width: 100%; }
+.sr-res-rows div { display: grid; grid-template-columns: 1fr auto auto auto; gap: 2cqw; padding: 1.2cqh 1.4cqw; border-radius: 1.4cqh; background: rgba(255,255,255,.06); border-left: .6cqw solid var(--team); color: #e6eeff; font: 700 2.7cqh "Exo 2", sans-serif; }
+.sr-res-rows b { color: var(--team); }
+.sr-again { font: 900 3cqh "Exo 2", sans-serif; letter-spacing: .1em; color: #e8f6ff; padding: .5em 1.6em; border-radius: 2cqh; border: .3cqh solid #8fd3ff; background: rgba(10,30,60,.8); cursor: pointer; }
+
+/* bảng QR iPad */
+.sr-panel { position: absolute; inset: 0; z-index: 8; display: grid; place-items: center; background: rgba(2,4,10,.66); backdrop-filter: blur(3px); }
+.sr-panel[hidden] { display: none; }
+.sr-panel-box { position: relative; max-width: 92cqw; max-height: 82cqh; overflow: auto; padding: 2.4cqh 2.4cqw; border-radius: 2.4cqh; background: #0b1120; border: .25cqh solid rgba(140,210,255,.3); color: #e2e8f0; }
+.sr-panel-box h2 { margin: 0 0 1.6cqh; font: italic 900 3.4cqh "Exo 2", sans-serif; letter-spacing: .08em; color: #cdeaff; }
+.sr-panel-x { position: absolute; top: 1cqh; right: 1cqh; width: 5cqh; height: 5cqh; border-radius: 50%; border: 0; background: rgba(255,255,255,.08); color: #fff; font-size: 2.6cqh; cursor: pointer; }
+.sr-ipad { display: flex; gap: 22px; justify-content: center; flex-wrap: wrap; }
+.sr-ipad-card { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 14px 12px; border-radius: 16px; border: 2px solid var(--tc); background: rgba(255,255,255,.04); min-width: 240px; }
+.sr-ipad-card h3 { margin: 0; font: italic 900 20px "Exo 2", sans-serif; letter-spacing: .1em; color: var(--tc); }
+.sr-ipad-qr { width: 230px; height: 230px; padding: 10px; border-radius: 12px; background: #fff; }
+.sr-ipad-qr svg { display: block; width: 100%; height: 100%; }
+.sr-ipad-st { display: flex; align-items: center; gap: 8px; font: 700 16px "Exo 2", sans-serif; color: #cbd5e1; }
+.sr-ipad-st i { width: 11px; height: 11px; border-radius: 50%; background: #64748b; }
+.sr-ipad-st[data-s="on"] i { background: #4ade80; box-shadow: 0 0 10px #4ade80; } .sr-ipad-st[data-s="on"] { color: #bbf7d0; }
+.sr-ipad-st[data-s="relay"] i { background: #facc15; } .sr-ipad-st[data-s="relay"] { color: #fef08a; }
+.sr-ipad-st[data-s="wait"] i { animation: sr-blink 1s steps(2) infinite; }
+.sr-ipad-url { max-width: 250px; font: 600 12px ui-monospace, Consolas, monospace; color: #94a3b8; word-break: break-all; text-align: center; user-select: all; }
+.sr-pn-note { margin: 14px 0 0; max-width: 560px; color: #94a3b8; font: 600 14px/1.4 "Exo 2", sans-serif; }
+.sr-ipad-err { color: #fca5a5; }
+
+/* hiện/ẩn theo pha */
+.sr-root:not(.is-menu) .sr-title, .sr-root:not(.is-menu) .sr-sub, .sr-root:not(.is-menu) .sr-menu-btns, .sr-root:not(.is-menu) .sr-help { display: none; }
+.sr-root.is-count .sr-lights { display: flex; }
+.sr-root.is-menu .sr-arms, .sr-root.is-count .sr-arms { opacity: .35; }
+
+/* =====================================================================
+   MẪU 3 (15/10/2026)
+   ===================================================================== */
+/* dải trên THẤP: câu hỏi đội 1 | bản đồ (giữa) | câu hỏi đội 2 */
+.sr3 { grid-template-rows: 10cqh 1fr; }
+.sr3 .sr-strip { grid-template-columns: 1fr 27cqw 1fr; padding: .7cqh .8cqw; gap: .7cqw; }
+.sr3 .sr-qbox { padding: .6cqh 1.2cqw; border-radius: 1.3cqh; }
+.sr3 .sr-q { -webkit-line-clamp: 2; font-size: 3.1cqh; line-height: 1.12; }
+.sr3 .sr-q[data-len="s"] { font-size: 3.6cqh; } .sr3 .sr-q[data-len="m"] { font-size: 3.1cqh; } .sr3 .sr-q[data-len="l"] { font-size: 2.7cqh; } .sr3 .sr-q[data-len="xl"] { font-size: 2.3cqh; }
+/* "TEAM n" GIỮA khung khi chưa có câu hỏi (màn chờ / đếm / kết) — lúc đua thì ẩn hẳn */
+.sr3 .sr-qtag { position: absolute; inset: 0; left: 0; right: 0; top: 0; display: grid; place-items: center; font: italic 900 4.6cqh "Exo 2", sans-serif; letter-spacing: .14em;
+  color: var(--team); text-shadow: 0 0 2.4cqh color-mix(in srgb, var(--team) 60%, transparent); transition: opacity .3s; }
+.sr3 .sr-qbox1 .sr-qtag { right: 0; left: 0; }
+.sr3.is-race .sr-qtag { opacity: 0; }
+.sr3:not(.is-race) .sr-q { opacity: 0; }
+.sr3 .sr-map { border-radius: 1.3cqh; display: flex; align-items: center; gap: .3cqw; padding: 0 .5cqw; box-sizing: border-box; }
+.sr3 .sr-map svg { position: relative; flex: 1; min-width: 0; height: 100%; }
+.sr3 .sr-map .m-edge { stroke-width: 26; } .sr3 .sr-map .m-road { stroke-width: 18; } .sr3 .sr-map .m-mid { stroke: #f1efe8; stroke-width: 2; stroke-dasharray: 8 10; }
+.sr3 .sr-map .m-ramp path { fill: #f5c518; stroke: #111; stroke-width: 2.5; }
+.sr3 .sr-map .m-start { fill: #f4f4f2; stroke: #111; stroke-width: 2; }
+.sr3 .sr-map .m-car text { font-size: 19px; }
+.sr-lap { flex: none; width: 4.6cqw; text-align: center; color: #fff; font: italic 900 3.4cqh/1 "Exo 2", sans-serif; pointer-events: none; }
+.sr-lap small { display: block; font-size: 1.5cqh; letter-spacing: .2em; color: #9fb4e0; margin-bottom: .3cqh; }
+.sr3 .sr-gap { position: static; flex: none; width: 5.6cqw; white-space: normal; text-align: center; font-size: 1.6cqh; line-height: 1.15; }
+/* bỏ vạch chia cứng: chỉ còn đường kẻ mảnh 2 màu giữa 2 khung nhìn */
+.sr3 .sr-divider { width: .3cqw; }
+
+/* tap-lô: màn đáp án | BOOST + PHANH | vô lăng (giữa màn) */
+.sr3 .sr-wheelbox { width: 15cqw; pointer-events: auto; touch-action: none; cursor: pointer; }
+/* vô lăng: bấm nửa trái / phải để lái ⇒ vầng sáng mờ màu ĐỘI bên đó */
+.sr-wglow { position: absolute; bottom: -9cqh; width: 22cqh; height: 37cqh; border-radius: 50%; pointer-events: none; opacity: 0; filter: blur(2.2cqh);
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--team) 95%, white), color-mix(in srgb, var(--team) 55%, transparent) 60%, transparent); transition: opacity .12s; mix-blend-mode: screen; }
+.sr-wglow.l { left: calc(50% - 21cqh); } .sr-wglow.r { left: calc(50% - 1cqh); }
+.sr-wheelbox.is-l .sr-wglow.l, .sr-wheelbox.is-r .sr-wglow.r { opacity: .95; }
+.sr-wheelbox.is-l .sr-wheel, .sr-wheelbox.is-r .sr-wheel { filter: drop-shadow(0 1cqh 1.6cqh rgba(0,0,0,.6)) drop-shadow(0 0 1.4cqh var(--team)); }
+/* thanh NITRO trên màn vô lăng */
+.sr-nbar { width: 78%; height: .9cqh; border-radius: .4cqh; background: rgba(255,255,255,.1); overflow: hidden; }
+.sr-nbar em { display: block; height: 100%; transform-origin: left; transform: scaleX(0); background: linear-gradient(90deg, #4ef0ff, #a77bff); box-shadow: 0 0 .8cqh #4ef0ff; }
+
+/* vạch tốc độ khi BAY / Nitro (CSS, rẻ) */
+.sr-speed { position: absolute; left: 0; right: 0; top: 0; bottom: 27cqh; pointer-events: none; opacity: 0; transition: opacity .25s;
+  background: repeating-conic-gradient(from 0deg at 50% 42%, transparent 0deg 3.1deg, rgba(255,255,255,.34) 3.3deg 3.55deg, transparent 3.75deg 7deg);
+  -webkit-mask-image: radial-gradient(ellipse 60% 70% at 50% 42%, transparent 30%, #000 85%); mask-image: radial-gradient(ellipse 60% 70% at 50% 42%, transparent 30%, #000 85%); }
+.sr-half.is-air .sr-speed { opacity: .85; animation: sr-speedl .12s steps(2) infinite; }
+.sr-half.is-nitro:not(.is-air) .sr-speed { opacity: .45; animation: sr-speedl .12s steps(2) infinite; filter: hue-rotate(160deg) saturate(3); }
+@keyframes sr-speedl { 50% { transform: rotate(1.6deg) scale(1.03); } }
+
+/* hàng nút chức năng (ngoài khung game, như AWord): 1 nút góc phải; bấm ⇒ các nút bung ra bên TRÁI; bấm chỗ khác ⇒ thu lại */
+.sr-bar { position: relative; display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 0 18px; box-sizing: border-box; height: 100%;
+  background: linear-gradient(180deg, #0a0d16, #05070b); border-top: 1px solid rgba(255,255,255,.07); font-family: "Exo 2", sans-serif; }
+.sr-tools { display: flex; gap: 10px; overflow: hidden; max-width: 0; opacity: 0; transform: translateX(24px); pointer-events: none;
+  transition: max-width .35s cubic-bezier(.22,.9,.3,1), opacity .25s, transform .35s cubic-bezier(.22,.9,.3,1); }
+.sr-bar.is-open .sr-tools { max-width: 520px; opacity: 1; transform: none; pointer-events: auto; }
+.sr-tool, .sr-toolmain { flex: none; width: 48px; height: 48px; padding: 0; display: grid; place-items: center; border-radius: 13px; cursor: pointer; color: #dbe7ff;
+  background: linear-gradient(180deg, #1c2538, #0e1422); border: 1.5px solid rgba(140,190,255,.35); box-shadow: 0 3px 0 #04060a, 0 4px 10px rgba(0,0,0,.45); }
+.sr-tool svg, .sr-toolmain svg { width: 23px; height: 23px; }
+.sr-tool:hover, .sr-toolmain:hover { border-color: #8fd3ff; color: #fff; }
+.sr-tool:active, .sr-toolmain:active { transform: translateY(2px); box-shadow: 0 1px 0 #04060a; }
+.sr-toolmain { width: 56px; height: 56px; border-radius: 16px; }
+.sr-bar.is-open .sr-toolmain { border-color: #ffcf4a; color: #ffe39a; box-shadow: 0 0 14px rgba(255,200,70,.45), 0 3px 0 #04060a; }
+.sr-tool[data-k="sound"] .x { display: none; } .sr-tool[data-k="sound"].is-off .x { display: block; } .sr-tool[data-k="sound"].is-off .w { display: none; }
+.sr-tool[data-k="sound"].is-off { border-color: #e86a4a; color: #ffc1ad; }
+.sr-tooltip { position: absolute; right: 18px; bottom: calc(100% + 8px); padding: 6px 12px; border-radius: 10px; background: rgba(8,12,22,.95); border: 1px solid rgba(140,190,255,.4);
+  color: #e6eeff; font: 700 14px "Exo 2", sans-serif; white-space: nowrap; opacity: 0; transform: translateY(6px); transition: opacity .2s, transform .2s; pointer-events: none; z-index: 20; }
+.sr-tooltip.on { opacity: 1; transform: none; }
+
+/* =====================================================================
+   MẪU 3b (15/10/2026)
+   ===================================================================== */
+/* tap-lô: màn đáp án | [ GA · vô lăng · PHANH ] — cụm lái KHÔNG đảo chiều ở đội 2 (GA luôn bên TRÁI, PHANH bên PHẢI) */
+.sr-drive { flex: none; display: flex; align-items: flex-end; gap: .2cqw; height: 100%; }
+.sr3 .sr-wheelbox { width: 17cqw; height: 100%; }
+.sr3 .sr-wheel { width: 34cqh; height: 34cqh; margin-left: -17cqh; bottom: -8.5cqh; }
+.sr-wglow { width: 20cqh; height: 34cqh; bottom: -8.5cqh; }
+.sr-wglow.l { left: calc(50% - 19cqh); } .sr-wglow.r { left: calc(50% - 1cqh); }
+.sr-pedal { position: relative; flex: none; height: 92%; padding: 0; border: 0; background: none; cursor: pointer; touch-action: none; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  transform-origin: 50% 100%; transition: transform .07s, filter .1s; -webkit-tap-highlight-color: transparent; }
+.sr-pedal .sr-pedal-svg { display: block; height: calc(100% - 2.6cqh); width: auto; filter: drop-shadow(0 .8cqh 1cqh rgba(0,0,0,.6)); }
+.sr-pedal span { font: italic 900 1.7cqh/2.4cqh "Exo 2", sans-serif; letter-spacing: .14em; }
+.sr-boost span { color: #7fe9ff; } .sr-brake span { color: #ff9a8a; }
+.sr-pedal.is-down { transform: perspective(40cqh) rotateX(16deg) scaleY(.95); }
+.sr-pedal.is-down .sr-pedal-svg { filter: drop-shadow(0 0 1.6cqh var(--team)) drop-shadow(0 0 .6cqh var(--team)) brightness(1.25); }
+.sr-nfill { fill: rgba(70,230,255,.55); transform-box: fill-box; transform-origin: 50% 100%; transform: scaleY(0); }
+.sr-boost.has-nitro .sr-pedal-svg { filter: drop-shadow(0 0 1.2cqh rgba(80,230,255,.85)); }
+.sr-boost.has-nitro span::after { content: " N2O"; font-size: 1.2cqh; color: #e8fbff; }
+.sr-root.is-menu .sr-pedal, .sr-root.is-count .sr-pedal { opacity: .55; }
+
+/* hàng nút: thấp hơn, nút Control bằng cỡ các nút khác */
+.sr-bar { padding: 0 14px; gap: 8px; }
+.sr-tools { gap: 8px; }
+.sr-tool, .sr-toolmain { width: 42px; height: 42px; border-radius: 12px; }
+.sr-tool svg, .sr-toolmain svg { width: 21px; height: 21px; }
+.sr-tooltip { right: 14px; }
+
+/* màn khởi động: ANDREW STUDIO trên chữ SPEED RUN */
+.sr-studio { display: flex; align-items: center; gap: 1.6cqw; margin-bottom: .2cqh; padding: .7cqh 6cqw; transform: skewX(-12deg);
+  background: linear-gradient(90deg, transparent, rgba(6,5,12,.82) 16%, rgba(6,5,12,.82) 84%, transparent); border-top: .25cqh solid rgba(255,207,74,.55); border-bottom: .25cqh solid rgba(255,207,74,.55); }
+.sr-studio span { font: italic 900 4.8cqh "Exo 2", sans-serif; -webkit-text-stroke: .06cqh rgba(255,236,170,.5); letter-spacing: .5em; padding-left: .5em; text-transform: uppercase;
+  background: linear-gradient(100deg, #8a5a12 0%, #ffe9a8 18%, #fff 24%, #ffcf4a 36%, #b8741a 52%, #ffe08a 70%, #fff7d6 78%, #c88a22 100%); background-size: 220% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 .3cqh 0 rgba(60,25,0,.85)) drop-shadow(0 0 1.6cqh rgba(255,170,60,.55));
+  animation: sr-shine 3.6s ease-in-out infinite; }
+.sr-studio i { width: 9cqw; height: .45cqh; border-radius: 9px; background: linear-gradient(90deg, transparent, #ffcf4a 60%, #fff3c4); box-shadow: 0 0 1cqh rgba(255,190,60,.7); }
+.sr-studio i:last-child { transform: scaleX(-1); }
+@keyframes sr-shine { 0%, 100% { background-position: 100% 0; } 50% { background-position: 0 0; } }
+.sr-root:not(.is-menu) .sr-studio { display: none; }
+
+/* chế độ iPad 1: câu hỏi chỉ trên iPad — khung câu hỏi hiện "QUESTION ON THE iPAD", đáp án trên màn lớn không bấm được */
+.sr-qipad { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; gap: .8cqw; color: color-mix(in srgb, var(--team) 70%, white);
+  font: italic 900 2.8cqh "Exo 2", sans-serif; letter-spacing: .12em; }
+.sr-qipad svg { width: 3.6cqh; height: 3.6cqh; }
+.sr3.pm1.is-race .sr-qipad { display: flex; animation: sr-blink 1.6s ease-in-out infinite; }
+.sr3.pm1 .sr-q { visibility: hidden; }
+.sr3.pm1 .sr-ans { pointer-events: none; }
+/* chế độ iPad 2: vô lăng + bàn đạp màn lớn chỉ HIỆN theo iPad */
+.sr3.pm2 .sr-wheelbox, .sr3.pm2 .sr-pedal { pointer-events: none; cursor: default; }
+
+/* bảng iPad: 3 chế độ */
+.sr-pm { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.4cqw; margin-bottom: 2cqh; }
+.sr-pm-o { display: flex; flex-direction: column; align-items: flex-start; gap: .8cqh; padding: 1.8cqh 1.4cqw; border-radius: 1.8cqh; cursor: pointer; text-align: left;
+  background: rgba(255,255,255,.04); border: .3cqh solid rgba(140,190,255,.25); color: #cbd5e1; font: 600 2cqh/1.35 "Exo 2", sans-serif; }
+.sr-pm-o i { width: 5.4cqh; height: 5.4cqh; color: #8fd3ff; } .sr-pm-o i svg { width: 100%; height: 100%; }
+.sr-pm-o b { font: italic 900 2.7cqh "Exo 2", sans-serif; color: #fff; letter-spacing: .04em; }
+.sr-pm-o:hover { border-color: #8fd3ff; }
+.sr-pm-o.on { border-color: #ffcf4a; background: rgba(255,200,70,.1); box-shadow: 0 0 2cqh rgba(255,200,70,.3); }
+.sr-pm-o.on i { color: #ffcf4a; }
+
+/* =====================================================================
+   MẪU 3c (15/10/2026)
+   ===================================================================== */
+/* vô lăng: chỉ sáng 1 CUNG 1/4 vành bên đang bấm (cung nằm trong SVG, quay theo vô lăng) */
+.sr-wheel .wg { opacity: 0; transition: opacity .1s; }
+.sr-wheelbox.is-l .wg.wl, .sr-wheelbox.is-r .wg.wr { opacity: 1; }
+.sr-wheelbox.is-l .sr-wheel, .sr-wheelbox.is-r .sr-wheel { filter: drop-shadow(0 1cqh 1.6cqh rgba(0,0,0,.6)); }
+.sr-wglow, .sr-nbar { display: none; }
+/* bàn đạp TREO: giá trên cố định, chỉ tay đòn + mặt đạp (.mv) lún xuống */
+.sr-pedal.is-down { transform: none; }
+.sr-pedal .mv { transition: transform .08s, filter .1s; }
+.sr-pedal.is-down .mv { transform: translateY(4px) scale(.96, .9); filter: drop-shadow(0 0 4px var(--team)) brightness(1.25); }
+.sr-pedal.is-down .sr-pedal-svg { filter: drop-shadow(0 .8cqh 1cqh rgba(0,0,0,.6)); }
+/* nút tên lửa: chỉ icon 2 quả chéo · bấm ⇒ 1 quả vút lên TRONG nút · tên lửa chờ dựng đứng (≤ 4 + "+x") */
+.sr3 .sr-fire { flex: none; position: relative; width: 11cqh; height: 100%; padding: 0; overflow: hidden; gap: 0; }
+.sr3 .sr-fire .sr-x2 { width: 4.4cqh; height: 4.4cqh; transform: none; }
+.sr-fly { position: absolute; left: 50%; bottom: -10%; width: 2.6cqh; margin-left: -1.3cqh; pointer-events: none; animation: sr-fly .7s cubic-bezier(.5,0,.8,.4) forwards; }
+.sr-fly svg { width: 100%; height: auto; display: block; color: #fff; filter: drop-shadow(0 0 .6cqh #ffb347); }
+@keyframes sr-fly { 0% { transform: translateY(0) scale(.9); opacity: 1; } 70% { opacity: 1; } 100% { transform: translateY(-260%) scale(1.05); opacity: 0; } }
+.sr3 .sr-ms { display: flex; align-items: flex-end; gap: .25cqw; min-width: 9cqh; color: #ff6a3c; }
+.sr3 .sr-ms svg { width: 2.5cqh; height: 2.8cqh; transform: none; color: #ff6a3c; filter: drop-shadow(0 0 .5cqh rgba(255,90,60,.7)); }
+.sr3 .sr-ms b { font: italic 900 2.1cqh "Exo 2", sans-serif; color: #ffb08f; margin-left: .2cqw; }
+/* khung đen điện ảnh khi SLOW MOTION về đích */
+.sr-lb { position: absolute; left: 0; right: 0; top: 0; bottom: 27cqh; pointer-events: none; z-index: 1; }
+.sr-lb i { position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height .45s cubic-bezier(.22,.9,.3,1); }
+.sr-lb i:first-child { top: 0; } .sr-lb i:last-child { bottom: 0; }
+.sr-root.is-cine .sr-lb i { height: 7cqh; }
+.sr-root.is-cine .sr-mirror, .sr-root.is-cine .sr-toast, .sr-root.is-cine .sr-tag { opacity: 0 !important; }
+/* bảng NHỎ giữa màn (iPad / Options) */
+.sr-panel.is-small .sr-panel-box { width: min(40cqw, 620px); padding: 2.2cqh 1.8cqw; }
+.sr-panel.is-small .sr-pm { grid-template-columns: 1fr; gap: 1cqh; margin-bottom: 1.4cqh; }
+.sr-panel.is-small .sr-pm-o { flex-direction: row; align-items: baseline; gap: 1cqw; padding: 1.3cqh 1.2cqw; }
+.sr-panel.is-small .sr-pm-o b { flex: none; font-size: 2.4cqh; }
+.sr-panel.is-small .sr-pm-o span { font-size: 1.8cqh; color: #94a3b8; }
+.sr-pm-st { display: flex; gap: 2cqw; justify-content: center; font: 700 1.8cqh "Exo 2", sans-serif; color: #94a3b8; }
+.sr-pm-st span { display: flex; align-items: center; gap: .5cqw; }
+.sr-pm-st i { width: 1.2cqh; height: 1.2cqh; border-radius: 50%; background: #475569; }
+.sr-pm-st span[data-s="on"] { color: #e2e8f0; } .sr-pm-st span[data-s="on"] i { background: #4ade80; box-shadow: 0 0 1cqh #4ade80; }
+.sr-cf { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh; border-radius: 2.4cqh; background: rgba(6,10,20,.96); }
+.sr-cf[hidden] { display: none; }
+.sr-cf p { margin: 0; font: 600 2.6cqh "Exo 2", sans-serif; color: #e2e8f0; text-align: center; padding: 0 2cqw; }
+.sr-cf p b { color: #ffcf4a; }
+.sr-cf div { display: flex; gap: 1.4cqw; }
+.sr-cf button { min-width: 10cqw; padding: 1.2cqh 1.6cqw; border-radius: 1.4cqh; font: 900 2.4cqh "Exo 2", sans-serif; letter-spacing: .08em; cursor: pointer; color: #e2e8f0; background: rgba(255,255,255,.06); border: .25cqh solid rgba(148,163,184,.5); }
+.sr-cf .sr-cf-ok { color: #1a1206; background: linear-gradient(180deg, #ffd96a, #e0a520); border-color: #ffe9a8; }
+.sr-opt { display: flex; flex-direction: column; gap: 1.8cqh; }
+.sr-opt-row { display: flex; align-items: center; justify-content: space-between; gap: 1.4cqw; font: 700 2.2cqh "Exo 2", sans-serif; color: #cbd5e1; }
+.sr-seg { display: flex; border-radius: 1.2cqh; overflow: hidden; border: .25cqh solid rgba(140,190,255,.35); }
+.sr-seg button { padding: 1cqh 1.2cqw; border: 0; background: transparent; color: #94a3b8; font: 800 1.9cqh "Exo 2", sans-serif; cursor: pointer; }
+.sr-seg button.on { background: rgba(255,200,70,.18); color: #ffe39a; }
+.sr-step { display: flex; align-items: center; gap: 1cqw; }
+.sr-step button { width: 5cqh; height: 5cqh; border-radius: 1.2cqh; border: .25cqh solid rgba(140,190,255,.35); background: rgba(255,255,255,.05); color: #e2e8f0; font: 900 2.6cqh "Exo 2", sans-serif; cursor: pointer; }
+.sr-step b { min-width: 3cqh; text-align: center; font: italic 900 3cqh "Exo 2", sans-serif; color: #fff; }
+
+/* =====================================================================
+   MẪU 3d (15/10/2026)
+   ===================================================================== */
+/* bàn đạp: không chữ ⇒ cao hết cỡ; rộng bằng nhau; SÁT vô lăng (vô lăng che nhẹ mép trong); chừa trống mép giữa 2 nửa màn */
+.sr3 .sr-drive { gap: 0; }
+.sr3 .sr-pedal { height: 96%; margin: 0 -1.1cqw; z-index: 0; }
+.sr3 .sr-pedal .sr-pedal-svg { height: 100%; }
+.sr3 .sr-wheelbox { z-index: 1; }
+.sr3 .sr-half0 .sr-dash { padding-right: 2.4cqw; }
+.sr3 .sr-half1 .sr-dash { padding-left: 2.4cqw; }
+/* hàng dưới bảng đáp án: tên lửa chờ (sát MÉP màn) | NÚT TÊN LỬA dài ở GIỮA | chấm chuỗi đúng (phía trong) */
+.sr3 .sr-arms { justify-content: space-between; gap: .8cqw; }
+.sr3 .sr-ms, .sr3 .sr-streak { flex: none; width: 11cqh; min-width: 0; display: flex; align-items: center; }
+.sr3 .sr-ms { justify-content: flex-start; } .sr3 .sr-streak { justify-content: flex-end; }
+.sr3 .sr-half1 .sr-ms { justify-content: flex-end; } .sr3 .sr-half1 .sr-streak { justify-content: flex-start; }
+.sr3 .sr-fire { flex: 1; width: auto; max-width: 62%; }
+.sr3 .sr-fire .sr-x2 { width: 4.6cqh; height: 4.6cqh; }
+/* trúng tên lửa: KHÓI ĐEN mù mịt che kính ~2,2 s */
+.sr-smoke { position: absolute; left: 0; right: 0; top: 0; bottom: 27cqh; pointer-events: none; opacity: 0; z-index: 1; overflow: hidden; }
+.sr-smoke i { position: absolute; border-radius: 50%; filter: blur(1.6cqh);
+  background: radial-gradient(closest-side, rgba(10,10,12,.98), rgba(18,18,20,.9) 55%, rgba(30,30,32,0)); }
+.sr-smoke i:nth-child(1) { left: -12%; top: 4%; width: 72%; height: 95%; }
+.sr-smoke i:nth-child(2) { left: 34%; top: -12%; width: 78%; height: 88%; }
+.sr-smoke i:nth-child(3) { left: 8%; top: 34%; width: 92%; height: 82%; }
+.sr-smoke i:nth-child(4) { left: 56%; top: 28%; width: 62%; height: 74%; }
+.sr-smoke i:nth-child(5) { left: 22%; top: 8%; width: 60%; height: 60%; }
+.sr-smoke.on { animation: sr-smoke 2.3s ease-out forwards; }
+.sr-smoke.on i { animation: sr-smokei 2.3s ease-out forwards; }
+.sr-smoke.on i:nth-child(2n) { animation-name: sr-smokej; }
+@keyframes sr-smoke { 0% { opacity: 0; } 7% { opacity: 1; } 50% { opacity: .96; } 100% { opacity: 0; } }
+@keyframes sr-smokei { from { transform: scale(.55) translate(0, 0); } to { transform: scale(1.4) translate(-6%, -10%); } }
+@keyframes sr-smokej { from { transform: scale(.6) translate(0, 0); } to { transform: scale(1.35) translate(7%, -8%); } }
+
+/* =====================================================================
+   MẪU 3e (15/10/2026)
+   ===================================================================== */
+/* khói đen che LÂU hơn (3,6 s) */
+.sr-smoke.on, .sr-smoke.on i { animation-duration: 3.6s; }
+@keyframes sr-smoke { 0% { opacity: 0; } 5% { opacity: 1; } 66% { opacity: .96; } 100% { opacity: 0; } }
+/* bàn đạp hẹp hơn (viewBox 60 × 150) · khung đáp án hẹp lại, cách bàn đạp */
+.sr3 .sr-half0 .sr-console { margin-right: 2cqw; } .sr3 .sr-half1 .sr-console { margin-left: 2cqw; }
+/* nút tên lửa: 2 ô song song; bay / nạp */
+.sr3 .sr-fire { display: flex; align-items: center; justify-content: center; gap: 1.2cqh; }
+.sr-slot { display: block; width: 2.2cqh; height: 4.6cqh; opacity: 0; transform: translateY(160%); }
+.sr-slot svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.sr-slot .fl { opacity: 0; }
+.sr-slot.on { opacity: 1; transform: none; }
+.sr-slot.load { animation: sr-load .5s cubic-bezier(.2,.9,.3,1) both; }
+.sr-slot.fly { animation: sr-flyup .52s cubic-bezier(.55,0,.9,.35) forwards; }
+.sr-slot.fly .fl { opacity: 1; }
+@keyframes sr-load { from { transform: translateY(160%); opacity: .3; } to { transform: none; opacity: 1; } }
+@keyframes sr-flyup { 0% { transform: none; opacity: 1; } 80% { opacity: 1; } 100% { transform: translateY(-250%); opacity: 0; } }
+/* tên lửa chờ: thụt xuống mép dưới khung đáp án khi được nạp lên */
+.sr3 .sr-ms { align-self: stretch; align-items: flex-end; overflow: hidden; padding-bottom: .5cqh; box-sizing: border-box; }
+.sr3 .sr-ms svg.sink { animation: sr-sink .45s ease-in forwards; }
+@keyframes sr-sink { to { transform: translateY(180%); opacity: 0; } }
+/* chấm chuỗi đúng: cân giữa ô của nó */
+.sr3 .sr-streak, .sr3 .sr-half1 .sr-streak { justify-content: center; gap: .8cqh; }
+.sr3 .sr-streak i { width: 1.5cqh; height: 1.5cqh; }
+
+/* =====================================================================
+   MẪU 3g (15/10/2026) — vô lăng ĐÁY PHẲNG (dash-3g): nâng lên cho thấy trọn mép dưới phẳng (đáy ở 85 % chiều cao hình), nhỏ lại chút cho khỏi lấn kính
+   ===================================================================== */
+.sr3 .sr-wheel { width: 31cqh; height: 31cqh; margin-left: -15.5cqh; bottom: -4.2cqh; }

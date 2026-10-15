@@ -150,6 +150,14 @@ export const TEMPLATES = [
     load: () => import("../templates/rocket-race/rocket-race.js"),
     sample: () => import("../templates/rocket-race/sample-rocket-race.js") },
 
+  // ⭐ Đợt 527 (15/10/2026) — RACING WORDS: supercar race for 2 teams on a Quiz question set (myGame speed-run, 3D).
+  // See templates/racing-words/GHI CHU RACING-WORDS.md.
+  { type: "racing_words",    label: "Racing words",    built: true,
+    blurb: "3D supercar race for 2 teams — answer right to charge your BOOST, earn missiles, jump the ramps and race to the finish.",
+    css: "templates/racing-words/racing-words.css",
+    load: () => import("../templates/racing-words/racing-words.js"),
+    sample: () => import("../templates/racing-words/sample-racing-words.js") },
+
   // ⭐ Đợt 386 (25/9/2026) — make the lesson's words from shaken letter tiles,
   // three modes (One word · Word list · Free words), Fight with a centre board.
   // See templates/wordshake/GHI CHU WORDSHAKE.md.
@@ -186,7 +194,7 @@ export const TEMPLATE_ICON = {
   open_the_box: "fmtBox", maze_chase: "fmtMaze", whack_a_mole: "fmtMole",
   true_false: "check",
   speaking_cards: "mic", speaking: "mic",
-  running_word: "fmtRace", running_team: "fmtRace", rocket_race: "fmtRace",
+  running_word: "fmtRace", running_team: "fmtRace", rocket_race: "fmtRace", racing_words: "fmtRace",
   find_the_gap: "fmtWord",
   wordshake: "fmtAnagram"   // Đợt 386 — makes words from letters, like Anagram
 };

@@ -1,0 +1,61 @@
+/* RACING WORDS mẫu 3o = sr3d-intro-3n.css + dòng ghi công mẫu 3D dưới ô chọn xe */
+/* RACING WORDS mẫu 3n — lớp INTRO xưởng ANDREW STUDIO (sr3d-intro-3n.js): phủ kín khung game, chữ + chọn xe + START, viền điện ảnh, thẻ tên, chữ lớn, chớp sáng */
+.ri-root { position: absolute; inset: 0; z-index: 50; overflow: hidden; background: #050608; container-type: size; font-family: "Exo 2", sans-serif; color: #fff; }
+.ri-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.ri-ui { position: absolute; inset: 0; pointer-events: none; }
+.ri-ui > * { pointer-events: auto; }
+/* tiêu đề */
+.ri-studio { position: absolute; left: 50%; top: 6cqh; transform: translateX(-50%); display: flex; align-items: center; gap: 1.6cqh; font: italic 800 2.2cqh "Exo 2"; letter-spacing: .9cqh; color: #ffcf7a; white-space: nowrap; pointer-events: none; }
+.ri-studio i { width: 7cqh; height: .25cqh; background: linear-gradient(90deg, transparent, #ffcf7a); } .ri-studio i:last-child { transform: scaleX(-1); }
+.ri-title { position: absolute; left: 50%; top: 10cqh; transform: translateX(-50%); font: italic 900 12cqh "Exo 2"; letter-spacing: .06em; white-space: nowrap; color: #fff3dd;
+  text-shadow: 0 0 3cqh rgba(255, 150, 60, .75), 0 .6cqh 1.6cqh rgba(0, 0, 0, .55); pointer-events: none; }
+/* chọn xe: 2 góc trên */
+.ri-pick { position: absolute; top: 31cqh; display: flex; gap: .8cqh; filter: drop-shadow(0 .8cqh 1.6cqh rgba(0, 0, 0, .6)); }
+.ri-pick0 { left: 4cqw; } .ri-pick1 { right: 4cqw; }
+.ri-pb { width: 6.4cqh; border: 1px solid rgba(255, 255, 255, .22); border-radius: 1.4cqh; background: rgba(8, 11, 16, .72); color: #fff; font: 900 2.6cqh "Exo 2"; cursor: pointer; backdrop-filter: blur(6px); }
+.ri-pb:hover { background: color-mix(in srgb, var(--team) 45%, rgba(8, 11, 16, .8)); }
+.ri-pn { min-width: 34cqh; padding: 1cqh 2.4cqh 1.1cqh; border-radius: 1.4cqh; text-align: center; background: rgba(8, 11, 16, .72); color: #fff; cursor: pointer; font: inherit;
+  border: 1px solid rgba(255, 255, 255, .14); border-bottom: .45cqh solid var(--team); backdrop-filter: blur(6px); display: flex; flex-direction: column; gap: .3cqh; }
+.ri-pn small { font: 800 1.35cqh "Exo 2"; letter-spacing: .25cqh; color: var(--team); }
+.ri-pn b { font: italic 900 3.2cqh/1.05 "Exo 2"; white-space: nowrap; }
+.ri-pn em { font: 700 1.3cqh "Exo 2"; font-style: normal; color: rgba(255, 255, 255, .55); }
+.ri-list { position: absolute; left: 50%; top: calc(100% + .8cqh); transform: translateX(-50%); width: 46cqh; max-height: 52cqh; overflow-y: auto; display: none; flex-direction: column; gap: .35cqh;
+  padding: 1cqh; border-radius: 1.4cqh; background: rgba(8, 11, 16, .94); border: 1px solid rgba(255, 255, 255, .16); scrollbar-width: thin; }
+.ri-pick.is-list .ri-list { display: flex; }
+.ri-lh { font: 800 1.25cqh "Exo 2"; letter-spacing: .25cqh; color: var(--team); padding: .9cqh .8cqh .3cqh; }
+.ri-list button { text-align: left; font: italic 800 2cqh "Exo 2"; color: #e9eef5; background: rgba(255, 255, 255, .04); border: 1px solid transparent; border-radius: .9cqh; padding: .75cqh 1.2cqh; cursor: pointer; }
+.ri-list button:hover { background: color-mix(in srgb, var(--team) 30%, transparent); }
+.ri-list button.is-on { border-color: var(--team); background: color-mix(in srgb, var(--team) 22%, transparent); }
+/* START */
+.ri-start { position: absolute; left: 50%; bottom: 9cqh; transform: translateX(-50%); padding: 2cqh 6cqh; border-radius: 1.6cqh; cursor: pointer;
+  font: italic 900 4.2cqh "Exo 2"; letter-spacing: .2cqh; color: #fff3dd; background: linear-gradient(180deg, rgba(120, 72, 20, .9), rgba(60, 32, 6, .92));
+  border: .25cqh solid #ffb347; box-shadow: 0 0 3cqh rgba(255, 150, 60, .55), inset 0 0 2cqh rgba(255, 190, 90, .25); animation: riPulse 1.8s ease-in-out infinite; }
+.ri-start:hover { filter: brightness(1.15); }
+@keyframes riPulse { 50% { box-shadow: 0 0 5cqh rgba(255, 150, 60, .85), inset 0 0 2cqh rgba(255, 190, 90, .35); } }
+.ri-skip { position: absolute; right: 3cqw; bottom: 4cqh; padding: 1cqh 2.4cqh; border-radius: 1cqh; cursor: pointer; font: 800 1.8cqh "Exo 2"; letter-spacing: .3cqh;
+  color: rgba(255, 255, 255, .8); background: rgba(0, 0, 0, .45); border: 1px solid rgba(255, 255, 255, .25); display: none; }
+/* đang chiếu: ẩn chọn xe/START, hiện viền đen điện ảnh + SKIP */
+.ri-root.is-play .ri-pick, .ri-root.is-play .ri-start, .ri-root.is-play .ri-title, .ri-root.is-play .ri-studio { opacity: 0; pointer-events: none; transition: opacity .35s; }
+.ri-root.is-play .ri-skip { display: block; }
+.ri-bars i { position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height .7s cubic-bezier(.22, .9, .3, 1); z-index: 2; }
+.ri-bars i:first-child { top: 0; } .ri-bars i:last-child { bottom: 0; }
+.ri-root.is-play .ri-bars i { height: 9cqh; }
+/* thẻ tên đội + xe (góc trái dưới, trượt vào) */
+.ri-card { position: absolute; left: 6cqw; bottom: 15cqh; z-index: 3; opacity: 0; transform: translateX(-4cqh); display: flex; flex-direction: column; gap: .4cqh; padding-left: 1.6cqh; border-left: .6cqh solid var(--team); }
+.ri-card small { font: 800 2cqh "Exo 2"; letter-spacing: .5cqh; color: var(--team); }
+.ri-card b { font: italic 900 6cqh/1 "Exo 2"; text-shadow: 0 .5cqh 2cqh rgba(0, 0, 0, .7); }
+.ri-root.is-card .ri-card { animation: riCard 1.5s cubic-bezier(.22, .9, .3, 1) forwards; }
+@keyframes riCard { 0% { opacity: 0; transform: translateX(-4cqh); } 18% { opacity: 1; transform: translateX(0); } 80% { opacity: 1; transform: translateX(.6cqh); } 100% { opacity: 0; transform: translateX(1.2cqh); } }
+/* chữ lớn RACING WORDS (đập vào giữa màn) */
+.ri-big { position: absolute; left: 50%; top: 50%; z-index: 3; transform: translate(-50%, -50%) scale(1.6); opacity: 0; white-space: nowrap; font: italic 900 15cqh "Exo 2"; letter-spacing: .08em;
+  color: #fff6e6; text-shadow: 0 0 4cqh rgba(255, 140, 50, .9), 0 0 10cqh rgba(255, 110, 30, .55); }
+.ri-root.is-big .ri-big { animation: riBig 1.5s cubic-bezier(.2, 1.2, .3, 1) forwards; }
+@keyframes riBig { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.7); filter: blur(1cqh); } 14% { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: blur(0); }
+  75% { opacity: 1; transform: translate(-50%, -50%) scale(1.04); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.12); } }
+/* chớp sáng cắt cảnh */
+.ri-flash { position: absolute; inset: 0; z-index: 4; background: #fff; opacity: 0; pointer-events: none; }
+.ri-root.is-flash .ri-flash { animation: riFlash .35s ease-out forwards; }
+@keyframes riFlash { 0% { opacity: 0; } 60% { opacity: 1; } 100% { opacity: 1; } }
+
+.ri-cred { position: absolute; left: 0; right: 0; top: calc(100% + .5cqh); text-align: center; font: 600 1.15cqh "Exo 2"; color: rgba(255, 255, 255, .55); white-space: nowrap; pointer-events: none; text-shadow: 0 1px 3px #000; }
+.ri-pick.is-list .ri-cred { display: none; }

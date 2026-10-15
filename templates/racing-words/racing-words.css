@@ -1,0 +1,7 @@
+/* =============================================================
+   RACING WORDS (Đợt 527) — đua siêu xe 3D 2 đội. CSS của game nằm trong ./3d/ (chép từ myGame, racing-words.js tự nạp).
+   Ô game gắn vào <body>, phủ TRỌN trang, đứng trên mọi thứ của AWord; bảng nổi (MENU, Options của AWord) nằm TRONG ô này.
+   ============================================================= */
+.aw-rw-host { position: fixed; inset: 0; z-index: 1000; background: #04060d; }
+html.aw-rw-on, html.aw-rw-on body { overflow: hidden; }
+.aw-rw-need3d { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: #e0f2fe; background: #0b0d14; font: 700 20px "Baloo 2", system-ui, sans-serif; }
