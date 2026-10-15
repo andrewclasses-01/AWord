@@ -546,6 +546,44 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 525 (15/10/2026) — MÀN CHỌN ACT WORDS: CHỌN OPTIONS + MODE TRƯỚC KHI VÀO GAME (ô bay sang trái · khung Options trượt từ mép phải · READY)
+
+Thầy duyệt mẫu `D:\OTHERS\CLAUDE\AWord - thiet ke man chon WORDS\man-chon-v8-options.html` (v7 → v8: READY xanh dương phẳng + máy bay giấy
+bay NGANG, Options KHÔNG cuộn, ô bay THẲNG sang trái + khung trượt từ mép phải) rồi "ok build".
+- **Máy tính** (khung > 700 px): chạm một ô template KHÔNG vào game ngay. Nền khung tối đi (`.aw-wp-dim`), hàng tiêu đề + TEXT/VOICE + bộ nghĩa
+  nổi trên nền tối (đổi được ngay lúc này); ô sáng nổi BAY THẲNG từ chỗ của nó sang trái (bản sao `.wp-fly`, 260×492 px thiết kế, chip bộ nghĩa
+  dưới đáy); khung `.aw-wp-opt` (860×492) TRƯỢT VÀO TỪ MÉP PHẢI: thanh MODE tối FIGHT · SINGLE · SHOWDOWN · RUNNING · IPA (mode không có ⇒
+  mờ) + bảng Options THẬT của engine; nút READY (330×70, xanh dương, máy bay giấy bay ngang khi bấm) ở dưới; ✕ / nền tối / Esc = huỷ, ô bay về.
+  **Điện thoại giữ đường cũ** (chạm là vào màn START).
+- **Không có bảng Options thứ hai.** Màn chọn dựng game NGẦM trong `.aw-wp-gamehost` (div ẩn, `position:absolute` đầu `#app`, `#app` tạm
+  `position:relative`) với `noAutoFight:true`; engine báo mỗi lần một bàn dựng xong qua **`setPreflight({onMount(api)})`** (export mới
+  `core/engine.js`, chỉ bàn 0 của trận, không bao giờ học sinh). `api.embedOptions(host)` = `openToolPanel(optionsBtn, buildOptionsPanel)`
+  qua nhánh MỚI `pendingOvl.embed` ⇒ bảng gắn THẲNG vào khung (không lớp mờ, không neo, không nghe chạm ra ngoài; `.is-embed` giấu
+  `.aw-opt-switches` + `.aw-opt-foot` vì TEXT/VOICE + template đã chọn ở màn chọn). Màn chọn `zoom` bảng cho vừa khung rồi co đều nếu cao
+  quá (`fitPanel`, 0,45–1,9) ⇒ không bao giờ cuộn.
+- **Thanh MODE = đúng các hàm nút MODE dùng** (`api.setMode`): SINGLE (`fight.ctl.exitFight` / `doSwitchTemplate(homeType())`), FIGHT
+  (`enterFight`), RUNNING (`goPlayMode("running", word|team)` + hàng WORD/TEAM `.aw-wp-runseg` khi có cả hai), IPA (`goPlayMode("ipa",
+  "speaking_cards")`). Mỗi lần đổi ⇒ bàn dựng lại ⇒ onMount ⇒ gắn lại bảng. **SHOWDOWN** và **FIGHT của game có trận riêng trọn màn
+  (`ownFight` — Train Rush)** chỉ ghi Ý ĐỊNH: bàn đứng single để chọn Options, READY xong mới `api.openShowdown()` (bàn chọn lớp/đội có sẵn)
+  / `api.enterFight()`. Rocket race (`fightByDefault`) mở khung sẵn ở FIGHT (`api.fightFirst`).
+- **READY** = `api.apply()` bấm nút Apply THẬT trong bảng (chỉ khi sáng — có gì đổi), cờ `preflightApplying` chặn Apply hẹn mở lại bảng
+  (`openOptionsOnMount`); lưu y hệt Apply (per-view options, `templateOptions` của act chuyển đổi, `saveActivity`). Rồi container ngầm hiện
+  dần (`.is-in`, 0,3 s) đè lên trang màn chọn ⇒ trang màn chọn gỡ, container thành khối thường. myActivity: `setPickUrl` lúc READY.
+- **Game 3D gắn ô vào `<body>`** (Train Rush `.aw-tr-host`, Star Loot `.aw-sl-host`) ⇒ lớp `html.aw-wp-ngam` giấu chúng tới READY (luật CSS có
+  `:has(.aw-wp-gamehost)` nên lớp có sót cũng vô hại). Huỷ = gỡ container ⇒ lưới an toàn "ván rời trang" (Đợt 295) tự `cleanupAll()` ⇒ ô 3D
+  ở body cũng được dọn. Phím khi khung mở bị chặn ở `onKey` (trừ ô gõ trong bảng) để game ngầm không tự bắt đầu.
+- Sửa: `core/engine.js` (setPreflight + preflightApi + nhánh embed + 1 dòng Apply), `core/words-picker.js`, `tools/wp.src.css` → `python
+  tools/wp-css.py` → `core/words-picker.css`. Backup `_backup/dot525/`.
+- **Thử:** bàn thử `scratch/dot525.html` (act WORDS giả 4 bộ nghĩa + IPA, Firebase giả) qua `devserver.py 5525`: Quiz gắn bảng thật (zoom 1,27,
+  vừa khung) · đổi FIGHT (2 bàn, ô Time delay/Speed bonus/Miss wait) → RUNNING (WORD/TEAM, ô Team A/B…) → IPA (Deal places) → SHOWDOWN →
+  SINGLE đều gắn lại đúng · bấm dồn 5 mode 150 ms/lần vẫn đứng · đổi VI1 khi đang mở ⇒ dựng lại, `contentVariant` = vi1 · READY sau khi tích
+  Allow skip ⇒ `templateOptions.quiz.allowSkip = true`, màn START Quiz, Options trong game vẫn mở kiểu cũ (có dim + Apply) và giữ ô đã tích ·
+  Rocket race mở sẵn FIGHT (bảng dài nhất zoom 0,92 vừa khung) → READY ⇒ màn START trận · Train Rush / Star Loot: ô 3D `hidden` khi khung mở,
+  ✕ ⇒ dọn sạch, READY ⇒ hiện · SHOWDOWN (Type the answer) → READY ⇒ bàn chọn lớp/đội mở · phóng to sau READY đúng · điện thoại 375 px ⇒
+  vào thẳng START như cũ · console 0 lỗi.
+- ⬜ thầy thử thật: act WORDS thật trên trình duyệt + TOMKO + myActivity nhiều cột (cột theo nhận đúng lựa chọn sau READY?), Train Rush FIGHT
+  READY (vào trận riêng), cỡ chữ bảng trên màn 86".
+
 ## Đợt 524 (15/10/2026) — THẺ ACT XEM TRƯỚC + NHÃN LOẠI NỔI GIỮA · DẢI TÊN 2 DÒNG CỐ ĐỊNH · ĐÚP TÊN THƯ MỤC ĐỂ CHÉP · QUICK ACCESS VỪA MÀN HÌNH · CON LĂN MỞ THẺ MỚI
 
 Thầy duyệt mẫu `D:\OTHERS\CLAUDE\myLesson - thiet ke khung explorer\mau-v6.html` (chọn kiểu **C** + chữ nhãn = LOẠI act như cũ) rồi "ok build".

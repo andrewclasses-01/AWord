@@ -5398,3 +5398,22 @@ iPad cầm tay suốt trận ⇒ nóng nhanh (thầy phản ánh với Rocket Ra
   phủ cả màn mỗi khung lại CHẬM HƠN (đo Chrome).
 - **Đo trước khi tin** (bàn đo `scratch/dot523-*`): 3D bằng `EXT_disjoint_timer_query_webgl2`; 2D phải ép vẽ xong (`getImageData(0,0,1,1)`) — đo JS-only thấy 2 ms
   trong khi thật 15,6 ms. Khung xem ẩn ⇒ rAF đứng ⇒ giữ callback rAF rồi tự gọi từng khung (giờ giả phải tăng liên tục, không lùi).
+
+---
+
+## ⭐⭐ MÀN CHỌN OPTIONS TRƯỚC KHI VÀO GAME — `setPreflight` (Đợt 525)
+
+Màn chọn act WORDS (`core/words-picker.js`) dựng game NGẦM rồi mượn bảng Options thật. Hợp đồng phía engine:
+- `setPreflight({ onMount(api) })` (module scope, sống qua các lần `startGame()` dựng lại; `setPreflight(null)` để gỡ). Sau mỗi lần một bàn
+  dựng xong (microtask cuối phần dựng, sau khối `openOptionsOnMount`) engine gọi `onMount(preflightApi())` — chỉ khi `!session` và
+  `(!fight || fight.side === 0)`.
+- `api` = `{ type, originType, mode ("single"|"fight"|"running"|"ipa"), ownFight, fightFirst, can:{fight, showdown, running:[types], ipa},
+  embedOptions(host), setMode(m, sub), apply(), close(), enterFight(), openShowdown() }`. Mọi hàm đi qua ĐÚNG hàm của nút MODE/Options/Apply.
+- `embedOptions(host)` ⇒ `pendingOvl = { layer: host, embed: true }` ⇒ nhánh `embed` đầu `openToolPanel`: bảng `.aw-tool-panel.is-embed`
+  gắn thẳng vào `host`, KHÔNG `toolDim`, KHÔNG `onToolOutside`, `ovlLayer` để null (closeToolPanel chỉ gỡ bảng). ⚠️ Đừng cho nhánh này
+  dùng `ovlLayer` — `layer.remove()` sẽ xoá luôn khung của màn chọn.
+- `apply()` bấm `.aw-opt-apply` khi nó sáng, với `preflightApplying = true` ⇒ Apply KHÔNG đặt `openOptionsOnMount` (không mở lại bảng).
+  Trả `true` nếu đã bấm (bàn sẽ dựng lại ⇒ màn chọn chờ lần onMount kế để làm việc sau READY).
+- Màn chọn khởi động bằng `startGame(host, node, { noAutoFight: true })` — Fight do thanh MODE quyết.
+- ⚠️ Template mới gắn ô vào `<body>` (kiểu `.aw-tr-host`) phải được thêm vào luật `html.aw-wp-ngam:has(.aw-wp-gamehost) …` trong
+  `tools/wp.src.css`, không thì nó hiện đè lên màn chọn khi đang dựng ngầm.

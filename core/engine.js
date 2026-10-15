@@ -280,6 +280,14 @@ export function setActSwitchHandler(fn) { actSwitchHook = typeof fn === "functio
 // với actSwitchHook/openOptionsOnMount: sống qua các lần startGame() dựng lại.
 let wordsPickerHook = null;
 export function setWordsPickerHook(h) { wordsPickerHook = h && typeof h.open === "function" ? h : null; }
+// ⭐⭐ Đợt 525 — CHỌN OPTIONS TRƯỚC KHI VÀO GAME (màn chọn act WORDS, core/words-picker.js).
+// Thầy chạm một ô template ⇒ màn chọn dựng game NGẦM phía sau (container ẩn) rồi mượn ĐÚNG bảng
+// Options của engine gắn vào khung bên phải của nó, thanh MODE của màn chọn đổi mode thật, READY =
+// bấm Apply thật rồi mới hiện game. Không có bảng Options thứ hai nào: lưu y như Apply.
+// Mỗi lần một bàn (bàn 0 nếu đang Fight) dựng xong, engine gọi `preflightHook.onMount(api)` — xem
+// `preflightApi()` cuối phần dựng. Màn chọn tự gỡ hook (setPreflight(null)) khi READY / huỷ.
+let preflightHook = null;
+export function setPreflight(h) { preflightHook = h && typeof h.onMount === "function" ? h : null; }
 
 // ⭐⭐ Đợt 400 — "TEMPLATE CHƠI CUỐI" (xem setLastTemplate trong core/store.js). Template
 // mà act THƯ VIỆN này phải mở ra, hoặc "" nếu là chính loại gốc / không chuyển được.
@@ -1926,6 +1934,82 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       openToolPanelFor(optionsBtn, buildOptionsPanel);
       if (silentReopen) { toolDim?.classList.add("aw-no-anim"); toolPanelEl?.classList.add("aw-no-anim"); }
     });
+  }
+
+  // ⭐⭐ Đợt 525 — báo màn chọn (setPreflight) rằng một bàn vừa dựng xong. Microtask: chờ cả lần dựng
+  // đồng bộ này xong (y lý do của openOptionsOnMount ngay trên). Chỉ bàn 0 của trận trả lời; học sinh không bao giờ.
+  if (preflightHook && !session && (!fight || fight.side === 0)) {
+    const pf = preflightHook;
+    Promise.resolve().then(() => {
+      if (pf !== preflightHook || torndown || !root.isConnected) return;
+      try { pf.onMount(preflightApi()); } catch (e) { console.warn("AWord: preflight", e); }
+    });
+  }
+  // Những gì màn chọn được làm với bàn này. Mọi việc đều đi qua ĐÚNG hàm mà nút MODE / Options / Apply
+  // vẫn dùng — màn chọn chỉ bấm hộ, không có đường riêng.
+  function preflightApi() {
+    return {
+      type: activity.type,
+      originType: originAct.type,
+      mode: fight ? "fight" : (playMode || "single"),
+      ownFight: !!modeTpl.ownFight,
+      fightFirst: !!modeTpl.fightByDefault,   // Rocket race / Train rush: khung mở sẵn ở FIGHT
+      can: {
+        fight: canFight,
+        showdown: canShowdown,
+        running: runTargets().map(t => t.type),
+        ipa: canIpa || playMode === "ipa"
+      },
+      // Bảng Options thật, gắn vào `host` của màn chọn (xem nhánh `embed` trong openToolPanel).
+      embedOptions(host) {
+        if (torndown || !host || !optionsBtn.isConnected) return false;
+        awSyncMute++;   // như cầu openOptions: lần mở này không phát TOOLOPEN sang các cột myActivity
+        try { pendingOvl = { layer: host, embed: true }; openToolPanel(optionsBtn, buildOptionsPanel); }
+        finally { pendingOvl = null; setTimeout(() => { awSyncMute = Math.max(0, awSyncMute - 1); }, 400); }
+        return !!toolPanelEl;
+      },
+      // single · fight · running (sub = running_word|running_team) · ipa. Showdown KHÔNG ở đây: màn
+      // chọn đưa bàn về single rồi mở bàn đội sau READY (openShowdown) — bàn đội là màn chọn lớp riêng.
+      setMode(m, sub) {
+        if (torndown) return false;
+        const cur = fight ? "fight" : (playMode || "single");
+        if (m === "single") {
+          if (cur === "single") return false;
+          if (fight) { fight.ctl.exitFight(); awEmit("FIGHT", "off"); return true; }
+          doSwitchTemplate(homeType()); return true;
+        }
+        if (m === "fight") {
+          if (!canFight || cur === "fight") return false;
+          enterFight(); return true;
+        }
+        if (m === "running") {
+          const t = runTargets().find(x => x.type === sub) || runTargets()[0];
+          if (!t || (cur === "running" && activity.type === t.type)) return false;
+          goPlayMode("running", t.type); return true;
+        }
+        if (m === "ipa") {
+          if (cur === "ipa" || !canIpa) return false;
+          goPlayMode("ipa", "speaking_cards"); return true;
+        }
+        return false;
+      },
+      // READY = bấm Apply thật (chỉ khi có gì đổi — Apply mờ thì không có gì để lưu).
+      apply() {
+        const b = toolPanelEl && activeToolBuild === buildOptionsPanel ? toolPanelEl.querySelector(".aw-opt-apply") : null;
+        if (b && !b.disabled) {
+          preflightApplying = true;
+          try { b.click(); } finally { preflightApplying = false; }
+        }
+        if (toolPanelEl && toolPanelEl.classList.contains("is-embed")) closeToolPanel(false);
+        return true;
+      },
+      close() { if (toolPanelEl && toolPanelEl.classList.contains("is-embed")) closeToolPanel(false); },
+      enterFight() { if (!torndown && canFight && !fight) enterFight(); },
+      openShowdown() {
+        if (torndown || !canShowdown || fight || !modeBtn.isConnected) return;
+        openToolPanel(modeBtn, buildShowdownPanelHost);
+      }
+    };
   }
 
   // ---- THE PICKER (teacher's design, 14/8/2026) ----------------------------
@@ -4238,6 +4322,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // engine nằm DƯỚI ô game (z-index 1000) nên lớp mờ + bảng được gắn vào LỚP của game (`ovlLayer`), neo trên hàng nút của game.
   // pendingOvl = lời mời đang chờ openToolPanel nhận · ovlPanel = bảng đang mở kiểu này ({ layer, top(), onClose }).
   let pendingOvl = null, ovlPanel = null, ovlLayer = null, ovlAnchor = null;
+  // ⭐ Đợt 525 — READY của màn chọn đang bấm Apply thay thầy (xem preflightApi().apply):
+  // Apply khi đó KHÔNG được hẹn mở lại bảng sau lần dựng lại (openOptionsOnMount).
+  let preflightApplying = false;
   // ⭐ Đợt 452 — template áp Options NGAY không dựng lại ván (ui.liveOptions) — xem Options ▸ Apply.
   let liveOptsFn = null;
   // Which BUILDER the open panel is showing (Dot 192) - see openToolPanelFor().
@@ -4545,6 +4632,21 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   function openToolPanel(btn, buildContent) {
     const ovl = pendingOvl && pendingOvl.layer && pendingOvl.layer.isConnected ? pendingOvl : null;   // Đợt 452
     pendingOvl = null;
+    if (ovl && ovl.embed) {
+      // ⭐ Đợt 525 — bảng GẮN THẲNG vào khung của màn chọn (preflightApi().embedOptions): không lớp mờ,
+      // không neo, không nghe cú chạm ra ngoài (thanh MODE/READY của màn chọn nằm "ngoài" bảng),
+      // không tự canh chiều cao — màn chọn tự co cả bảng cho vừa khung. `ovlLayer` để null:
+      // closeToolPanel() chỉ gỡ BẢNG, không bao giờ gỡ khung của màn chọn.
+      closeToolPanel(false);
+      ovlPanel = ovl;
+      toolPanelEl = el("div", "aw-tool-panel is-embed");
+      mountPanelContent(buildContent);
+      ovl.layer.append(toolPanelEl);
+      btn.classList.add("is-active");
+      activeToolBtn = btn;
+      enterPause("panel", { dim: false });
+      return;
+    }
     if (activeToolBtn === btn) { closeToolPanel(true); return; }   // clicking the open one again closes it
     sound.click();
     if (toolPanelEl && activeToolBtn) { twoBeatPanelSwap(buildContent, btn); return; }
@@ -5579,7 +5681,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // biết Apply sẽ thoát qua nhánh nào, để mọi đường thoát bên dưới đều được mở lại.
       // ⭐ Kèm `openOptionsSilently` (thầy báo cú đóng-mở này "nháy" — bỏ hẳn hiệu ứng bật lên
       // cho panel/nền lần mở lại này, xem chỗ tiêu thụ cờ + rule .aw-no-anim trong app.css).
-      if (!fight && !liveOptsFn) { openOptionsOnMount = true; openOptionsSilently = true; }   // Đợt 452: game 3D trọn màn không mở lại bảng sau khi dựng lại
+      if (!fight && !liveOptsFn && !preflightApplying) { openOptionsOnMount = true; openOptionsSilently = true; }   // Đợt 525: READY của màn chọn ⇒ không mở lại bảng   // Đợt 452: game 3D trọn màn không mở lại bảng sau khi dựng lại
       // FIGHT MODE: each board plays a COPY of the act (its own frozen word
       // order), so writing into this copy's options would leave the real act —
       // and the other board — untouched. Hand the whole draft to the match,

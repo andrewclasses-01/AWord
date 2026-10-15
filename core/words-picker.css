@@ -150,3 +150,80 @@
   .aw-wp-spin { width: calc(14 * var(--p)); height: calc(14 * var(--p)); border-width: calc(1.5 * var(--p)); }
 }
 @media (prefers-reduced-motion: reduce) { .aw-wp, .aw-wp * { transition: none !important; animation: none !important; } }
+
+/* =============================================================
+   ⭐⭐ Đợt 525 — KHUNG CHỌN OPTIONS TRƯỚC KHI VÀO GAME (máy tính). Mẫu: man-chon-v8-options.html.
+   Lớp: lưới (thường) < nền tối .aw-wp-dim (20) < khung/READY/✕ (22) < ô bay (23). Hàng tiêu đề +
+   TEXT/VOICE nổi trên nền tối (21) để đổi bộ nghĩa ngay khi khung đang mở.
+   ============================================================= */
+.aw-wp-dim { position: absolute; inset: 0; z-index: 20; background: rgba(14,22,38,.66); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); opacity: 0; visibility: hidden; transition: opacity .32s ease, visibility 0s linear .32s; }
+.aw-wp.is-pre .aw-wp-dim { opacity: 1; visibility: visible; transition: opacity .32s ease; }
+.aw-wp.is-pre .aw-wp-slogan, .aw-wp.is-pre .aw-wp-head, .aw-wp.is-pre .aw-wp-ctl { z-index: 21; }
+.aw-wp.is-pre .aw-wp-slogan { color: #8fa0b8; }
+.aw-wp.is-pre .aw-wp-title { color: #fff; text-shadow: 0 calc(4 * var(--p)) calc(18 * var(--p)) rgba(0,0,0,.35); }
+.aw-wp.is-pre .aw-wp-seg { box-shadow: 0 calc(6 * var(--p)) calc(18 * var(--p)) rgba(0,0,0,.25); }
+.aw-wp .wp-tile.is-away, .aw-wp .wp-card.is-away { visibility: hidden; }
+
+/* ô bay */
+.aw-wp .wp-fly { position: absolute; z-index: 23; pointer-events: none; margin: 0; transform: none !important; transition: left .5s cubic-bezier(.22,.9,.3,1), top .5s cubic-bezier(.22,.9,.3,1), width .5s cubic-bezier(.22,.9,.3,1), height .5s cubic-bezier(.22,.9,.3,1), box-shadow .5s ease; }
+.aw-wp .wp-fly.wp-tile { gap: calc(18 * var(--p)); border-color: transparent; }
+.aw-wp .wp-fly.wp-tile .wp-tic { transform: none !important; transition: width .5s cubic-bezier(.22,.9,.3,1), height .5s cubic-bezier(.22,.9,.3,1); }
+.aw-wp .wp-fly.wp-tile .wp-nm { transition: font-size .5s cubic-bezier(.22,.9,.3,1); }
+.aw-wp .wp-fly.wp-tile.is-lit .wp-tic { width: calc(150 * var(--p)); height: calc(150 * var(--p)); }
+.aw-wp .wp-fly.wp-tile.is-lit .wp-nm { font-size: calc(28 * var(--p)); }
+.aw-wp .wp-fly.wp-card .wp-nm { transition: font-size .5s cubic-bezier(.22,.9,.3,1); }
+.aw-wp .wp-fly.wp-card.is-lit .wp-nm { font-size: calc(32 * var(--p)); }
+.aw-wp .wp-fly.wp-card svg.art { transform: none !important; }
+.aw-wp .wp-fly.is-lit { box-shadow: 0 0 0 calc(4 * var(--p)) #fff, 0 0 0 calc(10 * var(--p)) rgba(80,160,255,.55), 0 0 calc(60 * var(--p)) calc(10 * var(--p)) rgba(80,160,255,.45), 0 calc(30 * var(--p)) calc(60 * var(--p)) rgba(0,0,0,.45) !important; }
+.aw-wp .wp-pickset { position: absolute; left: 0; right: 0; bottom: calc(22 * var(--p)); display: flex; justify-content: center; gap: calc(8 * var(--p)); opacity: 0; transform: translateY(calc(8 * var(--p))); transition: opacity .25s ease .3s, transform .3s ease .3s; }
+.aw-wp .wp-fly.is-lit .wp-pickset { opacity: 1; transform: none; }
+.aw-wp .wp-pickset span { font-weight: 800; font-size: calc(15 * var(--p)); letter-spacing: .08em; padding: calc(3 * var(--p)) calc(12 * var(--p)); border-radius: calc(99 * var(--p)); background: var(--wp-blue-soft); color: var(--wp-blue); }
+.aw-wp .wp-fly.wp-card .wp-pickset span { background: rgba(255,255,255,.92); }
+
+/* khung Options: trượt vào từ mép phải */
+.aw-wp-opt { position: absolute; z-index: 22; background: #fff; border-radius: calc(22 * var(--p)); box-shadow: 0 calc(30 * var(--p)) calc(70 * var(--p)) rgba(0,0,0,.45); display: flex; flex-direction: column; overflow: hidden; transform: translateX(var(--from)); visibility: hidden; pointer-events: none; transition: transform .5s cubic-bezier(.22,.9,.3,1), visibility 0s linear .5s; }
+.aw-wp-opt.on { transform: none; visibility: visible; pointer-events: auto; transition: transform .5s cubic-bezier(.22,.9,.3,1); }
+.aw-wp-mbar { position: relative; flex: 0 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); gap: calc(3 * var(--p)); margin: calc(14 * var(--p)) calc(14 * var(--p)) 0; padding: calc(5 * var(--p)); height: calc(56 * var(--p)); border-radius: calc(18 * var(--p)); background: #1f2633; }
+.aw-wp-mbar .wp-th { position: absolute; top: calc(5 * var(--p)); bottom: calc(5 * var(--p)); left: calc(5 * var(--p)); width: calc((100% - calc(10 * var(--p)) - calc(12 * var(--p))) / 5); border-radius: calc(14 * var(--p)); background: linear-gradient(180deg,#3a8dff,#2563eb); box-shadow: 0 calc(6 * var(--p)) calc(16 * var(--p)) rgba(37,99,235,.55), inset 0 1px 0 rgba(255,255,255,.3); transition: transform .3s cubic-bezier(.22,.9,.3,1); }
+.aw-wp-mbar button { position: relative; z-index: 1; border: 0; background: none; color: #9fb0c8; font-weight: 800; font-size: calc(16 * var(--p)); letter-spacing: .06em; display: flex; align-items: center; justify-content: center; gap: calc(7 * var(--p)); border-radius: calc(14 * var(--p)); cursor: pointer; padding: 0; transition: color .2s ease, opacity .2s ease; }
+.aw-wp-mbar button svg { width: calc(21 * var(--p)); height: calc(21 * var(--p)); flex: 0 0 auto; }
+.aw-wp-mbar button:hover:not(.on):not(.no) { color: #fff; }
+.aw-wp-mbar button.on { color: #fff; }
+.aw-wp-mbar button.no { opacity: .28; cursor: not-allowed; }
+.aw-wp-runseg { display: none; flex: 0 0 auto; gap: calc(6 * var(--p)); margin: calc(10 * var(--p)) calc(14 * var(--p)) 0; }
+.aw-wp-runseg.on { display: flex; }
+.aw-wp-runseg button { flex: 1 1 0; height: calc(36 * var(--p)); border-radius: calc(11 * var(--p)); border: 1.5px solid #dbe3ee; background: #fff; color: #4a5a70; font-weight: 800; font-size: calc(15 * var(--p)); letter-spacing: .1em; cursor: pointer; }
+.aw-wp-runseg button.on { background: var(--wp-blue); border-color: var(--wp-blue); color: #fff; }
+.aw-wp-obody { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; margin: calc(6 * var(--p)) calc(10 * var(--p)) calc(10 * var(--p)); }
+.aw-wp-obody.is-loading { display: grid; place-items: center; }
+.aw-wp-obody .aw-wp-spin { margin: 0; }
+
+/* bảng Options THẬT của engine, gắn vào khung (openToolPanel nhánh embed) */
+.aw-wp .aw-tool-panel.is-embed { position: static; left: auto; bottom: auto; transform: none; width: auto !important; min-width: 0; max-width: none; max-height: none !important; overflow: visible; box-shadow: none; border-radius: 0; background: transparent; animation: none; padding: 6px 10px 4px; z-index: auto; }
+.aw-wp .aw-tool-panel.is-embed .aw-opt-switches,
+.aw-wp .aw-tool-panel.is-embed .aw-opt-foot { display: none !important; }
+
+/* READY — xanh dương, phẳng; máy bay giấy bay ngang */
+.aw-wp-ready { position: absolute; z-index: 22; height: calc(70 * var(--p)); border: 0; border-radius: calc(20 * var(--p)); cursor: pointer; color: #fff; display: flex; align-items: center; justify-content: center; gap: calc(20 * var(--p)); padding: 0 calc(30 * var(--p)) 0 calc(40 * var(--p)); overflow: hidden; background: linear-gradient(135deg,#4a95ff 0%,#2f7bff 45%,#1d5be6 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(255,255,255,.14), 0 calc(18 * var(--p)) calc(44 * var(--p)) rgba(29,91,230,.55); opacity: 0; transform: translateY(calc(18 * var(--p))); pointer-events: none; transition: opacity .3s ease, transform .4s cubic-bezier(.22,.9,.3,1), box-shadow .25s ease; }
+.aw-wp-ready.on { opacity: 1; transform: none; pointer-events: auto; }
+.aw-wp-ready .rt { position: relative; font-weight: 800; font-size: calc(27 * var(--p)); letter-spacing: .34em; line-height: 1; margin-right: -.34em; }
+.aw-wp-ready .rp { position: relative; width: calc(40 * var(--p)); height: calc(40 * var(--p)); display: grid; place-items: center; }
+.aw-wp-ready .rp svg { width: calc(30 * var(--p)); height: calc(30 * var(--p)); transform: rotate(45deg); transition: transform .3s cubic-bezier(.22,.9,.3,1); filter: drop-shadow(0 2px 4px rgba(0,0,0,.18)); }
+.aw-wp-ready::before { content: ""; position: absolute; top: 0; bottom: 0; left: -45%; width: 35%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent); transform: skewX(-18deg); animation: wpShine 4.2s ease-in-out 1.2s infinite; }
+@keyframes wpShine { 0% { left: -45%; } 40%, 100% { left: 130%; } }
+.aw-wp-ready:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 0 0 1px rgba(255,255,255,.2), 0 calc(22 * var(--p)) calc(54 * var(--p)) rgba(29,91,230,.7), 0 0 0 calc(6 * var(--p)) rgba(47,123,255,.22); }
+.aw-wp-ready:hover .rp svg { transform: translateX(calc(5 * var(--p))) rotate(45deg); }
+.aw-wp-ready:active { transform: translateY(calc(2 * var(--p))) scale(.985); }
+.aw-wp-ready.go .rp svg { animation: wpPlaneGo .6s cubic-bezier(.5,0,.75,0) forwards; }
+@keyframes wpPlaneGo { 0% { transform: translateX(calc(5 * var(--p))) rotate(45deg); } 30% { transform: translateX(calc(-4 * var(--p))) rotate(45deg); } 100% { transform: translateX(calc(90 * var(--p))) rotate(45deg); opacity: 0; } }
+.aw-wp-x { position: absolute; z-index: 22; width: calc(48 * var(--p)); height: calc(48 * var(--p)); border-radius: 50%; border: 0; padding: 0; background: rgba(255,255,255,.14); color: #fff; display: grid; place-items: center; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .25s ease, background .2s ease, transform .2s ease; }
+.aw-wp-x.on { opacity: 1; pointer-events: auto; }
+.aw-wp-x:hover { background: rgba(255,255,255,.26); transform: rotate(90deg); }
+.aw-wp-x svg { width: calc(22 * var(--p)); height: calc(22 * var(--p)); }
+
+/* game dựng NGẦM sau trang màn chọn (cùng #app, neo đầu trang); READY ⇒ hiện dần lên trên rồi đứng chỗ cũ */
+.aw-wp-gamehost { position: absolute; left: 0; right: 0; top: 0; visibility: hidden; pointer-events: none; z-index: 0; }
+.aw-wp-gamehost.is-in { visibility: visible; pointer-events: auto; z-index: 60; animation: wpHostIn .3s ease both; }
+@keyframes wpHostIn { from { opacity: 0; } to { opacity: 1; } }
+/* ô 3D trọn màn của game dựng ngầm (gắn ở <body>, ngoài container) — giấu tới READY. `:has` = chỉ khi container ngầm còn trên trang (lớp html có sót lại cũng vô hại) */
+html.aw-wp-ngam:has(.aw-wp-gamehost) .aw-tr-host, html.aw-wp-ngam:has(.aw-wp-gamehost) .aw-sl-host { visibility: hidden !important; pointer-events: none !important; }
