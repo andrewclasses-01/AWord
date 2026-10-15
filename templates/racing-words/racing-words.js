@@ -3,6 +3,7 @@
 //
 // Thầy: "đưa lên AWord, sử dụng options của AWord" ⇒ chốt (AskUserQuestion): Options = Cùng/khác câu hỏi · Số tên lửa tối đa ·
 //   Độ dài đường + số vòng · Cầu nhảy bật/tắt · 13 xe (BỎ Bugatti Divo — CC-BY-NC) · iPad thật làm luôn ⇒ "ok build".
+// ⭐ Đợt 533: myGame mẫu 3r (core/rw-3r.js) = 3q tối ưu MƯỢT trên TOMKO (đo act 572 trong myActivity: xưởng 37⇒60, phim 18⇒60, đua hết dịch shader giữa trận).
 // ⭐ Đợt 531: myGame mẫu 3q (core/rw-3q.js) = 3p + Options kiểu Fight Rocket Race + cảnh xa đúng vật lý + 35 km/h; template CHỈ có Fight (fightOnly).
 // ⭐ Đợt 529: myGame mẫu 3p (core/rw-3p.js) = 3o + CHẠM ĐÚP lúc phim intro ⇒ vào thẳng 5 đèn + tối ưu (gộp lưới xe, số đo xe sẵn, dịch sẵn shader).
 // Game THIẾT KẾ ở kho myGame (speed-run, tên cũ SPEED RUN; mẫu 3o = GÓI NHÚNG core/rw-3o.js ⇒ createRacingWords), chép vào ./3d bằng
@@ -24,8 +25,8 @@ import { block3dHere, block3dMessage } from "../../core/myact-board.js";   // �
 const loader = () => { ensureCss(); return showLoader3d({ key: "racingwords", title: "RACING WORDS", theme: "space" }); };
 preloadLoader3d("space");
 
-const GAME = "./3d/rw-3q.js";                     // Đợt 531: myGame mẫu 3q (Fight options, cảnh xa đúng vật lý, 35 km/h) · Đợt 529: 3p · Đợt 527: 3o
-const CSS = ["sr3d-3g.css", "sr3d-3l.css", "sr3d-intro-3o.css", "rw-3q.css"];
+const GAME = "./3d/rw-3r.js";                     // Đợt 533: myGame mẫu 3r (mượt TOMKO) · Đợt 531: myGame mẫu 3q (Fight options, cảnh xa đúng vật lý, 35 km/h) · Đợt 529: 3p · Đợt 527: 3o
+const CSS = ["sr3d-3g.css", "sr3d-3l.css", "sr3d-intro-3o.css", "rw-3r.css"];
 const FONTS = "https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,600;0,700;0,800;0,900;1,800;1,900&subset=vietnamese&display=swap";
 // khoá game <-> khoá PHẲNG (activity.options)
 // ⭐ Đợt 531 (thầy) — Options kiểu FIGHT của Rocket Race: Lives (srLives 0 = tắt) · Missile damages 1–5 (srMsDmg) · Time delay (srTie giây,

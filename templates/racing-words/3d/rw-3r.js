@@ -1,3 +1,7 @@
+// RACING WORDS — GÓI NHÚNG mẫu 3r (16/10/2026) = rw-3q.js + lõi sr3d-3r.js / intro sr3d-intro-3r.js (MƯỢT TRÊN TOMKO: thầy "tối ưu tuyệt đối độ mượt";
+//   đo act 572 trong myActivity: xưởng 37 ⇒ 60 fps, phim intro 18 ⇒ ~55–60, đua hết dịch shader giữa trận). CSS rw-3r.css (bỏ filter đắt của HUD).
+//   Intro chỉ bắt đầu tự chỉnh độ nét SAU khi trận dịch sẵn shader xong (intro.arGo) — lúc dịch ngầm khung chậm giả, đừng để bộ chỉnh học sai.
+// ---- gốc 3q ----
 // RACING WORDS — GÓI NHÚNG mẫu 3q (15/10/2026) = rw-3p.js + lõi sr3d-3q.js (cảnh xa đúng vật lý · 35 km/h · cầu nhảy chậm · FIGHT: Lives / Missile damages /
 //   Time delay / Miss wait / Missile streak / Missiles max). options thêm: lives · msDmg · tieWait · missWait · streak (Infinity = chờ mãi).
 // =============================================================
@@ -19,9 +23,9 @@
 //   onEvent   : (k, v) — "pad" (iPad nối / mất nối), "padMode", "end", …
 // ⇒ { setOptions(o) (true = áp ngay, false = AWord dựng lại), destroy(), game, intro }
 // =============================================================
-import { createSpeedRun } from "./sr3d-3q.js";
+import { createSpeedRun } from "./sr3d-3r.js";
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
-import { createIntro } from "./sr3d-intro-3q.js";
+import { createIntro } from "./sr3d-intro-3r.js";
 import { createSound } from "./sr3d-sound-3o.js";
 
 const CARS_KEY = "speedrun.cars";            // xe 2 đội nhớ THEO MÁY (thầy chọn ở màn chờ xưởng)
@@ -59,17 +63,19 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
   // ---------- intro xưởng ANDREW STUDIO ----------
   const after = document.createElement("div"); after.className = "rw-after"; frame.appendChild(after);
   const intro = createIntro({ mount: frame, cars, title,
-    onSetCar: (i, id) => { game.setCar(i, id); try { localStorage.setItem(CARS_KEY, JSON.stringify(intro ? intro.cars : cars)); } catch (e) { /* */ } },
+    onSetCar: (i, id) => { intro.arWait(); Promise.resolve(game.setCar(i, id)).then(() => game.prewarm()).catch(() => {}).then(() => { if (!dead) intro.arGo(); });   // 3r: đổi xe ⇒ trận dịch lại shader ⇒ intro chờ
+      try { localStorage.setItem(CARS_KEY, JSON.stringify(intro ? intro.cars : cars)); } catch (e) { /* */ } },
     onCue: (n, t) => introCue(n, t),
     onHandoff: () => {
       introOn = false;
       // 3p: chờ dịch sẵn shader (tối đa 4 s) rồi mới vào trận ⇒ không đứng hình ở 5 đèn đỏ
-      Promise.race([warm, new Promise(r => setTimeout(r, 4000))]).then(() => { if (dead) return; game.hold(false); game.start(); });
+      Promise.race([game.prewarm(), new Promise(r => setTimeout(r, 4000))]).then(() => { if (dead) return; game.hold(false); game.start(); });   // 3r: lần dịch HIỆN HÀNH (đổi xe ⇒ dịch lại)
       after.style.transition = "none"; after.style.opacity = "1";
       requestAnimationFrame(() => { if (dead) return; intro.hide(); after.style.transition = "opacity .6s ease-out"; after.style.opacity = "0"; });
     } });
   // 3p: dịch sẵn shader ngay lúc thầy còn ở xưởng (compileAsync không chặn khung) · đổi xe ⇒ lõi tự dịch lại
   const warm = game.prewarm().catch(e => console.warn("RW prewarm", e));
+  warm.then(() => { if (!dead && intro.arGo) intro.arGo(); });   // 3r
   // 3p: CHẠM ĐÚP khi phim intro đang chiếu ⇒ vào thẳng màn xuất phát (2 lần chạm ≤ 350 ms, lệch ≤ 40 px)
   let tap0 = null;
   on(frame, "pointerdown", e => {

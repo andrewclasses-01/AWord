@@ -546,6 +546,43 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 533 (16/10/2026) — RACING WORDS MƯỢT TUYỆT ĐỐI TRÊN TOMKO (myGame mẫu 3r) + SỬA LỖI KHUNG KHÔNG ĐƯỢC VẼ
+
+**Thầy:** chạy game với bộ từ thật đang cài (act 572 "1. CAU BI DONG 1 WORDS"), đo mọi tình huống từng khung hình trên máy này, tối ưu để mượt nhất — chấp nhận bỏ khử răng cưa,
+nén xe, giảm đồ hoạ; đọc cấu hình máy để cân đối.
+
+**Máy (TOMKO):** HP Z2 Mini G5 · Quadro T2000 4 GB (ANGLE D3D11, ~150 ms dịch 1 shader, có KHR_parallel_shader_compile) · Xeon W-1250 6 nhân · 32 GB · màn 3840×2160 DPR 1,25,
+myActivity v2.34 (`__awMaxPR = 1`, khung game 3087×1519) · card 84 °C, bị SW thermal slowdown khi chơi.
+
+**Cách đo:** myActivity mở lại với `--remote-debugging-port`; act 572 chép từ trang live (bọc `mount` lấy act đã chuyển WORDS ⇒ 50 câu; Options thầy: Fight · Same ·
+Track 20 · Laps 6 · Missiles max 10 · Streak 1 · Damage 1 · Time delay 1 s) ⇒ bàn thử chạy đúng template + engine trong bảng 1 myActivity; đếm nhịp rAF, lần
+`composer.render` THẬT, lỗi JS, long-animation-frame, program mới, GPU từng pass (timer query), CPU profiler, nvidia-smi. Kịch bản: xưởng → START → phim →
+5 đèn → đua tự động cả ván → kết quả; nặng: đổi xe Y4 + H7 → đua → PLAY AGAIN. Chi tiết: myGame `speed-run/NGHIEN CUU GAMEPLAY.md` mục 30.
+⚠️ CDP `Fetch.fulfillRequest` trong myActivity làm treo trang (xung đột `webRequest`) — đừng dùng.
+
+**Kết quả (khung vẽ thật / giây):**
+| | 3q (live Đợt 531) | **3r** |
+|---|---|---|
+| Xưởng chờ | 28,7–37,5 | **60,1** |
+| Phim intro | 17–18 (khung 67–317 ms) | **59,3** |
+| 5 đèn | 45–48 | **60,0** |
+| Đua | 58,3 + 49 khung LỖI không vẽ + 17–19 lần dịch shader | **59,7**, 0 lỗi, 0 dịch shader |
+| Đổi xe Y4 + H7 ở xưởng | đứng 4,9 s + 4,1 s | 0,7 s |
+
+**Sửa (myGame 3r `2c02a7b` + `6f1a453`, chép `tools/chep-racing-words.py` GOC `rw-3r.js`, CSS `rw-3r.css`):**
+- ⛔ LỖI 3q: `updateHUD` — `const dist = …; PJ.project(cam);` bị nuốt vào chú thích ⇒ xe kia cách ~60–120 m trong khung nhìn ⇒ ReferenceError mỗi khung TRƯỚC khi vẽ ⇒ hình đứng.
+- Intro xưởng: 5 RectAreaLight ⇒ 1 tấm gộp (22 ms ⇒ ~4) · bỏ 2 đèn pha SpotLight · sàn bỏ clearcoat · bỏ MSAA canvas · trần `__awMaxPR` + tự chỉnh độ nét · bóng đổ chỉ
+  vẽ lại khi vật di chuyển · chụp môi trường ≤ 4 lần/giây, giữ đèn ⇒ cùng shader · làm nóng phim lúc nạp/đổi xe · phim ngân sách ~2,3 triệu điểm ảnh · chữ lớn bỏ blur.
+- Trận: vật liệu cột sáng tên lửa dùng lại (cũ dịch shader MỖI phát) · ghim shader trước khi dọn mẫu prewarm · đèn trong xe hiện mọi camera (115 ⇒ 65 program) ·
+  bỏ MSAA hẳn · vẽ đất/biển/trời sau (early-z) · tắt nhoè khi không dùng · tự chỉnh độ nét ít đổi (thử nâng sau ~20 s).
+- HUD (`rw-3r.css`): bỏ filter / animation đắt (vô lăng xoay + drop-shadow + filter SVG, bàn đạp, FIRE / START nhấp nháy box-shadow, kính mờ ô chọn xe), quầng đúng/sai = lớp opacity.
+- Nén xe (`slimMat`): bỏ normal/AO map, roughness-metalness ⇒ trung bình ảnh, bỏ clearcoat ⇒ ít shader, nhẹ GPU. Vết cháy dùng lại chỗ cũ (không dò tia giữa trận).
+- Gói nhúng: vào trận chờ lần dịch sẵn HIỆN HÀNH (đổi xe rồi START không còn khựng 5 đèn).
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy chơi thật trên TOMKO trong myActivity (xe trông ổn không sau khi nén vật liệu; đèn xưởng 1 tấm). ⬜ vệ sinh quạt card (84 °C, thermal slowdown).
+
+---
+
 ## Đợt 532 (15/10/2026) — TRAIN RUSH: 1 ĐIỂM/THÙNG · TỐC ĐỘ +5 %/MÀN TỪ NẤC OPTIONS · BỎ NGƯỜI TRONG TOA (myGame mẫu 1aw)
 
 **Thầy:** (1) mỗi hộp rơi trúng đích chỉ tính 1 điểm · (2) sau mỗi màn tốc độ tăng một chút tính từ tốc độ Options đặt ban đầu · (3) bỏ hẳn người chạy trong toa để tiết kiệm hiệu năng. Sửa cả myGame và AWord.

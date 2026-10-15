@@ -1,3 +1,7 @@
+// RACING WORDS mẫu 3r (16/10/2026) = sr3d-autores.js (bản chép Rocket Race game8) + ÍT ĐỔI ĐỘ NÉT HƠN. Đo TOMKO trong myActivity (act 572): trận đua
+//   hạ 1,0 → 0,85 rồi cứ ~7 s êm lại thử nâng 0,05 ⇒ rớt ⇒ hạ (9 lần đổi / ván); mỗi lần đổi = cấp lại khung đệm HalfFloat + 5 tầng bloom ⇒ 1 cú khựng.
+//   Nay: thử nâng sau ~20 s êm (CALM 30 cửa sổ × 40 khung), thử mà rớt ⇒ chốt trần ngay (như cũ). Dùng cho trận đua (sr3d-3r) và intro xưởng (sr3d-intro-3r).
+// ---- gốc ----
 // Chép NGUYÊN từ rocket-race/game8/rr3d-autores.js (= AWord 156cf57) cho SPEED RUN — đừng sửa ở đây, sửa ở Rocket Race rồi chép lại.
 // (giữ tiền tố localStorage aw.rr3d.pr.* — khoá riêng nhờ key "speedrun-*")
 // =============================================================
@@ -19,6 +23,7 @@
 //       Không truyền `aa` ⇒ y như cũ.
 //   (4) Rớt 2 lần ở CÙNG một mức độ nét ⇒ chốt trần dưới mức đó (màn chờ nhẹ / lúc chơi nặng làm thử–rớt lặp mãi).
 // =============================================================
+const CALM = 30;                                                 // 3r: số cửa sổ 40 khung êm liền trước khi thử nâng (cũ 10 ≈ 7 s)
 const hostCap = () => { const v = +window.__awMaxPR; return v > 0 ? v : Infinity; };
 const memKey = key => key ? "aw.rr3d.pr." + key + "." + window.innerWidth + "x" + window.innerHeight + "@" + (window.devicePixelRatio || 1) : "";
 const memGet = k => { try { const v = +localStorage.getItem(k); return v > 0 ? v : 0; } catch { return 0; } };
@@ -66,7 +71,7 @@ export function makeAutoRes({ max, min = 0.8, apply, key = "", aa = null }) {
       } else if (avg < 17.4) {
         if (probing) save();                                    // vừa nâng mà vẫn êm ⇒ nhớ mức mới
         probing = false; aaProbe = false;
-        if (++calm >= 10) {
+        if (++calm >= CALM) {
           calm = 0;
           if (pr < cap) { probing = true; set(Math.min(cap, pr + 0.05)); }
           else if (aa && !aaOn && aaOK) { aaProbe = true; setAA(true); }   // Đợt 478: độ nét đã tối đa ⇒ thử bật lại MSAA

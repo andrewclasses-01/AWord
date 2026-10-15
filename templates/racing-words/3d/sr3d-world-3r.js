@@ -1,3 +1,6 @@
+// 3r (16/10/2026, đo TOMKO): THỨ TỰ VẼ — bản cũ vẽ TRỜI đầu tiên (renderOrder −10, phủ kín màn, fbm mây) rồi đất (−5, 2 fbm/điểm ảnh) rồi biển,
+//   sau cùng mới tới đường / xe / cây đè lên ⇒ GPU tính shader nhiễu cho cả những điểm ảnh bị che. Nay vật thường (0) và vạch (1) vẽ TRƯỚC,
+//   rồi đất (2), biển (3), trời CUỐI (4; gl_Position.z = w ⇒ độ sâu 1,0 chỉ qua được chỗ còn trống) ⇒ loại sớm theo độ sâu (early-z), hình y như cũ.
 // =============================================================
 // SPEED RUN 3D — THẾ GIỚI (mẫu 3, 15/10/2026 — chép từ sr3d-world-1.js của mẫu 1/2)
 // Mẫu 3 (thầy 15/10): BỎ dải phân cách cứng giữa 2 đội ⇒ vạch giữa = vạch TRẮNG ĐỨT (lấn sang được); ĐƯỜNG VÒNG nhiều vòng
@@ -113,7 +116,7 @@ function makeSky() {
         gl_FragColor = vec4(c, 1.0); }`,
     side: THREE.BackSide, depthWrite: false, fog: false
   });
-  const m = new THREE.Mesh(new THREE.SphereGeometry(1800, 48, 24), mat); m.renderOrder = -10; m.frustumCulled = false;
+  const m = new THREE.Mesh(new THREE.SphereGeometry(1800, 48, 24), mat); m.renderOrder = 4; m.frustumCulled = false;   // 3r: trời vẽ CUỐI (cũ −10)
   return m;
 }
 
@@ -148,7 +151,7 @@ function makeGround(U, KEY) {
         gl_FragColor = vec4(lit, 1.0); }`,
     fog: false
   });
-  const m = new THREE.Mesh(g, mat); m.frustumCulled = false; m.renderOrder = -5;
+  const m = new THREE.Mesh(g, mat); m.frustumCulled = false; m.renderOrder = 2;   // 3r: sau đường / xe / cây (cũ −5)
   return m;
 }
 function makeSea(U) {
@@ -176,7 +179,7 @@ function makeSea(U) {
         gl_FragColor = vec4(c, 1.0); }`,
     fog: false
   });
-  const m = new THREE.Mesh(g, mat); m.position.y = -1.3; m.frustumCulled = false; m.renderOrder = -4;
+  const m = new THREE.Mesh(g, mat); m.position.y = -1.3; m.frustumCulled = false; m.renderOrder = 3;   // 3r: (cũ −4)
   return m;
 }
 

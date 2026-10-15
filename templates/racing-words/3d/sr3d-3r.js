@@ -1,3 +1,12 @@
+// RACING WORDS — LÕI MẪU 3r (16/10/2026) = sr3d-3q.js tối ưu MƯỢT cho TOMKO (Quadro T2000 4 GB, màn 4K DPR 1,25, myActivity trần __awMaxPR 1).
+//   Đo act 572 thật trong myActivity (thầy: "tối ưu tuyệt đối độ mượt, chấp nhận bỏ khử răng cưa / giảm đồ hoạ"): trận 58,6 fps nhưng 17 lần dịch
+//   shader giữa trận + độ nét nhấp nhả 9 lần/ván + MSAA bật lại giữa trận (khựng ~200 ms). Sửa:
+//   · MSAA TẮT HẲN (render target samples 0, bộ tự chỉnh không còn nấc MSAA ⇒ không bao giờ cấp lại khung đệm vì MSAA).
+//   · tên lửa: vật liệu cột sáng dùng lại (sr3d-missile-3r) ⇒ hết dịch shader mỗi phát bắn.
+//   · cảnh: đường / xe / cây vẽ trước, đất – biển – trời sau (sr3d-world-3r) ⇒ early-z bỏ phần shader nhiễu bị che.
+//   · pass nhoè hướng tâm TẮT khi cả 2 nửa không nhoè (tiết kiệm 1 lượt đọc–ghi toàn màn).
+//   · bộ tự chỉnh độ nét sr3d-autores-3r (thử nâng sau ~20 s êm), khoá nhớ rw-3r. HUD: bỏ filter / animation đắt (rw-3r.css).
+// ---- gốc 3q ----
 // RACING WORDS — LÕI MẪU 3q (15/10/2026) = sr3d-3p.js + (thầy, sau khi chơi 3p):
 //   · CẢNH XA ĐÚNG VẬT LÝ: đường cong theo tiếp tuyến ngoài 150 m (sr3d-world-3q.js bendQ) ⇒ núi chỉ xoay đúng góc xe quay; trời xoay cùng;
 //     độ cong vào dần theo GIÂY THẬT (bản cũ lerp 0,08 MỖI KHUNG ⇒ máy nhanh/chậm khác nhau)
@@ -127,11 +136,11 @@ import { ShaderPass } from "../../rocket-race/vendor/three/addons/ShaderPass.js"
 import { UnrealBloomPass } from "../../rocket-race/vendor/three/addons/UnrealBloomPass.js";
 import { OutputPass } from "../../rocket-race/vendor/three/addons/OutputPass.js";
 import { RoomEnvironment } from "../../rocket-race/vendor/three/addons/RoomEnvironment.js";
-import { makeCar3d } from "./sr3d-car-3q.js";
+import { makeCar3d } from "./sr3d-car-3r.js";
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
-import { createWorld, makeBend, HAZE, bendQ } from "./sr3d-world-3q.js";
-import { makeAutoRes } from "./sr3d-autores.js";
-import { createMissiles, MS, missileGeos, buildMissile } from "./sr3d-missile-3q.js";
+import { createWorld, makeBend, HAZE, bendQ } from "./sr3d-world-3r.js";
+import { makeAutoRes } from "./sr3d-autores-3r.js";
+import { createMissiles, MS, missileGeos, buildMissile } from "./sr3d-missile-3r.js";
 import { createRamps, createTrails, RadialBlurShader, RAMP, RAMP_SLOPE } from "./sr3d-fx-3c.js";
 import { WHEEL_SVG, GAS_SVG, BRAKE_SVG, FIRE_ICON, FLY_HTML, reserveHTML } from "./sr3d-dash-3h.js";
 
@@ -305,7 +314,11 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   }
   function newCar(i) {
     const c = makeCar3d({ id: carIds[i], color: TEAMS[i].color, num: i + 1, bend, U });
-    addPods(c, TEAMS[i].color); c.rig.traverse(o => o.layers.set(1 + i)); c.rig.rotation.order = "YXZ"; scene.add(c.rig); return c;
+    addPods(c, TEAMS[i].color); c.rig.traverse(o => o.layers.set(1 + i)); c.rig.rotation.order = "YXZ"; scene.add(c.rig);
+    // 3r: đèn trong xe (lửa cháy ở đuôi) hiện với MỌI máy quay ⇒ máy quay nào cũng thấy cùng số đèn ⇒ mỗi vật liệu chỉ 1 bản shader (cũ 2–3 bản theo
+    //   buồng lái đội 1 / đội 2 / ngoài xe ⇒ prewarm dịch gấp 2–3 lần, sót bản nào là khựng giữa trận). Ánh đèn đuôi xe mình không lọt vào khung buồng lái.
+    c.rig.traverse(o => { if (o.isLight) o.layers.enableAll(); });
+    return c;
   }
   // 3i: đổi xe 1 đội (màn chờ) — giữ nguyên vị trí/xoay của rig cũ
   function rebuildCar(i) {
@@ -399,7 +412,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   paintPick();
 
   // ---------- hậu kỳ: 2 máy quay → 1 render target MSAA → bloom → nhoè hướng tâm → output ----------
-  const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 });
+  const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 0 });   // 3r: không MSAA (TOMKO: MSAA HalfFloat là phần đắt nhất)
   const composer = new EffectComposer(renderer, rt);
   let dashF = 0.3;
   composer.addPass(new SplitPass((r, target) => {
@@ -1247,7 +1260,10 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       const h = H[i];
       h.wheel.style.transform = `rotate(${(t.steer * 70 + (t.spinT > 0 ? Math.sin(G.t * 40) * 6 : 0)).toFixed(1)}deg)`;
       const o = T[1 - i], cam = cams[i], d = Math.min(-o.s - cam.position.z, 0);
-      const bq = bendQ(d); PJ.set(o.x + bxS[i] * bq, 2.0 + o.y - bendFor(i)[1] * bq, -o.s);   // 3q: cùng công thức cong của shader const dist = PJ.distanceTo(cam.position); PJ.project(cam);
+      const bq = bendQ(d); PJ.set(o.x + bxS[i] * bq, 2.0 + o.y - bendFor(i)[1] * bq, -o.s);   // 3q: cùng công thức cong của shader
+      // 3r: SỬA LỖI 3q — dòng dưới bị nuốt vào chú thích ⇒ xe kia cách ~60–120 m trong khung nhìn ⇒ ReferenceError `dist` MỖI khung, ném ra trước
+      //   composer.render() ⇒ khung đó KHÔNG được vẽ (hình đứng trong lúc rAF vẫn chạy).
+      const dist = PJ.distanceTo(cam.position); PJ.project(cam);
       const yTop = (1 - PJ.y) / 2, show = G.phase === "race" && PJ.z < 1 && Math.abs(PJ.x) < 0.98 && yTop > 0.05 && yTop < 1 - dashF - 0.04 ? smooth(14, 40, dist) : 0;
       h.tag.style.opacity = show.toFixed(2);
       if (show > 0) { h.tag.style.left = ((PJ.x + 1) / 2 * 100).toFixed(2) + "%"; h.tag.style.top = (yTop * 100).toFixed(2) + "%"; }
@@ -1259,6 +1275,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       blurK[i] = lerp(blurK[i], Math.max(t.jk * 0.75, t.blurB, 0.45 * t.nitroK + 0.25 * smooth(PHYS.VBOOST, PHYS.VNITRO, t.v)), 1 - Math.exp(-dt * 10));
     });
     blurPass.uniforms.uK.value.set(blurK[0], blurK[1]);
+    blurPass.enabled = blurK[0] > 0.004 || blurK[1] > 0.004;   // 3r: không nhoè ⇒ bỏ hẳn lượt vẽ toàn màn này
     const cy = 1 - HORIZON * (1 - dashF); blurPass.uniforms.uC0.value.set(0.25, cy); blurPass.uniforms.uC1.value.set(0.75, cy);
     const act = missiles.active;
     if (mapMs.childElementCount !== act.length) mapMs.innerHTML = act.map(() => `<circle r="8" class="m-msdot"/>`).join("");
@@ -1296,8 +1313,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   }
 
   // ---------- vòng vẽ ----------
-  const AR = makeAutoRes({ max: PR_MAX, min: Math.min(0.8, PR_MAX), key: "rw-3p", apply: pr => { renderer.setPixelRatio(pr); fit(true); },
-    aa: { on: true, set: on => { const ns = on ? 4 : 0; for (const r of [composer.renderTarget1, composer.renderTarget2]) if (r.samples !== ns) { r.samples = ns; r.dispose(); } } } });
+  const AR = makeAutoRes({ max: PR_MAX, min: Math.min(0.7, PR_MAX), key: "rw-3r", apply: pr => { renderer.setPixelRatio(pr); fit(true); } });   // 3r: không nấc MSAA
   let W = 0, Hh = 0;
   function fit(force) {
     const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h || (!force && w === W && h === Hh)) return;
@@ -1331,7 +1347,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       try {
         // ⚠️ đích vẽ = render target của composer (game KHÔNG vẽ thẳng ra màn) — không thì khoá shader lệch (tone mapping / hệ màu) ⇒ dịch phí
         const cA = l => { setL(cams[0], l); renderer.setRenderTarget(composer.renderTarget1); const p = renderer.compileAsync(scene, cams[0]); renderer.setRenderTarget(null); return p; };
-        if (renderer.compileAsync) { await cA([0, 1, 2]); if (!dead) await cA(LAY[0]); }
+        if (renderer.compileAsync) { await cA([0, 1, 2]); if (!dead) await cA(LAY[0]); if (!dead) await cA(LAY[1]); }   // 3r: + buồng lái đội 2 (2 xe khác số đèn pô ⇒ khác khoá)
         // vật liệu hậu kỳ (bloom: lọc sáng / làm mờ 5 tầng / ghép · nhoè hướng tâm) — vẽ vào render target ⇒ dịch ngầm với đích đó.
         // OutputPass tự đặt define ở lần vẽ đầu ⇒ để khung ẩn lo (1 shader).
         if (renderer.compileAsync && !dead) {
@@ -1349,9 +1365,9 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
         tT = performance.now(); nT = tx.size; }
       if (!dead) { cams.forEach((c, i) => setL(c, LAY[i])); fit(true); composer.render(); }   // khung ẩn: mũi xe (clipping) + bloom / nhoè / output
       cams.forEach((c, i) => { c.layers.mask = lay[i]; }); tR = performance.now();
-      try { missiles.update(10, G.t); missiles.clear(); } catch (e) { /* */ }
+      pinPrograms();                                             // 3r: GHIM TRƯỚC khi dọn mẫu — dispose vật liệu mẫu (vết cháy, tên lửa) xoá luôn program chưa ghim
+      try { missiles.update(10, G.t); missiles.clear(); } catch (e) { /* */ }      //     ⇒ trúng tên lửa lần đầu giữa trận phải dịch lại (đo TOMKO: 2 lần / ván)
       cars.forEach(c => c.clearBurns && c.clearBurns());
-      pinPrograms();
       await prepBurnsSoft();                                     // chỗ cháy làm sẵn (trúng tên lửa không phải dò tia giữa trận)
       warmInfo = { ms: Math.round(performance.now() - t0), compile: Math.round(tC - t0), tex: Math.round(tT - tC) + "ms/" + nT, render: Math.round(tR - tT), burns: Math.round(performance.now() - tR), programs: [n0, nC, renderer.info.programs.length] };
     })();

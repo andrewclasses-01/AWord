@@ -1,3 +1,6 @@
+// 3r (16/10/2026, đo TOMKO trong myActivity, act 572): mỗi phát bắn tạo ShaderMaterial CỘT SÁNG mới rồi dispose() khi nổ ⇒ three.js xoá luôn
+//   shader stage (usedTimes về 0) ⇒ phát sau mang mã stage MỚI ⇒ khoá program mới ⇒ DỊCH LẠI SHADER mỗi lần bắn (17 lần / ván, mỗi lần khựng 30–130 ms;
+//   pinPrograms không giữ được vì khoá đổi). Nay vật liệu cột sáng dùng lại (beamPool) — không bao giờ dispose giữa trận.
 // 3q: bendW = công thức cong theo tiếp tuyến của sr3d-world-3q.js (cảnh xa không quét ngang).
 // =============================================================
 // SPEED RUN 3D — TÊN LỬA + HẠT (mẫu 3e = 3c bay chậm hơn, 15/10/2026) = sr3d-missile-2.js sửa theo thầy (15/10):
@@ -158,7 +161,8 @@ export function createMissiles({ scene, bend, U }) {
       tan.set(d0 * (c1x - a.x) + d1 * (c2x - c1x) + d2 * (m.P.x - c2x), d0 * (c1y - a.y) + d1 * (c2y - c1y) + d2 * (m.P.y - c2y), d0 * (c1z - a.z) + d1 * (c2z - c1z) + d2 * (m.P.z - c2z)); }
     return out;
   }
-  const kill = m => { scene.remove(m.g, m.ring, m.beam); m.rm.dispose(); m.bm.dispose(); m.nose.dispose(); };
+  const beamPool = [];                                       // 3r: vật liệu cột sáng dùng lại (không dispose ⇒ giữ shader stage)
+  const kill = m => { scene.remove(m.g, m.ring, m.beam); m.rm.dispose(); beamPool.push(m.bm); m.nose.dispose(); };
 
   return {
     smoke, sparks, fire, dark,
@@ -170,8 +174,9 @@ export function createMissiles({ scene, bend, U }) {
       g.position.set(x, y, z); scene.add(g);
       const rm = bend(new THREE.MeshBasicMaterial({ map: ringT, color: new THREE.Color(1.0, 0.16, 0.1).multiplyScalar(3.2), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -4 }));
       const ring = new THREE.Mesh(ringG, rm); ring.renderOrder = 4; scene.add(ring);
-      const bm = new THREE.ShaderMaterial({ vertexShader: BEAM_VS, fragmentShader: BEAM_FS, uniforms: { uBend: U.uBend, uBendZ: U.uBendZ, uA: { value: 0 }, uT: { value: 0 } },
+      const bm = beamPool.pop() || new THREE.ShaderMaterial({ vertexShader: BEAM_VS, fragmentShader: BEAM_FS, uniforms: { uBend: U.uBend, uBendZ: U.uBendZ, uA: { value: 0 }, uT: { value: 0 } },
         transparent: true, depthWrite: false, side: THREE.DoubleSide });
+      bm.uniforms.uA.value = 0; bm.uniforms.uT.value = 0;          // 3r: vật liệu có thể là bản dùng lại
       const beam = new THREE.Mesh(beamG, bm); beam.renderOrder = 5; beam.frustumCulled = false; scene.add(beam);
       const m = { id: ++seq, from, to, t: 0, L0: new THREE.Vector3(x, y, z), P: new THREE.Vector3(), H: 11, g, ring, rm, beam, bm, nose: noseM, predict, locked: false, trailD: 0, last: new THREE.Vector3(x, y, z) };
       const p0 = predict(MS.T); m.P.set(p0.x, 0.6, -p0.s); m.H = 3.6 + Math.min(4.5, m.P.distanceTo(m.L0) * 0.035);     // vòng cung THẤP: góc nhìn trong xe chỉ thấy tới ~18° trên đường chân trời
@@ -243,7 +248,7 @@ export function createMissiles({ scene, bend, U }) {
     },
     dispose() {
       this.clear(); [smoke, dark, fire, sparks].forEach(p => { scene.remove(p.mesh); p.dispose(); }); scene.remove(light);
-      geos.forEach(g => g.dispose()); mats.forEach(m => m.dispose()); ringT.dispose(); scT.dispose();
+      geos.forEach(g => g.dispose()); mats.forEach(m => m.dispose()); beamPool.splice(0).forEach(m => m.dispose()); ringT.dispose(); scT.dispose();
     }
   };
 }

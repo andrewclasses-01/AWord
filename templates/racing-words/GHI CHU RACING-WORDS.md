@@ -2,6 +2,11 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
+## Đợt 533 (16/10/2026) — myGame mẫu 3r: MƯỢT TUYỆT ĐỐI TRÊN TOMKO + sửa lỗi khung không được vẽ
+- GOC `rw-3r.js`, CSS `rw-3r.css`. File 3r: rw · sr3d · sr3d-intro · sr3d-car (nén vật liệu) · sr3d-world (thứ tự vẽ) · sr3d-missile (pool cột sáng) · sr3d-autores-3r.
+- Đo act 572 trong myActivity (khung vẽ thật): xưởng 60 · phim 59 · 5 đèn 60 · đua 59,7 · 0 lỗi · 0 dịch shader giữa trận. Chi tiết GHI CHU DU AN Đợt 533 + myGame NGHIEN CUU mục 30.
+- ⚠️ Đo game 3D: đếm `composer.render` thật + bắt lỗi JS — nhịp rAF vẫn 60 khi khung bị lỗi không vẽ (lỗi `dist` của 3q).
+
 ## Đợt 531 (15/10/2026) — myGame mẫu 3q (Fight options · cảnh xa · 35 km/h) + chỉ có Fight
 - GOC `rw-3q.js`, CSS `rw-3q.css`. Khoá phẳng mới: srLives · srMsDmg · srTie (0 = ∞) · srMissWait (−1 = ∞) · srMsStreak · srMsMax 0–10. Cờ `fightOnly` + `boxMode` + `ownFight`.
 - Bàn thử `scratch/dot531-rw.html` (engine thật + preflight + act có sẵn Options). Chi tiết GHI CHU DU AN Đợt 531.

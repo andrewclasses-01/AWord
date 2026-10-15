@@ -1,3 +1,14 @@
+// RACING WORDS mẫu 3r (16/10/2026) = sr3d-intro-3q.js tối ưu cho TOMKO (Quadro T2000, màn 4K, myActivity). Đo act 572 trong myActivity: màn chờ 37 fps,
+//   PHIM intro 18 fps (khung 67–150 ms, cú đầu 317 ms). Nguyên nhân + sửa:
+//   · canvas antialias (MSAA) vô ích — composer vẽ vào render target riêng rồi mới chép ra ⇒ BỎ (antialias: false).
+//   · độ nét = min(DPR, 1,5) = 1,25 BỎ QUA trần `__awMaxPR` của myActivity ⇒ 3858×1823. Nay trần chung + tự chỉnh độ nét (sr3d-autores-3r, khoá rw-3r-intro).
+//   · 3 bản đồ bóng (mặt trời + 2 đèn rọi, cả 2 xe ~350 nghìn tam giác) vẽ lại MỖI khung và MỖI lần chụp môi trường (CubeCamera = 6 lần vẽ) ⇒
+//     shadowMap.autoUpdate = false; chỉ vẽ lại khi vật đổ bóng di chuyển (dựng/đổi xe, đặt lại cảnh, cửa cuốn kéo lên → xe lao ra).
+//   · chụp lại môi trường phản chiếu (envDirty) tối đa 4 lần / giây (lúc cửa cuốn kéo lên bản cũ chụp ngẫu nhiên 8 % mỗi khung).
+//   · CHIẾU SÁNG (đo GPU từng pass, độ nét 1,0: RenderPass 32 ms ⇒ 11,8 ms): 5 RectAreaLight ⇒ 1 tấm gộp · bỏ 2 đèn pha SpotLight · sàn bỏ clearcoat.
+//   · chụp môi trường chỉ ẩn mảnh lưới xe (giữ đèn) + LÀM NÓNG phim (warmIntro) ⇒ bấm START không còn dịch shader (cũ khựng 280–320 ms).
+//   · tự chỉnh độ nét chỉ chạy sau khi trận dịch sẵn shader xong (arGo / arWait từ gói nhúng).
+// ---- gốc 3p ----
 // RACING WORDS mẫu 3p (15/10/2026) = sr3d-intro-3o.js, chỉ đổi nguồn xe sang sr3d-car-3p.js (gộp mảnh + số đo sẵn ⇒ dựng xe ở xưởng 6–210 ms thay vì 0,2–3,4 s).
 // RACING WORDS mẫu 3o = sr3d-intro-3n.js + dòng GHI CÔNG mẫu 3D (tên mẫu · tác giả · CC-BY 4.0) dưới ô chọn xe; xe từ sr3d-xe3d-3o.js / sr3d-car-3o.js; destroy() trả card đồ hoạ (forceContextLoss).
 // =============================================================
@@ -17,7 +28,8 @@ import { RenderPass } from "../../rocket-race/vendor/three/addons/RenderPass.js"
 import { UnrealBloomPass } from "../../rocket-race/vendor/three/addons/UnrealBloomPass.js";
 import { OutputPass } from "../../rocket-race/vendor/three/addons/OutputPass.js";
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
-import { makeCar3d } from "./sr3d-car-3q.js";
+import { makeCar3d } from "./sr3d-car-3r.js";
+import { makeAutoRes } from "./sr3d-autores-3r.js";
 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -98,10 +110,13 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
   const cv = $(".ri-cv");
 
   // ---------- renderer / cảnh ----------
-  const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
+  const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: "high-performance" });   // 3r: bỏ MSAA canvas (composer có RT riêng)
+  renderer.debug.checkShaderErrors = false;
+  const PR_MAX = Math.min(devicePixelRatio || 1, 1.5);
+  renderer.setPixelRatio(PR_MAX);
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0; renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.autoUpdate = false; let shadowDirty = true;   // 3r: bóng chỉ vẽ lại khi vật đổ bóng di chuyển
   RectAreaLightUniformsLib.init();
   const scene = new THREE.Scene(); scene.fog = new THREE.FogExp2(0x0b0c10, 0.012);
   const cam = new THREE.PerspectiveCamera(40, 16 / 9, 0.05, 600);
@@ -121,7 +136,8 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
   sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14, near: 10, far: 120 }); sun.shadow.bias = -0.0006;
 
   // ---------- xưởng ----------
-  const concrete = new THREE.MeshPhysicalMaterial({ map: floorTex(), color: "#9a9ea6", roughness: 0.32, metalness: 0.0, clearcoat: 0.6, clearcoatRoughness: 0.18, envMapIntensity: 1.0 });
+  // 3r: sàn bỏ lớp clearcoat (MeshStandard) — đo TOMKO 2,5 ms/khung ở 4K; vẫn bóng nhờ roughness thấp + môi trường phản chiếu
+  const concrete = new THREE.MeshStandardMaterial({ map: floorTex(), color: "#9a9ea6", roughness: 0.32, metalness: 0.0, envMapIntensity: 1.0 });
   const floor = add(new THREE.Mesh(new THREE.PlaneGeometry(W * 2, BACK_Z - DOOR_Z), concrete)); floor.rotation.x = -Math.PI / 2; floor.position.z = (BACK_Z + DOOR_Z) / 2; floor.receiveShadow = true;
   const wallM = new THREE.MeshStandardMaterial({ color: "#23262c", roughness: 0.82, metalness: 0.15 });
   const panelM = new THREE.MeshStandardMaterial({ color: "#2e323a", roughness: 0.6, metalness: 0.35 });
@@ -150,10 +166,10 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
   // ---------- đèn trần: 5 dãy LED (vật phát sáng + RectAreaLight hắt vệt sáng lên sơn xe) ----------
   const rowZ = [-12, -6, 0, 6, 12];
   const ledM = rowZ.map(() => new THREE.MeshBasicMaterial({ color: new THREE.Color(0.05, 0.05, 0.06), toneMapped: false }));
-  const rects = rowZ.map((z, k) => {
-    [-6, 0, 6].forEach(x => { const m = add(new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.08, 0.32), ledM[k])); m.position.set(x, H - 1.25, z); });
-    const r = new THREE.RectAreaLight(0xf2f5ff, 0, 18, 0.6); r.position.set(0, H - 1.3, z); r.lookAt(0, 0, z); add(r); return r;
-  });
+  // 3r: 5 RectAreaLight (mỗi dãy 1 cái) ⇒ 1 TẤM gộp 18 × 3 m (= tổng diện tích 5 dải ⇒ cùng công suất) trên 2 xe. Đo TOMKO: 5 đèn diện tích ăn 22 ms / 32 ms
+  //   mỗi khung (tính cả lúc đang tắt ở màn chờ) ⇒ còn ~4 ms. Dãy LED vẫn bật "cạch" từng dãy (vật phát sáng); tấm đèn sáng dần theo số dãy đã bật.
+  rowZ.forEach((z, k) => { [-6, 0, 6].forEach(x => { const m = add(new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.08, 0.32), ledM[k])); m.position.set(x, H - 1.25, z); }); });
+  const rect = new THREE.RectAreaLight(0xf2f5ff, 0, 18, 3); rect.position.set(0, H - 1.3, 1); rect.lookAt(0, 0, 1); add(rect);
   const fill = add(new THREE.HemisphereLight("#cfd8ff", "#1a1b1f", 0.05));
   // đèn rọi 2 xe (màn chờ) + quầng sáng hình nón
   const spots = [0, 1].map(i => { const s = add(new THREE.SpotLight("#fff3e2", 120, 18, 0.38, 0.55, 2)); s.position.set(CAR_X[i], H - 1.2, CAR_Z + 1.5); s.target.position.set(CAR_X[i], 0, CAR_Z); add(s.target);
@@ -182,7 +198,21 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
   // ---------- môi trường phản chiếu: chụp xưởng bằng CubeCamera mỗi khi đèn/cửa đổi ----------
   const cubeRT = new THREE.WebGLCubeRenderTarget(256, { type: THREE.HalfFloatType }); const cubeCam = new THREE.CubeCamera(0.1, 400, cubeRT); cubeCam.position.set(0, 1.2, CAR_Z); scene.add(cubeCam);
   let envDirty = true;
-  function refreshEnv() { const vis = []; cars.forEach(c => c && (vis.push(c.rig.visible), c.rig.visible = false)); cubeCam.update(renderer, scene); cars.forEach((c, i) => c && (c.rig.visible = vis[i])); scene.environment = cubeRT.texture; envDirty = false; }
+  // 3r: chỉ ẩn MẢNH LƯỚI xe (giữ đèn pha / đèn lửa pô trong rig) — bản cũ ẩn cả rig ⇒ số đèn lúc chụp khác lúc vẽ chính ⇒ khoá shader khác ⇒ bấm START
+  //   phải dịch thêm cả loạt shader (cú khựng ~280 ms đầu phim). Nay 2 lượt dùng chung shader.
+  const envHide = [];
+  function refreshEnv() { envHide.length = 0; cars.forEach(c => c && c.rig.traverse(o => { if ((o.isMesh || o.isPoints) && o.visible) { o.visible = false; envHide.push(o); } }));
+    cubeCam.update(renderer, scene); envHide.forEach(o => { o.visible = true; }); envHide.length = 0; scene.environment = cubeRT.texture; envDirty = false; }
+  // 3r: LÀM NÓNG phim intro ngay khi xe dựng xong (thầy còn ở xưởng): chụp môi trường khi đã có envMap + 1 khung có lửa pô / boost ⇒ dịch sẵn mọi
+  //   shader phim sẽ dùng (đo TOMKO: START sinh 3 program mới ⇒ khung đầu phim 294 ms). Đồng bộ, chạy 1 lần lúc nạp / đổi xe.
+  function warmIntro() {
+    if (dead || !cars[0] || !cars[1]) return;
+    const tt = performance.now() / 1000;
+    cars.forEach(c => c.update(1 / 60, { dist: 0, accel: 9.5, steer: 0, boost: 1, t: tt, pop: 1 }));
+    fit(); refreshEnv(); refreshEnv(); renderer.shadowMap.needsUpdate = true; composer.render();
+    cars.forEach(c => c.update(1 / 60, { dist: 0, accel: 0, steer: 0, boost: 0, t: tt, pop: 0 }));
+    arFrom = performance.now() + 1500; AR.pause();
+  }
 
   // ---------- xe ----------
   const U = { uBend: { value: new THREE.Vector2() }, uBendZ: { value: 0 } };
@@ -191,15 +221,16 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
     if (cars[i]) { scene.remove(cars[i].rig); cars[i].dispose(); }
     const c = makeCar3d({ id: carIds[i], color: TEAMS[i].color, num: i + 1, U });
     c.rig.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-    c.rig.position.set(CAR_X[i], 0, CAR_Z); scene.add(c.rig); cars[i] = c;
+    c.rig.position.set(CAR_X[i], 0, CAR_Z); scene.add(c.rig); cars[i] = c; shadowDirty = true;
+    arFrom = performance.now() + 1500; AR.pause();   // 3r: (buildCar chỉ chạy sau khi hàm dựng xong) dựng xe = khung nặng một lần, không phải máy yếu
     // đèn pha: 2 đèn rọi phía trước (bật khi nổ máy)
-    const hl = new THREE.SpotLight("#e8f1ff", 0, 40, 0.5, 0.6, 1.6); hl.position.set(0, 0.7, -c.M.L / 2 + 0.2); hl.target.position.set(0, 0.3, -c.M.L / 2 - 30); c.body.add(hl, hl.target); heads[i] = hl;
+    heads[i] = null;   // 3r: BỎ 2 đèn pha rọi (SpotLight) — đo TOMKO 8,6 ms/khung ở 4K; đèn pha trên mẫu xe vẫn sáng (vật phát sáng)
     envDirty = true; paintPick();
   }
   async function setCar(i, id, notify = true) {
     carIds[i] = id; paintPick();
     await prepXe(id); if (carIds[i] !== id) return;
-    buildCar(i); if (notify && onSetCar) onSetCar(i, id);
+    buildCar(i); warmIntro(); if (notify && onSetCar) onSetCar(i, id);
   }
 
   // ---------- UI chọn xe ----------
@@ -228,9 +259,9 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
     fired.clear(); T = 0; doorOpen = 0; layDoor(); signK = 0; sunK = 0; engOn = [false, false]; lit.fill(0);
     cars.forEach((c, i) => { if (!c) return; c.rig.position.set(CAR_X[i], 0, CAR_Z); c.rig.rotation.set(0, 0, 0); });
     heads.forEach(h => h && (h.intensity = 0));
-    root.classList.remove("is-play", "is-card", "is-big", "is-flash", "is-done"); root.classList.add("is-idle"); envDirty = true;
+    root.classList.remove("is-play", "is-card", "is-big", "is-flash", "is-done"); root.classList.add("is-idle"); envDirty = true; shadowDirty = true;
   }
-  function play() { if (state === "play") return; closeLists(); resetScene(); state = "play"; root.classList.remove("is-idle"); root.classList.add("is-play"); onStart(); cue("start"); }
+  function play() { if (state === "play") return; closeLists(); resetScene(); state = "play"; root.classList.remove("is-idle"); root.classList.add("is-play"); applyPR(); onStart(); cue("start"); }
   function handoff() { if (state !== "play") return; state = "out"; cue("handoff"); onHandoff(); }
   function card(i) { const x = XE.find(q => q.id === carIds[i]); $(".ri-card small").textContent = TEAMS[i].name; $(".ri-card b").textContent = x ? x.name : ""; $(".ri-card").style.setProperty("--team", TEAMS[i].color);
     root.classList.remove("is-card"); void root.offsetWidth; root.classList.add("is-card"); }
@@ -269,6 +300,7 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
       if (t >= START_T.flash && cue("flash")) root.classList.add("is-flash");
       if (t >= START_T.end) handoff();
       doorOpen = ease(clamp((t - START_T.door) / (START_T.doorEnd - START_T.door), 0, 1)); layDoor();
+      if (t >= START_T.door) shadowDirty = true;                    // 3r: cửa cuốn kéo lên, rồi 2 xe lao ra ⇒ bóng phải đi theo
       if (doorOpen > 0 && doorOpen < 1 && Math.random() < 0.08) envDirty = true;
       signK = smooth(START_T.sign, START_T.sign + 0.25, t) * (t < START_T.sign + 0.25 ? (Math.random() < 0.5 ? 0.3 : 1) : 1);   // biển nháy rồi sáng hẳn
       sunK = doorOpen;
@@ -276,7 +308,8 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
       [0, 1].forEach(i => { popT[i] -= dt; if (popT[i] <= 0) { popT[i] = 2.4 + Math.random() * 3.6; pop(i); if (Math.random() < 0.4) setTimeout(() => state === "idle" && pop(i), 170); } });
     }
     // đèn
-    rects.forEach((r, k) => { const on = state === "play" ? lit[k] : 0; r.intensity = lerp(r.intensity, on ? 7 : 0, on ? 0.6 : 0.2); ledM[k].color.setScalar(on ? 3.2 : 0.05); });
+    let litN = 0; rowZ.forEach((z, k) => { const on = state === "play" ? lit[k] : 0; litN += on ? 1 : 0; ledM[k].color.setScalar(on ? 3.2 : 0.05); });
+    rect.intensity = lerp(rect.intensity, 7 * litN / 5, litN ? 0.6 : 0.2);   // 3r: 1 tấm thay 5 dải
     signM.color.setScalar(state === "play" ? 0.05 + signK * 2.4 : 0.06);
     const idleK = state === "play" ? 1 - smooth(0.2, 1.6, t) * 0.75 : 1;
     spots.forEach(s => s.intensity = 120 * idleK); beamM.opacity = 0.05 * idleK;
@@ -301,28 +334,48 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
     const s = shot(t); cam.position.copy(s.pos); cam.lookAt(s.look); if (cam.fov !== s.fov) { cam.fov = s.fov; cam.updateProjectionMatrix(); }
     if (state === "play" && t >= START_T.flyby - 0.2 && t < START_T.flash) { cam.position.x += (Math.random() - 0.5) * 0.06; cam.position.y += (Math.random() - 0.5) * 0.05; }
   }
-  function fit() { const w = root.clientWidth, h = root.clientHeight; if (!w || !h) return; const pr = renderer.getPixelRatio();
-    if (cv.width !== Math.round(w * pr) || cv.height !== Math.round(h * pr)) { renderer.setSize(w, h, false); composer.setSize(w, h); cam.aspect = w / h; cam.updateProjectionMatrix(); } }
+  let fitW = 0, fitH = 0;
+  function fit(force) { const w = root.clientWidth, h = root.clientHeight; if (!w || !h) return; const pr = renderer.getPixelRatio();
+    if (force || w !== fitW || h !== fitH || cv.width !== Math.round(w * pr) || cv.height !== Math.round(h * pr)) { fitW = w; fitH = h; renderer.setSize(w, h, false); composer.setPixelRatio(pr); composer.setSize(w, h); cam.aspect = w / h; cam.updateProjectionMatrix(); } }
+  // 3r: tự giữ 60 khung — hạ độ nét khi không kịp (trần __awMaxPR của myActivity), nhớ mức êm theo máy
+  // 3r: PHIM (state play) có NGÂN SÁCH ĐIỂM ẢNH riêng ~2,3 triệu (TOMKO 3087×1519 ⇒ 0,7; cửa sổ 1080p không bị chạm) — phim nặng hơn màn chờ
+  //   (bóng vẽ lại mỗi khung, chụp môi trường) và chỉ 12 s: để bộ tự chỉnh hạ dần giữa phim thì mỗi lần hạ lại thêm một cú khựng (đo: 5 lần / phim).
+  //   Bộ tự chỉnh chỉ học ở màn chờ.
+  const FILM_PIX = 2.3e6;
+  function applyPR() {
+    let pr = AR.pr;
+    if (state === "play") { const w = root.clientWidth || 1, h = root.clientHeight || 1; pr = Math.min(pr, Math.sqrt(FILM_PIX / (w * h))); }
+    pr = Math.round(pr * 100) / 100;
+    if (pr !== renderer.getPixelRatio()) { renderer.setPixelRatio(pr); fit(true); }
+  }
+  const AR = makeAutoRes({ max: PR_MAX, min: Math.min(0.6, PR_MAX), key: "rw-3r-intro", apply: () => applyPR() });
+  let envT = -1e9, arFrom = performance.now() + 4000;            // 3r: lúc nạp xe / dịch shader ngầm khung chậm GIẢ ⇒ chưa tính
+  let arHold = true; const arHoldT = setTimeout(() => { arHold = false; }, 25000);   // 3r: chờ trận dịch sẵn shader xong (arGo) — tối đa 25 s
   function loop(now) {
     if (dead) return; raf = requestAnimationFrame(loop);
-    if (hidden) { lastT = 0; return; }
+    if (hidden) { lastT = 0; AR.pause(); return; }
     const dt = Math.min(0.05, lastT ? (now - lastT) / 1000 : 1 / 60); lastT = now;
     if (state === "play") T += dt;
     fit(); update(dt);
-    if (envDirty) refreshEnv();
+    if (shadowDirty) { renderer.shadowMap.needsUpdate = true; shadowDirty = false; }
+    if (envDirty && now - envT > 250) { envT = now; refreshEnv(); }   // 3r: tối đa 4 lần / giây
     composer.render();
+    if (!arHold && state !== "play" && now >= arFrom) AR.frame(now);   // 3r: chỉ học ở màn chờ
   }
   raf = requestAnimationFrame(loop);
 
-  const ready = Promise.all(carIds.map((id, i) => prepXe(id).then(() => buildCar(i))));
+  const ready = Promise.all(carIds.map((id, i) => prepXe(id).then(() => buildCar(i)))).then(r => { warmIntro(); return r; });   // 3r: làm nóng phim
   return {
     ready, setCar, get cars() { return carIds.slice(); }, get state() { return state; },
-    show() { hidden = false; state = "idle"; resetScene(); root.style.display = ""; },
+    show() { hidden = false; state = "idle"; resetScene(); root.style.display = ""; applyPR(); AR.pause(); },
     hide() { hidden = true; root.style.display = "none"; },
     play, skip: handoff,
-    step(n = 1, dt = 1 / 60) { for (let k = 0; k < n; k++) { if (state === "play") T += dt; update(dt); } fit(); if (envDirty) refreshEnv(); composer.render(); },
-    seek(t) { if (state !== "play") play(); T = 0; while (T < t) { T += 1 / 30; update(1 / 30); } fit(); refreshEnv(); composer.render(); },
-    destroy() { dead = true; cancelAnimationFrame(raf); cars.forEach(c => c && c.dispose()); composer.dispose(); cubeRT.dispose(); renderer.dispose(); renderer.forceContextLoss(); root.remove(); },   // 3o: trả card đồ hoạ
+    step(n = 1, dt = 1 / 60) { for (let k = 0; k < n; k++) { if (state === "play") T += dt; update(dt); } fit(); renderer.shadowMap.needsUpdate = true; if (envDirty) refreshEnv(); composer.render(); },
+    seek(t) { if (state !== "play") play(); T = 0; while (T < t) { T += 1 / 30; update(1 / 30); } fit(); renderer.shadowMap.needsUpdate = true; refreshEnv(); composer.render(); },
+    get res() { return AR.info; }, renderer, composer,                // 3r: bàn đo
+    arGo() { clearTimeout(arHoldT); arHold = false; arFrom = performance.now() + 1500; AR.pause(); },
+    arWait() { arHold = true; AR.pause(); },   // 3r: gói nhúng gọi khi prewarm trận xong
+    destroy() { dead = true; clearTimeout(arHoldT); cancelAnimationFrame(raf); cars.forEach(c => c && c.dispose()); composer.dispose(); cubeRT.dispose(); renderer.dispose(); renderer.forceContextLoss(); root.remove(); },   // 3o: trả card đồ hoạ
     root, scene, cam,
   };
 }
