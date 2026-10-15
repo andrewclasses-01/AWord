@@ -288,6 +288,13 @@ export function preloadLoader3d(theme) {
   try { ensureCss(); document.fonts.load(theme === "west" ? '400 60px Rye' : '800 60px "Baloo 2"').catch(() => {}); } catch (e) { /* màn chờ tự lo */ }
 }
 
+// ⭐ Đợt 526 — màn chọn act WORDS huỷ một game 3D đang nạp NGẦM (core/words-picker.js closePre): gỡ NGAY mọi màn chờ đang sống.
+// Không gỡ thì màn chờ của ván đã bỏ ở lại <body> tới khi lượt nạp xong (vài giây, tối đa 25 s) và hiện đè lên màn chọn.
+// `drop()` đánh dấu `gone` ⇒ lượt nạp xong gọi `done()` sau đó là vô hại.
+export function dropAllLoader3d() {
+  [...live.values()].forEach(h => { try { h.drop(); } catch (e) { /* đã gỡ */ } });
+}
+
 export function showLoader3d({ key, title, theme = "space" }) {
   const cur = live.get(key);
   if (cur && !cur.gone) return cur;

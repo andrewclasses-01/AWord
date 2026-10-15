@@ -546,6 +546,28 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 526 (15/10/2026) — MÀN CHỌN OPTIONS: GAME 3D NẠP NGẦM · KHUNG HẾT NHẢY · BACK VỀ MÀN CHỌN · MẶC ĐỊNH FIGHT
+
+Thầy thử Đợt 525 live, báo 4 việc:
+1. **STAR LOOT / TRAIN RUSH hiện màn LOADING trước khi hiện Options** — màn chờ `.aw-ld3d` (core/loader3d.js) gắn ở `<body>` ⇒ thêm vào luật
+   giấu `html.aw-wp-ngam:has(.aw-wp-gamehost) …` ⇒ game 3D nạp NGẦM trong lúc chọn options; READY là vào. Huỷ (✕/Esc) ⇒ `dropAllLoader3d()`
+   (export mới) gỡ ngay màn chờ của ván bỏ dở — trước đó nó ở lại `<body>` tới khi lượt nạp xong (tối đa 25 s) và hiện đè màn chọn.
+2. **Đổi Fight ↔ Single, khung nhảy trái/phải** — container ngầm `position:absolute` kéo dài trang (Fight 2 bàn cao hơn) ⇒ thanh cuộn
+   bật/tắt ⇒ bề ngang đổi. Nay lúc ngầm `position:fixed; inset:0; overflow:hidden` (READY `.is-in` mới về `absolute`); thêm: Train Rush /
+   Star Loot khoá cuộn `html.aw-tr-on/aw-sl-on {overflow:hidden}` ⇒ lúc ngầm trả `overflow:visible`. Đo: 4 lần đổi, mép trái khung đứng yên 360,6 px.
+3. **Back của trình duyệt ở màn START ⇒ về MÀN CHỌN** (không về thư mục): vào game (READY, và đường điện thoại `pick`) ⇒
+   `history.pushState({awWpGame}, "", location.href)` — cùng địa chỉ ⇒ Back bắn popstate ⇒ `routeFromLocation` mở lại act ⇒ màn chọn.
+   Back lần nữa mới về thư mục.
+4. **Mặc định của MỌI template là FIGHT** (game không có Fight ⇒ Single). TRAIN RUSH: Fight chạy NGAY TRONG ô 3D (Đợt 487/521) ⇒ hook
+   template mới `tpl.boxMode("fight"|"single")` (balloon-pop.js, biến dùng-một-lần `modeOnce`) — thanh MODE đổi Fight/Single bằng cách dựng
+   lại ô NGẦM với chế độ đã báo, READY xong là chơi luôn (không còn `engine.enterFight` ⇒ trận riêng nạp 3D lại). Star Loot không có nút
+   FIGHT trên thanh MODE (Fight của nó là ô "Mode" trong Options — không đổi).
+- Sửa thêm: `api.apply()` của engine nay trả `true` CHỈ khi đã bấm Apply (trước luôn `true` ⇒ việc sau READY luôn chờ 1,5 s).
+- **Thử** (bàn thử `scratch/dot525.html`): Quiz mở sẵn FIGHT · khung đứng yên qua 4 lần đổi · Star Loot/Train Rush: `.aw-ld3d` `hidden` khi
+  khung mở · `dropAllLoader3d` gỡ màn chờ chưa xong · Train Rush FIGHT (ô `fb-*`) → SINGLE (ô `bp-*`) → FIGHT, luôn 1 ô · READY ⇒ thêm 1 mục
+  lịch sử cùng địa chỉ, `history.back()` bắn popstate. ⚠️ Khung trình duyệt thử bị ẩn (rAF đứng) nên chưa thấy game 3D nạp xong thật.
+- ⬜ thầy thử thật: Star Loot/Train Rush nạp ngầm rồi READY vào ngay · Back trình duyệt ở màn START · Fight mặc định.
+
 ## Đợt 525 (15/10/2026) — MÀN CHỌN ACT WORDS: CHỌN OPTIONS + MODE TRƯỚC KHI VÀO GAME (ô bay sang trái · khung Options trượt từ mép phải · READY)
 
 Thầy duyệt mẫu `D:\OTHERS\CLAUDE\AWord - thiet ke man chon WORDS\man-chon-v8-options.html` (v7 → v8: READY xanh dương phẳng + máy bay giấy

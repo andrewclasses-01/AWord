@@ -45,9 +45,10 @@ import { variantsOf, voiceVariantsOf, variantLabel } from "./content-view.js";
 import { switchTargets } from "./convert.js";
 import { templateEntry } from "./catalog.js";
 import { setLastTemplate } from "./store.js";
-import { ensureTemplate } from "./registry.js";
+import { ensureTemplate, getTemplate, hasTemplate } from "./registry.js";
 import { startGame, setWordsPickerHook, setPreflight } from "./engine.js";
 import { iconSvg, sceneSvg, SC } from "./words-picker-art.js";
+import { dropAllLoader3d } from "./loader3d.js";
 
 // 3 game 3D (khu trên) → cảnh trong words-picker-art.js
 const G3 = [["rocket_race", "rocket"], ["balloon_pop", "train"], ["maze_chase", "loot"]];
@@ -473,8 +474,20 @@ export async function openWordsPicker(root, node, { onExit, onBack } = {}) {
     }
     me.boot = true;
     setPreflight({ onMount: api => onBoard(me, api) });
+    // Train Rush: Fight / Single nằm NGAY TRONG ô 3D — báo trước cho lần dựng này (mặc định Fight, Đợt 526)
+    boxModeFor(type, me.intent === "single" ? "single" : "fight");
     // noAutoFight: Fight do màn chọn quyết (thanh MODE), không tự vào như mở act thường.
     startGame(me.host, node, { onExit: exit, noAutoFight: true });
+  }
+
+  // ⭐ Đợt 526 — template có Fight NGAY TRONG ô (Train Rush, `tpl.boxMode`): thanh MODE đổi Fight/Single bằng cách dựng lại ô
+  // NGẦM với chế độ đã báo trước — không qua engine.enterFight (trận riêng, nạp 3D lại từ đầu sau READY). Trả true nếu template có.
+  function boxModeFor(type, m) {
+    try {
+      const t = hasTemplate(type) ? getTemplate(type) : null;
+      if (t && typeof t.boxMode === "function") { t.boxMode(m); return true; }
+    } catch { /* template lạ: đi đường thường */ }
+    return false;
   }
 
   // Engine báo: một bàn vừa dựng xong (single / bàn 0 của trận / bàn mượn Running·IPA).
@@ -489,7 +502,8 @@ export async function openWordsPicker(root, node, { onExit, onBack } = {}) {
     if (!me.avail) me.avail = { fight: api.can.fight, showdown: api.can.showdown, running: api.can.running.slice(), ipa: api.can.ipa, ownFight: api.ownFight };
     if (me.boot) {
       me.boot = false;
-      if (!me.intent) me.intent = api.fightFirst && me.avail.fight ? "fight" : "single";
+      // ⭐ Đợt 526 (thầy): MẶC ĐỊNH của MỌI template là FIGHT (game không có Fight ⇒ SINGLE).
+      if (!me.intent) me.intent = me.avail.fight ? "fight" : "single";
       // mode cần dựng lại bàn ⇒ gọi đúng cửa của nó, chờ lần báo kế
       if (me.intent === "fight" && !me.avail.ownFight && api.setMode("fight")) return;
       if (me.intent === "running" && api.setMode("running", me.sub)) return;
@@ -570,6 +584,12 @@ export async function openWordsPicker(root, node, { onExit, onBack } = {}) {
     pre.intent = k;
     paintBar(); paintRun();
     const api = pre.api;
+    if (pre.avail.ownFight && (k === "fight" || k === "single") && boxModeFor(pre.type, k)) {
+      loading();
+      if (api.mode !== "single") { if (!api.setMode("single")) onBoard(pre, api); }   // đang Running/IPA ⇒ về bàn single (ô đọc chế độ đã báo)
+      else { api.close(); startGame(pre.host, node, { onExit: exit, noAutoFight: true }); }
+      return;
+    }
     let target = k;
     if (k === "showdown" || (k === "fight" && pre.avail.ownFight)) target = "single";
     if (k === "running" && !pre.sub) pre.sub = pre.avail.running[0];
@@ -587,14 +607,24 @@ export async function openWordsPicker(root, node, { onExit, onBack } = {}) {
     mountBehind();
   }
 
+  // ⭐ Đợt 526 (thầy) — nút BACK của TRÌNH DUYỆT ở màn START / trong game ⇒ về MÀN CHỌN, không về thư mục. Vào game thì thêm
+  // một mục lịch sử CÙNG địa chỉ ⇒ Back lùi về mục của màn chọn ⇒ main.js `routeFromLocation` mở lại act ⇒ màn chọn hiện
+  // (ván đang mở tự dọn khi rời trang — lưới an toàn Đợt 295). Back lần nữa mới về thư mục.
+  function pushGameEntry() {
+    try { history.pushState({ awWpGame: node.id }, "", location.href); } catch { /* trình duyệt chặn ⇒ Back về thư mục như cũ */ }
+  }
+
   function ready() {
     if (!pre || pre.done || !pre.api || obody.classList.contains("is-loading")) return;
     const me = pre;
     me.done = true;
     clearLater();
     readyBtn.classList.add("go");
-    me.after = me.intent === "showdown" ? "showdown" : (me.intent === "fight" && me.avail.ownFight ? "fight" : null);
+    // Train Rush (boxMode) đã ở đúng Fight/Single trong ô ⇒ READY là chơi luôn; chỉ trận riêng KHÔNG có boxMode mới mở sau READY.
+    const box = hasTemplate(me.type) && typeof getTemplate(me.type).boxMode === "function";
+    me.after = me.intent === "showdown" ? "showdown" : (me.intent === "fight" && me.avail.ownFight && !box ? "fight" : null);
     const hadChanges = me.api.apply();   // Apply thật (nếu có gì đổi) — engine dựng lại bàn ⇒ onBoard(done)
+    pushGameEntry();
     setPickUrl(me.type, curSel());       // myActivity: cột theo mở đúng lựa chọn
     if (!hadChanges) { setPreflight(null); runAfter(me, me.api); }
     else setTimeout(() => { if (!me.ran) { setPreflight(null); runAfter(me, me.api); } }, 1500);   // lỡ không có lần báo kế
@@ -636,6 +666,7 @@ export async function openWordsPicker(root, node, { onExit, onBack } = {}) {
     try { me.api && me.api.close(); } catch { /* bàn đã gỡ */ }
     // gỡ container ⇒ engine tự dọn ván (lưới an toàn "ván rời trang", Đợt 295) — kể cả ô 3D ở <body>
     if (me.host) { me.host.remove(); me.host = null; root.style.position = me.rootPos || ""; }
+    dropAllLoader3d();   // màn chờ 3D của ván vừa bỏ (đang nạp ngầm) — gỡ ngay, đừng để nó hiện đè màn chọn
     document.documentElement.classList.remove("aw-wp-ngam");
     optEl.classList.remove("on"); readyBtn.classList.remove("on", "go"); xBtn.classList.remove("on");
     wp.classList.remove("is-pre");
@@ -663,6 +694,7 @@ export async function openWordsPicker(root, node, { onExit, onBack } = {}) {
     node.options = { ...(node.options || {}), ...sel };
     if (type === node.type) delete node.lastTpl; else node.lastTpl = type;
     off();
+    pushGameEntry();
     setPickUrl(type, sel);   // myActivity: địa chỉ mang lựa chọn ⇒ chép sang cột theo, chúng mở theo
     startGame(root, node, { onExit: exit });
   }

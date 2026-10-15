@@ -1996,12 +1996,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // READY = bấm Apply thật (chỉ khi có gì đổi — Apply mờ thì không có gì để lưu).
       apply() {
         const b = toolPanelEl && activeToolBuild === buildOptionsPanel ? toolPanelEl.querySelector(".aw-opt-apply") : null;
-        if (b && !b.disabled) {
+        const clicked = !!(b && !b.disabled);
+        if (clicked) {
           preflightApplying = true;
           try { b.click(); } finally { preflightApplying = false; }
         }
         if (toolPanelEl && toolPanelEl.classList.contains("is-embed")) closeToolPanel(false);
-        return true;
+        return clicked;   // true ⇒ Apply đã dựng lại bàn (hoặc áp ngay) — màn chọn chờ lần onMount kế
       },
       close() { if (toolPanelEl && toolPanelEl.classList.contains("is-embed")) closeToolPanel(false); },
       enterFight() { if (!torndown && canFight && !fight) enterFight(); },

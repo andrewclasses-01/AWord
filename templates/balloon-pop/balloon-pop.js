@@ -111,6 +111,8 @@ const trGame = act => ({ ...TR_DEF, ...gameOpts(act && act.options) });
 let fightNextAt = 0;
 // ⭐ Đợt 521 — act mà thầy đã chủ động chuyển về Single (mở act khác thì xoá ⇒ lại vào thẳng Fight)
 let singleFor = "";
+// ⭐ Đợt 526 — màn chọn act WORDS (thanh MODE) chọn TRƯỚC ô sẽ mở Fight hay Single: dùng MỘT LẦN ở lần dựng kế (`boxMode` cuối file).
+let modeOnce = null;
 
 let webglOk = null;
 function canRun3d() {
@@ -311,7 +313,8 @@ const balloonPopTemplate = {
     // Đợt 521 — mặc định vào Fight (thầy); Đợt 487 — chọn act khác giữa trận Fight ⇒ act đó cũng vào Fight
     const actKey = String(activity.id || activity.title || "");
     if (singleFor && singleFor !== actKey) singleFor = "";
-    const wantFight = Date.now() - fightNextAt < 15000 || (!!ui.host && !activity._mistakes && singleFor !== actKey);
+    const once = modeOnce; modeOnce = null;   // Đợt 526 — màn chọn đã quyết thì theo màn chọn
+    const wantFight = once ? once === "fight" : (Date.now() - fightNextAt < 15000 || (!!ui.host && !activity._mistakes && singleFor !== actKey));
     fightNextAt = 0;
     if (wantFight) toFight(); else single();
     return function cleanup() {
@@ -323,6 +326,9 @@ const balloonPopTemplate = {
   },
   // ⭐ Đợt 449 — MODE ▸ Fight = trận TRAIN RUSH 3D (core/engine.js gọi thay core/fight.js). Trả về cleanup.
   ownFight(root, act, { single, home }) { return mountTrainRushFight(root, act, { single, home }); },
+  // ⭐ Đợt 526 — màn chọn act WORDS: Fight của TRAIN RUSH chạy NGAY TRONG ô Single (Đợt 487/521) nên thanh MODE của màn chọn
+  // không gọi engine.enterFight (dựng trận riêng, nạp 3D lại) mà báo trước cho lần dựng kế: "fight" | "single".
+  boxMode(mode) { modeOnce = mode === "fight" || mode === "single" ? mode : null; },
   onPause() { /* TRAIN RUSH có Menu/PAUSED riêng; menu engine không mở được khi game phủ trọn màn */ }
 };
 

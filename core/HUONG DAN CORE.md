@@ -5417,3 +5417,6 @@ Màn chọn act WORDS (`core/words-picker.js`) dựng game NGẦM rồi mượn 
 - Màn chọn khởi động bằng `startGame(host, node, { noAutoFight: true })` — Fight do thanh MODE quyết.
 - ⚠️ Template mới gắn ô vào `<body>` (kiểu `.aw-tr-host`) phải được thêm vào luật `html.aw-wp-ngam:has(.aw-wp-gamehost) …` trong
   `tools/wp.src.css`, không thì nó hiện đè lên màn chọn khi đang dựng ngầm.
+- ⭐ Đợt 526 — `tpl.boxMode(mode)` (tuỳ chọn): template có Fight NGAY TRONG ô của nó (Train Rush) nhận "fight"|"single" cho LẦN DỰNG KẾ
+  (dùng một lần). Màn chọn gọi nó rồi dựng lại ô ngầm thay vì `api.setMode("fight")`. Màn chờ 3D mới phải dùng `core/loader3d.js`
+  (`.aw-ld3d`) để được giấu lúc ngầm và được `dropAllLoader3d()` gỡ khi huỷ.
