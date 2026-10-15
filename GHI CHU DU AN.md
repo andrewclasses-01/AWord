@@ -579,6 +579,8 @@ Track 20 · Laps 6 · Missiles max 10 · Streak 1 · Damage 1 · Time delay 1 s)
 - Nén xe (`slimMat`): bỏ normal/AO map, roughness-metalness ⇒ trung bình ảnh, bỏ clearcoat ⇒ ít shader, nhẹ GPU. Vết cháy dùng lại chỗ cũ (không dò tia giữa trận).
 - Gói nhúng: vào trận chờ lần dịch sẵn HIỆN HÀNH (đổi xe rồi START không còn khựng 5 đèn).
 
+**Sổ tay dùng lại:** myGame `HUONG DAN TOI UU GAME 3D.md` (quy trình đo + 16 bẫy) · bộ đo `myGame/tools/do-game-3d/`.
+
 **VIỆC ĐANG CHỜ:** ⬜ thầy chơi thật trên TOMKO trong myActivity (xe trông ổn không sau khi nén vật liệu; đèn xưởng 1 tấm). ⬜ vệ sinh quạt card (84 °C, thermal slowdown).
 
 ---
