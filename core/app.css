@@ -8594,20 +8594,33 @@ body.aw-khung-mode .aw-giao-nen{display:none}
    xoá chúng (bàn thử cũ vẫn đọc được lịch sử). Danh sách (list view) giữ hàng ngang như cũ.
    ========================================================================== */
 /* ---- cột Quick access: KHÔNG khung, nền nhạt, MỘT nét mảnh dọc chạy hết chiều cao ---- */
+/* ⭐ Đợt 524 (thầy 15/10/2026, mẫu v6): nền TRÙNG nền AWord (trong suốt) · rộng tới hết nút "+ New folder"
+   (`--aw-qa-w` do `canhQuickAccess()` main.js đo) · ruột cao vừa màn hình, cuộn NGAY TRONG cột (max-height do JS đặt
+   theo mép trên ruột) · tên dài MỜ DẦN ở cuối thay dấu "…". */
 .aw-qa {
-  background: #f3f7fc; border: none; border-radius: 0; box-shadow: none;
+  background: transparent; border: none; border-radius: 0; box-shadow: none;
   padding: 0; max-height: none; display: block;
 }
+.aw-fm-withqa > .aw-qa { flex: 0 0 var(--aw-qa-w, 214px); width: var(--aw-qa-w, 214px);
+  /* `contain: size` — chiều cao ruột KHÔNG đẩy cao hàng/trang (cột chỉ giãn theo lưới bên phải); thiếu dòng này thì
+     max-height do JS đặt ⇒ trang cao/thấp ⇒ cuộn đổi ⇒ JS đo lại: vòng lặp tự đọc kết quả của chính nó. */
+  contain: size; }
 .aw-qa::after { top: 0; bottom: 0; right: 0; width: 1px; background: #d7e0ec; }
 .aw-qa-in {
   position: sticky; top: 0; max-height: 100vh; display: flex; flex-direction: column; min-height: 0;
-  padding: 4px 0 14px;
+  padding: 0 0 14px; overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: thin; scrollbar-color: #c5d2e3 transparent;
 }
-.aw-qa-head { border-bottom: none; margin: 0; padding: 14px 14px 6px; }
+.aw-qa-head { border-bottom: none; margin: 0; padding: 4px 6px 6px; }
 .aw-qa-title { font-size: .72rem; letter-spacing: 1.1px; color: #8a97ab; }
-.aw-qa-list { flex: 0 1 auto; }
-.aw-qa-row { margin: 1px 8px; border-radius: 8px; }
-.aw-qa-row:hover { background: #e6edf6; }
+.aw-qa-list { flex: 0 0 auto; overflow: visible; min-height: auto; }
+.aw-qa-row { margin: 1px 10px 1px 0; border-radius: 8px; }
+.aw-qa-row:hover { background: #dde7f4; }
+.aw-qa-name {
+  flex: 1 1 auto; min-width: 0; text-overflow: clip;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
+          mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
+}
 .aw-qa-row.is-current { background: #fff; box-shadow: 0 1px 3px rgba(30,50,80,.10); }
 .aw-qa-row.is-current .aw-qa-label { color: #1d4ed8; }
 .aw-qa-empty { margin: 2px 14px 6px; padding: 8px; border: 1.5px dashed #dfe6ef; border-radius: 8px; font-size: .78rem; }
@@ -8635,26 +8648,46 @@ body.aw-khung-mode .aw-giao-nen{display:none}
 .aw-fm-grid .aw-card-folder.is-dropok { background: #dce9ff; outline: 2px dashed #2f7bff; outline-offset: -2px; box-shadow: none; }
 .aw-fm-grid .aw-card-folder.is-dragging { opacity: .45; }
 
-/* ---- ACT THẤP (kiểu A): khối màu = LOẠI, dải trắng = TÊN ---- */
-.aw-act-gon { cursor: pointer; border-radius: 14px; height: 126px; -webkit-touch-callout: none; }
+/* ---- ⭐⭐ Đợt 524 (thầy chốt 15/10/2026, mẫu v6 kiểu C) — THẺ ACT: nửa trên XEM TRƯỚC nội dung act (mờ), nhãn LOẠI
+   to nổi GIỮA thẻ (nghiêng nhẹ, viền trắng); dải TÊN dưới LUÔN cao đúng 2 dòng ở mọi thẻ, tên ngắn căn giữa.
+   Thay khối "ACT THẤP" Đợt 516 (khối màu LOẠI + dải tên co giãn). ---- */
+.aw-act-gon { cursor: pointer; border-radius: 14px; -webkit-touch-callout: none; }
 .aw-act-gon:active { transform: scale(.97); }
 .aw-ag-tren {
-  position: relative; flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center;
-  padding: 8px 10px; text-align: center; color: #fff;
+  position: relative; flex: 0 0 auto; height: 100px; overflow: hidden;
+  background: linear-gradient(135deg, #eef4fc, #e2ecfa);
+}
+.aw-ag-xem {
+  position: absolute; inset: 0; padding: 10px 9px 8px; display: flex; flex-direction: column; gap: 6px;
+  filter: blur(.6px); opacity: .55; pointer-events: none;
+}
+.aw-ag-q {
+  font-size: .74rem; font-weight: 700; color: #2a3a4d; line-height: 1.3; word-break: break-word;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.aw-ag-chips { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: auto; }
+.aw-ag-chip {
+  font-size: .62rem; font-weight: 700; color: #fff; padding: 4px 4px; border-radius: 6px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;
 }
 .aw-ag-loai {
-  font-size: .92rem; font-weight: 700; line-height: 1.25; letter-spacing: .2px; word-break: break-word; text-transform: uppercase;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-3deg); z-index: 1;
+  max-width: 92%; padding: 4px 12px; border-radius: 9px; border: 2px solid #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,.22);
+  color: #fff; font-size: .82rem; font-weight: 800; letter-spacing: .4px; line-height: 1.25; text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.aw-ag-loai.is-xam { opacity: .85; }
-/* dải TÊN: một dòng khi đủ chỗ; khung hẹp (khung trái myLesson 655 px) thì xuống tối đa 2 dòng, khối màu nhường chỗ */
+/* dải TÊN: cao CỐ ĐỊNH = 2 dòng chữ + đệm, chữ căn giữa cả dọc lẫn ngang; dài quá 2 dòng thì cắt "…" */
 .aw-ag-ten {
-  flex: 0 0 auto; min-height: 30px; padding: 8px 8px 7px; border-top: 1px solid #eef2f7; line-height: 1.2;
-  text-align: center; font-size: .72rem; font-weight: 800; letter-spacing: .4px; text-transform: uppercase;
+  flex: 0 0 auto; height: calc(2 * 1.22em + 12px); padding: 6px 8px; border-top: 1px solid #eef2f7;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  font-size: .72rem; font-weight: 800; letter-spacing: .4px; line-height: 1.22; text-transform: uppercase;
+}
+.aw-ag-ten > span {
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; word-break: break-word;
 }
 .aw-ag-play {
-  position: absolute; right: 7px; bottom: 7px; width: 26px; height: 26px; border-radius: 50%; border: none; padding: 0;
+  position: absolute; right: 7px; bottom: 7px; z-index: 2; width: 26px; height: 26px; border-radius: 50%; border: none; padding: 0;
   background: rgba(255,255,255,.95); color: #23303e; display: inline-flex; align-items: center; justify-content: center;
   box-shadow: 0 1px 4px rgba(0,0,0,.18); cursor: pointer; opacity: 0; transition: opacity .15s ease;
 }
@@ -8662,15 +8695,21 @@ body.aw-khung-mode .aw-giao-nen{display:none}
 .aw-act-gon:hover .aw-ag-play { opacity: 1; }
 @media (hover: none) { .aw-ag-play { opacity: .9; } }   /* màn cảm ứng không có "rê chuột" */
 .aw-ag-voice {
-  position: absolute; left: 7px; top: 7px; width: 20px; height: 20px; border-radius: 50%;
-  background: rgba(255,255,255,.28); color: #fff; display: inline-flex; align-items: center; justify-content: center;
+  position: absolute; left: 7px; top: 7px; z-index: 2; width: 20px; height: 20px; border-radius: 50%;
+  background: #10b981; color: #fff; display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,.18);
 }
 .aw-ag-voice svg { width: 11px; height: 11px; }
-.aw-act-gon .aw-newdot { top: 7px; right: 7px; }
-/* danh sách: hàng ngang — viên màu LOẠI bên trái + TÊN */
+.aw-act-gon .aw-newdot { top: 7px; right: 7px; z-index: 2; }
+/* danh sách: hàng ngang — viên màu LOẠI bên trái (không xem trước) + TÊN một dòng */
 .aw-fm-list .aw-act-gon { height: auto; flex-direction: row; align-items: center; padding: 6px; gap: 10px; }
-.aw-fm-list .aw-ag-tren { flex: 0 0 116px; height: 44px; border-radius: 10px; padding: 4px 8px; }
-.aw-fm-list .aw-ag-loai { font-size: .78rem; }
+.aw-fm-list .aw-ag-tren { flex: 0 0 116px; height: 44px; border-radius: 10px; background: none; overflow: visible; }
+.aw-fm-list .aw-ag-xem { display: none; }
+.aw-fm-list .aw-ag-loai {
+  inset: 0; transform: none; max-width: none; border: none; box-shadow: none; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; font-size: .78rem; padding: 4px 8px;
+}
 .aw-fm-list .aw-ag-play { display: none; }   /* hàng danh sách: bấm cả hàng là chơi */
-.aw-fm-list .aw-ag-ten { flex: 1 1 auto; border-top: none; text-align: left; font-size: .86rem; min-height: 0; padding: 0 8px; line-height: 1.35; }
+.aw-fm-list .aw-ag-voice { left: auto; right: -6px; top: -6px; width: 18px; height: 18px; }
+.aw-fm-list .aw-ag-ten { flex: 1 1 auto; height: auto; border-top: none; justify-content: flex-start; text-align: left; font-size: .86rem; padding: 0 8px; line-height: 1.35; }
 .aw-fm-list .aw-act-gon .aw-newdot { top: 50%; right: 12px; transform: translateY(-50%); }

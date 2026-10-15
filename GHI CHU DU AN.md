@@ -546,6 +546,30 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 524 (15/10/2026) — THẺ ACT XEM TRƯỚC + NHÃN LOẠI NỔI GIỮA · DẢI TÊN 2 DÒNG CỐ ĐỊNH · ĐÚP TÊN THƯ MỤC ĐỂ CHÉP · QUICK ACCESS VỪA MÀN HÌNH · CON LĂN MỞ THẺ MỚI
+
+Thầy duyệt mẫu `D:\OTHERS\CLAUDE\myLesson - thiet ke khung explorer\mau-v6.html` (chọn kiểu **C** + chữ nhãn = LOẠI act như cũ) rồi "ok build".
+- **Đường dẫn** (`breadcrumb()`): đúp vào tên thư mục ĐANG ĐỨNG (chữ đen `.aw-crumb.is-current`) ⇒ `copyText(itemName)` + toast `Copied “…”`.
+- **Thẻ act** (`actCard`): nửa trên `.aw-ag-tren` (cao 100 px, nền xanh nhạt) = XEM TRƯỚC `.aw-ag-xem` một câu ngẫu nhiên + ≤ 2 đáp án
+  (`previewPick`, như thẻ trước Đợt 516) làm MỜ (blur .6px, opacity .55); nhãn LOẠI `.aw-ag-loai` to nổi GIỮA (nghiêng −3°, viền trắng,
+  bóng, màu theo LOẠI — `loaiCuaAct` Đợt 516 giữ nguyên, act không "/" vẫn ghi tên template màu xám). Dải TÊN `.aw-ag-ten` LUÔN cao đúng
+  2 dòng (`height: calc(2*1.22em + 12px)` = 40 px mọi thẻ), chữ căn giữa dọc + ngang, `<span>` bên trong cắt "…" sau 2 dòng.
+  `previewPick` nay bỏ qua gợi ý không phải chuỗi. Danh sách (list view): ẩn phần xem trước, viên LOẠI 116×44 như cũ.
+- **Quick access**: nền TRONG SUỐT (trùng nền trang `#eaf2fb`) · rộng = từ mép trái cột tới mép phải nút tạo CUỐI CÙNG trên thanh công cụ
+  (`+ New folder`; đầu Courses là `+ New course`) — `canhQuickAccess()` đặt `--aw-qa-w` (160–380 px, ngoài khoảng ⇒ 214 px) ·
+  ruột `.aw-qa-in` `overflow-y:auto`, `max-height` = phần cột đang LỘ trong cửa sổ (đo lại khi cuộn/đổi cỡ/font tải xong) ⇒ không bao giờ
+  thò quá đáy màn hình, nhiều dòng cuộn ngay trong cột (ghim + Recent cuộn chung) · tên dài MỜ DẦN ở cuối (mask-image) thay "…".
+  ⛔ `.aw-fm-withqa > .aw-qa { contain: size }` là BẮT BUỘC: thiếu nó thì chiều cao ruột đẩy cao trang ⇒ cuộn đổi ⇒ JS đo lại = vòng lặp
+  tự đọc kết quả của chính nó (đã thấy trên bàn thử: trang 869 ⇄ 741 px).
+- **Con lăn** (`moTheMoiKhiBamLan`): bấm nút giữa vào thẻ act / thẻ thư mục / dòng Quick access / mắt xích đường dẫn ⇒ `window.open(linkFor(node))`
+  thẻ mới; chặn `mousedown` nút giữa để khỏi bật cuộn tự động. `click` thường không đổi.
+- **Thử:** bàn thử Firebase giả `_thu524/ban.html` (import map `/core/firebase.js` → `fake-firebase221.js` + `fake-classes.js` chép từ `scratch/`,
+  KHÔNG commit, đã xoá) qua `devserver.py 8524`: 9 thẻ act đều 142 px (xem trước 100 + tên 40) · Quick access 246 px = đúng mép phải
+  "+ New folder" (cả khổ 1595 lẫn 655) · cửa sổ 1280×620: ruột 397 px kết thúc ở 610 < 620, cuộn trong cột, trang đứng yên 741 px khi cuộn ·
+  đúp THẬT vào "LESSON 3" ⇒ toast `Copied “LESSON 3”` · con lăn (sự kiện giả) ⇒ `?f=3&a=20` / `?f=5` / `?f=1` / `?f=6`, trang không đổi ·
+  list view · console 0 lỗi.
+- ⬜ thầy thử thật: con lăn bằng chuột thật (trình duyệt + trong myLesson), cỡ Quick access trên màn 86", đọc chữ nhãn C trên thẻ nhỏ.
+
 ## Đợt 523 (14/10/2026) — MÀN iPAD BỚT NÓNG: ROCKET RACE + TRAIN RUSH (đo GPU, 25 khung/giây, độ nét 1,5)
 
 **Thầy:** "chơi Rocket Race với iPad thấy khá nóng — nghiên cứu, đo đạc phương án (vd giảm fps xuống 25), trên iPad không cần mượt" (+ Train Rush).

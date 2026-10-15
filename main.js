@@ -972,7 +972,42 @@ async function withQuickAccess(content) {
   const wrapRow = el("div", "aw-fm-withqa");
   wrapRow.append(await quickAccess(), content);
   content.classList.add("aw-fm-qamain");
+  setTimeout(canhQuickAccess, 0);           // ⭐ Đợt 524 — đo khi hàng đã nằm trong trang (setTimeout: chạy cả khi tab
+  requestAnimationFrame(canhQuickAccess);   //   chưa vẽ khung nào; rAF: đo lại sau khung vẽ đầu tiên)
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(canhQuickAccess);   // font web đổi bề ngang nút
   return wrapRow;
+}
+
+// ⭐⭐ Đợt 524 (thầy 15/10/2026, mẫu v6) — cột Quick access:
+// (1) RỘNG tới hết nút "+ New folder" (nút tạo CUỐI CÙNG trên thanh công cụ — ở đầu Courses là "+ New course")
+//     cho cân với thanh nút; thanh công cụ xuống dòng / chưa có nút ⇒ giữ 214 px.
+// (2) CAO vừa màn hình: ruột `.aw-qa-in` (dính trên cùng khi cuộn) không bao giờ thò quá mép dưới cửa sổ —
+//     nhiều dòng thì cuộn NGAY TRONG cột. Chiều cao = từ mép trên của ruột tới đáy cửa sổ, đo lại khi cuộn/đổi cỡ.
+// ⚠️ Chỉ đo VỊ TRÍ nút + mép trên ruột, KHÔNG đọc lại cỡ của chính cột (bài học `sizeQuickAccess()` Đợt 221).
+function canhQuickAccess() {
+  const qa = document.querySelector(".aw-fm-withqa > .aw-qa");
+  if (!qa) return;
+  const nuts = document.querySelectorAll(".aw-fm-toolbar .aw-fm-newbtn");
+  const nut = nuts[nuts.length - 1];
+  if (nut) {
+    const w = Math.round(nut.getBoundingClientRect().right - qa.getBoundingClientRect().left);
+    if (w >= 160 && w <= 380) qa.style.setProperty("--aw-qa-w", w + "px");
+    else qa.style.removeProperty("--aw-qa-w");
+  }
+  const ruot = qa.querySelector(".aw-qa-in");
+  if (ruot) {
+    // khoảng cột đang LỘ trong cửa sổ: từ mép trên (hoặc đỉnh cửa sổ khi đã cuộn qua) tới đáy cửa sổ (hoặc đáy cột khi
+    // cuộn hết trang) — ruột dính `top:0` nên luôn nằm gọn trong khoảng này, không bị đáy cột đẩy lên khuất đầu.
+    const r = qa.getBoundingClientRect();
+    const lo = Math.min(window.innerHeight, r.bottom) - Math.max(0, r.top);
+    ruot.style.maxHeight = Math.max(160, Math.floor(lo - 10)) + "px";
+  }
+}
+{
+  let hen = 0;
+  const henDo = () => { if (!hen) hen = requestAnimationFrame(() => { hen = 0; canhQuickAccess(); }); };
+  window.addEventListener("scroll", henDo, { passive: true });
+  window.addEventListener("resize", henDo);
 }
 
 // In ACTIVITIES we do not show assignments, but we still want the "new results"
@@ -1268,6 +1303,7 @@ function qaRecentSection(byId) {
     ic.style.color = node.color || FOLDER_DEFAULT_COLOR;
     label.append(ic, el("span", "aw-qa-name", escapeText(itemName(node))));
     label.onclick = () => enterFolder(node.root, node.id);
+    moTheMoiKhiBamLan(label, () => linkFor(node));   // ⭐ Đợt 524 — con lăn = thẻ mới
     row.append(label);
     // Same drop rule as a pinned row: drag a card onto it to move the card there.
     // ⚠️ No `makePinDraggable` here — this list's order is a fact (when you last
@@ -1308,6 +1344,7 @@ function qaBranch(node, depth, ctx) {
   ic.style.color = node.color || FOLDER_DEFAULT_COLOR;
   label.append(ic, el("span", "aw-qa-name", escapeText(itemName(node))));
   label.onclick = () => enterFolder(node.root, node.id);
+  moTheMoiKhiBamLan(label, () => linkFor(node));   // ⭐ Đợt 524 — con lăn = thẻ mới
 
   row.append(arrow, label);
   if (ctx.pinnedRoot) {
@@ -1450,7 +1487,17 @@ async function breadcrumb() {
     bc.append(sep());
     const isCurrent = i === chain.length - 1;
     const b = el(isCurrent ? "span" : "button", "aw-crumb" + (isCurrent ? " is-current" : ""), escapeText(itemName(f)));
-    if (!isCurrent) b.onclick = () => enterFolder(state.root, f.id);
+    if (!isCurrent) {
+      b.onclick = () => enterFolder(state.root, f.id);
+      moTheMoiKhiBamLan(b, () => linkFor(f));
+    } else {
+      // ⭐ Đợt 524 (thầy 15/10/2026) — đúp vào tên thư mục ĐANG ĐỨNG (chữ đen) ⇒ sao chép đúng tên đó.
+      b.title = "Double-click to copy the name";
+      b.ondblclick = async () => {
+        const ten = String(itemName(f) || "");
+        toast(await copyText(ten) ? `Copied “${ten}”` : "Could not copy");
+      };
+    }
     makeDropTarget(b, () => f.id, f);    // drop an item onto an ancestor folder crumb
     bc.append(b);
   });
@@ -1623,6 +1670,7 @@ function folderCard(node, counts, assignmentCount = 0, hasNews = false) {
   info.append(el("div", "aw-card-name", escapeText(itemName(node))));
   foot.append(info);                           // ⭐ Đợt 516 — bỏ ⋮: chuột phải (máy tính) / giữ (điện thoại, iPad)
   card.append(foot);
+  moTheMoiKhiBamLan(card, () => linkFor(node));   // ⭐ Đợt 524 — bấm con lăn = mở thư mục ở thẻ mới
   attachContextMenu(card, () => folderMenuItems(node));
 
   makeDraggable(card, node);
@@ -1651,7 +1699,7 @@ function previewPick(node) {
   const it = list[Math.floor(Math.random() * list.length)];
   const question = it.question || it.prompt || it.clue || it.definition ||
                    it.sentence || it.text || it.word || "";
-  if (!question) return null;
+  if (!question || typeof question !== "string") return null;   // ⭐ Đợt 524 — gợi ý dạng object (bộ nghĩa) không hiện thô
   let answers = [];
   if (Array.isArray(it.answers)) answers = it.answers.map(a => a.text || "").filter(Boolean);
   else if (Array.isArray(it.acceptedAnswers)) answers = it.acceptedAnswers.filter(Boolean);
@@ -1711,9 +1759,28 @@ function actCard(node) {
   card.title = itemName(node);
   card.onclick = () => playAct(node.id);
 
+  // ⭐⭐ Đợt 524 (thầy chốt 15/10/2026, mẫu `myLesson - thiet ke khung explorer\mau-v6.html` kiểu C) — nửa trên
+  // = XEM TRƯỚC nội dung act (một câu ngẫu nhiên + 2 đáp án, như thẻ trước Đợt 516), nhãn LOẠI to nổi GIỮA thẻ,
+  // nội dung phía sau làm mờ. Dải TÊN dưới luôn cao đúng 2 dòng (CSS), tên ngắn căn giữa.
   const tren = el("div", "aw-ag-tren");
-  tren.style.background = l.mau;
-  tren.append(el("div", "aw-ag-loai" + (l.xam ? " is-xam" : ""), escapeText(l.loai)));
+  const xem = el("div", "aw-ag-xem");
+  const pick = previewPick(node);
+  if (pick) {
+    xem.append(el("div", "aw-ag-q", escapeText(pick.question)));
+    if (pick.answers.length) {
+      const chips = el("div", "aw-ag-chips");
+      pick.answers.slice(0, 2).forEach((text, i) => {
+        const chip = el("div", "aw-ag-chip", escapeText(text));
+        chip.style.background = PREVIEW_COLORS[i % PREVIEW_COLORS.length];
+        chips.append(chip);
+      });
+      xem.append(chips);
+    }
+  }
+  tren.append(xem);
+  const loai = el("div", "aw-ag-loai" + (l.xam ? " is-xam" : ""), escapeText(l.loai));
+  loai.style.background = l.mau;
+  tren.append(loai);
   const playBtn = el("button", "aw-ag-play", icons.playBig);
   playBtn.type = "button"; playBtn.title = "Play";
   playBtn.onclick = e => { e.stopPropagation(); playAct(node.id); };
@@ -1724,15 +1791,30 @@ function actCard(node) {
     tren.append(voiceBadge);
   }
   card.append(tren);
-  const ten = el("div", "aw-ag-ten", escapeText(l.ten));
+  const ten = el("div", "aw-ag-ten");
+  ten.append(el("span", null, escapeText(l.ten)));   // span = chỗ cắt 2 dòng; khối ngoài giữ chiều cao cố định
   ten.style.color = l.xam ? LOAI_ACT_XAM : l.mau;
   card.append(ten);
   // an act wears the dot when one of ITS assignments has new results
   if (actHasNews(node.id)) card.append(newDot("New results in an assignment"));
 
+  moTheMoiKhiBamLan(card, () => linkFor(node));   // ⭐ Đợt 524 — bấm con lăn = mở act ở thẻ mới
   attachContextMenu(card, () => actMenuItems(node));
   makeDraggable(card, node);   // an act can be dragged into a folder / breadcrumb
   return card;
+}
+
+// ⭐ Đợt 524 (thầy 15/10/2026) — bấm CON LĂN (nút giữa) vào thẻ act / thư mục / dòng Quick access / mắt xích
+// đường dẫn ⇒ mở chỗ đó ở THẺ trình duyệt MỚI (dùng đúng link `linkFor` như nút Copy link). Chặn mousedown nút
+// giữa để trình duyệt khỏi bật chế độ cuộn tự động; `click` thường không bắn với nút giữa nên không đụng hành vi cũ.
+function moTheMoiKhiBamLan(target, urlFn) {
+  target.addEventListener("mousedown", e => { if (e.button === 1) e.preventDefault(); });
+  target.addEventListener("auxclick", async e => {
+    if (e.button !== 1) return;
+    e.preventDefault(); e.stopPropagation();
+    const url = await urlFn();
+    if (url && !/=undefined\b/.test(url)) window.open(url, "_blank", "noopener");
+  });
 }
 
 // ---------------- drag & drop (move into folders / breadcrumb) ----------------
