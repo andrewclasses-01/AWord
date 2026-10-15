@@ -23,7 +23,7 @@ SRC = r"E:/LAP TRINH APP/myGame/speed-run"
 QR = r"E:/LAP TRINH APP/myGame/maze-chase/core/mc3d-qr.js"
 WEB = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DST = os.path.join(WEB, "templates", "racing-words")
-GOC = "rw-3o.js"   # Đợt 527: 3o — gói nhúng (intro xưởng + trận + âm thanh thật + iPad) · Options = bảng thật của AWord (host.options)
+GOC = "rw-3p.js"   # Đợt 529: 3p = 3o + chạm đúp bỏ intro + tối ưu (gộp lưới xe, bỏ kính transmission, số đo xe đo sẵn, dịch sẵn shader). Đợt 527: 3o — gói nhúng
 GOC_THEM = ["sr3d-padui-3m.js", "sr3d-padlink-3e.js"]   # màn iPad (pad.js nạp) + đường nối iPad (racing-words.js nạp createPadHost)
 CSS = ["sr3d-3g.css", "sr3d-3l.css", "sr3d-intro-3o.css", "rw-3o.css"]
 BO_XE = {"H3"}     # Bugatti Divo: CC-BY-NC — thầy chốt bỏ (lớp học có thu phí)

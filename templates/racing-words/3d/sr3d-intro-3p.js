@@ -1,3 +1,4 @@
+// RACING WORDS mẫu 3p (15/10/2026) = sr3d-intro-3o.js, chỉ đổi nguồn xe sang sr3d-car-3p.js (gộp mảnh + số đo sẵn ⇒ dựng xe ở xưởng 6–210 ms thay vì 0,2–3,4 s).
 // RACING WORDS mẫu 3o = sr3d-intro-3n.js + dòng GHI CÔNG mẫu 3D (tên mẫu · tác giả · CC-BY 4.0) dưới ô chọn xe; xe từ sr3d-xe3d-3o.js / sr3d-car-3o.js; destroy() trả card đồ hoạ (forceContextLoss).
 // =============================================================
 // RACING WORDS — INTRO XƯỞNG ANDREW STUDIO (mẫu 3n, 15/10/2026). Thầy chọn kịch bản A (tương tự intro Rocket Race):
@@ -16,7 +17,7 @@ import { RenderPass } from "../../rocket-race/vendor/three/addons/RenderPass.js"
 import { UnrealBloomPass } from "../../rocket-race/vendor/three/addons/UnrealBloomPass.js";
 import { OutputPass } from "../../rocket-race/vendor/three/addons/OutputPass.js";
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
-import { makeCar3d } from "./sr3d-car-3o.js";
+import { makeCar3d } from "./sr3d-car-3p.js";
 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const lerp = (a, b, t) => a + (b - a) * t;

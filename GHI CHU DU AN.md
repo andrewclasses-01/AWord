@@ -546,6 +546,33 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 529 (15/10/2026) — RACING WORDS MƯỢT (myGame mẫu 3p) + CHẠM ĐÚP BỎ INTRO
+
+**Thầy** (sau Đợt 528): "double tap vào intro để vào màn chuẩn bị start luôn" · "game chạy được nhưng khá lag — tham khảo cách tối ưu của Train Rush, trải nghiệm mượt nhất".
+
+**Đo bản 3o** (Chrome thật điều khiển qua CDP — khung trình duyệt trong app bị ẩn nên rAF đứng; RTX 4060, cửa sổ 1920×1080):
+- Bấm START ⇒ đứng hình **4,3 s + 5,3 s** (shader 4 ⇒ 78 dịch ngay khung đầu của trận). Giữa trận khựng ~200 ms ở lần tên lửa / nổ / vết cháy đầu tiên.
+- **1.092 lệnh vẽ/khung** — xe Sketchfab tới 1.107 mảnh lưới, cộng bản sao mũi xe ở buồng lái; **nghẽn CPU** (9,2 ms/khung), hạ độ nét không đỡ ⇒ bộ tự chỉnh chỉ làm mờ (0,8, tắt MSAA).
+- Kính **transmission** (5/13 xe) bắt three.js vẽ lại cả cảnh mỗi camera mỗi khung.
+- **Dựng 1 xe 0,2–3,6 s** (~97 % là raycast đo nóc / chân kính / capô / chỗ biển số), mỗi xe dựng 2 lần ⇒ "LOADING CARS rất lâu". Vết cháy 6–110 ms giữa trận.
+
+**Sửa ở myGame** (mẫu 3p, `a3a586a`, hồ sơ `myGame/speed-run/NGHIEN CUU GAMEPLAY.md` mục 28), chép bằng `python -X utf8 tools/chep-racing-words.py` (GOC = `rw-3p.js`):
+- `3d/sr3d-car-3p.js`: `mergeStatic` gộp mảnh tĩnh cùng vật liệu (Y4 1.107 ⇒ 79 mảnh; bánh giữ riêng, 13/13 xe vẫn quay) · `noTransmission` · số đo xe từ bảng
+  `3d/sr3d-carmeta-3p.js` (13 xe; xe lạ đo 1 lần) ⇒ dựng xe 6–211 ms · cắt mũi xe bằng shader (`hoodClip`) thay clippingPlanes · chỗ cháy làm sẵn (`prepBurns`).
+- `3d/sr3d-3p.js`: `prewarm()` lúc thầy ở xưởng — `compileAsync` với đích vẽ = render target composer, 2 kiểu số đèn (camera ngoài xe / buồng lái), vật liệu hậu kỳ,
+  texture đẩy lên card từng cái, 1 khung ẩn; `pinPrograms()` mỗi 30 khung; khoá nhớ độ nét bộ tự chỉnh đổi `rw-3p`.
+- `3d/rw-3p.js`: **CHẠM ĐÚP** lúc phim intro chiếu (≤ 350 ms, lệch ≤ 40 px, không tính nút) ⇒ vào thẳng 5 đèn; START / chạm đúp chờ prewarm (tối đa 4 s).
+- `racing-words.js`: `GAME = "./3d/rw-3p.js"`. CSS / xe / âm thanh / iPad (`sr3d-padui-3m.js`) không đổi.
+
+**Đo sau:** START ⇒ đèn không khựng (khung dài nhất 24 ms) · đua **85–144 khung/giây ở độ nét 1,0 + MSAA** (3o: 46–65 ở 0,8 không MSAA) · ~380–430 lệnh vẽ, CPU ~5 ms/khung ·
+cả ván 0 khung > 70 ms (trừ lần làm sẵn vết cháy ở bảng kết quả — cố ý). Bàn thử AWord `scratch/dot529-rw.html` (engine thật, act giả 8 câu): START ▸ chạm đúp ⇒ `is-race`,
+99–147 khung/giây, không lỗi. Ảnh xưởng + buồng lái 3o/3p cùng góc giống nhau (sai khác 0,6/255).
+⚠️ Lần ĐẦU TIÊN trên một máy, trình duyệt dịch shader lạnh ⇒ prewarm có thể tới ~30 s (chạy ngầm ở xưởng; START chờ tối đa 4 s rồi vào luôn); các lần sau trình duyệt dùng shader đã lưu (2–4 s).
+⚠️ Cú khựng ~200 ms chỉ còn khi bộ tự chỉnh NÂNG độ nét (cấp lại khung đệm) — hết sau khi đã nhớ mức êm.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy chơi trên TOMKO trong myActivity (Quadro T2000, 4K, `__awMaxPR = 1`) — còn lag không, chạm đúp bỏ intro có tiện không, kính xe (bỏ transmission) trông ổn không ·
+⬜ việc chờ của Đợt 528 / 527.
+
 ## Đợt 528 (15/10/2026) — RACING WORDS TRONG MÀN CHỌN OPTIONS: XƯỞNG XE ĐÈ MÀN CHỌN · GAME KẸT 5 ĐÈN ĐỎ
 
 **Thầy** (chạy trong myActivity, kèm ảnh 2 đội đứng ở 5 đèn đỏ, 0 km/h): nạp xe rất lâu · đứng hình ở khung đó, không chơi được ·

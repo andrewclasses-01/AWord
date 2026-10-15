@@ -1,3 +1,10 @@
+// RACING WORDS — LÕI MẪU 3p (15/10/2026, thầy: "khá lag — tham khảo cách tối ưu của Train Rush") = sr3d-3o.js + DỊCH SẴN SHADER:
+//   đo Chrome thật (RTX 4060): bấm START ⇒ ĐỨNG HÌNH 4,3 s rồi 5,3 s (shader 4 ⇒ 78 dịch ngay khung đầu của trận), giữa trận thêm cú khựng
+//   ~200 ms mỗi lần tên lửa / nổ / vết cháy đầu tiên (vật liệu mới; dispose xong lần sau lại dịch lại). Như TRAIN RUSH 1am / STAR LOOT 2p:
+//   · prewarm(): lúc đang ở xưởng (game hold) — sinh MẪU tên lửa + nổ + vết cháy, renderer.compileAsync cả cảnh (không chặn khung),
+//     rồi vẽ 1 khung ẩn với mọi lớp camera (dịch nốt biến thể cắt mũi xe + hậu kỳ), dọn mẫu · pinPrograms() mỗi 30 khung giữ shader sống
+//   · xe gộp mảnh + bỏ kính transmission ở sr3d-car-3p.js (1.092 ⇒ ~430 lệnh vẽ/khung)
+// ---- gốc 3o ----
 // RACING WORDS — LÕI MẪU 3o (15/10/2026) = sr3d-3n.js + CHỖ NỐI AWORD (thầy "đưa lên AWord, sử dụng options của AWord" ⇒ "ok build", khuôn STAR LOOT 2o):
 //   · createSpeedRun({ …, host }): host = cầu AWord (ui.host): options(ov) · listActs() / openAct(id) · templates() / switchTemplate(t) · home()
 //   · nút Options ⇒ host.options({layer, top, onClose}) = bảng Options THẬT của AWord gắn trên game, game DỪNG tới khi bảng đóng;
@@ -109,7 +116,7 @@ import { ShaderPass } from "../../rocket-race/vendor/three/addons/ShaderPass.js"
 import { UnrealBloomPass } from "../../rocket-race/vendor/three/addons/UnrealBloomPass.js";
 import { OutputPass } from "../../rocket-race/vendor/three/addons/OutputPass.js";
 import { RoomEnvironment } from "../../rocket-race/vendor/three/addons/RoomEnvironment.js";
-import { makeCar3d } from "./sr3d-car-3o.js";
+import { makeCar3d } from "./sr3d-car-3p.js";
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
 import { createWorld, makeBend, HAZE } from "./sr3d-world-3.js";
 import { makeAutoRes } from "./sr3d-autores.js";
@@ -303,6 +310,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     try { await prepXe(id); } catch (e) { console.error(e); H[i].el.classList.remove("is-loading"); return false; }
     if (my !== pickTok[i] || dead) return false;
     rebuildCar(i); H[i].el.classList.remove("is-loading"); onEvent("car", { team: i, id });
+    warmP = null; prewarm();                                   // 3p: xe mới = vật liệu mới ⇒ dịch sẵn lại
     return true;
   }
   function stepCar(i, d) {
@@ -622,6 +630,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     G.slow = SLOW_T; G.cineW = w; mount.classList.add("is-cine");
     const b = $(".sr-banner");
     later(0.62, () => { b.textContent = TEAMS[w].name + " WINS!"; b.style.setProperty("--team", TEAMS[w].color); b.className = "sr-banner on"; });
+    later(0.62 + 3.2 + 0.4, () => prepBurnsSoft());           // 3p: bảng kết quả đứng yên ⇒ làm lại chỗ cháy cho ván sau
     later(0.62 + 3.2, () => {
       $(".sr-res-title").innerHTML = `<span style="color:${TEAMS[w].color}">${TEAMS[w].name}</span> WINS`;
       $(".sr-res-rows").innerHTML = T.map(t => `<div style="--team:${TEAMS[t.i].color}"><b>${TEAMS[t.i].name}</b><span>${Math.round(Math.min(t.s, FIN))} / ${FIN} m</span><span>✔ ${t.ok} · ✘ ${t.bad_}</span><span>🚀 ${t.hits} hit${t.hits === 1 ? "" : "s"}</span></div>`).join("");
@@ -1184,7 +1193,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   }
 
   // ---------- vòng vẽ ----------
-  const AR = makeAutoRes({ max: PR_MAX, min: Math.min(0.8, PR_MAX), key: "speedrun-3h", apply: pr => { renderer.setPixelRatio(pr); fit(true); },
+  const AR = makeAutoRes({ max: PR_MAX, min: Math.min(0.8, PR_MAX), key: "rw-3p", apply: pr => { renderer.setPixelRatio(pr); fit(true); },
     aa: { on: true, set: on => { const ns = on ? 4 : 0; for (const r of [composer.renderTarget1, composer.renderTarget2]) if (r.samples !== ns) { r.samples = ns; r.dispose(); } } } });
   let W = 0, Hh = 0;
   function fit(force) {
@@ -1195,8 +1204,59 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   }
   const ro = new ResizeObserver(() => fit()); ro.observe(stage); fit(true);
 
+  // ---------- 3p: dịch sẵn shader + giữ shader sống (TRAIN RUSH 1am / STAR LOOT 2p) ----------
+  function pinPrograms() { const ps = renderer.info.programs; if (ps) for (const p of ps) if (!p.__pin3p) { p.__pin3p = true; p.usedTimes++; } }
+  let warmP = null, warmInfo = null;
+  // 3p: mỗi xe 3 chỗ cháy làm sẵn — từng chỗ một, nghỉ giữa các lần (mỗi lần 6–110 ms) ⇒ không dồn thành một cú đơ
+  async function prepBurnsSoft(n = 3) {
+    for (let k = 1; k <= n && !dead; k++) {
+      for (const c of cars) { if (dead) return; try { c.prepBurns && c.prepBurns(k); } catch (e) { /* */ } await new Promise(r => setTimeout(r, 40)); }
+    }
+  }
+  function prewarm() {
+    if (warmP) return warmP;
+    warmP = (async () => {
+      const t0 = performance.now(), n0 = renderer.info.programs.length; let tC = t0, tR = t0, nC = 0, tT = t0, nT = 0;
+      // mẫu những thứ CHỈ sinh lúc đua: tên lửa bay (vòng ngắm, cột sáng, lửa đuôi) · nổ (quả cầu lửa, vết cháy đường) · vết cháy trên thân xe
+      try { missiles.launch({ from: 0, to: 1, x: 0, y: -40, z: 0, predict: () => ({ x: 0, s: 0 }) }); missiles.boom(0, 0, "hit"); } catch (e) { /* */ }
+      cars.forEach(c => { try { c.burn && c.burn(0); } catch (e) { /* */ } });
+      // khoá shader gồm SỐ ĐÈN camera thấy: đèn lửa pô mỗi xe nằm ở lớp của đội ⇒ camera buồng lái (lớp 0 · xe kia · mũi xe mình) thấy 2 đèn điểm,
+      // camera ngoài xe / về đích (lớp 0 · 2 xe) thấy 3 ⇒ dịch CẢ HAI kiểu. compile() bỏ qua clippingPlanes của vật liệu ⇒ mũi xe (cắt ở chân kính)
+      // phải qua 1 khung vẽ thật với lớp buồng lái.
+      const lay = cams.map(c => c.layers.mask), setL = (c, a) => { c.layers.set(a[0]); a.slice(1).forEach(l => c.layers.enable(l)); };
+      const LAY = [[0, 2, 3], [0, 1, 4]];                          // buồng lái của đội 0 / đội 1 (= updateCams)
+      try {
+        // ⚠️ đích vẽ = render target của composer (game KHÔNG vẽ thẳng ra màn) — không thì khoá shader lệch (tone mapping / hệ màu) ⇒ dịch phí
+        const cA = l => { setL(cams[0], l); renderer.setRenderTarget(composer.renderTarget1); const p = renderer.compileAsync(scene, cams[0]); renderer.setRenderTarget(null); return p; };
+        if (renderer.compileAsync) { await cA([0, 1, 2]); if (!dead) await cA(LAY[0]); }
+        // vật liệu hậu kỳ (bloom: lọc sáng / làm mờ 5 tầng / ghép · nhoè hướng tâm) — vẽ vào render target ⇒ dịch ngầm với đích đó.
+        // OutputPass tự đặt define ở lần vẽ đầu ⇒ để khung ẩn lo (1 shader).
+        if (renderer.compileAsync && !dead) {
+          const pm = new Set(), quad = new THREE.PlaneGeometry(2, 2), sc = new THREE.Scene();
+          composer.passes.forEach(p => { if (p instanceof OutputPass) return; Object.values(p).forEach(v => { if (v && v.isMaterial) pm.add(v); else if (Array.isArray(v)) v.forEach(x => x && x.isMaterial && pm.add(x)); }); });
+          pm.forEach(m => { const q = new THREE.Mesh(quad, m); q.frustumCulled = false; sc.add(q); });
+          renderer.setRenderTarget(composer.renderTarget1); const pp = renderer.compileAsync(sc, cams[0]); renderer.setRenderTarget(null);
+          await pp; quad.dispose();
+        }
+        tC = performance.now(); nC = renderer.info.programs.length;
+      } catch (e) { /* dịch lúc vẽ như cũ */ }
+      // ảnh (texture) đẩy lên card từng cái một, nghỉ giữa chừng — không dồn vào khung ẩn bên dưới thành một cú đơ dài
+      { const tx = new Set(); scene.traverse(o => { (Array.isArray(o.material) ? o.material : o.material ? [o.material] : []).forEach(m => { for (const k in m) { const v = m[k]; if (v && v.isTexture && !v.isRenderTargetTexture) tx.add(v); } }); });
+        let tq = performance.now(); for (const t of tx) { if (dead) break; try { renderer.initTexture(t); } catch (e) { /* */ } if (performance.now() - tq > 12) { await new Promise(r => setTimeout(r, 0)); tq = performance.now(); } }
+        tT = performance.now(); nT = tx.size; }
+      if (!dead) { cams.forEach((c, i) => setL(c, LAY[i])); fit(true); composer.render(); }   // khung ẩn: mũi xe (clipping) + bloom / nhoè / output
+      cams.forEach((c, i) => { c.layers.mask = lay[i]; }); tR = performance.now();
+      try { missiles.update(10, G.t); missiles.clear(); } catch (e) { /* */ }
+      cars.forEach(c => c.clearBurns && c.clearBurns());
+      pinPrograms();
+      await prepBurnsSoft();                                     // chỗ cháy làm sẵn (trúng tên lửa không phải dò tia giữa trận)
+      warmInfo = { ms: Math.round(performance.now() - t0), compile: Math.round(tC - t0), tex: Math.round(tT - tC) + "ms/" + nT, render: Math.round(tR - tT), burns: Math.round(performance.now() - tR), programs: [n0, nC, renderer.info.programs.length] };
+    })();
+    return warmP;
+  }
+
   const RC = new THREE.Vector3(), RA = new THREE.Vector3();
-  let raf = 0, last = 0, manual = false, dead = false, fpsN = 0, fpsT = 0, fps = 0;
+  let raf = 0, last = 0, manual = false, dead = false, fpsN = 0, fpsT = 0, fps = 0, pinT = 0;
   function frame(dt) {
     if (G.slow > 0) {                                        // SLOW MOTION về đích: vào chậm 0,3 s, ×0,2, ra lại nhanh cuối
       G.slow -= dt; const p = 1 - G.slow / SLOW_T;
@@ -1264,6 +1324,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     if (manual) return;
     const dt = Math.min(0.05, last ? (now - last) / 1000 : 1 / 60); last = now;
     if (G.hold) return;                                                          // 3n: intro đang chiếu ⇒ không vẽ cảnh đua
+    if (++pinT >= 30) { pinT = 0; pinPrograms(); }                                // 3p: giữ shader sống
     fit(); if (!G.paused) frame(dt); composer.render(); AR.frame(now);   // 3j: MENU mở ⇒ đứng hình
     fpsN++; if (now - fpsT > 1000) { fps = fpsN; fpsN = 0; fpsT = now; onEvent("fps", fps); }
   }
@@ -1285,6 +1346,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     arm(i, n = 1) { T[i].ms = clamp(n, 0, opt.msMax); },
     nitro(i, k = 1) { T[i].N = clamp(k, 0, 1); },
     hold(v) { G.hold = !!v; if (!v) last = 0; },
+    prewarm, get warm() { return warmInfo; },                // 3p
     // 3o: Options ▸ Apply của AWord. Cùng/khác câu hỏi + số tên lửa áp ngay (true); đường / vòng / cầu nhảy đổi ⇒ false (AWord dựng lại cả game)
     setOptions(o = {}) {
       if (dead) return false;

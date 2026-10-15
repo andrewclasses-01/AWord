@@ -1,4 +1,9 @@
 // =============================================================
+// RACING WORDS — GÓI NHÚNG mẫu 3p (15/10/2026) = rw-3o.js + (thầy: "double tap vào intro để vào màn chuẩn bị start luôn" · "khá lag, tham khảo Train Rush"):
+//   · CHẠM ĐÚP lúc phim intro đang chiếu ⇒ bỏ phim, vào thẳng 5 đèn xuất phát (intro.skip = handoff)
+//   · game.prewarm() ngay khi dựng xong (thầy còn ở xưởng): dịch sẵn shader cả trận; START / chạm đúp chờ nó xong (thường đã xong từ lâu)
+//   · lõi sr3d-3p.js + xe sr3d-car-3p.js (gộp mảnh, bỏ kính transmission) — chi tiết ở đầu 2 file đó
+// ---- gốc 3o ----
 // RACING WORDS — GÓI NHÚNG mẫu 3o (15/10/2026) để AWord nạp (thầy: "đưa lên AWord, sử dụng options của AWord" ⇒ "ok build").
 // Gom những gì trang thử page-3n.js làm (intro xưởng, trận đua, âm thanh, iPad, tải xe) thành MỘT hàm, KHÔNG có bàn thử, KHÔNG biến window.__*,
 // mọi bộ đếm giờ / listener / AudioContext / khung WebGL đều dỡ ở destroy() (AWord dựng lại game khi Apply / đổi act).
@@ -12,9 +17,9 @@
 //   onEvent   : (k, v) — "pad" (iPad nối / mất nối), "padMode", "end", …
 // ⇒ { setOptions(o) (true = áp ngay, false = AWord dựng lại), destroy(), game, intro }
 // =============================================================
-import { createSpeedRun } from "./sr3d-3o.js";
+import { createSpeedRun } from "./sr3d-3p.js";
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
-import { createIntro } from "./sr3d-intro-3o.js";
+import { createIntro } from "./sr3d-intro-3p.js";
 import { createSound } from "./sr3d-sound-3o.js";
 
 const CARS_KEY = "speedrun.cars";            // xe 2 đội nhớ THEO MÁY (thầy chọn ở màn chờ xưởng)
@@ -55,10 +60,22 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
     onSetCar: (i, id) => { game.setCar(i, id); try { localStorage.setItem(CARS_KEY, JSON.stringify(intro ? intro.cars : cars)); } catch (e) { /* */ } },
     onCue: (n, t) => introCue(n, t),
     onHandoff: () => {
-      introOn = false; game.hold(false); game.start();
+      introOn = false;
+      // 3p: chờ dịch sẵn shader (tối đa 4 s) rồi mới vào trận ⇒ không đứng hình ở 5 đèn đỏ
+      Promise.race([warm, new Promise(r => setTimeout(r, 4000))]).then(() => { if (dead) return; game.hold(false); game.start(); });
       after.style.transition = "none"; after.style.opacity = "1";
       requestAnimationFrame(() => { if (dead) return; intro.hide(); after.style.transition = "opacity .6s ease-out"; after.style.opacity = "0"; });
     } });
+  // 3p: dịch sẵn shader ngay lúc thầy còn ở xưởng (compileAsync không chặn khung) · đổi xe ⇒ lõi tự dịch lại
+  const warm = game.prewarm().catch(e => console.warn("RW prewarm", e));
+  // 3p: CHẠM ĐÚP khi phim intro đang chiếu ⇒ vào thẳng màn xuất phát (2 lần chạm ≤ 350 ms, lệch ≤ 40 px)
+  let tap0 = null;
+  on(frame, "pointerdown", e => {
+    if (!intro || intro.state !== "play" || e.target.closest("button")) { tap0 = null; return; }
+    const now = performance.now();
+    if (tap0 && now - tap0.t < 350 && Math.hypot(e.clientX - tap0.x, e.clientY - tap0.y) < 40) { tap0 = null; intro.skip(); return; }
+    tap0 = { t: now, x: e.clientX, y: e.clientY };
+  }, { capture: true });
   // nút thử / tự chơi gọi thẳng game.start() ⇒ intro tự ẩn
   every(() => { if (introOn && game.state().phase !== "menu") { introOn = false; intro.hide(); game.hold(false); } }, 200);
 

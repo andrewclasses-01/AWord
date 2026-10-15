@@ -1,3 +1,11 @@
+// RACING WORDS mẫu 3p (15/10/2026, thầy: "khá lag — tham khảo cách tối ưu của Train Rush") = sr3d-car-3o.js + GỘP MẢNH:
+//   đo Chrome thật (RTX 4060): 1.092 lệnh vẽ/khung, ~1.000 là của 2 xe — xe Sketchfab ~250 mảnh lưới, lại thêm bản sao "mũi xe" ở buồng lái,
+//   frustumCulled tắt (thế giới cong) ⇒ CPU 9 ms/khung chỉ để gửi lệnh vẽ; hạ độ nét không đỡ được. Nay mỗi xe GỘP mọi mảnh TĨNH cùng vật liệu
+//   thành 1 mảnh (mergeStatic) — bánh (đã tách vào trục quay) để riêng; cây mảnh gốc giữ NGOÀI cảnh (ghost) chỉ để bắn tia / dán vết cháy.
+//   · ĐO SẴN: dựng 1 xe tốn 0,2–3,6 s (đo: ~97 % là raycast ~20 ms/tia × 150–300 tia tìm nóc / chân kính / capô / chỗ biển số), mỗi xe dựng 2 lần
+//     (xưởng + trận) ⇒ "LOADING CARS rất lâu" + đổi xe bị đơ. Kết quả chỉ phụ thuộc mẫu xe ⇒ bảng sr3d-carmeta-3p.js (đo sẵn 13 xe) + nhớ trong
+//     phiên (xe lạ đo 1 lần). carMeta() trả bảng đang nhớ (bàn thử sinh lại bảng khi đổi xe).
+//   · kính transmission ⇒ kính trong suốt thường (noTransmission)
 // RACING WORDS mẫu 3o = sr3d-car-3l.js (lửa pô thật), chỉ đổi nguồn xe sang sr3d-xe3d-3o.js (13 xe, bỏ Bugatti Divo CC-BY-NC — thầy chốt khi đưa lên AWord).
 // =============================================================
 // SPEED RUN 3D — XE 3D THẬT mẫu 3l (15/10/2026) = sr3d-car-3k.js + LỬA PÔ THẬT (thầy: "lửa xì ra từ xe trông giả quá, muốn giống thật"):
@@ -33,6 +41,7 @@
 import * as THREE from "../../rocket-race/vendor/three/three.module.min.js";
 import { DecalGeometry } from "../../rocket-race/vendor/three/addons/DecalGeometry.js";
 import { XE, buildXe, setPaint } from "./sr3d-xe3d-3o.js";
+import { CAR_META } from "./sr3d-carmeta-3p.js";
 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -130,6 +139,96 @@ void main(){
   gl_FragColor = vec4(col * k * (uEnd > 0.5 ? 0.7 : 0.85), k);
 }`;
 
+// ---- 3p: gộp mảnh tĩnh theo vật liệu ----
+// Mọi mảnh lưới (đang hiện) trong `src` ⇒ hình nướng sẵn toạ độ của `root`, gộp theo (vật liệu + bộ thuộc tính) ⇒ mảnh mới gắn vào root.
+// Thuộc tính nén (meshopt: Int16/Int8 chuẩn hoá) đổi về Float32 trước khi nướng. Ma trận lật (định thức âm) ⇒ đảo chiều tam giác.
+// Mảnh không gộp được (nhiều vật liệu, morph, skinned, instanced) ⇒ chuyển nguyên sang root (giữ vị trí thế giới).
+// 3p: kính "transmission" (khúc xạ thật — Y4 Y5 Y6 H4 H7) bắt three.js VẼ LẠI CẢ CẢNH vào một ảnh nền cho mỗi camera, mỗi khung
+//   (đo: 1 mảnh kính H4 kéo theo 192 lệnh vẽ) ⇒ đổi thành kính trong suốt thường (giữ màu / độ nhám, mờ 0,3–0,45).
+function noTransmission(m) {
+  if (!m || !(m.transmission > 0)) return;
+  m.transmission = 0; m.transparent = true;
+  m.opacity = m.opacity < 1 ? Math.min(0.45, Math.max(0.3, m.opacity + 0.08)) : 0.35;
+  m.needsUpdate = true;
+}
+const MERGE_ATTRS = ["position", "normal", "uv", "uv1", "uv2", "color", "tangent"];
+function toF32(a) {
+  const n = a.count, k = a.itemSize, out = new Float32Array(n * k);
+  for (let i = 0; i < n; i++) for (let j = 0; j < k; j++) out[i * k + j] = a.getComponent(i, j);
+  return new THREE.BufferAttribute(out, k);
+}
+export function mergeStatic(root, src) {
+  root.updateMatrixWorld(true);
+  const inv = root.matrixWorld.clone().invert(), M4 = new THREE.Matrix4(), N3 = new THREE.Matrix3(), V3 = new THREE.Vector3();
+  const groups = new Map(), loose = [];
+  const shown = o => { for (let p = o; p && p !== root; p = p.parent) if (!p.visible) return false; return true; };
+  src.traverse(o => {
+    if (!o.isMesh || !shown(o)) return;
+    const g = o.geometry;
+    if (Array.isArray(o.material) || o.isSkinnedMesh || o.isInstancedMesh || !g.attributes.position || Object.keys(g.morphAttributes || {}).length) { loose.push(o); return; }
+    const names = MERGE_ATTRS.filter(n => g.attributes[n]);
+    const key = o.material.uuid + "|" + names.map(n => n + g.attributes[n].itemSize).join(",") + "|" + o.renderOrder;
+    if (!groups.has(key)) groups.set(key, { mat: o.material, names, order: o.renderOrder, parts: [] });
+    groups.get(key).parts.push(o);
+  });
+  const out = [];
+  for (const { mat, names, order, parts } of groups.values()) {
+    let nv = 0, ni = 0;
+    for (const o of parts) { const g = o.geometry; nv += g.attributes.position.count; ni += g.index ? g.index.count : g.attributes.position.count; }
+    const arr = {}; names.forEach(n => { arr[n] = new Float32Array(nv * parts[0].geometry.attributes[n].itemSize); });
+    const idx = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
+    let vo = 0, io = 0;
+    for (const o of parts) {
+      const g = o.geometry, cnt = g.attributes.position.count;
+      M4.multiplyMatrices(inv, o.matrixWorld); N3.getNormalMatrix(M4);
+      for (const n of names) {
+        const a = g.attributes[n], k = a.itemSize, f = (a.array instanceof Float32Array && !a.isInterleavedBufferAttribute && !a.normalized) ? a : toF32(a), dst = arr[n];
+        for (let i = 0; i < cnt; i++) {
+          if (n === "position") { V3.fromBufferAttribute(f, i).applyMatrix4(M4); dst[(vo + i) * 3] = V3.x; dst[(vo + i) * 3 + 1] = V3.y; dst[(vo + i) * 3 + 2] = V3.z; }
+          else if (n === "normal") { V3.fromBufferAttribute(f, i).applyMatrix3(N3).normalize(); dst[(vo + i) * 3] = V3.x; dst[(vo + i) * 3 + 1] = V3.y; dst[(vo + i) * 3 + 2] = V3.z; }
+          else if (n === "tangent") { V3.set(f.getX(i), f.getY(i), f.getZ(i)).transformDirection(M4); const b = (vo + i) * 4; dst[b] = V3.x; dst[b + 1] = V3.y; dst[b + 2] = V3.z; dst[b + 3] = f.getW(i); }
+          else for (let j = 0; j < k; j++) dst[(vo + i) * k + j] = f.getComponent(i, j);
+        }
+      }
+      const flip = M4.determinant() < 0, gi = g.index;
+      const m = gi ? gi.count : cnt;
+      for (let t = 0; t < m; t += 3) {
+        const a = gi ? gi.getX(t) : t, b = gi ? gi.getX(t + 1) : t + 1, c = gi ? gi.getX(t + 2) : t + 2;
+        idx[io++] = vo + a; idx[io++] = vo + (flip ? c : b); idx[io++] = vo + (flip ? b : c);
+      }
+      vo += cnt;
+    }
+    const geo = new THREE.BufferGeometry();
+    names.forEach(n => geo.setAttribute(n, new THREE.BufferAttribute(arr[n], parts[0].geometry.attributes[n].itemSize)));
+    geo.setIndex(new THREE.BufferAttribute(idx, 1));
+    geo.computeBoundingSphere(); geo.computeBoundingBox();
+    const mesh = new THREE.Mesh(geo, mat); mesh.renderOrder = order; mesh.name = "merged:" + (mat.name || "");
+    root.add(mesh); out.push(mesh);
+  }
+  loose.forEach(o => root.attach(o));
+  return { meshes: out, geos: out.map(m => m.geometry), loose };
+}
+
+// 3p: CẮT MŨI XE BẰNG SHADER (thay material.clippingPlanes): renderer.compile()/compileAsync bỏ qua clippingPlanes của vật liệu ⇒ biến thể cắt
+//   chỉ dịch được khi VẼ THẬT (đo: đứng 754 ms ở xưởng với Y4 + H7). Nay mặt phẳng là uniform + discard, khoá shader riêng "|hoodclip"
+//   ⇒ dịch ngầm được như mọi vật liệu. So sánh trên vị trí ĐÃ CONG (bw — như clipping cũ so mvPosition đã cong); mũi xe sát camera nên gần như không cong.
+function hoodClip(m, U) {
+  const prev = m.onBeforeCompile, key = m.customProgramCacheKey;
+  m.onBeforeCompile = (sh, r) => {
+    if (prev) prev.call(m, sh, r);
+    sh.uniforms.uHoodP = U;
+    const tag = "gl_Position = projectionMatrix * mvPosition;";
+    if (!sh.vertexShader.includes(tag)) console.warn("hoodClip: không thấy chỗ chèn");
+    sh.vertexShader = "varying vec3 vHoodW;\n" + sh.vertexShader.replace(tag, tag + " vHoodW = bw.xyz;");
+    sh.fragmentShader = "uniform vec4 uHoodP; varying vec3 vHoodW;\n" + sh.fragmentShader.replace("void main() {", "void main() {\n  if (dot(uHoodP.xyz, vHoodW) + uHoodP.w < 0.0) discard;");
+  };
+  m.customProgramCacheKey = () => (key ? key.call(m) : "") + "|hoodclip";
+}
+
+// 3p: số đo xe (nóc, chân kính, capô, chỗ biển số dò bằng tia) theo mã xe
+const SO_DO = new Map();
+export const carMeta = () => Object.fromEntries(SO_DO);
+
 const nameChain = o => { let s = "", n = o; for (let k = 0; n && k < 4; k++, n = n.parent) s += " " + (n.name || ""); return s; };
 
 /** makeCar3d({ id, color, num, bend, U }) — xe phải được prepXe(id) xong trước (buildXe đồng bộ). */
@@ -140,32 +239,38 @@ export function makeCar3d({ id = XE[0].id, color = "#3b8cff", num = 1, bend = m 
   const sz = xe.userData.size;                                     // x = rộng, y = cao, z = dài
   const mats = new Set();
   xe.traverse(o => { if (!o.isMesh) return; (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => mats.add(m)); o.castShadow = o.receiveShadow = false; o.frustumCulled = false; });
+  mats.forEach(noTransmission);                                   // 3p
   mats.forEach(m => { bend(m); if (m.envMapIntensity !== undefined) m.envMapIntensity = Math.max(m.envMapIntensity, 1.1); });
   xe.updateMatrixWorld(true);
 
   // ---- độ cao nóc: tia từ trên xuống ở giữa xe, dải dọc −25 % … +12 % chiều dài ----
   // 3j: lõi chuyển xe sang lớp riêng của đội ⇒ tia phải quét MỌI lớp (burn sau này)
   const ray = new THREE.Raycaster(), meshes = []; ray.layers.enableAll(); xe.traverse(o => { if (o.isMesh && !(o.material.transparent && o.material.opacity < 0.5)) meshes.push(o); });
+  // 3p: số đo đã có (bảng đo sẵn / đã đo trong phiên) ⇒ bỏ qua toàn bộ tia dò
+  const known = SO_DO.get(id) || CAR_META[id] || null, fresh = { pick: {} };
   let roofY = sz.y * 0.85, roofZ = 0, best = -1;
-  for (let k = 0; k <= 10; k++) {
+  if (known) ({ roofY, roofZ } = known);
+  else for (let k = 0; k <= 10; k++) {
     const z = lerp(-0.25, 0.12, k / 10) * sz.z;
     ray.set(new THREE.Vector3(0, sz.y + 2, z), new THREE.Vector3(0, -1, 0));
     const h = ray.intersectObjects(meshes, false)[0];
     if (h && h.point.y > best && h.point.y < sz.y * 0.98) { best = h.point.y; roofZ = z; }
   }
-  if (best > 0.6) roofY = best;
+  if (!known && best > 0.6) roofY = best;
 
   // ---- 3j: chân kính chắn gió (zWS) + mép capô (hoodY) + mắt tài xế ----
   const all = []; xe.traverse(o => { if (o.isMesh) all.push(o); });
   const DOWN = new THREE.Vector3(0, -1, 0), V = (x, y, z) => new THREE.Vector3(x, y, z);
-  let zWS = null;
+  let zWS = known ? known.zWS : null;
+  if (!known)
   for (let z = -sz.z / 2 + 0.3; z < roofZ + 0.3 && zWS == null; z += 0.03)
     for (const x of [0, 0.22, -0.22]) {
       ray.set(V(x, sz.y + 2, z), DOWN); const h = ray.intersectObjects(all, false)[0];
       if (h && h.point.y > 0.55 && isGlass(h.object.material)) { zWS = z; break; }
     }
   if (zWS == null) zWS = roofZ - 0.9;
-  let hoodY = 0;
+  let hoodY = known ? known.hoodY : 0;
+  if (!known)
   for (const x of [0, 0.25, -0.25, 0.45, -0.45]) { ray.set(V(x, sz.y + 2, zWS - 0.06), DOWN); const h = ray.intersectObjects(meshes, false).find(q => !isGlass(q.object.material)); if (h) hoodY = Math.max(hoodY, h.point.y); }
   if (hoodY < 0.5) hoodY = 0.85;
   // mắt SÁT mép capô (cao hơn 0,15 m, sau chân kính 0,32 m): màn chỉ thấy được tới ~25° dưới tầm mắt (dưới nữa là bảng điều khiển) ⇒ mắt cao thì capô
@@ -183,6 +288,7 @@ export function makeCar3d({ id = XE[0].id, color = "#3b8cff", num = 1, bend = m 
     o.visible = false; done[rear ? "rear" : "front"] = true; addPlate(V(0, c.y, rear ? b.max.z + 0.012 : b.min.z - 0.012), rear); });
   for (const rear of [true, false]) {
     if (done[rear ? "rear" : "front"]) continue;
+    if (known) { const q = known.pick && known.pick[rear ? "r" : "f"]; if (q) addPlate(V(q[0], q[1], q[2]), rear); continue; }   // 3p
     const yGoal = rear ? 0.45 : 0.36, dir = V(0, 0, rear ? -1 : 1); let pick = null;
     for (let y = 0.26; y <= 0.66; y += 0.02) {
       ray.set(V(0, y, rear ? sz.z : -sz.z), dir); const h = ray.intersectObjects(meshes, false)[0];
@@ -195,7 +301,9 @@ export function makeCar3d({ id = XE[0].id, color = "#3b8cff", num = 1, bend = m 
       const sc = Math.abs(y - yGoal); if (!pick || sc < pick.sc) pick = { sc, p: V(0, y, h.point.z + (rear ? 0.014 : -0.014)) };
     }
     if (pick) addPlate(pick.p, rear);
+    fresh.pick[rear ? "r" : "f"] = pick ? pick.p.toArray() : null;   // 3p
   }
+  if (!known) SO_DO.set(id, { roofY, roofZ, zWS, hoodY, pick: fresh.pick });   // 3p: lần dựng sau (trận / mũi xe / đổi xe) không dò lại
 
   // ---- bánh: nhận theo HÌNH DẠNG (tên mảnh mỗi mẫu một kiểu): mảnh TRÒN nhìn ngang (cao ≈ dài), ở 4 góc xe, gần mặt đất.
   //   Lốp = mảnh tròn lớn nhất mỗi góc (cao 0,45–0,95 m); mâm/đĩa = mảnh tròn nhỏ hơn có tâm trùng lốp ⇒ quay cùng. Kẹp phanh không tròn ⇒ đứng yên.
@@ -320,24 +428,33 @@ export function makeCar3d({ id = XE[0].id, color = "#3b8cff", num = 1, bend = m 
   // đèn cam ở đuôi xe: hắt sáng lên đuôi + mặt đường khi có lửa
   const fireLight = new THREE.PointLight(0xff7a2a, 0, 5.5, 2); fireLight.position.set(0, 0.45, M.L / 2 + 0.45); body.add(fireLight);
 
+  // ---- 3p: gộp mảnh tĩnh của thân xe (bánh đã ở trục quay riêng, không nằm trong cây này) ----
+  // cây gốc (ghost) rời cảnh — chỉ gắn lại TẠM trong burn() để tia + DecalGeometry dùng đúng mảnh nhỏ
+  const ghost = xe.children[0], mg = mergeStatic(xe, ghost); xe.remove(ghost);
+  mg.meshes.concat(mg.loose).forEach(o => { o.frustumCulled = false; o.castShadow = o.receiveShadow = false; });
+  mg.geos.forEach(g => own.push(g));
+
   let pitch = 0, roll = 0, braking = -1, wheelAng = 0, lastDist = null;
-  const burns = [];
-  return {
+  const burns = [], burnPool = [];   // 3p: burnPool = chỗ cháy làm sẵn
+  const car = {
     rig, body, M, wheels, id, eye, look, exhaust,
     /** mũi xe nhìn từ ghế lái: bản sao xe CẮT ở chân kính (giữ phần z ≤ zCut) + tấm táp-lô tối phía sau. update() mỗi khung trước khi vẽ. */
     hoodView() {
       const h = buildXe(id); setPaint(h, color);
-      const local = new THREE.Plane(V(0, 0, -1), zCut), wp = new THREE.Plane(), hm = new Set();
+      const local = new THREE.Plane(V(0, 0, -1), zCut), wp = new THREE.Plane(), hm = new Set(), hoodU = { value: new THREE.Vector4(0, 0, -1, zCut) };
       h.traverse(o => { if (!o.isMesh) return; o.frustumCulled = false; (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => hm.add(m)); if (PLATE_RE.test(o.name + " " + (o.parent?.name || ""))) o.visible = false; });
-      hm.forEach(m => { m.clippingPlanes = [wp]; m.fog = false; bend(m); });
+      hm.forEach(m => { noTransmission(m); m.fog = false; bend(m); hoodClip(m, hoodU); });   // 3p: cắt bằng shader (hoodClip), không clippingPlanes
+      // 3p: gộp mảnh tĩnh của bản sao (~250 mảnh ⇒ vài chục), cây gốc bỏ đi
+      const hsrc = h.children[0], hmg = mergeStatic(h, hsrc); h.remove(hsrc); hmg.meshes.concat(hmg.loose).forEach(o => { o.frustumCulled = false; });
       const dg = new THREE.PlaneGeometry(2.6, 1.2).rotateX(-Math.PI / 2 + 0.12).translate(0, hoodY - 0.03, zCut + 0.62);
       const dm = new THREE.MeshStandardMaterial({ color: "#121418", roughness: 0.92, fog: false });
       const grp = new THREE.Group(); grp.add(h, new THREE.Mesh(dg, dm));
-      return { grp, update() { grp.updateMatrixWorld(true); wp.copy(local).applyMatrix4(grp.matrixWorld); },
-        dispose() { hm.forEach(m => m.dispose()); dg.dispose(); dm.dispose(); } };
+      return { grp, update() { grp.updateMatrixWorld(true); wp.copy(local).applyMatrix4(grp.matrixWorld); hoodU.value.set(wp.normal.x, wp.normal.y, wp.normal.z, wp.constant); },
+        dispose() { hm.forEach(m => m.dispose()); hmg.geos.forEach(g => g.dispose()); dg.dispose(); dm.dispose(); } };
     },
     /** trúng tên lửa: chọn chỗ cháy trên thân ⇒ { p, n } (toạ độ body); lõi phun lửa ở đó; vết cháy hiện dần sau `delay` giây */
-    burn(delay = 2.2) {
+    // 3p: TÌM chỗ cháy (tia + DecalGeometry trên mảnh gốc: 6–110 ms/lần ở xe nặng) — tách khỏi burn() để làm SẴN lúc rảnh (prepBurns)
+    _pick() {
       body.updateMatrixWorld(true);
       const inv = body.matrixWorld.clone().invert();
       const paint = new Set(xe.userData.paint), wheelSet = new Set(); wheels.forEach(w => w.g.traverse(o => wheelSet.add(o)));
@@ -356,13 +473,21 @@ export function makeCar3d({ id = XE[0].id, color = "#3b8cff", num = 1, bend = m 
         } catch (e) { continue; }
         if (!geo.attributes.position || geo.attributes.position.count < 3) { geo.dispose(); continue; }
         geo.applyMatrix4(inv);
-        const m = bend(new THREE.MeshStandardMaterial({ map: scorchTex(), transparent: true, opacity: 0, depthWrite: false, roughness: 1, metalness: 0, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
-        const d = new THREE.Mesh(geo, m); d.layers.mask = rig.layers.mask; d.frustumCulled = false; body.add(d);
-        burns.push({ d, m, t: -delay });
-        return { p: h.point.clone().applyMatrix4(inv), n: nW.clone().transformDirection(inv).normalize() };
+        return { geo, p: h.point.clone().applyMatrix4(inv), n: nW.clone().transformDirection(inv).normalize() };   // toạ độ body ⇒ dùng được ở mọi tư thế xe
       }
       return null;
     },
+    /** trúng tên lửa: lấy chỗ cháy làm sẵn (không có thì tìm ngay) ⇒ { p, n } (toạ độ body); vết cháy hiện dần sau `delay` giây */
+    burn(delay = 2.2) {
+      const sp = burnPool.length ? burnPool.shift() : this._pick();
+      if (!sp) return null;
+      const m = bend(new THREE.MeshStandardMaterial({ map: scorchTex(), transparent: true, opacity: 0, depthWrite: false, roughness: 1, metalness: 0, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
+      const d = new THREE.Mesh(sp.geo, m); d.layers.mask = rig.layers.mask; d.frustumCulled = false; body.add(d);
+      burns.push({ d, m, t: -delay });
+      return { p: sp.p, n: sp.n };
+    },
+    /** 3p: làm sẵn n chỗ cháy (gọi lúc rảnh: xưởng / màn kết quả) */
+    prepBurns(n = 3) { while (burnPool.length < n) { const sp = this._pick(); if (!sp) break; burnPool.push(sp); } return burnPool.length; },
     clearBurns() { burns.forEach(b => { body.remove(b.d); b.d.geometry.dispose(); b.m.dispose(); }); burns.length = 0; },
     update(dt, { dist = 0, accel = 0, brake = 0, steer = 0, boost = 0, t = 0, pop = 0 } = {}) {
       // 3k: góc bánh CỘNG DỒN, mỗi khung tối đa 0,42 rad (chậm thì đúng tốc độ thật; nhanh thì vẫn thấy lăn tới, không bao giờ đứng/quay ngược)
@@ -391,4 +516,11 @@ export function makeCar3d({ id = XE[0].id, color = "#3b8cff", num = 1, bend = m 
     },
     dispose() { own.forEach(g => g.dispose()); mats.forEach(m => m.dispose()); shadowM.dispose(); flameMs.forEach(m => m.dispose()); plateM.dispose(); plateG.dispose(); burns.forEach(b => { b.d.geometry.dispose(); b.m.dispose(); }); }
   };
+  // 3p: tìm chỗ cháy trên MẢNH GỐC — gắn cây gốc vào xe TẠM trong lúc tìm (không có khung nào vẽ nó)
+  const pickOn = car._pick;
+  car._pick = () => { xe.add(ghost); try { return pickOn.call(car); } finally { xe.remove(ghost); } };
+  const disposeOn = car.dispose;
+  car.dispose = () => { burnPool.splice(0).forEach(sp => sp.geo.dispose()); disposeOn.call(car); };
+  car.merged = { meshes: mg.meshes.length, loose: mg.loose.length };
+  return car;
 }
