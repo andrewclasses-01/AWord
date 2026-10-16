@@ -57,10 +57,9 @@
    + tên game góc dưới trái, phông riêng từng game (cỡ chữ theo em của .wp-nm ⇒ lúc phóng to / màn hẹp tự theo) */
 .wp-card.is-cine { background: #000; box-shadow: 0 calc(8 * var(--p)) calc(18 * var(--p)) rgba(20,30,60,.22); }
 .wp-card .wp-im { position: absolute; inset: 0; z-index: 1; background: center / cover no-repeat; transition: transform .6s cubic-bezier(.22,.61,.36,1); }
+/* Đợt 541 (thầy: "lấy luôn ảnh của màn loading… không có dải đen bên trên hay hai bên"): bỏ khung phim + tối góc, chỉ còn tối nhẹ ở đáy cho chữ */
 .wp-card.is-cine::before { content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
-  background: linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,.72) 100%), radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,.45) 100%); }
-.wp-card.is-cine::after { content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: .85;
-  background: linear-gradient(180deg, #000 0 4.7%, transparent 4.7% 95.3%, #000 95.3%); }
+  background: linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,.55) 100%); }
 .wp-card.hi .wp-im { transform: scale(1.07); }
 .wp-card.is-soon.hi .wp-im { transform: none; }
 .wp-card.is-cine .wp-nm { z-index: 3; top: auto; left: calc(16 * var(--p)); bottom: calc(18 * var(--p)); line-height: 1; white-space: nowrap; font-weight: 400; letter-spacing: 0; }

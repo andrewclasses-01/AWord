@@ -53,7 +53,7 @@ import { dropAllLoader3d } from "./loader3d.js";
 // 4 game 3D (khu trên) → cảnh trong words-picker-art.js (Đợt 527: thêm RACING WORDS)
 const G3 = [["rocket_race", "rocket"], ["balloon_pop", "train"], ["maze_chase", "loot"], ["racing_words", "race"]];   // Đợt 527: + RACING WORDS
 // ⭐ Đợt 540 (thầy 17/10/2026: "thumbnail 4 game… phong cách điện ảnh, cắt từ cảnh 3D của game, toát lên sự kịch tích, tên game mỗi
-// tên một phong cách"): ảnh cắt từ chính cảnh 3D (core/wp-art/*.webp, 600×430) + khung phim + tên game bằng phông riêng từng game.
+// tên một phong cách"): ảnh cắt từ chính cảnh 3D (core/wp-art/*.webp, 600×430 — Đợt 541: cắt từ CHÍNH ảnh màn chờ, bỏ khung phim) + tên game bằng phông riêng từng game.
 // Cảnh phẳng SC[key].svg giữ làm nền tạm lúc ảnh chưa về. Thiết kế: myGame anh-game-3d/thiet-ke-v1.html.
 const CINE = { rocket: ["rr", "ROCKET RACE"], train: ["tr", "Train Rush"], loot: ["sl", "STAR LOOT"], race: ["rw", "Racing Words"] };
 const cineImg = k => new URL("./wp-art/" + CINE[k][0] + ".webp", import.meta.url).href;

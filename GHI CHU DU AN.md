@@ -546,6 +546,15 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 541 (17/10/2026) — Màn chọn WORDS: 4 ô game 3D lấy CHÍNH ảnh màn chờ, bỏ khung phim
+
+**Thầy:** "màn chờ loading ok rồi… màn chọn Words lấy luôn ảnh của màn loading cho đồng bộ, chỉnh lại khung hình để không có dải đen bên trên hay hai bên".
+**Làm:** `core/wp-art/{tr,sl,rr,rw}.webp` cắt lại từ tr-/sl-/rr-/rw-loading.webp (giữ hết chiều cao, cắt 2 bên theo tỉ lệ ô 600×430; TRAIN RUSH lệch trái x 2 % để đủ 2 đầu tàu,
+RACING WORDS = ảnh xưởng ANDREW STUDIO). `tools/wp.src.css`: bỏ `::after` (dải đen trên/dưới) + tối góc hai bên, chỉ còn tối nhẹ ở đáy (55 %→.55) cho chữ tên game.
+**Thử:** `scratch/dot540-wp.html` — 4 ô đúng ảnh màn chờ, `::after` = none, diff file sinh chỉ dòng sửa.
+
+---
+
 ## Đợt 540 (17/10/2026) — ẢNH GAME 3D: màn chờ ảnh tĩnh cho TRAIN RUSH / STAR LOOT / ROCKET RACE + 4 ô màn chọn WORDS kiểu điện ảnh
 
 **Thầy:** "tạo lại ảnh loading cho TRAIN RUSH, STAR LOOT và ROCKET RACE theo phong cách của RACING WORDS (ảnh tĩnh 3D cắt cảnh trong game + thanh loading giống nhau + slogan + tên game)"
