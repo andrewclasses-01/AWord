@@ -71,6 +71,13 @@ Mở thư mục ⇒ `listAllAssignments()` 147 bài giao ≈ 3,9 MB (98 % ảnh 
 **Chữa:** vẽ ngay từ cái đã có; tập phụ tải NGẦM rồi vá giao diện (`capNhatChamDo`); nhớ 30 s; **tự tải lại khi chính trang vừa GHI**
 (bộ đếm `soLanGhiBaiGiao()` tăng trong mọi hàm ghi) ⇒ không bao giờ hiện dữ liệu cũ sau thao tác của thầy. Thẻ act: 3,2 s → 0,1 s.
 
+### 2.5 Trang chủ chờ thứ nó không hiển thị (Đợt 536, 16/10/2026)
+Trang chủ AWord chỉ có 4 thẻ thư mục nhưng `init()` chờ đọc CẢ KHO + 46 module (1,9 MB nguồn) + mp3 nạp sẵn của một module. **Chữa:** trang
+"vỏ" vẽ ngay sau khi biết tài khoản; import tĩnh nặng ⇒ biến `let` cùng tên gán trong một hàm nạp động (`napNang`), mọi cửa ra khỏi vỏ
+(render view khác, router link sâu, nút Settings, cầu cho app ngoài) đi qua một `chuanBi()` nhớ lời gọi; mã và dữ liệu nạp SONG SONG; vạch nạp
+trên đỉnh thay màn trắng. Bàn thử (WebKit, 3000 kbps, kho giả chậm 3 s): 4,2 s ⇒ 0,8 s. Kiểm web khác: `grep` import tĩnh của file vào trang
+chủ, hỏi từng cái "trang chủ có vẽ thứ này không?"; soi module có tác dụng phụ lúc nạp (tải âm thanh/ảnh sẵn).
+
 ## 3. Bẫy của chính công cụ đo (đã cắn)
 - **Playwright WebKit trên Windows KHÔNG có cache HTTP** — số "mở lại" của WebKit ở bàn thử là vô nghĩa (cache phải đo trên iPad).
 - **`page.route()` (Playwright) tắt cache HTTP** ở mọi trình duyệt — chặn ghi Firestore bằng nghe `request` thay vì route khi đo cache.

@@ -546,6 +546,40 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 536 (16/10/2026) — TRANG CHỦ CHỈ NẠP VỎ (bấm vào đâu mới nạp cái đó)
+
+**Thầy:** "mở trang chủ (đặc biệt trên iPad) rất lâu… chỉ load vỏ bên ngoài, bấm vào thư mục hay tính năng gì thì mới load dữ liệu của cái đó".
+**Soi ra trang chủ cũ đang chờ gì trước khi vẽ 4 thẻ:**
+1. `init()` chờ `maybeSeed()` ⇒ `listChildren` ⇒ `readAll()` = đọc **CẢ KHO** Firestore (~7 MB+ sau Đợt 483/484) + `ensureNumbers` + `loadSettings` — trang chủ không dùng cái nào.
+2. index.html `warmUp()` cũng kéo kho đó ngay lúc mở + preload SDK `firebase-firestore.js` (~100 KB nén).
+3. main.js import tĩnh **46 module ≈ 1,9 MB nguồn** (engine 529 KB, showdown-setup 261 KB, assignment-ui 98 KB, options-panel 97 KB…) + 45 modulepreload.
+4. `wrong-sound.js` tự tải sẵn 6 mp3 "meme" (~140 KB) lúc nạp — chỉ Settings dùng.
+**Làm (main.js + index.html):**
+- Khối nặng (engine · settings · lop-dashboard · print-quest · showdown-setup/showdown/showdown-home · assignments · assignment-ui · wrong-sound) đổi từ `import` tĩnh sang
+  biến `let` CÙNG TÊN, gán trong **`napNang()`** (Promise.all import động, nhớ lời gọi đang bay, hỏng thì lần sau thử lại). Thân file không đổi một chữ ở các chỗ dùng.
+  `chanQuetChuotDongPopup()` + `setActSwitchHandler` (Đợt 400/453b) chuyển vào napNang.
+- **`chuanBi()`** = napNang ∥ maybeSeed (song song) ⇒ ensureNumbers ⇒ loadSettings; cờ `sanSang` để render() sau lần đầu không phải nhường nhịp. Gọi ở: `render()` (mọi view ≠ "top"),
+  `routeFromLocation()` (mọi địa chỉ ≠ trang chủ trơn, gồm ◀/▶), `openSettingsFlow()` (thân cũ đổi tên `moSettings`), 4 hàm cầu `window.__awordLib` (myLesson).
+  Lỗi ⇒ toast + đứng ở trang chủ (link sâu lỗi lúc init ⇒ renderLogin như cũ). `boChuanBi()` khi đăng nhập/đăng xuất (tài khoản mới chuẩn bị lại); reset* gọi bằng `?.`.
+- `init()`: địa chỉ trang chủ trơn (`laDiaChiTrangChu()` — bỏ qua `?do=`) ⇒ vẽ NGAY sau khi biết tài khoản; link sâu vẫn chuẩn bị đủ trước khi đi (Đợt 338 ?giao= cần loadSettings).
+- index.html: `warmUp()` chỉ chạy khi có tham số ≠ `do`; bỏ preload firebase-firestore.js; `body.aw-dang-nap::before` = vạch xanh chạy trên đỉnh trong lúc chuanBi
+  (trang chủ đứng yên, không màn trắng); khối AW-PRELOAD sinh lại 45 ⇒ **11** module.
+**Đo (bàn thử: bản HEAD vs bản mới, cùng thu gọn bằng tools/xuat-ban.mjs, Firebase giả đã đăng nhập (tools/toc-do/firestore-gia.js) + getDocs chậm giả 3 s thay cho kho
+7 MB, máy chủ may-chu-cham 3000 kbps/50 ms):**
+
+| | trang chủ hiện 4 thẻ | lượt tải | KB | đọc kho trước khi vẽ |
+|---|---|---|---|---|
+| WebKit cũ | 4256 ms | 64 (50 js) | 421 | getDocs 1 + getDoc 1 |
+| WebKit mới | **825 ms** | 25 (16 js) | 184 | **0** |
+| Chrome cũ | 4192 ms | 63 | 421 | 1 + 1 |
+| Chrome mới | **889 ms** | 24 | 183 | **0** |
+
+Bấm "Activity" lần đầu: ~3,2 s (gồm 3 s kho giả — đúng ý thầy: chỉ tốn khi bấm); lần sau tức thì. Trên iPad thật kho thật ~7 MB+ nên trang chủ cũ còn lâu hơn nhiều.
+**Kiểm chức năng (WebKit + Chrome, cũ vs mới y hệt, 0 lỗi trang):** trang chủ · Settings mở từ trang chủ · Showdown · ◀ về trang chủ · Stats · ◀ · Activity · chơi act ·
+link sâu ?r=results · link sâu ?a=1 · Course · Game · cầu myLesson timThuMuc + lietKeBaiGiao ok. `sinh-preload.py --check` KHỚP. play.html (học sinh) KHÔNG đổi.
+⛔ Luật mới: thêm `import` tĩnh vào main.js ⇒ hỏi "trang chủ có cần không?"; không ⇒ cho vào `napNang()`.
+⬜ thầy mở trang chủ trên iPad (có thể `?do=1` để xem bảng) + bấm thử Settings/Activity/Showdown.
+
 ## Đợt 535 (16/10/2026) — RACING WORDS 5 ĐỢT SAU 3y (myGame mẫu 4d)
 
 **Thầy:** 12 việc sau khi chốt 3y ("quan trọng nhất là giữ được độ mượt và hiệu năng") ⇒ nghiên cứu (hồ sơ myGame mục 33) ⇒ chia 5 đợt thử từng đợt: 3z · 4a · 4b · 4c · 4d,

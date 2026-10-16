@@ -21,13 +21,20 @@
 //   still open, and are quietly upgraded to the short form.
 // =============================================================
 
-import { startGame, setActSwitchHandler } from "./core/engine.js";
+// ⭐⭐ Đợt 536 (thầy 16/10/2026: "trang chủ mở rất lâu, nhất là iPad — chỉ load VỎ, bấm vào đâu mới load cái đó")
+// Các khối NẶNG (engine 529 KB · showdown · assignments · settings/options-panel · print-quest · lop-dashboard ≈ 1,5 MB
+// nguồn) KHÔNG còn import tĩnh: trang chủ chỉ cần vỏ + tài khoản. Chúng nạp trong `napNang()` (cuối khối import) lần
+// đầu thầy bấm vào một thư mục / Settings / link sâu. Tên biến giữ nguyên ⇒ thân file không đổi; mọi đường tới chúng
+// đều đi qua `chuanBi()` (render · routeFromLocation · openSettingsFlow · cầu myLesson). ⛔ Thêm import tĩnh mới: hỏi
+// "trang chủ có cần không?" — không thì cho vào napNang(). Sau khi đổi import nhớ `python tools/sinh-preload.py --write`.
+let startGame, setActSwitchHandler;
 import { el, copyText } from "./core/utils.js";
 import { icons } from "./core/icons.js";
 import { ensureTemplate } from "./core/registry.js";
 import { TEMPLATES, templateLabel, templateIcon } from "./core/catalog.js";
-import { getDefaultOptions, saveDefaultOptions, buildOptionsControls, loadSettings, resetSettingsCache, actKindForRoot, courseImportOptions } from "./core/settings.js";
-import { getEntries as getWrongSoundEntries, getWrongChoice, setWrongChoice, previewSound as previewWrongSound, renameSound as renameWrongSound, removeSound as removeWrongSound, uploadSound as uploadWrongSound } from "./core/wrong-sound.js";
+let getDefaultOptions, saveDefaultOptions, buildOptionsControls, loadSettings, resetSettingsCache, actKindForRoot, courseImportOptions;
+// Đợt 536 — wrong-sound.js tự tải sẵn 6 mp3 "meme" (~140 KB) lúc nạp ⇒ cũng vào napNang (chỉ Settings dùng).
+let getWrongSoundEntries, getWrongChoice, setWrongChoice, previewWrongSound, renameWrongSound, removeWrongSound, uploadWrongSound;
 import {
   ROOTS, holdsActs, holdsAssignments, folderIdsOfRoot,
   itemName, getItem, getByNum, ensureNumbers, listChildren, pathTo, listFolders, searchItems, listTrash,
@@ -44,35 +51,20 @@ import {
   // tests; nothing in the app calls it any more.
   parseStudentNames, resetClassesCache, MAX_STUDENTS
 } from "./core/classes.js";
-// ⭐ Đợt 435 — học sinh TẠM của lớp dashboard (Settings ▸ Classes ▸ một lớp).
-import { themHsTam, xoaHsTam, doiGtTam } from "./core/lop-dashboard.js";
-import { chanQuetChuotDongPopup } from "./core/print-quest.js";
-// ⭐ Đợt 435 (thầy báo 01/10) — quét chuột BÔI ĐEN chữ trong một pop-up rồi thả ra ngoài làm pop-up ĐÓNG
-// (click bắn lên tổ tiên chung = nền mờ). Chặn chung một chỗ cho MỌI pop-up của thư viện — xem hàm.
-chanQuetChuotDongPopup();
+// ⭐ Đợt 435 — học sinh TẠM của lớp dashboard (Settings ▸ Classes ▸ một lớp). (Đợt 536: nạp trong napNang)
+let themHsTam, xoaHsTam, doiGtTam;
 // SHOWDOWN (Đợt 155) — the home page needs only the two account-change hooks;
 // the mode itself is driven entirely from inside a game (core/engine.js).
-import { resetShowdownCache } from "./core/showdown-setup.js";
-import { clearPick as clearShowdownPick } from "./core/showdown.js";
-// ⭐⭐⭐ Đợt 236 — the full-page durable ledger, reached from its own button on
-// this very page (see topbar() below). Unlike the line above, THIS is a real,
-// heavy import: main.js already talks to Firestore directly (it IS the
-// teacher's signed-in library), so none of Showdown's "keep the student page
-// clean" rule from core/HUONG DAN CORE.md applies here.
-import { mountShowdownHome } from "./core/showdown-home.js";
+// ⭐⭐⭐ Đợt 236 — mountShowdownHome: the full-page durable ledger (core/showdown-home.js). (Đợt 536: nạp trong napNang)
+let resetShowdownCache, clearShowdownPick, mountShowdownHome;
 import { currentUser, signIn, signOutNow, TEACHER_EMAIL } from "./core/firebase.js";
 import { variantsOf, voiceVariantsOf, clueOf, voiceOf, setVoiceOf, variantFullyVoiced } from "./core/content-view.js";
-import {
-  listAllAssignments, listAssignmentsForAct, updateAssignment, trashAssignment,
+let listAllAssignments, listAssignmentsForAct, updateAssignment, trashAssignment,
   restoreAssignment, deleteAssignmentForever, assignmentNameTaken, hasNewResults,
-  getAssignment, soLanGhiBaiGiao
-} from "./core/assignments.js";
-import {
-  openAssignmentDetail, openAssignmentEdit, confirmTrashAssignment,
-  copyAssignmentLink, copyAssignmentQr,
-  // ⭐ Đợt 253 — đường ?giao= mở thẳng form Set assignment (cửa cho myLesson).
-  openAssignmentSetup
-} from "./core/assignment-ui.js";
+  getAssignment, soLanGhiBaiGiao;
+// ⭐ Đợt 253 — openAssignmentSetup: đường ?giao= mở thẳng form Set assignment (cửa cho myLesson).
+let openAssignmentDetail, openAssignmentEdit, confirmTrashAssignment,
+  copyAssignmentLink, copyAssignmentQr, openAssignmentSetup;
 // ⭐ Đợt 373 — the FIXED games of the GAMES tree (Werewolf…): a tiny list; each
 // game's own module is fetched only when it is opened.
 import { FIXED_GAMES, fixedGame, loadGameCss } from "./games/games.js";
@@ -81,6 +73,77 @@ import { loadGameData, saveSeats as saveGameSeats, listTracks as listGameTracks,
 // NOTE: no template is imported here. Each game (and its stylesheet) is fetched
 // the first time it is actually played or edited — see ensureTemplate() in
 // core/registry.js, which reads the one list in core/catalog.js.
+
+// ⭐⭐ Đợt 536 — NẠP KHỐI NẶNG một lần (dùng chung lời gọi đang bay); hỏng mạng thì lần bấm sau thử lại.
+let napNangP = null;
+function napNang() {
+  if (!napNangP) {
+    napNangP = Promise.all([
+      import("./core/engine.js"), import("./core/settings.js"), import("./core/lop-dashboard.js"),
+      import("./core/print-quest.js"), import("./core/showdown-setup.js"), import("./core/showdown.js"),
+      import("./core/showdown-home.js"), import("./core/assignments.js"), import("./core/assignment-ui.js"),
+      import("./core/wrong-sound.js"),
+    ]).then(([eng, set, lop, pq, sds, sd, sdh, asg, asu, ws]) => {
+      ({ getEntries: getWrongSoundEntries, getWrongChoice, setWrongChoice, previewSound: previewWrongSound,
+         renameSound: renameWrongSound, removeSound: removeWrongSound, uploadSound: uploadWrongSound } = ws);
+      ({ startGame, setActSwitchHandler } = eng);
+      ({ getDefaultOptions, saveDefaultOptions, buildOptionsControls, loadSettings, resetSettingsCache, actKindForRoot, courseImportOptions } = set);
+      ({ themHsTam, xoaHsTam, doiGtTam } = lop);
+      resetShowdownCache = sds.resetShowdownCache; clearShowdownPick = sd.clearPick; mountShowdownHome = sdh.mountShowdownHome;
+      ({ listAllAssignments, listAssignmentsForAct, updateAssignment, trashAssignment, restoreAssignment,
+         deleteAssignmentForever, assignmentNameTaken, hasNewResults, getAssignment, soLanGhiBaiGiao } = asg);
+      ({ openAssignmentDetail, openAssignmentEdit, confirmTrashAssignment, copyAssignmentLink, copyAssignmentQr, openAssignmentSetup } = asu);
+      // ⭐ Đợt 435 (thầy báo 01/10) — quét chuột BÔI ĐEN chữ trong một pop-up rồi thả ra ngoài làm pop-up ĐÓNG
+      // (click bắn lên tổ tiên chung = nền mờ). Chặn chung một chỗ cho MỌI pop-up của thư viện — xem hàm.
+      pq.chanQuetChuotDongPopup();
+      // ⭐ Đợt 400 — nút chuyển act trong game: thanh địa chỉ + tiêu đề tab đi theo act mới
+      // (pushState, nên ◀ quay về act trước).
+      setActSwitchHandler(async node => {
+        state.view = "play";
+        let link = await linkFor(node);
+        // ⭐ Đợt 453b — myActivity: đổi act ngay trong game không qua màn chọn ⇒ nối sẵn lựa chọn đang
+        // lưu vào địa chỉ, không thì cột theo gặp act WORDS sẽ đứng chờ mãi (xem core/words-picker.js).
+        try { link = (await import("./core/words-picker.js")).urlForSwitch(link, node); } catch { /* giữ link trơn */ }
+        setUrl(link);
+        document.title = node.title || PAGE_TITLE_BASE;
+      });
+    });
+    napNangP.catch(() => { napNangP = null; });
+  }
+  return napNangP;
+}
+// ⭐⭐ Đợt 536 — CHUẨN BỊ THƯ VIỆN = khối nặng + 3 bước trước đây init() chờ TRƯỚC KHI vẽ trang chủ (maybeSeed đọc
+// CẢ KHO Firestore ~7 MB+ · ensureNumbers · loadSettings). Trang chủ không cần cái nào ⇒ chỉ chạy khi rời trang chủ.
+// `sanSang` để render() không phải nhường một nhịp (await) khi đã xong — giữ nguyên hành vi vẽ đồng bộ cũ.
+let chuanBiP = null, sanSang = false;
+function chuanBi() {
+  if (sanSang) return Promise.resolve();
+  if (!chuanBiP) {
+    document.body.classList.add("aw-dang-nap");
+    const p = (async () => {
+      // Mã nặng và lượt đọc kho (maybeSeed ⇒ readAll, chỉ cần store.js tĩnh) chạy SONG SONG, không nối đuôi.
+      await Promise.all([napNang(), maybeSeed()]);
+      await ensureNumbers();      // one-time: give older items their link numbers
+      // ⭐ Đợt 338 — pull the shared option defaults out of Firestore into
+      // localStorage BEFORE any Set-assignment form can open (routeFromLocation
+      // handles ?giao=), so a default set on one machine seeds the form on
+      // every machine and inside the myLesson webview. Never throws.
+      await loadSettings();
+      if (chuanBiP === p) sanSang = true;   // đổi tài khoản giữa chừng (boChuanBi) ⇒ lượt này không tính
+    })();
+    chuanBiP = p;
+    p.catch(() => { if (chuanBiP === p) chuanBiP = null; })
+      .finally(() => document.body.classList.remove("aw-dang-nap"));
+  }
+  return chuanBiP;
+}
+function boChuanBi() { sanSang = false; chuanBiP = null; }
+// Địa chỉ trang chủ trơn (không ?f=/?a=/?giao=… — chỉ có thể kèm ?do= của bàn đo) ⇒ không cần chuẩn bị gì.
+function laDiaChiTrangChu() {
+  const p = new URLSearchParams(location.search);
+  p.delete("do");
+  return [...p.keys()].length === 0;
+}
 
 const app = document.getElementById("app");
 
@@ -218,7 +281,9 @@ window.__awordLib = {
       for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
       // Đợt 500 (audit 11/10) — luôn nhập vào cây ACTIVITIES (bước tìm trùng của myLesson chỉ tìm ở đó): trước đây theo cây đang
       // mở ở khung trái ⇒ thầy đang đứng ở Courses là act rơi sang Courses, lần sau "Tạo AWord" báo chưa có ⇒ nhập đôi.
-      importFlow(new File([u8], String(tenFile || "lesson.xlsm")), { fromRoot: true, root: "activities" });
+      const f = new File([u8], String(tenFile || "lesson.xlsm"));
+      // Đợt 536 — trang chủ không nạp sẵn thư viện ⇒ chuẩn bị xong mới mở hộp import.
+      chuanBi().then(() => importFlow(f, { fromRoot: true, root: "activities" }), () => {});
       return { ok: true };
     } catch (e) { return { ok: false, loi: e.message || "loi" }; }
   },
@@ -237,6 +302,7 @@ window.__awordLib = {
       // thư mục thầy vừa tạo bên AWord thật sẽ không có trong đó. CHECK là hành
       // động thầy chủ động bấm (không lặp lại liên tục), nên cứ bỏ cache trước,
       // đổi lấy một lượt đọc Firestore để chắc chắn thấy thư mục MỚI NHẤT.
+      await chuanBi();        // Đợt 536 — trang chủ không nạp sẵn thư viện
       boCacheChoMyLesson();   // Đợt 500 — chỉ bỏ khi cache đã cũ > 15 s (xem hàm)
       // ⭐ Đợt 287 — tìm ở CẢ HAI cây có act: Activities rồi Courses (thầy chốt
       // 03/9). Mục thuộc Courses có đường dẫn mở đầu "Courses / " để myLesson
@@ -262,6 +328,7 @@ window.__awordLib = {
     try {
       // Cùng lý do với timThuMuc ở trên: bỏ cache để thấy act mới nhất trong
       // thư mục, không phải danh sách chụp từ lúc webview này mở lên.
+      await chuanBi();        // Đợt 536
       boCacheChoMyLesson();   // Đợt 500
       // ⭐ Đợt 287 — thư mục có thể thuộc Courses: hỏi chính nó xem thuộc cây nào.
       const fld = folderId ? await getItem(folderId) : null;
@@ -280,6 +347,7 @@ window.__awordLib = {
   async lietKeBaiGiao() {
     if (!state.user) return { ok: false, loi: "chua-dang-nhap" };
     try {
+      await chuanBi();        // Đợt 536
       const ds = await listAllAssignments();
       return { ok: true, ds: ds.map(a => {
         const o = (a.activity && a.activity.options) || {};
@@ -312,31 +380,19 @@ async function init() {
   if (!user) { renderLogin(); return; }
   state.user = user;
 
-  try {
-    await maybeSeed();
-    await ensureNumbers();      // one-time: give older items their link numbers
-    // ⭐ Đợt 338 — pull the shared option defaults out of Firestore into
-    // localStorage BEFORE any Set-assignment form can open (routeFromLocation
-    // below handles ?giao=), so a default set on one machine seeds the form on
-    // every machine and inside the myLesson webview. Never throws.
-    await loadSettings();
-  } catch (e) {
-    renderLogin("Could not load your library: " + e.message);
-    return;
+  // ⭐⭐ Đợt 536 — trang chủ trơn: VẼ NGAY, không đọc kho / không nạp khối nặng (chuanBi() chạy khi rời trang chủ).
+  // Link sâu (?f= ?a= ?giao= ?bao= ?sd= …) vẫn chuẩn bị đủ TRƯỚC khi đi như cũ (Đợt 338: ?giao= cần loadSettings xong).
+  if (!laDiaChiTrangChu()) {
+    try {
+      await chuanBi();
+    } catch (e) {
+      renderLogin("Could not load your library: " + e.message);
+      return;
+    }
   }
 
   window.addEventListener("popstate", () => routeFromLocation());
-  // ⭐ Đợt 400 — nút chuyển act trong game: thanh địa chỉ + tiêu đề tab đi theo act mới
-  // (pushState, nên ◀ quay về act trước).
-  setActSwitchHandler(async node => {
-    state.view = "play";
-    let link = await linkFor(node);
-    // ⭐ Đợt 453b — myActivity: đổi act ngay trong game không qua màn chọn ⇒ nối sẵn lựa chọn đang
-    // lưu vào địa chỉ, không thì cột theo gặp act WORDS sẽ đứng chờ mãi (xem core/words-picker.js).
-    try { link = (await import("./core/words-picker.js")).urlForSwitch(link, node); } catch { /* giữ link trơn */ }
-    setUrl(link);
-    document.title = node.title || PAGE_TITLE_BASE;
-  });
+  // (Đợt 536: setActSwitchHandler — Đợt 400/453b — nay gắn trong napNang(), ngay khi engine nạp xong.)
   // ⭐ Đợt 221 — NO resize listener any more. Đợt 218b needed one because the
   // panel's row span was a number this file computed and had to recompute when
   // myActivity changed its column count under it. The rail is plain flex now:
@@ -416,6 +472,11 @@ function setUrl(url, replace) {
 async function routeFromLocation() {
   const p = new URLSearchParams(location.search);
   const opts = { fromUrl: true };
+  // ⭐ Đợt 536 — mọi đường dưới đây (trừ trang chủ trơn) cần khối nặng + kho: chuẩn bị trước (◀/▶ của trình duyệt cũng vào đây).
+  if (!laDiaChiTrangChu()) {
+    try { await chuanBi(); }
+    catch (e) { toastMsg("Could not load your library: " + (e.message || "")); return goTop(opts); }
+  }
 
   // ⭐ Đợt 247 — ?bao=<mã bài giao>: mở THẲNG bảng kết quả assignment (đúng
   // pop-up openAssignmentDetail của Results) trên nền trang chủ. Đường cho
@@ -624,14 +685,15 @@ function renderLogin(errorMsg) {
     try {
       await signIn();
       resetCache();
-      resetSettingsCache();  // Đợt 338 — re-pull option defaults for the new account
+      boChuanBi();           // Đợt 536 — tài khoản mới chuẩn bị lại từ đầu
+      resetSettingsCache?.();  // Đợt 338 — re-pull option defaults for the new account (Đợt 536: `?.` = khối chưa nạp)
       resetClassesCache();   // classes keep their own cache — drop it too, or the
                              // previous account's class rolls would linger
       // Đợt 155 — and the same for Showdown: its team table is another account's
       // data, and the team THIS browser had ticked names pupils who are not in
       // the new account's classes at all.
-      resetShowdownCache();
-      clearShowdownPick();
+      resetShowdownCache?.();
+      clearShowdownPick?.();
       await init();
     } catch (e) {
       btn.disabled = false;
@@ -684,6 +746,16 @@ async function maybeSeed() {
 
 // ---------------- render dispatch ----------------
 async function render() {
+  // ⭐⭐ Đợt 536 — rời trang chủ lần đầu ⇒ nạp khối nặng + đọc kho (chuanBi) rồi mới vẽ; trong lúc chờ trang chủ đứng
+  // yên + vạch chạy trên đỉnh (body.aw-dang-nap, index.html). Đọc `state` SAU khi chờ: thầy bấm chỗ khác giữa chừng thì vẽ chỗ mới.
+  if (state.view !== "top" && !sanSang) {
+    try { await chuanBi(); }
+    catch (e) {
+      toastMsg("Could not load your library: " + (e.message || ""));
+      state.view = "top"; state.root = null; state.folderId = null; state.query = "";
+      syncUrl(true);
+    }
+  }
   closeMenu();
   // ⭐ Đợt 236 — tear the showdown-home page down explicitly BEFORE wiping it
   // out from under itself: its own MutationObserver would catch this a beat
@@ -3216,9 +3288,11 @@ async function doSignOut() {
   try { await signOutNow(); } catch { /* ignore */ }
   resetCache();
   resetClassesCache();
-  resetSettingsCache();    // Đợt 338 — next sign-in re-pulls that account's defaults
-  resetShowdownCache();
-  clearShowdownPick();     // Đợt 155 — see the matching pair in the sign-in path
+  boChuanBi();             // Đợt 536 — tài khoản kế phải chuẩn bị lại (maybeSeed/loadSettings của CHÍNH nó)
+  // Đợt 536 — `?.`: chưa rời trang chủ lần nào thì các khối này chưa nạp ⇒ chưa có gì để xoá.
+  resetSettingsCache?.();    // Đợt 338 — next sign-in re-pulls that account's defaults
+  resetShowdownCache?.();
+  clearShowdownPick?.();     // Đợt 155 — see the matching pair in the sign-in path
   state.user = null;
   state.view = "top"; state.root = null; state.folderId = null; state.query = "";
   renderLogin();
@@ -3263,8 +3337,14 @@ function logo(small) {
 // ---------------- Settings (multi-row menu) ----------------
 // Settings menu -> "Default activity options" -> pick a template -> its options.
 // (More rows will be added here in the future.)
-function openSettingsFlow() {
+// ⭐ Đợt 536 — Settings mở từ trang chủ: chuẩn bị (options-panel, lớp dashboard…) xong mới mở hộp.
+async function openSettingsFlow() {
   closeMenu();
+  try { await chuanBi(); }
+  catch (e) { toastMsg("Could not load your library: " + (e.message || "")); return; }
+  moSettings();
+}
+function moSettings() {
   openModal("Settings", (body, close) => {
     const titleEl = body.parentElement.querySelector(".aw-modal-title");
     const setTitle = (text, onBack) => {
