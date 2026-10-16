@@ -1,0 +1,4 @@
+/* RACING WORDS mẫu 4d (16/10/2026) — nạp SAU rw-4c.css. GỘP CAMERA: 2 nửa ghép thành 1 ảnh ⇒ vạch giữa + khung kính buồng lái mờ đi (chỉ opacity, đổi lớp 1 lần). */
+.sr3z .sr-divider, .sr3z .sr-frame { transition: opacity .45s ease; }
+.sr3z.is-merge .sr-divider, .sr3z.is-merge .sr-frame { opacity: 0; }
+.sr-sky { margin-bottom: 1.4cqh; }

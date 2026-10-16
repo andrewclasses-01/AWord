@@ -1,0 +1,11 @@
+/* RACING WORDS mẫu 4a (16/10/2026) — nạp SAU rw-3z.css.
+   · ô ĐỒNG HỒ / SỐ TỪ / QUÃNG TỚI ĐÍCH trong khung bản đồ (cạnh chữ LAP) — chế độ đua theo thời gian / số từ / đích dời được
+   · cờ ĐÍCH đỏ nhấp nháy trên bản đồ khi đích vừa được đặt (opacity — không filter, không box-shadow động) */
+.sr3 .sr-clock { flex: none; min-width: 5.4cqw; text-align: center; color: #fff; font: italic 900 3cqh/1 "Exo 2", sans-serif; pointer-events: none; font-variant-numeric: tabular-nums; }
+.sr3 .sr-clock:empty { display: none; }
+.sr3 .sr-clock small { display: block; font-size: 1.5cqh; letter-spacing: .2em; color: #9fb4e0; margin-bottom: .3cqh; font-style: normal; }
+.sr3 .sr-clock.is-low { color: #ff5a4a; animation: rw4a-blink .5s steps(2) infinite; }
+.sr-map .m-fin circle { fill: #e5262b; stroke: #fff; stroke-width: 3; }
+.sr-map .m-fin path { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linejoin: round; }
+.sr-map .m-fin.on { animation: rw4a-blink .6s steps(2) infinite; }
+@keyframes rw4a-blink { 50% { opacity: .35; } }

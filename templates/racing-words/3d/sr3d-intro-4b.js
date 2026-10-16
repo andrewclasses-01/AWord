@@ -1,3 +1,8 @@
+// RACING WORDS mẫu 4b (16/10/2026) = sr3d-intro-3z.js, đổi xe sang sr3d-car-4b.js — PHẢI cùng mô-đun xe với lõi: bảng số đo xe (SO_DO: chỗ cháy, kính…)
+//   nằm trong mô-đun; khác mô-đun ⇒ lõi dò lại bằng tia ⇒ bước dịch sẵn chậm ~20 s (đo 4b lần đầu: 20,4 s ⇒ cùng mô-đun: ~1,5 s).
+// ---- gốc 3z ----
+// RACING WORDS mẫu 3z (16/10/2026) = sr3d-intro-3r.js, chỉ đổi xe sang sr3d-car-3z.js (bánh không chìm + bóng đúng hình xe).
+// ---- gốc 3r ----
 // RACING WORDS mẫu 3r (16/10/2026) = sr3d-intro-3q.js tối ưu cho TOMKO (Quadro T2000, màn 4K, myActivity). Đo act 572 trong myActivity: màn chờ 37 fps,
 //   PHIM intro 18 fps (khung 67–150 ms, cú đầu 317 ms). Nguyên nhân + sửa:
 //   · canvas antialias (MSAA) vô ích — composer vẽ vào render target riêng rồi mới chép ra ⇒ BỎ (antialias: false).
@@ -28,7 +33,7 @@ import { RenderPass } from "../../rocket-race/vendor/three/addons/RenderPass.js"
 import { UnrealBloomPass } from "../../rocket-race/vendor/three/addons/UnrealBloomPass.js";
 import { OutputPass } from "../../rocket-race/vendor/three/addons/OutputPass.js";
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
-import { makeCar3d } from "./sr3d-car-3r.js";
+import { makeCar3d } from "./sr3d-car-4b.js";
 import { makeAutoRes } from "./sr3d-autores-3r.js";
 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
@@ -215,7 +220,7 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
   }
 
   // ---------- xe ----------
-  const U = { uBend: { value: new THREE.Vector2() }, uBendZ: { value: 0 } };
+  const U = { uBend: { value: new THREE.Vector2() }, uBendZ: { value: 0 }, uBendT: { value: null }, uBendD: { value: 0 } };   // 4b: lửa pô dùng bảng cong (xưởng không cong ⇒ uBendD 0)
   const cars = [null, null], carIds = ids.slice(0, 2), heads = [null, null];
   function buildCar(i) {
     if (cars[i]) { scene.remove(cars[i].rig); cars[i].dispose(); }

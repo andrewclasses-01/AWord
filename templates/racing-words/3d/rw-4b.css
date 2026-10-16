@@ -1,0 +1,21 @@
+/* RACING WORDS mẫu 4b (16/10/2026) — nạp SAU rw-4a.css.
+   VẠCH MẠNG làm lại (thầy: "cần đưa cân đối vào giữa theo chiều cao … phong cách mảnh, racing hơn, ngầu hơn — hiện trông hiền và hoạt hình quá"):
+   · canh GIỮA phần khung nhìn (trên tap-lô): lõi đặt --rw-dashpx = chiều cao tap-lô
+   · mảnh 0,42cqw, mỗi mạng = 1 thanh XIÊN cắt góc (clip-path) màu neon, không bo tròn; ray mảnh bên cạnh + số mạng nghiêng ở đỉnh
+   · không filter / box-shadow động — chỉ đổi opacity, transform (giữ mượt như 3r) */
+.rw-lives { top: calc((100% - var(--rw-dashpx, 30cqh)) * .21); bottom: auto; height: calc((100% - var(--rw-dashpx, 30cqh)) * .58);
+  width: .42cqw; min-width: 4px; gap: .55cqh; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+.sr-half0 .rw-lives { left: 1.1%; } .sr-half1 .rw-lives { right: 1.1%; }
+.rw-lives::before { content: ""; position: absolute; top: -1.4cqh; bottom: -1.4cqh; width: 1px; background: linear-gradient(180deg, transparent, rgba(220, 255, 235, .55) 12%, rgba(220, 255, 235, .55) 88%, transparent); }
+.sr-half0 .rw-lives::before { left: calc(100% + .3cqw); } .sr-half1 .rw-lives::before { right: calc(100% + .3cqw); }
+.rw-lives::after { content: attr(data-n); position: absolute; top: -4.4cqh; left: 50%; transform: translateX(-50%) skewX(-12deg); color: #eafff2;
+  font: italic 900 2.4cqh/1 "Exo 2", sans-serif; letter-spacing: .02em; text-shadow: 0 0 .8cqh rgba(43, 255, 136, .7), 0 .2cqh .3cqh rgba(0, 0, 0, .8); }
+.rw-lives i { border-radius: 0; box-shadow: none; transition: opacity .25s, background .25s;
+  background: linear-gradient(90deg, #f2fff7 0%, #4dffa0 38%, #12c766 100%); clip-path: polygon(0 22%, 100% 0, 100% 78%, 0 100%); }
+.sr-half1 .rw-lives i { background: linear-gradient(270deg, #f2fff7 0%, #4dffa0 38%, #12c766 100%); clip-path: polygon(0 0, 100% 22%, 100% 100%, 0 78%); }
+.rw-lives i.off { background: rgba(255, 255, 255, .13) !important; }
+.rw-lives.is-low i:not(.off) { background: linear-gradient(90deg, #fff1ee, #ff5a4a 40%, #c81e1e) !important; box-shadow: none; animation: rw4b-low .8s steps(2) infinite; }
+.rw-lives.is-low::after { color: #ffe1dc; text-shadow: 0 0 .8cqh rgba(255, 60, 40, .8), 0 .2cqh .3cqh rgba(0, 0, 0, .8); }
+.rw-lives.hit { animation: rw4b-hit .45s ease-out; }
+@keyframes rw4b-low { 50% { opacity: .4; } }
+@keyframes rw4b-hit { 0% { transform: scaleX(1); } 30% { transform: scaleX(2.6); } 100% { transform: scaleX(1); } }

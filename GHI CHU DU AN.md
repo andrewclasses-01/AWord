@@ -546,6 +546,18 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 535 (16/10/2026) — RACING WORDS 5 ĐỢT SAU 3y (myGame mẫu 4d)
+
+**Thầy:** 12 việc sau khi chốt 3y ("quan trọng nhất là giữ được độ mượt và hiệu năng") ⇒ nghiên cứu (hồ sơ myGame mục 33) ⇒ chia 5 đợt thử từng đợt: 3z · 4a · 4b · 4c · 4d,
+kèm việc thầy thêm giữa chừng (lên dốc ramp giật · bỏ lái tự động · đường xa vắt trái/phải phi vật lý · vạch mạng mảnh racing) ⇒ "chạy luôn tất cả các đợt còn lại" ⇒ "đưa bản 4d lên AWord luôn".
+**Làm:** myGame `8a6c7ce` (rw-4d · sr3d-4d · world-4b · missile-4b · car-4b · intro-4b · stunt-4b · traffic-4c · CSS rw-3z/4a/4b/4c/4d; hồ sơ mục 34–38) ⇒ chép bằng
+tools/chep-racing-words.py (GOC rw-4d.js, CSS + 5 file mới đúng thứ tự). racing-words.js: GAME rw-4d, CSS mới, Options mới **Race** (Length / Time / Words) · **Length** ×1 / ×1,5 / ×2 / ×3 ·
+**Time** 1–10 phút · **Twist ramps** · **Road pickups: Boost / Life / Missile** (khoá phẳng srRace · srLenK · srTimeS · srTwists · srPkBoost · srPkLife · srPkMissile; mặc định Length ×2,
+3 phút, bật hết). Traffic + Sky view + Camera nằm trong ⚙ Settings của game (nhớ theo máy chiếu, không theo act). iPad giữ padui-3y / padlink-3y.
+**Đã thử (bàn thử scratch/dot535-rw.html):** xưởng → START → đua (câu hỏi dưới, LAP 1/4, DRIVE), bảng Options thật có đủ mục mới, chọn Race = Time ⇒ Apply ⇒ act.options srRace "time",
+game dựng lại chế độ time; pad.html mở bình thường. Đo ở myGame (mục 34–38): ~450 lệnh vẽ, 0 dịch shader giữa trận, 96–100 fps máy thầy (trình duyệt giới hạn 100).
+⬜ thầy thử 2 đội trên TOMKO (lái tay mới, cong thật, xe khác, camera gộp).
+
 ## Đợt 534 (16/10/2026) — RACING WORDS LÁI NGHIÊNG iPAD (myGame mẫu 3y)
 
 **Thầy:** "build phần điều khiển cả ở trong game và trên ipad — tập trung lái bằng nghiêng ipad, nghiên cứu tính khả thi trước" ⇒ nghiên cứu (kênh WebRTC + lõi lái liên tục có sẵn;

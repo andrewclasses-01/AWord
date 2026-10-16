@@ -1,3 +1,19 @@
+// RACING WORDS mẫu 4b (16/10/2026) = sr3d-world-4a.js + ĐƯỜNG CONG ĐÚNG VẬT LÝ (thầy: "xe đi thẳng nhưng đôi khi đoạn đường phía xa vắt sang trái,
+//   vắt sang phải rất nhanh … cần đường đua giống thực tế vật lý"): cũ = 1 hệ số cong chung (trung bình 30–150 m) cho CẢ đoạn xa ⇒ mỗi khúc S mới lọt vào
+//   tầm là cả đường xa quẹt ngang. Nay dịch ngang = HÌNH THẬT của đường phía trước: lõi tích phân độ cong bản đồ từ chỗ máy quay ra 1.400 m
+//   (góc hướng φ(d) = ∫κ, lệch X(d) = ∫sin φ) ⇒ bảng 256 mẫu (uBendT, ảnh nổi 1 dòng), shader nội suy; ngoài 1.400 m theo tiếp tuyến (uBend.x).
+//   Điểm nào trên đường cũng đứng YÊN trong thế giới — chỉ đổi khi máy quay thật sự đi tới / quay đầu. Bầu trời xoay theo HƯỚNG TUYỆT ĐỐI của đường
+//   tại máy quay (U.uSkyYaw) — không còn xoay theo đường xa.
+// ---- gốc 4a ----
+// RACING WORDS mẫu 4a (16/10/2026) = sr3d-world-3r.js + đợt 2/5 (hồ sơ mục 35):
+//   · CÂY CHI TIẾT HƠN mà vẫn rẻ: thông 4 tầng tán (mép tán lệch ngẫu nhiên), cây tròn 3 khối tán lồi lõm, vân sáng–tối VẼ SẴN vào màu đỉnh
+//     (gốc tối, ngọn sáng ⇒ có khối như có bóng, 0 chi phí đèn) + BỤI CÂY và CỎ (InstancedMesh, cỏ chỉ ~430 m quanh xe) — vẫn 1 vật liệu chung, KHÔNG lá trong suốt.
+//   · VẠCH "ANDREW STUDIO" sơn giữa đường kiểu đường đua, thỉnh thoảng (~420 m), né cầu nhảy / cổng (setAvoid) — 1 InstancedMesh.
+//   · CỘT MỐC đoạn: 14 chỗ dùng lại theo cửa sổ quanh xe (cũ dựng sẵn MỌI mốc ⇒ đường ×3 = 300 lệnh vẽ); số in lúc cần, nhớ theo số.
+//   · setTrack({ SEG, segs, LAP, laps }) — segs = Infinity ⇒ mốc không có "/ tổng"; cổng LAP chỉ khi đua theo độ dài.
+//   · CỔNG ĐÍCH DỜI ĐƯỢC: setFinish(s | null) — đích tuỳ diễn biến trận (hết giờ / hết từ / hết mạng). Cổng luôn có trong cảnh (null ⇒ cất sau vạch xuất phát)
+//     ⇒ shader đã dịch sẵn, hiện ra giữa trận không khựng.
+// ---- gốc 3r ----
 // 3r (16/10/2026, đo TOMKO): THỨ TỰ VẼ — bản cũ vẽ TRỜI đầu tiên (renderOrder −10, phủ kín màn, fbm mây) rồi đất (−5, 2 fbm/điểm ảnh) rồi biển,
 //   sau cùng mới tới đường / xe / cây đè lên ⇒ GPU tính shader nhiễu cho cả những điểm ảnh bị che. Nay vật thường (0) và vạch (1) vẽ TRƯỚC,
 //   rồi đất (2), biển (3), trời CUỐI (4; gl_Position.z = w ⇒ độ sâu 1,0 chỉ qua được chỗ còn trống) ⇒ loại sớm theo độ sâu (early-z), hình y như cũ.
@@ -66,15 +82,17 @@ export function groundH(x, z) {
 //   TIẾP TUYẾN ⇒ cảnh xa chỉ XOAY một góc atan(2·b·D0) như khi xe quay đầu thật; bầu trời xoay cùng góc (skyRot). bendQ JS = cùng công thức.
 export const BEND_D0 = 150;
 export const bendQ = d => { const a = -Math.min(d, 0); return a <= BEND_D0 ? a * a : BEND_D0 * (2 * a - BEND_D0); };
-const BEND_GLSL = `uniform vec2 uBend; uniform float uBendZ;
+export const BEND_GLSL = `uniform vec2 uBend; uniform float uBendZ; uniform sampler2D uBendT; uniform float uBendD;
 float bendQ(float d){ float a = -d; return a <= 150.0 ? a*a : 150.0*(2.0*a - 150.0); }
-vec4 bendW(vec4 w){ float d = min(w.z - uBendZ, 0.0); float q = bendQ(d); w.x += uBend.x*q; w.y -= uBend.y*q; return w; }`;
+float bendX(float a){ if (uBendD <= 0.0) return 0.0; float f = clamp(a / uBendD, 0.0, 1.0) * 255.0; float i0 = min(floor(f), 254.0);
+  float p = mix(texelFetch(uBendT, ivec2(int(i0), 0), 0).r, texelFetch(uBendT, ivec2(int(i0) + 1, 0), 0).r, f - i0); return p + uBend.x * max(a - uBendD, 0.0); }
+vec4 bendW(vec4 w){ float d = min(w.z - uBendZ, 0.0); float q = bendQ(d); w.x += bendX(-d); w.y -= uBend.y*q; return w; }`;
 export function makeBend(U) {
   return mat => {
     const prev = mat.onBeforeCompile;
     mat.onBeforeCompile = (sh, r) => {
       if (prev) prev(sh, r);
-      sh.uniforms.uBend = U.uBend; sh.uniforms.uBendZ = U.uBendZ;
+      sh.uniforms.uBend = U.uBend; sh.uniforms.uBendZ = U.uBendZ; sh.uniforms.uBendT = U.uBendT; sh.uniforms.uBendD = U.uBendD;   // 4b
       sh.vertexShader = BEND_GLSL + "\n" + sh.vertexShader.replace("#include <project_vertex>", `
         vec4 bw = vec4( transformed, 1.0 );
         #ifdef USE_BATCHING
@@ -125,7 +143,7 @@ const FOGU = { uFogCol: { value: HAZE }, uFogNear: { value: 140 }, uFogFar: { va
 function makeGround(U, KEY) {
   const g = new THREE.PlaneGeometry(1700, 1700, 170, 170).rotateX(-Math.PI / 2);
   const mat = new THREE.ShaderMaterial({
-    uniforms: { ...FOGU, uBend: U.uBend, uBendZ: U.uBendZ, uKey: { value: KEY } },
+    uniforms: { ...FOGU, uBend: U.uBend, uBendZ: U.uBendZ, uBendT: U.uBendT, uBendD: U.uBendD, uKey: { value: KEY } },
     vertexShader: NOISE_GLSL + BEND_GLSL + `
       varying vec3 vW; varying vec3 vN; varying float vFog;
       void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vec2 q = w.xz;
@@ -157,7 +175,7 @@ function makeGround(U, KEY) {
 function makeSea(U) {
   const g = new THREE.PlaneGeometry(1400, 1700, 70, 170).rotateX(-Math.PI / 2); g.translate(712, 0, 0);
   const mat = new THREE.ShaderMaterial({
-    uniforms: { ...FOGU, uBend: U.uBend, uBendZ: U.uBendZ, uSun: { value: SUN_DIR }, uT: { value: 0 } },
+    uniforms: { ...FOGU, uBend: U.uBend, uBendZ: U.uBendZ, uBendT: U.uBendT, uBendD: U.uBendD, uSun: { value: SUN_DIR }, uT: { value: 0 } },
     vertexShader: BEND_GLSL + `varying vec3 vW; varying float vFog; varying vec3 vB;
       void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vec4 b = bendW(w); vB = b.xyz; vec4 mv = viewMatrix * b; vFog = length(mv.xyz); gl_Position = projectionMatrix * mv; }`,
     fragmentShader: NOISE_GLSL + `uniform vec3 uFogCol; uniform float uFogNear, uFogFar; uniform vec3 uSun; uniform float uT;
@@ -221,6 +239,27 @@ function signTexture(text, sub, col) {
   g.font = "800 34px 'Exo 2', sans-serif"; g.fillStyle = col; g.fillText(sub, 128, 205);
   return tex(c);
 }
+// 4a: vạch sơn "ANDREW STUDIO" giữa đường — chữ nghiêng đậm, viền đỏ, 2 dải tốc độ + mũi tên chevron 2 bên; sơn hơi mòn (lỗ chấm) cho thật
+function logoTexture() {
+  const W = 2048, H = 980, [c, g] = canvas(W, H);
+  g.clearRect(0, 0, W, H);
+  g.save(); g.transform(1, 0, -0.22, 1, 110, 0);                                     // nghiêng kiểu đua
+  g.fillStyle = "rgba(200,38,43,.92)"; g.fillRect(170, 110, 1500, 46); g.fillRect(170, H - 156, 1500, 46);     // 2 dải đỏ
+  g.fillStyle = "rgba(241,239,232,.95)"; g.fillRect(170, 176, 1500, 18); g.fillRect(170, H - 194, 1500, 18);   // chỉ trắng
+  g.textAlign = "center"; g.textBaseline = "middle";
+  g.font = "italic 900 330px 'Exo 2', 'Arial Black', sans-serif"; g.lineJoin = "round";
+  g.lineWidth = 34; g.strokeStyle = "rgba(205,36,42,1)"; g.strokeText("ANDREW", 930, 360);
+  g.fillStyle = "#fbfaf5"; g.fillText("ANDREW", 930, 360);
+  g.font = "italic 900 250px 'Exo 2', 'Arial Black', sans-serif";
+  g.lineWidth = 28; g.strokeText("STUDIO", 930, 640); g.fillText("STUDIO", 930, 640);
+  g.restore();
+  g.fillStyle = "rgba(245,197,24,.9)";                                               // chevron ▲ chỉ hướng chạy (2 bên)
+  [[80, 1], [W - 80, 1]].forEach(([x]) => { for (let k = 0; k < 3; k++) { const y = 300 + k * 150; g.beginPath(); g.moveTo(x - 50, y + 60); g.lineTo(x, y); g.lineTo(x + 50, y + 60); g.lineTo(x + 50, y + 92); g.lineTo(x, y + 32); g.lineTo(x - 50, y + 92); g.closePath(); g.fill(); } });
+  g.globalCompositeOperation = "destination-out";                                    // sơn mòn
+  for (let i = 0; i < 4000; i++) { g.fillStyle = `rgba(0,0,0,${0.1 + Math.random() * 0.35})`; g.fillRect(Math.random() * W, Math.random() * H, 2 + Math.random() * 5, 2 + Math.random() * 5); }
+  g.globalCompositeOperation = "source-over";
+  const t = tex(c); return t;
+}
 function checkerTexture(cols = 16, rows = 2) {
   const [c, g] = canvas(cols * 32, rows * 32);
   for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) { g.fillStyle = (i + j) % 2 ? "#111" : "#f4f4f2"; g.fillRect(i * 32, j * 32, 32, 32); }
@@ -246,7 +285,8 @@ export function createWorld({ scene, U, bend, keyDir }) {
   // 3q: cảnh xa (theo tiếp tuyến) lệch về +x một góc φ = atan(2·bx·D0) và chúc xuống α = atan(2·by·D0) ⇒ pixel nhìn hướng v phải lấy màu trời
   //   ở hướng R⁻¹·v (R = xoay đưa cảnh xa tới chỗ mới) ⇒ mặt trời, mây, chân trời đi cùng núi.
   const SE = new THREE.Euler(0, 0, 0, "YXZ"), SM = new THREE.Matrix4();
-  function skyRot(bx, by) { SE.set(-Math.atan(2 * by * BEND_D0), -Math.atan(2 * bx * BEND_D0), 0, "YXZ"); SM.makeRotationFromEuler(SE).transpose(); sky.material.uniforms.uRot.value.setFromMatrix4(SM); }
+  function skyRot(yaw, by) { SE.set(-Math.atan(2 * by * BEND_D0), -yaw, 0, "YXZ");   // 4b: yaw = hướng tuyệt đối của đường tại máy quay
+    SM.makeRotationFromEuler(SE).transpose(); sky.material.uniforms.uRot.value.setFromMatrix4(SM); }
   const ground = keep(makeGround(U, keyDir)); scene.add(ground);
   const sea = keep(makeSea(U)); scene.add(sea);
 
@@ -269,11 +309,33 @@ export function createWorld({ scene, U, bend, keyDir }) {
   const poles = new THREE.InstancedMesh(poleG, bend(new THREE.MeshStandardMaterial({ color: "#7e868c", roughness: 0.5, metalness: 0.6 })), NL);
   const heads = new THREE.InstancedMesh(headG, bend(new THREE.MeshStandardMaterial({ color: "#fff3d6", emissive: new THREE.Color("#ffd49a"), emissiveIntensity: 2.2 })), NL);
   [poles, heads].forEach(m => { m.frustumCulled = false; keep(m); scene.add(m); });
-  // ----- cây: thông (trái) · cây tròn (trái) · dừa (phải, trên cát) -----
-  const pineG = (() => { const t = new THREE.CylinderGeometry(0.16, 0.24, 2.2, 6).translate(0, 1.1, 0), c1 = new THREE.ConeGeometry(1.9, 4.2, 8).translate(0, 3.6, 0), c2 = new THREE.ConeGeometry(1.4, 3.2, 8).translate(0, 5.6, 0);
-    paint(t, "#5a3d26"); paint(c1, "#ffffff"); paint(c2, "#ffffff"); const m = mergeGeos([t, c1, c2]); [t, c1, c2].forEach(x => x.dispose()); return m; })();
-  const roundG = (() => { const t = new THREE.CylinderGeometry(0.18, 0.26, 2.6, 6).translate(0, 1.3, 0), c = new THREE.IcosahedronGeometry(2.3, 1).translate(0, 4.2, 0);
-    paint(t, "#5a3d26"); paint(c, "#ffffff"); const m = mergeGeos([t, c]); t.dispose(); c.dispose(); return m; })();
+  // ----- 4a: cây CHI TIẾT HƠN: thông 4 tầng · cây tròn 3 khối tán · bụi · cỏ — vân sáng/tối vẽ sẵn (màu đỉnh × màu từng cây) -----
+  const RG = mulberry(4242);
+  const shade = (g, y0, y1, lo, hi, jit = 0.14) => { const p = g.attributes.position, n = p.count, a = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { const k = Math.max(0, Math.min(1, (p.getY(i) - y0) / (y1 - y0))), v = (lo + (hi - lo) * k) * (1 - jit / 2 + RG() * jit);
+      a[3 * i] = v * (0.96 + 0.06 * k); a[3 * i + 1] = v; a[3 * i + 2] = v * (0.9 + 0.08 * k); }
+    g.setAttribute("color", new THREE.BufferAttribute(a, 3)); return g; };
+  const lumpy = (g, amt) => { const p = g.attributes.position, seen = new Map();   // lồi lõm: cùng 1 đỉnh (trùng vị trí) dịch cùng 1 lượng ⇒ không hở mép
+    for (let i = 0; i < p.count; i++) { const key = p.getX(i).toFixed(3) + "," + p.getY(i).toFixed(3) + "," + p.getZ(i).toFixed(3);
+      if (!seen.has(key)) seen.set(key, 1 + (RG() - 0.5) * 2 * amt); const k = seen.get(key); p.setXYZ(i, p.getX(i) * k, p.getY(i) * k, p.getZ(i) * k); }
+    g.computeVertexNormals(); return g; };
+  const jitRing = (g, amt, yb) => { const p = g.attributes.position, seen = new Map();   // mép tán thông lệch ngẫu nhiên
+    for (let i = 0; i < p.count; i++) { if (p.getY(i) > yb + 0.01) continue; const key = p.getX(i).toFixed(3) + "," + p.getZ(i).toFixed(3);
+      if (!seen.has(key)) seen.set(key, [1 + (RG() - 0.5) * 2 * amt, (RG() - 0.5) * 0.35]); const [k, dy] = seen.get(key); p.setXYZ(i, p.getX(i) * k, p.getY(i) + dy, p.getZ(i) * k); }
+    g.computeVertexNormals(); return g; };
+  const cone = (r, h, y, seg = 9) => { const g = new THREE.ConeGeometry(r, h, seg, 1, true).translate(0, y, 0), q = g.toNonIndexed(); g.dispose(); return jitRing(q, 0.16, y - h / 2); };
+  const pineG = (() => { const t = shade(new THREE.CylinderGeometry(0.13, 0.26, 2.4, 6).translate(0, 1.2, 0), 0, 2.4, 0.45, 0.7);
+    const tiers = [[2.1, 3.0, 2.9], [1.75, 2.7, 4.4], [1.35, 2.4, 5.8], [0.85, 2.1, 7.1]].map(([r, h, y]) => shade(cone(r, h, y), y - h / 2, y + h / 2, 0.5, 1.22));
+    const m = mergeGeos([t, ...tiers]); [t, ...tiers].forEach(x => x.dispose()); return m; })();
+  const roundG = (() => { const t = shade(new THREE.CylinderGeometry(0.16, 0.28, 2.8, 6).translate(0, 1.4, 0), 0, 2.8, 0.42, 0.66);
+    const br = shade(new THREE.CylinderGeometry(0.07, 0.1, 1.5, 5).rotateZ(0.7).translate(0.55, 2.7, 0), 2, 3.4, 0.45, 0.6);
+    const blobs = [[2.2, 0, 4.4, 0], [1.6, 0.95, 5.3, 0.4], [1.45, -0.9, 5.0, -0.5]].map(([r, x, y, z]) => shade(lumpy(new THREE.IcosahedronGeometry(r, 1).toNonIndexed(), 0.14).translate(x, y, z), y - r, y + r, 0.5, 1.2));
+    const m = mergeGeos([t, br, ...blobs]); [t, br, ...blobs].forEach(x => x.dispose()); return m; })();
+  const bushG = (() => { const parts = [[0.95, 0, 0.55, 0], [0.7, 0.75, 0.45, 0.25], [0.65, -0.7, 0.42, -0.2]].map(([r, x, y, z]) => shade(lumpy(new THREE.IcosahedronGeometry(r, 0).toNonIndexed(), 0.2).scale(1, 0.78, 1).translate(x, y, z), 0, y + r, 0.5, 1.15));
+    const m = mergeGeos(parts); parts.forEach(x => x.dispose()); return m; })();
+  const grassG = (() => { const parts = []; for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2 + RG() * 0.5, h = 0.38 + RG() * 0.3;
+      parts.push(shade(new THREE.ConeGeometry(0.045, h, 3, 1).toNonIndexed().translate(0, h / 2, 0).rotateZ(0.25 + RG() * 0.35).rotateY(a).translate(Math.cos(a) * 0.09, 0, Math.sin(a) * 0.09), 0, h, 0.55, 1.3, 0.2)); }
+    const m = mergeGeos(parts); parts.forEach(x => x.dispose()); return m; })();
   const palmG = (() => { const parts = []; let x = 0, y = 0;
     for (let i = 0; i < 6; i++) { const s = new THREE.CylinderGeometry(0.17 - i * 0.012, 0.2 - i * 0.012, 1.45, 7).translate(0, 0.72, 0).rotateZ(-0.06 * i).translate(x, y, 0); paint(s, i % 2 ? "#8a6a45" : "#7a5c3b"); parts.push(s); x += Math.sin(0.06 * i) * 1.45; y += Math.cos(0.06 * i) * 1.42; }
     for (let k = 0; k < 9; k++) { const a = k / 9 * Math.PI * 2; const l = new THREE.PlaneGeometry(0.75, 3.6, 1, 4); const p = l.attributes.position;
@@ -281,25 +343,44 @@ export function createWorld({ scene, U, bend, keyDir }) {
       l.translate(0, 1.8, 0).rotateX(-1.15).rotateY(a).translate(x, y, 0); paint(l, "#ffffff"); parts.push(l); }
     const m = mergeGeos(parts); parts.forEach(q => q.dispose()); return m; })();
   const leafM = bend(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, side: THREE.DoubleSide }));
-  const NP = 220, NR = 120, NPa = 110;
+  const NP = 300, NR = 170, NPa = 110, NB = 320, NG = 1100;                                       // 4a: + bụi + cỏ, cây dày hơn và lên cao hơn trên núi
   const pines = new THREE.InstancedMesh(pineG, leafM, NP), rounds = new THREE.InstancedMesh(roundG, leafM, NR), palms = new THREE.InstancedMesh(palmG, leafM, NPa);
-  [pines, rounds, palms].forEach(m => { m.frustumCulled = false; m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(m.count * 3).fill(1), 3); keep(m); scene.add(m); });
+  const bushes = new THREE.InstancedMesh(bushG, leafM, NB), grass = new THREE.InstancedMesh(grassG, leafM, NG);
+  [pines, rounds, palms, bushes, grass].forEach(m => { m.frustumCulled = false; m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(m.count * 3).fill(1), 3); keep(m); scene.add(m); });
 
+  // ----- 4a: vạch "ANDREW STUDIO" sơn giữa đường (kiểu đường đua), mỗi ~420 m, né cầu nhảy / cổng -----
+  const LOGO_GAP = 420, LOGO_W = 13.4, LOGO_L = 6.4, NLOGO = 6;
+  const logoT = logoTexture();
+  const logoM = bend(new THREE.MeshStandardMaterial({ map: logoT, transparent: true, depthWrite: false, roughness: 0.62, polygonOffset: true, polygonOffsetFactor: -2 }));
+  const logos = new THREE.InstancedMesh(new THREE.PlaneGeometry(LOGO_W, LOGO_L).rotateX(-Math.PI / 2), logoM, NLOGO);
+  logos.frustumCulled = false; logos.renderOrder = 1; logos.count = 0; keep(logos); scene.add(logos);
+  let avoid = () => false;                                       // lõi báo chỗ có cầu nhảy / cổng
   const M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3(), P = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0), C = new THREE.Color();
   let win = "";
-  function fillProps(s0, s1) {                                   // s = quãng đường (m) dương về phía trước; z = −s
-    let nl = 0, np = 0, nr = 0, npa = 0;
+  function fillProps(s0, s1, sNear = s0) {                       // s = quãng đường (m) dương về phía trước; z = −s · 4a: sNear = xe chậm hơn (cỏ chỉ quanh xe)
+    let nl = 0, np = 0, nr = 0, npa = 0, nb = 0, ng = 0;
     for (let c = Math.floor(s0 / 24); c <= Math.ceil(s1 / 24) && nl < NL; c++) {
       const side = (c & 1) ? 1 : -1; P.set(side * 11.0, 0, -c * 24); Q.setFromAxisAngle(UP, side > 0 ? Math.PI : 0); S.set(1, 1, 1);
       M4.compose(P, Q, S); poles.setMatrixAt(nl, M4); heads.setMatrixAt(nl, M4); nl++;
     }
     for (let c = Math.floor(s0 / TILE); c <= Math.ceil(s1 / TILE); c++) {
       const r = mulberry(c * 7919 + 13);
-      for (let i = 0; i < 9; i++) {                               // trái: thông + cây tròn, dày dần ra xa đường
-        const x = -(14.5 + Math.pow(r(), 1.6) * 75), z = -(c * TILE + r() * TILE), y = groundH(x, z) - 0.25, sc = 0.8 + r() * 0.7, kind = r() < 0.62;
+      for (let i = 0; i < 12; i++) {                              // trái: thông + cây tròn, dày dần ra xa đường — 4a: lên tới ~150 m trên sườn núi
+        const x = -(14.5 + Math.pow(r(), 1.7) * 135), z = -(c * TILE + r() * TILE), y = groundH(x, z) - 0.25, sc = 0.8 + r() * 0.7, kind = r() < 0.6;
         P.set(x, y, z); Q.setFromAxisAngle(UP, r() * 6.28); S.set(sc, sc * (0.85 + r() * 0.4), sc); M4.compose(P, Q, S);
         C.setHSL(kind ? 0.3 + r() * 0.05 : 0.22 + r() * 0.07, 0.45 + r() * 0.2, 0.2 + r() * 0.1);
         if (kind && np < NP) { pines.setMatrixAt(np, M4); pines.setColorAt(np, C); np++; } else if (!kind && nr < NR) { rounds.setMatrixAt(nr, M4); rounds.setColorAt(nr, C); nr++; }
+      }
+      for (let i = 0; i < 12 && nb < NB; i++) {                   // 4a: bụi cây trên sườn trái (gần đường dày hơn) + vài bụi ở bãi bên phải
+        const right = r() < 0.12, x = right ? 12.8 + r() * 3 : -(13 + Math.pow(r(), 1.4) * 60), z = -(c * TILE + r() * TILE), y = groundH(x, z) - 0.12; if (y < -0.6) continue;
+        const sc = 0.6 + r() * 0.9; P.set(x, y, z); Q.setFromAxisAngle(UP, r() * 6.28); S.set(sc, sc * (0.75 + r() * 0.5), sc); M4.compose(P, Q, S);
+        C.setHSL(right ? 0.2 + r() * 0.04 : 0.24 + r() * 0.08, 0.4 + r() * 0.2, 0.2 + r() * 0.1); bushes.setMatrixAt(nb, M4); bushes.setColorAt(nb, C); nb++;
+      }
+      const cs = c * TILE;
+      if (cs + TILE > sNear - 40 && cs < sNear + 390) for (let i = 0; i < 125 && ng < NG; i++) {   // 4a: CỎ chỉ quanh xe (đứng gần mới thấy)
+        const left = r() < 0.86, x = left ? -(12.4 + Math.pow(r(), 1.3) * 26) : 12.2 + r() * 1.4, z = -(cs + r() * TILE), y = groundH(x, z) - 0.04;
+        const sc = 0.7 + r() * 0.9; P.set(x, y, z); Q.setFromAxisAngle(UP, r() * 6.28); S.set(sc, sc * (0.8 + r() * 0.6), sc); M4.compose(P, Q, S);
+        C.setHSL(0.17 + r() * 0.08, 0.45 + r() * 0.2, 0.26 + r() * 0.12); grass.setMatrixAt(ng, M4); grass.setColorAt(ng, C); ng++;
       }
       for (let i = 0; i < 4 && npa < NPa; i++) {                   // phải: dừa trên cát (bỏ chỗ đã ngập nước)
         const x = 13.6 + r() * 14, z = -(c * TILE + r() * TILE), y = groundH(x, z); if (y < -0.9) continue;
@@ -307,59 +388,92 @@ export function createWorld({ scene, U, bend, keyDir }) {
         C.setHSL(0.27 + r() * 0.05, 0.5, 0.26 + r() * 0.08); palms.setMatrixAt(npa, M4); palms.setColorAt(npa, C); npa++;
       }
     }
-    poles.count = heads.count = nl; pines.count = np; rounds.count = nr; palms.count = npa;
-    [poles, heads, pines, rounds, palms].forEach(m => { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
+    let nlg = 0;                                                   // 4a: vạch ANDREW STUDIO
+    for (let k = Math.max(0, Math.ceil((s0 - 260) / LOGO_GAP)); nlg < NLOGO; k++) { const sl = 260 + k * LOGO_GAP; if (sl > s1) break;
+      if (avoid(sl, LOGO_L / 2 + 6)) continue; P.set(0, 0.035, -sl); Q.identity(); S.set(1, 1, 1); M4.compose(P, Q, S); logos.setMatrixAt(nlg++, M4); }
+    logos.count = nlg; logos.instanceMatrix.needsUpdate = true;
+    poles.count = heads.count = nl; pines.count = np; rounds.count = nr; palms.count = npa; bushes.count = nb; grass.count = ng;
+    [poles, heads, pines, rounds, palms, bushes, grass].forEach(m => { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
   }
 
-  // ----- vạch đoạn / xuất phát / cổng đích (dựng theo đường đua) -----
-  let trackG = null;
-  function setTrack(L, SEG, LAP = L * SEG) {
-    if (trackG) { scene.remove(trackG); trackG.traverse(x => { if (x.geometry) x.geometry.dispose(); if (x.material) { if (x.material.map) x.material.map.dispose(); x.material.dispose(); } }); }
-    trackG = new THREE.Group(); scene.add(trackG);
-    const laps = Math.max(1, Math.round(L * SEG / LAP));
-    const strip = (z, mat, d = 0.55) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(15.6, d).rotateX(-Math.PI / 2), mat); m.position.set(0, 0.03, z); m.renderOrder = 1; trackG.add(m); return m; };
-    for (let k = 1; k < L; k++) {
-      const mat = bend(new THREE.MeshBasicMaterial({ color: new THREE.Color(0.75, 0.95, 1.0).multiplyScalar(1.6), transparent: true, opacity: 0.85, toneMapped: false, depthWrite: false }));
-      strip(-k * SEG, mat);
-      [-1, 1].forEach(s => {                                        // biển số đoạn 2 bên đường
-        const col = s < 0 ? "#3b8cff" : "#ff7a00";
-        const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.1, 2.1), bend(new THREE.MeshStandardMaterial({ map: signTexture(String(k), "/ " + L, col), roughness: 0.5, emissive: new THREE.Color("#ffffff"), emissiveIntensity: 0.25, emissiveMap: null })));
-        sign.material.emissiveMap = sign.material.map; sign.position.set(s * 12.4, 3.4, -k * SEG); trackG.add(sign);
-        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.4, 6), bend(new THREE.MeshStandardMaterial({ color: "#8a9196", metalness: 0.6, roughness: 0.5 })));
-        post.position.set(s * 12.4, 1.2, -k * SEG); trackG.add(post);
-      });
-    }
-    // cổng: 2 trụ + xà + băng rôn (mặt quay về phía xe tới) — mẫu 3: cổng ở MỖI MỐC VÒNG ("LAP n / laps", "FINAL LAP") + FINISH ở đích
-    const pm = bend(new THREE.MeshStandardMaterial({ color: "#1b2433", roughness: 0.4, metalness: 0.5 }));
-    const gate = (z, text, stripZ = z) => {
-      strip(stripZ, bend(new THREE.MeshStandardMaterial({ map: checkerTexture(16, 2), roughness: 0.7, polygonOffset: true, polygonOffsetFactor: -2 })), 1.6);
-      [-1, 1].forEach(s => { const p = new THREE.Mesh(new THREE.BoxGeometry(1.1, 8.6, 1.1), pm); p.position.set(s * 11.4, 4.3, z); trackG.add(p);
-        const lite = new THREE.Mesh(new THREE.BoxGeometry(0.2, 7.6, 1.14), bend(new THREE.MeshBasicMaterial({ color: new THREE.Color(s < 0 ? "#3b8cff" : "#ff7a00").multiplyScalar(2.2), toneMapped: false })));
-        lite.position.set(s * 11.4 - s * 0.5, 4.3, z); trackG.add(lite); });
-      const beam = new THREE.Mesh(new THREE.BoxGeometry(24, 2.3, 0.9), pm); beam.position.set(0, 9.4, z); trackG.add(beam);
-      const ban = new THREE.Mesh(new THREE.PlaneGeometry(23.2, 2.9), bend(new THREE.MeshStandardMaterial({ map: bannerTexture(text), roughness: 0.5, emissive: new THREE.Color("#ffffff"), emissiveIntensity: 0.35 })));
-      ban.material.emissiveMap = ban.material.map; ban.position.set(0, 9.4, z + 0.47); trackG.add(ban);
-    };
-    gate(-0.2, laps > 1 ? "LAP 1 / " + laps : "GO!", 0.8);
-    for (let k = 1; k < laps; k++) gate(-k * LAP, k + 1 === laps ? "FINAL LAP" : "LAP " + (k + 1) + " / " + laps);
-    gate(-L * SEG, "FINISH");
+  // ----- 4a: mốc đoạn (14 chỗ dùng lại quanh xe) · cổng xuất phát · cổng LAP (đua theo độ dài) · cổng ĐÍCH dời được -----
+  let trackG = null, trackO = { SEG: 80, segs: 12, LAP: 480, laps: 1 }, finG = null;
+  const NMK = 12, mkSlots = [], signCache = new Map();
+  const stripG = new THREE.PlaneGeometry(15.6, 0.55).rotateX(-Math.PI / 2), postG = new THREE.CylinderGeometry(0.07, 0.07, 2.4, 6), signG = new THREE.PlaneGeometry(2.1, 2.1);
+  const stripM = bend(new THREE.MeshBasicMaterial({ color: new THREE.Color(0.75, 0.95, 1.0).multiplyScalar(1.6), transparent: true, opacity: 0.85, toneMapped: false, depthWrite: false }));
+  const postM = bend(new THREE.MeshStandardMaterial({ color: "#8a9196", metalness: 0.6, roughness: 0.5 }));
+  own.push(stripG, postG, signG); ownM.push(stripM, postM);
+  const signTex = (k, side) => { const key = k + ":" + side + ":" + trackO.segs; if (!signCache.has(key)) signCache.set(key, signTexture(String(k), isFinite(trackO.segs) ? "/ " + trackO.segs : "", side < 0 ? "#3b8cff" : "#ff7a00")); return signCache.get(key); };
+  const blankSign = signTexture("", "", "#3b8cff"); ownT.push(blankSign);   // ảnh giữ chỗ ⇒ shader có sẵn map (đổi ảnh không dịch lại)
+  // vạch + cột của MỌI mốc = 2 InstancedMesh (2 lệnh vẽ); chỉ biển số là tấm riêng (mỗi biển 1 ảnh số)
+  const mkStrips = new THREE.InstancedMesh(stripG, stripM, NMK), mkPosts = new THREE.InstancedMesh(postG, postM, NMK * 2);
+  mkStrips.renderOrder = 1; [mkStrips, mkPosts].forEach(m => { m.frustumCulled = false; m.count = 0; scene.add(m); });
+  for (let n = 0; n < NMK; n++) {
+    const g = new THREE.Group(); g.visible = false; g.userData.k = -1;
+    g.userData.signs = [-1, 1].map(sd => { const m = new THREE.Mesh(signG, bend(new THREE.MeshStandardMaterial({ map: blankSign, emissiveMap: blankSign, roughness: 0.5, emissive: new THREE.Color("#ffffff"), emissiveIntensity: 0.25 })));
+      ownM.push(m.material); m.position.set(sd * 12.4, 3.4, 0); g.add(m); return { m, sd }; });
+    scene.add(g); mkSlots.push(g);
   }
+  const MK4 = new THREE.Matrix4();
+  function placeMarkers(sMin) {
+    const { SEG, segs } = trackO, k0 = Math.max(1, Math.floor((sMin - 60) / SEG));
+    let moved = false, ns = 0;
+    mkSlots.forEach((g, n) => { const k = k0 + n, on = k < segs; g.visible = on; if (on) ns++; if (!on || g.userData.k === k) return;
+      moved = true; g.userData.k = k; g.position.set(0, 0, -k * SEG); g.userData.signs.forEach(({ m, sd }) => { m.material.map = m.material.emissiveMap = signTex(k, sd); m.material.needsUpdate = false; }); });
+    if (!moved && mkStrips.count === ns) return;
+    mkSlots.forEach((g, n) => { if (n >= ns) return; const z = g.position.z;
+      MK4.makeTranslation(0, 0.03, z); mkStrips.setMatrixAt(n, MK4); MK4.makeTranslation(-12.4, 1.2, z); mkPosts.setMatrixAt(2 * n, MK4); MK4.makeTranslation(12.4, 1.2, z); mkPosts.setMatrixAt(2 * n + 1, MK4); });
+    mkStrips.count = ns; mkPosts.count = ns * 2; mkStrips.instanceMatrix.needsUpdate = mkPosts.instanceMatrix.needsUpdate = true;
+  }
+  const pm = bend(new THREE.MeshStandardMaterial({ color: "#1b2433", roughness: 0.4, metalness: 0.5 }));
+  const liteM = [-1, 1].map(sd => bend(new THREE.MeshBasicMaterial({ color: new THREE.Color(sd < 0 ? "#3b8cff" : "#ff7a00").multiplyScalar(2.2), toneMapped: false })));
+  const chkM = bend(new THREE.MeshStandardMaterial({ map: checkerTexture(16, 2), roughness: 0.7, polygonOffset: true, polygonOffsetFactor: -2 }));
+  ownM.push(pm, ...liteM, chkM); ownT.push(chkM.map);
+  const postBG = new THREE.BoxGeometry(1.1, 8.6, 1.1), liteG = new THREE.BoxGeometry(0.2, 7.6, 1.14), beamG = new THREE.BoxGeometry(24, 2.3, 0.9), banG = new THREE.PlaneGeometry(23.2, 2.9), chkG = new THREE.PlaneGeometry(15.6, 1.6).rotateX(-Math.PI / 2);
+  own.push(postBG, liteG, beamG, banG, chkG);
+  // cổng: 2 trụ + xà + băng rôn (mặt quay về phía xe tới) — group ở z = 0, đặt bằng position
+  function gate(parent, z, text, stripDz = 0) {
+    const g = new THREE.Group(); g.position.z = z; parent.add(g);
+    const st = new THREE.Mesh(chkG, chkM); st.position.set(0, 0.03, stripDz); st.renderOrder = 1; g.add(st);
+    [-1, 1].forEach((sd, j) => { const p = new THREE.Mesh(postBG, pm); p.position.set(sd * 11.4, 4.3, 0); g.add(p);
+      const l = new THREE.Mesh(liteG, liteM[j]); l.position.set(sd * 11.4 - sd * 0.5, 4.3, 0); g.add(l); });
+    const beam = new THREE.Mesh(beamG, pm); beam.position.set(0, 9.4, 0); g.add(beam);
+    const ban = new THREE.Mesh(banG, bend(new THREE.MeshStandardMaterial({ map: bannerTexture(text), roughness: 0.5, emissive: new THREE.Color("#ffffff"), emissiveIntensity: 0.35 })));
+    ban.material.emissiveMap = ban.material.map; ban.position.set(0, 9.4, 0.47); g.add(ban); g.userData.ban = ban;
+    return g;
+  }
+  const dropGate = g => { const b = g && g.userData.ban; if (b) { b.material.map.dispose(); b.material.dispose(); } };
+  function setTrack(o) {
+    trackO = { ...trackO, ...o };
+    if (trackG) { scene.remove(trackG); trackG.children.forEach(dropGate); }
+    trackG = new THREE.Group(); scene.add(trackG);
+    signCache.forEach(t => t.dispose()); signCache.clear(); mkSlots.forEach(g => { g.userData.k = -1; });
+    const { LAP, laps } = trackO;
+    gate(trackG, -0.2, laps > 1 ? "LAP 1 / " + laps : "GO!", 1.0);
+    for (let k = 1; k < laps; k++) gate(trackG, -k * LAP, k + 1 === laps ? "FINAL LAP" : "LAP " + (k + 1) + " / " + laps);
+    finG = gate(trackG, 400, "FINISH");                          // cất SAU vạch xuất phát tới khi có đích (vẫn trong cảnh ⇒ shader dịch sẵn)
+    placeMarkers(0);
+  }
+  function setFinish(s) { if (finG) finG.position.z = s == null ? 400 : -s; }
 
   return {
     groundH,
     setTrack,
     setFog(n, f) { FOGU.uFogNear.value = n; FOGU.uFogFar.value = f; },
     /** camPos: vị trí máy quay (chưa cong) · t: giây · sMin/sMax: đoạn đường cần có cây/cột (m) */
+    setFinish,
+    setAvoid(fn) { avoid = fn || (() => false); win = ""; },      // 4a: (s, r) ⇒ true nếu cách cầu nhảy / cổng < r m
     update(camPos, t, sMin, sMax) {
-      skyRot(U.uBend.value.x, U.uBend.value.y);                // 3q: trời xoay CÙNG góc với cảnh xa
+      skyRot(U.uSkyYaw ? U.uSkyYaw.value : 0, U.uBend.value.y);   // 4b: trời xoay theo hướng tuyệt đối của đường
       sky.position.copy(camPos); sky.material.uniforms.uT.value = t; sea.material.uniforms.uT.value = t;
       const zc = Math.round(camPos.z / 10) * 10; ground.position.z = zc - 450; sea.position.z = zc - 450;
       const snap = Math.floor(camPos.z / TILE) * TILE; road.position.z = snap - ROAD_LEN / 2 + 200; rails.forEach(r => r.position.z = road.position.z);
       const s0 = Math.floor((sMin - 220) / TILE) * TILE, s1 = Math.ceil((sMax + 1000) / TILE) * TILE, k = s0 + ":" + s1;
-      if (k !== win) { win = k; fillProps(s0, s1); }
+      if (k !== win) { win = k; fillProps(s0, s1, sMin); }
+      placeMarkers(sMin);                                          // 4a: chỉ đổi khi 1 mốc ra khỏi cửa sổ
     },
     dispose() { [...new Set(own)].forEach(g => g.dispose()); [...new Set(ownM)].forEach(m => m.dispose()); [...new Set(ownT)].forEach(t => t.dispose());
-      if (trackG) trackG.traverse(x => { if (x.geometry) x.geometry.dispose(); if (x.material) { if (x.material.map) x.material.map.dispose(); x.material.dispose(); } }); }
+      if (trackG) trackG.children.forEach(dropGate); signCache.forEach(t => t.dispose()); mkSlots.forEach(g => scene.remove(g)); scene.remove(mkStrips, mkPosts); mkStrips.dispose(); mkPosts.dispose(); }
   };
 }
 

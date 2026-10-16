@@ -1,3 +1,16 @@
+// RACING WORDS — GÓI NHÚNG mẫu 4d (16/10/2026) = rw-4c.js + lõi sr3d-4d.js (gộp 2 camera bay lên trời (⚙ Settings ▸ Camera: Sky view)). CSS thêm rw-4d.css.
+// ---- gốc 4c ----
+// RACING WORDS — GÓI NHÚNG mẫu 4c (16/10/2026) = rw-4b.js + lõi sr3d-4c.js (xe khác trên đường (⚙ Settings ▸ Race: Traffic)). CSS thêm rw-4c.css.
+// ---- gốc 4b ----
+// RACING WORDS — GÓI NHÚNG mẫu 4b (16/10/2026) = rw-4a.js + lõi sr3d-4b.js (đường cong đúng vật lý · bỏ lái tự động · dốc xoắn · phần thưởng
+//   BOOST / LIFE / MISSILE · vạch mạng mới). Options mới: pkBoost, pkLife, pkMissile (true/false), twists. CSS thêm rw-4b.css (sau rw-4a.css).
+// ---- gốc 4a ----
+// RACING WORDS — GÓI NHÚNG mẫu 4a (16/10/2026) = rw-3z.js + lõi sr3d-4a.js (chế độ đua len/time/words · đích dời được · nhiều cua · cây chi tiết ·
+//   vạch ANDREW STUDIO · cầu nhảy mượt). Options mới: race ("len" | "time" | "words"), lenK (1 | 1.5 | 2 | 3), timeS (giây). CSS thêm rw-4a.css (sau rw-3z.css).
+// ---- gốc 3z ----
+// RACING WORDS — GÓI NHÚNG mẫu 3z (16/10/2026) = rw-3y.js + lõi sr3d-3z.js / intro sr3d-intro-3z.js (dải câu hỏi xuống dưới, xe không chìm,
+//   bóng đúng hình xe, nút ⚙ Cài đặt có tab iPad · Camera, góc nhìn đuôi xe). CSS thêm rw-3z.css (sau rw-3r.css).
+// ---- gốc 3y ----
 // RACING WORDS — GÓI NHÚNG mẫu 3y (16/10/2026) = rw-3r.js + lõi sr3d-3y.js (LÁI NGHIÊNG iPAD · phanh trái ga phải · dấu đỉnh vô lăng máy bay giấy).
 //   iPad: sr3d-padui-3y.js + đường nối sr3d-padlink-3y.js (khoá "c:" kiểu lái, "r:" tên lửa qua kho). remote phải là createPadHost của padlink-3y.
 // ---- gốc 3r ----
@@ -26,9 +39,9 @@
 //   onEvent   : (k, v) — "pad" (iPad nối / mất nối), "padMode", "end", …
 // ⇒ { setOptions(o) (true = áp ngay, false = AWord dựng lại), destroy(), game, intro }
 // =============================================================
-import { createSpeedRun } from "./sr3d-3y.js";
+import { createSpeedRun } from "./sr3d-4d.js";
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
-import { createIntro } from "./sr3d-intro-3r.js";
+import { createIntro } from "./sr3d-intro-4b.js";
 import { createSound } from "./sr3d-sound-3o.js";
 
 const CARS_KEY = "speedrun.cars";            // xe 2 đội nhớ THEO MÁY (thầy chọn ở màn chờ xưởng)

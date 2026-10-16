@@ -1,0 +1,23 @@
+/* RACING WORDS mẫu 3z (16/10/2026) — nạp SAU rw-3r.css.
+   · thầy: "chuyển hẳn dải trên cùng gồm câu hỏi 2 bên và bản đồ xuống dưới khung đua … khung đua trên cùng để cả lớp cùng dễ quan sát, câu hỏi gần khu vực câu trả lời"
+     ⇒ lõi sr3d-3z.js đặt .sr-strip SAU .sr-stage; ở đây đảo hàng lưới: khung đua 1fr trên, dải 10cqh dưới.
+   · bảng ⚙ Cài đặt có TAB (iPad · Camera) · góc nhìn Chase (sau đuôi xe) ẩn khung kính buồng lái.
+   Không filter / không animation mới (giữ mượt như 3r). */
+.sr3.sr3z { grid-template-rows: 1fr 10cqh; }
+.sr3z .sr-strip { padding: .7cqh .8cqw .9cqh; }
+
+/* bảng Cài đặt: hàng tab */
+.sr-panel.is-set .sr-panel-box { width: min(44cqw, 680px); }
+.sr-tabs { display: flex; gap: .6cqw; margin: -.4cqh 0 1.6cqh; padding: .5cqh; border-radius: 1.6cqh; background: rgba(255,255,255,.05); }
+.sr-tabs button { flex: 1; padding: 1.1cqh 1cqw; border: 0; border-radius: 1.2cqh; background: transparent; color: #94a3b8; cursor: pointer;
+  font: italic 900 2.2cqh "Exo 2", sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+.sr-tabs button:hover { color: #e2e8f0; }
+.sr-tabs button.on { background: #1c2a44; color: #ffcf4a; box-shadow: inset 0 0 0 .2cqh rgba(255,207,74,.45); }
+.sr-panel.is-small .sr-view { grid-template-columns: 1fr 1fr; gap: 1cqw; margin-bottom: 0; }
+.sr-panel.is-small .sr-view .sr-pm-o { flex-direction: column; align-items: flex-start; gap: .6cqh; padding: 1.6cqh 1.2cqw; }
+
+/* góc nhìn sau đuôi xe: không còn ngồi trong xe ⇒ ẩn khung kính (nóc + 2 cột A) */
+.sr3z.is-chase:not(.is-menu) .sr-frame { display: none; }
+
+/* 3z: hàng ẩn (Full lock / Smoothing khi lái chạm) — [hidden] bị display của .sr-opt-row đè */
+.sr-opt-row[hidden] { display: none !important; }

@@ -1,3 +1,5 @@
+// RACING WORDS mẫu 4b (16/10/2026) = sr3d-missile-3r.js, chỉ đổi công thức cong sang HÌNH THẬT của đường (bảng uBendT — xem sr3d-world-4b.js).
+// ---- gốc 3r ----
 // 3r (16/10/2026, đo TOMKO trong myActivity, act 572): mỗi phát bắn tạo ShaderMaterial CỘT SÁNG mới rồi dispose() khi nổ ⇒ three.js xoá luôn
 //   shader stage (usedTimes về 0) ⇒ phát sau mang mã stage MỚI ⇒ khoá program mới ⇒ DỊCH LẠI SHADER mỗi lần bắn (17 lần / ván, mỗi lần khựng 30–130 ms;
 //   pinPrograms không giữ được vì khoá đổi). Nay vật liệu cột sáng dùng lại (beamPool) — không bao giờ dispose giữa trận.
@@ -23,9 +25,11 @@ import * as THREE from "../../rocket-race/vendor/three/three.module.min.js";
 export const MS = { T: 2.45, LOCK: 1.0 };                // 3e: bay CHẬM hơn 3c (2,0 s) theo thầy · khoá điểm rơi khi còn LOCK giây
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
-const BEND_VS = `uniform vec2 uBend; uniform float uBendZ;
+const BEND_VS = `uniform vec2 uBend; uniform float uBendZ; uniform sampler2D uBendT; uniform float uBendD;
 float bendQ(float d){ float a = -d; return a <= 150.0 ? a*a : 150.0*(2.0*a - 150.0); }
-vec4 bendW(vec4 w){ float d = min(w.z - uBendZ, 0.0); float q = bendQ(d); w.x += uBend.x*q; w.y -= uBend.y*q; return w; }`;
+float bendX(float a){ if (uBendD <= 0.0) return 0.0; float f = clamp(a / uBendD, 0.0, 1.0) * 255.0; float i0 = min(floor(f), 254.0);
+  float p = mix(texelFetch(uBendT, ivec2(int(i0), 0), 0).r, texelFetch(uBendT, ivec2(int(i0) + 1, 0), 0).r, f - i0); return p + uBend.x * max(a - uBendD, 0.0); }
+vec4 bendW(vec4 w){ float d = min(w.z - uBendZ, 0.0); float q = bendQ(d); w.x += bendX(-d); w.y -= uBend.y*q; return w; }`;
 
 // ---------- hạt điểm có cong (khói xám / lửa cộng sáng) ----------
 export function makeParticles({ U, n = 400, additive = false, color = "#d2ccc6" }) {
@@ -34,7 +38,7 @@ export function makeParticles({ U, n = 400, additive = false, color = "#d2ccc6" 
   g.setAttribute("position", new THREE.BufferAttribute(P.pos, 3)); g.setAttribute("aA", new THREE.BufferAttribute(P.a, 1)); g.setAttribute("aS", new THREE.BufferAttribute(P.sz, 1));
   const m = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
-    uniforms: { uBend: U.uBend, uBendZ: U.uBendZ, uScale: { value: 400 }, uCol: { value: new THREE.Color(color) } },
+    uniforms: { uBend: U.uBend, uBendZ: U.uBendZ, uBendT: U.uBendT, uBendD: U.uBendD, uScale: { value: 400 }, uCol: { value: new THREE.Color(color) } },
     vertexShader: BEND_VS + `uniform float uScale; attribute float aA; attribute float aS; varying float vA;
       void main(){ vec4 w = bendW(modelMatrix * vec4(position,1.0)); vec4 mv = viewMatrix * w; gl_Position = projectionMatrix * mv;
         gl_PointSize = min(aS * uScale / max(-mv.z, 0.2), 900.0); vA = aA; }`,
@@ -132,7 +136,7 @@ export function createMissiles({ scene, bend, U }) {
   const flameG = G(new THREE.ConeGeometry(0.07, 1.1, 10, 1, true).translate(0, -0.55, 0).rotateX(Math.PI / 2).translate(0, 0, -0.64));   // đỉnh nón chĩa −z (ra sau)
   const bodyM = Mt(bend(new THREE.MeshStandardMaterial({ color: "#e9ecef", roughness: 0.3, metalness: 0.55 })));
   const finM = Mt(bend(new THREE.MeshStandardMaterial({ color: "#2a2f36", roughness: 0.45, metalness: 0.6 })));
-  const flameU = { uT: { value: 0 }, uBend: U.uBend, uBendZ: U.uBendZ };
+  const flameU = { uT: { value: 0 }, uBend: U.uBend, uBendZ: U.uBendZ, uBendT: U.uBendT, uBendD: U.uBendD };
   const flameM = Mt(new THREE.ShaderMaterial({ vertexShader: FLAME_VS, fragmentShader: FLAME_FS, uniforms: flameU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
   const ringG = G(new THREE.PlaneGeometry(5.4, 5.4, 8, 8).rotateX(-Math.PI / 2));
   // CỘT SÁNG đỏ đứng thẳng tại điểm rơi: vòng ngắm phẳng trên đường nhìn từ mắt người lái (cao 1,1 m) ở 30 m chỉ còn 3–4 px ⇒ cần vật ĐỨNG
@@ -174,7 +178,7 @@ export function createMissiles({ scene, bend, U }) {
       g.position.set(x, y, z); scene.add(g);
       const rm = bend(new THREE.MeshBasicMaterial({ map: ringT, color: new THREE.Color(1.0, 0.16, 0.1).multiplyScalar(3.2), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -4 }));
       const ring = new THREE.Mesh(ringG, rm); ring.renderOrder = 4; scene.add(ring);
-      const bm = beamPool.pop() || new THREE.ShaderMaterial({ vertexShader: BEAM_VS, fragmentShader: BEAM_FS, uniforms: { uBend: U.uBend, uBendZ: U.uBendZ, uA: { value: 0 }, uT: { value: 0 } },
+      const bm = beamPool.pop() || new THREE.ShaderMaterial({ vertexShader: BEAM_VS, fragmentShader: BEAM_FS, uniforms: { uBend: U.uBend, uBendZ: U.uBendZ, uBendT: U.uBendT, uBendD: U.uBendD, uA: { value: 0 }, uT: { value: 0 } },
         transparent: true, depthWrite: false, side: THREE.DoubleSide });
       bm.uniforms.uA.value = 0; bm.uniforms.uT.value = 0;          // 3r: vật liệu có thể là bản dùng lại
       const beam = new THREE.Mesh(beamG, bm); beam.renderOrder = 5; beam.frustumCulled = false; scene.add(beam);

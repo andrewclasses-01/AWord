@@ -27,17 +27,22 @@ import { block3dHere, block3dMessage } from "../../core/myact-board.js";   // �
 const loader = () => { ensureCss(); return showLoader3d({ key: "racingwords", title: "RACING WORDS", theme: "space" }); };
 preloadLoader3d("space");
 
-const GAME = "./3d/rw-3y.js";                     // Đợt 534: myGame mẫu 3y (lái nghiêng iPad) · Đợt 533: myGame mẫu 3r (mượt TOMKO) · Đợt 531: myGame mẫu 3q (Fight options, cảnh xa đúng vật lý, 35 km/h) · Đợt 529: 3p · Đợt 527: 3o
-const CSS = ["sr3d-3g.css", "sr3d-3l.css", "sr3d-intro-3o.css", "rw-3r.css"];
+const GAME = "./3d/rw-4d.js";                     // Đợt 535: myGame mẫu 4d (5 đợt sau 3y: chế độ đua, cong thật, lái tay, dốc xoắn, phần thưởng, xe khác, camera gộp) · Đợt 534: myGame mẫu 3y (lái nghiêng iPad) · Đợt 533: myGame mẫu 3r (mượt TOMKO) · Đợt 531: myGame mẫu 3q (Fight options, cảnh xa đúng vật lý, 35 km/h) · Đợt 529: 3p · Đợt 527: 3o
+const CSS = ["sr3d-3g.css", "sr3d-3l.css", "sr3d-intro-3o.css", "rw-3r.css", "rw-3z.css", "rw-4a.css", "rw-4b.css", "rw-4c.css", "rw-4d.css"];   // Đợt 535: + 3z…4d (đúng thứ tự)
 const FONTS = "https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,600;0,700;0,800;0,900;1,800;1,900&subset=vietnamese&display=swap";
 // khoá game <-> khoá PHẲNG (activity.options)
 // ⭐ Đợt 531 (thầy) — Options kiểu FIGHT của Rocket Race: Lives (srLives 0 = tắt) · Missile damages 1–5 (srMsDmg) · Time delay (srTie giây,
 //   0 = ∞, thang nấc như Fight AWord) · Miss wait (srMissWait giây 0–20, −1 = ∞) · Missile streak 1–10 (srMsStreak) · Missiles max 0–10 (srMsMax, 0 = Off).
 //   Time delay / Miss wait chỉ có tác dụng khi Questions = Same (theo LƯỢT); Different = mỗi đội nhịp riêng.
-const RW_DEF = { sameQ: true, msMax: 3, steps: 12, laps: 0, ramps: true, lives: 0, msDmg: 2, tieWait: 0.1, missWait: 20, streak: 3 };
+// ⭐ Đợt 535 — Race (srRace len | time | words) · Length ×1 / ×1,5 / ×2 / ×3 (srLenK) · Time (srTimeS giây) · Twist ramps (srTwists) ·
+//   Road pickups Boost / Life / Missile (srPkBoost · srPkLife · srPkMissile). Traffic + Sky view nằm trong ⚙ Settings của game (thói quen máy chiếu, không theo act).
+const RW_DEF = { sameQ: true, msMax: 3, steps: 12, laps: 0, ramps: true, lives: 0, msDmg: 2, tieWait: 0.1, missWait: 20, streak: 3,
+  race: "len", lenK: 2, timeS: 180, twists: true, pkBoost: true, pkLife: true, pkMissile: true };
+const RACES = ["len", "time", "words"], LENKS = [1, 1.5, 2, 3];
 const clampN = (v, lo, hi, d) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d; };
 const RW_FLAT = [["srSameQ", "sameQ", "b"], ["srMsMax", "msMax", "n", 0, 10], ["srSteps", "steps", "n", 3, 20], ["srLaps", "laps", "n", 0, 6], ["srRamps", "ramps", "b"],
-  ["srLives", "lives", "n", 0, 10], ["srMsDmg", "msDmg", "n", 1, 5], ["srMsStreak", "streak", "n", 1, 10]];
+  ["srLives", "lives", "n", 0, 10], ["srMsDmg", "msDmg", "n", 1, 5], ["srMsStreak", "streak", "n", 1, 10],
+  ["srTimeS", "timeS", "n", 60, 600], ["srTwists", "twists", "b"], ["srPkBoost", "pkBoost", "b"], ["srPkLife", "pkLife", "b"], ["srPkMissile", "pkMissile", "b"]];   // Đợt 535
 // Time delay: thang nấc y như Fight AWord (core/fight.js DELAY_STEPS) — 0,1 … 3,0 từng 0,1 · 3,5 … 10 từng 0,5 · nấc sau cùng = ∞
 const DELAY_STEPS = (() => { const out = []; for (let t = 1; t <= 30; t++) out.push(t / 10); for (let t = 35; t <= 100; t += 5) out.push(t / 10); return out; })();
 const snapDelay = s => DELAY_STEPS.reduce((b, v) => (Math.abs(v - s) < Math.abs(b - s) ? v : b), DELAY_STEPS[0]);
@@ -49,12 +54,16 @@ function gameOpts(o) {
   });
   if (typeof o.srTie === "number") g.tieWait = o.srTie === 0 ? Infinity : snapDelay(o.srTie);
   if (typeof o.srMissWait === "number") g.missWait = o.srMissWait < 0 ? Infinity : clampN(o.srMissWait, 0, 20, 20);
+  if (RACES.includes(o.srRace)) g.race = o.srRace;                                  // Đợt 535
+  if (LENKS.includes(o.srLenK)) g.lenK = o.srLenK;
   return g;
 }
 function flatOpts(g) {
   const f = {}; RW_FLAT.forEach(([fk, k]) => { if (typeof g[k] === typeof RW_DEF[k]) f[fk] = g[k]; });
   if (typeof g.tieWait === "number") f.srTie = g.tieWait === Infinity ? 0 : g.tieWait;
   if (typeof g.missWait === "number") f.srMissWait = g.missWait === Infinity ? -1 : g.missWait;
+  if (RACES.includes(g.race)) f.srRace = g.race;                                    // Đợt 535
+  if (LENKS.includes(g.lenK)) f.srLenK = g.lenK;
   return f;
 }
 const rwGame = act => ({ ...RW_DEF, ...gameOpts(act && act.options) });
@@ -153,13 +162,28 @@ const racingWordsTemplate = {
       value: g.missWait === Infinity ? WW : g.missWait, tone: "blue",
       fmt: v => (v >= WW ? "∞" : v + "s"), onInput: v => { draft.srMissWait = v >= WW ? -1 : v; } });
     miss.cell.title = "Same questions: once one team answers wrong, how long the other team still has before both move on. ∞ = waits";
+    // ⭐ Đợt 535 — CHẾ ĐỘ ĐUA: mọi kiểu thắng đều phải chạy qua vạch đích (hết giờ / hết từ / hết mạng ⇒ đích hiện trước xe thắng)
+    const race = mkCell({ label: "Race", wide: true });
+    race.ctl.append(mkSeg([{ value: "len", label: "Length" }, { value: "time", label: "Time" }, { value: "words", label: "Words" }], g.race, v => { draft.srRace = v; }));
+    race.cell.title = "Length: a fixed track. Time: countdown — the team further ahead when time is up drives to the finish line. Words: race until the words run out — the finish line appears near the last words";
+    const lenK = mkSliderCell({ label: "Length", sub: "Race = Length", min: 0, max: 3, step: 1, value: Math.max(0, LENKS.indexOf(g.lenK)), tone: "blue",
+      fmt: p => "×" + String(LENKS[p]).replace(".", ","), onInput: p => { draft.srLenK = LENKS[p]; } });
+    lenK.cell.title = "Track length × Track segments (×2 = twice as long as before)";
+    const timeS = mkSliderCell({ label: "Time", sub: "Race = Time", min: 1, max: 10, step: 1, value: Math.round(g.timeS / 60), tone: "blue",
+      fmt: v => v + " min", onInput: v => { draft.srTimeS = v * 60; } });
+    timeS.cell.title = "Countdown for Race = Time";
     panel.append(
+      race.cell, lenK.cell, timeS.cell,
       qs.cell, lives.cell, dmg.cell, streak.cell, msMax.cell, tie.cell, miss.cell,
       mkSliderCell({ label: "Track length", sub: "segments · 1 per question", min: 3, max: 20, step: 1, value: g.steps, tone: "blue", onInput: v => { draft.srSteps = v; } }).cell,
       mkSliderCell({ label: "Laps", sub: "Auto = by track length", min: 0, max: 6, step: 1, value: g.laps, tone: "blue", offAt: 0,
         fmt: v => (v === 0 ? "Auto" : String(v)), onInput: v => { draft.srLaps = v; } }).cell
     );
     addCheck("Jump ramps", g.ramps, v => { draft.srRamps = v; }, { key: "srRamps" });
+    addCheck("Twist ramps", g.twists, v => { draft.srTwists = v; }, { key: "srTwists" });            // Đợt 535
+    addCheck("Road pickups: Boost", g.pkBoost, v => { draft.srPkBoost = v; }, { key: "srPkBoost" });
+    addCheck("Road pickups: Life", g.pkLife, v => { draft.srPkLife = v; }, { key: "srPkLife" });
+    addCheck("Road pickups: Missile", g.pkMissile, v => { draft.srPkMissile = v; }, { key: "srPkMissile" });
   },
   noAssignment: "Racing words is a classroom game for now — it cannot be set as homework yet.",
   // ⭐ Đợt 531 (thầy): "game hiện tại là chế độ FIGHT (2 đội đấu nhau), không phải single — mặc định Fight ở màn chọn, tạm tắt Single".

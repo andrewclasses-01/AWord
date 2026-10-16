@@ -2,6 +2,13 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
+## Đợt 535 (16/10/2026) — myGame mẫu 4d: 5 đợt sau 3y
+- GOC `rw-4d.js` (lõi `sr3d-4d.js`, thế giới `sr3d-world-4b.js`, xe `sr3d-car-4b.js` — intro `sr3d-intro-4b.js` PHẢI cùng mô-đun xe, khác ⇒ dịch sẵn chậm 20 s), `sr3d-stunt-4b.js`
+  (dốc xoắn + phần thưởng), `sr3d-traffic-4c.js` (xe khác). CSS thêm rw-3z · rw-4a · rw-4b · rw-4c · rw-4d (nạp sau rw-3r.css, đúng thứ tự).
+- Options mới (khoá phẳng): srRace "len"|"time"|"words" · srLenK 1|1.5|2|3 · srTimeS 60–600 · srTwists · srPkBoost · srPkLife · srPkMissile. Đổi Race / Length / Time / Twist ⇒ game dựng lại; phần thưởng áp ngay.
+- ⚙ Settings (nút bánh răng thay nút iPad): iPad · Camera (Cockpit / Chase · Sky view Auto/Off) · Race (Traffic Off / Same way / Both ways) — nhớ theo máy (`racingwords.view` · `racingwords.sky` · `racingwords.traffic`).
+- Bàn thử `scratch/dot535-rw.html?padsig=local` + `pad.html?padsig=local`. Hồ sơ myGame mục 33–38.
+
 ## Đợt 534 (16/10/2026) — myGame mẫu 3y: LÁI NGHIÊNG iPAD
 - GOC `rw-3y.js` (lõi `sr3d-3y.js`), GOC_THEM `sr3d-padui-3y.js` + `sr3d-padlink-3y.js` (padui-3y vẫn nạp TEAM_META từ padlink-3e ⇒ 3e còn trong 3d/). CSS giữ rw-3r.css.
 - Màn lớn: phanh trái / boost phải · dấu đỉnh vô lăng máy bay giấy · nút iPad: Steering + Full lock + Smoothing (nhớ máy `racingwords.steer`) · iPad nghiêng ⇒ game làm mượt dt·22.

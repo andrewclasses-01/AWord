@@ -1,3 +1,14 @@
+// RACING WORDS mẫu 4b (16/10/2026) = sr3d-car-3z.js, chỉ đổi công thức cong của lửa pô sang HÌNH THẬT của đường (bảng uBendT — xem sr3d-world-4b.js).
+// ---- gốc 3z ----
+// RACING WORDS mẫu 3z (16/10/2026) = sr3d-car-3r.js + thầy: "bánh xe đang hơi chìm xuống đường" + "bóng của xe trên mặt đường đang bị vuông vức":
+//   · XE CHÌM: đo 3y lúc đua — đáy bánh xuống tới −0,19 m (Y2) / −0,07 m (H4); đứng yên thì chạm đúng 0 ⇒ thủ phạm là thân xe NGHIÊNG (tăng tốc /
+//     phanh ±0,05 rad, ôm cua ±0,12 rad) quanh điểm SÁT ĐẤT kéo cả 4 bánh theo ⇒ đầu / một bên cắm xuống đường. Nay như xe thật: BÁNH BÁM ĐƯỜNG
+//     (mỗi khung đặt lại trục bánh về đúng chỗ trong rig, bù ngược góc nghiêng của thân), thân nhún quanh tâm cao 0,45 m, biên độ nhỏ lại
+//     (dọc ×0,5, ngang ×0,42 ⇒ thân lệch bánh ≤ ~6 cm như giảm xóc); góc nghiêng cũ vẫn trả ra car.tilt cho camera buồng lái (cảm giác lái giữ nguyên).
+//     LIFT = nâng thân nếu đáy bánh lúc đứng yên dưới 0 (13 xe hiện có đều ≈ 0).
+//   · BÓNG ĐÚNG HÌNH XE: chiếu MỌI tam giác của xe từ trên xuống (x, z) vào canvas (đổi về cùng chiều ⇒ tô 1 lần = phần hợp), làm mờ 2 lớp
+//     (lõi sát thân + quầng rộng) + 4 vệt tối dưới bánh. Làm 1 lần mỗi mẫu xe (nhớ theo id) ⇒ mỗi khung vẫn chỉ 1 tấm như cũ, 0 chi phí thêm.
+// ---- gốc 3r ----
 // RACING WORDS mẫu 3r (16/10/2026) = sr3d-car-3q.js + NÉN VẬT LIỆU XE + vết cháy dùng lại (thầy: "chấp nhận nén các xe lại, giảm chất lượng đồ hoạ").
 //   Đo TOMKO (ANGLE D3D11, ~150 ms dịch 1 shader): đổi xe ở xưởng sang Y4 + H7 đứng hình 4,9 s + 4,1 s — mỗi xe 55–67 vật liệu ⇒ 23–29 biến thể
 //   shader (normal map 66–70 cái, roughness/metalness map 50…), dịch 2 lần (renderer xưởng + renderer trận). slimMat():
@@ -96,6 +107,46 @@ const isGlass = m => !!m && m.transparent && /glass|window|wind|luna|vetro|vitre
 const PLATE_RE = /licen[sc]e_?plate(?!_?light)|manufacturer_?plate|number_?plate/i;
 
 let SHADOW = null;
+const SIL = new Map();                                            // 3z: bóng hình xe theo id mẫu xe
+/** 3z: bóng nhìn từ trên xuống của chính xe — objs: các gốc cần chiếu (đã đặt đúng chỗ trong rig ở gốc toạ độ) · wheelsXZ: tâm bánh [x, z] */
+function silhouette(id, objs, wheelsXZ, wheelW) {
+  if (SIL.has(id)) return SIL.get(id);
+  const tris = [], v = new THREE.Vector3(); let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+  objs.forEach(root => { root.updateMatrixWorld(true); root.traverse(o => {
+    if (!o.isMesh || !o.geometry || !o.geometry.attributes.position || !o.visible) return;
+    const ms = Array.isArray(o.material) ? o.material : [o.material]; if (ms.some(m => m.isShaderMaterial)) return;
+    const p = o.geometry.attributes.position, ix = o.geometry.index, n = ix ? ix.count : p.count, xz = new Float32Array(p.count * 2);
+    for (let k = 0; k < p.count; k++) { v.fromBufferAttribute(p, k).applyMatrix4(o.matrixWorld); xz[2 * k] = v.x; xz[2 * k + 1] = v.z;
+      if (v.x < x0) x0 = v.x; if (v.x > x1) x1 = v.x; if (v.z < z0) z0 = v.z; if (v.z > z1) z1 = v.z; }
+    tris.push({ xz, ix, n });
+  }); });
+  if (!isFinite(x0)) return null;
+  const PAD = 0.45, X0 = x0 - PAD, X1 = x1 + PAD, Z0 = z0 - PAD, Z1 = z1 + PAD, PX = 40;    // 40 điểm ảnh / m
+  const W = Math.ceil((X1 - X0) * PX), H = Math.ceil((Z1 - Z0) * PX);
+  const mk = () => { const c = document.createElement("canvas"); c.width = W; c.height = H; return [c, c.getContext("2d")]; };
+  const [cs, gs] = mk(); gs.fillStyle = "#000"; gs.beginPath();
+  const X = x => (x - X0) * PX, Y = z => (z - Z0) * PX;
+  tris.forEach(({ xz, ix, n }) => { for (let k = 0; k + 2 < n; k += 3) {
+    const a = ix ? ix.getX(k) : k, b = ix ? ix.getX(k + 1) : k + 1, c = ix ? ix.getX(k + 2) : k + 2;
+    const ax = X(xz[2 * a]), ay = Y(xz[2 * a + 1]), bx = X(xz[2 * b]), by = Y(xz[2 * b + 1]), cx = X(xz[2 * c]), cy = Y(xz[2 * c + 1]);
+    const ar = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax); if (Math.abs(ar) < 0.02) continue;
+    gs.moveTo(ax, ay); if (ar > 0) { gs.lineTo(bx, by); gs.lineTo(cx, cy); } else { gs.lineTo(cx, cy); gs.lineTo(bx, by); } gs.closePath();   // cùng chiều ⇒ tô = phần HỢP
+  } });
+  gs.fill("nonzero");
+  // mờ bằng thu nhỏ rồi phóng (chạy cả nơi không có ctx.filter)
+  const soft = (k) => { const w = Math.max(2, Math.round(W / k)), h = Math.max(2, Math.round(H / k)), c = document.createElement("canvas"); c.width = w; c.height = h;
+    const g = c.getContext("2d"); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high"; g.drawImage(cs, 0, 0, w, h); return c; };
+  const [co, go] = mk(); go.imageSmoothingEnabled = true; go.imageSmoothingQuality = "high";
+  go.globalAlpha = 0.42; go.drawImage(soft(10), -PX * 0.12, -PX * 0.12, W + PX * 0.24, H + PX * 0.24);   // quầng rộng mềm
+  go.globalAlpha = 0.5; go.drawImage(soft(4), 0, 0, W, H);                                               // lõi sát thân
+  go.globalAlpha = 1;
+  wheelsXZ.forEach(([wx, wz]) => { const r = PX * 0.42, gr = go.createRadialGradient(X(wx), Y(wz), 0, X(wx), Y(wz), r);
+    gr.addColorStop(0, "rgba(0,0,0,.55)"); gr.addColorStop(1, "rgba(0,0,0,0)"); go.fillStyle = gr;
+    go.save(); go.translate(X(wx), Y(wz)); go.scale(Math.max(0.5, wheelW / 0.42), 1.25); go.translate(-X(wx), -Y(wz)); go.fillRect(X(wx) - r, Y(wz) - r, 2 * r, 2 * r); go.restore(); });
+  const tex = new THREE.CanvasTexture(co);
+  const out = { tex, w: X1 - X0, h: Z1 - Z0, cx: (X0 + X1) / 2, cz: (Z0 + Z1) / 2 };
+  SIL.set(id, out); return out;
+}
 function shadowTex() {
   if (SHADOW) return SHADOW;
   const c = document.createElement("canvas"); c.width = 128; c.height = 256; const g = c.getContext("2d");
@@ -104,8 +155,13 @@ function shadowTex() {
   g.save(); g.scale(1, 2); g.fillStyle = r0; g.translate(0, -64); g.fillRect(0, 0, 128, 256); g.restore();
   return (SHADOW = new THREE.CanvasTexture(c));
 }
-const FLAME_VS = `uniform vec2 uBend; uniform float uBendZ; varying vec2 vUv;
-void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position,1.0); float d = min(w.z - uBendZ, 0.0); float a = -d; float q = a <= 150.0 ? a*a : 150.0*(2.0*a - 150.0); w.x += uBend.x*q; w.y -= uBend.y*q; gl_Position = projectionMatrix * viewMatrix * w; }`;
+const FLAME_VS = `uniform vec2 uBend; uniform float uBendZ; uniform sampler2D uBendT; uniform float uBendD;
+float bendQ(float d){ float a = -d; return a <= 150.0 ? a*a : 150.0*(2.0*a - 150.0); }
+float bendX(float a){ if (uBendD <= 0.0) return 0.0; float f = clamp(a / uBendD, 0.0, 1.0) * 255.0; float i0 = min(floor(f), 254.0);
+  float p = mix(texelFetch(uBendT, ivec2(int(i0), 0), 0).r, texelFetch(uBendT, ivec2(int(i0) + 1, 0), 0).r, f - i0); return p + uBend.x * max(a - uBendD, 0.0); }
+vec4 bendW(vec4 w){ float d = min(w.z - uBendZ, 0.0); float q = bendQ(d); w.x += bendX(-d); w.y -= uBend.y*q; return w; }
+varying vec2 vUv;
+void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position,1.0); w = bendW(w); gl_Position = projectionMatrix * viewMatrix * w; }`;
 // 3l: lửa thật — uEnd 0 = tấm dọc (vUv.y = dọc luồng lửa từ miệng ống), 1 = đĩa nhìn từ sau (toạ độ cực)
 const FLAME_FS = `uniform float uT; uniform float uK; uniform float uPop; uniform float uSeed; uniform float uEnd; varying vec2 vUv;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -428,10 +484,20 @@ export function makeCar3d({ id = XE[0].id, color = "#3b8cff", num = 1, bend = m 
     const spin = new THREE.Group(); piv.add(spin);
     body.updateMatrixWorld(true);
     parts.forEach(p => spin.attach(p.o));
-    wheels.push({ g: spin, steer: piv, front: key[1] === "F" });
+    wheels.push({ g: spin, steer: piv, front: key[1] === "F", rest: piv.position.clone() });   // 3z: rest = chỗ trục bánh khi thân đứng yên
   }
   const M = { L: sz.z, W: sz.x, r: rN ? rSum / rN : 0.34, clr: 0.12, belt: 0.8, taper: 0.7,
     top: [[0, roofY]], roof: [sz.z / 2 - roofZ, sz.z / 2 - roofZ], id, name: cfg.name };   // lõi tính zr = −((roof0+roof1)/2 − L/2) = roofZ
+
+  // ---- 3z: XE CHÌM ⇒ đo đáy bánh (đỉnh thấp nhất của mảnh bánh, rig ở gốc toạ độ) rồi nâng thân ----
+  const LIFT = (() => {
+    body.updateMatrixWorld(true); let mn = Infinity; const q = new THREE.Vector3();
+    (wheels.length ? wheels.map(w => w.g) : [xe]).forEach(r => r.traverse(o => { if (!o.isMesh || !o.geometry.attributes.position) return;
+      const p = o.geometry.attributes.position, st = Math.max(1, Math.floor(p.count / 4000));
+      for (let k = 0; k < p.count; k += st) { q.fromBufferAttribute(p, k).applyMatrix4(o.matrixWorld); if (q.y < mn) mn = q.y; } }));
+    return isFinite(mn) ? clamp(-mn - 0.005, 0, 0.4) : 0;     // −0,5 cm: lốp đè nhẹ xuống mặt đường
+  })();
+  body.position.y = LIFT; body.updateMatrixWorld(true);
 
   // ---- đèn phanh ----
   const tails = [...mats].filter(m => TAIL_RE.test(m.name) && m.emissive);
@@ -439,12 +505,15 @@ export function makeCar3d({ id = XE[0].id, color = "#3b8cff", num = 1, bend = m 
 
   // ---- bóng blob (lõi tách nó ra khỏi rig theo renderOrder −1) ----
   const own = [];
-  const shadowM = bend(new THREE.MeshBasicMaterial({ map: shadowTex(), transparent: true, depthWrite: false, color: 0x000000, opacity: 0.9 }));
-  { const g = new THREE.PlaneGeometry(M.W + 0.7, M.L + 0.9).rotateX(-Math.PI / 2); g.translate(0, 0.03, 0); own.push(g); const s = new THREE.Mesh(g, shadowM); s.renderOrder = -1; rig.add(s); }
+  // 3z: bóng = hình chiếu từ trên của chính xe (nhớ theo mẫu xe); lỗi ⇒ quay về vệt tròn cũ
+  let sil = null; try { body.updateMatrixWorld(true); sil = silhouette(id, [xe, ...wheels.map(w => w.g)], wheels.map(w => { const p = w.steer.getWorldPosition(V(0, 0, 0)); return [p.x, p.z]; }), Math.min(0.42, M.W * 0.13)); } catch (e) { console.warn("RACING WORDS 3z: bóng hình xe lỗi", e); }
+  const shadowM = bend(new THREE.MeshBasicMaterial({ map: sil ? sil.tex : shadowTex(), transparent: true, depthWrite: false, color: 0x000000, opacity: sil ? 1 : 0.9 }));
+  { const g = sil ? new THREE.PlaneGeometry(sil.w, sil.h).rotateX(-Math.PI / 2).translate(sil.cx, 0.03, sil.cz) : new THREE.PlaneGeometry(M.W + 0.7, M.L + 0.9).rotateX(-Math.PI / 2).translate(0, 0.03, 0);
+    own.push(g); const s = new THREE.Mesh(g, shadowM); s.renderOrder = -1; rig.add(s); }
   // ---- lửa pô ----
   // 3l: mỗi ống 1 vật liệu (hạt nhiễu riêng ⇒ 2 lửa không giống hệt nhau); tấm dọc: y 0..1 xoay thành +z (ra sau xe), rộng 1 ⇒ scale theo bề ngang lửa
   const flameMs = [], mkFlameM = (end, seed) => { const m = new THREE.ShaderMaterial({ vertexShader: FLAME_VS, fragmentShader: FLAME_FS,
-    uniforms: { uT: { value: 0 }, uK: { value: 0 }, uPop: { value: 0 }, uSeed: { value: seed }, uEnd: { value: end }, uBend: U.uBend, uBendZ: U.uBendZ },
+    uniforms: { uT: { value: 0 }, uK: { value: 0 }, uPop: { value: 0 }, uSeed: { value: seed }, uEnd: { value: end }, uBend: U.uBend, uBendZ: U.uBendZ, uBendT: U.uBendT, uBendD: U.uBendD },
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, toneMapped: false }); flameMs.push(m); return m; };
   const flameG = new THREE.PlaneGeometry(1, 1, 1, 10).translate(0, 0.5, 0).rotateX(Math.PI / 2); own.push(flameG);
   const discG = new THREE.PlaneGeometry(1, 1); own.push(discG);
@@ -476,6 +545,8 @@ export function makeCar3d({ id = XE[0].id, color = "#3b8cff", num = 1, bend = m 
   mg.geos.forEach(g => own.push(g));
 
   let pitch = 0, roll = 0, braking = -1, wheelAng = 0, lastDist = null;
+  const PIVOT_H = 0.45, BQI = new THREE.Quaternion(), QS = new THREE.Quaternion(), YAX = V(0, 1, 0), VC = V(0, 0, 0), VR = V(0, 0, 0);   // 3z
+  const tilt = { x: 0, z: 0 };                                     // 3z: góc nghiêng ĐẦY ĐỦ (như cũ) cho camera buồng lái
   const burns = [], burnPool = [], burnUsed = [];   // 3p: burnPool = chỗ cháy làm sẵn · 3r: burnUsed = chỗ đã dùng trong trận (dùng lại, không dispose)
   const car = {
     rig, body, M, wheels, id, eye, look, exhaust,
@@ -536,11 +607,19 @@ export function makeCar3d({ id = XE[0].id, color = "#3b8cff", num = 1, bend = m 
       // 3k: góc bánh CỘNG DỒN, mỗi khung tối đa 0,42 rad (chậm thì đúng tốc độ thật; nhanh thì vẫn thấy lăn tới, không bao giờ đứng/quay ngược)
       const dd = lastDist == null ? 0 : dist - lastDist; lastDist = dist;
       wheelAng -= Math.sign(dd) * Math.min(Math.abs(dd) / M.r, 0.42); const spin = wheelAng;
-      wheels.forEach(w => { w.g.rotation.x = spin; w.steer.rotation.y = w.front ? clamp(-steer * 0.08, -0.35, 0.35) : 0; });
+      wheels.forEach(w => { w.g.rotation.x = spin; });
       pitch = lerp(pitch, clamp(-accel * 0.0045, -0.05, 0.05), 1 - Math.exp(-dt * 6));
       roll = lerp(roll, clamp(steer * 0.035, -0.12, 0.12), 1 - Math.exp(-dt * 7));
-      body.rotation.x = pitch; body.rotation.z = roll;
-      body.position.y = Math.sin(t * 23 + num) * 0.006 * clamp(Math.abs(accel) / 10 + 0.3, 0, 1);
+      tilt.x = pitch; tilt.z = roll;
+      body.rotation.x = pitch * 0.5; body.rotation.z = roll * 0.42;                      // 3z: thân nghiêng ít hơn (giảm xóc)
+      // 3z: nghiêng quanh tâm (0, PIVOT_H, 0) thay vì điểm sát đất: pos = C − R·C
+      VC.set(0, PIVOT_H, 0).applyQuaternion(body.quaternion);
+      body.position.set(-VC.x, LIFT + PIVOT_H - VC.y + Math.sin(t * 23 + num) * 0.006 * clamp(Math.abs(accel) / 10 + 0.3, 0, 1), -VC.z);
+      // 3z: BÁNH BÁM ĐƯỜNG — trục bánh trong body = R⁻¹·(chỗ đứng yên trong rig − vị trí body); bánh trước còn đánh lái quanh trục đứng của RIG
+      BQI.copy(body.quaternion).invert();
+      const sa = clamp(-steer * 0.08, -0.35, 0.35);
+      wheels.forEach(w => { VR.set(w.rest.x, w.rest.y + LIFT, w.rest.z).sub(body.position).applyQuaternion(BQI); w.steer.position.copy(VR);
+        QS.setFromAxisAngle(YAX, w.front ? sa : 0); w.steer.quaternion.copy(BQI).multiply(QS); });
       const b = brake > 0.05 ? 1 : 0;
       if (b !== braking) { braking = b; tails.forEach(m => { if (b) { m.emissive.setRGB(1, 0.05, 0.03); m.emissiveIntensity = 4; } else { m.emissive.copy(m.userData.e0); m.emissiveIntensity = m.userData.i0; } }); }
       burns.forEach(b => { b.t += dt; b.m.opacity = 0.93 * clamp(b.t / 1.4, 0, 1); });   // vết cháy hiện dần khi lửa tàn
@@ -565,5 +644,6 @@ export function makeCar3d({ id = XE[0].id, color = "#3b8cff", num = 1, bend = m 
   const disposeOn = car.dispose;
   car.dispose = () => { burnPool.splice(0).forEach(sp => sp.geo.dispose()); disposeOn.call(car); };
   car.merged = { meshes: mg.meshes.length, loose: mg.loose.length };
+  car.tilt = tilt; car.lift = LIFT; car.sil = sil ? { w: +sil.w.toFixed(2), h: +sil.h.toFixed(2) } : null;   // 3z
   return car;
 }
