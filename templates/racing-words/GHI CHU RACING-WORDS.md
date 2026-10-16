@@ -2,6 +2,10 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
+## Đợt 539 (16/10/2026) — khoá đội iPad
+- Đội có CHỦ = mã máy iPad (`rwpad.dev`), host ghi `u0`/`u1`; máy khác bị bỏ qua + tấm "already has an iPad"; pad.js màn chọn đội dùng `watchTeams` ⇒ `setBusy`.
+- Nhả: chủ bấm ◀ về màn chọn đội (ghi `left`) hoặc mất > 8 s. Bàn thử nhiều iPad cùng trình duyệt: `pad.html?padsig=local&dev=a` / `dev=b`.
+
 ## Đợt 538 (16/10/2026) — myGame mẫu 4f: iPad nối trước intro · giữ kết nối · tự nối lại · mốc nghiêng tự lấy
 - GOC `rw-4f.js` (+ `rw-4f.css`), iPad `sr3d-padlink-4f.js` + `sr3d-padui-4f.js` (pad.js nạp). Lõi vẫn `sr3d-4e.js`, intro `sr3d-intro-4e.js`.
 - ⛔ Đường nối iPad là MỘT bản cho cả trang (`PADLINK` trong racing-words.js) — đừng tạo createPadHost trong mount nữa (Apply dựng lại game ⇒ iPad phải nối lại = lỗi Đợt 537 trở về).

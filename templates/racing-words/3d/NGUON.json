@@ -1,7 +1,7 @@
 {
  "nguon": "myGame/speed-run/core",
  "goc": "rw-4f.js",
- "commit": "9c19a15",
+ "commit": "4077f92",
  "con_sua_chua_commit": false,
  "js": [
   "sr3d-padlink-4f.js",

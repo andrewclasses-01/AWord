@@ -10,7 +10,12 @@
 //      và thẻ iPad ở xưởng ⇒ lần sau thấy ngay vì sao một iPad không nối thẳng được (Wi-Fi tách máy / khác mạng / chặn multicast mDNS…).
 //   + live(t) cho thẻ thử xưởng: trạng thái, góc lái mới nhất, đã thử TRÁI / PHẢI chưa (cờ nằm trong đường nối ⇒ dựng lại game không phải thử lại).
 //   + thêm máy STUN dự phòng (Google 2 máy + Cloudflare).
-// Giao thức giữ nguyên 3y (thêm khoá "k0"/"k1" trong tài liệu host) — iPad 4f phải đi với màn lớn 4f.
+//   5. KHOÁ ĐỘI (thầy 16/10: "iPad 1 chọn Team 1 rồi, iPad 2 vẫn chọn được Team 1 ⇒ 2 máy cùng Connecting… mãi" — 2 iPad cùng ghi tài liệu "pad0",
+//      mỗi lần chào đè nonce của nhau ⇒ máy chiếu mời bắt tay qua lại không dứt). Mỗi iPad có MÃ MÁY cố định (localStorage "rwpad.dev") ghi kèm lời chào.
+//      Máy chiếu giữ CHỦ ĐỘI = máy của lời chào đầu tiên được nhận, ghi "u0"/"u1" vào tài liệu host; lời chào từ máy KHÁC bị bỏ qua.
+//      Nhả chủ khi: chủ thoát ra màn chọn đội (destroy ⇒ ghi "left") · chủ mất hẳn > 8 s (iPad tắt / đóng Safari). Cùng máy tải lại trang = vẫn là chủ.
+//      iPad thấy đội đã có chủ khác ⇒ KHÔNG chào, báo "taken"; màn chọn đội (watchTeams) làm mờ đội đã có iPad.
+// Giao thức giữ nguyên 3y (thêm khoá "k0"/"k1" · "u0"/"u1" trong tài liệu host, "dev"/"left" trong tài liệu pad) — iPad 4f phải đi với màn lớn 4f.
 // ---- gốc 3y ----
 // RACING WORDS mẫu 3y (16/10/2026) — ĐƯỜNG NỐI iPAD ⇄ MÀN CHƠI = padlink-3e + 2 khoá mới (thầy "ok build" lái nghiêng iPad):
 //   game → iPad:  "c:<json>"  KIỂU LÁI { mode: "touch"|"tilt", max: góc lái hết cỡ °, smooth: độ mượt % } — chọn ở nút iPad của game, gửi cả 2 iPad
@@ -27,6 +32,16 @@ const ICE = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:1
 const KEYS = new Set(["fire"]);
 const isKey = k => KEYS.has(k) || /^a:\d+:\d+$/.test(k);
 const rid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+// 5: mã máy iPad cố định (cùng máy tải lại trang vẫn là chủ đội cũ)
+export function padDev() {
+  const q = new URLSearchParams(location.search).get("dev"); if (q) return q;   // bàn thử: nhiều tab = nhiều iPad
+  try { let v = localStorage.getItem("rwpad.dev"); if (!v) { v = rid(); localStorage.setItem("rwpad.dev", v); } return v; } catch (e) { return padDev.v || (padDev.v = rid()); }
+}
+/** 5: màn chọn đội nghe đội nào đã có iPad KHÁC ⇒ cb([bận0, bận1]) — trả hàm huỷ */
+export function watchTeams(signal, cb) {
+  const me = padDev();
+  return signal.listen("host", d => { const on = !!(d && d.sid); cb([0, 1].map(t => on && !!d["u" + t] && d["u" + t] !== me)); });
+}
 function gather(pc, ms) {
   return new Promise(res => {
     if (pc.iceGatheringState === "complete") return res();
@@ -58,7 +73,9 @@ export function createPadHost({ signal, padUrl }) {
   const ctls = [];                                            // 4f: các bên đang gắn (mới nhất nhận iPad) — gỡ 1 bên thì bên trước nhận lại
   const cache = [{}, {}];                                     // chế độ + câu hỏi mới nhất mỗi đội (gửi lại khi iPad vừa nối)
   const st = [0, 1].map(() => ({ pc: null, dc: null, served: "", offered: "", hc: 0, last: 0, rs: 0, sn: 0, s: "",
-    tries: 0, kick: 0, mine: null, theirs: null, pair: "", rtt: 0, ice: "", steer: 0, at: 0, tl: 0, tr: 0, via: "" }));
+    tries: 0, kick: 0, mine: null, theirs: null, pair: "", rtt: 0, ice: "", steer: 0, at: 0, tl: 0, tr: 0, via: "", owner: "", lostAt: 0 }));
+  const OWN_GRACE = 8000;                                     // 5: chủ đội mất hẳn quá 8 s ⇒ nhả cho iPad khác
+  const setOwner = (t, dev) => { const x = st[t]; if (x.owner === dev) return; x.owner = dev; x.lostAt = 0; if (sid) signal.write("host", { sid, ["u" + t]: dev }).catch(() => {}); emit(t); };
   const subs = new Set();                                     // 4f: thẻ thử ở xưởng nghe đổi trạng thái
   const emit = t => subs.forEach(f => { try { f(t); } catch (e) { /* */ } });
   const setS = (t, s) => {
@@ -123,8 +140,18 @@ export function createPadHost({ signal, padUrl }) {
   }
   async function onPad(t, d) {
     const x = st[t];
-    if (!d || !sid || d.sid !== sid || !d.nonce) return;
-    if (d.nonce !== x.served) { offerTo(t, d.nonce).catch(e => console.warn("iPad offer", e)); return; }
+    if (!d || !sid || d.sid !== sid) return;
+    const dev = String(d.dev || "");
+    if (d.left) {                                              // 5: chủ thoát ra màn chọn đội ⇒ nhả đội ngay
+      if (x.owner && dev === x.owner && d.left !== x.leftSeen) { x.leftSeen = d.left; closePc(t); x.served = ""; setS(t, ""); setOwner(t, ""); }
+      return;
+    }
+    if (!d.nonce) return;
+    if (d.nonce !== x.served) {
+      if (x.owner && dev && dev !== x.owner) return;           // 5: đội đã có iPad khác ⇒ bỏ qua lời chào (không mời qua lại)
+      if (dev) setOwner(t, dev);
+      offerTo(t, d.nonce).catch(e => console.warn("iPad offer", e)); return;
+    }
     if (!d.answer && x.offered && (+d.hc || 0) > x.hc) { x.hc = +d.hc; signal.write("host", { sid, ["n" + t]: x.served, ["o" + t]: x.offered, ["h" + t]: x.hc }).catch(() => {}); }
     if (d.answer && x.pc && !x.pc.remoteDescription) {
       try { const a = JSON.parse(d.answer); x.theirs = candsOf(a.sdp); await x.pc.setRemoteDescription(a); paintPanel(); emit(t); } catch (e) { console.warn("iPad answer", e); }
@@ -169,11 +196,16 @@ export function createPadHost({ signal, padUrl }) {
       const k = ctls.indexOf(c); if (k >= 0) ctls.splice(k, 1); ctls.push(c); ctl = c;
       if (sid) { [0, 1].forEach(t => { if (st[t].s) ctl.status(t, st[t].s); resend(t); }); return; }
       sid = rid();
-      signal.write("host", { sid, n0: "", o0: "", n1: "", o1: "", m0: cache[0].m ?? "", m1: cache[1].m ?? "", q0: cache[0].q ?? "", q1: cache[1].q ?? "" }).catch(e => { failMsg = (e && e.message) || "iPad link unavailable"; paintPanel(); console.warn("iPad link", e); });
+      signal.write("host", { sid, n0: "", o0: "", n1: "", o1: "", u0: "", u1: "", m0: cache[0].m ?? "", m1: cache[1].m ?? "", q0: cache[0].q ?? "", q1: cache[1].q ?? "" }).catch(e => { failMsg = (e && e.message) || "iPad link unavailable"; paintPanel(); console.warn("iPad link", e); });
       [0, 1].forEach(t => unsubs.push(signal.listen("pad" + t, d => onPad(t, d))));
       tick = setInterval(() => {                                    // im quá 4 s (iPad ngủ / rớt Wi-Fi) ⇒ "đang nối"
         st.forEach((x, t) => { if ((x.s === "on" || x.s === "relay") && performance.now() - x.last > 4000) setS(t, "wait"); });
         st.forEach((x, t) => { if (x.s === "on" && x.pc) probe(t); });   // độ trễ hiện tại cho dòng chẩn đoán
+        st.forEach((x, t) => {                                    // 5: chủ đội mất hẳn > 8 s ⇒ nhả
+          if (!x.owner) return;
+          if (x.s === "on" || x.s === "relay") { x.lostAt = 0; return; }
+          const now = performance.now(); if (!x.lostAt) x.lostAt = now; else if (now - x.lostAt > OWN_GRACE) { closePc(t); x.served = ""; setS(t, ""); setOwner(t, ""); }
+        });
       }, 1000);
     },
     /** 4f: gỡ GAME khỏi đường nối (game bị huỷ / dựng lại) — đường nối vẫn sống */
@@ -188,13 +220,13 @@ export function createPadHost({ signal, padUrl }) {
       unsubs.splice(0).forEach(f => { try { f(); } catch (e) { /* */ } });
       [0, 1].forEach(closePc); subs.clear();
       const old = sid; sid = "";
-      if (old) signal.write("host", { sid: "", n0: "", o0: "", n1: "", o1: "" }).catch(() => {});
+      if (old) signal.write("host", { sid: "", n0: "", o0: "", n1: "", o1: "", u0: "", u1: "" }).catch(() => {});
     },
     get closed() { return closed; },
     /** 4f: màn lớn bảo iPad đội t bắt tay lại (nút Reconnect) */
     reconnect(t) { const x = st[t]; if (!sid) return; x.kick++; signal.write("host", { sid, ["k" + t]: x.kick + ":" + rid() }).catch(() => {}); },
     /** 4f: trạng thái 1 đội cho thẻ thử xưởng */
-    live(t) { const x = st[t]; return { s: x.s, steer: x.steer, at: x.at, tl: !!x.tl, tr: !!x.tr, rtt: x.rtt, pair: x.pair, tries: x.tries, diag: diag(t), url: padUrl(t) }; },
+    live(t) { const x = st[t]; return { owner: x.owner, s: x.s, steer: x.steer, at: x.at, tl: !!x.tl, tr: !!x.tr, rtt: x.rtt, pair: x.pair, tries: x.tries, diag: diag(t), url: padUrl(t) }; },
     onChange(f) { subs.add(f); return () => subs.delete(f); },
     /** game → iPad (chỉ qua kênh thẳng; đường kho không gửi ngược) */
     send(t, m) { const x = st[t]; if (x.dc && x.dc.readyState === "open") { try { x.dc.send(m); } catch (e) { /* */ } } },
@@ -226,7 +258,8 @@ export function createPadHost({ signal, padUrl }) {
 // onState({ s: "nogame" | "connecting" | "on" | "relay", rtt }) · onInfo({ kmh, cells, ms, alarm, phase, nitro }) · onMode(0|1|2) · onQ({ n, ph, q, a, lock, pick, ok, rev })
 // onSteer({ mode, max, smooth }) — kiểu lái do màn lớn chọn
 export function createPadClient({ signal, team, onState, onInfo, onMode, onQ, onSteer }) {
-  const me = "pad" + (team ? 1 : 0), t = team ? 1 : 0;
+  const me = "pad" + (team ? 1 : 0), t = team ? 1 : 0, dev = padDev();
+  let taken = false, owned = false;                           // 5: đội đã có iPad khác · mình đang là chủ
   let sid = "", nonce = "", pc = null, dc = null, answered = false, rs = 0, rq = [], sn = 0, s = "", rtt = 0, ping = 0, pingAt = new Map(), relayT = 0, dead = false, tries = 0;
   let cur = "s:0,0,0", lastSent = "", sentAt = 0, relayAt = 0, relayPend = 0, mode = null, qRaw = "";
   let retryT = 0, retryN = 0, discT = 0, kick = null;          // 4f: tự bắt tay lại
@@ -248,10 +281,10 @@ export function createPadClient({ signal, team, onState, onInfo, onMode, onQ, on
     retryT = setTimeout(() => { if (dead || !sid || open()) return; retryN++; hello(true); }, ms != null ? ms : RETRY[Math.min(retryN, RETRY.length - 1)]);
   }
   function hello(keep) {
-    if (!sid || dead) return;
+    if (!sid || dead || taken) return;
     closePc(); nonce = rid(); answered = false; rs = 0; rq = []; sn = 0; tries = 0; clearTimeout(relayT);
     if (!(keep && s === "relay")) set("connecting");
-    signal.write(me, { sid, nonce, answer: "", rs: 0, rq: "", sn: 0, st: "" }).catch(e => console.warn("pad hello", e));
+    signal.write(me, { sid, nonce, dev, left: "", answer: "", rs: 0, rq: "", sn: 0, st: "" }).catch(e => console.warn("pad hello", e));
     planRetry(Math.max(9000, RETRY[Math.min(retryN, RETRY.length - 1)] + 3000));   // lỡ máy chiếu không trả lời ⇒ vẫn thử lại
   }
   async function answer(offer) {
@@ -296,6 +329,11 @@ export function createPadClient({ signal, team, onState, onInfo, onMode, onQ, on
     if (d["c" + t]) gotSteer(d["c" + t]);
     if (d["r" + t]) gotRelay(d["r" + t]);
     const k = d["k" + t] || "";
+    // 5: đội đã có chủ là máy KHÁC ⇒ đứng yên báo "taken" (không chào, không giành); chủ nhả ⇒ tự chào
+    const u = d["u" + t] || "";
+    owned = u === dev;
+    if (u && u !== dev) { if (!taken) { taken = true; sid = d.sid; nonce = ""; answered = false; closePc(); clearTimeout(retryT); clearTimeout(relayT); set("taken"); } return; }
+    if (taken) { taken = false; sid = d.sid; kick = k; retryN = 0; hello(); return; }
     if (d.sid !== sid) { sid = d.sid; kick = k; retryN = 0; hello(); return; }
     if (kick !== null && k && k !== kick) { kick = k; retryN = 0; hello(true); return; }   // 4f: màn lớn bấm Reconnect
     kick = k;
@@ -340,7 +378,9 @@ export function createPadClient({ signal, team, onState, onInfo, onMode, onQ, on
     },
     get state() { return { s, rtt, tries: retryN, dc: dc ? dc.readyState : "", ice: pc ? pc.iceConnectionState : "" }; },
     reconnect() { retryN = 0; hello(true); },
-    destroy() { dead = true; clearInterval(beat); clearInterval(nudge); clearInterval(rep); clearTimeout(relayT); clearTimeout(retryT); clearTimeout(discT); document.removeEventListener("visibilitychange", onVis); try { unsub(); } catch (e) { /* */ } closePc(); },
+    destroy() {
+      if (!dead && sid && !taken && (owned || nonce)) signal.write(me, { sid, dev, nonce: "", answer: "", left: rid() }).catch(() => {});   // 5: thoát ra màn chọn đội ⇒ nhả đội
+      dead = true; clearInterval(beat); clearInterval(nudge); clearInterval(rep); clearTimeout(relayT); clearTimeout(retryT); clearTimeout(discT); document.removeEventListener("visibilitychange", onVis); try { unsub(); } catch (e) { /* */ } closePc(); },
   };
 }
 

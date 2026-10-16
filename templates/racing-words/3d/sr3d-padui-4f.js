@@ -5,6 +5,8 @@
 //   · tự bật nghiêng nếu Safari đã cho phép cảm biến (có sự kiện devicemotion ⇒ không cần chạm "TAP TO TURN ON TILT").
 //   · trạng thái nối "SLOW" ghi rõ đang tự sửa (đường nối 4f tự bắt tay lại).
 //   · đường nối: sr3d-padlink-4f.js.
+//   · KHOÁ ĐỘI (thầy 16/10): đội đã có iPad khác ⇒ màn này phủ tấm "TEAM 1 already has an iPad" + nút chọn đội khác (không Connecting mãi);
+//     màn chọn đội có setBusy([b0, b1]) — đội đang có iPad khác mờ đi, chạm chỉ báo, không vào được.
 // ---- gốc 3y ----
 // RACING WORDS — màn iPad mẫu 3y (16/10/2026) = padui-3x + dấu đỉnh vô lăng = MÁY BAY GIẤY logo Andrew Classes, thầy chọn "S1 nhưng nhỏ hơn ~10 %"
 //   (chon-dau-vo-lang.html: cỡ S cao 18 ⇒ 16,2 đơn vị vô lăng, tâm y 19 — nằm gọn trong vành; màu đội: cánh trái pha 50 % trắng, cánh phải màu đội; viền tối; không sao; không filter).
@@ -265,6 +267,14 @@ html,body{margin:0;height:100%;overflow:hidden;background:#05060a;overscroll-beh
 .ip-smeter i.l{right:0;transform-origin:100% 50%;background:linear-gradient(270deg,var(--tc) 0%,color-mix(in srgb,var(--tc) 85%,transparent) 40%,transparent 100%)}
 .ip-smeter i::before{content:"";position:absolute;left:0;right:0;top:-1vh;bottom:-1vh;border-radius:99px;background:inherit;opacity:.35;
   -webkit-mask-image:linear-gradient(180deg,transparent,#000 50%,transparent);mask-image:linear-gradient(180deg,transparent,#000 50%,transparent)}
+.ip-taken{display:none;position:absolute;inset:0;z-index:9;background:rgba(5,8,16,.94);flex-direction:column;align-items:center;justify-content:center;gap:3.5vmin;text-align:center;padding:6vmin;box-sizing:border-box}
+.ip[data-s="taken"] .ip-taken{display:flex}
+.ip-taken b{font:italic 900 max(26px,5vmin) "Exo 2",sans-serif;color:var(--tc);letter-spacing:.05em}
+.ip-taken p{margin:0;font-size:max(17px,2.6vmin);color:#cbd5e1;max-width:70vmin}
+.ip-taken button{padding:2vmin 5vmin;border-radius:99px;border:0;background:#e2e8f0;color:#0f172a;font:900 max(17px,2.6vmin) "Exo 2",sans-serif;cursor:pointer}
+.ipc-b.busy{opacity:.35;border-style:dashed}
+.ipc-b small{display:block;margin-top:1vmin;font:700 max(13px,1.9vmin) "Exo 2",sans-serif;color:#cbd5e1;min-height:1.2em}
+.ipc-msg{min-height:1.4em;color:#fcd34d!important;font-weight:700}
 .ipc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4vmin;padding:4vmin;box-sizing:border-box}
 .ipc h1{margin:0;font:italic 900 max(30px,6vmin) "Exo 2",sans-serif;letter-spacing:.08em;color:#fff3dd}
 .ipc p{margin:0;font-size:max(17px,2.4vmin);color:#94a3b8}
@@ -275,7 +285,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#05060a;overscroll-beh
 const UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14l6-6 6 6"/></svg>';
 const BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
 const OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="4.5" y="2.5" width="15" height="19" rx="2.2"/><path d="M3 3l18 18"/></svg>';
-const TXT = { on: "Connected", relay: "SLOW link — reconnecting…", connecting: "Connecting…", nogame: "Waiting for the game" };   // 4f
+const TXT = { on: "Connected", relay: "SLOW link — reconnecting…", connecting: "Connecting…", nogame: "Waiting for the game", taken: "Team taken" };   // 4f
 const MODE = ["iPad off", "Answer on iPad", "Drive on iPad"];
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 let styled = false;
@@ -286,6 +296,7 @@ export function mountPadApp(mount, { team, client, onBack, steer: steerCfg }) {
   style();
   const t = team ? 1 : 0, m = TEAM_META[t];
   mount.innerHTML = `<div class="ip" style="--tc:${m.color}" data-s="nogame" data-m="w" data-alarm="0">
+    <div class="ip-taken"><b>${m.name} already has an iPad</b><p>Another iPad is driving ${m.name}. It must go back to the team screen first — or choose the other team.</p>${onBack ? `<button type="button" class="ip-tback">Choose team</button>` : ""}</div>
     <div class="ip-top">${onBack ? `<button class="ip-back" aria-label="Choose team">${BACK}</button>` : ""}<b class="ip-team">${m.name}</b><span class="ip-st"><i></i><span></span></span><span class="ip-rtt"></span><span class="ip-mode"></span><button class="ip-lvl" type="button">⟲ LEVEL</button></div>
     <div class="ip-scr ip-wait"><div class="ip-msg"><b>RACING WORDS</b><span>Open RACING WORDS on the big screen — this iPad links by itself.</span></div></div>
     <div class="ip-scr ip-off"><div class="ip-msg">${OFF}<b>iPad is OFF</b><span>The big screen is playing without iPads.<br>Choose "Answer on iPad" or "Drive on iPad" with the iPad button on the big screen.</span></div></div>
@@ -471,6 +482,7 @@ export function mountPadApp(mount, { team, client, onBack, steer: steerCfg }) {
   setSteer(steerCfg);
   const paintCap = () => {};                               // 3t: bỏ chữ dưới dải tên lửa (chỗ đó là hàng tên lửa con)
   paintCap();
+  root.querySelector(".ip-tback")?.addEventListener("click", () => root.querySelector(".ip-back")?.click());
   root.querySelector(".ip-back")?.addEventListener("click", () => { cancelAnimationFrame(raf); window.removeEventListener("devicemotion", onMotion); window.removeEventListener("orientationchange", onOrient); onBack(); });
   noGestures(root);
   let lock = null;
@@ -507,8 +519,22 @@ export function mountPadApp(mount, { team, client, onBack, steer: steerCfg }) {
 export function mountPadChooser(mount, { onPick }) {
   style();
   mount.innerHTML = `<div class="ipc"><h1>RACING WORDS · iPad</h1><p>Choose this iPad's team</p>
-    <div class="ipc-row">${[0, 1].map(t => `<button class="ipc-b" data-t="${t}" style="--tc:${TEAM_META[t].color}">${TEAM_META[t].name}</button>`).join("")}</div>
+    <div class="ipc-row">${[0, 1].map(t => `<button class="ipc-b" data-t="${t}" style="--tc:${TEAM_META[t].color}">${TEAM_META[t].name}<small></small></button>`).join("")}</div>
+    <p class="ipc-msg"></p>
     <p>The big screen decides what this iPad does: answer the questions, or be the steering wheel.</p></div>`;
-  mount.querySelectorAll(".ipc-b").forEach(b => b.addEventListener("click", () => onPick(+b.dataset.t)));
+  let busy = [false, false];
+  const msg = mount.querySelector(".ipc-msg");
+  mount.querySelectorAll(".ipc-b").forEach(b => b.addEventListener("click", () => {
+    const t = +b.dataset.t;
+    if (busy[t]) { msg.textContent = TEAM_META[t].name + " already has an iPad. Choose the other team."; return; }   // 4f: đội đã có iPad khác ⇒ không vào
+    onPick(t);
+  }));
   noGestures(mount.firstElementChild);
+  return {
+    setBusy(b) {
+      busy = [!!b[0], !!b[1]];
+      mount.querySelectorAll(".ipc-b").forEach(el => { const t = +el.dataset.t; el.classList.toggle("busy", busy[t]); el.querySelector("small").textContent = busy[t] ? "iPad already connected" : ""; });
+      if (!busy.some(Boolean)) msg.textContent = "";
+    }
+  };
 }

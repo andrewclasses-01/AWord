@@ -143,9 +143,11 @@ async function showRWChooser() {
   note.hidden = true;
   stopPad(); view = "chooser";
   history.replaceState(null, "", urlWith("pad.html", null));
-  let U; try { [, U] = await rwMods(); } catch (e) { showNote("Could not load", "Check the network and reload this page.", { bad: true }); return; }
+  let L, U, S; try { [L, U, S] = await rwMods(); } catch (e) { showNote("Could not load", "Check the network and reload this page.", { bad: true }); return; }
   if (view !== "chooser") return;
-  U.mountPadChooser(padEl, { onPick: t => { saveTeam(t); manual = false; apply(true); } });
+  const ch = U.mountPadChooser(padEl, { onPick: t => { saveTeam(t); manual = false; apply(true); } });
+  // Đợt 539 — đội đang có iPad KHÁC (host u0/u1) ⇒ mờ, chạm chỉ báo, không vào được (huỷ nghe: rrBusyOff trong stopPad)
+  if (ch && ch.setBusy && L.watchTeams) rrBusyOff = L.watchTeams(S.rwPadSignal(), b => ch.setBusy(b));
 }
 function showDpad(team) {
   note.hidden = true;
