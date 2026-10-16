@@ -7612,6 +7612,10 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
+> ⭐ **(Đợt 527–539, 15–16/10/2026) — RACING WORDS (đua 3D 2 đội + iPad lái nghiêng).** Bản live = myGame mẫu 4f (Đợt 538 nối iPad bền / cổng START / tự nối lại;
+> Đợt 539 khoá đội iPad). ⬜ thầy thử TOMKO + 2 iPad thật: cổng iPad ở xưởng, Apply / Start again không phải nối lại, chọn trùng đội bị chặn; còn "SLOW" ⇒ chụp dòng
+> chẩn đoán dưới thẻ đội. Hồ sơ đầy đủ: myGame `speed-run/HO SO BAN GIAO RACING WORDS.md` + `templates/racing-words/GHI CHU RACING-WORDS.md`.
+>
 > ⭐ **(Đợt 509b, 12/10/2026) — Fight + Lives thêm 5 game** (Anagram, True/false, Type the answer, Find the gap, Find the match). ⬜ thầy chơi TOMKO.
 >
 > ⭐ **(Đợt 509, 12/10/2026) — Fight + Lives Quiz: đội hết mạng GAME OVER, đội kia chơi tiếp.** ⬜ thầy chơi TOMKO · ⬜ có muốn áp dụng cho Anagram/True-false/… không.
