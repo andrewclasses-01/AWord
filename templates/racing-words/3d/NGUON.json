@@ -1,14 +1,13 @@
 {
  "nguon": "myGame/speed-run/core",
- "goc": "rw-4e.js",
- "commit": "3f5f9a6",
+ "goc": "rw-4f.js",
+ "commit": "9c19a15",
  "con_sua_chua_commit": false,
  "js": [
-  "sr3d-padlink-3y.js",
-  "sr3d-padui-3y.js",
+  "sr3d-padlink-4f.js",
+  "sr3d-padui-4f.js",
   "sr3d-dash-3h.js",
-  "sr3d-padlink-3e.js",
-  "rw-4e.js",
+  "rw-4f.js",
   "sr3d-sound-3o.js",
   "sr3d-intro-4e.js",
   "sr3d-autores-3r.js",
@@ -33,7 +32,8 @@
   "rw-4b.css",
   "rw-4c.css",
   "rw-4d.css",
-  "rw-4e.css"
+  "rw-4e.css",
+  "rw-4f.css"
  ],
  "bo_xe": [
   "H3"

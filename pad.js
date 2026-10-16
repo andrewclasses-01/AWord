@@ -118,7 +118,7 @@ async function showTR(team) {
   keepAwake();
 }
 // ⭐ Đợt 527 — màn iPad RACING WORDS cho đội `team`
-const rwMods = () => Promise.all([import("./templates/racing-words/3d/sr3d-padlink-3y.js"), import("./templates/racing-words/3d/sr3d-padui-3y.js"), import("./templates/racing-words/rw-pad-signal.js")]);
+const rwMods = () => Promise.all([import("./templates/racing-words/3d/sr3d-padlink-4f.js"), import("./templates/racing-words/3d/sr3d-padui-4f.js"), import("./templates/racing-words/rw-pad-signal.js")]);   // Đợt 538: 4f (tự nối lại khi slow, mốc nghiêng tự lấy)
 async function showRW(team) {
   note.hidden = true;
   if (view === "rw" + team) return;

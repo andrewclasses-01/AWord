@@ -1,3 +1,12 @@
+// RACING WORDS — GÓI NHÚNG mẫu 4f (16/10/2026) = rw-4e.js + iPad sau buổi thử TOMKO (thầy: "kết nối với iPad ngay từ trước khi có intro… test ok rồi
+//   mới cho start. Khi đã start thì phải giữ kết nối đó, dù có chỉnh options hay bấm start again, change car…"):
+//   · CỔNG iPAD ở XƯỞNG (chế độ Drive on iPad): 2 thẻ đội góc dưới — trạng thái nối, mã QR khi chưa nối, vô lăng nhỏ quay theo iPad, ô thử ◀ LEFT / RIGHT ▶,
+//     nút Reconnect, dòng chẩn đoán. START chỉ bấm được khi CẢ 2 iPad nối THẲNG (không phải "slow") và đã bẻ thử trái + phải.
+//     Đổi chế độ iPad khác Drive (⚙ Settings ▸ iPad) ⇒ không chặn.
+//   · remote = createPadHost của sr3d-padlink-4f.js — đường nối SỐNG QUA NHIỀU VÁN (chủ trang giữ, game chỉ gắn / gỡ) ⇒ Apply Options / Start again /
+//     đổi xe không phải nối lại; cờ "đã thử" nằm trong đường nối nên dựng lại game không phải thử lại. Lõi vẫn sr3d-4e.js, intro sr3d-intro-4e.js.
+//   · iPad: sr3d-padui-4f.js (mốc cân bằng tự lấy theo hướng màn, bỏ LEVEL).
+// ---- gốc 4e ----
 // RACING WORDS — GÓI NHÚNG mẫu 4e (16/10/2026) = rw-4d.js + lõi sr3d-4e.js / intro sr3d-intro-4e.js (8 việc thầy — hồ sơ mục 39):
 //   · ⚙ Settings mở được MỌI LÚC, cả trên xưởng intro (rw-4e.css: bảng nổi trên lớp intro) và TẠM DỪNG game: trận đứng, phim intro đứng (intro.pause), tiếng dừng
 //   · chạm đúp bỏ phim intro không tính các cú chạm trong bảng Settings
@@ -49,6 +58,7 @@ import { createSpeedRun } from "./sr3d-4e.js";
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
 import { createIntro } from "./sr3d-intro-4e.js";
 import { createSound } from "./sr3d-sound-3o.js";
+import { qrSvg } from "./mc3d-qr.js";
 
 const CARS_KEY = "speedrun.cars";            // xe 2 đội nhớ THEO MÁY (thầy chọn ở màn chờ xưởng)
 const DEF_CARS = ["Y2", "H4"];
@@ -78,7 +88,10 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
   let introOn = true, idleAmb = false;
 
   // ---------- trận đua ----------
-  const game = createSpeedRun({ mount: frame, bar, questions, title, options: { ...options, cars }, remote, host,
+  // 4f: đường nối iPad sống qua nhiều ván — game chỉ gắn / gỡ CHÍNH NÓ
+  let myCtl = null;
+  const rem = remote ? Object.assign(Object.create(remote), { attach(c) { myCtl = c; remote.attach(c); }, detach() { remote.detach && remote.detach(myCtl); } }) : null;
+  const game = createSpeedRun({ mount: frame, bar, questions, title, options: { ...options, cars }, remote: rem, host,
     onEvent: (k, v) => { if (dead) return; if (k === "pause") S.pause(v === true); else if (k === "settings") { if (intro) intro.pause(v === true); } else onGameEvent(k, v || {}); try { onEvent(k, v); } catch (e) { /* */ } } });
   game.hold(true);
 
@@ -108,6 +121,54 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
   }, { capture: true });
   // nút thử / tự chơi gọi thẳng game.start() ⇒ intro tự ẩn
   every(() => { if (introOn && game.state().phase !== "menu") { introOn = false; intro.hide(); game.hold(false); } }, 200);
+
+  // ---------- 4f: CỔNG iPAD ở xưởng ----------
+  const TM = [{ name: "TEAM 1", color: "#3b8cff" }, { name: "TEAM 2", color: "#ff7a00" }];
+  const WHEEL = `<svg viewBox="-50 -50 100 100"><circle r="38" fill="none" stroke="currentColor" stroke-width="9"/><path d="M-38 4H38M0 4V38" stroke="currentColor" stroke-width="9" fill="none"/><rect x="-6" y="-49" width="12" height="15" rx="3" fill="var(--tc)"/></svg>`;
+  const gate = document.createElement("div"); gate.className = "rw-gate"; gate.hidden = true;
+  gate.innerHTML = [0, 1].map(i => `<div class="rw-gc rw-gc${i}" style="--tc:${TM[i].color}" data-t="${i}">
+      <div class="rw-gh"><b>${TM[i].name} · iPAD</b><span class="rw-gs"><i></i><span></span></span></div>
+      <div class="rw-gb"><div class="rw-gq"></div><div class="rw-gw">${WHEEL}</div>
+        <div class="rw-gt"><span class="rw-gl">◀ LEFT</span><span class="rw-gr">RIGHT ▶</span><small></small></div></div>
+      <div class="rw-gf"><button type="button" class="rw-grc">↻ Reconnect</button><em class="rw-gd"></em></div></div>`).join("");
+  frame.appendChild(gate);
+  const startB = frame.querySelector(".ri-start"), startHTML = startB ? startB.innerHTML : "";
+  const gs = [0, 1].map(i => { const c = gate.querySelector(".rw-gc" + i); return { c, st: c.querySelector(".rw-gs span"), q: c.querySelector(".rw-gq"), w: c.querySelector(".rw-gw svg"), tip: c.querySelector(".rw-gt small"), d: c.querySelector(".rw-gd"), key: "", qr: "", rot: 1e9 }; });
+  gate.querySelectorAll(".rw-grc").forEach(b => on(b, "click", e => { e.stopPropagation(); const t = +b.closest(".rw-gc").dataset.t; remote && remote.reconnect && remote.reconnect(t); }));
+  const gateNeed = () => !!(remote && remote.live && game.padMode === 2);
+  const teamOk = l => l.s === "on" && l.tl && l.tr;
+  let gateOk = true;
+  function paintGate() {
+    const show = gateNeed() && introOn && intro && intro.state === "idle";
+    if (gate.hidden === show) gate.hidden = !show;
+    const need = gateNeed();
+    gateOk = !need || [0, 1].every(i => teamOk(remote.live(i)));
+    root.classList.toggle("rw-padwait", !gateOk);
+    if (startB) { const h = gateOk ? startHTML : "WAITING FOR iPADS…"; if (startB.innerHTML !== h) startB.innerHTML = h; }
+    if (!show) return;
+    [0, 1].forEach(i => {
+      const l = remote.live(i), g = gs[i], ok = teamOk(l);
+      const key = [l.s, l.tl, l.tr, l.diag, ok].join("|");
+      if (key !== g.key) {
+        g.key = key;
+        g.c.dataset.s = l.s || "none"; g.c.classList.toggle("is-ok", ok); g.c.classList.toggle("is-tl", l.tl); g.c.classList.toggle("is-tr", l.tr);
+        g.st.textContent = l.s === "on" ? (ok ? "READY" : "Connected") : l.s === "relay" ? "SLOW — reconnecting…" : l.s === "wait" ? "Connecting…" : "Scan the QR with the iPad";
+        g.tip.textContent = l.s === "on" ? (ok ? "Steering OK" : "Turn the iPad wheel left and right") : l.s === "relay" ? "No direct link — too slow to drive" : "";
+        g.d.textContent = l.diag || "";
+        const wantQr = l.s !== "on" && l.s !== "relay" ? l.url : "";
+        if (wantQr !== g.qr) { g.qr = wantQr; g.q.innerHTML = wantQr ? qrSvg(wantQr, { quiet: 1 }) : ""; g.c.classList.toggle("has-qr", !!wantQr); }
+      }
+      const fresh = performance.now() - l.at < 600, rot = Math.round((fresh ? l.steer : 0) * 90);
+      if (rot !== g.rot) { g.rot = rot; g.w.style.transform = `rotate(${rot}deg)`; }
+    });
+  }
+  every(paintGate, 100);
+  // START bị chặn khi iPad chưa sẵn sàng ⇒ nháy thẻ đội còn thiếu
+  on(frame, "click", e => {
+    if (gateOk || !e.target.closest(".ri-start")) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    [0, 1].forEach(i => { if (!teamOk(remote.live(i))) { const c = gs[i].c; c.classList.remove("is-nudge"); void c.offsetWidth; c.classList.add("is-nudge"); } });
+  }, { capture: true });
 
   function introCue(n, t) {
     if (n === "start") { S.play("mIntro"); S.loop("garage", true); }

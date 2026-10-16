@@ -1,0 +1,42 @@
+/* RACING WORDS mẫu 4f (16/10/2026) — nạp SAU rw-4e.css. CỔNG iPAD ở xưởng: 2 thẻ đội góc dưới (trên lớp intro z 50, dưới bảng Settings z 60).
+   START mờ + chữ "WAITING FOR iPADS…" tới khi cả 2 iPad nối THẲNG và đã bẻ thử trái + phải. Chỉ đổi transform / màu — không filter, không blur. */
+.rw-gate { position: absolute; inset: 0; z-index: 55; pointer-events: none; font-family: "Exo 2", sans-serif; color: #e8eefc; }
+.rw-gate[hidden] { display: none; }
+.rw-gc { position: absolute; bottom: 3cqh; width: min(30cqw, 54cqh); pointer-events: auto; box-sizing: border-box; padding: 1.4cqh 1.6cqh 1.2cqh;
+  border-radius: 1.8cqh; background: rgba(6, 10, 20, .86); border: .3cqh solid rgba(255, 255, 255, .12); border-top: .6cqh solid var(--tc);
+  box-shadow: 0 1cqh 3cqh rgba(0, 0, 0, .55); transition: border-color .25s; }
+.rw-gc0 { left: 2.5cqw; } .rw-gc1 { right: 2.5cqw; }
+.rw-gc.is-ok { border-color: rgba(74, 222, 128, .75); border-top-color: var(--tc); }
+.rw-gc.is-nudge { animation: rwnudge .5s; }
+@keyframes rwnudge { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-1.2cqh); } 40% { transform: translateX(1.2cqh); } 60% { transform: translateX(-.8cqh); } 80% { transform: translateX(.8cqh); } }
+.rw-gh { display: flex; align-items: center; justify-content: space-between; gap: 1cqh; }
+.rw-gh b { font: 900 2.3cqh "Exo 2"; letter-spacing: .08em; color: var(--tc); }
+.rw-gs { display: flex; align-items: center; gap: .7cqh; font: 800 1.9cqh "Exo 2"; color: #cbd5e1; }
+.rw-gs i { width: 1.4cqh; height: 1.4cqh; border-radius: 50%; background: #64748b; }
+.rw-gc[data-s="on"] .rw-gs i { background: #4ade80; box-shadow: 0 0 1cqh #4ade80; }
+.rw-gc[data-s="relay"] .rw-gs i { background: #f87171; }
+.rw-gc[data-s="relay"] .rw-gs { color: #fca5a5; }
+.rw-gc[data-s="wait"] .rw-gs i { background: #facc15; animation: rwblink 1s steps(2) infinite; }
+.rw-gc.is-ok .rw-gs { color: #86efac; }
+@keyframes rwblink { 50% { opacity: .25; } }
+.rw-gb { display: flex; align-items: center; gap: 1.6cqh; margin-top: 1.2cqh; }
+.rw-gq { display: none; width: 15cqh; height: 15cqh; flex: none; background: #fff; border-radius: 1cqh; padding: .6cqh; box-sizing: border-box; }
+.rw-gq svg { width: 100%; height: 100%; display: block; }
+.rw-gc.has-qr .rw-gq { display: block; }
+.rw-gw { width: 11cqh; height: 11cqh; flex: none; color: #94a3b8; }
+.rw-gc.has-qr .rw-gw { display: none; }
+.rw-gc[data-s="on"] .rw-gw { color: #e2e8f0; }
+.rw-gw svg { width: 100%; height: 100%; display: block; transition: transform .1s linear; will-change: transform; }
+.rw-gt { display: flex; flex-wrap: wrap; gap: .8cqh; align-items: center; min-width: 0; }
+.rw-gt span { padding: .5cqh 1.1cqh; border-radius: 99px; font: 800 1.7cqh "Exo 2"; letter-spacing: .06em; background: rgba(255, 255, 255, .07); color: #94a3b8; border: .2cqh solid rgba(255, 255, 255, .12); }
+.rw-gc.is-tl .rw-gl, .rw-gc.is-tr .rw-gr { background: rgba(74, 222, 128, .18); color: #86efac; border-color: rgba(74, 222, 128, .6); }
+.rw-gc.is-tl .rw-gl::before, .rw-gc.is-tr .rw-gr::before { content: "✓ "; }
+.rw-gc.has-qr .rw-gl, .rw-gc.has-qr .rw-gr { display: none; }
+.rw-gt small { flex-basis: 100%; font: 700 1.6cqh "Exo 2"; color: #cbd5e1; }
+.rw-gf { display: flex; align-items: center; gap: 1cqh; margin-top: 1cqh; min-height: 3.4cqh; }
+.rw-grc { flex: none; padding: .5cqh 1.3cqh; border-radius: 99px; border: .2cqh solid rgba(255, 255, 255, .25); background: rgba(255, 255, 255, .06); color: #e2e8f0;
+  font: 800 1.6cqh "Exo 2"; cursor: pointer; }
+.rw-gc.is-ok .rw-grc { display: none; }
+.rw-gd { font: 600 1.35cqh "Exo 2"; font-style: normal; color: #7c8aa3; line-height: 1.25; min-width: 0; overflow-wrap: anywhere; }
+/* START chờ iPad */
+.rw-root.rw-padwait .ri-start { opacity: .5; filter: grayscale(1); cursor: not-allowed; font-size: 2.4cqh; }

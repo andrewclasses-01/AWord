@@ -2,6 +2,14 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
+## Đợt 538 (16/10/2026) — myGame mẫu 4f: iPad nối trước intro · giữ kết nối · tự nối lại · mốc nghiêng tự lấy
+- GOC `rw-4f.js` (+ `rw-4f.css`), iPad `sr3d-padlink-4f.js` + `sr3d-padui-4f.js` (pad.js nạp). Lõi vẫn `sr3d-4e.js`, intro `sr3d-intro-4e.js`.
+- ⛔ Đường nối iPad là MỘT bản cho cả trang (`PADLINK` trong racing-words.js) — đừng tạo createPadHost trong mount nữa (Apply dựng lại game ⇒ iPad phải nối lại = lỗi Đợt 537 trở về).
+  Game chỉ attach/detach; hết người dùng ⇒ nhả claim ngay, `close()` sau 30 s. Mở sớm ở startScreen (chế độ iPad nhớ trên máy ≠ Off).
+- Cổng START ở xưởng (chế độ Drive on iPad): 2 iPad nối THẲNG + đã bẻ thử trái/phải. Lối thoát khi iPad hỏng: ⚙ ▸ iPad đổi chế độ khác.
+- "SLOW" còn xảy ra ⇒ đọc dòng chẩn đoán dưới thẻ đội (hồ sơ myGame mục 40 có cách đọc). iPad tự thử lại nấc 5→20 s; nút Reconnect bắt bắt tay lại ngay.
+- Bàn thử `scratch/dot538-rw.html?padsig=local` + `pad.html?padsig=local&t=0|1` (tab iPad phải ở trước khi giả nghiêng `__padui.tiltDebug(deg)` — tab nền dừng rAF).
+
 ## Đợt 537 (16/10/2026) — myGame mẫu 4e: Settings mọi nơi + tạm dừng · mặc định mới · bay xa · nghiêng đúng chiều · màn chờ ảnh riêng
 - GOC `rw-4e.js` (lõi `sr3d-4e.js`, intro `sr3d-intro-4e.js` — vẫn xe `sr3d-car-4b.js` chung với lõi). CSS thêm `rw-4e.css` (nạp sau rw-4d.css): bảng Settings z 60 nổi trên intro.
 - Mặc định Settings: Drive on iPad + Tilt · Cockpit · Sky view Off · Traffic Off; khoá máy đổi `.v2` (`racingwords.steer.v2 · view.v2 · sky.v2 · traffic.v2 · padMode.v2`) — chế độ iPad nhớ theo máy.

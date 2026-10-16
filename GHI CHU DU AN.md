@@ -546,6 +546,35 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 538 (16/10/2026) — RACING WORDS iPad: NỐI TRƯỚC INTRO · GIỮ KẾT NỐI · TỰ NỐI LẠI · MỐC NGHIÊNG TỰ LẤY (myGame mẫu 4f)
+
+**Thầy (thử TOMKO + 2 iPad):** "2 iPad kết nối thì 1 cái connect ngon, còn 1 cái bị slow connect nên không thể điều khiển nổi — điều tra nguyên nhân để lần sau cả 2 đều ngon ·
+luôn lấy mốc cân bằng của iPad mà không cần reset level · kết nối với iPad ngay từ trước khi có intro, cài đặt là iPad thì phải kết nối rồi, test ok rồi mới cho start · đã start thì
+giữ kết nối đó dù chỉnh options, start again, change car… iPad vẫn hiện vô lăng đầy đủ, vào chơi là chơi luôn". Sửa ở myGame trước (mẫu 4f `8e5fd7a` + `9c19a15`, hồ sơ myGame mục 40).
+**Nguyên nhân "slow":** kênh WebRTC thẳng iPad ⇄ máy chiếu không mở ⇒ lái qua kho Firestore (≤ 5 lần/giây, trễ 0,3–1 s). Đường nối 3y (a) KHÔNG BAO GIỜ THỬ LẠI — lần bắt tay đầu
+trượt (chỉ STUN, IP LAN giấu sau mDNS `.local`; mạng chặn multicast / tách băng Wi-Fi / khác SSID; hoặc chỉ do thời điểm) là kẹt slow tới khi tải lại trang; (b) MỖI LẦN Apply Options
+engine dựng lại game ⇒ `rwPadLink()` dựng lại cả đường nối (sid mới, nhả claim) ⇒ 2 iPad bắt tay lại từ đầu ⇒ cơ hội trượt nhân lên + "kết nối lại lằng nhằng".
+**Làm:**
+- tools/chep-racing-words.py: GOC `rw-4f.js`, GOC_THEM `sr3d-padui-4f.js` + `sr3d-padlink-4f.js`, CSS + `rw-4f.css` ⇒ 3d/ có rw-4f.js · rw-4f.css · sr3d-padlink-4f.js · sr3d-padui-4f.js
+  (xoá rw-4e.js · sr3d-padlink-3e.js · sr3d-padlink-3y.js · sr3d-padui-3y.js; lõi vẫn sr3d-4e.js + intro sr3d-intro-4e.js).
+- racing-words.js: `rwPadLink()` ⇒ MỘT ĐƯỜNG NỐI CHO CẢ TRANG (`PADLINK`, đếm người dùng `use()`/`release()`): mount mới gắn vào đường nối đang sống; hết người dùng ⇒ nhả claim
+  ipad_now ngay (ipad-now gộp ghi 1,5 s ⇒ dựng lại game không nháy) và đóng đường nối sau 30 s. Mở NGAY ở `startScreen` (lúc màn chờ tải 3D) nếu chế độ iPad nhớ trên máy ≠ Off
+  (`racingwords.padMode.v2`, mặc định Drive) — giữ tới `dispose` (ngay trước mount) hoặc 90 s. Lúc chưa có game, đường nối gắn 1 bên giả để vẫn theo dõi trạng thái (claim `hold`).
+  GAME `./3d/rw-4f.js`, CSS + rw-4f.css.
+- pad.js: iPad nạp `sr3d-padlink-4f.js` + `sr3d-padui-4f.js`. rw-pad-signal.js: localSignal từ padlink-4f.
+- Game (myGame 4f): padlink 4f `attach/detach` chỉ gắn / gỡ game (giữ sid + kênh; danh sách bên gắn — gỡ 1 game thì game trước nhận lại), `close()` đóng thật; iPad tự bắt tay lại
+  nấc 5 · 6 · 8 · 12 · 20 s khi kênh thẳng chưa mở / ICE failed / disconnected > 3 s, trong lúc đó vẫn lái qua kho; nút Reconnect (khoá `k0`/`k1`); nhịp tim đường kho 1,5 s;
+  STUN dự phòng; dòng chẩn đoán (`direct host→host · 6 ms` hoặc `ICE failed · PC: mDNS 1 STUN 2 · iPad: none · try 3`) ở thẻ đội + ⚙ ▸ iPad.
+  CỔNG iPAD ở xưởng (chế độ Drive on iPad): 2 thẻ đội (trạng thái · QR khi chưa nối · vô lăng nhỏ theo iPad · ◀ LEFT / RIGHT ▶ · Reconnect) — START "WAITING FOR iPADS…"
+  tới khi 2 đội nối THẲNG + đã bẻ thử trái/phải (cờ giữ suốt đường nối). iPad: mốc nghiêng TUYỆT ĐỐI theo hướng màn (bỏ LEVEL), tự bật nghiêng nếu Safari đã cho phép.
+**Đã thử (bàn thử `scratch/dot538-rw.html?padsig=local` + 2 tab `pad.html?padsig=local&t=0|1`, engine thật):** iPad nối thẳng + sang màn vô lăng NGAY trong lúc màn chờ còn tải ⇒
+xưởng: 2 thẻ chờ ⇒ bẻ thử trái/phải ⇒ READY, START sáng ⇒ gắn rồi gỡ thêm 1 bản game (như engine dựng lại): sid không đổi, ipad_now không ghi lại, iPad vẫn `on` + vô lăng ⇒
+START ⇒ trận, 2 xe nhận lái iPad (HUD "iPAD"). Ở myGame thêm: Apply dựng lại game không bắt tay lại; giả mạng chặn (`iceTransportPolicy: "relay"`) ⇒ "slow" vẫn lái được, START chặn,
+chẩn đoán "iPad: none" ⇒ gỡ chặn ⇒ tự về nối thẳng sau 15–27 s không tải lại; bật nghiêng khi cầm lệch 20° đọc đúng 20°. 0 lỗi console.
+⬜ thầy thử TOMKO + 2 iPad; còn slow ⇒ chụp dòng chẩn đoán dưới thẻ đội.
+
+---
+
 ## Đợt 537 (16/10/2026) — RACING WORDS 8 VIỆC SAU 4d (myGame mẫu 4e) + MÀN CHỜ ẢNH TĨNH RIÊNG + OPTIONS MỜ THANH KHÔNG DÙNG
 
 **Thầy:** "Settings hiện ở mọi nơi, cả trong intro · màn load đang dùng ảnh STAR LOOT ⇒ ảnh tĩnh có loading riêng cho RACING WORDS · xưởng đã có ANDREW STUDIO trên tường ⇒ bỏ chữ

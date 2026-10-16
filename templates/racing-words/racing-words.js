@@ -3,6 +3,9 @@
 //
 // Thầy: "đưa lên AWord, sử dụng options của AWord" ⇒ chốt (AskUserQuestion): Options = Cùng/khác câu hỏi · Số tên lửa tối đa ·
 //   Độ dài đường + số vòng · Cầu nhảy bật/tắt · 13 xe (BỎ Bugatti Divo — CC-BY-NC) · iPad thật làm luôn ⇒ "ok build".
+// ⭐ Đợt 538: myGame mẫu 4f (core/rw-4f.js) — sau buổi thử TOMKO + 2 iPad: cổng iPad ở XƯỞNG (START chỉ mở khi 2 iPad nối THẲNG + đã bẻ thử trái/phải),
+//   đường nối iPad SỐNG SUỐT TRANG (rwPadLink ⇒ PADLINK; Apply / Start again / đổi xe không nối lại), mở ngay từ màn chờ tải; iPad tự bắt tay lại khi "slow"
+//   + nút Reconnect + dòng chẩn đoán ICE; iPad 4f lấy mốc nghiêng tuyệt đối theo hướng màn (bỏ LEVEL). pad.js nạp padlink-4f + padui-4f.
 // ⭐ Đợt 537: myGame mẫu 4e (core/rw-4e.js) = 4d + ⚙ Settings mở được MỌI LÚC (cả trên xưởng intro) và TẠM DỪNG game · mặc định Drive on iPad + Tilt ·
 //   Cockpit · Sky view Off · Traffic Off (nhớ theo máy, khoá ".v2") · bay xa hơn khi lên dốc bằng boost · nghiêng đúng chiều vô lăng, đáp nghiêng = BAD mất lái ·
 //   bỏ chữ phủ màn xưởng. Màn chờ: ảnh tĩnh RIÊNG ./rw-loading.webp (theme "race" của core/loader3d.js), không còn cảnh "space" của STAR LOOT.
@@ -32,8 +35,8 @@ const LOAD_BG = new URL("./rw-loading.webp", import.meta.url).href;   // Đợt 
 const loader = () => { ensureCss(); return showLoader3d({ key: "racingwords", title: "RACING WORDS", theme: "race", bg: LOAD_BG }); };
 preloadLoader3d("race", LOAD_BG);
 
-const GAME = "./3d/rw-4e.js";                     // Đợt 537: myGame mẫu 4e (Settings mọi nơi + tạm dừng, mặc định mới, bay xa, nghiêng đúng chiều, BAD mất lái) · Đợt 535: myGame mẫu 4d (5 đợt sau 3y: chế độ đua, cong thật, lái tay, dốc xoắn, phần thưởng, xe khác, camera gộp) · Đợt 534: myGame mẫu 3y (lái nghiêng iPad) · Đợt 533: myGame mẫu 3r (mượt TOMKO) · Đợt 531: myGame mẫu 3q (Fight options, cảnh xa đúng vật lý, 35 km/h) · Đợt 529: 3p · Đợt 527: 3o
-const CSS = ["sr3d-3g.css", "sr3d-3l.css", "sr3d-intro-3o.css", "rw-3r.css", "rw-3z.css", "rw-4a.css", "rw-4b.css", "rw-4c.css", "rw-4d.css", "rw-4e.css"];   // Đợt 537: + rw-4e · Đợt 535: + 3z…4d (đúng thứ tự)
+const GAME = "./3d/rw-4f.js";                     // Đợt 538: myGame mẫu 4f (cổng iPad ở xưởng: START khi 2 iPad nối thẳng + thử trái/phải · đường nối sống qua Apply / Start again / đổi xe · tự nối lại khi slow · mốc nghiêng tự lấy) · Đợt 537: myGame mẫu 4e (Settings mọi nơi + tạm dừng, mặc định mới, bay xa, nghiêng đúng chiều, BAD mất lái) · Đợt 535: myGame mẫu 4d (5 đợt sau 3y: chế độ đua, cong thật, lái tay, dốc xoắn, phần thưởng, xe khác, camera gộp) · Đợt 534: myGame mẫu 3y (lái nghiêng iPad) · Đợt 533: myGame mẫu 3r (mượt TOMKO) · Đợt 531: myGame mẫu 3q (Fight options, cảnh xa đúng vật lý, 35 km/h) · Đợt 529: 3p · Đợt 527: 3o
+const CSS = ["sr3d-3g.css", "sr3d-3l.css", "sr3d-intro-3o.css", "rw-3r.css", "rw-3z.css", "rw-4a.css", "rw-4b.css", "rw-4c.css", "rw-4d.css", "rw-4e.css", "rw-4f.css"];   // Đợt 538: + rw-4f (cổng iPad) · Đợt 537: + rw-4e · Đợt 535: + 3z…4d (đúng thứ tự)
 const FONTS = "https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,600;0,700;0,800;0,900;1,800;1,900&subset=vietnamese&display=swap";
 // khoá game <-> khoá PHẲNG (activity.options)
 // ⭐ Đợt 531 (thầy) — Options kiểu FIGHT của Rocket Race: Lives (srLives 0 = tắt) · Missile damages 1–5 (srMsDmg) · Time delay (srTie giây,
@@ -98,26 +101,57 @@ function needMessage(root, text) {
 }
 let live3d = 0;   // số ván đang mở (lớp html.aw-rw-on)
 
-// iPad: kênh bắt tay + claim ipad_now khi nút iPad của game ≠ Off; `hold` từ lúc có iPad nối
-async function rwPadLink() {
-  let S = null, P = null, N = null, claim = null, dead = false, mode = 0, linked = [false, false];
-  try { [S, P] = await Promise.all([import("./rw-pad-signal.js"), import("./3d/sr3d-padlink-3y.js")]); } catch (e) { console.warn("Racing words iPad link", e); }
-  import("../../core/ipad-now.js").then(m => { N = m; sync(); }).catch(() => {});
-  function sync() {
-    if (dead || !N) return;
-    const hold = linked.some(Boolean);
-    if (!mode) { if (claim) { claim.release(); claim = null; } return; }
-    if (!claim) claim = N.claimIpad({ game: "racingwords", fight: true, ctl: mode === 2, hold });
-    else claim.update({ hold, ctl: mode === 2 });
-  }
-  return {
-    remote: S && P ? P.createPadHost({ signal: S.rwPadSignal(), padUrl: S.padUrl }) : null,
+// iPad: kênh bắt tay + claim ipad_now khi chế độ iPad của game ≠ Off; `hold` từ lúc có iPad nối
+// ⭐ Đợt 538 (thầy thử TOMKO 16/10: "1 iPad slow không lái nổi" + "kết nối trước intro, test ok mới cho start, chỉnh Options / Start again / đổi xe vẫn giữ kết nối"):
+//   ĐƯỜNG NỐI SỐNG SUỐT TRANG — một bản cho cả trang (PADLINK), không còn dựng lại theo mỗi mount: Apply Options (engine dựng lại game) ⇒ game mới chỉ GẮN vào
+//   đường nối đang sống (createPadHost 4f: attach/detach), iPad không bắt tay lại, không nháy "Waiting for the game". Mở NGAY từ màn chờ tải (startScreen) ⇒
+//   iPad bắt tay song song lúc 3D đang nạp; claim ipad_now theo chế độ nhớ trên máy ("racingwords.padMode.v2", mặc định 2 = Drive on iPad).
+//   Hết người dùng (rời Racing words) ⇒ nhả claim ngay (ipad-now gộp 1,5 s nên dựng lại game không nháy), đóng đường nối sau 30 s nếu không ai mở lại.
+//   Cổng START ở xưởng + tự nối lại khi slow + chẩn đoán: trong gói nhúng 4f (./3d/rw-4f.js, ./3d/sr3d-padlink-4f.js).
+const PADM_KEY = "racingwords.padMode.v2";
+const savedPadMode = () => { try { const v = localStorage.getItem(PADM_KEY); return v === "0" || v === "1" || v === "2" ? +v : 2; } catch (e) { return 2; } };
+let PADLINK = null;
+function rwPadLink() {
+  if (PADLINK && !PADLINK.dead) { PADLINK.use(); return PADLINK.ready; }
+  let N = null, claim = null, mode = savedPadMode(), linked = [false, false], users = 1, dropT = 0;
+  const L = {
+    dead: false, remote: null,
     onEvent(k, v) {
       if (k === "padMode") { mode = v | 0; sync(); }
       if (k === "pad" && v) { linked[v.team] = v.s === "on" || v.s === "relay"; sync(); }
     },
-    release() { dead = true; if (claim) { claim.release(); claim = null; } }
+    use() { users++; clearTimeout(dropT); sync(); },
+    release() {                                   // một mount thôi dùng
+      users = Math.max(0, users - 1); if (users) return;
+      if (claim) { claim.release(); claim = null; }
+      clearTimeout(dropT); dropT = setTimeout(close, 30000);
+    }
   };
+  function sync() {
+    if (L.dead || !N) return;
+    const hold = linked.some(Boolean);
+    if (!mode || !users) { if (claim) { claim.release(); claim = null; } return; }
+    if (!claim) claim = N.claimIpad({ game: "racingwords", fight: true, ctl: mode === 2, hold });
+    else claim.update({ hold, ctl: mode === 2 });
+  }
+  function close() {
+    if (users || L.dead) return;
+    L.dead = true; if (PADLINK === L) PADLINK = null;
+    if (claim) { claim.release(); claim = null; }
+    try { L.remote && L.remote.close && L.remote.close(); } catch (e) { /* */ }
+  }
+  import("../../core/ipad-now.js").then(m => { N = m; sync(); }).catch(() => {});
+  L.ready = Promise.all([import("./rw-pad-signal.js"), import("./3d/sr3d-padlink-4f.js")]).then(([S, P]) => {
+    if (L.dead) return L;
+    const r = P.createPadHost({ signal: S.rwPadSignal(), padUrl: S.padUrl });
+    // mở phiên NGAY (chưa có game): game gắn sau sẽ nhận lại trạng thái từng đội
+    r.attach({ press() {}, drive() {}, answer() {}, status(t, s) { L.onEvent("pad", { team: t, s }); } });
+    r.onChange(t => L.onEvent("pad", { team: t, s: r.live(t).s }));
+    L.remote = r;
+    return L;
+  }).catch(e => { console.warn("Racing words iPad link", e); return L; });
+  PADLINK = L;
+  return L.ready;
 }
 
 const racingWordsTemplate = {
@@ -210,9 +244,12 @@ const racingWordsTemplate = {
     if (block3dHere()) { ready().then(() => play()); return { dispose() {} }; }   // Đợt 530: bảng 2..5 — không màn chờ 3D, không thử WebGL
     if (!canRun3d()) throw new Error("Racing words: no WebGL");
     const ld = loader();
+    // ⭐ Đợt 538: iPad bắt tay NGAY lúc 3D đang nạp — giữ đường nối tới khi màn chờ đi (dispose, ngay trước mount) hoặc tối đa 90 s nếu thầy rời trang chờ
+    let early = null; const letGo = () => { if (early) { const p = early; early = null; p.then(L => L.release()); } };
+    if (savedPadMode()) { early = rwPadLink(); setTimeout(letGo, 90000); }
     let gone = false;
     Promise.all([ready(), ld.ready]).then(() => { if (!gone) play(); });
-    return { dispose() { gone = true; } };
+    return { dispose() { gone = true; letGo(); } };
   },
   mount(root, activity, ui) {
     if (block3dHere()) { root.innerHTML = ""; return block3dMessage(root, "Racing words"); }   // Đợt 530
@@ -246,7 +283,7 @@ const racingWordsTemplate = {
     Promise.all([import(GAME), rwPadLink()])
       .then(([m, L]) => {
         if (dead) { L.release(); return null; }
-        link = L;
+        link = L;   // Đợt 538: đường nối dùng chung cả trang (L.remote sống qua các lần dựng lại game)
         return m.createRacingWords({ mount: box, questions, title: "RACING WORDS", options: rwGame(activity), host, remote: L.remote,
           onEvent: (k, v) => L.onEvent(k, v) });
       })

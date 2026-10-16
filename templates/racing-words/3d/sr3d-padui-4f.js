@@ -1,3 +1,11 @@
+// RACING WORDS — màn iPad mẫu 4f (16/10/2026) = padui-3y + thầy sau buổi thử TOMKO: "luôn lấy mốc cân bằng của iPad mà không cần reset level":
+//   · MỐC CÂN BẰNG TUYỆT ĐỐI: cầm iPad như vô lăng thì "thẳng" = trọng lực nằm dọc đúng 1 trục của máy (ngang ⇒ trục x, dọc ⇒ trục y) ⇒ mốc lấy theo
+//     hướng màn (screen.orientation), không theo tư thế lúc bật nghiêng (3y: lúc bật đang nghiêng ⇒ lệch mãi tới khi bấm LEVEL). Bỏ nút LEVEL.
+//     Xoay màn (ngang ↔ dọc / lật đầu) ⇒ tự lấy lại mốc.
+//   · tự bật nghiêng nếu Safari đã cho phép cảm biến (có sự kiện devicemotion ⇒ không cần chạm "TAP TO TURN ON TILT").
+//   · trạng thái nối "SLOW" ghi rõ đang tự sửa (đường nối 4f tự bắt tay lại).
+//   · đường nối: sr3d-padlink-4f.js.
+// ---- gốc 3y ----
 // RACING WORDS — màn iPad mẫu 3y (16/10/2026) = padui-3x + dấu đỉnh vô lăng = MÁY BAY GIẤY logo Andrew Classes, thầy chọn "S1 nhưng nhỏ hơn ~10 %"
 //   (chon-dau-vo-lang.html: cỡ S cao 18 ⇒ 16,2 đơn vị vô lăng, tâm y 19 — nằm gọn trong vành; màu đội: cánh trái pha 50 % trắng, cánh phải màu đội; viền tối; không sao; không filter).
 // ---- gốc 3x ----
@@ -63,7 +71,7 @@
 //                  + nút TÊN LỬA (thầy: "thêm một nút tên lửa ở một chỗ phù hợp"): góc TRÊN PHẢI, ngay trên bàn đạp phanh — ngón cái phải
 //                  trượt lên là tới, không lẫn với bàn đạp; số quả + 3 ống hiện trên nút. Màn vô lăng: km/h + 4 ô năng lượng + thanh Nitro (như game).
 //   mountPadApp(mount, { team, client, onBack }) ⇒ { setState, setInfo, setMode, setQ } · mountPadChooser(mount, { onPick })
-import { TEAM_META } from "./sr3d-padlink-3e.js";
+import { TEAM_META } from "./sr3d-padlink-4f.js";
 import { WHEEL_SVG, GAS_SVG, BRAKE_SVG, FIRE_ICON, FLY_HTML, reserveHTML } from "./sr3d-dash-3h.js";
 // 3v: vô lăng NHẸ cho lái nghiêng — cùng hình, bỏ 2 nhóm nét sáng (6 path blur) + mọi <filter>; chữ ATEAM sáng bằng nét viền mờ thay bộ lọc
 // 3w: dấu đỉnh = vạch cong theo vành ⇒ 3y: máy bay giấy (xem dưới)
@@ -211,7 +219,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#05060a;overscroll-beh
 .ip-warn{top:2.2vh;z-index:3}
 .ip[data-m="2"] .ip-top{left:50%;top:31.6%;transform:translateX(-50%)}
 .ip-lvl{height:max(36px,4.6vmin);padding:0 1.8vmin;border-radius:99px;border:1px solid rgba(140,210,255,.4);background:rgba(255,255,255,.06);color:#cbd5e1;font:800 max(13px,1.7vmin) "Exo 2",sans-serif;letter-spacing:.1em;cursor:pointer}
-.ip:not([data-tilt="1"]) .ip-lvl{display:none}
+.ip-lvl{display:none!important}   /* 4f: mốc cân bằng tự lấy — bỏ nút LEVEL */
 .ip-tiltgo{position:absolute;left:50%;top:22%;transform:translateX(-50%);z-index:4;display:none;padding:2vmin 4vmin;border-radius:99px;border:0;background:var(--tc);color:#fff;
   font:italic 900 max(16px,3vmin) "Exo 2",sans-serif;letter-spacing:.12em;box-shadow:0 0 4vmin var(--tc);cursor:pointer;white-space:nowrap}
 .ip[data-tilt="1"]:not([data-tiltok="1"]) .ip-tiltgo{display:block}
@@ -267,7 +275,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#05060a;overscroll-beh
 const UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14l6-6 6 6"/></svg>';
 const BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
 const OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="4.5" y="2.5" width="15" height="19" rx="2.2"/><path d="M3 3l18 18"/></svg>';
-const TXT = { on: "Connected", relay: "Connected (slow)", connecting: "Connecting…", nogame: "Waiting for the game" };
+const TXT = { on: "Connected", relay: "SLOW link — reconnecting…", connecting: "Connecting…", nogame: "Waiting for the game" };   // 4f
 const MODE = ["iPad off", "Answer on iPad", "Drive on iPad"];
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 let styled = false;
@@ -406,7 +414,8 @@ export function mountPadApp(mount, { team, client, onBack, steer: steerCfg }) {
     const now = performance.now(), dt = lastEvT ? Math.min(0.1, (now - lastEvT) / 1000) : 0; if (lastEvT) ST.evGap = Math.max(ST.evGap, now - lastEvT); lastEvT = now;
     gl = gl ? { x: gl.x + (g.x - gl.x) * 0.5, y: gl.y + (g.y - gl.y) * 0.5 } : { x: g.x, y: g.y };   // 3x: lọc 0,3 ⇒ 0,5 (bớt trễ khi chưa có con quay)
     const m = Math.hypot(gl.x, gl.y);
-    if (!ref && m > 4) ref = { x: gl.x / m, y: gl.y / m };
+    if (!TILT.ok) { TILT.ok = true; root.dataset.tiltok = "1"; }   // 4f: có sự kiện ⇒ Safari đã cho phép ⇒ bật luôn
+    if (!ref && m > 4) ref = levelRef();
     if (!ref || m < 1) return;
     const nx = gl.x / m, ny = gl.y / m, prev = phiAcc;
     phiAcc = Math.atan2(ref.x * ny - ref.y * nx, ref.x * nx + ref.y * ny) * 180 / Math.PI;
@@ -428,11 +437,23 @@ export function mountPadApp(mount, { team, client, onBack, steer: steerCfg }) {
       if (drift > 6) { gyroAx = null; learn = 0; corrAx.alpha = corrAx.beta = corrAx.gamma = 0; drift = 0; TILT.phi = phiAcc; relearn++; }
     } else TILT.phi = phiAcc;
   };
-  const level = () => { if (gl) { const m = Math.hypot(gl.x, gl.y); if (m > 4) ref = { x: gl.x / m, y: gl.y / m }; } TILT.phi = phiAcc = 0; };
+  // 4f: MỐC CÂN BẰNG TUYỆT ĐỐI — iPad cầm ngang như vô lăng, đặt thẳng thì trọng lực nằm dọc trục x của máy (cầm dọc: trục y).
+  //   Chỉ lấy CHIỀU (±) từ cảm biến; góc thì luôn so với đúng trục ⇒ bật nghiêng lúc đang cầm lệch vẫn đúng, không cần LEVEL.
+  const landscape = () => { const o = screen.orientation && screen.orientation.type; if (o) return o.startsWith("landscape"); if (window.orientation != null) return Math.abs(+window.orientation) === 90; return innerWidth > innerHeight; };
+  function levelRef() {
+    if (!gl) return null;
+    const land = landscape(), v = land ? gl.x : gl.y;
+    if (Math.abs(v) < 2) { return Math.abs(gl.x) > Math.abs(gl.y) ? { x: Math.sign(gl.x), y: 0 } : { x: 0, y: Math.sign(gl.y || 1) }; }   // gần nằm phẳng ⇒ trục gần nhất
+    return land ? { x: Math.sign(v), y: 0 } : { x: 0, y: Math.sign(v) };
+  }
+  const level = () => { ref = null; gyroAx = null; learn = 0; corrAx.alpha = corrAx.beta = corrAx.gamma = 0; };   // lấy lại mốc ở sự kiện kế
+  const onOrient = () => level();
+  window.addEventListener("orientationchange", onOrient); if (screen.orientation) screen.orientation.addEventListener("change", onOrient);
+  window.addEventListener("devicemotion", onMotion);   // 4f: Safari đã cho phép từ trước ⇒ có sự kiện ngay, khỏi chạm nút
   async function tiltStart() {
     try { if (window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === "function" && (await DeviceMotionEvent.requestPermission()) !== "granted") { $(".ip-tiltgo").textContent = "ALLOW MOTION IN SAFARI, THEN RELOAD"; return; } }
     catch (e) { $(".ip-tiltgo").textContent = "TILT NEEDS HTTPS"; return; }
-    window.addEventListener("devicemotion", onMotion); TILT.ok = true; root.dataset.tiltok = "1"; ref = null; TILT.phi = 0;
+    window.addEventListener("devicemotion", onMotion); TILT.ok = true; root.dataset.tiltok = "1"; ref = null;
   }
   $(".ip-tiltgo").addEventListener("click", tiltStart);
   $(".ip-lvl").addEventListener("click", level);
@@ -450,7 +471,7 @@ export function mountPadApp(mount, { team, client, onBack, steer: steerCfg }) {
   setSteer(steerCfg);
   const paintCap = () => {};                               // 3t: bỏ chữ dưới dải tên lửa (chỗ đó là hàng tên lửa con)
   paintCap();
-  root.querySelector(".ip-back")?.addEventListener("click", () => { cancelAnimationFrame(raf); window.removeEventListener("devicemotion", onMotion); onBack(); });
+  root.querySelector(".ip-back")?.addEventListener("click", () => { cancelAnimationFrame(raf); window.removeEventListener("devicemotion", onMotion); window.removeEventListener("orientationchange", onOrient); onBack(); });
   noGestures(root);
   let lock = null;
   const keep = async () => { if (lock || !("wakeLock" in navigator) || document.visibilityState !== "visible") return; try { lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release", () => { lock = null; }); } catch (e) { /* */ } };
