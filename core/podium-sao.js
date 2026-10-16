@@ -26,7 +26,9 @@ import { avatarNode } from "./avatar.js";
 const GIU_MS = 450;
 const SAO = '<svg viewBox="0 0 24 24"><path d="M12 2.3l2.95 6.3 6.9.85-5.08 4.75 1.3 6.85L12 17.7l-6.07 3.35 1.3-6.85L2.15 9.45l6.9-.85z"/></svg>';
 const VI_IC = '<svg viewBox="0 0 24 24"><path d="M4 8.5V7a2.5 2.5 0 0 1 2.5-2.5H17a1.5 1.5 0 0 1 1.5 1.5v2.5"/><rect x="3" y="8.5" width="18" height="11.5" rx="2.6"/><path d="M21 12.5h-4.2a1.8 1.8 0 0 0 0 3.6H21"/><circle cx="16.9" cy="14.3" r=".6"/></svg>';
-const TEAM_IC = '<svg viewBox="0 0 24 24"><circle cx="8" cy="8.5" r="3.2"/><circle cx="16.6" cy="9.4" r="2.6"/><path d="M2.6 19.6c.5-3.3 2.8-5.2 5.4-5.2s4.9 1.9 5.4 5.2"/><path d="M13.6 15.1c.9-.7 1.9-1 3-1 2.3 0 4.1 1.6 4.6 4.6"/></svg>';
+// Đợt 543 (thầy: "đổi icon thành icon của app myTeam, vẫn phong cách phẳng") — HÌNH icon app myTeam (tools/tao-icon.ps1:
+// vòng tròn + 3 quả bóng xếp tam giác), vẽ phẳng một màu theo `currentColor`.
+const TEAM_IC = '<svg viewBox="0 0 24 24" class="aw-psx-mtic"><circle cx="12" cy="12" r="10.4" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="7.6" r="3.1" fill="currentColor" stroke="none"/><circle cx="15.8" cy="14.2" r="3.1" fill="currentColor" stroke="none"/><circle cx="8.2" cy="14.2" r="3.1" fill="currentColor" stroke="none"/></svg>';
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const chuanMa = s => String(s || "").replace(/\s+/g, "").toUpperCase();
 const ngayVN = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);

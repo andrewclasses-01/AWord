@@ -809,28 +809,22 @@ export function shortenName(full) {
  * "(2)", "(3)"… tag appended so the list still never shows two rows reading
  * the same thing.
  */
+// ⭐ Đợt 543 (thầy 17/10/2026: "Ki.Ngân thành K.Ngân — nếu đã viết tắt thì viết tắt luôn và chỉ còn lại chữ cái đầu,
+// không viết tắt nửa chữ") — BỎ cách thêm từng chữ cái (Đợt 289: "Ki.Ngân / Kh.Ngân"). Nay viết tắt LUÔN chỉ một chữ cái
+// đầu; nhóm nào vẫn trùng nhãn (TUỆ LÂM / TÙNG LÂM, KIM NGÂN / KHÁNH NGÂN) ⇒ các em trong nhóm đó hiện TÊN ĐẦY ĐỦ
+// (không viết tắt nửa vời). Tên dài quá thì các bảng vẫn tự co chữ như cũ (fitPodiumNames…).
 export function assignShortLabels(fulls) {
-  const level = fulls.map(() => 1);
-  const labelAt = i => shortenNameAtLevel(fulls[i], level[i]);
-  let labels = fulls.map((_, i) => labelAt(i));
-  let changed = true;
-  let guard = 0;
-  while (changed && guard++ < 20) {
-    changed = false;
-    const groups = new Map();
-    labels.forEach((lab, i) => {
-      if (!groups.has(lab)) groups.set(lab, []);
-      groups.get(lab).push(i);
-    });
-    groups.forEach(idxs => {
-      if (idxs.length < 2) return;             // no collision, leave as-is
-      idxs.forEach(i => {
-        const maxed = labels[i] === shortenNameAtLevel(fulls[i], Infinity);
-        if (!maxed) { level[i]++; changed = true; }
-      });
-    });
-    if (changed) labels = fulls.map((_, i) => labelAt(i));
-  }
+  const tron = fulls.map(f => String(f || "").trim().replace(/\s+/g, " "));
+  let labels = fulls.map(f => shortenNameAtLevel(f, 1));
+  const groups = new Map();
+  labels.forEach((lab, i) => {
+    if (!groups.has(lab)) groups.set(lab, []);
+    groups.get(lab).push(i);
+  });
+  groups.forEach(idxs => {
+    if (idxs.length < 2) return;               // không trùng ⇒ giữ bản viết tắt
+    idxs.forEach(i => { labels[i] = tron[i]; });
+  });
   // Last resort for genuine duplicates: number the repeats so the screen
   // still never shows the same text twice.
   const seen = new Map();

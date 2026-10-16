@@ -546,6 +546,23 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 543 (17/10/2026) — PODIUM: thẻ rộng hơn, ít thuôn · viết tắt CHỈ chữ cái đầu · icon nút myTeam = hình icon app
+
+Thầy gửi 3 ảnh Podium A2B (18 em) sau Đợt 542:
+1. **Thẻ đầu rộng hơn + chênh lệch ít đi** — `POD_MAX_W` 80 → **84**, `POD_MIN_W` 52 → **70** (`core/showdown-review.js`; bản chép ảnh tải về
+   `core/showdown-export.js` đổi cùng; bảng mini Recent results import từ review nên tự theo). Đo bàn thử 18 em, khung 1880px: thẻ đầu 1017px,
+   thẻ cuối 848px (≈83%, trước ≈65%) — hết "M.Á…" bị cắt.
+2. **Viết tắt chỉ còn chữ cái đầu** (`core/showdown.js` `assignShortLabels`): bỏ cách Đợt 289 thêm từng chữ cái khi trùng ("Ki.Ngân / Kh.Ngân").
+   Nay: viết tắt = 1 chữ cái đầu mỗi tiếng trước tên; nhóm nào vẫn trùng nhãn ⇒ các em đó hiện TÊN ĐẦY ĐỦ ("Kim Ngân" / "Khánh Ngân",
+   "Tuệ Lâm" / "Tùng Lâm"); trùng 100% ⇒ đánh số (2) như cũ. Áp cho MỌI chỗ dùng hàm này (Podium, Recent results, chip đội).
+3. **Icon nút myTeam** (`core/podium-sao.js` `TEAM_IC`): hình icon app myTeam (`myTeam/tools/tao-icon.ps1`: vòng tròn + 3 quả bóng xếp tam giác),
+   vẽ phẳng `currentColor` — nút ở góc dưới phải + hộp "Đồng bộ đội sang myTeam?".
+
+**Thử:** bàn `zthu-dot543/podium.html` (đã xoá) 18 em: nhãn `Hải | H.Nam | Kim Ngân | H.Chi | … | Khánh Ngân | T.Đạt | M.Thư | M.Ánh | P.Hưng`,
+không tên nào bị "…"; icon phóng 4× đúng hình. `node --check` sạch. ⬜ thầy xem TOMKO.
+
+---
+
 ## Đợt 542 (17/10/2026) — SHOWDOWN: LỚP 2 CỘT + LỚP TẠM · PODIUM MŨI TÊN TAM GIÁC · BÓNG ĐI CÙNG THẺ · SAO / VÍ / myTeam
 
 Thầy ("ok build" sau phương án + 4 câu AskUserQuestion: lớp tạm LƯU lịch sử trận · phiếu sao ghi nguồn như dashboard · em chưa chia ⇒ khu chờ

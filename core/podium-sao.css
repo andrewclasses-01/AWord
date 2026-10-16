@@ -221,4 +221,6 @@
 .aw-psx-mt-doi b { display: block; font-size: 11px; letter-spacing: .06em; margin-bottom: 2px; }
 .sx-xn-ic.aw-psx-mt-ic { background: linear-gradient(180deg,#E0ECFF,#BFD5FF); }
 .sx-xn-ic.aw-psx-mt-ic svg { stroke: #1D4ED8; }
+.sx-xn-ic.aw-psx-mt-ic { color: #1D4ED8; }   /* Đợt 543 — icon hình app myTeam tô bằng currentColor */
+.aw-psx-mtic { stroke-width: 0; }
 .sx-xn-nut .chinh.aw-psx-mt-ok { background: linear-gradient(180deg,#3B82F6,#1D4ED8); box-shadow: 0 6px 16px rgba(29,78,216,.3); }

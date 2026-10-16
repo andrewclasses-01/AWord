@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **17/10/2026 Đợt 543 — PODIUM: thẻ đầu 84%, đáy 70% (bớt thuôn) · viết tắt CHỈ chữ cái đầu, trùng thì hiện tên đầy đủ (`assignShortLabels`) · icon nút myTeam = hình icon app myTeam**. Chi tiết: GHI CHU DU AN.md Đợt 543.
 > ✏️ **17/10/2026 Đợt 542 — SHOWDOWN: chọn lớp 2 CỘT + LỚP TẠM · Podium MŨI TÊN TAM GIÁC · bóng/thẻ đi cùng nhau trên máy yếu (một quả avatar thật đi suốt, co bằng transform) · SAO / VÍ (y dashboard, `core/podium-sao.js`) + GIỮ thẻ/bóng thưởng một em · nút myTeam (myTeam v1.18.0 + myActivity v2.35.0, đường mở myteam://)**. Chi tiết: GHI CHU DU AN.md Đợt 542.
 > ✏️ **16/10/2026 Đợt 539 — RACING WORDS KHOÁ ĐỘI iPad**: iPad chọn đội đã có iPad khác ⇒ không còn 2 máy Connecting mãi: đội có CHỦ (mã máy iPad), máy khác thấy tấm "TEAM x already has an iPad", màn chọn đội làm mờ đội đó; chủ thoát ra màn chọn đội / mất > 8 s mới nhả, iPad đang chờ tự vào. Chi tiết: GHI CHU DU AN.md Đợt 539.
 > ✏️ **16/10/2026 Đợt 538 — RACING WORDS iPad (myGame mẫu 4f)**: sau buổi thử TOMKO (1 iPad "slow" không lái nổi): đường nối iPad SỐNG SUỐT TRANG (Apply Options / Start again / đổi xe không nối lại), mở ngay từ màn chờ tải · iPad tự bắt tay lại khi slow + nút Reconnect + dòng chẩn đoán ICE · CỔNG iPAD ở xưởng: START chỉ mở khi 2 iPad nối THẲNG + đã bẻ thử trái/phải · iPad lấy mốc nghiêng tuyệt đối (bỏ LEVEL). Chi tiết: GHI CHU DU AN.md Đợt 538.

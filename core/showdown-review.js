@@ -74,11 +74,13 @@ const DONE_MS = 1600;
 // ⚠️ Đợt 197 — EXPORTED, because the Recent results miniature in
 // core/showdown-setup.js draws the same taper at a tenth of the size. Two
 // copies of these two numbers is two funnels of different shapes a month later.
-export const POD_MAX_W = 80;
+// ⭐ Đợt 543 (thầy 17/10/2026: "tăng chiều ngang bạn đầu tiên lên một chút · giảm chênh lệch chiều dài các thẻ để bạn
+// cuối không bị ngắn quá") — đỉnh 80 → 84, đáy 52 → 70: lớp 18 em thẻ cuối ≈ 83% thẻ đầu (trước 65%), vẫn thấy thuôn.
+// ⛔ Bản chép trong core/showdown-export.js (ảnh tải về) phải đổi CÙNG lúc.
+export const POD_MAX_W = 84;
 // ⭐ Đợt 217 — đáy phễu nới từ 46 lên 52 (thầy: *"giãn rộng hơn các ô ra một chút"*).
-// Hàng cuối là hàng chật nhất mà vẫn phải đủ chỗ cho tên + huy hiệu đội + bốn con số;
-// 6 điểm phần trăm ở đáy đủ để một tên dài thôi phải viết tắt, mà vẫn còn thấy rõ độ thuôn.
-export const POD_MIN_W = 52;
+// Hàng cuối là hàng chật nhất mà vẫn phải đủ chỗ cho tên + huy hiệu đội + bốn con số.
+export const POD_MIN_W = 70;
 
 // ⭐ Đợt 207 — HOW FAR A NAME MAY SHRINK before it is abbreviated instead
 // (thầy: "không bao giờ để khuyết hiển thị thông tin, nếu tên quá dài và ô quá

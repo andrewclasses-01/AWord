@@ -58,7 +58,7 @@ const MEDAL = ["🥇", "🥈", "🥉"];
 // importing a pair of numbers that file documents as "a share of the
 // container" — see that file's own note on why two copies of *these two
 // numbers* is fine while everything else stays imported.
-const POD_MAX_W = 80, POD_MIN_W = 52;
+const POD_MAX_W = 84, POD_MIN_W = 70;   // Đợt 543 — khớp showdown-review.js (80/52 → 84/70)
 function taperPct(i, n) { return n > 1 ? POD_MAX_W - (POD_MAX_W - POD_MIN_W) * (i / (n - 1)) : POD_MAX_W; }
 
 function fmtDate(ms) {
