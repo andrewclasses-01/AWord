@@ -23,8 +23,8 @@ SRC = r"E:/LAP TRINH APP/myGame/speed-run"
 QR = r"E:/LAP TRINH APP/myGame/maze-chase/core/mc3d-qr.js"
 WEB = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DST = os.path.join(WEB, "templates", "racing-words")
-GOC = "rw-3r.js"   # Đợt 533: 3r = 3q tối ưu MƯỢT trên TOMKO (intro, đua, HUD, nén vật liệu xe). Trước: GOC = "rw-3q.js"   # Đợt 531: 3q = 3p + Fight options (Lives · Missile damages · Time delay · Miss wait · streak) + cảnh xa đúng vật lý + 35 km/h. Trước: GOC = "rw-3p.js"   # Đợt 529: 3p = 3o + chạm đúp bỏ intro + tối ưu (gộp lưới xe, bỏ kính transmission, số đo xe đo sẵn, dịch sẵn shader). Đợt 527: 3o — gói nhúng
-GOC_THEM = ["sr3d-padui-3m.js", "sr3d-padlink-3e.js"]   # màn iPad (pad.js nạp) + đường nối iPad (racing-words.js nạp createPadHost)
+GOC = "rw-3y.js"   # Đợt 534: 3y = 3r + LÁI NGHIÊNG iPad (phanh trái · ga phải · dấu đỉnh vô lăng máy bay giấy · nút iPad Steering/Full lock/Smoothing). Trước: GOC = "rw-3r.js"   # Đợt 533: 3r = 3q tối ưu MƯỢT trên TOMKO (intro, đua, HUD, nén vật liệu xe). Trước: GOC = "rw-3q.js"   # Đợt 531: 3q = 3p + Fight options (Lives · Missile damages · Time delay · Miss wait · streak) + cảnh xa đúng vật lý + 35 km/h. Trước: GOC = "rw-3p.js"   # Đợt 529: 3p = 3o + chạm đúp bỏ intro + tối ưu (gộp lưới xe, bỏ kính transmission, số đo xe đo sẵn, dịch sẵn shader). Đợt 527: 3o — gói nhúng
+GOC_THEM = ["sr3d-padui-3y.js", "sr3d-padlink-3y.js"]   # màn iPad (pad.js nạp) + đường nối iPad (racing-words.js nạp createPadHost) — Đợt 534: 3y (trước: padui-3m · padlink-3e)
 CSS = ["sr3d-3g.css", "sr3d-3l.css", "sr3d-intro-3o.css", "rw-3r.css"]   # Đợt 533: rw-3r.css (= rw-3q.css + bỏ filter / animation đắt của HUD) · Đợt 531: rw-3q.css (vạch Lives, thanh chờ)
 BO_XE = {"H3"}     # Bugatti Divo: CC-BY-NC — thầy chốt bỏ (lớp học có thu phí)
 VENDOR = "../../rocket-race/vendor/three"

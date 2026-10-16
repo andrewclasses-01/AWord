@@ -3,6 +3,8 @@
 //
 // Thầy: "đưa lên AWord, sử dụng options của AWord" ⇒ chốt (AskUserQuestion): Options = Cùng/khác câu hỏi · Số tên lửa tối đa ·
 //   Độ dài đường + số vòng · Cầu nhảy bật/tắt · 13 xe (BỎ Bugatti Divo — CC-BY-NC) · iPad thật làm luôn ⇒ "ok build".
+// ⭐ Đợt 534: myGame mẫu 3y (core/rw-3y.js) = 3r + LÁI NGHIÊNG iPad: tap-lô phanh trái · ga phải, dấu đỉnh vô lăng máy bay giấy, nút iPad thêm
+//   Steering (Touch wheel / Tilt) + Full lock + Smoothing (gửi "c:"), iPad 3y (sr3d-padui-3y.js) + đường nối sr3d-padlink-3y.js ("c:" kiểu lái, "r:" tên lửa qua kho).
 // ⭐ Đợt 533: myGame mẫu 3r (core/rw-3r.js) = 3q tối ưu MƯỢT trên TOMKO (đo act 572 trong myActivity: xưởng 37⇒60, phim 18⇒60, đua hết dịch shader giữa trận).
 // ⭐ Đợt 531: myGame mẫu 3q (core/rw-3q.js) = 3p + Options kiểu Fight Rocket Race + cảnh xa đúng vật lý + 35 km/h; template CHỈ có Fight (fightOnly).
 // ⭐ Đợt 529: myGame mẫu 3p (core/rw-3p.js) = 3o + CHẠM ĐÚP lúc phim intro ⇒ vào thẳng 5 đèn + tối ưu (gộp lưới xe, số đo xe sẵn, dịch sẵn shader).
@@ -25,7 +27,7 @@ import { block3dHere, block3dMessage } from "../../core/myact-board.js";   // �
 const loader = () => { ensureCss(); return showLoader3d({ key: "racingwords", title: "RACING WORDS", theme: "space" }); };
 preloadLoader3d("space");
 
-const GAME = "./3d/rw-3r.js";                     // Đợt 533: myGame mẫu 3r (mượt TOMKO) · Đợt 531: myGame mẫu 3q (Fight options, cảnh xa đúng vật lý, 35 km/h) · Đợt 529: 3p · Đợt 527: 3o
+const GAME = "./3d/rw-3y.js";                     // Đợt 534: myGame mẫu 3y (lái nghiêng iPad) · Đợt 533: myGame mẫu 3r (mượt TOMKO) · Đợt 531: myGame mẫu 3q (Fight options, cảnh xa đúng vật lý, 35 km/h) · Đợt 529: 3p · Đợt 527: 3o
 const CSS = ["sr3d-3g.css", "sr3d-3l.css", "sr3d-intro-3o.css", "rw-3r.css"];
 const FONTS = "https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,600;0,700;0,800;0,900;1,800;1,900&subset=vietnamese&display=swap";
 // khoá game <-> khoá PHẲNG (activity.options)
@@ -85,7 +87,7 @@ let live3d = 0;   // số ván đang mở (lớp html.aw-rw-on)
 // iPad: kênh bắt tay + claim ipad_now khi nút iPad của game ≠ Off; `hold` từ lúc có iPad nối
 async function rwPadLink() {
   let S = null, P = null, N = null, claim = null, dead = false, mode = 0, linked = [false, false];
-  try { [S, P] = await Promise.all([import("./rw-pad-signal.js"), import("./3d/sr3d-padlink-3e.js")]); } catch (e) { console.warn("Racing words iPad link", e); }
+  try { [S, P] = await Promise.all([import("./rw-pad-signal.js"), import("./3d/sr3d-padlink-3y.js")]); } catch (e) { console.warn("Racing words iPad link", e); }
   import("../../core/ipad-now.js").then(m => { N = m; sync(); }).catch(() => {});
   function sync() {
     if (dead || !N) return;

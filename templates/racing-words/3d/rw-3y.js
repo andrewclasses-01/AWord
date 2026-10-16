@@ -1,3 +1,6 @@
+// RACING WORDS — GÓI NHÚNG mẫu 3y (16/10/2026) = rw-3r.js + lõi sr3d-3y.js (LÁI NGHIÊNG iPAD · phanh trái ga phải · dấu đỉnh vô lăng máy bay giấy).
+//   iPad: sr3d-padui-3y.js + đường nối sr3d-padlink-3y.js (khoá "c:" kiểu lái, "r:" tên lửa qua kho). remote phải là createPadHost của padlink-3y.
+// ---- gốc 3r ----
 // RACING WORDS — GÓI NHÚNG mẫu 3r (16/10/2026) = rw-3q.js + lõi sr3d-3r.js / intro sr3d-intro-3r.js (MƯỢT TRÊN TOMKO: thầy "tối ưu tuyệt đối độ mượt";
 //   đo act 572 trong myActivity: xưởng 37 ⇒ 60 fps, phim intro 18 ⇒ ~55–60, đua hết dịch shader giữa trận). CSS rw-3r.css (bỏ filter đắt của HUD).
 //   Intro chỉ bắt đầu tự chỉnh độ nét SAU khi trận dịch sẵn shader xong (intro.arGo) — lúc dịch ngầm khung chậm giả, đừng để bộ chỉnh học sai.
@@ -23,7 +26,7 @@
 //   onEvent   : (k, v) — "pad" (iPad nối / mất nối), "padMode", "end", …
 // ⇒ { setOptions(o) (true = áp ngay, false = AWord dựng lại), destroy(), game, intro }
 // =============================================================
-import { createSpeedRun } from "./sr3d-3r.js";
+import { createSpeedRun } from "./sr3d-3y.js";
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
 import { createIntro } from "./sr3d-intro-3r.js";
 import { createSound } from "./sr3d-sound-3o.js";

@@ -118,7 +118,7 @@ async function showTR(team) {
   keepAwake();
 }
 // ⭐ Đợt 527 — màn iPad RACING WORDS cho đội `team`
-const rwMods = () => Promise.all([import("./templates/racing-words/3d/sr3d-padlink-3e.js"), import("./templates/racing-words/3d/sr3d-padui-3m.js"), import("./templates/racing-words/rw-pad-signal.js")]);
+const rwMods = () => Promise.all([import("./templates/racing-words/3d/sr3d-padlink-3y.js"), import("./templates/racing-words/3d/sr3d-padui-3y.js"), import("./templates/racing-words/rw-pad-signal.js")]);
 async function showRW(team) {
   note.hidden = true;
   if (view === "rw" + team) return;
@@ -132,7 +132,7 @@ async function showRW(team) {
   let rui = null; const pend = {};
   const call = (k, v) => rui ? rui[k](v) : (pend[k] = v);
   const c = L.createPadClient({ signal: S.rwPadSignal(), team,
-    onState: x => call("setState", x), onInfo: i => call("setInfo", i), onMode: m => call("setMode", m), onQ: x => call("setQ", x) });
+    onState: x => call("setState", x), onInfo: i => call("setInfo", i), onMode: m => call("setMode", m), onQ: x => call("setQ", x), onSteer: x => call("setSteer", x) });   // Đợt 534: kiểu lái (Touch / Tilt) do màn lớn chọn
   rui = U.mountPadApp(padEl, { team, client: c, onBack: () => { manual = true; showChooser(); } });
   rui.setState(c.state); Object.entries(pend).forEach(([k, v]) => rui[k](v));
   rw = { client: c, ui: rui };

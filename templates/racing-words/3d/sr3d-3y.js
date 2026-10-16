@@ -1,3 +1,11 @@
+// RACING WORDS — LÕI MẪU 3y (16/10/2026) = sr3d-3r.js + LÁI NGHIÊNG iPAD (thầy "ok build" sau thiết kế iPad 3s→3y):
+//   · tap-lô màn lớn: PHANH bên TRÁI, BOOST (ga) bên PHẢI (thầy: "cả iPad và game đều có phanh bên trái, ga bên phải") — đảo bố cục 3g.
+//   · dấu đỉnh vô lăng = MÁY BAY GIẤY logo Andrew Classes (S1 nhỏ hơn 10 %, như iPad 3y) — thầy "đổi giống iPad".
+//   · nút iPad: thêm mục STEERING (Touch wheel | Tilt) + Full lock (15–40°, mặc định 25°) + Smoothing (Low 2 % · Normal 6 % · High 15 %),
+//     đổi là gửi NGAY "c:" cho cả 2 iPad (không hỏi xác nhận, trận chạy tiếp); nhớ trên máy này (localStorage "racingwords.steer").
+//   · iPad lái nghiêng ⇒ tín hiệu đã mượt sẵn ⇒ game làm mượt tay lái nhanh gấp đôi (dt·22 thay dt·10) ⇒ bớt ~50 ms trễ; chạm / phím giữ như cũ.
+//   · "r:<tên lửa>,<pha>" ghi vào kho mỗi khi đổi ⇒ iPad nối chậm (relay) vẫn bắn được (sr3d-padlink-3y.js).
+// ---- gốc 3r ----
 // RACING WORDS — LÕI MẪU 3r (16/10/2026) = sr3d-3q.js tối ưu MƯỢT cho TOMKO (Quadro T2000 4 GB, màn 4K DPR 1,25, myActivity trần __awMaxPR 1).
 //   Đo act 572 thật trong myActivity (thầy: "tối ưu tuyệt đối độ mượt, chấp nhận bỏ khử răng cưa / giảm đồ hoạ"): trận 58,6 fps nhưng 17 lần dịch
 //   shader giữa trận + độ nét nhấp nhả 9 lần/ván + MSAA bật lại giữa trận (khựng ~200 ms). Sửa:
@@ -142,7 +150,14 @@ import { createWorld, makeBend, HAZE, bendQ } from "./sr3d-world-3r.js";
 import { makeAutoRes } from "./sr3d-autores-3r.js";
 import { createMissiles, MS, missileGeos, buildMissile } from "./sr3d-missile-3r.js";
 import { createRamps, createTrails, RadialBlurShader, RAMP, RAMP_SLOPE } from "./sr3d-fx-3c.js";
-import { WHEEL_SVG, GAS_SVG, BRAKE_SVG, FIRE_ICON, FLY_HTML, reserveHTML } from "./sr3d-dash-3h.js";
+import { WHEEL_SVG as WHEEL_SVG_3H, GAS_SVG, BRAKE_SVG, FIRE_ICON, FLY_HTML, reserveHTML } from "./sr3d-dash-3h.js";
+// 3y: dấu đỉnh vô lăng = máy bay giấy logo Andrew Classes (y hệt iPad sr3d-padui-3y.js) thay ô chữ nhật màu đội
+const PL_K = 16.2 / 288, PL_SW = (1.5 / PL_K).toFixed(1);
+const WHEEL_SVG = WHEEL_SVG_3H.replace('<path d="M93 8.3 h14 v20 h-14 Z" fill="var(--team)"/>',
+  `<g transform="translate(100 19) scale(${PL_K.toFixed(4)}) translate(-256 -264)">`
+  + `<path d="M256 408 L256 120 L86 380 Q174.40 364 256 408Z" fill="color-mix(in srgb, var(--team) 50%, white)" stroke="#06080b" stroke-width="${PL_SW}" paint-order="stroke" stroke-linejoin="round"/>`
+  + `<path d="M256 408 L256 120 L426 380 Q337.60 364 256 408Z" fill="var(--team)" stroke="#06080b" stroke-width="${PL_SW}" paint-order="stroke" stroke-linejoin="round"/></g>`);
+if (WHEEL_SVG === WHEEL_SVG_3H) console.warn("RACING WORDS 3y: không thay được dấu đỉnh vô lăng");
 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -223,11 +238,11 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
           <div class="sr-arms"><div class="sr-ms"></div><button class="sr-fire" type="button" aria-label="Fire missile">${FIRE_ICON}</button><div class="sr-streak"><i></i><i></i><i></i></div></div>
         </div>
         <div class="sr-drive">
-          <button class="sr-pedal sr-boost" type="button" aria-label="Boost">${GAS_SVG}</button>
+          <button class="sr-pedal sr-brake" type="button" aria-label="Brake">${BRAKE_SVG}</button>
           <div class="sr-wheelbox"><div class="sr-wheel">${WHEEL_SVG.replace(/srwg/g, "srwg" + i)}
             <div class="sr-screen"><div class="sr-src">AUTO</div><div class="sr-kmh"><span>0</span><small>km/h</small></div><div class="sr-cells"><i></i><i></i><i></i><i></i></div><div class="sr-nbar"><em></em></div></div>
           </div></div>
-          <button class="sr-pedal sr-brake" type="button" aria-label="Brake">${BRAKE_SVG}</button>
+          <button class="sr-pedal sr-boost" type="button" aria-label="Boost">${GAS_SVG}</button>
         </div>
       </div>
     </div>`;
@@ -762,11 +777,33 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     { t: "Drive on iPad", d: "The iPad is the wheel + pedals + missile button." },
   ];
   const pBody = $(".sr-panel-body"), pHead = $(".sr-panel-h");
+  // 3y: KIỂU LÁI iPad (chế độ Drive on iPad) — Touch wheel (giữ nửa vô lăng) | Tilt (nghiêng iPad); thông số gửi "c:" cho cả 2 iPad
+  const STEER_KEY = "racingwords.steer", SMOOTH = [{ t: "Low", v: 2 }, { t: "Normal", v: 6 }, { t: "High", v: 15 }];
+  const steer = { mode: "touch", max: 25, smooth: 6 };
+  try { const o = JSON.parse(localStorage.getItem(STEER_KEY) || "{}"); if (o.mode === "tilt" || o.mode === "touch") steer.mode = o.mode; if (o.max >= 15 && o.max <= 40) steer.max = o.max | 0; if (SMOOTH.some(x => x.v === o.smooth)) steer.smooth = o.smooth; } catch (e) { /* */ }
+  if (options.steer && typeof options.steer === "object") Object.assign(steer, options.steer);
+  function shareSteer() { if (remote && remote.share) { const v = JSON.stringify(steer); [0, 1].forEach(i => remote.share(i, "c", v)); } }
+  function setSteer(o) {
+    Object.assign(steer, o); try { localStorage.setItem(STEER_KEY, JSON.stringify(steer)); } catch (e) { /* */ }
+    shareSteer(); onEvent("steer", { ...steer });
+  }
+  const steerHTML = () => `<div class="sr-opt sr-steer"><div class="sr-opt-row"><span>Steering</span><div class="sr-seg">
+      <button type="button" data-sm="touch" class="${steer.mode === "touch" ? "on" : ""}">Touch wheel</button><button type="button" data-sm="tilt" class="${steer.mode === "tilt" ? "on" : ""}">Tilt the iPad</button></div></div>
+    <div class="sr-opt-row"${steer.mode === "tilt" ? "" : " hidden"}><span>Full lock</span><div class="sr-step"><button type="button" data-sx="-5">−</button><b>${steer.max}°</b><button type="button" data-sx="5">+</button></div></div>
+    <div class="sr-opt-row"${steer.mode === "tilt" ? "" : " hidden"}><span>Smoothing</span><div class="sr-seg">${SMOOTH.map(x => `<button type="button" data-ss="${x.v}" class="${steer.smooth === x.v ? "on" : ""}">${x.t}</button>`).join("")}</div></div></div>`;
+  function wireSteer(box) {
+    const repaint = () => { const old = box.querySelector(".sr-steer"); if (!old) return; old.outerHTML = steerHTML(); wireSteer(box); };
+    box.querySelectorAll("[data-sm]").forEach(b => b.addEventListener("click", () => { setSteer({ mode: b.dataset.sm }); repaint(); }));
+    box.querySelectorAll("[data-sx]").forEach(b => b.addEventListener("click", () => { setSteer({ max: clamp(steer.max + +b.dataset.sx, 15, 40) }); repaint(); }));
+    box.querySelectorAll("[data-ss]").forEach(b => b.addEventListener("click", () => { setSteer({ smooth: +b.dataset.ss }); repaint(); }));
+  }
   function openPanel() {                                    // bảng iPad NHỎ giữa màn: chọn ⇒ hỏi xác nhận ⇒ OK là đóng (trận vẫn chạy tiếp)
     panel.hidden = false; panel.classList.add("is-small"); pHead.textContent = "iPad";
     pBody.innerHTML = `<div class="sr-pm">${PM.map((m, k) => `<button type="button" class="sr-pm-o${k === padMode ? " on" : ""}" data-m="${k}"><b>${k + 1}. ${m.t}</b><span>${m.d}</span></button>`).join("")}</div>
       <div class="sr-pm-st">${[0, 1].map(i => `<span data-t="${i}" data-s="${T[i].padOn ? "on" : ""}" style="--team:${TEAMS[i].color}"><i></i>${TEAMS[i].name} iPad</span>`).join("")}</div>
+      ${steerHTML()}
       <div class="sr-cf" hidden><p></p><div><button type="button" class="sr-cf-no">Cancel</button><button type="button" class="sr-cf-ok">OK</button></div></div>`;
+    wireSteer(pBody);
     const cf = pBody.querySelector(".sr-cf"); let pend = -1;
     pBody.querySelectorAll(".sr-pm-o").forEach(b => b.addEventListener("click", () => { pend = +b.dataset.m; cf.querySelector("p").innerHTML = `Switch to <b>${pend + 1}. ${PM[pend].t}</b>?`; cf.hidden = false; }));
     cf.querySelector(".sr-cf-no").addEventListener("click", () => { cf.hidden = true; });
@@ -814,6 +851,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     mount.classList.toggle("pm1", m === 1); mount.classList.toggle("pm2", m === 2);
     touch.forEach(x => x.clear()); paintTouch();
     if (remote && remote.share) [0, 1].forEach(i => remote.share(i, "m", String(m)));
+    shareSteer();                                                // 3y
     T.forEach(shareQ);
     onEvent("padMode", m);
   }
@@ -963,7 +1001,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     if (racing && t.spinT <= 0 && !(t.stallT > 0)) inp = input(t);
     else if (G.phase === "end") { const tx = TEAMS[t.i].lanes[t.aiLane]; inp = { steer: clamp((tx - t.x) * 0.5 - t.vx * 0.2, -1, 1), boost: 0, brake: G.t - G.endT > 1.2 ? 1 : 0 }; }
     t.inp = inp;
-    t.steer += (inp.steer - t.steer) * Math.min(1, dt * 10);
+    t.steer += (inp.steer - t.steer) * Math.min(1, dt * (t.src === "pad" && steer.mode === "tilt" ? 22 : 10));   // 3y: nghiêng đã mượt sẵn ⇒ bám nhanh hơn
     const brakeEdge = inp.brake && !t.brakeHeld; t.brakeHeld = !!inp.brake;
 
     if (t.air) flyStep(t, dt, inp, brakeEdge);
@@ -1308,6 +1346,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     }
     infoT -= dt; if (infoT <= 0 && remote && remote.send) {
       infoT = 0.25;
+      T.forEach((t, i) => { if (t.padOn && remote.share) remote.share(i, "r", `${t.ms},${G.phase}`); });   // 3y: chỉ ghi kho khi ĐỔI (share tự bỏ trùng)
       T.forEach((t, i) => { if (t.padOn) remote.send(i, `i:${Math.round(t.v * 3.6)},${(t.E / SEG).toFixed(1)},${t.ms},${t.inc ? (t.inc.locked ? 2 : 1) : 0},${G.phase},${clamp(t.E / (PHYS.CAP * SEG), 0, 1).toFixed(2)}`); });
     }
   }
@@ -1453,13 +1492,13 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   if (remote) remote.attach({
     press: (i, k) => { if (k === "fire") fire(i); },
     drive: (i, d) => { T[i].pad = d; T[i].padT = G.t; },
-    status: (i, s) => { T[i].padSt = s; T[i].padOn = s === "on" || s === "relay"; onEvent("pad", { team: i, s }); },
+    status: (i, s) => { T[i].padSt = s; T[i].padOn = s === "on" || s === "relay"; onEvent("pad", { team: i, s }); if (T[i].padOn) shareSteer(); },
     answer: (i, k, n) => { if (padMode === 1 && T[i].qn === n) answer(i, k); },
   });
   setPadMode(padMode);
 
   const api = {
-    start, toMenu, setPadMode, get padMode() { return padMode; },
+    start, toMenu, setPadMode, get padMode() { return padMode; }, setSteer, get steer() { return { ...steer }; },   // 3y
     answer: (i, ok) => { const t = T[i]; if (!t.cur) return false; const k = t.cur.answers.findIndex(a => !!a.correct === !!ok); return answer(i, k < 0 ? 0 : k); },
     auto(on = true, a0, a1) { G.auto = on; if (a0 != null) G.acc[0] = a0; if (a1 != null) G.acc[1] = a1; },
     give(i, n = 1) { T[i].E = Math.min(PHYS.CAP * SEG, T[i].E + n * SEG); },

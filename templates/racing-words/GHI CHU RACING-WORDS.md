@@ -2,6 +2,12 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
+## Đợt 534 (16/10/2026) — myGame mẫu 3y: LÁI NGHIÊNG iPAD
+- GOC `rw-3y.js` (lõi `sr3d-3y.js`), GOC_THEM `sr3d-padui-3y.js` + `sr3d-padlink-3y.js` (padui-3y vẫn nạp TEAM_META từ padlink-3e ⇒ 3e còn trong 3d/). CSS giữ rw-3r.css.
+- Màn lớn: phanh trái / boost phải · dấu đỉnh vô lăng máy bay giấy · nút iPad: Steering + Full lock + Smoothing (nhớ máy `racingwords.steer`) · iPad nghiêng ⇒ game làm mượt dt·22.
+- iPad (pad.js showRW): `onSteer` ⇒ `setSteer`. Thiết kế từng vòng: myGame `speed-run/thiet-ke-ipad-3s…3y.html`, trang thử nghiêng `thu-nghieng-3s.html`, hồ sơ myGame mục 31–32.
+- Bàn thử `scratch/dot534-rw.html?padsig=local` + `pad.html?padsig=local` (tab khác, chọn TEAM 1 sau khi màn lớn bật Drive on iPad).
+
 ## Đợt 533 (16/10/2026) — myGame mẫu 3r: MƯỢT TUYỆT ĐỐI TRÊN TOMKO + sửa lỗi khung không được vẽ
 - GOC `rw-3r.js`, CSS `rw-3r.css`. File 3r: rw · sr3d · sr3d-intro · sr3d-car (nén vật liệu) · sr3d-world (thứ tự vẽ) · sr3d-missile (pool cột sáng) · sr3d-autores-3r.
 - Đo act 572 trong myActivity (khung vẽ thật): xưởng 60 · phim 59 · 5 đèn 60 · đua 59,7 · 0 lỗi · 0 dịch shader giữa trận. Chi tiết GHI CHU DU AN Đợt 533 + myGame NGHIEN CUU mục 30.

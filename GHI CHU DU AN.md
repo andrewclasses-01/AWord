@@ -546,6 +546,23 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 534 (16/10/2026) — RACING WORDS LÁI NGHIÊNG iPAD (myGame mẫu 3y)
+
+**Thầy:** "build phần điều khiển cả ở trong game và trên ipad — tập trung lái bằng nghiêng ipad, nghiên cứu tính khả thi trước" ⇒ nghiên cứu (kênh WebRTC + lõi lái liên tục có sẵn;
+rủi ro iOS xin quyền/https, iPad tự xoay màn, relay quá chậm cho nghiêng) ⇒ trang thử `myGame/speed-run/thu-nghieng-3s.html` ⇒ thiết kế iPad thật 3s → 3y (A2: cả dải trên
+là tên lửa · phanh trái ga phải · dải phím trên cùng · tên lửa con bay lên · boost mép mờ · vô lăng nhẹ không filter: thầy đo iPad thật 20 ⇒ 60 fps · bỏ vùng khoá giữa ·
+con quay tự dò trục (Safari báo khác lý thuyết) · quá góc hết cỡ cố thêm được · dấu đỉnh máy bay giấy S1 −10 %) ⇒ "ok build". Thầy chốt thêm: vô lăng màn lớn đổi cùng dấu ·
+nút iPad có Góc lái hết cỡ + Độ mượt.
+**Làm:** myGame `63a0719` (rw-3y · sr3d-3y · sr3d-padlink-3y · trang mau-3y-lai-nghieng.html + pad-3y.html) ⇒ chép bằng tools/chep-racing-words.py (GOC rw-3y.js, GOC_THEM padui-3y + padlink-3y);
+racing-words.js GAME rw-3y + padlink-3y · rw-pad-signal.js localSignal từ padlink-3y · pad.js rwMods padlink-3y/padui-3y + `onSteer` ⇒ `setSteer`.
+**Lỗi cũ sửa kèm (iPad 3m):** `.ip-row` (absolute phủ kín màn) đứng sau `.ip-fire` ⇒ chạm nút tên lửa rơi vào hàng ⇒ không bắn được · luật `.ip-fire span{position:absolute}` làm 2 quả tên lửa
+chồng lên nhau · relay ("Connected (slow)") iPad không nhận "i:" ⇒ nút bắn tự khoá ⇒ nay "r:" qua kho.
+**Đã thử:** myGame 2 tab (kênh cục bộ, tab ẩn tua game.step): iPad nhận c {tilt,30,2}; bấm thật Touch wheel trên màn lớn ⇒ iPad về lái chạm; drive 0,6 ⇒ vô lăng màn lớn 41,9°; bắn từ dải
+iPad ⇒ ms 2 → 1. AWord bàn thử `scratch/dot534-rw.html?padsig=local` + `pad.html?padsig=local`: màn lớn Drive on iPad + Tilt ⇒ pad.html tự sang Racing words, TEAM 1 ⇒ m=2, nối thẳng, tilt,
+phanh trái, dải tên lửa; drive −0,5 ⇒ vô lăng đội 1 −35°; 0 lỗi console 2 tab. ⚠️ chưa thử: đường relay "r:", 2 iPad thật trong lớp, máy chiếu TOMKO.
+
+---
+
 ## Đợt 533 (16/10/2026) — RACING WORDS MƯỢT TUYỆT ĐỐI TRÊN TOMKO (myGame mẫu 3r) + SỬA LỖI KHUNG KHÔNG ĐƯỢC VẼ
 
 **Thầy:** chạy game với bộ từ thật đang cài (act 572 "1. CAU BI DONG 1 WORDS"), đo mọi tình huống từng khung hình trên máy này, tối ưu để mượt nhất — chấp nhận bỏ khử răng cưa,
