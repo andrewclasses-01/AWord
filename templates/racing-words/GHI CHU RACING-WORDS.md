@@ -2,6 +2,13 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
+## Đợt 537 (16/10/2026) — myGame mẫu 4e: Settings mọi nơi + tạm dừng · mặc định mới · bay xa · nghiêng đúng chiều · màn chờ ảnh riêng
+- GOC `rw-4e.js` (lõi `sr3d-4e.js`, intro `sr3d-intro-4e.js` — vẫn xe `sr3d-car-4b.js` chung với lõi). CSS thêm `rw-4e.css` (nạp sau rw-4d.css): bảng Settings z 60 nổi trên intro.
+- Mặc định Settings: Drive on iPad + Tilt · Cockpit · Sky view Off · Traffic Off; khoá máy đổi `.v2` (`racingwords.steer.v2 · view.v2 · sky.v2 · traffic.v2 · padMode.v2`) — chế độ iPad nhớ theo máy.
+- Màn chờ: `rw-loading.webp` (ảnh gốc ở myGame `speed-run/rw-loading.webp`) qua `showLoader3d({ theme: "race", bg })`. Đổi ảnh: chụp lại ở myGame (hồ sơ mục 39) rồi chép đè.
+- Options: `lockRace()` làm mờ Length · Track length · Laps (Race ≠ Length) và Time (Race ≠ Time).
+- Bàn thử `scratch/dot537-rw.html` (+ `?padsig=local` khi thử iPad). Hồ sơ myGame mục 39.
+
 ## Đợt 535 (16/10/2026) — myGame mẫu 4d: 5 đợt sau 3y
 - GOC `rw-4d.js` (lõi `sr3d-4d.js`, thế giới `sr3d-world-4b.js`, xe `sr3d-car-4b.js` — intro `sr3d-intro-4b.js` PHẢI cùng mô-đun xe, khác ⇒ dịch sẵn chậm 20 s), `sr3d-stunt-4b.js`
   (dốc xoắn + phần thưởng), `sr3d-traffic-4c.js` (xe khác). CSS thêm rw-3z · rw-4a · rw-4b · rw-4c · rw-4d (nạp sau rw-3r.css, đúng thứ tự).

@@ -1,3 +1,9 @@
+// RACING WORDS — GÓI NHÚNG mẫu 4e (16/10/2026) = rw-4d.js + lõi sr3d-4e.js / intro sr3d-intro-4e.js (8 việc thầy — hồ sơ mục 39):
+//   · ⚙ Settings mở được MỌI LÚC, cả trên xưởng intro (rw-4e.css: bảng nổi trên lớp intro) và TẠM DỪNG game: trận đứng, phim intro đứng (intro.pause), tiếng dừng
+//   · chạm đúp bỏ phim intro không tính các cú chạm trong bảng Settings
+//   · game đã huỷ (Apply ⇒ AWord dựng lại) thì bỏ qua sự kiện muộn (bảng Options đóng sau ⇒ "pause" ⇒ lỗi resume AudioContext đã đóng)
+//   · mặc định Drive on iPad + Tilt · Cockpit · Sky view Off · Traffic Off; bay xa hơn khi lên cầu nhảy bằng boost; nghiêng đúng chiều vô lăng; BAD LANDING mất lái
+// ---- gốc 4d ----
 // RACING WORDS — GÓI NHÚNG mẫu 4d (16/10/2026) = rw-4c.js + lõi sr3d-4d.js (gộp 2 camera bay lên trời (⚙ Settings ▸ Camera: Sky view)). CSS thêm rw-4d.css.
 // ---- gốc 4c ----
 // RACING WORDS — GÓI NHÚNG mẫu 4c (16/10/2026) = rw-4b.js + lõi sr3d-4c.js (xe khác trên đường (⚙ Settings ▸ Race: Traffic)). CSS thêm rw-4c.css.
@@ -39,9 +45,9 @@
 //   onEvent   : (k, v) — "pad" (iPad nối / mất nối), "padMode", "end", …
 // ⇒ { setOptions(o) (true = áp ngay, false = AWord dựng lại), destroy(), game, intro }
 // =============================================================
-import { createSpeedRun } from "./sr3d-4d.js";
+import { createSpeedRun } from "./sr3d-4e.js";
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
-import { createIntro } from "./sr3d-intro-4b.js";
+import { createIntro } from "./sr3d-intro-4e.js";
 import { createSound } from "./sr3d-sound-3o.js";
 
 const CARS_KEY = "speedrun.cars";            // xe 2 đội nhớ THEO MÁY (thầy chọn ở màn chờ xưởng)
@@ -73,7 +79,7 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
 
   // ---------- trận đua ----------
   const game = createSpeedRun({ mount: frame, bar, questions, title, options: { ...options, cars }, remote, host,
-    onEvent: (k, v) => { if (k === "pause") S.pause(v === true); else onGameEvent(k, v || {}); try { onEvent(k, v); } catch (e) { /* */ } } });
+    onEvent: (k, v) => { if (dead) return; if (k === "pause") S.pause(v === true); else if (k === "settings") { if (intro) intro.pause(v === true); } else onGameEvent(k, v || {}); try { onEvent(k, v); } catch (e) { /* */ } } });
   game.hold(true);
 
   // ---------- intro xưởng ANDREW STUDIO ----------
@@ -95,7 +101,7 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
   // 3p: CHẠM ĐÚP khi phim intro đang chiếu ⇒ vào thẳng màn xuất phát (2 lần chạm ≤ 350 ms, lệch ≤ 40 px)
   let tap0 = null;
   on(frame, "pointerdown", e => {
-    if (!intro || intro.state !== "play" || e.target.closest("button")) { tap0 = null; return; }
+    if (!intro || intro.state !== "play" || e.target.closest("button, .sr-panel")) { tap0 = null; return; }   // 4e: chạm trong Settings không bỏ phim
     const now = performance.now();
     if (tap0 && now - tap0.t < 350 && Math.hypot(e.clientX - tap0.x, e.clientY - tap0.y) < 40) { tap0 = null; intro.skip(); return; }
     tap0 = { t: now, x: e.clientX, y: e.clientY };

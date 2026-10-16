@@ -3,6 +3,10 @@
 //
 // Thầy: "đưa lên AWord, sử dụng options của AWord" ⇒ chốt (AskUserQuestion): Options = Cùng/khác câu hỏi · Số tên lửa tối đa ·
 //   Độ dài đường + số vòng · Cầu nhảy bật/tắt · 13 xe (BỎ Bugatti Divo — CC-BY-NC) · iPad thật làm luôn ⇒ "ok build".
+// ⭐ Đợt 537: myGame mẫu 4e (core/rw-4e.js) = 4d + ⚙ Settings mở được MỌI LÚC (cả trên xưởng intro) và TẠM DỪNG game · mặc định Drive on iPad + Tilt ·
+//   Cockpit · Sky view Off · Traffic Off (nhớ theo máy, khoá ".v2") · bay xa hơn khi lên dốc bằng boost · nghiêng đúng chiều vô lăng, đáp nghiêng = BAD mất lái ·
+//   bỏ chữ phủ màn xưởng. Màn chờ: ảnh tĩnh RIÊNG ./rw-loading.webp (theme "race" của core/loader3d.js), không còn cảnh "space" của STAR LOOT.
+//   Options: chọn Race ⇒ làm MỜ thanh không có tác dụng (Length/Track length/Laps khi Time·Words; Time khi Length/Words).
 // ⭐ Đợt 534: myGame mẫu 3y (core/rw-3y.js) = 3r + LÁI NGHIÊNG iPad: tap-lô phanh trái · ga phải, dấu đỉnh vô lăng máy bay giấy, nút iPad thêm
 //   Steering (Touch wheel / Tilt) + Full lock + Smoothing (gửi "c:"), iPad 3y (sr3d-padui-3y.js) + đường nối sr3d-padlink-3y.js ("c:" kiểu lái, "r:" tên lửa qua kho).
 // ⭐ Đợt 533: myGame mẫu 3r (core/rw-3r.js) = 3q tối ưu MƯỢT trên TOMKO (đo act 572 trong myActivity: xưởng 37⇒60, phim 18⇒60, đua hết dịch shader giữa trận).
@@ -24,11 +28,12 @@ import { registerTemplate } from "../../core/registry.js";
 import { openQuizEditor } from "../quiz/quiz-editor.js";
 import { showLoader3d, preloadLoader3d } from "../../core/loader3d.js";
 import { block3dHere, block3dMessage } from "../../core/myact-board.js";   // ⭐ Đợt 530 — game 3D chỉ chạy ở bảng 1 của myActivity
-const loader = () => { ensureCss(); return showLoader3d({ key: "racingwords", title: "RACING WORDS", theme: "space" }); };
-preloadLoader3d("space");
+const LOAD_BG = new URL("./rw-loading.webp", import.meta.url).href;   // Đợt 537: ảnh tĩnh riêng (chụp xưởng ANDREW STUDIO của game, 1920×1080, 63 KB)
+const loader = () => { ensureCss(); return showLoader3d({ key: "racingwords", title: "RACING WORDS", theme: "race", bg: LOAD_BG }); };
+preloadLoader3d("race", LOAD_BG);
 
-const GAME = "./3d/rw-4d.js";                     // Đợt 535: myGame mẫu 4d (5 đợt sau 3y: chế độ đua, cong thật, lái tay, dốc xoắn, phần thưởng, xe khác, camera gộp) · Đợt 534: myGame mẫu 3y (lái nghiêng iPad) · Đợt 533: myGame mẫu 3r (mượt TOMKO) · Đợt 531: myGame mẫu 3q (Fight options, cảnh xa đúng vật lý, 35 km/h) · Đợt 529: 3p · Đợt 527: 3o
-const CSS = ["sr3d-3g.css", "sr3d-3l.css", "sr3d-intro-3o.css", "rw-3r.css", "rw-3z.css", "rw-4a.css", "rw-4b.css", "rw-4c.css", "rw-4d.css"];   // Đợt 535: + 3z…4d (đúng thứ tự)
+const GAME = "./3d/rw-4e.js";                     // Đợt 537: myGame mẫu 4e (Settings mọi nơi + tạm dừng, mặc định mới, bay xa, nghiêng đúng chiều, BAD mất lái) · Đợt 535: myGame mẫu 4d (5 đợt sau 3y: chế độ đua, cong thật, lái tay, dốc xoắn, phần thưởng, xe khác, camera gộp) · Đợt 534: myGame mẫu 3y (lái nghiêng iPad) · Đợt 533: myGame mẫu 3r (mượt TOMKO) · Đợt 531: myGame mẫu 3q (Fight options, cảnh xa đúng vật lý, 35 km/h) · Đợt 529: 3p · Đợt 527: 3o
+const CSS = ["sr3d-3g.css", "sr3d-3l.css", "sr3d-intro-3o.css", "rw-3r.css", "rw-3z.css", "rw-4a.css", "rw-4b.css", "rw-4c.css", "rw-4d.css", "rw-4e.css"];   // Đợt 537: + rw-4e · Đợt 535: + 3z…4d (đúng thứ tự)
 const FONTS = "https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,600;0,700;0,800;0,900;1,800;1,900&subset=vietnamese&display=swap";
 // khoá game <-> khoá PHẲNG (activity.options)
 // ⭐ Đợt 531 (thầy) — Options kiểu FIGHT của Rocket Race: Lives (srLives 0 = tắt) · Missile damages 1–5 (srMsDmg) · Time delay (srTie giây,
@@ -164,7 +169,7 @@ const racingWordsTemplate = {
     miss.cell.title = "Same questions: once one team answers wrong, how long the other team still has before both move on. ∞ = waits";
     // ⭐ Đợt 535 — CHẾ ĐỘ ĐUA: mọi kiểu thắng đều phải chạy qua vạch đích (hết giờ / hết từ / hết mạng ⇒ đích hiện trước xe thắng)
     const race = mkCell({ label: "Race", wide: true });
-    race.ctl.append(mkSeg([{ value: "len", label: "Length" }, { value: "time", label: "Time" }, { value: "words", label: "Words" }], g.race, v => { draft.srRace = v; }));
+    race.ctl.append(mkSeg([{ value: "len", label: "Length" }, { value: "time", label: "Time" }, { value: "words", label: "Words" }], g.race, v => { draft.srRace = v; lockRace(v); }));
     race.cell.title = "Length: a fixed track. Time: countdown — the team further ahead when time is up drives to the finish line. Words: race until the words run out — the finish line appears near the last words";
     const lenK = mkSliderCell({ label: "Length", sub: "Race = Length", min: 0, max: 3, step: 1, value: Math.max(0, LENKS.indexOf(g.lenK)), tone: "blue",
       fmt: p => "×" + String(LENKS[p]).replace(".", ","), onInput: p => { draft.srLenK = LENKS[p]; } });
@@ -172,12 +177,20 @@ const racingWordsTemplate = {
     const timeS = mkSliderCell({ label: "Time", sub: "Race = Time", min: 1, max: 10, step: 1, value: Math.round(g.timeS / 60), tone: "blue",
       fmt: v => v + " min", onInput: v => { draft.srTimeS = v * 60; } });
     timeS.cell.title = "Countdown for Race = Time";
+    // ⭐ Đợt 537 (thầy): thanh không có tác dụng với chế độ đua đang chọn ⇒ MỜ + không chạm được (.is-locked, luật Đợt 188 "mất màu chứ không ẩn")
+    //   Length · Track length · Laps chỉ dùng khi Race = Length (Time / Words: đường mở, đích dời) · Time chỉ dùng khi Race = Time.
+    const segs = mkSliderCell({ label: "Track length", sub: "segments · 1 per question", min: 3, max: 20, step: 1, value: g.steps, tone: "blue", onInput: v => { draft.srSteps = v; } });
+    const laps = mkSliderCell({ label: "Laps", sub: "Auto = by track length", min: 0, max: 6, step: 1, value: g.laps, tone: "blue", offAt: 0,
+      fmt: v => (v === 0 ? "Auto" : String(v)), onInput: v => { draft.srLaps = v; } });
+    function lockRace(r) {
+      [lenK, segs, laps].forEach(c => c.cell.classList.toggle("is-locked", r !== "len"));
+      timeS.cell.classList.toggle("is-locked", r !== "time");
+    }
+    lockRace(g.race);
     panel.append(
       race.cell, lenK.cell, timeS.cell,
       qs.cell, lives.cell, dmg.cell, streak.cell, msMax.cell, tie.cell, miss.cell,
-      mkSliderCell({ label: "Track length", sub: "segments · 1 per question", min: 3, max: 20, step: 1, value: g.steps, tone: "blue", onInput: v => { draft.srSteps = v; } }).cell,
-      mkSliderCell({ label: "Laps", sub: "Auto = by track length", min: 0, max: 6, step: 1, value: g.laps, tone: "blue", offAt: 0,
-        fmt: v => (v === 0 ? "Auto" : String(v)), onInput: v => { draft.srLaps = v; } }).cell
+      segs.cell, laps.cell
     );
     addCheck("Jump ramps", g.ramps, v => { draft.srRamps = v; }, { key: "srRamps" });
     addCheck("Twist ramps", g.twists, v => { draft.srTwists = v; }, { key: "srTwists" });            // Đợt 535

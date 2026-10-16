@@ -1,3 +1,7 @@
+// RACING WORDS mẫu 4e (16/10/2026) = sr3d-intro-4b.js + (thầy: "trong xưởng có ANDREW STUDIO trên tường rồi, bỏ andrew studio và racing words trên màn hình")
+//   · bỏ 2 dòng chữ phủ màn chờ (.ri-studio · .ri-title) — biển đèn trên tường xưởng giữ nguyên; chữ lớn RACING WORDS lúc xe lao ra (.ri-big) giữ
+//   · pause(true|false): ⚙ Settings mở giữa phim intro ⇒ phim đứng (không cộng thời gian, KHÔNG VẼ khung mới ⇒ nhẹ card đồ hoạ)
+// ---- gốc 4b ----
 // RACING WORDS mẫu 4b (16/10/2026) = sr3d-intro-3z.js, đổi xe sang sr3d-car-4b.js — PHẢI cùng mô-đun xe với lõi: bảng số đo xe (SO_DO: chỗ cháy, kính…)
 //   nằm trong mô-đun; khác mô-đun ⇒ lõi dò lại bằng tia ⇒ bước dịch sẵn chậm ~20 s (đo 4b lần đầu: 20,4 s ⇒ cùng mô-đun: ~1,5 s).
 // ---- gốc 3z ----
@@ -99,8 +103,6 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
     <canvas class="ri-cv"></canvas>
     <div class="ri-bars"><i></i><i></i></div>
     <div class="ri-ui">
-      <div class="ri-studio"><i></i><span>ANDREW STUDIO</span><i></i></div>
-      <div class="ri-title">${title}</div>
       ${[0, 1].map(i => `<div class="ri-pick ri-pick${i}" style="--team:${TEAMS[i].color}"><button class="ri-pb" data-d="-1" type="button">◀</button>
         <button class="ri-pn" type="button"><small>${TEAMS[i].name} · CHOOSE YOUR CAR</small><b></b><em></em></button>
         <button class="ri-pb" data-d="1" type="button">▶</button><div class="ri-list"></div><div class="ri-cred"></div></div>`).join("")}
@@ -256,7 +258,7 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
   $(".ri-skip").addEventListener("click", () => { if (state === "play") handoff(); });
 
   // ---------- trạng thái + kịch bản ----------
-  let state = "idle", T = 0, lastT = 0, raf = 0, dead = false, hidden = false;
+  let state = "idle", T = 0, lastT = 0, raf = 0, dead = false, hidden = false, paused = false;   // 4e: paused
   const fired = new Set(), popT = [1.2, 2.6], popK = [0, 0], lit = rowZ.map(() => 0);
   let signK = 0, sunK = 0, engOn = [false, false];
   const cue = (name, team) => { const key = name + (team ?? ""); if (fired.has(key)) return false; fired.add(key); onCue(name, team); return true; };
@@ -358,7 +360,7 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
   let arHold = true; const arHoldT = setTimeout(() => { arHold = false; }, 25000);   // 3r: chờ trận dịch sẵn shader xong (arGo) — tối đa 25 s
   function loop(now) {
     if (dead) return; raf = requestAnimationFrame(loop);
-    if (hidden) { lastT = 0; AR.pause(); return; }
+    if (hidden || paused) { lastT = 0; AR.pause(); return; }   // 4e: Settings mở ⇒ đứng hình, không vẽ
     const dt = Math.min(0.05, lastT ? (now - lastT) / 1000 : 1 / 60); lastT = now;
     if (state === "play") T += dt;
     fit(); update(dt);
@@ -374,6 +376,7 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
     ready, setCar, get cars() { return carIds.slice(); }, get state() { return state; },
     show() { hidden = false; state = "idle"; resetScene(); root.style.display = ""; applyPR(); AR.pause(); },
     hide() { hidden = true; root.style.display = "none"; },
+    pause(v) { paused = !!v; },                                        // 4e
     play, skip: handoff,
     step(n = 1, dt = 1 / 60) { for (let k = 0; k < n; k++) { if (state === "play") T += dt; update(dt); } fit(); renderer.shadowMap.needsUpdate = true; if (envDirty) refreshEnv(); composer.render(); },
     seek(t) { if (state !== "play") play(); T = 0; while (T < t) { T += 1 / 30; update(1 / 30); } fit(); renderer.shadowMap.needsUpdate = true; refreshEnv(); composer.render(); },

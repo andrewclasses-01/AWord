@@ -1,0 +1,3 @@
+/* RACING WORDS mẫu 4e (16/10/2026) — nạp SAU rw-4d.css. ⚙ Settings mở được cả trên XƯỞNG INTRO: lớp intro .ri-root (z 50) phủ khung game,
+   bảng Settings (.sr-panel z 8) trước đây nằm dưới nó ⇒ bấm không thấy gì. Nâng bảng lên trên intro (MENU .sr-pmenu đã là z 70). */
+.rw-root .sr-panel { z-index: 60; }

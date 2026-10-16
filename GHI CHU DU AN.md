@@ -546,6 +546,29 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 537 (16/10/2026) — RACING WORDS 8 VIỆC SAU 4d (myGame mẫu 4e) + MÀN CHỜ ẢNH TĨNH RIÊNG + OPTIONS MỜ THANH KHÔNG DÙNG
+
+**Thầy:** "Settings hiện ở mọi nơi, cả trong intro · màn load đang dùng ảnh STAR LOOT ⇒ ảnh tĩnh có loading riêng cho RACING WORDS · xưởng đã có ANDREW STUDIO trên tường ⇒ bỏ chữ
+ANDREW STUDIO + RACING WORDS trên màn · bấm Settings thì game tạm dừng · mặc định Drive on iPad + Tilt, Cockpit, Sky view Off, Traffic Off · bay lên ramp nhờ boost đi xa hơn ·
+trên không vô lăng bên nào xe nghiêng bên đó (đang ngược), đáp perfect có lợi, đáp nghiêng quá ⇒ bad landing chậm, mất lái một chút · Options chọn Length/Time/Words ⇒ làm mờ thanh không
+có tác dụng" — "phải đảm bảo hiệu năng không bị ảnh hưởng". Sửa ở myGame trước (mẫu 4e, myGame `41f798b` + `3f5f9a6`, hồ sơ myGame mục 39) rồi đưa lên đây.
+**Làm:**
+- tools/chep-racing-words.py: GOC `rw-4e.js`, CSS + `rw-4e.css` ⇒ 3d/ có `rw-4e.js` · `sr3d-4e.js` · `sr3d-intro-4e.js` · `rw-4e.css` (xoá rw-4d.js · sr3d-4d.js · sr3d-intro-4b.js).
+- racing-words.js: GAME `./3d/rw-4e.js`, CSS + rw-4e.css; màn chờ theme **`race`** với ảnh `templates/racing-words/rw-loading.webp` (1920×1080, 63 KB, chụp từ chính xưởng intro của game);
+  Options: `lockRace(r)` — Race ≠ Length ⇒ **Length · Track length · Laps** mờ (`.is-locked` = opacity .4 + không chạm, luật Đợt 188); Race ≠ Time ⇒ **Time** mờ. Gọi lúc dựng bảng và mỗi lần bấm Race.
+- core/loader3d.js: theme `race` = ảnh tĩnh phủ kín (`bg`, `center 38% / cover`) + dải tối dưới + thanh chạy + LOADING; ẩn chữ ANDREW STUDIO / tên game (biển đèn trong ảnh đã có).
+  `preloadLoader3d(theme, bg)` nạp sớm ảnh; `showLoader3d({ …, bg })`. Không cảnh động ⇒ nhẹ hơn cảnh space.
+- Game (myGame 4e): ⚙ Settings nổi TRÊN xưởng intro (cũ z 8 nằm dưới intro z 50 ⇒ bấm không thấy) + TẠM DỪNG trận + phim intro (không vẽ khung mới) + tiếng; mặc định mới với khoá máy `.v2`
+  (máy đã thử bản cũ cũng về mặc định mới 1 lần); chế độ iPad nay NHỚ THEO MÁY (`racingwords.padMode.v2`, mặc định Drive on iPad ⇒ mở game là claim `ipad_now`, khác Đợt 514 "mặc định OFF");
+  bay bằng boost đi xa ×1,5; vô lăng phải ⇒ nghiêng phải; nhịp hất nghiêng lúc cất cánh ⇒ phải chỉnh mới PERFECT; BAD LANDING ⇒ ×0,45 tốc độ + mất lái 1,2 s; bỏ 2 dòng chữ phủ xưởng.
+**Đã thử (bàn thử scratch/dot537-rw.html, engine thật):** màn chờ mới hiện ảnh + LOADING ⇒ xưởng không còn chữ phủ ⇒ ⚙ Settings bấm trên xưởng hiện TRÊN intro (elementFromPoint),
+mặc định "3. Drive on iPad" + Tilt · Cockpit · Sky Off · Traffic Off ⇒ Options thật: Length (Time mờ) / Time (Length · Track length · Laps mờ) / Words (cả 4 mờ) ⇒ Apply Words / Time ⇒
+game dựng lại, trận chế độ Words chạy, 0 lỗi. Ở myGame: Settings dừng trận (G.t đứng 0,8 s), dừng phim intro (0 khung vẽ), MENU + Settings đóng Settings vẫn dừng;
+bay: chỉnh 4/4 PERFECT, giữ hết lái 4/4 BAD, bay 145–176 m so với 96–118 m chạy đất. Không thêm lượt vẽ / shader.
+⬜ thầy thử trên TOMKO + 2 iPad.
+
+---
+
 ## Đợt 536 (16/10/2026) — TRANG CHỦ CHỈ NẠP VỎ (bấm vào đâu mới nạp cái đó)
 
 **Thầy:** "mở trang chủ (đặc biệt trên iPad) rất lâu… chỉ load vỏ bên ngoài, bấm vào thư mục hay tính năng gì thì mới load dữ liệu của cái đó".

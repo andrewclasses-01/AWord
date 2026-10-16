@@ -16,6 +16,10 @@
 //   const ld = showLoader3d({ key: "starloot", title: "STAR LOOT", theme: "space" | "west" });  …  ld.done();
 // ⚠️ z-index 1001: TRÊN ô game (.aw-sl-host / .aw-tr-host = 1000) — game dựng xong dưới màn chờ rồi mới lộ ra.
 // ⚠️ Lưới an toàn: tự mờ sau 25 s dù không ai gọi done() (game lỗi giữa chừng không được kẹt màn chờ mãi).
+// ⭐ Đợt 537 (thầy 16/10/2026: "phần load đang dùng ảnh của STAR LOOT, hãy tạo một ảnh tĩnh có loading dành riêng cho RACING WORDS"):
+//   theme "race" = ẢNH TĨNH (`bg`, chụp từ chính xưởng ANDREW STUDIO của game — biển đèn trên tường đã có ANDREW STUDIO · RACING WORDS)
+//   ⇒ KHÔNG phủ thêm chữ studio / tên game, chỉ thanh chạy + LOADING ở dưới. Ảnh nạp sớm bằng preloadLoader3d("race", bg).
+//   Không có cảnh động nào ⇒ nhẹ nhất trong các màn chờ (chỉ thanh chạy = transform).
 // =============================================================
 
 const live = new Map();   // key → handle
@@ -123,6 +127,15 @@ const CSS = `
 .sp-comet { left: 0; top: 0; width: 22vmin; height: 2px; border-radius: 2px; background: linear-gradient(90deg, transparent, #e0f2fe);
   opacity: 0; animation: sp-comet 6s ease-in infinite; animation-delay: 1.4s; }
 @keyframes sp-comet { 0% { transform: translate(62vw, 8vh) rotate(155deg); opacity: 0; } 4% { opacity: 1; } 14% { transform: translate(30vw, 26vh) rotate(155deg); opacity: 0; } 100% { opacity: 0; transform: translate(30vw, 26vh) rotate(155deg); } }
+
+/* ===================== RACE — RACING WORDS (Đợt 537): ảnh tĩnh phủ kín + thanh LOADING dưới ===================== */
+.aw-ld3d.is-race { place-items: end center; background: #0a0b0f;
+  --ld-track: rgba(255,255,255,.16); --ld-bar: linear-gradient(90deg, #3b8cff, #ff7a00); --ld-glow: rgba(255,170,90,.5); --ld-sub: #e8eefc; --ld-studio: #fff; }
+.aw-ld3d.is-race .ld-bg { inset: 0; background: center 38% / cover no-repeat; }
+.aw-ld3d.is-race .ld-shade { left: 0; right: 0; bottom: 0; height: 34%; background: linear-gradient(180deg, rgba(5,6,10,0), rgba(5,6,10,.78)); }
+.aw-ld3d.is-race .aw-ld3d-studio, .aw-ld3d.is-race .aw-ld3d-t { display: none; }
+.aw-ld3d.is-race .aw-ld3d-in { margin-bottom: 7vh; }
+.aw-ld3d.is-race .aw-ld3d-s { font-style: italic; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
 
 /* ===================== WEST — TRAIN RUSH ===================== */
 .aw-ld3d.is-west { place-items: start center;
@@ -284,7 +297,9 @@ function ensureCss() {
 
 // Đợt 452 — gọi SỚM (lúc nạp module template) để phông của màn chờ đã sẵn khi màn chờ hiện: ngay sau khi hiện, luồng chính bận
 // dựng cảnh 3D ~2 s nên chữ tên game không đổi lớp kịp (đo 03/10: máy chưa lưu phông ⇒ tên TRAIN RUSH trống ~2,4 s).
-export function preloadLoader3d(theme) {
+const BG = {};   // Đợt 537: theme → ảnh nền tĩnh (preloadLoader3d gán)
+export function preloadLoader3d(theme, bg) {
+  if (bg && !BG[theme]) { BG[theme] = bg; try { const im = new Image(); im.decoding = "async"; im.src = bg; } catch (e) { /* màn chờ vẫn hiện, chỉ chậm ảnh */ } }
   try { ensureCss(); document.fonts.load(theme === "west" ? '400 60px Rye' : '800 60px "Baloo 2"').catch(() => {}); } catch (e) { /* màn chờ tự lo */ }
 }
 
@@ -295,7 +310,7 @@ export function dropAllLoader3d() {
   [...live.values()].forEach(h => { try { h.drop(); } catch (e) { /* đã gỡ */ } });
 }
 
-export function showLoader3d({ key, title, theme = "space" }) {
+export function showLoader3d({ key, title, theme = "space", bg = null }) {
   const cur = live.get(key);
   if (cur && !cur.gone) return cur;
   ensureCss();
@@ -303,9 +318,11 @@ export function showLoader3d({ key, title, theme = "space" }) {
   el.className = "aw-ld3d is-" + theme;
   el.setAttribute("role", "status");
   el.setAttribute("aria-label", "Loading " + title);
-  el.innerHTML = (SCENE[theme] ? SCENE[theme]() : "") +
+  const bgUrl = bg || BG[theme];
+  el.innerHTML = (bgUrl ? `<div class="l ld-bg"></div><div class="l ld-shade"></div>` : "") + (SCENE[theme] ? SCENE[theme]() : "") +
     `<div class="aw-ld3d-in"><div class="aw-ld3d-studio"><i></i>ANDREW STUDIO<i></i></div><div class="aw-ld3d-t"></div><div class="aw-ld3d-bar"><i></i></div><div class="aw-ld3d-s">LOADING</div></div>`;
   el.querySelector(".aw-ld3d-t").textContent = title;
+  if (bgUrl) el.querySelector(".ld-bg").style.backgroundImage = `url("${bgUrl}")`;
   document.body.append(el);
   // phông của game (Baloo 2 800 có sẵn trong AWord · Rye nạp từ Google Fonts) — chờ tối đa 1,2 s rồi hiện dù chưa có
   const font = theme === "west" ? '400 60px Rye' : '800 60px "Baloo 2"';
