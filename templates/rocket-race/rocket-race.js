@@ -53,6 +53,11 @@ import { fitOnce } from "../../core/fit.js";
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { rrSound } from "./rr-sound.js";
 import { block3dHere, block3dMessage } from "../../core/myact-board.js";   // ⭐ Đợt 530 — game 3D chỉ chạy ở bảng 1 của myActivity
+import { showLoader3d, preloadLoader3d } from "../../core/loader3d.js";
+// ⭐ Đợt 540 — Fight 3D có MÀN CHỜ (trước: ~0,75 s đen lúc dựng cảnh): ảnh tĩnh 2 tên lửa rời bệ phóng, kiểu RACING WORDS (theme "shot").
+// Hiện lúc rr3dScene dựng, mờ đi khi cảnh phóng đã dựng xong (hoặc khi lùi về START 3D cũ / về 2D / rời trận).
+const RR_LOAD_BG = new URL("./rr-loading.webp", import.meta.url).href;
+preloadLoader3d("shot", RR_LOAD_BG, "rocket");
 import { openRocketRaceEditor } from "./rocket-race-editor.js";
 import { publishStage, clearStage, subscribeViewer, mintMatchId, VIEWER_STALE_MS } from "./rr-link.js";
 
@@ -350,6 +355,7 @@ function rr3dPaintProgress() {
 function rr3dFallback(st, err) {
   console.warn("[rocket-race] 3D scene failed — back to 2D", err);
   st.failed = true;
+  try { st.ld && st.ld.done(); } catch { /* đã gỡ */ }   // Đợt 540
   rrSound.quiet = false;
   const wrap = st.root.closest(".aw-fight");
   if (wrap) { wrap.classList.remove("is-fullscene", "is-skin-rr3d"); wrap.style.setProperty("--aw-fsh", "5.75"); }
@@ -657,6 +663,8 @@ function rr3dScene({ root, ctl, title, play }) {
   root.append(host3d, host2d);
   const st = { root, host2d, ctl, view: null, sfx: null, boards: [null, null], q: ["", ""], pending: [], dead: false, failed: false,
                prog: [{ done: 0, total: 0 }, { done: 0, total: 0 }], twoDevice: false, offs: [] };
+  st.ld = showLoader3d({ key: "rocketrace", title: "ROCKET RACE", theme: "shot", game: "rocket", bg: RR_LOAD_BG });   // ⭐ Đợt 540
+  st.offs.push(() => { try { st.ld.drop(); } catch { /* đã gỡ */ } });
   rr3d = st;
   if (ctl && ctl.setDelayFloor) ctl.setDelayFloor(side => msDelayFloorMs(side));   // Đợt 458
   // ⭐ Đợt 405 — act VOICE biết NGAY lúc dựng cảnh (bàn chỉ mount sau START) ⇒ nền cảnh phóng cũng im.
@@ -755,6 +763,7 @@ function rr3dLaunch(st, play) {
     try { st.launch && st.launch.destroy(); } catch { /* ignore */ }
     st.launch = null; layer.remove(); hud.remove();
     try { st.view.resume(); st.view.showStart(); } catch { /* ignore */ }
+    try { st.ld && st.ld.done(); } catch { /* đã gỡ */ }   // Đợt 540
   };
   Promise.all([import("./rr3d-launch.js"), import("./rr3d-intro-sound.js")]).then(async ([L, S]) => {
     if (st.dead) return;
@@ -763,6 +772,7 @@ function rr3dLaunch(st, play) {
       onHandoff: handoff, onTick: s => { if (st.isnd) st.isnd.update(s); } });
     if (st.dead) { launch.destroy(); return; }
     st.launch = launch;
+    try { st.ld && st.ld.done(); } catch { /* đã gỡ */ }   // Đợt 540: cảnh phóng đã dựng ⇒ màn chờ mờ đi (done() đợi 2 nhịp vẽ)
     after(() => ttl.classList.add("on"), 700);
     after(() => go.classList.add("on"), 1800);
   }).catch(fallback);

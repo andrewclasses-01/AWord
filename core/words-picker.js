@@ -52,6 +52,17 @@ import { dropAllLoader3d } from "./loader3d.js";
 
 // 4 game 3D (khu trên) → cảnh trong words-picker-art.js (Đợt 527: thêm RACING WORDS)
 const G3 = [["rocket_race", "rocket"], ["balloon_pop", "train"], ["maze_chase", "loot"], ["racing_words", "race"]];   // Đợt 527: + RACING WORDS
+// ⭐ Đợt 540 (thầy 17/10/2026: "thumbnail 4 game… phong cách điện ảnh, cắt từ cảnh 3D của game, toát lên sự kịch tích, tên game mỗi
+// tên một phong cách"): ảnh cắt từ chính cảnh 3D (core/wp-art/*.webp, 600×430) + khung phim + tên game bằng phông riêng từng game.
+// Cảnh phẳng SC[key].svg giữ làm nền tạm lúc ảnh chưa về. Thiết kế: myGame anh-game-3d/thiet-ke-v1.html.
+const CINE = { rocket: ["rr", "ROCKET RACE"], train: ["tr", "Train Rush"], loot: ["sl", "STAR LOOT"], race: ["rw", "Racing Words"] };
+const cineImg = k => new URL("./wp-art/" + CINE[k][0] + ".webp", import.meta.url).href;
+function loadCineFonts() {
+  if (document.getElementById("aw-wp-fonts")) return;
+  const lk = document.createElement("link"); lk.id = "aw-wp-fonts"; lk.rel = "stylesheet";
+  lk.href = "https://fonts.googleapis.com/css2?family=Rye&family=Audiowide&family=Orbitron:wght@900&family=Racing+Sans+One&display=swap";
+  document.head.append(lk);
+}
 // game thường (khu dưới), THEO THỨ TỰ HIỆN. Ba game cuối cùng là thầy dặn xuống dưới cùng.
 // Running word/team/IPA KHÔNG ở đây: chúng là MODE trong game (Đợt 400), không phải template.
 const G2 = [
@@ -269,9 +280,10 @@ export async function openWordsPicker(root, node, { onExit, onBack } = {}) {
   // ---- hai khu ----
   const z3 = el("div", "aw-wp-z3");
   G3.forEach(([type, key]) => {
-    const b = el("button", "wp-card");
+    const b = el("button", "wp-card is-cine");
     b.type = "button"; b.dataset.t = type; b.style.cssText = SC[key].v;
-    b.innerHTML = sceneSvg(key) + `<span class="wp-nm">${SC[key].name}</span>`;
+    loadCineFonts();
+    b.innerHTML = sceneSvg(key) + `<span class="wp-im" style="background-image:url('${cineImg(key)}')"></span><span class="wp-nm n-${key}">${CINE[key][1]}</span>`;
     wire(b, type);
     z3.append(b);
   });

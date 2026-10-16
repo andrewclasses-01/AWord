@@ -19,6 +19,11 @@
 // ⭐ Đợt 537 (thầy 16/10/2026: "phần load đang dùng ảnh của STAR LOOT, hãy tạo một ảnh tĩnh có loading dành riêng cho RACING WORDS"):
 //   theme "race" = ẢNH TĨNH (`bg`, chụp từ chính xưởng ANDREW STUDIO của game — biển đèn trên tường đã có ANDREW STUDIO · RACING WORDS)
 //   ⇒ KHÔNG phủ thêm chữ studio / tên game, chỉ thanh chạy + LOADING ở dưới. Ảnh nạp sớm bằng preloadLoader3d("race", bg).
+// ⭐ Đợt 540 (thầy 17/10/2026: "tạo lại ảnh loading cho TRAIN RUSH, STAR LOOT và ROCKET RACE theo phong cách của RACING WORDS"):
+//   theme "shot" = ẢNH TĨNH cắt từ chính cảnh 3D của game (thiết kế myGame anh-game-3d/thiet-ke-v1.html, thầy chọn ANDREW STUDIO)
+//   + CÙNG thanh chạy / LOADING như "race" + trên cùng: ANDREW STUDIO · tên game bằng kiểu chữ riêng của game (`game`):
+//   train = Rye vàng đồng khối nâu · loot = Audiowide neon · rocket = Orbitron kim loại nghiêng. Cảnh động space/west giữ lại (không còn ai gọi).
+//   const ld = showLoader3d({ key, title, theme: "shot", game: "train" | "loot" | "rocket", bg });   preloadLoader3d("shot", bg, game);
 //   Không có cảnh động nào ⇒ nhẹ nhất trong các màn chờ (chỉ thanh chạy = transform).
 // =============================================================
 
@@ -136,6 +141,27 @@ const CSS = `
 .aw-ld3d.is-race .aw-ld3d-studio, .aw-ld3d.is-race .aw-ld3d-t { display: none; }
 .aw-ld3d.is-race .aw-ld3d-in { margin-bottom: 7vh; }
 .aw-ld3d.is-race .aw-ld3d-s { font-style: italic; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
+
+/* ===================== SHOT (Đợt 540) — ảnh tĩnh cảnh 3D + ANDREW STUDIO · tên game ở trên + thanh LOADING như race ===================== */
+.aw-ld3d.is-shot { place-items: end center; background: #0a0b0f; container-type: size;
+  --ld-track: rgba(255,255,255,.16); --ld-bar: linear-gradient(90deg, #3b8cff, #ff7a00); --ld-glow: rgba(255,170,90,.5); --ld-sub: #e8eefc; --ld-studio: #fff; }
+.aw-ld3d.is-shot .ld-bg { inset: 0; background: center 38% / cover no-repeat; }
+.aw-ld3d.is-shot .ld-shade { left: 0; right: 0; bottom: 0; height: 34%; background: linear-gradient(180deg, rgba(5,6,10,0), rgba(5,6,10,.78)); }
+.aw-ld3d.is-shot .ld-top { left: 0; right: 0; top: 0; height: 42%; background: linear-gradient(180deg, rgba(5,6,10,.42), rgba(5,6,10,0)); }
+.aw-ld3d.is-shot .aw-ld3d-in { margin-bottom: 7vh; }
+.aw-ld3d.is-shot .aw-ld3d-s { font-style: italic; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
+.aw-ld3d-hd { position: absolute; z-index: 5; left: 0; right: 0; top: 9cqh; display: flex; flex-direction: column; align-items: center; gap: 1.6cqmin; pointer-events: none; }
+.aw-ld3d-hd .aw-ld3d-studio { font-weight: 700; font-size: 2.3cqmin; text-shadow: 0 0 1.4cqmin rgba(255,255,255,.55), 0 1px 3px rgba(0,0,0,.6); }
+.aw-ld3d-hd .aw-ld3d-studio i { width: 9cqmin; height: max(1px, .18cqmin); }
+.aw-ld3d-hd .aw-ld3d-t { font-weight: 400; letter-spacing: 0; filter: none; }
+.aw-ld3d-hd .g-train { font-family: Rye, serif; font-size: 11cqmin; letter-spacing: .04em;
+  background: linear-gradient(180deg, #fff6d6 0%, #ffd27a 45%, #e08a2c 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 .5cqmin 0 #5a2a0c) drop-shadow(0 .9cqmin 0 #3a1a06) drop-shadow(0 0 2.6cqmin rgba(255,150,60,.55)); }
+.aw-ld3d-hd .g-loot { font-family: Audiowide, sans-serif; font-size: 10cqmin; letter-spacing: .1em; padding-left: .1em; background: none; color: #f4fdff;
+  text-shadow: 0 0 .6cqmin #fff, 0 0 1.6cqmin #3ff3e6, 0 0 3.2cqmin #23c9ff, 0 0 6cqmin #c13cff; }
+.aw-ld3d-hd .g-rocket { font-family: Orbitron, sans-serif; font-weight: 900; font-size: 9.6cqmin; letter-spacing: .06em; transform: skewX(-10deg);
+  background: linear-gradient(180deg, #ffffff 0%, #dfe9ff 42%, #7f9cc9 52%, #e9f0ff 70%, #ffffff 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 .35cqmin 0 #1b2a5a) drop-shadow(0 0 2.4cqmin rgba(255,120,40,.65)); }
 
 /* ===================== WEST — TRAIN RUSH ===================== */
 .aw-ld3d.is-west { place-items: start center;
@@ -298,9 +324,23 @@ function ensureCss() {
 // Đợt 452 — gọi SỚM (lúc nạp module template) để phông của màn chờ đã sẵn khi màn chờ hiện: ngay sau khi hiện, luồng chính bận
 // dựng cảnh 3D ~2 s nên chữ tên game không đổi lớp kịp (đo 03/10: máy chưa lưu phông ⇒ tên TRAIN RUSH trống ~2,4 s).
 const BG = {};   // Đợt 537: theme → ảnh nền tĩnh (preloadLoader3d gán)
-export function preloadLoader3d(theme, bg) {
-  if (bg && !BG[theme]) { BG[theme] = bg; try { const im = new Image(); im.decoding = "async"; im.src = bg; } catch (e) { /* màn chờ vẫn hiện, chỉ chậm ảnh */ } }
-  try { ensureCss(); document.fonts.load(theme === "west" ? '400 60px Rye' : '800 60px "Baloo 2"').catch(() => {}); } catch (e) { /* màn chờ tự lo */ }
+// Đợt 540: theme "shot" — phông riêng từng game (Rye có @font-face sẵn trong CSS; Audiowide / Orbitron nạp từ Google Fonts)
+const SHOT_FONT = { train: ["Rye", '400 60px Rye'], loot: ["Audiowide", '400 60px Audiowide'], rocket: ["Orbitron", '900 60px Orbitron'] };
+function fontOf(theme, game) {
+  if (theme === "west") return SHOT_FONT.train;
+  if (theme === "shot" && SHOT_FONT[game]) return SHOT_FONT[game];
+  return [null, '800 60px "Baloo 2"'];
+}
+function ensureShotFonts() {
+  if (document.getElementById("aw-ld3d-fonts")) return;
+  const lk = document.createElement("link"); lk.id = "aw-ld3d-fonts"; lk.rel = "stylesheet";
+  lk.href = "https://fonts.googleapis.com/css2?family=Audiowide&family=Orbitron:wght@900&display=block";
+  document.head.append(lk);
+}
+export function preloadLoader3d(theme, bg, game) {
+  const k = theme === "shot" ? "shot:" + game : theme;
+  if (bg && !BG[k]) { BG[k] = bg; try { const im = new Image(); im.decoding = "async"; im.src = bg; } catch (e) { /* màn chờ vẫn hiện, chỉ chậm ảnh */ } }
+  try { ensureCss(); if (theme === "shot") ensureShotFonts(); document.fonts.load(fontOf(theme, game)[1]).catch(() => {}); } catch (e) { /* màn chờ tự lo */ }
 }
 
 // ⭐ Đợt 526 — màn chọn act WORDS huỷ một game 3D đang nạp NGẦM (core/words-picker.js closePre): gỡ NGAY mọi màn chờ đang sống.
@@ -310,7 +350,7 @@ export function dropAllLoader3d() {
   [...live.values()].forEach(h => { try { h.drop(); } catch (e) { /* đã gỡ */ } });
 }
 
-export function showLoader3d({ key, title, theme = "space", bg = null }) {
+export function showLoader3d({ key, title, theme = "space", bg = null, game = null }) {
   const cur = live.get(key);
   if (cur && !cur.gone) return cur;
   ensureCss();
@@ -318,14 +358,19 @@ export function showLoader3d({ key, title, theme = "space", bg = null }) {
   el.className = "aw-ld3d is-" + theme;
   el.setAttribute("role", "status");
   el.setAttribute("aria-label", "Loading " + title);
-  const bgUrl = bg || BG[theme];
-  el.innerHTML = (bgUrl ? `<div class="l ld-bg"></div><div class="l ld-shade"></div>` : "") + (SCENE[theme] ? SCENE[theme]() : "") +
-    `<div class="aw-ld3d-in"><div class="aw-ld3d-studio"><i></i>ANDREW STUDIO<i></i></div><div class="aw-ld3d-t"></div><div class="aw-ld3d-bar"><i></i></div><div class="aw-ld3d-s">LOADING</div></div>`;
+  const shot = theme === "shot";
+  if (shot) ensureShotFonts();
+  const bgUrl = bg || BG[shot ? "shot:" + game : theme];
+  // Đợt 540: "shot" — khối ANDREW STUDIO · tên game nằm TRÊN (vùng trời của ảnh), cột dưới chỉ còn thanh chạy + LOADING
+  const studio = `<div class="aw-ld3d-studio"><i></i>ANDREW STUDIO<i></i></div>`;
+  el.innerHTML = (bgUrl ? `<div class="l ld-bg"></div>` + (shot ? `<div class="l ld-top"></div>` : "") + `<div class="l ld-shade"></div>` : "") + (SCENE[theme] ? SCENE[theme]() : "") +
+    (shot ? `<div class="aw-ld3d-hd">${studio}<div class="aw-ld3d-t g-${game}"></div></div>` : "") +
+    `<div class="aw-ld3d-in">${shot ? "" : studio + `<div class="aw-ld3d-t"></div>`}<div class="aw-ld3d-bar"><i></i></div><div class="aw-ld3d-s">LOADING</div></div>`;
   el.querySelector(".aw-ld3d-t").textContent = title;
   if (bgUrl) el.querySelector(".ld-bg").style.backgroundImage = `url("${bgUrl}")`;
   document.body.append(el);
   // phông của game (Baloo 2 800 có sẵn trong AWord · Rye nạp từ Google Fonts) — chờ tối đa 1,2 s rồi hiện dù chưa có
-  const font = theme === "west" ? '400 60px Rye' : '800 60px "Baloo 2"';
+  const [fam, font] = fontOf(theme, game);   // Đợt 540: phông riêng từng game của theme "shot" (trước: chỉ Rye cho west)
   // `ready` (Đợt 452): chữ tên game đã hiện VÀ đã vẽ lên màn (2 nhịp vẽ) — template chờ cái này rồi mới bắt đầu dựng cảnh 3D
   // (dựng cảnh khoá luồng chính ~2 s: đổi lớp lúc đó là trễ). Tối đa 0,9 s — mạng chậm thì thôi, dựng game trước.
   let markShown = () => {};
@@ -336,17 +381,18 @@ export function showLoader3d({ key, title, theme = "space", bg = null }) {
   // ⚠️ Đợt 452 — Rye (TRAIN RUSH) nạp từ Google Fonts: lúc màn chờ hiện, file CSS của phông có khi CHƯA về ⇒ trình duyệt chưa biết
   // phông tên Rye ⇒ fonts.check() trả TRUE (không có gì phải nạp) ⇒ chữ hiện bằng phông tạm ~2 s (đo 03/10). Phải thấy đúng mặt
   // phông Rye đã nạp xong mới hiện; dò lại mỗi 120 ms, tối đa 3 s rồi hiện dù chưa có.
-  const famOk = () => theme !== "west" || [...document.fonts].some(f => /Rye/i.test(f.family) && f.status === "loaded");
+  const famRe = fam ? new RegExp(fam, "i") : null;
+  const famOk = () => !famRe || [...document.fonts].some(f => famRe.test(f.family) && f.status === "loaded");
   let has = false; try { has = famOk() && document.fonts.check(font); } catch (e) { has = true; }
   if (has) showT();
-  else if (theme === "west") {
+  else if (famRe) {
     try { document.fonts.load(font).catch(() => {}); } catch (e) { /* tick() lo */ }
     const t0 = performance.now();
     const tick = () => {
       if (!el.isConnected) return;
       let ok = false; try { ok = famOk(); } catch (e) { ok = true; }
       if (ok || performance.now() - t0 > 3000) { showT(); return; }
-      try { const face = [...document.fonts].find(f => /Rye/i.test(f.family)); if (face && face.status === "unloaded") face.load().catch(() => {}); } catch (e) { /* thử lại nhịp sau */ }
+      try { const face = [...document.fonts].find(f => famRe.test(f.family)); if (face && face.status === "unloaded") face.load().catch(() => {}); } catch (e) { /* thử lại nhịp sau */ }
       setTimeout(tick, 120);
     };
     tick();

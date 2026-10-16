@@ -546,6 +546,28 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 540 (17/10/2026) — ẢNH GAME 3D: màn chờ ảnh tĩnh cho TRAIN RUSH / STAR LOOT / ROCKET RACE + 4 ô màn chọn WORDS kiểu điện ảnh
+
+**Thầy:** "tạo lại ảnh loading cho TRAIN RUSH, STAR LOOT và ROCKET RACE theo phong cách của RACING WORDS (ảnh tĩnh 3D cắt cảnh trong game + thanh loading giống nhau + slogan + tên game)"
+và "thumbnail 4 game ở màn chọn act… phong cách điện ảnh, cắt từ cảnh 3D, kịch tích, tên game mỗi tên một phong cách". Thiết kế duyệt: myGame `anh-game-3d/thiet-ke-v1.html` (`3a0a84f`);
+thầy chọn chữ **ANDREW STUDIO** (không phải ANDREW CLASSES) rồi "ok build".
+**Kiểm khớp trước khi làm (17/10):** TRAIN RUSH `3d/` = myGame 1aw `f32004b` · STAR LOOT = 2r `1fd3173` · RACING WORDS = 4f `4077f92` — mọi file chỉ khác dòng import (+ CSS trang thử / URL phông tự host, cố ý);
+ROCKET RACE gốc ở AWord, bản tra myGame `rocket-race/game10` = Đợt 511 (AWord mới hơn 1 chỗ: Đợt 514 bắn đúng ô iPad chạm).
+**Làm:**
+- Ảnh: chụp CHÍNH cảnh 3D ở 1920×1080 (renderer + toBlob gửi về máy chủ tạm): `templates/balloon-pop/tr-loading.webp` (phim mở màn Fight — 2 tàu đỏ/xanh lao tới) ·
+  `templates/maze-chase/sl-loading.webp` (phi thuyền mẹ giữa các hành tinh) · `templates/rocket-race/rr-loading.webp` (2 tên lửa rời bệ phóng) · `core/wp-art/{rr,tr,sl,rw}.webp` 600×430.
+- `core/loader3d.js` theme **"shot"** (`showLoader3d({ …, theme: "shot", game: "train"|"loot"|"rocket", bg })`, `preloadLoader3d("shot", bg, game)`): ảnh phủ kín + CÙNG thanh chạy/LOADING như "race"
+  + khối trên ANDREW STUDIO · tên game phông riêng (Rye vàng đồng / Audiowide neon / Orbitron kim loại nghiêng; Audiowide+Orbitron nạp Google Fonts). Dò phông đã nạp (fontOf / famRe) thay chỗ chỉ Rye.
+  Cảnh động space/west giữ trong file nhưng không còn ai gọi.
+- balloon-pop.js / maze-chase.js: đổi sang theme shot. rocket-race.js: Fight 3D **lần đầu có màn chờ** (trước ~0,75 s đen): hiện ở rr3dScene, `done()` khi cảnh phóng dựng xong / lùi START cũ / về 2D; `drop()` khi rời trận.
+- `core/words-picker.js` + `tools/wp.src.css`: ô `.wp-card.is-cine` = ảnh (`.wp-im`, cảnh phẳng cũ làm nền tạm) + khung phim + tối góc/đáy + tên dưới trái `.n-rocket/.n-train/.n-loot/.n-race`
+  (Orbitron · Rye · Audiowide neon · Racing Sans One nghiêng + vệt tốc độ; cỡ theo em ⇒ phóng to / điện thoại tự theo).
+  ⛔ BẪY: `tools/wp.src.css` đã LỆCH file sinh từ Đợt 527/528 (sửa tay words-picker.css: 4 cột + luật `.aw-rw-host`) — sinh lại là MẤT. Đã chép ngược 3 chỗ vào nguồn; diff file sinh = chỉ dòng thêm.
+**Thử (bàn `scratch/dot540-ld.html?g=`, `dot540-wp.html`, `dot540-game.html?t=`, launch `aword-dot540` cổng 5640):** màn chờ hiện 0,13–0,19 s, tắt khi game vẽ xong (TRAIN RUSH 2,9 s · STAR LOOT 3,2 s · ROCKET RACE 2,9 s), 0 lỗi console;
+màn chọn 4 ô đúng 4 phông. ⚠️ Khung Browser ẩn ⇒ rAF đứng ⇒ màn chờ không tắt — phải hiện khung khi thử. ⬜ thầy xem trên TOMKO.
+
+---
+
 ## Đợt 539 (16/10/2026) — RACING WORDS: KHOÁ ĐỘI iPad (myGame mẫu 4f bổ sung)
 
 **Làm:** chép lại `3d/sr3d-padlink-4f.js` + `3d/sr3d-padui-4f.js` (tools/chep-racing-words.py) · pad.js `showRWChooser`: màn chọn đội nghe `watchTeams(rwPadSignal())` ⇒ `setBusy`

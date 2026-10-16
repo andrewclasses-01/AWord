@@ -55,8 +55,10 @@ import { resolveActivity } from "../../core/content-view.js";   // act từ vự
 import { openBalloonPopEditor } from "./balloon-pop-editor.js";
 import { showLoader3d, preloadLoader3d } from "../../core/loader3d.js";
 import { block3dHere, block3dMessage } from "../../core/myact-board.js";   // ⭐ Đợt 530 — game 3D chỉ chạy ở bảng 1 của myActivity   // Đợt 451 — màn chờ thay khung trống lúc nạp 3D
-const loader = () => { ensureTr3dCss(); return showLoader3d({ key: "trainrush", title: "TRAIN RUSH", theme: "west" }); };
-preloadLoader3d("west");   // Đợt 452 — phông Rye tải ngay lúc nạp template (màn chờ hiện là đã có chữ)
+// ⭐ Đợt 540 — màn chờ = ảnh tĩnh cắt từ phim mở màn Fight (2 tàu đỏ/xanh lao tới) kiểu RACING WORDS (theme "shot" của core/loader3d.js)
+const LOAD_BG = new URL("./tr-loading.webp", import.meta.url).href;
+const loader = () => { ensureTr3dCss(); return showLoader3d({ key: "trainrush", title: "TRAIN RUSH", theme: "shot", game: "train", bg: LOAD_BG }); };
+preloadLoader3d("shot", LOAD_BG, "train");   // Đợt 452 — phông Rye (+ Đợt 540 ảnh nền) tải ngay lúc nạp template
 
 // CSS của game (chép từ myGame) + phông miền Tây; nạp một lần khi game mở lần đầu.
 const TR3D_CSS = ["bp3d.css", "bp3d-1j.css", "bp3d-1p.css", "bp3d-1q.css", "bp3d-1r.css", "bp3d-1ab.css", "fight-cine-1ae.css", "fight-1al.css", "bp3d-1al.css", "fight-1ao.css", "fight-1ap.css"];

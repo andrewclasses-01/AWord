@@ -53,6 +53,30 @@
 .wp-card.hi { transform: translateY(calc(-5 * var(--p))); box-shadow: 0 0 0 calc(4 * var(--p)) var(--wp-blue), 0 calc(18 * var(--p)) calc(30 * var(--p)) rgba(31,42,68,.22); }
 .wp-card.hi svg.art { transform: scale(1.05); }
 .wp-card:active { transform: translateY(calc(-1 * var(--p))) scale(.985); }
+/* ⭐ Đợt 540 — ô game 3D kiểu ĐIỆN ẢNH: ảnh cắt từ cảnh 3D phủ lên cảnh phẳng (nền tạm lúc ảnh chưa về) + khung phim + tối góc/đáy
+   + tên game góc dưới trái, phông riêng từng game (cỡ chữ theo em của .wp-nm ⇒ lúc phóng to / màn hẹp tự theo) */
+.wp-card.is-cine { background: #000; box-shadow: 0 calc(8 * var(--p)) calc(18 * var(--p)) rgba(20,30,60,.22); }
+.wp-card .wp-im { position: absolute; inset: 0; z-index: 1; background: center / cover no-repeat; transition: transform .6s cubic-bezier(.22,.61,.36,1); }
+.wp-card.is-cine::before { content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,.72) 100%), radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,.45) 100%); }
+.wp-card.is-cine::after { content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: .85;
+  background: linear-gradient(180deg, #000 0 4.7%, transparent 4.7% 95.3%, #000 95.3%); }
+.wp-card.hi .wp-im { transform: scale(1.07); }
+.wp-card.is-soon.hi .wp-im { transform: none; }
+.wp-card.is-cine .wp-nm { z-index: 3; top: auto; left: calc(16 * var(--p)); bottom: calc(18 * var(--p)); line-height: 1; white-space: nowrap; font-weight: 400; letter-spacing: 0; }
+.wp-card .n-rocket { font-family: Orbitron, "Baloo 2", sans-serif; font-weight: 900; font-size: .9em; letter-spacing: .04em; transform: skewX(-10deg);
+  background: linear-gradient(180deg, #fff 0%, #dfe9ff 45%, #7f9cc9 55%, #fff 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 .07em 0 #142250) drop-shadow(0 0 .36em rgba(255,110,40,.75)); }
+.wp-card .n-train { font-family: Rye, "Baloo 2", serif; font-size: 1.1em; letter-spacing: .02em;
+  background: linear-gradient(180deg, #fff6d6 0%, #ffd27a 45%, #e08a2c 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 .065em 0 #5a2a0c) drop-shadow(0 .13em 0 #2a1204) drop-shadow(0 0 .32em rgba(255,150,60,.6)); }
+.wp-card .n-loot { font-family: Audiowide, "Baloo 2", sans-serif; font-size: 1.04em; letter-spacing: .08em; color: #f4fdff;
+  text-shadow: 0 0 .1em #fff, 0 0 .28em #3ff3e6, 0 0 .55em #23c9ff, 0 0 .9em #c13cff; }
+.wp-card .n-race { font-family: "Racing Sans One", "Baloo 2", sans-serif; font-style: italic; font-size: 1.18em; letter-spacing: .01em; margin-left: .3em; transform: skewX(-6deg);
+  background: linear-gradient(180deg, #fff3b0 0%, #ffc531 45%, #ff6a00 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 .06em 0 #0f2a6b) drop-shadow(-.18em 0 .18em rgba(59,140,255,.75)); }
+.wp-card .n-race::before { content: ""; position: absolute; right: 100%; top: 52%; width: 1.2em; height: .09em; margin-right: .12em;
+  background: linear-gradient(90deg, transparent, #ffc531); box-shadow: 0 -.21em 0 -1px rgba(255,197,49,.6), 0 .21em 0 -1px rgba(255,197,49,.6); }
 /* regular tiles */
 .wp-tile { position: relative; height: calc(150 * var(--p)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(10 * var(--p)); padding: 0; background: #fff; border: 1.5px solid var(--wp-line); border-radius: calc(22 * var(--p)); cursor: pointer; box-shadow: 0 calc(5 * var(--p)) calc(14 * var(--p)) rgba(31,42,68,.06); transition: transform .2s cubic-bezier(.22,.61,.36,1), box-shadow .2s ease, border-color .2s ease, opacity .2s ease; outline: 0; }
 .wp-tile .wp-tic { width: calc(80 * var(--p)); height: calc(80 * var(--p)); transition: transform .26s cubic-bezier(.34,1.56,.64,1); }
@@ -136,6 +160,7 @@
   .aw-wp-z3 { left: calc(8 * var(--p)); right: calc(8 * var(--p)); top: calc(84 * var(--p)); gap: calc(6 * var(--p)); }
   .wp-card { height: calc(50 * var(--p)); border-radius: calc(9 * var(--p)); }
   .wp-card .wp-nm { font-size: calc(9 * var(--p)); left: calc(7 * var(--p)); top: calc(5 * var(--p)); }
+  .wp-card.is-cine .wp-nm { top: auto; left: calc(6 * var(--p)); bottom: calc(5 * var(--p)); }
   .wp-card.hi { box-shadow: 0 0 0 calc(2 * var(--p)) var(--wp-blue); transform: none; }
   .aw-wp-rule { display: none; }
   .aw-wp-z2 { left: calc(8 * var(--p)); right: calc(8 * var(--p)); top: calc(144 * var(--p)); gap: calc(5 * var(--p)); }
