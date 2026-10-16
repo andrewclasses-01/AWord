@@ -7806,6 +7806,23 @@ body.aw-page-dragover::after {
 /* ⭐ Đợt 448 — chấm tích ửng màu đội khi rê chuột. */
 .aw-sd-pod-tick.is-l:hover .aw-sd-pod-dot { background: #2563eb; }
 .aw-sd-pod-tick.is-r:hover .aw-sd-pod-dot { background: #e8590c; }
+/* ⭐ Đợt 542 (thầy 17/10/2026) — CHẤM ⇒ MŨI TÊN TAM GIÁC chỉ ra phía đội, SÁT mép thẻ tên. Nút giữ vùng chạm
+   4.8 đơn vị như cũ, chỉ dồn hình tam giác về phía thẻ + hàng khít lại. */
+.aw-sd-podwrap .aw-sd-pod-row { gap: calc(.2 * var(--aw-u)); }
+.aw-sd-pod-tick.is-l { justify-content: flex-end; }
+.aw-sd-pod-tick.is-r { justify-content: flex-start; }
+.aw-sd-pod-tri {
+  display: block; width: calc(1.5 * var(--aw-u)); height: calc(2.5 * var(--aw-u));
+  background: var(--aw-tri, #2563eb); opacity: .32; transition: opacity .16s ease, transform .16s cubic-bezier(.22,.9,.3,1);
+}
+.aw-sd-pod-tick.is-l .aw-sd-pod-tri { --aw-tri: #2563eb; clip-path: polygon(100% 0, 0 50%, 100% 100%); transform-origin: 100% 50%; }
+.aw-sd-pod-tick.is-r .aw-sd-pod-tri { --aw-tri: #e8590c; clip-path: polygon(0 0, 100% 50%, 0 100%); transform-origin: 0 50%; }
+.aw-sd-pod-tick:hover .aw-sd-pod-tri { opacity: .9; transform: scale(1.12); }
+.aw-sd-pod-tick:active .aw-sd-pod-tri { opacity: 1; }
+/* ⭐ Đợt 542 — quả avatar thật đi suốt thẻ ⇄ bóng: ô giữ chỗ trong thẻ không vẽ gì; lớp bay lên card đồ hoạ sẵn. */
+.aw-av.aw-av-ph { visibility: hidden; }
+.aw-sd-flyball { will-change: transform; }
+.aw-sd-ball-in { will-change: transform; }
 /* ⭐ Đợt 448 — Podium của ANALYSIS: một viên % mỗi trận (vắng = gạch đứt), rồi % trung bình. */
 .aw-sd-pod-chips { display: flex; gap: calc(.4 * var(--aw-u) * var(--sc, 1)); }
 .aw-sd-pod-chip {
@@ -7920,6 +7937,16 @@ body.aw-page-dragover::after {
 .aw-sdh-classopt:hover { background: #f2f6fc; }
 .aw-sdh-classopt.is-cur { color: #2f6fed; background: #eaf1ff; }
 .aw-sdh-classpop-empty { padding: 14px 12px; font-size: .85rem; color: #8b93a1; text-align: center; }
+/* ⭐ Đợt 542 (thầy 17/10/2026) — HAI CỘT, hiện HẾT không cuộn: trái khối B, phải khối A · Nền tảng · khóa · lớp tạm. */
+.aw-sdh-classpop.is-2col { display: flex; gap: 6px; max-height: none; overflow: visible; min-width: 0; }
+.aw-sdh-classcol { flex: 0 0 auto; width: 190px; display: flex; flex-direction: column; }
+.aw-sdh-classpop.is-2col .aw-sdh-classcol + .aw-sdh-classcol { border-left: 1px solid #edf1f6; padding-left: 6px; }
+.aw-sdh-classgrp { padding: 8px 12px 3px; font-size: .66rem; font-weight: 800; letter-spacing: .12em; color: #9aa6b6; }
+.aw-sdh-classgrp:first-child { padding-top: 4px; }
+.aw-sdh-classpop.is-2col .aw-sdh-classopt { padding: 7px 12px; }
+.aw-sdh-classopt.is-tam { color: #8a5a00; }
+.aw-sdh-classopt.is-tam.is-cur { color: #2f6fed; }
+.aw-set-hint.aw-cls-tamhead { margin-top: 14px; }
 
 /* ---- the three-column body ---- */
 .aw-sdh-main { position: relative; flex: 1 1 auto; min-height: 0; display: flex; gap: 0; }

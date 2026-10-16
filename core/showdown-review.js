@@ -99,6 +99,11 @@ const NAME_STEP = 0.94;
 // lại gần. Thực tế đo ở đợt này chưa ca nào chạm tới đây; nó là lưới cuối.
 const NAME_HARD_MIN_RATIO = 0.40;
 
+// ⭐ Đợt 542 — biên an toàn cho đồng hồ dự phòng của `whenDone`. Trước: thời lượng + 150–200 ms ⇒ máy yếu bắt đầu
+// hiệu ứng TRỄ (khung đầu khựng) là đồng hồ cắt ngang, `cancel()` nhảy cóc tới cuối ⇒ thẻ/bóng lệch nhau. Nay gấp đôi
+// + 400 ms: vẫn có đáy (tab ẩn không treo), nhưng không còn cướp một hiệu ứng đang chạy dở.
+const slack = (ms) => ms * 2 + 400;
+
 /** Run `anim`, and guarantee `after()` happens even if onfinish never fires. */
 function whenDone(anim, after, ms) {
   let done = false;
@@ -221,7 +226,7 @@ function gestures(node, { onTap, onDouble, onHold }) {
 export function mountShowdownReview({
   head, before, host, pick, review, loadTeams,
   watchTeams = null, flushPending = null, isPending = () => false, actName = "", toast = () => {},
-  savePicks = null
+  savePicks = null, saoBai = null
 }) {
   // THIS team, from memory. Authoritative: it is the play that just happened on
   // this screen, and it is what the class board shows for us even if the write
@@ -729,9 +734,19 @@ export function mountShowdownReview({
   // every repaint — is still exactly what makes that possible.
   const picks = new Map();
   let picksDirty = false;      // something changed since the last save
+  // ⭐⭐ Đợt 542 — SAO / VÍ / myTeam ngay ở Podium sau trận (core/podium-sao.js, nạp LƯỜI — file này sạch Firestore).
+  // `saoBai()` (engine) = mã trận trong sổ cái ("sd_<classId>_<matchId>") — cùng mã với Podium mở từ trang Showdown.
+  let saoCtl = null;
+  if (saoBai) {
+    import("./podium-sao.js").then(m => {
+      saoCtl = m.taoSaoPodium({ classId: pick.classId, lopMa: pick.className || "", actName, baiId: saoBai, picks, toast });
+      if (view === "podium" && host.isConnected) paintBody();
+    }).catch(e => console.warn("AWord: podium stars unavailable", e));
+  }
   const renderPodium = ranked => renderReviewPodium(ranked, {
     showTeam: scope === "class", picks, onChange: () => { picksDirty = true; },
-    className: pick.className || ""          // ⭐ Đợt 448 — tìm ảnh avatar theo lớp
+    className: pick.className || "",         // ⭐ Đợt 448 — tìm ảnh avatar theo lớp
+    sao: saoCtl
   });
 
   /**
@@ -1164,9 +1179,9 @@ function analysisStats(r, entries) {
   return stats;
 }
 
-export function renderReviewPodium(ranked, { picks = null, onChange = null, className = "" } = {}) {
-  const items = (ranked || []).map((b, i) => ({ key: podKey(b, i), name: b.name, stats: () => singleStats(b) }));
-  return buildPodium(items, { picks, onChange, className });
+export function renderReviewPodium(ranked, { picks = null, onChange = null, className = "", sao = null } = {}) {
+  const items = (ranked || []).map((b, i) => ({ key: podKey(b, i), name: b.name, pct: pctOf(b), stats: () => singleStats(b) }));
+  return buildPodium(items, { picks, onChange, className, sao });
 }
 
 /**
@@ -1180,8 +1195,35 @@ export function renderAnalysisPodium({ full = [], partial = [], entries = [] } =
   return buildPodium(items, { picks, onChange, className });
 }
 
-function buildPodium(items, { picks, onChange, className }) {
+/**
+ * ⭐ Đợt 542 — GIỮ ≈0,45 s trên một nút (thẻ tên) ⇒ `onHold()`. Rê > 8px / thả sớm = huỷ. Thanh vàng chạy trong lúc giữ
+ * (y dashboard `.sx-giu`). Chỉ setTimeout — không rAF (cột myActivity chạy ngầm đóng băng rAF).
+ */
+const SAO_GIU_MS = 450;
+function wireHold(node, can, onHold) {
+  let t = null, x0 = 0, y0 = 0, bar = null;
+  const huy = () => { if (t) { clearTimeout(t); t = null; } if (bar) { bar.remove(); bar = null; } };
+  node.addEventListener("pointerdown", e => {
+    if (e.button !== 0 || !can()) return;
+    huy();
+    x0 = e.clientX; y0 = e.clientY;
+    bar = el("i", "aw-psx-giu");
+    node.prepend(bar);
+    t = setTimeout(() => { t = null; huy(); onHold(); }, SAO_GIU_MS);
+  });
+  node.addEventListener("pointermove", e => { if (t && Math.hypot(e.clientX - x0, e.clientY - y0) > 8) huy(); });
+  node.addEventListener("pointerup", huy);
+  node.addEventListener("pointercancel", huy);
+  node.addEventListener("pointerleave", huy);
+  node.addEventListener("contextmenu", e => e.preventDefault());
+}
+
+// ⭐⭐ Đợt 542 — `sao` (tuỳ chọn) = bộ điều khiển SAO/VÍ/myTeam của core/podium-sao.js (người gọi nạp LƯỜI rồi truyền vào —
+// file này vẫn sạch Firestore). Có `sao` ⇒ huy hiệu sao trên quả avatar · GIỮ thẻ tên / GIỮ quả bóng = pop-up thưởng một
+// em · cụm nút ⭐ · VÍ | myTeam góc dưới phải.
+function buildPodium(items, { picks, onChange, className, sao = null }) {
   const wrap = el("div", "aw-sd-podwrap");
+  if (sao) { sao.moiBang(); wrap.classList.add("has-sao"); }
   const podcol = el("div", "aw-sd-podcol");
   const box = el("div", "aw-sd-pod");
   const arrUp = el("button", "aw-sd-pod-arrow is-up", `<span>${icons.chevronUp || "▲"}</span>`);
@@ -1233,7 +1275,8 @@ function buildPodium(items, { picks, onChange, className }) {
         const t = el("button", "aw-sd-pod-tick is-" + side);
         t.type = "button";
         t.title = side === "l" ? "Left team" : "Right team";
-        t.append(el("i", "aw-sd-pod-dot"));
+        // ⭐ Đợt 542 (thầy 17/10/2026) — CHẤM ⇒ MŨI TÊN TAM GIÁC chỉ ra phía đội, nằm sát mép thẻ.
+        t.append(el("i", "aw-sd-pod-tri"));
         t.onclick = e => { e.stopPropagation(); pickFromRow(it.key, side); };
         return t;
       };
@@ -1243,7 +1286,12 @@ function buildPodium(items, { picks, onChange, className }) {
     }
     box.append(row);
     if (!dup) rows.set(it.key, { row, card, av, it, label: labels[i], i });
+    if (sao && !dup) {
+      sao.ganAv(it.key, av, { name: it.name, rank: i + 1, pct: it.pct });
+      wireHold(card, () => !row.dataset.busy, () => sao.giu(it.key, card));
+    }
   });
+  if (sao) sao.congCu(wrap);
 
   // ---------------- độ thuôn phễu: tính trên các thẻ CÒN trong cột ----------------
   function retaper(instant) {
@@ -1289,6 +1337,23 @@ function buildPodium(items, { picks, onChange, className }) {
   // ================= phần CHIA ĐỘI (chỉ khi có `picks`) =================
   const teamCls = side => side === "l" ? "is-tl" : "is-tr";
 
+  // ⭐⭐ Đợt 542 (thầy 17/10/2026: "máy yếu quả bóng icon và nền không đi cùng nhau") — CHỈ MỘT quả avatar THẬT
+  // cho mỗi em, đi suốt: thẻ ⇄ lớp bay ⇄ bóng trong cột. Trước đây mỗi chặng dựng avatarNode MỚI ⇒ thẻ <img> mới
+  // (decoding async) ⇒ máy yếu: nền màu + chữ tắt bay trước, ảnh hiện sau / lệch khung. Nay chuyển chính nút đã giải
+  // mã xong; chỗ của nó trong thẻ giữ bằng một ô trống cùng cỡ (`ph`) để thẻ không xô lệch.
+  function avRa(r) {
+    if (!r.ph) { r.ph = el("span", "aw-av aw-sd-pod-av aw-av-ph"); r.ph.setAttribute("aria-hidden", "true"); }
+    // Ô giữ chỗ CHỈ vào thẻ khi quả avatar đang nằm trong thẻ; quả đang ở bóng/lớp bay thì chỉ gỡ nó ra
+    // (đừng `replaceWith` ở đó — sẽ kéo ô giữ chỗ ra khỏi thẻ, về lại thẻ là mất ảnh).
+    if (!r.ph.parentNode && r.av.parentNode) r.av.replaceWith(r.ph);
+    else if (r.av.parentNode) r.av.remove();
+    return r.av;
+  }
+  function avVe(r) {
+    if (r.ph && r.ph.isConnected) r.ph.replaceWith(r.av);
+    r.av.style.visibility = "";
+  }
+
   function addBall(key, side, hidden) {
     const r = rows.get(key);
     const ball = el("div", "aw-sd-ball no-tr " + teamCls(st.origin.get(key) || side) + (hidden ? " is-hidden" : ""));
@@ -1301,7 +1366,8 @@ function buildPodium(items, { picks, onChange, className }) {
     ["--y1", "--y2", "--y3"].forEach(k => inner.style.setProperty(k, rnd(-7, 7).toFixed(1) + "%"));
     inner.style.setProperty("--r1", rnd(-6, 6).toFixed(1) + "deg");
     inner.style.setProperty("--r3", rnd(-6, 6).toFixed(1) + "deg");
-    inner.append(avatarNode(className, r.it.name, "aw-av"));
+    // bóng dựng ẨN (sắp có bóng bay tới) ⇒ quả avatar còn đang bay, `landIn` gắn vào sau; dựng thẳng ⇒ gắn ngay.
+    if (!hidden) inner.append(avRa(r));
     const cap = el("span", "aw-sd-ball-cap");
     cap.textContent = r.label;                              // pupil's own name: textContent only
     inner.append(cap);
@@ -1378,9 +1444,18 @@ function buildPodium(items, { picks, onChange, className }) {
     node.style.width = f.w + "px"; node.style.height = f.h + "px";
     node.style.setProperty("--bs", f.w + "px");
     node.style.transform = `translate(${f.x}px,${f.y}px)`;
-    node.append(avatarNode(className, rows.get(key).it.name, "aw-av"));
+    const av = avRa(rows.get(key));                       // Đợt 542 — chính quả avatar thật, không dựng bản mới
+    av.style.visibility = "";
+    node.append(av);
     fly.append(node);
     return { node, f };
+  }
+  /** Đợt 542 — bóng bay hạ cánh: chuyển quả avatar vào bóng trong cột (trước ô chữ tên). */
+  function landIn(ball, key) {
+    const inner = ball.querySelector(".aw-sd-ball-in");
+    const av = rows.get(key).av;
+    if (inner && av.parentNode !== inner) inner.prepend(av);
+    av.style.visibility = "";
   }
   function flyTo(fb, toR, ms, done) {
     const { node, f } = fb;
@@ -1396,7 +1471,7 @@ function buildPodium(items, { picks, onChange, className }) {
         { transform: `translate(${ex}px,${ey}px) scale(${sEnd})` }
       ], { duration: ms, easing: "cubic-bezier(.45,.05,.35,1)", fill: "forwards" });
     } catch { done(); node.remove(); return; }
-    whenDone(a, () => { done(); node.remove(); }, ms + 200);
+    whenDone(a, () => { done(); node.remove(); }, slack(ms));
   }
   /**
    * Vòng sáng + chùm sao vàng toả ra NGAY CHỖ quả bóng vừa bật khỏi thẻ (thầy: "bắn ra một chút
@@ -1441,12 +1516,6 @@ function buildPodium(items, { picks, onChange, className }) {
     catch { /* âm thanh là trang trí */ }
   }
 
-  function clipCircle(card, av) {
-    const br = card.getBoundingClientRect(), ar = av.getBoundingClientRect();
-    const cx = ar.left + ar.width / 2 - br.left, cy = ar.top + ar.height / 2 - br.top;
-    const R = Math.hypot(Math.max(cx, br.width - cx), Math.max(cy, br.height - cy));
-    return { big: `circle(${R}px at ${cx}px ${cy}px)`, small: `circle(${ar.width / 2 + 1}px at ${cx}px ${cy}px)` };
-  }
 
   function counts() { const c = { l: 0, r: 0 }; picks.forEach(v => { if (c[v] != null) c[v]++; }); return c; }
   function shake(node) {
@@ -1477,27 +1546,39 @@ function buildPodium(items, { picks, onChange, className }) {
     r.row.dataset.busy = "1";
     r.row.classList.add("is-leaving");
     const from = r.av.getBoundingClientRect();
-    const clip = clipCircle(r.card, r.av);
-    // 1) bóng bật ra, bay về cột ngay
-    r.av.style.visibility = "hidden";
+    const hut = shrinkFrames(r.card, from);
+    // 1) bóng bật ra, bay về cột ngay — chính quả avatar thật (Đợt 542)
     const fb = makeFlyBall(key, side, from);
     popSparkle(fb, PT.pop);
     const ball = addBall(key, side, true);
     layoutSides(false);
-    flyTo(fb, ballTarget(ball), PT.flyOut, () => ball.classList.remove("is-hidden"));
-    // 2) cùng lúc: dải thẻ co tròn về chỗ quả bóng vừa rời, xong thì hàng khép lại tại chỗ
+    flyTo(fb, ballTarget(ball), PT.flyOut, () => { landIn(ball, key); ball.classList.remove("is-hidden"); });
+    // 2) cùng lúc: dải thẻ thu về chỗ quả bóng vừa rời, xong thì hàng khép lại tại chỗ
     const afterShrink = () => {
-      const restore = () => { r.card.style.visibility = ""; r.av.style.visibility = ""; delete r.row.dataset.busy; paintArrows(); };
+      const restore = () => { r.card.style.visibility = ""; r.card.style.transformOrigin = ""; delete r.row.dataset.busy; paintArrows(); };
       if (!alive()) return restore();
       r.card.style.visibility = "hidden";
       collapseRow(r, restore);
       retaper(false);
     };
     try {
-      const shrink = r.card.animate([{ clipPath: clip.big }, { clipPath: clip.small }],
-        { duration: PT.shrink, easing: "cubic-bezier(.6,0,.8,.4)", fill: "forwards" });
-      whenDone(shrink, afterShrink, PT.shrink + 150);
+      // ⭐ Đợt 542 — co bằng transform + opacity (chạy trên card đồ hoạ), KHÔNG clip-path (vẽ lại từng khung trên
+      // luồng chính ⇒ máy yếu thẻ khựng trong khi bóng bay mượt = "không đi cùng nhau").
+      r.card.style.transformOrigin = hut.origin;
+      const shrink = r.card.animate(hut.frames, { duration: PT.shrink, easing: "cubic-bezier(.6,0,.8,.4)", fill: "forwards" });
+      whenDone(shrink, afterShrink, slack(PT.shrink));
     } catch { afterShrink(); }
+  }
+
+  /** Đợt 542 — khung hình "thẻ thu vào quả avatar": scale về đúng cỡ ô avatar, gốc biến hình ở tâm avatar. */
+  function shrinkFrames(card, avRect) {
+    const br = card.getBoundingClientRect();
+    const cx = avRect.left + avRect.width / 2 - br.left, cy = avRect.top + avRect.height / 2 - br.top;
+    const sx = Math.max(.05, avRect.width / Math.max(1, br.width)), sy = Math.max(.05, avRect.height / Math.max(1, br.height));
+    return {
+      origin: `${cx}px ${cy}px`,
+      frames: [{ transform: "scale(1,1)", opacity: 1 }, { transform: `scale(${sx},${sy})`, opacity: 0 }]
+    };
   }
 
   function collapseRow(r, after) {
@@ -1509,7 +1590,7 @@ function buildPodium(items, { picks, onChange, className }) {
         { height: h + "px", marginBottom: "0px", opacity: 1 },
         { height: "0px", marginBottom: -gap + "px", opacity: 0 }
       ], { duration: PT.collapse, easing: "cubic-bezier(.4,0,.2,1)", fill: "forwards" });
-      whenDone(a, end, PT.collapse + 150);
+      whenDone(a, end, slack(PT.collapse));
     } catch { end(); }
   }
 
@@ -1522,7 +1603,7 @@ function buildPodium(items, { picks, onChange, className }) {
     st.origin.delete(key);
     if (st.cols[side]) st.cols[side] = st.cols[side].filter(k => k !== key);
     const ball = balls.get(key);
-    if (ball) { ball.remove(); balls.delete(key); }
+    if (ball) { ball.remove(); balls.delete(key); }       // quả avatar vẫn ở trong `ball` (đã rời DOM) — makeFlyBall lấy ra
     onChange?.();
     try { sound.tick(); } catch { /* âm thanh là trang trí */ }
     layoutSides(false);
@@ -1538,7 +1619,8 @@ function buildPodium(items, { picks, onChange, className }) {
     const pr = box.getBoundingClientRect(), rr = r.row.getBoundingClientRect();
     if (rr.top < pr.top) box.scrollTop -= (pr.top - rr.top) + 10;
     else if (rr.bottom > pr.bottom) box.scrollTop += (rr.bottom - pr.bottom) + 10;
-    const to = r.av.getBoundingClientRect();
+    // Đợt 542 — quả avatar đang ở ngoài thẻ (trong bóng cũ) ⇒ đích bay = ô giữ chỗ `ph` cùng cỡ.
+    const to = (r.ph && r.ph.isConnected ? r.ph : r.av).getBoundingClientRect();
     const h = r.row.offsetHeight;
     const gap = parseFloat(getComputedStyle(box).rowGap) || 0;
     r.card.classList.remove("no-tr");
@@ -1548,14 +1630,15 @@ function buildPodium(items, { picks, onChange, className }) {
     } catch { /* không có WAAPI: hàng mở thẳng */ }
     const fb = makeFlyBall(key, teamSide, fromR);
     flyTo(fb, to, PT.flyBack, () => {
+      avVe(r);                                           // quả avatar về lại thẻ TRƯỚC khi lớp bay bị gỡ
       r.card.style.visibility = "";
-      const done = () => { r.row.classList.remove("is-leaving"); delete r.row.dataset.busy; paintArrows(); };
+      const done = () => { r.card.style.transformOrigin = ""; r.row.classList.remove("is-leaving"); delete r.row.dataset.busy; paintArrows(); };
       if (!alive()) return done();
-      const clip = clipCircle(r.card, r.av);
+      const hut = shrinkFrames(r.card, r.av.getBoundingClientRect());
       try {
-        const g = r.card.animate([{ clipPath: clip.small }, { clipPath: clip.big }],
-          { duration: PT.grow, easing: "cubic-bezier(.2,.8,.3,1)" });
-        whenDone(g, done, PT.grow + 150);
+        r.card.style.transformOrigin = hut.origin;
+        const g = r.card.animate(hut.frames.slice().reverse(), { duration: PT.grow, easing: "cubic-bezier(.2,.8,.3,1)" });
+        whenDone(g, done, slack(PT.grow));
       } catch { done(); }
     });
   }
@@ -1563,6 +1646,9 @@ function buildPodium(items, { picks, onChange, className }) {
   // ---------------- kéo bóng ----------------
   function wireDrag(ball, key) {
     let id = null, sx = 0, sy = 0, ox = 0, oy = 0, dragging = false, last = "";
+    // ⭐ Đợt 542 — GIỮ yên quả bóng ≈0,45 s ⇒ pop-up thưởng sao em đó (chỉ khi có `sao`); rê đi = kéo như cũ.
+    let holdT = null, held = false;
+    const dropHold = () => { if (holdT) { clearTimeout(holdT); holdT = null; } };
     const inR = (n, x, y) => { const r = n.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; };
     const hot = (x, y) => inR(podcol, x, y) ? "pod" : inR(sides.l, x, y) ? "l" : inR(sides.r, x, y) ? "r" : null;
     const paintHot = h => {
@@ -1574,13 +1660,17 @@ function buildPodium(items, { picks, onChange, className }) {
       if (e.button !== 0) return;
       id = e.pointerId; sx = e.clientX; sy = e.clientY;
       ox = parseFloat(ball.style.left) || 0; oy = parseFloat(ball.style.top) || 0;
-      dragging = false; last = "";
+      dragging = false; last = ""; held = false;
       try { ball.setPointerCapture(id); } catch { /* not capturable */ }
+      dropHold();
+      if (sao) holdT = setTimeout(() => { holdT = null; if (dragging || id == null) return; held = true; sao.giu(key, ball); }, SAO_GIU_MS);
     });
     ball.addEventListener("pointermove", e => {
       if (e.pointerId !== id) return;
       const dx = e.clientX - sx, dy = e.clientY - sy;
       if (!dragging && Math.hypot(dx, dy) < 8) return;
+      if (held) return;                        // đã mở pop-up — không kéo nữa
+      dropHold();
       if (!dragging) { dragging = true; ball.classList.add("is-drag"); wrap.classList.add("is-dragging"); }
       ball.style.left = (ox + dx) + "px";
       ball.style.top = (oy + dy) + "px";
@@ -1594,8 +1684,10 @@ function buildPodium(items, { picks, onChange, className }) {
     const end = e => {
       if (e.pointerId !== id) return;
       id = null;
+      dropHold();
       wrap.classList.remove("is-dragging");
       paintHot(null);
+      if (held) { held = false; return; }    // Đợt 542 — vừa giữ mở pop-up sao: không hé tên
       if (!dragging) {                       // chạm nhẹ ⇒ hé tên em trong giây lát
         ball.classList.add("is-peek");
         setTimeout(() => ball.classList.remove("is-peek"), 1500);

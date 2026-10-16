@@ -175,12 +175,17 @@ export async function listLocalClasses() {
   return Object.values(await readAll()).sort(byName);
 }
 const khoaTenLop = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+// ⭐ Đợt 542 (thầy 17/10/2026) — LỚP TẠM: lớp riêng của AWord (`tamThoi:true`, kind "class" như lớp cũ), tạo ở
+// Settings ▸ Classes dưới cùng. Không có trên dashboard ⇒ không ví sao, không lên dashboard; lịch sử Showdown vẫn
+// lưu như lớp thường (sổ cái theo `id`). Luôn nối vào CUỐI danh sách, kể cả khi đọc được dashboard.
 export async function listClasses() {
-  let local = [];
-  try { local = await listLocalClasses(); } catch (e) { local = []; }
+  let all = [];
+  try { all = await listLocalClasses(); } catch (e) { all = []; }
+  const tam = all.filter(c => c.tamThoi).map(c => ({ ...c, label: c.name, tamThoi: true }));
+  const local = all.filter(c => !c.tamThoi);
   let dbl = null;
   try { dbl = await dsLopDashboard(); } catch (e) { console.warn("AWord: dashboard classes unavailable — using AWord's own", e); }
-  if (!dbl || !dbl.lop.length) return local;
+  if (!dbl || !dbl.lop.length) return local.concat(tam);
   const cu = new Map(local.map(c => [khoaTenLop(c.name), c]));
   return dbl.lop.map(c => {
     const old = cu.get(khoaTenLop(c.maLop)) || cu.get(khoaTenLop(c.ten));
@@ -192,7 +197,7 @@ export async function listClasses() {
         return { id: o ? o.id : s.id, name: s.name, gender: s.gender || (o && o.gender) || "", tam: !!s.tam, tamId: s.tamId || "", khoa: s.khoa || "" };
       })
     };
-  });
+  }).concat(tam);
 }
 
 export async function getClass(id) {
@@ -200,7 +205,7 @@ export async function getClass(id) {
 }
 
 // ---- writes ----------------------------------------------------------------
-export async function createClass(name) {
+export async function createClass(name, opts = {}) {
   const map = await readAll();
   const wanted = String(name || "").trim();
   if (!wanted) throw new Error("Please enter a class name.");
@@ -209,6 +214,7 @@ export async function createClass(name) {
   const node = normalize({
     id: newId("cls"),
     name: wanted,
+    ...(opts.tamThoi ? { tamThoi: true } : {}),   // Đợt 542 — lớp tạm
     students: [],
     createdAt: now(),
     updatedAt: now()

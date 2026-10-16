@@ -546,6 +546,44 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 542 (17/10/2026) — SHOWDOWN: LỚP 2 CỘT + LỚP TẠM · PODIUM MŨI TÊN TAM GIÁC · BÓNG ĐI CÙNG THẺ · SAO / VÍ / myTeam
+
+Thầy ("ok build" sau phương án + 4 câu AskUserQuestion: lớp tạm LƯU lịch sử trận · phiếu sao ghi nguồn như dashboard · em chưa chia ⇒ khu chờ
+myTeam · Chrome ⇒ đăng ký myteam://). Worktree `web-wt-dot541`, nhánh `dot541-podium-sao`. Đi cặp **myTeam v1.18.0** + **myActivity v2.35.0**.
+
+1. **Danh sách lớp Showdown 2 CỘT, KHÔNG CUỘN** (`core/showdown-home.js` toggleClassPicker + `app.css` `.aw-sdh-classpop.is-2col`): trái LEVEL B;
+   phải LEVEL A · NỀN TẢNG (lớp thường còn lại) · COURSES (`laKhoa`) · TEMPORARY (lớp tạm). Thử với kho thật: B1B/B2A/B2B | A1A…A2B, NNTNG4, K10/K9.
+2. **LỚP TẠM** (`core/classes.js` + `main.js` Settings ▸ Classes): lớp kind "class" của AWord có `tamThoi:true` (`createClass(name,{tamThoi})`),
+   khối "TEMPORARY CLASSES" + ô "+ Add a temporary class" CUỐI danh sách lớp dashboard; sửa tên/học sinh = trình sửa lớp cũ (`showClassEditor`).
+   `listClasses()` luôn nối lớp tạm vào CUỐI (cả khi đọc được dashboard; lớp tạm KHÔNG được mượn id cho lớp dashboard trùng tên). Không lên
+   dashboard; lịch sử Showdown lưu như thường (`sd_hist_<id>`); không ví sao; nút myTeam tắt.
+3. **Chấm ⇒ MŨI TÊN TAM GIÁC** sát mép thẻ (`.aw-sd-pod-tri`, clip-path, màu đội, nút giữ vùng chạm 4.8u, hàng khít `gap .2u`).
+4. **BÓNG + NỀN THẺ ĐI CÙNG NHAU trên máy yếu** (`showdown-review.js` buildPodium): gốc lỗi = mỗi chặng (thẻ → bóng bay → bóng cột → về) dựng
+   `avatarNode` MỚI ⇒ `<img>` mới giải mã async ⇒ máy yếu nền màu/chữ tắt bay trước, ảnh hiện sau; thẻ co bằng `clip-path` (vẽ lại trên luồng chính)
+   trong khi bóng bay bằng transform; đồng hồ dự phòng `whenDone` (thời lượng +150–200 ms) cắt ngang hiệu ứng khởi động trễ ⇒ nhảy cóc.
+   Sửa: CHỈ MỘT quả avatar thật đi suốt (`avRa`/`avVe`/`landIn`, ô giữ chỗ `.aw-av-ph` trong thẻ) · thẻ co/nở bằng `transform: scale` + `opacity`
+   (`shrinkFrames`, gốc biến hình ở tâm avatar) · `slack(ms) = ms*2+400` cho mọi đồng hồ dự phòng của Podium · `will-change` lớp bay/bóng.
+   ⛔ BẪY đã gặp khi thử: `avRa` từng `replaceWith(ph)` cả khi quả avatar đang ở bóng ⇒ kéo ô giữ chỗ ra khỏi thẻ ⇒ bỏ chọn là MẤT ảnh. Nay chỉ đặt
+   ô giữ chỗ khi avatar đang trong thẻ.
+5. **SAO + VÍ ở Podium** (`core/podium-sao.js` MỚI + `core/podium-sao.css` = bản chép `myLesson/web/css/sao-xh.css` + phần riêng; nạp LƯỜI):
+   y hệt dashboard sao-xh v1.338.0 — nút ⭐ (Đội xanh / Đội cam / Cả lớp · AWARD/PUNISHMENT · 0–3 sao · lý do gợi ý + `saoCaiDat` · câu lịch sử sửa
+   được) · GIỮ thẻ tên hoặc GIỮ quả bóng 0,45 s = pop-up một em (`wireHold` + giữ trong `wireDrag`) · thưởng = SAO TẠM (localStorage
+   `aw_psx_sd_<classId>_<matchId>`, huy hiệu viền đứt TRÊN quả avatar, đi theo bóng) · nút VÍ ⇒ hỏi ⇒ `saoDot` {nguon:'dashboard', dòng app:'aword',
+   bai:'sd_<classId>_<matchId>'} ⇒ `apDotSao` ⇒ huy hiệu đặc (đọc lại phiếu theo `bai`). Số HS: `listClasses` khoá em ⇒ `khoa` (mã đăng nhập) ⇒
+   `hsSo/soCai`. Em tạm / lớp tạm không có ví (báo khi chốt). ✕ ở thẻ trận Showdown Home khi còn sao tạm ⇒ hỏi ĐƯA VÀO VÍ / HỦY BỎ.
+   Có ở Podium SAU TRẬN (`mountShowdownReview` tuỳ chọn `saoBai`, engine.js đọc `sdLastMatchRef` lúc gọi) và Podium thẻ trận (showdown-home).
+6. **Nút myTeam** (ngoài cùng phải, vạch mảnh): hỏi "Đồng bộ đội sang myTeam?" (liệt kê 2 đội + khu chờ) ⇒ ghi `users/{uid}/items/myteam_doi`
+   (kind `myteam-doi` — thêm vào APP_DATA_KINDS; KHÔNG luật mới) ⇒ trong myActivity `console.log("MYACT:MYTEAM:<id>")`, trình duyệt thường
+   `myteam://nhan?id=`. myTeam đọc bằng khoá quản trị, chọn lớp, áp 2 đội, lưu một bản LƯU ĐỘI mới nhất, tự lên trước.
+
+**Thử (bàn `zthu-dot541/podium.html` + `home.html`, launch `aword-dot541` cổng 5541, KHÔNG commit):** bấm tam giác thật ⇒ cùng một phần tử avatar
+nằm trong bóng (`sameEl true`) · chặn luồng chính 500 ms ngay sau cú bấm ⇒ bóng hiện, thẻ khép, không còn lớp bay · kéo bóng về ⇒ ảnh về đúng thẻ ·
+giữ thẻ H.Nam ⇒ pop-up "Top 2 Showdown" ⇒ THƯỞNG 1 SAO ⇒ màn sao chói + huy hiệu +1 + nút ví đếm 1 · ⭐ Đội xanh (2 em) ⇒ 2 bóng có +1 ·
+VÍ / myTeam khi CHƯA đăng nhập ⇒ báo rõ, không ghi gì · 0 lỗi console. myTeam shim nhận `{lop:'B2B'}` ⇒ B2-B, 2 đội đúng, LƯU ĐỘI 1/5.
+⬜ CHƯA thử ghi thật `saoDot` / `myteam_doi` (cần đăng nhập thầy) · ⬜ thầy thử TOMKO: myActivity + Chrome (Chrome hỏi mở myTeam lần đầu).
+
+---
+
 ## Đợt 541 (17/10/2026) — Màn chọn WORDS: 4 ô game 3D lấy CHÍNH ảnh màn chờ, bỏ khung phim
 
 **Thầy:** "màn chờ loading ok rồi… màn chọn Words lấy luôn ảnh của màn loading cho đồng bộ, chỉnh lại khung hình để không có dải đen bên trên hay hai bên".

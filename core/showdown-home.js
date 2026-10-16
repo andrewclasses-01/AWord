@@ -191,13 +191,24 @@ export function mountShowdownHome(host, opts = {}) {
     if (!classesCache.length) {
       pop.append(el("div", "aw-sdh-classpop-empty", "No classes yet — add one in Settings › Classes."));
     } else {
-      classesCache.forEach(c => {
-        const b = el("button", "aw-sdh-classopt" + (c.id === curClassId ? " is-cur" : ""));
-        b.type = "button";
-        b.textContent = c.name;                                 // the teacher's own text — never innerHTML
-        b.onclick = () => { sfx.tap(); close(); selectClass(c.id, c.name); };
-        pop.append(b);
+      // ⭐ Đợt 542 (thầy 17/10/2026) — HAI CỘT, KHÔNG CUỘN: trái = khối B; phải = khối A · Nền tảng · khóa học · lớp tạm.
+      const cols = { l: el("div", "aw-sdh-classcol"), r: el("div", "aw-sdh-classcol") };
+      const nhom = c => c.tamThoi ? "tam" : c.laKhoa ? "khoa" : /^B/i.test(c.name) ? "b" : /^A/i.test(c.name) ? "a" : "nt";
+      [["b", "l", "LEVEL B"], ["a", "r", "LEVEL A"], ["nt", "r", "NỀN TẢNG"], ["khoa", "r", "COURSES"], ["tam", "r", "TEMPORARY"]].forEach(([k, side, ten]) => {
+        const ds = classesCache.filter(c => nhom(c) === k);
+        if (!ds.length) return;
+        cols[side].append(el("div", "aw-sdh-classgrp", ten));
+        ds.forEach(c => {
+          const b = el("button", "aw-sdh-classopt" + (c.id === curClassId ? " is-cur" : "") + (c.tamThoi ? " is-tam" : ""));
+          b.type = "button";
+          b.textContent = c.name;                               // the teacher's own text — never innerHTML
+          b.onclick = () => { sfx.tap(); close(); selectClass(c.id, c.name); };
+          cols[side].append(b);
+        });
       });
+      const coCot = [cols.l, cols.r].filter(x => x.childNodes.length);
+      pop.classList.toggle("is-2col", coCot.length === 2);
+      pop.append(...coCot);
     }
     titleRow.append(pop);
     // ⭐ Đợt 237 — anchor to the class-name box itself, not the whole title
@@ -951,7 +962,13 @@ export function mountShowdownHome(host, opts = {}) {
       whenDone(a, () => det.remove(), 260);
     }
     teardownFns.add(closeDetail);
-    back.onclick = () => { sfx.back(); closeDetail(); };
+    // ⭐ Đợt 542 — còn sao TẠM chưa vào ví ⇒ ✕ hỏi ĐƯA VÀO VÍ / HỦY BỎ trước (y dashboard). Esc thoát toàn màn hình thì
+    // không chặn: sao tạm vẫn giữ trong máy theo trận, mở lại trận là thấy.
+    back.onclick = () => {
+      sfx.back();
+      if (saoCtl && saoCtl.chanDong(() => closeDetail())) return;
+      closeDetail();
+    };
     dh.append(dt, tableBtn, podiumBtn, listBtn, dlBtn, back);
     const dbody = el("div", "aw-sd-rec-dbody");
     det.append(dh, dbody, classifyRow);
@@ -961,6 +978,17 @@ export function mountShowdownHome(host, opts = {}) {
     // hands back (`{}` for a match filed before this đợt, or never split).
     const picks = new Map(Object.entries(m.picks || {}));
     let picksDirty = false;
+    // ⭐⭐ Đợt 542 — SAO / VÍ / myTeam ở Podium (core/podium-sao.js, nạp lười). Mã trận = "sd_<classId>_<matchId>" — CÙNG mã
+    // với Podium ngay sau trận (engine.js saoBai), nên sao tạm / phiếu ví của một trận thấy ở cả hai nơi.
+    let saoCtl = null;
+    const lopNay = (classesCache || []).find(c => c.id === curClassId) || null;
+    import("./podium-sao.js").then(mod => {
+      saoCtl = mod.taoSaoPodium({
+        classId: curClassId, lopMa: curClassName, lopTen: (lopNay && lopNay.label) || curClassName, laTam: !!(lopNay && lopNay.tamThoi),
+        actName: displayName(m), baiId: () => `sd_${curClassId}_${m.matchId}`, picks, toast
+      });
+      if (view === "podium" && det.isConnected) paint();
+    }).catch(e => console.warn("AWord: podium stars unavailable", e));
     /**
      * Same "checkpoint, not every tap" rule as core/showdown-review.js's own
      * commitPicks — see that file's note on why `picksDirty` guards it.
@@ -990,11 +1018,11 @@ export function mountShowdownHome(host, opts = {}) {
       classifyRow.style.display = showingTable ? "" : "none";
       if (!hasRows && view !== "podium") {
         dbody.append(el("div", "aw-sd-rec-note", "The answers for this match were not kept — here is the ranking."));
-        dbody.append(renderReviewPodium(ranked, { showTeam: true, picks, onChange: () => { picksDirty = true; }, className: curClassName }));
+        dbody.append(renderReviewPodium(ranked, { showTeam: true, picks, onChange: () => { picksDirty = true; }, className: curClassName, sao: saoCtl }));
       } else if (view === "table") {
         dbody.append(renderReviewTable(ranked, [curClassName, displayName(m)].filter(Boolean).join(" • "), { classify }));
       } else if (view === "podium") {
-        dbody.append(renderReviewPodium(ranked, { showTeam: true, picks, onChange: () => { picksDirty = true; }, className: curClassName }));
+        dbody.append(renderReviewPodium(ranked, { showTeam: true, picks, onChange: () => { picksDirty = true; }, className: curClassName, sao: saoCtl }));
       } else {
         dbody.append(renderReviewList(ranked, { showTeam: true }));
       }

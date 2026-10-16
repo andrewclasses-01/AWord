@@ -7997,6 +7997,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
             .then(h => h.setMatchPicks(ref.classId, ref.yyyymm, ref.matchId, picks))
             .catch(e => { console.warn("AWord: could not save the team split", e); return false; });
         },
+        // ⭐⭐ Đợt 542 — Podium có SAO / VÍ / myTeam: mã trận trong sổ cái, đọc LÚC GỌI (giống savePicks) —
+        // "" khi trận chưa ghi xong (pop-up sao báo "đang lưu, thử lại").
+        saoBai: () => {
+          const ref = sdLastMatchRef;
+          return ref && ref.classId && ref.matchId ? `sd_${ref.classId}_${ref.matchId}` : "";
+        },
         toast
       });
       }).catch(e => { console.warn("AWord: could not load the Showdown review", e); });

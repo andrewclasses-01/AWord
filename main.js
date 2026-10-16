@@ -3414,12 +3414,20 @@ function moSettings() {
         // thì giữ trình sửa lớp cũ y như trước.
         if (classes.length && classes[0].fromDashboard) {
           listWrap.append(el("div", "aw-set-hint aw-cls-nguon", "Classes and pupils come from the myLesson dashboard. Edit pupils there — here you can add a <b>temporary</b> pupil."));
-          classes.forEach(c => {
+          classes.filter(c => !c.tamThoi).forEach(c => {
             const chinh = c.students.filter(s => !s.tam).length, tam = c.students.length - chinh;
             listWrap.append(menuRow(c.label || c.name,
               (chinh === 1 ? "1 pupil" : `${chinh} pupils`) + (tam ? ` · ${tam} temp` : "") + (c.laKhoa ? " · course" : ""),
               () => showDashClass(c.maLop)));
           });
+          // ⭐ Đợt 542 (thầy 17/10/2026) — LỚP TẠM ở dưới cùng: tên lớp + học sinh gõ ngay tại đây (trình sửa lớp cũ),
+          // không lên dashboard, không ví sao; lịch sử Showdown vẫn lưu.
+          listWrap.append(el("div", "aw-set-hint aw-cls-tamhead", "<b>TEMPORARY CLASSES</b> — not on the dashboard, no star wallet. Showdown history is kept."));
+          classes.filter(c => c.tamThoi).forEach(c => {
+            const n = c.students.length;
+            listWrap.append(menuRow(c.name, (n === 1 ? "1 pupil" : `${n} pupils`) + " · temporary", () => showClassEditor(c.id)));
+          });
+          listWrap.append(addClassTile(listWrap, { tamThoi: true }));
           return;
         }
         classes.forEach(c => {
@@ -3525,8 +3533,8 @@ function moSettings() {
      * exactly where the teacher works — the same reason Showdown's own
      * "Add member" row is built this way.
      */
-    function addClassTile(listWrap) {
-      const tile = el("button", "aw-set-addtile", "+ Add a new class");
+    function addClassTile(listWrap, opts = {}) {
+      const tile = el("button", "aw-set-addtile", opts.tamThoi ? "+ Add a temporary class" : "+ Add a new class");
       tile.type = "button";
       tile.onclick = () => {
         const holder = el("div", "aw-set-addtile is-editing");
@@ -3540,7 +3548,7 @@ function moSettings() {
           const name = inp.value.trim();
           if (!name) { holder.replaceWith(tile); return; }
           try {
-            const cls = await createClass(name);
+            const cls = await createClass(name, opts);
             toast(`Class "${cls.name}" created`);
             await showClassEditor(cls.id);
           } catch (e) {
