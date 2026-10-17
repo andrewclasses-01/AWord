@@ -159,7 +159,7 @@ const ROOT_LABEL = { activities: "Activity", results: "Result", courses: "Course
 // own name (so ?f=416 reads "LSA2-S2.T3.P1-2", not the app's own name), an act
 // shows its own title, everything else falls back to this. `document.title`
 // PAGE_TITLE_BASE == the `<title>` already sitting in index.html/play.html.
-const PAGE_TITLE_BASE = "AWord in ANDREW CLASSES";
+const PAGE_TITLE_BASE = "AWord";
 // ⭐ Đợt 287c (thầy 03/9) — the TOP of Courses is a list of COURSES, nothing else:
 // no New activity / New folder / Import / file drop there, only "+ New course"
 // (a plain folder at the top of the tree) and the recycle bin. One level down,

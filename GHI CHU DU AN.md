@@ -546,6 +546,21 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 545 (17/10/2026) — TÊN TAB TRANG WEB: "AWord in ANDREW CLASSES" ⇒ "AWord"
+
+**Bối cảnh:** thầy muốn tên trang web mặc định gọn lại, chỉ còn "AWord".
+
+**Đã làm (5 chỗ, mỗi chỗ 1 dòng):**
+- `index.html`, `play.html`, `404.html`: `<title>AWord</title>`.
+- `main.js` `PAGE_TITLE_BASE = "AWord"` — tên tab mặc định khi về trang chủ / thư mục không tên / game không nhãn (main.js tự đặt lại `document.title` nên phải đổi cùng `<title>` trong HTML, không thì tab nhảy về tên cũ sau khi app chạy).
+- `manifest.webmanifest` `"name": "AWord"` (tên khi cài lên Màn hình chính; `short_name` vốn đã là AWord).
+
+**Cố ý KHÔNG đổi:** logo trên trang ("AWord" + dòng nhỏ "in ANDREW CLASSES", cả màn chờ `.aw-boot-sub` lẫn logo in `core/print.js`) — thầy chỉ nói tên trang web; các trang phụ (`kiemtra*.html`, `pad.html`, `source.html`) vốn đã có tên riêng.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy xem tab trình duyệt. Máy đã cài AWord như app có thể giữ tên cũ tới khi trình duyệt tự đọc lại manifest.
+
+---
+
 ## Đợt 544 (17/10/2026) — 4 GAME 3D: MÀN CHỜ HIỆN % LOAD THẬT + NÉN TIẾNG (mức Vừa)
 
 **Thầy:** "hiển thị chính xác % load game để biết đường chờ… mạng chậm load rất lâu" → chọn "Chỉ %" + "đợi tất cả tiếng" + "nén tiếng cả 4 game 3D… build và push cả myGame cả AWord".
