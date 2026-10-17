@@ -29,10 +29,19 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { openQuizEditor } from "../quiz/quiz-editor.js";
-import { showLoader3d, preloadLoader3d } from "../../core/loader3d.js";
+import { showLoader3d, preloadLoader3d, filesOf } from "../../core/loader3d.js";
+import { FILES as LOAD_FILES, ALT as LOAD_ALT, CARS as LOAD_CARS } from "./load-files.js";   // ⭐ Đợt 544 — % load thật (tools/tao-load-files.py)
+// Đợt 544: 2 xe đang chọn — cùng luật rw-4f (máy nhớ "speedrun.cars", không có ⇒ Y2 + H4)
+const loadCars = () => { let c = null; try { c = JSON.parse(localStorage.getItem("speedrun.cars") || "null"); } catch (e) { /* */ }
+  if (!Array.isArray(c) || c.length !== 2 || !c.every(id => LOAD_CARS[id])) c = ["Y2", "H4"];
+  return c.map(id => ["templates/racing-words/xe3d/" + id + ".glb", LOAD_CARS[id] || 0, 0]); };
+const loadFiles = () => filesOf(LOAD_FILES, LOAD_ALT, loadCars());
+// Đợt 544 (thầy: "đợi tất cả tiếng"): intro xưởng chạy NGAY khi game dựng ⇒ tải sẵn toàn bộ tiếng TRƯỚC (bộ đếm % đếm luôn),
+// game fetch lại cùng địa chỉ thì lấy từ bộ nhớ đệm trình duyệt ⇒ tiếng nền xưởng / nổ máy có ngay từ giây đầu.
+const preloadSounds = () => Promise.all(loadFiles().filter(f => f[2]).map(([u]) => fetch(u).then(r => r.arrayBuffer()).catch(() => null)));
 import { block3dHere, block3dMessage } from "../../core/myact-board.js";   // ⭐ Đợt 530 — game 3D chỉ chạy ở bảng 1 của myActivity
 const LOAD_BG = new URL("./rw-loading.webp", import.meta.url).href;   // Đợt 537: ảnh tĩnh riêng (chụp xưởng ANDREW STUDIO của game, 1920×1080, 63 KB)
-const loader = () => { ensureCss(); return showLoader3d({ key: "racingwords", title: "RACING WORDS", theme: "race", bg: LOAD_BG }); };
+const loader = () => { ensureCss(); return showLoader3d({ key: "racingwords", title: "RACING WORDS", theme: "race", bg: LOAD_BG, files: loadFiles }); };
 preloadLoader3d("race", LOAD_BG);
 
 const GAME = "./3d/rw-4f.js";                     // Đợt 538: myGame mẫu 4f (cổng iPad ở xưởng: START khi 2 iPad nối thẳng + thử trái/phải · đường nối sống qua Apply / Start again / đổi xe · tự nối lại khi slow · mốc nghiêng tự lấy) · Đợt 537: myGame mẫu 4e (Settings mọi nơi + tạm dừng, mặc định mới, bay xa, nghiêng đúng chiều, BAD mất lái) · Đợt 535: myGame mẫu 4d (5 đợt sau 3y: chế độ đua, cong thật, lái tay, dốc xoắn, phần thưởng, xe khác, camera gộp) · Đợt 534: myGame mẫu 3y (lái nghiêng iPad) · Đợt 533: myGame mẫu 3r (mượt TOMKO) · Đợt 531: myGame mẫu 3q (Fight options, cảnh xa đúng vật lý, 35 km/h) · Đợt 529: 3p · Đợt 527: 3o
@@ -280,7 +289,7 @@ const racingWordsTemplate = {
       if (!live3d) document.documentElement.classList.remove("aw-rw-on");
       console.log("MYACT:3D:OFF");
     };
-    Promise.all([import(GAME), rwPadLink()])
+    Promise.all([import(GAME), rwPadLink(), preloadSounds()])
       .then(([m, L]) => {
         if (dead) { L.release(); return null; }
         link = L;   // Đợt 538: đường nối dùng chung cả trang (L.remote sống qua các lần dựng lại game)

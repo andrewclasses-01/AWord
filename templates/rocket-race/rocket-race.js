@@ -53,7 +53,8 @@ import { fitOnce } from "../../core/fit.js";
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { rrSound } from "./rr-sound.js";
 import { block3dHere, block3dMessage } from "../../core/myact-board.js";   // ⭐ Đợt 530 — game 3D chỉ chạy ở bảng 1 của myActivity
-import { showLoader3d, preloadLoader3d } from "../../core/loader3d.js";
+import { showLoader3d, preloadLoader3d, filesOf } from "../../core/loader3d.js";
+import { FILES as LOAD_FILES, ALT as LOAD_ALT } from "./load-files.js";   // ⭐ Đợt 544 — % load thật (tools/tao-load-files.py)
 // ⭐ Đợt 540 — Fight 3D có MÀN CHỜ (trước: ~0,75 s đen lúc dựng cảnh): ảnh tĩnh 2 tên lửa rời bệ phóng, kiểu RACING WORDS (theme "shot").
 // Hiện lúc rr3dScene dựng, mờ đi khi cảnh phóng đã dựng xong (hoặc khi lùi về START 3D cũ / về 2D / rời trận).
 const RR_LOAD_BG = new URL("./rr-loading.webp", import.meta.url).href;
@@ -663,7 +664,7 @@ function rr3dScene({ root, ctl, title, play }) {
   root.append(host3d, host2d);
   const st = { root, host2d, ctl, view: null, sfx: null, boards: [null, null], q: ["", ""], pending: [], dead: false, failed: false,
                prog: [{ done: 0, total: 0 }, { done: 0, total: 0 }], twoDevice: false, offs: [] };
-  st.ld = showLoader3d({ key: "rocketrace", title: "ROCKET RACE", theme: "shot", game: "rocket", bg: RR_LOAD_BG });   // ⭐ Đợt 540
+  st.ld = showLoader3d({ key: "rocketrace", title: "ROCKET RACE", theme: "shot", game: "rocket", bg: RR_LOAD_BG, files: () => filesOf(LOAD_FILES, LOAD_ALT) });   // ⭐ Đợt 540 · 543 % thật
   st.offs.push(() => { try { st.ld.drop(); } catch { /* đã gỡ */ } });
   rr3d = st;
   if (ctl && ctl.setDelayFloor) ctl.setDelayFloor(side => msDelayFloorMs(side));   // Đợt 458

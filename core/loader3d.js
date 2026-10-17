@@ -24,6 +24,13 @@
 //   + CÙNG thanh chạy / LOADING như "race" + trên cùng: ANDREW STUDIO · tên game bằng kiểu chữ riêng của game (`game`):
 //   train = Rye vàng đồng khối nâu · loot = Audiowide neon · rocket = Orbitron kim loại nghiêng. Cảnh động space/west giữ lại (không còn ai gọi).
 //   const ld = showLoader3d({ key, title, theme: "shot", game: "train" | "loot" | "rocket", bg });   preloadLoader3d("shot", bg, game);
+// ⭐ Đợt 544 (thầy 17/10/2026: "hiển thị chính xác % load game… mạng chậm load rất lâu" + "đợi tất cả tiếng"): `files` = danh sách
+//   [đường dẫn tuyệt đối, số byte, là tiếng?] (template lấy từ templates/<game>/load-files.js — tools/tao-load-files.py ghi lúc đo thật).
+//   % = byte đã về / tổng byte (trọng số theo cỡ thật trên mạng: js/css ×0,3 vì web thật nén + thu gọn, glb ×0,8 gzip, tiếng/ảnh ×1).
+//   Byte đếm 2 đường: fetch() của game được bọc ⇒ đếm TỪNG KHÚC dữ liệu về (xe 3D, tiếng) · file còn lại (module js, css) tính khi
+//   PerformanceObserver báo xong. Thanh chạy đổi sang ĐẦY DẦN + "LOADING 42%" (thầy chọn "chỉ %"), không quá 99 % tới khi game xong.
+//   done() của game ⇒ còn ĐỢI các file tiếng ĐANG tải (đã bắt đầu mà chưa xong) — tiếng chưa hề được gọi sau 1,5 s thì thôi
+//   (game có bộ nhớ đệm riêng / tải sau khi chạm). `h.out` = Promise lúc màn chờ thật sự mờ đi (RACING WORDS giữ intro tới lúc đó).
 //   Không có cảnh động nào ⇒ nhẹ nhất trong các màn chờ (chỉ thanh chạy = transform).
 // =============================================================
 
@@ -58,6 +65,8 @@ const CSS = `
   box-shadow: 0 0 12px var(--ld-glow); will-change: transform; animation: ld-run 1.25s cubic-bezier(.45,.05,.55,.95) infinite; }
 .aw-ld3d-s { font-weight: 700; font-size: clamp(11px, 1.6vmin, 18px); letter-spacing: .5em; padding-left: .5em; color: var(--ld-sub); }
 @keyframes ld-run { 0% { transform: translateX(-105%); } 100% { transform: translateX(268%); } }
+/* Đợt 544: % thật — thanh ĐẦY DẦN (chỉ transform scaleX, đúng luật ⛔ chỉ transform/opacity) */
+.aw-ld3d.is-pct .aw-ld3d-bar i { width: 100%; animation: none; transform: scaleX(0); transform-origin: 0 50%; transition: transform .35s ease-out; }
 @keyframes ld-spin { to { transform: rotate(360deg); } }
 
 /* ===================== SPACE — STAR LOOT ===================== */
@@ -350,7 +359,92 @@ export function dropAllLoader3d() {
   [...live.values()].forEach(h => { try { h.drop(); } catch (e) { /* đã gỡ */ } });
 }
 
-export function showLoader3d({ key, title, theme = "space", bg = null, game = null }) {
+// ---------- Đợt 544: bộ đếm % thật ----------
+// filesOf(FILES, ALT, more): danh sách load-files.js (đường dẫn từ gốc web) ⇒ [URL tuyệt đối, byte, tiếng]; máy không đọc ogg ⇒ đổi sang mp3 (ALT)
+const WEB_ROOT = new URL("../", import.meta.url).href;
+let OGG = null;
+export function filesOf(FILES, ALT = {}, more = []) {
+  if (OGG == null) { try { OGG = !!new Audio().canPlayType('audio/ogg; codecs="vorbis"'); } catch (e) { OGG = true; } }
+  return [...FILES, ...more].map(([p, b, s]) => { if (!OGG && ALT[p]) [p, b] = ALT[p]; return [WEB_ROOT + p, b, s]; });
+}
+const METERS = new Set();
+const clean = u => { try { return new URL(u, location.href).href.split(/[?#]/)[0]; } catch (e) { return ""; } };
+let hooked = false;
+function hookFetch() {
+  if (hooked || typeof window.fetch !== "function") return; hooked = true;
+  const orig = window.fetch;
+  window.fetch = function (input, init) {
+    const p = orig.call(this, input, init);
+    if (!METERS.size) return p;
+    const url = clean(typeof input === "string" || input instanceof URL ? String(input) : input && input.url);
+    const hits = [];
+    METERS.forEach(m => { const e = m.byUrl.get(url); if (e && !e.done) { e.started = true; hits.push([m, e]); } });
+    if (!hits.length) return p;
+    return p.then(r => {
+      if (!r.ok || !r.body || typeof ReadableStream === "undefined") return r;
+      const rd = r.body.getReader();
+      const body = new ReadableStream({
+        async pull(c) {
+          try {
+            const { done, value } = await rd.read();
+            if (done) { hits.forEach(([m, e]) => m.got(e, -1)); c.close(); return; }
+            hits.forEach(([m, e]) => m.got(e, value.byteLength)); c.enqueue(value);
+          } catch (err) { c.error(err); }
+        },
+        cancel(why) { try { rd.cancel(why); } catch (e) { /* */ } }
+      });
+      const out = new Response(body, { status: r.status, statusText: r.statusText, headers: r.headers });
+      try { Object.defineProperty(out, "url", { value: r.url }); } catch (e) { /* */ }
+      return out;
+    }, err => { hits.forEach(([m, e]) => m.got(e, -1)); throw err; });
+  };
+}
+const W8 = u => /\.(m?js|css)$/i.test(u) ? 0.3 : /\.glb$/i.test(u) ? 0.8 : 1;
+function createMeter(list, paint) {
+  const es = list.filter(f => f && f[0] && f[1] > 0).map(([u, b, snd]) => ({ u: clean(u), b, w: b * W8(u), snd: !!snd, n: 0, done: false, started: false }));
+  const byUrl = new Map(es.map(e => [e.u, e]));
+  const total = es.reduce((a, e) => a + e.w, 0) || 1;
+  let shown = 0, lastMove = performance.now(), po = null;
+  const m = {
+    byUrl, es,
+    pct() { return es.reduce((a, e) => a + (e.done ? e.w : e.w * Math.min(1, e.n / e.b)), 0) / total; },
+    got(e, n) { if (e.done) return; e.started = true; if (n < 0) { e.done = true; e.n = e.b; } else e.n += n; tick(); },
+    get lastMove() { return lastMove; },
+    stop() { METERS.delete(m); try { po && po.disconnect(); } catch (e) { /* */ } }
+  };
+  // File KHÔNG đếm được từng phần (ảnh <img> của TextureLoader, module js) chỉ báo lúc xong ⇒ % nhảy cóc. Đo tốc độ mạng thật (byte/giây
+  // trọng số) từ lúc bắt đầu; giữa 2 lần nhảy thì DỰ ĐOÁN tiếp theo tốc độ đó, nhưng không vượt quá 90 % phần các file chưa đếm được còn lại.
+  const t0 = performance.now();
+  let realW = 0, realT = t0, w0 = null, rateNow = 0;   // w0 = phần đã có sẵn lúc mở (bộ nhớ đệm) — không tính vào tốc độ
+  const hist = [];   // [lúc, byte thật] mỗi lần tăng ⇒ tốc độ = 3 s GẦN NHẤT có dữ liệu (giữa 2 lần nhảy vẫn dùng tốc độ đó)
+  const tick = () => {
+    const now = performance.now();
+    const w = m.pct() * total;
+    if (w0 == null) w0 = w;
+    if (w > realW) {
+      realW = w; realT = now; hist.push([now, w]);
+      while (hist.length > 2 && now - hist[1][0] >= 3000) hist.shift();
+      if (hist.length > 1 && now - hist[0][0] > 400) rateNow = (w - hist[0][1]) / ((now - hist[0][0]) / 1000);
+    }
+    const rate = rateNow || (realW - w0) / Math.max(0.5, (now - t0) / 1000);
+    const blind = es.reduce((x, e) => x + (!e.done && !(e.started && e.n > 0) ? e.w : 0), 0);
+    const guess = realW + Math.min(rate * (now - realT) / 1000, blind * 0.9);
+    const p = Math.min(0.99, guess / total);
+    if (p > shown + 0.001) { shown = p; lastMove = now; paint(p); }
+  };
+  const iv = setInterval(() => { if (!METERS.has(m)) clearInterval(iv); else tick(); }, 200);
+  const seen = l => l.forEach(r => { const e = byUrl.get(clean(r.name)); if (e && !e.done) { e.started = true; e.done = true; e.n = e.b; } });
+  try { performance.setResourceTimingBufferSize(1000); } catch (e) { /* */ }
+  try { seen(performance.getEntriesByType("resource")); } catch (e) { /* */ }
+  try { po = new PerformanceObserver(l => { seen(l.getEntries()); tick(); }); po.observe({ type: "resource", buffered: true }); } catch (e) { /* trình duyệt cũ: chỉ đếm qua fetch */ }
+  METERS.add(m); hookFetch(); tick();
+  // Ảnh / json lớn (vd mặt đất bãi phóng ROCKET RACE ~5 MB) game tải bằng <img> ⇒ không đếm được từng phần. Tải TRƯỚC bằng fetch (đếm được);
+  // lúc game cần, trình duyệt lấy từ bộ nhớ đệm (Chrome còn khoá bộ đệm: yêu cầu trùng đang bay thì chờ, không tải 2 lần).
+  es.filter(e => !e.done && /\.(jpe?g|png|webp|json|hdr|ktx2)$/i.test(e.u)).forEach(e => { try { fetch(e.u).then(r => r.arrayBuffer()).catch(() => {}); } catch (x) { /* */ } });
+  return m;
+}
+
+export function showLoader3d({ key, title, theme = "space", bg = null, game = null, files = null }) {
   const cur = live.get(key);
   if (cur && !cur.gone) return cur;
   ensureCss();
@@ -398,27 +492,56 @@ export function showLoader3d({ key, title, theme = "space", bg = null, game = nu
     tick();
   }
   else { try { Promise.race([document.fonts.load(font), new Promise(r => setTimeout(r, 1200))]).then(showT, showT); } catch (e) { showT(); } }
+  // Đợt 544: % thật (files) — thanh đầy dần + "LOADING 42%"
+  let meter = null, markOut = () => {};
+  const outP = new Promise(r => { markOut = r; });
+  const barI = el.querySelector(".aw-ld3d-bar i"), sEl = el.querySelector(".aw-ld3d-s");
+  const paint = p => { barI.style.transform = `scaleX(${p.toFixed(4)})`; sEl.textContent = "LOADING " + Math.floor(p * 100) + "%"; };
+  try {
+    const list = typeof files === "function" ? files() : files;
+    if (Array.isArray(list) && list.length) { el.classList.add("is-pct"); paint(0); meter = createMeter(list, paint); }
+  } catch (e) { console.warn("loader3d: files", e); meter = null; }
+  const fade = () => {
+    if (meter) { meter.stop(); paint(1); }
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      el.classList.add("is-out"); markOut();
+      setTimeout(() => el.remove(), 550);
+    }));
+  };
   const h = {
     gone: false,
     ready: Promise.race([shownP, new Promise(r => setTimeout(r, 900))]),
+    out: outP,
     // game đã vẽ xong khung đầu ⇒ mờ đi (đợi 2 nhịp vẽ để khung game thật đã lên màn trước khi lộ ra)
+    // Đợt 544: có bộ đếm ⇒ đợi nốt các file TIẾNG đang tải (tối đa 180 s); tiếng chưa hề được gọi sau 1,5 s thì thôi
     done() {
       if (h.gone) return; h.gone = true;
       if (live.get(key) === h) live.delete(key);
       clearTimeout(safety);
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        el.classList.add("is-out");
-        setTimeout(() => el.remove(), 550);
-      }));
+      if (!meter) { fade(); return; }
+      const t0 = performance.now();
+      const wait = () => {
+        if (!el.isConnected) return;
+        const snd = meter.es.filter(e => e.snd);
+        const busy = snd.some(e => e.started && !e.done);
+        const allDone = snd.every(e => e.done);
+        const dt = performance.now() - t0;
+        if ((!busy && (allDone || dt > 1500)) || dt > 180000) { fade(); return; }
+        setTimeout(wait, 150);
+      };
+      wait();
     },
     // gỡ ngay (rời game trước khi nạp xong)
     drop() {
       if (h.gone) return; h.gone = true;
       if (live.get(key) === h) live.delete(key);
-      clearTimeout(safety); el.remove();
+      clearTimeout(safety); if (meter) meter.stop(); markOut(); el.remove();
     }
   };
-  const safety = setTimeout(() => h.done(), 25000);
+  // lưới an toàn 25 s — Đợt 544: còn đang tải (có byte mới trong 20 s) thì chưa tính là kẹt
+  let safety = 0;
+  const guard = () => { safety = setTimeout(() => { if (meter && performance.now() - meter.lastMove < 20000) guard(); else h.done(); }, 25000); };
+  guard();
   live.set(key, h);
   return h;
 }

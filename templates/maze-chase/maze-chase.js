@@ -41,11 +41,12 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { openMazeChaseEditor } from "./maze-chase-editor.js";
-import { showLoader3d, preloadLoader3d } from "../../core/loader3d.js";
+import { showLoader3d, preloadLoader3d, filesOf } from "../../core/loader3d.js";
+import { FILES as LOAD_FILES, ALT as LOAD_ALT } from "./load-files.js";   // ⭐ Đợt 544 — % load thật (tools/tao-load-files.py)
 import { block3dHere, block3dMessage } from "../../core/myact-board.js";   // ⭐ Đợt 530 — game 3D chỉ chạy ở bảng 1 của myActivity   // Đợt 451 — màn chờ thay khung trắng của AWord lúc nạp 3D
 // ⭐ Đợt 540 — màn chờ = ảnh tĩnh cắt từ phim mở màn (phi thuyền mẹ giữa các hành tinh) kiểu RACING WORDS (theme "shot")
 const LOAD_BG = new URL("./sl-loading.webp", import.meta.url).href;
-const loader = () => showLoader3d({ key: "starloot", title: "STAR LOOT", theme: "shot", game: "loot", bg: LOAD_BG });
+const loader = () => showLoader3d({ key: "starloot", title: "STAR LOOT", theme: "shot", game: "loot", bg: LOAD_BG, files: () => filesOf(LOAD_FILES, LOAD_ALT) });
 preloadLoader3d("shot", LOAD_BG, "loot");
 
 const CSS_3D = new URL("./3d/mc3d-2r.css", import.meta.url).href;

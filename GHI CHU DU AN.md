@@ -546,6 +546,23 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 544 (17/10/2026) — 4 GAME 3D: MÀN CHỜ HIỆN % LOAD THẬT + NÉN TIẾNG (mức Vừa)
+
+**Thầy:** "hiển thị chính xác % load game để biết đường chờ… mạng chậm load rất lâu" → chọn "Chỉ %" + "đợi tất cả tiếng" + "nén tiếng cả 4 game 3D… build và push cả myGame cả AWord".
+(Thầy chưa chọn mức nén ⇒ làm mức **Vừa**, trang nghe so sánh myGame `speed-run/nghe-nen-tieng/`.)
+**Nén tiếng** (`myGame/tools/nen-tieng-3d.py --aw <kho>`; thay cùng lúc AWord + bản chép myGame giống hệt): tiếng có trái/phải rõ (năng lượng S/M ≥ 0,08) ⇒ 2 kênh 96 kbps,
+còn lại 1 kênh 64 kbps; nhẹ không quá 10 % thì giữ gốc. TRAIN RUSH 7,8→5,5 MB · STAR LOOT 12,7→7,2 · ROCKET RACE sfx 2,1→1,4 + intro 4,3→2,6 · RACING WORDS 3,9→2,4 · tổng 30,8→19,0 MB.
+Trình duyệt giải mã đủ (11 file .ogg ffmpeg báo lệch mốc cuối file nhưng decodeAudioData đúng thời lượng — vô hại).
+**% thật** (`core/loader3d.js`): `showLoader3d({ …, files })` + `filesOf(FILES, ALT, more)`. `templates/<game>/load-files.js` SINH bằng `tools/tao-load-files.py <thư mục rec-*.json>`
+từ lần đo thật (`scratch/dot543-rec.html?t=<game>`: mọi file tải từ lúc màn chờ hiện; bỏ <audio> nhạc phát dần). Đếm: fetch() được bọc ⇒ đếm từng khúc (xe, tiếng) ·
+module js/css tính lúc PerformanceObserver báo xong · ảnh/json lớn (bãi phóng ROCKET RACE ~5 MB) màn chờ tải TRƯỚC bằng fetch (Chrome khoá bộ đệm ⇒ không tải 2 lần) ·
+giữa 2 lần nhảy dự đoán theo tốc độ 3 s gần nhất (≤ 90 % phần chưa đếm được). Trọng số js/css ×0,3, glb ×0,8. Thanh đầy dần scaleX + "LOADING 42%", ≤ 99 % tới khi game xong.
+done() còn đợi các file TIẾNG đang tải (≤ 180 s; tiếng chưa hề gọi sau 1,5 s thì thôi). Lưới an toàn 25 s chỉ kích khi 20 s không có byte mới.
+RACING WORDS: intro chạy ngay khi dựng ⇒ `preloadSounds()` tải sẵn toàn bộ tiếng trước createRacingWords (game fetch lại lấy bộ nhớ đệm); 2 xe theo "speedrun.cars" (CARS).
+⚠️ Đổi tiếng / xe / module ⇒ đo lại (rec) + chạy lại tao-load-files.py, nếu không % lệch (không hỏng game: hết thì nhảy 100 %).
+**Thử (mạng giả 3,2 Mbps, `scratch/cham-server.mjs` ở scratchpad, giới hạn CHUNG):** STAR LOOT 20→99 % đều trong 20 s · ROCKET RACE 3→97 % đều 24 s ·
+RACING WORDS 4→98 % đều 22 s · TRAIN RUSH đúng chiều (1 bước nhảy 33→77 % vì máy thử làm chậm cả mã chưa nén). ⚠️ Bàn thử cục bộ RACING WORDS đứng 23 s ở 99 %:
+có SẴN từ trước (bản Đợt 541 cũng vậy — chờ Firestore iPad, máy thử không với tới).
 ## Đợt 543 (17/10/2026) — PODIUM: thẻ rộng hơn, ít thuôn · viết tắt CHỈ chữ cái đầu · icon nút myTeam = hình icon app
 
 Thầy gửi 3 ảnh Podium A2B (18 em) sau Đợt 542:
