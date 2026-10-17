@@ -546,6 +546,29 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 547 (17/10/2026) — FIGHT: SỐ CÂU DƯỚI KHUNG = SỐ CÂU CỦA CẢ TRẬN
+
+**Bối cảnh (thầy):** trong Fight ở một số template, số câu ở hàng dưới khung chưa chuẩn — phải là số thực tế của cả game (câu thứ 5 trong 30 câu ⇒ "5/30"), đang hiện số câu làm được của riêng đội đó.
+
+**Đo trước khi sửa** (`scratch/dot547-fight-nav.html`, `__open(template, options)` đọc `.aw-nav-label` hai bàn, mẫu `sample-*.js`):
+- **True/false**: "0 of 8" — nhãn là ĐIỂM của đội (`label: liveScore() of total`, Đợt 178), lên theo câu đúng của riêng đội ⇒ đúng lời thầy tả.
+- **Find the match**: trống (nhãn chỉ có "Page x / y" khi nhiều trang).
+- **In turns** (bộ câu chia XEN KẼ cho hai bàn, Đợt 202): mỗi bàn đếm theo nửa bộ của mình — TTA 6 câu ⇒ cả hai bàn "1 of 3".
+- Đúng sẵn (Same): Anagram, Quiz, Type the answer, Find the gap, Wordshake. Crossword/Open the box là game chọn ô, nhãn trống/khẩu hiệu cố ý — không đổi.
+
+**Đã làm:**
+- `core/fight.js`: `ctl.soCauTran = { turns: turnsMode, tong: srcItems.length }` đặt ngay trước khi dựng hai bàn.
+- `core/engine.js` `setNav`: Fight + In turns + template không gửi `label` ⇒ nhãn = `(index−1)·2 + side + 1 of tong` (bàn trái câu lẻ, bàn phải câu chẵn của cả bộ — đúng phép chia `i % 2` của fight.js).
+- `templates/true-false/true-false.js` + `templates/find-the-match/find-the-match.js`: trong Fight gửi `label: null` ⇒ engine viết "x of N" theo vòng. Chơi thường giữ nguyên (TF vẫn hiện điểm, FTM vẫn "Page").
+
+**Đo sau khi sửa:** TF "1 of 8" → "2 of 8" → "3 of 8" cả hai bàn · FTM "1 of 6" → … → "4 of 6" · TTA In turns trái/phải "1/2 of 6" → "3/4 of 6" → "5/6 of 6" · Quiz/TTA Same vẫn "1 of 6". 0 lỗi console.
+
+**Chưa đổi:** bàn độc lập (Different + màn iPad, Đợt 370) — mỗi bàn một chồng riêng nên số của bàn là đúng nghĩa.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy xem trên bảng thật.
+
+---
+
 ## Đợt 546b (17/10/2026) — FIND THE MATCH FIGHT: REMOVE CORRECTS ẨN Ô ĐÚNG Ở CẢ HAI BÀN
 
 **Bối cảnh (thầy):** Fight của Find the match, Options đã bật Remove corrects mà ô đáp án đúng đã được chọn vẫn còn trên lưới. Muốn: đội 1 chọn đúng, tính điểm xong thì ô đó ẩn, và bàn đội 2 cũng ẩn.

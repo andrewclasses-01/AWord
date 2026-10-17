@@ -6844,6 +6844,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     setNav({ index, total, onPrev = null, onNext = null, nextLabel = null, label = null }) {
       // ⭐ Đợt 220 — FREE: một con số duy nhất tăng dần từ 1 (thầy chốt). Tổng của
       // mảng đã nối dài (500…) là con số kỹ thuật, lớp nhìn thấy chỉ hoảng.
+      // ⭐ Đợt 547 — FIGHT: số câu của CẢ TRẬN (In turns: mỗi bàn chỉ giữ nửa bộ câu, xen kẽ ⇒
+      // đổi số của bàn ra số của cả bộ; xem `ctl.soCauTran` trong core/fight.js).
+      const sct = fight && fight.ctl && fight.ctl.soCauTran;
+      if (label == null && sct && sct.turns && typeof index === "number" && sct.tong > 0) {
+        label = `${Math.min(sct.tong, (index - 1) * 2 + (fight.side === 1 ? 1 : 0) + 1)} of ${sct.tong}`;
+      }
       navLabel.textContent = label != null ? label
         : quay ? `CÂU ${index} / ${total}`   // Đợt 512 — số câu MỘT chỗ, chữ đậm cho máy quay thấy
         : (sdDealMode === "free" ? String(index) : `${index} of ${total}`);

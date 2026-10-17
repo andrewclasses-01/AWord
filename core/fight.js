@@ -2877,6 +2877,10 @@ export function startFight(root, activity, { onExit, base = null, keepIpad = fal
   // doesn't reuse the exact tile order the class has already solved.
   srcItems.forEach(it => { if (it && it._fightOrder) delete it._fightOrder; });
 
+  // ⭐ Đợt 547 (thầy 17/10/2026) — số câu dưới khung phải là số câu của CẢ TRẬN ("câu 5 / 30"),
+  // không phải số của riêng một đội. In turns chia bộ câu XEN KẼ (0,2,4… trái; 1,3,5… phải) nên
+  // câu thứ k của bàn `side` là câu (k−1)·2 + side + 1 của cả bộ. core/engine.js setNav đọc cái này.
+  ctl.soCauTran = { turns: turnsMode, tong: srcItems.length };
   startGame(boardEls[0], actFor(0), { onExit, fight: { side: 0, ctl } });
   startGame(boardEls[1], actFor(1), { fight: { side: 1, ctl } });
 

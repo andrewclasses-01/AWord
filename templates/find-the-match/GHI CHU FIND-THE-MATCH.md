@@ -1,5 +1,11 @@
 # GHI CHÚ — TEMPLATE FIND THE MATCH
 
+## Đợt 547 (17/10/2026) — FIGHT: NHÃN DƯỚI KHUNG "x of N"
+
+Trong Fight `updateNav` gửi `label: null` (trước: trống / "Page x / y"). Chi tiết: `../../GHI CHU DU AN.md` Đợt 547.
+
+---
+
 ## Đợt 546b (17/10/2026) — FIGHT: REMOVE CORRECTS ẨN Ô ĐÚNG Ở CẢ HAI BÀN
 
 Nhánh Fight của `choose()` chưa bao giờ gọi `removeTile()`, bàn kia không biết cặp đã bắt. Nay sổ chung `ftmFightSolved` (mỗi trận một sổ) + `fightGoTo()` ẩn ô ở đầu vòng kế (sau khi ✓ đã hiện), `renderShell()` bỏ qua; `revealFightMarks()` tìm ô theo `data-idx`. Chi tiết + bàn thử: `../../GHI CHU DU AN.md` Đợt 546b.

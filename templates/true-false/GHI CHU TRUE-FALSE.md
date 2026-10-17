@@ -1,5 +1,11 @@
 # GHI CHÚ — TRUE FALSE (True or false)
 
+## Đợt 547 (17/10/2026) — FIGHT: NHÃN DƯỚI KHUNG LÀ SỐ CÂU, KHÔNG PHẢI ĐIỂM
+
+Trong Fight `updateNav` gửi `label: null` ⇒ engine viết "x of N" theo vòng (trước: điểm của đội). Chơi thường vẫn hiện điểm. Chi tiết: `../../GHI CHU DU AN.md` Đợt 547.
+
+---
+
 ## Đợt 493 (07/10/2026) — SPEED = THỜI GIAN ĐỨNG YÊN ĐỂ ĐỌC
 
 Thầy: chữ chỉ dừng ở giữa "một chút rất nhanh" rồi trôi ra ngay ⇒ không đọc hết được. Gốc: `crawlMsFor()` cũ là MỘT lần trôi thẳng giữa → mép phải, bắt đầu NGAY khi câu vào giữa — chữ chỉ đứng yên trong đuôi ease-out của lúc chạy vào.

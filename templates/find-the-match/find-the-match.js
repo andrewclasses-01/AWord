@@ -1275,7 +1275,8 @@ const ftmTemplate = {
       ui.setNav({
         index: curRow + 1, total,
         onPrev: null, onNext: null,
-        label: PAGE_COUNT > 1 ? `Page ${curPage + 1} / ${PAGE_COUNT}` : ""
+        // ⭐ Đợt 547 — FIGHT: "x of N" số câu của cả trận (label null ⇒ engine tự viết); chơi thường giữ như cũ.
+        label: fightCtl ? null : (PAGE_COUNT > 1 ? `Page ${curPage + 1} / ${PAGE_COUNT}` : "")
       });
     }
 

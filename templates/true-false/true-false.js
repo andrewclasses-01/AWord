@@ -1125,7 +1125,9 @@ const tfTemplate = {
       // given, so this row reads exactly as it did before).
       ui.setNav({
         index: curRow + 1, total,
-        label: `${liveScore()} of ${total}`,
+        // ⭐ Đợt 547 — FIGHT: số CÂU của cả trận (engine tự viết "x of N" khi label null), không
+        // phải điểm của riêng đội này (thầy: "hiển thị số câu làm được của riêng đội đó" là sai).
+        label: fightCtl ? null : `${liveScore()} of ${total}`,
         onPrev: null, onNext: null
       });
     }
