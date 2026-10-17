@@ -2640,6 +2640,7 @@ câu trả lời). Ba API, đều no-op khi tắt nên template nối một lầ
 | `ui.roundDone()` | template | "lượt của em này xong" → đồng hồ ĐÓNG BĂNG ở số đó; số đó là thời gian in trong Show answers, và là thứ chặn đếm ngược nổ trên một câu đã trả lời |
 | `ui.setRoundTimeout(fn)` | template (1 lần lúc mount) | engine gọi `fn()` đúng lúc đếm ngược về 0 mà lượt còn mở |
 | `ui.roundTimerMode()` | template | `"none"/"countUp"/"countDown"` nếu cần biết |
+| `ui.hetGioCaVan()` | template | ⭐ Đợt 546 — `true` khi lần gọi hàm của `ui.onSubmit` là do ĐỒNG HỒ CẢ VÁN (count down) chạm 0, `false` khi do Menu ▸ Submit answers. Type the answer dùng để chấm chữ đang gõ dở trước khi chốt sổ |
 
 > ### ⛔⛔⛔ ĐỢT 265 — HAI HOOK NÀY **KHÔNG CÒN LÀ TUỲ CHỌN** VỚI GAME SHOWDOWN
 >

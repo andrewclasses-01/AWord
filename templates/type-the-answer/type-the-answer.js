@@ -1220,6 +1220,11 @@ const ttaTemplate = {
       const it = items[index];
       const st = state[index];
       if (!it || st.graded || finished || dead || fightLocked()) return;
+      // ⭐ Đợt 546 (thầy 17/10/2026) — đang gõ dở mà hết giờ ⇒ CHỮ ĐANG HIỆN được nhận làm đáp án,
+      // đi đúng đường bấm Submit (chấm đúng/sai thật, Fight báo trọng tài như thường). Chỉ ô TRỐNG
+      // mới là "No answer" như cũ. Áp cho mọi đường vào hàm này: Time each round (single/Showdown)
+      // và Time limit (core/time-limit.js, cả Fight).
+      if (input.value.trim()) { submitAnswer(input.value); return; }
       st.typed = "";
       st.graded = true;
       st.timedOut = true;
@@ -1644,6 +1649,19 @@ const ttaTemplate = {
       });
     }
 
+    // ⭐ Đợt 546 — chấm IM LẶNG chữ đang gõ dở của câu đang đứng (đồng hồ cả ván hết giờ, xem finish()).
+    function chotChuDangGo() {
+      const it = items[index], st = state[index];
+      const typed = input.value;
+      if (!it || !st || st.graded || dead || fightLocked() || !String(typed).trim()) return;
+      st.typed = typed;
+      st.graded = true;
+      st.correct = it.acceptedAnswers.some(a => normalize(a) === normalize(typed));
+      ui.roundDone?.();
+      input.disabled = true;
+      syncSubmitEnabled();
+    }
+
     // Đợt 223 — per-question detail for the "Show answers" review screen,
     // pulled out of finish() so fightCtl.attach's `review` can hand the SAME
     // array to the Fight end panel mid-match (before `finished` is ever true).
@@ -1667,6 +1685,10 @@ const ttaTemplate = {
 
     function finish(reason = "complete") {
       if (finished) return;
+      // ⭐ Đợt 546 — ĐỒNG HỒ CẢ VÁN (Timer count down) chạm 0 giữa lúc em gõ dở: chữ đang hiện được
+      // chấm làm đáp án câu này trước khi chốt sổ (ván kết luôn nên không chạy hoạt ảnh chấm).
+      // Menu ▸ Submit answers không đặt cờ ⇒ giữ như cũ.
+      if (ui.hetGioCaVan?.()) chotChuDangGo();
       const answeredNow = state.filter(s => s.graded).length;
       if (answeredNow === 0) { ui.toast?.("Answer at least one question first."); return; }   // don't latch finished
       finished = true;

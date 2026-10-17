@@ -3787,6 +3787,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // prep. Guarded so it can only start once per play. Templates that don't opt
   // in behave exactly as before (begin() starts the clock immediately).
   let timerStarted = false;
+  // ⭐ Đợt 546 — true khi ĐỒNG HỒ CẢ VÁN (count down) chạm 0 và gọi submitHandler; Menu ▸ Submit answers
+  // KHÔNG đặt cờ. Template hỏi qua ui.hetGioCaVan() để biết vì sao bị nộp (Type the answer: chữ đang gõ dở được tính).
+  let hetGioCaVan = false;
   // Split out of startTimerNow() so the Menu-pause code (below) can restart
   // the exact same interval after adjusting `startedAt` — kept as one function
   // so the two call sites can never drift apart.
@@ -3807,7 +3810,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         countdownSec = remaining;
         if (!fight || fight.side === 0) tpl.sounds?.countdownTick?.(remaining);
       }
-      if (remaining <= 0) { stopTimer(); submitHandler?.(); }
+      if (remaining <= 0) { stopTimer(); hetGioCaVan = true; submitHandler?.(); }   // Đợt 546 — cờ cho ui.hetGioCaVan()
     } else {
       timerEl.textContent = formatTime(elapsed);
       secondsNow = elapsed;
@@ -4125,7 +4128,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     if (torndown) return;
     timerStarted = true;
     startedAt = performance.now() - lamTiepBuMs;   // Đợt 470 — lượt làm tiếp: đồng hồ theo giờ thật từ lúc lượt bắt đầu
-    timeWarned = false; countdownSec = -1;
+    timeWarned = false; countdownSec = -1; hetGioCaVan = false;
     timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
     if (timerMode() !== "none") {
       // show the correct value immediately (don't wait for the first 500ms tick)
@@ -6887,6 +6890,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       if (typeof index0 === "number") paintShowdownName(index0, { outMs, inMs });
     },
     onSubmit(fn, countFn) { submitHandler = fn; answeredCounter = typeof countFn === "function" ? countFn : null; },
+    hetGioCaVan: () => hetGioCaVan,   // Đợt 546
     sound,
     toast,
     finish(raw) {

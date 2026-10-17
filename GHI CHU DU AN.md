@@ -546,6 +546,26 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 546 (17/10/2026) — TYPE THE ANSWER: HẾT GIỜ ⇒ CHỮ ĐANG GÕ DỞ ĐƯỢC NHẬN LÀM ĐÁP ÁN
+
+**Bối cảnh (thầy):** em gõ dở một từ mà hết giờ (mọi tình huống: single, Showdown, Fight…) thì chữ cuối cùng đang hiện phải được nhận là đáp án, không để trống vì chưa kịp bấm Submit.
+
+**Trước đợt này:** mọi đường hết giờ đều vứt chữ trong ô: `roundTimeUp()` đặt `typed = ""` + `timedOut` ⇒ chấm sai "No answer"; đồng hồ CẢ VÁN (Timer count down) gọi thẳng `finish()` ⇒ câu đang gõ không được chấm, và nếu đó là câu đầu tiên thì `finish()` còn báo "Answer at least one question first." rồi KHÔNG kết ván (ván kẹt ở 0:00).
+
+**Đã làm:**
+- `templates/type-the-answer/type-the-answer.js`
+  - `roundTimeUp()`: ô có chữ ⇒ `submitAnswer(input.value)` (đúng đường bấm Submit: chấm đúng/sai thật, tiếng, tim, điểm phạt, Fight báo `wordDone` cho trọng tài). Ô trống ⇒ "No answer" như cũ. Hàm này là đích của CẢ Time each round (single/Showdown, `ui.setRoundTimeout`) lẫn Time limit (`core/time-limit.js`, cả Fight).
+  - Hàm mới `chotChuDangGo()` chấm IM LẶNG chữ đang gõ của câu đang đứng; `finish()` gọi nó ở đầu khi `ui.hetGioCaVan()` true.
+- `core/engine.js` (thêm, không đổi gì của template khác): cờ `hetGioCaVan` (khai cạnh `timerStarted` — tránh TDZ), đặt true ngay trước `submitHandler()` khi đồng hồ cả ván chạm 0, xoá khi đồng hồ bắt đầu lại; lộ ra `ui.hetGioCaVan()`. Menu ▸ Submit answers KHÔNG đặt cờ ⇒ nộp tay giữ y như cũ (chữ chưa Submit không tính).
+
+**Quyết định:** chữ gõ dở mà khớp đáp án thì tính ĐÚNG (thầy: "được nhận là đáp án"); không đánh dấu `timedOut` nên Show answers in chữ em gõ.
+
+**Bàn thử** `scratch/dot546-tta-hetgio.html` (`__single(opts, chữ, chờ)`, `__fight(chữ)`), đo trên trình duyệt: Time limit 3 s gõ "cat" ⇒ khoá, không hiện đáp án (đúng) · gõ "ca" ⇒ sai, hiện "cat" · ô trống ⇒ "No answer" như cũ · Timer count down 4 s gõ "cat" ở câu 1 ⇒ GAME COMPLETE 1/3 (trước: kẹt) · Fight Time limit 3 s bàn trái gõ "cat" ⇒ dải điểm 1–0 rồi sang câu 2, gõ "ca" ⇒ 0–0. 0 lỗi console.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy thử tay (đặc biệt Showdown Time each round trên nhiều máy).
+
+---
+
 ## Đợt 545 (17/10/2026) — TÊN TAB TRANG WEB: "AWord in ANDREW CLASSES" ⇒ "AWord"
 
 **Bối cảnh:** thầy muốn tên trang web mặc định gọn lại, chỉ còn "AWord".

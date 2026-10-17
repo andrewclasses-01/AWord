@@ -1,5 +1,11 @@
 # GHI CHÚ — TEMPLATE TYPE THE ANSWER
 
+## Đợt 546 (17/10/2026) — HẾT GIỜ ⇒ CHỮ ĐANG GÕ DỞ ĐƯỢC NHẬN LÀM ĐÁP ÁN
+
+`roundTimeUp()` (Time each round + Time limit, mọi mode kể cả Fight) ô có chữ ⇒ `submitAnswer(input.value)`; đồng hồ cả ván ⇒ `finish()` gọi `chotChuDangGo()` khi `ui.hetGioCaVan()`. Ô trống vẫn "No answer". Chi tiết + bàn thử: `../../GHI CHU DU AN.md` Đợt 546.
+
+---
+
 ## Đợt 469 (05/10/2026) — LÀM TIẾP lượt dở bài giao (core/lam-tiep.js)
 
 `ui.setLuuTrangThai` + `ui.daDoiBaiLam` + đọc `ui.khoiPhuc` (hợp đồng ở `core/HUONG DAN CORE.md`, mục Đợt 469). Lưu: thứ tự câu + chữ đã gõ/đúng sai/hết giờ + tim + Andrew help đã dùng; `livePoints` tính lại từ bài làm. Chi tiết + số đo: `GHI CHU DU AN.md` Đợt 469.
