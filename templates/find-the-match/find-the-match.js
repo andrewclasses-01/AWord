@@ -106,6 +106,13 @@ function speedPlanFor(speed) {
   };
 }
 
+// ⭐ Đợt 546b (thầy 17/10/2026) — FIGHT + Remove corrects: cặp một đội đã bắt ĐÚNG phải biến khỏi
+// lưới của CẢ HAI bàn (trước đây không bàn nào ẩn: nhánh Fight của choose() không gọi removeTile,
+// và bàn kia không hề biết cặp đã được bắt). Hai bàn chạy chung module này nên dùng chung một sổ;
+// mở một lần mỗi TRẬN (trọng tài `ctl` mới = trận mới, kể cả Start again) — khuôn ftgFightLedger
+// của Find the gap. Ô chỉ ẩn ở đầu vòng KẾ (fightGoTo), sau khi ✓ đã hiện lúc reveal().
+let ftmFightSolved = null;   // { ctl, set: Set<pairIdx> }
+
 const ftmTemplate = {
   type: "find_the_match",
   scorable: true,
@@ -233,6 +240,9 @@ const ftmTemplate = {
     let fightBoardLock = false;
     const fightLocked = () => fightBoardLock || !!(fightCtl && fightCtl.isLocked(fightSide));
     let fightPendingReveal = null;   // { idx, tile, correct } — held back while the other team plays
+    if (fightCtl && (!ftmFightSolved || ftmFightSolved.ctl !== fightCtl)) ftmFightSolved = { ctl: fightCtl, set: new Set() };
+    // Đợt 546b — cặp đã có đội bắt đúng trong trận này (bàn nào cũng được) ⇒ ẩn khi Remove corrects bật.
+    const anChungFight = idx => !!(fightCtl && removeCorrects && ftmFightSolved && ftmFightSolved.ctl === fightCtl && ftmFightSolved.set.has(idx));
     // ⭐ SHOWDOWN (Đợt 186) — the order the prompts were actually SHOWN in. See
     // updateNav / finish: it is what makes "this definition belongs to pupil N"
     // and the end-of-game review agree with each other.
@@ -321,8 +331,8 @@ const ftmTemplate = {
     // ⚠️ Luật Đợt 184 *"cả hai bàn phải là cùng một bàn"* vẫn còn nguyên phần lõi của
     // nó: thứ tự VÒNG ĐẤU chung, phép chia trang chung. Cái được thả ra chỉ là chỗ
     // ngồi của các ô — thứ mà Đợt 184 khoá kèm chỉ vì hồi đó nó dính chung một mảng.
-    // ⚠️ `revealFightMarks()` tra ô đúng bằng `pages[curPage].indexOf(target)` nên nó
-    // tự đi theo bố cục mới, không phải sửa gì.
+    // ⚠️ `revealFightMarks()` tra ô đúng bằng `data-idx` (Đợt 546b; trước đó bằng
+    // `pages[curPage].indexOf(target)`) nên nó tự đi theo bố cục mới, không phải sửa gì.
     // ⚠️ Xáo hai lần cho tới khi KHÁC nhau là việc của xác suất, không làm được ở đây
     // (mỗi bàn là một lần `mount` riêng, không bàn nào thấy bàn kia). Trang 5 ô thì
     // xác suất trùng là 1/120 — chấp nhận được; trang 20 ô thì coi như không bao giờ.
@@ -537,7 +547,7 @@ const ftmTemplate = {
       pages[curPage].forEach((idx, i) => {
         const st = state[idx];
         // A matched-and-removed tile (removeCorrects) leaves an empty cell.
-        if (st.solved && removeCorrects) return;
+        if ((st.solved && removeCorrects) || anChungFight(idx)) return;   // Đợt 546b — cả cặp bàn KIA đã bắt
         const tile = el("button", "aw-ftm-tile", escapeHtml(pairs[idx].keyword));
         tile.dataset.idx = String(idx);
         tile.style.gridRow = String(Math.floor(i / cols) + 1);
@@ -1150,6 +1160,7 @@ const ftmTemplate = {
         fightPendingReveal = { idx, tile, correct };
         if (correct) {
           state[target].solved = true;
+          ftmFightSolved?.set.add(target);   // Đợt 546b — báo bàn kia: cặp này đã bắt (ẩn ở đầu vòng kế)
           ftmSound.correct();
         } else {
           ftmSound.wrong();
@@ -1278,6 +1289,8 @@ const ftmTemplate = {
       if (finished) return;
       if (!pairs[i]) return;
       fightPendingReveal = null;
+      // Đợt 546b — vòng trước đã lộ ✓; cặp nào đã có đội bắt đúng thì giờ ẩn ở CẢ HAI bàn.
+      root.querySelectorAll(".aw-ftm-tile").forEach(t => { if (anChungFight(Number(t.dataset.idx))) removeTile(t); });
       const page = pages.findIndex(arr => arr.includes(i));
       if (page >= 0 && page !== curPage) { curPage = page; renderShell(); }
       queue = pageQueues[curPage];
@@ -1297,11 +1310,10 @@ const ftmTemplate = {
       const held = fightPendingReveal;
       fightPendingReveal = null;
       const target = queue.length ? queue[0] : null;
-      const tiles = [...root.querySelectorAll(".aw-ftm-tile")];
-      const pageArr = pages[curPage] || [];
       if (target !== null) {
-        const pos = pageArr.indexOf(target);
-        const rightTile = pos >= 0 ? tiles[pos] : null;
+        // Đợt 546b — tra theo data-idx: lưới có thể đã thiếu ô (cặp đã ẩn khi dựng lại trang)
+        // nên vị trí trong trang KHÔNG còn là chỉ số trong danh sách ô.
+        const rightTile = root.querySelector(`.aw-ftm-tile[data-idx="${target}"]`);
         if (rightTile && !rightTile.querySelector(".aw-ftm-fightmark")) {
           rightTile.append(el("span", "aw-ftm-fightmark", icons.markCheck));
         }

@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **17/10/2026 Đợt 546b — FIND THE MATCH FIGHT + REMOVE CORRECTS: ô một đội bắt đúng ẩn ở CẢ HAI bàn từ đầu vòng kế** (sổ chung cấp module `ftmFightSolved`, khuôn ftgFightLedger; `revealFightMarks` tìm ô theo `data-idx`). Chi tiết: GHI CHU DU AN.md Đợt 546b.
 > ✏️ **17/10/2026 Đợt 546 — TYPE THE ANSWER: HẾT GIỜ (mọi mode) ⇒ CHỮ ĐANG GÕ DỞ ĐƯỢC CHẤM LÀM ĐÁP ÁN** (`roundTimeUp` ô có chữ ⇒ `submitAnswer`; đồng hồ cả ván ⇒ `chotChuDangGo` qua `ui.hetGioCaVan()` MỚI của engine; Menu ▸ Submit answers giữ như cũ). Chi tiết: GHI CHU DU AN.md Đợt 546.
 > ✏️ **17/10/2026 Đợt 545 — TÊN TAB = "AWord"** (bỏ "in ANDREW CLASSES" ở `<title>` index/play/404 + `PAGE_TITLE_BASE` main.js + manifest `name`; logo trên trang GIỮ nguyên). Chi tiết: GHI CHU DU AN.md Đợt 545.
 > ✏️ **17/10/2026 Đợt 540 · 541 · 544 — 4 GAME 3D: màn chờ ảnh tĩnh cắt từ cảnh 3D (theme `shot` core/loader3d.js, ANDREW STUDIO + tên game phông riêng; Rocket Race Fight lần đầu có màn chờ) · màn chọn WORDS 4 ô dùng CHÍNH ảnh màn chờ (core/wp-art, không dải đen) · màn chờ hiện **% LOAD THẬT** (`files`/`filesOf`, `templates/<game>/load-files.js` SINH bằng `tools/tao-load-files.py` từ đo thật — đổi tiếng/xe/module PHẢI sinh lại) + đợi đủ tiếng · tiếng nén mức Vừa 30,8→19,0 MB (myGame `tools/nen-tieng-3d.py`)**. ⛔ `tools/wp.src.css` từng lệch file sinh — diff trước khi chạy wp-css.py. Chi tiết: GHI CHU DU AN Đợt 540/541/544.

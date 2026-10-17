@@ -546,6 +546,26 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 546b (17/10/2026) — FIND THE MATCH FIGHT: REMOVE CORRECTS ẨN Ô ĐÚNG Ở CẢ HAI BÀN
+
+**Bối cảnh (thầy):** Fight của Find the match, Options đã bật Remove corrects mà ô đáp án đúng đã được chọn vẫn còn trên lưới. Muốn: đội 1 chọn đúng, tính điểm xong thì ô đó ẩn, và bàn đội 2 cũng ẩn.
+
+**Gốc lỗi:** nhánh Fight của `choose()` (`templates/find-the-match/find-the-match.js`) chỉ đặt `state[target].solved = true` rồi `return` — KHÔNG gọi `removeTile()` như chơi thường (nhánh đó cố ý không vẽ gì để giữ luật "giấu đáp án khi vòng còn mở"). `fightGoTo()` chỉ dựng lại lưới khi ĐỔI TRANG ⇒ cùng trang thì ô đúng không bao giờ biến. Bàn đội kia thì còn tệ hơn: nó không hề biết cặp đã được bắt (mỗi bàn một `state` riêng) nên kể cả đổi trang cũng không ẩn.
+
+**Đã làm (chỉ file trên):**
+- Sổ chung cấp module `ftmFightSolved = { ctl, set }` (khuôn `ftgFightLedger` của Find the gap): mở một lần mỗi TRẬN (`ctl` mới = trận mới, kể cả Start again) bởi bàn mount trước; bàn bắt đúng ghi `set.add(target)`.
+- `anChungFight(idx)` = Fight + Remove corrects bật + cặp có trong sổ.
+- `fightGoTo()` (đầu vòng KẾ, tức SAU khi `reveal()` đã hiện ✓ cho cả hai bàn) gọi `removeTile()` cho mọi ô `anChungFight` ⇒ ô mờ biến (giữ chỗ trống, không xô ô khác) ở CẢ HAI bàn. `renderShell()` bỏ qua các cặp đó khi dựng trang mới.
+- `revealFightMarks()` tìm ô đúng bằng `data-idx` thay vì `tiles[pages[curPage].indexOf(target)]` — lưới dựng lại có thể thiếu ô nên vị trí trong trang không còn khớp chỉ số ô.
+
+**Quyết định:** cặp không đội nào bắt đúng thì vẫn ở lại (như chơi thường: bấm sai không xoá ô). Remove corrects tắt ⇒ y như cũ.
+
+**Bàn thử** `scratch/dot546b-ftm-remove.html` (`__run(true|false)`): bật — vòng 1 đội 1 đúng ⇒ lúc reveal ô còn + ✓ ở bàn đội 2, sang vòng 2 ô ẩn ở CẢ HAI bàn · vòng 2 cả hai sai ⇒ cặp đó vẫn còn ở hai bàn · vòng 3 đội 2 đúng ⇒ vòng 4 ẩn ở cả hai; tắt — không ô nào ẩn. 0 lỗi console. Hồi quy `scratch/ftm-fight-test.html` 17/18 — phép trượt duy nhất "hai bàn xếp ô GIỐNG HỆT" đã lỗi thời từ Đợt 222 (cố ý xáo riêng mỗi bàn), không liên quan đợt này.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy bấm tay trên bảng thật.
+
+---
+
 ## Đợt 546 (17/10/2026) — TYPE THE ANSWER: HẾT GIỜ ⇒ CHỮ ĐANG GÕ DỞ ĐƯỢC NHẬN LÀM ĐÁP ÁN
 
 **Bối cảnh (thầy):** em gõ dở một từ mà hết giờ (mọi tình huống: single, Showdown, Fight…) thì chữ cuối cùng đang hiện phải được nhận là đáp án, không để trống vì chưa kịp bấm Submit.

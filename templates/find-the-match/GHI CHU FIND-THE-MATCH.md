@@ -1,5 +1,11 @@
 # GHI CHÚ — TEMPLATE FIND THE MATCH
 
+## Đợt 546b (17/10/2026) — FIGHT: REMOVE CORRECTS ẨN Ô ĐÚNG Ở CẢ HAI BÀN
+
+Nhánh Fight của `choose()` chưa bao giờ gọi `removeTile()`, bàn kia không biết cặp đã bắt. Nay sổ chung `ftmFightSolved` (mỗi trận một sổ) + `fightGoTo()` ẩn ô ở đầu vòng kế (sau khi ✓ đã hiện), `renderShell()` bỏ qua; `revealFightMarks()` tìm ô theo `data-idx`. Chi tiết + bàn thử: `../../GHI CHU DU AN.md` Đợt 546b.
+
+---
+
 ## Đợt 493 (07/10/2026) — SPEED = THỜI GIAN ĐỨNG YÊN ĐỂ ĐỌC
 
 Thầy: chữ chỉ dừng ở giữa "một chút rất nhanh" rồi trôi ra ngay ⇒ không đọc hết được. Gốc: `crawlMsFor()` cũ là MỘT lần trôi thẳng giữa → mép phải, bắt đầu NGAY khi định nghĩa vào giữa — chữ chỉ đứng yên trong đuôi ease-out của lúc chạy vào.
