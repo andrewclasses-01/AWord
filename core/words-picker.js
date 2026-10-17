@@ -68,7 +68,8 @@ function loadCineFonts() {
 const G2 = [
   ["quiz", "quiz"], ["anagram", "anagram"], ["find_the_match", "match"], ["type_the_answer", "type"],
   ["open_the_box", "box"], ["whack_a_mole", "mole"], ["crossword", "cross"], ["wordshake", "speed"],
-  ["flying_fruit", "fruit"], ["gameshow", "show"], ["speaking_cards", "speak"]
+  ["flying_fruit", "fruit"], ["gameshow", "show"], ["speaking_cards", "speak"],
+  ["tournament", "tourn"]   // Đợt 548 — ô thứ 12 (hàng dưới đủ 6 ô)
 ];
 const ORDER = [...G3.map(g => g[0]), ...G2.map(g => g[0])];
 
@@ -365,8 +366,9 @@ export async function openWordsPicker(root, node, { onExit, onBack } = {}) {
     }
     if (k === "ArrowRight") i = Math.min(ORDER.length - 1, i + 1);
     else if (k === "ArrowLeft") i = Math.max(0, i - 1);
-    else if (k === "ArrowDown") i = i < 3 ? 3 + i * 2 : Math.min(ORDER.length - 1, i + (i < 9 ? 6 : 5));
-    else if (k === "ArrowUp") i = i >= 3 && i < 9 ? Math.min(2, Math.floor((i - 3) / 2)) : Math.max(0, i - (i >= 9 ? 6 : 0));
+    // Đợt 548 — 4 thẻ 3D (chỉ số 0–3) + 2 hàng × 6 ô (4–9, 10–15)
+    else if (k === "ArrowDown") i = i < 4 ? 4 + Math.round(i * 5 / 3) : Math.min(ORDER.length - 1, i < 10 ? i + 6 : i);
+    else if (k === "ArrowUp") i = i >= 10 ? i - 6 : (i >= 4 ? Math.min(3, Math.floor((i - 4) * 4 / 6)) : i);
     else return;
     e.preventDefault();
     st.hi = ORDER[i]; paintHi();

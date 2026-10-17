@@ -44,7 +44,7 @@
 .aw-wp-rule { position: absolute; left: calc(80 * var(--p)); right: calc(80 * var(--p)); top: calc(448 * var(--p)); height: 1px; background: linear-gradient(90deg, transparent, #cfdbea 18%, #cfdbea 82%, transparent); }
 .aw-wp-z2 { position: absolute; left: calc(80 * var(--p)); right: calc(80 * var(--p)); top: calc(474 * var(--p)); display: grid; grid-template-columns: repeat(12, 1fr); gap: calc(14 * var(--p)); }
 .aw-wp-z2 .wp-tile { grid-column: span 2; }
-.aw-wp-z2 .wp-tile:nth-child(7) { grid-column: 2 / span 2; }
+/* Đợt 548: 12 ô = 2 hàng đủ 6 ô (trước 11 ô: hàng dưới lệch vào giữa) */
 
 /* 3D scene cards (flat art) */
 .wp-card { position: relative; height: calc(190 * var(--p)); border-radius: calc(22 * var(--p)); overflow: hidden; cursor: pointer; border: 0; padding: 0; display: block; width: 100%; text-align: left; transition: transform .22s cubic-bezier(.22,.61,.36,1), box-shadow .22s ease; outline: 0; }

@@ -1,0 +1,61 @@
+/* =============================================================
+   TOURNAMENT — thẻ giải cho học sinh + nút mờ "sắp có" trong Options.
+   Mọi class có tiền tố .aw-tn- ; cỡ đo bằng --aw-u (1% bề ngang khung, core/unit.js).
+   ============================================================= */
+
+.aw-tn-root {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  background: radial-gradient(120% 120% at 50% 0%, #1b2a6b 0%, #0d1233 62%, #070a20 100%);
+  color: #eaf0ff; font-family: var(--aw-font, "Baloo 2", system-ui, sans-serif);
+  overflow: hidden;
+  animation: aw-fadein .25s ease;
+}
+.aw-tn-card {
+  width: calc(64 * var(--aw-u)); max-height: 94%; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: calc(2.4 * var(--aw-u)) calc(3 * var(--aw-u));
+  border-radius: calc(2 * var(--aw-u));
+  background: rgba(255, 255, 255, .06);
+  border: 2px solid rgba(96, 165, 250, .55);
+  box-shadow: 0 0 calc(3 * var(--aw-u)) rgba(96, 165, 250, .28), inset 0 0 calc(3 * var(--aw-u)) rgba(96, 165, 250, .08);
+}
+.aw-tn-trophy { width: calc(6.4 * var(--aw-u)); height: calc(6.4 * var(--aw-u)); color: #ffd23f; filter: drop-shadow(0 0 calc(.9 * var(--aw-u)) rgba(255, 210, 63, .6)); }
+.aw-tn-trophy svg { width: 100%; height: 100%; display: block; }
+.aw-tn-kicker { margin-top: calc(.6 * var(--aw-u)); font-size: calc(1.45 * var(--aw-u)); letter-spacing: .18em; font-weight: 800; color: #8fb8ff; }
+.aw-tn-title {
+  margin: calc(.5 * var(--aw-u)) 0 calc(1.6 * var(--aw-u)); max-width: 100%;
+  font-size: calc(3.6 * var(--aw-u)); line-height: 1.12; font-weight: 800; color: #fff;
+  overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.aw-tn-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: calc(.9 * var(--aw-u)); }
+.aw-tn-chip {
+  display: flex; flex-direction: column; align-items: center; min-width: calc(9 * var(--aw-u));
+  padding: calc(.7 * var(--aw-u)) calc(1.3 * var(--aw-u)); border-radius: calc(1.2 * var(--aw-u));
+  background: rgba(96, 165, 250, .14); border: 1px solid rgba(96, 165, 250, .4);
+}
+.aw-tn-chip b { font-size: calc(2.1 * var(--aw-u)); line-height: 1.1; font-weight: 800; color: #fff; }
+.aw-tn-chip span { font-size: calc(1.2 * var(--aw-u)); color: #9db4e8; }
+.aw-tn-note { margin-top: calc(2 * var(--aw-u)); font-size: calc(2.2 * var(--aw-u)); font-weight: 800; color: #ffd23f; }
+.aw-tn-sub { margin-top: calc(.4 * var(--aw-u)); font-size: calc(1.5 * var(--aw-u)); color: #b9c8ee; }
+.aw-tn-btns { margin-top: calc(2 * var(--aw-u)); display: flex; flex-wrap: wrap; justify-content: center; gap: calc(1.2 * var(--aw-u)); }
+.aw-tn-btn {
+  appearance: none; border: 2px solid rgba(96, 165, 250, .7); background: rgba(96, 165, 250, .12); color: #dbe8ff;
+  font: inherit; font-weight: 800; font-size: calc(2 * var(--aw-u)); text-decoration: none; cursor: pointer;
+  padding: calc(.9 * var(--aw-u)) calc(2.6 * var(--aw-u)); border-radius: calc(1.2 * var(--aw-u));
+  transition: transform .12s, background-color .15s, box-shadow .15s;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.aw-tn-btn:hover { background: rgba(96, 165, 250, .26); box-shadow: 0 0 calc(1.6 * var(--aw-u)) rgba(96, 165, 250, .45); }
+.aw-tn-btn:active { transform: scale(.96); }
+.aw-tn-btn.is-main { background: #2f7bff; border-color: #8fb8ff; color: #fff; }
+.aw-tn-btn.is-main:hover { background: #4a8dff; }
+.aw-tn-btn:disabled { opacity: .5; cursor: default; box-shadow: none; transform: none; }
+
+/* Options: lựa chọn "sắp có" — hiện mờ, không bấm được */
+.aw-seg-btn.aw-tn-soon { opacity: .38; cursor: not-allowed; pointer-events: none; }
+
+/* Tournament không có điểm / giờ / câu: ẩn chip ✓, đồng hồ, và hàng ‹ › của khung */
+.aw-stage.act-tournament .aw-top-score,
+.aw-stage.act-tournament .aw-top-timer,
+.aw-stage.act-tournament .aw-nav { visibility: hidden !important; opacity: 0 !important; pointer-events: none; }
+.aw-page:has(.aw-stage.act-tournament) .aw-bottombar .aw-nav { visibility: hidden; pointer-events: none; }

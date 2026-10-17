@@ -165,7 +165,16 @@ export const TEMPLATES = [
     blurb: "Shake the letters and make the words — one at a time, from a word list, or any word you can find.",
     css: "templates/wordshake/wordshake.css",
     load: () => import("../templates/wordshake/wordshake.js"),
-    sample: () => import("../templates/wordshake/sample-wordshake.js") }
+    sample: () => import("../templates/wordshake/sample-wordshake.js") },
+
+  // ⭐ Đợt 548 (17/10/2026) — TOURNAMENT: bộ cấu hình GIẢI ĐẤU A SHOW SPEED cho một lớp (trận thật chạy trên
+  // andrewclasses.com, không chạy ở AWord). Đổi từ act WORDS; giao bài qua ?giao= của myLesson.
+  // See templates/tournament/GHI CHU TOURNAMENT.md.
+  { type: "tournament",      label: "Tournament",      built: true,
+    blurb: "Set up an A Show Speed tournament for a class — the matches are played on andrewclasses.com.",
+    css: "templates/tournament/tournament.css",
+    load: () => import("../templates/tournament/tournament.js"),
+    sample: () => import("../templates/tournament/sample-tournament.js") }
 ];
 
 export function templateEntry(type) {
@@ -196,7 +205,8 @@ export const TEMPLATE_ICON = {
   speaking_cards: "mic", speaking: "mic",
   running_word: "fmtRace", running_team: "fmtRace", rocket_race: "fmtRace", racing_words: "fmtRace",
   find_the_gap: "fmtWord",
-  wordshake: "fmtAnagram"   // Đợt 386 — makes words from letters, like Anagram
+  wordshake: "fmtAnagram",   // Đợt 386 — makes words from letters, like Anagram
+  tournament: "fmtRace"      // Đợt 548 — a tournament is a race between pupils
 };
 
 // The icon MARKUP for a type. `icons` is passed in rather than imported so this

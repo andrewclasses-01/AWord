@@ -21,7 +21,7 @@
 
 import { templateEntry } from "./catalog.js";
 import { shuffle } from "./utils.js";
-import { resolveActivity } from "./content-view.js";
+import { resolveActivity, activeVariant } from "./content-view.js";
 import { OPT_VER } from "./options-migrate.js";
 
 // ---- Các loại đích theo từng "kind" nguồn -------------------------------
@@ -32,7 +32,8 @@ const QA_TARGETS = [
   "whack_a_mole", "speaking_cards", "running_team", "running_word",
   "rocket_race",  // Đợt 350 — same question shape as Quiz / Maze chase
   "racing_words", // Đợt 527 — same question shape as Quiz / Rocket race
-  "wordshake"     // Đợt 386 — same {word, clue} shape as Anagram
+  "wordshake",    // Đợt 386 — same {word, clue} shape as Anagram
+  "tournament"    // Đợt 548 — giải đấu A Show Speed: cùng khuôn {word, clue} (+ clues/voices của 4 bộ), xem templates/tournament
 ];
 // Running team needs SIX words to fill a round (one answer + five look-alike
 // decoys). Hardcoded rather than imported from templates/running-team/rt-sets.js
@@ -73,7 +74,8 @@ export function toRecords(activityIn) {
   switch (type) {
     case "anagram":
     case "flying_fruit":
-    case "wordshake": {
+    case "wordshake":
+    case "tournament": {
       const items = c.items || [];
       return { kind: "qa", records: items.map(i => qaRec(i.word, i.clue, i)) };
     }
@@ -234,6 +236,19 @@ export async function convertActivity(activity, targetType, { style = "" } = {})
   const { kind, records } = toRecords(activity);
   const content = buildContent(targetType, kind, records, style);
 
+  // ⭐ Đợt 548 — TOURNAMENT mang theo CẢ BỐN bộ gợi ý (ENG1/ENG2/VI1/VI2) và giọng đọc của từng bộ:
+  // app myLesson tự chọn `clues[tnBien]` khi dựng giải, màn "Luyện với máy" cũng vậy. `toRecords` ở trên
+  // đã trải phẳng về MỘT bộ nên phải lấy lại từ act gốc (chỉ khi gốc là danh sách items cùng từ, cùng thứ tự).
+  if (targetType === "tournament" && Array.isArray(content.items)) {
+    const raw = (activity.content && activity.content.items) || [];
+    content.items.forEach((it, i) => {
+      const r = raw[i];
+      if (!r || String(r.word || "").trim() !== it.word) return;
+      if (r.clues && typeof r.clues === "object") it.clues = { ...r.clues };
+      if (r.voices && typeof r.voices === "object") it.voices = JSON.parse(JSON.stringify(r.voices));
+    });
+  }
+
   // ⭐ Đợt 190 — CARRY THE SAVED SETS IN. The two racing games keep their printed
   // numbering on the activity, and RUNNING mode saves it back onto the ORIGIN act
   // (see ui.saveTarget in core/engine.js). Without this line the round trip only
@@ -283,6 +298,13 @@ export async function convertActivity(activity, targetType, { style = "" } = {})
   const srcMode = (activity && activity.options) ? activity.options.contentMode : null;
   if (srcMode) options.contentMode = srcMode;
 
+  // Đợt 548 — Tournament: bộ gợi ý đang chọn ở act gốc là bộ mặc định của giải (`tnBien`), và nhớ act WORDS nguồn.
+  if (targetType === "tournament") {
+    let bien = "";
+    try { bien = activeVariant(activity) || ""; } catch (_) {}
+    options.tnBien = bien;
+  }
+
   return {
     id: "conv_" + targetType + "_" + Math.floor(Math.random() * 1e9),
     schemaVersion: 1,
@@ -323,6 +345,7 @@ export async function convertActivity(activity, targetType, { style = "" } = {})
     // `undefined`. Vá bằng cách trả `options` lại, giữ nguyên `optVer` bên cạnh.
     options,
     content,
+    ...(targetType === "tournament" ? { sourceActId: String(activity.id || "") } : {}),   // Đợt 548 — id act WORDS nguồn
     _converted: true   // cờ đánh dấu act tạm (không lưu, không có trên thư viện)
   };
 }
@@ -344,6 +367,7 @@ function buildContent(targetType, kind, records, style) {
     case "anagram":
     case "flying_fruit":
     case "wordshake":
+    case "tournament":
       return {
         withClues: records.some(r => clueOf(r, kind).trim()),
         items: records.map(r => ({

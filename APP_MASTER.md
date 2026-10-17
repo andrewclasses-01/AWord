@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **17/10/2026 Đợt 548 — TEMPLATE TOURNAMENT** (bộ cấu hình giải đấu A Show Speed đổi từ act WORDS: khoá `tn*`/`ws*`, thẻ giải + Luyện với máy cho học sinh, không ghi results; core chỉ thêm dòng khai báo). Chi tiết: GHI CHU DU AN.md Đợt 548 + `templates/tournament/GHI CHU TOURNAMENT.md`.
 > ✏️ **17/10/2026 Đợt 547 — FIGHT: SỐ CÂU DƯỚI KHUNG = SỐ CÂU CẢ TRẬN** (True/false thôi hiện điểm đội, Find the match có số câu, In turns đổi số của bàn ra số cả bộ qua `ctl.soCauTran` + engine `setNav`). Chi tiết: GHI CHU DU AN.md Đợt 547.
 > ✏️ **17/10/2026 Đợt 546b — FIND THE MATCH FIGHT + REMOVE CORRECTS: ô một đội bắt đúng ẩn ở CẢ HAI bàn từ đầu vòng kế** (sổ chung cấp module `ftmFightSolved`, khuôn ftgFightLedger; `revealFightMarks` tìm ô theo `data-idx`). Chi tiết: GHI CHU DU AN.md Đợt 546b.
 > ✏️ **17/10/2026 Đợt 546 — TYPE THE ANSWER: HẾT GIỜ (mọi mode) ⇒ CHỮ ĐANG GÕ DỞ ĐƯỢC CHẤM LÀM ĐÁP ÁN** (`roundTimeUp` ô có chữ ⇒ `submitAnswer`; đồng hồ cả ván ⇒ `chotChuDangGo` qua `ui.hetGioCaVan()` MỚI của engine; Menu ▸ Submit answers giữ như cũ). Chi tiết: GHI CHU DU AN.md Đợt 546.

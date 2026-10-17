@@ -82,7 +82,8 @@ function snapshotOf(act, optionsOverride) {
     instruction: act.instruction || "",
     theme: act.theme || "classic",
     options: optionsOverride || act.options || {},
-    content: act.content || {}
+    content: act.content || {},
+    sourceActId: act.sourceActId   // Đợt 548 — chỉ Tournament có: id act WORDS nguồn (myLesson đọc để dựng giải); undefined thì clean() bỏ
   });
 }
 

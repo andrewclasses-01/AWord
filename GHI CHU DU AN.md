@@ -546,6 +546,23 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 548 (17/10/2026) — TEMPLATE TOURNAMENT: BỘ CẤU HÌNH GIẢI ĐẤU A SHOW SPEED (giao qua ?giao=, trận chạy trên web)
+
+**Bối cảnh (thầy duyệt "ok build"):** giải đấu riêng cho một lớp tạo từ app myLesson (loại TOURNAMENT). Ba phiên song song (AWord · myLesson · web); hồ sơ `D:\OTHERS\CLAUDE\GIAI DAU THE - thiet ke\` (KE HOACH BUILD + HOP DONG DU LIEU - 3 kho). Phần AWord = template `tournament`.
+
+**Đã làm:**
+- `templates/tournament/` (js · css `.aw-tn-` · sample · editor dùng lại Anagram · test.html · `GHI CHU TOURNAMENT.md`). Không phải game: thẻ giải cho học sinh (tên · phút · độ khó · cách chơi · số từ), dòng "Giải đấu diễn ra trên andrewclasses.com", nút mở `https://andrewclasses.com/nw/giaidau.html`, nút "Luyện với máy" (= `startGame` wordshake với đúng cấu hình, KHÔNG có `session` ⇒ không nộp gì). Không gọi `ui.finish`/`onSubmit` ⇒ không ghi `results`/`scores`. KHÔNG đặt `noAssignment`.
+- Khoá options CHỐT: `tnGame 'aShowSpeed'` · `tnHinh 'cap'` · `wsMode/wsTiles/wsOnlyList` (dùng lại `buildExtraOptions` wordshake, bỏ ô Score tank) · `tnPhut 2|3|5` · `tnLv easy|medium|hard` · `tnGoiY` · `tnGiong` · `tnBien eng1|eng2|vi1|vi2|''`. Ô "Trò khác", "Đấu đội", "Hai đội đấu chéo" hiện mờ "Sắp có".
+- Nội dung: `items[{word,clue,clues{4 bộ},voice?,voices{eng1,eng2}}]` + `activity.sourceActId` (id act WORDS nguồn) — `core/convert.js` lấy lại `clues`/`voices` từ act gốc (toRecords trải phẳng một bộ), đặt `options.tnBien` = bộ đang chọn.
+- Core CHỈ thêm dòng khai báo: `catalog.js` (TEMPLATES + TEMPLATE_ICON) · `convert.js` (QA_TARGETS, toRecords, buildContent, decorate) · `assignment-ui.js` (`TPL_SHORT` TOURNAMENT) · `assignments.js` (`snapshotOf` + `sourceActId`) · `words-picker*.js/.css` (ô thứ 12; hàng dưới đủ 6 ô; sửa phím ↑↓ lệch từ Đợt 527) · `tpl-files.js` sinh lại. KHÔNG đụng engine/fight/showdown.
+- Marker `MYACT:AW:ASSIGN:` giữ nguyên khoá, chỉ `mauType:'tournament'` ⇒ myLesson/myActivity không phải bump cùng. myLesson lấy mã assignment như cũ rồi đọc `assignments/{code}` (đọc công khai).
+
+**Đã đo (bàn thử `templates/tournament/test.html`):** thẻ giải đủ chữ, Luyện với máy mở A Show Speed 3 phút ra câu (gợi ý eng1), Options đủ ô, `switchTargets` có tournament, `convertActivity` giữ `clues/voices/sourceActId/tnBien`, chip ✓/đồng hồ/‹ › ẩn. 0 lỗi console.
+
+**VIỆC ĐANG CHỜ:** ⬜ TOMKO: thầy thử đường thật — myLesson ô Set Tournament → form giao bài (chọn Tournament) → học sinh mở link xem thẻ giải + nút Giải đấu + Luyện với máy. ⬜ `tnLv`/`tnGoiY` chưa tác dụng ở "Luyện với máy" (wordshake template chưa có độ khó).
+
+---
+
 ## Đợt 547 (17/10/2026) — FIGHT: SỐ CÂU DƯỚI KHUNG = SỐ CÂU CỦA CẢ TRẬN
 
 **Bối cảnh (thầy):** trong Fight ở một số template, số câu ở hàng dưới khung chưa chuẩn — phải là số thực tế của cả game (câu thứ 5 trong 30 câu ⇒ "5/30"), đang hiện số câu làm được của riêng đội đó.
