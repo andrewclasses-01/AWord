@@ -249,7 +249,8 @@ const racingWordsTemplate = {
   boxMode() { /* chỉ có Fight — không có gì để đổi */ },
   ownFight(root, act) { return racingWordsTemplate.mount(root, act, {}); },
   // bỏ màn READY: Play ngay ⇒ thầy thấy thẳng xưởng ANDREW STUDIO. Không chạy được 3D ⇒ NÉM để engine giữ màn READY thường.
-  startScreen({ play, ready }) {
+  startScreen({ play, ready, preflight }) {
+    if (preflight) return { dispose() {} };   // ⭐ Đợt 549 — màn chọn WORDS đang dựng NHẸ (chỉ lấy bảng Options): chưa nạp 3D, chưa Play — READY mới dựng thật
     if (block3dHere()) { ready().then(() => play()); return { dispose() {} }; }   // Đợt 530: bảng 2..5 — không màn chờ 3D, không thử WebGL
     if (!canRun3d()) throw new Error("Racing words: no WebGL");
     const ld = loader();
@@ -261,6 +262,7 @@ const racingWordsTemplate = {
     return { dispose() { gone = true; letGo(); } };
   },
   mount(root, activity, ui) {
+    if (ui && ui.preflight) { root.innerHTML = ""; return () => {}; }   // ⭐ Đợt 549 — bàn ngầm dựng NHẸ của màn chọn: không nạp 3D
     if (block3dHere()) { root.innerHTML = ""; return block3dMessage(root, "Racing words"); }   // Đợt 530
     const questions = playable(activity);
     if (!canRun3d()) { needMessage(root, "Racing words needs 3D graphics (WebGL), which this browser or device cannot run."); return () => {}; }

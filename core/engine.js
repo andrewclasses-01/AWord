@@ -286,8 +286,13 @@ export function setWordsPickerHook(h) { wordsPickerHook = h && typeof h.open ===
 // bấm Apply thật rồi mới hiện game. Không có bảng Options thứ hai nào: lưu y như Apply.
 // Mỗi lần một bàn (bàn 0 nếu đang Fight) dựng xong, engine gọi `preflightHook.onMount(api)` — xem
 // `preflightApi()` cuối phần dựng. Màn chọn tự gỡ hook (setPreflight(null)) khi READY / huỷ.
+// ⭐⭐ Đợt 549 (thầy 18/10/2026: "game đang được load ngay nên không chỉnh options được… bắt đầu load sau khi bấm ready") —
+// `light: true` = DỰNG NHẸ: bàn ngầm của màn chọn chỉ để có bảng Options + thanh MODE thật; template 3D đọc `ui.preflight` /
+// `api.preflight` (startScreen) và KHÔNG nạp cảnh 3D, không màn chờ, không bắt tay iPad; core/fight.js bỏ `fightScene` (Rocket race).
+// READY ⇒ màn chọn đổi hook sang dựng THẬT rồi Apply / `remount()` ⇒ bàn dựng lại đầy đủ, lúc đó 3D mới bắt đầu nạp.
 let preflightHook = null;
 export function setPreflight(h) { preflightHook = h && typeof h.onMount === "function" ? h : null; }
+export function preflightLight() { return !!(preflightHook && preflightHook.light); }
 
 // ⭐⭐ Đợt 400 — "TEMPLATE CHƠI CUỐI" (xem setLastTemplate trong core/store.js). Template
 // mà act THƯ VIỆN này phải mở ra, hoặc "" nếu là chính loại gốc / không chuyển được.
@@ -453,6 +458,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   if (fight) fight.ctl.registerCleanup(fight.side, cleanupAll);
 
   const tpl = getTemplate(activity.type);
+  // ⭐ Đợt 549 — chốt NGAY lúc dựng: bàn này là bàn ngầm DỰNG NHẸ của màn chọn? (hook đổi sau đó không làm bàn này đổi nết)
+  const preLight = !session && preflightLight();
   const { page, stage, inner, below } = buildStage(activity.theme || "classic");
   // ⭐⭐ Đợt 512 (thầy chốt 14/10/2026) — CHẾ ĐỘ QUAY VIDEO của bài giao (play.js `&quay=1` ⇒ `session.quay`): nút BẮT ĐẦU LẠI
   // (hỏi lại 1 lần) đứng chỗ ☰ · nhãn giữa đáy "CÂU x / N" · không chip điểm · làm xong KHÔNG nộp, màn "ĐÃ ĐI HẾT N CÂU".
@@ -1955,6 +1962,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       ownFight: !!modeTpl.ownFight,
       fightOnly: !!modeTpl.fightOnly,          // ⭐ Đợt 531 — Racing words: chỉ có Fight ⇒ màn chọn làm mờ SINGLE
       fightFirst: !!modeTpl.fightByDefault,   // Rocket race / Train rush: khung mở sẵn ở FIGHT
+      light: preLight,                         // ⭐ Đợt 549 — bàn này dựng NHẸ (game 3D chưa nạp) ⇒ READY phải dựng lại thật
       can: {
         fight: canFight,
         showdown: canShowdown,
@@ -1962,11 +1970,14 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         ipa: canIpa || playMode === "ipa"
       },
       // Bảng Options thật, gắn vào `host` của màn chọn (xem nhánh `embed` trong openToolPanel).
-      embedOptions(host) {
+      // ⭐ Đợt 549 — opts.showdown: màn chọn đang chọn SHOWDOWN (bàn đứng single tới READY) ⇒ dựng luôn các dòng riêng của
+      //   Showdown (Time each round · Count …) y như bảng Options khi đang ở Showdown — màn chọn không được thiếu dòng nào.
+      embedOptions(host, opts) {
         if (torndown || !host || !optionsBtn.isConnected) return false;
         awSyncMute++;   // như cầu openOptions: lần mở này không phát TOOLOPEN sang các cột myActivity
+        embedShowdown = !!(opts && opts.showdown && canShowdown);
         try { pendingOvl = { layer: host, embed: true }; openToolPanel(optionsBtn, buildOptionsPanel); }
-        finally { pendingOvl = null; setTimeout(() => { awSyncMute = Math.max(0, awSyncMute - 1); }, 400); }
+        finally { pendingOvl = null; embedShowdown = false; setTimeout(() => { awSyncMute = Math.max(0, awSyncMute - 1); }, 400); }
         return !!toolPanelEl;
       },
       // single · fight · running (sub = running_word|running_team) · ipa. Showdown KHÔNG ở đây: màn
@@ -2007,6 +2018,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       },
       close() { if (toolPanelEl && toolPanelEl.classList.contains("is-embed")) closeToolPanel(false); },
       enterFight() { if (!torndown && canFight && !fight) enterFight(); },
+      // ⭐ Đợt 549 — dựng lại bàn đang có (Trận: dựng lại cả trận) — READY của màn chọn khi Apply không có gì đổi mà bàn còn NHẸ.
+      remount() { if (!torndown) replayCurrent(); },
       openShowdown() {
         if (torndown || !canShowdown || fight || !modeBtn.isConnected) return;
         openToolPanel(modeBtn, buildShowdownPanelHost);
@@ -3344,6 +3357,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     try {
       customStart = tpl.startScreen({
         host, activity,
+        preflight: preLight,   // ⭐ Đợt 549 — màn chọn đang dựng NHẸ: đừng nạp 3D / đừng tự Play
         fight: fight ? { side: fight.side, ctl: fight.ctl } : null,
         play: () => { if (!bigPlay.disabled && !playStarted) startPressed(); },
         ready: () => Promise.resolve(prepDoneP).catch(() => {})
@@ -4327,6 +4341,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // engine nằm DƯỚI ô game (z-index 1000) nên lớp mờ + bảng được gắn vào LỚP của game (`ovlLayer`), neo trên hàng nút của game.
   // pendingOvl = lời mời đang chờ openToolPanel nhận · ovlPanel = bảng đang mở kiểu này ({ layer, top(), onClose }).
   let pendingOvl = null, ovlPanel = null, ovlLayer = null, ovlAnchor = null;
+  let embedShowdown = false;   // ⭐ Đợt 549 — xem preflightApi().embedOptions
   // ⭐ Đợt 525 — READY của màn chọn đang bấm Apply thay thầy (xem preflightApi().apply):
   // Apply khi đó KHÔNG được hẹn mở lại bảng sau lần dựng lại (openOptionsOnMount).
   let preflightApplying = false;
@@ -5324,6 +5339,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // What stays HERE is everything this caller owns and Settings does not: the
   // draft model, Apply, fight mode, and persisting into the teacher's library.
   function buildOptionsPanel(panel) {
+    const sdEmbedHere = embedShowdown;   // ⭐ Đợt 549 — chốt lúc dựng (buildBody còn được gọi lại về sau khi đổi view)
     // myActivity Đợt "đồng bộ tức thời" (22/8/2026) — fires once, right as this
     // popover opens (not per internal showBody() swap between Options/Template/
     // Style — those all live inside this ONE panel since Đợt 228 today, so one
@@ -5530,7 +5546,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         // actually running, the same way the Fight rows above are built only
         // during a match: outside Showdown nobody owns a round, so the control
         // would be the dead button the OPT-IN rule of Đợt 143 exists to prevent.
-        showdown: !!showdownPick,
+        showdown: !!showdownPick || sdEmbedHere,
         // ⭐ Đợt 220 — trần cứng của ô số Count. ⚠️ Đếm trên ACT GỐC trong thư
         // viện chứ không phải `activity`: ván đang chạy có thể ĐÃ bị nối dài
         // (500 slot) hoặc bị Balance cắt ngắn — đưa con số đó vào là trần sai.
@@ -6606,6 +6622,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // ----- API handed to the template -----
   const ui = {
     playArea,
+    preflight: preLight,   // ⭐ Đợt 549 — bàn ngầm của màn chọn (dựng NHẸ): template 3D không nạp cảnh, READY sẽ dựng lại thật
     topbarMid,   // null unless tpl.inlineTimerBar is true — see topbar setup above
     kbdSlot,     // null unless tpl.hasKeyboardToggle is true — see bottombar setup above
     livesSlot,   // null unless tpl.hasLivesSlot is true — a span left of the score (True/false hearts)

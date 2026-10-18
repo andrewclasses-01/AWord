@@ -190,7 +190,8 @@ const starLootTemplate = {
   noAssignment: "Star loot is a classroom game for now — it cannot be set as homework yet.",
   // Bỏ màn READY của engine: bấm Play ngay khi engine chuẩn bị xong ⇒ thầy thấy thẳng màn START của STAR LOOT.
   // Không chạy được 3D ⇒ NÉM để engine giữ màn READY thường; bấm Play ra dòng báo thiếu WebGL (Đợt 450: không còn bản 2D).
-  startScreen({ play, ready }) {
+  startScreen({ play, ready, preflight }) {
+    if (preflight) return { dispose() {} };   // ⭐ Đợt 549 — màn chọn WORDS đang dựng NHẸ (chỉ lấy bảng Options): chưa nạp 3D, chưa Play — READY mới dựng thật
     if (block3dHere()) { ready().then(() => play()); return { dispose() {} }; }   // Đợt 530: bảng 2..5
     if (!canRun3d()) throw new Error("Star loot: no WebGL");
     const ld = loader();   // Đợt 451 — hiện NGAY khung đầu (che màn READY + khung trống của engine trong lúc nạp)
@@ -201,6 +202,7 @@ const starLootTemplate = {
   },
   mount(root, activity, ui) {
     const questions = playable(activity);
+    if (ui && ui.preflight) { root.innerHTML = ""; return () => {}; }   // ⭐ Đợt 549 — bàn ngầm dựng NHẸ của màn chọn: không nạp 3D
     if (block3dHere()) { root.innerHTML = ""; return block3dMessage(root, "Star loot"); }   // Đợt 530
     if (!canRun3d()) { needMessage(root, "Star loot needs 3D graphics (WebGL), which this browser or device cannot run."); return () => {}; }
     if (!questions.length) { loader().drop(); needMessage(root, "No questions yet — add questions with one correct answer."); return () => {}; }

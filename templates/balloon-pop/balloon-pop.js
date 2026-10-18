@@ -223,7 +223,8 @@ const balloonPopTemplate = {
   },
   // Bỏ màn READY của engine: bấm Play ngay khi engine chuẩn bị xong ⇒ thầy thấy thẳng màn START của TRAIN RUSH.
   // Không chạy được 3D ⇒ NÉM để engine giữ màn READY thường; bấm Play sẽ ra dòng báo thiếu WebGL (mount).
-  startScreen({ play, ready }) {
+  startScreen({ play, ready, preflight }) {
+    if (preflight) return { dispose() {} };   // ⭐ Đợt 549 — màn chọn WORDS đang dựng NHẸ (chỉ lấy bảng Options): chưa nạp 3D, chưa Play — READY mới dựng thật
     if (block3dHere()) { ready().then(() => play()); return { dispose() {} }; }   // Đợt 530: bảng 2..5
     if (!canRun3d()) throw new Error("Train rush: no WebGL");
     const ld = loader();   // Đợt 451 — hiện NGAY khung đầu
@@ -234,6 +235,7 @@ const balloonPopTemplate = {
   },
   mount(root, activity, ui) {
     root.innerHTML = "";
+    if (ui && ui.preflight) return () => {};   // ⭐ Đợt 549 — bàn ngầm dựng NHẸ của màn chọn: không nạp 3D
     if (block3dHere()) { root.innerHTML = ""; return block3dMessage(root, "Train rush"); }   // Đợt 530
     if (!canRun3d()) { noWebglMessage(root); return () => {}; }
     const words = wordsOf(activity);

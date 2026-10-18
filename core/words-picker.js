@@ -35,6 +35,8 @@
 //   riêng trọn màn (Train Rush) cũng vậy: chọn options ở single, READY xong mới vào trận.
 //   Điện thoại (khung ≤ 700px) giữ đường cũ: chạm là vào màn START.
 //   Thiết kế: D:\OTHERS\CLAUDE\AWord - thiet ke man chon WORDS\man-chon-v8-options.html.
+// ⭐⭐ Đợt 549 (thầy 18/10/2026) — bàn ngầm DỰNG NHẸ (`setPreflight({ light: true })`): game 3D chưa nạp gì lúc chọn Options; READY ⇒
+//   hook thật + Apply (không đổi gì ⇒ `api.remount()`) ⇒ bàn đầy đủ, 3D mới bắt đầu nạp. Ý định SHOWDOWN ⇒ bảng nhúng có đủ dòng Showdown.
 // =============================================================
 
 import "./unit.js";
@@ -487,7 +489,8 @@ export async function openWordsPicker(root, node, { onExit, onBack } = {}) {
       document.documentElement.classList.add("aw-wp-ngam");
     }
     me.boot = true;
-    setPreflight({ onMount: api => onBoard(me, api) });
+    // ⭐ Đợt 549 — DỰNG NHẸ: bàn ngầm chỉ để có bảng Options + MODE thật; game 3D chưa nạp gì (READY mới dựng thật)
+    setPreflight({ onMount: api => onBoard(me, api), light: true });
     // Train Rush: Fight / Single nằm NGAY TRONG ô 3D — báo trước cho lần dựng này (mặc định Fight, Đợt 526)
     boxModeFor(type, me.intent === "single" ? "single" : "fight");
     // noAutoFight: Fight do màn chọn quyết (thanh MODE), không tự vào như mở act thường.
@@ -509,6 +512,8 @@ export async function openWordsPicker(root, node, { onExit, onBack } = {}) {
     if (pre !== me) return;
     me.api = api;
     if (me.done) {   // READY đã bấm, Apply vừa dựng lại bàn ⇒ làm nốt việc còn lại rồi thôi nghe
+      if (api.light) return;   // ⭐ Đợt 549 — vẫn là bàn NHẸ (lần dựng cũ báo muộn) ⇒ chờ bàn THẬT
+      me.real = true;
       setPreflight(null);
       runAfter(me, api);
       return;
@@ -527,7 +532,7 @@ export async function openWordsPicker(root, node, { onExit, onBack } = {}) {
     obody.innerHTML = "";
     const inner = el("div", "aw-wp-oin");
     obody.append(inner);
-    api.embedOptions(inner);
+    api.embedOptions(inner, { showdown: curMode() === "showdown" });   // ⭐ Đợt 549 — chọn SHOWDOWN ⇒ bảng có đủ dòng riêng của Showdown
     obody.classList.remove("is-loading");
     paintBar(); paintRun();
     fitPanel();
@@ -607,7 +612,7 @@ export async function openWordsPicker(root, node, { onExit, onBack } = {}) {
     let target = k;
     if (k === "showdown" || (k === "fight" && pre.avail.ownFight)) target = "single";
     if (k === "running" && !pre.sub) pre.sub = pre.avail.running[0];
-    if (api.mode === target && (target !== "running" || api.type === pre.sub)) { paintRun(); return; }   // bàn đã đúng: chỉ đổi ý định
+    if (api.mode === target && (target !== "running" || api.type === pre.sub)) { paintRun(); loading(); onBoard(pre, api); return; }   // bàn đã đúng: chỉ đổi ý định — Đợt 549: gắn lại bảng (vào/ra SHOWDOWN thêm/bớt dòng riêng)
     loading();
     if (!api.setMode(target, pre.sub)) onBoard(pre, api);   // không dựng lại được ⇒ gắn lại bảng cũ
   }
@@ -637,10 +642,19 @@ export async function openWordsPicker(root, node, { onExit, onBack } = {}) {
     // Train Rush (boxMode) đã ở đúng Fight/Single trong ô ⇒ READY là chơi luôn; chỉ trận riêng KHÔNG có boxMode mới mở sau READY.
     const box = hasTemplate(me.type) && typeof getTemplate(me.type).boxMode === "function";
     me.after = me.intent === "showdown" ? "showdown" : (me.intent === "fight" && me.avail.ownFight && !box ? "fight" : null);
+    // ⭐ Đợt 549 — bàn đang NHẸ (game 3D chưa nạp) ⇒ đổi hook sang dựng THẬT trước khi Apply: mọi lần dựng lại từ đây là bàn đầy đủ.
+    const light = !!me.api.light;
+    if (light) setPreflight({ onMount: api => onBoard(me, api) });
     const hadChanges = me.api.apply();   // Apply thật (nếu có gì đổi) — engine dựng lại bàn ⇒ onBoard(done)
     pushGameEntry();
     setPickUrl(me.type, curSel());       // myActivity: cột theo mở đúng lựa chọn
-    if (!hadChanges) { setPreflight(null); runAfter(me, me.api); }
+    if (light) {
+      if (!hadChanges) me.api.remount();   // không có gì đổi ⇒ vẫn phải dựng lại thật (lúc này 3D mới bắt đầu nạp)
+      // lỡ Apply đi nhánh không dựng lại ⇒ tự dựng lại; vẫn không có lần báo ⇒ thôi chờ (đừng kẹt màn chọn)
+      setTimeout(() => { if (!me.real && me.api) me.api.remount(); }, 600);
+      setTimeout(() => { if (!me.ran) { setPreflight(null); runAfter(me, me.api); } }, 2500);
+    }
+    else if (!hadChanges) { setPreflight(null); runAfter(me, me.api); }
     else setTimeout(() => { if (!me.ran) { setPreflight(null); runAfter(me, me.api); } }, 1500);   // lỡ không có lần báo kế
     // hiện game: container ngầm hiện dần trên trang này, rồi trang này rời đi
     setTimeout(() => reveal(me), 320);

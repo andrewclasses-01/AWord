@@ -546,6 +546,35 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 549 (18/10/2026) — MÀN CHỌN WORDS: GAME 3D CHỈ BẮT ĐẦU NẠP SAU READY · OPTIONS Ở MÀN CHỌN ĐỦ NHƯ TRONG GAME
+
+**Thầy** (thử TOMKO): "Trong màn chọn template ngay đầu tiên, game đang được load ngay nên không chỉnh options được. Hãy điều chỉnh các game 3D để bắt đầu
+load sau khi bấm ready, không load game từ màn options nữa. Thêm: các options được build ở màn chọn template phải đầy đủ, y như trong khi vào game, không được thiếu gì".
+
+**Gốc:** từ Đợt 525 màn chọn dựng game NGẦM (`startGame` trong `.aw-wp-gamehost`) để mượn bảng Options thật; game 3D có `startScreen` tự Play ⇒ dựng
+cảnh 3D (khoá luồng chính, tải ~13–28 module + xe + tiếng, iPad bắt tay) ngay lúc thầy đang chỉnh Options. Rocket Race: core/fight.js dựng `fightScene` ngay khi khung trận dựng.
+
+**Sửa — DỰNG NHẸ:**
+- `core/engine.js`: `setPreflight({ onMount, light })` + export `preflightLight()`; mỗi bàn chốt `preLight` lúc dựng ⇒ `ui.preflight`, `startScreen({ …, preflight })`,
+  `preflightApi().light`; thêm `preflightApi().remount()` (= `replayCurrent()`; trận ⇒ dựng lại cả trận).
+- `core/fight.js`: `preflightLight()` ⇒ không gọi `tpl.fightScene` (Rocket Race 3D).
+- `templates/balloon-pop|maze-chase|racing-words`: `startScreen` có `preflight` ⇒ trả `{dispose}` (không màn chờ, không Play, không bắt tay iPad); `mount` có `ui.preflight` ⇒ rỗng.
+  `boxMode` của Train Rush vẫn dùng một lần ở lần dựng THẬT (mount nhẹ không đụng `modeOnce`).
+- `core/words-picker.js`: `mountBehind` gắn hook `light: true`. READY: bàn đang nhẹ ⇒ đổi hook sang thật TRƯỚC `apply()`; không có gì đổi ⇒ `api.remount()`;
+  lưới an toàn 600 ms (chưa có bàn thật ⇒ remount) + 2,5 s (thôi chờ). `onBoard` sau READY bỏ qua báo từ bàn còn nhẹ (`api.light`), chỉ bàn thật mới `runAfter`.
+- **Options đủ:** đo 4 game 3D, bảng nhúng ở màn chọn vs bảng mở bằng nút Options trong game (bàn thật, cùng mode): GIỐNG HỆT từng dòng (Racing Words 41 ·
+  Rocket Race Fight 34 · Train Rush 19 · Star Loot 38). Chỗ duy nhất còn thiếu: ý định SHOWDOWN (game 2D) — bàn đứng single nên bảng thiếu dòng Showdown
+  ⇒ `embedOptions(host, { showdown })` dựng luôn (Quiz: +TIME EACH ROUND · QUESTIONS EACH · Normal/Free · Count…); đổi vào/ra SHOWDOWN màn chọn gắn lại bảng.
+  Cố ý GIỮ ẩn ở bảng nhúng (như Đợt 525): hàng TEXT/VOICE + bộ nghĩa (đã ở đầu màn chọn) và nút Template/Style ở chân bảng (màn chọn chính là nơi chọn template).
+
+**Đã kiểm** (devserver 5549): `scratch/dot549-opt.html` — dựng nhẹ 4 game: 0 module 3D, 0 canvas, không `.aw-ld3d`; READY (apply/remount) ⇒ bàn thật, 3D nạp
+(Rocket Race vào FIGHT). `scratch/dot549-wp.html` (màn chọn THẬT, act WORDS giả ENG1/VI1): chạm Racing Words ⇒ bảng Options hiện ngay, FIGHT sáng, 0 file 3D ⇒
+đổi Race = Time ⇒ READY ⇒ màn chờ ⇒ xưởng xe, `templateOptions.racing_words.srRace = "time"`; Rocket Race / Train Rush (vào trận `fb-*`) / Star Loot: 0 file 3D
+lúc chọn, nạp sau READY; Quiz: FIGHT 35 dòng · SHOWDOWN 40 (có TIME EACH ROUND) · SINGLE 24 · READY ⇒ màn START. Console 0 lỗi.
+⚠️ Lỗi `checkMaterialsReady … isReady` của three chỉ hiện khi bàn thử phá game 3D đang dịch shader (có sẵn từ trước, myGame 4f cũng có) — dựng nhẹ không dịch shader nên màn chọn không còn gặp.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy thử TOMKO + myActivity: chạm ô game 3D ⇒ chỉnh Options ngay (không có màn chờ / không lag) ⇒ READY mới nạp · cột theo myActivity vẫn mở đúng lựa chọn.
+
 ## Đợt 548 (17/10/2026) — TEMPLATE TOURNAMENT: BỘ CẤU HÌNH GIẢI ĐẤU A SHOW SPEED (giao qua ?giao=, trận chạy trên web)
 
 **Bối cảnh (thầy duyệt "ok build"):** giải đấu riêng cho một lớp tạo từ app myLesson (loại TOURNAMENT). Ba phiên song song (AWord · myLesson · web); hồ sơ `D:\OTHERS\CLAUDE\GIAI DAU THE - thiet ke\` (KE HOACH BUILD + HOP DONG DU LIEU - 3 kho). Phần AWord = template `tournament`.

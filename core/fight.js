@@ -79,7 +79,7 @@
 
 import { el, shuffle } from "./utils.js";
 import { press } from "./press.js";
-import { startGame } from "./engine.js";
+import { startGame, preflightLight } from "./engine.js";
 import { icons } from "./icons.js";
 import { sound } from "./sound.js";
 import { getTemplate } from "./registry.js";
@@ -2962,7 +2962,8 @@ export function startFight(root, activity, { onExit, base = null, keepIpad = fal
   if (frame && frame.fullscene && sharedEl) {
     wrap.classList.add("is-fullscene");
     const tplScene = getTemplate(activity.type);
-    if (tplScene && typeof tplScene.fightScene === "function") {
+    // ⭐ Đợt 549 — trận ngầm DỰNG NHẸ của màn chọn WORDS: chưa dựng cảnh 3D (READY dựng lại cả trận, lúc đó mới nạp)
+    if (tplScene && typeof tplScene.fightScene === "function" && !preflightLight()) {
       try {
         sceneHandle = tplScene.fightScene({
           root: sharedEl, ctl, title: playAct.title || "",

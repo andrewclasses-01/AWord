@@ -5421,3 +5421,11 @@ Màn chọn act WORDS (`core/words-picker.js`) dựng game NGẦM rồi mượn 
 - ⭐ Đợt 526 — `tpl.boxMode(mode)` (tuỳ chọn): template có Fight NGAY TRONG ô của nó (Train Rush) nhận "fight"|"single" cho LẦN DỰNG KẾ
   (dùng một lần). Màn chọn gọi nó rồi dựng lại ô ngầm thay vì `api.setMode("fight")`. Màn chờ 3D mới phải dùng `core/loader3d.js`
   (`.aw-ld3d`) để được giấu lúc ngầm và được `dropAllLoader3d()` gỡ khi huỷ.
+- ⭐⭐ Đợt 549 — DỰNG NHẸ (thầy: "game đang được load ngay nên không chỉnh options được"): màn chọn gọi `setPreflight({ onMount, light: true })`.
+  Mỗi bàn chốt `preLight = !session && preflightLight()` NGAY lúc dựng ⇒ `ui.preflight` + `api.preflight` (startScreen) + `preflightApi().light`;
+  core/fight.js bỏ `tpl.fightScene` khi `preflightLight()`. Game 3D (Train Rush · Star Loot · Racing Words: startScreen trả `{dispose}` không
+  Play, mount trả rỗng · Rocket Race: không có cảnh) KHÔNG nạp gì cho tới READY. READY: màn chọn đổi hook sang `{ onMount }` (thật) rồi
+  `apply()`; Apply không có gì đổi ⇒ `api.remount()` (= `replayCurrent()`, trận thì dựng lại cả trận) ⇒ bàn THẬT báo về (`api.light === false`)
+  mới chạy việc sau READY. ⛔ Game 3D MỚI phải đọc `ui.preflight` / `api.preflight` như 3 game trên (không thì lại nạp 3D ở màn chọn).
+- ⭐ Đợt 549 — `embedOptions(host, { showdown: true })`: màn chọn đang ở ý định SHOWDOWN (bàn đứng single) ⇒ bảng nhúng dựng luôn dòng riêng
+  của Showdown (`showdown: !!showdownPick || sdEmbedHere` trong buildBody) — bảng ở màn chọn phải đủ y như trong game.
