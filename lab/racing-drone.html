@@ -50,7 +50,7 @@ async function go() {
     return;
   }
   note.textContent = "Loading the race…";
-  const [{ createRacingWords }, { createPadHost }] = await Promise.all([import("../templates/racing-words/3d/rw-4m.js"), import("../templates/racing-words/3d/sr3d-padlink-4l.js")]);
+  const [{ createRacingWords }, { createPadHost }] = await Promise.all([import("../templates/racing-words/3d/rw-4n.js"), import("../templates/racing-words/3d/sr3d-padlink-4l.js")]);
   const remote = createPadHost({ signal: labSignal(), padUrl: labPadUrl });
   const opts = { pkBoost: true, pkLife: true, pkMissile: true, twists: true, race: "len", lenK: 2, steps: 12, laps: 0, ramps: true, sameQ: true, msMax: 3, lives: 5, msDmg: 2, tieWait: 0.1, missWait: 20, streak: 3 };
   const rw = await createRacingWords({ mount: document.getElementById("host"), questions: activity.content.questions, title: "RACING WORDS", options: opts, host: null, remote, onEvent: () => {} });
