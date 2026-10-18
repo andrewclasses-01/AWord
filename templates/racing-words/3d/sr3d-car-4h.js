@@ -126,13 +126,17 @@ function silhouette(id, objs, wheelsXZ, wheelW) {
   const mk = () => { const c = document.createElement("canvas"); c.width = W; c.height = H; return [c, c.getContext("2d")]; };
   const [cs, gs] = mk(); gs.fillStyle = "#000"; gs.beginPath();
   const X = x => (x - X0) * PX, Y = z => (z - Z0) * PX;
+  // ⛔ 4h (18/10): bản 3z gom ~60k tam giác vào MỘT nét + closePath mỗi tam giác ⇒ trình duyệt chậm dần theo cấp số: ĐƠ ~10 s mỗi xe lần đầu mỗi trang
+  //   (gốc "LOADING đứng 99 %"). Nay: KHÔNG closePath (fill tự đóng) + tô từng lô 1.500 tam giác (cùng màu đen đặc ⇒ hợp các lô = hình y hệt).
+  let inPath = 0;
   tris.forEach(({ xz, ix, n }) => { for (let k = 0; k + 2 < n; k += 3) {
     const a = ix ? ix.getX(k) : k, b = ix ? ix.getX(k + 1) : k + 1, c = ix ? ix.getX(k + 2) : k + 2;
     const ax = X(xz[2 * a]), ay = Y(xz[2 * a + 1]), bx = X(xz[2 * b]), by = Y(xz[2 * b + 1]), cx = X(xz[2 * c]), cy = Y(xz[2 * c + 1]);
     const ar = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax); if (Math.abs(ar) < 0.02) continue;
-    gs.moveTo(ax, ay); if (ar > 0) { gs.lineTo(bx, by); gs.lineTo(cx, cy); } else { gs.lineTo(cx, cy); gs.lineTo(bx, by); } gs.closePath();   // cùng chiều ⇒ tô = phần HỢP
+    gs.moveTo(ax, ay); if (ar > 0) { gs.lineTo(bx, by); gs.lineTo(cx, cy); } else { gs.lineTo(cx, cy); gs.lineTo(bx, by); }   // cùng chiều ⇒ tô = phần HỢP
+    if (++inPath >= 1500) { gs.fill("nonzero"); gs.beginPath(); inPath = 0; }
   } });
-  gs.fill("nonzero");
+  if (inPath) gs.fill("nonzero");
   // mờ bằng thu nhỏ rồi phóng (chạy cả nơi không có ctx.filter)
   const soft = (k) => { const w = Math.max(2, Math.round(W / k)), h = Math.max(2, Math.round(H / k)), c = document.createElement("canvas"); c.width = w; c.height = h;
     const g = c.getContext("2d"); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high"; g.drawImage(cs, 0, 0, w, h); return c; };

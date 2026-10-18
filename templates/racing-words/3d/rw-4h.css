@@ -1,0 +1,42 @@
+/* RACING WORDS mẫu 4h (18/10/2026) — nạp SAU rw-4g.css. Chỉ transform / opacity — không filter, không blur thật (TOMKO).
+   · Bàn đạp BOOST kiểu C (thầy chọn): quầng .rw-halo (dải màu tĩnh, JS chỉ đổi opacity theo năng lượng) · lớp .sr-nfill2 phủ gân bàn đạp (gân bắt sáng)
+     · vạch sáng mép trên trong .sr-nfill (#rw4hEdge) · đang BOOST ⇒ vệt .rw-scan chạy lên · đầy ⇒ quầng "thở"
+   · .rw-qfill: khoảng chờ 3 s trước câu mới — lớp màu đội ĐẦY DẦN từ phía GIỮA màn ra mép ngoài (translateX), mép đầu vạch trắng phát sáng, che câu cũ
+   · chữ ô trả lời: JS tự thu nhỏ (sr3d-4h fitAns) — ở đây chỉ cấm ngắt giữa từ */
+
+/* ---------- bàn đạp BOOST kiểu C ---------- */
+.rw-root .sr-boost .sr-pedal-svg { position: relative; z-index: 1; }
+.rw-root .sr-boost > span { position: relative; z-index: 1; }
+.rw-root .sr-boost .sr-nfill2 { transform-box: fill-box; transform-origin: 50% 100%; transform: translateY(100%); transition: transform .5s cubic-bezier(.25,.8,.35,1); }
+.rw-halo { position: absolute; left: 50%; bottom: 1.4cqh; width: 230%; height: 100%; margin-left: -115%; border-radius: 50%; pointer-events: none; z-index: 0;
+  background: radial-gradient(closest-side, rgba(120,245,255,.9), rgba(70,230,255,.45) 42%, rgba(70,230,255,.12) 70%, rgba(70,230,255,0));
+  opacity: 0; transform: scale(.9); transition: opacity .6s ease, transform .6s ease; will-change: opacity, transform; }
+.sr-boost.is-down.has-nitro .rw-halo { transform: scale(1.08); }
+.sr-boost.is-full:not(.is-down) .rw-halo { animation: rw4hBreathe 1.6s ease-in-out infinite alternate; }
+@keyframes rw4hBreathe { from { transform: scale(.94); } to { transform: scale(1.06); } }
+.rw-scan { position: absolute; left: 50%; bottom: 8%; width: 70%; height: 9%; margin-left: -35%; border-radius: 50%; z-index: 2; pointer-events: none; opacity: 0;
+  background: radial-gradient(closest-side, rgba(220,255,255,.85), rgba(120,240,255,.35) 55%, transparent); }
+.sr-boost.is-down.has-nitro .rw-scan { animation: rw4hScan .55s linear infinite; }
+@keyframes rw4hScan { 0% { transform: translateY(0) scaleX(.7); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-650%) scaleX(1); opacity: 0; } }
+
+/* ---------- khoảng chờ câu mới ---------- */
+.rw-qfill { position: absolute; inset: 0; z-index: 4; overflow: hidden; border-radius: inherit; pointer-events: none; opacity: 0; }
+.rw-qfill i { position: absolute; inset: 0; will-change: transform; transform: translateX(var(--from));
+  background: linear-gradient(var(--dir), color-mix(in srgb, var(--team) 30%, #070b14) 0%, color-mix(in srgb, var(--team) 62%, #0b1222) 70%, color-mix(in srgb, var(--team) 85%, #fff) 100%); }
+.rw-qfill i::before { content: ""; position: absolute; top: 0; bottom: 0; width: 2.4cqh; background: linear-gradient(var(--dir), rgba(255,255,255,0), rgba(255,255,255,.95)); }
+.rw-qfill i::after { content: ""; position: absolute; top: -20%; bottom: -20%; width: 6cqh; background: radial-gradient(closest-side, rgba(255,255,255,.6), color-mix(in srgb, var(--team) 45%, transparent) 55%, transparent); }
+.sr-qbox0 .rw-qfill { --from: 101%; --dir: 270deg; } .sr-qbox1 .rw-qfill { --from: -101%; --dir: 90deg; }      /* đầu sáng ở phía GIỮA màn */
+.sr-qbox0 .rw-qfill i::before { left: 0; } .sr-qbox0 .rw-qfill i::after { left: -3cqh; }
+.sr-qbox1 .rw-qfill i::before { right: 0; } .sr-qbox1 .rw-qfill i::after { right: -3cqh; }
+.rw-qfill.run { opacity: 1; } .rw-qfill.run i { animation: rw4hFill var(--gs, 3s) linear forwards; }
+@keyframes rw4hFill { from { transform: translateX(var(--from)); } to { transform: translateX(0); } }
+.rw-qfill.pop { opacity: 0; transition: opacity .35s ease-out; } .rw-qfill.pop i { animation: none; transform: none; }
+.sr-root.is-paused .rw-qfill i, .sr-root.is-paused .rw-scan, .sr-root.is-paused .rw-halo { animation-play-state: paused; }
+.sr-qbox.rw-qnew::before { content: ""; position: absolute; inset: 0; z-index: 5; pointer-events: none; border-radius: inherit;
+  background: radial-gradient(closest-side, rgba(255,255,255,.9), color-mix(in srgb, var(--team) 55%, transparent) 70%, transparent); animation: rw4hFlash .5s ease-out forwards; }
+.sr-qbox.rw-qnew .sr-q { animation: rw4hQin .45s cubic-bezier(.2,.9,.3,1.25); }
+@keyframes rw4hFlash { 0% { opacity: 1; transform: scale(.7); } 100% { opacity: 0; transform: scale(1.3); } }
+@keyframes rw4hQin { 0% { transform: scale(.8); opacity: 0; } 100% { transform: none; opacity: 1; } }
+
+/* ---------- chữ ô trả lời: không ngắt giữa từ (JS thu nhỏ cho vừa) ---------- */
+.rw-root .sr-ans button span { overflow-wrap: normal; word-break: normal; hyphens: none; }

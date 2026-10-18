@@ -2,6 +2,13 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
+## Đợt 551 (18/10/2026) — myGame 4g → 4j
+- GOC `rw-4j.js` · lõi `sr3d-4j.js` · intro `sr3d-intro-4h.js` + xe `sr3d-car-4h.js` (CÙNG mô-đun) · tên lửa `sr3d-missile-4i.js` · iPad `sr3d-padui-4j.js` + `sr3d-padlink-4j.js` (pad.js), đầu game `sr3d-padlink-4f.js`.
+- CSS nạp thêm (đúng thứ tự) rw-4g · rw-4h · rw-4i · rw-4j-fb (thẻ nút bắn — iPad cũng nạp qua pad.js) · rw-4j.
+- Màn chờ: `showLoader3d({ pace: { create: createLoadPace, key: "rw" } })` + `onProgress` ⇒ `ld.mark` (chặng cars · race · studio · frame). ⛔ Đổi module / tiếng / xe ⇒ đo lại load-files.js.
+- Tin iPad "i:": kmh,cells,ms,alarm,phase,nitro,dmg,dmgT,noaim,k/n (chuỗi đúng). Thanh DAMAGE + nút bắn iPad chỉ khi nối THẲNG.
+- Bàn thử worktree: launch `aword-dot551` (scratch/srv551.mjs, cổng 5651) + `scratch/dot543-pct.html?t=racing-words`.
+
 ## Đợt 539 (16/10/2026) — khoá đội iPad
 - Đội có CHỦ = mã máy iPad (`rwpad.dev`), host ghi `u0`/`u1`; máy khác bị bỏ qua + tấm "already has an iPad"; pad.js màn chọn đội dùng `watchTeams` ⇒ `setBusy`.
 - Nhả: chủ bấm ◀ về màn chọn đội (ghi `left`) hoặc mất > 8 s. Bàn thử nhiều iPad cùng trình duyệt: `pad.html?padsig=local&dev=a` / `dev=b`.

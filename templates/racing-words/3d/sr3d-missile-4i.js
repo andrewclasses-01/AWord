@@ -1,3 +1,8 @@
+// RACING WORDS mẫu 4i (18/10/2026) = sr3d-missile-4b.js + (thầy, trang thiet-ke-4i mục 3):
+//   · quỹ đạo THẤP: H 3,6–8,1 (đỉnh ~3–6,7 m) ⇒ H 4,6 cố định (đỉnh ~4 m) — tên lửa nằm trong tầm nhìn buồng lái suốt đường bay
+//   · điểm rơi = QUẦNG ĐỎ nhỏ (~2,4 m) mép mờ, nhấp nháy nhanh dần — thay vòng ngắm 5,4 m + CỘT SÁNG đỏ 26 m
+//   · BÁM MỤC TIÊU CÓ GIỚI HẠN: dọc đường vẫn theo tốc độ xe, NGANG chỉ trôi ≤ 2,5 m/s về phía xe; khoá hẳn khi còn 1,4 s (cũ: bám trọn tới 1 s cuối)
+// ---- gốc 4b ----
 // RACING WORDS mẫu 4b (16/10/2026) = sr3d-missile-3r.js, chỉ đổi công thức cong sang HÌNH THẬT của đường (bảng uBendT — xem sr3d-world-4b.js).
 // ---- gốc 3r ----
 // 3r (16/10/2026, đo TOMKO trong myActivity, act 572): mỗi phát bắn tạo ShaderMaterial CỘT SÁNG mới rồi dispose() khi nổ ⇒ three.js xoá luôn
@@ -22,7 +27,7 @@
 // =============================================================
 import * as THREE from "../../rocket-race/vendor/three/three.module.min.js";
 
-export const MS = { T: 2.45, LOCK: 1.0 };                // 3e: bay CHẬM hơn 3c (2,0 s) theo thầy · khoá điểm rơi khi còn LOCK giây
+export const MS = { T: 2.45, LOCK: 1.4, DRIFT: 2.5, H: 4.6 };   // 4i: khoá 1,4 s · trôi ngang ≤ 2,5 m/s · vồng H 4,6                // 3e: bay CHẬM hơn 3c (2,0 s) theo thầy · khoá điểm rơi khi còn LOCK giây
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
 const BEND_VS = `uniform vec2 uBend; uniform float uBendZ; uniform sampler2D uBendT; uniform float uBendD;
@@ -68,6 +73,14 @@ export function makeParticles({ U, n = 400, additive = false, color = "#d2ccc6" 
 }
 
 function canvas(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return [c, c.getContext("2d")]; }
+// 4i: quầng đỏ MỜ MÉP (gradient tròn) — 128 px, vẽ 1 lần
+function glowTex() {
+  const c = document.createElement("canvas"); c.width = c.height = 128; const g = c.getContext("2d");
+  const r = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  r.addColorStop(0, "rgba(255,255,255,1)"); r.addColorStop(0.22, "rgba(255,255,255,.85)"); r.addColorStop(0.5, "rgba(255,255,255,.35)"); r.addColorStop(0.78, "rgba(255,255,255,.08)"); r.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = r; g.fillRect(0, 0, 128, 128);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
 function reticleTex() {
   const [c, g] = canvas(256, 256), C = 128;
   const fill = g.createRadialGradient(C, C, 10, C, C, 112); fill.addColorStop(0, "rgba(255,255,255,.55)"); fill.addColorStop(1, "rgba(255,255,255,.18)");
@@ -138,10 +151,10 @@ export function createMissiles({ scene, bend, U }) {
   const finM = Mt(bend(new THREE.MeshStandardMaterial({ color: "#2a2f36", roughness: 0.45, metalness: 0.6 })));
   const flameU = { uT: { value: 0 }, uBend: U.uBend, uBendZ: U.uBendZ, uBendT: U.uBendT, uBendD: U.uBendD };
   const flameM = Mt(new THREE.ShaderMaterial({ vertexShader: FLAME_VS, fragmentShader: FLAME_FS, uniforms: flameU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
-  const ringG = G(new THREE.PlaneGeometry(5.4, 5.4, 8, 8).rotateX(-Math.PI / 2));
+  const ringG = G(new THREE.PlaneGeometry(3.4, 3.4).rotateX(-Math.PI / 2));   // 4i: quầng đỏ (ảnh mờ mép ⇒ phần thấy rõ ~2,4 m)
   // CỘT SÁNG đỏ đứng thẳng tại điểm rơi: vòng ngắm phẳng trên đường nhìn từ mắt người lái (cao 1,1 m) ở 30 m chỉ còn 3–4 px ⇒ cần vật ĐỨNG
   const beamG = G(new THREE.CylinderGeometry(1.1, 1.6, 26, 20, 8, true).translate(0, 13, 0));
-  const ringT = reticleTex(), scT = scorchTex();
+  const ringT = glowTex(), scT = scorchTex();   // 4i: quầng mờ thay vòng ngắm
   const scorchG = G(new THREE.PlaneGeometry(5.5, 5.5).rotateX(-Math.PI / 2));
   const flashG = G(new THREE.IcosahedronGeometry(1, 2));
   const BEAM_VS = BEND_VS + `varying float vY; varying vec3 vN; varying vec3 vV; void main(){ vY = position.y / 26.0; vec4 w = bendW(modelMatrix * vec4(position,1.0));
@@ -166,7 +179,7 @@ export function createMissiles({ scene, bend, U }) {
     return out;
   }
   const beamPool = [];                                       // 3r: vật liệu cột sáng dùng lại (không dispose ⇒ giữ shader stage)
-  const kill = m => { scene.remove(m.g, m.ring, m.beam); m.rm.dispose(); beamPool.push(m.bm); m.nose.dispose(); };
+  const kill = m => { scene.remove(m.g, m.ring); m.rm.dispose(); m.nose.dispose(); };   // 4i: không còn cột sáng
 
   return {
     smoke, sparks, fire, dark,
@@ -178,12 +191,8 @@ export function createMissiles({ scene, bend, U }) {
       g.position.set(x, y, z); scene.add(g);
       const rm = bend(new THREE.MeshBasicMaterial({ map: ringT, color: new THREE.Color(1.0, 0.16, 0.1).multiplyScalar(3.2), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -4 }));
       const ring = new THREE.Mesh(ringG, rm); ring.renderOrder = 4; scene.add(ring);
-      const bm = beamPool.pop() || new THREE.ShaderMaterial({ vertexShader: BEAM_VS, fragmentShader: BEAM_FS, uniforms: { uBend: U.uBend, uBendZ: U.uBendZ, uBendT: U.uBendT, uBendD: U.uBendD, uA: { value: 0 }, uT: { value: 0 } },
-        transparent: true, depthWrite: false, side: THREE.DoubleSide });
-      bm.uniforms.uA.value = 0; bm.uniforms.uT.value = 0;          // 3r: vật liệu có thể là bản dùng lại
-      const beam = new THREE.Mesh(beamG, bm); beam.renderOrder = 5; beam.frustumCulled = false; scene.add(beam);
-      const m = { id: ++seq, from, to, t: 0, L0: new THREE.Vector3(x, y, z), P: new THREE.Vector3(), H: 11, g, ring, rm, beam, bm, nose: noseM, predict, locked: false, trailD: 0, last: new THREE.Vector3(x, y, z) };
-      const p0 = predict(MS.T); m.P.set(p0.x, 0.6, -p0.s); m.H = 3.6 + Math.min(4.5, m.P.distanceTo(m.L0) * 0.035);     // vòng cung THẤP: góc nhìn trong xe chỉ thấy tới ~18° trên đường chân trời
+      const m = { id: ++seq, from, to, t: 0, L0: new THREE.Vector3(x, y, z), P: new THREE.Vector3(), H: MS.H, g, ring, rm, nose: noseM, predict, locked: false, trailD: 0, last: new THREE.Vector3(x, y, z) };
+      const p0 = predict(MS.T); m.P.set(p0.x, 0.6, -p0.s);   // 4i: vồng cố định thấp (đỉnh ~4 m)
       list.push(m);
       for (let k = 0; k < 14; k++) smoke.emit(x + (Math.random() - 0.5) * 0.6, y, z + (Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 3, Math.random() * 2, (Math.random() - 0.5) * 3, 1.2, 0.8, 0.5, 2.6, 1.8);
       return m.id;
@@ -194,7 +203,7 @@ export function createMissiles({ scene, bend, U }) {
       for (let i = list.length - 1; i >= 0; i--) {
         const m = list[i]; m.t += dt;
         const tLeft = MS.T - m.t;
-        if (tLeft > MS.LOCK) { const p = m.predict(tLeft); m.P.set(p.x, 0.6, -p.s); } else m.locked = true;
+        if (tLeft > MS.LOCK) { const p = m.predict(tLeft), mx = MS.DRIFT * dt; m.P.set(m.P.x + clamp(p.x - m.P.x, -mx, mx), 0.6, -p.s); } else m.locked = true;   // 4i: ngang trôi có giới hạn ⇒ né được
         const x = clamp(m.t / MS.T, 0, 1), u = 0.38 * x + 0.62 * x * x;   // động cơ đẩy: chậm lúc rời bệ, nhanh dần          // đầu đường bay nhanh hơn xe ⇒ người bắn thấy tên lửa vọt lên TRƯỚC mũi xe mình
         bez(m, u, B, Bt);
         m.g.position.copy(B); m.g.lookAt(tmp.copy(B).add(Bt));
@@ -205,12 +214,10 @@ export function createMissiles({ scene, bend, U }) {
           smoke.emit(tmp.x, tmp.y, tmp.z, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5 + 0.25, (Math.random() - 0.5) * 0.5, 1.3 + Math.random() * 0.7, 0.45, 0.45, 1.6, 0.6);
           fire.emit(tmp.x, tmp.y, tmp.z, 0, 0, 0, 0.14, 0.32, 0.75, 0.3, 0); }
         m.last.copy(B);
-        // vòng ngắm trên đường: hiện dần, nhịp nhanh dần; khoá ⇒ đỏ đặc + nhấp nháy
-        m.ring.position.set(m.P.x, 0.07, m.P.z); m.ring.rotation.y = t * (m.locked ? 3 : 1.2);
-        const pulse = m.locked ? 0.75 + 0.25 * Math.sin(t * 30) : 0.55 + 0.2 * Math.sin(t * (6 + 10 * x));
-        m.rm.opacity = Math.min(1, m.t * 2) * pulse; m.ring.scale.setScalar(m.locked ? 1 : 1.25 - 0.25 * x);
-        m.beam.position.set(m.P.x, 0, m.P.z); m.bm.uniforms.uT.value = t; m.bm.uniforms.uA.value = Math.min(1, m.t * 1.5) * (m.locked ? 0.9 + 0.1 * Math.sin(t * 30) : 0.5 + 0.12 * Math.sin(t * 8));
-        m.beam.scale.set(m.locked ? 0.8 : 1.15 - 0.35 * x, 1, m.locked ? 0.8 : 1.15 - 0.35 * x);
+        // 4i: QUẦNG ĐỎ trên mặt đường — hiện dần, nhấp nháy nhanh dần theo lúc rơi; khoá ⇒ nháy gấp, co nhẹ
+        m.ring.position.set(m.P.x, 0.07, m.P.z);
+        const pulse = 0.55 + 0.45 * Math.sin(t * (m.locked ? 30 : 8 + 20 * x));
+        m.rm.opacity = Math.min(1, m.t * 2) * (0.45 + 0.55 * pulse); m.ring.scale.setScalar(m.locked ? 0.9 + 0.08 * pulse : 1.1 - 0.15 * x);
         m.nose.emissiveIntensity = 0.6 + 2.5 * (0.5 + 0.5 * Math.sin(t * 24));
         if (m.t >= MS.T) { hits.push({ id: m.id, from: m.from, to: m.to, P: { s: -m.P.z, x: m.P.x } }); kill(m); list.splice(i, 1); }
       }

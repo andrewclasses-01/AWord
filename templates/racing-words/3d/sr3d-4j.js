@@ -1,3 +1,16 @@
+// RACING WORDS — LÕI MẪU 4g (18/10/2026) = sr3d-4e.js + 9 việc thầy (hồ sơ mục 41):
+//   · KẾT TRẬN ĐIỆN ẢNH (finish + finTick + finCams): Time / hết mạng ⇒ chốt NGAY lúc 0 s (không chạy tới đích nữa); Length / Words vẫn qua vạch đích.
+//     Chốt xong: ~1 s mỗi nửa màn quay NGOÀI xe của mình — xe thua phanh gấp + drift ngắn (xe thắng đang bay thì "treo" giữa trời ×0,12) ⇒ CẮT sang
+//     1 khung rộng (máy quay gộp 4d, không thêm lượt vẽ) quay quanh xe thắng: đang chạy đất ⇒ vụt ga ⇒ DRIFT (khói 2 bánh sau, vết lốp cháy đậm)
+//     slow ×0,14; đang bay ⇒ slow ×0,16 suốt cú bay, tự cân thân xe ⇒ đáp PERFECT + nảy. Thời gian slow = G.ts (dt game = dt thật × G.ts).
+//   · Time: 10 giây cuối số đếm 10…1 to giữa vạch chia 2 đội (.rw-cd, đổi mỗi giây — onEvent("tick", n)).
+//   · Barrel roll (dốc 1 bên / dốc xoắn): lộn xong LỆCH ±0,18–0,42 rad + hất nghiêng tiếp + 0,45 s cuối chông chênh ⇒ phải bẻ vô lăng mới PERFECT (bỏ tự cân).
+//   · Dốc xoắn KHÔNG ga ⇒ không bay: LẬT CHẬM tại chỗ quanh mép thân xe (tumble, ~1,5 s), mất đà + mất lái 1 s, chông chênh.
+//   · Mọi cú đáp: NẢY thêm (theo vận tốc rơi, 2 nhịp) + chúc mũi + chông chênh mạnh hơn.
+//   · 5 đèn chậm hơn (0,8 + k·0,75 s) + onEvent("light", k) đúng nhịp (gói nhúng phát tiếng, không dò 50 ms nữa).
+//   · Bàn đạp BOOST màn lớn: vạch năng lượng gradient MÉP MỜ như iPad (translateY + transition, không filter).
+//   · Đối thủ KHUẤT ⇒ mũi tên màu đội kia: phía trước ⇒ trên đường chân trời · phía sau ⇒ mép dưới khung nhìn · ngang hàng ⇒ mép bên.
+// ---- gốc 4e ----
 // RACING WORDS — LÕI MẪU 4e (16/10/2026) = sr3d-4d.js + 8 việc thầy (hồ sơ mục 39):
 //   · ⚙ Settings TẠM DỪNG trận (đóng ⇒ chạy tiếp) + báo onEvent("settings", true|false) để gói nhúng dừng cả phim intro
 //   · MẶC ĐỊNH MỚI (khoá nhớ máy đổi tên ".v2" ⇒ máy đã thử bản cũ cũng về mặc định mới một lần): Drive on iPad + Tilt · Cockpit · Sky view Off · Traffic Off;
@@ -189,15 +202,25 @@ import { ShaderPass } from "../../rocket-race/vendor/three/addons/ShaderPass.js"
 import { UnrealBloomPass } from "../../rocket-race/vendor/three/addons/UnrealBloomPass.js";
 import { OutputPass } from "../../rocket-race/vendor/three/addons/OutputPass.js";
 import { RoomEnvironment } from "../../rocket-race/vendor/three/addons/RoomEnvironment.js";
-import { makeCar3d } from "./sr3d-car-4b.js";
+import { makeCar3d } from "./sr3d-car-4h.js";
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
 import { createWorld, makeBend, HAZE, bendQ } from "./sr3d-world-4b.js";
 import { createTwists, createPickups, TWIST, twistAngle } from "./sr3d-stunt-4b.js";
 import { createTraffic, TRAFFIC_MODES } from "./sr3d-traffic-4c.js";
 import { makeAutoRes } from "./sr3d-autores-3r.js";
-import { createMissiles, MS, missileGeos, buildMissile } from "./sr3d-missile-4b.js";
+import { createMissiles, MS, missileGeos, buildMissile } from "./sr3d-missile-4i.js";
 import { createRamps, createTrails, RadialBlurShader, RAMP, RAMP_SLOPE } from "./sr3d-fx-3c.js";
 import { WHEEL_SVG as WHEEL_SVG_3H, GAS_SVG, BRAKE_SVG, FIRE_ICON, FLY_HTML, reserveHTML } from "./sr3d-dash-3h.js";
+// 4j (thầy chốt thiết kế thiet-ke-4j-v8): NÚT BẮN = thẻ kính nghiêng · 2 ô tên lửa PHẲNG màu đội (đứng yên) · "+x MISSILES" = số trong KHO
+//   (tổng = icon sáng + x) · thanh chuỗi đúng trắng mảnh sát đáy · bắn = quả MỜ DẦN, nạp = quả mới HIỆN DẦN · không có mục tiêu = chữ + icon xanh lá nhạt,
+//   bấm ⇒ "NO TARGET AHEAD" vàng nháy giữa nút.
+const FB_MIS = '<svg viewBox="0 0 24 34" fill="currentColor" aria-hidden="true"><path d="M12 1 C15.5 4 16 8 16 11 V24 H8 V11 C8 8 8.5 4 12 1 Z"/><path d="M8 18 L3 25 V28 L8 25.5 Z M16 18 L21 25 V28 L16 25.5 Z"/><rect x="9.5" y="25.5" width="5" height="3" rx="1"/><path d="M10 30 H14 L12 33 Z" opacity=".55"/></svg>';
+const FB_HTML = `<i class="rw-fb-edge"></i><span class="rw-fb-mid"><span class="rw-fb-rack"><span class="rw-fbm">${FB_MIS}</span><span class="rw-fbm">${FB_MIS}</span></span><span class="rw-fb-num"><b>+0</b><small>MISSILES</small></span></span><span class="sr-streak rw-fb-stk"><i></i><i></i><i></i></span><span class="rw-fb-nt">NO TARGET AHEAD</span>`;
+// 4h (thầy chọn kiểu C, 18/10): bàn đạp BOOST phát sáng KHÔNG filter — lớp năng lượng = nhóm .sr-nfill (dải mép mờ + vạch sáng mép trên #rw4hEdge),
+//   lớp .sr-nfill2 PHỦ LÊN gân bàn đạp (gân bắt sáng), quầng .rw-halo (dải màu tĩnh, chỉ đổi opacity) + vệt .rw-scan chạy lên khi đang boost.
+const GAS_SVG_4H = GAS_SVG
+  .replace(/<rect class="sr-nfill"[^>]*\/>/, `<g class="sr-nfill"><rect x="0" y="30" width="60" height="120"/><rect x="0" y="27" width="60" height="9" fill="url(#rw4hEdge)"/></g>`)
+  .replace('<circle cx="10" cy="37"', `<g clip-path="url(#srgasclip)"><g class="sr-nfill2"><rect x="0" y="30" width="60" height="120" fill="#7ff3ff" opacity=".2"/></g></g><circle cx="10" cy="37"`);
 // 3y: dấu đỉnh vô lăng = máy bay giấy logo Andrew Classes (y hệt iPad sr3d-padui-3y.js) thay ô chữ nhật màu đội
 const PL_K = 16.2 / 288, PL_SW = (1.5 / PL_K).toFixed(1);
 const WHEEL_SVG = WHEEL_SVG_3H.replace('<path d="M93 8.3 h14 v20 h-14 Z" fill="var(--team)"/>',
@@ -227,7 +250,7 @@ export const AIR = { BOOST: 1.2, VY0: 2.8, VYK: 0.55, GUP: 4.5, G: 10.5, LIFT_T:
 export const DEFAULTS = { pkBoost: true, pkLife: true, pkMissile: true, twists: true, race: "len", lenK: 2, timeS: 180, steps: 12, laps: 0, cars: ["Y2", "H4"], bend: 0.75, streak: 3, msMax: 3, hitLoss: 1, ramps: true, sameQ: true,
   lives: 0, msDmg: 2, tieWait: 0.1, missWait: 20 };          // 3q: lives 0 = tắt · tieWait/missWait giây, Infinity = chờ mãi
 const LOW_V = 40 / 3.6;                                    // 3q: dưới 40 km/h lên cầu nhảy ⇒ không bay
-const SLOW_T = 2.6;                                         // giây THẬT của slow motion về đích
+const LIGHT0 = 0.8, LIGHTK = 0.75;                          // 4g: 5 đèn xuất phát — đèn đầu 0,8 s, mỗi đèn sau 0,75 s (cũ 0,6 + 0,55)
 const EYE = new THREE.Vector3(0, 1.1, 0.25), LOOK = new THREE.Vector3(0, 0.86, -9);
 const HORIZON = 0.42;
 const HOOD = { z0: -0.12, z1: -0.95, y0: 0.93, y1: 0.76, w: 1.9 };
@@ -249,6 +272,12 @@ const TOOL_ICON = {
   options: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M10 12h10M4 18h13M21 18h-1"/><circle cx="16" cy="6" r="2.2"/><circle cx="7" cy="12" r="2.2"/><circle cx="17" cy="18" r="2.2"/></svg>',
   ipad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="2.5" width="15" height="19" rx="2.2"/><path d="M11 18.3h2"/></svg>',
   fs: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>',
+};
+// 4i: icon tab dọc bên trái của Settings (kiểu C) — DRIVER · CAMERA · RACE
+const WIN_ICON = {
+  ipad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2"/><path d="M3.6 11h6.4M14 11h6.4M12 14v6.4"/></svg>',
+  camera: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 8h3l2-3h8l2 3h3v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  race: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h12l-2 4 2 4H5"/></svg>'
 };
 
 // bản đồ đường vòng (khung SVG 1000 × 200, chạy THEO chiều kim đồng hồ ⇒ cua phải là chính): điểm neo Catmull-Rom khép kín
@@ -282,29 +311,37 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       <div class="sr-smoke"><i></i><i></i><i></i><i></i><i></i></div>
       <div class="sr-mirror"><span class="sr-mir-dir"></span><span class="sr-mir-txt"></span></div>
       <div class="sr-tag"><b>${2 - i}</b><span></span></div>
+      <div class="rw-oa2" style="--oc:${TEAMS[1 - i].color}"><svg class="rw-oa2-r" viewBox="0 0 60 60" aria-hidden="true"><defs><linearGradient id="rwOa${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="${TEAMS[1 - i].color}"/></linearGradient></defs><path d="M30 4 L54 50 Q30 40 6 50 Z" fill="rgba(10,14,22,.82)" stroke="url(#rwOa${i})" stroke-width="3.2" stroke-linejoin="round"/><path d="M30 14 L44 42 Q30 36 16 42 Z" fill="${TEAMS[1 - i].color}" opacity=".85"/></svg><b class="rw-oa2-d"></b></div>
+      <div class="rw-dmg"><span>DAMAGE</span><i><em></em></i></div>
       <div class="sr-pick"><button class="sr-pick-b" data-d="-1" type="button" aria-label="Previous car">◀</button><button class="sr-pick-n" type="button"><small>${TEAMS[i].name} · CHOOSE YOUR CAR</small><b></b><em></em></button><button class="sr-pick-b" data-d="1" type="button" aria-label="Next car">▶</button><div class="sr-pick-list"></div></div>
       <div class="sr-alarm"><b>⚠ MISSILE</b><span class="sr-alarm-t"></span><i class="sr-alarm-bar"><em></em></i></div>
       <div class="sr-toast"></div>
       <div class="sr-dash">
         <div class="sr-console">
           <div class="sr-ans"></div>
-          <div class="sr-arms"><div class="sr-ms"></div><button class="sr-fire" type="button" aria-label="Fire missile">${FIRE_ICON}</button><div class="sr-streak"><i></i><i></i><i></i></div></div>
+          <div class="sr-arms rw-arms4j"><div class="sr-ms" hidden></div><button class="sr-fire rw-fb" type="button" aria-label="Fire missile">${FB_HTML}</button></div>
         </div>
         <div class="sr-drive">
           <button class="sr-pedal sr-brake" type="button" aria-label="Brake">${BRAKE_SVG}</button>
           <div class="sr-wheelbox"><div class="sr-wheel">${WHEEL_SVG.replace(/srwg/g, "srwg" + i)}
             <div class="sr-screen"><div class="sr-src">AUTO</div><div class="sr-kmh"><span>0</span><small>km/h</small></div><div class="sr-cells"><i></i><i></i><i></i><i></i></div><div class="sr-nbar"><em></em></div></div>
           </div></div>
-          <button class="sr-pedal sr-boost" type="button" aria-label="Boost">${GAS_SVG}</button>
+          <button class="sr-pedal sr-boost" type="button" aria-label="Boost"><i class="rw-halo"></i><i class="rw-scan"></i>${GAS_SVG_4H}</button>
         </div>
       </div>
     </div>`;
-  const qbox = i => `<div class="sr-qbox sr-qbox${i}" style="--team:${TEAMS[i].color}"><b class="sr-qtag">${TEAMS[i].name}</b><div class="sr-q"></div><i class="rw-wait"><em></em></i><div class="sr-qipad">${IPAD_ICON}<span>QUESTION ON THE iPAD</span></div></div>`;
+  const qbox = i => `<div class="sr-qbox sr-qbox${i}" style="--team:${TEAMS[i].color}"><b class="sr-qtag">${TEAMS[i].name}</b><div class="sr-q"></div><i class="rw-wait"><em></em></i><div class="rw-qfill"><i></i></div><div class="sr-qipad">${IPAD_ICON}<span>QUESTION ON THE iPAD</span></div></div>`;
   mount.innerHTML = `
     <div class="sr-stage">
       <canvas class="sr-canvas"></canvas>
       ${half(0)}${half(1)}
       <div class="sr-divider"></div>
+      <div class="rw-cd" aria-hidden="true"><b></b></div>
+      <div class="rw-rs" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="rw-cb" aria-hidden="true"><div class="rw-cb-p"><b></b><small></small></div><div class="rw-cb-big"></div></div>
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="rw4gNit" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#46e6ff" stop-opacity="0"/><stop offset=".2" stop-color="#46e6ff" stop-opacity=".42"/><stop offset="1" stop-color="#46e6ff" stop-opacity=".6"/></linearGradient>
+        <linearGradient id="rw4hEdge" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d8ffff" stop-opacity="0"/><stop offset=".5" stop-color="#d8ffff" stop-opacity=".75"/><stop offset="1" stop-color="#7ff3ff" stop-opacity="0"/></linearGradient></defs></svg>
       <div class="sr-center">
         <div class="sr-studio"><i></i><span>ANDREW STUDIO</span><i></i></div>
         <div class="sr-title">RACING WORDS</div>
@@ -329,10 +366,13 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   const H = halves.map((h, i) => ({
     el: h, dash: h.querySelector(".sr-dash"), ans: h.querySelector(".sr-ans"), fire: h.querySelector(".sr-fire"), ms: h.querySelector(".sr-ms"), msN: -1, streak: [...h.querySelectorAll(".sr-streak i")],
     wheel: h.querySelector(".sr-wheel"), wbox: h.querySelector(".sr-wheelbox"), kmh: h.querySelector(".sr-kmh span"), cells: [...h.querySelectorAll(".sr-cells i")], src: h.querySelector(".sr-src"),
-    nbar: h.querySelector(".sr-nbar em"), nitro: h.querySelector(".sr-boost .sr-nfill"), boost: h.querySelector(".sr-boost"), brake: h.querySelector(".sr-brake"),
-    smoke: h.querySelector(".sr-smoke"), slots: [...h.querySelectorAll(".sr-slot")], slotBusy: [0, 0], msHold: 0, tag: h.querySelector(".sr-tag"), tagT: h.querySelector(".sr-tag span"), mirDir: h.querySelector(".sr-mir-dir"), mirTxt: h.querySelector(".sr-mir-txt"),
-    alarm: h.querySelector(".sr-alarm"), alarmT: h.querySelector(".sr-alarm-t"), alarmBar: h.querySelector(".sr-alarm-bar em"), toast: h.querySelector(".sr-toast"), q: qboxes[i].querySelector(".sr-q")
+    nbar: h.querySelector(".sr-nbar em"), nitro: h.querySelector(".sr-boost .sr-nfill"), nitro2: h.querySelector(".sr-boost .sr-nfill2"), halo: h.querySelector(".sr-boost .rw-halo"), boost: h.querySelector(".sr-boost"), brake: h.querySelector(".sr-brake"),
+    smoke: h.querySelector(".sr-smoke"), slots: [...h.querySelectorAll(".rw-fbm")], fbN: h.querySelector(".rw-fb-num b"), fbL: h.querySelector(".rw-fb-num small"), slotBusy: [0, 0], /* 4j */ msHold: 0, tag: h.querySelector(".sr-tag"), tagT: h.querySelector(".sr-tag span"), mirDir: h.querySelector(".sr-mir-dir"), mirTxt: h.querySelector(".sr-mir-txt"),
+    alarm: h.querySelector(".sr-alarm"), alarmT: h.querySelector(".sr-alarm-t"), alarmBar: h.querySelector(".sr-alarm-bar em"), toast: h.querySelector(".sr-toast"), q: qboxes[i].querySelector(".sr-q"),
+    oa: h.querySelector(".rw-oa2"), oaR: h.querySelector(".rw-oa2-r"), oaT: h.querySelector(".rw-oa2-d"), oaX: -1, oaY: 0, oaA: 0, oaLX: 0, oaLY: 0,
+    dmg: h.querySelector(".rw-dmg"), dmgE: h.querySelector(".rw-dmg em"), dmgK: "", dmgS: "", oaK: "", oaD: ""   // 4g: mũi tên đối thủ khuất
   }));
+  const cdEl = $(".rw-cd"), cdB = cdEl.querySelector("b"); let cdN = -1;   // 4g: số đếm 10 giây cuối (Time)
 
   // ---------- renderer / cảnh ----------
   const renderer = new THREE.WebGLRenderer({ canvas: cvs, antialias: false, powerPreference: "high-performance" });
@@ -457,13 +497,12 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     cradle.add(new THREE.Mesh(gCradle, metal)); [-0.17, 0, 0.17].forEach(x => { const r = new THREE.Mesh(gRail, metal); r.position.set(x, 0.03, 0); cradle.add(r); });
     const slots = [-0.085, 0.085].map(x => { const g = new THREE.Group(); g.position.set(x, 0.085, -0.02); g.rotation.y = Math.PI; buildMissile(g, P, bodyM, noseM, finM); g.scale.setScalar(0.62); cradle.add(g); return g; });
     const sc = [0, 0];
-    let k = 0;
     c.launcher = {
       sc,
       update(dt, ms) {
-        k = lerp(k, ms > 0 ? 1 : 0, 1 - Math.exp(-dt * 4));
-        A.rotation.x = lerp(0.03, 0.85, ease(k)); B.rotation.x = -A.rotation.x + lerp(0, 0.16, ease(k));
-        slots.forEach((g, j) => { sc[j] = lerp(sc[j], ms > j && k > 0.5 ? 1 : 0, 1 - Math.exp(-dt * 3.2)); g.visible = sc[j] > 0.02; g.scale.setScalar(0.62 * sc[j]); });
+        // 4j (thầy): tay robot LUÔN gập sát nóc như lúc không có tên lửa; quả vẫn hiện / nạp lớn dần trên giá
+        A.rotation.x = 0.03; B.rotation.x = -0.03;
+        slots.forEach((g, j) => { sc[j] = lerp(sc[j], ms > j ? 1 : 0, 1 - Math.exp(-dt * 3.2)); g.visible = sc[j] > 0.02; g.scale.setScalar(0.62 * sc[j]); });
       },
       slotWorld(j, v) { slots[j].updateWorldMatrix(true, false); return slots[j].getWorldPosition(v); },
     };
@@ -521,18 +560,19 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
 
   // ---------- trạng thái ----------
   const G = { phase: "menu", t: 0, countT: 0, winner: -1, endT: 0, queue: [], auto: false, acc: [0.85, 0.6], nextAuto: [0, 0], nextFire: [0, 0], bumpT: 0, qList: [], slow: 0, cineW: -1,
-    rqi: 0, round: null, bendAmt: opt.bend * 0.5, finS: FIN, decided: -1, timeLeft: TIME_S };   // 4a: finS = vạch đích (null = chưa có) · decided = đội đã chốt thắng                                  // 3q: lượt chơi (Same)
+    rqi: 0, round: null, bendAmt: opt.bend * 0.5, finS: FIN, decided: -1, timeLeft: TIME_S, ts: 1, fin: null };   // 4g: ts = hệ số thời gian (slow motion) · fin = màn kết   // 4a: finS = vạch đích (null = chưa có) · decided = đội đã chốt thắng                                  // 3q: lượt chơi (Same)
   const T0 = [null, null];
   const fresh = i => ({ i, s: 0, v: 0, a: 0, x: TEAMS[i].lanes[0], vx: 0, px: 0, yaw: 0, yk: 0, ykV: 0, E: 0, N: 0, steer: 0, boostK: 0, nitroK: 0, brake: 0, brakeT: 0, spinT: 0, spinDir: 1, shake: 0,
     y: 0, vy: 0, air: false, low: false, stallT: 0, lives: opt.lives | 0, airT: 0, ap: 0, ar: 0, ay: 0, flip: 0, flipDir: 1, flipGoal: null, bad: false, lbT: 0, airK: 1, arW: 0, ctlT: 0, ctlDir: 0, jk: 0, blurB: 0, ramp: null, lapShown: 1,
     ms: 0, streak: 0, ok: 0, bad_: 0, hits: 0, lock: true, order: [], cur: null, smokeT: 0, aiLane: 0, aiFlipT: 0, aiDodgeT: -9, keyT: -99, touchT: -99, pad: { steer: 0, boost: 0, brake: 0 }, padT: -99,
-    padSt: T0[i] ? T0[i].padSt : "", padOn: T0[i] ? T0[i].padOn : false, manual: null, fireT: -9, src: "ai", camK: 0, inc: null, done: false, brakeHeld: false, qn: 0, pick: -1, pickOk: false, inp: { steer: 0, boost: 0, brake: 0 }, qi: 0, qT: 0, smokeBlack: 0, pushT: 0, spinT0: 1.4, spinTurns: 1, hy: 0, hopV: 0, hitRoll: 0, forced: false, rollW: 7, rampPart: 0, wobA: 0, wobT: 9, markT: 0, burnT: 0, burnP: null, burnN: null, cx: 0, slipCd: 0, popK: 0, popT: 0.8 + Math.random() * 1.5, psi: 0, wk: 0, twist: null });   // 4b: psi = hướng xe so với đường · wk = cú giật vô lăng khi va chạm
+    padSt: T0[i] ? T0[i].padSt : "", padOn: T0[i] ? T0[i].padOn : false, manual: null, fireT: -9, src: "ai", camK: 0, inc: null, done: false, brakeHeld: false, qn: 0, pick: -1, pickOk: false, inp: { steer: 0, boost: 0, brake: 0 }, qi: 0, qT: 0, smokeBlack: 0, pushT: 0, spinT0: 1.4, spinTurns: 1, hy: 0, hopV: 0, hitRoll: 0, forced: false, rollW: 7, rampPart: 0, wobA: 0, wobT: 9, markT: 0, burnT: 0, burnP: null, burnN: null, cx: 0, slipCd: 0, popK: 0, popT: 0.8 + Math.random() * 1.5, psi: 0, wk: 0, twist: null,
+    dr: null, tumble: null, bnc: 0, nodA: 0, nearW: 0, nearOn: false, rolled: false, sEnd: 0, finGas: false, finBrake: false, drSmT: 0 });   // 4g: drift · lật chậm · nảy đáp · chông chênh gần đất · kết trận   // 4b: psi = hướng xe so với đường · wk = cú giật vô lăng khi va chạm
   const T = [fresh(0), fresh(1)];
   const later = (sec, fn) => G.queue.push({ at: G.t + sec, fn });
 
   function resetTeams() {
     T.forEach((t, i) => { T0[i] = t; T[i] = fresh(i); T0[i] = null; });
-    missiles.clear(); trails.reset(); skids.clear(); pickups.reset(); cars.forEach(c => c.clearBurns && c.clearBurns()); G.winner = -1; G.queue = []; $(".sr-result").classList.remove("on"); $(".sr-banner").className = "sr-banner";
+    missiles.clear(); trails.reset(); skids.clear(); burnSk.clear(); pickups.reset(); cars.forEach(c => c.clearBurns && c.clearBurns()); G.winner = -1; G.queue = []; qGapClear(); $(".sr-result").classList.remove("on"); $(".sr-banner").className = "sr-banner";
     halves.forEach(h => h.classList.remove("is-alarm", "is-locked", "is-win", "is-lose", "is-air", "is-nitro"));
   }
 
@@ -545,6 +585,36 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       rev: c && t.pick >= 0 && !t.pickOk ? c.answers.map((a, j) => a.correct ? j : -1).filter(j => j >= 0) : [] }));
   }
   const lenCls = n => n > 90 ? "xl" : n > 58 ? "l" : n > 30 ? "m" : "s";
+  // 4h (thầy 18/10: "chữ quá to làm tràn ra ngoài khung"): cỡ theo số ký tự (data-len) vẫn là điểm xuất phát, rồi ĐO THẬT mỗi ô — còn tràn ngang
+  //   (từ dài bị cắt) hoặc quá 2 dòng thì thu 8 % / lần tới khi cả 4 ô vừa; 4 ô một đội cùng 1 cỡ. Đo 1 lần mỗi câu + khi khung đổi cỡ — không đo mỗi khung hình.
+  function fitAns(box) {
+    const bs = [...box.children]; if (!bs.length || !box.offsetWidth) return;
+    bs.forEach(b => { b.style.fontSize = ""; });
+    const base = parseFloat(getComputedStyle(bs[0]).fontSize);
+    const over = () => bs.some(b => { const s = b.firstElementChild; return !!s && (s.scrollWidth > s.clientWidth + 1 || s.scrollHeight > s.clientHeight + 2); });
+    let k = 1;
+    for (let n = 0; n < 14 && over(); n++) { k *= 0.92; const px = (base * k).toFixed(1) + "px"; bs.forEach(b => { b.style.fontSize = px; }); }
+  }
+  // 4h (thầy 18/10): KHOẢNG CHỜ 3 s trước câu mới — câu cũ + kết quả ô trả lời giữ nguyên; trong khung câu hỏi lớp màu đội ĐẦY DẦN từ phía GIỮA màn
+  //   ra mép ngoài (chỉ translateX), che dần câu cũ; đầy ⇒ chớp + câu mới bật ra. Same: 2 đội cùng chờ · Different: đội nào xong đội đó tự chờ.
+  //   Tiếng (gói nhúng phát): "qwait" ⇒ gió hút + trầm dâng (R3) · "qnew" ⇒ bùm trầm nhẹ (B1). Nhịp theo giờ GAME (tạm dừng là dừng).
+  const QGAP = 3, qTok = [0, 0];
+  const qFill = i => qboxes[i].querySelector(".rw-qfill");
+  function qGapClear() { [0, 1].forEach(i => { qTok[i]++; const f = qFill(i); if (f) f.classList.remove("run", "pop"); qboxes[i].classList.remove("rw-qnew"); }); }
+  function qGap(list, fn) {
+    list.forEach(i => { qTok[i]++; const f = qFill(i); if (!f) return; f.style.setProperty("--gs", QGAP + "s"); f.classList.remove("run", "pop"); void f.offsetWidth; f.classList.add("run"); qboxes[i].classList.remove("rw-qnew"); });
+    const tok = list.map(i => qTok[i]);
+    onEvent("qwait", { teams: list, T: QGAP });
+    later(QGAP, () => {
+      if (list.some((i, j) => qTok[i] !== tok[j])) return;                 // đã xoá (chơi lại / kết trận)
+      fn();
+      if (G.phase !== "race") { qGapClear(); return; }
+      list.forEach(i => { const f = qFill(i), b = qboxes[i]; if (f) f.classList.add("pop"); b.classList.remove("rw-qnew"); void b.offsetWidth; b.classList.add("rw-qnew"); });
+      onEvent("qnew", { teams: list });
+      const t2 = list.map(i => qTok[i]);
+      setTimeout(() => list.forEach((i, j) => { if (qTok[i] === t2[j]) { const f = qFill(i); if (f) f.classList.remove("run", "pop"); qboxes[i].classList.remove("rw-qnew"); } }), 600);
+    });
+  }
   function nextQ(t, e0) {
     let q, perm;
     if (e0) { q = questions[e0.k]; perm = e0.perm; }                  // 3q: lượt chung (Same) — cả 2 đội cùng câu cùng lúc
@@ -559,6 +629,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     const ml = Math.max(...t.cur.answers.map(a => a.text.length));
     h.ans.dataset.n = t.cur.answers.length; h.ans.dataset.len = ml > 22 ? "l" : ml > 12 ? "m" : "s";
     h.ans.innerHTML = t.cur.answers.map((a, k) => `<button type="button" data-k="${k}"><span>${esc(a.text)}</span></button>`).join("");
+    fitAns(h.ans);                                                                  // 4h
     t.lock = false; h.el.classList.remove("is-qlock"); qboxes[t.i].classList.remove("fx-ok", "fx-bad");
     t.qn = ++qSeq; t.qc = (t.qc || 0) + 1; t.pick = -1; t.pickOk = false; shareQ(t);   // 4a: qc = số câu đội này đã nhận
   }
@@ -586,7 +657,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       else if (full) toast(i, "BOOST FULL", "info");
       else toast(i, fast > 0.7 ? "FAST! +BOOST" : "+BOOST", "ok");
       if (missiles.incoming(i) && t.src === "ai") { t.aiLane = 1 - t.aiLane; t.aiDodgeT = G.t; toast(i, "AUTO DODGE!", "ok"); }
-      if (opt.sameQ) roundAnswered(i, true); else later(0.55, () => nextQ(t));   // 3q: Same = theo lượt
+      if (opt.sameQ) roundAnswered(i, true); else qGap([i], () => { if (!t.done && G.phase === "race") nextQ(t); });   // 3q: Same = theo lượt · 4h: Different = đội tự chờ 3 s
       onEvent("correct", { team: i, energy: t.E });
     } else {
       t.bad_++; t.streak = 0;
@@ -596,7 +667,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       slip(t, 1);                                                                     // 3k: xe giật lắc + hơi mất lái
       t.cur.answers.forEach((a, j) => { if (a.correct) btns[j]?.classList.add("is-reveal"); });
       toast(i, lost > 0 ? "−BOOST" : "WRONG!", "bad");
-      if (opt.sameQ) roundAnswered(i, false); else later(1.3, () => nextQ(t));
+      if (opt.sameQ) roundAnswered(i, false); else qGap([i], () => { if (!t.done && G.phase === "race") nextQ(t); });   // 4h
       onEvent("wrong", { team: i, lost });
       loseLife(i, "WRONG");                                                           // 3q: Lives — sai −1
     }
@@ -632,7 +703,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   function endRound(delay) {
     const R = G.round; if (!R || R.ending) return;
     R.ending = true; R.dl = null; waitBar(-1);
-    later(delay, startRound);
+    qGap([0, 1].filter(i => !T[i].done), startRound);                            // 4h: chờ 3 s cho CẢ 2 đội (trước: later(delay) 0,55–1,3 s)
   }
   function roundTick() {                                     // mỗi khung (frame): hết Time delay / Miss wait ⇒ khoá đội chậm, sang câu mới
     const R = G.round; if (!R || R.ending || G.phase !== "race") return;
@@ -686,18 +757,14 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     G.finS = s == null ? null : Math.round(s); world.setFinish(G.finS);
     if (mapFin) { mapFin.style.display = G.finS == null || (!OPEN && G.decided < 0) ? "none" : ""; if (G.finS != null) { const [x, y] = mapAt(G.finS); mapFin.setAttribute("transform", `translate(${x.toFixed(1)} ${y.toFixed(1)})`); } }
   }
-  function decide(w, why) {                                  // hết giờ / hết mạng ⇒ đội w thắng — vẫn phải CHẠY QUA VẠCH ĐÍCH đặt trước mặt
-    if (G.decided >= 0 || G.winner >= 0) return;
-    G.decided = w; T.forEach(t => { t.lock = true; }); halves.forEach(h => h.classList.add("is-qlock"));
-    if (G.round) { G.round.ending = true; G.round.dl = null; } waitBar(-1);
-    setFin(Math.max(T[w].s, T[1 - w].s) + 140);
-    toast(w, why === "time" ? "TIME UP! DRIVE TO THE FINISH!" : "DRIVE TO THE FINISH!", "ok");
-    if (why === "time") toast(1 - w, "TIME UP!", "bad");
-    onEvent("decided", { team: w, why, finS: G.finS });
+  function decide(w, why) {                                  // 4g: hết giờ / hết mạng ⇒ CHỐT NGAY (không chạy tới vạch đích nữa) — bàn thử vẫn gọi được
+    if (G.winner >= 0 || G.phase !== "race") return;
+    G.decided = w; onEvent("decided", { team: w, why, finS: null });
+    finish(w, why);
   }
   function modeTick(dt) {                                    // 4a: mỗi khung trong lúc đua
     if (G.phase !== "race" || G.decided >= 0) return;
-    if (MODE === "time") { G.timeLeft = Math.max(0, G.timeLeft - dt); if (G.timeLeft <= 0) decide(T[0].s >= T[1].s ? 0 : 1, "time"); }
+    if (MODE === "time") { G.timeLeft = Math.max(0, G.timeLeft - dt); if (G.timeLeft <= 0) decide(T[0].s >= T[1].s ? 0 : 1, "time"); }   // 4g: decide = chốt ngay
     else if (MODE === "words" && G.finS == null) {
       const N = questions.length, p = opt.sameQ ? G.rqi : Math.max(T[0].qc || 0, T[1].qc || 0), left = N - p;
       if (left <= Math.min(2, N - 1)) {                      // còn 2 từ ⇒ đặt đích theo quãng trung bình mỗi từ × số từ còn lại (+ nửa từ đang làm)
@@ -714,7 +781,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     t.spinT0 = t.spinT = 1.4; t.spinTurns = Math.random() < 0.5 ? -1.3 : 1.3; t.hopV = 4; t.shake = 1; t.blurB = 1; t.smokeBlack = 6; t.v *= 0.2;
     toast(i, "OUT OF LIVES!", "bad"); toast(1 - i, "KNOCKOUT!", "ok");
     onEvent("knockout", { team: i });
-    t.dead = true;                                            // 4a: xe cháy đứng lại; đội kia chạy tới vạch đích mới hiện trước mặt
+    t.dead = true;                                            // 4a: xe cháy đứng lại · 4g: đội kia thắng NGAY (màn kết điện ảnh)
     if (G.winner < 0) decide(1 - i, "ko");
   }
   // 3k: hiệu ứng trên NÚT trả lời — burst (đúng + nhanh): chớp sáng + 2 vòng sóng + 16 tia lửa · glow (đúng) · smoke (sai): 9 cụm khói xịt ra quanh nút
@@ -731,7 +798,8 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   function slip(t, k = 1) {
     if (t.air || t.done) return;
     const dir = Math.random() < 0.5 ? -1 : 1;
-    t.px += dir * 1.7 * k; t.ykV += dir * 2.4 * k; t.wk = clamp(t.wk + dir * 0.6 * k, -1.2, 1.2); t.psi = clamp(t.psi - dir * 0.05 * k, -0.7, 0.7);   // 4b t.wobA = 0.05 * k * -dir; t.wobT = 0; t.shake = Math.max(t.shake, 0.45 * k);
+    t.px += dir * 1.7 * k; t.ykV += dir * 2.4 * k; t.wk = clamp(t.wk + dir * 0.6 * k, -1.2, 1.2); t.psi = clamp(t.psi - dir * 0.05 * k, -0.7, 0.7);   // 4b
+    t.wobA = 0.05 * k * -dir; t.wobT = 0; t.shake = Math.max(t.shake, 0.45 * k);   // 4g: BẬT LẠI (từ 4b dòng này bị nuốt vào chú thích) — thân chông chênh + rung máy quay khi sai
   }
   const toastAt = [-9, -9];
   function toast(i, text, kind) { const el = H[i].toast; el.textContent = text; el.className = "sr-toast"; void el.offsetWidth; el.className = "sr-toast on k-" + kind; toastAt[i] = G.t; }
@@ -746,26 +814,31 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   }
   const VF = new THREE.Vector3();
   // nút tên lửa: CHÍNH quả ở ô cao nhất bay lên; còn kho ⇒ 1 icon chờ thụt xuống + quả mới trồi từ dưới lên ô đó (HUD không đụng ô đang diễn)
+  // 4j: quả vừa bắn MỜ DẦN 0,35 s tại chỗ (không bay) ⇒ còn kho thì quả mới HIỆN DẦN 0,55 s vào đúng ô; số "+x" đổi sau lúc mờ (msHold)
   function fireAnim(i, nBefore) {
-    const h = H[i], j = Math.max(0, Math.min(nBefore, 2) - 1), slot = h.slots[j], reload = nBefore >= 3, now = performance.now();
-    h.slotBusy[j] = now + 1100;
-    slot.classList.remove("load"); void slot.offsetWidth; slot.classList.add("fly");
-    if (reload) { h.msHold = now + 700; const ic = h.ms.querySelectorAll("svg"); ic[ic.length - 1]?.classList.add("sink"); }
-    setTimeout(() => { slot.classList.remove("fly"); if (reload) { void slot.offsetWidth; slot.classList.add("on", "load"); } else slot.classList.remove("on"); }, 520);
-    setTimeout(() => { h.msN = -1; }, 700);
+    const h = H[i], j = Math.max(0, Math.min(nBefore, 2) - 1), sl = h.slots[j], reload = nBefore >= 3, now = performance.now();
+    if (!sl) return;
+    h.slotBusy[j] = now + 1050; h.msHold = now + 380;
+    sl.classList.remove("in", "in0"); sl.classList.add("out");
+    setTimeout(() => {
+      if (dead) return; sl.classList.remove("out");
+      if (reload) { sl.classList.add("in0"); void sl.offsetWidth; sl.classList.add("in"); sl.classList.remove("in0"); setTimeout(() => sl.classList.remove("in"), 600); }
+      else sl.classList.remove("on");
+      h.msN = -1;
+    }, 380);
   }
-  function paintSlots(t, h) {                                // trạng thái tĩnh: ô j có quả khi j < min(ms, 2); vừa có thêm ⇒ trồi lên (nạp)
+  function paintSlots(t, h) {                                // 4j: ô j sáng (màu đội) khi j < min(ms, 2); không đụng ô đang diễn
     const now = performance.now(), ready = Math.min(t.ms, 2);
-    h.slots.forEach((sl, j) => {
-      if (now < h.slotBusy[j]) return;
-      const on = j < ready, was = sl.classList.contains("on");
-      if (on && !was) { sl.classList.remove("load"); void sl.offsetWidth; sl.classList.add("on", "load"); }
-      else if (!on && was) sl.classList.remove("on", "load");
-    });
+    h.slots.forEach((sl, j) => { if (now < h.slotBusy[j]) return; sl.classList.toggle("on", j < ready); });
   }
+  function noTarget(i) {                                      // 4j: bấm khi không có mục tiêu ⇒ chữ mờ, NO TARGET AHEAD vàng nháy giữa nút
+    const f = H[i].fire; f.classList.remove("rw-nt"); void f.offsetWidth; f.classList.add("rw-nt"); clearTimeout(f._ntT); f._ntT = setTimeout(() => f.classList.remove("rw-nt"), 1350);
+  }
+  const AIM_MIN = 5;                                          // 4i: đối thủ phải ở trước ≥ 5 m mới bắn được
   function fire(i) {
     const t = T[i], j = 1 - i;
     if (G.phase !== "race" || t.ms <= 0 || t.done || T[j].done || G.t - t.fireT < 1.0 || t.spinT > 0 || G.decided >= 0) return false;
+    if (T[j].s - t.s < AIM_MIN) { noTarget(i); return false; }   // 4i: chỉ bắn xe Ở TRƯỚC (không mất đạn) · 4j: báo ngay trên nút   // 4i: chỉ bắn xe Ở TRƯỚC (không mất đạn)
     const slot = Math.max(0, Math.min(t.ms, 2) - 1), Lc = cars[i].launcher, wp = Lc.slotWorld(slot, VF);
     Lc.sc[slot] = 0;                                         // quả này rời giá ⇒ chỗ trống, quả mới nạp lên dần (nếu còn)
     t.ms--; t.fireT = G.t;
@@ -785,17 +858,19 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       missiles.boom(tg.x, -tg.s - 3, "hit");                  // 3d: nổ ngay TRƯỚC mũi xe (không loá trắng cả buồng lái), rồi khói đen trùm
       const lost = Math.min(tg.E, opt.hitLoss * SEG); tg.E -= lost;
       // mỗi lần trúng một kiểu: thời gian xoay, số vòng (cả lẻ — phần dư trả về dần qua lò xo văng đuôi), văng ngang, nảy lên, nghiêng
-      const sg = Math.random() < 0.5 ? -1 : 1;
-      // 3q: MISSILE DAMAGES L (1–5): xoay + đứng yên ≈ L giây (mức 2 ≈ như bản cũ), khói đen che kính 0,8 + 0,75·L giây
-      const L = clamp(opt.msDmg | 0 || 2, 1, 5), spin = Math.min(L, 0.6 + 0.4 * L) * (0.9 + Math.random() * 0.2);
-      tg.spinT0 = tg.spinT = spin; tg.stallT = Math.max(0, L - spin); tg.spinTurns = sg * (0.55 + Math.random() * (0.6 + 0.35 * L));
-      tg.v *= 0.3 + Math.random() * 0.3; tg.px += (Math.random() < 0.5 ? -1 : 1) * (2 + Math.random() * 5.5);
-      tg.hopV = 1.2 + Math.random() * 3.6; tg.hitRoll = (Math.random() - 0.5) * 1.3;
-      tg.shake = 1; tg.blurB = 0.8; T[h.from].hits++;
-      const bn = cars[h.to].burn ? cars[h.to].burn(2.2) : null; if (bn) { tg.burnT = 2.6; tg.burnP = bn.p; tg.burnN = bn.n; }   // 3j: cháy rồi để vết đen
-      const sm = H[h.to].smoke, smD = (0.8 + 0.75 * clamp(opt.msDmg | 0 || 2, 1, 5)).toFixed(2) + "s";   // 3q: khói theo mức thiệt hại
-      sm.style.animationDuration = smD; sm.querySelectorAll("i").forEach(x => { x.style.animationDuration = smD; });
-      sm.classList.remove("on"); void sm.offsetWidth; sm.classList.add("on");
+      // 4i (thầy 18/10, bảng L1–L5 trên trang thiet-ke-4i): KHÔNG xoay tròn nữa — xe LỆCH HƯỚNG 8 + 3·L độ (về phía xa chỗ nổ), trượt nhẹ, phanh gấp,
+      //   MẤT LÁI L giây (thanh DAMAGE trên đầu rút dần đỏ → cam → vàng → xanh lá), khói đen phụt từ GẦM quanh xe (18 + 14·L cụm/giây trong 0,8 + 0,9·L s),
+      //   cháy chỗ trúng suốt lúc mất lái. Bỏ lớp khói đen che kính (chỉ còn mờ nhẹ 0,5 s).
+      const L = clamp(opt.msDmg | 0 || 2, 1, 5), side = Math.sign(tg.x - h.P.x) || (Math.random() < 0.5 ? -1 : 1);
+      tg.spinT = 0; tg.stallT = tg.dmgT0 = L; tg.dmgGo = 0;
+      tg.devT = tg.devT0 = L; tg.devA = -side * (8 + 3 * L) * Math.PI / 180;            // mũi xe ngoảnh ra xa chỗ nổ
+      tg.v *= 0.45; tg.px += side * (1.2 + 0.35 * L); tg.ykV += side * 1.5;
+      tg.hopV = 1.1 + 0.25 * L; tg.hitRoll = -side * (0.12 + 0.05 * L);
+      tg.uSmT = 0.8 + 0.9 * L; tg.uSmR = 18 + 14 * L; tg.uSmA = 0;
+      tg.shake = 1; tg.blurB = 0.6; T[h.from].hits++;
+      const bn = cars[h.to].burn ? cars[h.to].burn(L + 0.4) : null; if (bn) { tg.burnT = L + 0.6; tg.burnP = bn.p; tg.burnN = bn.n; }   // cháy suốt lúc mất lái
+      const sm = H[h.to].smoke; sm.style.animationDuration = "0.5s"; sm.querySelectorAll("i").forEach(x => { x.style.animationDuration = "0.5s"; });
+      sm.classList.add("rw-lite"); sm.classList.remove("on"); void sm.offsetWidth; sm.classList.add("on");
       for (let k = 0; k < 70; k++) { const a = Math.random() * TAU, r = Math.random() * 2.5;
         missiles.dark.emit(tg.x + Math.cos(a) * r, 0.6 + Math.random() * 1.8, -tg.s - 2 - Math.random() * 7, Math.cos(a) * 1.5, 0.6 + Math.random() * 1.8, -tg.v * 0.35 + (Math.random() - 0.5) * 2, 2 + Math.random() * 1.6, 2.6 + Math.random() * 1.8, 0.9, 2.4, 0.8); }
       toast(h.to, lost > 0 ? `HIT! −${Math.round(lost / SEG)} ⚡` : "HIT!", "bad"); toast(h.from, "DIRECT HIT!", "ok");
@@ -822,32 +897,36 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   }
   // ---------- 3j: vết lốp trên đường — 1 InstancedMesh, vòng đệm 900 đoạn (đoạn cũ nhất bị thay) ----------
   const SK = new THREE.Vector3(), skPrev = new Array(8).fill(null);
-  const skids = (() => {
-    const N = 900, g = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
-    const m = bend(new THREE.MeshBasicMaterial({ color: 0x0d0d0f, transparent: true, opacity: 0.55, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+  // 4g: makeSkids(màu, độ đậm, số đoạn) — vết thường (cũ) + VẾT CHÁY drift (đậm, rộng). Cùng kiểu vật liệu ⇒ cùng 1 shader (không dịch thêm).
+  const makeSkids = (color, opacity, N) => {
+    const g = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+    const m = bend(new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
     const im = new THREE.InstancedMesh(g, m, N); im.frustumCulled = false; im.count = 0; im.renderOrder = -1; scene.add(im);
     const O = new THREE.Object3D(); let k = 0, n = 0;
     return {
       seg(a, b, w) {
         O.position.set((a.x + b.x) / 2, 0.018, (a.z + b.z) / 2); O.rotation.set(0, Math.atan2(b.x - a.x, b.z - a.z), 0);
-        O.scale.set(0.24 * w / 0.5, 1, Math.hypot(b.x - a.x, b.z - a.z));   // dài ĐÚNG khoảng cách: chồng mép ⇒ chỗ chồng đậm gấp đôi thành sọc bậc thang O.updateMatrix();
+        O.scale.set(0.24 * w / 0.5, 1, Math.hypot(b.x - a.x, b.z - a.z));   // dài ĐÚNG khoảng cách: chồng mép ⇒ chỗ chồng đậm gấp đôi thành sọc bậc thang
+        O.updateMatrix();
         im.setMatrixAt(k, O.matrix); k = (k + 1) % N; n = Math.min(N, n + 1); im.count = n; im.instanceMatrix.needsUpdate = true;
       },
       clear() { k = 0; n = 0; im.count = 0; },
       dispose() { scene.remove(im); g.dispose(); m.dispose(); }
     };
-  })();
+  };
+  const skids = makeSkids(0x0d0d0f, 0.55, 900);
+  const burnSk = makeSkids(0x050404, 0.82, 700);             // 4g: vết lốp cháy khi drift kết trận
 
   // ---------- nhịp trận ----------
   function start() {
     if (G.phase === "count" || G.phase === "race") return false;
-    resetTeams(); G.phase = "count"; G.countT = 0; G.qList = []; G.round = null; paintLives(); waitBar(-1);
+    resetTeams(); G.phase = "count"; G.countT = 0; G.qList = []; G.round = null; paintLives(); waitBar(-1); G.fin = null; G.ts = 1; G.cineW = -1; G.mergeK = 0; mount.classList.remove("is-cine"); cdShow(-1);   // 4g
     G.decided = -1; G.timeLeft = TIME_S; setFin(OPEN ? null : FIN);                                    // 4a
     traffic.set(trafficMode, 0, 0);                                                                     // 4c
     mount.classList.add("is-count"); mount.classList.remove("is-menu", "is-end");
     const lights = $$(".sr-lights i"); lights.forEach(l => l.classList.remove("on"));
-    for (let k = 0; k < 5; k++) later(0.6 + k * 0.55, () => lights[k].classList.add("on"));
-    later(0.6 + 4 * 0.55 + 0.75 + Math.random() * 0.3, go);
+    for (let k = 0; k < 5; k++) later(LIGHT0 + k * LIGHTK, () => { lights[k].classList.add("on"); onEvent("light", k); });   // 4g: chậm hơn + báo gói nhúng phát tiếng đúng nhịp
+    later(LIGHT0 + 4 * LIGHTK + 0.85 + Math.random() * 0.3, go);
     H.forEach(h => { h.q.textContent = ""; h.ans.innerHTML = ""; });
     closePanel(); tools.close(); T.forEach(shareQ);
     return true;
@@ -860,26 +939,74 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     if (opt.sameQ) startRound(); else T.forEach(t => nextQ(t));                    // 3q: Same = theo lượt
     G.nextAuto = [G.t + 1 + Math.random() * 2, G.t + 1 + Math.random() * 2];
   }
-  function finish(w) {
+  // 4g: KẾT TRẬN ĐIỆN ẢNH — G.fin = { w, why, rt (giây THẬT từ lúc chốt), stage: "lose" → "win", kind: "drift" | "air" }
+  //   lose (FIN_LOSE giây thật): mỗi nửa màn quay NGOÀI xe của mình — xe thua phanh gấp + drift ngắn; xe thắng chạy đất ⇒ vụt ga (lửa pô), đang bay ⇒ treo ×0,12
+  //   win: CẮT sang 1 khung rộng (máy quay gộp) quay quanh xe thắng · drift ⇒ slow ×0,14 lúc góc trượt lớn nhất · bay ⇒ slow ×0,16 tới khi đáp + nảy
+  const FIN_LOSE = 1.05;
+  function finish(w, why = "line") {
+    if (G.winner >= 0 || G.phase !== "race") return;
     if (G.round) { G.round.ending = true; G.round.dl = null; } waitBar(-1);   // 3q
+    qGapClear();                                                                   // 4h
     G.winner = w; G.endT = G.t; G.phase = "end"; mount.classList.remove("is-race"); mount.classList.add("is-end");
-    T.forEach(t => { t.lock = true; t.done = true; }); halves.forEach(h => h.classList.add("is-qlock"));
+    T.forEach(t => { t.lock = true; t.done = true; t.sEnd = t.s; }); halves.forEach(h => h.classList.add("is-qlock"));
     halves[w].classList.add("is-win"); halves[1 - w].classList.add("is-lose");
-    // SLOW MOTION + máy quay điện ảnh trong SLOW_T giây thật, rồi mới hiện chữ thắng
-    G.slow = SLOW_T; G.cineW = w; mount.classList.add("is-cine");
-    const b = $(".sr-banner");
-    later(0.62, () => { b.textContent = TEAMS[w].name + " WINS!"; b.style.setProperty("--team", TEAMS[w].color); b.className = "sr-banner on"; });
-    later(0.62 + 3.2 + 0.4, () => prepBurnsSoft());           // 3p: bảng kết quả đứng yên ⇒ làm lại chỗ cháy cho ván sau
-    later(0.62 + 3.2, () => {
-      $(".sr-res-title").innerHTML = `<span style="color:${TEAMS[w].color}">${TEAMS[w].name}</span> WINS`;
-      $(".sr-res-rows").innerHTML = T.map(t => `<div style="--team:${TEAMS[t.i].color}"><b>${TEAMS[t.i].name}</b><span>${Math.round(G.finS != null ? Math.min(t.s, G.finS) : t.s)}${OPEN ? "" : " / " + FIN} m</span><span>✔ ${t.ok} · ✘ ${t.bad_}</span><span>🚀 ${t.hits} hit${t.hits === 1 ? "" : "s"}</span></div>`).join("");
-      $(".sr-result").classList.add("on");
-    });
+    const L = T[1 - w], W = T[w];
+    G.fin = { w, why, rt: 0, stage: "lose", kind: null, t0: 0, landRT: -1, banner: -1, res: -1, ang: Math.random() < 0.5 ? -1 : 1 };
+    G.cineW = w; mount.classList.add("is-cine"); cdShow(-1);
+    if (!L.dead) { if (L.air || L.tumble) L.finBrake = true; else startDrift(L, true); }
+    if (!W.air && !W.tumble) W.finGas = true;
     T.forEach(shareQ);
-    onEvent("end", { winner: w });
+    onEvent("end", { winner: w, why });
+    onEvent("fin", { stage: "lose", team: w, loser: 1 - w, air: !!W.air });
+  }
+  function startDrift(t, loser) {                              // 4g: drift — mũi xe quay vào lòng đường, thân trượt ngang
+    const dir = t.x > 0.6 ? -1 : t.x < -0.6 ? 1 : (Math.random() < 0.5 ? -1 : 1);   // yk dương = mũi sang TRÁI (−x). Mũi quay RA mép gần, thân trượt VÀO lòng đường
+    //   (như ôm cua về phía mép mà xe văng ra ngoài) ⇒ sườn ngoài + khói quay về phía lòng đường, nơi đặt máy quay
+    t.dr = { t: 0, dir, k: loser ? 0.55 : 1.0, loser, ang: 0 }; t.finGas = false; t.markT = 0;
+    onEvent("drift", { team: t.i, loser: !!loser });
+  }
+  function finTick(rdt) {                                      // mỗi khung (giây THẬT) ⇒ hệ số thời gian mục tiêu
+    const F = G.fin; if (!F) return 1;
+    F.rt += rdt;
+    const W = T[F.w];
+    if (F.stage === "lose" && F.rt >= (T[1 - F.w].dead ? 0.7 : FIN_LOSE)) {
+      F.stage = "win"; F.t0 = F.rt; F.kind = W.air || W.tumble ? "air" : "drift";
+      G.mergeK = 1; mInit = false; missiles.clear();                                       // cắt cảnh ⇒ dọn tên lửa còn bay (vòng ngắm đỏ không lọt vào cảnh đẹp)
+      if (F.kind === "drift") startDrift(W, false);
+      else { const air = W.tumble ? 0.6 : (W.vy + Math.sqrt(Math.max(0, W.vy * W.vy + 2 * AIR.G * Math.max(W.y, 0)))) / AIR.G;   // còn bay bao lâu (giây game)
+        F.airTs = clamp(air / 3.0, 0.12, 0.45); }                                                                // ⇒ cú bay slow kéo ~3 giây thật dù cao hay thấp
+      onEvent("fin", { stage: "win", team: F.w, kind: F.kind });
+    }
+    let ts = 1;
+    if (F.stage === "win") {
+      const u = F.rt - F.t0;
+      if (F.kind === "drift") ts = u < 0.12 ? 1 : u < 0.42 ? lerp(1, 0.14, ease((u - 0.12) / 0.3)) : u < 2.7 ? 0.14 : u < 3.3 ? lerp(0.14, 1, ease((u - 2.7) / 0.6)) : 1;
+      else {
+        if (!W.air && !W.tumble && F.landRT < 0) { F.landRT = F.rt; onEvent("fin", { stage: "land", team: F.w }); later(0.3, () => { if (G.fin && !W.dr && !W.air) { startDrift(W, false); W.dr.k = 0.7; } }); }   // đáp xong ⇒ trượt dừng
+        const v = F.landRT < 0 ? 0 : F.rt - F.landRT;
+        const sa = F.airTs || 0.16;
+        ts = F.landRT < 0 ? (u < 0.25 ? lerp(0.5, sa, u / 0.25) : sa) : v < 0.55 ? sa : v < 1.1 ? lerp(sa, 1, ease((v - 0.55) / 0.55)) : 1;
+        if (u > 6) ts = Math.max(ts, 0.6);                      // bay quá lâu (hiếm) ⇒ thôi slow
+        if (F.landRT < 0) return ts;
+      }
+      if (F.banner < 0 && u >= (F.kind === "drift" ? 1.0 : 0.25 + (F.landRT - F.t0))) { F.banner = F.rt; showBanner(F.w); }
+    }
+    if (F.banner >= 0 && F.res < 0 && F.rt - F.banner >= 3.2) { F.res = F.rt; showResults(F.w); }
+    return ts;
+  }
+  function showBanner(w) {
+    const b = $(".sr-banner"); b.textContent = TEAMS[w].name + " WINS!"; b.style.setProperty("--team", TEAMS[w].color); b.className = "sr-banner on";
+    onEvent("banner", { team: w });
+  }
+  function showResults(w) {
+    G.cineW = -1; mount.classList.remove("is-cine"); if (G.fin) G.fin.cam = false;
+    $(".sr-res-title").innerHTML = `<span style="color:${TEAMS[w].color}">${TEAMS[w].name}</span> WINS`;
+    $(".sr-res-rows").innerHTML = T.map(t => `<div style="--team:${TEAMS[t.i].color}"><b>${TEAMS[t.i].name}</b><span>${Math.round(G.finS != null ? Math.min(t.sEnd, G.finS) : t.sEnd)}${OPEN ? "" : " / " + FIN} m</span><span>✔ ${t.ok} · ✘ ${t.bad_}</span><span>🚀 ${t.hits} hit${t.hits === 1 ? "" : "s"}</span></div>`).join("");
+    $(".sr-result").classList.add("on");
+    later(0.4, () => prepBurnsSoft());                         // 3p: bảng kết quả đứng yên ⇒ làm lại chỗ cháy cho ván sau
   }
   function toMenu() {                                       // Menu ▸ về màn chờ (bỏ trận đang chơi)
-    resetTeams(); G.phase = "menu"; G.slow = 0; G.cineW = -1; mount.classList.remove("is-cine");
+    resetTeams(); G.phase = "menu"; G.fin = null; G.ts = 1; G.cineW = -1; G.mergeK = 0; mount.classList.remove("is-cine"); cdShow(-1);   // 4g
     mount.classList.remove("is-count", "is-race", "is-end"); mount.classList.add("is-menu");
     H.forEach(h => { h.q.textContent = ""; h.ans.innerHTML = ""; h.el.classList.remove("is-qlock"); });
     T.forEach(shareQ);
@@ -894,10 +1021,11 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   const PADM_KEY = "racingwords.padMode.v2";                 // 4e: nhớ theo MÁY cả trong AWord · mặc định 2 = Drive on iPad (thầy 16/10)
   let padMode = opt.padMode != null ? opt.padMode : (() => { try { const v = localStorage.getItem(PADM_KEY); return v === "0" || v === "1" || v === "2" ? +v : 2; } catch (e) { return 2; } })();
   const PM = [
-    { t: "iPad OFF", d: "Race, questions and answers on the big screen." },
-    { t: "Answer on iPad", d: "Questions only on the iPad; race on the big screen." },
-    { t: "Drive on iPad", d: "The iPad is the wheel + pedals + missile button." },
+    { t: "Drive on game", d: "Everything on the big screen." },
+    { t: "Answer on iPad", d: "Questions on the iPad." },
+    { t: "Drive on iPad", d: "iPad + big screen both drive." },
   ];
+  const PM_ORDER = [2, 1, 0];                                 // 4i (thầy 18/10): hiện theo thứ tự 1. Drive on iPad · 2. Answer on iPad · 3. Drive on game (số chế độ giữ nguyên)
   const pBody = $(".sr-panel-body"), pHead = $(".sr-panel-h");
   // 3y: KIỂU LÁI iPad (chế độ Drive on iPad) — Touch wheel (giữ nửa vô lăng) | Tilt (nghiêng iPad); thông số gửi "c:" cho cả 2 iPad
   const STEER_KEY = "racingwords.steer.v2", SMOOTH = [{ t: "Low", v: 2 }, { t: "Normal", v: 6 }, { t: "High", v: 15 }];
@@ -950,38 +1078,46 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   // 3z: nút ⚙ CÀI ĐẶT đa năng — bảng NHỎ giữa màn có TAB (trận vẫn chạy tiếp); nhớ tab đang mở
   let setTab = remote ? "ipad" : "camera";
   function openSettings(tab = setTab) {
-    const tabs = [...(remote ? [["ipad", "iPad"]] : []), ["camera", "Camera"], ["race", "Race"]];   // 4c: + Race
+    const tabs = [...(remote ? [["ipad", "Driver"]] : []), ["camera", "Camera"], ["race", "Race"]];   // 4c: + Race · 4i: tab iPad ⇒ DRIVER
     if (!tabs.some(x => x[0] === tab)) tab = tabs[0][0];
-    setPause(true);                                             // 4e: mở Settings ⇒ trận TẠM DỪNG (gói nhúng dừng cả phim intro)
-    setTab = tab; panel.hidden = false; panel.classList.add("is-small", "is-set"); pHead.textContent = "Settings";
-    pBody.innerHTML = `<div class="sr-tabs">${tabs.map(([k, t]) => `<button type="button" data-tab="${k}" class="${k === tab ? "on" : ""}">${t}</button>`).join("")}</div><div class="sr-tabbody"></div>`;
+    setTab = tab;
+    winOpen("settings", () => { panel.hidden = false; panel.className = "sr-panel rw-win is-set is-c"; });   // 4i: góc dưới phải, tạm dừng chung
+    pHead.textContent = "";
+    // 4i (thầy chọn kiểu C): tab ICON dọc bên trái + nội dung bên phải
+    pBody.innerHTML = `<div class="rw-c"><nav>${tabs.map(([k, t]) => `<button type="button" data-tab="${k}" class="${k === tab ? "on" : ""}">${WIN_ICON[k]}<span>${t}</span></button>`).join("")}</nav>`
+      + `<div class="rw-cbody"><h3>${tabs.find(x => x[0] === tab)[1]}</h3><div class="sr-tabbody"></div></div></div>`;
     pBody.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => openSettings(b.dataset.tab)));
     const box = pBody.querySelector(".sr-tabbody");
     if (tab === "ipad") ipadTab(box); else if (tab === "race") raceTab(box); else cameraTab(box);
   }
   function openPanel() { openSettings("ipad"); }             // 3z: giữ tên cũ (mở thẳng tab iPad)
   function ipadTab(pBody) {                                 // bảng iPad (3y): chọn ⇒ hỏi xác nhận ⇒ OK là đóng (trận vẫn chạy tiếp)
-    pBody.innerHTML = `<div class="sr-pm">${PM.map((m, k) => `<button type="button" class="sr-pm-o${k === padMode ? " on" : ""}" data-m="${k}"><b>${k + 1}. ${m.t}</b><span>${m.d}</span></button>`).join("")}</div>
+    pBody.innerHTML = `<div class="sr-pm">${PM_ORDER.map((k, n) => `<button type="button" class="sr-pm-o${k === padMode ? " on" : ""}" data-m="${k}"><b>${n + 1}. ${PM[k].t}</b><span>${PM[k].d}</span></button>`).join("")}</div>
       <div class="sr-pm-st">${[0, 1].map(i => `<span data-t="${i}" data-s="${T[i].padOn ? "on" : ""}" style="--team:${TEAMS[i].color}"><i></i>${TEAMS[i].name} iPad</span>`).join("")}</div>
       ${steerHTML()}
       <div class="sr-cf" hidden><p></p><div><button type="button" class="sr-cf-no">Cancel</button><button type="button" class="sr-cf-ok">OK</button></div></div>`;
     wireSteer(pBody);
     const cf = pBody.querySelector(".sr-cf"); let pend = -1;
-    pBody.querySelectorAll(".sr-pm-o").forEach(b => b.addEventListener("click", () => { pend = +b.dataset.m; cf.querySelector("p").innerHTML = `Switch to <b>${pend + 1}. ${PM[pend].t}</b>?`; cf.hidden = false; }));
+    pBody.querySelectorAll(".sr-pm-o").forEach(b => b.addEventListener("click", () => { pend = +b.dataset.m; cf.querySelector("p").innerHTML = `Switch to <b>${PM_ORDER.indexOf(pend) + 1}. ${PM[pend].t}</b>?`; cf.hidden = false; }));
     cf.querySelector(".sr-cf-no").addEventListener("click", () => { cf.hidden = true; });
     cf.querySelector(".sr-cf-ok").addEventListener("click", () => { if (pend >= 0) setPadMode(pend); closePanel(); });
   }
   // 3o: AWord — bảng Options THẬT của AWord gắn trên game (lớp chung chứa cả khung game + hàng nút), neo trên hàng nút; game dừng tới khi đóng
+  let optTok = 0, optOv = null;
   function openHostOptions() {
-    closePanel();
-    const layer = mount.parentElement || mount, wasPaused = G.paused;
-    G.paused = true; onEvent("pause", true);
-    host.options({ layer, top: () => bar ? bar.getBoundingClientRect().top - layer.getBoundingClientRect().top : layer.clientHeight,
-      onClose: () => { if (!wasPaused && !pmenu.on) { G.paused = false; last = 0; onEvent("pause", false); } } });
+    const layer = mount.parentElement || mount, tok = ++optTok;
+    winOpen("options", () => {                                   // 4i: bảng AWord giữ nguyên chỗ; đóng nó (nút của AWord) ⇒ đếm 3-2-1
+      let h = null;
+      optOv = { layer, top: () => bar ? bar.getBoundingClientRect().top - layer.getBoundingClientRect().top : layer.clientHeight,
+        onClose: () => { if (tok !== optTok || winK !== "options") return; hostOpt = null; optOv = null; winK = null; toolOn("options", false); resume321(); } };
+      try { h = host.options(optOv); } catch (e) { console.warn(e); }
+      hostOpt = h && typeof h.close === "function" ? h : null;
+    });
   }
   // 3o: AWord — nút Thư mục = act THẬT cùng thư mục (host.listActs), bấm là mở
   function openFolder() {
-    panel.hidden = false; panel.classList.add("is-small"); pHead.textContent = "Switch activity";
+    winOpen("folder", () => { panel.hidden = false; panel.className = "sr-panel rw-win is-folder"; });   // 4i: trước đây KHÔNG tạm dừng
+    pHead.textContent = "Switch activity";
     pBody.innerHTML = `<p class="sr-fd-note">Loading…</p>`;
     Promise.resolve().then(() => host.listActs()).then(d => {
       if (panel.hidden) return;
@@ -996,7 +1132,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   const esc = v => String(v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   function openOptions() {                                  // Options riêng (chỉ khi chạy ở myGame, không có host): cùng / khác câu hỏi · số tên lửa tối đa
     if (host && host.options) { openHostOptions(); return; }
-    panel.hidden = false; panel.classList.add("is-small"); pHead.textContent = "Options";
+    winOpen("options", () => { panel.hidden = false; panel.className = "sr-panel rw-win is-opt"; }); pHead.textContent = "Options";
     const paint = () => {
       pBody.innerHTML = `<div class="sr-opt">
         <div class="sr-opt-row"><span>Questions</span><div class="sr-seg"><button type="button" data-q="1" class="${opt.sameQ ? "on" : ""}">Same for both teams</button><button type="button" data-q="0" class="${opt.sameQ ? "" : "on"}">Different</button></div></div>
@@ -1008,14 +1144,45 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     paint();
   }
   // 4e: Settings tạm dừng — nhớ trận đã dừng sẵn chưa (MENU / Options AWord) để đóng Settings không chạy nhầm
-  let setPaused = false, setWas = false;
-  function setPause(on) {
-    if (on === setPaused) return; setPaused = on;
-    if (on) { setWas = G.paused; G.paused = true; mount.classList.add("is-paused"); }
-    else if (!setWas && !pmenu.on) { G.paused = false; last = 0; mount.classList.remove("is-paused"); }
-    onEvent("pause", G.paused); onEvent("settings", on);
+  // ---------- 4i (thầy 18/10): BỘ QUẢN LÝ CỬA SỔ GÓC — menu · folder · options · settings ----------
+  //   chỉ 1 cửa sổ mở (mở cái này ⇒ cái kia đóng) · đang mở bất kỳ ⇒ TẠM DỪNG (âm thanh, phim intro, đồng hồ, tên lửa…)
+  //   đóng hết ⇒ đang ĐUA thì 3 đèn đếm 3-2-1 rồi mới chạy; ngoài lúc đua chạy ngay. Mở lại giữa lúc đếm ⇒ huỷ đếm.
+  let winK = null, hostOpt = null, rsT = [];
+  const rsEl = $(".rw-rs");
+  function pauseAll(on) { G.paused = on; if (!on) last = 0; mount.classList.toggle("is-paused", on); onEvent("pause", on); onEvent("settings", on); }
+  function toolOn(k, on) { const b = bar && bar.querySelector(`.sr-tool[data-k="${k}"]`); if (b) b.classList.toggle("is-win", on); }
+  function winHide(k) {
+    if (k === "menu") $(".sr-pmenu").hidden = true;
+    else if (k === "options" && (hostOpt || optOv)) {           // bảng AWord: gọi lại host.options(cùng ov) = AWord tự đóng (bật/tắt); tok mới ⇒ onClose cũ bỏ qua
+      const h = hostOpt, ov = optOv; hostOpt = null; optOv = null; optTok++;
+      try { if (h) h.close(); else if (ov && host && host.options) host.options(ov); } catch (e) { /* */ }
+    }
+    if (k !== "menu" && !panel.hidden) { panel.hidden = true; panel.className = "sr-panel"; try { remote && remote.panelClosed && remote.panelClosed(); } catch (e) { /* */ } }
+    toolOn(k, false);
   }
-  function closePanel() { if (panel.hidden) return; if (panel.classList.contains("is-set")) setPause(false); panel.hidden = true; panel.classList.remove("is-small", "is-set"); try { remote && remote.panelClosed && remote.panelClosed(); } catch (e) { /* */ } }
+  function winOpen(k, render) {
+    rsCancel();
+    if (winK && winK !== k) winHide(winK);
+    winK = k; toolOn(k, true);
+    pauseAll(true);                                              // (cả khi đang đếm 3-2-1: âm thanh đã mở lại ⇒ tắt lại)
+    render();
+  }
+  function winClose() { if (!winK) return; const k = winK; winK = null; winHide(k); resume321(); }
+  function winDrop() { if (winK) { const k = winK; winK = null; winHide(k); } rsCancel(); if (G.paused) pauseAll(false); }   // đóng KHÔNG đếm (về màn chờ / đổi act)
+  function rsCancel() { rsT.forEach(clearTimeout); rsT = []; if (rsEl) rsEl.classList.remove("on", "go"); }
+  function resume321() {
+    rsCancel();
+    if (dead) return;
+    if (G.phase !== "race") { pauseAll(false); return; }
+    const L = [...rsEl.children]; L.forEach(x => { x.classList.remove("on"); x.textContent = ""; }); rsEl.classList.add("on");
+    onEvent("pause", false);                                     // âm thanh mở lại ngay (tiếng bíp + máy nổ chờ đèn); trận vẫn đứng tới GO
+    [0, 1, 2].forEach(k => rsT.push(setTimeout(() => { if (dead) return; L[k].classList.add("on"); L[k].textContent = 3 - k; onEvent("rsLight", 3 - k); }, 150 + k * 1000)));
+    rsT.push(setTimeout(() => { if (dead) return; rsEl.classList.add("go"); L.forEach(x => { x.textContent = ""; }); onEvent("rsGo", 1); pauseAll(false); }, 3150));
+    rsT.push(setTimeout(() => { if (rsEl) rsEl.classList.remove("on", "go"); }, 3750));
+  }
+  function closePanel() { if (winK && winK !== "menu") winClose(); }
+  // bấm ra ngoài cửa sổ góc (trong khung game) ⇒ đóng (Options của AWord tự lo)
+  mount.addEventListener("pointerdown", e => { if (!winK || winK === "options" || e.target.closest(".sr-panel, .sr-pmenu")) return; winClose(); }, true);
   function setPadMode(m) {
     padMode = m; try { localStorage.setItem(PADM_KEY, String(m)); } catch (e) { /* */ }   // 4e: nhớ cả trong AWord
     mount.classList.toggle("pm1", m === 1); mount.classList.toggle("pm2", m === 2);
@@ -1031,15 +1198,14 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   // ---------- 3j: bảng MENU (như Rocket Race): giữa màn, game TẠM DỪNG; RESUME / bấm ☰ lại / bấm nền mờ / Esc ⇒ đóng ----------
   const pmenu = (() => {
     const el = $(".sr-pmenu"), note = $(".sr-pmenu-note");
-    const open = () => { el.hidden = false; G.paused = true; note.textContent = ""; mount.classList.add("is-paused"); };
-    const close = () => { el.hidden = true; G.paused = false; last = 0; mount.classList.remove("is-paused"); };
-    el.addEventListener("pointerdown", e => { if (e.target === el) close(); });
+    const open = () => winOpen("menu", () => { el.hidden = false; note.textContent = ""; });   // 4i: góc dưới phải, tạm dừng chung
+    const close = () => { if (winK === "menu") winClose(); };
     el.querySelector(".sr-pmenu-box").addEventListener("click", e => {
       const b = e.target.closest("button[data-m]"); if (!b) return;
       const m = b.dataset.m;
       if (m === "resume") close();
-      else if (m === "again") { close(); toMenu(); }                                 // 3k: về màn chờ START (không vào đua ngay)
-      else if (m === "cars") { close(); toMenu(); }
+      else if (m === "again") { winDrop(); toMenu(); }                               // 3k: về màn chờ START (không vào đua ngay) · 4i: không đếm 3-2-1
+      else if (m === "cars") { winDrop(); toMenu(); }
       else if (m === "tpl") {                                                        // 3o: AWord — danh sách template + Library
         const list = (host && host.templates ? host.templates() : []) || [];
         if (!host) { note.textContent = "Change template — available when RACING WORDS runs inside AWord."; return; }
@@ -1051,9 +1217,9 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       e.stopPropagation();
       if (b.dataset.lib) host.home(); else if (b.dataset.t) host.switchTemplate(b.dataset.t);
     });
-    return { open, close, toggle: () => el.hidden ? open() : close(), get on() { return !el.hidden; } };
+    return { open, close, toggle: () => winK === "menu" ? close() : open(), get on() { return winK === "menu"; } };
   })();
-  const onEsc = e => { if (e.code === "Escape" && !dead && !e.defaultPrevented && !document.querySelector(".aw-ovl, .aw-opt-panel")) pmenu.toggle(); };   // 3o: gỡ khi destroy; bảng AWord đang mở thì nhường
+  const onEsc = e => { if (e.code === "Escape" && !dead && !e.defaultPrevented && !document.querySelector(".aw-ovl, .aw-opt-panel")) { if (winK) winClose(); else pmenu.open(); } };   // 4i   // 3o: gỡ khi destroy; bảng AWord đang mở thì nhường
   window.addEventListener("keydown", onEsc);
 
   // ---------- hàng nút chức năng: 1 nút góc phải, bấm ⇒ bung các nút sang trái, bấm chỗ khác ⇒ thu lại ----------
@@ -1077,10 +1243,10 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       const k = b.dataset.k;
       if (k === "menu") pmenu.toggle();
       else if (k === "sound") { b.classList.toggle("is-off"); say(b.classList.contains("is-off") ? "Sound off" : "Sound on"); }
-      else if (k === "folder") { if (host && host.listActs) (panel.hidden ? openFolder() : closePanel()); else say("Switch activity — available inside AWord"); }
-      else if (k === "options") openOptions();
-      else if (k === "ipad") { panel.hidden ? openPanel() : closePanel(); }
-      else if (k === "settings") { panel.hidden ? openSettings() : closePanel(); }   // 3z
+      else if (k === "folder") { if (host && host.listActs) (winK === "folder" ? winClose() : openFolder()); else say("Switch activity — available inside AWord"); }
+      else if (k === "options") { winK === "options" ? winClose() : openOptions(); }
+      else if (k === "ipad") { winK === "settings" ? winClose() : openPanel(); }
+      else if (k === "settings") { winK === "settings" ? winClose() : openSettings(); }   // 3z · 4i: bấm lại nút đang mở = đóng
     });
     // 3j: thầy: hàng nút KHÔNG tự đóng khi bấm chỗ khác / bấm nút con — chỉ đóng khi bấm lại nút Controls
     return { close() { /* 3j: không tự đóng */ }, closeNow: close, dispose() { bar.innerHTML = ""; bar.classList.remove("sr-bar", "is-open"); } };
@@ -1108,7 +1274,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       h.boost.classList.toggle("is-down", v.includes("b") || (man && !!p.boost)); h.brake.classList.toggle("is-down", v.includes("k") || (man && !!p.brake)); });
   }
   function bindHold(el, i, kindOf) {                       // giữ để lái/đạp — nhiều ngón cùng lúc được (mỗi pointerId 1 việc)
-    const down = e => { e.preventDefault(); if (padMode === 2) return; const k0 = kindOf(e); if (!k0) return; try { el.setPointerCapture(e.pointerId); } catch (x) { /* */ } touch[i].set(e.pointerId, k0); T[i].touchT = G.t; paintTouch(); };
+    const down = e => { e.preventDefault(); /* 4i: Drive on iPad vẫn nhận chạm màn lớn */ const k0 = kindOf(e); if (!k0) return; try { el.setPointerCapture(e.pointerId); } catch (x) { /* */ } touch[i].set(e.pointerId, k0); T[i].touchT = G.t; paintTouch(); };
     const move = e => { if (!touch[i].has(e.pointerId)) return; const k = kindOf(e); if (k && k !== touch[i].get(e.pointerId)) { touch[i].set(e.pointerId, k); paintTouch(); } T[i].touchT = G.t; };
     const up = e => { if (touch[i].delete(e.pointerId)) paintTouch(); };
     el.addEventListener("pointerdown", down); el.addEventListener("pointermove", move);
@@ -1124,14 +1290,25 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   });
 
   const ZERO = { steer: 0, boost: 0, brake: 0 };
+  // 4i (thầy 18/10): Drive on iPad ⇒ màn lớn LÁI ĐỒNG THỜI. BOOST / phanh = bên nào bấm cũng nhận; vô lăng = màn lớn (chạm / phím) đang giữ thì màn lớn thắng,
+  //   buông ra thì trả dần về iPad trong 0,3 s (không giật). Nút tên lửa màn lớn bấm được như thường.
+  function padMix(t) {
+    const p = G.t - t.padT < 0.45 ? t.pad : ZERO, tv = [...touch[t.i].values()], hk = held[t.i];
+    t.src = "pad";
+    if (!tv.length && !hk.size && !(G.t - (t.bigT || -9) < 0.3)) return p;
+    const has = k => hk.has(k) || tv.includes(k), ls = (has("r") ? 1 : 0) - (has("l") ? 1 : 0);
+    if (has("l") || has("r")) { t.bigT = G.t; t.bigS = ls; }
+    const k = has("l") || has("r") ? 0 : clamp((G.t - (t.bigT || -9)) / 0.3, 0, 1);
+    return { ...p, steer: (has("l") || has("r")) ? ls : (t.bigS || 0) * (1 - k) + (p.steer || 0) * k, boost: +(!!p.boost || has("b")), brake: +(!!p.brake || has("k")) };
+  }
   function idleInput(t) {                                   // ngoài lúc đua: chỉ để vô lăng / bàn đạp trên màn lớn đi theo tay người (iPad, phím, chạm)
-    if (t.padOn && padMode === 2) { t.src = "pad"; return G.t - t.padT < 0.45 ? t.pad : ZERO; }
+    if (t.padOn && padMode === 2) return padMix(t);                // 4i
     const tv = [...touch[t.i].values()], hk = held[t.i];
     if (tv.length || hk.size) { t.src = tv.length ? "touch" : "key"; const has = k => hk.has(k) || tv.includes(k); return { steer: (has("r") ? 1 : 0) - (has("l") ? 1 : 0), boost: +has("b"), brake: +has("k") }; }
     return ZERO;
   }
   function input(t) {
-    if (t.padOn && padMode === 2) { t.src = "pad"; return G.t - t.padT < 0.45 ? t.pad : { steer: 0, boost: 0, brake: 0 }; }
+    if (t.padOn && padMode === 2) return padMix(t);                // 4i: iPad + màn lớn cùng lái
     const tv = [...touch[t.i].values()], hk = held[t.i];
     if (tv.length || G.t - t.touchT < 4 || G.t - t.keyT < 4) {
       t.src = t.touchT > t.keyT ? "touch" : "key";
@@ -1161,6 +1338,12 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     const vd = clamp((tx - t.x) * 0.7, -4, 4), pd = Math.asin(clamp(vd / Math.max(t.v, 3), -0.5, 0.5));
     return clamp(((pd - t.psi) * 4 + t.v * kapV(t.s)) / Math.max(0.05, yawR(t.v)), -1, 1);
   }
+  // 4g: MÀN KẾT tự lái — xe thua (đang bay) chạm đất ⇒ drift phanh · xe thắng vụt ga tới lúc cắt cảnh · trên không: buông tay (flyStep tự cân)
+  function finInput(t) {
+    if (t.finBrake && !t.air && !t.tumble) { t.finBrake = false; startDrift(t, true); }
+    if (t.dead || t.air || t.tumble) return ZERO;
+    return { steer: aiSteer(t, clamp(t.x * (t.dr ? 0.6 : 1), -5.5, 5.5)), boost: t.finGas ? 1 : 0, brake: 0 };
+  }
   // ---------- vật lý xe ----------
   // xe chạm dốc: cov = phần bề ngang xe nằm trên dốc (0..1), side = dốc ở bên PHẢI (+1) hay TRÁI (−1) của xe
   // 4a: tiếp xúc dốc theo 2 TRỤC BÁNH: hF / hR = độ cao mặt dốc dưới trục trước / sau (trục trước đã qua mép ⇒ nằm trên đường kéo dài của dốc,
@@ -1180,6 +1363,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     const racing = G.phase === "race" && !t.done, o = T[1 - t.i];
     let inp = { steer: 0, boost: 0, brake: 0 };
     if (racing && t.spinT <= 0 && !(t.stallT > 0)) inp = input(t);
+    else if (G.phase === "end" && G.fin) inp = finInput(t);                                                      // 4g: màn kết tự lái
     else if (G.phase === "end") { const tx = TEAMS[t.i].lanes[t.aiLane]; inp = { steer: aiSteer(t, tx), boost: 0, brake: G.t - G.endT > 1.2 ? 1 : 0 }; }
     if (t.ctlT > 0) {                                        // 4e: BAD LANDING ⇒ mất lái ~1,2 s: tay lái còn 30 %, vô lăng tự giật về 1 phía (tắt dần), không boost
       t.ctlT = Math.max(0, t.ctlT - dt); const k = t.ctlT / 1.2;
@@ -1190,7 +1374,8 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     t.steer += (inp.steer - t.steer) * Math.min(1, dt * (t.src === "pad" && steer.mode === "tilt" ? 22 : 10));   // 3y: nghiêng đã mượt sẵn ⇒ bám nhanh hơn
     const brakeEdge = inp.brake && !t.brakeHeld; t.brakeHeld = !!inp.brake;
 
-    if (t.air) flyStep(t, dt, inp, brakeEdge);
+    if (t.tumble) tumbleStep(t, dt);                                                   // 4g: lật chậm (dốc xoắn không ga)
+    else if (t.air) flyStep(t, dt, inp, brakeEdge);
     else {
       const braking = !!inp.brake || t.brakeT > 0;
       if (t.brakeT > 0) t.brakeT -= dt;
@@ -1199,8 +1384,8 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       const behind = live ? smooth(PHYS.CATCH, PHYS.CATCH + PHYS.CATCH_K, gap) : 0, ahead = live ? smooth(PHYS.CATCH, PHYS.CATCH + PHYS.CATCH_K, -gap) : 0;
       // mẫu 3c: tốc độ NỀN luôn có; BOOST chỉ chạy khi đạp + còn năng lượng tích trữ (dùng dần BUSE ô/giây)
       const vBase = (racing ? PHYS.VBASE : 0) + 5 * behind;                          // 3q: nền 35 km/h ⇒ bù +18 km/h (cũ +43)
-      const nitroOn = !!inp.boost && t.E > 0.5 && racing && !t.dead && (G.decided < 0 || G.decided === t.i);
-      if (nitroOn) t.E = Math.max(0, t.E - PHYS.BUSE * SEG * dt);
+      const nitroOn = (!!inp.boost && t.E > 0.5 && racing && !t.dead && (G.decided < 0 || G.decided === t.i)) || t.finGas;   // 4g: kết trận ⇒ xe thắng VỤT GA
+      if (nitroOn && !t.finGas) t.E = Math.max(0, t.E - PHYS.BUSE * SEG * dt);
       let vT = nitroOn ? PHYS.VBOOST + 4 * behind : vBase;
       vT = Math.max(vT * (1 - 0.3 * ahead), racing ? PHYS.VMIN : 0);
       if (t.pushT > 0) t.pushT -= dt;
@@ -1216,6 +1401,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       else if (t.v < vT - 0.05) a = Math.min((nitroOn || t.lbT > 0 ? 20 : PHYS.ACC) * (1 - 0.25 * t.v / PHYS.VNITRO), (vT - t.v) / dt);
       else if (t.v > vT + 0.05) a = t.pushT > 0 ? -clamp((t.v - vT) * 0.3, 0.6, 4) : -clamp((t.v - vT) * 1.6, 3, PHYS.HARD);   // vừa bị húc đẩy ⇒ giữ đà lâu hơn
       if (!nitroOn && t.spinT <= 0 && rampContact(t)) a -= 9.8 * Math.sin(RAMP_SLOPE) * 3.2;            // leo dốc KHÔNG boost ⇒ trọng lực hãm (≈ −5,3 m/s²)
+      if (t.dr) { const D = t.dr; D.t += dt; a = D.loser ? -15 : D.t < 0.2 ? -2 : -15; }                     // 4g: drift — lốp cày đường, mất đà nhanh
       t.v = Math.max(0, t.v + a * dt); t.a = a;
       t.nitroK = lerp(t.nitroK, nitroOn ? 1 : 0, 1 - Math.exp(-dt * 8));
       // ngang: lái liên tục trên CẢ mặt đường; đứng yên thì không lách ngang được; px = lực đẩy ngoài (va chạm) tắt dần
@@ -1225,7 +1411,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       else t.psi += (t.steer * yawR(t.v) - (G.phase === "race" || G.phase === "end" ? t.v * kapV(t.s) : 0)) * dt;
       t.psi = clamp(t.psi, -0.7, 0.7); t.vx = t.v * Math.sin(t.psi); t.cx = 0;
       t.yaw = lerp(t.yaw, -Math.atan2(t.vx + t.px * 0.5, Math.max(t.v, 5)) * 0.9, 1 - Math.exp(-dt * 8));
-      t.brake = braking || t.spinT > 0 ? 1 : a < -2 ? 0.35 : 0;
+      t.brake = braking || t.spinT > 0 || t.dr ? 1 : a < -2 ? 0.35 : 0;
       t.boostK = lerp(t.boostK, a > 0.5 || nitroOn ? (inp.boost ? 1 : 0.35) : 0, 1 - Math.exp(-dt * 8));
       if (t.smokeBlack > 0) {                               // trả lời sai ⇒ xì khói ĐEN từ ống xả
         t.smokeBlack -= dt; t.smokeT2 = (t.smokeT2 || 0) - dt;
@@ -1264,10 +1450,22 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       if (t.v > 3 && !t.air) { t.v *= 1 - 1.2 * dt; if (Math.random() < 0.7) missiles.sparks.emit(t.x + side * 1.0, 0.5, -t.s + (Math.random() - 0.5) * 2, side * 2, 2 + Math.random() * 3, 3 + Math.random() * 4, 0.35, 0.12, 1, 0, 1); }
     }
     // văng đuôi (va chạm / đáp đất xấu): lò xo tắt dần
-    t.ykV += (-26 * t.yk - 6 * t.ykV) * dt; t.yk += t.ykV * dt;
+    { const ykT = t.devT > 0 ? t.devA * (0.35 + 0.65 * t.devT / t.devT0) : 0; if (t.devT > 0) t.devT = Math.max(0, t.devT - dt);   // 4i: giữ góc lệch khi trúng tên lửa
+      t.ykV += (-26 * (t.yk - ykT) - 6 * t.ykV) * dt; t.yk += t.ykV * dt; }
+    if (t.dr && !t.air && !t.tumble) {                       // 4g: góc trượt drift (thay lò xo): vào nhanh, vượt nhẹ rồi giữ, xe dừng thì đứng yên ở góc đó
+      const D = t.dr, u = D.t, k = D.k * (u < 0.32 ? ease(u / 0.32) * 1.12 : lerp(1.12, 0.82, clamp((u - 0.32) / 0.7, 0, 1)));
+      if (t.v > 0.5) D.ang = lerp(D.ang, 1.05 * k, 1 - Math.exp(-dt * 16));
+      t.yk = D.dir * D.ang; t.ykV = 0;
+      if (t.v > 2) t.px += D.dir * (D.loser ? 1.6 : 2.6) * dt * clamp(t.v / 25, 0, 1);                           // thân trượt ngang vào lòng đường
+    }
     if (t.spinT <= 0 && t.stallT > 0) t.stallT = Math.max(0, t.stallT - dt);   // 3q
+    if (t.uSmT > 0) {                                                          // 4i: khói đen phụt từ GẦM quanh 4 phía xe, nhỏ dần
+      t.uSmT = Math.max(0, t.uSmT - dt); t.uSmA += t.uSmR * dt * (0.35 + 0.65 * Math.min(1, t.uSmT));
+      while (t.uSmA >= 1) { t.uSmA -= 1; const a = Math.random() * TAU, cx = Math.cos(a), cz = Math.sin(a);
+        missiles.dark.emit(t.x + cx * 1.05, 0.12 + Math.random() * 0.2, -t.s + cz * 2.3, cx * (1 + Math.random() * 1.6), 0.5 + Math.random() * 1.3, cz * 1.2 + 1.5, 1.3 + Math.random() * 0.9, 1.1 + Math.random() * 0.7, 0.75, 2.4, 1.1); }
+    }
     if (t.spinT > 0) { t.spinT = Math.max(0, t.spinT - dt); if (t.spinT === 0) { t.yk += wrapPI(t.spinTurns * TAU); t.ykV = 0; } }   // vòng lẻ còn dư ⇒ lò xo kéo về dần
-    t.hy += t.hopV * dt; t.hopV -= 14 * dt; if (t.hy <= 0) { t.hy = 0; t.hopV = 0; } t.hitRoll *= Math.exp(-dt * 2.5);
+    t.hy += t.hopV * dt; t.hopV -= 14 * dt; if (t.hy <= 0) { if (t.bnc > 0 && t.hopV < -1.2) { t.bnc--; t.hopV = -t.hopV * 0.38; t.hy = 0.001; t.wobA *= 0.8; t.wobT = Math.min(t.wobT, 0.15); } else { t.hy = 0; t.hopV = 0; } } t.hitRoll *= Math.exp(-dt * 2.5);   // 4g: nảy lần 2
     t.shake = Math.max(0, t.shake - dt * 1.6); t.blurB = Math.max(0, t.blurB - dt * 1.8);
     if (G.winner < 0 && G.phase === "race" && G.finS != null && t.s >= G.finS && !t.dead && (G.decided < 0 || G.decided === t.i)) finish(t.i);   // 4a: đích dời được
     // qua mốc vòng
@@ -1288,25 +1486,54 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     if (part) {                                             // chỉ 1 bên xe trên dốc ⇒ bị hất LỘN 1 VÒNG quanh trục DỌC xe (barrel roll), tự xong trước khi chạm đất
       const ar0 = part * Math.atan2(RAMP.H, cars[t.i].M.W);
       t.y = Math.max(t.y, RAMP.H * 0.45); t.ap = RAMP_SLOPE * 0.5; t.ar = ar0; t.vy *= 0.7;
-      t.forced = true; t.flip = 2; t.flipDir = part; t.flipGoal = part * TAU;
+      t.forced = true; t.flip = 2; t.flipDir = part; t.flipGoal = part * TAU + rollErr(); t.rolled = true;   // 4g: lộn xong LỆCH ⇒ người lái phải chỉnh
       const airEst = (t.vy + Math.sqrt(t.vy * t.vy + 2 * AIR.G * t.y)) / AIR.G + 0.25;
-      t.rollW = clamp((TAU - Math.abs(ar0)) / (airEst * 0.78), 4, 12);
+      t.rollW = clamp((TAU - Math.abs(ar0)) / (airEst * 0.7), 4, 12);
     }
     onEvent("takeoff", { team: t.i, v: +t.v.toFixed(1) });
   }
-  // 4b: rời DỐC XOẮN — luôn phóng (dốc biểu diễn, kể cả 35 km/h): giữ độ cao + góc vặn đang có, hất vào lòng đường, lộn nốt 1 vòng quanh trục dọc
+  // 4g: lộn trục dọc xong LỆCH ngẫu nhiên ±0,18–0,42 rad (không tự về đúng vòng trọn) — bỏ qua trong màn kết (xe thắng tự đáp đẹp)
+  const rollErr = () => G.fin ? 0 : (Math.random() < 0.5 ? -1 : 1) * (0.18 + Math.random() * 0.24);
+  // 4b: rời DỐC XOẮN — phóng + lộn nốt 1 vòng quanh trục dọc · 4g: CHỈ khi đang đạp ga (boost) ở tốc độ đủ; không ga ⇒ LẬT CHẬM tại chỗ (tumble)
   function twistLaunch(t, r) {
     const y0 = t.y, ar0 = r.side * twistAngle(TWIST.LEN);
+    if (!G.fin && (t.nitroK < 0.35 || t.v < LOW_V)) { tumbleStart(t, r, y0, ar0); return; }
     takeOff(t, r.side); t.arW = 0;                          // 4e: dốc xoắn tự lộn vòng — không thêm nhịp nghiêng
     t.y = Math.max(y0, 0.5); t.ar = ar0; t.ap = 0.08; t.vy = 3.6 + t.v * 0.04; t.vx = -r.side * 1.6; t.low = false;
     const airEst = (t.vy + Math.sqrt(t.vy * t.vy + 2 * AIR.G * t.y)) / AIR.G + 0.25;
-    t.rollW = clamp((TAU - Math.abs(ar0)) / (airEst * 0.78), 4, 12);
+    t.rollW = clamp((TAU - Math.abs(ar0)) / (airEst * 0.7), 4, 12);
+    t.flipGoal = r.side * TAU + rollErr(); if (!G.fin) t.arW = Math.sign(t.flipGoal - r.side * TAU) * (0.1 + Math.random() * 0.12);   // 4g: lệch + hất tiếp ⇒ phải chỉnh
     toast(t.i, "TWIST!", "info"); onEvent("twist", { team: t.i, side: r.side });
   }
   // 3q: dưới 40 km/h ⇒ xe chỉ RƠI qua mép dốc như chạy đường thường: không lực phóng, không +20 % tốc độ, không camera bay, không lộn vòng
   function lowDrop(t) {
     t.airK = 1; t.arW = 0;
     t.air = true; t.low = true; t.airT = AIR.LIFT_T; t.vy = 0; t.y = Math.max(t.y, RAMP.H); t.ar = 0; t.ay = 0; t.flip = 0; t.flipGoal = null; t.bad = false; t.forced = false;
+  }
+  // 4g: LẬT CHẬM — rời dốc xoắn không ga: thân xe lăn 1 vòng quanh trục dọc tì lên mép thân (tâm xoay = rig sát đất ⇒ nâng rig theo góc nghiêng
+  //   để điểm thấp nhất của hộp xe chạm đường), trượt dần vào lòng đường, mất đà; xong ⇒ đáp 4 bánh chông chênh + mất lái ~1 s
+  function tumbleStart(t, r, y0, ar0) {
+    const c = cars[t.i], hc = Math.max(0.9, c.M.top && c.M.top[0] ? c.M.top[0][1] : 1.15);
+    t.tumble = { u: 0, D: 1.55, y0, ar0, goal: r.side * TAU + (Math.random() - 0.5) * 0.16, side: r.side, w: c.M.W, h: hc, sp: 0 };
+    t.air = true; t.airT = 0; t.vy = 0; t.flip = 0; t.flipGoal = null; t.forced = false; t.arW = 0; t.airK = 1; t.low = false; t.bad = false; t.ay = 0; t.ap = 0.04;
+    t.v *= 0.55; t.shake = Math.max(t.shake, 0.5);
+    toast(t.i, "NO GAS — ROLLED OVER!", "bad"); onEvent("tumble", { team: t.i, side: r.side });
+  }
+  function tumbleStep(t, dt) {
+    const B = t.tumble; B.u += dt; const p = clamp(B.u / B.D, 0, 1), e = p < 0.5 ? 2 * p * p : 1 - 2 * (1 - p) * (1 - p);   // chậm 2 đầu
+    t.ar = lerp(B.ar0, B.goal, e);
+    const sa = Math.sin(t.ar), ca = Math.cos(t.ar), hw = B.w / 2;                // điểm thấp nhất của hộp thân (±hw, 0..h) khi xoay quanh trục dọc tại rig
+    const low = Math.min(-hw * sa, hw * sa, -hw * sa + B.h * ca, hw * sa + B.h * ca);
+    t.y = Math.max(0, -low) * smooth(0, 0.22, p) + B.y0 * (1 - ease(clamp(p / 0.35, 0, 1)));
+    t.v = Math.max(1.5, t.v - 7 * dt); t.a = -7; t.vx = -B.side * 1.4 * (1 - p); t.psi *= Math.exp(-dt * 3);
+    t.steer *= Math.exp(-dt * 6); t.wk = B.side * 0.8 * Math.sin(B.u * 7) * (1 - p); t.shake = Math.max(t.shake, 0.18);
+    if (Math.abs(Math.cos(t.ar)) < 0.35 || ca < 0) { B.sp -= dt; if (B.sp <= 0) { B.sp = 0.05; const X = t.x - B.side * hw, Z = -t.s;   // thân / nóc cạ đường ⇒ tia lửa
+      for (let n = 0; n < 3; n++) missiles.sparks.emit(X + (Math.random() - 0.5), 0.2, Z + (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, 1 + Math.random() * 2, 2 + Math.random() * 3, 0.3, 0.1, 1, 0, 1); } }
+    if (p >= 1) {
+      t.tumble = null; t.air = false; t.y = 0; t.ar = 0; t.ap = 0; t.ay = 0; t.vy = 0; t.airT = 0;
+      t.ctlT = 1.0; t.ctlDir = -B.side; t.markT = 0.5; t.wobT = 0; t.wobA = 0.09 * B.side; t.nodA = 0.05; t.hopV = 1.4; t.bnc = 1; t.shake = Math.max(t.shake, 0.7);
+      onEvent("land", { team: t.i, kind: "tumble", rots: 1, err: 0 });
+    }
   }
   function flyStep(t, dt, inp, brakeEdge) {
     t.airT += dt;
@@ -1316,7 +1543,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     t.vx += inp.steer * 2.2 * dt;
     if (!t.flip && !t.bad && !t.low) t.ar += (t.arW - inp.steer * AIR.ROLL) * dt;             // 4e: vô lăng PHẢI ⇒ nghiêng PHẢI (ar âm = hạ sườn phải; cũ ngược dấu) + nhịp hất nghiêng lúc cất cánh
     // PHANH trên không = xoay tròn: phanh thẳng ⇒ Flat Spin (quanh trục đứng) · phanh + lái ⇒ Barrel Roll (quanh trục dọc)
-    if (inp.brake && !t.bad && !t.low && !t.flip && !t.forced && Math.abs(inp.steer) > 0.35) { t.flip = 2; t.flipDir = -Math.sign(inp.steer); t.flipGoal = null; }   // 4e: lộn về phía vô lăng · 3f: chỉ PHANH + LÁI = lộn trục dọc; phanh không thì không xoay
+    if (inp.brake && !t.bad && !t.low && !t.flip && !t.forced && Math.abs(inp.steer) > 0.35) { t.rolled = true; t.flip = 2; t.flipDir = -Math.sign(inp.steer); t.flipGoal = null; }   // 4e: lộn về phía vô lăng · 3f: chỉ PHANH + LÁI = lộn trục dọc; phanh không thì không xoay
     if (t.flip) {
       const w = (t.forced ? t.rollW : AIR.ROT) * t.flipDir * dt;
       if (inp.brake && !t.forced) t.flipGoal = null;
@@ -1326,24 +1553,36 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     } else if (!inp.steer) {                                                                          // tự cân nhẹ về thăng bằng (vòng trọn gần nhất)
       const k = 1 - Math.exp(-dt * 2.4); if (t.arW === 0) t.ar += (Math.round(t.ar / TAU) * TAU - t.ar) * k * 0.6; t.ay += (Math.round(t.ay / TAU) * TAU - t.ay) * k * 0.35;
     }
+    // 4g: 0,45 s CUỐI trước khi chạm đất sau cú LỘN trục dọc ⇒ thân chông chênh (lắc + hất 1 phía) — người lái phải giữ, không tự cân
+    if (t.rolled && !t.flip && !t.bad && !t.low && !G.fin) {
+      const tg = t.vy < 0 || t.y < 2.5 ? (t.vy + Math.sqrt(Math.max(0, t.vy * t.vy + 2 * AIR.G * Math.max(t.y, 0)))) / AIR.G : 9;
+      if (tg < 0.45) { if (!t.nearOn) { t.nearOn = true; t.nearW = (Math.random() < 0.5 ? -1 : 1) * (0.35 + Math.random() * 0.3); }
+        const q = 1 - tg / 0.45; t.ar += (t.nearW * q + Math.sin(G.t * 13) * 1.6 * q) * dt; t.ap += Math.sin(G.t * 9 + 1) * 0.35 * q * dt; }
+    }
+    // 4g: MÀN KẾT — xe thắng đang bay tự cân thân về vòng trọn gần nhất (lộn dở thì lộn nốt) ⇒ đáp PERFECT
+    if (G.fin && t.i === G.fin.w && !t.flip) { const k = 1 - Math.exp(-dt * 4.5); t.arW = 0; t.ar += (Math.round(t.ar / TAU) * TAU - t.ar) * k; t.ay += (Math.round(t.ay / TAU) * TAU - t.ay) * k; }
     // chúc mũi theo quỹ đạo (đầu bay ngóc lên, cuối hơi chúc) — nhẹ để mặc định đáp được
     t.ap = lerp(t.ap, Math.atan2(t.vy, Math.max(t.v, 8)) * 0.45, 1 - Math.exp(-dt * 3));
     if (t.y <= 0 && t.vy < 0) land(t);
   }
+  // 4g: NẢY khi đáp — theo vận tốc rơi (hy/hopV: chỉ là hình, không đụng va chạm) + nảy lần 2 nhỏ hơn (bnc) + chúc mũi (nodA)
+  function bounce(t, vy, k = 1) { t.hopV = Math.max(t.hopV, clamp(-vy * 0.2, 0.7, 2.1) * k); t.bnc = 1; t.nodA = clamp(-vy * 0.012, 0.03, 0.08) * k; t.rolled = false; t.nearOn = false; }
   function land(t) {
+    const vyHit = t.vy;
     const eP = Math.abs(t.ap), eR = Math.abs(wrapPI(t.ar)), eY = Math.abs(wrapPI(t.ay)), err = Math.max(eP, eR, eY);
     const rots = Math.max(0, Math.round(Math.abs(t.ay) / TAU - 0.15)) + Math.max(0, Math.round(Math.abs(t.ar) / TAU - 0.15));
     const wasBad = t.bad, name = spinName(t);
     if (t.low) {                                             // 3q: rơi qua mép dốc lúc chậm ⇒ chạm đất nặng: rung màn mạnh, vệt lốp, thân xe chông chênh
       t.low = false; t.air = false; t.y = 0; t.vy = 0; t.airT = 0; t.ap = 0; t.ar = 0; t.ay = 0; t.psi = Math.asin(clamp(t.vx / Math.max(t.v, 2), -0.5, 0.5));
-      t.markT = 0.55; t.wobT = 0; t.wobA = 0.06 * (Math.random() < 0.5 ? -1 : 1); t.shake = Math.max(t.shake, 0.95); t.blurB = Math.max(t.blurB, 0.35);
+      t.markT = 0.55; t.wobT = 0; t.wobA = 0.085 * (Math.random() < 0.5 ? -1 : 1); t.shake = Math.max(t.shake, 0.95); t.blurB = Math.max(t.blurB, 0.35); bounce(t, vyHit, 0.8);
       onEvent("land", { team: t.i, kind: "drop", rots: 0, err: 0 });
       return;
     }
     t.air = false; t.y = 0; t.vy = 0; t.airT = 0; t.flip = 0; t.flipGoal = null; t.forced = false; t.arW = 0; t.airK = 1;
     t.psi = Math.asin(clamp(t.vx / Math.max(t.v, 2), -0.5, 0.5));                      // 4b: hướng lúc đáp = hướng đang trôi
     t.markT = 0.55; t.wobT = 0;                                                      // 3j: vệt lốp khi chạm đất + thân xe chông chênh
-    t.wobA = (wasBad ? 0.07 : 0.05 + (Math.abs(t.ar) > 1 ? 0.07 : 0) + (Math.abs(t.ay) > 1 ? 0.03 : 0)) * (Math.random() < 0.5 ? -1 : 1);
+    t.wobA = (wasBad ? 0.1 : 0.07 + (Math.abs(t.ar) > 1 ? 0.08 : 0) + (Math.abs(t.ay) > 1 ? 0.04 : 0)) * (Math.random() < 0.5 ? -1 : 1);   // 4g: chông chênh mạnh hơn ~40 %
+    bounce(t, vyHit, wasBad ? 0.6 : 1);
     if (wasBad) { t.bad = false; t.ap = 0; t.ar = 0; t.ay = 0; t.shake = Math.max(t.shake, 0.4); return; }   // cú nảy sau đáp xấu
     const X = t.x, Z = -t.s;
     if (err < AIR.OK) {
@@ -1358,7 +1597,8 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       t.ap = 0; t.ar = 0; t.ay = 0; t.pushT = Math.max(t.pushT, perfect ? 1.6 : 0.9);   // 4e: đáp tốt ⇒ giữ đà bay thêm một quãng (hãm nhẹ)
       onEvent("land", { team: t.i, kind: perfect ? "perfect" : "ok", rots, err: +(err * 180 / Math.PI).toFixed(1) });
     } else {                                                                                                // đáp nghiêng / lật ⇒ mất đà, nảy, nổ nhỏ, văng đuôi
-      t.v *= 0.45; t.ctlT = 1.2; t.ctlDir = Math.sign(wrapPI(t.ar)) || (Math.random() < 0.5 ? -1 : 1); t.pushT = 0; t.lbT = 0; t.bad = true;   // 4e: + mất lái 1,2 s t.air = true; t.vy = 3.4; t.y = 0.02; t.airT = AIR.LIFT_T;
+      t.v *= 0.45; t.ctlT = 1.2; t.ctlDir = Math.sign(wrapPI(t.ar)) || (Math.random() < 0.5 ? -1 : 1); t.pushT = 0; t.lbT = 0; t.bad = true;   // 4e: + mất lái 1,2 s
+      t.air = true; t.vy = 3.4; t.y = 0.02; t.airT = AIR.LIFT_T;   // 4g: BẬT LẠI cú bật nảy sau đáp xấu (từ 4e dòng này bị nuốt vào chú thích) — lần chạm sau đi nhánh wasBad
       t.yk = clamp(wrapPI(t.ay), -1.2, 1.2) || (Math.random() < 0.5 ? -0.7 : 0.7); t.ykV = 0; t.ay = 0; t.ar = 0; t.ap = 0.12;
       t.shake = 1; t.blurB = 0.7; missiles.boom(X, Z, "miss");
       for (let k = 0; k < 30; k++) missiles.sparks.emit(X + (Math.random() - 0.5) * 2, 0.3, Z + (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 10, 2 + Math.random() * 6, (Math.random() - 0.5) * 10, 0.5, 0.15, 1, 0, 1);
@@ -1434,9 +1674,10 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     }
     fast = !want && G.t - (G.msEndT || -9) < 1.0;
     G.mergeK = clamp((G.mergeK || 0) + (want ? 1.45 : fast ? -4.5 : -1.7) * dt, 0, 1);
-    G.mergeE = G.cineW >= 0 ? 0 : ease(G.mergeK);
+    G.mergeE = G.fin && G.cineW >= 0 ? (G.fin.stage === "win" ? 1 : 0) : G.cineW >= 0 ? 0 : ease(G.mergeK);   // 4g: cảnh xe thắng = 1 khung rộng
     mount.classList.toggle("is-merge", G.mergeE > 0.45);
     if (G.mergeE <= 0) { mInit = false; return; }
+    if (G.fin && G.cineW >= 0) return;                                                     // 4g: finCams tự đặt MPOS / MLOOK
     const a = T[0], b = T[1], lead = a.s >= b.s ? a : b, trail = lead === a ? b : a, gap = lead.s - trail.s, mx = (a.x + b.x) / 2;
     // tâm nhìn nằm ở ~29 % từ trên (phần dưới là tap-lô) ⇒ nhìn gần, đặt cao, chúc xuống: xe sau ở ~60 % chiều cao, xe trước gần chân trời
     const q = MTUNE, back = q.b0 + gap * q.b1, hgt = q.h0 + gap * q.h1;
@@ -1448,7 +1689,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     updateMerge(dt);                                         // 4d
     T.forEach((t, i) => {
       const car = cars[i], cam = cams[i];
-      const want = G.phase === "menu" ? 0 : G.phase === "count" ? ease(clamp((G.countT - 0.3) / 2.6, 0, 1)) : G.phase === "end" && G.t - G.endT > 2.2 ? 0 : 1;
+      const want = G.phase === "menu" ? 0 : G.phase === "count" ? ease(clamp((G.countT - 0.3) / (LIGHT0 + 4 * LIGHTK - 0.3), 0, 1)) : G.phase === "end" && G.t - G.endT > 2.2 ? 0 : 1;
       t.camK = G.phase === "count" ? want : lerp(t.camK, want, 1 - Math.exp(-dt * 2.2));
       // jk: máy quay NHẢY — trên không lùi RA NGOÀI, thấp, rộng (FOV +18 %); đáp đất thì về lại ghế lái
       t.jk = lerp(t.jk, t.air && !t.bad && !t.low ? 1 : 0, 1 - Math.exp(-dt * (t.air ? 13 : 8)));   // 3c: chuyển góc NHANH hơn
@@ -1460,8 +1701,8 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       // 3z: CHASE — camera sau đuôi xe theo HƯỚNG CHẠY (fx, fz), thấp như ảnh thầy gửi; thay chỗ mắt tài xế
       const chase = view === "chase";
       if (chase) { const cb = car.M.L / 2 + 5.4; eyeC.set(t.x - fx * cb, t.y + 2.05, -t.s - fz * cb); lookC.set(t.x + fx * 11, t.y * 0.7 + 0.55, -t.s + fz * 11); }
-      const side = i ? 2.0 : -2.0;
-      const eyeJ = V5.set(t.x + side - fx * 8.6, 0.8 + t.y * 0.35, -t.s - fz * 8.6), lookJ = V6.set(t.x + fx * 5, 0.5 + t.y * 1.0, -t.s + fz * 5);   // nhìn ngay xe ⇒ xe nằm quanh đường chân trời
+      const side = t.tumble ? -t.tumble.side * 3.2 : i ? 2.0 : -2.0;                       // 4g: lật chậm ⇒ máy quay phía lòng đường, cao hơn (không bị dốc xoắn che)
+      const eyeJ = V5.set(t.x + side - fx * 8.6, (t.tumble ? 2.3 : 0.8) + t.y * 0.35, -t.s - fz * 8.6), lookJ = V6.set(t.x + fx * 5, 0.5 + t.y * 1.0, -t.s + fz * 5);   // nhìn ngay xe ⇒ xe nằm quanh đường chân trời
       const k = t.camK, j = t.jk * k;
       cam.position.lerpVectors(eyeF, eyeC, k).lerp(eyeJ, j);
       const look = eyeF.copy(lookF).lerp(lookC, k).lerp(lookJ, j);
@@ -1477,10 +1718,36 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       if (Math.abs(cam.fov - fov) > 0.01 || lensM[i] !== me) { cam.fov = fov; lensM[i] = me; lens(cam, i); }
       cam.layers.set(0); cam.layers.enable(2 - i);
       if (!chase && me < 0.2 && k * (1 - t.jk) > 0.86) cam.layers.enable(3 + i); else cam.layers.enable(1 + i);   // 3z: chase ⇒ thấy cả xe mình · 4d: gộp ⇒ cả 2 xe
-      if (G.cineW >= 0) cine(i, cam);
+      if (G.cineW >= 0) { if (G.fin) finCam(i, cam); else cine(i, cam); }
       cam.updateMatrixWorld();
     });
   }
+  // 4g: máy quay MÀN KẾT — "lose": mỗi nửa quay ngoài xe của MÌNH (thấp, chếch sau-bên) · "win": 1 vị trí chung (khung gộp) quay quanh xe thắng
+  const FP = new THREE.Vector3(), FL = new THREE.Vector3();
+  function finCam(i, cam) {
+    const F = G.fin;
+    if (F.stage === "lose") {
+      const t = T[i], o = T[1 - i], th = t.dead ? 0.9 : 0.55, near = Math.abs(o.s - t.s) < 14;
+      const sd = near ? (Math.sign(t.x - o.x) || (i ? 1 : -1)) : -(Math.sign(t.x) || (i ? 1 : -1));   // phía LÒNG ĐƯỜNG; xe kia sát bên ⇒ phía KHÔNG có xe kia
+      cam.position.set(clamp(t.x + sd * 3.8, -ROADX + 0.5, ROADX - 0.5), t.y + (near ? 2.6 : 1.7), -t.s + 6.4 + (t.dead ? 3 : 0)); cam.lookAt(t.x - sd * 0.3, t.y + 0.6, -t.s - 2.5);
+      setFov(cam, i, 50 + 8 * th, 0);
+    } else {
+      const W = T[F.w], u = F.rt - F.t0, sd = -(Math.sign(W.x) || F.ang);                        // phía lòng đường
+      if (F.kind === "drift") {                              // vào từ chếch TRƯỚC-bên (thấy mũi xe quay ngang, khói tuôn) ⇒ quét ra hông ⇒ lùi sau-bên khi xe trượt dừng
+        const a = lerp(0.3, 1.95, ease(clamp(u / 4.4, 0, 1))), d = lerp(8, 11, ease(clamp(u / 4.5, 0, 1)));
+        FP.set(W.x + sd * Math.sin(a) * d, 0.75 + 1.2 * ease(clamp((u - 2.5) / 2, 0, 1)), -W.s - Math.cos(a) * d); FL.set(W.x, 0.55, -W.s);
+      } else {                                               // bay: quay vòng từ sau-bên ra trước-bên, ngang tầm xe; đáp xong hạ thấp
+        const a = lerp(2.5, 0.9, ease(clamp(u / 3.2, 0, 1))), d = 9.5 - 1.5 * ease(clamp(u / 3, 0, 1));
+        FP.set(W.x + sd * Math.sin(a) * d, Math.max(0.6, W.y * 0.85 + 0.9), -W.s - Math.cos(a) * d); FL.set(W.x, W.y + W.hy + 0.5, -W.s);
+      }
+      FP.x = clamp(FP.x, -ROADX + 0.5, ROADX - 0.5);
+      MPOS.copy(FP); MLOOK.copy(FL); mInit = true; G.mergeK = 1;                 // giữ độ gộp ⇒ hết màn kết thì máy quay trôi mượt về
+      cam.position.copy(FP); cam.lookAt(FL);
+      setFov(cam, i, F.kind === "drift" ? 44 : 46, 1);
+    }
+    cam.layers.set(0); cam.layers.enable(1); cam.layers.enable(2);
+  }
+  function setFov(cam, i, fov, m) { if (Math.abs(cam.fov - fov) > 0.01 || lensM[i] !== m) { cam.fov = fov; lensM[i] = m; lens(cam, i); } }
   // về đích: nửa TRÁI quay vòng quanh xe thắng (từ chếch trước ra hông), nửa PHẢI đặt thấp sau cổng đích nhìn xe lao tới
   function cine(i, cam) {
     const w = T[G.cineW], p = clamp(1 - G.slow / SLOW_T, 0, 1);
@@ -1558,7 +1825,66 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   const PJ = new THREE.Vector3();
   let hudT = 0, infoT = 0;
   const blurK = [0, 0];
+  // 4g: MŨI TÊN ĐỐI THỦ KHUẤT — thẻ xe kia ẩn (ngoài khung / quá gần / bị tap-lô che) ⇒ mũi tên màu đội kia:
+  //   phía TRƯỚC ⇒ trên đường chân trời, x theo hướng xe kia (kẹp trong nửa màn), chĩa lên / xiên · phía SAU ⇒ mép DƯỚI khung nhìn (trên tap-lô), chĩa xuống
+  //   · ngang hàng (|Δs| < 7 m) ⇒ mép bên phía xe kia, chĩa ngang. Chỉ đổi left/top/transform khi khác ⇒ không vẽ lại thừa.
+  // 4i (thầy chọn kiểu 2): mũi nhọn kim loại DÍNH MÉP khung nhìn, trượt MƯỢT dọc mép theo hướng xe kia (không tiến lùi), xoay chỉ đúng hướng;
+  //   số mét LUÔN sau đuôi (phía trong khung), không nền, ô chữ rộng cố định ⇒ khe đều. Chỉ đổi transform (vị trí px theo cỡ nửa màn đo lúc fit()).
+  function oppArrow(i, t, o, show, P, yTop, dt) {
+    const h = H[i], d = o.s - t.s, vh = 1 - dashF;
+    const inFrame = P.z < 1 && Math.abs(P.x) < 0.97 && yTop > 0.03 && yTop < vh - 0.02;
+    const on = G.phase === "race" && !inFrame && show < 0.05 && (G.mergeE || 0) < 0.3 && !o.dead && Math.abs(d) < 600;
+    if (on !== !!h.oaOn) { h.oaOn = on; h.oa.classList.toggle("on", on); if (on) h.oaX = -1; }
+    if (!on || !h.w) return;
+    const W = h.w, Hh = h.hgt * vh, cx = W / 2, cy = Hh * 0.45;
+    let dx, dy;                                                     // hướng từ giữa khung nhìn tới xe kia (px)
+    if (Math.abs(d) < 7) { dx = (Math.sign(o.x - t.x) || (i ? -1 : 1)) * W; dy = Hh * 0.1; }
+    else if (d > 0) { if (P.z < 1) { dx = (P.x + 1) / 2 * W - cx; dy = Math.min(yTop, 0.5) * h.hgt - cy; if (Math.abs(dx) < 1 && Math.abs(dy) < 1) dy = -1; } else { dx = (o.x > t.x ? 1 : -1) * W; dy = -Hh * 0.5; } }
+    else { dx = clamp((o.x - t.x) / (ROADX * 2), -0.6, 0.6) * W; dy = Hh; }
+    const n = Math.hypot(dx, dy) || 1, ux = dx / n, uy = dy / n, aw = h.oa.offsetWidth || 40, m = aw * 0.62;
+    const sx = (cx - m) / Math.max(1e-6, Math.abs(ux)), sy = (Hh / 2 - m) / Math.max(1e-6, Math.abs(uy));
+    const tx = cx + ux * Math.min(sx, sy), ty = Hh / 2 + uy * Math.min(sx, sy);   // điểm trên mép (lề = 0,62 bề mũi tên)
+    const k = 1 - Math.exp(-(dt || 0.016) * 10), ang = Math.atan2(uy, ux);
+    if (h.oaX < 0) { h.oaX = tx; h.oaY = ty; h.oaA = ang; } else { h.oaX += (tx - h.oaX) * k; h.oaY += (ty - h.oaY) * k; h.oaA += wrapPI(ang - h.oaA) * k; }
+    h.oa.style.transform = `translate(${(h.oaX - aw / 2).toFixed(1)}px, ${(h.oaY - aw / 2).toFixed(1)}px)`;
+    h.oaR.style.transform = `rotate(${(h.oaA * 180 / Math.PI + 90).toFixed(1)}deg)`;
+    const dt2 = Math.round(Math.abs(d)) + " m"; if (dt2 !== h.oaD) { h.oaD = dt2; h.oaT.textContent = dt2; }
+    const ca = Math.cos(h.oaA), sa = Math.sin(h.oaA), lw = h.oaT.offsetWidth * 0.62, lh = h.oaT.offsetHeight, R = aw * 0.4 + Math.abs(ca) * lw / 2 + Math.abs(sa) * lh / 2 + aw * 0.05;
+    h.oaT.style.transform = `translate(calc(-50% + ${(-ca * R).toFixed(1)}px), calc(-50% + ${(-sa * R).toFixed(1)}px))`;   // số mét SAU ĐUÔI
+  }
+  // 4g: SỐ ĐẾM 10 giây cuối (Time) giữa vạch chia 2 đội — đổi lớp mỗi giây (CSS keyframe chạy trên compositor)
+  // 4i: THANH DAMAGE trên đầu xe — rút dần theo thời gian mất lái, màu theo NẤC đỏ → cam → vàng → xanh lá; hết ⇒ "GO!" 0,6 s
+  function dmgBar(i, t) {
+    const h = H[i], on = t.stallT > 0 && t.dmgT0 > 0 && G.phase === "race";
+    if (on) { const k = clamp(t.stallT / t.dmgT0, 0, 1), sc = `scaleX(${k.toFixed(3)})`, st = k > 0.75 ? "r" : k > 0.5 ? "o" : k > 0.25 ? "y" : "g";
+      if (sc !== h.dmgK) { h.dmgK = sc; h.dmgE.style.transform = sc; } if (st !== h.dmgS) { h.dmgS = st; h.dmg.dataset.s = st; h.dmg.classList.add("on"); h.dmg.classList.remove("go"); } t.dmgGo = 1; }
+    else if (t.dmgGo === 1) { t.dmgGo = 2; h.dmgS = ""; h.dmgK = ""; h.dmg.classList.add("go"); setTimeout(() => { if (!dead && t.dmgGo === 2) { t.dmgGo = 0; h.dmg.classList.remove("on", "go"); } }, 650); }
+  }
+  // 4i (thầy chọn vị trí A): BẢNG ĐẾM ĐẦU VẠCH GIỮA 2 khung nhìn — Length "850 m LEFT" · Words "12 WORDS LEFT" (hết từ ⇒ "FINISH 140 m") · Time đồng hồ,
+  //   10 giây cuối số TO ngay chỗ đó (thay .rw-cd 2 nửa màu). Màu = đội DẪN (gần đích hơn), sát nhau < 1 m ⇒ trắng. Cập nhật theo nhịp HUD 0,08 s.
+  const cbEl = $(".rw-cb"), cbB = cbEl.querySelector(".rw-cb-p b"), cbS = cbEl.querySelector(".rw-cb-p small"), cbBig = cbEl.querySelector(".rw-cb-big");
+  let cbTxt = "", cbCol = "", cbOn = null;
+  function cbPaint() {
+    const on = (G.phase === "race" || G.phase === "end") && !mount.classList.contains("is-cine");
+    if (on !== cbOn) { cbOn = on; cbEl.classList.toggle("on", on); } if (!on) return;
+    const lead = T[0].s >= T[1].s ? 0 : 1, gap = Math.abs(T[0].s - T[1].s), col = gap < 1 ? "#ffffff" : TEAMS[lead].color;
+    if (col !== cbCol) { cbCol = col; cbEl.style.setProperty("--lc", col); }
+    const leadS = Math.max(T[0].s, T[1].s), pq = opt.sameQ ? G.rqi : Math.max(T[0].qc || 0, T[1].qc || 0);
+    let v, sm;
+    if (MODE === "time") { v = mmss(G.timeLeft); sm = "TIME"; }
+    else if (MODE === "words" && !(G.finS != null && questions.length - pq <= 0)) { const w = Math.max(0, questions.length - pq); v = String(w); sm = w === 1 ? "WORD LEFT" : "WORDS LEFT"; }
+    else { const f = G.finS != null ? G.finS : FIN; v = Math.max(0, Math.round(f - leadS)) + " m"; sm = MODE === "len" ? "LEFT" : "FINISH"; }
+    const tx = v + "|" + sm; if (tx !== cbTxt) { cbTxt = tx; cbB.textContent = v; cbS.textContent = sm; }
+  }
+  function cdShow(n) {
+    if (n === cdN) return; cdN = n;
+    if (n < 1) { cbEl.classList.remove("final"); return; }                       // 4i: số to nằm TRONG bảng đếm đầu vạch
+    cbBig.textContent = n; cbEl.classList.toggle("is-hot", n <= 3); cbEl.classList.add("final");
+    cbBig.classList.remove("beat"); void cbBig.offsetWidth; cbBig.classList.add("beat");
+    onEvent("tick", n);
+  }
   function updateHUD(dt) {
+    cdShow(MODE === "time" && G.phase === "race" && G.winner < 0 && G.timeLeft <= 10 && G.timeLeft > 0 ? Math.ceil(G.timeLeft) : -1);   // 4g
     { const R = G.round; if (R && R.dl != null && R.wait >= 0) { const e = qboxes[R.wait].querySelector(".rw-wait em"); if (e) e.style.transform = `scaleX(${clamp((R.dl - G.t) / R.win, 0, 1).toFixed(3)})`; } }   // 3q
     T.forEach((t, i) => {
       const [x, y] = mapAt(t.s); mapCars[i].setAttribute("transform", `translate(${x.toFixed(1)} ${(y + (i ? 6 : -6)).toFixed(1)})`);
@@ -1572,12 +1898,14 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       const yTop = (1 - PJ.y) / 2, show = G.phase === "race" && PJ.z < 1 && Math.abs(PJ.x) < 0.98 && yTop > 0.05 && yTop < 1 - dashF - 0.04 ? smooth(14, 40, dist) : 0;
       h.tag.style.opacity = show.toFixed(2);
       if (show > 0) { h.tag.style.left = ((PJ.x + 1) / 2 * 100).toFixed(2) + "%"; h.tag.style.top = (yTop * 100).toFixed(2) + "%"; }
+      oppArrow(i, t, o, show, PJ, yTop, dt);                                                               // 4g · 4i: kiểu 2 dính mép
+      dmgBar(i, t);                                                                                        // 4i
       const inc = missiles.incoming(i); t.inc = inc;
       h.el.classList.toggle("is-alarm", !!inc); h.el.classList.toggle("is-locked", !!(inc && inc.locked));
       if (inc) { h.alarmBar.style.transform = `scaleX(${clamp(inc.tLeft / MS.T, 0, 1).toFixed(3)})`; }
       h.el.classList.toggle("is-air", t.jk > 0.3); h.el.classList.toggle("is-nitro", t.nitroK > 0.3);
       // nhoè: khi bay + lúc cất cánh/đáp đất + khi Nitro / rất nhanh
-      blurK[i] = lerp(blurK[i], Math.max(t.jk * 0.75, t.blurB, 0.45 * t.nitroK + 0.25 * smooth(PHYS.VBOOST, PHYS.VNITRO, t.v)), 1 - Math.exp(-dt * 10));
+      blurK[i] = lerp(blurK[i], Math.max(t.jk * 0.75, t.blurB, 0.45 * t.nitroK + 0.25 * smooth(PHYS.VBOOST, PHYS.VNITRO, t.v)) * (G.cineW >= 0 ? 0.18 : 1), 1 - Math.exp(-dt * 10));   // 4g: màn kết ⇒ hình nét
     });
     { const me = G.mergeE || 0, mk = Math.max(blurK[0], blurK[1]); blurPass.uniforms.uK.value.set(lerp(blurK[0], mk, me), lerp(blurK[1], mk, me)); }   // 4d: gộp ⇒ nhoè chung
     blurPass.enabled = blurK[0] > 0.004 || blurK[1] > 0.004;   // 3r: không nhoè ⇒ bỏ hẳn lượt vẽ toàn màn này
@@ -1586,7 +1914,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     if (mapMs.childElementCount !== act.length) mapMs.innerHTML = act.map(() => `<circle r="8" class="m-msdot"/>`).join("");
     act.forEach((m, k) => { const [x, y] = mapAt(m.P.s); mapMs.children[k].setAttribute("cx", x.toFixed(1)); mapMs.children[k].setAttribute("cy", (y + (m.to ? 6 : -6)).toFixed(1)); });
     hudT -= dt; if (hudT <= 0) {
-      hudT = 0.08; paintTouch();
+      hudT = 0.08; paintTouch(); cbPaint();                                      // 4i: bảng đếm đầu vạch
       const lead = T[0].s >= T[1].s ? 0 : 1, gap = Math.abs(T[0].s - T[1].s);
       gapEl.innerHTML = G.phase === "race" || G.phase === "end" ? (gap < 1 ? "NECK AND NECK" : `<b style="color:${TEAMS[lead].color}">${TEAMS[lead].name}</b><br>+${Math.round(gap)} m`) : MODE === "len" ? `${FIN} m` : MODE === "time" ? `${mmss(TIME_S)}<br>RACE` : `${questions.length}<br>WORDS`;
       // 4a: đồng hồ (theo thời gian) / số từ còn lại (theo số từ) / quãng còn tới đích (đã có đích)
@@ -1602,12 +1930,15 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
         h.kmh.textContent = Math.round(t.v * 3.6);
         h.cells.forEach((c, k) => c.style.setProperty("--f", clamp(e - k, 0, 1).toFixed(3)));
         const ef = clamp(t.E / (PHYS.CAP * SEG), 0, 1);          // thanh BOOST tích trữ = lớp xanh trong bàn đạp ga
-        h.nitro.style.transform = `scaleY(${ef.toFixed(3)})`; h.boost.classList.toggle("has-nitro", t.E > 1);
-        if (h.msN !== t.ms && performance.now() > h.msHold) { h.msN = t.ms; h.ms.innerHTML = reserveHTML(Math.max(0, t.ms - 2)); }   // icon chờ = ngoài 2 quả trong nút
+        { const tf = `translateY(${((1 - ef) * 100).toFixed(1)}%)`; if (h.nitroTf !== tf) { h.nitroTf = tf; h.nitro.style.transform = tf; if (h.nitro2) h.nitro2.style.transform = tf; } } h.boost.classList.toggle("has-nitro", t.E > 1);
+        if (h.halo) { const dn = h.boost.classList.contains("is-down") && t.E > 1, ho = (t.E > 1 ? (0.25 + 0.6 * ef) * (dn ? 1 : 0.8) + (dn ? 0.2 : 0) : 0).toFixed(2);   // 4h: quầng sáng theo năng lượng
+          if (h.haloO !== ho) { h.haloO = ho; h.halo.style.opacity = ho; } h.boost.classList.toggle("is-full", ef > 0.98); }   // 4g: mép mờ trôi lên (như iPad)
+        if (h.msN !== t.ms && performance.now() > h.msHold) { h.msN = t.ms; const st = Math.max(0, t.ms - 2); h.fbN.textContent = "+" + st; h.fbL.textContent = st === 1 ? "MISSILE" : "MISSILES"; }   // 4j: +x = KHO
         paintSlots(t, h);
         if (h.streak.length !== opt.streak) { const box = h.el.querySelector(".sr-streak"); box.innerHTML = "<i></i>".repeat(opt.streak); box.classList.toggle("is-many", opt.streak > 5); h.streak = [...box.children]; }   // 3q
         h.streak.forEach((s, k) => s.classList.toggle("on", k < t.streak));
         h.fire.classList.toggle("ready", t.ms > 0 && G.phase === "race");
+        h.fire.classList.toggle("rw-noaim", G.phase === "race" && T[1 - i].s - t.s < AIM_MIN);   // 4i: đang dẫn ⇒ nút bắn mờ
         h.src.textContent = t.src === "pad" ? "iPAD" : t.src === "key" ? "KEYS" : t.src === "touch" ? "TOUCH" : t.src === "test" ? "TEST" : t.src === "free" ? "DRIVE" : "AUTO";
         h.src.dataset.s = t.padOn ? (t.padSt === "relay" ? "relay" : "on") : "";
         const o = T[1 - i], d = o.s - t.s;
@@ -1620,7 +1951,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     infoT -= dt; if (infoT <= 0 && remote && remote.send) {
       infoT = 0.25;
       T.forEach((t, i) => { if (t.padOn && remote.share) remote.share(i, "r", `${t.ms},${G.phase}`); });   // 3y: chỉ ghi kho khi ĐỔI (share tự bỏ trùng)
-      T.forEach((t, i) => { if (t.padOn) remote.send(i, `i:${Math.round(t.v * 3.6)},${(t.E / SEG).toFixed(1)},${t.ms},${t.inc ? (t.inc.locked ? 2 : 1) : 0},${G.phase},${clamp(t.E / (PHYS.CAP * SEG), 0, 1).toFixed(2)}`); });
+      T.forEach((t, i) => { if (t.padOn) remote.send(i, `i:${Math.round(t.v * 3.6)},${(t.E / SEG).toFixed(1)},${t.ms},${t.inc ? (t.inc.locked ? 2 : 1) : 0},${G.phase},${clamp(t.E / (PHYS.CAP * SEG), 0, 1).toFixed(2)},${t.stallT > 0 && t.dmgT0 ? t.stallT.toFixed(2) : 0},${t.dmgT0 || 0},${T[1 - i].s - t.s < AIM_MIN ? 1 : 0},${t.streak || 0}/${opt.streak}`); });   // 4j: + chuỗi đúng   // 4i: + DAMAGE, không mục tiêu
     }
   }
 
@@ -1631,8 +1962,10 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h || (!force && w === W && h === Hh)) return;
     W = w; Hh = h; renderer.setSize(w, h, false); composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h);
     dashF = clamp(H[0].dash.offsetHeight / h, 0, 0.6);
+    H.forEach(x => { x.w = x.el.clientWidth; x.hgt = x.el.clientHeight; });   // 4i: mũi tên đối thủ tính theo px
     mount.style.setProperty("--rw-dashpx", H[0].dash.offsetHeight + "px");   // 4b: vạch mạng canh giữa phần khung nhìn
     LENS.A = (w / 2) / h; cams.forEach((c, i) => lens(c, i));
+    H.forEach(x => fitAns(x.ans));                                                  // 4h
   }
   const ro = new ResizeObserver(() => fit()); ro.observe(stage); fit(true);
 
@@ -1690,11 +2023,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   const RC = new THREE.Vector3(), RA = new THREE.Vector3();
   let raf = 0, last = 0, manual = false, dead = false, fpsN = 0, fpsT = 0, fps = 0, pinT = 0;
   function frame(dt) {
-    if (G.slow > 0) {                                        // SLOW MOTION về đích: vào chậm 0,3 s, ×0,2, ra lại nhanh cuối
-      G.slow -= dt; const p = 1 - G.slow / SLOW_T;
-      dt *= p < 0.12 ? lerp(1, 0.2, p / 0.12) : p > 0.86 ? lerp(0.2, 1, (p - 0.86) / 0.14) : 0.2;
-      if (G.slow <= 0) { G.slow = 0; G.cineW = -1; mount.classList.remove("is-cine"); T.forEach(t => { const c = cams[t.i]; c.fov = 1; }); }
-    }
+    { const tsT = finTick(dt); G.ts = tsT < G.ts ? lerp(G.ts, tsT, 1 - Math.exp(-dt * 18)) : lerp(G.ts, tsT, 1 - Math.exp(-dt * 9)); if (Math.abs(G.ts - tsT) < 0.004) G.ts = tsT; dt *= G.ts; }   // 4g: slow motion màn kết (dt thật ⇒ dt game)
     G.t += dt;
     if (G.phase === "count") G.countT += dt;
     G.bendAmt = lerp(G.bendAmt, opt.bend * (G.phase === "menu" ? 0.5 : 1), 1 - Math.exp(-dt * 1.2));   // 4b: độ cong vào dần (màn chờ ½)
@@ -1708,7 +2037,11 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       }
       if (t.ms > 0 && G.t >= G.nextFire[i]) { fire(i); G.nextFire[i] = G.t + 2 + Math.random() * 4; }
     });
-    if (G.phase === "race" || G.phase === "end") { T.forEach(t => drive(t, dt)); collide(); collide(); }
+    if (G.phase === "race" || G.phase === "end") {
+      const F = G.fin;
+      T.forEach(t => drive(t, F && F.stage === "lose" && t.i === F.w && (t.air || t.tumble) ? dt * 0.12 : dt));   // 4g: xe thắng đang bay ⇒ "treo" giữa trời trong lúc chiếu xe thua
+      if (!F || F.stage === "lose") { collide(); collide(); }                                                       // 4g: cảnh điện ảnh xe thắng ⇒ thôi va chạm
+    }
     else T.forEach(t => { const inp = idleInput(t); t.inp = inp; t.steer += (inp.steer - t.steer) * Math.min(1, dt * 10); });   // iPad/phím/chạm hiện lên game cả lúc chờ
     if (G.phase === "race") for (const [A, B] of [[T[0], T[1]], [T[1], T[0]]]) {          // 3k: xe trước PHANH gấp ngay trước mặt ⇒ xe sau hơi lệch, mất lái nhẹ
       const gap = A.s - B.s;
@@ -1724,10 +2057,11 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     if (G.phase === "race" || G.phase === "end") { traffic.update(dt, Math.min(T[0].s, T[1].s), Math.max(T[0].s, T[1].s)); if (G.phase === "race") T.forEach(trafficHit); }   // 4c
     T.forEach((t, i) => {
       const c = cars[i]; c.rig.position.set(t.x, t.y + t.hy, -t.s);
-      t.wobT += dt; const wob = t.wobT < 2.5 ? t.wobA * Math.exp(-2.6 * t.wobT) * Math.sin(12.5 * t.wobT) : 0;   // 3j: chông chênh tắt dần
-      c.rig.rotation.set(t.ap + wob * 0.35 * Math.sin(9 * t.wobT + 1), t.yaw + t.yk + t.ay + (t.spinT > 0 ? t.spinTurns * TAU * ease(1 - t.spinT / t.spinT0) : 0), t.ar + t.hitRoll * Math.min(1, t.hy * 2 + 0.3) + wob);
+      const wob = t.wobT < 2.5 ? t.wobA * Math.exp(-2.6 * t.wobT) * Math.sin(12.5 * t.wobT) : 0;   // 3j: chông chênh tắt dần
+      const nod = t.wobT < 1.6 ? t.nodA * Math.exp(-4.2 * t.wobT) * Math.sin(15 * t.wobT) : 0;   // 4g: chúc mũi khi đáp (lò xo trước/sau)
+      c.rig.rotation.set(t.ap + nod + wob * 0.35 * Math.sin(9 * t.wobT + 1), t.yaw + t.yk + t.ay + (t.spinT > 0 ? t.spinTurns * TAU * ease(1 - t.spinT / t.spinT0) : 0), t.ar + t.hitRoll * Math.min(1, t.hy * 2 + 0.3) + wob);
       // 3z: rig nghiêng (chông chênh sau khi đáp, trúng tên lửa) quanh điểm SÁT ĐẤT ⇒ 1 bên bánh cắm xuống tới ~5 cm ⇒ nâng rig bù đúng phần đó (trên mặt đường phẳng)
-      if (!t.air && !t.ramp && !t.twist) c.rig.position.y += Math.abs(Math.sin(c.rig.rotation.z)) * c.M.W * 0.45 + Math.abs(Math.sin(c.rig.rotation.x)) * c.M.L * 0.32;
+      if (!t.air && !t.ramp && !t.twist && !t.tumble) c.rig.position.y += Math.abs(Math.sin(c.rig.rotation.z)) * c.M.W * 0.45 + Math.abs(Math.sin(c.rig.rotation.x)) * c.M.L * 0.32;
       c.update(dt, { dist: t.s, accel: t.a, brake: t.brake, steer: t.vx, boost: Math.max(t.boostK, t.nitroK), t: G.t, pop: t.popK });
       c.launcher.update(dt, t.ms);
       const hy = t.ramp ? 0 : t.y, sh = shadows[i];
@@ -1740,10 +2074,19 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       trails.push(i, RA, RC, k);
       // 3j: vết lốp — chạm đất sau cú nhảy, bị bắn xoay, phanh gấp ở tốc độ cao (bánh sau; xoay thì cả 4 bánh)
       if (t.markT > 0) t.markT -= dt;
-      const onGround = !t.air && t.y < 0.06, skid = onGround && (t.markT > 0 || t.spinT > 0 || (t.brake > 0.5 && t.v > 16));
+      const drift = !!(t.dr && t.v > 1.2), onGround = !t.air && !t.tumble && t.y < 0.06, skid = onGround && (drift || t.markT > 0 || t.spinT > 0 || (t.brake > 0.5 && t.v > 16));
+      const smk = drift && onGround && (t.drSmT -= dt) <= 0; if (smk) t.drSmT = t.dr.loser ? 0.03 : 0.012;
       [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(([sx, sz], w) => {
         const P = c.rig.localToWorld(SK.set(sx * M.W * 0.36, 0, sz * M.L * 0.31)), key = i * 4 + w, prev = skPrev[key];
-        if (skid && (w < 2 || t.spinT > 0)) { if (prev && prev.distanceToSquared(P) > 0.01 && prev.distanceToSquared(P) < 9) skids.seg(prev, P, t.spinT > 0 ? 0.6 : 0.5); skPrev[key] = (prev || new THREE.Vector3()).copy(P); }
+        if (skid && (w < 2 || t.spinT > 0 || drift)) {
+          if (prev && prev.distanceToSquared(P) > 0.01 && prev.distanceToSquared(P) < 9) { if (drift && w < 2) burnSk.seg(prev, P, 0.78); else skids.seg(prev, P, t.spinT > 0 || drift ? 0.6 : 0.5); }   // 4g: drift ⇒ bánh sau để vết CHÁY đậm
+          skPrev[key] = (prev || new THREE.Vector3()).copy(P);
+          if (smk && w < 2) {                                                                                  // 4g: khói lốp cháy cuộn từ 2 bánh sau
+            const k = clamp(t.v / 30, 0.35, 1), sd = (Math.random() - 0.5);
+            const big = t.dr.t < 0.08 ? 7 : 1;                                                             // vào drift ⇒ bùng 1 đám khói
+            for (let n = 0; n < big; n++) missiles.smoke.emit(P.x + sd * 0.5 + (big > 1 ? (Math.random() - 0.5) * 1.5 : 0), 0.3, P.z + 0.2, (Math.random() - 0.5) * 2.6 + t.dr.dir * 1.4, 0.4 + Math.random() * 1.2, 1 + Math.random() * 2.5 * k, 1.8 + Math.random() * 1.4, (t.dr.loser ? 1.1 : 1.5) + 0.6 * k, t.dr.loser ? 0.5 : 0.68, 3.4, 0.7);
+          }
+        }
         else skPrev[key] = null;
       });
       // 3j: lửa tại chỗ bị bắn trúng (vết cháy đen do sr3d-car-3j hiện dần sau)
@@ -1820,10 +2163,10 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     get fps() { return fps; }, get res() { return AR.info; }, get dashF() { return dashF; },
     renderer, scene, cams, composer, G, T, pmenu, carObj: i => cars[i],
     destroy() {
-      if (dead) return; dead = true; cancelAnimationFrame(raf); ro.disconnect();
+      if (dead) return; dead = true; cancelAnimationFrame(raf); ro.disconnect(); rsCancel();   // 4i: huỷ đếm 3-2-1
       window.removeEventListener("keydown", onKeyDown); window.removeEventListener("keyup", onKeyUp); window.removeEventListener("blur", onBlur); window.removeEventListener("keydown", onEsc);
       try { remote && remote.detach && remote.detach(); } catch (e) { /* */ }
-      tools.dispose(); skids.dispose();
+      tools.dispose(); skids.dispose(); burnSk.dispose();
       hoods.forEach(h => h.dispose()); cars.forEach(c => c.dispose()); shadows.forEach(s => scene.remove(s)); world.dispose(); missiles.dispose(); ramps.dispose(); trails.dispose(); twists.dispose(); pickups.dispose(); traffic.dispose(); bendTex.forEach(t => t.dispose());
       composer.dispose(); rt.dispose(); pmrem.dispose(); scene.environment?.dispose();
       renderer.dispose(); renderer.forceContextLoss(); mount.innerHTML = ""; mount.classList.remove("sr-root", "sr2", "sr3", "is-menu", "is-count", "is-race", "is-end");

@@ -1,0 +1,36 @@
+/* RACING WORDS mẫu 4j (18/10/2026) — NÚT BẮN TÊN LỬA kiểu thẻ (thầy chốt trang thiet-ke-4j-v8), DÙNG CHUNG màn lớn + iPad.
+   Đơn vị --u do nơi dùng đặt (màn lớn theo cqh, iPad theo vmin). Màu đội = --team (màn lớn có sẵn trên .sr-half; iPad lấy từ --tc).
+   · thẻ kính nghiêng, mép màu đội · 2 ô tên lửa PHẲNG đứng yên (đã nạp = màu đội) · "+x MISSILES" = số trong kho, neo phải trục, dài ra bên phải
+   · thanh chuỗi đúng: đoạn trắng mảnh sáng mờ, tách nhau, cách viền · sẵn sàng = viền đỏ cam phát sáng
+   · không mục tiêu (.noaim / .rw-noaim) = chữ + icon xanh lá nhạt · bấm (.rw-nt) ⇒ chữ mờ, NO TARGET AHEAD vàng nháy rồi ẩn
+   · bắn: .out mờ dần 0,35 s · nạp: .in0 → .in hiện dần 0,55 s. Chỉ opacity / transform. */
+.ip .rw-fb { --team: var(--tc); }
+.rw-fb { --na: #9cf0b8; position: relative; transform: skewX(-12deg); border-radius: calc(1 * var(--u)); overflow: hidden;
+  background: linear-gradient(135deg, rgba(26,34,52,.97), rgba(8,12,20,.97)); border: calc(.25 * var(--u)) solid rgba(140,190,255,.22); transition: border-color .3s, box-shadow .3s; }
+.rw-fb > * { transform: skewX(12deg); }
+.rw-fb-edge { position: absolute; left: 0; top: 0; bottom: 0; width: calc(1 * var(--u)); background: var(--team); transform: none !important; }
+.rw-fb-mid { position: absolute; left: calc(1 * var(--u)); right: 0; top: 0; bottom: calc(1.3 * var(--u)); --ax: 45%; }
+.rw-fb-rack { position: absolute; right: calc(100% - var(--ax) + 1.1 * var(--u)); top: 13%; bottom: 13%; display: flex; gap: calc(.5 * var(--u)); transition: opacity .25s; }
+.rw-fbm { display: block; height: 100%; aspect-ratio: .72; color: #3a4252; transition: opacity .35s ease, transform .35s ease, color .3s; }
+.rw-fbm svg { display: block; width: 100%; height: 100%; transform: rotate(45deg); }
+.rw-fbm.on { color: var(--team); }
+.rw-fbm.out { opacity: 0 !important; transform: scale(.92); }
+.rw-fbm.in0 { opacity: 0 !important; transform: scale(.85); transition: none; }
+.rw-fbm.in { transition: opacity .55s ease, transform .55s cubic-bezier(.2,.9,.3,1.1); }
+.rw-fb-num { position: absolute; left: calc(var(--ax) + 1.1 * var(--u)); top: 0; bottom: 0; display: flex; align-items: center; gap: calc(.7 * var(--u)); transition: opacity .25s; white-space: nowrap; }
+.rw-fb-num b { font: italic 900 calc(4.6 * var(--u)) "Exo 2", sans-serif; color: #8d97a6; line-height: 1; transition: color .3s; }
+.rw-fb-num small { font: italic 800 calc(1.6 * var(--u)) "Exo 2", sans-serif; letter-spacing: .22em; color: #8fa3bf; translate: 0 18%; transition: color .3s; }
+.rw-fb-stk { position: absolute !important; left: calc(2.4 * var(--u)); right: calc(1.4 * var(--u)); bottom: calc(.7 * var(--u)); height: calc(.38 * var(--u)); display: flex !important; gap: calc(.9 * var(--u)); transform: none !important; }
+.rw-fb-stk i { flex: 1; width: auto !important; height: auto !important; border-radius: 99px !important; background: rgba(255,255,255,.1) !important; box-shadow: none !important; transition: background .3s, box-shadow .3s; }
+.rw-fb-stk i.on { background: #fff !important; box-shadow: 0 0 calc(.7 * var(--u)) rgba(255,255,255,.85), 0 0 calc(1.6 * var(--u)) rgba(190,225,255,.45) !important; }
+.rw-fb.ready { border-color: #ff7a4a; box-shadow: 0 0 calc(1.6 * var(--u)) rgba(255,80,40,.45); }
+.rw-fb.ready .rw-fb-num b { color: #fff; }
+.rw-fb.noaim, .rw-fb.rw-noaim { border-color: rgba(156,240,184,.45) !important; box-shadow: none !important; opacity: 1 !important; }
+.rw-fb.noaim .rw-fb-num b, .rw-fb.noaim .rw-fb-num small, .rw-fb.noaim .rw-fbm.on,
+.rw-fb.rw-noaim .rw-fb-num b, .rw-fb.rw-noaim .rw-fb-num small, .rw-fb.rw-noaim .rw-fbm.on { color: var(--na); }
+.rw-fb-nt { position: absolute; left: calc(1 * var(--u)); right: 0; top: 0; bottom: calc(1.3 * var(--u)); display: grid; place-items: center; font: italic 900 calc(2.6 * var(--u)) "Exo 2", sans-serif;
+  letter-spacing: .14em; color: #ffd23f; opacity: 0; pointer-events: none; white-space: nowrap; }
+.rw-fb.rw-nt .rw-fb-num, .rw-fb.rw-nt .rw-fb-rack { opacity: .18; }
+.rw-fb.rw-nt .rw-fb-nt { animation: rwFbNt 1.3s ease-out forwards; }
+@keyframes rwFbNt { 0% { opacity: 0; } 10% { opacity: 1; } 22% { opacity: .25; } 34% { opacity: 1; } 46% { opacity: .25; } 58% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
+.ip .ip-res { display: none !important; }   /* 4j: kho cũ trên iPad (đã gộp vào +x trong thẻ) */

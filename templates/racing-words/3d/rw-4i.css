@@ -1,0 +1,107 @@
+/* RACING WORDS mẫu 4i (18/10/2026) — nạp SAU rw-4h.css.
+   · CỬA SỔ GÓC (.rw-win = Settings / Switch activity / Options riêng · .sr-pmenu = MENU): góc DƯỚI PHẢI khung game, ngay trên hàng nút,
+     MỌI cỡ theo cqh (chiều cao khung) ⇒ 1280×720, 1920×1080, TOMKO 4K đều cùng tỉ lệ, cùng chỗ. Không lớp mờ, không filter.
+   · Settings kiểu C (thầy chọn): tab icon dọc bên trái (DRIVER · CAMERA · RACE) + nội dung bên phải.
+   · .rw-rs: 3 đèn đếm 3-2-1 khi đóng hết cửa sổ (đang đua).
+   · Drive on iPad (pm2): màn lớn bấm được vô lăng / bàn đạp / tên lửa (lái đồng thời). */
+
+/* ---------- khung cửa sổ góc ---------- */
+.rw-root .sr-panel.rw-win { position: absolute; inset: auto 1.4cqh 1.4cqh auto; display: block; z-index: 72; background: none; backdrop-filter: none; pointer-events: none; }
+.rw-root .sr-panel.rw-win[hidden] { display: none; }
+.rw-root .sr-panel.rw-win .sr-panel-box { pointer-events: auto; position: relative; width: 44cqh; max-width: 70cqw; max-height: 72cqh; overflow: auto; padding: 1.5cqh 1.6cqh 1.6cqh;
+  border-radius: 1.6cqh; background: rgba(9,14,26,.96); border: .15cqh solid rgba(140,210,255,.32); box-shadow: 0 1.6cqh 4cqh rgba(0,0,0,.55); color: #e2e8f0; }
+.rw-root .sr-panel.rw-win .sr-panel-h { margin: 0 4cqh 1cqh 0; font: italic 900 2.1cqh "Exo 2", sans-serif; letter-spacing: .08em; color: #cdeaff; }
+.rw-root .sr-panel.rw-win .sr-panel-x { top: 1cqh; right: 1cqh; width: 3.2cqh; height: 3.2cqh; font-size: 1.6cqh; z-index: 2; }
+/* Settings kiểu C */
+.rw-root .sr-panel.rw-win.is-c .sr-panel-box { width: 56cqh; padding: 0; overflow: visible; }
+.rw-root .sr-panel.rw-win.is-c .sr-panel-h { display: none; }
+.rw-c { display: grid; grid-template-columns: 9cqh 1fr; min-height: 30cqh; }
+.rw-c nav { display: flex; flex-direction: column; gap: .5cqh; padding: 1.2cqh .8cqh; border-radius: 1.6cqh 0 0 1.6cqh; background: rgba(255,255,255,.04); }
+.rw-c nav button { display: flex; flex-direction: column; align-items: center; gap: .3cqh; padding: .9cqh 0; border: 0; border-radius: 1cqh; background: none; cursor: pointer;
+  font: 800 1.15cqh "Exo 2", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #8d9bb0; }
+.rw-c nav button svg { width: 2.6cqh; height: 2.6cqh; }
+.rw-c nav button.on { background: rgba(245,197,66,.14); color: #f5c542; }
+.rw-cbody { padding: 1.4cqh 1.6cqh 1.6cqh; position: relative; max-height: 66cqh; overflow: auto; }
+.rw-cbody h3 { margin: 0 4cqh 1cqh 0; font: italic 900 2.1cqh "Exo 2", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #cdeaff; }
+/* nội dung thu nhỏ (đè cỡ chữ cũ của bảng giữa màn) */
+.rw-win .sr-pm { display: grid; grid-template-columns: 1fr !important; gap: .6cqh !important; margin: 0 0 1cqh !important; }
+.rw-win .sr-pm-o { flex-direction: row !important; align-items: baseline !important; gap: 1cqh !important; padding: .8cqh 1.1cqh !important; border-radius: 1cqh !important; }
+.rw-win .sr-pm-o b { flex: none; font: italic 900 1.6cqh "Exo 2", sans-serif !important; }
+.rw-win .sr-pm-o span { font: 600 1.2cqh "Exo 2", sans-serif; color: #8d9bb0; }
+.rw-win .sr-pm-o.on { box-shadow: inset 0 0 0 .1cqh #ffcf4a !important; }
+.rw-win .sr-pm-st { gap: 2cqh; font: 700 1.25cqh "Exo 2", sans-serif; margin: .2cqh 0 .6cqh; } .rw-win .sr-pm-st span { gap: .6cqh; } .rw-win .sr-pm-st i { width: .9cqh; height: .9cqh; }
+.rw-win .sr-opt-row { gap: 1.2cqh; font: 700 1.55cqh "Exo 2", sans-serif; margin-top: 1cqh; }
+.rw-win .sr-seg { border-radius: .9cqh; border-width: .15cqh; } .rw-win .sr-seg button { padding: .7cqh 1cqh; font: 800 1.4cqh "Exo 2", sans-serif; }
+.rw-win .sr-step { gap: .7cqh; } .rw-win .sr-step button { width: 3cqh; height: 3cqh; border-radius: .8cqh; border-width: .15cqh; font-size: 1.7cqh; } .rw-win .sr-step b { min-width: 4cqh; font-size: 1.8cqh; }
+.rw-win .sr-opt-note { margin: .6cqh 0 0; font: 600 1.2cqh/1.35 "Exo 2", sans-serif; }
+.rw-win .sr-view { grid-template-columns: 1fr 1fr !important; gap: .8cqh !important; margin: 1cqh 0 0 !important; }
+.rw-win .sr-view .sr-pm-o { flex-direction: column !important; align-items: flex-start !important; gap: .3cqh !important; }
+.rw-win .sr-cf { border-radius: 1.6cqh; gap: 1.4cqh; } .rw-win .sr-cf p { font: 600 1.7cqh "Exo 2", sans-serif; }
+.rw-win .sr-cf button { min-width: 9cqh; padding: .8cqh 1.4cqh; border-radius: 1cqh; font: 900 1.5cqh "Exo 2", sans-serif; border-width: .15cqh; }
+/* Switch activity */
+.rw-win .sr-fd { gap: .6cqh; max-height: 50cqh; min-width: 0; }
+.rw-win .sr-fd-grp { margin: .8cqh 0 .2cqh; font: 800 1.2cqh "Exo 2"; }
+.rw-win .sr-fd-row { padding: .9cqh 1.2cqh; border-radius: 1cqh; font: 700 1.55cqh "Exo 2"; border-width: .15cqh; }
+.rw-win .sr-fd-note { font: 600 1.45cqh "Exo 2"; }
+
+/* ---------- MENU góc dưới phải ---------- */
+.rw-root .sr-pmenu { inset: auto 1.4cqh 1.4cqh auto; display: block; background: none; backdrop-filter: none; pointer-events: none; z-index: 72; }
+.rw-root .sr-pmenu[hidden] { display: none; }
+.rw-root .sr-pmenu-box { pointer-events: auto; min-width: 0; width: 30cqh; gap: .7cqh; padding: 1.5cqh 1.6cqh 1.6cqh; border-radius: 1.6cqh;
+  background: rgba(9,14,26,.96); border: .15cqh solid rgba(140,210,255,.32); box-shadow: 0 1.6cqh 4cqh rgba(0,0,0,.55); }
+.rw-root .sr-pmenu-title { text-align: left; font: italic 900 2.1cqh "Exo 2", sans-serif; letter-spacing: .08em; color: #cdeaff; text-shadow: none; margin-bottom: .3cqh; }
+.rw-root .sr-pmenu-box button { font: italic 900 1.7cqh "Exo 2", sans-serif; letter-spacing: .1em; padding: 1.1cqh 1.2cqh; border-radius: 1cqh; text-align: left; }
+.rw-root .sr-pmenu-box button.is-resume { background: #f5c542; color: #1b1300; border-color: #f5c542; }
+.rw-root .sr-pmenu-note { font-size: 1.4cqh; }
+.rw-root .sr-pm-tpl button { font-size: 1.4cqh; padding: .8cqh 1cqh; }
+/* nút trên hàng đang mở cửa sổ */
+.sr-bar .sr-tool.is-win { background: #2f6fe0; color: #fff; box-shadow: inset 0 0 0 1px #8fc1ff; }
+
+/* ---------- 3 đèn 3-2-1 khi quay lại game ---------- */
+.rw-rs { position: absolute; left: 50%; top: calc((100% - var(--rw-dashpx, 30%)) * .3); z-index: 9; transform: translate(-50%, -50%); display: none; gap: 1.8cqh; padding: 1.6cqh 2.4cqh;
+  border-radius: 3cqh; background: rgba(10,10,14,.85); border: .3cqh solid rgba(255,255,255,.12); pointer-events: none; }
+.rw-rs.on { display: flex; }
+.rw-rs i { width: 6.4cqh; height: 6.4cqh; border-radius: 50%; display: grid; place-items: center; font: italic 900 3cqh "Exo 2", sans-serif; font-style: normal; color: transparent;
+  background: radial-gradient(circle at 40% 35%, #4a1416, #1e0708); box-shadow: inset 0 0 1cqh rgba(0,0,0,.8); transition: background .08s, box-shadow .08s; }
+.rw-rs i.on { color: #fff; background: radial-gradient(circle at 40% 35%, #ffd0c8, #ff2a1f 45%, #b00c06); box-shadow: 0 0 4cqh #ff2a1f, inset 0 0 1cqh rgba(255,255,255,.4); }
+.rw-rs.go i { color: transparent; background: radial-gradient(circle at 40% 35%, #e6ffd0, #4bd84b 45%, #138a1a); box-shadow: 0 0 4cqh #4bd84b, inset 0 0 1cqh rgba(255,255,255,.4); }
+
+/* ---------- Drive on iPad: màn lớn LÁI ĐỒNG THỜI ---------- */
+.sr3.pm2 .sr-wheelbox, .sr3.pm2 .sr-pedal { pointer-events: auto; cursor: pointer; }
+
+/* ---------- mũi tên đối thủ kiểu 2 (thầy chọn): dính mép, trượt mượt, số mét sau đuôi không nền ---------- */
+.rw-oa, .rw-cd { display: none !important; }
+.rw-oa2 { position: absolute; left: 0; top: 0; z-index: 3; width: 8.4cqh; height: 8.4cqh; pointer-events: none; opacity: 0; transition: opacity .2s; will-change: transform; }
+.rw-oa2.on { opacity: 1; }
+.rw-oa2-r { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; will-change: transform; filter: none; }
+.rw-oa2-d { position: absolute; left: 50%; top: 50%; width: 7cqh; text-align: center; white-space: nowrap; font: italic 900 2.3cqh/1 "Exo 2", sans-serif; font-variant-numeric: tabular-nums;
+  color: #fff; text-shadow: 0 0 .5cqh rgba(0,0,0,.95), 0 .15cqh .35cqh rgba(0,0,0,.9), 0 0 1.4cqh color-mix(in srgb, var(--oc) 55%, transparent); will-change: transform; }
+.sr-root.is-cine .rw-oa2, .sr3z.is-merge .rw-oa2 { opacity: 0 !important; }
+
+/* ---------- thanh DAMAGE trên đầu xe ---------- */
+.rw-dmg { position: absolute; left: 50%; top: calc((100% - var(--rw-dashpx, 30%)) * .56); z-index: 4; width: 22cqh; transform: translate(-50%, -50%); pointer-events: none; opacity: 0;
+  display: flex; flex-direction: column; align-items: center; gap: .5cqh; transition: opacity .2s; }
+.sr-root.is-chase .rw-dmg { top: calc((100% - var(--rw-dashpx, 30%)) * .5); }
+.rw-dmg.on { opacity: 1; }
+.rw-dmg span { font: italic 900 1.5cqh "Exo 2", sans-serif; letter-spacing: .24em; color: #fff; text-shadow: 0 .15cqh .5cqh rgba(0,0,0,.9); }
+.rw-dmg i { position: relative; display: block; width: 100%; height: 1.3cqh; border-radius: 1cqh; overflow: hidden; background: rgba(0,0,0,.6); box-shadow: 0 0 0 .2cqh rgba(0,0,0,.55); }
+.rw-dmg em { position: absolute; inset: 0; border-radius: inherit; transform-origin: 0 50%; will-change: transform; background: #ff3b30; transition: background .25s; }
+.rw-dmg[data-s="o"] em { background: #ff8a1f; } .rw-dmg[data-s="y"] em { background: #ffd23f; } .rw-dmg[data-s="g"] em { background: #3ddc84; }
+.rw-dmg.go span { color: #3ddc84; font-size: 2.6cqh; letter-spacing: .1em; } .rw-dmg.go span::after { content: " GO!"; } .rw-dmg.go i { opacity: 0; }
+.rw-root .sr-smoke.rw-lite { opacity: .35; }
+
+/* ---------- nút bắn: đối thủ không ở trước ⇒ mờ ---------- */
+.sr-fire.rw-noaim { opacity: .38; filter: none; }
+
+/* ---------- bảng đếm ĐẦU VẠCH GIỮA (vị trí A) ---------- */
+.rw-cb { position: absolute; left: 50%; top: 1.4cqh; z-index: 7; transform: translateX(-50%); display: none; flex-direction: column; align-items: center; pointer-events: none; --lc: #fff; }
+.rw-cb.on { display: flex; }
+.rw-cb-p { display: flex; align-items: baseline; gap: .8cqh; padding: .7cqh 1.8cqh; border-radius: 1.6cqh; background: rgba(6,9,15,.8); border: .3cqh solid var(--lc);
+  box-shadow: 0 0 2.2cqh color-mix(in srgb, var(--lc) 45%, transparent); transition: border-color .35s, box-shadow .35s; }
+.rw-cb-p b { font: italic 900 3.4cqh/1 "Exo 2", sans-serif; color: #fff; font-variant-numeric: tabular-nums; }
+.rw-cb-p small { font: italic 800 1.5cqh "Exo 2", sans-serif; letter-spacing: .2em; color: var(--lc); transition: color .35s; }
+.rw-cb-big { display: none; font: italic 900 15cqh/1 "Exo 2", sans-serif; color: var(--lc); -webkit-text-stroke: .35cqh #fff; text-shadow: 0 .8cqh 2.4cqh rgba(0,0,0,.6); padding: 0 .1em; transition: color .35s; }
+.rw-cb.final .rw-cb-p { display: none; } .rw-cb.final .rw-cb-big { display: block; }
+.rw-cb-big.beat { animation: rw4iBeat 1s cubic-bezier(.2,.8,.3,1) both; }
+.rw-cb.is-hot .rw-cb-big { -webkit-text-stroke-color: #fff3c4; }
+@keyframes rw4iBeat { 0% { transform: scale(1.35); opacity: .2; } 14% { transform: scale(1); opacity: 1; } 80% { opacity: 1; } 100% { transform: scale(.9); opacity: .35; } }

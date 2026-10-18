@@ -546,6 +546,16 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 551 (18/10/2026) — RACING WORDS: myGame 4g → 4j
+- Chép bằng `tools/chep-racing-words.py`: GOC `rw-4j.js` (lõi `sr3d-4j.js`, intro `sr3d-intro-4h.js` + xe `sr3d-car-4h.js` CÙNG mô-đun, tên lửa `sr3d-missile-4i.js`),
+  GOC_THEM iPad `sr3d-padui-4j.js` + `sr3d-padlink-4j.js`, đầu game vẫn `sr3d-padlink-4f.js` (cùng giao thức), + `rw-loadpace-4h.js`. CSS thêm rw-4g · rw-4h · rw-4i · rw-4j-fb · rw-4j (đúng thứ tự).
+- `core/loader3d.js`: `showLoader3d({ pace: { create, key } })` + `h.mark(k)` — % chia theo thời gian từng chặng (files · cars · race · studio · frame), nhớ theo máy
+  (localStorage `loadpace.rw`), byte thật chỉ làm sàn; thanh chạy trước bằng CSS transition; tắt màn chờ khi game báo KHUNG ĐẦU (tối đa 6 s) + lưới 1,5 s. Không truyền pace ⇒ như cũ.
+- Gốc "đứng 99 %": myGame `silhouette()` (bóng xe) gọi closePath ~60k lần ⇒ đơ 10–50 s / xe — 4h tô theo lô (H4 10,8 s → 0,07 s).
+- `racing-words.js`: GAME `./3d/rw-4j.js`, CSS mới, `onProgress` ⇒ `ld.mark`. `pad.js`: rwMods nạp padlink-4j + padui-4j, chèn `3d/rw-4j-fb.css` (thẻ nút bắn).
+- `load-files.js` sinh lại (đo `scratch/dot543-rec.html?t=racing-words` ⇒ `tools/tao-load-files.py`): 70 file, 5,1 MB.
+- Không thêm Options. Chi tiết gameplay: myGame `speed-run/HO SO BAN GIAO RACING WORDS.md` (4g…4j) + các trang thiet-ke-4h/4i/4j-v8.
+
 ## Đợt 550 (18/10/2026) — TRAIN RUSH: MÀN iPAD MƯỢT (30 khung đúng nhịp · nền cam trơn · khinh khí cầu tự bập bềnh · thùng hết "nảy")
 
 **Thầy:** "Hiển thị trên iPad vẫn giật, có thể cần tăng fps · máy bay (khinh khí cầu) và các hộp chuyển động rất giật · có hộp rơi xuống đường rồi lại nảy lên

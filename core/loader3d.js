@@ -444,7 +444,10 @@ function createMeter(list, paint) {
   return m;
 }
 
-export function showLoader3d({ key, title, theme = "space", bg = null, game = null, files = null }) {
+// ⭐ Đợt 551 (thầy 18/10: "load đầu nhanh nhưng dừng ở 99 % khá lâu… cần chia đều %"): `pace` = { create, key } (RACING WORDS truyền createLoadPace của
+//   myGame rw-loadpace-4h.js) ⇒ % chia theo THỜI GIAN từng chặng (tải · xe · dựng trận · xưởng · khung đầu), nhớ theo máy; byte thật chỉ làm sàn cho chặng tải;
+//   thanh "chạy trước" bằng CSS transition (vẫn nhích lúc luồng chính bận dựng game). Game báo chặng qua h.mark(k). Không có `pace` ⇒ y như cũ (3 game kia).
+export function showLoader3d({ key, title, theme = "space", bg = null, game = null, files = null, pace = null }) {
   const cur = live.get(key);
   if (cur && !cur.gone) return cur;
   ensureCss();
@@ -496,22 +499,35 @@ export function showLoader3d({ key, title, theme = "space", bg = null, game = nu
   let meter = null, markOut = () => {};
   const outP = new Promise(r => { markOut = r; });
   const barI = el.querySelector(".aw-ld3d-bar i"), sEl = el.querySelector(".aw-ld3d-s");
-  const paint = p => { barI.style.transform = `scaleX(${p.toFixed(4)})`; sEl.textContent = "LOADING " + Math.floor(p * 100) + "%"; };
+  let lp = null;                                                   // Đợt 551: bộ chia % theo thời gian (nếu có pace)
+  const paint = p => { if (lp) return; barI.style.transform = `scaleX(${p.toFixed(4)})`; sEl.textContent = "LOADING " + Math.floor(p * 100) + "%"; };
   try {
     const list = typeof files === "function" ? files() : files;
     if (Array.isArray(list) && list.length) { el.classList.add("is-pct"); paint(0); meter = createMeter(list, paint); }
   } catch (e) { console.warn("loader3d: files", e); meter = null; }
+  if (meter && pace && typeof pace.create === "function") {
+    try {
+      lp = pace.create({ key: pace.key || key, bytes: () => meter.pct(),
+        paint: (p, ahead, sec) => { barI.style.transition = `transform ${sec.toFixed(2)}s linear`; barI.style.transform = `scaleX(${ahead.toFixed(4)})`;
+          const t = "LOADING " + Math.floor(p * 100) + "%"; if (sEl.textContent !== t) sEl.textContent = t; } });
+    } catch (e) { console.warn("loader3d: pace", e); lp = null; }
+  }
   const fade = () => {
-    if (meter) { meter.stop(); paint(1); }
-    requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (meter) meter.stop();
+    const go = () => requestAnimationFrame(() => requestAnimationFrame(() => {
       el.classList.add("is-out"); markOut();
       setTimeout(() => el.remove(), 550);
     }));
+    if (lp) { let gone = false; const g2 = () => { if (gone) return; gone = true; go(); };   // Đợt 551: chạy nốt tới 100 % (~0,35 s) rồi mới mờ
+      lp.done(g2); setTimeout(() => { lp.stop(); g2(); }, 1500); return; }                // lưới an toàn: tab không vẽ khung (rAF dừng) vẫn tắt màn chờ
+    if (meter) paint(1);
+    go();
   };
   const h = {
     gone: false,
     ready: Promise.race([shownP, new Promise(r => setTimeout(r, 900))]),
     out: outP,
+    mark(k) { if (lp) lp.mark(k); },                                   // Đợt 551: game báo xong chặng (cars · race · studio · frame)
     // game đã vẽ xong khung đầu ⇒ mờ đi (đợi 2 nhịp vẽ để khung game thật đã lên màn trước khi lộ ra)
     // Đợt 544: có bộ đếm ⇒ đợi nốt các file TIẾNG đang tải (tối đa 180 s); tiếng chưa hề được gọi sau 1,5 s thì thôi
     done() {
@@ -535,7 +551,7 @@ export function showLoader3d({ key, title, theme = "space", bg = null, game = nu
     drop() {
       if (h.gone) return; h.gone = true;
       if (live.get(key) === h) live.delete(key);
-      clearTimeout(safety); if (meter) meter.stop(); markOut(); el.remove();
+      clearTimeout(safety); if (meter) meter.stop(); if (lp) lp.stop(); markOut(); el.remove();
     }
   };
   // lưới an toàn 25 s — Đợt 544: còn đang tải (có byte mới trong 20 s) thì chưa tính là kẹt

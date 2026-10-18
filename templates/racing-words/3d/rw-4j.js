@@ -1,3 +1,11 @@
+// RACING WORDS — GÓI NHÚNG mẫu 4g (18/10/2026) = rw-4f.js + lõi sr3d-4g.js (9 việc thầy — hồ sơ mục 41). Phần tiếng mới:
+//   · 5 đèn: phát theo sự kiện lõi "light" (đúng nhịp, không dò 50 ms) — mẫu start_lights to hơn + lớp BÍP tổng hợp (sóng vuông 660 Hz, cắt gọn) cho rõ, nét;
+//     nhạc trận vào nhỏ (35 %) trong lúc đếm, GO mới lên đủ
+//   · Time 10 giây cuối: "tick" mỗi giây (bíp 880 Hz, 3 giây cuối 1.320 Hz)
+//   · màn kết: xe thua phanh (rít lốp) · xe thắng vụt ga (boost) · drift (rít lốp dài, trầm) · slow motion ⇒ máy + gió trầm xuống theo G.ts ·
+//     đáp đất (land + cinematic_hit) · chữ thắng mới phát win + tiếng reo
+//   CSS thêm rw-4g.css (sau rw-4f.css).
+// ---- gốc 4f ----
 // RACING WORDS — GÓI NHÚNG mẫu 4f (16/10/2026) = rw-4e.js + iPad sau buổi thử TOMKO (thầy: "kết nối với iPad ngay từ trước khi có intro… test ok rồi
 //   mới cho start. Khi đã start thì phải giữ kết nối đó, dù có chỉnh options hay bấm start again, change car…"):
 //   · CỔNG iPAD ở XƯỞNG (chế độ Drive on iPad): 2 thẻ đội góc dưới — trạng thái nối, mã QR khi chưa nối, vô lăng nhỏ quay theo iPad, ô thử ◀ LEFT / RIGHT ▶,
@@ -54,16 +62,18 @@
 //   onEvent   : (k, v) — "pad" (iPad nối / mất nối), "padMode", "end", …
 // ⇒ { setOptions(o) (true = áp ngay, false = AWord dựng lại), destroy(), game, intro }
 // =============================================================
-import { createSpeedRun } from "./sr3d-4e.js";
+import { createSpeedRun } from "./sr3d-4j.js";
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
-import { createIntro } from "./sr3d-intro-4e.js";
+import { createIntro } from "./sr3d-intro-4h.js";
 import { createSound } from "./sr3d-sound-3o.js";
 import { qrSvg } from "./mc3d-qr.js";
 
 const CARS_KEY = "speedrun.cars";            // xe 2 đội nhớ THEO MÁY (thầy chọn ở màn chờ xưởng)
 const DEF_CARS = ["Y2", "H4"];
 
-export async function createRacingWords({ mount, questions, title = "RACING WORDS", options = {}, host = null, remote = null, onEvent = () => {} }) {
+export async function createRacingWords({ mount, questions, title = "RACING WORDS", options = {}, host = null, remote = null, onEvent = () => {}, onProgress = () => {} }) {
+  // 4h: onProgress(bước) cho thanh LOADING chia theo THỜI GIAN — "cars" (xe đã tải) · "race" (trận dựng xong) · "studio" (xưởng xong, sắp trả về) · "frame" (khung đầu đã vẽ) · "warm" (dịch sẵn hình xong)
+  const prog = k => { try { onProgress(k); } catch (e) { /* */ } };
   // ---------- khung: game (tỉ lệ ≤ 2:1, giữa theo chiều dọc) + hàng nút 60 px ----------
   const root = document.createElement("div"); root.className = "rw-root";
   root.innerHTML = `<div class="rw-wrap"><div class="rw-frame"><div class="rw-load">LOADING CARS…</div></div><div class="rw-bar"></div></div>`;
@@ -80,10 +90,47 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
   const cars = want.map((id, i) => XE.some(x => x.id === id) ? id : DEF_CARS[i]);
   await Promise.all(cars.map(prepXe));
   if (dead) return null;
+  prog("cars"); await new Promise(r => setTimeout(r, 0));   // 4h: nhường 1 nhịp cho thanh LOADING vẽ
+  if (dead) return null;
   frame.innerHTML = "";
 
   // ---------- âm thanh ----------
   const S = createSound(); S.load();
+  // 4g: BÍP tổng hợp (Web Audio) chồng lên tiếng mẫu — rõ, nét, không tốn file; theo nút loa hiệu ứng (S.fxOn)
+  function beep(f = 660, dur = 0.2, gain = 0.32) {
+    if (dead || !S.fxOn) return; const c = S.ctx; if (!c || c.state === "closed") return;
+    const t0 = c.currentTime, o = c.createOscillator(), o2 = c.createOscillator(), g = c.createGain();
+    o.type = "square"; o.frequency.value = f; o2.type = "sine"; o2.frequency.value = f * 2;
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(gain, t0 + 0.006); g.gain.setValueAtTime(gain, t0 + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 5200;
+    o.connect(lp); o2.connect(lp); lp.connect(g); g.connect(c.destination); o.start(t0); o2.start(t0); o.stop(t0 + dur + 0.02); o2.stop(t0 + dur + 0.02);
+  }
+  // 4h: tiếng KHOẢNG CHỜ câu mới (thầy chọn trên trang thiet-ke-4h): R3 gió hút qua bộ lọc + sóng trầm dâng (T giây) · B1 bùm trầm nhẹ khi câu mới bật ra
+  let noiseB = null;
+  const noise = c => { if (noiseB && noiseB.sampleRate === c.sampleRate) return noiseB; const b = c.createBuffer(1, c.sampleRate * 3.2, c.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; return (noiseB = b); };
+  function qRiser(T = 3) {
+    if (dead || !S.fxOn) return; const c = S.ctx; if (!c || c.state === "closed") return;
+    const t = c.currentTime + 0.02, out = c.createGain(); out.gain.value = 0.8; out.connect(c.destination);
+    const n = c.createBufferSource(); n.buffer = noise(c); const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 2.2;
+    bp.frequency.setValueAtTime(260, t); bp.frequency.exponentialRampToValueAtTime(3600, t + T);
+    const ng = c.createGain(); ng.gain.setValueAtTime(0.0001, t); ng.gain.exponentialRampToValueAtTime(0.32, t + T * 0.92); ng.gain.linearRampToValueAtTime(0, t + T);
+    n.connect(bp); bp.connect(ng); ng.connect(out); n.start(t); n.stop(t + T + 0.05);
+    const o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.setValueAtTime(48, t); o.frequency.exponentialRampToValueAtTime(130, t + T);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + T * 0.9); g.gain.linearRampToValueAtTime(0, t + T);
+    o.connect(g); g.connect(out); o.start(t); o.stop(t + T + 0.02);
+    setTimeout(() => { try { out.disconnect(); } catch (e) { /* */ } }, (T + 0.5) * 1000);
+  }
+  function qBoom() {
+    if (dead || !S.fxOn) return; const c = S.ctx; if (!c || c.state === "closed") return;
+    const t = c.currentTime + 0.005, out = c.createGain(); out.gain.value = 0.85; out.connect(c.destination);
+    const o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.32);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.55, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+    o.connect(g); g.connect(out); o.start(t); o.stop(t + 0.6);
+    const n = c.createBufferSource(); n.buffer = noise(c); const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1400;
+    const ng = c.createGain(); ng.gain.setValueAtTime(0.25, t); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    n.connect(lp); lp.connect(ng); ng.connect(out); n.start(t); n.stop(t + 0.15);
+    setTimeout(() => { try { out.disconnect(); } catch (e) { /* */ } }, 900);
+  }
   const PAN = [-0.55, 0.55];
   let introOn = true, idleAmb = false;
 
@@ -94,6 +141,7 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
   const game = createSpeedRun({ mount: frame, bar, questions, title, options: { ...options, cars }, remote: rem, host,
     onEvent: (k, v) => { if (dead) return; if (k === "pause") S.pause(v === true); else if (k === "settings") { if (intro) intro.pause(v === true); } else onGameEvent(k, v || {}); try { onEvent(k, v); } catch (e) { /* */ } } });
   game.hold(true);
+  prog("race");
 
   // ---------- intro xưởng ANDREW STUDIO ----------
   const after = document.createElement("div"); after.className = "rw-after"; frame.appendChild(after);
@@ -110,7 +158,8 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
     } });
   // 3p: dịch sẵn shader ngay lúc thầy còn ở xưởng (compileAsync không chặn khung) · đổi xe ⇒ lõi tự dịch lại
   const warm = game.prewarm().catch(e => console.warn("RW prewarm", e));
-  warm.then(() => { if (!dead && intro.arGo) intro.arGo(); });   // 3r
+  warm.then(() => { if (!dead && intro.arGo) intro.arGo(); prog("warm"); });   // 3r · 4h: báo "warm"
+  prog("studio"); requestAnimationFrame(() => requestAnimationFrame(() => { if (!dead) prog("frame"); }));   // 4h: "frame" = khung đầu đã vẽ (dịch hình lần đầu khoá luồng chính ~1 s)
   // 3p: CHẠM ĐÚP khi phim intro đang chiếu ⇒ vào thẳng màn xuất phát (2 lần chạm ≤ 350 ms, lệch ≤ 40 px)
   let tap0 = null;
   on(frame, "pointerdown", e => {
@@ -189,18 +238,18 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
   every(() => {
     const st = game.state(), ph = st.phase, racing = ph === "count" || ph === "race" || ph === "end";
     if (ph !== lastPhase) {
-      if (ph === "count") { S.loop("mRace", true, { fade: 2 }); lights = 0; }
-      if (ph === "race") S.play("go");
-      if (ph === "end") { S.loop("mRace", false, { fade: 1.2 }); S.play("win"); S.play("crowd", { delay: 0.3 }); setTimeout(() => !dead && S.play("mResult"), 1400); }
+      if (ph === "count") { S.loop("mRace", true, { fade: 2, gain: 0.35 }); lights = 0; }                       // 4g: nhạc nhỏ khi đếm đèn
+      if (ph === "race") { S.play("go"); beep(1320, 0.42, 0.34); S.loop("mRace", true, { gain: 1 }); }
+      if (ph === "end") S.loop("mRace", false, { fade: 0.8 });                                                   // 4g: win / reo / nhạc kết khi CHỮ THẮNG hiện (sự kiện "banner")
       if (ph === "menu") { S.stopAll(0.8); idleAmb = false; }
       lastPhase = ph;
     }
-    if (ph === "count") { const n = Math.min(5, Math.floor((game.G.countT - 0.6) / 0.55) + 1); while (lights < n && lights < 5) { lights++; S.play("lightsBeep"); } }
     S.pause(!!game.G.paused);
     st.teams.forEach((t, i) => {
       const T = game.T[i], v = t.v, boostK = Math.max(T.boostK || 0, T.nitroK || 0);
-      S.loop("engine" + i, racing, { name: "engine", rate: 0.85 + v / 45 + boostK * 0.1, gain: 0.55 + 0.35 * boostK, pan: PAN[i] });
-      S.loop("wind" + i, racing && (v > 25 || t.air), { name: "wind", gain: Math.min(1, (v - 20) / 25) + (t.air ? 0.4 : 0), pan: PAN[i] });
+      const ts = game.G.ts || 1, slow = 0.45 + 0.55 * ts;                                                         // 4g: slow motion ⇒ tiếng trầm xuống
+      S.loop("engine" + i, racing, { name: "engine", rate: (0.85 + v / 45 + boostK * 0.1) * slow, gain: 0.55 + 0.35 * boostK, pan: PAN[i] });
+      S.loop("wind" + i, racing && (v > 25 || t.air), { name: "wind", gain: Math.min(1, (v - 20) / 25) + (t.air ? 0.4 : 0), rate: slow, pan: PAN[i] });
       S.loop("fire" + i, racing && (T.burnT || 0) > 0, { name: "fire", pan: PAN[i] });
       if (T.nitroK > 0.6 && !T._sBoost) { T._sBoost = true; S.play("boost", { pan: PAN[i] }); } else if (T.nitroK < 0.2) T._sBoost = false;
       if (t.spin > 0 && !T._sSpin) { T._sSpin = true; S.play("screech", { pan: PAN[i] }); } else if (t.spin <= 0) T._sSpin = false;
@@ -212,6 +261,21 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
   if (tb) { tb.classList.toggle("is-off", !S.fxOn); on(tb, "click", () => { const v = !tb.classList.contains("is-off"); S.setBus("fx", v); S.setBus("music", v); }); }
 
   function onGameEvent(k, v) {
+    if (k === "qwait") { qRiser(v.T || 3); return; }                                // 4h
+    if (k === "rsLight") { S.play("lightsBeep", { gain: 1.3 }); beep(660, 0.2, 0.28); return; }   // 4i: đèn 3-2-1 khi quay lại game
+    if (k === "rsGo") { beep(1320, 0.34, 0.32); return; }
+    if (k === "qnew") { qBoom(); return; }
+    if (k === "light") { S.play("lightsBeep", { gain: 1.6 }); beep(660, 0.22, 0.3); return; }                    // 4g: từng đèn — to, rõ, nét
+    if (k === "tick") { beep(v <= 3 ? 1320 : 880, v <= 3 ? 0.16 : 0.1, v <= 3 ? 0.26 : 0.17); if (v <= 3) S.play("lightsBeep", { gain: 1.1, rate: 1.25 }); return; }
+    if (k === "drift") { S.play("screech", { pan: PAN[v.team], gain: v.loser ? 0.9 : 1.2, rate: v.loser ? 1 : 0.82 }); if (!v.loser) S.play("screech", { pan: PAN[v.team], gain: 0.8, rate: 0.7, delay: 0.25 }); return; }
+    if (k === "fin") {
+      if (v.stage === "lose") { if (!v.air) S.play("boost", { pan: PAN[v.team], gain: 1.1 }); }
+      else if (v.stage === "win") { S.play("flyby", { gain: 0.9, rate: 0.62 }); S.play("hit", { gain: 0.7, delay: 0.1 }); }
+      else if (v.stage === "land") { S.play("land", { gain: 1.1, rate: 0.8 }); S.play("hit", { gain: 0.9 }); }
+      return;
+    }
+    if (k === "banner") { S.play("win"); S.play("crowd", { delay: 0.3 }); setTimeout(() => !dead && S.play("mResult"), 1400); return; }
+    if (k === "tumble") { S.play("crash", { pan: PAN[v.team], gain: 0.7 }); S.play("screech", { pan: PAN[v.team], gain: 0.6, rate: 0.75 }); return; }
     if (k === "correct") S.play("correct", { pan: PAN[v.team] });
     else if (k === "wrong") S.play("wrong", { pan: PAN[v.team] });
     else if (k === "fire") S.play("mLaunch", { pan: PAN[v.team] });

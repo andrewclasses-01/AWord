@@ -120,7 +120,9 @@ async function showTR(team) {
   keepAwake();
 }
 // ⭐ Đợt 527 — màn iPad RACING WORDS cho đội `team`
-const rwMods = () => Promise.all([import("./templates/racing-words/3d/sr3d-padlink-4f.js"), import("./templates/racing-words/3d/sr3d-padui-4f.js"), import("./templates/racing-words/rw-pad-signal.js")]);   // Đợt 538: 4f (tự nối lại khi slow, mốc nghiêng tự lấy)
+// ⭐ Đợt 551 — iPad RACING WORDS 4j: thanh DAMAGE · nút tên lửa kiểu THẺ (CSS dùng chung với màn lớn: 3d/rw-4j-fb.css) · padlink-4j đọc thêm chuỗi đúng
+const rwCss = () => { if (document.querySelector("link[data-rw4j]")) return; const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "./templates/racing-words/3d/rw-4j-fb.css"; l.dataset.rw4j = "1"; document.head.append(l); };
+const rwMods = () => { rwCss(); return Promise.all([import("./templates/racing-words/3d/sr3d-padlink-4j.js"), import("./templates/racing-words/3d/sr3d-padui-4j.js"), import("./templates/racing-words/rw-pad-signal.js")]); };   // Đợt 538: 4f (tự nối lại khi slow, mốc nghiêng tự lấy)
 async function showRW(team) {
   note.hidden = true;
   if (view === "rw" + team) return;

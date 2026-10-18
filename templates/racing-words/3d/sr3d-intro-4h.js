@@ -37,7 +37,7 @@ import { RenderPass } from "../../rocket-race/vendor/three/addons/RenderPass.js"
 import { UnrealBloomPass } from "../../rocket-race/vendor/three/addons/UnrealBloomPass.js";
 import { OutputPass } from "../../rocket-race/vendor/three/addons/OutputPass.js";
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
-import { makeCar3d } from "./sr3d-car-4b.js";
+import { makeCar3d } from "./sr3d-car-4h.js";
 import { makeAutoRes } from "./sr3d-autores-3r.js";
 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));

@@ -1,0 +1,46 @@
+/* RACING WORDS mẫu 4g (18/10/2026) — nạp SAU rw-4f.css. Chỉ đổi transform / opacity / left-top — không filter, không blur (TOMKO).
+   · .rw-cd  : số đếm 10 giây cuối (Time) giữa vạch chia 2 đội — chữ nửa trái màu đội 1, nửa phải màu đội 2, viền trắng, "đập" mỗi giây
+   · .rw-oa  : mũi tên đối thủ khuất (màu đội kia) — trên đường chân trời / mép dưới khung nhìn / mép bên
+   · .sr-nfill: vạch năng lượng trong bàn đạp BOOST = gradient mép mờ như iPad (#rw4gNit), trôi lên bằng translateY + transition */
+
+/* ---------- số đếm ---------- */
+.rw-cd { position: absolute; left: 50%; top: calc((100% - var(--rw-dashpx, 30%)) * .42); z-index: 6; pointer-events: none; opacity: 0;
+  transform: translate(-50%, -50%); width: 30cqh; height: 30cqh; display: grid; place-items: center; }
+.rw-cd::before { content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle, rgba(4,6,12,.62) 0, rgba(4,6,12,.45) 38%, rgba(4,6,12,0) 68%); }
+.rw-cd::after { content: ""; position: absolute; inset: 9%; border-radius: 50%; border: .55cqh solid transparent;
+  background: conic-gradient(from 180deg, #ff7a00 0 50%, #3b8cff 50% 100%) border-box;
+  -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: .85; }
+.rw-cd b { position: relative; z-index: 1; font: italic 900 21cqh/1 "Exo 2", sans-serif; letter-spacing: -.02em; padding: 0 .12em 0 .02em;
+  color: transparent; background: linear-gradient(90deg, #8fc1ff 0, #3b8cff 49.6%, #ff7a00 50.4%, #ffbb73 100%); -webkit-background-clip: text; background-clip: text;
+  -webkit-text-stroke: .45cqh #fff; text-shadow: 0 .9cqh 2.4cqh rgba(0,0,0,.6); }
+.rw-cd.on { opacity: 1; }
+.rw-cd.beat { animation: rw-cd-beat 1s cubic-bezier(.2,.8,.3,1) both; }
+.rw-cd.beat b { animation: rw-cd-num 1s cubic-bezier(.2,.8,.3,1) both; }
+.rw-cd.is-hot::after { background: conic-gradient(from 180deg, #ff2a1f 0 50%, #ff2a1f 50% 100%) border-box; }
+.rw-cd.is-hot b { -webkit-text-stroke-color: #fff3c4; text-shadow: 0 0 3cqh rgba(255,40,30,.75), 0 .9cqh 2.4cqh rgba(0,0,0,.6); }
+@keyframes rw-cd-beat { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.45); } 14% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  78% { opacity: 1; transform: translate(-50%, -50%) scale(.97); } 100% { opacity: .15; transform: translate(-50%, -50%) scale(.86); } }
+@keyframes rw-cd-num { 0% { transform: scale(1.25) skewX(-6deg); } 18% { transform: scale(1); } 100% { transform: scale(1); } }
+.sr-root.is-cine .rw-cd, .sr-root.is-end .rw-cd { opacity: 0 !important; animation: none; }
+
+/* ---------- mũi tên đối thủ ---------- */
+.rw-oa { position: absolute; left: 50%; top: 40%; z-index: 3; pointer-events: none; opacity: 0; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; gap: .3cqh; transition: opacity .18s; }
+.rw-oa.on { opacity: 1; }
+.rw-oa-r { display: block; width: 6.6cqh; height: 7.6cqh; }
+.rw-oa-r svg { width: 100%; height: 100%; display: block; overflow: visible; animation: rw-oa-pulse .9s ease-in-out infinite alternate; }
+.rw-oa-r .o { fill: var(--oc); stroke: #06080b; stroke-width: 2.4; stroke-linejoin: round; paint-order: stroke; }
+.rw-oa-r .o + .o { opacity: .55; }
+.rw-oa-r .h { fill: rgba(255,255,255,.55); }
+@keyframes rw-oa-pulse { from { transform: translateY(.5cqh); } to { transform: translateY(-.5cqh); } }
+.rw-oa b { display: none; }
+.rw-oa span { font: italic 800 1.9cqh "Exo 2", sans-serif; color: #fff; padding: .15cqh .8cqh; border-radius: 1cqh; white-space: nowrap;
+  background: rgba(6,8,12,.72); border: .2cqh solid var(--oc); }
+.rw-oa.is-back { flex-direction: column-reverse; }
+.sr-root.is-cine .rw-oa, .sr3z.is-merge .rw-oa { opacity: 0 !important; }
+
+/* ---------- bàn đạp BOOST: vạch năng lượng mép mờ ---------- */
+.rw-root .sr-boost .sr-nfill { fill: url(#rw4gNit); transform-box: fill-box; transform-origin: 50% 100%; transform: translateY(100%);
+  transition: transform .5s cubic-bezier(.25,.8,.35,1); }
+.sr-root.is-cine .sr-alarm, .sr-root.is-cine .sr-half::after { opacity: 0 !important; animation: none !important; }

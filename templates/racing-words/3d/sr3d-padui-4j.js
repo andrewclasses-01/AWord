@@ -4,7 +4,7 @@
 //     Xoay màn (ngang ↔ dọc / lật đầu) ⇒ tự lấy lại mốc.
 //   · tự bật nghiêng nếu Safari đã cho phép cảm biến (có sự kiện devicemotion ⇒ không cần chạm "TAP TO TURN ON TILT").
 //   · trạng thái nối "SLOW" ghi rõ đang tự sửa (đường nối 4f tự bắt tay lại).
-//   · đường nối: sr3d-padlink-4f.js.
+//   · đường nối: sr3d-padlink-4i.js (4i).
 //   · KHOÁ ĐỘI (thầy 16/10): đội đã có iPad khác ⇒ màn này phủ tấm "TEAM 1 already has an iPad" + nút chọn đội khác (không Connecting mãi);
 //     màn chọn đội có setBusy([b0, b1]) — đội đang có iPad khác mờ đi, chạm chỉ báo, không vào được.
 // ---- gốc 3y ----
@@ -73,7 +73,10 @@
 //                  + nút TÊN LỬA (thầy: "thêm một nút tên lửa ở một chỗ phù hợp"): góc TRÊN PHẢI, ngay trên bàn đạp phanh — ngón cái phải
 //                  trượt lên là tới, không lẫn với bàn đạp; số quả + 3 ống hiện trên nút. Màn vô lăng: km/h + 4 ô năng lượng + thanh Nitro (như game).
 //   mountPadApp(mount, { team, client, onBack }) ⇒ { setState, setInfo, setMode, setQ } · mountPadChooser(mount, { onPick })
-import { TEAM_META } from "./sr3d-padlink-4f.js";
+// 4i (18/10): + THANH DAMAGE như màn lớn (trúng tên lửa ⇒ rút dần đỏ → cam → vàng → xanh lá, hết ⇒ GO!) · nút tên lửa mờ khi đối thủ không ở trước.
+// 4j: NÚT BẮN iPad = cùng thẻ kính nghiêng với màn lớn (thiet-ke-4j-v8) — cả dải trên vẫn là vùng bấm.
+import { TEAM_META } from "./sr3d-padlink-4j.js";
+const FB_MIS = '<svg viewBox="0 0 24 34" fill="currentColor" aria-hidden="true"><path d="M12 1 C15.5 4 16 8 16 11 V24 H8 V11 C8 8 8.5 4 12 1 Z"/><path d="M8 18 L3 25 V28 L8 25.5 Z M16 18 L21 25 V28 L16 25.5 Z"/><rect x="9.5" y="25.5" width="5" height="3" rx="1"/><path d="M10 30 H14 L12 33 Z" opacity=".55"/></svg>';
 import { WHEEL_SVG, GAS_SVG, BRAKE_SVG, FIRE_ICON, FLY_HTML, reserveHTML } from "./sr3d-dash-3h.js";
 // 3v: vô lăng NHẸ cho lái nghiêng — cùng hình, bỏ 2 nhóm nét sáng (6 path blur) + mọi <filter>; chữ ATEAM sáng bằng nét viền mờ thay bộ lọc
 // 3w: dấu đỉnh = vạch cong theo vành ⇒ 3y: máy bay giấy (xem dưới)
@@ -281,6 +284,20 @@ html,body{margin:0;height:100%;overflow:hidden;background:#05060a;overscroll-beh
 .ipc-row{display:flex;gap:5vmin;flex-wrap:wrap;justify-content:center}
 .ipc-b{width:min(38vmin,380px);aspect-ratio:1.2;border-radius:4vmin;border:3px solid var(--tc);background:rgba(255,255,255,.04);color:var(--tc);cursor:pointer;padding:0;
   font:italic 900 max(28px,5vmin) "Exo 2",sans-serif;letter-spacing:.1em;box-shadow:0 0 4vmin color-mix(in srgb,var(--tc) 30%,transparent)}
+/* 4i — thanh DAMAGE (chỉ transform / màu nền theo nấc) */
+.ip-dmg{position:absolute;left:50%;top:calc(max(50px,7.6vh) + env(safe-area-inset-top) + 14.5vh);z-index:4;width:46vmin;transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:1vmin;pointer-events:none}
+.ip-dmg.on{display:flex}
+.ip-dmg span{font:italic 900 2.6vmin "Exo 2",sans-serif;letter-spacing:.24em;color:#fff;text-shadow:0 .3vmin 1vmin rgba(0,0,0,.9)}
+.ip-dmg i{position:relative;display:block;width:100%;height:2.4vmin;border-radius:2vmin;overflow:hidden;background:rgba(0,0,0,.6);box-shadow:0 0 0 .4vmin rgba(0,0,0,.5)}
+.ip-dmg em{position:absolute;inset:0;border-radius:inherit;transform-origin:0 50%;will-change:transform;background:#ff3b30;transition:background .25s}
+.ip-dmg[data-s=o] em{background:#ff8a1f}.ip-dmg[data-s=y] em{background:#ffd23f}.ip-dmg[data-s=g] em{background:#3ddc84}
+.ip-dmg.go span{color:#3ddc84;font-size:4.4vmin;letter-spacing:.1em}.ip-dmg.go span::after{content:" GO!"}.ip-dmg.go i{opacity:0}
+/* 4j — nút bắn kiểu thẻ (dải trên cùng vẫn là vùng bấm; thẻ nằm giữa dải) */
+.ip-fire{background:none!important;box-shadow:none!important;animation:none!important;display:flex;align-items:center;justify-content:center;padding:1.6vmin 4vw!important}
+.ip-fire .ip-fhint,.ip-fire .sr-slot{display:none}
+.ip-fbw{position:absolute;left:0;right:0;top:calc(max(50px,7.6vh) + env(safe-area-inset-top) + 2.8vh);bottom:70%;z-index:3;display:flex;align-items:center;justify-content:center;padding:1.2vmin 4vw 2.4vmin;box-sizing:border-box;pointer-events:none}
+.ip-fbw .rw-fb{--u:1.55vmin;display:block;width:min(100%,92vmin);height:100%;max-height:15vmin}
+.ip[data-m="2"] .ip-fbw{display:flex}.ip:not([data-m="2"]) .ip-fbw{display:none}
 `;
 const UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14l6-6 6 6"/></svg>';
 const BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
@@ -304,8 +321,8 @@ export function mountPadApp(mount, { team, client, onBack, steer: steerCfg }) {
     <div class="ip-scr ip-drv">
       <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="ip3tNit" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stop-color="#46e6ff" stop-opacity="0"/><stop offset=".2" stop-color="#46e6ff" stop-opacity=".42"/><stop offset="1" stop-color="#46e6ff" stop-opacity=".6"/></linearGradient></defs></svg>
-      <div class="ip-warn"></div>
-      <button class="ip-fire" data-k="f" aria-label="Fire missile"><i class="ip-fhint l">${UP}FIRE</i>${FIRE_ICON}<i class="ip-fhint r">FIRE${UP}</i></button><div class="ip-res"></div>
+      <div class="ip-warn"></div><div class="ip-dmg"><span>DAMAGE</span><i><em></em></i></div>
+      <button class="ip-fire" data-k="f" aria-label="Fire missile"></button><div class="ip-fbw"><span class="rw-fb"><i class="rw-fb-edge"></i><span class="rw-fb-mid"><span class="rw-fb-rack"><span class="rw-fbm">${FB_MIS}</span><span class="rw-fbm">${FB_MIS}</span></span><span class="rw-fb-num"><b>+0</b><small>MISSILES</small></span></span><span class="rw-fb-stk"><i></i><i></i><i></i></span><span class="rw-fb-nt">NO TARGET AHEAD</span></span></div><div class="ip-res" hidden></div>
       <div class="ip-smeter"><i class="l"></i><i class="r"></i><b></b></div>
       <div class="ip-row">
         <button class="ip-ped ip-gas" data-k="b" aria-label="Boost">${GAS_SVG}</button>
@@ -316,6 +333,21 @@ export function mountPadApp(mount, { team, client, onBack, steer: steerCfg }) {
     </div></div>`;
   const root = mount.firstElementChild, $ = s => root.querySelector(s);
   const wbox = $(".ip-wbox"), wheel = $(".ip-wheel"), gas = $(".ip-gas"), brk = $(".ip-brk"), fireB = $(".ip-fire");
+  // 4i: THANH DAMAGE — tin "i:" tới 4 lần/giây ⇒ iPad tự đếm lùi theo đồng hồ của mình (mượt), khớp lại khi lệch > 0,15 s; game tạm dừng ⇒ số giữ nguyên ⇒ thanh đứng theo
+  const dmgEl = $(".ip-dmg"), dmgE = $(".ip-dmg em"); let dmgEnd = 0, dmgTot = 0, dmgRaf = 0, dmgOn = false, dmgSt = "";
+  function dmgTick() {
+    dmgRaf = 0; const left = (dmgEnd - performance.now()) / 1000;
+    if (left > 0 && dmgTot > 0) { const k = Math.min(1, left / dmgTot), st = k > 0.75 ? "r" : k > 0.5 ? "o" : k > 0.25 ? "y" : "g";
+      dmgE.style.transform = `scaleX(${k.toFixed(3)})`; if (st !== dmgSt) { dmgSt = st; dmgEl.dataset.s = st; } dmgRaf = requestAnimationFrame(dmgTick); return; }
+    if (dmgOn) { dmgOn = false; dmgSt = ""; dmgEl.classList.add("go"); setTimeout(() => { if (!dmgOn) dmgEl.classList.remove("on", "go"); }, 650); }
+  }
+  function dmgSync(i) {
+    if (!(i.dmg > 0) || i.phase !== "race") { if (dmgOn && i.phase !== "race") { dmgOn = false; dmgEl.classList.remove("on", "go"); } return; }
+    const end = performance.now() + i.dmg * 1000; dmgTot = i.dmgT || dmgTot || i.dmg;
+    if (!dmgOn || Math.abs(end - dmgEnd) > 150) dmgEnd = end;
+    if (!dmgOn) { dmgOn = true; dmgEl.classList.remove("go"); dmgEl.classList.add("on"); }
+    if (!dmgRaf) dmgRaf = requestAnimationFrame(dmgTick);
+  }
   // ---- lái: nhiều ngón cùng lúc, mỗi pointerId 1 việc ----
   const held = new Map();
   let steerVis = 0;
@@ -343,29 +375,31 @@ export function mountPadApp(mount, { team, client, onBack, steer: steerCfg }) {
     const r = wheel.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2), rad = wheel.offsetWidth / 2 * 1.12;
     return dx * dx + dy * dy <= rad * rad ? (dx < 0 ? "l" : "r") : null; });
   bind(gas, () => "b"); bind(brk, () => "k");
-  let msN = 0, msShown = -1, msHold = 0;
-  const slots = [...fireB.querySelectorAll(".sr-slot")], busy = [0, 0], resEl = $(".ip-res");
+  // 4j: nút bắn kiểu thẻ — 2 ô tên lửa (đứng yên), +x = kho, thanh chuỗi đúng; bắn ⇒ quả mờ dần, nạp ⇒ hiện dần; không mục tiêu ⇒ bấm hiện NO TARGET AHEAD
+  let msN = 0, msShown = -1, msHold = 0, noaimOn = false, stkK = 0, stkN = 3;
+  // thẻ là LỚP PHỦ riêng (.ip-fbw) đè lên dải bắn — không nằm trong nút cũ (CSS nút tròn cũ đè span/b/svg); cả dải vẫn là vùng bấm
+  const fb = $(".ip-fbw .rw-fb"), slots = [...fb.querySelectorAll(".rw-fbm")], busy = [0, 0], resEl = $(".ip-res"), fbN = fb.querySelector(".rw-fb-num b"), fbL = fb.querySelector(".rw-fb-num small"), stkBox = fb.querySelector(".rw-fb-stk");
   const paintSlots = () => { const now = performance.now(), ready = Math.min(msN, 2);
-    slots.forEach((sl, j) => { if (now < busy[j]) return; const on = j < ready, was = sl.classList.contains("on");
-      if (on && !was) { sl.classList.remove("load"); void sl.offsetWidth; sl.classList.add("on", "load"); } else if (!on && was) sl.classList.remove("on", "load"); });
-    if (msShown !== msN && now > msHold) { msShown = msN; resEl.innerHTML = reserveHTML(Math.max(0, msN - 2)); } };
-  fireB.addEventListener("pointerdown", e => {                // như game: chính quả trong nút bay; còn kho ⇒ icon chờ thụt xuống + quả mới trồi lên
+    slots.forEach((sl, j) => { if (now < busy[j]) return; sl.classList.toggle("on", j < ready); });
+    if (msShown !== msN && now > msHold) { msShown = msN; const st = Math.max(0, msN - 2); fbN.textContent = "+" + st; fbL.textContent = st === 1 ? "MISSILE" : "MISSILES"; }
+    if (stkBox.children.length !== stkN) stkBox.innerHTML = "<i></i>".repeat(Math.max(1, stkN));
+    [...stkBox.children].forEach((x, k) => x.classList.toggle("on", k < stkK)); };
+  fireB.addEventListener("pointerdown", e => {
     e.preventDefault();
-    const fr = fireB.getBoundingClientRect(), rip = document.createElement("span");          // 3s: gợn sóng ở đúng chỗ ngón cái chạm (cả khi hết tên lửa, để biết đã chạm)
+    const fr = fireB.getBoundingClientRect(), rip = document.createElement("span");          // 3s: gợn sóng ở đúng chỗ ngón cái chạm
     rip.className = "ip-rip"; rip.style.left = (e.clientX - fr.left) + "px"; rip.style.top = (e.clientY - fr.top) + "px";
-    if (msN <= 0) rip.style.borderColor = "#64748b";
+    if (msN <= 0 || noaimOn) rip.style.borderColor = "#64748b";
     fireB.append(rip); setTimeout(() => rip.remove(), 600);
-    if (msN <= 0) return; client.send("fire"); fireB.classList.add("hit"); setTimeout(() => fireB.classList.remove("hit"), 160);
+    if (msN <= 0) return;
+    if (noaimOn) { fb.classList.remove("rw-nt"); void fb.offsetWidth; fb.classList.add("rw-nt"); clearTimeout(fb._t); fb._t = setTimeout(() => fb.classList.remove("rw-nt"), 1350); return; }
+    client.send("fire"); fireB.classList.add("hit"); setTimeout(() => fireB.classList.remove("hit"), 160);
     const n = msN, j = Math.min(n, 2) - 1, sl = slots[j], reload = n >= 3, now = performance.now();
-    busy[j] = now + 1100; sl.classList.remove("load"); void sl.offsetWidth; sl.classList.add("fly");
-    if (reload) {                                             // 3t: tên lửa con cuối hàng BAY LÊN đúng chỗ quả to vừa phóng
-      msHold = now + 700; const ic = resEl.querySelectorAll("svg"), last = ic[ic.length - 1];
-      if (last) { const a = last.getBoundingClientRect(), b = sl.getBoundingClientRect();
-        last.style.setProperty("--dx", (b.left + b.width / 2 - (a.left + a.width / 2)).toFixed(0) + "px");
-        last.style.setProperty("--dy", (b.top + b.height * 0.85 - a.bottom).toFixed(0) + "px"); last.classList.add("rise"); }
-    }
-    setTimeout(() => { sl.classList.remove("fly"); if (reload) { void sl.offsetWidth; sl.classList.add("on", "load"); } else sl.classList.remove("on"); }, 520);
-    msN = n - 1; setTimeout(() => { msShown = -1; paintSlots(); }, 720);
+    busy[j] = now + 1050; msHold = now + 380;
+    sl.classList.remove("in", "in0"); sl.classList.add("out");
+    setTimeout(() => { sl.classList.remove("out");
+      if (reload) { sl.classList.add("in0"); void sl.offsetWidth; sl.classList.add("in"); sl.classList.remove("in0"); setTimeout(() => sl.classList.remove("in"), 600); } else sl.classList.remove("on");
+      msShown = -1; paintSlots(); }, 380);
+    msN = n - 1;
   });
   // vô lăng quay mượt theo tay (như game: 70° khi bẻ hết)
   let wv = 0, raf = 0;
@@ -504,14 +538,16 @@ export function mountPadApp(mount, { team, client, onBack, steer: steerCfg }) {
     stats: () => ({ ...ST.out, gyro: (gyroAx ? AXN[gyroAx] + (gyroSign > 0 ? "+" : "−") : "learning") + (relearn ? " ↻" + relearn : "") }),
     setSteer, level, get steer() { return { ...SC, value: tiltOn ? tiltSteer : lastSteer, phi: TILT.phi, ok: TILT.ok, ev: TILT.ev }; },
     tiltDebug(deg) { TILT.debug = deg; if (deg != null) { TILT.phi = deg; if (!TILT.ok) { TILT.ok = true; root.dataset.tiltok = "1"; } } },   // bàn thử: giả góc nghiêng
-    setInfo(i) {
+    setInfo(i) {   // 4i: + dmg/dmgT/noaim
       $(".ip-kmh span").textContent = i.kmh;
       root.querySelectorAll(".ip-cells i").forEach((c, k) => c.style.setProperty("--f", Math.max(0, Math.min(1, i.cells - k)).toFixed(2)));
       $(".ip-nbar em").style.transform = `scaleX(${(i.nitro || 0).toFixed(2)})`;
       $(".ip-gas .sr-nfill").style.transform = `translateY(${((1 - Math.max(0, Math.min(1, i.nitro || 0))) * 100).toFixed(1)}%)`; gas.classList.toggle("nitro", (i.nitro || 0) > 0.01);   // 3t: trôi mượt (transition), mép mờ
-      msN = i.ms; paintSlots(); paintCap(); fireB.classList.toggle("ready", i.ms > 0 && i.phase === "race");
+      msN = i.ms; paintSlots(); paintCap(); fireB.classList.toggle("ready", i.ms > 0 && i.phase === "race"); fb.classList.toggle("ready", i.ms > 0 && i.phase === "race" && !(i.noaim === 1));
       root.dataset.alarm = String(root.dataset.m === "2" ? i.alarm || 0 : 0);
       $(".ip-warn").textContent = i.alarm === 2 ? "DODGE!" : i.alarm === 1 ? "⚠ MISSILE" : "";
+      noaimOn = i.noaim === 1 && i.phase === "race"; fb.classList.toggle("noaim", noaimOn); stkK = i.stk || 0; stkN = i.stkN || 3;   // 4j
+      dmgSync(i);                                                                         // 4i
     },
   };
 }

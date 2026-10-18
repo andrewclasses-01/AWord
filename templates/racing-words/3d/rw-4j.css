@@ -1,0 +1,9 @@
+/* RACING WORDS mẫu 4j (18/10/2026) — màn lớn: nạp SAU rw-4i.css + rw-4j-fb.css (thẻ nút bắn dùng chung).
+   Hàng nút dưới ô trả lời: chỉ còn 1 thẻ nút bắn trải hết bề ngang (kho / chuỗi đúng nằm TRONG thẻ). Bỏ kiểu nút đỏ cũ. */
+.rw-root .sr-arms.rw-arms4j { gap: 0; height: 6cqh; }
+.rw-root .sr-arms.rw-arms4j .sr-ms { display: none !important; }
+.rw-root .sr3 .sr-fire.rw-fb, .rw-root .sr-fire.rw-fb { --u: .78cqh; flex: 1 1 auto; width: auto; max-width: none; height: 100%; padding: 0; display: block; cursor: pointer;
+  background: linear-gradient(135deg, rgba(26,34,52,.97), rgba(8,12,20,.97)); animation: none; color: inherit; gap: 0; }
+.rw-root .sr-fire.rw-fb.ready { background: linear-gradient(135deg, rgba(26,34,52,.97), rgba(8,12,20,.97)); animation: none; }
+.rw-root .sr-fire.rw-fb:active { transform: skewX(-12deg) scale(.97); }
+.rw-root .sr-fire.rw-fb.rw-noaim { opacity: 1; }
