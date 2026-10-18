@@ -1,0 +1,6 @@
+/* RACING WORDS mẫu 4r (19/10/2026) — nạp SAU rw-4o.css. Đạn drone: thẻ đạn trên cột mờ khi chưa đủ pin / đang chờ · thanh pin đỏ khi < 25 % · dòng DRONE ở bảng kết trận. */
+.rw-dv-ammo span.wait { opacity: .45; }
+.rw-dv-ammo span.on.wait { opacity: .7; }
+.rw-dv-bat i { transition: transform .2s linear; }
+.rw-dv-bat i.low { background: #ff4d5e; }
+.sr-res-rows .rw-dres b { color: #b07cff; }
