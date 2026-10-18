@@ -1,3 +1,5 @@
+// TRAIN RUSH — Fight 1 màn mẫu 1ax (18/10/2026): = 1aw cho iPad mượt (tr-padui-1ax) — lõi bp3d-1ax (tin iPad thêm trường), kênh tr-padlink-1ax
+//   (trạng thái đi kênh KHÔNG xếp hàng), nhịp gửi iPad đều 30 tin/giây (1aw: `> 33,33 ms` trên màn 60 Hz lúc 2 khung lúc 3 ⇒ 20–30 tin lộn xộn).
 // TRAIN RUSH — Fight 1 màn mẫu 1aw (15/10/2026): lõi bp3d-1aw — thùng trúng 1 điểm, tốc độ +5 %/màn từ nấc Options, bỏ người trong toa.
 // TRAIN RUSH — Fight 1 màn mẫu 1au (14/10/2026): lõi bp3d-1au — thả được vào 2 toa đáp án cùng lúc (iPad tr-padui-1au thu nhỏ).
 // TRAIN RUSH — Fight 1 màn mẫu 1at (14/10/2026): lõi bp3d-1at (thùng đi theo gia tốc tàu, điểm chỉ khi chắc chắn, khinh khí cầu nhỏ + cao, nhanh ×2,
@@ -19,9 +21,9 @@
 //     host = cầu AWord { listActs, openAct, options(ov) } (như 1ao) · padSignal = kho bắt tay iPad { write, listen } (myGame: localSignal)
 //   ⇒ api { destroy(), setOptions(o), start(), G, core, pad }
 // Hàng nút, bảng Thư mục / Mode / PAUSED / kết quả: như fight-1ao (CSS fight-1al + fight-1ao + fight-1ap).
-import { createBalloonPop, DUO_COLORS } from "./bp3d-1aw.js";
+import { createBalloonPop, DUO_COLORS } from "./bp3d-1ax.js";
 import { createBpSound } from "./sound-1ah.js";
-import { createPadHost } from "./tr-padlink-1ap.js";
+import { createPadHost } from "./tr-padlink-1ax.js";
 
 const ICON = {
   menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
@@ -256,7 +258,7 @@ export async function createTrainRushFight({ mount, words, wordsTitle = "", opti
     const dt = last ? Math.min(0.1, (ts - last) / 1000) : 0; last = ts;
     if (!G.paused) tick(dt);
     paintHud();
-    if (pad && ts - padTick > 1000 / PAD_HZ) { padTick = ts; padSend(); }
+    if (pad && ts - padTick >= 1000 / PAD_HZ - 4) { padTick = ts; padSend(); }   // 1ax: −4 ms ⇒ màn 60 Hz gửi đúng mỗi 2 khung (đều 30 tin/giây)
   }
   function tick(dt) {
     if (G.phase === "play") {

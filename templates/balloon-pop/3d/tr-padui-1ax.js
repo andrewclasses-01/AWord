@@ -1,3 +1,17 @@
+// TRAIN RUSH 1ax (18/10/2026) — thầy: "iPad vẫn giật, máy bay (khinh khí cầu) + hộp giật; có hộp rơi xuống đường rồi lại nảy lên; cảnh sau không cần
+//   đẹp — một màu cam trơn". Thầy chốt: 30 khung, nền cam trơn, GIỮ ray + tà vẹt, bỏ khói, thùng rơi đất mờ dần. Đã làm:
+//   (1) 30 khung/giây ĐÚNG NHỊP: 1av đặt 25 ⇒ ngưỡng 38 ms ⇒ màn 60 Hz chỉ vẽ mỗi 3 khung = 20 khung/giây (Chế độ nguồn điện thấp rAF 30 Hz ⇒ 15);
+//       30 là ước của 60 / 120 / 30 Hz ⇒ mỗi khung cách đều.
+//   (2) Nền = MỘT màu cam trơn tô cả canvas (canvas { alpha: false }) — bỏ trời chuyển màu, mặt trời, 2 lớp núi, bụi, xương rồng, đất chuyển màu,
+//       nền đá, cỏ tiền cảnh. Giữ ray + tà vẹt (thấy tàu chạy). Bỏ khói ống khói.
+//   (3) Khinh khí cầu: game gửi baseY + pha + đà đầu màn ⇒ iPad tự tính bập bềnh theo giờ game và đẩy tiếp đúng tốc độ riêng từng quả
+//       (1av: bập bềnh nhảy bậc 30 lần/giây, 2 quả đầu màn bay nhanh hơn dự đoán ⇒ răng cưa).
+//   (4) Thùng: NỘI SUY giữa 2 tin (trễ DELAY 0,08 s), toạ độ tính THEO TÀU (thùng nằm trên tàu dính tàu, không trễ). 1av ĐOÁN TIẾP theo trọng lực
+//       không biết mặt đỡ ⇒ Wi-Fi khựng là thùng lún qua nóc toa/xuống đất rồi tin mới kéo NGƯỢC LÊN = "nảy"; còn kẹp ở nóc − 2 nên thùng dưới đất lơ lửng.
+//   (5) Thùng LẠC (game gửi g = 2: không trên tàu, thấp hơn nóc toa): chỉ được đi XUỐNG, ghim mặt ray, chạm đất thì mờ dần 0,5 s rồi ẩn — game hất
+//       thùng nằm trên ray sang lề (vy 2,4 + đi theo chiều sâu z): màn lớn thấy trượt ra lề, iPad 2D chỉ thấy phần NẢY LÊN ⇒ không vẽ phần đó.
+//   (6) Bố cục chữ (wrapFit) nhớ lại theo (chữ, khung) — 1av dò cỡ chữ lại MỖI khung cho mỗi toa / thùng / quả. Xoá nhớ khi phông nạp xong.
+//   (7) Kênh tr-padlink-1ax: tin trạng thái đi kênh không xếp hàng (1 gói rơi không chặn cả hàng); tin game mới (giờ game lùi > 2 s) ⇒ nhận lại từ đầu.
 // TRAIN RUSH 1av (14/10/2026) — thầy: "iPad nóng — trên iPad không cần mượt" ⇒ GIẢM TẢI (đo AWord scratch/dot523-tr.html, khung 1024×768 ×2):
 //   1as–1au vẽ lại cả màn 60 khung/giây ở độ nét ×2 (2048×1536) và mỗi khung TẠO LẠI ~17 gradient ⇒ ~17 ms/khung NGAY TRÊN MÁY TÍNH MẠNH
 //   (ghi lệnh 2 ms, phần tô điểm ảnh 15,6 ms; bỏ gradient còn 9,7). Nay: (1) PAD_FPS = 25 khung/giây khi đang chơi, IDLE_FPS = 8 khi màn đứng
@@ -27,13 +41,14 @@
 //   (2) mọi thứ đẩy tiếp tính từ LÚC TIN TỚI ⇒ tin tới không đều (Wi-Fi 30–150 ms) làm cả cảnh nhảy. Nay game gửi giờ game `t`, iPad ước giờ game
 //       (đường bao trên của độ lệch giờ — tin tới sớm nhất = ít trễ nhất) ⇒ vị trí tính theo giờ game, không lệ thuộc lúc tin tới.
 //   (3) bỏ shadowBlur (đắt trên Safari iPad) ở khung toa chờ; chạm 3 lần góc phải dưới ⇒ bảng đo: FPS · thời gian vẽ · nhịp tin · trễ mạng.
-import { createPadClient } from "./tr-padlink-1ap.js";
+import { createPadClient } from "./tr-padlink-1ax.js";
 
 const TEAM = [
   { name: "TEAM 1", main: "#d8392a", dark: "#7c1a10", env: ["#f2a092", "#d4513f", "#9a2b1f"], eng: "#8f1d14" },
   { name: "TEAM 2", main: "#2a72d8", dark: "#123d80", env: ["#a9c8f5", "#3f7fd6", "#1f4c94"], eng: "#1d3f7a" }];
 const BW = 6.0, BH = 2.0, VIS = 40, FOC = 0.46;
-const PAD_FPS = 25, IDLE_FPS = 8, CHOOSER_FPS = 10, PR_MAX = 1.5;   // 1av: giảm tải (iPad nóng)   // 1au: khinh khí cầu to hơn 1as (4,2 × 1,4) — khung thu nhỏ ⇒ chữ vẫn đọc rõ   // 1au: VIS bề ngang thấy (đơn vị) · FOC chỗ đặt camX (toa mở đầu tiên) tính từ trái
+const PAD_FPS = 30, IDLE_FPS = 8, CHOOSER_FPS = 10, PR_MAX = 1.5;   // 1ax: 25 ⇒ 30 (ước của 60/120/30 Hz — 25 thật ra chỉ ra 20 khung/giây)
+const BG = "#ec9a5c", DELAY = 0.08;   // 1ax: nền cam trơn · thùng vẽ trễ 0,08 s (≈ 2,4 tin) để luôn có 2 tin kẹp hai bên mà nội suy   // 1av: giảm tải (iPad nóng)   // 1au: khinh khí cầu to hơn 1as (4,2 × 1,4) — khung thu nhỏ ⇒ chữ vẫn đọc rõ   // 1au: VIS bề ngang thấy (đơn vị) · FOC chỗ đặt camX (toa mở đầu tiên) tính từ trái
            // cỡ khinh khí cầu trên iPad (đơn vị thế giới) — to hơn màn lớn cho dễ đọc / dễ chạm
 const CRW = 2.9 * 0.86, CR = 1.5 * 0.86;   // thùng (bp3d-1aq DUO_TS)
 
@@ -55,12 +70,21 @@ const fmt = s => { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ":
 function painter(ctx) {
   const GC = new Map();   // 1av: gradient dùng lại giữa các khung (khoá = toạ độ làm tròn + màu)
   const grad = (key, make) => { let g = GC.get(key); if (!g) { if (GC.size > 400) GC.clear(); g = make(); GC.set(key, g); } return g; };
+  const WC = new Map();   // 1ax: bố cục chữ đã dò (khoá = chữ + khung + cỡ) — phông nạp xong thì đo lại
+  try { document.fonts && document.fonts.addEventListener("loadingdone", () => WC.clear()); } catch (e) { /* */ }
   const D = {
     k: 1, W: 1024, H: 768,
     lg(x0, y0, x1, y1, stops) { return grad("l" + [x0, y0, x1, y1].map(Math.round).join(",") + stops.join(), () => { const g = ctx.createLinearGradient(x0, y0, x1, y1); stops.forEach(([p, c]) => g.addColorStop(p, c)); return g; }); },
     rg(x0, y0, r0, x1, y1, r1, stops) { return grad("r" + [x0, y0, r0, x1, y1, r1].map(Math.round).join(",") + stops.join(), () => { const g = ctx.createRadialGradient(x0, y0, r0, x1, y1, r1); stops.forEach(([p, c]) => g.addColorStop(p, c)); return g; }); },
     rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); },
-    wrapFit(text, maxW, maxH, maxPx, minPx, weight = 800, font = "Baloo 2", lh = 1.05) {   // 1au: lh = khoảng dòng (Baloo cao chữ ~1,15 cỡ)
+    wrapFit(text, maxW, maxH, maxPx, minPx, weight = 800, font = "Baloo 2", lh = 1.05) {   // 1ax: nhớ kết quả (vẫn đặt ctx.font như bản dò — nơi gọi dựa vào đó)
+      const key = text + "|" + [maxW, maxH, maxPx, minPx].map(v => Math.round(v * 2)).join(",") + "|" + weight + font + lh;
+      let r = WC.get(key);
+      if (!r) { if (WC.size > 600) WC.clear(); r = D.wrapFit0(text, maxW, maxH, maxPx, minPx, weight, font, lh); WC.set(key, r); }
+      ctx.font = `${weight} ${r.px}px "${font}"`;
+      return r;
+    },
+    wrapFit0(text, maxW, maxH, maxPx, minPx, weight = 800, font = "Baloo 2", lh = 1.05) {   // 1au: lh = khoảng dòng (Baloo cao chữ ~1,15 cỡ)
       const fit = px => { ctx.font = `${weight} ${px}px "${font}"`; const words = String(text).split(/\s+/), lines = []; let cur = "";
         for (const w of words) { const t = cur ? cur + " " + w : w; if (ctx.measureText(t).width <= maxW || !cur) cur = t; else { lines.push(cur); cur = w; } }
         if (cur) lines.push(cur); return lines; };
@@ -108,11 +132,12 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
   const T = TEAM[team ? 1 : 0], O = TEAM[team ? 0 : 1];
   el.innerHTML = `<div class="trp"><canvas class="trp-cv"></canvas><button class="trp-back" title="Choose team" hidden>‹</button></div>`;
   if (onBack) { const bk = el.querySelector(".trp-back"); bk.hidden = false; bk.addEventListener("click", () => onBack()); }
-  const cv = el.querySelector(".trp-cv"), ctx = cv.getContext("2d"), D = painter(ctx);
+  const cv = el.querySelector(".trp-cv"), ctx = cv.getContext("2d", { alpha: false }), D = painter(ctx);   // 1ax: canvas đục (nền tô kín)
   let clk = null; const stat = { on: false, gaps: [], lastAt: 0, frames: 0, fps: 0, fpsT: 0, drawMs: 0, taps: [] };   // 1ar
   let L = null, St = null, link = { s: "connecting", rtt: 0 }, dead = false, raf = 0, last = 0, flash = null, popped = new Set(), endEv = "";
   let W = 1024, H = 768, k = 1, ppu = 50, HEAD = 84, GY = 600, P = null, t = 0;
-  const fx = [], smoke = []; let smokeT = 0;
+  const fx = [];   // 1ax: bỏ khói
+  const hist = [], lost = new Map();   // 1ax: các tin gần nhất (nội suy thùng) · thùng lạc: id ⇒ { minY, landAt, rot }
   // ---- tiếng nhỏ + rung (Web Audio — mở sau lần chạm đầu)
   let ac = null;
   const beep = (f, d = 0.12, type = "sine", g = 0.18) => { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(), v = ac.createGain(); o.type = type; o.frequency.value = f; v.gain.setValueAtTime(g, ac.currentTime); v.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + d); o.connect(v).connect(ac.destination); o.start(); o.stop(ac.currentTime + d); } catch (e) { /* */ } };
@@ -121,7 +146,10 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
 
   function onInfo(d) {
       if (d.mode && d.x === undefined) { St = { ...(St || {}), mode: d.mode, ph: d.ph }; return; }
-      if (St && St.t != null && d.t != null && d.t < St.t) return;   // 1as: tin cũ tới muộn ⇒ bỏ
+      if (St && St.t != null && d.t != null && d.t < St.t) {
+        if (d.t > St.t - 2) return;   // 1as: tin cũ tới muộn ⇒ bỏ
+        St = null; clk = null; hist.length = 0; lost.clear(); sm.clear();   // 1ax: giờ game lùi hẳn = trận / trang game MỚI ⇒ nhận lại từ đầu (1av: bỏ mọi tin tới khi giờ vượt mốc cũ)
+      }
       const nowS = performance.now() / 1000;
       const before = clk != null ? predict(St, nowS + clk) : null;   // 1as: vị trí đang vẽ (theo tin cũ)
       if (d.t != null) {   // 1ar: độ lệch giờ game − giờ iPad; lấy đường bao trên (tin ít trễ nhất), trôi chậm xuống để theo kịp lệch đồng hồ
@@ -131,6 +159,10 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
       if (stat.lastAt) { const g = (nowS - stat.lastAt) * 1000; stat.gaps.push(g); if (stat.gaps.length > 60) stat.gaps.shift(); }
       stat.lastAt = nowS;
       St = { ...d, at: performance.now() };
+      if (d.t != null && d.x != null) {   // 1ax: lưu tin cho nội suy thùng (toạ độ theo tàu)
+        hist.push({ t: d.t, x: d.x, tv: d.tv || 0, ps: d.ps, c: new Map((d.c || []).map(e => [e[7], e])) });
+        if (hist.length > 12) hist.shift();
+      }
       if (before && clk != null) {   // 1as: phần lệch giữa tin cũ và tin mới ⇒ cộng vào độ bù, tan dần khi vẽ
         const after = predict(St, nowS + clk), keep = new Map();
         for (const [key, n] of after) {
@@ -163,15 +195,51 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
   fit();
   window.addEventListener("resize", fit);
 
-  // 1as: đoán vị trí mọi vật của trạng thái s ở giờ game g (để đo phần lệch khi tin mới tới)
+  // 1as: đoán vị trí mọi vật của trạng thái s ở giờ game g (để đo phần lệch khi tin mới tới) — 1ax: thùng không còn ở đây (nội suy, xem crateView)
   const sm = new Map(), Z0 = [0, 0], so = key => sm.get(key) || Z0;
+  // 1ax: vị trí khinh khí cầu b (của tin s) sau dt giây: trôi (cv − bv) + đà đầu màn tắt dần e^(−0,55 t) như game; bập bềnh theo giờ game g
+  function bpos(s, b, dt) {
+    const bo = b[7] || 0, x = b[1] + (s.cv - s.bv) * dt - (bo ? bo * (1 - Math.exp(-0.55 * dt)) / 0.55 : 0);
+    return [x, b[5] != null ? b[5] + Math.sin((s.t + dt) * 1.3 + b[6]) * 0.22 : b[2]];
+  }
   function predict(s, g) {
     const out = new Map(); if (!s || s.cx == null || s.t == null) return out;
     const dt = Math.max(0, Math.min(0.6, g - s.t)) * (s.ps ? 0 : 1);
     out.set("cam", [s.cx + s.cv * dt, 0]);
     if (s.x != null) out.set("tr", [s.x + s.tv * dt, 0]);
-    for (const b of s.b || []) out.set("b" + b[0], [b[1] + (s.cv - s.bv) * dt, b[2]]);
-    for (const c of s.c || []) if (c[7] != null) out.set("c" + c[7], [c[0] + (c[5] || 0) * dt, c[1] + (c[6] || 0) * dt - (c[6] ? 7.5 * dt * dt : 0)]);
+    for (const b of s.b || []) out.set("b" + b[0], bpos(s, b, dt));
+    return out;
+  }
+  // 1ax: THÙNG = nội suy giữa 2 tin kẹp giờ (giờ game hiện tại − DELAY), toạ độ x tính theo đầu máy (ox = vị trí tàu đang vẽ) ⇒ thùng trên tàu dính tàu.
+  //   Không bao giờ đoán tiếp theo trọng lực (1av: lún qua nóc rồi bật lên). Hết tin (Wi-Fi khựng) ⇒ giữ tin cuối, chỉ trôi ngang ≤ 0,1 s.
+  //   Thùng lạc (g = 2): chỉ đi xuống, ghim mặt ray, chạm đất ⇒ mờ dần 0,5 s.
+  const angLerp = (a, b, f) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return a + d * f; };
+  function crateView(ox) {
+    const out = []; if (!hist.length) return out;
+    const nowP = performance.now() / 1000, g = clk != null ? nowP + clk - DELAY : hist[hist.length - 1].t;
+    let j = hist.length - 1; while (j >= 0 && hist[j].t > g) j--;
+    let s0, s1 = null, f = 0, ex = 0;
+    if (j < 0) s0 = hist[0];
+    else if (j === hist.length - 1) { s0 = hist[j]; ex = s0.ps ? 0 : Math.min(0.1, g - s0.t); }
+    else { s0 = hist[j]; s1 = hist[j + 1]; f = Math.max(0, Math.min(1, (g - s0.t) / Math.max(1e-3, s1.t - s0.t))); }
+    const floor = rail() + CR / 2, seen = new Set();
+    for (const [id, e0] of s0.c) {
+      const e1 = s1 ? s1.c.get(id) : null, e = e1 || e0;
+      if (e[3]) continue;   // bị văng khỏi toa ⇒ ẩn (như 1av)
+      seen.add(id);
+      let xr, y, rot;
+      if (e1) { xr = (e0[0] - s0.x) + ((e1[0] - s1.x) - (e0[0] - s0.x)) * f; y = e0[1] + (e1[1] - e0[1]) * f; rot = angLerp(e0[4] || 0, e1[4] || 0, f); }
+      else { xr = e0[0] - s0.x + ((e0[5] || 0) - s0.tv) * ex; y = e0[1]; rot = e0[4] || 0; }
+      let a = 1;
+      if (e[8] === 2) {
+        let L2 = lost.get(id); if (!L2) { L2 = { minY: Infinity, landAt: 0, at: nowP, rot }; lost.set(id, L2); }
+        y = Math.max(floor, Math.min(L2.minY, y)); L2.minY = y;
+        if (!L2.landAt && (y <= floor + 0.02 || nowP - L2.at > 1.2)) { L2.landAt = nowP; L2.rot = rot; }
+        if (L2.landAt) { rot = L2.rot; a = 1 - (nowP - L2.landAt - 0.15) / 0.5; if (a <= 0) continue; a = Math.min(1, a); }
+      }
+      out.push({ id, x: ox + xr, y, word: e[2], rot, a });
+    }
+    if (lost.size > 60) for (const id of [...lost.keys()]) if (!seen.has(id)) lost.delete(id);
     return out;
   }
   // vị trí hiện tại (đẩy tiếp theo vận tốc kể từ lần nhận trạng thái)
@@ -186,52 +254,12 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
   const Y = wy => (wy <= SB ? GY - (wy - rail()) * ppu : GY - (SB - rail()) * ppu - (wy - SB) * ppu * SK);
   const rail = () => (L ? L.rail : 0.62), roof = () => (L ? L.roof : 3.82);
 
-  // ---------------------------------------------------------------- nền
-  function backdrop() {
-    const hz = Y(roof() + 0.9), cx = P ? P.cx : 0;
-    ctx.fillStyle = D.lg(0, HEAD, 0, hz, [[0, "#e7895c"], [0.6, "#f5b97a"], [1, "#fbe0ae"]]); ctx.fillRect(0, HEAD, W, hz - HEAD);
-    const sx = W * 0.78, sy = hz - 70 * k;
-    ctx.fillStyle = D.rg(sx, sy, 10 * k, sx, sy, 160 * k, [[0, "rgba(255,245,200,.9)"], [0.3, "rgba(255,220,150,.35)"], [1, "rgba(255,200,120,0)"]]); ctx.fillRect(sx - 160 * k, sy - 160 * k, 320 * k, 320 * k);
-    ctx.fillStyle = "#fff3c4"; ctx.beginPath(); ctx.arc(sx, sy, 34 * k, 0, 7); ctx.fill();
-    const layer = (par, col, hBase, hAmp, flat) => {
-      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, hz);
-      for (let x = 0; x <= W + 8; x += 8 * k) {
-        const wx = cx * par + (x - W * FOC) / ppu;
-        let h = hBase + hAmp * (0.5 + 0.3 * Math.sin(wx * 0.21) + 0.2 * Math.sin(wx * 0.53 + 1.3));
-        if (flat) { const m = Math.sin(wx * 0.17 + 0.4); h = m > 0.35 ? hBase + hAmp * 1.15 : m > 0.1 ? hBase + hAmp * (0.3 + (m - 0.1) * 3.4) : hBase + hAmp * 0.3 * (0.6 + 0.4 * Math.sin(wx * 0.9)); }
-        ctx.lineTo(x, hz - h * ppu);
-      }
-      ctx.lineTo(W, hz); ctx.closePath(); ctx.fill();
-    };
-    layer(0.08, "#c97a5e", 1.4, 2.6, true);
-    layer(0.18, "#a65a3f", 0.5, 1.5, false);
-    ctx.fillStyle = D.lg(0, hz, 0, H, [[0, "#d99660"], [1, "#c27445"]]); ctx.fillRect(0, hz, W, Y(rail()) - 2 * k - hz);   // 1av: chỉ tới nền đá ray (dưới đó đất ray phủ kín — đỡ tô 2 lần)
-    for (let i = -9; i < 11; i++) {   // 1au: khung rộng hơn
-      const base = Math.floor(cx * 0.6 / 4) + i, wx = base * 4 + hash(base) * 3, x = W * FOC + (wx - cx * 0.6) * ppu;
-      const y = hz + (8 * k + hash(base + 7) * (Y(rail() + 0.6) - hz - 18 * k));
-      if (hash(base + 3) < 0.25) cactus(x, y, (16 + hash(base) * 12) * k); else bush(x, y, (7 + hash(base + 1) * 8) * k);
-    }
-  }
-  function bush(x, y, r) { ctx.fillStyle = "#7a6a3a"; for (const [dx, dy, s] of [[0, 0, 1], [-0.8, 0.2, 0.7], [0.8, 0.25, 0.75]]) { ctx.beginPath(); ctx.ellipse(x + dx * r, y - r * 0.6 + dy * r, r * s, r * s * 0.7, 0, 0, 7); ctx.fill(); } }
-  function cactus(x, y, h) {
-    ctx.strokeStyle = "#4f6a3a"; ctx.lineCap = "round"; ctx.lineWidth = h * 0.22;
-    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - h);
-    ctx.moveTo(x, y - h * 0.45); ctx.lineTo(x - h * 0.3, y - h * 0.45); ctx.lineTo(x - h * 0.3, y - h * 0.75);
-    ctx.moveTo(x, y - h * 0.6); ctx.lineTo(x + h * 0.28, y - h * 0.6); ctx.lineTo(x + h * 0.28, y - h * 0.85); ctx.stroke();
-  }
+  // ---------------------------------------------------------------- nền — 1ax: cam trơn (tô trong draw) + chỉ còn ray và tà vẹt
   function track() {
     const by = Y(rail()), lw = W * FOC / ppu, rw = W * (1 - FOC) / ppu;
-    ctx.fillStyle = "#7d6a5a"; ctx.fillRect(0, by - 2 * k, W, 18 * k);
     ctx.fillStyle = "#4a3020"; const tw = 0.25 * ppu, step = 0.9;
     for (let wx = Math.floor((P.cx - lw) / step) * step; wx < P.cx + rw + 1; wx += step) ctx.fillRect(X(wx) - tw / 2, by + 1 * k, tw, 9 * k);
     ctx.fillStyle = "#d9d4cc"; ctx.fillRect(0, by - 4 * k, W, 5 * k);
-    ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(0, by + 1 * k, W, 2 * k);
-    ctx.fillStyle = "#a85e37"; ctx.fillRect(0, by + 16 * k, W, H - by - 16 * k);
-    ctx.strokeStyle = "#6d5b2c"; ctx.lineWidth = 2 * k;
-    for (let i = -10; i < 20; i++) {   // 1au
-      const base = Math.floor(P.cx * 1.25 / 2.2) + i, wx = base * 2.2 + hash(base + 11) * 1.6, x = W * FOC + (wx - P.cx * 1.25) * ppu, y = by + 26 * k + hash(base + 5) * (H - by - 30 * k);
-      for (let j = -3; j <= 3; j++) { ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + j * 3 * k, y - 10 * k, x + j * 5 * k, y - (14 + hash(base + j) * 10) * k); ctx.stroke(); }
-    }
   }
 
   // ---------------------------------------------------------------- tàu (gốc = tâm đầu máy). Bánh: tàu sang phải ⇒ góc TĂNG theo x (xuôi kim đồng hồ)
@@ -315,13 +343,13 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     ctx.fillStyle = "#ffd34d"; ctx.strokeStyle = "#7a4a10"; ctx.lineWidth = 2.5 * k;
     ctx.beginPath(); ctx.moveTo(cx - 16 * k, ay - 14 * k); ctx.lineTo(cx + 16 * k, ay - 14 * k); ctx.lineTo(cx, ay + 6 * k); ctx.closePath(); ctx.fill(); ctx.stroke();
   }
-  function crate(x, y, word, rot) {
+  function crate(x, y, word, rot, a = 1) {   // 1ax: a = độ đục (thùng lạc mờ dần)
     const u = ppu, w = CRW * u, h = CR * u;
-    ctx.save(); ctx.translate(X(x), Y(y)); ctx.rotate(-(rot || 0));
+    ctx.save(); ctx.translate(X(x), Y(y)); ctx.rotate(-(rot || 0)); ctx.globalAlpha = a;
     const g = D.lg(0, -h / 2, 0, h / 2, [[0, "#d8a266"], [1, "#a8723e"]]);
     ctx.fillStyle = g; ctx.fillRect(-w / 2, -h / 2, w, h);
     ctx.strokeStyle = "#6b4426"; ctx.lineWidth = 3 * k; ctx.strokeRect(-w / 2, -h / 2, w, h);
-    ctx.lineWidth = 2 * k; ctx.globalAlpha = 0.35; ctx.beginPath(); ctx.moveTo(-w / 2, -h / 2); ctx.lineTo(w / 2, h / 2); ctx.moveTo(w / 2, -h / 2); ctx.lineTo(-w / 2, h / 2); ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.lineWidth = 2 * k; ctx.globalAlpha = 0.35 * a; ctx.beginPath(); ctx.moveTo(-w / 2, -h / 2); ctx.lineTo(w / 2, h / 2); ctx.moveTo(w / 2, -h / 2); ctx.lineTo(-w / 2, h / 2); ctx.stroke(); ctx.globalAlpha = a;
     ctx.fillStyle = "#fff7e6"; D.rr(-w * 0.42, -h * 0.26, w * 0.84, h * 0.52, 5 * k); ctx.fill();
     ctx.fillStyle = "#2a1608"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; D.lines(D.wrapFit(word, w * 0.78, h * 0.46, 26 * k, Math.max(5, 0.14 * u), 800, "Baloo 2", 1.15), 0, 1 * k);   // 1au: cỡ tối thiểu theo cỡ thùng
     ctx.restore();
@@ -355,9 +383,6 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     hits.push({ id, x: sx, y: sy, rx: rx * 1.08, ry: ry * 1.5 });
   }
   function effects(dt) {
-    for (const s of smoke) { s.t += dt; s.x += s.vx * dt; s.y += 1.1 * dt; }
-    for (let i = smoke.length - 1; i >= 0; i--) if (smoke[i].t > 2.4) smoke.splice(i, 1);
-    for (const s of smoke) { const a = Math.max(0, 0.42 * (1 - s.t / 2.4)), r = (s.s + s.t * 0.32) * ppu * 0.7; ctx.fillStyle = `rgba(235,230,225,${a})`; ctx.beginPath(); ctx.arc(X(s.x), Y(s.y), r, 0, 7); ctx.fill(); }
     for (const f of fx) f.t += dt;
     for (let i = fx.length - 1; i >= 0; i--) if (fx[i].t > 1.2) fx.splice(i, 1);
     for (const f of fx) {
@@ -407,7 +432,7 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
   // ---------------------------------------------------------------- khung
   function draw(dt) {
     t += dt;
-    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);   // 1ax: nền cam trơn (canvas đục — không cần xoá)
     const lanes = L && L.lanes ? L.lanes : [7.2, 8.6, 10.0];
     const span = (lanes[2] + BH / 2 + 0.7) - (rail() - 1.5);
     ppu = Math.min((H - HEAD) / span, W / VIS);                         // 1au: khớp bề ngang VIS (thường hẹp hơn chiều cao)
@@ -419,14 +444,12 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     { const f = Math.exp(-dt / 0.12); for (const v of sm.values()) { v[0] *= f; v[1] *= f; } }   // 1as: độ bù tan dần
     const P0 = now(); if (P0) P0.cx += so("cam")[0];
     P = P0 || { cx: P ? P.cx : 0, x: null, bdx: 0, dt: 0 };
-    backdrop(); track();
+    track();
     const st = St ? St.st : "", ph = St ? St.ph : "";
     const live = St && (ph === "play" || ph === "countup" || ph === "between" || ph === "over");
     if (live && L && P.x != null && st !== "gone" && st !== "attract" && st !== "ready") {
-      for (const [id, x, y, word, bonus] of St.b || []) if (!popped.has(id)) { const o = so("b" + id); blimp(id, x + P.bdx + o[0], y + o[1], word, bonus); }
+      for (const b of St.b || []) if (!popped.has(b[0])) { const o = so("b" + b[0]), p = bpos(St, b, P.dt); blimp(b[0], p[0] + o[0], p[1] + o[1], b[3], b[4]); }   // 1ax: tốc độ + bập bềnh riêng từng quả
       const ox = P.x + so("tr")[0];
-      // khói ống khói (toạ độ thế giới)
-      smokeT -= dt; if (smokeT <= 0) { smokeT = 0.11; smoke.push({ x: ox + L.eng * 0.33, y: roof() + 0.9, t: 0, vx: (St.tv || 0) - 2.4, s: 0.35 + Math.random() * 0.2 }); }
       let ai = 0;
       for (const [type, lx, len, def, pruned] of L.cars) {
         if (type !== "a") { if (!pruned) car(type, ox + lx, len, def, false); continue; }
@@ -435,8 +458,8 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
       }
       tender(ox - L.eng / 2 - L.gap - L.ten / 2); engine(ox);
       if (St.out) { ctx.fillStyle = "rgba(60,60,70,.45)"; ctx.fillRect(0, Y(roof() + 1.2), W, Y(rail() - 0.3) - Y(roof() + 1.2)); }
-      for (const [x, y, word, kicked, rot, vx = 0, vy = 0, id] of St.c || []) if (!kicked) { const o = so("c" + id); crate(x + vx * P.dt + o[0], Math.max(roof() - 2, y + vy * P.dt - 7.5 * P.dt * P.dt * (vy !== 0 ? 1 : 0) + o[1]), word, rot); }   // 1ar: đẩy tiếp theo vận tốc · 1as: + độ bù
-    } else if (live && St) for (const [id, x, y, word, bonus] of St.b || []) if (!popped.has(id)) { const o = so("b" + id); blimp(id, x + P.bdx + o[0], y + o[1], word, bonus); }
+      for (const v of crateView(ox)) crate(v.x, v.y, v.word, v.rot, v.a);   // 1ax: nội suy theo tàu (thay đoán tiếp theo trọng lực)
+    } else if (live && St) for (const b of St.b || []) if (!popped.has(b[0])) { const o = so("b" + b[0]), p = bpos(St, b, P.dt); blimp(b[0], p[0] + o[0], p[1] + o[1], b[3], b[4]); }
     effects(dt);
     header();
     // lời nhắc / dải / thẻ theo trạng thái
@@ -468,11 +491,15 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
   }
   // 1av: màn ĐỨNG (chưa nối / chờ START / đếm / thẻ kết thúc / iPad tắt / tạm dừng) ⇒ IDLE_FPS; đang chơi ⇒ PAD_FPS
   const idle = () => !St || St.ps || St.mode === "off" || !(St.ph === "play" || St.ph === "countup" || St.ph === "between") || link.s !== "on" && link.s !== "relay";
+  let nextAt = 0;
   function loop(ts) {
     if (dead) return;
     raf = requestAnimationFrame(loop);
-    if (ts < last) last = ts;   // giờ lùi (không xảy ra với rAF thật) ⇒ không để vòng vẽ đứng hẳn / dt âm
-    if (last && ts - last < 1000 / (idle() && !fx.length && !flash ? IDLE_FPS : PAD_FPS) - 2) return;   // bỏ khung (−2 ms: rAF 60 Hz rơi đúng nhịp 25)
+    if (ts < last) { last = ts; nextAt = 0; }   // giờ lùi (không xảy ra với rAF thật) ⇒ không để vòng vẽ đứng hẳn / dt âm
+    // 1ax: lịch vẽ theo MỐC (nextAt += khoảng) thay vì "cách khung trước ≥ khoảng" — màn 60/120/30 Hz ra đúng 30 đều; màn tần số lẻ (83/144 Hz) vẫn đủ 30/giây
+    const iv = 1000 / (idle() && !fx.length && !flash ? IDLE_FPS : PAD_FPS);
+    if (nextAt && ts < nextAt - 2) return;
+    nextAt = nextAt && ts - nextAt < iv ? nextAt + iv : ts + iv;
     const dt = last ? Math.min(0.15, (ts - last) / 1000) : 0; last = ts;
     const t0 = performance.now(); draw(dt); const ms = performance.now() - t0;
     stat.drawMs += (ms - stat.drawMs) * 0.1; stat.frames++;
@@ -482,7 +509,8 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
   raf = requestAnimationFrame(loop);
   function statBox() {   // 1ar: bảng đo (chạm 3 lần góc phải dưới)
     const g = stat.gaps, avg = g.length ? g.reduce((a, b) => a + b, 0) / g.length : 0, mx = g.length ? Math.max(...g) : 0;
-    const lines = [`FPS ${stat.fps} · draw ${stat.drawMs.toFixed(1)} ms`, `msg every ${avg.toFixed(0)} ms (max ${mx.toFixed(0)})`, `link ${link.s} · ping ${Math.round(link.rtt || 0)} ms`];
+    const cs = client.state || {};   // 1ax: + kênh trạng thái đang dùng ("st" = không xếp hàng)
+    const lines = [`FPS ${stat.fps} · draw ${stat.drawMs.toFixed(1)} ms`, `msg every ${avg.toFixed(0)} ms (max ${mx.toFixed(0)})`, `link ${link.s} · ping ${Math.round(link.rtt || 0)} ms · ${cs.st === "open" ? "st" : "pad"}`];
     ctx.font = `700 ${Math.round(15 * k)}px "Baloo 2"`; const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 20 * k, h = lines.length * 20 * k + 12 * k;
     ctx.fillStyle = "rgba(0,0,0,.72)"; D.rr(W - w - 28 * k, H - h - 28 * k, w, h, 8 * k); ctx.fill();
     ctx.fillStyle = "#9dff9d"; ctx.textAlign = "left"; ctx.textBaseline = "top"; lines.forEach((l, i) => ctx.fillText(l, W - w - 18 * k, H - h - 22 * k + i * 20 * k));
@@ -503,7 +531,7 @@ export function mountTrainPad(el, { signal, team, onLeave = null, onBack = null 
     }
   });
   return {
-    get state() { return { link, St, L, clk, stat, sm }; },
+    get state() { return { link, St, L, clk, stat, sm, hist, lost, crates: P && P.x != null ? crateView(P.x + so("tr")[0]) : [] }; },   // 1ax: + thùng đang vẽ (bàn thử)
     get hits() { return hits; },   // bàn thử: vùng chạm khinh khí cầu (toạ độ canvas)
     tap(id) { const h = hits.find(q => q.id === id); if (!h) return false; const r = cv.getBoundingClientRect();   // bàn thử: chạm THẬT (pointerdown) vào giữa quả
       cv.dispatchEvent(new PointerEvent("pointerdown", { clientX: r.left + h.x / cv.width * r.width, clientY: r.top + h.y / cv.height * r.height, bubbles: true })); return true; },

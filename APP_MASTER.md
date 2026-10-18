@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **18/10/2026 Đợt 550 — TRAIN RUSH: MÀN iPAD MƯỢT** (myGame 1ax `cb85668`, chep-train-rush GOC fight-1ax / tr-padui-1ax): 30 khung/giây đúng nhịp (25 cũ thật ra 20), nền cam trơn chỉ còn ray + tà vẹt, bỏ khói; khinh khí cầu tự bập bềnh theo giờ game; thùng NỘI SUY theo đầu máy (hết lún rồi "nảy"), thùng rơi đất mờ dần; tin trạng thái đi kênh không xếp hàng (`tr-padlink-1ax`). Game chỉ thêm trường vào tin iPad. Chi tiết: GHI CHU DU AN.md Đợt 550.
 > ✏️ **18/10/2026 Đợt 549 — MÀN CHỌN WORDS: GAME 3D CHỈ NẠP SAU READY + OPTIONS ĐỦ NHƯ TRONG GAME** (bàn ngầm DỰNG NHẸ `setPreflight({light:true})` ⇒ `ui.preflight`/`api.preflight`, Train Rush · Star Loot · Racing Words · Rocket Race không nạp 3D; READY ⇒ hook thật + Apply/`remount()`; ý định SHOWDOWN ⇒ bảng nhúng có dòng Showdown). Chi tiết: GHI CHU DU AN.md Đợt 549.
 > ✏️ **17/10/2026 Đợt 548 — TEMPLATE TOURNAMENT** (bộ cấu hình giải đấu A Show Speed đổi từ act WORDS: khoá `tn*`/`ws*`, thẻ giải + Luyện với máy cho học sinh, không ghi results; core chỉ thêm dòng khai báo). Chi tiết: GHI CHU DU AN.md Đợt 548 + `templates/tournament/GHI CHU TOURNAMENT.md`.
 > ✏️ **17/10/2026 Đợt 547 — FIGHT: SỐ CÂU DƯỚI KHUNG = SỐ CÂU CẢ TRẬN** (True/false thôi hiện điểm đội, Find the match có số câu, In turns đổi số của bàn ra số cả bộ qua `ctl.soCauTran` + engine `setNav`). Chi tiết: GHI CHU DU AN.md Đợt 547.

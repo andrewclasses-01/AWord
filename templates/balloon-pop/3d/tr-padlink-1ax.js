@@ -1,3 +1,8 @@
+// TRAIN RUSH 1ax (18/10/2026) — = 1ap + KÊNH TRẠNG THÁI KHÔNG XẾP HÀNG: kênh "pad" (ordered, gửi lại tới khi tới) giữ cho lệnh / bố cục / sự kiện;
+//   tin "i:" (30 lần/giây, tin sau thay hẳn tin trước) đi kênh riêng "st" { ordered: false, maxRetransmits: 0 } ⇒ Wi-Fi rơi 1 gói thì BỎ gói đó,
+//   không chặn cả hàng tin phía sau (kênh xếp hàng: 1 gói rơi ⇒ mọi tin sau đứng chờ gửi lại ⇒ iPad nhận dồn cục, khựng 100–300 ms).
+//   Tương thích: iPad mới chào bằng nonce đầu "2." ⇒ máy chủ mới mở thêm "st"; iPad cũ (1ap) không có "2." ⇒ chỉ 1 kênh như cũ.
+//   iPad mới gặp máy chủ cũ ⇒ không có "st" ⇒ nhận "i:" qua kênh "pad" như cũ.
 // TRAIN RUSH 1ap (14/10/2026) — ĐƯỜNG NỐI iPAD ⇄ MÀN CHƠI cho FIGHT 1 MÀN. CHÉP AWord templates/rocket-race/rr-padlink.js (Đợt 514: đội đã có iPad
 // thì iPad thứ 2 bị TỪ CHỐI — "taken"), chỉ đổi phần lệnh:
 //   iPad → game:  "pop:<số khinh khí cầu>"  — chạm quả trên iPad = quả đó nổ trên màn lớn · "p:<n>" nhịp tim
@@ -40,7 +45,7 @@ export const TEAM_META = [{ name: "TEAM 1", color: "#e2402f" }, { name: "TEAM 2"
 // ctl = { press(team, "fire"|"boost"|"load"), status(team, "on"|"relay"|"wait"|"") }
 export function createPadHost({ signal, padUrl }) {
   let ctl = null, sid = "", unsubs = [], tick = 0, panelEl = null, failMsg = "";
-  const st = [0, 1].map(() => ({ pc: null, dc: null, served: "", offered: "", hc: 0, last: 0, rs: 0, s: "", sent: "" }));
+  const st = [0, 1].map(() => ({ pc: null, dc: null, sc: null, served: "", offered: "", hc: 0, last: 0, rs: 0, s: "", sent: "" }));   // 1ax: sc = kênh trạng thái
   // c0/c1 trong tài liệu host = đội đó ĐANG có iPad nối ⇒ màn chọn đội trên iPad ghi "đã có iPad" (chỉ ghi khi đổi có/không)
   const busy = s => s === "on" || s === "relay";
   const setS = (t, s) => {
@@ -50,7 +55,7 @@ export function createPadHost({ signal, padUrl }) {
     ctl && ctl.status(t, s); paintPanel();
   };
   const press = (t, k) => { st[t].last = performance.now(); if (isPadKey(k) && ctl) ctl.press(t, k); };
-  function closePc(t) { const x = st[t]; try { x.dc && x.dc.close(); } catch (e) { /* */ } try { x.pc && x.pc.close(); } catch (e) { /* */ } x.pc = x.dc = null; }
+  function closePc(t) { const x = st[t]; try { x.sc && x.sc.close(); } catch (e) { /* */ } try { x.dc && x.dc.close(); } catch (e) { /* */ } try { x.pc && x.pc.close(); } catch (e) { /* */ } x.pc = x.dc = x.sc = null; }
 
   async function offerTo(t, nonce) {
     const x = st[t];
@@ -59,6 +64,7 @@ export function createPadHost({ signal, padUrl }) {
     x.served = nonce; x.offered = ""; x.hc = 0; x.rs = 0; setS(t, "wait");
     const pc = new RTCPeerConnection({ iceServers: ICE }); x.pc = pc;
     const dc = pc.createDataChannel("pad", { ordered: true }); x.dc = dc;
+    x.sc = /^2\./.test(nonce) ? pc.createDataChannel("st", { ordered: false, maxRetransmits: 0 }) : null;   // 1ax: chỉ iPad mới (nonce "2.")
     dc.onopen = () => { if (x.dc === dc) { x.last = performance.now(); setS(t, "on"); } };
     dc.onclose = () => { if (x.dc === dc) setS(t, "wait"); };
     dc.onmessage = e => {
@@ -127,9 +133,9 @@ export function createPadHost({ signal, padUrl }) {
     get attached() { return !!ctl; },
     /** game → iPad: trạng thái (object) — chỉ gửi khi KHÁC lần trước; kênh thẳng mới gửi được */
     state(t, obj) {
-      const x = st[t]; if (!(x.dc && x.dc.readyState === "open")) return;
+      const x = st[t], ch = x.sc && x.sc.readyState === "open" ? x.sc : x.dc; if (!(ch && ch.readyState === "open")) return;   // 1ax: kênh "st" mở ⇒ đi "st"
       const m = "i:" + JSON.stringify(obj); if (m === x.sent) return;
-      try { x.dc.send(m); x.sent = m; } catch (e) { /* */ }
+      try { ch.send(m); x.sent = m; } catch (e) { /* */ }
     },
     /** game → iPad: sự kiện cho tiếng/rung */
     /** 1ap: game → iPad: chuỗi tuỳ ý (bố cục "l:…") — không lọc trùng */
@@ -149,7 +155,7 @@ export function createPadHost({ signal, padUrl }) {
       paintPanel();
     },
     panelClosed() { panelEl = null; },
-    get debug() { return st.map(x => ({ s: x.s, served: x.served, dc: x.dc ? x.dc.readyState : "", ice: x.pc ? x.pc.iceConnectionState : "" })); },
+    get debug() { return st.map(x => ({ s: x.s, served: x.served, dc: x.dc ? x.dc.readyState : "", st: x.sc ? x.sc.readyState : "", ice: x.pc ? x.pc.iceConnectionState : "" })); },
   };
 }
 
@@ -158,12 +164,12 @@ export function createPadHost({ signal, padUrl }) {
 // "kicked" = một iPad khác vừa chọn CÙNG đội và giành quyền ⇒ iPad này đứng yên (không tự chào lại) tới khi gọi reconnect() (giành lại).
 export function createPadClient({ signal, team, onState, onInfo, onEvent, onLayout }) {   // 1ap: + onLayout
   const me = "pad" + (team ? 1 : 0), t = team ? 1 : 0;
-  let sid = "", nonce = "", pc = null, dc = null, answered = false, rs = 0, rq = [], s = "", rtt = 0, ping = 0, pingAt = new Map(), relayT = 0, dead = false, tries = 0, kicked = false;
+  let sid = "", nonce = "", pc = null, dc = null, sc = null, answered = false, rs = 0, rq = [], s = "", rtt = 0, ping = 0, pingAt = new Map(), relayT = 0, dead = false, tries = 0, kicked = false;   // 1ax: sc = kênh trạng thái "st"
   const set = v => { if (v === s) return; s = v; onState && onState({ s, rtt }); };
-  function closePc() { try { dc && dc.close(); } catch (e) { /* */ } try { pc && pc.close(); } catch (e) { /* */ } pc = dc = null; }
+  function closePc() { try { sc && sc.close(); } catch (e) { /* */ } try { dc && dc.close(); } catch (e) { /* */ } try { pc && pc.close(); } catch (e) { /* */ } pc = dc = sc = null; }
   function hello() {
     if (!sid || dead || kicked) return;
-    closePc(); nonce = rid(); answered = false; rs = 0; rq = []; tries = 0; clearTimeout(relayT);
+    closePc(); nonce = "2." + rid(); answered = false; rs = 0; rq = []; tries = 0; clearTimeout(relayT);   // 1ax: "2." = iPad nhận được kênh trạng thái "st"
     set("connecting");
     signal.write(me, { sid, nonce, answer: "", rs: 0, rq: "" }).catch(e => console.warn("pad hello", e));
   }
@@ -173,6 +179,11 @@ export function createPadClient({ signal, team, onState, onInfo, onEvent, onLayo
     pc = new RTCPeerConnection({ iceServers: ICE });
     const mine = pc;
     pc.ondatachannel = e => {
+      if (e.channel.label === "st") {   // 1ax: kênh trạng thái — chỉ "i:", đóng/mở không đụng trạng thái nối (kênh "pad" lo)
+        const ch = e.channel; sc = ch;
+        ch.onmessage = ev => { if (pc !== mine || sc !== ch) return; const m = String(ev.data); if (m.startsWith("i:") && onInfo) { try { onInfo(JSON.parse(m.slice(2))); } catch (er) { /* */ } } };
+        return;
+      }
       dc = e.channel;
       dc.onopen = () => { if (pc === mine) { clearTimeout(relayT); set("on"); } };
       dc.onclose = () => { if (pc === mine && !dead) { set("connecting"); setTimeout(() => { if (pc === mine) hello(); }, 800); } };
@@ -219,7 +230,7 @@ export function createPadClient({ signal, team, onState, onInfo, onEvent, onLayo
       signal.write(me, { sid, nonce, rs, rq: rq.join(",") }).catch(e => console.warn("pad relay", e));
       return true;
     },
-    get state() { return { s, rtt, dc: dc ? dc.readyState : "", ice: pc ? pc.iceConnectionState : "" }; },
+    get state() { return { s, rtt, dc: dc ? dc.readyState : "", st: sc ? sc.readyState : "", ice: pc ? pc.iceConnectionState : "" }; },
     reconnect() { kicked = false; hello(); },              // giành lại đội sau khi bị iPad khác giành
     destroy() { dead = true; clearInterval(beat); clearInterval(nudge); clearTimeout(relayT); document.removeEventListener("visibilitychange", onVis); try { unsub(); } catch (e) { /* */ } closePc(); },
   };

@@ -296,3 +296,34 @@ xong bằng `getImageData(0,0,1,1)`. Tải/giây = ms/khung × khung/giây; số
 - `tools/chep-train-rush.py` GOC_THEM tr-padui-1av · `pad.js` ⇒ tr-padui-1av. Kiểm khớp: chạy lại công cụ chép không đổi gì; rr-padscene AWord = bản chép myGame (trừ import).
 - Đã kiểm: hình 2 màn iPad y cũ (chụp), mô-đun nạp trên devserver, pad.html sạch, bàn đo 1av 9,5 ms/khung không lỗi.
 ⬜ thầy chơi vài trận với iPad thật: còn nóng không, 25 khung/giây có khó chịu không. Còn nóng ⇒ 20 khung/giây + độ nét 1,25 (hằng PAD_FPS / PR_MAX đầu 2 file).
+
+## Đợt 550 (chép từ GHI CHU DU AN.md) (18/10/2026) — TRAIN RUSH: MÀN iPAD MƯỢT (30 khung đúng nhịp · nền cam trơn · khinh khí cầu tự bập bềnh · thùng hết "nảy")
+
+**Thầy:** "Hiển thị trên iPad vẫn giật, có thể cần tăng fps · máy bay (khinh khí cầu) và các hộp chuyển động rất giật · có hộp rơi xuống đường rồi lại nảy lên
+trên iPad (trên game thì rơi chuẩn) · đồ hoạ iPad không cần đẹp, cảnh sau một màu cam trơn — không làm sai tính năng khác, không ảnh hưởng hiệu năng game".
+Thầy chốt: 30 khung, nền cam trơn, GIỮ ray + tà vẹt, bỏ khói, thùng rơi đất mờ dần; làm myGame trước (mẫu **1ax** `cb85668`), thầy xem `xem-1ax.html` OK ⇒ chép AWord.
+
+**Gốc (soi code 1av):** `PAD_FPS 25` + ngưỡng "≥ 38 ms" ⇒ màn 60 Hz chỉ vẽ **20 khung/giây** · iPad không biết bập bềnh + đà đầu màn của khinh khí cầu ⇒ răng cưa ·
+thùng ĐOÁN TIẾP theo trọng lực mà không biết mặt đỡ ⇒ lún qua nóc / xuống dưới chỗ dừng thật, tin mới kéo NGƯỢC LÊN = "nảy"; thùng dưới đất kẹp ở nóc − 2 ⇒ lơ lửng ·
+kênh DataChannel `ordered` ⇒ rơi 1 gói là cả hàng tin chờ · máy chủ gửi `> 33,33 ms` ⇒ 20–30 tin lộn xộn · nền nhiều lớp + khói + dò cỡ chữ mỗi khung.
+
+**Sửa (chép bằng `tools/chep-train-rush.py` GOC `fight-1ax.js`, GOC_THEM `tr-padui-1ax.js`; công cụ tự xoá bp3d-1aw · fight-1aw · tr-padlink-1ap · tr-padui-1av):**
+- `3d/tr-padui-1ax.js` (iPad): 30 khung theo MỐC (`nextAt += 1000/30`) · canvas `{alpha:false}` + một `fillRect` cam `#ec9a5c`, chỉ còn ray + tà vẹt, bỏ khói ·
+  khinh khí cầu tính x theo đà riêng + y = baseY + bập bềnh theo giờ game (y hệt game) · thùng NỘI SUY giữa 2 tin (trễ 0,08 s), x tính theo đầu máy (thùng trên tàu
+  dính tàu) — không đoán theo trọng lực · thùng lạc (cờ g = 2) chỉ đi xuống, ghim mặt ray, chạm đất mờ dần 0,5 s · nhớ bố cục chữ (xoá khi phông nạp xong) ·
+  giờ game lùi > 2 s (trận mới) ⇒ nhận lại từ đầu.
+- `3d/tr-padlink-1ax.js`: tin trạng thái "i:" đi kênh `st` { ordered:false, maxRetransmits:0 }; lệnh chạm / bố cục / sự kiện vẫn kênh `pad`. Tương thích: iPad mới chào
+  nonce đầu `2.` ⇒ máy chủ mới mở `st`; iPad cũ ⇒ 1 kênh như cũ. KHÔNG thêm trường nào vào tài liệu Firestore.
+- `3d/bp3d-1ax.js`: CHỈ thêm trường vào `padState` (khinh khí cầu baseY/pha/boost; thùng cờ g) — game không đổi luật/hình/vật lý.
+- `3d/fight-1ax.js`: gửi iPad `≥ 1000/30 − 4 ms` ⇒ đều 30 tin/giây.
+- Sửa tay: `templates/balloon-pop/balloon-pop.js` import bp3d-1ax / fight-1ax (3 chỗ) · `pad.js` nạp `tr-padui-1ax.js` · `tr-pad-signal.js` import `localSignal` từ
+  `tr-padlink-1ax.js` · `load-files.js` đổi 3 tên + số byte theo đĩa (cùng bộ module, chỉ đổi phiên bản — không đo lại).
+
+**Đã kiểm:** myGame (`tools/do-ipad-train-rush/`, Chrome riêng qua CDP, game thật + iPad ×2, Wi-Fi giả trễ 0–150 ms): 22 → **30** khung/giây · vẽ 1 khung 9,6 → **2,9 ms**
+(tải mỗi giây −60 %) · thùng lún rồi bật lên 15/17 → **0/16** · khinh khí cầu giật dọc p95 0,37 → 0,03 px · thùng dưới đất hết lơ lửng (1,82 → 1,27 = mặt ray) · bảng số
+đầy đủ: myGame `balloon-pop/NGHIEN CUU GAMEPLAY.md` mục 48. AWord (cùng bàn đo trỏ vào `templates/balloon-pop/3d/`): `balloon-pop.js` + `tr-pad-signal.js` nạp
+sạch, game + iPad 30 khung, 0/14 thùng lún, chạm khinh khí cầu trên iPad ⇒ quả nổ trên màn lớn, kênh `st` open.
+
+**VIỆC ĐANG CHỜ:** ⬜ thầy chơi TOMKO + 2 iPad thật: iPad mượt chưa, còn nóng không (chạm 3 lần góc phải dưới iPad = bảng đo: FPS 30, dòng 3 có `st`).
+⚠️ iPad đang mở trang cũ thì tải lại trang (iPad cũ vẫn chạy được với máy chủ mới nhưng không có phần mượt).
+

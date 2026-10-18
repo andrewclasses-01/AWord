@@ -1,3 +1,5 @@
+// TRAIN RUSH — lõi MẪU 1ax (18/10/2026) = 1aw + padState gửi thêm cho iPad (tr-padui-1ax): khinh khí cầu baseY · pha · boost; thùng cờ g (rơi / trên tàu / lạc).
+//   Không đổi gì trong game (chỉ thêm trường vào tin gửi iPad).
 // TRAIN RUSH — lõi MẪU 1aw (15/10/2026), thầy 3 ý (cả Single lẫn Fight):
 //   1) mỗi thùng rơi trúng toa đúng chỉ tính 1 ĐIỂM (trước 5; đang x2 ⇒ 2) ·
 //   2) tốc độ TÀU + KHINH KHÍ CẦU: màn 1 = đúng nấc Options, mỗi màn sau +5 % (levelBoost, tối đa ×1,75) — thay kiểu cũ tàu +4 %/toa · khinh khí cầu +6 %/màn ·
@@ -2105,8 +2107,11 @@ export async function createBalloonPop({ mount, view = "side", words, wordsTitle
       return { t: Math.round(SH.time * 1000) / 1000, cx: r2(SH.camX), cv: r2(SH.camV),   // 1ar: t = giờ GAME của trạng thái (iPad tính theo giờ này, không theo lúc tin tới)
         x: R.train ? r2(R.train.position.x) : null, tv: r2(R.trainV), st: R.state, sc: R.score, lv: R.layoutV || 0, ps: SH.paused ? 1 : 0,
         f: R.carts.map(c => (c.filled ? 1 : 0)).join(""), bv: r2(withRig(R, blimpV)),
-        b: R.blimps.filter(b => !b.leaving).map(b => [b.id, r2(b.x), r2(b.y), b.word || "", b.bonus || ""]),
-        c: R.crates.filter(c => !c.removed && c.body).map(c => { const q = c.body.quaternion; return [r2(c.body.position.x), r2(c.body.position.y), c.word, c.kicked ? 1 : 0, r2(2 * Math.atan2(q.z, q.w)), r2(c.body.velocity.x), r2(c.body.velocity.y), c.id]; }) };   // 1as: + số hiệu thùng   // 1aq: + góc nghiêng · 1ar: + vận tốc (iPad cho thùng chạy theo tàu giữa 2 tin)
+        // 1ax: + baseY · pha bập bềnh · đà đầu màn (boost) ⇒ iPad tự tính bập bềnh theo giờ game + đẩy tiếp đúng tốc độ RIÊNG từng quả (1aw thiếu boost ⇒ răng cưa)
+        b: R.blimps.filter(b => !b.leaving).map(b => [b.id, r2(b.x), r2(b.y), b.word || "", b.bonus || "", r2(b.baseY), Math.round(b.phase * 1000) / 1000, r2(b.boost || 0)]),
+        // 1ax: + g = 0 đang rơi · 1 nằm trên tàu · 2 LẠC (không trên tàu, đã thấp hơn nóc toa ⇒ xuống đất) — iPad ghim mặt đất + mờ dần
+        c: R.crates.filter(c => !c.removed && c.body).map(c => { const q = c.body.quaternion; return [r2(c.body.position.x), r2(c.body.position.y), c.word, c.kicked ? 1 : 0, r2(2 * Math.atan2(q.z, q.w)), r2(c.body.velocity.x), r2(c.body.velocity.y), c.id,
+          c.onTrain ? 1 : c.body.position.y < ROOF_W - 0.35 ? 2 : 0]; }) };   // 1as: + số hiệu thùng   // 1aq: + góc nghiêng · 1ar: + vận tốc (iPad cho thùng chạy theo tàu giữa 2 tin)
     },
     popById(team, id) {
       const R = RIGS[team]; if (!R || R.state !== "play" || SH.paused) return false;

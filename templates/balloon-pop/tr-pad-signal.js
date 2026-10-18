@@ -2,7 +2,7 @@
 // TRAIN RUSH — KÊNH BẮT TAY iPAD QUA FIRESTORE (Đợt 515, thầy 14/10/2026: Fight 1 màn "điều khiển bằng iPad như ROCKET RACE").
 //
 // CHÉP khuôn templates/rocket-race/rr-pad-signal.js (Đợt 511 — thầy đã thử iPad thật): lệnh (iPad chạm quả ⇒ "pop:<số>") + trạng thái
-// (bố cục tàu, vị trí khinh khí cầu) đi WebRTC DataChannel (./3d/tr-padlink-1ap.js — chép từ myGame, đừng sửa tay); kho chỉ để 2 máy
+// (bố cục tàu, vị trí khinh khí cầu) đi WebRTC DataChannel (./3d/tr-padlink-1ax.js — Đợt 550, chép từ myGame, đừng sửa tay); kho chỉ để 2 máy
 // tìm thấy nhau + đường dự phòng. Ở `users/{uid}/items` của thầy — không luật mới. Ba tài liệu, MỖI CÁI ĐÚNG MỘT NGƯỜI GHI:
 //     trpad_host — máy chiếu ghi (sid, offer, c0/c1 = đội đang có iPad) · trpad_pad0 / trpad_pad1 — iPad đội đó ghi
 // ⚠️ kind "trainrush-pad" PHẢI có trong APP_DATA_KINDS (core/store.js), không thì ăn mất số link ?a=.
@@ -10,7 +10,7 @@
 // =============================================================
 
 import { db, fs, currentUser } from "../../core/firebase.js";
-import { localSignal } from "./3d/tr-padlink-1ap.js";
+import { localSignal } from "./3d/tr-padlink-1ax.js";
 
 export const TR_PAD_LOCAL = new URLSearchParams(location.search).get("padsig") === "local";
 export const TR_PAD_KIND = "trainrush-pad";
