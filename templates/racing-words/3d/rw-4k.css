@@ -1,0 +1,24 @@
+/* RACING WORDS mẫu 4k (19/10/2026) — DRONE đợt 1: nạp SAU rw-4j.css.
+   Cột drone giữa 2 khung nhìn (bố cục A): bề rộng = --rw-dw (lõi đặt theo độ trượt dK), 2 nửa đội hẹp lại đều 2 bên.
+   Chữ trên cột: tên drone + chế độ (dưới bảng đếm đầu vạch), dòng khoá / tâm, 3 ô đạn, thanh pin, gợi ý phím. Kiểu phẳng, tĩnh. */
+.sr-root.rw-drone .sr-half { width: calc((100% - var(--rw-dw, 0%)) / 2); }
+.sr-root.rw-drone .sr-divider { opacity: 0; }
+.rw-dv { position: absolute; top: 0; bottom: 0; left: 50%; width: var(--rw-dw, 0%); transform: translateX(-50%); z-index: 3; pointer-events: none; overflow: hidden;
+  display: none; --dc: #b07cff; box-shadow: inset .35cqh 0 0 #000, inset -.35cqh 0 0 #000; }
+.sr-root.rw-drone .rw-dv { display: block; }
+.rw-dv-top { position: absolute; left: 0; right: 0; top: 8cqh; display: flex; flex-direction: column; align-items: center; gap: .2cqh; text-shadow: 0 .2cqh .8cqh rgba(0,0,0,.8); }
+.rw-dv-top b { font: italic 900 2.3cqh/1 "Exo 2", sans-serif; letter-spacing: .22em; color: var(--dc); }
+.rw-dv-top span { font: 800 1.35cqh/1 "Exo 2", sans-serif; letter-spacing: .16em; color: #fff; opacity: .85; white-space: nowrap; }
+.rw-dv-lock { position: absolute; left: 0; right: 0; bottom: 13.5cqh; text-align: center; font: italic 900 1.9cqh/1.1 "Exo 2", sans-serif; letter-spacing: .1em; color: #fff;
+  text-shadow: 0 .2cqh .8cqh rgba(0,0,0,.85); padding: 0 1cqh; }
+.rw-dv-bot { position: absolute; left: 6%; right: 6%; bottom: 1.6cqh; display: flex; flex-direction: column; gap: 1cqh; }
+.rw-dv-ammo { display: flex; gap: .7cqh; }
+.rw-dv-ammo span { flex: 1 1 0; min-width: 0; text-align: center; font: italic 900 1.5cqh/1 "Exo 2", sans-serif; letter-spacing: .06em; color: #cfd6e2; padding: 1.1cqh .4cqh;
+  border-radius: 1cqh; background: rgba(8,12,20,.82); border: .25cqh solid rgba(255,255,255,.12); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rw-dv-ammo span.on { color: #fff; background: color-mix(in srgb, var(--ac) 30%, rgba(8,12,20,.9)); border-color: var(--ac); }
+.rw-dv-ammo span.off { opacity: .3; }
+.rw-dv-bat { position: relative; height: .8cqh; border-radius: 1cqh; background: rgba(255,255,255,.14); overflow: hidden; }
+.rw-dv-bat i { position: absolute; inset: 0; border-radius: inherit; background: var(--dc); transform-origin: 0 50%; }
+.rw-dv-keys { text-align: center; font: 700 1.2cqh/1 "Exo 2", sans-serif; letter-spacing: .08em; color: rgba(255,255,255,.55); white-space: nowrap; overflow: hidden; }
+/* Settings ▸ Drone: danh sách chế độ gọn hơn danh sách iPad */
+.rw-dmode { margin: 1cqh 0; }

@@ -546,6 +546,13 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 552 (19/10/2026) — TRANG THỬ ẨN Racing words + DRONE (thử 3 iPad thật trước khi chốt)
+- Thầy: "cần chạy được trước, test kết nối 3 thiết bị" ⇒ trang thử KHÔNG link: `lab/racing-drone.html` (màn lớn, cần đăng nhập AWord) · `lab/racing-drone-pad.html?t=0|1|2` (iPad, cùng tài khoản; QR ở xưởng).
+- Kênh bắt tay `templates/racing-words/rw-lab-signal.js` = rw-pad-signal nhưng tài liệu `rwlab_host/pad0/pad1/pad2` (không đụng phiên game thật), kind `racingwords-pad`.
+- File game chép tay từ myGame 4l vào `templates/racing-words/3d/` (đổi đường three / mc3d-qr như chep-racing-words.py): sr3d-4l.js, rw-4l.js, sr3d-padlink-4l.js, sr3d-padui-4l.js, rw-4k.css, rw-4l.css.
+  ⚠️ chep-racing-words.py lần sau (GOC khác) có thể DỌN các file này — trang thử hết dùng thì xoá cả thư mục lab/ + rw-lab-signal.js.
+- Template racing_words thật vẫn GOC rw-4j (Đợt 551), load-files.js không đổi.
+
 ## Đợt 551 (18/10/2026) — RACING WORDS: myGame 4g → 4j
 - Chép bằng `tools/chep-racing-words.py`: GOC `rw-4j.js` (lõi `sr3d-4j.js`, intro `sr3d-intro-4h.js` + xe `sr3d-car-4h.js` CÙNG mô-đun, tên lửa `sr3d-missile-4i.js`),
   GOC_THEM iPad `sr3d-padui-4j.js` + `sr3d-padlink-4j.js`, đầu game vẫn `sr3d-padlink-4f.js` (cùng giao thức), + `rw-loadpace-4h.js`. CSS thêm rw-4g · rw-4h · rw-4i · rw-4j-fb · rw-4j (đúng thứ tự).
