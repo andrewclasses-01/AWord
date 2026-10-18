@@ -1,0 +1,8 @@
+/* RACING WORDS mẫu 4o (19/10/2026) — nạp SAU rw-4l.css. Settings ▸ Drone ▸ MODEL = lưới thẻ theo nhóm (DRONES · AIRCRAFT · SPACESHIPS), 4 thẻ / hàng, không tràn. */
+.rw-dmdl { display: grid; gap: .5cqh; margin: .8cqh 0 1cqh; }
+.rw-dmdl b { font: 900 1.2cqh "Exo 2", sans-serif; letter-spacing: .16em; color: #8d9bb0; margin-top: .5cqh; }
+.rw-dmdl > div { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .6cqh; }
+.rw-dmdl button { font: 800 1.5cqh "Exo 2", sans-serif; color: #dbe3ee; background: rgba(255,255,255,.06); border: .2cqh solid rgba(255,255,255,.12); border-radius: 1cqh;
+  padding: 1cqh .4cqh; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rw-dmdl button:hover { background: rgba(255,255,255,.12); }
+.rw-dmdl button.on { background: #b07cff; border-color: #b07cff; color: #12061f; }
