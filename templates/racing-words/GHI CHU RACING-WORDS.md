@@ -2,6 +2,10 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
+## Đợt 556 (19/10/2026) — myGame 5h: TỐI ƯU TOMKO khi bật drone
+- GOC `rw-5h.js` · lõi `sr3d-5h.js` (xưởng `sr3d-intro-5f.js`, iPad padui-5g / padlink-5e giữ nguyên) · CSS thêm `rw-5h.css` sau rw-5f.css.
+- Luật mới khi sửa lõi: vật liệu `transparent` + DoubleSide phải `forceSinglePass` TRƯỚC compileAsync (`singlePass()`); đổi độ nét KHÔNG gọi `fit(true)`; không đọc offsetWidth/clientWidth trong vòng khung.
+
 ## Đợt 554 (19/10/2026) — myGame 5e → 5g: 2 DRONE (iPad thứ 4) — CHỐT
 - GOC `rw-5f.js` · lõi `sr3d-5f.js` · xưởng `sr3d-intro-5f.js` · đạn `sr3d-dammo-5e.js` (chủ đạn) · iPad `sr3d-padui-5g.js` + `sr3d-padlink-5e.js` (4 chỗ: t = 0 · 1 đội, 2 · 3 drone) · ảnh `anh-pad/`.
 - CSS nạp thêm sau rw-4y.css: rw-5e · rw-5f. Kênh bắt tay + `rwpad_pad3`; pad.js `?t=3` ⇒ vai DRONE 2 (cờ `aw.rwDrone` = "3").

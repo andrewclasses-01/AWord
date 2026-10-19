@@ -1,0 +1,6 @@
+/* RACING WORDS 5h (19/10/2026) — tối ưu TOMKO: keyframes có filter: blur() trên HUD đè canvas 4K ⇒ compositor lọc lại mỗi khung (bẫy #13).
+   Luật thường KHÔNG đè được thuộc tính trong @keyframes ⇒ khai keyframes mới không blur và đổi tên animation. */
+@keyframes rw-sb-in5h { from { opacity: 0; transform: translateY(-1.2cqh); } to { opacity: 1; transform: none; } }
+.rw-sb-r.cur { animation-name: rw-sb-in5h; }
+@keyframes rw-tin5h { from { opacity: 0; transform: translateY(var(--dy, 12px)); } to { opacity: 1; transform: none; } }
+.rw-tin { animation-name: rw-tin5h; }

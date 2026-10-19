@@ -546,6 +546,18 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 556 (19/10/2026) — RACING WORDS THẬT: myGame 5h — TỐI ƯU LẠI TRÊN TOMKO sau drone / 2 drone (thầy: "push myGame rồi đưa 5h lên AWord thật")
+- `tools/chep-racing-words.py`: GOC `rw-5h.js` (lõi `sr3d-5h.js`; xưởng / iPad / mô-đun khác giữ 5f / 5g) · CSS thêm `rw-5h.css` (cuối). `racing-words.js`: GAME `./3d/rw-5h.js`, CSS + rw-5h.
+  Chạy `python -I -X utf8 tools/chep-racing-words.py` (myGame `1488ae5`). Hồ sơ đo + nguyên nhân: myGame `speed-run/NGHIEN CUU GAMEPLAY.md` mục 48.
+- Đo TOMKO trong myActivity (act 572, đếm khung VẼ THẬT) — Đợt 554 (5f) khi bật drone: 5 đèn 56–57 fps, đua ~85 khung trễ / ván, bộ tự chỉnh tụt độ nét 1,0 ⇒ 0,7; CPU vẽ 4,8 ⇒ 9,0 ms.
+  Sửa (5h): vật liệu trong suốt 2 mặt (kính xe, thân + quạt drone) `forceSinglePass` (three vẽ 2 lượt + tính lại shader mỗi lần vẽ) · cột drone trượt không cấp lại khung đệm ·
+  đổi độ nét chỉ `setSize` (cũ đo lại cả HUD ⇒ khung 35–54 ms mỗi lần đổi) · bỏ đọc kích thước DOM mỗi khung · ẩn mảnh xe < 0,22 m trong cột drone · CSS bỏ `blur` trong keyframes.
+- Đo lại trên THƯ MỤC AWORD THẬT (worktree dot556, cùng act / kịch bản): không drone 60 / 60 / 60 / đua 59,8–59,9 · 1 drone 5 đèn 59,6, đua 59,7–59,8 · 2 drone 5 đèn 58,4, đua 59,7 ·
+  2 drone + Traffic Both + Sky Auto 5 đèn 59,0, đua 59,7 (lần 1 ngay sau khi mở myActivity, card 84 °C SW Thermal Slowdown: 56,3 / 58,7). 0 lỗi JS, 0 dịch shader giữa trận, độ nét 0,9–1,0.
+- `load-files.js` đo lại: 98 file, 5,37 MB (= cũ − rw-5f/sr3d-5f + rw-5h.js/sr3d-5h.js/rw-5h.css). Máy TOMKO không có `scratch/dot543-rec.html` ⇒ ghi bằng
+  myGame `tools/do-game-3d/recload.js` (resource timing trên bàn thử, lọc đúng tập file cũ) rồi `python -I tools/tao-load-files.py`.
+- Không bỏ hiệu ứng nào. ⬜ thầy thử TOMKO thật (2 drone + 4 iPad).
+
 ## Đợt 555 (19/10/2026) — NÚT IN Ở MÀN CHỌN TEMPLATE + LINK `?a=N&print=1` MỞ THẲNG HỘP IN (cửa cho myLesson v2.173.0)
 - Thầy: từ khi có màn chọn template, myLesson ▸ Worksheet ▸ "Lấy bản in AWord" mở act là kẹt ở màn chọn (không có nút Print) ⇒ thiếu đường lấy bản in.
   (Cửa sổ lấy bản in của myLesson gỡ chữ Electron khỏi UA nên `wantsPicker()` coi nó như Chrome thường ⇒ màn chọn hiện.)

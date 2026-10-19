@@ -1,3 +1,5 @@
+// RACING WORDS — GÓI NHÚNG mẫu 5h (19/10/2026) = rw-5f.js + lõi sr3d-5h.js (tối ưu lại trên TOMKO khi bật drone — NGHIEN CUU mục 48) + CSS rw-5h.css.
+// ---- gốc 5f ----
 // RACING WORDS — GÓI NHÚNG mẫu 5f (19/10/2026) = rw-5e.js + lõi sr3d-5f.js (màu sơn drone, máy quay ưu tiên xe dẫn + nâng theo khoảng cách) +
 //   xưởng sr3d-intro-5f.js (drone lơ lửng + ô chọn NO / 1 / 2 DRONE + mẫu — đặt thẳng cho trận, đồng bộ 2 chiều với Settings ▸ Drone). CSS thêm rw-5f.css.
 // RACING WORDS — GÓI NHÚNG mẫu 5e (19/10/2026) = rw-5d.js + lõi sr3d-5e.js (CHẾ ĐỘ 2 DRONE) · xưởng: 2 drone ⇒ 2 thẻ DRONE 1 · iPAD (xanh) + DRONE 2 · iPAD (cam). CSS thêm rw-5e.css.
@@ -86,7 +88,7 @@
 //   onEvent   : (k, v) — "pad" (iPad nối / mất nối), "padMode", "end", …
 // ⇒ { setOptions(o) (true = áp ngay, false = AWord dựng lại), destroy(), game, intro }
 // =============================================================
-import { createSpeedRun } from "./sr3d-5f.js";   // 5f: màu sơn, máy quay theo xe dẫn · 5e: 2 drone · 5d: tải mẫu drone khi bật · 5a: tin iPad drone có hồi chiêu · 4z: vùng nổ trúng cả 2 xe · 4y: tâm bóng mờ, bảng nhiều hiệp · 4x: icon 2D Neon viền · 4w: màu tâm, 1 tâm, tab mượt · 4v: NEAR/FAR dời drone, dấu điểm rơi, Auto target · 4u: nghiêng 4 hướng · 4t: nhỏ 10 %, đạn ra từ bụng, chỉnh cột + zoom · 4s: đạn nhỏ, phóng về trước, đuôi lửa · 4r: đạn drone · 4q: tâm ngắm lục giác HUD · 4p: 5 mẫu giữ + Quad quay · 4o: lưới chọn mẫu + sửa quạt · 4n: 8 mẫu + quạt quay + bay lượn · 4m: mẫu drone 3D thật · 4l: + iPad drone · 4k: DRONE
+import { createSpeedRun } from "./sr3d-5h.js";   // 5h: tối ưu TOMKO (vẽ 1 lượt vật liệu trong suốt, cột drone không cấp lại khung đệm, bớt ép bố cục)   // 5f: màu sơn, máy quay theo xe dẫn · 5e: 2 drone · 5d: tải mẫu drone khi bật · 5a: tin iPad drone có hồi chiêu · 4z: vùng nổ trúng cả 2 xe · 4y: tâm bóng mờ, bảng nhiều hiệp · 4x: icon 2D Neon viền · 4w: màu tâm, 1 tâm, tab mượt · 4v: NEAR/FAR dời drone, dấu điểm rơi, Auto target · 4u: nghiêng 4 hướng · 4t: nhỏ 10 %, đạn ra từ bụng, chỉnh cột + zoom · 4s: đạn nhỏ, phóng về trước, đuôi lửa · 4r: đạn drone · 4q: tâm ngắm lục giác HUD · 4p: 5 mẫu giữ + Quad quay · 4o: lưới chọn mẫu + sửa quạt · 4n: 8 mẫu + quạt quay + bay lượn · 4m: mẫu drone 3D thật · 4l: + iPad drone · 4k: DRONE
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
 import { createIntro } from "./sr3d-intro-5f.js";   // 5f: drone trong xưởng
 import { createSound } from "./sr3d-sound-3o.js";

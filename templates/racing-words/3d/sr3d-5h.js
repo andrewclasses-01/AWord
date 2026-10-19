@@ -1,3 +1,12 @@
+// RACING WORDS — LÕI MẪU 5h (19/10/2026) = sr3d-5f.js TỐI ƯU LẠI TRÊN TOMKO (đo act 572 trong myActivity, NGHIEN CUU mục 48):
+//   bật drone ⇒ CPU vẽ 4,8 ⇒ 9,0 ms/khung, 5 đèn 56–57 fps, đua ~85 khung trễ / ván, bộ tự chỉnh tụt độ nét 1,0 ⇒ 0,7. Sửa:
+//   · VẬT LIỆU TRONG SUỐT 2 MẶT (kính xe, thân + cánh quạt drone…) ⇒ forceSinglePass: three vẽ loại này 2 lượt (mặt sau rồi mặt trước), mỗi lượt
+//     đặt needsUpdate ⇒ tính lại tham số shader MỖI lần vẽ (getParameters) + gấp đôi lệnh vẽ. Đặt cờ trước khi dịch sẵn (prewarm / nạp mẫu drone).
+//   · cột drone trượt vào / ra: không fit(true) (cấp lại khung đệm renderer + composer + bloom) và không đọc kích thước DOM mỗi khung ⇒ fitHud().
+//   · vòng vẽ: bỏ fit() mỗi khung (đã có ResizeObserver; kiểm lại 1 lần / giây) · mũi tên đối thủ dùng kích thước đo sẵn (hết ép bố cục giữa khung).
+//   · đổi độ nét (bộ tự chỉnh) chỉ cấp lại khung đệm — cũ chạy cả fitHud ⇒ fitAns (đo chữ ô trả lời bằng scrollWidth) ⇒ mỗi lần đổi 1 khung 35–54 ms.
+//   · CỘT DRONE: mảnh xe nhỏ (bán kính < 0,22 m: logo, đĩa phanh, nội thất…) ẩn riêng trong lượt vẽ cột drone (nhìn từ trên cao chỉ vài điểm ảnh).
+// ---- gốc 5f ----
 // RACING WORDS — LÕI MẪU 5f (19/10/2026) = sr3d-5e.js + thầy chỉnh drone:
 //   · màu đội SƠN THẲNG lên thân drone (pha 70 % màu đội sáng hơn, không phát sáng) — bỏ quầng sáng dưới bụng.
 //   · máy quay drone ƯU TIÊN XE DẪN ĐẦU: bám xe đi trước, lùi sau nó (NEAR / FAR + khoảng cách 2 xe, tối đa GMAX 70 m) ⇒ xe dẫn luôn trong khung;
@@ -669,6 +678,22 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   // 4k: cột drone chiếm dwF = DRONE_W·dK bề ngang (dK 0..1 trượt mượt khi bật / tắt / màn kết) — 2 nửa đội hẹp lại đều 2 bên
   let dK = 0, dW = DRONE_W;   // 4t: dW = bề ngang cột theo Settings ▸ Drone
   const halfPx = w => Math.floor(w * (1 - dW * dK) / 2);
+  // 5h: mảnh xe nhỏ (bán kính thật < 0,22 m, không phát sáng) — chỉ ẩn trong lượt vẽ cột drone (nhìn từ trên cao chỉ vài điểm ảnh). Tính lại khi đổi xe.
+  const SMALL_R = 0.22, smallMap = new WeakMap(), sv = new THREE.Vector3();
+  function smallParts() {
+    const out = [];
+    for (const c of cars) {
+      if (!c || !c.rig) continue;
+      let L = smallMap.get(c);
+      if (!L) { L = []; c.rig.updateMatrixWorld(true);
+        c.rig.traverse(o => { if (!o.isMesh || !o.visible || !o.geometry) return; const g = o.geometry; if (!g.boundingSphere) g.computeBoundingSphere();
+          const ms = Array.isArray(o.material) ? o.material : [o.material]; if (ms.some(m => m && m.emissive && m.emissive.getHex() && (m.emissiveIntensity || 0) > 0)) return;   // đèn xe giữ
+          o.getWorldScale(sv); if (g.boundingSphere.radius * Math.max(sv.x, sv.y, sv.z) < SMALL_R) L.push(o); });
+        smallMap.set(c, L); }
+      for (const m of L) if (m.visible) out.push(m);
+    }
+    return out;
+  }
   composer.addPass(new SplitPass((r, target) => {
     const w = target.width, h = target.height, hw = halfPx(w), dpx = Math.max(0, Math.floor(h * dashF) - 4);
     r.setRenderTarget(target); r.setScissorTest(false); r.setClearColor(0x06080d, 1); r.clear();
@@ -683,7 +708,9 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       target.viewport.set(hw, 0, w - 2 * hw, h); target.scissor.set(hw, 0, w - 2 * hw, h); target.scissorTest = true;
       r.setRenderTarget(target);
       prepView(2, h);
+      const sm = smallParts(); sm.forEach(m => { m.visible = false; });   // 5h: mảnh xe nhỏ ẩn riêng trong cột drone (bớt ~50–60 lệnh vẽ)
       r.render(scene, dcam);
+      sm.forEach(m => { m.visible = true; });
     }
     target.viewport.set(0, 0, w, h); target.scissor.set(0, 0, w, h); target.scissorTest = false; r.setRenderTarget(target);
     // ⚠️ giải MSAA trọn khung (blit bị scissor cắt ⇒ dải dưới tap-lô giữ rác ⇒ NaN loang đen) — xem mẫu 2
@@ -1441,6 +1468,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       loadDrone(id, bend).then(m => {
         if (!m || tok !== o.tok || dead) { if (m) m.dispose(); return; }
         drop(); m.obj.scale.multiplyScalar(0.9 / (0.95 * 0.9));   /* 4t: mẫu thật cũng nhỏ 10 % (5e: theo cỡ gốc — nhóm g co giãn riêng) */ o.g.add(m.obj); o.model = m; o.basic.visible = false; o.tintDirty = true; paintTint(o);
+        singlePass(m.obj);                                       // 5h
         try { if (renderer.compileAsync) renderer.compileAsync(scene, dcam); } catch (e) { /* */ }
         onEvent("droneModel", id);
       }).catch(e => { console.warn("drone model", e); if (tok === o.tok) { o.modelId = "basic"; o.basic.visible = true; } });
@@ -1578,13 +1606,13 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   function layoutDrone(done) {
     mount.style.setProperty("--rw-dw", (dW * dK * 100).toFixed(3) + "%");
     mount.classList.toggle("rw-drone", dK > 0.001);
-    if (done) fit(true); else fitLens();
+    if (done) fitHud(); else fitLens(false);   // 5h: cũ fit(true) ⇒ cấp lại khung đệm renderer + composer + bloom dù khung không đổi cỡ
   }
-  function fitLens() {
+  function fitLens(read = true) {
     if (!W || !Hh) return;
     LENS.A = (W * (1 - dW * dK) / 2) / Hh; cams.forEach((c, i) => lens(c, i));
     dcam.aspect = Math.max(0.05, W * dW * Math.max(dK, 0.05) / Hh); dcam.updateProjectionMatrix();
-    H.forEach(x => { x.w = x.el.clientWidth; });
+    H.forEach(x => { x.w = read ? x.el.clientWidth : Math.floor(W * (1 - dW * dK) / 2); });   // 5h: đang trượt ⇒ tính, không đọc DOM (ép bố cục mỗi khung)
     const hf = (1 - dW * dK) / 2; blurPass.uniforms.uE.value.set(hf, 1 - hf);
   }
   // 3z: nút ⚙ CÀI ĐẶT đa năng — bảng NHỎ giữa màn có TAB (trận vẫn chạy tiếp); nhớ tab đang mở
@@ -2376,12 +2404,13 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     const on = G.phase === "race" && !inFrame && show < 0.05 && (G.mergeE || 0) < 0.3 && !o.dead && Math.abs(d) < 600;
     if (on !== !!h.oaOn) { h.oaOn = on; h.oa.classList.toggle("on", on); if (on) h.oaX = -1; }
     if (!on || !h.w) return;
+    if (!h.oaLw) { h.oaW = h.oa.offsetWidth || 40; h.oaLw = h.oaT.offsetWidth; h.oaLh = h.oaT.offsetHeight; }   // 5h: lúc fitHud mũi tên đang ẩn ⇒ đo 1 lần khi hiện
     const W = h.w, Hh = h.hgt * vh, cx = W / 2, cy = Hh * 0.45;
     let dx, dy;                                                     // hướng từ giữa khung nhìn tới xe kia (px)
     if (Math.abs(d) < 7) { dx = (Math.sign(o.x - t.x) || (i ? -1 : 1)) * W; dy = Hh * 0.1; }
     else if (d > 0) { if (P.z < 1) { dx = (P.x + 1) / 2 * W - cx; dy = Math.min(yTop, 0.5) * h.hgt - cy; if (Math.abs(dx) < 1 && Math.abs(dy) < 1) dy = -1; } else { dx = (o.x > t.x ? 1 : -1) * W; dy = -Hh * 0.5; } }
     else { dx = clamp((o.x - t.x) / (ROADX * 2), -0.6, 0.6) * W; dy = Hh; }
-    const n = Math.hypot(dx, dy) || 1, ux = dx / n, uy = dy / n, aw = h.oa.offsetWidth || 40, m = aw * 0.62;
+    const n = Math.hypot(dx, dy) || 1, ux = dx / n, uy = dy / n, aw = h.oaW || 40, m = aw * 0.62;   /* 5h: đo sẵn ở fitHud */
     const sx = (cx - m) / Math.max(1e-6, Math.abs(ux)), sy = (Hh / 2 - m) / Math.max(1e-6, Math.abs(uy));
     const tx = cx + ux * Math.min(sx, sy), ty = Hh / 2 + uy * Math.min(sx, sy);   // điểm trên mép (lề = 0,62 bề mũi tên)
     const k = 1 - Math.exp(-(dt || 0.016) * 10), ang = Math.atan2(uy, ux);
@@ -2389,7 +2418,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     h.oa.style.transform = `translate(${(h.oaX - aw / 2).toFixed(1)}px, ${(h.oaY - aw / 2).toFixed(1)}px)`;
     h.oaR.style.transform = `rotate(${(h.oaA * 180 / Math.PI + 90).toFixed(1)}deg)`;
     const dt2 = Math.round(Math.abs(d)) + " m"; if (dt2 !== h.oaD) { h.oaD = dt2; h.oaT.textContent = dt2; }
-    const ca = Math.cos(h.oaA), sa = Math.sin(h.oaA), lw = h.oaT.offsetWidth * 0.62, lh = h.oaT.offsetHeight, R = aw * 0.4 + Math.abs(ca) * lw / 2 + Math.abs(sa) * lh / 2 + aw * 0.05;
+    const ca = Math.cos(h.oaA), sa = Math.sin(h.oaA), lw = (h.oaLw || 0) * 0.62, lh = h.oaLh || 0, R = aw * 0.4 + Math.abs(ca) * lw / 2 + Math.abs(sa) * lh / 2 + aw * 0.05;
     h.oaT.style.transform = `translate(calc(-50% + ${(-ca * R).toFixed(1)}px), calc(-50% + ${(-sa * R).toFixed(1)}px))`;   // số mét SAU ĐUÔI
   }
   // 4g: SỐ ĐẾM 10 giây cuối (Time) giữa vạch chia 2 đội — đổi lớp mỗi giây (CSS keyframe chạy trên compositor)
@@ -2498,16 +2527,21 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   }
 
   // ---------- vòng vẽ ----------
-  const AR = makeAutoRes({ max: PR_MAX, min: Math.min(0.7, PR_MAX), key: "rw-3r", apply: pr => { renderer.setPixelRatio(pr); fit(true); } });   // 3r: không nấc MSAA
+  const AR = makeAutoRes({ max: PR_MAX, min: Math.min(0.7, PR_MAX), key: "rw-3r", apply: pr => { renderer.setPixelRatio(pr); if (W && Hh) { composer.setPixelRatio(pr); composer.setSize(W, Hh); } else fit(true); } });   // 5h: đổi độ nét KHÔNG đổi bố cục CSS ⇒ chỉ cấp lại khung đệm (cũ fit(true) ⇒ fitHud + fitAns đo chữ 10–17 ms mỗi lần đổi)   // 3r: không nấc MSAA
   let W = 0, Hh = 0;
   function fit(force) {
     const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h || (!force && w === W && h === Hh)) return;
     W = w; Hh = h; renderer.setSize(w, h, false); composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h);
+    fitHud();
+  }
+  function fitHud() {                                                               // 5h: phần đo HUD của fit() — không đụng khung đệm
+    const h = Hh; if (!h) return;
     dashF = clamp(H[0].dash.offsetHeight / h, 0, 0.6);
     H.forEach(x => { x.w = x.el.clientWidth; x.hgt = x.el.clientHeight; });   // 4i: mũi tên đối thủ tính theo px
     mount.style.setProperty("--rw-dashpx", H[0].dash.offsetHeight + "px");   // 4b: vạch mạng canh giữa phần khung nhìn
     fitLens();                                                                      // 4k: LENS.A theo bề rộng nửa (trừ cột drone) + máy quay drone + mép nhoè
-    H.forEach(x => fitAns(x.ans));                                                  // 4h
+    H.forEach((x, i) => { if (!i) fitAns(x.ans); else requestAnimationFrame(() => !dead && fitAns(x.ans)); });   // 4h · 5h: nửa thứ 2 canh chữ ở khung sau (mỗi nửa ~8 ms ép bố cục)
+    H.forEach(x => { if (!x.oa) return; x.oaW = x.oa.offsetWidth || 40; x.oaLw = x.oaT.offsetWidth; x.oaLh = x.oaT.offsetHeight; });   // 5h: mũi tên đối thủ đo 1 lần
   }
   const ro = new ResizeObserver(() => fit()); ro.observe(stage); fit(true);
 
@@ -2520,9 +2554,12 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       for (const c of cars) { if (dead) return; try { c.prepBurns && c.prepBurns(k); } catch (e) { /* */ } await new Promise(r => setTimeout(r, 40)); }
     }
   }
+  // 5h: vật liệu trong suốt 2 mặt ⇒ vẽ 1 lượt (xem đầu file). Gọi TRƯỚC compileAsync ⇒ dịch đúng biến thể DoubleSide.
+  function singlePass(root) { root.traverse(o => { const ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : []; ms.forEach(m => { if (m.transparent && m.side === THREE.DoubleSide && !m.forceSinglePass) m.forceSinglePass = true; }); }); }
   function prewarm() {
     if (warmP) return warmP;
     warmP = (async () => {
+      singlePass(scene);                                         // 5h
       const t0 = performance.now(), n0 = renderer.info.programs.length; let tC = t0, tR = t0, nC = 0, tT = t0, nT = 0;
       // mẫu những thứ CHỈ sinh lúc đua: tên lửa bay (vòng ngắm, cột sáng, lửa đuôi) · nổ (quả cầu lửa, vết cháy đường) · vết cháy trên thân xe
       try { missiles.launch({ from: 0, to: 1, x: 0, y: -40, z: 0, predict: () => ({ x: 0, s: 0 }) }); missiles.boom(0, 0, "hit"); } catch (e) { /* */ }
@@ -2565,7 +2602,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   }
 
   const RC = new THREE.Vector3(), RA = new THREE.Vector3();
-  let raf = 0, last = 0, manual = false, dead = false, fpsN = 0, fpsT = 0, fps = 0, pinT = 0;
+  let raf = 0, last = 0, manual = false, dead = false, fpsN = 0, fpsT = 0, fps = 0, pinT = 0, fitT = 0;
   // 4k: ĐẾM LỆNH VẼ cả khung (mọi lượt vẽ: 2 nửa + cột drone + hậu kỳ) — trung bình trượt
   renderer.info.autoReset = false;
   const DI = { calls: 0, tris: 0, drone: false };
@@ -2657,7 +2694,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     const dt = Math.min(0.05, last ? (now - last) / 1000 : 1 / 60); last = now;
     if (G.hold) return;                                                          // 3n: intro đang chiếu ⇒ không vẽ cảnh đua
     if (++pinT >= 30) { pinT = 0; pinPrograms(); }                                // 3p: giữ shader sống
-    fit(); if (!G.paused) frame(dt); else updateDrone(dt); renderer.info.reset(); composer.render(); drawCount(); AR.frame(now);   /* 4k: Settings đổi drone lúc dừng vẫn trượt cột · đếm lệnh vẽ */   // 3j: MENU mở ⇒ đứng hình
+    if (++fitT >= 60) { fitT = 0; fit(); }   /* 5h: cũ fit() MỖI khung (đọc clientWidth ⇒ ép bố cục) — ResizeObserver đã lo */ if (!G.paused) frame(dt); else updateDrone(dt); renderer.info.reset(); composer.render(); drawCount(); AR.frame(now);   /* 4k: Settings đổi drone lúc dừng vẫn trượt cột · đếm lệnh vẽ */   // 3j: MENU mở ⇒ đứng hình
     fpsN++; if (now - fpsT > 1000) { fps = fpsN; fpsN = 0; fpsT = now; onEvent("fps", fps); }
   }
   raf = requestAnimationFrame(loop);
