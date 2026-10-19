@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 557 (19/10/2026) — ROCKET RACE: TÀU + TÊN LỬA 3D CÓ SẴN + ⚙ SETTINGS (myGame mẫu 12 → 12e `f4deb77`) (thầy: "commit và push cả myGame, cả AWord")
+## Đợt 557 (19/10/2026) — ROCKET RACE: TÀU + TÊN LỬA 3D CÓ SẴN + ⚙ SETTINGS (myGame mẫu 12 → 12e `f4deb77`) (thầy: "commit và push cả myGame, cả AWord") — ✅ push `10c1298` + LIVE 32/32
 - **Nguồn:** myGame `rocket-race/game11` (= AWord a4170d8 + mẫu 12) chép bằng `myGame/tools/chep-rr-mau12-sang-aword.py` (đổi import three ⇒ ./vendor/three/, ./tau3d/) —
   `rr3d-view.js` · `rr3d-launch.js` · `rr3d-missile.js` (chỉ khác đúng phần mẫu 12, đã soát dòng cũ bị đổi) + **MỚI** `rr3d-ships.js` + `tau3d/` (7 tàu + 5 tên lửa glb nén
   meshopt + webp, 3,1 MB; `tau3d/anh/` 14 ảnh mô phỏng). Hồ sơ đầy đủ từng bước: myGame `GHI CHU DU AN.md` chặng "Rocket Race MẪU 12" → "12e".
