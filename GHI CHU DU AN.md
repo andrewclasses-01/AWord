@@ -561,6 +561,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 - Đợt 552n (19/10): trang thử lên myGame 4z — đạn drone chạm ⇒ MỌI xe trong vùng nổ đều nhận tác dụng (2 xe gần nhau trúng cả 2). File mới: 3d/sr3d-4z.js, rw-4z.js.
 - Đợt 552o (19/10): trang thử lên myGame 5a — BẢNG LÁI DRONE MỚI kiểu AERO YOKE (chân đế cố định, vô lăng nghiêng theo tay, vòng hồi chiêu thật, dòng ANDREW STUDIO); tin "j:" thêm hồi chiêu + đạn đang bay.
   File mới: 3d/sr3d-5a.js, rw-5a.js, sr3d-padlink-5a.js, sr3d-padui-5a.js (lab-pad thêm font Chakra Petch).
+- Đợt 552p (19/10): trang thử iPad drone lên myGame 5b — bỏ cột + chân đế, vô lăng LƠ LỬNG giữa (đầu cần tròn vuông góc phía sau), ANDREW STUDIO nhỏ + thấp, NEAR / FAR = icon tiến / lùi. File mới: 3d/sr3d-padui-5b.js.
   ⚠️ chep-racing-words.py lần sau (GOC khác) có thể DỌN các file này — trang thử hết dùng thì xoá cả thư mục lab/ + rw-lab-signal.js.
 - Template racing_words thật vẫn GOC rw-4j (Đợt 551), load-files.js không đổi.
 - Đợt 552b (19/10): trang thử nâng lên myGame 4m `13fce24` — mẫu drone 3D thật (A1 Mavic · A6 Quad · B3 Combat, Sketchfab CC BY, ghi công trong Settings ▸ Drone) ở `templates/racing-words/drone3d/` + `3d/sr3d-4m.js`, `rw-4m.js`, `sr3d-drone3d-4m.js`.
