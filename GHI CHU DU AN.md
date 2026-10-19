@@ -546,6 +546,23 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 555 (19/10/2026) — NÚT IN Ở MÀN CHỌN TEMPLATE + LINK `?a=N&print=1` MỞ THẲNG HỘP IN (cửa cho myLesson v2.173.0)
+- Thầy: từ khi có màn chọn template, myLesson ▸ Worksheet ▸ "Lấy bản in AWord" mở act là kẹt ở màn chọn (không có nút Print) ⇒ thiếu đường lấy bản in.
+  (Cửa sổ lấy bản in của myLesson gỡ chữ Electron khỏi UA nên `wantsPicker()` coi nó như Chrome thường ⇒ màn chọn hiện.)
+- `core/words-picker.js`: nút `.aw-wp-exit.aw-wp-print` (chỉ icon `icons.print`, không nền) góc dưới PHẢI, đối xứng mũi tên Back (thầy chốt kiểu A:
+  cùng cỡ 48/30, cùng màu, cách mép 28 — điện thoại 5). Bấm = `openPrintForAct(node)`. `onKey` bỏ qua phím khi `.aw-print-pop-overlay` đang mở
+  (không thì Enter trong hộp in mở khung Options phía sau).
+- `core/print.js`: `export openPrintForAct(libAct)` = `ensureTemplate` + `openPrintPopup(resolveActivity(libAct), libAct)` (y nút Print màn START của act
+  chưa đổi template); trả lớp phủ hộp in, đang mở sẵn hộp thì null.
+- `main.js` link `?a=N&print=1`: gỡ `print` khỏi địa chỉ (replaceState) · act WORDS: màn chọn + hộp in đè lên · act thường: CHƯA dựng game (khỏi nạp
+  game/nhạc chỉ để in), thầy đóng hộp in (MutationObserver thấy lớp phủ rời body) mới `startGame` như link thường. Lỗi nạp ⇒ toast + vào game.
+- CSS sinh từ `tools/wp.src.css` (`python -I tools/wp-css.py`). ⚠️ Nguồn đã LỆCH từ Đợt 548 (sửa thẳng `core/words-picker.css`, bỏ luật
+  `nth-child(7)`) ⇒ đã vá nguồn cho khớp; lần sau sửa NGUỒN rồi sinh lại.
+- Đã thử bàn `scratch/dot555-wp.html` (chép dot540-wp): hai nút cách mép 28/28 (đt 21/21), bấm THẬT icon in ⇒ hộp in mở; Enter khi hộp mở không mở
+  Options; Esc đóng hộp. ⚠️ Nhánh `?print=1` cần đăng nhập thư viện ⇒ chưa chạy được trên bàn thử — thầy thử qua myLesson.
+
+---
+
 ## Đợt 554 (19/10/2026) — RACING WORDS THẬT: 2 DRONE (iPad thứ 4) — myGame 5e → 5g (thầy CHỐT: "Bản 5g ổn rồi, chốt và đưa lên AWord")
 - `tools/chep-racing-words.py`: GOC `rw-5f.js` · GOC_THEM `sr3d-padui-5g.js` + `sr3d-padlink-5e.js` + `rw-loadpace-4h.js` · CSS + `rw-5e.css` + `rw-5f.css` (sau rw-4y) · chép thêm `anh-pad/*.webp`
   (4 ảnh xe / drone của màn chọn vai iPad — padui-5g nạp `../anh-pad/`). Chạy: `python -I -X utf8 tools/chep-racing-words.py`.

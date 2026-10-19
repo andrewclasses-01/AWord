@@ -609,6 +609,26 @@ async function routeFromLocation() {
       state.view = "play";
       if (!p.get("a")) setUrl(await linkFor(node), true);   // upgrade an old link in place
       document.title = node.title || PAGE_TITLE_BASE;   // ⭐ Đợt 325
+      // ⭐ Đợt 555 — `&print=1` (cửa của myLesson ▸ "Lấy bản in AWord"): mở THẲNG hộp in của act.
+      // Act WORDS: màn chọn template nằm dưới hộp in. Act thường: chưa dựng game (khỏi nạp game/nhạc
+      // chỉ để in) — thầy đóng hộp in thì mới vào màn START như mở link thường.
+      if (p.get("print") === "1") {
+        try { const u = new URL(location.href); u.searchParams.delete("print"); history.replaceState(history.state, "", u.toString()); } catch { /* ignore */ }
+        const words = await openWordsPickerFor(node);
+        const thenGame = words ? null : () => startGame(app, node, { onExit: goTop });
+        try {
+          const ov = await (await import("./core/print.js")).openPrintForAct(node);
+          if (ov && thenGame) {
+            const mo = new MutationObserver(() => { if (!ov.isConnected) { mo.disconnect(); thenGame(); } });
+            mo.observe(document.body, { childList: true });
+          } else if (thenGame) thenGame();
+        } catch (e) {
+          console.warn("AWord: could not open Print", e);
+          toast("Could not open Print — check the connection.");
+          if (thenGame) thenGame();
+        }
+        return;
+      }
       if (await openWordsPickerFor(node)) return;   // ⭐ Đợt 453 — act WORDS mở tay ⇒ màn chọn
       startGame(app, node, { onExit: goTop });
       return;

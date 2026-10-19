@@ -42,7 +42,7 @@
 // needs is what that flattening throws away, so Word has to reach past it.
 // =============================================================
 
-import { getTemplate } from "./registry.js";
+import { getTemplate, ensureTemplate } from "./registry.js";
 import { shuffle, el } from "./utils.js";
 import { icons } from "./icons.js";
 import { sound } from "./sound.js";
@@ -63,6 +63,18 @@ const FORMAT_ORDER = ["anagram", "crossword", "quiz", "unjumble", "word"];
 // Word's clue-set choice is now made in the popup's FIRST step (Đợt 415,
 // showVariantStep in openPrintPopup) — "all" = eng1 + vi2 side by side,
 // otherwise one of the act's own variant keys (variantsOf()).
+
+// ⭐ Đợt 555 (thầy 19/10/2026) — MỞ HỘP IN CỦA MỘT ACT THƯ VIỆN mà KHÔNG cần game đang chạy: nút máy in góc dưới
+// phải màn chọn template (core/words-picker.js) + link `?a=N&print=1` (main.js — cửa của myLesson ▸ "Lấy bản in AWord").
+// Y hệt nút Print của màn START với act chưa đổi template: activity = act đã phẳng về bộ đang bật, libAct = act gốc.
+// Trả về lớp phủ của hộp in (để main.js biết lúc thầy đóng hộp), hoặc null nếu đang mở sẵn một hộp.
+export async function openPrintForAct(libAct) {
+  if (document.querySelector(".aw-print-pop-overlay")) return null;
+  await ensureTemplate(libAct.type);   // extractItems() hỏi template.toPrintItems
+  openPrintPopup(resolveActivity(libAct), libAct);
+  const ovs = document.querySelectorAll(".aw-print-pop-overlay");
+  return ovs[ovs.length - 1] || null;
+}
 
 // ---------- public entry (called by core/engine.js Print button) ----------
 // `libAct` (optional, defaults to `activity`) is the RAW library act, needed

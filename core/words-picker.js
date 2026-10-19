@@ -307,6 +307,14 @@ export async function openWordsPicker(root, node, { onExit, onBack } = {}) {
   backBtn.onclick = () => { off(); setWordsPickerHook(null); (onBack || onExit || (() => {}))(); };
   wp.append(backBtn);
 
+  // ---- ⭐ Đợt 555 — nút IN (chỉ icon máy in) góc dưới PHẢI, đối xứng nút quay lại: mở hộp in của act
+  //      (core/print.js) ngay từ màn này, khỏi vào game — in nhanh trên mọi máy. ----
+  const printBtn = el("button", "aw-wp-exit aw-wp-print", icons.print);
+  printBtn.type = "button"; printBtn.title = "Print"; printBtn.setAttribute("aria-label", "Print");
+  printBtn.onclick = () => import("./print.js").then(m => m.openPrintForAct(node))
+    .catch(e => console.warn("AWord: could not open Print", e));
+  wp.append(printBtn);
+
   function wire(b, type) {
     if (!usable(type)) { b.classList.add("is-soon"); b.setAttribute("aria-disabled", "true"); b.title = "Doesn't fit this content"; }
     b.addEventListener("mouseenter", () => { st.hi = type; paintHi(); });
@@ -350,6 +358,7 @@ export async function openWordsPicker(root, node, { onExit, onBack } = {}) {
   function onKey(e) {
     if (!wp.isConnected) { off(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (document.querySelector(".aw-print-pop-overlay")) return;   // Đợt 555 — hộp in đang mở: phím là của nó
     if (pre) {
       // Game đang dựng NGẦM phía sau cũng nghe bàn phím (Enter/Space = bắt đầu chơi…) ⇒ khung mở thì chặn
       // phím ở đây; riêng ô gõ trong bảng (tên đội Running word…) vẫn nhận chữ như thường.

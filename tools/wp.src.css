@@ -44,7 +44,7 @@
 .aw-wp-rule { position: absolute; left: 80@; right: 80@; top: 448@; height: 1px; background: linear-gradient(90deg, transparent, #cfdbea 18%, #cfdbea 82%, transparent); }
 .aw-wp-z2 { position: absolute; left: 80@; right: 80@; top: 474@; display: grid; grid-template-columns: repeat(12, 1fr); gap: 14@; }
 .aw-wp-z2 .wp-tile { grid-column: span 2; }
-.aw-wp-z2 .wp-tile:nth-child(7) { grid-column: 2 / span 2; }
+/* Đợt 548: 12 ô = 2 hàng đủ 6 ô (trước 11 ô: hàng dưới lệch vào giữa) */
 
 /* 3D scene cards (flat art) */
 .wp-card { position: relative; height: 190@; border-radius: 22@; overflow: hidden; cursor: pointer; border: 0; padding: 0; display: block; width: 100%; text-align: left; transition: transform .22s cubic-bezier(.22,.61,.36,1), box-shadow .22s ease; outline: 0; }
@@ -95,6 +95,10 @@
 .aw-wp-exit:hover { color: var(--wp-blue); }
 .aw-wp-exit:hover svg { transform: translateX(-3@); }
 .aw-wp-exit:active { transform: scale(.9); }
+/* ⭐ Đợt 555 — nút IN (chỉ icon máy in) góc dưới PHẢI, đối xứng nút quay lại: cùng cỡ, cùng màu, cách mép phải/dưới như nhau.
+   Bấm = hộp in của act (core/print.js) — in nhanh từ mọi máy mà khỏi vào game. Link `?a=N&print=1` mở hộp này ngay (myLesson). */
+.aw-wp-exit.aw-wp-print { left: auto; right: 28@; }
+.aw-wp-exit.aw-wp-print:hover svg { transform: translateY(-2@); }
 
 /* ---- the START screen's one new button: back to the picker (icon only) ---- */
 .aw-wp-back { position: absolute; left: calc(1.9 * var(--aw-u)); bottom: calc(1.7 * var(--aw-u)); width: calc(3.75 * var(--aw-u)); height: calc(3.75 * var(--aw-u)); display: flex; align-items: center; justify-content: center; padding: 0; border-radius: calc(1.1 * var(--aw-u)); background: #21242b; border: 1px solid #343944; color: #cfd5df; cursor: pointer; transition: border-color .15s ease, color .15s ease, transform .15s ease; z-index: 30; }
@@ -169,6 +173,7 @@
   .wp-tile.hi { transform: none; box-shadow: 0 0 0 1.5@ var(--wp-blue-soft); }
   .aw-wp-exit { left: 5@; bottom: 5@; width: 24@; height: 24@; }
   .aw-wp-exit svg { width: 14@; height: 14@; }
+  .aw-wp-exit.aw-wp-print { left: auto; right: 5@; }
   .aw-wp-wait { --p: calc(var(--aw-u) / 3.75); gap: 10@; }
   .aw-wp-wtitle { font-size: 20@; }
   .aw-wp-spin { width: 14@; height: 14@; border-width: 1.5@; }

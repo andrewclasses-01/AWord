@@ -95,6 +95,10 @@
 .aw-wp-exit:hover { color: var(--wp-blue); }
 .aw-wp-exit:hover svg { transform: translateX(calc(-3 * var(--p))); }
 .aw-wp-exit:active { transform: scale(.9); }
+/* ⭐ Đợt 555 — nút IN (chỉ icon máy in) góc dưới PHẢI, đối xứng nút quay lại: cùng cỡ, cùng màu, cách mép phải/dưới như nhau.
+   Bấm = hộp in của act (core/print.js) — in nhanh từ mọi máy mà khỏi vào game. Link `?a=N&print=1` mở hộp này ngay (myLesson). */
+.aw-wp-exit.aw-wp-print { left: auto; right: calc(28 * var(--p)); }
+.aw-wp-exit.aw-wp-print:hover svg { transform: translateY(calc(-2 * var(--p))); }
 
 /* ---- the START screen's one new button: back to the picker (icon only) ---- */
 .aw-wp-back { position: absolute; left: calc(1.9 * var(--aw-u)); bottom: calc(1.7 * var(--aw-u)); width: calc(3.75 * var(--aw-u)); height: calc(3.75 * var(--aw-u)); display: flex; align-items: center; justify-content: center; padding: 0; border-radius: calc(1.1 * var(--aw-u)); background: #21242b; border: 1px solid #343944; color: #cfd5df; cursor: pointer; transition: border-color .15s ease, color .15s ease, transform .15s ease; z-index: 30; }
@@ -169,6 +173,7 @@
   .wp-tile.hi { transform: none; box-shadow: 0 0 0 calc(1.5 * var(--p)) var(--wp-blue-soft); }
   .aw-wp-exit { left: calc(5 * var(--p)); bottom: calc(5 * var(--p)); width: calc(24 * var(--p)); height: calc(24 * var(--p)); }
   .aw-wp-exit svg { width: calc(14 * var(--p)); height: calc(14 * var(--p)); }
+  .aw-wp-exit.aw-wp-print { left: auto; right: calc(5 * var(--p)); }
   .aw-wp-wait { --p: calc(var(--aw-u) / 3.75); gap: calc(10 * var(--p)); }
   .aw-wp-wtitle { font-size: calc(20 * var(--p)); }
   .aw-wp-spin { width: calc(14 * var(--p)); height: calc(14 * var(--p)); border-width: calc(1.5 * var(--p)); }
