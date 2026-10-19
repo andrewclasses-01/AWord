@@ -554,6 +554,8 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
   (xoay = trái / phải, ngả ra xa / kéo về = tâm xa / gần, tư thế vô lăng = đứng yên + tâm về giữa; nút LEVEL). File mới: 3d/sr3d-4u.js, rw-4u.js, sr3d-dammo-4t.js, sr3d-padlink-4u.js, sr3d-padui-4u.js.
 - Đợt 552j (19/10): trang thử lên myGame 4v — NEAR / FAR dời drone (gần / xa cụm xe), tâm ngắm tay hoàn toàn (bỏ khoá xe), bắn ⇒ dấu điểm rơi trên đường,
   Settings ▸ Drone: Auto target Off / On + thanh Auto pull 1–10. File mới: 3d/sr3d-4v.js, rw-4v.js, sr3d-dammo-4v.js, sr3d-padui-4v.js.
+- Đợt 552k (19/10): trang thử lên myGame 4w — tâm Heart hồng / Missile đỏ chót, trên đường luôn 1 tâm (đạn bay ⇒ tâm ẩn, hiện / ẩn nhoè), 1 quả một lúc,
+  đổi tab Settings mượt, bỏ ghi công mẫu 3D trên màn hình. File mới: 3d/sr3d-4w.js, rw-4w.js, rw-4w.css, sr3d-dammo-4w.js, sr3d-padui-4w.js.
   ⚠️ chep-racing-words.py lần sau (GOC khác) có thể DỌN các file này — trang thử hết dùng thì xoá cả thư mục lab/ + rw-lab-signal.js.
 - Template racing_words thật vẫn GOC rw-4j (Đợt 551), load-files.js không đổi.
 - Đợt 552b (19/10): trang thử nâng lên myGame 4m `13fce24` — mẫu drone 3D thật (A1 Mavic · A6 Quad · B3 Combat, Sketchfab CC BY, ghi công trong Settings ▸ Drone) ở `templates/racing-words/drone3d/` + `3d/sr3d-4m.js`, `rw-4m.js`, `sr3d-drone3d-4m.js`.

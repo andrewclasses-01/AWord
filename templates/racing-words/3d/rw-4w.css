@@ -1,0 +1,13 @@
+/* RACING WORDS mẫu 4w (19/10/2026) — sau rw-4r.css.
+   Đổi tab Settings mượt: vệt sáng (rw-cpill) trượt sau nút tab · nội dung + tiêu đề mới trồi lên từ phía tab (mờ + nhoè → rõ).
+   Bỏ ghi công mẫu 3D ở màn chọn xe (.ri-cred) theo thầy — ghi công giữ trong code + hồ sơ. */
+.rw-c nav { position: relative; }
+.rw-c nav button { position: relative; z-index: 1; transition: color .28s ease; }
+.rw-c nav button.on { background: none; }
+.rw-cpill { position: absolute; left: .8cqh; right: .8cqh; top: 0; height: 0; opacity: 0; border-radius: 1cqh; pointer-events: none;
+  background: rgba(245,197,66,.14); box-shadow: 0 0 0 1px rgba(245,197,66,.22) inset, 0 0 1.6cqh rgba(245,197,66,.12);
+  transition: transform .36s cubic-bezier(.22,.9,.3,1), height .36s cubic-bezier(.22,.9,.3,1), opacity .2s; }
+.rw-cbody { overflow-anchor: none; }
+.rw-tin { animation: rw-tin .36s cubic-bezier(.22,.9,.3,1) both; }
+@keyframes rw-tin { from { opacity: 0; transform: translateY(var(--dy, 12px)); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+.ri-cred { display: none !important; }
