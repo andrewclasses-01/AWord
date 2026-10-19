@@ -1,3 +1,8 @@
+// RACING WORDS — LÕI MẪU 5d (19/10/2026, bản CHỐT đưa lên AWord Đợt 553) = sr3d-5a.js + CHỈ TẢI MẪU DRONE 3D KHI DRONE BẬT
+//   (đo màn chờ AWord: drone tắt vẫn tải Mavic 350 KB — Northstar 1,25 MB — cho mọi lớp). Bật drone ở Settings ⇒ setDrone ⇒ applyModel tải lúc đó.
+// ---- gốc 5a ----
+// RACING WORDS — LÕI MẪU 5a (19/10/2026) = sr3d-4z.js + tin iPad drone thêm thời gian chờ từng loại đạn + cờ đạn đang bay (bảng lái AERO YOKE padui-5a vẽ vòng hồi chiêu).
+// ---- gốc 4z ----
 // RACING WORDS — LÕI MẪU 4z (19/10/2026) = sr3d-4y.js + thầy: "ở vùng bắn, 2 xe gần nhau có thể bị ảnh hưởng cho cả 2":
 //   đạn drone chạm ⇒ MỌI xe trong vùng nổ (ngang < 1,9 m, dọc < 3,8 m) mà chế độ cho phép đều nhận tác dụng (Heart / Boost cả 2 · Missile trúng cả 2).
 // ---- gốc 4y ----
@@ -1249,7 +1254,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   }
   function droneSel(k) { if (AMMO[k] && dset.ammo[AMMO[k].k]) { D.sel = k; paintDv(); droneInfo(); } }
   // 4l: tin cho iPad drone (chỉ kênh thẳng)
-  function droneInfo() { if (remote && remote.send && D.padOn) remote.send(2, `j:${D.bat.toFixed(2)},${D.sel},${D.lock},${G.phase},${AMMO.map(a => dset.ammo[a.k] ? 1 : 0).join("")},${dset.mode},${dset.team},${dset.on ? 1 : 0}`); }
+  function droneInfo() { if (remote && remote.send && D.padOn) remote.send(2, `j:${D.bat.toFixed(2)},${D.sel},${D.lock},${G.phase},${AMMO.map(a => dset.ammo[a.k] ? 1 : 0).join("")},${dset.mode},${dset.team},${dset.on ? 1 : 0},${AMMO.map(a => Math.max(0, D.cd[a.k] - G.t).toFixed(1)).join("/")},${dammo.active > 0 ? 1 : 0}`); }   /* 5a: + chờ · đạn bay */
   const dvMsg = tx => { D.msgT = 1.3; dvLock.textContent = tx; dvLock.style.color = "#f5c542"; dvLockTx = null; };
   // 4r: BẮN — đang đua · đủ pin · hết thời gian chờ loại đó; khoá xe ⇒ đạn bám vị trí dự đoán của xe (s + v·t)
   function droneFire() {
@@ -1363,6 +1368,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   fixSel(); paintDv();
   // 4m: đổi mẫu drone — nạp (có cache), thay vào nhóm g (cùng vị trí / nghiêng), dịch shader ngầm
   function applyModel() {
+    if (!dset.on) return;                                       // 5d: drone tắt ⇒ chưa tải mẫu 3D (bật ⇒ setDrone gọi lại)
     const id = dset.model || "basic"; if (id === dObj.modelId) return; dObj.modelId = id; const tok = ++dObj.tok;
     const drop = () => { if (dObj.model) { dObj.g.remove(dObj.model.obj); dObj.model.dispose(); dObj.model = null; } };
     if (id === "basic") { drop(); dObj.basic.visible = true; return; }

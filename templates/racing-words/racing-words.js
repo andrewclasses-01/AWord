@@ -45,8 +45,9 @@ const LOAD_BG = new URL("./rw-loading.webp", import.meta.url).href;   // Đợt 
 const loader = () => { ensureCss(); return showLoader3d({ key: "racingwords", title: "RACING WORDS", theme: "race", bg: LOAD_BG, files: loadFiles, pace: { create: createLoadPace, key: "rw" } }); };
 preloadLoader3d("race", LOAD_BG);
 
-const GAME = "./3d/rw-4j.js";                     // ⭐ Đợt 551: myGame 4g→4j (kết trận slow motion · chờ câu mới 3 s · loading đều + hết đơ bóng xe · boost phát sáng · cửa sổ góc + tạm dừng chung + đèn 3-2-1 · Drive on iPad màn lớn lái cùng · tên lửa chỉ bắn phía trước / bay thấp / quầng đỏ · trúng đạn lệch + DAMAGE · mũi tên đối thủ dính mép · bảng đếm đầu vạch · nút bắn kiểu thẻ · giá tên lửa thấp) · Đợt 538: myGame mẫu 4f (cổng iPad ở xưởng: START khi 2 iPad nối thẳng + thử trái/phải · đường nối sống qua Apply / Start again / đổi xe · tự nối lại khi slow · mốc nghiêng tự lấy) · Đợt 537: myGame mẫu 4e (Settings mọi nơi + tạm dừng, mặc định mới, bay xa, nghiêng đúng chiều, BAD mất lái) · Đợt 535: myGame mẫu 4d (5 đợt sau 3y: chế độ đua, cong thật, lái tay, dốc xoắn, phần thưởng, xe khác, camera gộp) · Đợt 534: myGame mẫu 3y (lái nghiêng iPad) · Đợt 533: myGame mẫu 3r (mượt TOMKO) · Đợt 531: myGame mẫu 3q (Fight options, cảnh xa đúng vật lý, 35 km/h) · Đợt 529: 3p · Đợt 527: 3o
-const CSS = ["sr3d-3g.css", "sr3d-3l.css", "sr3d-intro-3o.css", "rw-3r.css", "rw-3z.css", "rw-4a.css", "rw-4b.css", "rw-4c.css", "rw-4d.css", "rw-4e.css", "rw-4f.css", "rw-4g.css", "rw-4h.css", "rw-4i.css", "rw-4j-fb.css", "rw-4j.css"];   // Đợt 551: + 4g…4j (đúng thứ tự) · Đợt 538: + rw-4f (cổng iPad) · Đợt 537: + rw-4e · Đợt 535: + 3z…4d (đúng thứ tự)
+const GAME = "./3d/rw-5d.js";                     // ⭐ Đợt 553: myGame 4k→5d — DRONE iPad thứ 3 (Settings ▸ Drone; mặc định Off). Trước: "./3d/rw-4j.js"
+// const GAME_4J = "./3d/rw-4j.js";                     // ⭐ Đợt 551: myGame 4g→4j (kết trận slow motion · chờ câu mới 3 s · loading đều + hết đơ bóng xe · boost phát sáng · cửa sổ góc + tạm dừng chung + đèn 3-2-1 · Drive on iPad màn lớn lái cùng · tên lửa chỉ bắn phía trước / bay thấp / quầng đỏ · trúng đạn lệch + DAMAGE · mũi tên đối thủ dính mép · bảng đếm đầu vạch · nút bắn kiểu thẻ · giá tên lửa thấp) · Đợt 538: myGame mẫu 4f (cổng iPad ở xưởng: START khi 2 iPad nối thẳng + thử trái/phải · đường nối sống qua Apply / Start again / đổi xe · tự nối lại khi slow · mốc nghiêng tự lấy) · Đợt 537: myGame mẫu 4e (Settings mọi nơi + tạm dừng, mặc định mới, bay xa, nghiêng đúng chiều, BAD mất lái) · Đợt 535: myGame mẫu 4d (5 đợt sau 3y: chế độ đua, cong thật, lái tay, dốc xoắn, phần thưởng, xe khác, camera gộp) · Đợt 534: myGame mẫu 3y (lái nghiêng iPad) · Đợt 533: myGame mẫu 3r (mượt TOMKO) · Đợt 531: myGame mẫu 3q (Fight options, cảnh xa đúng vật lý, 35 km/h) · Đợt 529: 3p · Đợt 527: 3o
+const CSS = ["sr3d-3g.css", "sr3d-3l.css", "sr3d-intro-3o.css", "rw-3r.css", "rw-3z.css", "rw-4a.css", "rw-4b.css", "rw-4c.css", "rw-4d.css", "rw-4e.css", "rw-4f.css", "rw-4g.css", "rw-4h.css", "rw-4i.css", "rw-4j-fb.css", "rw-4j.css", "rw-4k.css", "rw-4l.css", "rw-4o.css", "rw-4r.css", "rw-4w.css", "rw-4y.css"];   // Đợt 551: + 4g…4j (đúng thứ tự) · Đợt 538: + rw-4f (cổng iPad) · Đợt 537: + rw-4e · Đợt 535: + 3z…4d (đúng thứ tự)
 const FONTS = "https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,600;0,700;0,800;0,900;1,800;1,900&subset=vietnamese&display=swap";
 // khoá game <-> khoá PHẲNG (activity.options)
 // ⭐ Đợt 531 (thầy) — Options kiểu FIGHT của Rocket Race: Lives (srLives 0 = tắt) · Missile damages 1–5 (srMsDmg) · Time delay (srTie giây,
@@ -123,7 +124,7 @@ const savedPadMode = () => { try { const v = localStorage.getItem(PADM_KEY); ret
 let PADLINK = null;
 function rwPadLink() {
   if (PADLINK && !PADLINK.dead) { PADLINK.use(); return PADLINK.ready; }
-  let N = null, claim = null, mode = savedPadMode(), linked = [false, false], users = 1, dropT = 0;
+  let N = null, claim = null, mode = savedPadMode(), linked = [false, false, false], users = 1, dropT = 0;   // Đợt 553: + [2] iPad DRONE
   const L = {
     dead: false, remote: null,
     onEvent(k, v) {
@@ -151,7 +152,7 @@ function rwPadLink() {
     try { L.remote && L.remote.close && L.remote.close(); } catch (e) { /* */ }
   }
   import("../../core/ipad-now.js").then(m => { N = m; sync(); }).catch(() => {});
-  L.ready = Promise.all([import("./rw-pad-signal.js"), import("./3d/sr3d-padlink-4f.js")]).then(([S, P]) => {
+  L.ready = Promise.all([import("./rw-pad-signal.js"), import("./3d/sr3d-padlink-5a.js")]).then(([S, P]) => {   // ⭐ Đợt 553: 5a (3 chỗ: 2 đội + drone)
     if (L.dead) return L;
     const r = P.createPadHost({ signal: S.rwPadSignal(), padUrl: S.padUrl });
     // mở phiên NGAY (chưa có game): game gắn sau sẽ nhận lại trạng thái từng đội

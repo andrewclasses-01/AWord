@@ -546,6 +546,19 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 553 (19/10/2026) — RACING WORDS THẬT: DRONE (iPad thứ 3) — myGame 4j → 5d (thầy CHỐT: "đưa lên AWord và myGame")
+- Thầy duyệt từng bước ở trang thử ẩn (Đợt 552 → 552q) rồi chốt ⇒ đưa vào template `racing_words` THẬT. Drone mặc định OFF (⚙ Settings ▸ Drone bật) ⇒ lớp không dùng drone chơi như cũ.
+- `tools/chep-racing-words.py`: GOC `rw-5d.js` · GOC_THEM `sr3d-padui-5c.js` + `sr3d-padlink-5a.js` + `rw-loadpace-4h.js` · CSS + rw-4k · 4l · 4o · 4r · 4w · 4y (đúng thứ tự) ·
+  chép thêm `drone3d/` (5 mẫu DRONE_PICK, Sketchfab CC BY — ghi công trong `3d/sr3d-drone3d-4p.js`). Chạy: `python -I -X utf8 tools/chep-racing-words.py` (⚠️ thiếu -X utf8 ⇒ chết giữa chừng ở dòng in "xoá cũ").
+- `racing-words.js`: GAME `./3d/rw-5d.js`, CSS mới, đường nối iPad `3d/sr3d-padlink-5a.js` (3 chỗ: 2 đội + drone), `linked` 3 phần tử.
+- `rw-pad-signal.js`: + tài liệu `rwpad_pad2` (iPad DRONE) · `padUrl(2)` ⇒ `pad.html?t=2` · localSignal từ padlink-5a.
+- `pad.js`: `?t=2` (QR thẻ DRONE · iPAD ở xưởng) / chọn vai DRONE ⇒ nhớ RIÊNG `aw.rwDrone` (KHÔNG đụng đội Fight `aw.ipadTeam` của Star Loot / Train Rush / Rocket Race);
+  QR đội t=0/1 ⇒ xoá cờ drone. racingwords ⇒ vai DRONE = `mountDroneApp` (bảng lái AERO YOKE), đội = màn 4j như cũ; màn chọn vai 3 nút; + font Chakra Petch.
+- myGame 5d = 5a + chỉ tải mẫu drone 3D khi drone BẬT (đo màn chờ thấy drone tắt vẫn tải Mavic 350 KB). `load-files.js` đo lại (`scratch/dot543-rec.html?t=racing-words`, máy chủ lưu 8899) ⇒ 95 file, 5,3 MB.
+- Đã thử máy nhà: game tải đủ không 404 · `pad.html?t=2&padsig=local` ⇒ bảng lái drone CONNECTED, cờ aw.rwDrone, không đụng aw.ipadTeam · `?t=0` ⇒ màn đội 4j CONNECTED. ⬜ thầy thử TOMKO + 3 iPad thật.
+- Trang thử ẩn `lab/racing-drone*.html` GIỮ lại (dùng tiếp cho "2 drones"); nay dùng chung file 3d/ với template thật (rw-5d, padlink-5a, padui-5c).
+- Việc chờ: chế độ 2 DRONE (mỗi đội 1 drone) — thiết kế ở myGame trước (hồ sơ `speed-run/HO SO BAN GIAO RACING WORDS.md` mục 0).
+
 ## Đợt 552 (19/10/2026) — TRANG THỬ ẨN Racing words + DRONE (thử 3 iPad thật trước khi chốt)
 - Thầy: "cần chạy được trước, test kết nối 3 thiết bị" ⇒ trang thử KHÔNG link: `lab/racing-drone.html` (màn lớn, cần đăng nhập AWord) · `lab/racing-drone-pad.html?t=0|1|2` (iPad, cùng tài khoản; QR ở xưởng).
 - Kênh bắt tay `templates/racing-words/rw-lab-signal.js` = rw-pad-signal nhưng tài liệu `rwlab_host/pad0/pad1/pad2` (không đụng phiên game thật), kind `racingwords-pad`.

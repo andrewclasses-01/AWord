@@ -1,3 +1,24 @@
+// RACING WORDS — GÓI NHÚNG mẫu 5d (19/10/2026, CHỐT ⇒ AWord Đợt 553) = rw-5a.js + lõi sr3d-5d.js (chỉ tải mẫu drone khi drone bật).
+// RACING WORDS — GÓI NHÚNG mẫu 5a (19/10/2026) = rw-4z.js + lõi sr3d-5a.js (tin iPad drone có hồi chiêu — bảng lái AERO YOKE sr3d-padui-5a.js).
+// RACING WORDS — GÓI NHÚNG mẫu 4z (19/10/2026) = rw-4y.js + lõi sr3d-4z.js (vùng nổ đạn drone trúng mọi xe trong vùng).
+// RACING WORDS — GÓI NHÚNG mẫu 4y (19/10/2026) = rw-4x.js + lõi sr3d-4y.js (tâm bóng mờ khi đạn bay, bảng kết quả nhiều hiệp). CSS thêm rw-4y.css.
+// RACING WORDS — GÓI NHÚNG mẫu 4x (19/10/2026) = rw-4w.js + lõi sr3d-4x.js (icon 2D Neon viền thay emoji — rw-icons-4x.js).
+// RACING WORDS — GÓI NHÚNG mẫu 4w (19/10/2026) = rw-4v.js + lõi sr3d-4w.js (màu tâm hồng / đỏ chót, 1 tâm trên đường + hiện / ẩn nhoè, đổi tab mượt, bỏ ghi công). CSS thêm rw-4w.css.
+// RACING WORDS — GÓI NHÚNG mẫu 4v (19/10/2026) = rw-4u.js + lõi sr3d-4v.js (NEAR / FAR dời drone, tâm tay hoàn toàn, dấu điểm rơi, Auto target).
+// RACING WORDS — GÓI NHÚNG mẫu 4u (19/10/2026) = rw-4t.js + lõi sr3d-4u.js (iPad drone lái nghiêng 4 hướng, drone nghiêng theo tay lái).
+// RACING WORDS — GÓI NHÚNG mẫu 4t (19/10/2026) = rw-4s.js + lõi sr3d-4t.js (drone nhỏ 10 %, đạn ra từ bụng, Settings ▸ Drone: Column width + View zoom).
+// RACING WORDS — GÓI NHÚNG mẫu 4s (19/10/2026) = rw-4r.js + lõi sr3d-4s.js (đạn drone nhỏ hơn, phóng về trước, đuôi chỉ thấy lửa + khói).
+// RACING WORDS — GÓI NHÚNG mẫu 4r (19/10/2026) = rw-4q.js + lõi sr3d-4r.js (ĐẠN DRONE: bắn, pin, trúng xe / đường) + tiếng droneShot / droneHit / droneDeny. CSS thêm rw-4r.css.
+// RACING WORDS — GÓI NHÚNG mẫu 4q (19/10/2026) = rw-4p.js + lõi sr3d-4q.js (tâm ngắm drone lục giác HUD).
+// RACING WORDS — GÓI NHÚNG mẫu 4p (19/10/2026) = rw-4o.js + lõi sr3d-4p.js (5 mẫu drone thầy giữ, sửa cánh Quad).
+// RACING WORDS — GÓI NHÚNG mẫu 4o (19/10/2026) = rw-4n.js + lõi sr3d-4o.js (lưới chọn mẫu drone, cánh quạt quay đúng trục + vòng mờ). CSS thêm rw-4o.css.
+// RACING WORDS — GÓI NHÚNG mẫu 4n (19/10/2026) = rw-4m.js + lõi sr3d-4n.js (8 mẫu drone, cánh quạt quay, bay lượn như thật).
+// RACING WORDS — GÓI NHÚNG mẫu 4m (19/10/2026) = rw-4l.js + lõi sr3d-4m.js (mẫu drone 3D thật A1 / A6 / B3, chọn ở Settings ▸ Drone ▸ Model).
+// RACING WORDS — GÓI NHÚNG mẫu 4l (19/10/2026) = rw-4k.js + lõi sr3d-4l.js (iPad DRONE) · remote phải là createPadHost của sr3d-padlink-4l.js (3 chỗ).
+//   Xưởng: khi Settings ▸ Drone bật ⇒ thẻ thứ 3 DRONE · iPAD (giữa trên) có QR + trạng thái nối — KHÔNG chặn START (drone không bắt buộc). CSS thêm rw-4l.css.
+// ---- gốc 4k ----
+// RACING WORDS — GÓI NHÚNG mẫu 4k (19/10/2026) = rw-4j.js + lõi sr3d-4k.js (DRONE đợt 1: cột drone giữa, tab Settings ▸ Drone, tâm bắn). CSS thêm rw-4k.css (sau rw-4j.css).
+// ---- gốc 4j ----
 // RACING WORDS — GÓI NHÚNG mẫu 4g (18/10/2026) = rw-4f.js + lõi sr3d-4g.js (9 việc thầy — hồ sơ mục 41). Phần tiếng mới:
 //   · 5 đèn: phát theo sự kiện lõi "light" (đúng nhịp, không dò 50 ms) — mẫu start_lights to hơn + lớp BÍP tổng hợp (sóng vuông 660 Hz, cắt gọn) cho rõ, nét;
 //     nhạc trận vào nhỏ (35 %) trong lúc đếm, GO mới lên đủ
@@ -62,7 +83,7 @@
 //   onEvent   : (k, v) — "pad" (iPad nối / mất nối), "padMode", "end", …
 // ⇒ { setOptions(o) (true = áp ngay, false = AWord dựng lại), destroy(), game, intro }
 // =============================================================
-import { createSpeedRun } from "./sr3d-4j.js";
+import { createSpeedRun } from "./sr3d-5d.js";   // 5d: tải mẫu drone khi bật · 5a: tin iPad drone có hồi chiêu · 4z: vùng nổ trúng cả 2 xe · 4y: tâm bóng mờ, bảng nhiều hiệp · 4x: icon 2D Neon viền · 4w: màu tâm, 1 tâm, tab mượt · 4v: NEAR/FAR dời drone, dấu điểm rơi, Auto target · 4u: nghiêng 4 hướng · 4t: nhỏ 10 %, đạn ra từ bụng, chỉnh cột + zoom · 4s: đạn nhỏ, phóng về trước, đuôi lửa · 4r: đạn drone · 4q: tâm ngắm lục giác HUD · 4p: 5 mẫu giữ + Quad quay · 4o: lưới chọn mẫu + sửa quạt · 4n: 8 mẫu + quạt quay + bay lượn · 4m: mẫu drone 3D thật · 4l: + iPad drone · 4k: DRONE
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
 import { createIntro } from "./sr3d-intro-4h.js";
 import { createSound } from "./sr3d-sound-3o.js";
@@ -180,6 +201,9 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
       <div class="rw-gb"><div class="rw-gq"></div><div class="rw-gw">${WHEEL}</div>
         <div class="rw-gt"><span class="rw-gl">◀ LEFT</span><span class="rw-gr">RIGHT ▶</span><small></small></div></div>
       <div class="rw-gf"><button type="button" class="rw-grc">↻ Reconnect</button><em class="rw-gd"></em></div></div>`).join("");
+  // 4l: thẻ DRONE · iPAD (chỉ khi Settings ▸ Drone bật) — QR + trạng thái, không chặn START
+  gate.insertAdjacentHTML("beforeend", `<div class="rw-gc rw-gc2" style="--tc:#b07cff" data-t="2"><div class="rw-gh"><b>DRONE · iPAD</b><span class="rw-gs"><i></i><span></span></span></div>
+    <div class="rw-gb"><div class="rw-gq"></div><div class="rw-gt"><small></small></div></div><div class="rw-gf"><button type="button" class="rw-grc">↻ Reconnect</button><em class="rw-gd"></em></div></div>`);
   frame.appendChild(gate);
   const startB = frame.querySelector(".ri-start"), startHTML = startB ? startB.innerHTML : "";
   const gs = [0, 1].map(i => { const c = gate.querySelector(".rw-gc" + i); return { c, st: c.querySelector(".rw-gs span"), q: c.querySelector(".rw-gq"), w: c.querySelector(".rw-gw svg"), tip: c.querySelector(".rw-gt small"), d: c.querySelector(".rw-gd"), key: "", qr: "", rot: 1e9 }; });
@@ -187,14 +211,27 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
   const gateNeed = () => !!(remote && remote.live && game.padMode === 2);
   const teamOk = l => l.s === "on" && l.tl && l.tr;
   let gateOk = true;
+  const g2 = (() => { const c = gate.querySelector(".rw-gc2"); return { c, st: c.querySelector(".rw-gs span"), q: c.querySelector(".rw-gq"), tip: c.querySelector(".rw-gt small"), d: c.querySelector(".rw-gd"), key: "", qr: "" }; })();
+  function paintDroneCard() {                                        // 4l
+    const on = !!(remote && remote.live && game.drone && game.drone.set.on && introOn && intro && intro.state === "idle");
+    g2.c.hidden = !on; if (!on) return;
+    const l = remote.live(2), key = [l.s, l.diag].join("|"); if (key === g2.key) return; g2.key = key;
+    g2.c.dataset.s = l.s || "none"; g2.c.classList.toggle("is-ok", l.s === "on");
+    g2.st.textContent = l.s === "on" ? "READY" : l.s === "relay" ? "SLOW — reconnecting…" : l.s === "wait" ? "Connecting…" : "Scan the QR with the drone iPad";
+    g2.tip.textContent = l.s === "on" ? "Drone iPad connected" : "Optional — the race can start without it"; g2.d.textContent = l.diag || "";
+    const wantQr = l.s !== "on" && l.s !== "relay" ? l.url : "";
+    if (wantQr !== g2.qr) { g2.qr = wantQr; g2.q.innerHTML = wantQr ? qrSvg(wantQr, { quiet: 1 }) : ""; g2.c.classList.toggle("has-qr", !!wantQr); }
+  }
   function paintGate() {
-    const show = gateNeed() && introOn && intro && intro.state === "idle";
+    paintDroneCard();                                                   // 4l
+    const show = (gateNeed() || !g2.c.hidden) && introOn && intro && intro.state === "idle";
     if (gate.hidden === show) gate.hidden = !show;
     const need = gateNeed();
     gateOk = !need || [0, 1].every(i => teamOk(remote.live(i)));
     root.classList.toggle("rw-padwait", !gateOk);
     if (startB) { const h = gateOk ? startHTML : "WAITING FOR iPADS…"; if (startB.innerHTML !== h) startB.innerHTML = h; }
-    if (!show) return;
+    gs.forEach(g => { g.c.hidden = !gateNeed(); });                    // 4l: cổng 2 đội chỉ khi Drive on iPad
+    if (!show || !gateNeed()) return;
     [0, 1].forEach(i => {
       const l = remote.live(i), g = gs[i], ok = teamOk(l);
       const key = [l.s, l.tl, l.tr, l.diag, ok].join("|");
@@ -276,6 +313,10 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
     }
     if (k === "banner") { S.play("win"); S.play("crowd", { delay: 0.3 }); setTimeout(() => !dead && S.play("mResult"), 1400); return; }
     if (k === "tumble") { S.play("crash", { pan: PAN[v.team], gain: 0.7 }); S.play("screech", { pan: PAN[v.team], gain: 0.6, rate: 0.75 }); return; }
+    // 4r: tiếng ĐẠN DRONE — phóng (tiếng phóng tên lửa cao hơn) · trúng xe Heart (correct cao) / Boost (boost) · trúng đường (pop nhỏ) · bị từ chối (wrong nhỏ)
+    if (k === "droneShot") { S.play("mLaunch", { gain: 0.75, rate: v.kind === "missile" ? 1.05 : 1.35 }); return; }
+    if (k === "droneHit") { if (v.kind === "missile") { if (v.team < 0) S.play("boom", { gain: 0.5, rate: 1.2 }); } else if (v.team >= 0) S.play(v.kind === "heart" ? "correct" : "boost", { pan: PAN[v.team], rate: v.kind === "heart" ? 1.25 : 1 }); else S.play("pop", { gain: 0.6 }); return; }
+    if (k === "droneDeny") { S.play("wrong", { gain: 0.35, rate: 1.3 }); return; }
     if (k === "correct") S.play("correct", { pan: PAN[v.team] });
     else if (k === "wrong") S.play("wrong", { pan: PAN[v.team] });
     else if (k === "fire") S.play("mLaunch", { pan: PAN[v.team] });

@@ -2,6 +2,13 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
+## Đợt 553 (19/10/2026) — myGame 4j → 5d: DRONE (iPad thứ 3) — CHỐT
+- GOC `rw-5d.js` · lõi `sr3d-5d.js` · đạn `sr3d-dammo-4w.js` · mẫu drone `sr3d-drone3d-4p.js` + `drone3d/*.glb` · icon `rw-icons-4x.js` · iPad `sr3d-padui-5c.js` + `sr3d-padlink-5a.js` (cả đầu game lẫn pad.js).
+- CSS nạp thêm (đúng thứ tự, sau rw-4j.css): rw-4k · rw-4l · rw-4o · rw-4r · rw-4w · rw-4y. Kênh bắt tay + `rwpad_pad2`; pad.js `?t=2` ⇒ vai DRONE (cờ riêng `aw.rwDrone`).
+- Tính năng (đủ ở hồ sơ myGame mục 0): cột drone giữa · 5 mẫu drone · tâm ngắm lục giác HUD (tay hoàn toàn, Auto target tuỳ chọn) · đạn Heart / Boost / Missile ra từ bụng, dấu điểm rơi,
+  vùng nổ trúng mọi xe trong vùng · icon neon · đổi tab Settings mượt · bảng kết quả nhiều hiệp (PLAY AGAIN cộng dồn) · bảng lái iPad AERO YOKE (nghiêng 4 hướng, vòng hồi chiêu, cân cả điện thoại).
+- Việc chờ: 2 drone (mỗi đội 1 drone).
+
 ## Đợt 551 (18/10/2026) — myGame 4g → 4j
 - GOC `rw-4j.js` · lõi `sr3d-4j.js` · intro `sr3d-intro-4h.js` + xe `sr3d-car-4h.js` (CÙNG mô-đun) · tên lửa `sr3d-missile-4i.js` · iPad `sr3d-padui-4j.js` + `sr3d-padlink-4j.js` (pad.js), đầu game `sr3d-padlink-4f.js`.
 - CSS nạp thêm (đúng thứ tự) rw-4g · rw-4h · rw-4i · rw-4j-fb (thẻ nút bắn — iPad cũng nạp qua pad.js) · rw-4j.

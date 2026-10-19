@@ -42,8 +42,13 @@ import { firestoreSignal, PAD_LOCAL } from "./templates/maze-chase/sl-pad-signal
 import { watchIpadNow, savedTeam, saveTeam } from "./core/ipad-now.js";
 
 const q = new URLSearchParams(location.search);
-const urlTeam = q.has("t") ? (q.get("t") === "1" ? 1 : 0) : null;
-if (urlTeam !== null) saveTeam(urlTeam);   // quét QR đội nào = iPad này thuộc đội đó (dùng cho Fight)
+// ⭐ Đợt 553 — ?t=2 = iPad DRONE của RACING WORDS: nhớ RIÊNG (aw.rwDrone), KHÔNG đụng đội Fight dùng chung (aw.ipadTeam của Star Loot / Train Rush / Rocket Race)
+const RWD_KEY = "aw.rwDrone";
+const rwDrone = { get() { try { return localStorage.getItem(RWD_KEY) === "1"; } catch (e) { return false; } },
+  set(v) { try { if (v) localStorage.setItem(RWD_KEY, "1"); else localStorage.removeItem(RWD_KEY); } catch (e) { /* */ } } };
+const urlTeam = q.has("t") && q.get("t") !== "2" ? (q.get("t") === "1" ? 1 : 0) : null;
+if (q.get("t") === "2") rwDrone.set(true);
+else if (urlTeam !== null) { saveTeam(urlTeam); rwDrone.set(false); }   // quét QR đội nào = iPad này thuộc đội đó (dùng cho Fight)   // quét QR đội nào = iPad này thuộc đội đó (dùng cho Fight)
 const padEl = document.getElementById("pad");
 const note = document.getElementById("note"), noteB = note.querySelector("b"), noteP = note.querySelector("p"), noteBtn = note.querySelector("button");
 function showNote(title, text, { bad = false, button = false } = {}) {
@@ -121,8 +126,10 @@ async function showTR(team) {
 }
 // ⭐ Đợt 527 — màn iPad RACING WORDS cho đội `team`
 // ⭐ Đợt 551 — iPad RACING WORDS 4j: thanh DAMAGE · nút tên lửa kiểu THẺ (CSS dùng chung với màn lớn: 3d/rw-4j-fb.css) · padlink-4j đọc thêm chuỗi đúng
-const rwCss = () => { if (document.querySelector("link[data-rw4j]")) return; const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "./templates/racing-words/3d/rw-4j-fb.css"; l.dataset.rw4j = "1"; document.head.append(l); };
-const rwMods = () => { rwCss(); return Promise.all([import("./templates/racing-words/3d/sr3d-padlink-4j.js"), import("./templates/racing-words/3d/sr3d-padui-4j.js"), import("./templates/racing-words/rw-pad-signal.js")]); };   // Đợt 538: 4f (tự nối lại khi slow, mốc nghiêng tự lấy)
+const rwCss = () => { if (document.querySelector("link[data-rw4j]")) return; const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "./templates/racing-words/3d/rw-4j-fb.css"; l.dataset.rw4j = "1"; document.head.append(l);
+  const f = document.createElement("link"); f.rel = "stylesheet"; f.href = "https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&display=swap"; document.head.append(f); };   // Đợt 553: + font bảng lái drone
+// ⭐ Đợt 553 — myGame 5c: padlink-5a (3 chỗ: 2 đội + DRONE) · padui-5c (đội = màn 4j như cũ · DRONE = bảng lái AERO YOKE · màn chọn vai 3 nút)
+const rwMods = () => { rwCss(); return Promise.all([import("./templates/racing-words/3d/sr3d-padlink-5a.js"), import("./templates/racing-words/3d/sr3d-padui-5c.js"), import("./templates/racing-words/rw-pad-signal.js")]); };   // Đợt 538: 4f (tự nối lại khi slow, mốc nghiêng tự lấy)
 async function showRW(team) {
   note.hidden = true;
   if (view === "rw" + team) return;
@@ -136,8 +143,9 @@ async function showRW(team) {
   let rui = null; const pend = {};
   const call = (k, v) => rui ? rui[k](v) : (pend[k] = v);
   const c = L.createPadClient({ signal: S.rwPadSignal(), team,
-    onState: x => call("setState", x), onInfo: i => call("setInfo", i), onMode: m => call("setMode", m), onQ: x => call("setQ", x), onSteer: x => call("setSteer", x) });   // Đợt 534: kiểu lái (Touch / Tilt) do màn lớn chọn
-  rui = U.mountPadApp(padEl, { team, client: c, onBack: () => { manual = true; showChooser(); } });
+    onState: x => call("setState", x), onInfo: i => call("setInfo", i), onMode: m => call("setMode", m), onQ: x => call("setQ", x), onSteer: x => call("setSteer", x), onDrone: j => call("setDrone", j) });   // Đợt 553: + onDrone   // Đợt 534: kiểu lái (Touch / Tilt) do màn lớn chọn
+  const back = () => { manual = true; showChooser(); };
+  rui = team === 2 ? U.mountDroneApp(padEl, { client: c, onBack: back }) : U.mountPadApp(padEl, { team, client: c, onBack: back });   // ⭐ Đợt 553: vai DRONE
   rui.setState(c.state); Object.entries(pend).forEach(([k, v]) => rui[k](v));
   rw = { client: c, ui: rui };
   window.__padc = c; window.__padui = rui;   // bàn thử
@@ -149,7 +157,7 @@ async function showRWChooser() {
   history.replaceState(null, "", urlWith("pad.html", null));
   let L, U, S; try { [L, U, S] = await rwMods(); } catch (e) { showNote("Could not load", "Check the network and reload this page.", { bad: true }); return; }
   if (view !== "chooser") return;
-  const ch = U.mountPadChooser(padEl, { onPick: t => { saveTeam(t); manual = false; apply(true); } });
+  const ch = U.mountPadChooser(padEl, { onPick: t => { if (t === 2) rwDrone.set(true); else { saveTeam(t); rwDrone.set(false); } manual = false; apply(true); } });   // Đợt 553: 3 vai
   // Đợt 539 — đội đang có iPad KHÁC (host u0/u1) ⇒ mờ, chạm chỉ báo, không vào được (huỷ nghe: rrBusyOff trong stopPad)
   if (ch && ch.setBusy && L.watchTeams) rrBusyOff = L.watchTeams(S.rwPadSignal(), b => ch.setBusy(b));
 }
@@ -241,7 +249,7 @@ function apply(force) {
     return;
   }
   if (g === "racingwords") {                            // Đợt 527: RACING WORDS ⇒ màn iPad của đội đã nhớ
-    const t = savedTeam();
+    const t = rwDrone.get() ? 2 : savedTeam();          // ⭐ Đợt 553: iPad DRONE (quét QR t=2 / chọn vai DRONE)
     if (t === null) { if (view !== "chooser") showChooser(); } else showRW(t);
     return;
   }
