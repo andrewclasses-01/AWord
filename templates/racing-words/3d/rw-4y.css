@@ -1,0 +1,25 @@
+/* RACING WORDS mẫu 4y (19/10/2026) — sau rw-4w.css. BẢNG KẾT QUẢ NHIỀU HIỆP (2 cột 2 đội, đầu cột = tổng hiệp thắng, dưới = từng hiệp). */
+.sr-result { min-width: min(74cqw, 1180px); max-width: 92cqw; top: 47%; gap: 1.6cqh; }
+.rw-sb-wrap { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 1.2cqh; }
+.rw-sb-round { font: italic 900 1.9cqh "Exo 2", sans-serif; letter-spacing: .3em; color: #f5c542; margin-top: -1cqh; }
+.rw-sb { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 1.6cqw; align-items: start; }
+.rw-sb-col { display: flex; flex-direction: column; gap: .9cqh; min-width: 0; }
+.rw-sb-h { display: flex; align-items: center; justify-content: space-between; gap: 1cqw; padding: 1.1cqh 1.4cqw; border-radius: 1.6cqh;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--team) 30%, transparent), rgba(255,255,255,.03)); border: .2cqh solid color-mix(in srgb, var(--team) 60%, transparent); }
+.rw-sb-h b { font: italic 900 3.2cqh "Exo 2", sans-serif; letter-spacing: .06em; color: var(--team); }
+.rw-sb-h span { display: flex; align-items: baseline; gap: .7cqw; }
+.rw-sb-h em { font: italic 900 6.4cqh/1 "Exo 2", sans-serif; color: #fff; text-shadow: 0 0 2.4cqh var(--team); }
+.rw-sb-h small { font: 800 1.45cqh "Exo 2", sans-serif; letter-spacing: .16em; color: #9fb0c6; }
+.rw-sb-list { display: flex; flex-direction: column; gap: .6cqh; max-height: 31cqh; overflow-y: auto; overflow-x: hidden; padding-right: .3cqw; }
+.rw-sb-r { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto auto; align-items: center; gap: 1.1cqw; padding: .75cqh 1.1cqw; border-radius: 1.2cqh;
+  background: rgba(255,255,255,.045); font: 700 2.2cqh "Exo 2", sans-serif; color: #cfd8e6; white-space: nowrap; }
+.rw-sb-r > i { font: italic 900 1.8cqh "Exo 2", sans-serif; color: #8d9bb0; min-width: 2.2em; }
+.rw-sb-m { overflow: hidden; text-overflow: ellipsis; }
+.rw-sb-wl { font: italic 900 1.7cqh "Exo 2", sans-serif; letter-spacing: .12em; padding: .35cqh .8cqw; border-radius: .8cqh; text-align: center; min-width: 4.2em; }
+.rw-sb-r.win .rw-sb-wl { background: var(--team); color: #0b0f15; box-shadow: 0 0 1.4cqh color-mix(in srgb, var(--team) 60%, transparent); }
+.rw-sb-r.lose .rw-sb-wl { background: rgba(255,255,255,.08); color: #8d9bb0; }
+.rw-sb-r.lose:not(.cur) { opacity: .72; }
+.rw-sb-r.cur { background: rgba(255,255,255,.09); box-shadow: 0 0 0 .22cqh color-mix(in srgb, var(--team) 70%, transparent) inset; animation: rw-sb-in .55s cubic-bezier(.22,.9,.3,1) both; }
+@keyframes rw-sb-in { from { opacity: 0; transform: translateY(-1.2cqh); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+.rw-sb-vs { align-self: start; margin-top: 2.2cqh; font: italic 900 3cqh "Exo 2", sans-serif; letter-spacing: .1em; color: #f5c542; text-shadow: 0 0 1.6cqh rgba(245,197,66,.5); }
+.sr-res-rows:empty { display: none; }

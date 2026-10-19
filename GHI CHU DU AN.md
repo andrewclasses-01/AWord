@@ -557,6 +557,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 - Đợt 552k (19/10): trang thử lên myGame 4w — tâm Heart hồng / Missile đỏ chót, trên đường luôn 1 tâm (đạn bay ⇒ tâm ẩn, hiện / ẩn nhoè), 1 quả một lúc,
   đổi tab Settings mượt, bỏ ghi công mẫu 3D trên màn hình. File mới: 3d/sr3d-4w.js, rw-4w.js, rw-4w.css, sr3d-dammo-4w.js, sr3d-padui-4w.js.
 - Đợt 552l (19/10): trang thử lên myGame 4x — icon 2D Neon viền vẽ riêng thay emoji (kết trận, DRONE, thông báo, cảnh báo, thẻ đạn iPad). File mới: 3d/rw-icons-4x.js, sr3d-4x.js, rw-4x.js, sr3d-padui-4x.js.
+- Đợt 552m (19/10): trang thử lên myGame 4y — tâm bóng mờ trắng khi đạn đang bay, bảng kết quả nhiều hiệp (2 cột, PLAY AGAIN cộng dồn). File mới: 3d/sr3d-4y.js, rw-4y.js, rw-4y.css.
   ⚠️ chep-racing-words.py lần sau (GOC khác) có thể DỌN các file này — trang thử hết dùng thì xoá cả thư mục lab/ + rw-lab-signal.js.
 - Template racing_words thật vẫn GOC rw-4j (Đợt 551), load-files.js không đổi.
 - Đợt 552b (19/10): trang thử nâng lên myGame 4m `13fce24` — mẫu drone 3D thật (A1 Mavic · A6 Quad · B3 Combat, Sketchfab CC BY, ghi công trong Settings ▸ Drone) ở `templates/racing-words/drone3d/` + `3d/sr3d-4m.js`, `rw-4m.js`, `sr3d-drone3d-4m.js`.
