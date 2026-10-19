@@ -1,3 +1,10 @@
+// RACING WORDS mẫu 5g (19/10/2026) = padui-5f + thầy chỉnh iPad:
+//   · màn ĐỘI: nút bắn tên lửa (thẻ +x MISSILES) dài HẾT bề ngang màn (dải chạm vốn đã hết bề ngang) — dễ bấm bằng ngón cái khi đang đua.
+//   · màn ĐỘI vừa MỌI tỉ lệ (4:3 · 16:10 · 16:9 · điện thoại 19,5:9 · cầm dọc): vô lăng + bàn đạp tính cỡ theo cả ngang lẫn cao, vô lăng hiện TRỌN (cũ: 66vh, chìm đáy 9,6vh ⇒
+//     16:9 / điện thoại cụt đáy; cầm dọc vô lăng đè bàn đạp). Cầm dọc ⇒ vô lăng trên, 2 bàn đạp dưới, dải tên lửa thấp hơn.
+//   · màn chọn vai: thêm ANDREW STUDIO trên RACING WORDS.
+// RACING WORDS mẫu 5f (19/10/2026) = padui-5e + MÀN CHỌN VAI MỚI: 4 thẻ vát góc có ảnh xe / drone thật sơn màu đội (anh-pad/*.webp), vệt sáng, drone bồng bềnh, thẻ đã có iPad = TAKEN.
+// RACING WORDS mẫu 5e (19/10/2026) = padui-5c + màn chọn vai 4 nút (TEAM 1 · TEAM 2 · DRONE · DRONE 2) — đường nối padlink-5e (4 chỗ). Bảng lái drone giữ nguyên (màu đội theo tin "j:").
 // RACING WORDS mẫu 5c (19/10/2026) = padui-5b + thầy: "iPad rất ok; ĐIỆN THOẠI (ngang, dài ~2,2:1) lỗi — nút tiến to quá đè nút khác".
 //   Gốc: mọi cỡ tính theo BỀ NGANG (cqw) ⇒ màn dài mà thấp thì các hàng cao hơn màn, chồng lên nhau.
 //   Sửa: 1 đơn vị --u = min(1 % bề ngang, 1,333 % chiều cao) — luôn vừa khung 4:3 nằm trong màn ⇒ iPad 4:3 y như cũ; điện thoại: cỡ theo chiều cao,
@@ -15,10 +22,98 @@
 //   · thẻ đạn có VÒNG HỒI CHIÊU thật + mờ khi thiếu pin (game gửi thêm thời gian chờ từng loại + cờ "đạn đang bay" — padlink-5a).
 //   Logic lái giữ nguyên padui-4x: nghiêng iPad 4 hướng (tư thế vô lăng = 0, LEVEL) · kéo ngón trên vùng cần lái = ngắm · NEAR / FAR giữ = dời drone · chạm thẻ = chọn đạn · FIRE.
 //   Kích thước theo bề ngang màn (cqw) như trang thiết kế ⇒ iPad 4:3 / 16:10 đều cân.
-import { mountPadApp, mountPadChooser } from "./sr3d-padui-4x.js";
-import { TEAM_META, DRONE_META } from "./sr3d-padlink-5a.js";
+import { mountPadApp as mountPadApp4x } from "./sr3d-padui-4x.js";   /* 5g: bọc thêm CSS vừa mọi tỉ lệ */
+import { TEAM_META, DRONE_META, DRONE2_META } from "./sr3d-padlink-5e.js";   /* 5e */
 import { icon as ICON } from "./rw-icons-4x.js";
-export { mountPadApp, mountPadChooser };
+// 5g: CSS chèn SAU CSS gốc của màn đội (padui-4j) — đè bằng độ ưu tiên cao hơn (.ip .x)
+const FIT_CSS = `
+.ip{--W:min(64vh,47vw);--P:min(52vh,60vw)}
+.ip .ip-wbox{width:var(--W);height:var(--W);margin-left:calc(var(--W) / -2);bottom:max(2vh,env(safe-area-inset-bottom))}
+.ip .ip-wbox .ip-wheel{width:var(--W);height:var(--W);margin-left:calc(var(--W) / -2);bottom:0}
+.ip .ip-gas{height:var(--P);bottom:max(4vh,env(safe-area-inset-bottom));right:max(4vw,env(safe-area-inset-right))}
+.ip .ip-brk{height:calc(var(--P) * .86);bottom:max(4vh,env(safe-area-inset-bottom));left:max(4vw,env(safe-area-inset-left))}
+.ip .ip-fbw{padding-left:max(2vw,env(safe-area-inset-left));padding-right:max(2.6vw,env(safe-area-inset-right))}
+.ip .ip-fbw .rw-fb{width:100%;max-height:17vmin}
+@media (orientation:portrait){
+  .ip{--W:min(84vw,36vh);--P:min(26vh,60vw)}
+  .ip .ip-wbox{bottom:calc(var(--P) + 4vh)}
+  .ip .ip-fbw .rw-fb{max-height:12vh}
+}`;
+let fitStyled = false;
+export function mountPadApp(mount, o) {
+  const r = mountPadApp4x(mount, o);
+  if (!fitStyled) { fitStyled = true; const st = document.createElement("style"); st.textContent = FIT_CSS; document.head.append(st); }
+  return r;
+}
+/** 5f: MÀN CHỌN VAI MỚI (thầy: "đẹp và ngầu, dùng luôn xe và drone + màu sắc") — 4 thẻ vát góc: TEAM 1 · TEAM 2 (ảnh xe thật sơn màu đội) · DRONE 1 · DRONE 2 (ảnh drone sơn màu đội).
+ *  Ảnh: ../anh-pad/*.webp (tao-anh-vai-ipad-5f.html chụp từ mẫu 3D). Thẻ đã có iPad khác ⇒ xám + "TAKEN". setBusy([b0, b1, b2, b3]) */
+const IMG = n => new URL(`../anh-pad/${n}.webp`, import.meta.url).href;
+const ROLES = [
+  { name: "TEAM 1", sub: "DRIVE · ANSWER", c: "#3b8cff", img: "car-0", k: "car" },
+  { name: "TEAM 2", sub: "DRIVE · ANSWER", c: "#ff7a00", img: "car-1", k: "car" },
+  { name: "DRONE 1", sub: "FLY · AIM · SHOOT", c: "#3b8cff", c2: "#b07cff", img: "drone-0", k: "drone" },
+  { name: "DRONE 2", sub: "FLY · AIM · SHOOT", c: "#ff7a00", img: "drone-1", k: "drone" },
+];
+const CH_CSS = `
+.rc5{position:fixed;inset:0;overflow:hidden;color:#fff;font-family:"Exo 2",sans-serif;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;container-type:size;
+  background:radial-gradient(60cqw 50cqh at 18% 30%,rgba(59,140,255,.22),transparent 70%),radial-gradient(60cqw 50cqh at 82% 30%,rgba(255,122,0,.2),transparent 70%),linear-gradient(180deg,#0d111b,#06080d);
+  --u:min(1cqw,1.5cqh)}
+.rc5::before{content:"";position:absolute;inset:-20%;background:repeating-linear-gradient(115deg,transparent 0 calc(5 * var(--u)),rgba(255,255,255,.025) calc(5 * var(--u)) calc(5.2 * var(--u)));animation:rc5s 9s linear infinite;pointer-events:none}
+@keyframes rc5s{to{transform:translateX(calc(10.4 * var(--u)))}}
+.rc5-hd{position:relative;text-align:center;padding-top:calc(2.4 * var(--u))}
+.rc5-hd em{display:inline-flex;align-items:center;gap:calc(1 * var(--u));margin-bottom:calc(.7 * var(--u));font:italic 700 calc(1.7 * var(--u))/1 "Chakra Petch","Exo 2";letter-spacing:.5em;padding-left:.5em;
+  background:linear-gradient(180deg,#f3ecff,#b9a3ff 55%,#7d5cff);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 calc(.8 * var(--u)) rgba(150,110,255,.55))}
+.rc5-hd em::before,.rc5-hd em::after{content:"";width:calc(.7 * var(--u));height:calc(.7 * var(--u));transform:rotate(45deg);background:#b07cff;box-shadow:0 0 calc(.9 * var(--u)) #b07cff}
+.rc5-hd b{display:block;font:italic 900 calc(5.2 * var(--u))/1 "Exo 2";letter-spacing:.06em;background:linear-gradient(90deg,#7fb4ff,#fff 45%,#fff 55%,#ffb46b);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 calc(1.4 * var(--u)) rgba(255,255,255,.18))}
+.rc5-hd span{display:inline-flex;align-items:center;gap:calc(1.2 * var(--u));margin-top:calc(1 * var(--u));font:800 calc(1.6 * var(--u)) "Chakra Petch","Exo 2";letter-spacing:.42em;color:rgba(255,255,255,.62)}
+.rc5-hd span::before,.rc5-hd span::after{content:"";width:calc(6 * var(--u));height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5))}
+.rc5-hd span::after{transform:scaleX(-1)}
+.rc5-g{position:absolute;left:50%;top:calc(17.6 * var(--u));bottom:calc(4.4 * var(--u));grid-template-rows:1fr 1fr;transform:translateX(-50%);width:min(94cqw,calc(128 * var(--u)));display:grid;grid-template-columns:1fr 1fr;gap:calc(2.2 * var(--u)) calc(2.8 * var(--u))}
+.rc5-c{--cut:calc(3.4 * var(--u));position:relative;height:auto;min-height:0;border:0;padding:0;cursor:pointer;color:#fff;background:none;font:inherit;text-align:left;
+  filter:drop-shadow(0 calc(1 * var(--u)) calc(2.4 * var(--u)) rgba(0,0,0,.55)) drop-shadow(0 0 calc(1.4 * var(--u)) color-mix(in srgb,var(--c) 35%,transparent));transition:transform .18s,filter .25s}
+.rc5-c:active{transform:scale(.97)}
+.rc5-c .bg{position:absolute;inset:0;clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut));
+  background:linear-gradient(135deg,color-mix(in srgb,var(--c) 34%,#0c111a) 0%,#0b0f17 58%,color-mix(in srgb,var(--c2,var(--c)) 22%,#0b0f17) 100%)}
+.rc5-c .bg::before{content:"";position:absolute;inset:1.5px;clip-path:inherit;background:radial-gradient(70% 90% at 70% 40%,color-mix(in srgb,var(--c) 30%,transparent),transparent 70%),linear-gradient(160deg,#121a28,#090c13 70%)}
+.rc5-c .bg::after{content:"";position:absolute;top:0;bottom:0;width:30%;left:-40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.13),transparent);transform:skewX(-18deg);animation:rc5sh 4.5s ease-in-out infinite;animation-delay:var(--d,0s)}
+@keyframes rc5sh{0%,60%{left:-40%}100%{left:130%}}
+.rc5-c .ln{position:absolute;inset:0;clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut));
+  background:linear-gradient(90deg,var(--c),color-mix(in srgb,var(--c2,var(--c)) 80%,#fff));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;padding:2px;opacity:.9}
+.rc5-c img{position:absolute;right:calc(1.5 * var(--u));top:50%;transform:translateY(-54%);height:74%;max-width:66%;object-fit:contain;filter:drop-shadow(0 calc(1.6 * var(--u)) calc(1.6 * var(--u)) rgba(0,0,0,.6));transition:transform .3s;pointer-events:none}
+.rc5-c[data-k="drone"] img{height:62%;top:40%;animation:rc5f 3.2s ease-in-out infinite;animation-delay:var(--d,0s)}
+@media (orientation:portrait){.rc5-g{grid-template-columns:1fr;grid-template-rows:repeat(4,1fr)}.rc5-c img{max-width:58%}}   /* 5g: cầm dọc ⇒ 1 cột 4 thẻ phủ kín */
+@keyframes rc5f{50%{transform:translateY(-62%)}}
+.rc5-c .no{position:absolute;left:calc(3 * var(--u));top:calc(2.4 * var(--u));font:700 calc(1.5 * var(--u)) "Chakra Petch";letter-spacing:.3em;color:color-mix(in srgb,var(--c) 70%,#fff);opacity:.85}
+.rc5-c .nm{position:absolute;left:calc(3 * var(--u));bottom:calc(5.6 * var(--u));font:italic 900 calc(5 * var(--u))/1 "Exo 2";letter-spacing:.02em;text-shadow:0 0 calc(2 * var(--u)) color-mix(in srgb,var(--c) 70%,transparent)}
+.rc5-c .nm i{color:var(--c);font-style:inherit}
+.rc5-c .sb{position:absolute;left:calc(3 * var(--u));bottom:calc(2.6 * var(--u));display:flex;align-items:center;gap:calc(1 * var(--u));font:700 calc(1.45 * var(--u)) "Chakra Petch";letter-spacing:.24em;color:rgba(255,255,255,.75)}
+.rc5-c .sb::before{content:"";width:calc(2.4 * var(--u));height:calc(.35 * var(--u));background:var(--c);box-shadow:0 0 calc(.8 * var(--u)) var(--c)}
+.rc5-c .tk{position:absolute;right:calc(3 * var(--u));bottom:calc(2.4 * var(--u));padding:calc(.5 * var(--u)) calc(1.2 * var(--u));border:1.5px solid rgba(255,255,255,.55);font:700 calc(1.4 * var(--u)) "Chakra Petch";letter-spacing:.3em;transform:rotate(-6deg);display:none}
+.rc5-c.busy{filter:grayscale(1) brightness(.55);cursor:not-allowed}
+.rc5-c.busy .tk{display:block}
+.rc5-msg{position:absolute;left:0;right:0;bottom:calc(1.6 * var(--u));text-align:center;font:700 calc(1.6 * var(--u)) "Exo 2";color:#f5c542;min-height:1.4em}
+`;
+let chStyled = false;
+export function mountPadChooser(mount, { onPick }) {
+  if (!chStyled) { chStyled = true; const st = document.createElement("style"); st.textContent = CH_CSS; document.head.append(st); }
+  mount.innerHTML = `<div class="rc5"><div class="rc5-hd"><em>ANDREW STUDIO</em><b>RACING WORDS</b><span>CHOOSE YOUR ROLE</span></div>
+    <div class="rc5-g">${ROLES.map((r, t) => `<button type="button" class="rc5-c" data-t="${t}" data-k="${r.k}" style="--c:${r.c};${r.c2 ? `--c2:${r.c2};` : ""}--d:${(t * 0.55).toFixed(2)}s">
+      <span class="bg"></span><span class="ln"></span><img src="${IMG(r.img)}" alt="" draggable="false">
+      <span class="no">0${t + 1} · ${r.k === "car" ? "CAR" : "DRONE"}</span><span class="nm">${r.name.split(" ")[0]} <i>${r.name.split(" ")[1]}</i></span><span class="sb">${r.sub}</span><span class="tk">TAKEN</span></button>`).join("")}</div>
+    <p class="rc5-msg"></p></div>`;
+  let busy = [false, false, false, false];
+  const msg = mount.querySelector(".rc5-msg");
+  mount.querySelectorAll(".rc5-c").forEach(b => b.addEventListener("click", () => { const t = +b.dataset.t; if (busy[t]) { msg.textContent = ROLES[t].name + " already has an iPad."; return; } onPick(t); }));
+  ["contextmenu", "dblclick", "gesturestart"].forEach(ev => mount.firstElementChild.addEventListener(ev, e => e.preventDefault()));
+  return {
+    setBusy(b) {
+      busy = [0, 1, 2, 3].map(k => !!(b && b[k]));
+      mount.querySelectorAll(".rc5-c").forEach(el => el.classList.toggle("busy", busy[+el.dataset.t]));
+      if (!busy.some(Boolean)) msg.textContent = "";
+    }
+  };
+}
 
 const AMMO = [{ k: "heart", t: "HEART", c: "#ff63c3", cost: 0.40, cd: 4 }, { k: "boost", t: "BOOST", c: "#2ee6c9", cost: 0.25, cd: 3 }, { k: "missile", t: "MISSILE", c: "#ff2020", cost: 0.35, cd: 3 }];
 const MODE_T = { neutral: "NEUTRAL", losing: "HELPS THE LOSING TEAM", team: "TEAM DRONE" };

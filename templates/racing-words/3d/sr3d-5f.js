@@ -1,3 +1,18 @@
+// RACING WORDS — LÕI MẪU 5f (19/10/2026) = sr3d-5e.js + thầy chỉnh drone:
+//   · màu đội SƠN THẲNG lên thân drone (pha 70 % màu đội sáng hơn, không phát sáng) — bỏ quầng sáng dưới bụng.
+//   · máy quay drone ƯU TIÊN XE DẪN ĐẦU: bám xe đi trước, lùi sau nó (NEAR / FAR + khoảng cách 2 xe, tối đa GMAX 70 m) ⇒ xe dẫn luôn trong khung;
+//     2 xe càng xa ⇒ drone + máy quay NÂNG CAO DẦN (tới ×2 độ cao), nhìn xa thêm ⇒ thấy cả 2 xe; cách > 70 m ⇒ xe sau rơi khỏi khung (ưu tiên bắn xe nhanh hơn).
+//     2 xe gần nhau ⇒ y như 5e. Tâm bắn xa tối đa 130 m (cũ 90).
+// ---- gốc 5e ----
+// RACING WORDS — LÕI MẪU 5e (19/10/2026) = sr3d-5d.js + CHẾ ĐỘ 2 DRONE (thầy chọn ở thiet-ke-5e-hai-drone.html):
+//   · Settings ▸ Drone: Off / 1 drone / 2 drones. 2 drone = mỗi đội 1 drone (luật Team drone: Heart / Boost cho đội mình, Missile bắn đội kia), iPad thứ 4 (t = 3).
+//   · cách A "hàng ngang lệch tầng": CHUNG máy quay (lùi ×1,15, nhìn xa thêm 15 m) ⇒ 2 drone ngang hàng sát đáy cột; drone 2 cao +1 m nhưng lùi 0,7 m (không va);
+//     mỗi drone giữ nửa đường đội mình (TEAM 1 trái, TEAM 2 phải), nhỏ 15 %. NEAR / FAR: máy quay ở khoảng TRUNG BÌNH 2 iPad, drone mỗi người nhích ±3 m.
+//   · chung 1 mẫu drone, PHA MÀU ĐỘI (thân 38 % + quầng sáng dưới bụng + chấm thoi màu đội giữa tâm ngắm) — thầy: KHÔNG số 1 / 2.
+//   · bảng đạn TỐI GIẢN M1 trên trời (.rw-dv2, rw-5e.css): 3 icon đạn (đang chọn sáng viền, hồi chiêu = vòng chạy, thiếu pin = mờ) + vạch pin màu đội. Bỏ chữ / ô nền.
+//   · mỗi drone: pin, hồi chiêu, 1 quả một lúc (sr3d-dammo-5e activeOf), tâm ngắm + tâm bóng mờ riêng; dòng kết trận mỗi drone. Phím drone 2: bàn số 4 6 8 5 · 7 9 · 1 2 3 · 0.
+//   · 1 drone: y hệt 5d.
+// ---- gốc 5d ----
 // RACING WORDS — LÕI MẪU 5d (19/10/2026, bản CHỐT đưa lên AWord Đợt 553) = sr3d-5a.js + CHỈ TẢI MẪU DRONE 3D KHI DRONE BẬT
 //   (đo màn chờ AWord: drone tắt vẫn tải Mavic 350 KB — Northstar 1,25 MB — cho mọi lớp). Bật drone ở Settings ⇒ setDrone ⇒ applyModel tải lúc đó.
 // ---- gốc 5a ----
@@ -287,7 +302,7 @@ import { createTwists, createPickups, TWIST, twistAngle } from "./sr3d-stunt-4b.
 import { createTraffic, TRAFFIC_MODES } from "./sr3d-traffic-4c.js";
 import { makeAutoRes } from "./sr3d-autores-3r.js";
 import { icon as ICON, iconize } from "./rw-icons-4x.js";   /* 4x: icon 2D Neon viền */
-import { createDroneAmmo, DA } from "./sr3d-dammo-4w.js";   /* 4w: dấu hiện / ẩn nhoè */   /* 4v: dấu điểm rơi + seek */   /* 4t: ra từ bụng */   /* 4s */   // 4r: đạn drone
+import { createDroneAmmo, DA } from "./sr3d-dammo-5e.js";   /* 5e: + chủ đạn */   /* 4w: dấu hiện / ẩn nhoè */   /* 4v: dấu điểm rơi + seek */   /* 4t: ra từ bụng */   /* 4s */   // 4r: đạn drone
 import { DRONE_MODELS, DRONE_PICK, droneInfo as droneMeta, loadDrone } from "./sr3d-drone3d-4p.js";   /* 4p */   // 4o: trục quạt = trọng tâm + vòng mờ · 4n: 8 mẫu + quạt quay · 4m
 import { createMissiles, MS, missileGeos, buildMissile } from "./sr3d-missile-4i.js";
 import { createRamps, createTrails, RadialBlurShader, RAMP, RAMP_SLOPE } from "./sr3d-fx-3c.js";
@@ -353,8 +368,8 @@ const RadialBlurShader4k = {
       gl_FragColor = acc / 10.0; }`
 };
 // 4k: DRONE — cột giữa rộng DRONE_W bề ngang khung; tâm bắn xa D_NEAR…D_FAR m trước drone; khoá xe khi tâm cách xe < D_LOCK m
-const DRONE_W = 0.24, D_NEAR = 15, D_FAR = 90, D_LOCK = 6, D_ALT = 12, D_BACK = 20;
-const D_BK0 = 4, D_BK1 = 45, D_SIGHT = 2.6;   // 4v: khoảng drone sau xe (NEAR / FAR dời) · bán kính lục giác ngắm (báo IN SIGHT)
+const DRONE_W = 0.24, D_NEAR = 15, D_FAR = 130,   /* 5f: 90 ⇒ 130 (bắn tới xe dẫn khi 2 xe xa) */ D_LOCK = 6, D_ALT = 12, D_BACK = 20;
+const D_BK0 = 4, D_BK1 = 45, D_SIGHT = 2.6, GMAX = 70;   /* 5f: GMAX = khoảng 2 xe tối đa máy quay cố ôm */   // 4v: khoảng drone sau xe (NEAR / FAR dời) · bán kính lục giác ngắm (báo IN SIGHT)
 const autoR = k => 4 + 1.2 * k, autoV = k => 0.8 * k;   // 4v: Auto target — bán kính bắt · tốc độ trượt điểm rơi (m/s)
 const DRONE_KEY = "racingwords.drone.v1";
 const D_WS = [0.18, 0.21, 0.24, 0.28, 0.32], D_ZS = [[0.8, "Close"], [1, "Normal"], [1.25, "Wide"], [1.5, "Wider"], [1.8, "Widest"]];   // 4t: bề ngang cột · độ xa máy quay drone
@@ -443,7 +458,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       <canvas class="sr-canvas"></canvas>
       ${half(0)}${half(1)}
       <div class="rw-dv" aria-hidden="true"><div class="rw-dv-top"><b>DRONE</b><span class="rw-dv-mode"></span></div><div class="rw-dv-lock"></div>
-        <div class="rw-dv-bot"><div class="rw-dv-ammo">${AMMO.map(a => `<span data-a="${a.k}" style="--ac:${a.c}">${a.t}</span>`).join("")}</div><div class="rw-dv-bat"><i></i></div><div class="rw-dv-keys">J L · I K aim &nbsp;·&nbsp; U O drone &nbsp;·&nbsp; 1 2 3 ammo</div></div></div>
+        <div class="rw-dv-bot"><div class="rw-dv-ammo">${AMMO.map(a => `<span data-a="${a.k}" style="--ac:${a.c}">${a.t}</span>`).join("")}</div><div class="rw-dv-bat"><i></i></div><div class="rw-dv-keys">J L · I K aim &nbsp;·&nbsp; U O drone &nbsp;·&nbsp; 1 2 3 ammo</div></div><div class="rw-dv2">${[0, 1].map(n => `<div class="rw-dv2-g" style="--c:${TEAMS[n].color}"><div class="rw-dv2-row">${AMMO.map(a => `<span class="rw-dv2-ic" data-a="${a.k}" style="--ac:${a.c}">${ICON(a.k)}</span>`).join("")}</div><div class="rw-dv2-bat"><i></i></div></div>`).join("")}</div></div>
       <div class="sr-divider"></div>
       <div class="rw-cd" aria-hidden="true"><b></b></div>
       <div class="rw-rs" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -1210,10 +1225,14 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     box.querySelectorAll("[data-tr]").forEach(b => b.addEventListener("click", () => { setTraffic(b.dataset.tr); raceTab(box); }));
   }
   // ---------- 4k: DRONE — cài đặt (nhớ theo máy) · trạng thái · mô hình · máy quay · tâm bắn ----------
+  // 5e: 2 DRONE (thầy chọn ở thiet-ke-5e-hai-drone.html — cách A "hàng ngang lệch tầng"): DR[0] = drone 1 (1 drone: như 5d · 2 drone: TEAM 1), DR[1] = drone 2 (TEAM 2).
+  //   Dùng CHUNG máy quay dcam (lùi ×1,15, nhìn xa thêm 15 m ⇒ 2 drone sát đáy cột). Drone 2 cao hơn 1 m nhưng lùi 0,7 m ⇒ trên màn 2 chiếc ngang hàng, không va.
+  //   Mỗi drone giữ nửa đường của đội mình (không bay chéo qua nhau) · NEAR / FAR: máy quay ở khoảng TRUNG BÌNH 2 iPad, drone mỗi người nhích ±3 m theo ý mình.
+  //   Chung 1 mẫu drone, PHA MÀU ĐỘI (thân + vòng sáng dưới bụng + chấm giữa tâm ngắm) — không có số 1 / 2. Bảng đạn tối giản M1 trên trời (3 icon + vạch pin màu đội).
   const dset = (() => {
-    const d = { on: false, mode: "neutral", team: 0, model: "A1", ammo: { heart: true, boost: true, missile: true }, w: DRONE_W, zoom: 1, auto: false, autoK: 5 };   /* 4t: + w · zoom · 4v: + auto · autoK */   /* 4m: + model (mặc định Mavic) */
+    const d = { on: false, n: 1, mode: "neutral", team: 0, model: "A1", ammo: { heart: true, boost: true, missile: true }, w: DRONE_W, zoom: 1, auto: false, autoK: 5 };   /* 5e: + n (1 | 2 drone) */   /* 4t: + w · zoom · 4v: + auto · autoK */   /* 4m: + model (mặc định Mavic) */
     try { const o = JSON.parse(localStorage.getItem(DRONE_KEY) || "{}");
-      if (typeof o.on === "boolean") d.on = o.on; if (D_MODES.some(m => m.k === o.mode)) d.mode = o.mode; if (o.team === 0 || o.team === 1) d.team = o.team;
+      if (typeof o.on === "boolean") d.on = o.on; if (o.n === 1 || o.n === 2) d.n = o.n; if (D_MODES.some(m => m.k === o.mode)) d.mode = o.mode; if (o.team === 0 || o.team === 1) d.team = o.team;
       if (o.ammo) AMMO.forEach(a => { if (typeof o.ammo[a.k] === "boolean") d.ammo[a.k] = o.ammo[a.k]; }); if (DRONE_PICK.some(m => m.id === o.model)) d.model = o.model;
       if (typeof o.auto === "boolean") d.auto = o.auto; if (Number.isInteger(o.autoK) && o.autoK >= 1 && o.autoK <= 10) d.autoK = o.autoK;   // 4v
       if (D_WS.includes(o.w)) d.w = o.w; if (D_ZS.some(z => z[0] === o.zoom)) d.zoom = o.zoom; } catch (e) { /* */ }
@@ -1221,29 +1240,39 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     return d;
   })();
   dW = dset.w;   // 4t
-  //   s / x / y: chỗ drone (quãng đường, ngang, cao) · ax / ad: TÂM BẮN (ngang trên đường, xa phía trước drone) · sel: đạn đang chọn (chỉ số AMMO) · lock: đội đang khoá (−1)
-  const D = { s: 0, x: 0, y: D_ALT, off: -D_BACK, anc: -1, ax: 0, ad: 40, sel: 0, lock: -1, keys: new Set(), msgT: 0, init: false, pad: null, padT: -99, padSt: "", padOn: false,
-    vx: 0, axl: 0, vs: 0, afs: 0, sPrev: 0, yaw: 0, spin: 0, tR: 0, tP: 0, bk: D_BACK };   /* 4v: bk = khoảng sau xe (NEAR / FAR) */   /* 4u: tR / tP = nghiêng theo tay lái (êm) */   /* 4l: + iPad · 4n: vận tốc / gia tốc ngang + tiến, góc quay đầu, góc quạt */   /* 4l: + iPad */
-  Object.assign(D, { bat: 1, batTx: "", cd: { heart: 0, boost: 0, missile: 0 }, stats: { help: [0, 0], hit: [0, 0] } });   // 4r: pin · chờ · thống kê
-  droneReset = () => { D.bk = D_BACK; D.bat = 1; D.cd = { heart: 0, boost: 0, missile: 0 }; D.stats = { help: [0, 0], hit: [0, 0] }; dammo.clear(); };
+  const two = () => dset.on && dset.n === 2;                                   // 5e
+  const dUsed = d => dset.on && (d.n === 0 || two());                          // 5e: drone này đang bay?
+  //   s / x / y: chỗ drone (quãng đường, ngang, cao) · ax / ad: TÂM BẮN (ngang trên đường, xa phía trước drone) · sel: đạn đang chọn (chỉ số AMMO) · lock: đội đang trong lục giác (−1)
+  const mkD = n => ({ n, s: 0, x: 0, y: D_ALT, off: -D_BACK, anc: -1, ax: 0, ad: 40, sel: 0, lock: -1, keys: new Set(), msgT: 0, init: false, pad: null, padT: -99, padSt: "", padOn: false,
+    vx: 0, axl: 0, vs: 0, afs: 0, sPrev: 0, yaw: 0, spin: 0, tR: 0, tP: 0, bk: D_BACK, ds: 0,   /* 5e: ds = lệch so với đội hình */
+    bat: 1, batTx: "", cd: { heart: 0, boost: 0, missile: 0 }, stats: { help: [0, 0], hit: [0, 0] }, o: null, hud: "" });
+  const DR = [mkD(0), mkD(1)], D = DR[0];
+  const F = { anc: -1, off: -D_BACK, s: 0, x: 0, init: false };              // 5e: ĐỘI HÌNH 2 drone (máy quay chung bám theo)
+  const DV = { S: 0, kg: 0, g: 0 };   /* 5f: kg = mức nâng máy quay theo khoảng cách 2 xe (0..1) · g = khoảng 2 xe (êm) */                                                          // 5e: chỗ máy quay drone nhìn tới (bảng hình đường cong)
+  droneReset = () => { DR.forEach(d => { d.bk = D_BACK; d.bat = 1; d.cd = { heart: 0, boost: 0, missile: 0 }; d.stats = { help: [0, 0], hit: [0, 0] }; }); dammo.clear(); };
   const dvKeys = $(".rw-dv-keys"), dvBat = $(".rw-dv-bat i");   /* 4r: + thanh pin */
   const dvEl = $(".rw-dv"), dvMode = dvEl.querySelector(".rw-dv-mode"), dvLock = dvEl.querySelector(".rw-dv-lock"), dvChips = [...dvEl.querySelectorAll(".rw-dv-ammo span")];
+  const dv2 = [...dvEl.querySelectorAll(".rw-dv2-g")].map(g => ({ ic: [...g.querySelectorAll(".rw-dv2-ic")], bat: g.querySelector(".rw-dv2-bat i") }));   // 5e: bảng tối giản M1
   let dvLockTx = null;
-  function fixSel() { if (dset.ammo[(AMMO[D.sel] || {}).k]) return; D.sel = AMMO.findIndex(a => dset.ammo[a.k]); }
+  const dMode = () => two() ? "team" : dset.mode;                              // 5e: 2 drone ⇒ luôn "Team drone"
+  const dTeam = d => two() ? d.n : dset.team;
+  function fixSel(d) { if (!d) { DR.forEach(fixSel); return; } if (dset.ammo[(AMMO[d.sel] || {}).k]) return; d.sel = AMMO.findIndex(a => dset.ammo[a.k]); }
   function setDrone(o) {
     if (o.ammo) { dset.ammo = { ...dset.ammo, ...o.ammo }; o = { ...o }; delete o.ammo; }
     if (o.model != null && !DRONE_PICK.some(m => m.id === o.model)) { o = { ...o }; delete o.model; }   // 4p: mẫu đã bỏ ⇒ bỏ qua
+    const was = two();
     Object.assign(dset, o); if (dW !== dset.w) { dW = dset.w; if (dK > 0.001) layoutDrone(true); }   /* 4t */
-    fixSel(); paintDv(); droneInfo(); applyModel();   /* 4m */   /* 4l: báo iPad drone ngay */
+    if (was !== two()) { DR.forEach(d => { d.init = false; }); F.init = false; }   // 5e: đổi 1 ⇄ 2 drone ⇒ xếp lại đội hình
+    fixSel(); paintDv(); DR.forEach(d => droneInfo(d)); applyModel();   /* 4m */   /* 4l: báo iPad drone ngay */
     try { localStorage.setItem(DRONE_KEY, JSON.stringify(dset)); } catch (e) { /* */ }
     onEvent("drone", { ...dset, ammo: { ...dset.ammo } });
   }
-  //   đội i có được nhận loại đạn k không (theo chế độ) — Neutral: ai cũng được · Help the losing team: tiếp tế đội SAU, tên lửa đội DẪN · Team drone: tiếp tế đội mình, tên lửa đội kia
-  function canTarget(i, k) {
+  //   đội i có được nhận loại đạn k từ drone d không (theo chế độ) — Neutral: ai cũng được · Help the losing team: tiếp tế đội SAU, tên lửa đội DẪN · Team drone: tiếp tế đội mình, tên lửa đội kia
+  function canTarget(i, k, d = D) {
     if (!k || !dset.ammo[k]) return false;
-    const sup = k !== "missile";
-    if (dset.mode === "team") return sup ? i === dset.team : i !== dset.team;
-    if (dset.mode === "losing") { if (Math.abs(T[0].s - T[1].s) < 1) return true; const lead = T[0].s > T[1].s ? 0 : 1; return sup ? i !== lead : i === lead; }
+    const sup = k !== "missile", mode = dMode();
+    if (mode === "team") { const tm = dTeam(d); return sup ? i === tm : i !== tm; }
+    if (mode === "losing") { if (Math.abs(T[0].s - T[1].s) < 1) return true; const lead = T[0].s > T[1].s ? 0 : 1; return sup ? i !== lead : i === lead; }
     return true;
   }
   function paintDv() {
@@ -1251,58 +1280,62 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     dvMode.textContent = dset.mode === "team" ? TEAMS[dset.team].name : m.t.toUpperCase();
     dvEl.style.setProperty("--dc", dset.mode === "team" ? TEAMS[dset.team].color : "#b07cff");
     dvChips.forEach((c, k) => { c.classList.toggle("on", k === D.sel); c.classList.toggle("off", !dset.ammo[AMMO[k].k]); });
+    mount.classList.toggle("rw-d2", two());                                    // 5e: 2 drone ⇒ bảng tối giản
+    DR.forEach(d => dv2[d.n].ic.forEach((c, k) => { c.classList.toggle("on", k === d.sel); c.classList.toggle("off", !dset.ammo[AMMO[k].k]); }));
   }
-  function droneSel(k) { if (AMMO[k] && dset.ammo[AMMO[k].k]) { D.sel = k; paintDv(); droneInfo(); } }
-  // 4l: tin cho iPad drone (chỉ kênh thẳng)
-  function droneInfo() { if (remote && remote.send && D.padOn) remote.send(2, `j:${D.bat.toFixed(2)},${D.sel},${D.lock},${G.phase},${AMMO.map(a => dset.ammo[a.k] ? 1 : 0).join("")},${dset.mode},${dset.team},${dset.on ? 1 : 0},${AMMO.map(a => Math.max(0, D.cd[a.k] - G.t).toFixed(1)).join("/")},${dammo.active > 0 ? 1 : 0}`); }   /* 5a: + chờ · đạn bay */
-  const dvMsg = tx => { D.msgT = 1.3; dvLock.textContent = tx; dvLock.style.color = "#f5c542"; dvLockTx = null; };
-  // 4r: BẮN — đang đua · đủ pin · hết thời gian chờ loại đó; khoá xe ⇒ đạn bám vị trí dự đoán của xe (s + v·t)
-  function droneFire() {
-    if (D.sel < 0 || !dset.on) return;
-    const a = AMMO[D.sel], k = a.k;
-    if (G.phase !== "race" || G.paused) { dvMsg("WAIT FOR THE RACE"); return; }
-    if (dammo.active > 0) { dvMsg("WAIT · SHOT IN THE AIR"); onEvent("droneDeny", { kind: k, why: "busy" }); return; }   // 4w: 1 quả một lúc
-    if (D.cd[k] > G.t) { dvMsg(`${a.t.toUpperCase()} · READY IN ${Math.ceil(D.cd[k] - G.t)} s`); onEvent("droneDeny", { kind: k, why: "wait" }); return; }
-    if (D.bat < DA.COST[k] - 1e-6) { dvMsg("LOW BATTERY"); onEvent("droneDeny", { kind: k, why: "battery" }); return; }
-    D.bat -= DA.COST[k]; D.cd[k] = G.t + DA.CD[k];
+  function droneSel(k, d = D) { if (AMMO[k] && dset.ammo[AMMO[k].k]) { d.sel = k; paintDv(); droneInfo(d); } }
+  // 4l: tin cho iPad drone (chỉ kênh thẳng) · 5e: drone 2 = chỗ t = 3; drone không bay ⇒ báo "tắt"
+  function droneInfo(d = D) { if (remote && remote.send && d.padOn) remote.send(2 + d.n, `j:${d.bat.toFixed(2)},${d.sel},${d.lock},${G.phase},${AMMO.map(a => dset.ammo[a.k] ? 1 : 0).join("")},${dMode()},${dTeam(d)},${dUsed(d) ? 1 : 0},${AMMO.map(a => Math.max(0, d.cd[a.k] - G.t).toFixed(1)).join("/")},${dammo.activeOf(d.n) > 0 ? 1 : 0}`); }   /* 5a: + chờ · đạn bay */
+  const dvMsg = (tx, d = D) => { if (two() || d.n) return; D.msgT = 1.3; dvLock.textContent = tx; dvLock.style.color = "#f5c542"; dvLockTx = null; };   // 5e: 2 drone ⇒ không chữ (iPad báo)
+  // 4r: BẮN — đang đua · đủ pin · hết thời gian chờ loại đó
+  function droneFire(d = D) {
+    if (d.sel < 0 || !dUsed(d)) return;
+    const a = AMMO[d.sel], k = a.k, o = d.o;
+    if (G.phase !== "race" || G.paused) { dvMsg("WAIT FOR THE RACE", d); return; }
+    if (dammo.activeOf(d.n) > 0) { dvMsg("WAIT · SHOT IN THE AIR", d); onEvent("droneDeny", { kind: k, why: "busy", drone: d.n }); return; }   // 4w: 1 quả một lúc (5e: mỗi drone)
+    if (d.cd[k] > G.t) { dvMsg(`${a.t.toUpperCase()} · READY IN ${Math.ceil(d.cd[k] - G.t)} s`, d); onEvent("droneDeny", { kind: k, why: "wait", drone: d.n }); return; }
+    if (d.bat < DA.COST[k] - 1e-6) { dvMsg("LOW BATTERY", d); onEvent("droneDeny", { kind: k, why: "battery", drone: d.n }); return; }
+    d.bat -= DA.COST[k]; d.cd[k] = G.t + DA.CD[k];
     // 4v: KHÔNG khoá — đạn rơi đúng chỗ tâm ngắm; Auto target bật ⇒ điểm rơi trượt về xe gần (theo luật chế độ)
-    const tg = D.lock, R = autoR(dset.autoK);
-    const seek = dset.auto ? (x, s, tl) => { let best = null, bd = R; T.forEach(t => { if (t.done || t.dead || !canTarget(t.i, k)) return; const ps = t.s + t.v * tl, d = Math.hypot(t.x - x, ps - s); if (d < bd) { bd = d; best = { x: t.x, s: ps }; } }); return best; } : null;
-    dammo.fire({ kind: k, x: dObj.g.position.x, y: dObj.g.position.y - 0.35, z: dObj.g.position.z - 1.5,   src: dObj.g.position,   /* 4t: ra từ bụng, bám drone */ tx: D.ax, ts: D.s + D.ad, seek, drift: autoV(dset.autoK) });   /* 4v */
-    onEvent("droneShot", { kind: k, lock: tg }); droneInfo();
+    const tg = d.lock, R = autoR(dset.autoK);
+    const seek = dset.auto ? (x, s, tl) => { let best = null, bd = R; T.forEach(t => { if (t.done || t.dead || !canTarget(t.i, k, d)) return; const ps = t.s + t.v * tl, dd = Math.hypot(t.x - x, ps - s); if (dd < bd) { bd = dd; best = { x: t.x, s: ps }; } }); return best; } : null;
+    dammo.fire({ owner: d.n, kind: k, x: o.g.position.x, y: o.g.position.y - 0.35, z: o.g.position.z - 1.5, src: o.g.position,   /* 4t: ra từ bụng, bám drone */ tx: d.ax, ts: d.s + d.ad, seek, drift: autoV(dset.autoK) });   /* 4v */
+    onEvent("droneShot", { kind: k, lock: tg, drone: d.n }); droneInfo(d);
   }
   // 4r: ĐẠN CHẠM — xe trong vùng nổ + chế độ cho phép loại đạn ⇒ trúng xe; không ⇒ trúng đường
-  function droneHit(h) {   // 4z: mọi xe trong vùng nổ (không chỉ xe gần nhất)
-    const cars = [];
-    if (G.phase === "race") T.forEach(t => { if (t.done || t.dead || t.y > 1.6) return; if (Math.abs(t.x - h.x) < 1.9 && Math.abs(t.s - h.s) < 3.8 && canTarget(t.i, h.kind)) cars.push(t.i); });
+  function droneHit(h) {   // 4z: mọi xe trong vùng nổ (không chỉ xe gần nhất) · 5e: h.owner = drone bắn
+    const d = DR[h.owner || 0], cars = [];
+    if (G.phase === "race") T.forEach(t => { if (t.done || t.dead || t.y > 1.6) return; if (Math.abs(t.x - h.x) < 1.9 && Math.abs(t.s - h.s) < 3.8 && canTarget(t.i, h.kind, d)) cars.push(t.i); });
     if (h.kind === "missile") {
-      if (cars.length) cars.forEach(c => { impact({ from: c, to: c, P: { s: T[c].s, x: T[c].x }, drone: true }); D.stats.hit[c]++; });
+      if (cars.length) cars.forEach(c => { impact({ from: c, to: c, P: { s: T[c].s, x: T[c].x }, drone: true }); d.stats.hit[c]++; });
       else { missiles.boom(h.x, -h.s, "miss"); dammo.burst("missile", h.x, h.s, false); T.forEach(t => { if (Math.hypot(t.x - h.x, t.s - h.s) < 5) t.shake = Math.max(t.shake, 0.5); }); }
     } else if (!cars.length) dammo.burst(h.kind, h.x, h.s, false);
     else cars.forEach(car => { const t = T[car];
-      dammo.burst(h.kind, t.x, t.s, true); D.stats.help[car]++;
+      dammo.burst(h.kind, t.x, t.s, true); d.stats.help[car]++;
       if (h.kind === "heart") { if (opt.lives && t.lives < opt.lives) { t.lives++; paintLives(); toast(car, "+1 [heart] FROM DRONE", "ok"); } else if (opt.lives) toast(car, "LIVES FULL", "info"); else { t.E = Math.min(PHYS.CAP * SEG, t.E + 0.5 * SEG); toast(car, "+½ BOOST FROM DRONE", "ok"); } }
       else { t.E = Math.min(PHYS.CAP * SEG, t.E + SEG); t.popK = 1; toast(car, "+BOOST FROM DRONE", "ok"); } });
-    onEvent("droneHit", { kind: h.kind, team: cars.length ? cars[0] : -1, teams: cars, x: +h.x.toFixed(1), s: Math.round(h.s) });
+    onEvent("droneHit", { kind: h.kind, team: cars.length ? cars[0] : -1, teams: cars, x: +h.x.toFixed(1), s: Math.round(h.s), drone: d.n });
   }
-  // 4r: dòng DRONE ở bảng kết trận
-  function droneRow() { if (!dset.on) return ""; const st = D.stats, nm = i => `<b style="color:${TEAMS[i].color}">${TEAMS[i].name}</b>`;
+  // 4r: dòng DRONE ở bảng kết trận · 5e: 2 drone ⇒ mỗi drone 1 dòng màu đội
+  function droneRow() { if (!dset.on) return ""; const nm = i => `<b style="color:${TEAMS[i].color}">${TEAMS[i].name}</b>`;
+    if (two()) return DR.map(d => { const st = d.stats, me = d.n, op = 1 - me;
+      return `<div class="rw-dres" style="--team:${TEAMS[me].color}"><b>${ICON("drone")} ${TEAMS[me].name} DRONE</b><span>${ICON("heart")}${ICON("boost")} helped ${nm(me)} ×${st.help[me]}</span><span>${ICON("missile")} hit ${nm(op)} ×${st.hit[op]}</span></div>`; }).join("");
+    const st = D.stats;
     return `<div class="rw-dres" style="--team:#b07cff"><b>${ICON("drone")} DRONE</b><span>${ICON("heart")}${ICON("boost")} helped ${nm(0)} ×${st.help[0]} · ${nm(1)} ×${st.help[1]}</span><span>${ICON("missile")} hit ${nm(0)} ×${st.hit[0]} · ${nm(1)} ×${st.hit[1]}</span></div>`; }
   function droneTab(box) {
-    const m = D_MODES.find(x => x.k === dset.mode);
-    box.innerHTML = `<div class="sr-opt"><div class="sr-opt-row"><span>Drone</span><div class="sr-seg"><button type="button" data-don="0" class="${dset.on ? "" : "on"}">Off</button><button type="button" data-don="1" class="${dset.on ? "on" : ""}">1 drone</button><button type="button" disabled title="Coming later">2 drones · soon</button></div></div>
-        <p class="sr-opt-note">${dset.on ? "A third player flies the drone in the middle of the screen (keys J L I K aim · U O drone closer / back · 1 2 3 · Space). Sky view is off while the drone is on." : "No drone — the two teams use the whole screen."}</p></div>
-      <div class="sr-pm rw-dmode">${D_MODES.map(x => `<button type="button" class="sr-pm-o${x.k === dset.mode ? " on" : ""}" data-dm="${x.k}"><b>${x.t}</b><span>${x.d}</span></button>`).join("")}</div>
-      <div class="sr-opt">${dset.mode === "team" ? `<div class="sr-opt-row"><span>Drone team</span><div class="sr-seg">${TEAMS.map((tm, i) => `<button type="button" data-dt="${i}" class="${dset.team === i ? "on" : ""}">${tm.name}</button>`).join("")}</div></div>` : ""}
+    const m = D_MODES.find(x => x.k === dset.mode), n2 = two();
+    box.innerHTML = `<div class="sr-opt"><div class="sr-opt-row"><span>Drone</span><div class="sr-seg"><button type="button" data-don="0" class="${dset.on ? "" : "on"}">Off</button><button type="button" data-don="1" class="${dset.on && !n2 ? "on" : ""}">1 drone</button><button type="button" data-don="2" class="${n2 ? "on" : ""}">2 drones</button></div></div>
+        <p class="sr-opt-note">${n2 ? "Each team has its own drone: hearts and boosts help your car, missiles hit the other car. Drone 1 = J L I K · U O · 1 2 3 · Space; drone 2 = numpad 4 6 8 5 · 7 9 · 1 2 3 · 0." : dset.on ? "A third player flies the drone in the middle of the screen (keys J L I K aim · U O drone closer / back · 1 2 3 · Space). Sky view is off while the drone is on." : "No drone — the two teams use the whole screen."}</p></div>
+      ${n2 ? "" : `<div class="sr-pm rw-dmode">${D_MODES.map(x => `<button type="button" class="sr-pm-o${x.k === dset.mode ? " on" : ""}" data-dm="${x.k}"><b>${x.t}</b><span>${x.d}</span></button>`).join("")}</div>`}
+      <div class="sr-opt">${!n2 && dset.mode === "team" ? `<div class="sr-opt-row"><span>Drone team</span><div class="sr-seg">${TEAMS.map((tm, i) => `<button type="button" data-dt="${i}" class="${dset.team === i ? "on" : ""}">${tm.name}</button>`).join("")}</div></div>` : ""}
         <div class="rw-dmdl">${[["DRONES", ["quad", "bug"]], ["AIRCRAFT", ["jet", "tilt"]], ["SPACESHIPS", ["ship"]]].map(([gt, ks]) => `<b>${gt}</b><div>${DRONE_PICK.filter(m => ks.includes(m.kind)).map(m => `<button type="button" data-dmd="${m.id}" class="${dset.model === m.id ? "on" : ""}">${m.name}</button>`).join("")}</div>`).join("")}</div>   <!-- 4o: lưới thẻ theo nhóm -->
-        <!-- 4w: bỏ dòng ghi công mẫu 3D (thầy) -->
         <div class="sr-opt-row"><span>Ammo</span><div class="sr-seg">${AMMO.map(a => `<button type="button" data-da="${a.k}" class="${dset.ammo[a.k] ? "on" : ""}">${a.t}</button>`).join("")}</div></div>
         <div class="sr-opt-row"><span>Auto target</span><div class="sr-seg"><button type="button" data-dau="0" class="${dset.auto ? "" : "on"}">Off</button><button type="button" data-dau="1" class="${dset.auto ? "on" : ""}">On</button></div></div>   <!-- 4v -->
         ${dset.auto ? `<div class="sr-opt-row"><span>Auto pull</span><div style="display:flex;align-items:center;gap:10px;flex:1;max-width:280px"><small style="opacity:.6">weak</small><input type="range" min="1" max="10" step="1" value="${dset.autoK}" data-dak style="flex:1;accent-color:#b07cff;cursor:pointer"><small style="opacity:.6">strong</small><b class="rw-dakv" style="min-width:1.6em;text-align:right">${dset.autoK}</b></div></div>
         <p class="sr-opt-note rw-dakn">Shots slide toward a car within ${Math.round(autoR(dset.autoK))} m of the aim point (up to ${autoV(dset.autoK).toFixed(1)} m/s). Off = the shot lands exactly where you aim.</p>` : `<p class="sr-opt-note">Off: the shot lands exactly where you aim — a glowing mark on the road shows where it will hit.</p>`}
         <div class="sr-opt-row"><span>Column width</span><div class="sr-seg">${D_WS.map(w => `<button type="button" data-dw="${w}" class="${dset.w === w ? "on" : ""}">${Math.round(w * 100)}%</button>`).join("")}</div></div>   <!-- 4t -->
         <div class="sr-opt-row"><span>View zoom</span><div class="sr-seg">${D_ZS.map(([z, t]) => `<button type="button" data-dz="${z}" class="${dset.zoom === z ? "on" : ""}">${t}</button>`).join("")}</div></div></div>`;
-    box.querySelectorAll("[data-don]").forEach(b => b.addEventListener("click", () => { setDrone({ on: b.dataset.don === "1" }); droneTab(box); }));
+    box.querySelectorAll("[data-don]").forEach(b => b.addEventListener("click", () => { const v = +b.dataset.don; setDrone(v ? { on: true, n: v } : { on: false }); droneTab(box); }));   // 5e: + 2 drones
     box.querySelectorAll("[data-dm]").forEach(b => b.addEventListener("click", () => { setDrone({ mode: b.dataset.dm }); droneTab(box); }));
     box.querySelectorAll("[data-dt]").forEach(b => b.addEventListener("click", () => { setDrone({ team: +b.dataset.dt }); droneTab(box); }));
     box.querySelectorAll("[data-dmd]").forEach(b => b.addEventListener("click", () => { setDrone({ model: b.dataset.dmd }); droneTab(box); }));   // 4m
@@ -1316,7 +1349,33 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     void m;
   }
   //   mô hình: thân + 4 tay + 4 đĩa cánh quạt mờ + đèn tím; bóng tròn trên mặt đường; tâm bắn + vòng khoá xe chỉ máy quay drone thấy (lớp 6)
-  const dObj = (() => {
+  // 4q: TÂM NGẮM "LỤC GIÁC HUD" (thầy chọn R5 ở thiet-ke-4q-tam-ngam.html) — ảnh phát sáng vẽ sẵn bằng canvas, CỘNG SÁNG, chỉ máy quay drone thấy (lớp 6). 5e: bộ ảnh DÙNG CHUNG 2 drone.
+  const DX = (() => {
+    const geos = [], G2 = x => { geos.push(x); return x; };
+    const HEXC = ["#ff63c3", "#2ee6c9", "#ff2020", "#ffffff"], HEX_R = 0.36;   // 4w
+    const hexTex = (col, kind, blur) => {   // 4w: + blur = bản nhoè (canvas filter)
+      const N = 256, cv = document.createElement("canvas"); cv.width = cv.height = N; const x = cv.getContext("2d"), C0 = N / 2, R = N * HEX_R; if (blur) x.filter = `blur(${blur}px)`;
+      const hex = (r, rot, gap) => { for (let k = 0; k < 6; k++) { const a0 = rot + k * Math.PI / 3, a1 = a0 + Math.PI / 3, p0 = [C0 + Math.cos(a0) * r, C0 + Math.sin(a0) * r], p1 = [C0 + Math.cos(a1) * r, C0 + Math.sin(a1) * r];
+        x.beginPath(); x.moveTo(p0[0] + (p1[0] - p0[0]) * gap, p0[1] + (p1[1] - p0[1]) * gap); x.lineTo(p1[0] + (p0[0] - p1[0]) * gap, p1[1] + (p0[1] - p1[1]) * gap); x.stroke(); } };
+      const dia = r => { x.beginPath(); x.moveTo(C0, C0 - r); x.lineTo(C0 + r, C0); x.lineTo(C0, C0 + r); x.lineTo(C0 - r, C0); x.closePath(); x.stroke(); };
+      const shapes = () => { if (kind === "out") hex(R, 0, 0.3); else { hex(R, Math.PI / 6, 0.14); dia(N * (kind === "in" ? 0.025 : 0.05)); } };
+      const pass = (w, blur, a, stroke) => { x.save(); x.globalAlpha = a; x.strokeStyle = stroke; x.lineWidth = w; x.lineCap = "round"; x.shadowColor = col; x.shadowBlur = blur; shapes(); x.restore(); };
+      pass(7, 20, 0.5, col); pass(3, 10, 0.9, col); pass(1.6, 6, 0.95, "rgba(255,255,255,.95)");
+      const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return G2(t);
+    };
+    // 5e: ảnh TRẮNG để tô màu đội bằng material.color — quầng tròn mờ (dưới bụng drone) · hình thoi đặc phát sáng (giữa tâm ngắm)
+    const glowTex = (() => { const N = 128, cv = document.createElement("canvas"); cv.width = cv.height = N; const x = cv.getContext("2d"), g = x.createRadialGradient(N / 2, N / 2, 0, N / 2, N / 2, N / 2);
+      g.addColorStop(0, "rgba(255,255,255,.95)"); g.addColorStop(0.35, "rgba(255,255,255,.55)"); g.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = g; x.fillRect(0, 0, N, N);
+      const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return G2(t); })();
+    const dotTex = (() => { const N = 128, cv = document.createElement("canvas"); cv.width = cv.height = N; const x = cv.getContext("2d"), C0 = N / 2, r = N * 0.2;
+      x.shadowColor = "#fff"; x.shadowBlur = 16; x.fillStyle = "#fff"; x.beginPath(); x.moveTo(C0, C0 - r); x.lineTo(C0 + r, C0); x.lineTo(C0, C0 + r); x.lineTo(C0 - r, C0); x.closePath(); x.fill();
+      const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return G2(t); })();
+    const TEXS = HEXC.map(c => ({ aim: hexTex(c, "aim"), aimB: hexTex(c, "aim", 9), in: hexTex(c, "in"), out: hexTex(c, "out") }));   /* 4w: + aimB nhoè */
+    const ghost = hexTex("#ffffff", "aim", 2.5);                                     // 4y: tâm BÓNG MỜ trắng
+    const plane = G2(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2));
+    return { HEX_R, TEXS, ghost, glowTex, dotTex, plane, dispose() { geos.forEach(x => x.dispose()); } };
+  })();
+  function mkObj(n) {   // 5e: bộ hình của 1 drone (nhóm g, bóng, tâm ngắm + nhoè + bóng mờ, vòng khoá, quầng màu đội, chấm đội giữa tâm)
     const g = new THREE.Group(), geos = [], mats = [];
     const G2 = x => { geos.push(x); return x; }, M2 = x => { mats.push(x); return x; };
     const bodyM = M2(bend(new THREE.MeshStandardMaterial({ color: "#2b2140", roughness: 0.45, metalness: 0.5 })));
@@ -1336,128 +1395,185 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     g.scale.setScalar(0.95 * 0.9); scene.add(g);   // 4t: nhỏ 10 %
     const shM = M2(bend(new THREE.MeshBasicMaterial({ color: "#000", transparent: true, opacity: 0.32, depthWrite: false })));
     const sh = new THREE.Mesh(G2(new THREE.CircleGeometry(1.7 * 0.9, 24).rotateX(-Math.PI / 2)), shM); sh.renderOrder = 1; scene.add(sh);   // 4t: bóng nhỏ theo
-    // 4q: TÂM NGẮM "LỤC GIÁC HUD" (thầy chọn R5 ở thiet-ke-4q-tam-ngam.html) — ảnh phát sáng vẽ sẵn bằng canvas: quầng màu đạn mờ (shadowBlur) + lõi trắng mảnh.
-    //   Mỗi loại đạn 1 bộ ảnh (+ bộ trắng khi chưa chọn đạn), dán lên mặt phẳng nằm trên đường, CỘNG SÁNG (AdditiveBlending), chỉ máy quay drone thấy (lớp 6).
-    //   ret = lục giác có khe ở các cạnh + hình thoi giữa (đang ngắm) · lock = lục giác ôm xe + thoi, và lục giác ngoài khe rộng XOAY NGƯỢC chậm (đã khoá).
-    const HEXC = ["#ff63c3", "#2ee6c9", "#ff2020", "#ffffff"], HEX_R = 0.36;   // 4w
-    const hexTex = (col, kind, blur) => {   // 4w: + blur = bản nhoè (canvas filter)
-      const N = 256, cv = document.createElement("canvas"); cv.width = cv.height = N; const x = cv.getContext("2d"), C0 = N / 2, R = N * HEX_R; if (blur) x.filter = `blur(${blur}px)`;
-      const hex = (r, rot, gap) => { for (let k = 0; k < 6; k++) { const a0 = rot + k * Math.PI / 3, a1 = a0 + Math.PI / 3, p0 = [C0 + Math.cos(a0) * r, C0 + Math.sin(a0) * r], p1 = [C0 + Math.cos(a1) * r, C0 + Math.sin(a1) * r];
-        x.beginPath(); x.moveTo(p0[0] + (p1[0] - p0[0]) * gap, p0[1] + (p1[1] - p0[1]) * gap); x.lineTo(p1[0] + (p0[0] - p1[0]) * gap, p1[1] + (p0[1] - p1[1]) * gap); x.stroke(); } };
-      const dia = r => { x.beginPath(); x.moveTo(C0, C0 - r); x.lineTo(C0 + r, C0); x.lineTo(C0, C0 + r); x.lineTo(C0 - r, C0); x.closePath(); x.stroke(); };
-      const shapes = () => { if (kind === "out") hex(R, 0, 0.3); else { hex(R, Math.PI / 6, 0.14); dia(N * (kind === "in" ? 0.025 : 0.05)); } };
-      const pass = (w, blur, a, stroke) => { x.save(); x.globalAlpha = a; x.strokeStyle = stroke; x.lineWidth = w; x.lineCap = "round"; x.shadowColor = col; x.shadowBlur = blur; shapes(); x.restore(); };
-      pass(7, 20, 0.5, col); pass(3, 10, 0.9, col); pass(1.6, 6, 0.95, "rgba(255,255,255,.95)");
-      const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return G2(t);
-    };
-    const TEXS = HEXC.map(c => ({ aim: hexTex(c, "aim"), aimB: hexTex(c, "aim", 9), in: hexTex(c, "in"), out: hexTex(c, "out") }));   /* 4w: + aimB nhoè */
     const pm = map => M2(bend(new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 })));
-    const plane = G2(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2));
+    const { TEXS, HEX_R, plane } = DX;
     const retM = pm(TEXS[3].aim), linM = pm(TEXS[3].in), loutM = pm(TEXS[3].out);
     const ret = new THREE.Mesh(plane, retM); ret.scale.setScalar(2.6 / HEX_R);                // lục giác ngắm bán kính ~2,6 m
     const retBM = pm(TEXS[3].aimB), retB = new THREE.Mesh(plane, retBM); retB.visible = false;   // 4w: lớp nhoè khi hiện / ẩn
-    const retGM = pm(hexTex("#ffffff", "aim", 2.5)), retG = new THREE.Mesh(plane, retGM); retG.visible = false;   // 4y: tâm BÓNG MỜ trắng khi đạn đang bay
+    const retGM = pm(DX.ghost), retG = new THREE.Mesh(plane, retGM); retG.visible = false;   // 4y: tâm BÓNG MỜ trắng khi đạn đang bay
     const lock = new THREE.Group(), lockIn = new THREE.Mesh(plane, linM), lockOut = new THREE.Mesh(plane, loutM);
     lockIn.scale.setScalar(3.3 / HEX_R); lockOut.scale.setScalar(4.3 / HEX_R); lockOut.position.y = 0.01; lock.add(lockIn, lockOut);   // ôm xe ~3,3 m · vòng ngoài ~4,3 m
+    // 5e: MÀU ĐỘI — quầng sáng dưới bụng drone (chỉ máy quay drone thấy) + chấm thoi màu đội giữa tâm ngắm (chỉ khi 2 drone)
+    const glowM = pm(DX.glowTex); glowM.color.set(TEAMS[n].color); glowM.polygonOffset = false; const glow = new THREE.Mesh(plane, glowM); glow.scale.setScalar(4.2); glow.renderOrder = 2;
+    const tdotM = pm(DX.dotTex); tdotM.color.set(TEAMS[n].color); const tdot = new THREE.Mesh(plane, tdotM); tdot.scale.setScalar(1.5); tdot.visible = false;
     const basic = new THREE.Group(); [...g.children].forEach(c => basic.add(c)); g.add(basic);   // 4m: drone tự dựng = 1 nhóm (giấu khi có mẫu thật)
-    [ret, retB, retG, lock].forEach(o => { o.traverse(q => { q.layers.set(6); q.renderOrder = 3; }); scene.add(o); });
-    [g, sh, ret, retB, retG, lock].forEach(o => o.traverse(q => { q.frustumCulled = false; }));   // thế giới cong trong shader ⇒ hộp bao gốc lệch chỗ thật ⇒ không cắt theo khung nhìn
-    return { g, sh, ret, retB, retBM, retG, retGM, gv: 0, rv: 0, lock, lockIn, lockOut, retM, linM, loutM, TEXS, rotors, blades, rotM, basic, model: null, modelId: "basic", tok: 0,
-      dispose() { [g, sh, ret, retB, retG, lock].forEach(o => scene.remove(o)); geos.forEach(x => x.dispose()); mats.forEach(x => x.dispose()); if (this.model) this.model.dispose(); } };
-  })();
+    [ret, retB, retG, lock, glow, tdot].forEach(o => { o.traverse(q => { q.layers.set(6); q.renderOrder = q === glow ? 2 : 3; }); scene.add(o); });
+    tdot.renderOrder = 4;
+    [g, sh, ret, retB, retG, lock, glow, tdot].forEach(o => o.traverse(q => { q.frustumCulled = false; }));   // thế giới cong trong shader ⇒ hộp bao gốc lệch chỗ thật ⇒ không cắt theo khung nhìn
+    return { n, g, sh, ret, retB, retBM, retG, retGM, gv: 0, rv: 0, lock, lockIn, lockOut, retM, linM, loutM, rotors, blades, rotM, ledM, basic, glow, glowM, tdot, tdotM, model: null, modelId: "basic", tok: 0, tint: -1,
+      dispose() { [g, sh, ret, retB, retG, lock, glow, tdot].forEach(o => scene.remove(o)); geos.forEach(x => x.dispose()); mats.forEach(x => x.dispose()); if (this.model) this.model.dispose(); } };
+  }
+  DR.forEach(d => { d.o = mkObj(d.n); });
+  const dObj = D.o;
   fixSel(); paintDv();
-  // 4m: đổi mẫu drone — nạp (có cache), thay vào nhóm g (cùng vị trí / nghiêng), dịch shader ngầm
+  // 5e: PHA MÀU ĐỘI lên thân drone (2 drone) — màu gốc lưu trong userData để trả lại khi về 1 drone
+  const TC = TEAMS.map(t => new THREE.Color(t.color)), tcTmp = new THREE.Color();
+  function paintTint(o) {
+    const want = two() ? o.n : -1; if (o.tint === want && !o.tintDirty) return; o.tint = want; o.tintDirty = false;
+    o.ledM.color.set(want < 0 ? "#b07cff" : TEAMS[want].color); o.ledM.emissive.set(want < 0 ? "#b07cff" : "#000000");   // 5f: 2 drone ⇒ đèn tắt, chỉ màu sơn
+    if (!o.model) return;
+    const seen = new Set();
+    o.model.obj.traverse(q => { if (!q.isMesh || !q.material) return; (Array.isArray(q.material) ? q.material : [q.material]).forEach(m => {
+      if (seen.has(m) || !m.color || (m.transparent && m.opacity < 0.3)) return;   /* 5f: chỉ bỏ đĩa mờ cánh quạt (thân Mavic cũng "transparent") */ seen.add(m);
+      const u = m.userData; if (!u.c0) { u.c0 = m.color.clone(); if (m.emissive) u.e0 = m.emissive.clone(); }
+      m.color.copy(u.c0); if (m.emissive && u.e0) m.emissive.copy(u.e0);
+      if (want >= 0) m.color.lerp(tcTmp.copy(TC[want]).multiplyScalar(2.4), 0.85);   // 5f: SƠN — màu đội đậm (×2,4 bù vân tối của mẫu), không phát sáng
+    }); });
+  }
+  // 4m: đổi mẫu drone — nạp (có cache), thay vào nhóm g (cùng vị trí / nghiêng), dịch shader ngầm · 5e: cho từng drone đang bay
   function applyModel() {
     if (!dset.on) return;                                       // 5d: drone tắt ⇒ chưa tải mẫu 3D (bật ⇒ setDrone gọi lại)
-    const id = dset.model || "basic"; if (id === dObj.modelId) return; dObj.modelId = id; const tok = ++dObj.tok;
-    const drop = () => { if (dObj.model) { dObj.g.remove(dObj.model.obj); dObj.model.dispose(); dObj.model = null; } };
-    if (id === "basic") { drop(); dObj.basic.visible = true; return; }
-    loadDrone(id, bend).then(m => {
-      if (!m || tok !== dObj.tok || dead) { if (m) m.dispose(); return; }
-      drop(); m.obj.scale.multiplyScalar(0.9 / dObj.g.scale.x);   /* 4t: mẫu thật cũng nhỏ 10 % */ dObj.g.add(m.obj); dObj.model = m; dObj.basic.visible = false;
-      try { if (renderer.compileAsync) renderer.compileAsync(scene, dcam); } catch (e) { /* */ }
-      onEvent("droneModel", id);
-    }).catch(e => { console.warn("drone model", e); if (tok === dObj.tok) { dObj.modelId = "basic"; dObj.basic.visible = true; } });
+    DR.forEach(d => { if (!dUsed(d)) return; const o = d.o;
+      paintTint(o);
+      const id = dset.model || "basic"; if (id === o.modelId) return; o.modelId = id; const tok = ++o.tok;
+      const drop = () => { if (o.model) { o.g.remove(o.model.obj); o.model.dispose(); o.model = null; } };
+      if (id === "basic") { drop(); o.basic.visible = true; return; }
+      loadDrone(id, bend).then(m => {
+        if (!m || tok !== o.tok || dead) { if (m) m.dispose(); return; }
+        drop(); m.obj.scale.multiplyScalar(0.9 / (0.95 * 0.9));   /* 4t: mẫu thật cũng nhỏ 10 % (5e: theo cỡ gốc — nhóm g co giãn riêng) */ o.g.add(m.obj); o.model = m; o.basic.visible = false; o.tintDirty = true; paintTint(o);
+        try { if (renderer.compileAsync) renderer.compileAsync(scene, dcam); } catch (e) { /* */ }
+        onEvent("droneModel", id);
+      }).catch(e => { console.warn("drone model", e); if (tok === o.tok) { o.modelId = "basic"; o.basic.visible = true; } });
+    });
   }
   applyModel();
   const DKEYS = { KeyJ: "l", KeyL: "r", KeyI: "f", KeyK: "n", KeyU: "dn", KeyO: "db" };   /* 4v: U / O dời drone */
+  const DKEYS2 = { Numpad4: "l", Numpad6: "r", Numpad8: "f", Numpad5: "n", Numpad7: "dn", Numpad9: "db" };   /* 5e: drone 2 = bàn số */
   const droneOn = () => dset.on && !G.fin && G.cineW < 0;          // màn kết điện ảnh ⇒ cột thu lại (khung gộp cần cả bề ngang)
   let dRaw = 0;
   const DC = new THREE.Color();
+  // 5f: ƯU TIÊN XE DẪN ĐẦU — drone (hoặc đội hình F) neo vào xe đi trước, lùi sau nó bk + khoảng cách 2 xe (tối đa GMAX) ⇒ xe dẫn luôn trong khung,
+  //   xe sau thấy được khi 2 xe cách ≤ GMAX. Đổi xe dẫn (vượt nhau) ⇒ bù offset, không giật. Trả true khi vừa đặt chỗ đầu.
+  function anchorS(o, bk, dt) {
+    const a = T[0], b = T[1], lead = a.s >= b.s ? a : b, want = -(bk + Math.min(Math.abs(a.s - b.s), GMAX));
+    if (!o.init) { o.anc = lead.i; o.off = want; o.s = lead.s + o.off; o.init = true; return true; }
+    if (lead.i !== o.anc) { o.off += T[o.anc].s - lead.s; o.anc = lead.i; }
+    o.off += (want - o.off) * (1 - Math.exp(-dt * 1.6));
+    o.s = lead.s + o.off; return false;
+  }
+  // 2. tâm bắn: J / L ngang · I / K xa / gần (+ iPad) · NEAR / FAR = khoảng sau xe — cho 1 drone
+  function steerDrone(d, dt) {
+    const pd = G.t - d.padT < 0.45 && d.pad ? d.pad : null;                                  // 4l: iPad drone (im > 0,45 s ⇒ nhả)
+    const kx = clamp((d.keys.has("r") ? 1 : 0) - (d.keys.has("l") ? 1 : 0) + (pd ? pd.steer : 0), -1, 1), kd = clamp((d.keys.has("f") ? 1 : 0) - (d.keys.has("n") ? 1 : 0) + (pd ? (pd.pitch || 0) : 0), -1, 1);   /* 4u: + chúc iPad */
+    const kb = clamp((d.keys.has("db") ? 1 : 0) - (d.keys.has("dn") ? 1 : 0) + (pd ? (pd.boost ? 1 : 0) - (pd.brake ? 1 : 0) : 0), -1, 1);   // 4v: FAR (boost) lùi · NEAR (brake) tiến
+    if (G.paused) return;
+    d.bk = clamp(d.bk + kb * 14 * dt, D_BK0, D_BK1);
+    d.ax = clamp(d.ax + kx * 11 * dt, -ROADX, ROADX); d.ad = clamp(d.ad + kd * 45 * dt, D_NEAR, D_FAR);
+    if (pd && pd.tilt && !kx && !kd) { const e = 1 - Math.exp(-dt * 1.3), mx0 = (T[0].x + T[1].x) / 2, home = two() ? (d.n ? 2.2 : -2.2) : 0; d.ax += (0.43 * mx0 + home - d.ax) * e; d.ad += (40 - d.ad) * e; }   // 4u: tư thế 0 ⇒ tâm về giữa khung (5e: 2 drone ⇒ giữa nửa đường của đội mình)
+    { const e = 1 - Math.exp(-dt * 5); d.tR += (kx - d.tR) * e; d.tP += (kd - d.tP) * e; }   // 4u: nghiêng theo tay lái
+  }
+  // 4n: ngang = LÒ XO GIẢM CHẤN THIẾU (k 7, c 3,4 ⇒ vượt ~10 % rồi về) — có quán tính như drone thật; + vận tốc / gia tốc tiến (để chúc mũi)
+  function flyBody(d, xT, dt) {
+    const axl = dt > 0 ? 7 * (xT - d.x) - 3.4 * d.vx : 0; d.vx += axl * dt; d.x += d.vx * dt; d.axl += (axl - d.axl) * (1 - Math.exp(-dt * 6));
+    if (dt > 0) { const vs = (d.s - d.sPrev) / dt; if (Math.abs(vs - d.vs) < 80) d.afs += (((vs - d.vs) / dt) - d.afs) * (1 - Math.exp(-dt * 4)); d.vs += (vs - d.vs) * (1 - Math.exp(-dt * 8)); } d.sPrev = d.s;
+  }
+  // 4. mô hình + bóng — TƯ THẾ theo loại mẫu (4n) + nghiêng theo tay lái (4u) + quạt quay
+  function poseDrone(d, dt, ph) {
+    const o = d.o, kind = o.model ? o.model.kind : "quad", air = kind === "jet" || kind === "ship", t3 = G.t + ph;
+    const wR = 0.035 * Math.sin(t3 * 1.7) + 0.02 * Math.sin(t3 * 2.9 + 1.1) + (air ? 0.06 * Math.sin(t3 * 0.8 + 0.4) : 0), wP = 0.025 * Math.sin(t3 * 1.3 + 2) + 0.015 * Math.sin(t3 * 3.7);
+    const wx = 0.22 * Math.sin(t3 * 0.63) + 0.1 * Math.sin(t3 * 1.41 + 0.5), wy = (air ? 0.22 : 0.32) * Math.sin(t3 * 0.9) + 0.12 * Math.sin(t3 * 2.2 + 1.3);
+    const rollK = air ? 1.7 : 1, roll = clamp(-(d.vx * 0.075 + d.axl * 0.03) * rollK - d.tR * 0.32, -0.7, 0.7) + wR;
+    const pitch = (air ? clamp(-d.afs * 0.004, -0.08, 0.08) + wP * 0.6 : -0.1 - clamp(d.afs * 0.012, -0.22, 0.25) + wP) - d.tP * (air ? 0.12 : 0.24);
+    d.yaw += (clamp(Math.atan2(d.ax - d.x, d.ad) * 0.55, -0.4, 0.4) - d.vx * (air ? 0.03 : 0) - d.yaw) * (1 - Math.exp(-dt * 2.2));
+    if (o.model && o.model.mixer) o.model.mixer.update(dt);                                // 4m: mẫu có chuyển động
+    o.g.rotation.order = "YXZ"; o.g.position.set(d.x + wx, d.y + wy, -d.s); o.g.rotation.set(pitch, d.yaw, roll);
+    o.g.scale.setScalar(0.95 * 0.9 * (two() ? 0.85 : 1));                                  // 5e: 2 drone ⇒ nhỏ 15 %
+    const om = (kind === "tilt" ? 24 : 34) + 10 * clamp(Math.abs(d.axl) * 0.15 + Math.abs(d.afs) * 0.05, 0, 1);
+    d.spin = om * dt;
+    o.blades.forEach(bl => { bl.rotation.y += bl.userData.dir * d.spin; });
+    if (o.model) o.model.props.forEach(p => p.o.rotateOnAxis(p.axis, p.dir * d.spin));
+    o.sh.position.set(d.x + wx, 0.05, -d.s); o.sh.rotation.y = d.yaw; o.rotM.opacity = 0.12 + 0.06 * Math.abs(Math.sin(G.t * 37));
+    o.glow.visible = false;   // 5f: bỏ quầng sáng (thầy: màu sơn trên thân, không toả sáng)
+  }
+  // 5. tâm ngắm của 1 drone — 4w: LUÔN 1 TÂM / drone (đạn của drone đó đang bay ⇒ ẩn) · hiện / ẩn nhoè · 4y: tâm bóng mờ trắng khi đạn bay · 5e: chấm thoi màu đội giữa tâm (2 drone)
+  function aimDrone(d, dt, vis) {
+    const o = d.o, rs2 = d.s + d.ad, ak = d.sel >= 0 ? AMMO[d.sel].k : null;
+    let best = -1, bd = D_SIGHT;   // 4v: chỉ BÁO xe trong lục giác — không khoá, không bám
+    if (G.phase === "race") T.forEach(t => { if (t.dead) return; const dd = Math.hypot(t.x - d.ax, t.s - rs2); if (dd < bd && canTarget(t.i, ak, d)) { bd = dd; best = t.i; } });
+    d.lock = best;
+    { const tx = DX.TEXS[d.sel >= 0 ? d.sel : 3]; if (o.retM.map !== tx.aim) { o.retM.map = tx.aim; o.retBM.map = tx.aimB; o.linM.map = tx.in; o.loutM.map = tx.out; } }
+    o.ret.position.set(d.ax, 0.3, -rs2);   /* 4q: cao 0,3 m — sát 0,08 bị mặt đường che */
+    const busy = dammo.activeOf(d.n) > 0;
+    { const want = vis && d.sel >= 0 && !busy ? 1 : 0; o.rv += (want - o.rv) * (1 - Math.exp(-dt * (want ? 6 : 9))); if (Math.abs(o.rv - want) < 0.004) o.rv = want;
+      const v = o.rv, sc = 2.6 / DX.HEX_R * (1 + 0.35 * (1 - v)); o.ret.visible = v > 0.004; o.retB.visible = v > 0.004 && v < 0.996;
+      o.retM.opacity = v * v; o.retBM.opacity = Math.min(1, 2.6 * v * (1 - v)); o.ret.scale.setScalar(sc); o.retB.scale.setScalar(sc * 1.04); o.retB.position.copy(o.ret.position);
+      const gw = vis && d.sel >= 0 && busy ? 1 : 0; o.gv += (gw - o.gv) * (1 - Math.exp(-dt * 6)); if (Math.abs(o.gv - gw) < 0.004) o.gv = gw;
+      o.retG.visible = o.gv > 0.004; o.retGM.opacity = 0.3 * o.gv; o.retG.position.copy(o.ret.position); o.retG.scale.setScalar(2.6 / DX.HEX_R * (1 + 0.12 * (1 - o.gv)));
+      const dv = two() ? Math.max(v * v, 0.45 * o.gv) : 0; o.tdot.visible = dv > 0.004; o.tdotM.opacity = dv; o.tdot.position.set(d.ax, 0.32, -rs2); o.tdot.scale.setScalar(1.5 * (1 + 0.35 * (1 - v))); }
+    o.lock.visible = false;   // 4v: bỏ vòng khoá xe
+    return best;
+  }
+  function hideDrone(d) { const o = d.o; d.init = false; o.g.visible = o.sh.visible = o.glow.visible = false; o.lock.visible = false; o.ret.visible = o.retB.visible = o.retG.visible = o.tdot.visible = false; o.rv = o.gv = 0; }
   function updateDrone(dt) {
     // 1. bề rộng cột (trượt ~0,45 s)
     const want = droneOn() ? 1 : 0;
     if (dRaw !== want) { dRaw = want ? Math.min(1, dRaw + dt * 2.2) : Math.max(0, dRaw - dt * 2.2); const k = ease(dRaw); if (k !== dK) { dK = k; layoutDrone(dRaw === want); } }
     const vis = dset.on && dK > 0.01;
-    dObj.g.visible = dObj.sh.visible = dset.on;   /* 4w: tâm hiện / ẩn ở mục 5 */
-    if (!dset.on) { D.init = false; dObj.lock.visible = false; dObj.ret.visible = dObj.retB.visible = dObj.retG.visible = false; dObj.rv = dObj.gv = 0; return; }
-    // 2. tâm bắn: J / L ngang · I / K xa / gần (+ iPad đợt 4m)
-    const pd = G.t - D.padT < 0.45 && D.pad ? D.pad : null;                                  // 4l: iPad drone (im > 0,45 s ⇒ nhả)
-    const kx = clamp((D.keys.has("r") ? 1 : 0) - (D.keys.has("l") ? 1 : 0) + (pd ? pd.steer : 0), -1, 1), kd = clamp((D.keys.has("f") ? 1 : 0) - (D.keys.has("n") ? 1 : 0) + (pd ? (pd.pitch || 0) : 0), -1, 1);   /* 4u: + chúc iPad · 4v: NEAR / FAR không dời tâm nữa */
-    const kb = clamp((D.keys.has("db") ? 1 : 0) - (D.keys.has("dn") ? 1 : 0) + (pd ? (pd.boost ? 1 : 0) - (pd.brake ? 1 : 0) : 0), -1, 1);   // 4v: FAR (boost) lùi · NEAR (brake) tiến
-    if (!G.paused) D.bk = clamp(D.bk + kb * 14 * dt, D_BK0, D_BK1);
-    if (!G.paused) { D.ax = clamp(D.ax + kx * 11 * dt, -ROADX, ROADX); D.ad = clamp(D.ad + kd * 45 * dt, D_NEAR, D_FAR);
-      if (pd && pd.tilt && !kx && !kd) { const e = 1 - Math.exp(-dt * 1.3), mx0 = (T[0].x + T[1].x) / 2; D.ax += (0.43 * mx0 - D.ax) * e; D.ad += (40 - D.ad) * e; }   // 4u: tư thế 0 ⇒ tâm về giữa khung
-      { const e = 1 - Math.exp(-dt * 5); D.tR += (kx - D.tR) * e; D.tP += (kd - D.tP) * e; } }   // 4u: nghiêng theo tay lái
-    // 3. drone bay sau + trên cụm 2 xe; 2 xe cách > 110 m ⇒ theo xe gần TÂM hơn (đổi xe ⇒ bù offset, không giật)
-    const a = T[0], b = T[1], lead = a.s >= b.s ? a : b, trail = lead === a ? b : a, gap = lead.s - trail.s, rS = D.s + D.ad;
-    const anc = gap > 110 ? (Math.abs(rS - lead.s) < Math.abs(rS - trail.s) ? lead.i : trail.i) : trail.i;
-    if (!D.init) { D.anc = anc; D.off = -D.bk; D.s = T[anc].s + D.off; D.x = 0; D.vx = 0; D.sPrev = D.s; D.vs = 0; D.afs = 0; D.init = true; }
-    if (anc !== D.anc) { D.off += T[D.anc].s - T[anc].s; D.anc = anc; }
-    D.off += (-D.bk - D.off) * (1 - Math.exp(-dt * 1.6));   // 4v: khoảng sau xe theo NEAR / FAR
-    D.s = T[anc].s + D.off;
-    // 4n: ngang = LÒ XO GIẢM CHẤN THIẾU (k 7, c 3,4 ⇒ vượt ~10 % rồi về) — có quán tính như drone thật
-    const mx = (a.x + b.x) / 2, xT = clamp(mx * 0.3 + D.ax * 0.45, -ROADX, ROADX);
-    const axl = dt > 0 ? 7 * (xT - D.x) - 3.4 * D.vx : 0; D.vx += axl * dt; D.x += D.vx * dt; D.axl += (axl - D.axl) * (1 - Math.exp(-dt * 6));
-    if (dt > 0) { const vs = (D.s - D.sPrev) / dt; if (Math.abs(vs - D.vs) < 80) D.afs += (((vs - D.vs) / dt) - D.afs) * (1 - Math.exp(-dt * 4)); D.vs += (vs - D.vs) * (1 - Math.exp(-dt * 8)); } D.sPrev = D.s;
-    // 4. mô hình + bóng
-    // 4n: TƯ THẾ — kiểu bay theo loại mẫu: quad / bug chúc mũi khi tăng tốc, nghiêng vừa · jet / ship nghiêng nhiều (lượn), không chúc · rung gió nhiều tần số
-    const kind = dObj.model ? dObj.model.kind : "quad", air = kind === "jet" || kind === "ship", t3 = G.t;
-    const wR = 0.035 * Math.sin(t3 * 1.7) + 0.02 * Math.sin(t3 * 2.9 + 1.1) + (air ? 0.06 * Math.sin(t3 * 0.8 + 0.4) : 0), wP = 0.025 * Math.sin(t3 * 1.3 + 2) + 0.015 * Math.sin(t3 * 3.7);
-    const wx = 0.22 * Math.sin(t3 * 0.63) + 0.1 * Math.sin(t3 * 1.41 + 0.5), wy = (air ? 0.22 : 0.32) * Math.sin(t3 * 0.9) + 0.12 * Math.sin(t3 * 2.2 + 1.3);
-    const rollK = air ? 1.7 : 1, roll = clamp(-(D.vx * 0.075 + D.axl * 0.03) * rollK - D.tR * 0.32, -0.7, 0.7) + wR;   /* 4u: + nghiêng theo tay lái */
-    const pitch = (air ? clamp(-D.afs * 0.004, -0.08, 0.08) + wP * 0.6 : -0.1 - clamp(D.afs * 0.012, -0.22, 0.25) + wP) - D.tP * (air ? 0.12 : 0.24);   /* 4u: ra xa ⇒ chúc mũi */
-    D.yaw += (clamp(Math.atan2(D.ax - D.x, D.ad) * 0.55, -0.4, 0.4) - D.vx * (air ? 0.03 : 0) - D.yaw) * (1 - Math.exp(-dt * 2.2));
-    if (dObj.model && dObj.model.mixer) dObj.model.mixer.update(dt);                                // 4m: mẫu có chuyển động
-    dObj.g.rotation.order = "YXZ"; dObj.g.position.set(D.x + wx, D.y + wy, -D.s); dObj.g.rotation.set(pitch, D.yaw, roll);
-    // 4n: QUẠT QUAY — nhanh hơn khi đang tăng tốc / nghiêng gắt ("ga" lớn); đổi chiều xen kẽ như quadcopter thật
-    const om = (kind === "tilt" ? 24 : 34) + 10 * clamp(Math.abs(D.axl) * 0.15 + Math.abs(D.afs) * 0.05, 0, 1);
-    D.spin = om * dt;
-    dObj.blades.forEach(bl => { bl.rotation.y += bl.userData.dir * D.spin; });
-    if (dObj.model) dObj.model.props.forEach(p => p.o.rotateOnAxis(p.axis, p.dir * D.spin));
-    dObj.sh.position.set(D.x + wx, 0.05, -D.s); dObj.sh.rotation.y = D.yaw; dObj.rotM.opacity = 0.12 + 0.06 * Math.abs(Math.sin(G.t * 37));
-    // 5. khoá xe: gần tâm < D_LOCK m + chế độ cho phép loại đạn đang chọn
-    const rs2 = D.s + D.ad, ak = D.sel >= 0 ? AMMO[D.sel].k : null;
-    let best = -1, bd = D_SIGHT;   // 4v: chỉ BÁO xe trong lục giác — không khoá, không bám
-    if (G.phase === "race") T.forEach(t => { if (t.dead) return; const d = Math.hypot(t.x - D.ax, t.s - rs2); if (d < bd && canTarget(t.i, ak)) { bd = d; best = t.i; } });
-    D.lock = best;
-    const col = D.sel >= 0 ? AMMO[D.sel].c : "#ffffff";
-    // 4q: lục giác HUD — đổi bộ ảnh theo đạn; đã khoá ⇒ giấu lục giác ngắm, hiện lục giác ôm xe (nhịp rất nhẹ) + vòng ngoài xoay ngược chậm
-    { const tx = dObj.TEXS[D.sel >= 0 ? D.sel : 3]; if (dObj.retM.map !== tx.aim) { dObj.retM.map = tx.aim; dObj.retBM.map = tx.aimB; dObj.linM.map = tx.in; dObj.loutM.map = tx.out; } }
-    dObj.ret.position.set(D.ax, 0.3, -rs2);   /* 4q: cao 0,3 m — sát 0,08 bị mặt đường (vạch, dốc mui rùa) che */ void col; void DC;
-    // 4w: LUÔN 1 TÂM — đạn đang bay ⇒ ẩn tâm ngắm (dấu điểm rơi thay chỗ) · hiện / ẩn: nét = v², nhoè đỉnh giữa chừng, nở 35 % khi mờ
-    { const want = vis && D.sel >= 0 && dammo.active === 0 ? 1 : 0, o = dObj; o.rv += (want - o.rv) * (1 - Math.exp(-dt * (want ? 6 : 9))); if (Math.abs(o.rv - want) < 0.004) o.rv = want;
-      const v = o.rv, sc = 2.6 / 0.36 * (1 + 0.35 * (1 - v)); o.ret.visible = v > 0.004; o.retB.visible = v > 0.004 && v < 0.996;
-      o.retM.opacity = v * v; o.retBM.opacity = Math.min(1, 2.6 * v * (1 - v)); o.ret.scale.setScalar(sc); o.retB.scale.setScalar(sc * 1.04); o.retB.position.copy(o.ret.position);
-      // 4y: đạn đang bay ⇒ tâm BÓNG MỜ trắng (0,3) đi theo chỗ đang ngắm — đủ thấy hướng, không rõ nét
-      const gw = vis && D.sel >= 0 && dammo.active > 0 ? 1 : 0; o.gv += (gw - o.gv) * (1 - Math.exp(-dt * 6)); if (Math.abs(o.gv - gw) < 0.004) o.gv = gw;
-      o.retG.visible = o.gv > 0.004; o.retGM.opacity = 0.3 * o.gv; o.retG.position.copy(o.ret.position); o.retG.scale.setScalar(2.6 / 0.36 * (1 + 0.12 * (1 - o.gv))); }   /* 4v: luôn hiện tâm */
-    dObj.lock.visible = false;   // 4v: bỏ vòng khoá xe
-    if (best >= 0) { const t = T[best]; dObj.lock.position.set(t.x, 0.28, -t.s); dObj.lockOut.rotation.y = -G.t * 0.4; dObj.lockIn.scale.setScalar(3.3 / 0.36 * (1 + 0.025 * Math.sin(G.t * 2.4))); }
-    // 6. máy quay: 4,5 m sau + 4,5 m trên drone (chếch 45° ⇒ drone nằm DƯỚI 2 xe trong khung), nhìn xuống ~32° tới 22 m trước drone; ống kính dọc 70°
-    const zf = dset.zoom || 1;                                                                // 4t: View zoom — lùi + lên theo cùng tỉ lệ, nhìn xa hơn chút
-    dcam.position.set(D.x * 0.85, D.y + 4.5 * zf, -(D.s - 4.5 * zf));
-    dcam.lookAt(lerp(mx, D.ax, 0.5) * 0.6, 0, -(D.s + 22 + 10 * (zf - 1)));
+    DR.forEach(d => { if (!dUsed(d)) hideDrone(d); else { d.o.g.visible = d.o.sh.visible = true; } });
+    if (!dset.on) { F.init = false; return; }
+    const act = two() ? DR : [D];
+    act.forEach(d => steerDrone(d, dt));
+    const a = T[0], b = T[1], zf = dset.zoom || 1, lead = a.s >= b.s ? a : b;
+    { const gC = Math.min(Math.abs(a.s - b.s), GMAX), e = 1 - Math.exp(-dt * 1.2); DV.g += (gC - DV.g) * e; DV.kg += (clamp((gC - 12) / (GMAX - 12), 0, 1) - DV.kg) * e; }   // 5f
+    const kg = DV.kg, alt = D_ALT * (1 + kg), mx = lerp((a.x + b.x) / 2, lead.x, kg), lookX = 0.6 * DV.g;   // 5f: xa ⇒ cao hơn, nghiêng theo xe dẫn, nhìn xa hơn
+    if (!two()) {
+      // 3. (1 drone — như 5d) drone bay sau + trên cụm 2 xe
+      if (anchorS(D, D.bk, dt)) { D.x = 0; D.vx = 0; D.sPrev = D.s; D.vs = 0; D.afs = 0; }
+      D.y = alt;   // 5f: nâng theo khoảng cách 2 xe
+      flyBody(D, clamp(mx * 0.3 + D.ax * 0.45, -ROADX, ROADX), dt);
+      poseDrone(D, dt, 0);
+      const best = aimDrone(D, dt, vis);
+      // 6. máy quay: 4,5 m sau + 4,5 m trên drone (chếch 45° ⇒ drone nằm DƯỚI 2 xe trong khung), nhìn xuống tới 22 m trước drone; ống kính dọc 70°
+      dcam.position.set(D.x * 0.85, D.y + 4.5 * zf * (1 + 0.2 * kg), -(D.s - 4.5 * zf));     // 4t: View zoom — lùi + lên theo cùng tỉ lệ · 5f: + nâng
+      dcam.lookAt(lerp(mx, D.ax, 0.5) * 0.6, 0, -(D.s + 22 + 10 * (zf - 1) + lookX));
+      DV.S = D.s + D.bk + 0.5 * DV.g;
+      // 7. chữ trên cột (1 drone)
+      if (!G.paused && G.phase === "race") D.bat = Math.min(1, D.bat + DA.RECHARGE * dt);
+      { const bs = `scaleX(${D.bat.toFixed(3)})`; if (bs !== D.batTx) { D.batTx = bs; dvBat.style.transform = bs; dvBat.classList.toggle("low", D.bat < 0.25); } }
+      dvChips.forEach((c, k) => { const ak = AMMO[k].k, w = D.cd[ak] > G.t || D.bat < DA.COST[ak]; if (c.classList.contains("wait") !== w) c.classList.toggle("wait", w); });
+      if (D.msgT > 0) D.msgT -= dt;
+      else { const tx = D.sel < 0 ? "NO AMMO" : best >= 0 ? "IN SIGHT · " + TEAMS[best].name : "AIM ON THE ROAD";
+        if (tx !== dvLockTx) { dvLockTx = tx; dvLock.textContent = tx; dvLock.style.color = best >= 0 ? TEAMS[best].color : ""; } }
+    } else {
+      // 3. (5e — 2 drone) ĐỘI HÌNH: máy quay ở khoảng TRUNG BÌNH NEAR / FAR của 2 iPad; mỗi drone nhích ±3 m theo ý mình; drone 2 cao +1 m, lùi 0,7 m (trên màn ngang hàng)
+      const bkC = (DR[0].bk + DR[1].bk) / 2, axC = (DR[0].ax + DR[1].ax) / 2, adC = (DR[0].ad + DR[1].ad) / 2;
+      const first = anchorS(F, bkC, dt); void adC;
+      const fx = clamp(mx * 0.3 + axC * 0.12, -ROADX + 2.4, ROADX - 2.4);
+      if (first) F.x = fx; else F.x += (fx - F.x) * (1 - Math.exp(-dt * 2));
+      DR.forEach(d => {
+        const side = d.n ? 1 : -1, wantDs = -clamp(d.bk - bkC, -3, 3) - (d.n ? 0.7 : 0);
+        const lean = clamp((d.ax - F.x) * 0.15, side < 0 ? -0.9 : -0.3, side < 0 ? 0.3 : 0.9);   // nghiêng về phía tâm ngắm — ra ngoài nhiều, vào trong ít (không chéo qua nhau)
+        const xT = clamp(F.x + side * 1.45 + lean, -ROADX, ROADX);
+        if (!d.init) { d.ds = wantDs; d.s = F.s + d.ds; d.x = xT; d.vx = 0; d.sPrev = d.s; d.vs = 0; d.afs = 0; d.ax = side * 2.2; d.init = true; }   // 5e: tâm mới bật = nửa đường đội mình (2 tâm không chồng)
+        d.ds += (wantDs - d.ds) * (1 - Math.exp(-dt * 2)); d.s = F.s + d.ds; d.y = alt + (d.n ? 1 : 0);   /* 5f: nâng theo khoảng cách */
+        flyBody(d, xT, dt); poseDrone(d, dt, d.n * 1.9); aimDrone(d, dt, vis);
+        if (!G.paused && G.phase === "race") d.bat = Math.min(1, d.bat + DA.RECHARGE * dt);
+        // 7. bảng tối giản M1: icon đang chọn sáng · đang chờ = vòng chạy · thiếu pin = mờ · vạch pin màu đội (đỏ khi yếu)
+        const u = dv2[d.n];
+        { const bs = `scaleX(${d.bat.toFixed(3)})`; if (bs !== d.batTx) { d.batTx = bs; u.bat.style.transform = bs; u.bat.classList.toggle("low", d.bat < 0.25); } }
+        u.ic.forEach((c, k) => { const ak = AMMO[k].k, cdL = d.cd[ak] - G.t, w = cdL > 0 || d.bat < DA.COST[ak];
+          if (c.classList.contains("wait") !== w) c.classList.toggle("wait", w);
+          const p = cdL > 0 ? Math.round(100 * (1 - cdL / DA.CD[ak])) + "%" : ""; if (c.dataset.p !== p) { c.dataset.p = p; c.style.setProperty("--p", p || "0%"); c.classList.toggle("cd", !!p); } });
+      });
+      // 6. máy quay CHUNG (thiết kế 5e): lùi + lên ×1,15 so với 1 drone, nhìn xa thêm 15 m ⇒ 2 drone sát đáy cột, giữa cột thoáng cho xe + tâm ngắm
+      const U5 = 4.5 * zf * 1.15, cx = (DR[0].x + DR[1].x) / 2;
+      dcam.position.set(cx * 0.85, alt + U5 * (1 + 0.2 * kg), -(F.s - U5));
+      dcam.lookAt(lerp(mx, axC, 0.5) * 0.6, 0, -(F.s + 37 + 10 * (zf - 1) + lookX));
+      DV.S = F.s + bkC + 0.5 * DV.g;
+    }
     dcam.layers.set(0); dcam.layers.enable(1); dcam.layers.enable(2); dcam.layers.enable(6);
     dcam.updateMatrixWorld();
-    // 7. chữ trên cột
-    // 4r: PIN tự sạc khi đang đua · thanh pin trên cột · thẻ đạn mờ khi chưa đủ pin / đang chờ
-    if (!G.paused && G.phase === "race") D.bat = Math.min(1, D.bat + DA.RECHARGE * dt);
-    { const bs = `scaleX(${D.bat.toFixed(3)})`; if (bs !== D.batTx) { D.batTx = bs; dvBat.style.transform = bs; dvBat.classList.toggle("low", D.bat < 0.25); } }
-    dvChips.forEach((c, k) => { const a = AMMO[k].k, w = D.cd[a] > G.t || D.bat < DA.COST[a]; if (c.classList.contains("wait") !== w) c.classList.toggle("wait", w); });
-    if (D.msgT > 0) D.msgT -= dt;
-    else { const tx = D.sel < 0 ? "NO AMMO" : best >= 0 ? "IN SIGHT · " + TEAMS[best].name : "AIM ON THE ROAD";
-      if (tx !== dvLockTx) { dvLockTx = tx; dvLock.textContent = tx; dvLock.style.color = best >= 0 ? TEAMS[best].color : ""; } }
+    void DC;
   }
   function layoutDrone(done) {
     mount.style.setProperty("--rw-dw", (dW * dK * 100).toFixed(3) + "%");
@@ -1507,7 +1623,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   function openPanel() { openSettings("ipad"); }             // 3z: giữ tên cũ (mở thẳng tab iPad)
   function ipadTab(pBody) {                                 // bảng iPad (3y): chọn ⇒ hỏi xác nhận ⇒ OK là đóng (trận vẫn chạy tiếp)
     pBody.innerHTML = `<div class="sr-pm">${PM_ORDER.map((k, n) => `<button type="button" class="sr-pm-o${k === padMode ? " on" : ""}" data-m="${k}"><b>${n + 1}. ${PM[k].t}</b><span>${PM[k].d}</span></button>`).join("")}</div>
-      <div class="sr-pm-st">${[0, 1].map(i => `<span data-t="${i}" data-s="${T[i].padOn ? "on" : ""}" style="--team:${TEAMS[i].color}"><i></i>${TEAMS[i].name} iPad</span>`).join("")}${dset.on ? `<span data-t="2" data-s="${D.padOn ? "on" : ""}" style="--team:#b07cff"><i></i>DRONE iPad</span>` : ""}</div>
+      <div class="sr-pm-st">${[0, 1].map(i => `<span data-t="${i}" data-s="${T[i].padOn ? "on" : ""}" style="--team:${TEAMS[i].color}"><i></i>${TEAMS[i].name} iPad</span>`).join("")}${dset.on ? `<span data-t="2" data-s="${D.padOn ? "on" : ""}" style="--team:${two() ? TEAMS[0].color : "#b07cff"}"><i></i>${two() ? "DRONE 1" : "DRONE"} iPad</span>` : ""}${two() ? `<span data-t="3" data-s="${DR[1].padOn ? "on" : ""}" style="--team:${TEAMS[1].color}"><i></i>DRONE 2 iPad</span>` : ""}</div>
       ${steerHTML()}
       <div class="sr-cf" hidden><p></p><div><button type="button" class="sr-cf-no">Cancel</button><button type="button" class="sr-cf-ok">OK</button></div></div>`;
     wireSteer(pBody);
@@ -1675,6 +1791,11 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       if (DKEYS[e.code]) D.keys.add(DKEYS[e.code]); else if (e.code === "Space") { if (!e.repeat) droneFire(); } else droneSel(+e.code.slice(5) - 1);
       return;
     }
+    if (two() && (DKEYS2[e.code] || /^Numpad[0-3]$/.test(e.code)) && !e.target.closest?.("input,textarea")) {   /* 5e: drone 2 = bàn số */
+      e.preventDefault(); if (G.paused) return; const d2 = DR[1];
+      if (DKEYS2[e.code]) d2.keys.add(DKEYS2[e.code]); else if (e.code === "Numpad0") { if (!e.repeat) droneFire(d2); } else droneSel(+e.code.slice(6) - 1, d2);
+      return;
+    }
     const m = KEYMAP[e.code]; if (!m || e.target.closest?.("input,textarea")) return;
     if (e.code.startsWith("Arrow")) e.preventDefault();
     if (G.paused) return;
@@ -1683,8 +1804,8 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     if (k === "f") { if (!e.repeat) fire(i); return; }
     held[i].add(k);
   };
-  const onKeyUp = e => { if (DKEYS[e.code]) D.keys.delete(DKEYS[e.code]); const m = KEYMAP[e.code]; if (m) held[m[0]].delete(m[1]); };
-  const onBlur = () => { D.keys.clear(); held.forEach(h => h.clear()); touch.forEach(t => t.clear()); paintTouch(); };
+  const onKeyUp = e => { if (DKEYS[e.code]) D.keys.delete(DKEYS[e.code]); if (DKEYS2[e.code]) DR[1].keys.delete(DKEYS2[e.code]); const m = KEYMAP[e.code]; if (m) held[m[0]].delete(m[1]); };
+  const onBlur = () => { DR.forEach(d => d.keys.clear()); held.forEach(h => h.clear()); touch.forEach(t => t.clear()); paintTouch(); };
   window.addEventListener("keydown", onKeyDown); window.addEventListener("keyup", onKeyUp); window.addEventListener("blur", onBlur);
   function paintTouch() {
     H.forEach((h, i) => { const v = [...touch[i].values()];
@@ -2211,7 +2332,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   }
   const bendXjs = (i, a) => { if (a <= 0) return 0; const arr = bendTex[i].image.data, fu = Math.min(a / BD, 1) * (BN - 1), k = Math.min(Math.floor(fu), BN - 2); return lerp(arr[k], arr[k + 1], fu - k) + bendSlope[i] * Math.max(a - BD, 0); };
   function bendFor(i) {                                      // khúc cua 3D lấy từ độ cong bản đồ ~30–150 m phía trước (+ đổ dốc nhẹ như mẫu 2)
-    const S = i === 2 ? D.s + D.bk : T[i].s,   /* 4v */ amt = opt.bend * (G.phase === "menu" ? 0.5 : 1);
+    const S = i === 2 ? DV.S : T[i].s,   /* 5e: chỗ máy quay drone nhìn (1 hay 2 drone) */   /* 4v */ amt = opt.bend * (G.phase === "menu" ? 0.5 : 1);
     let k = 0; for (let d = 30; d <= 150; d += 30) k += kapAt(S + d); k /= 5;
     return [clamp(k * 0.11, -0.0032, 0.0032) * amt,   // 4a: cong mạnh hơn (cũ ×0,085, ±0,0024)
             (0.00012 + 0.0001 * Math.sin(S / 170 + 0.4)) * amt];
@@ -2370,7 +2491,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     infoT -= dt; if (infoT <= 0 && remote && remote.send) {
       infoT = 0.25;
       T.forEach((t, i) => { if (t.padOn && remote.share) remote.share(i, "r", `${t.ms},${G.phase}`); });   // 3y: chỉ ghi kho khi ĐỔI (share tự bỏ trùng)
-      droneInfo();                                                                                         // 4l: iPad drone
+      DR.forEach(d => droneInfo(d));                                                                       // 4l: iPad drone · 5e: + drone 2
       { const kt = D.padOn ? (D.padSt === "relay" ? "DRONE iPad · SLOW LINK" : "DRONE iPad CONNECTED") : "J L · I K aim  ·  U O drone  ·  1 2 3 ammo"; if (dvKeys.textContent !== kt) dvKeys.textContent = kt; }
       T.forEach((t, i) => { if (t.padOn) remote.send(i, `i:${Math.round(t.v * 3.6)},${(t.E / SEG).toFixed(1)},${t.ms},${t.inc ? (t.inc.locked ? 2 : 1) : 0},${G.phase},${clamp(t.E / (PHYS.CAP * SEG), 0, 1).toFixed(2)},${t.stallT > 0 && t.dmgT0 ? t.stallT.toFixed(2) : 0},${t.dmgT0 || 0},${T[1 - i].s - t.s < AIM_MIN ? 1 : 0},${t.streak || 0}/${opt.streak}`); });   // 4j: + chuỗi đúng   // 4i: + DAMAGE, không mục tiêu
     }
@@ -2415,7 +2536,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       try {
         // ⚠️ đích vẽ = render target của composer (game KHÔNG vẽ thẳng ra màn) — không thì khoá shader lệch (tone mapping / hệ màu) ⇒ dịch phí
         const cA = l => { setL(cams[0], l); renderer.setRenderTarget(composer.renderTarget1); const p = renderer.compileAsync(scene, cams[0]); renderer.setRenderTarget(null); return p; };
-        if (renderer.compileAsync) { dObj.g.visible = dObj.sh.visible = dObj.ret.visible = dObj.lock.visible = true; await cA([0, 1, 2, 6]); if (!dead) await cA(LAY[0]); if (!dead) await cA(LAY[1]); }   // 3r: + buồng lái đội 2 (2 xe khác số đèn pô ⇒ khác khoá)
+        if (renderer.compileAsync) { DR.forEach(d => { const o = d.o; o.g.visible = o.sh.visible = o.ret.visible = o.lock.visible = o.glow.visible = o.tdot.visible = true; });   /* 5e: 2 drone */ await cA([0, 1, 2, 6]); if (!dead) await cA(LAY[0]); if (!dead) await cA(LAY[1]); }   // 3r: + buồng lái đội 2 (2 xe khác số đèn pô ⇒ khác khoá)
         // vật liệu hậu kỳ (bloom: lọc sáng / làm mờ 5 tầng / ghép · nhoè hướng tâm) — vẽ vào render target ⇒ dịch ngầm với đích đó.
         // OutputPass tự đặt define ở lần vẽ đầu ⇒ để khung ẩn lo (1 shader).
         if (renderer.compileAsync && !dead) {
@@ -2542,9 +2663,9 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   raf = requestAnimationFrame(loop);
 
   if (remote) remote.attach({
-    press: (i, k) => { if (i === 2) { if (k === "fire") droneFire(); else if (/^d[0-2]$/.test(k)) droneSel(+k[1]); return; } if (k === "fire") fire(i); },   /* 4l: iPad drone */
-    drive: (i, d) => { if (i === 2) { D.pad = d; D.padT = G.t; return; } T[i].pad = d; T[i].padT = G.t; },
-    status: (i, s) => { if (i === 2) { D.padSt = s; D.padOn = s === "on" || s === "relay"; onEvent("pad", { team: 2, s }); droneInfo(); return; } T[i].padSt = s; T[i].padOn = s === "on" || s === "relay"; onEvent("pad", { team: i, s }); if (T[i].padOn) shareSteer(); },
+    press: (i, k) => { if (i >= 2) { const dr = DR[i - 2]; if (!dr) return; if (k === "fire") droneFire(dr); else if (/^d[0-2]$/.test(k)) droneSel(+k[1], dr); return; } if (k === "fire") fire(i); },   /* 4l: iPad drone · 5e: t = 3 = drone 2 */
+    drive: (i, d) => { if (i >= 2) { const dr = DR[i - 2]; if (dr) { dr.pad = d; dr.padT = G.t; } return; } T[i].pad = d; T[i].padT = G.t; },
+    status: (i, s) => { if (i >= 2) { const dr = DR[i - 2]; if (!dr) return; dr.padSt = s; dr.padOn = s === "on" || s === "relay"; onEvent("pad", { team: i, s }); droneInfo(dr); return; } T[i].padSt = s; T[i].padOn = s === "on" || s === "relay"; onEvent("pad", { team: i, s }); if (T[i].padOn) shareSteer(); },
     answer: (i, k, n) => { if (padMode === 1 && T[i].qn === n) answer(i, k); },
   });
   setPadMode(padMode);
@@ -2587,7 +2708,9 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     step(n = 1, dt = 1 / 60) { manual = true; for (let k = 0; k < n; k++) frame(dt); fit(true); renderer.info.reset(); composer.render(); drawCount(); },
     get draws() { return { ...DI }; },                                           // 4k: lệnh vẽ / tam giác mỗi khung (TB ~1 s)
     drone: { get set() { return { ...dset, ammo: { ...dset.ammo } }; }, setDrone, get state() { return { s: +D.s.toFixed(1), x: +D.x.toFixed(2), ax: +D.ax.toFixed(2), ad: +D.ad.toFixed(1), sel: D.sel, lock: D.lock, k: +dK.toFixed(3) }; },
-      aim(ax, ad) { if (ax != null) D.ax = clamp(ax, -ROADX, ROADX); if (ad != null) D.ad = clamp(ad, D_NEAR, D_FAR); }, sel: droneSel, fire: droneFire, canTarget, cam: dcam },   // 4k: bàn thử
+      aim(ax, ad, n = 0) { const d = DR[n]; if (ax != null) d.ax = clamp(ax, -ROADX, ROADX); if (ad != null) d.ad = clamp(ad, D_NEAR, D_FAR); }, sel: (k, n = 0) => droneSel(k, DR[n]), fire: (n = 0) => droneFire(DR[n]), canTarget, cam: dcam,   // 4k: bàn thử
+      near(bk, n = 0) { DR[n].bk = clamp(bk, D_BK0, D_BK1); },   // 5e: bàn thử NEAR / FAR
+      get drones() { return DR.map(d => ({ n: d.n, used: dUsed(d), s: +d.s.toFixed(1), x: +d.x.toFixed(2), y: +d.y.toFixed(2), ax: +d.ax.toFixed(2), ad: +d.ad.toFixed(1), bk: +d.bk.toFixed(1), sel: d.sel, lock: d.lock, bat: +d.bat.toFixed(2), padOn: d.padOn, stats: JSON.parse(JSON.stringify(d.stats)), model: !!d.o.model, gx: +d.o.g.position.x.toFixed(2) })); } },   // 5e
     resume() { manual = false; last = 0; },
     state: () => ({ phase: G.phase, t: +G.t.toFixed(2), winner: G.winner, L, FIN, LAP: +LAP.toFixed(1), LAPS, mode: MODE, finS: G.finS, decided: G.decided, timeLeft: +G.timeLeft.toFixed(1), teams: T.map(t => ({ s: +t.s.toFixed(2), v: +t.v.toFixed(2), kmh: Math.round(t.v * 3.6), x: +t.x.toFixed(2), y: +t.y.toFixed(2), air: t.air, E: +t.E.toFixed(1), cells: +(t.E / SEG).toFixed(2), N: +t.N.toFixed(2), ms: t.ms, streak: t.streak, ok: t.ok, bad: t.bad_, hits: t.hits, src: t.src, pad: t.padSt, spin: +t.spinT.toFixed(2), camK: +t.camK.toFixed(2), jk: +t.jk.toFixed(2), ay: +t.ay.toFixed(2), ar: +t.ar.toFixed(2), ap: +t.ap.toFixed(2), lock: t.lock })) }),
     camInfo: () => cams.map(c => ({ pos: c.position.toArray().map(v => +v.toFixed(2)), fov: +c.fov.toFixed(1), layers: c.layers.mask })),
@@ -2601,7 +2724,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       window.removeEventListener("keydown", onKeyDown); window.removeEventListener("keyup", onKeyUp); window.removeEventListener("blur", onBlur); window.removeEventListener("keydown", onEsc);
       try { remote && remote.detach && remote.detach(); } catch (e) { /* */ }
       tools.dispose(); skids.dispose(); burnSk.dispose();
-      hoods.forEach(h => h.dispose()); cars.forEach(c => c.dispose()); shadows.forEach(s => scene.remove(s)); world.dispose(); missiles.dispose(); dammo.dispose(); ramps.dispose(); trails.dispose(); twists.dispose(); pickups.dispose(); traffic.dispose(); dObj.dispose(); bendTex.forEach(t => t.dispose());   /* 4k */
+      hoods.forEach(h => h.dispose()); cars.forEach(c => c.dispose()); shadows.forEach(s => scene.remove(s)); world.dispose(); missiles.dispose(); dammo.dispose(); ramps.dispose(); trails.dispose(); twists.dispose(); pickups.dispose(); traffic.dispose(); DR.forEach(d => d.o.dispose()); DX.dispose();   /* 5e */ bendTex.forEach(t => t.dispose());   /* 4k */
       composer.dispose(); rt.dispose(); pmrem.dispose(); scene.environment?.dispose();
       renderer.dispose(); renderer.forceContextLoss(); mount.innerHTML = ""; mount.classList.remove("sr-root", "sr2", "sr3", "is-menu", "is-count", "is-race", "is-end");
       if (window.__sr === api) delete window.__sr;

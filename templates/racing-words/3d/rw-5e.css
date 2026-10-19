@@ -1,0 +1,29 @@
+/* RACING WORDS mẫu 5e (19/10/2026) — CHẾ ĐỘ 2 DRONE (sau rw-4y.css).
+   · bảng đạn TỐI GIẢN M1 trên trời (thầy chọn ở thiet-ke-5e-hai-drone.html, bỏ số 1 / 2): mỗi drone = 3 icon đạn + vạch pin màu đội; trái TEAM 1, phải TEAM 2.
+   · xưởng: 2 thẻ DRONE · iPAD cạnh nhau ở giữa trên (thu nhỏ). */
+.rw-dv2 { display: none; position: absolute; left: 0; right: 0; top: 7.2cqh; padding: .9cqh 4% 2.4cqh; justify-content: space-between; align-items: flex-start;
+  background: linear-gradient(rgba(6, 9, 15, .5), transparent); }
+.sr-root.rw-d2 .rw-dv2 { display: flex; }
+.sr-root.rw-d2 .rw-dv-top, .sr-root.rw-d2 .rw-dv-lock, .sr-root.rw-d2 .rw-dv-bot { display: none; }
+.rw-dv2-g { display: flex; flex-direction: column; gap: .6cqh; }
+.rw-dv2-g + .rw-dv2-g { align-items: flex-end; }
+.rw-dv2-row { display: flex; gap: .5cqh; }
+.rw-dv2-ic { position: relative; display: grid; place-items: center; width: 2.9cqh; height: 2.9cqh; border-radius: 50%; opacity: .38; transition: opacity .2s, box-shadow .2s, background .2s; }
+.rw-dv2-ic .rwi { height: 1.95cqh; width: auto; }
+.rw-dv2-ic.on { opacity: 1; background: color-mix(in srgb, var(--ac) 24%, rgba(8, 12, 20, .7)); box-shadow: 0 0 0 .2cqh var(--ac), 0 0 1.1cqh var(--ac); }
+.rw-dv2-ic.wait { opacity: .22; }
+.rw-dv2-ic.on.wait { opacity: .75; }
+.rw-dv2-ic.cd { opacity: .7; }
+.rw-dv2-ic.cd::after { content: ""; position: absolute; inset: -.25cqh; border-radius: 50%; background: conic-gradient(rgba(255, 255, 255, .85) var(--p, 0%), transparent 0);
+  -webkit-mask: radial-gradient(closest-side, transparent 80%, #000 83%); mask: radial-gradient(closest-side, transparent 80%, #000 83%); }
+.rw-dv2-ic.off { opacity: .1; }
+.rw-dv2-bat { width: 9.7cqh; height: .45cqh; border-radius: 1cqh; background: rgba(255, 255, 255, .16); overflow: hidden; }
+.rw-dv2-bat i { display: block; height: 100%; width: 100%; background: var(--c); box-shadow: 0 0 .8cqh var(--c); transform-origin: 0 50%; transition: transform .2s linear; }
+.rw-dv2-bat i.low { background: #ff4d5e; box-shadow: 0 0 .8cqh #ff4d5e; }
+/* xưởng: 2 thẻ drone cạnh nhau */
+.rw-gc3 { left: 50%; top: 3cqh; bottom: auto; transform: translateX(-50%); width: min(24cqw, 44cqh); }
+.rw-gc3 .rw-gq { width: 16cqh; margin: 0 auto; }
+.rw-gd2 .rw-gc2, .rw-gd2 .rw-gc3 { width: min(17cqw, 31cqh); }
+.rw-gd2 .rw-gc2 { transform: translateX(calc(-100% - .8cqw)); }
+.rw-gd2 .rw-gc3 { transform: translateX(.8cqw); }
+.rw-gd2 .rw-gc2 .rw-gq, .rw-gd2 .rw-gc3 .rw-gq { width: 12cqh; }

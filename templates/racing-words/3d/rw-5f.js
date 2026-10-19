@@ -1,3 +1,6 @@
+// RACING WORDS — GÓI NHÚNG mẫu 5f (19/10/2026) = rw-5e.js + lõi sr3d-5f.js (màu sơn drone, máy quay ưu tiên xe dẫn + nâng theo khoảng cách) +
+//   xưởng sr3d-intro-5f.js (drone lơ lửng + ô chọn NO / 1 / 2 DRONE + mẫu — đặt thẳng cho trận, đồng bộ 2 chiều với Settings ▸ Drone). CSS thêm rw-5f.css.
+// RACING WORDS — GÓI NHÚNG mẫu 5e (19/10/2026) = rw-5d.js + lõi sr3d-5e.js (CHẾ ĐỘ 2 DRONE) · xưởng: 2 drone ⇒ 2 thẻ DRONE 1 · iPAD (xanh) + DRONE 2 · iPAD (cam). CSS thêm rw-5e.css.
 // RACING WORDS — GÓI NHÚNG mẫu 5d (19/10/2026, CHỐT ⇒ AWord Đợt 553) = rw-5a.js + lõi sr3d-5d.js (chỉ tải mẫu drone khi drone bật).
 // RACING WORDS — GÓI NHÚNG mẫu 5a (19/10/2026) = rw-4z.js + lõi sr3d-5a.js (tin iPad drone có hồi chiêu — bảng lái AERO YOKE sr3d-padui-5a.js).
 // RACING WORDS — GÓI NHÚNG mẫu 4z (19/10/2026) = rw-4y.js + lõi sr3d-4z.js (vùng nổ đạn drone trúng mọi xe trong vùng).
@@ -83,9 +86,9 @@
 //   onEvent   : (k, v) — "pad" (iPad nối / mất nối), "padMode", "end", …
 // ⇒ { setOptions(o) (true = áp ngay, false = AWord dựng lại), destroy(), game, intro }
 // =============================================================
-import { createSpeedRun } from "./sr3d-5d.js";   // 5d: tải mẫu drone khi bật · 5a: tin iPad drone có hồi chiêu · 4z: vùng nổ trúng cả 2 xe · 4y: tâm bóng mờ, bảng nhiều hiệp · 4x: icon 2D Neon viền · 4w: màu tâm, 1 tâm, tab mượt · 4v: NEAR/FAR dời drone, dấu điểm rơi, Auto target · 4u: nghiêng 4 hướng · 4t: nhỏ 10 %, đạn ra từ bụng, chỉnh cột + zoom · 4s: đạn nhỏ, phóng về trước, đuôi lửa · 4r: đạn drone · 4q: tâm ngắm lục giác HUD · 4p: 5 mẫu giữ + Quad quay · 4o: lưới chọn mẫu + sửa quạt · 4n: 8 mẫu + quạt quay + bay lượn · 4m: mẫu drone 3D thật · 4l: + iPad drone · 4k: DRONE
+import { createSpeedRun } from "./sr3d-5f.js";   // 5f: màu sơn, máy quay theo xe dẫn · 5e: 2 drone · 5d: tải mẫu drone khi bật · 5a: tin iPad drone có hồi chiêu · 4z: vùng nổ trúng cả 2 xe · 4y: tâm bóng mờ, bảng nhiều hiệp · 4x: icon 2D Neon viền · 4w: màu tâm, 1 tâm, tab mượt · 4v: NEAR/FAR dời drone, dấu điểm rơi, Auto target · 4u: nghiêng 4 hướng · 4t: nhỏ 10 %, đạn ra từ bụng, chỉnh cột + zoom · 4s: đạn nhỏ, phóng về trước, đuôi lửa · 4r: đạn drone · 4q: tâm ngắm lục giác HUD · 4p: 5 mẫu giữ + Quad quay · 4o: lưới chọn mẫu + sửa quạt · 4n: 8 mẫu + quạt quay + bay lượn · 4m: mẫu drone 3D thật · 4l: + iPad drone · 4k: DRONE
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
-import { createIntro } from "./sr3d-intro-4h.js";
+import { createIntro } from "./sr3d-intro-5f.js";   // 5f: drone trong xưởng
 import { createSound } from "./sr3d-sound-3o.js";
 import { qrSvg } from "./mc3d-qr.js";
 
@@ -166,7 +169,7 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
 
   // ---------- intro xưởng ANDREW STUDIO ----------
   const after = document.createElement("div"); after.className = "rw-after"; frame.appendChild(after);
-  const intro = createIntro({ mount: frame, cars, title,
+  const intro = createIntro({ mount: frame, cars, title, drone: game.drone ? game.drone.set : null, onDrone: o => { if (game.drone) game.drone.setDrone(o); },   // 5f
     onSetCar: (i, id) => { intro.arWait(); Promise.resolve(game.setCar(i, id)).then(() => game.prewarm()).catch(() => {}).then(() => { if (!dead) intro.arGo(); });   // 3r: đổi xe ⇒ trận dịch lại shader ⇒ intro chờ
       try { localStorage.setItem(CARS_KEY, JSON.stringify(intro ? intro.cars : cars)); } catch (e) { /* */ } },
     onCue: (n, t) => introCue(n, t),
@@ -202,8 +205,8 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
         <div class="rw-gt"><span class="rw-gl">◀ LEFT</span><span class="rw-gr">RIGHT ▶</span><small></small></div></div>
       <div class="rw-gf"><button type="button" class="rw-grc">↻ Reconnect</button><em class="rw-gd"></em></div></div>`).join("");
   // 4l: thẻ DRONE · iPAD (chỉ khi Settings ▸ Drone bật) — QR + trạng thái, không chặn START
-  gate.insertAdjacentHTML("beforeend", `<div class="rw-gc rw-gc2" style="--tc:#b07cff" data-t="2"><div class="rw-gh"><b>DRONE · iPAD</b><span class="rw-gs"><i></i><span></span></span></div>
-    <div class="rw-gb"><div class="rw-gq"></div><div class="rw-gt"><small></small></div></div><div class="rw-gf"><button type="button" class="rw-grc">↻ Reconnect</button><em class="rw-gd"></em></div></div>`);
+  gate.insertAdjacentHTML("beforeend", [2, 3].map(t => `<div class="rw-gc rw-gc${t}" style="--tc:${t === 3 ? "#ff7a00" : "#b07cff"}" data-t="${t}"><div class="rw-gh"><b>${t === 3 ? "DRONE 2" : "DRONE"} · iPAD</b><span class="rw-gs"><i></i><span></span></span></div>
+    <div class="rw-gb"><div class="rw-gq"></div><div class="rw-gt"><small></small></div></div><div class="rw-gf"><button type="button" class="rw-grc">↻ Reconnect</button><em class="rw-gd"></em></div></div>`).join(""));   // 5e: + thẻ DRONE 2
   frame.appendChild(gate);
   const startB = frame.querySelector(".ri-start"), startHTML = startB ? startB.innerHTML : "";
   const gs = [0, 1].map(i => { const c = gate.querySelector(".rw-gc" + i); return { c, st: c.querySelector(".rw-gs span"), q: c.querySelector(".rw-gq"), w: c.querySelector(".rw-gw svg"), tip: c.querySelector(".rw-gt small"), d: c.querySelector(".rw-gd"), key: "", qr: "", rot: 1e9 }; });
@@ -211,11 +214,16 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
   const gateNeed = () => !!(remote && remote.live && game.padMode === 2);
   const teamOk = l => l.s === "on" && l.tl && l.tr;
   let gateOk = true;
-  const g2 = (() => { const c = gate.querySelector(".rw-gc2"); return { c, st: c.querySelector(".rw-gs span"), q: c.querySelector(".rw-gq"), tip: c.querySelector(".rw-gt small"), d: c.querySelector(".rw-gd"), key: "", qr: "" }; })();
-  function paintDroneCard() {                                        // 4l
-    const on = !!(remote && remote.live && game.drone && game.drone.set.on && introOn && intro && intro.state === "idle");
+  const gD = [2, 3].map(t => { const c = gate.querySelector(".rw-gc" + t); return { t, c, h: c.querySelector(".rw-gh b"), st: c.querySelector(".rw-gs span"), q: c.querySelector(".rw-gq"), tip: c.querySelector(".rw-gt small"), d: c.querySelector(".rw-gd"), key: "", qr: "" }; });
+  const g2 = gD[0];
+  function paintDroneCard() { gD.forEach(paintDroneCard1); }        // 5e: 1 hay 2 thẻ drone
+  function paintDroneCard1(g2) {                                     // 4l
+    const ds = game.drone && game.drone.set, n2 = !!(ds && ds.on && ds.n === 2);
+    const on = !!(remote && remote.live && ds && ds.on && (g2.t === 2 || n2) && introOn && intro && intro.state === "idle");
     g2.c.hidden = !on; if (!on) return;
-    const l = remote.live(2), key = [l.s, l.diag].join("|"); if (key === g2.key) return; g2.key = key;
+    if (g2.t === 2) { const tc = n2 ? "#3b8cff" : "#b07cff", nm = n2 ? "DRONE 1 · iPAD" : "DRONE · iPAD"; if (g2.h.textContent !== nm) { g2.h.textContent = nm; g2.c.style.setProperty("--tc", tc); } }   // 5e: 2 drone ⇒ drone 1 màu TEAM 1
+    root.classList.toggle("rw-gd2", n2);
+    const l = remote.live(g2.t), key = [l.s, l.diag].join("|"); if (key === g2.key) return; g2.key = key;
     g2.c.dataset.s = l.s || "none"; g2.c.classList.toggle("is-ok", l.s === "on");
     g2.st.textContent = l.s === "on" ? "READY" : l.s === "relay" ? "SLOW — reconnecting…" : l.s === "wait" ? "Connecting…" : "Scan the QR with the drone iPad";
     g2.tip.textContent = l.s === "on" ? "Drone iPad connected" : "Optional — the race can start without it"; g2.d.textContent = l.diag || "";
@@ -327,6 +335,7 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
     else if (k === "takeoff") S.play("flyby", { gain: 0.5, rate: 1.2, pan: PAN[v.team ?? 0] });
     else if (k === "menu" && intro) { introOn = true; game.hold(true); intro.show(); }
     else if (k === "car" && intro && intro.cars[v.team] !== v.id) intro.setCar(v.team, v.id, false);
+    else if (k === "drone" && intro && intro.setDrone) intro.setDrone(v);   // 5f: Settings ▸ Drone ⇒ xưởng
   }
 
   return {

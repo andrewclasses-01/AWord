@@ -546,6 +546,21 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 554 (19/10/2026) — RACING WORDS THẬT: 2 DRONE (iPad thứ 4) — myGame 5e → 5g (thầy CHỐT: "Bản 5g ổn rồi, chốt và đưa lên AWord")
+- `tools/chep-racing-words.py`: GOC `rw-5f.js` · GOC_THEM `sr3d-padui-5g.js` + `sr3d-padlink-5e.js` + `rw-loadpace-4h.js` · CSS + `rw-5e.css` + `rw-5f.css` (sau rw-4y) · chép thêm `anh-pad/*.webp`
+  (4 ảnh xe / drone của màn chọn vai iPad — padui-5g nạp `../anh-pad/`). Chạy: `python -I -X utf8 tools/chep-racing-words.py`.
+- `racing-words.js`: GAME `./3d/rw-5f.js` · CSS + 5e, 5f · padlink-5e (4 chỗ) · `linked` 4 phần tử. `rw-pad-signal.js`: + `rwpad_pad3` (iPad DRONE 2) · `padUrl(3)` ⇒ `pad.html?t=3` · localSignal từ padlink-5e.
+- `pad.js`: `?t=3` / chọn vai DRONE 2 ⇒ cờ `aw.rwDrone` = "3" (t=2 ⇒ "2"; bản cũ "1" vẫn hiểu là drone 1), vẫn KHÔNG đụng `aw.ipadTeam` · rwMods padlink-5e + padui-5g ·
+  vai ≥ 2 ⇒ `mountDroneApp` (màu đội theo tin "j:") · màn chọn vai 4 thẻ (ảnh xe / drone thật, ANDREW STUDIO) · màn đội: nút tên lửa hết bề ngang, vừa mọi tỉ lệ màn (cả cầm dọc).
+- Tính năng (đủ ở hồ sơ myGame mục 0): Settings ▸ Drone Off / 1 / 2 drones (2 = mỗi đội 1 drone, luật Team drone) · máy quay chung "hàng ngang lệch tầng" · drone SƠN màu đội ·
+  bảng đạn tối giản M1 trên trời · máy quay ưu tiên xe dẫn + nâng theo khoảng cách 2 xe · drone + ô chọn NO / 1 / 2 DRONE + mẫu ngay trong XƯỞNG · 2 thẻ QR DRONE 1 / DRONE 2 ở xưởng.
+- `load-files.js` đo lại (`scratch/dot543-rec.html?t=racing-words&padsig=local` + máy lưu 8899, chép trang đo từ web/scratch — scratch/ bị gitignore) ⇒ 97 file, 5,36 MB.
+  ⚠️ Lần đo đầu chỉ ghi 73 file (CSS tải trước mốc màn chờ) — đo lại lần 2 mới đủ: so danh sách với bản cũ trước khi tin.
+- XOÁ trang thử ẩn `lab/racing-drone.html` + `lab/racing-drone-pad.html` + `templates/racing-words/rw-lab-signal.js` (đúng kế hoạch hồ sơ: drone chốt xong thì xoá lab/).
+- Đã thử máy nhà: game tải đủ không 404 · xưởng bấm 2 DRONES ⇒ 2 drone sơn màu + 2 thẻ QR · `pad.html?t=3&padsig=local` ⇒ "TEAM 2 DRONE" CONNECTED, cờ = 3 ·
+  `?t=0` ⇒ màn đội CONNECTED, nút tên lửa 1789/1832 px, cờ drone xoá · màn chọn vai nạp 4 ảnh. ⚠️ trình duyệt giữ pad.js CŨ trong bộ nhớ đệm ⇒ iPad thật có thể cần tải lại trang.
+  ⬜ thầy thử TOMKO + 4 iPad thật.
+
 ## Đợt 553 (19/10/2026) — RACING WORDS THẬT: DRONE (iPad thứ 3) — myGame 4j → 5d (thầy CHỐT: "đưa lên AWord và myGame")
 - Thầy duyệt từng bước ở trang thử ẩn (Đợt 552 → 552q) rồi chốt ⇒ đưa vào template `racing_words` THẬT. Drone mặc định OFF (⚙ Settings ▸ Drone bật) ⇒ lớp không dùng drone chơi như cũ.
 - `tools/chep-racing-words.py`: GOC `rw-5d.js` · GOC_THEM `sr3d-padui-5c.js` + `sr3d-padlink-5a.js` + `rw-loadpace-4h.js` · CSS + rw-4k · 4l · 4o · 4r · 4w · 4y (đúng thứ tự) ·

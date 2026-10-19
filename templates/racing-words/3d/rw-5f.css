@@ -1,0 +1,16 @@
+/* RACING WORDS mẫu 5f (19/10/2026) — ô chọn DRONE trong xưởng (sau sr3d-intro-3o.css, rw-5e.css): giữa dưới, trên START. */
+.ri-dpick { position: absolute; left: 50%; bottom: 19cqh; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: .8cqh; --team: #b07cff;
+  filter: drop-shadow(0 .8cqh 1.6cqh rgba(0, 0, 0, .6)); transition: opacity .35s; }
+.ri-dpick[data-n="2"] { --team: #ffffff; }
+.ri-dseg { display: flex; padding: .4cqh; gap: .4cqh; border-radius: 1.4cqh; background: rgba(8, 11, 16, .86); border: 1px solid rgba(255, 255, 255, .16); }
+.ri-dseg button { border: 0; border-radius: 1cqh; padding: .8cqh 1.6cqh; background: transparent; color: rgba(255, 255, 255, .6); font: italic 900 1.45cqh/1 "Exo 2"; letter-spacing: .12cqh; cursor: pointer; }
+.ri-dseg button:hover { color: #fff; }
+.ri-dseg button.on { color: #fff; background: linear-gradient(90deg, color-mix(in srgb, #b07cff 55%, #121826), color-mix(in srgb, #b07cff 30%, #121826)); box-shadow: 0 0 1.2cqh rgba(176, 124, 255, .45); }
+.ri-dpick[data-n="2"] .ri-dseg button.on { background: linear-gradient(90deg, color-mix(in srgb, #3b8cff 60%, #121826), color-mix(in srgb, #ff7a00 60%, #121826)); box-shadow: 0 0 1.2cqh rgba(255, 255, 255, .3); }
+.ri-drow { display: flex; gap: .8cqh; }
+.ri-drow .ri-pb { width: 5.4cqh; }
+.ri-drow .ri-pn { min-width: 24cqh; padding: .8cqh 2cqh .9cqh; }
+.ri-drow .ri-pn small { color: #c9a8ff; }
+.ri-drow .ri-pn b { font-size: 2.6cqh; }
+.ri-dpick.is-off .ri-drow { display: none; }
+.ri-root.is-play .ri-dpick { opacity: 0; pointer-events: none; }

@@ -1,3 +1,4 @@
+// RACING WORDS mẫu 5e (19/10/2026) = sr3d-dammo-4w.js + CHỦ ĐẠN: fire({ owner }) · activeOf(owner) = số quả của drone đó đang bay · update() trả { …, owner } (2 drone).
 // RACING WORDS mẫu 4w (19/10/2026) = 4v + thầy: "tâm Missile ĐỎ CHÓT, Heart HỒNG" (DA_COL) · dấu điểm rơi HIỆN / ẨN mượt có NHOÈ:
 //   2 lớp ảnh (nét + nhoè canvas filter blur) đan nhau — hiện: nhoè → nét, to → vừa · ẩn (đạn chạm): nét → nhoè, nở ra rồi mờ hẳn (~0,35 s, danh sách fading).
 // ---- gốc 4v ----
@@ -80,13 +81,14 @@ export function createDroneAmmo({ scene, bend, U }) {
     k.a.scale.setScalar(sc); k.b.scale.setScalar(sc * 1.04); k.a.rotation.y = k.b.rotation.y = k.rot; };
   return {
     get active() { return list.length; },
-    fire({ kind, x, y, z, tx, ts, predict, src, seek, drift }) {   // 4v: + seek / drift (Auto target) · predict giữ cho tương thích   // 4t: src = Vector3 SỐNG của drone (bám theo khi thả + đầu đường cong)
+    activeOf(o) { let n = 0; for (const m of list) if ((m.owner || 0) === o) n++; return n; },   // 5e
+    fire({ kind, x, y, z, tx, ts, predict, src, seek, drift, owner = 0 }) {   // 5e: + owner   // 4v: + seek / drift (Auto target) · predict giữ cho tương thích   // 4t: src = Vector3 SỐNG của drone (bám theo khi thả + đầu đường cong)
       const L = LOOK[kind] || LOOK.missile, g = new THREE.Group();
       buildMissile(g, P, L.body, L.nose, L.fin); g.scale.setScalar(L.sc); g.position.set(x, y, z);
       g.traverse(o => { o.frustumCulled = false; }); scene.add(g);
       if (src) { x = src.x; y = src.y + DY0; z = src.z; g.position.set(x, y, z); g.scale.setScalar(L.sc * 0.5); }
       const mk = makeMk(kind, tx, -ts);   // 4v: dấu điểm rơi · 4w: 2 lớp nét / nhoè
-      const m = { kind, g, sc: L.sc, t: src ? -DROP : 0, src, lit: !src, seek, drift: drift || 0, mk, L0: new THREE.Vector3(x, y, z), P: new THREE.Vector3(tx, 0.4, -ts), predict, ph: Math.random() * 6.28, last: new THREE.Vector3(x, y, z), trailD: 0 };
+      const m = { owner, kind, g, sc: L.sc, t: src ? -DROP : 0, src, lit: !src, seek, drift: drift || 0, mk, L0: new THREE.Vector3(x, y, z), P: new THREE.Vector3(tx, 0.4, -ts), predict, ph: Math.random() * 6.28, last: new THREE.Vector3(x, y, z), trailD: 0 };
       list.push(m);
       if (!src) for (let k = 0; k < 5; k++) puff.emit(x + (Math.random() - 0.5) * 0.4, y, z + (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 1.5, -0.5 - Math.random(), (Math.random() - 0.5) * 1.5, 0.5, 0.3, 0.35, 1.2, 1.8);   // 4s: khói phóng nhỏ
     },
@@ -122,7 +124,7 @@ export function createDroneAmmo({ scene, bend, U }) {
           gp.emit(tmp.x, tmp.y, tmp.z, (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.4, 0.35 + Math.random() * 0.25, 0.42, 0.75, 0.6, 0.4);
           puff.emit(tmp.x, tmp.y, tmp.z, 0, 0.2, 0, 0.8 + Math.random() * 0.5, 0.3, 0.22, 1.4, 0.6); }
         m.last.copy(B);
-        if (m.t >= DA.T) { hits.push({ kind: m.kind, x: m.P.x, s: -m.P.z }); kill(m, true); list.splice(i, 1); }   // 4w: dấu mờ dần
+        if (m.t >= DA.T) { hits.push({ kind: m.kind, x: m.P.x, s: -m.P.z, owner: m.owner }); kill(m, true); list.splice(i, 1); }   // 4w: dấu mờ dần
       }
       for (let i = rings.length - 1; i >= 0; i--) { const r = rings[i]; r.t += dt; const k = r.t / r.life;
         r.m.scale.setScalar(r.r0 + (r.r1 - r.r0) * Math.sqrt(Math.min(k, 1))); r.m.material.opacity = Math.max(0, 1 - k) * 0.95;

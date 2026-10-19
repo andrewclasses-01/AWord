@@ -2,6 +2,11 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
+## Đợt 554 (19/10/2026) — myGame 5e → 5g: 2 DRONE (iPad thứ 4) — CHỐT
+- GOC `rw-5f.js` · lõi `sr3d-5f.js` · xưởng `sr3d-intro-5f.js` · đạn `sr3d-dammo-5e.js` (chủ đạn) · iPad `sr3d-padui-5g.js` + `sr3d-padlink-5e.js` (4 chỗ: t = 0 · 1 đội, 2 · 3 drone) · ảnh `anh-pad/`.
+- CSS nạp thêm sau rw-4y.css: rw-5e · rw-5f. Kênh bắt tay + `rwpad_pad3`; pad.js `?t=3` ⇒ vai DRONE 2 (cờ `aw.rwDrone` = "3").
+- Trang thử ẩn lab/racing-drone* đã xoá.
+
 ## Đợt 553 (19/10/2026) — myGame 4j → 5d: DRONE (iPad thứ 3) — CHỐT
 - GOC `rw-5d.js` · lõi `sr3d-5d.js` · đạn `sr3d-dammo-4w.js` · mẫu drone `sr3d-drone3d-4p.js` + `drone3d/*.glb` · icon `rw-icons-4x.js` · iPad `sr3d-padui-5c.js` + `sr3d-padlink-5a.js` (cả đầu game lẫn pad.js).
 - CSS nạp thêm (đúng thứ tự, sau rw-4j.css): rw-4k · rw-4l · rw-4o · rw-4r · rw-4w · rw-4y. Kênh bắt tay + `rwpad_pad2`; pad.js `?t=2` ⇒ vai DRONE (cờ riêng `aw.rwDrone`).

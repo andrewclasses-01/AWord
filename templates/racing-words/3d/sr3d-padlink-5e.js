@@ -1,3 +1,4 @@
+// RACING WORDS mẫu 5e (19/10/2026) = padlink-5a + chỗ thứ 4: t = 3 = iPad DRONE 2 (chế độ 2 drone) — tài liệu "pad3", khoá n3/o3/u3… trong "host". Tin "j:" như drone 1.
 // RACING WORDS mẫu 5a (19/10/2026) = padlink-4u + tin iPad drone "j:" thêm 2 trường: <chờ còn lại từng loại đạn "h/b/m" giây> · <đạn đang bay 0|1> ⇒ onDrone({ …, cd: [h, b, m], air }).
 // RACING WORDS mẫu 4u (19/10/2026) = padlink-4l + iPad DRONE gửi thêm 2 số: "s:<ngang>,<xa>,<gần>,<chúc −100..100>,<đang nghiêng 0|1>" (iPad đội vẫn gửi 3 số như cũ).
 // RACING WORDS mẫu 4l (19/10/2026) — + VAI DRONE (iPad thứ 3): chỗ t = 2 (tài liệu "pad2", khoá n2/o2/u2/m2/k2… trong "host") cùng cách bắt tay / tự nối lại / khoá máy.
@@ -68,8 +69,9 @@ export function candsOf(sdp) {
 }
 const candTxt = c => (c ? [c.h && "LAN " + c.h, c.m && "mDNS " + c.m, c.s && "STUN " + c.s, c.r && "TURN " + c.r].filter(Boolean).join(" ") || "none" : "?");
 export const TEAM_META = [{ name: "TEAM 1", color: "#3b8cff" }, { name: "TEAM 2", color: "#ff7a00" }];
-export const DRONE_META = { name: "DRONE", color: "#b07cff" };   // 4l
-const SLOTS = [0, 1, 2];                                            // 4l: 0 · 1 = 2 đội · 2 = drone
+export const DRONE_META = { name: "DRONE", color: "#b07cff" };
+export const DRONE2_META = { name: "DRONE 2", color: "#ff7a00" };   // 5e   // 4l
+const SLOTS = [0, 1, 2, 3];   // 5e: + 3 = drone 2                                            // 4l: 0 · 1 = 2 đội · 2 = drone
 export function parseDrive(m) {                     // "s:-100,1,0" ⇒ { steer: −1, boost: 1, brake: 0 } · 4u: "s:-100,0,0,40,1" ⇒ + pitch 0,4 · tilt 1
   const [a, b, c, p, tl] = String(m).slice(2).split(",").map(Number);
   return { steer: Math.max(-1, Math.min(1, (a || 0) / 100)), boost: b ? 1 : 0, brake: c ? 1 : 0, pitch: Math.max(-1, Math.min(1, (p || 0) / 100)), tilt: tl ? 1 : 0 };
@@ -80,7 +82,7 @@ export function parseDrive(m) {                     // "s:-100,1,0" ⇒ { steer:
 export function createPadHost({ signal, padUrl }) {
   let ctl = null, sid = "", unsubs = [], tick = 0, panelEl = null, failMsg = "", note = "", closed = false;
   const ctls = [];                                            // 4f: các bên đang gắn (mới nhất nhận iPad) — gỡ 1 bên thì bên trước nhận lại
-  const cache = [{}, {}, {}];                                     // chế độ + câu hỏi mới nhất mỗi đội (gửi lại khi iPad vừa nối)
+  const cache = SLOTS.map(() => ({}));   /* 5e: 4 chỗ */                                     // chế độ + câu hỏi mới nhất mỗi đội (gửi lại khi iPad vừa nối)
   const st = SLOTS.map(() => ({ pc: null, dc: null, served: "", offered: "", hc: 0, last: 0, rs: 0, sn: 0, s: "",
     tries: 0, kick: 0, mine: null, theirs: null, pair: "", rtt: 0, ice: "", steer: 0, at: 0, tl: 0, tr: 0, via: "", owner: "", lostAt: 0 }));
   const OWN_GRACE = 8000;                                     // 5: chủ đội mất hẳn quá 8 s ⇒ nhả cho iPad khác
@@ -269,7 +271,7 @@ export function createPadHost({ signal, padUrl }) {
 // onState({ s: "nogame" | "connecting" | "on" | "relay", rtt }) · onInfo({ kmh, cells, ms, alarm, phase, nitro, dmg, dmgT, noaim }) · onMode(0|1|2) · onQ({ n, ph, q, a, lock, pick, ok, rev })
 // onSteer({ mode, max, smooth }) — kiểu lái do màn lớn chọn
 export function createPadClient({ signal, team, onState, onInfo, onMode, onQ, onSteer, onDrone }) {
-  const t = team === 2 ? 2 : team ? 1 : 0, me = "pad" + t, dev = padDev();   /* 4l: t = 2 ⇒ iPad DRONE */
+  const t = team === 3 ? 3 : team === 2 ? 2 : team ? 1 : 0,   /* 5e: t = 3 ⇒ iPad DRONE 2 */ me = "pad" + t, dev = padDev();   /* 4l: t = 2 ⇒ iPad DRONE */
   let taken = false, owned = false;                           // 5: đội đã có iPad khác · mình đang là chủ
   let sid = "", nonce = "", pc = null, dc = null, answered = false, rs = 0, rq = [], sn = 0, s = "", rtt = 0, ping = 0, pingAt = new Map(), relayT = 0, dead = false, tries = 0;
   let cur = "s:0,0,0", lastSent = "", sentAt = 0, relayAt = 0, relayPend = 0, mode = null, qRaw = "";

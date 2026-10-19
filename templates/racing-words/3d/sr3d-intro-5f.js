@@ -1,3 +1,8 @@
+// RACING WORDS mẫu 5f (19/10/2026) = sr3d-intro-4h.js + DRONE TRONG XƯỞNG (thầy: "ngay trong xưởng đã có drone và chọn drone rồi"):
+//   · drone lơ lửng giữa, sau 2 xe, cao hơn mui (1 drone màu gốc · 2 drone = mỗi chiếc lệch về xe đội mình, SƠN màu đội, chiếc đội 2 cao hơn chút) — quạt quay, bồng bềnh.
+//   · ô chọn giữa dưới (trên START): NO DRONE · 1 DRONE · 2 DRONES + ◀ tên mẫu ▶ (lưới mẫu như Settings ▸ Drone). onDrone({ on, n, model }) ⇒ gói nhúng đặt cho trận.
+//   · phim START: drone bay theo 2 xe ra cửa, bốc cao dần. setDrone({ on, n, model }) đồng bộ từ Settings.
+// ---- gốc 4h ----
 // RACING WORDS mẫu 4e (16/10/2026) = sr3d-intro-4b.js + (thầy: "trong xưởng có ANDREW STUDIO trên tường rồi, bỏ andrew studio và racing words trên màn hình")
 //   · bỏ 2 dòng chữ phủ màn chờ (.ri-studio · .ri-title) — biển đèn trên tường xưởng giữ nguyên; chữ lớn RACING WORDS lúc xe lao ra (.ri-big) giữ
 //   · pause(true|false): ⚙ Settings mở giữa phim intro ⇒ phim đứng (không cộng thời gian, KHÔNG VẼ khung mới ⇒ nhẹ card đồ hoạ)
@@ -39,6 +44,7 @@ import { OutputPass } from "../../rocket-race/vendor/three/addons/OutputPass.js"
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
 import { makeCar3d } from "./sr3d-car-4h.js";
 import { makeAutoRes } from "./sr3d-autores-3r.js";
+import { DRONE_PICK, SPAN as D_SPAN, loadDrone } from "./sr3d-drone3d-4p.js";   // 5f: drone trong xưởng
 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -96,7 +102,7 @@ function skyMat() {
         gl_FragColor = vec4(c, 1.0); }` });
 }
 
-export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING WORDS", onStart = () => {}, onHandoff = () => {}, onCue = () => {}, onPick = null, onSetCar = null }) {
+export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING WORDS", onStart = () => {}, onHandoff = () => {}, onCue = () => {}, onPick = null, onSetCar = null, drone = null, onDrone = null }) {   /* 5f: + drone */
   // ---------- DOM: canvas + lớp chữ / chọn xe / START ----------
   const root = document.createElement("div"); root.className = "ri-root is-idle";
   root.innerHTML = `
@@ -106,6 +112,8 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
       ${[0, 1].map(i => `<div class="ri-pick ri-pick${i}" style="--team:${TEAMS[i].color}"><button class="ri-pb" data-d="-1" type="button">◀</button>
         <button class="ri-pn" type="button"><small>${TEAMS[i].name} · CHOOSE YOUR CAR</small><b></b><em></em></button>
         <button class="ri-pb" data-d="1" type="button">▶</button><div class="ri-list"></div><div class="ri-cred"></div></div>`).join("")}
+      <div class="ri-dpick"><div class="ri-dseg">${["NO DRONE", "1 DRONE", "2 DRONES"].map((t, n) => `<button type="button" data-n="${n}">${t}</button>`).join("")}</div>
+        <div class="ri-drow"><button class="ri-pb ri-db" data-d="-1" type="button">◀</button><button class="ri-pn ri-dn" type="button"><small>DRONE · CHOOSE YOUR DRONE</small><b></b><em></em></button><button class="ri-pb ri-db" data-d="1" type="button">▶</button></div></div>
       <button class="ri-start" type="button">▶&nbsp; START</button>
       <button class="ri-skip" type="button">SKIP ▸▸</button>
     </div>
@@ -254,6 +262,55 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
   function paintPick() { picks.forEach((p, i) => { const x = XE.find(q => q.id === carIds[i]); if (!x) return; p.querySelector(".ri-pn b").textContent = x.name; p.querySelector(".ri-pn em").textContent = `${XE.indexOf(x) + 1} / ${XE.length} · ▾ ALL CARS`;
     p.querySelector(".ri-cred").textContent = `3D model: ${x.name} by ${x.author} · ${x.lic} · Sketchfab`;   // 3o: ghi công CC-BY
     p.querySelectorAll(".ri-list button").forEach(b => b.classList.toggle("is-on", b.dataset.id === x.id)); }); }
+  // ---------- 5f: DRONE TRONG XƯỞNG ----------
+  const DRN = { on: false, n: 1, model: "A1", ...(drone || {}) };
+  const TCOL = TEAMS.map(t => new THREE.Color(t.color)), cTmp = new THREE.Color();
+  const dLight = new THREE.PointLight(0xffffff, 11, 4.5, 2); dLight.position.set(0, 3.5, CAR_Z + 1.0); scene.add(dLight);   // đèn rọi nhẹ riêng cho drone (luôn có ⇒ không dịch lại shader khi bật / tắt drone)
+  const dObjs = [0, 1].map(n => { const g = new THREE.Group(); g.visible = false; scene.add(g); return { n, g, model: null, id: "", tok: 0, ph: n * 2.1 }; });
+  function paintD(o) {   // 2 drone ⇒ SƠN màu đội lên thân (như trận 5f); 1 drone ⇒ màu gốc
+    if (!o.model) return; const want = DRN.n === 2 ? o.n : -1, seen = new Set();
+    o.model.obj.traverse(q => { if (!q.isMesh || !q.material) return; (Array.isArray(q.material) ? q.material : [q.material]).forEach(m => {
+      if (seen.has(m) || !m.color || (m.transparent && m.opacity < 0.3)) return;   /* 5f: chỉ bỏ đĩa mờ cánh quạt (thân Mavic cũng "transparent") */ seen.add(m); const u = m.userData; if (!u.c0) u.c0 = m.color.clone();
+      m.color.copy(u.c0); if (want >= 0) m.color.lerp(cTmp.copy(TCOL[want]).multiplyScalar(2.4), 0.85); }); });
+  }
+  function loadD(o) {
+    const id = DRN.model; if (o.id === id) { paintD(o); return; } o.id = id; const tok = ++o.tok;
+    loadDrone(id, m => m).then(m => {
+      if (!m || tok !== o.tok || dead) { if (m) m.dispose(); return; }
+      if (o.model) { o.g.remove(o.model.obj); o.model.dispose(); }
+      o.model = m; o.g.add(m.obj); m.obj.traverse(q => { if (q.isMesh) q.frustumCulled = false; }); paintD(o); envDirty = true;
+    }).catch(e => console.warn("intro drone", e));
+  }
+  const dUsed = o => DRN.on && (o.n === 0 || DRN.n === 2);
+  function applyDrone() { dObjs.forEach(o => { o.g.visible = dUsed(o) && !!o.model; if (dUsed(o)) loadD(o); }); paintDPick(); }
+  const dpick = $(".ri-dpick");
+  function paintDPick() {
+    const n = DRN.on ? DRN.n : 0, x = DRONE_PICK.find(q => q.id === DRN.model) || DRONE_PICK[0];
+    dpick.querySelectorAll(".ri-dseg button").forEach(b => b.classList.toggle("on", +b.dataset.n === n));
+    dpick.classList.toggle("is-off", !n); dpick.dataset.n = n;
+    dpick.querySelector(".ri-dn b").textContent = x.name; dpick.querySelector(".ri-dn em").textContent = `${DRONE_PICK.indexOf(x) + 1} / ${DRONE_PICK.length}`;
+  }
+  function pickDrone(o) { Object.assign(DRN, o); applyDrone(); if (onDrone) onDrone({ ...o }); }
+  dpick.querySelectorAll(".ri-dseg button").forEach(b => b.addEventListener("click", e => { e.stopPropagation(); const n = +b.dataset.n; pickDrone(n ? { on: true, n } : { on: false }); }));
+  dpick.querySelectorAll(".ri-db").forEach(b => b.addEventListener("click", e => { e.stopPropagation(); const k = Math.max(0, DRONE_PICK.findIndex(q => q.id === DRN.model)), N = DRONE_PICK.length; pickDrone({ model: DRONE_PICK[(k + +b.dataset.d + N) % N].id }); }));
+  dpick.querySelector(".ri-dn").addEventListener("click", e => { e.stopPropagation(); const k = Math.max(0, DRONE_PICK.findIndex(q => q.id === DRN.model)); pickDrone({ model: DRONE_PICK[(k + 1) % DRONE_PICK.length].id }); });
+  //   chỗ đứng: giữa, sau 2 xe, cao hơn mui · 2 drone ⇒ lệch về xe đội mình (đội 1 ở +x), drone đội 2 cao hơn + lùi chút · phim: bay theo xe ra cửa, bốc cao
+  function updateDrones(dt) {
+    const now = performance.now() / 1000, two = DRN.n === 2;
+    dObjs.forEach(o => {
+      o.g.visible = dUsed(o) && !!o.model; if (!o.g.visible) return;
+      if (o.n === 0) dLight.position.z = state === "play" && T >= START_T.roll ? Math.min(CAR_Z + 1.0, carZ(T) + 1.0) : CAR_Z + 1.0;
+      const sc = (two ? 1.6 : 1.9) / D_SPAN; o.g.scale.setScalar(sc);
+      const bx = two ? (o.n ? -0.95 : 0.95) : 0, by = two ? (o.n ? 1.78 : 1.62) : 1.6, bz = CAR_Z + 0.6 + (two && o.n ? 0.3 : 0);   // khe giữa 2 xe, ngang tầm mui
+      let z = bz, y = by;
+      if (state === "play" && T >= START_T.roll) { const s = T - START_T.roll; z = Math.min(bz, carZ(T) + 0.6) - s * 0.6; y = by + s * s * 0.5; }
+      const t = now + o.ph;
+      o.g.position.set(bx + 0.05 * Math.sin(t * 0.7), y + 0.07 * Math.sin(t * 1.3), z);
+      o.g.rotation.set(0.32 + 0.03 * Math.sin(t * 1.1), 0.12 * Math.sin(t * 0.37) + (two ? (o.n ? 0.12 : -0.12) : 0), 0.04 * Math.sin(t * 0.9));
+      const spin = 34 * dt; if (o.model) { o.model.props.forEach(p => p.o.rotateOnAxis(p.axis, p.dir * spin)); if (o.model.mixer) o.model.mixer.update(dt); }
+    });
+  }
+  applyDrone();
   $(".ri-start").addEventListener("click", () => play());
   $(".ri-skip").addEventListener("click", () => { if (state === "play") handoff(); });
 
@@ -334,6 +391,7 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
       c.update(dt, { dist, accel: rolling ? 9.5 : 0, steer: 0, boost, t: performance.now() / 1000, pop: Math.min(1, popK[i]) });
       if (heads[i]) heads[i].intensity = lerp(heads[i].intensity, engOn[i] ? 4 : 0, 0.15);
     });
+    updateDrones(dt);   // 5f
     // bụi trôi
     const a = dustG.attributes.position; for (let k = 0; k < DN; k += 7) { a.array[k * 3 + 1] += 0.004; if (a.array[k * 3 + 1] > 7) a.array[k * 3 + 1] = 0; } a.needsUpdate = true;
     dustM.opacity = 0.35 + 0.4 * sunK;
@@ -374,6 +432,7 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
   const ready = Promise.all(carIds.map((id, i) => prepXe(id).then(() => buildCar(i)))).then(r => { warmIntro(); return r; });   // 3r: làm nóng phim
   return {
     ready, setCar, get cars() { return carIds.slice(); }, get state() { return state; },
+    setDrone(o) { if (!o) return; Object.assign(DRN, { on: !!o.on, n: o.n === 2 ? 2 : 1, model: o.model || DRN.model }); applyDrone(); }, get drone() { return { ...DRN }; },   // 5f
     show() { hidden = false; state = "idle"; resetScene(); root.style.display = ""; applyPR(); AR.pause(); },
     hide() { hidden = true; root.style.display = "none"; },
     pause(v) { paused = !!v; },                                        // 4e
@@ -383,7 +442,7 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
     get res() { return AR.info; }, renderer, composer,                // 3r: bàn đo
     arGo() { clearTimeout(arHoldT); arHold = false; arFrom = performance.now() + 1500; AR.pause(); },
     arWait() { arHold = true; AR.pause(); },   // 3r: gói nhúng gọi khi prewarm trận xong
-    destroy() { dead = true; clearTimeout(arHoldT); cancelAnimationFrame(raf); cars.forEach(c => c && c.dispose()); composer.dispose(); cubeRT.dispose(); renderer.dispose(); renderer.forceContextLoss(); root.remove(); },   // 3o: trả card đồ hoạ
+    destroy() { dead = true; clearTimeout(arHoldT); cancelAnimationFrame(raf); cars.forEach(c => c && c.dispose()); dObjs.forEach(o => o.model && o.model.dispose()); composer.dispose(); cubeRT.dispose(); renderer.dispose(); renderer.forceContextLoss(); root.remove(); },   // 3o: trả card đồ hoạ
     root, scene, cam,
   };
 }
