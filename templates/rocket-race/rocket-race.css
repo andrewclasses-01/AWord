@@ -918,3 +918,54 @@
 .aw-rr3d-ipchip.is-relay i { background: #f59e0b; }
 .aw-rr3d-ipchip.is-wait i { animation: aw-rr3d-ipblink 1s infinite; }
 @keyframes aw-rr3d-ipblink { 50% { opacity: .2; } }
+
+/* =============================================================
+   ⭐ Đợt 557 (myGame mẫu 12 → 12e) — ⚙ SETTINGS trận 3D: cửa sổ góc dưới phải kiểu Racing Words, tab icon bên trái (iPad · Ship · Missile),
+   ô chọn có ẢNH MÔ PHỎNG (tau3d/anh). Cỡ theo chiều cao khung cảnh: --rh = 1 % cao khung (rocket-race.js đặt lúc mở).
+   Nút iPad của engine ẩn (đã vào tab iPad). 2D (WebGL hỏng) ⇒ ẩn nút ⚙, trả nút iPad.
+   ============================================================= */
+.aw-fight:not(.is-skin-rr3d) .aw-rr3d-gear { display: none !important; }
+.aw-fight.is-skin-rr3d .aw-below-center .aw-toolbtn.aw-rr3d-hide-ipad { display: none !important; }
+.aw-fight.is-skin-rr3d .aw-below .aw-toolbtn.aw-rr3d-gear.is-on { border-color: #8fc1ff !important; color: #fff !important; background: #2f6fe0 !important; }
+.aw-rr3d-set { --rh: 6px; position: absolute; right: calc(var(--rh) * 1.4); bottom: calc(var(--rh) * 1.4); z-index: 72; width: calc(var(--rh) * 80); max-width: 82%;
+  border-radius: calc(var(--rh) * 1.6); background: rgba(9, 14, 26, .96); border: 1px solid rgba(140, 210, 255, .32); box-shadow: 0 calc(var(--rh) * 1.6) calc(var(--rh) * 4) rgba(0, 0, 0, .55);
+  color: #e2e8f0; font-family: "Exo 2", "Baloo 2", system-ui, sans-serif; }
+.aw-rr3d-set[hidden] { display: none !important; }
+.aw-rr3d-set .rr-x { position: absolute; top: calc(var(--rh) * 1); right: calc(var(--rh) * 1); width: calc(var(--rh) * 3.6); height: calc(var(--rh) * 3.6); border-radius: 50%; border: 0;
+  background: rgba(255, 255, 255, .08); color: #fff; font-size: calc(var(--rh) * 1.8); cursor: pointer; z-index: 2; }
+.aw-rr3d-set .rr-c { display: grid; grid-template-columns: calc(var(--rh) * 9.5) 1fr; min-height: calc(var(--rh) * 30); }
+.aw-rr3d-set nav { display: flex; flex-direction: column; gap: calc(var(--rh) * .5); padding: calc(var(--rh) * 1.2) calc(var(--rh) * .8);
+  border-radius: calc(var(--rh) * 1.6) 0 0 calc(var(--rh) * 1.6); background: rgba(255, 255, 255, .04); }
+.aw-rr3d-set nav button { display: flex; flex-direction: column; align-items: center; gap: calc(var(--rh) * .3); padding: calc(var(--rh) * .9) 0; border: 0; border-radius: calc(var(--rh) * 1);
+  background: none; cursor: pointer; font: 800 calc(var(--rh) * 1.2) "Exo 2", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #8d9bb0; }
+.aw-rr3d-set nav button svg { width: calc(var(--rh) * 2.8); height: calc(var(--rh) * 2.8); }
+.aw-rr3d-set nav button.on { background: rgba(245, 197, 66, .14); color: #f5c542; box-shadow: 0 0 0 1px rgba(245, 197, 66, .22) inset; }
+.aw-rr3d-set .rr-cb { padding: calc(var(--rh) * 1.4) calc(var(--rh) * 1.6) calc(var(--rh) * 1.6); max-height: calc(var(--rh) * 76); overflow: auto; }
+.aw-rr3d-set h3 { margin: 0 calc(var(--rh) * 4) calc(var(--rh) * 1) 0; font: italic 900 calc(var(--rh) * 2.1) "Exo 2", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #cdeaff; }
+.aw-rr3d-set .rr-g { display: grid; gap: calc(var(--rh) * .5); margin: calc(var(--rh) * .4) 0 calc(var(--rh) * 1); }
+.aw-rr3d-set .rr-g > b { font: 900 calc(var(--rh) * 1.2) "Exo 2", sans-serif; letter-spacing: .16em; color: #8d9bb0; margin-top: calc(var(--rh) * .5); }
+.aw-rr3d-set .rr-g > div { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: calc(var(--rh) * .7); }
+.aw-rr3d-set .rr-g button { display: flex; flex-direction: column; align-items: center; gap: calc(var(--rh) * .3); padding: calc(var(--rh) * .5) calc(var(--rh) * .4) calc(var(--rh) * .7);
+  font: 800 calc(var(--rh) * 1.4) "Exo 2", sans-serif; color: #dbe3ee; cursor: pointer; overflow: hidden; white-space: nowrap;
+  background: radial-gradient(ellipse at 50% 40%, rgba(80, 120, 190, .28), rgba(255, 255, 255, .04) 70%); border: 1.5px solid rgba(255, 255, 255, .12); border-radius: calc(var(--rh) * 1.1); }
+.aw-rr3d-set .rr-g button img { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; display: block; pointer-events: none; }
+.aw-rr3d-set .rr-g.mis button img { aspect-ratio: 32 / 11; }
+.aw-rr3d-set .rr-g button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.aw-rr3d-set .rr-g button.on { background: #ff7a00; border-color: #ff7a00; color: #1a0b00; }
+.aw-rr3d-set .rr-g button.cur { box-shadow: inset 0 0 0 2px #8fd3ff; }
+.aw-rr3d-set .rr-ip { display: grid; grid-template-columns: repeat(3, 1fr); gap: calc(var(--rh) * .8); }
+.aw-rr3d-set .rr-ip button { text-align: left; padding: calc(var(--rh) * 1); border-radius: calc(var(--rh) * 1); border: 2px solid rgba(148, 163, 184, .25); background: rgba(30, 41, 59, .6); color: inherit; cursor: pointer; }
+.aw-rr3d-set .rr-ip button b { display: block; font: 800 calc(var(--rh) * 1.6) "Exo 2", sans-serif; color: #f1f5f9; margin-bottom: calc(var(--rh) * .4); }
+.aw-rr3d-set .rr-ip button span { display: block; font: 600 calc(var(--rh) * 1.25) / 1.35 "Baloo 2", system-ui, sans-serif; color: #94a3b8; }
+.aw-rr3d-set .rr-ip button.on { border-color: #38bdf8; background: rgba(12, 74, 110, .55); }
+.aw-rr3d-set .rr-ip button.cur { box-shadow: inset 0 0 0 2px #8fd3ff; }
+.aw-rr3d-set .rr-ipst { display: grid; grid-template-columns: 1fr 1fr; gap: calc(var(--rh) * .8); margin-top: calc(var(--rh) * 1.2); }
+.aw-rr3d-set .rr-ipst div { border-radius: calc(var(--rh) * 1); padding: calc(var(--rh) * 1); text-align: center; border: 2px solid #3b8cff; background: rgba(15, 23, 42, .8); }
+.aw-rr3d-set .rr-ipst div.t1 { border-color: #ff7a00; }
+.aw-rr3d-set .rr-ipst b { display: block; font: 900 calc(var(--rh) * 1.6) "Exo 2", sans-serif; letter-spacing: .1em; }
+.aw-rr3d-set .rr-ipst span { font: 600 calc(var(--rh) * 1.3) "Baloo 2", system-ui, sans-serif; color: #cbd5e1; }
+.aw-rr3d-set .rr-note { margin: calc(var(--rh) * .6) 0 0; font: 600 calc(var(--rh) * 1.25) / 1.4 "Exo 2", sans-serif; color: #94a3b8; }
+.aw-rr3d-set .rr-note a { color: #8fd3ff; }
+.aw-rr3d-set .rr-apply { margin-top: calc(var(--rh) * 1.2); width: 100%; padding: calc(var(--rh) * 1.1); border: 0; border-radius: calc(var(--rh) * 1.1);
+  font: 900 calc(var(--rh) * 1.7) "Exo 2", sans-serif; letter-spacing: .06em; cursor: pointer; color: #1a0b00;
+  background: linear-gradient(180deg, #ffd27a, #ff9a2e); box-shadow: 0 0 calc(var(--rh) * 1.6) rgba(255, 170, 60, .45); }

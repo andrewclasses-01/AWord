@@ -35,9 +35,11 @@
 // Gắn vào rr3d-view.js qua `createMissiles(ctx)`; view gọi attach/buildConsole/poseRocket/tick/tap.
 // =============================================================
 
+import { missileMeshes, hullSpot } from "./rr3d-ships.js";   // MẪU 12: tên lửa glb + vết cháy dán lên vỏ tàu glb
 export function createMissiles(X) {
   const { THREE, scene, rockets, cfg, fire, smoke, burst, explosion, sfx, labelOn, shake, stall, hitList,
     frameGeo, RoundedBoxGeometry, radialTex, G } = X;
+  const MT = X.missileT || null;                     // ⭐ MẪU 12: mẫu tên lửa glb (đã nướng dọc +X, đuôi −1,15 → mũi 1,17) — null = tên lửa cũ
   const V3 = THREE.Vector3;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -69,6 +71,7 @@ export function createMissiles(X) {
     peace = !!on; const p = pal();
     mRed.color.set(p.body); mRed.emissive.set(p.emis);
     mRedDark.color.set(p.dark); mRedDark.emissive.set(p.emis);
+    if (MT) MT.list.forEach(q => { q.mat.color.copy(q.base); if (peace) q.mat.color.lerp(new THREE.Color("#22c55e"), 0.65); });
     UI.forEach(U => { if (U) U.bigs.forEach(B => B.glowSp.material.color.setRGB(...p.halo)); });
     rings.forEach(o => o.m.material.color.setRGB(...p.halo));
   }
@@ -91,10 +94,12 @@ export function createMissiles(X) {
   })();
   const flareTex = radialTex([[0, "rgba(255,255,255,1)"], [0.2, "rgba(255,220,190,0.9)"], [0.5, "rgba(255,90,60,0.3)"], [1, "rgba(0,0,0,0)"]], 128);
   function makeMissile() {
-    const g = new THREE.Group();
-    g.add(new THREE.Mesh(GEO.body, mRed), new THREE.Mesh(GEO.nose, mRed), new THREE.Mesh(GEO.tail, mDark), new THREE.Mesh(GEO.glow, mGlow));
-    [0.43, -0.72].forEach(x => { const b = new THREE.Mesh(GEO.band, mWhite); b.position.x = x; g.add(b); });
-    for (let k = 0; k < 4; k++) { const f = new THREE.Mesh(GEO.fin, mRedDark); f.rotation.x = k * Math.PI / 2 + Math.PI / 4; g.add(f); }
+    const g = MT ? missileMeshes(MT) : new THREE.Group();
+    if (!MT) {
+      g.add(new THREE.Mesh(GEO.body, mRed), new THREE.Mesh(GEO.nose, mRed), new THREE.Mesh(GEO.tail, mDark), new THREE.Mesh(GEO.glow, mGlow));
+      [0.43, -0.72].forEach(x => { const b = new THREE.Mesh(GEO.band, mWhite); b.position.x = x; g.add(b); });
+      for (let k = 0; k < 4; k++) { const f = new THREE.Mesh(GEO.fin, mRedDark); f.rotation.x = k * Math.PI / 2 + Math.PI / 4; g.add(f); }
+    }
     const flame = new THREE.Mesh(GEO.flame, new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 1.5, 0.45), transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
     const flare = new THREE.Sprite(new THREE.SpriteMaterial({ map: flareTex, color: new THREE.Color(5, 2.2, 1), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
     flare.position.x = -1.25; flare.scale.setScalar(1.1);
@@ -108,6 +113,7 @@ export function createMissiles(X) {
   const FILL_SOFT = 0.22;
   const BAND_GEO = [0.43, -0.72].map(x => GEO.band.clone().translate(x, 0, 0));
   function makeMissileWith(M) {
+    if (MT) return { g: missileMeshes(MT, (mat, i) => (M.glb ? M.glb[i] : M.body)) };   // MẪU 12: bảng nạp dùng CHÍNH hình glb
     const g = new THREE.Group();
     g.add(new THREE.Mesh(GEO.body, M.body), new THREE.Mesh(GEO.nose, M.body), new THREE.Mesh(GEO.tail, M.tail), new THREE.Mesh(GEO.glow, M.glow));
     BAND_GEO.forEach(geo => g.add(new THREE.Mesh(geo, M.white)));
@@ -133,6 +139,7 @@ export function createMissiles(X) {
   function makeBigSlot(am, rotY, bigW, ammoH) {
     const uFill = { value: 9 }, mr = {};
     Object.entries({ body: mRed, dark: mRedDark, white: mWhite, tail: mDark, glow: mGlow }).forEach(([k, b]) => { mr[k] = fillMat(b, uFill); });
+    if (MT) mr.glb = MT.list.map(q => { const m = fillMat(q.mat, uFill); m.emissive = new THREE.Color(0, 0, 0); return m; });   // MẪU 12: nạp "đổ đầy" ngay trên vật liệu glb
     const g = new THREE.Group(); g.rotation.y = rotY; g.visible = false; am.add(g);
     const under = ghostOf(), red = makeMissileWith(mr);
     under.g.traverse(o => { o.renderOrder = 1; }); red.g.traverse(o => { o.renderOrder = 2; });
@@ -167,6 +174,7 @@ export function createMissiles(X) {
     return new THREE.LatheGeometry(pts, 10, phiStart, phiLen);
   }
   function attachSlot(r, sgn) {
+    if (r.glb) return attachSlotGlb(r, sgn);
     const C = TOP + sgn * MOUNT_TH;                      // tâm cửa (φ) — sgn +1 ⇒ phía +Z (người xem)
     const bay = new THREE.Group(); r.model.add(bay);      // cửa dựng trong không gian MÔ HÌNH (cùng trục lathe với vỏ)
     const pit = new THREE.Mesh(sliceGeo(0.94, C - DELTA, DELTA * 2), mPit); pit.visible = false; bay.add(pit);
@@ -196,6 +204,15 @@ export function createMissiles(X) {
       return { ax, sh, elbow, claw };
     });
     return { bay, pit, dL, dR, rig, ms, arms, sgn, open: 0, rise: 0, wantRise: 0, has: false, ext: 0, tilt: 0 };
+  }
+  // ⭐ MẪU 12: tàu glb — quả treo ở r.mount (x, y, out = khoảng cách ra hông), trượt ra từ trong thân, không cửa / tay robot
+  function attachSlotGlb(r, sgn) {
+    const g0 = () => { const o = new THREE.Group(); o.visible = false; return o; };
+    const bay = g0(), pit = g0(), dL = g0(), dR = g0();
+    const rig = new THREE.Group(); rig.position.set(r.mount.x, r.mount.y, 0); rig.rotation.x = sgn * MOUNT_TH; r.ship.add(rig);
+    const ms = makeMissile(); ms.g.scale.setScalar(MS); ms.g.visible = false; rig.add(ms.g);
+    const yout = Math.max(r.mount.out, 0.45) + M_R;
+    return { bay, pit, dL, dR, rig, ms, arms: [], sgn, open: 0, rise: 0, wantRise: 0, has: false, ext: 0, tilt: 0, yin: Math.max(0.1, yout - 0.45), yout };
   }
   function attach(r) {
     r.mis = { slots: [attachSlot(r, 1), attachSlot(r, -1)] };
@@ -231,7 +248,7 @@ export function createMissiles(X) {
     m.dL.visible = m.dR.visible = m.open > 0.01;          // 454b: cửa đóng = liền vỏ ⇒ ẩn hẳn (không che số đội sơn ở hông)
     const k = m.rise < 1 ? smooth(m.rise) : 1;
     const ke = smooth(m.ext), kt = smooth(m.tilt);
-    const y = lerp(Y_IN, Y_OUT, k) + EXT * ke + (m.rise >= 1 && ke <= 0 ? Math.sin(G.t * 3 + r.idx) * 0.008 : 0);
+    const y = lerp(m.yin ?? Y_IN, m.yout ?? Y_OUT, k) + EXT * ke + (m.rise >= 1 && ke <= 0 ? Math.sin(G.t * 3 + r.idx) * 0.008 : 0);
     m.ms.g.position.set(0, y, 0);
     m.ms.g.rotation.y = m.sgn * Math.PI / 2 * kt;                        // 455: mũi xoay lên trời quanh tâm quả
     m.ms.g.visible = m.has && (m.open > 0.9 || m.rise > 0);            // cánh đuôi quả thò ra ngoài vỏ ⇒ chỉ hiện khi cửa đã mở
@@ -270,14 +287,30 @@ export function createMissiles(X) {
     const mats = SC_MAPS.map(t => new THREE.MeshStandardMaterial({ map: t.map, emissiveMap: t.em, emissive: new THREE.Color(1, 0.35, 0.06), emissiveIntensity: 0,
       transparent: true, depthWrite: false, roughness: 0.95, metalness: 0.05, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
     const glowMat = new THREE.SpriteMaterial({ map: emberFlare, color: new THREE.Color(3, 1.1, 0.25), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 });
-    const warm = new THREE.Mesh(sliceGeo(1.018, TOP + 0.9, 0.2), mats[0]); warm.visible = false; r.model.add(warm);   // để warmBoom biên dịch
+    const warm = new THREE.Mesh(r.glb ? DECAL_GEO : sliceGeo(1.018, TOP + 0.9, 0.2), mats[0]); warm.visible = false; r.model.add(warm);   // để warmBoom biên dịch
     const warmS = new THREE.Sprite(glowMat); warmS.visible = false; r.model.add(warmS);
     r.burn = { mats, glowMat, spots: [], t: 0, acc: 0, n: 0, warm: [warm, warmS] };
+  }
+  // MẪU 12: khung mô hình = khung tàu xoay −90° quanh Z ⇒ điểm tàu (x, y, z) ↦ mô hình (−y, x, z)
+  const DECAL_GEO = new THREE.PlaneGeometry(0.85, 0.85);
+  const toModel = v => new V3(-v.y, v.x, v.z);
+  function scorchGlb(r, B) {
+    const h = hullSpot(r.glb, Math.random); if (!h) return;
+    if (B.spots.length >= SC_MAX) { const o = B.spots.shift(); r.model.remove(o.mesh, o.glow); }
+    B.n++;
+    const p = toModel(h.p), n = toModel(h.n).normalize();
+    const mesh = new THREE.Mesh(DECAL_GEO, B.mats[B.n % B.mats.length]);
+    mesh.position.copy(p).addScaledVector(n, 0.02); mesh.quaternion.setFromUnitVectors(new V3(0, 0, 1), n); mesh.rotateZ(rand(0, Math.PI * 2));
+    const glow = new THREE.Sprite(B.glowMat); glow.position.copy(p).addScaledVector(n, 0.08); glow.scale.setScalar(0.4);
+    r.model.add(mesh, glow);
+    B.spots.push({ mesh, glow, phi: 0, y: p.y, local: glow.position.clone(), nrm: n });
+    B.t = MC.burnSecs;
   }
   function scorch(r) {
     if (!r || !r.burn) return;
     const B = r.burn;
     B.warm.forEach(o => { if (o.parent) o.parent.remove(o); });
+    if (r.glb) return scorchGlb(r, B);
     if (B.spots.length >= SC_MAX) { const o = B.spots.shift(); r.model.remove(o.mesh, o.glow); o.mesh.geometry.dispose(); }
     // chỗ mới: xen kẽ 2 bên sườn trên, trải dọc thân, không trùng chỗ cũ
     let phi, y, tries = 0;
@@ -797,6 +830,11 @@ export function createMissiles(X) {
     for (let j = 1; j <= 4; j++) {
       const p = f.prev.clone().lerp(f.np, j / 4).addScaledVector(dir, NOSE);
       r.ship.worldToLocal(l.copy(p));
+      if (r.glb) {                                    // MẪU 12: mặt cắt thật của mẫu glb (ellipse theo từng khúc x)
+        const P = r.glb.prof; if (l.x < P.x0 || l.x > P.x1) continue;
+        const e = P.at(l.x); if (((l.y - e.cy) / (e.ry + 0.04)) ** 2 + (l.z / (e.rz + 0.04)) ** 2 <= 1) return p;
+        continue;
+      }
       if (l.x < -2.05 || l.x > 2.2) continue;
       if (Math.hypot(l.y, l.z) <= hullRad(l.x) + 0.04) return p;
     }

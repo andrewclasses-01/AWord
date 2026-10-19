@@ -15,7 +15,8 @@ import { EffectComposer } from "./vendor/three/addons/EffectComposer.js";
 import { RenderPass } from "./vendor/three/addons/RenderPass.js";
 import { UnrealBloomPass } from "./vendor/three/addons/UnrealBloomPass.js";
 import { OutputPass } from "./vendor/three/addons/OutputPass.js";
-import { makeRocket, DEFAULT_TEAMS as TEAMS } from "./rr3d-view.js";   // CÙNG mô hình tàu với cảnh đua
+import { makeAnyRocket, DEFAULT_TEAMS as TEAMS } from "./rr3d-view.js";   // CÙNG mô hình tàu với cảnh đua
+import { prepShip } from "./rr3d-ships.js";   // MẪU 12: tàu glb (⚙ Settings) — intro dựng CÙNG mẫu tàu với cảnh đua
 import { makeAutoRes } from "./rr3d-autores.js";   // mẫu 5: tàu giống hệt game (bản rẽ nhánh)   // tàu giống hệt game mới nhất
 
 const V3 = THREE.Vector3;
@@ -247,6 +248,11 @@ function trussStruts(S, a, b, hgt = 0.45, wid = 0.4, n = 8) {
 
 export async function createLaunch(cfg) {
   const container = cfg.container;
+  // ⭐ MẪU 12 (thầy: "đổi tên lửa là đổi cả loại tên lửa khi phóng từ intro"): tàu glb tải TRƯỚC khi dựng bệ — bệ / tay kẹp đo theo cỡ tàu
+  //   · tên lửa đứng (kind rocket): đứng trên bệ như cũ, cao theo đuôi mẫu · phi thuyền (kind ship): NẰM trên bệ, mũi hướng đường bay,
+  //     cất cánh THẲNG ĐỨNG (lửa nâng chĩa xuống từ bụng) rồi ngóc mũi bay đi; vòng kẹp + ngàm giữ ẩn, tay kẹp hạ xuống ngang thân.
+  const shipT = cfg.ship && cfg.ship !== "classic" ? await prepShip(cfg.ship).catch(e => { console.warn("ship", e); return null; }) : null;
+  const VTOL = !!(shipT && shipT.info.kind === "ship");
   const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });   // ⭐ Đợt 478: AA nằm ở composer (MSAA 4) — AA canvas chỉ tốn bộ nhớ
   renderer.debug.checkShaderErrors = /[?&]debug/.test(location.search);   // ⭐ Đợt 478: không bắt luồng chính chờ card dịch shader
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, cfg.pixelRatio ?? 1.5));
@@ -501,19 +507,23 @@ export async function createLaunch(cfg) {
   // ----- 2 bệ phóng + 2 tháp tay kẹp (trên mặt gò: nhóm padG nâng lên PY) -----
   const padG = new THREE.Group(); padG.position.y = PY; scene.add(padG);
   const PAD_X = 9, MOUNT_H = 1.7, TOWER_H = 9.2, TOWER_W = 1.45;
-  const sc = cfg.rocketScale ?? 1.1, NOZ = 2.52 * sc;
+  const sc = cfg.rocketScale ?? 1.1;
+  const NOZ = (shipT && !VTOL ? -shipT.box.min.x : 2.52) * sc;            // tâm tàu cách mặt bệ (tàu đứng: = đuôi mẫu)
+  const BELLY = VTOL ? (-shipT.box.min.y + 0.16) * sc : 0;               // phi thuyền nằm: bụng tàu trên vòng đỡ
+  const HULL_H = VTOL ? (shipT.box.max.y - shipT.box.min.y) * sc : 0;
   const SP = new Struts();
   const pads = [-PAD_X, PAD_X].map((x, i) => {
     const S = SP, scene = padG;                          /* mọi thứ của bệ vẽ trong nhóm nâng */
     const out = i === 0 ? -1 : 1;
     // bàn phóng: vòng tròn đỡ tàu + mặt bàn vuông + 6 chân + 20 ngàm giữ + tấm chắn lửa dưới
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.78, 0.16, 12, 40), steelLight); ring.rotation.x = Math.PI / 2; ring.position.set(x, MOUNT_H, 0); ring.castShadow = true; scene.add(ring);
+    ring.visible = !VTOL;
     const topShape = new THREE.Shape(); topShape.moveTo(-1.9, -1.9); topShape.lineTo(1.9, -1.9); topShape.lineTo(1.9, 1.9); topShape.lineTo(-1.9, 1.9); topShape.closePath();
     const hole = new THREE.Path(); hole.absarc(0, 0, 0.95, 0, TAU, true); topShape.holes.push(hole);
     const tg = new THREE.ExtrudeGeometry(topShape, { depth: 0.32, bevelEnabled: false }); tg.rotateX(-Math.PI / 2);
     const top = new THREE.Mesh(tg, steel); top.position.set(x, MOUNT_H - 0.32, 0); top.castShadow = top.receiveShadow = true; scene.add(top);
     for (let k = 0; k < 6; k++) { const a = k / 6 * TAU + 0.26; S.bar(new V3(x + Math.cos(a) * 1.55, 0, Math.sin(a) * 1.55), new V3(x + Math.cos(a) * 1.4, MOUNT_H - 0.3, Math.sin(a) * 1.4), 0.3); }
-    for (let k = 0; k < 20; k++) { const a = k / 20 * TAU; S.box(new V3(x + Math.cos(a) * 0.78, MOUNT_H + 0.12, Math.sin(a) * 0.78), 0.12, 0.22, 0.2, -a); }
+    if (!VTOL) for (let k = 0; k < 20; k++) { const a = k / 20 * TAU; S.box(new V3(x + Math.cos(a) * 0.78, MOUNT_H + 0.12, Math.sin(a) * 0.78), 0.12, 0.22, 0.2, -a); }
     const plate = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.8, 0.14, 40), darkMat); plate.position.set(x, 0.08, 0); plate.receiveShadow = true; scene.add(plate);
     // tháp phía ngoài
     const tx = x + out * 4.6;
@@ -522,14 +532,15 @@ export async function createLaunch(cfg) {
     S.box(new V3(tx - out * 0.2, TOWER_H + 0.9, 0.3), 0.8, 1.0, 0.8);                                   // nhà tời trên đỉnh
     S.bar(new V3(tx + out * 0.3, TOWER_H + 0.4, -0.3), new V3(tx + out * 0.3, TOWER_H + 3.4, -0.3), 0.07);  // cột thu lôi
     // tay kẹp "đũa": 2 dầm giàn dài, xe trượt ôm tháp
-    const armY = MOUNT_H + NOZ + 1.9 * sc, from = tx - out * TOWER_W / 2;
+    const armY = VTOL ? MOUNT_H + BELLY + HULL_H + 0.7 : MOUNT_H + NOZ + 1.9 * sc, from = tx - out * TOWER_W / 2;
     const arms = new THREE.Group(); const AS = new Struts();
     const reach = x - from - out * 0.2;
     [-1.0, 1.0].forEach(zz => trussStruts(AS, new V3(0, 0, zz * 0.55), new V3(reach, 0, zz * 1.02), 0.46, 0.36, 10));
     AS.box(new V3(-out * 0.1, 0, 0), 0.7, 1.3, 2.5);
     arms.add(AS.mesh(steel)); arms.position.set(from, armY, 0); scene.add(arms);
     // tay tiếp nhiên liệu (QD) + ống
-    trussStruts(S, new V3(from, MOUNT_H + NOZ + 0.9, 0.35), new V3(x - out * 0.62, MOUNT_H + NOZ + 0.9, 0.35), 0.3, 0.26, 7);
+    const qdY = VTOL ? MOUNT_H + BELLY + HULL_H * 0.5 : MOUNT_H + NOZ + 0.9;
+    trussStruts(S, new V3(from, qdY, 0.35), new V3(x - out * (VTOL ? 1.6 : 0.62), qdY, 0.35), 0.3, 0.26, 7);
     // đèn đỏ đỉnh tháp
     const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(5, 0.3, 0.2) }));
     beacon.position.set(tx + out * 0.3, TOWER_H + 3.5, -0.3); scene.add(beacon);
@@ -955,8 +966,8 @@ export async function createLaunch(cfg) {
   const Q_UP = new THREE.Quaternion().setFromUnitVectors(new V3(1, 0, 0), new V3(0, 1, 0));
   const Q_FWD = new THREE.Quaternion().setFromUnitVectors(new V3(1, 0, 0), new V3(0, 0, -1));
   const rockets = TEAMS.map((t, i) => {
-    const r = makeRocket(t, i, cfg.hull);
-    r.rig.scale.setScalar(sc); r.rig.position.set(pads[i].x, PY + MOUNT_H + NOZ, 0); r.rig.quaternion.copy(Q_UP);
+    const r = makeAnyRocket(t, i, cfg.hull, shipT);
+    r.rig.scale.setScalar(sc); r.rig.position.set(pads[i].x, PY + MOUNT_H + (VTOL ? BELLY : NOZ), 0); r.rig.quaternion.copy(VTOL ? Q_FWD : Q_UP);
     r.model.traverse(o => { if (o.isMesh) { o.castShadow = true; (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { m.fog = false; }); } });
     r.flameGroup.visible = false; r.nozzleGlow.visible = false; r.light.intensity = 0;
     scene.add(r.rig);
@@ -1016,7 +1027,7 @@ export async function createLaunch(cfg) {
   }
   function ventVapor(dt) {
     rockets.forEach(r => {
-      if (Math.random() < dt * 18) steam.emit({ pos: r.rig.position.clone().add(new V3(rand(-0.5, 0.5), rand(-1.5, 2) * sc, rand(-0.5, 0.5))), vel: new V3(rand(-0.4, 0.4), rand(-0.9, -0.2), rand(-0.4, 0.4)),
+      if (Math.random() < dt * 18) steam.emit({ pos: r.rig.position.clone().add(VTOL ? new V3(rand(-1.4, 1.4), rand(-0.4, 0.4) * sc, rand(-1.8, 1.8)) : new V3(rand(-0.5, 0.5), rand(-1.5, 2) * sc, rand(-0.5, 0.5))), vel: new V3(rand(-0.4, 0.4), rand(-0.9, -0.2), rand(-0.4, 0.4)),
         life: rand(1.2, 2.4), size: rand(0.25, 0.5), sizeEnd: rand(1, 1.8), color: new THREE.Color(0.95, 0.94, 0.93), colorEnd: new THREE.Color(0.86, 0.86, 0.88), alpha: 0.35, drag: 0.4 });
     });
   }
@@ -1033,7 +1044,9 @@ export async function createLaunch(cfg) {
         life: rand(6, 11), size: rand(2.2, 3.6), sizeEnd: rand(9, 16), color: cA.clone(), colorEnd: cB.clone(), alpha: rand(0.88, 0.98), drag: rand(0.55, 0.95), rise: rand(0.3, 0.8) });
     }
   }
-  function nozzle(r) { return new V3(-2.5, 0, 0).applyMatrix4(r.ship.matrixWorld); }
+  function nozzle(r) { return (r.nozzles ? r.nozzles[0].clone() : new V3(-2.5, 0, 0)).applyMatrix4(r.ship.matrixWorld); }
+  // MẪU 12: phi thuyền ngóc mũi khi cất cánh (quay quanh trục hông +Z của tàu), về phẳng khi vào hướng bay
+  const Q_PITCH = new THREE.Quaternion(), Z_AX = new V3(0, 0, 1);
 
   function tick(dt, ff = false) {   // ff = tua nhanh (Đợt 406): chạy đủ logic, KHÔNG vẽ, không báo nhịp tiếng
     G.t += dt;
@@ -1062,7 +1075,14 @@ export async function createLaunch(cfg) {
           r.rig.position.addScaledVector(dir, r.v * dt);
           const lk = G.passT ? smooth(G.passT, T.pitch1 - 1, t) : 0;
           r.rig.position.x = lerp(r.lx, LANES[i], ease(lk)) + Math.sin(G.t * 0.7 + i * 2) * 0.1 * lk;
-          r.rig.quaternion.copy(Q_UP).slerp(Q_FWD, pk);
+          if (VTOL) r.rig.quaternion.copy(Q_FWD).multiply(Q_PITCH.setFromAxisAngle(Z_AX, 0.42 * smooth(T.lift, T.lift + 1.6, t) * (1 - pk)));
+          else r.rig.quaternion.copy(Q_UP).slerp(Q_FWD, pk);
+        }
+        // phi thuyền: lửa NÂNG dưới bụng — bùng từ lúc đánh lửa, tắt dần khi đã ngóc vào hướng bay
+        if (r.liftFlames && r.liftFlames.g.length) {
+          const lk = lit ? (1 - (G.passT ? smooth(G.passT, G.passT + 2, t) : 0)) : 0;
+          r.liftFlames.visible = lk > 0.02;
+          r.liftFlames.scale.set(1.2, (0.7 + pow * 0.6) * lk * (0.9 + Math.random() * 0.2), 1.2);
         }
         r.rig.updateMatrixWorld(true);
         if (lit) {
@@ -1076,6 +1096,11 @@ export async function createLaunch(cfg) {
           }
           r.lastNz = nz.clone();
           if (t < T.lift + 1.5) fire.emit({ pos: nz, vel: new V3(1, 0, 0).applyQuaternion(r.rig.quaternion).multiplyScalar(-rand(6, 12)), life: rand(0.12, 0.3), size: rand(0.5, 0.9), sizeEnd: 0.15, color: new THREE.Color(3, 2.1, 1.1), colorEnd: new THREE.Color(1.4, 0.35, 0.05), alpha: 0.8, drag: 1 });
+          // phi thuyền: luồng nâng dưới bụng thổi XUỐNG bệ (hạt lửa + hơi trắng)
+          if (VTOL && r.liftFlames && t < T.lift + 2.5) r.liftFlames.g.forEach(g => {
+            const lp = g.getWorldPosition(new V3());
+            fire.emit({ pos: lp, vel: new V3(rand(-1, 1), -rand(6, 11), rand(-1, 1)), life: rand(0.12, 0.28), size: rand(0.4, 0.7), sizeEnd: 0.12, color: new THREE.Color(3, 2.1, 1.1), colorEnd: new THREE.Color(1.4, 0.35, 0.05), alpha: 0.8, drag: 1 });
+          });
         }
       });
       // mây khói ở chân bệ + quầng lửa + đèn cam hắt
@@ -1186,10 +1211,10 @@ export async function createLaunch(cfg) {
 
   renderer.shadowMap.autoUpdate = false; let shadowDone = false;   // 5c: bóng vẽ lại theo nhu cầu (xem tick)
   // 5c: DỊCH SẴN shader của những thứ đang ẨN (lửa tàu, quầng loa, vệt nhảy tốc độ) — trước đây dịch lần đầu ĐÚNG lúc đánh lửa/nhảy ⇒ khựng
-  rockets.forEach(r => { r.flameGroup.visible = true; r.nozzleGlow.visible = true; });
+  rockets.forEach(r => { r.flameGroup.visible = true; r.nozzleGlow.visible = true; if (r.liftFlames) r.liftFlames.visible = true; });
   warp.line.visible = true;
   try { renderer.compile(scene, camera); } catch (e) { /* máy không hỗ trợ — bỏ qua */ }
-  rockets.forEach(r => { r.flameGroup.visible = false; r.nozzleGlow.visible = false; });
+  rockets.forEach(r => { r.flameGroup.visible = false; r.nozzleGlow.visible = false; if (r.liftFlames) r.liftFlames.visible = false; });
   warp.line.visible = false;
   const clock = new THREE.Clock();
   let raf = 0, manual = false, dead = false, fN = 0, fT = 0, lastFrame = 0;

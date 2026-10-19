@@ -546,6 +546,30 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 557 (19/10/2026) — ROCKET RACE: TÀU + TÊN LỬA 3D CÓ SẴN + ⚙ SETTINGS (myGame mẫu 12 → 12e `f4deb77`) (thầy: "commit và push cả myGame, cả AWord")
+- **Nguồn:** myGame `rocket-race/game11` (= AWord a4170d8 + mẫu 12) chép bằng `myGame/tools/chep-rr-mau12-sang-aword.py` (đổi import three ⇒ ./vendor/three/, ./tau3d/) —
+  `rr3d-view.js` · `rr3d-launch.js` · `rr3d-missile.js` (chỉ khác đúng phần mẫu 12, đã soát dòng cũ bị đổi) + **MỚI** `rr3d-ships.js` + `tau3d/` (7 tàu + 5 tên lửa glb nén
+  meshopt + webp, 3,1 MB; `tau3d/anh/` 14 ảnh mô phỏng). Hồ sơ đầy đủ từng bước: myGame `GHI CHU DU AN.md` chặng "Rocket Race MẪU 12" → "12e".
+- **Tàu:** Classic + R1 Retro Toy · R2 Toy Rocket · R8 Cartoon Rocket (tên lửa đứng) + S5 Low Poly Ship · S7 Space Fighter · S9 Northstar · S10 Dvergr (phi thuyền) — 2 đội
+  cùng mẫu, sơn đổi màu xanh / cam; chuẩn hoá về khung tàu cũ (đường đua / camera / luật không đổi); lửa đuôi = đúng shader cũ ở từng vòi; mảnh vỡ cắt từ thân; vết cháy dán
+  vỏ; tên lửa chạm vỏ theo mặt cắt thật; tự sáng (GLOW) + độ sáng riêng từng mẫu (thầy chỉnh 4 lượt). **Tên lửa:** Classic + Sci-fi · AIM-9 · AIM-120 · Cartoon · Heavy.
+  Intro: tên lửa đứng trên bệ như cũ; phi thuyền NẰM trên bệ, cất cánh thẳng đứng (lửa nâng dưới bụng).
+- **Chuyển động (mọi tàu, kể cả Classic):** mỗi tàu một bộ tham số lượn riêng (`flightOf`), nghiêng = theo gia tốc ngang có lọc + giới hạn tốc độ nghiêng, lực né đá ẩn
+  (Đợt 398) còn 30 % — thầy: "2 tàu lắc giống nhau, góc rộng lượn quá nhanh không hợp lý".
+- **⚙ Settings (`rocket-race.js` `rr3dSettings`, CSS cuối `rocket-race.css`):** nút ⚙ trong hàng nút trận 3D (cạnh PEACE, `rr3dToolbar`) ⇒ cửa sổ góc dưới phải kiểu
+  Racing Words, tab **iPad** (Off / Question screen / Game controller — thay nút iPad của engine, nút đó chỉ ẨN bằng lớp `aw-rr3d-hide-ipad`; gọi `ctl.setIpadLive`, không được
+  thì `ctl.applyOptions` dựng lại trận; trạng thái 2 iPad đọc `st.pad.status`) · **Ship** · **Missile** (ô có ảnh, ghi công tác giả CC BY). Lựa chọn lưu THEO MÁY
+  `localStorage rocketrace.ship.v1` (cùng khoá myGame); APPLY ⇒ `ctl.restartMatch()` (giữ chế độ iPad). `rr3d-ships.js` chỉ nạp ĐỘNG (Solo 2D không kéo three.js).
+  Màn chờ %: mẫu glb đã chọn + 4 mô-đun (rr3d-ships, GLTFLoader, meshopt, BufferGeometryUtils) cộng qua `filesOf(…, rrShipFiles())` (số byte ở `RR_TAU` — chép lại mẫu thì sửa).
+- **Thử (máy MSI, `scratch/dot416-rr-endless.html` cổng 8557):** R8 + M4 ⇒ intro ⇒ đua (0 lỗi) · ⚙ mở, 8 ảnh tàu · chọn Northstar ⇒ APPLY ⇒ dựng lại S9 ⇒ đua (0 lỗi) ·
+  tab iPad: Game controller bật TẠI CHỖ (pad host chạy, fightPad true) ⇒ Off (pad tắt) · nút iPad engine ẩn, thứ tự hàng nút: Options · Peace · Settings · Mode.
+- Phát hiện bên lề (KHÔNG sửa đợt này): `tools/sinh-preload.py --check` báo `core/tpl-files.js` LỆCH ở `racing_words` (thiếu `templates/racing-words/3d/rw-loadpace-4h.js`) —
+  có sẵn từ trước, không do đợt này.
+- ⬜ thầy thử TOMKO: từng tàu (cỡ, sáng, sơn, lửa), cảm giác lượn ở góc rộng, intro phi thuyền, fps · ⬜ bảng tên lửa trên iPad (`rr-padscene.js`) vẫn vẽ tên lửa CŨ ·
+  ⬜ chọn mẫu mặc định (đang Classic) · ⬜ load-files.js chưa sinh lại bằng tools/tao-load-files.py (mẫu glb cộng tay qua RR_TAU).
+
+---
+
 ## Đợt 556 (19/10/2026) — RACING WORDS THẬT: myGame 5h — TỐI ƯU LẠI TRÊN TOMKO sau drone / 2 drone (thầy: "push myGame rồi đưa 5h lên AWord thật")
 - `tools/chep-racing-words.py`: GOC `rw-5h.js` (lõi `sr3d-5h.js`; xưởng / iPad / mô-đun khác giữ 5f / 5g) · CSS thêm `rw-5h.css` (cuối). `racing-words.js`: GAME `./3d/rw-5h.js`, CSS + rw-5h.
   Chạy `python -I -X utf8 tools/chep-racing-words.py` (myGame `1488ae5`). Hồ sơ đo + nguyên nhân: myGame `speed-run/NGHIEN CUU GAMEPLAY.md` mục 48.

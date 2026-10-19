@@ -655,6 +655,33 @@ function rr3dMissWait(st, wrap) {
   st.offs.push(() => cancelAnimationFrame(raf));
 }
 
+// =========================================================
+// ⭐ Đợt 557 (myGame mẫu 12 → 12e, thầy duyệt 19/10/2026) — TÀU + TÊN LỬA 3D CÓ SẴN + ⚙ SETTINGS
+// Nút ⚙ trên hàng nút trận 3D (cạnh PEACE) ⇒ cửa sổ góc dưới phải kiểu Racing Words: tab iPad (Off / Questions / Controller —
+// thay nút iPad của engine, dùng đúng ctl.setIpadLive / applyOptions) · Ship (Classic + 3 tên lửa + 4 phi thuyền) · Missile (Classic + 5).
+// 2 đội cùng một mẫu, khác màu sơn. Lựa chọn lưu THEO MÁY (localStorage "rocketrace.ship.v1", CÙNG khoá với myGame) — đổi ⇒ APPLY ⇒
+// ctl.restartMatch() (tàu dựng lúc vào cảnh, intro phóng chạy lại như Start again). Mẫu glb + ảnh mô phỏng: ./tau3d/ (rr3d-ships.js).
+// Chép từ myGame bằng myGame/tools/chep-rr-mau12-sang-aword.py.
+// =========================================================
+const RR_SET_KEY = "rocketrace.ship.v1";
+// [file glb, số byte] — chỉ để màn chờ tính % (khớp rr3d-ships.js SHIPS / MISSILES; chép lại mẫu thì sửa số theo tau3d/)
+const RR_TAU = {
+  R1: ["R1-retro-toy-rocket", 211480], R2: ["R2-toy-rocket", 221216], R8: ["R8-cartoon-rocket", 101348],
+  S5: ["S5-spaceship", 347048], S7: ["S7-space-fighter", 578248], S9: ["S9-northstar", 787584], S10: ["S10-dvergr", 604164],
+  M1: ["M1-scifi-missile", 66624], M2: ["M2-aim9", 35440], M3: ["M3-aim120", 59088], M4: ["M4-ballistic", 21720], M5: ["M5-missile-rocket", 98224]
+};
+const RR_TAU_MODS = [["templates/rocket-race/rr3d-ships.js", 30211, 0], ["templates/rocket-race/vendor/three/addons/GLTFLoader.js", 115010, 0],
+  ["templates/rocket-race/vendor/three/addons/meshopt_decoder.module.js", 25028, 0], ["templates/rocket-race/vendor/three/addons/BufferGeometryUtils.js", 33158, 0]];
+function rrShipSet() {
+  const d = { ship: "classic", missile: "classic" };
+  try { const j = JSON.parse(localStorage.getItem(RR_SET_KEY) || "{}"); if (RR_TAU[j.ship]) d.ship = j.ship; if (RR_TAU[j.missile]) d.missile = j.missile; } catch { /* chặn lưu */ }
+  return d;
+}
+function rrShipFiles(set) {
+  const f = [set.ship, set.missile].filter(k => RR_TAU[k]).map(k => ["templates/rocket-race/tau3d/" + RR_TAU[k][0] + ".glb", RR_TAU[k][1], 0]);
+  return f.length ? RR_TAU_MODS.concat(f) : [];
+}
+
 function rr3dScene({ root, ctl, title, play }) {
   root.innerHTML = "";
   if (block3dHere()) { const off = block3dMessage(root, "Rocket race"); return { destroy: off }; }   // Đợt 530: Fight 3D chỉ ở bảng 1 (Solo 2D vẫn chạy mọi bảng)
@@ -664,7 +691,8 @@ function rr3dScene({ root, ctl, title, play }) {
   root.append(host3d, host2d);
   const st = { root, host2d, ctl, view: null, sfx: null, boards: [null, null], q: ["", ""], pending: [], dead: false, failed: false,
                prog: [{ done: 0, total: 0 }, { done: 0, total: 0 }], twoDevice: false, offs: [] };
-  st.ld = showLoader3d({ key: "rocketrace", title: "ROCKET RACE", theme: "shot", game: "rocket", bg: RR_LOAD_BG, files: () => filesOf(LOAD_FILES, LOAD_ALT) });   // ⭐ Đợt 540 · 543 % thật
+  st.shipSet = rrShipSet();                    // ⭐ Đợt 557 — mẫu tàu / tên lửa (⚙ Settings, theo máy)
+  st.ld = showLoader3d({ key: "rocketrace", title: "ROCKET RACE", theme: "shot", game: "rocket", bg: RR_LOAD_BG, files: () => filesOf(LOAD_FILES, LOAD_ALT, rrShipFiles(st.shipSet)) });   // ⭐ Đợt 540 · 543 % thật (557: + glb đã chọn)
   st.offs.push(() => { try { st.ld.drop(); } catch { /* đã gỡ */ } });
   rr3d = st;
   if (ctl && ctl.setDelayFloor) ctl.setDelayFloor(side => msDelayFloorMs(side));   // Đợt 458
@@ -692,7 +720,7 @@ function rr3dScene({ root, ctl, title, play }) {
     st.sfx = S.createRr3dSound();
     if (st.voiceAct) { st.sfx.lockBg(true); st.sfx.setFxLevel && st.sfx.setFxLevel(MS_VOICE_FX); if (st.paintSoundBtn) st.paintSoundBtn(); }   // Đợt 417: tiếng hiệu ứng nhỏ cả trận
     return V.createView({ ...RR3D_CFG(V), container: host3d, title: title || "ROCKET RACE",
-      teams: V.DEFAULT_TEAMS,
+      teams: V.DEFAULT_TEAMS, ship: st.shipSet.ship, missile: st.shipSet.missile,   // ⭐ Đợt 557
       onStart: () => { play(); },
       onTap: (side, k) => { const b = st.boards[side]; if (b) b.choose(k); },
       // Đợt 405 — chạm thanh câu hỏi = nghe lại voice (null = một câu chung ⇒ bàn 0 phát)
@@ -769,7 +797,7 @@ function rr3dLaunch(st, play) {
   Promise.all([import("./rr3d-launch.js"), import("./rr3d-intro-sound.js")]).then(async ([L, S]) => {
     if (st.dead) return;
     st.isnd = S.createIntroSound(undefined, { prefs: () => (st.sfx ? st.sfx.prefs : { fx: true, bg: true }) });
-    const launch = await L.createLaunch({ container: layer, hull: RR3D_HULL, rocketScale: 1.1, fov: 38,
+    const launch = await L.createLaunch({ container: layer, hull: RR3D_HULL, rocketScale: 1.1, fov: 38, ship: st.shipSet.ship,   // ⭐ Đợt 557: intro cùng mẫu tàu
       onHandoff: handoff, onTick: s => { if (st.isnd) st.isnd.update(s); } });
     if (st.dead) { launch.destroy(); return; }
     st.launch = launch;
@@ -932,7 +960,17 @@ function rr3dToolbar(st, wrap) {
       if (st.sfx) st.sfx.play(st.peace ? "mload" : "mcharge", 0.5);
       if (st.ms) [0, 1].forEach(side => msSync(st, side));
     });
-    st.offs.push(() => { moClock.disconnect(); st.paintProg = null; led.remove(); prog.remove(); peace.remove(); });
+    // ⭐ Đợt 557: nút ⚙ SETTINGS (iPad · Ship · Missile) ngay trước Mode — nút iPad của engine ẨN (đã vào tab iPad).
+    //   ⚠️ KHÔNG bỏ tpl.fightScreen để mất nút: core/fight.js còn dùng cờ đó cho 2 bàn độc lập (Different).
+    const gear = el("button", "aw-toolbtn aw-rr3d-gear");
+    gear.type = "button"; gear.title = "Settings"; gear.setAttribute("aria-label", "Settings");
+    gear.innerHTML = icons.settings || RR_GEAR_SVG;
+    mode.before(gear);
+    const ipadBtn = center.querySelector('.aw-toolbtn[aria-label="iPad"]');
+    if (ipadBtn) ipadBtn.classList.add("aw-rr3d-hide-ipad");
+    const win = rr3dSettings(st, gear);
+    press(gear, e => { e.stopPropagation(); win.toggle(); });
+    st.offs.push(() => { moClock.disconnect(); st.paintProg = null; led.remove(); prog.remove(); peace.remove(); gear.remove(); win.remove(); if (ipadBtn) ipadBtn.classList.remove("aw-rr3d-hide-ipad"); });
     return true;
   };
   if (!setup()) {
@@ -940,6 +978,78 @@ function rr3dToolbar(st, wrap) {
     mo.observe(wrap, { childList: true, subtree: true });
     st.offs.push(() => { if (mo) mo.disconnect(); });
   }
+}
+
+const RR_GEAR_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
+const RR_SET_ICON = {
+  ipad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="2.5" width="16" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>',
+  ship: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c3 3 4.5 6.5 4.5 10.5L14 16h-4l-2.5-3.5C7.5 8.5 9 5 12 2z"/><circle cx="12" cy="9" r="1.6"/><path d="M7.5 12.5 4 16l3.5 1M16.5 12.5 20 16l-3.5 1M10 19l2 3 2-3"/></svg>',
+  missile: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 3.5 20.5 3.5 20.5 9.5 10 20 4 14z"/><path d="M4 14l-1 6 6-1M7 17l-3 3"/></svg>'
+};
+const RR_IPAD_MODES = [
+  { k: "off", b: "Off", t: "No iPad. Everything on this screen." },
+  { k: "question", b: "Question screen", t: "One iPad reads the questions out (tap the iPad button on the AWord page on that iPad)." },
+  { k: "ctl", b: "Game controller", t: "2 iPads, one per team (AWord home ▸ iPad ▸ team): fire missiles + BOOST from the iPad." }
+];
+function rr3dSettings(st, gear) {
+  const box = el("div", "aw-rr3d-set"); box.hidden = true;
+  st.root.append(box);
+  let tab = "ship", M = null, want = { ...st.shipSet }, ipWant = null;
+  const thumb = (k, id) => new URL("./tau3d/anh/" + k + "-" + id + ".webp", import.meta.url).href;
+  const ipadNow = () => { const o = (st.ctl && st.ctl.matchAct && st.ctl.matchAct().options) || {}; return o.fightPad === true ? "ctl" : o.fightScreen === true ? "question" : "off"; };
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  function grid(list, cur, sel, key) {
+    const groups = [...new Set(list.map(x => x.group || "MISSILES"))], pic = key === "s" ? "ship" : "missile";
+    return `<div class="rr-g ${key === "m" ? "mis" : ""}">${groups.map(g => `<b>${g}</b><div>${list.filter(x => (x.group || "MISSILES") === g).map(x =>
+      `<button type="button" data-${key}="${x.id}" class="${x.id === sel ? "on" : ""} ${x.id === cur ? "cur" : ""}" title="${esc(x.name)}"><img src="${thumb(pic, x.id)}" alt=""><span>${esc(x.name)}</span></button>`).join("")}</div>`).join("")}</div>`;
+  }
+  function paint() {
+    const nav = `<nav>${[["ipad", "iPad"], ["ship", "Ship"], ["missile", "Missile"]].map(([k, t]) => `<button type="button" data-tab="${k}" class="${k === tab ? "on" : ""}">${RR_SET_ICON[k]}<span>${t}</span></button>`).join("")}</nav>`;
+    let body = "";
+    if (tab === "ipad") {
+      const now = ipadNow(), sel = ipWant || now, live = !!(st.ctl && st.ctl.canIpadLive && st.ctl.canIpadLive());
+      const pad = st.pad, stTxt = t => { const s = pad && pad.status ? pad.status(t) : ""; return s === "on" ? "connected" : s === "relay" ? "connected (slow)" : s ? "waiting…" : "waiting for an iPad"; };
+      body = `<h3>iPad</h3><div class="rr-ip">${RR_IPAD_MODES.map(m => `<button type="button" data-ip="${m.k}" class="${m.k === sel ? "on" : ""} ${m.k === now ? "cur" : ""}"><b>${m.b}</b><span>${m.t}</span></button>`).join("")}</div>`
+        + (now === "ctl" && sel === "ctl" ? `<div class="rr-ipst">${[0, 1].map(t => `<div class="t${t}"><b>TEAM ${t + 1}</b><span>${stTxt(t)}</span></div>`).join("")}</div>` : "")
+        + (sel !== now ? `<p class="rr-note">${live ? "" : "This restarts the race."}</p><button type="button" class="rr-apply" data-ipgo>${sel === "off" ? "TURN OFF" : "SWITCH"}${live ? "" : " — RESTART GAME"}</button>` : "");
+    } else if (!M) body = `<h3>${tab === "ship" ? "Ship" : "Missile"}</h3><p class="rr-note">Loading…</p>`;
+    else {
+      const isShip = tab === "ship", info = isShip ? M.shipInfo(want.ship) : M.missileInfo(want.missile);
+      const dirty = want.ship !== st.shipSet.ship || want.missile !== st.shipSet.missile;
+      body = `<h3>${isShip ? "Ship" : "Missile"}</h3>${isShip ? grid(M.SHIPS, st.shipSet.ship, want.ship, "s") : grid(M.MISSILES, st.shipSet.missile, want.missile, "m")}`
+        + `<p class="rr-note">${isShip ? "Both teams fly the same ship — only the paint differs (blue / orange). Also used in the launch intro." : "Missiles on both ships, on the missile board and in flight."}</p>`
+        + `<p class="rr-note">${info.by ? `3D model: <a href="${info.src}" target="_blank" rel="noopener">${esc(info.name)}</a> by ${esc(info.by)} · ${info.lic}` : "Built-in model."}</p>`
+        + (dirty ? `<button type="button" class="rr-apply" data-apply>APPLY — RESTART GAME</button>` : "");
+    }
+    box.innerHTML = `<button type="button" class="rr-x" aria-label="Close">✕</button><div class="rr-c">${nav}<div class="rr-cb">${body}</div></div>`;
+    box.querySelector(".rr-x").onclick = () => close();
+    box.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { tab = b.dataset.tab; paint(); });
+    box.querySelectorAll("[data-s]").forEach(b => b.onclick = () => { want.ship = b.dataset.s; paint(); });
+    box.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { want.missile = b.dataset.m; paint(); });
+    box.querySelectorAll("[data-ip]").forEach(b => b.onclick = () => { ipWant = b.dataset.ip; paint(); });
+    const go = box.querySelector("[data-ipgo]");
+    if (go) go.onclick = () => {
+      const flags = { fightScreen: ipWant === "question", fightPad: ipWant === "ctl" }; ipWant = null;
+      if (st.ctl && st.ctl.setIpadLive && st.ctl.setIpadLive(flags)) paint();
+      else if (st.ctl && st.ctl.applyOptions) { close(); st.ctl.applyOptions(flags); }
+    };
+    const ap = box.querySelector("[data-apply]");
+    if (ap) ap.onclick = () => {
+      try { localStorage.setItem(RR_SET_KEY, JSON.stringify({ ship: want.ship, missile: want.missile })); } catch { /* chặn lưu */ }
+      close(); if (st.ctl && st.ctl.restartMatch) st.ctl.restartMatch();
+    };
+  }
+  let tick = 0;
+  function open() {
+    box.style.setProperty("--rh", Math.max(240, st.root.clientHeight) / 100 + "px");
+    box.hidden = false; gear.classList.add("is-on"); want = { ...st.shipSet }; ipWant = null; paint();
+    if (!M) import("./rr3d-ships.js").then(m => { M = m; if (!box.hidden) paint(); }).catch(e => console.warn("[rocket-race] ships", e));
+    clearInterval(tick); tick = setInterval(() => { if (tab === "ipad" && !box.hidden) { const a = document.activeElement; if (!box.contains(a)) paint(); } }, 1000);   // trạng thái 2 iPad
+    document.addEventListener("pointerdown", outside, true);
+  }
+  function close() { box.hidden = true; gear.classList.remove("is-on"); clearInterval(tick); document.removeEventListener("pointerdown", outside, true); }
+  function outside(e) { if (!box.contains(e.target) && !gear.contains(e.target)) close(); }
+  return { toggle() { if (box.hidden) open(); else close(); }, remove() { close(); box.remove(); } };
 }
 
 function rr3dSoundMenu(st, wrap) {

@@ -34,6 +34,7 @@ export { THREE };
 import { makeAutoRes } from "./rr3d-autores.js";
 import { createMissiles } from "./rr3d-missile.js";   // Đợt 407
 import { createMissWait } from "./rr3d-misswait.js";  // Đợt 409: thanh MISS WAIT 3D giữa màn
+import { prepShip, prepMissile, makeShipRocket, shipWreckKit } from "./rr3d-ships.js";   // MẪU 12: tàu + tên lửa 3D có sẵn (⚙ Settings)
 
 const V3 = THREE.Vector3;
 const TAU = Math.PI * 2;
@@ -361,6 +362,37 @@ function makeSun(pos, scale = 220) {
 // =============================================================
 function lathe(points, segs = 64) { return new THREE.LatheGeometry(points.map(([r, y]) => new THREE.Vector2(r, y)), segs); }
 
+// lửa đuôi: 2 nón chồng (lõi trắng + vỏ cam), shader nhiễu cuộn — dùng CHUNG cho tàu dựng tay và tàu glb (MẪU 12)
+export const makeFlameMat = (core, outer, pow) => new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  uniforms: { uTime: { value: 0 }, uPow: { value: 1 }, uCore: { value: new THREE.Color(...core) }, uCol: { value: new THREE.Color(...outer) }, uK: { value: pow } },
+  vertexShader: `varying vec2 vUv; varying vec3 vN; void main(){ vUv = uv; vN = normalize(normalMatrix*normal); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+  fragmentShader: GLSL_NOISE + `varying vec2 vUv; varying vec3 vN; uniform float uTime, uPow, uK; uniform vec3 uCore, uCol;
+    void main(){ float y = clamp(1.0 - vUv.y, 0.0, 1.0);    // 1 ở miệng loa, 0 ở đầu lửa (kẹp: pow số âm = NaN)
+      float n = noise3(vec3(vUv.x*8.0, vUv.y*5.0 + uTime*14.0, uTime*2.0));
+      float edge = pow(abs(vN.z), 0.8);
+      float a = pow(y, uK)*(0.55 + 0.7*n)*edge;
+      vec3 c = mix(uCol, uCore, pow(y, 2.5));
+      gl_FragColor = vec4(c*a*uPow, a); }`
+});
+function makeFlameGroup(model) {
+  const flameGroup = new THREE.Group();
+  flameGroup.position.y = -2.45;
+  // ConeGeometry: đỉnh +Y. Lật (rotateX PI) rồi dời xuống nửa chiều cao ⇒ đáy ở gốc (miệng loa), đỉnh ra sau (-Y).
+  const outerGeo = new THREE.ConeGeometry(0.42, 2.6, 32, 8, true); outerGeo.rotateX(Math.PI); outerGeo.translate(0, -1.3, 0);
+  const flameOuter = new THREE.Mesh(outerGeo, makeFlameMat([4, 3.2, 2], [3.2, 0.9, 0.2], 1.4));
+  const innerGeo = new THREE.ConeGeometry(0.22, 1.5, 32, 6, true); innerGeo.rotateX(Math.PI); innerGeo.translate(0, -0.75, 0);
+  const flameInner = new THREE.Mesh(innerGeo, makeFlameMat([6, 6, 6], [3, 2.6, 1.8], 1.0));
+  flameGroup.add(flameOuter, flameInner);
+  flameGroup.userData = { flameOuter, flameInner };
+  model.add(flameGroup);
+  return flameGroup;
+}
+// ⭐ MẪU 12: ST = mẫu tàu glb đã tải (prepShip) ⇒ tàu glb CÙNG giao diện; không có ⇒ tàu dựng tay cũ
+export function makeAnyRocket(team, idx, H = {}, ST = null) {
+  return ST ? makeShipRocket(ST, team, idx, { flameMat: makeFlameMat, hull: H }) : makeRocket(team, idx, H);
+}
+
 export function makeRocket(team, idx, H = {}) {
   const rig = new THREE.Group();        // vị trí + hướng bay
   const ship = new THREE.Group();       // nhấp nhô, lắc, xoay
@@ -418,28 +450,9 @@ export function makeRocket(team, idx, H = {}) {
   model.add(num);
   const num2 = num.clone(); num2.rotation.y = Math.PI + 0.6; model.add(num2);  // mặt bên kia
 
-  // lửa: 2 nón chồng (lõi trắng + vỏ cam), shader nhiễu cuộn
-  const flameMat = (core, outer, pow) => new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
-    uniforms: { uTime: { value: 0 }, uPow: { value: 1 }, uCore: { value: new THREE.Color(...core) }, uCol: { value: new THREE.Color(...outer) }, uK: { value: pow } },
-    vertexShader: `varying vec2 vUv; varying vec3 vN; void main(){ vUv = uv; vN = normalize(normalMatrix*normal); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-    fragmentShader: GLSL_NOISE + `varying vec2 vUv; varying vec3 vN; uniform float uTime, uPow, uK; uniform vec3 uCore, uCol;
-      void main(){ float y = clamp(1.0 - vUv.y, 0.0, 1.0);    // 1 ở miệng loa, 0 ở đầu lửa (kẹp: pow số âm = NaN)
-        float n = noise3(vec3(vUv.x*8.0, vUv.y*5.0 + uTime*14.0, uTime*2.0));
-        float edge = pow(abs(vN.z), 0.8);
-        float a = pow(y, uK)*(0.55 + 0.7*n)*edge;
-        vec3 c = mix(uCol, uCore, pow(y, 2.5));
-        gl_FragColor = vec4(c*a*uPow, a); }`
-  });
-  const flameGroup = new THREE.Group();
-  flameGroup.position.y = -2.45;
-  // ConeGeometry: đỉnh +Y. Lật (rotateX PI) rồi dời xuống nửa chiều cao ⇒ đáy ở gốc (miệng loa), đỉnh ra sau (-Y).
-  const outerGeo = new THREE.ConeGeometry(0.42, 2.6, 32, 8, true); outerGeo.rotateX(Math.PI); outerGeo.translate(0, -1.3, 0);
-  const flameOuter = new THREE.Mesh(outerGeo, flameMat([4, 3.2, 2], [3.2, 0.9, 0.2], 1.4));
-  const innerGeo = new THREE.ConeGeometry(0.22, 1.5, 32, 6, true); innerGeo.rotateX(Math.PI); innerGeo.translate(0, -0.75, 0);
-  const flameInner = new THREE.Mesh(innerGeo, flameMat([6, 6, 6], [3, 2.6, 1.8], 1.0));
-  flameGroup.add(flameOuter, flameInner);
-  model.add(flameGroup);
+  // lửa: 2 nón chồng (lõi trắng + vỏ cam), shader nhiễu cuộn — MẪU 12: tách ra makeFlameGroup (tàu glb dùng CÙNG shader)
+  const flameGroup = makeFlameGroup(model);
+  const { flameOuter, flameInner } = flameGroup.userData;
 
   const light = new THREE.PointLight(0xff8a3d, 12, 9, 2);
   light.position.set(-2.9, 0, 0);
@@ -527,6 +540,11 @@ export async function createView(cfg) {
   const container = cfg.container;
   await Promise.all([document.fonts.load(`800 60px "Baloo 2"`), document.fonts.load(`700 60px "Baloo 2"`)]).catch(() => {});
   const font = await loadFont().catch(() => null);
+  // ⭐ MẪU 12: mẫu tàu / tên lửa glb (⚙ Settings) — tải xong mới dựng (makeRocket đồng bộ). Lỗi tải ⇒ quay về tàu cũ, game vẫn chạy.
+  const [shipT, missileT] = await Promise.all([
+    cfg.ship && cfg.ship !== "classic" ? prepShip(cfg.ship).catch(e => { console.warn("ship", e); return null; }) : null,
+    cfg.missile && cfg.missile !== "classic" ? prepMissile(cfg.missile).catch(e => { console.warn("missile", e); return null; }) : null
+  ]);
 
   // ----- renderer + hậu kỳ -----
   // ?debug: giữ khung hình đã vẽ để công cụ chụp màn hình đọc được (chỉ dùng khi kiểm thử)
@@ -627,7 +645,7 @@ export async function createView(cfg) {
   scene.add(gate);
 
   // tên lửa
-  const rockets = TEAMS.map((t, i) => { const r = makeRocket(t, i, cfg.hull); r.rig.scale.setScalar(cfg.rocketScale ?? 1); r.nozzleGlow.material.color.multiplyScalar(cfg.exhaust?.flame ?? 1); scene.add(r.rig); return r; });
+  const rockets = TEAMS.map((t, i) => { const r = makeAnyRocket(t, i, cfg.hull, shipT); r.rig.scale.setScalar(cfg.rocketScale ?? 1); r.nozzleGlow.material.color.multiplyScalar(cfg.exhaust?.flame ?? 1); scene.add(r.rig); return r; });
 
   // ----- trạng thái trận -----
   let L = Math.max(1, cfg.steps ?? 5);     // số nấc tới đích — rocket-race.js đặt lại bằng setTrack()
@@ -949,8 +967,11 @@ export async function createView(cfg) {
   // =========================================================
   // HIỆU ỨNG
   // =========================================================
-  const tmpV = new V3(), tmpV2 = new V3(), tmpQ = new THREE.Quaternion();
-  function nozzleWorld(r, out) { return out.set(-2.55, 0, 0).applyMatrix4(r.ship.matrixWorld); }
+  const tmpV = new V3(), tmpV2 = new V3(), tmpV3 = new V3(), tmpQ = new THREE.Quaternion();
+  function nozzleWorld(r, out, k = -1) {
+    if (r.nozzles) { const n = r.nozzles[k >= 0 ? k % r.nozzles.length : Math.floor(Math.random() * r.nozzles.length)]; return out.copy(n).applyMatrix4(r.ship.matrixWorld); }
+    return out.set(-2.55, 0, 0).applyMatrix4(r.ship.matrixWorld);
+  }
   function forwardWorld(r, out) { return out.set(1, 0, 0).applyQuaternion(r.rig.quaternion); }
 
   function emitExhaust(r, dt) {
@@ -962,14 +983,17 @@ export async function createView(cfg) {
     const power = r.stall > 0 ? 0.55 + Math.random() * 0.35 : 1 + r.boost * 1.8;
     const turbo = r.turbo > 0 || !!r.nearWin;           // Đợt 417 (mẫu 7d): sắp thắng ⇒ hạt lửa xanh dương
     const EX = cfg.exhaust || {};
-    const want = (turbo ? 60 : 40) * power * dt * 60 / 6 * (EX.fire ?? 1);
+    // MẪU 12: tàu nhiều vòi ⇒ hạt chia đều các vòi, cỡ hạt theo miệng vòi (0,36 = tàu cũ)
+    const NZ = r.nozzles ? r.nozzles.length : 1;
+    const want = (turbo ? 60 : 40) * power * dt * 60 / 6 * (EX.fire ?? 1) * (1 + 0.35 * (NZ - 1));
     const count = Math.floor(want) + (Math.random() < want % 1 ? 1 : 0);
     for (let i = 0; i < count; i++) {
       const sp = rand(7, 12) * (0.6 + power * 0.4) * (r.nearWin ? 1.5 : 1);   // Đợt 417: vệt hạt dài 1,5 lần
+      const ek = r.nozzles ? Math.max(0.45, r.nozzleR[i % NZ] / 0.36) : 1, np = r.nozzles ? nozzleWorld(r, tmpV3, i) : n, j = 0.12 * ek;
       fire.emit({
-        pos: n.clone().add(new V3(rand(-0.12, 0.12), rand(-0.12, 0.12), rand(-0.12, 0.12))),
+        pos: np.clone().add(new V3(rand(-j, j), rand(-j, j), rand(-j, j))),
         vel: f.clone().multiplyScalar(-sp).add(new V3(rand(-0.6, 0.6), rand(-0.6, 0.6), rand(-0.6, 0.6))),
-        life: rand(0.16, 0.34), size: rand(0.45, 0.75), sizeEnd: 0.1,
+        life: rand(0.16, 0.34), size: rand(0.45, 0.75) * ek, sizeEnd: 0.1,
         color: turbo ? new THREE.Color(0.5, 1.3, 2.6) : new THREE.Color(3, 1.8, 0.7),
         colorEnd: turbo ? new THREE.Color(0.1, 0.2, 0.8) : new THREE.Color(1.2, 0.25, 0.04), drag: 2
       });
@@ -1307,6 +1331,7 @@ export async function createView(cfg) {
     return new THREE.Shape(pts);
   }
   function makeWreckKit(r) {
+    if (r.glb) return shipWreckKit(r);          // MẪU 12: mảnh vỡ = CHÍNH thân tàu glb cắt theo lưới không gian
     const kit = new THREE.Group(); kit.visible = false;
     const SOOT = new THREE.Color("#1c1815");
     // vật liệu CHÁY SẠM: màu gốc pha muội, hết bóng sơn, vertexColors ⇒ loang lổ
@@ -1424,7 +1449,7 @@ export async function createView(cfg) {
   }
   // ⭐ Đợt 407: TÊN LỬA — dựng SẴN mọi thứ (tên lửa, khoang, tay robot, vòng sáng) TRƯỚC warmBoom ⇒ shader biên dịch sẵn
   const MS = cfg.missiles === false ? null : createMissiles({
-    THREE, scene, camera, rockets, cfg, fire, smoke, burst, explosion, labelOn, hitList, frameGeo, RoundedBoxGeometry, canvasTex, radialTex, FONT_UI, G,
+    THREE, scene, camera, rockets, cfg, fire, smoke, burst, explosion, labelOn, hitList, frameGeo, RoundedBoxGeometry, canvasTex, radialTex, FONT_UI, G, missileT,
     sfx: (n, v) => sfx(n, v), stall: r => stallRocket(r), shake: k => { trauma = Math.min(1, trauma + k); },
     onFire: side => cfg.onFire && cfg.onFire(side), onBoost: side => cfg.onBoost && cfg.onBoost(side),
     onEnd: (to, res, from, tag) => cfg.onMissileEnd && cfg.onMissileEnd(to, res, from, tag),   // 441: tag "clash" = dính vụ đâm nhau (×1,5)
@@ -1553,6 +1578,29 @@ export async function createView(cfg) {
     }
   }
   // trả về độ lệch né (dời vị trí ngay trong hàm) — gọi sau khi đặt rig theo cfg.track
+  // ⭐ MẪU 12 (thầy 19/10: "độ nghiêng và láng của 2 tàu khá giống nhau ⇒ cần khác nhau hoàn toàn · góc rộng lượn quá nhanh, không hợp lý, nhất là
+  //   phi thuyền dẹt ⇒ láng nhẹ nhàng, đều, mượt, chuẩn vật lý"): mỗi tàu một BỘ THAM SỐ BAY riêng (tần số / biên độ / pha của 3 sóng lượn KHÔNG chia hết cho nhau,
+  //   độ nhấp nhô, độ ì) ⇒ 2 tàu không bao giờ lắc giống nhau. Nghiêng thân (roll) KHÔNG còn là sóng sin tự do: tính từ GIA TỐC NGANG như máy bay
+  //   ôm cua (tan φ = a/g), lọc mượt; ngóc / chúc mũi theo vận tốc lên xuống. Phi thuyền (dẹt, nặng) ì hơn + lượn chậm hơn tên lửa trụ.
+  function flightOf(r, i) {
+    if (r.fp) return r.fp;
+    let sd = (i + 1) * 7919 + (r.glb ? r.glb.info.id.charCodeAt(0) * 13 : 0);
+    const rnd = (a, b) => { sd = (sd * 16807) % 2147483647; return a + (b - a) * ((sd - 1) / 2147483646); };
+    const flat = r.kind === "ship";
+    const slow = flat ? 0.62 : 0.85;                       // phi thuyền lượn chậm hơn
+    const f0 = i === 0 ? rnd(0.33, 0.42) : rnd(0.47, 0.58);   // 2 tàu: tần số lượn chính KHÁC hẳn nhau
+    r.fp = {
+      wf: [f0 * slow, rnd(0.7, 0.9) * slow, rnd(1.3, 1.6) * slow], wa: [rnd(0.3, 0.42), rnd(0.05, 0.08), rnd(0.015, 0.03)], wp: [rnd(0, 6.28), rnd(0, 6.28), rnd(0, 6.28)],
+      vf: [rnd(0.42, 0.6) * slow, rnd(1.1, 1.5) * slow], va: [rnd(0.14, 0.22), rnd(0.04, 0.07)], vp: [rnd(0, 6.28), rnd(0, 6.28)],
+      bobF: (flat ? rnd(0.7, 1.0) : rnd(1.5, 2.1)) * (i === 0 ? 1 : 1.17), bobA: flat ? rnd(0.05, 0.07) : rnd(0.08, 0.11), bobP: rnd(0, 6.28),
+      k: flat ? 3.2 : 5.5, damp: flat ? 3.4 : 4.4, tgtTau: flat ? 0.9 : 0.55,   // đích lượn đi qua bộ lọc ⇒ cú né thành 1 đường cong mềm
+      rollRate: flat ? 0.45 : 0.75,                          // tốc độ nghiêng tối đa (rad/s) — thân to dẹt không lật nhanh được           // lò xo bám đích lượn: mềm ⇒ đổi hướng từ từ (cũ k 11 / damp 5,2)
+      bank: flat ? 0.6 : 0.45, bankMax: flat ? 0.3 : 0.38, bankTau: flat ? 0.6 : 0.4,   // roll = atan(a_ngang · bank) — gia tốc lượn ~0,02–0,05 đv/s² ⇒ nghiêng 0,1–0,25 rad
+      idle: flat ? rnd(0.015, 0.025) : rnd(0.05, 0.08), idleF: rnd(0.35, 0.5), idleP: rnd(0, 6.28),
+      pitch: flat ? 0.1 : 0.07, roll: 0, pit: 0, ax: 0, pvx: 0
+    };
+    return r.fp;
+  }
   function applyDodge(r, i, dt, pose) {
     const D = r.dg || (r.dg = { x: 0, y: 0, vx: 0, vy: 0, t: rand(0.3, 1) });
     const tv = cfg.travelDir.clone().normalize();
@@ -1564,8 +1612,9 @@ export async function createView(cfg) {
       if (D.t <= 0) { D.t = rand(DG.every[0], DG.every[1]); spawnDodgeRock(i, D, pose.pos, tv, right); }
     }
     // lượn nhẹ nền + đẩy khỏi viên đá sắp tới (càng gần càng mạnh)
-    let tx = on * (Math.sin(G.t * 0.95 + i * 2.1) * 0.35 + Math.sin(G.t * 2.1 + i) * 0.12);
-    let ty = on * Math.sin(G.t * 1.3 + i * 1.7) * 0.22;
+    const F = flightOf(r, i), t = G.t;
+    let tx = on * (Math.sin(t * F.wf[0] + F.wp[0]) * F.wa[0] + Math.sin(t * F.wf[1] + F.wp[1]) * F.wa[1] + Math.sin(t * F.wf[2] + F.wp[2]) * F.wa[2]);
+    let ty = on * (Math.sin(t * F.vf[0] + F.vp[0]) * F.va[0] + Math.sin(t * F.vf[1] + F.vp[1]) * F.va[1]);
     if (on > 0) dodgeRocks.forEach(o => {
       if (o.lane !== i) return;
       const rel = o.mesh.position.clone().sub(pose.pos);
@@ -1575,7 +1624,9 @@ export async function createView(cfg) {
       const clear = o.size + 0.95 * (cfg.rocketScale ?? 1);
       const dx = D.x - lx;
       if (Math.abs(dx) < clear) {
-        const w = smooth(11, 2.5, along) * on;
+        // MẪU 12: đá đã ẩn (dodge.rocks false, Đợt 398) mà vẫn đẩy MẠNH ⇒ tàu giật ngang mỗi 1–2 s (gia tốc ±3 đv/s²) — thầy chê lượn quá nhanh,
+        //   không hợp lý ⇒ đá ẩn chỉ còn 30 % lực né (thành 1 nhịp lượn mềm); đá hiện thì giữ nguyên
+        const w = smooth(11, 2.5, along) * on * (DG.rocks === false ? 0.3 : 1);
         tx += Math.sign(dx || o.side) * (clear - Math.abs(dx)) * 1.7 * w;
         ty += Math.sign((D.y - ly) || 1) * 0.3 * w;
       }
@@ -1584,11 +1635,13 @@ export async function createView(cfg) {
     const inner = DG.maxIn ?? 0.8, outer = DG.maxOut ?? 1.4;
     tx = i === 0 ? clamp(tx, -outer, inner) : clamp(tx, -inner, outer);
     ty = clamp(ty, -0.6, 0.6);
-    const k = 11, damp = 5.2;
-    D.vx += ((tx - D.x) * k - D.vx * damp) * dt; D.vy += ((ty - D.y) * k - D.vy * damp) * dt;
+    const k = F.k, damp = F.damp, kt = Math.min(1, dt / F.tgtTau);
+    D.tx = (D.tx ?? tx) + (tx - (D.tx ?? tx)) * kt; D.ty = (D.ty ?? ty) + (ty - (D.ty ?? ty)) * kt;
+    D.vx += ((D.tx - D.x) * k - D.vx * damp) * dt; D.vy += ((D.ty - D.y) * k - D.vy * damp) * dt;
+    if (dt > 0) { const ax = (D.vx - F.pvx) / dt; F.ax += (ax - F.ax) * Math.min(1, dt / 0.12); F.pvx = D.vx; }   // gia tốc ngang (lọc)
     D.x += D.vx * dt; D.y += D.vy * dt;
     r.rig.position.addScaledVector(right, D.x).addScaledVector(UP, D.y);
-    pose.dir = pose.dir.clone().normalize().addScaledVector(right, D.vx * 0.09).addScaledVector(UP, D.vy * 0.09);
+    pose.dir = pose.dir.clone().normalize().addScaledVector(right, D.vx * 0.06).addScaledVector(UP, D.vy * 0.05);   // mũi hướng theo vận tốc (nhẹ)
     return D;
   }
 
@@ -2094,12 +2147,20 @@ export async function createView(cfg) {
       if (!r.qInit) { r.rig.quaternion.copy(tmpQ); r.qInit = true; }   // 5b: khung đầu ĐẶT THẲNG (mô hình dựng nằm ngang ⇒ trước đây mất ~0,5 s xoay)
       else r.rig.quaternion.slerp(tmpQ, Math.min(1, dt * 6));
       // nhấp nhô + lắc
-      const bob = Math.sin(G.t * 2.4 + r.wob) * 0.12;
+      const FP = flightOf(r, i);
+      const bob = Math.sin(G.t * FP.bobF + FP.bobP) * FP.bobA + Math.sin(G.t * FP.bobF * 2.31 + FP.bobP * 1.7) * FP.bobA * 0.25;
       const jit = r.stall > 0 ? 0.08 : 0;
       r.ship.position.set(r.boost * 0.5 + rand(-jit, jit), bob + rand(-jit, jit), rand(-jit, jit));
       if (r.wreck) { r.ship.rotation.x += dt * 0.6; r.ship.rotation.z += dt * 0.25; r.ship.position.y -= 0.3; }
-      else { r.ship.rotation.x = Math.sin(G.t * 1.3 + r.wob) * 0.18 + (r.stall > 0 ? Math.sin(G.t * 40) * 0.08 : 0); r.ship.rotation.z = Math.sin(G.t * 2.4 + r.wob + 0.5) * 0.03; }
-      if (DG && r.dg && !r.wreck) r.ship.rotation.x += clamp(-r.dg.vx * 0.28, -0.6, 0.6);   // Đợt 397: nghiêng thân khi né
+      else {
+        // roll: ôm cua theo gia tốc ngang (+ chút dập dềnh rất chậm, mỗi tàu một nhịp) — lọc bậc 1 ⇒ nghiêng vào / ra từ từ
+        const wantRoll = (r.dg ? clamp(Math.atan(-FP.ax * FP.bank), -FP.bankMax, FP.bankMax) : 0) + Math.sin(G.t * FP.idleF + FP.idleP) * FP.idle;
+        FP.roll += clamp((wantRoll - FP.roll) * Math.min(1, dt / FP.bankTau), -FP.rollRate * dt, FP.rollRate * dt);
+        const wantPitch = r.dg ? clamp(r.dg.vy * FP.pitch, -0.12, 0.12) : 0;
+        FP.pit += (wantPitch - FP.pit) * Math.min(1, dt / 0.4);
+        r.ship.rotation.x = FP.roll + (r.stall > 0 ? Math.sin(G.t * 40) * 0.08 : 0);
+        r.ship.rotation.z = FP.pit + Math.sin(G.t * FP.bobF * 0.9 + FP.bobP + 0.5) * 0.012;
+      }
       r.model.visible = !r.hidden && !(r.exploding > 0 && r.exploding < 0.3);
       // 2f: tàu thắng bay xuyên cổng rồi lao tiếp ra khỏi màn hình
       if (r.flyOut) { r.flyV = (r.flyV || 1.2) + dt * 2.5; r.p += r.flyV * dt; r.boost = Math.max(r.boost, 0.8);

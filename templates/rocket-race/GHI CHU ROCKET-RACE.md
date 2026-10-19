@@ -924,3 +924,12 @@ xong bằng `getImageData(0,0,1,1)`. Tải/giây = ms/khung × khung/giây; số
 - `tools/chep-train-rush.py` GOC_THEM tr-padui-1av · `pad.js` ⇒ tr-padui-1av. Kiểm khớp: chạy lại công cụ chép không đổi gì; rr-padscene AWord = bản chép myGame (trừ import).
 - Đã kiểm: hình 2 màn iPad y cũ (chụp), mô-đun nạp trên devserver, pad.html sạch, bàn đo 1av 9,5 ms/khung không lỗi.
 ⬜ thầy chơi vài trận với iPad thật: còn nóng không, 25 khung/giây có khó chịu không. Còn nóng ⇒ 20 khung/giây + độ nét 1,25 (hằng PAD_FPS / PR_MAX đầu 2 file).
+
+## 48. Đợt 557 (19/10/2026) — TÀU + TÊN LỬA 3D CÓ SẴN + ⚙ SETTINGS (myGame mẫu 12 → 12e)
+- File mới: `rr3d-ships.js` (bảng SHIPS / MISSILES, `prepShip` / `prepMissile` / `makeShipRocket` / `shipWreckKit` / `hullSpot` / `missileMeshes` / `addGlow`) + `tau3d/*.glb` + `tau3d/anh/*.webp`.
+  ⚠️ SỬA Ở myGame `rocket-race/game11/` rồi chạy `myGame/tools/chep-rr-mau12-sang-aword.py` — đừng sửa thẳng 4 file 3D ở đây (lệch nguồn).
+- Giao diện tàu glb = giao diện makeRocket cũ (+ `glb`, `kind`, `nozzles`, `nozzleR`, `liftFlames`, `mount`, `body`); `r.flameGroup` là FlameSet (nhiều vòi, vẫn `.visible` + `.scale.set`).
+- Thêm mẫu: tải glb ⇒ `myGame/tools/nen-tau3d/nen.sh` ⇒ khai SHIPS (rot, engines đặt tay — soi `myGame/rocket-race/xem-tau-3d.html?ship=ID&view=back`, paint, glow) ⇒
+  chụp ảnh `myGame/rocket-race/tao-anh-tau.html?save=1` ⇒ chép sang AWord ⇒ thêm vào `RR_TAU` (rocket-race.js, số byte).
+- Chuyển động: `flightOf(r, i)` trong rr3d-view.js (tham số lượn riêng mỗi tàu, nghiêng theo gia tốc ngang, tốc độ nghiêng tối đa) — áp cho cả tàu Classic.
+- ⚙ Settings: `rr3dSettings` (rocket-race.js). Nút iPad engine chỉ ẨN (KHÔNG bỏ `tpl.fightScreen` — fight.js dùng cờ đó cho 2 bàn độc lập).
