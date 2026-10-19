@@ -21,7 +21,7 @@
 import { currentUser, signIn } from "../core/firebase.js";
 import { labSignal } from "../templates/racing-words/rw-lab-signal.js";
 import { createPadClient, watchTeams } from "../templates/racing-words/3d/sr3d-padlink-4u.js";
-import { mountPadApp, mountPadChooser, mountDroneApp } from "../templates/racing-words/3d/sr3d-padui-4u.js";
+import { mountPadApp, mountPadChooser, mountDroneApp } from "../templates/racing-words/3d/sr3d-padui-4v.js";
 const mount = document.getElementById("pad"), q = new URLSearchParams(location.search);
 async function go() {
   if (!(await currentUser())) {
