@@ -546,6 +546,21 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 559 (21/10/2026) — QUIZ: "SHOW TEXT AFTER ANSWER" cho câu chỉ có tiếng + vá Edit làm MẤT TIẾNG (thầy: BT1 bảng chữ cái K10 "sau khi chọn câu trả lời, letter đúng sẽ xuất hiện")
+
+- **Ô tích mới** trong Options của Quiz `options.showTextAfter` (key `showTextAfter`, cuối `checkOrder`). CHỈ dựng khi act có tiếng: options-panel truyền thêm
+  `hasVoice: !!contentSwitch` cho `tpl.buildExtraOptions` (dải Content chỉ có khi act có clip) — không thành công tắc chết (luật Đợt 143).
+- **quiz.js:** câu giấu chữ (`voiceView` hideText) + ô bật ⇒ `applyQuestion` dựng SẴN `.aw-quiz-reveal` (chữ = `question`, ẩn nhưng GIỮ CHỖ ⇒ fitNow đo đủ,
+  trả lời xong khung không nhảy); `choose()` ⇒ `showReveal(st, true)` (hiệu ứng `is-pop`); quay lại câu đã làm ⇒ hiện ngay; FIGHT: chờ `revealFightMarks`.
+  Màu riêng từng câu = trường MỚI `question.color` (inline). ⛔ Bài giao ẩn đáp án (`opt.anDapAn`) mà em chọn SAI ⇒ chữ màu THƯỜNG (màu lộ nhóm đáp án).
+- **quiz.css:** `.aw-quiz-has-reveal` (cột) + `.aw-quiz-reveal` 2.3em/800 + keyframes `aw-quiz-reveal-pop`.
+- ⛔⛔ **Vá lỗi có sẵn quiz-editor.js `normalize`:** `shape` chỉ trả `{question, answers}` ⇒ mở Edit rồi Save là act Quiz MẤT SẠCH `voice/voiceId/hideText`
+  (và nay `color`), lặng lẽ. Nay `{ ...q, question, answers }`. (Maze chase / Rocket race / Racing words dùng chung editor này — giữ thêm trường là vô hại.)
+- **Thử (bàn thử tạm `templates/quiz/test-dot559.html`, không commit, clip thật voiceClips):** đúng ⇒ "A a" xanh lá; sai ⇒ "B b" + ✓ ô đúng; ◁ câu cũ còn chữ;
+  Options có ô tích; `?an=1` sai ⇒ màu thường, đúng ⇒ màu; điện thoại 375px vừa khít; Edit→Save giữ đủ voice/hideText/color 6/6; console 0 lỗi.
+- Act dùng đầu tiên: `?f=146&a=608` BT1. NGUYEN AM - PHU AM (26 câu "A a"…"Z z", giọng clone thầy myVoice, màu #16a34a nguyên âm / #1d4ed8 phụ âm).
+- ⬜ Editor CHƯA có ô sửa `color` (đặt bằng dữ liệu). ⬜ thầy thử thật.
+
 ## Đợt 558 (20/10/2026) — RACING WORDS THẬT: myGame 5i — VẠCH LỬA DRONE + ⚙ Settings ▸ Boost + SỬA tab Driver (thầy: "Commit + push myGame và AWord bản mới nhất luôn") — ✅ push `12eeef7` + LIVE 9/9
 - `tools/chep-racing-words.py`: GOC `rw-5i.js` (lõi `sr3d-5i.js` + `rw-bloss-5i.js`) · GOC_THEM iPad `sr3d-padui-5i.js` (thay padui-5g) · CSS thêm `rw-5i.css` (cuối). `racing-words.js`: GAME `./3d/rw-5i.js`, CSS + rw-5i.
   `pad.js` rwMods nạp padui-5i. Chạy `python -I -X utf8 tools/chep-racing-words.py` (myGame `acd1f35`). Hồ sơ: myGame `speed-run/NGHIEN CUU GAMEPLAY.md` mục 49.

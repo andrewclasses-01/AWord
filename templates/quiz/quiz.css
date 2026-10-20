@@ -40,6 +40,26 @@
   padding-top: 0.14em;
 }
 
+/* ⭐ Đợt 559 — "Show text after answer" (câu chỉ có tiếng). Nút loa trên, chữ của câu
+   dưới; ô chữ dựng sẵn từ lúc câu mở (ẩn nhưng GIỮ CHỖ) nên trả lời xong khung không
+   nhảy. Màu riêng từng câu gắn inline từ `question.color` (quiz.js showReveal). */
+.aw-quiz-question.aw-quiz-has-reveal { flex-direction: column; gap: 0.12em; }
+.aw-quiz-reveal {
+  font-size: 2.3em;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  visibility: hidden;
+  opacity: 0;
+}
+.aw-quiz-reveal.is-shown { visibility: visible; opacity: 1; }
+.aw-quiz-reveal.is-pop { animation: aw-quiz-reveal-pop .42s cubic-bezier(.22, .9, .3, 1) both; }
+@keyframes aw-quiz-reveal-pop {
+  0%   { opacity: 0; transform: translateY(.18em) scale(.7); }
+  60%  { opacity: 1; transform: translateY(0) scale(1.08); }
+  100% { opacity: 1; transform: none; }
+}
+
 /* Answers in the lower part (margin-top:auto). Flex-wrap + justify-center gives
    the per-count layouts, and a short last row auto-centers. --per-row (set per
    question) fixes how many tiles fill one row. */

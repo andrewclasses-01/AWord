@@ -93,7 +93,7 @@ const quizTemplate = {
   // đổi "Show answer when wrong" thành "Show corrects").
   // ⚠️ Mã không có trong danh sách (Fight "In turns", Showdown "Balance questions")
   // tự xuống cuối — hai mode đó thầy chưa xếp.
-  checkOrder: ["shuffle", "shuffleAnswers", "autoNext", "allowSkip", "showAnswers"],
+  checkOrder: ["shuffle", "shuffleAnswers", "autoNext", "allowSkip", "showAnswers", "showTextAfter"],
   name: "Quiz",
   hasLivesSlot: true,      // hearts render in the top bar, left of the score (same slot as True/false)
   // FIGHT MODE (12/8/2026, trial second template after Anagram) — see the
@@ -164,7 +164,7 @@ const quizTemplate = {
   // these two options are cells of the SAME grid as the engine's, instead of
   // two more full-width groups with their own uppercase headings. Values,
   // ranges and draft fields are untouched; only the markup changed.
-  buildExtraOptions({ panel, draft, mkSliderCell, addCheck }) {
+  buildExtraOptions({ panel, draft, mkSliderCell, addCheck, hasVoice }) {
     // LIVES — a slider 0..10 (0 = Unlimited), teacher's spec 4/8/2026. A wrong
     // answer costs a heart; hitting 0 ends the game right away. Same control and
     // rendering pattern as True/false and Type the answer.
@@ -185,6 +185,17 @@ const quizTemplate = {
 
     addCheck("Allow skip", draft.allowSkip === true, v => draft.allowSkip = v,
       { key: "allowSkip", title: "Allow skip (move on without answering)" });
+
+    // ⭐ Đợt 559 (thầy, 21/10/2026 — BT1 bảng chữ cái K10: "sau khi chọn câu trả lời,
+    // letter đúng sẽ xuất hiện"). Câu CHỈ CÓ TIẾNG (Content = Voice) giấu chữ suốt câu;
+    // bật ô này thì trả lời xong chữ của câu hiện ra dưới nút loa (màu riêng từng câu =
+    // `question.color`, để trống = màu chữ câu hỏi). Chỉ dựng khi act CÓ tiếng (engine
+    // truyền `hasVoice` = có dải Content) — act không tiếng mà có ô này là công tắc chết
+    // (luật Đợt 143).
+    if (hasVoice) {
+      addCheck("Show text after answer", draft.showTextAfter === true, v => draft.showTextAfter = v,
+        { key: "showTextAfter", title: "Voice-only questions: show the hidden text once the question is answered" });
+    }
   },
 
   // ☰ Menu pause (Đợt 363) — engine gọi onPause(true) lúc mở Menu / bảng công cụ,
@@ -315,6 +326,7 @@ const quizTemplate = {
     root.innerHTML = "";
     const card = el("div", "aw-quiz-card");
     const questionEl = el("div", "aw-quiz-question");
+    let revealEl = null;   // Đợt 559 — ô chữ "Show text after answer" của câu đang mở (null = không có)
     const answersRow = el("div", "aw-quiz-answers");
     // ⭐⭐ TIME LIMIT (Đợt 363) — hàng [số giây][thanh] nằm GIỮA câu hỏi và các ô đáp
     // án (thanh mang `margin-top:auto`, ô đáp án theo sau — xem quiz.css `.has-tl`).
@@ -496,6 +508,7 @@ const quizTemplate = {
 
       voicePlayer.stop();   // silence the PREVIOUS question's clip, if any
       questionEl.className = "aw-quiz-question";
+      revealEl = null;   // Đợt 559 — ô chữ hiện-sau-khi-trả-lời của câu CŨ đã bị xoá theo textContent
       const vv = voiceView(activity, q.src);   // Options > Content decides text/voice
       const hasVoice = vv.hasVoice, hideText = vv.hideText;
       if (hideText) {
@@ -512,6 +525,16 @@ const quizTemplate = {
         press(vBtn, e => { e.stopPropagation(); handleListenTap(q.src.voice, vBtn); });
         questionEl.append(vBtn);
         curVoiceBtn = vBtn;
+        // ⭐ Đợt 559 — "Show text after answer": ô chữ dựng SẴN (ẩn, giữ chỗ) ngay từ lúc
+        // câu mở ⇒ fitNow đo luôn chiều cao có chữ, trả lời xong chữ hiện TẠI CHỖ, khung
+        // không nhảy. Đã trả lời (quay lại câu cũ / bàn Fight đã lộ) ⇒ hiện ngay, không hiệu ứng.
+        if (hideText && opt.showTextAfter === true && q.question) {
+          questionEl.classList.add("aw-quiz-has-reveal");
+          revealEl = el("div", "aw-quiz-reveal");
+          revealEl.textContent = q.question;   // chữ thầy gõ — textContent, không phải HTML
+          questionEl.append(revealEl);
+          if (answered) showReveal(st, false, q);
+        }
         // FIGHT MODE: both boards show the same question, so only board 0
         // speaks — two copies of the same clip a few ms apart is an echo, not
         // a reading (same rule as anagram.js).
@@ -606,6 +629,7 @@ const quizTemplate = {
         if (t.tile.querySelector(".aw-tile-badge")) return;   // already revealed
         addBadges(t.tile, q.answers[k], k, st);
       });
+      showReveal(st, true);   // Đợt 559 — trong trận chữ cũng chờ tới lúc lộ đáp án
       syncFightLock();
     }
 
@@ -670,6 +694,19 @@ const quizTemplate = {
       }
     }
 
+    // ⭐ Đợt 559 — "Show text after answer": hiện chữ của câu đang mở (ô dựng sẵn trong
+    // applyQuestion). Màu riêng = `question.color` của câu gốc — TRỪ bài giao ẩn đáp án
+    // (`opt.anDapAn`) mà em chọn SAI: màu nói luôn câu thuộc nhóm nào (BT1: xanh lá =
+    // nguyên âm), nên chỉ hiện chữ màu thường — cùng luật "không lộ ô đúng" của addBadges.
+    function showReveal(st, animate, q = questions[index]) {
+      if (!revealEl) return;
+      const mau = q && q.src && typeof q.src.color === "string" ? q.src.color.trim() : "";
+      if (mau && !(opt.anDapAn && !st.correct)) revealEl.style.color = mau;
+      else revealEl.style.removeProperty("color");
+      revealEl.classList.add("is-shown");
+      if (animate) revealEl.classList.add("is-pop");
+    }
+
     // Small persistent marks after answering + dim every WRONG tile
     // (the correct tile always keeps its color)
     function addBadges(tile, ans, i, st) {
@@ -724,6 +761,7 @@ const quizTemplate = {
 
         // small persistent ✓/✗ + dim wrong tiles
         tiles.forEach((t, k) => addBadges(t.tile, q.answers[k], k, st));
+        showReveal(st, true);   // Đợt 559 — chữ của câu hiện ra (nếu bật Show text after answer)
       }
 
       if (st.correct) quizSound.correct(); else quizSound.wrong();

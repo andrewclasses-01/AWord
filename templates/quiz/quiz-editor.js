@@ -348,7 +348,10 @@ function normalize(activity) {
     let answers = (Array.isArray(q.answers) && q.answers.length ? q.answers : blankAnswers())
       .map(ans => ({ text: ans.text || "", correct: !!ans.correct }));
     if (!answers.some(a => a.correct)) answers[0].correct = true;   // always exactly-one default
-    return { question: q.question || "", answers };
+    // ⭐ Đợt 559 — GIỮ các trường không có ô sửa ở đây (`voice`/`voiceId`/`hideText` của câu chỉ
+    // có tiếng, `color` của "Show text after answer"). Trước đợt này dòng này chỉ trả {question,
+    // answers} ⇒ mở Edit rồi Save là act MẤT SẠCH tiếng, lặng lẽ (BT1 bảng chữ cái K10, 21/10/2026).
+    return { ...q, question: q.question || "", answers };
   });
   const setKey = activeContentSet(a);
   if (setKey) {

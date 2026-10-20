@@ -794,7 +794,10 @@ export function buildOptionsBody(host, {
       // ⚠️ A BOOLEAN, not the `fight` object: a template has no business reaching
       // into the referee from a builder, and handing it the object would invite
       // exactly that.
-      inFight: !!fight
+      inFight: !!fight,
+      // ⭐ Đợt 559 — act này CÓ tiếng (engine chỉ dựng dải Content khi act có clip) ⇒ template
+      // được dựng công tắc chỉ có nghĩa với câu có tiếng (Quiz "Show text after answer").
+      hasVoice: !!contentSwitch
     });
   }
 
