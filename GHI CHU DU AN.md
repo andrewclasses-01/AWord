@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 558 (20/10/2026) — RACING WORDS THẬT: myGame 5i — VẠCH LỬA DRONE + ⚙ Settings ▸ Boost + SỬA tab Driver (thầy: "Commit + push myGame và AWord bản mới nhất luôn")
+## Đợt 558 (20/10/2026) — RACING WORDS THẬT: myGame 5i — VẠCH LỬA DRONE + ⚙ Settings ▸ Boost + SỬA tab Driver (thầy: "Commit + push myGame và AWord bản mới nhất luôn") — ✅ push `12eeef7` + LIVE 9/9
 - `tools/chep-racing-words.py`: GOC `rw-5i.js` (lõi `sr3d-5i.js` + `rw-bloss-5i.js`) · GOC_THEM iPad `sr3d-padui-5i.js` (thay padui-5g) · CSS thêm `rw-5i.css` (cuối). `racing-words.js`: GAME `./3d/rw-5i.js`, CSS + rw-5i.
   `pad.js` rwMods nạp padui-5i. Chạy `python -I -X utf8 tools/chep-racing-words.py` (myGame `acd1f35`). Hồ sơ: myGame `speed-run/NGHIEN CUU GAMEPLAY.md` mục 49.
 - VẠCH LỬA (chế độ 1 drone): tên lửa drone TRÚNG đúng 1 xe và xe đó đang DẪN ⇒ giữ xe đó (mất lái như cũ) + lửa ngang đường 4,2 m sau nó; xe đuổi tự phanh, dừng cách lửa 6 m
