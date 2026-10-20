@@ -2,6 +2,11 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
+## Đợt 558 (20/10/2026) — myGame 5i: VẠCH LỬA DRONE + ⚙ Settings ▸ Boost + sửa tab Driver
+- GOC `rw-5i.js` · lõi `sr3d-5i.js` (+ `rw-bloss-5i.js` hiệu ứng boost mất, tự chèn CSS) · iPad `sr3d-padui-5i.js` (bọc padui-5g) + padlink-5e giữ nguyên · CSS thêm `rw-5i.css` sau rw-5h.css.
+- Cài đặt Boost theo MÁY (`racingwords.boost.v1`), không phải Options của act. Muốn theo act ⇒ chuyển thành khoá `sr*` trong RW_DEF / RW_FLAT.
+- Luật mới khi sửa lõi: nút tab Settings gắn lệnh qua `nav [data-tab]` (khung `.rw-c` cũng có data-tab) · tên trong lõi đã dùng: `FL` (máy quay), API `fire` (bắn) ⇒ vạch lửa = `FIRE_L` / getter `fireL`.
+
 ## Đợt 556 (19/10/2026) — myGame 5h: TỐI ƯU TOMKO khi bật drone
 - GOC `rw-5h.js` · lõi `sr3d-5h.js` (xưởng `sr3d-intro-5f.js`, iPad padui-5g / padlink-5e giữ nguyên) · CSS thêm `rw-5h.css` sau rw-5f.css.
 - Luật mới khi sửa lõi: vật liệu `transparent` + DoubleSide phải `forceSinglePass` TRƯỚC compileAsync (`singlePass()`); đổi độ nét KHÔNG gọi `fit(true)`; không đọc offsetWidth/clientWidth trong vòng khung.

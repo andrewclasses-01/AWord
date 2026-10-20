@@ -546,6 +546,20 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 558 (20/10/2026) — RACING WORDS THẬT: myGame 5i — VẠCH LỬA DRONE + ⚙ Settings ▸ Boost + SỬA tab Driver (thầy: "Commit + push myGame và AWord bản mới nhất luôn")
+- `tools/chep-racing-words.py`: GOC `rw-5i.js` (lõi `sr3d-5i.js` + `rw-bloss-5i.js`) · GOC_THEM iPad `sr3d-padui-5i.js` (thay padui-5g) · CSS thêm `rw-5i.css` (cuối). `racing-words.js`: GAME `./3d/rw-5i.js`, CSS + rw-5i.
+  `pad.js` rwMods nạp padui-5i. Chạy `python -I -X utf8 tools/chep-racing-words.py` (myGame `acd1f35`). Hồ sơ: myGame `speed-run/NGHIEN CUU GAMEPLAY.md` mục 49.
+- VẠCH LỬA (chế độ 1 drone): tên lửa drone TRÚNG đúng 1 xe và xe đó đang DẪN ⇒ giữ xe đó (mất lái như cũ) + lửa ngang đường 4,2 m sau nó; xe đuổi tự phanh, dừng cách lửa 6 m
+  (bảng FIRE LINE · WAIT FOR THE FIRE), không vượt được; hết mất lái ⇒ thả cả 2 cùng lúc, xe đuổi chậm Fire line slow % trong 1,6 s. Lửa = hạt sẵn có của tên lửa (0 shader mới).
+- ⚙ Settings ▸ tab Boost (nhớ theo MÁY `racingwords.boost.v1`, áp ngay): Next question 1–5 s (3) · Boost gain 0–100 % (15 = cũ) · Boost max 0–100 % (50; cũ 30) · Boost off 0–100 % (15 = cũ) · Fire line slow 0–50 % (15).
+- Sai ⇒ khúc boost mất ĐỎ trên bàn đạp rồi xịt xuống + khói đen (màn lớn; iPad tự nhận boost tụt > 7,5 % giữa 2 tin "i:", đường nối không đổi).
+- SỬA LỖI (thầy báo, có từ myGame 4w = AWord Đợt 553 → 556): tab DRIVER bấm lựa chọn không có tác dụng — khung `.rw-c` mang `data-tab` bị gắn lệnh mở tab ⇒ mọi cú bấm trong bảng dựng lại bảng,
+  xoá hộp xác nhận "Switch to …?". Nay chỉ gắn cho `nav [data-tab]`.
+- `load-files.js`: bộ Đợt 556 thay rw-5h/sr3d-5h ⇒ rw-5i/sr3d-5i + thêm rw-bloss-5i.js, rw-5i.css (100 file, số byte trên đĩa — cùng bộ file nên không đo lại). rw-4f/rw-4g.css công cụ chép chỉ đổi kiểu xuống dòng ⇒ trả về bản git.
+- Đã thử bàn `scratch/dot558-rw.html` (chép dot531, engine thật, launch `aword-dot558`): nạp rw-5i / sr3d-5i / rw-bloss-5i / rw-5i.css, 0 lỗi; Settings 5 tab (Driver · Camera · Race · Boost · Drone),
+  tab Driver bấm ⇒ hộp xác nhận hiện; tab Boost đủ 5 thanh; import padui-5i + padlink-5e được. Vạch lửa / boost đã đo ở myGame (mục 49).
+- ⬜ thầy thử TOMKO: vạch lửa (Settings ▸ Drone ▸ 1 drone ▸ Help the losing team, bắn Missile vào xe dẫn) + tab Boost + tab Driver · trả lời 2 câu: nghĩa "Boost max" + thanh thứ 5 (Fire line slow).
+
 ## Đợt 557 (19/10/2026) — ROCKET RACE: TÀU + TÊN LỬA 3D CÓ SẴN + ⚙ SETTINGS (myGame mẫu 12 → 12e `f4deb77`) (thầy: "commit và push cả myGame, cả AWord") — ✅ push `10c1298` + LIVE 32/32
 - **Nguồn:** myGame `rocket-race/game11` (= AWord a4170d8 + mẫu 12) chép bằng `myGame/tools/chep-rr-mau12-sang-aword.py` (đổi import three ⇒ ./vendor/three/, ./tau3d/) —
   `rr3d-view.js` · `rr3d-launch.js` · `rr3d-missile.js` (chỉ khác đúng phần mẫu 12, đã soát dòng cũ bị đổi) + **MỚI** `rr3d-ships.js` + `tau3d/` (7 tàu + 5 tên lửa glb nén

@@ -1,3 +1,6 @@
+// RACING WORDS — GÓI NHÚNG mẫu 5i (20/10/2026) = rw-5h.js + lõi sr3d-5i.js (VẠCH LỬA khi tên lửa drone trúng xe dẫn · ⚙ Settings ▸ Boost 5 thanh kéo · sai ⇒ boost đỏ xịt + khói) + CSS rw-5i.css.
+//   Tiếng vạch lửa: bùm trầm (rung chấn) + tiếng lửa cháy lặp suốt lúc lửa còn (dùng lại tiếng "fire" sẵn có — không thêm file).
+// ---- gốc 5h ----
 // RACING WORDS — GÓI NHÚNG mẫu 5h (19/10/2026) = rw-5f.js + lõi sr3d-5h.js (tối ưu lại trên TOMKO khi bật drone — NGHIEN CUU mục 48) + CSS rw-5h.css.
 // ---- gốc 5f ----
 // RACING WORDS — GÓI NHÚNG mẫu 5f (19/10/2026) = rw-5e.js + lõi sr3d-5f.js (màu sơn drone, máy quay ưu tiên xe dẫn + nâng theo khoảng cách) +
@@ -88,7 +91,7 @@
 //   onEvent   : (k, v) — "pad" (iPad nối / mất nối), "padMode", "end", …
 // ⇒ { setOptions(o) (true = áp ngay, false = AWord dựng lại), destroy(), game, intro }
 // =============================================================
-import { createSpeedRun } from "./sr3d-5h.js";   // 5h: tối ưu TOMKO (vẽ 1 lượt vật liệu trong suốt, cột drone không cấp lại khung đệm, bớt ép bố cục)   // 5f: màu sơn, máy quay theo xe dẫn · 5e: 2 drone · 5d: tải mẫu drone khi bật · 5a: tin iPad drone có hồi chiêu · 4z: vùng nổ trúng cả 2 xe · 4y: tâm bóng mờ, bảng nhiều hiệp · 4x: icon 2D Neon viền · 4w: màu tâm, 1 tâm, tab mượt · 4v: NEAR/FAR dời drone, dấu điểm rơi, Auto target · 4u: nghiêng 4 hướng · 4t: nhỏ 10 %, đạn ra từ bụng, chỉnh cột + zoom · 4s: đạn nhỏ, phóng về trước, đuôi lửa · 4r: đạn drone · 4q: tâm ngắm lục giác HUD · 4p: 5 mẫu giữ + Quad quay · 4o: lưới chọn mẫu + sửa quạt · 4n: 8 mẫu + quạt quay + bay lượn · 4m: mẫu drone 3D thật · 4l: + iPad drone · 4k: DRONE
+import { createSpeedRun } from "./sr3d-5i.js";   // 5i: vạch lửa drone + Settings ▸ Boost   // 5h: tối ưu TOMKO (vẽ 1 lượt vật liệu trong suốt, cột drone không cấp lại khung đệm, bớt ép bố cục)   // 5f: màu sơn, máy quay theo xe dẫn · 5e: 2 drone · 5d: tải mẫu drone khi bật · 5a: tin iPad drone có hồi chiêu · 4z: vùng nổ trúng cả 2 xe · 4y: tâm bóng mờ, bảng nhiều hiệp · 4x: icon 2D Neon viền · 4w: màu tâm, 1 tâm, tab mượt · 4v: NEAR/FAR dời drone, dấu điểm rơi, Auto target · 4u: nghiêng 4 hướng · 4t: nhỏ 10 %, đạn ra từ bụng, chỉnh cột + zoom · 4s: đạn nhỏ, phóng về trước, đuôi lửa · 4r: đạn drone · 4q: tâm ngắm lục giác HUD · 4p: 5 mẫu giữ + Quad quay · 4o: lưới chọn mẫu + sửa quạt · 4n: 8 mẫu + quạt quay + bay lượn · 4m: mẫu drone 3D thật · 4l: + iPad drone · 4k: DRONE
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
 import { createIntro } from "./sr3d-intro-5f.js";   // 5f: drone trong xưởng
 import { createSound } from "./sr3d-sound-3o.js";
@@ -298,6 +301,7 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
       S.loop("engine" + i, racing, { name: "engine", rate: (0.85 + v / 45 + boostK * 0.1) * slow, gain: 0.55 + 0.35 * boostK, pan: PAN[i] });
       S.loop("wind" + i, racing && (v > 25 || t.air), { name: "wind", gain: Math.min(1, (v - 20) / 25) + (t.air ? 0.4 : 0), rate: slow, pan: PAN[i] });
       S.loop("fire" + i, racing && (T.burnT || 0) > 0, { name: "fire", pan: PAN[i] });
+      if (i === 0) { const F = game.fireL; S.loop("fireline", racing && !!F, { name: "fire", gain: 1.2, rate: 0.8, pan: F ? PAN[F.c] * 0.5 : 0 }); }   // 5i: vạch lửa cháy
       if (T.nitroK > 0.6 && !T._sBoost) { T._sBoost = true; S.play("boost", { pan: PAN[i] }); } else if (T.nitroK < 0.2) T._sBoost = false;
       if (t.spin > 0 && !T._sSpin) { T._sSpin = true; S.play("screech", { pan: PAN[i] }); } else if (t.spin <= 0) T._sSpin = false;
       if (t.ms > (T._sMs ?? t.ms)) S.play("reload", { pan: PAN[i] }); T._sMs = t.ms;
@@ -312,6 +316,7 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
     if (k === "rsLight") { S.play("lightsBeep", { gain: 1.3 }); beep(660, 0.2, 0.28); return; }   // 4i: đèn 3-2-1 khi quay lại game
     if (k === "rsGo") { beep(1320, 0.34, 0.32); return; }
     if (k === "qnew") { qBoom(); return; }
+    if (k === "fireline") { if (v.on) { S.play("boom", { gain: 1.25, rate: 0.62 }); S.play("crash", { gain: 0.5, rate: 0.8, pan: PAN[v.chaser] }); } else S.play("pop", { gain: 0.5, rate: 0.8, pan: PAN[v.chaser] }); return; }   // 5i
     if (k === "light") { S.play("lightsBeep", { gain: 1.6 }); beep(660, 0.22, 0.3); return; }                    // 4g: từng đèn — to, rõ, nét
     if (k === "tick") { beep(v <= 3 ? 1320 : 880, v <= 3 ? 0.16 : 0.1, v <= 3 ? 0.26 : 0.17); if (v <= 3) S.play("lightsBeep", { gain: 1.1, rate: 1.25 }); return; }
     if (k === "drift") { S.play("screech", { pan: PAN[v.team], gain: v.loser ? 0.9 : 1.2, rate: v.loser ? 1 : 0.82 }); if (!v.loser) S.play("screech", { pan: PAN[v.team], gain: 0.8, rate: 0.7, delay: 0.25 }); return; }
