@@ -546,6 +546,10 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 569 (21/10/2026) — TRANG THỬ ẨN RACING WORDS 5j-h: SỬA LỖI Roadster bay là đứng im (thầy báo: lộn vòng từ dốc, bấm TAKE OFF ⇒ xe kẹt, ga không đi)
+- Chép từ myGame 5j-h (commit c47fbbe). Lỗi từ Đợt 568: lệnh tiến tới của nhánh bay bị nằm sau chú thích ⇒ bay là đứng im. Thêm: tốc bay không âm, BOOST khi bay phóng tới.
+- ⛔ Template `racing_words` THẬT vẫn KHÔNG ĐỔI (GOC rw-5i).
+
 ## Đợt 568 (21/10/2026) — TRANG THỬ ẨN RACING WORDS 5j-g: Roadster phanh có vệt bánh + khói, xưởng không che cảnh quay, bật thrust theo quán tính + camera mượt, đâm xe giao thông
 - Chép từ myGame 5j-g (commit e385da6): các file 5j trong `templates/racing-words/3d/`.
 - Tên lửa trúng xe giao thông: vùng nổ rộng ~6,5 m. ⛔ Template `racing_words` THẬT vẫn KHÔNG ĐỔI (GOC rw-5i).

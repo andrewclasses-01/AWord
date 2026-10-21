@@ -1455,7 +1455,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
         Object.assign(C, { mode: "kick", kAct: true, kickT: -1, kTw: rolling, kr: C.ar, kp: C.ap, kvy: C.vy, kW: C.flip ? (C.forced ? C.rollW : AIR.ROT) * C.flipDir : -Math.sign(wrapPI(C.ar) || 1) * 5, kE: wrapPI(C.ar) });
         C.kWt = 0; }   // 5j-g: KHÔNG nổ ngay — văng thêm theo quán tính (thân thẳng 0,4 s · đang lộn: tới khi gầm song song đất) rồi mới nổ
       else { C.mode = "up"; C.sp = 0; }
-      Object.assign(C, { jump: false, low: false, ap: 0, ar: 0, flip: 0, flipGoal: null, forced: false, ramp: null, twist: null, hy: 0, hopV: 0, flameT: 0, bK: 0 }); d.x = C.x; d.vx = C.vx; d.s = C.s; d.sPrev = C.s; d.vs = C.v; d.afs = 0; onEvent("carFly", { up: 1 }); }
+      Object.assign(C, { jump: false, low: false, ap: 0, ar: 0, flip: 0, flipGoal: null, forced: false, ramp: null, twist: null, hy: 0, hopV: 0, flameT: 0, bK: 0 }); { const ld = T[0].s > T[1].s ? T[0] : T[1]; d.bk = clamp(ld.s - C.s, D_BK0, D_BK1); }   /* 5j-h: cất cánh ⇒ chỗ đứng sau xe dẫn = chỗ đang ở (không bị giật về) */ d.x = C.x; d.vx = C.vx; d.s = C.s; d.sPrev = C.s; d.vs = C.v; d.afs = 0; onEvent("carFly", { up: 1 }); }
     else if (C.mode === "down") { C.mode = "up"; C.sp = 9; onEvent("carFly", { up: 1 }); }   // đang hạ ⇒ bay lên lại (không chờ khói)
     else { C.mode = "down"; C.kAct = false; C.kr = 0; C.kp = 0; onEvent("carFly", { up: 0 }); }   // đang lên / đang bay ⇒ hạ
     droneInfo(d);
@@ -1872,8 +1872,11 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       } else {
         // bay: tiến / lùi theo cụm xe (BOOST / BRAKE dời bk ở steerDrone), ngang bám tâm như drone
         C.dF = ex(C.dF || 0, C.mode === "down" && race && kBoost ? 1 : 0, 6, dt);   // 5j-f: đang HẠ mà bấm BOOST ⇒ đuôi phụt lửa đẩy tới
-        const sT = lead.s - d.bk, vT = lead.v + clamp((sT - C.s) * 0.9, -14, 14) + C.dF * 20;
-        if (!(C.mode === "kick" && C.kickT < 0.4)) C.v += (vT - C.v) * Math.min(1, dt * (C.mode === "kick" ? 0.6 : 1.5 + C.dF * 1.5));   // 5j-g: vừa bật thrust ⇒ giữ đà, bám cụm xe từ từ C.s += C.v * dt; d.s = C.s;
+        const sT = lead.s - d.bk; let vT = lead.v + clamp((sT - C.s) * 0.9, -14, 14) + C.dF * 20;
+        vT = Math.max(vT, lead.v * 0.5, 5);                                          // 5j-h: LỖI cũ — đầu trận xe đua ~10 m/s, Roadster ở trước ⇒ vT = 10 − 14 < 0 ⇒ trôi LÙI / đứng im. Nay không bao giờ dưới ½ tốc xe dẫn (≥ 5 m/s)
+        if (race && kBoost && C.mode !== "down") vT = Math.max(vT, lead.v + 14);       // 5j-h: đang bay bấm BOOST ⇒ phóng tới thật (cũ chỉ dời chỗ đứng sau xe 14 m/s ⇒ như không ăn ga)
+        if (!(C.mode === "kick" && C.kickT < 0.4)) C.v += (vT - C.v) * Math.min(1, dt * (C.mode === "kick" ? 0.6 : 1.5 + C.dF * 1.5));
+        C.s += C.v * dt; d.s = C.s;   // 5j-g: vừa bật thrust ⇒ giữ đà, bám cụm xe từ từ · 5j-h: LỖI 5j-g — dòng tiến tới bị nhét vào sau chú thích ⇒ bay là ĐỨNG IM
         flyBody(d, clamp(mx * 0.3 + d.ax * 0.45, -ROADX, ROADX), dt); C.x = d.x; C.vx = d.vx;
         if (C.mode === "kick") carKick(C, d, dt, alt);
         else if (C.mode === "up") { C.sp = (C.sp || 0) + dt; C.lift = ex(C.lift, 1, 2.5, dt); if (C.sp > 0.9 && C.lift > 0.6) C.y = ex(C.y, alt, 0.9, dt); if (C.y > alt - 0.4) { C.mode = "air"; droneInfo(d); } }   // 0,9 s đầu: xả khói xuống mặt đường rồi mới nhấc
