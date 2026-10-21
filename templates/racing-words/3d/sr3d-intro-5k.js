@@ -1,3 +1,4 @@
+// RACING WORDS mẫu 5k (21/10/2026) = sr3d-intro-5j.js, chỉ đổi mô-đun xe bay sang sr3d-flycar-5k.js (lõi 5k và xưởng PHẢI cùng mô-đun — 1 lần nạp glb, 1 bộ shader).
 // RACING WORDS mẫu 5j (21/10/2026) = sr3d-intro-5f.js + XE BAY ROADSTER TRONG XƯỞNG (thầy: "Cho Roadster hiện trong xưởng luôn. 3 xe to bằng nhau, màu xanh lá cây đậm, ở vị trí ngầu nhất"):
 //   · mẫu FLYING CAR · Roadster có trong ◀ ▶ ô drone; xe CỠ THẬT (4,57 m, như 2 xe đua), sơn xanh lá đậm (sr3d-flycar-5j), lơ lửng GIỮA 2 xe, nhô lên trước nửa thân,
 //     gầm đỏ + khói tràn sàn, bệ tên lửa dựng · 2 drone ⇒ chiếc đội 2 lơ lửng cao phía sau. Phim START: bay theo 2 xe ra cửa, bốc cao.
@@ -49,7 +50,7 @@ import { XE, prepXe } from "./sr3d-xe3d-3o.js";
 import { makeCar3d } from "./sr3d-car-4h.js";
 import { makeAutoRes } from "./sr3d-autores-3r.js";
 import { DRONE_PICK as DP0, SPAN as D_SPAN, loadDrone } from "./sr3d-drone3d-4p.js";   // 5f: drone trong xưởng
-import { createFlyCar, FLYCAR, PAINT as FC_PAINT } from "./sr3d-flycar-5j.js";   // 5j: xe bay Roadster
+import { createFlyCar, FLYCAR, PAINT as FC_PAINT } from "./sr3d-flycar-5k.js";   // 5j: xe bay Roadster
 const DRONE_PICK = [...DP0, FLYCAR];
 const FC_U = { uBend: { value: new THREE.Vector2(0, 0) }, uBendZ: { value: 0 }, uBendT: { value: (() => { const t = new THREE.DataTexture(new Float32Array(4), 1, 1, THREE.RGBAFormat, THREE.FloatType); t.needsUpdate = true; return t; })() }, uBendD: { value: 0 } };   // 5j: đường thẳng ⇒ cong = 0
 

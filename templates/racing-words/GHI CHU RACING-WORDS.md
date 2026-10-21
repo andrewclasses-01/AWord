@@ -2,6 +2,10 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
+## Đợt 571 (21/10/2026) — THẬT: myGame 5k + 5k-b (Roadster bám xe nhanh + tên lửa tự đuổi) — GOC rw-5k, iPad giữ padui-5j / padlink-5j
+- Roadster bám theo tốc độ THẬT của xe (vEff = v × airK khi bay dốc), trần 342 km/h; khói hông dính ống, rung mượt; tên lửa tự đuổi (dammo-5k home/tgt), không tâm: 1 chạm = xe xa, đúp = xe gần.
+- 5k-b: nút loại đạn iPad (d0–2) / phím 1 2 3 = chọn + bắn; 1 drone bỏ chờ đạn bay / hồi / pin. Chi tiết: myGame HO SO BAN GIAO mục MẪU 5k.
+
 ## Đợt 570 (21/10/2026) — THẬT: myGame 5j (XE BAY ROADSTER trong bộ Drone) — GOC rw-5j, iPad padui-5j / padlink-5j, + drone3d/flycar-F296.glb; gỡ trang thử ẩn. Hồ sơ: myGame `speed-run/HO SO BAN GIAO RACING WORDS.md` mục 5j (5j-b … 5j-i).
 
 ## Đợt 569 (21/10/2026) — TRANG THỬ ẨN myGame 5j-h — sửa lỗi Roadster bay đứng im (từ Đợt 568), tốc bay không âm, BOOST khi bay. Template thật KHÔNG đổi.

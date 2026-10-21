@@ -1,3 +1,4 @@
+// RACING WORDS — GÓI NHÚNG mẫu 5k (21/10/2026) = rw-5j.js + lõi sr3d-5k.js (Roadster bám xe nhanh 150–200 km/h kể cả qua dốc, mượt, tên lửa TỰ ĐUỔI: 1 chạm = xe xa · đúp = xe gần) + intro sr3d-intro-5k.js (cùng mô-đun flycar-5k).
 // RACING WORDS — GÓI NHÚNG mẫu 5j (21/10/2026) = rw-5i.js + lõi sr3d-5j.js (XE BAY ROADSTER trong bộ Drone). remote = createPadHost của sr3d-padlink-5j.js.
 // RACING WORDS — GÓI NHÚNG mẫu 5i (20/10/2026) = rw-5h.js + lõi sr3d-5i.js (VẠCH LỬA khi tên lửa drone trúng xe dẫn · ⚙ Settings ▸ Boost 5 thanh kéo · sai ⇒ boost đỏ xịt + khói) + CSS rw-5i.css.
 //   Tiếng vạch lửa: bùm trầm (rung chấn) + tiếng lửa cháy lặp suốt lúc lửa còn (dùng lại tiếng "fire" sẵn có — không thêm file).
@@ -92,9 +93,9 @@
 //   onEvent   : (k, v) — "pad" (iPad nối / mất nối), "padMode", "end", …
 // ⇒ { setOptions(o) (true = áp ngay, false = AWord dựng lại), destroy(), game, intro }
 // =============================================================
-import { createSpeedRun } from "./sr3d-5j.js";   // 5j: xe bay ROADSTER   // 5i: vạch lửa drone + Settings ▸ Boost   // 5h: tối ưu TOMKO (vẽ 1 lượt vật liệu trong suốt, cột drone không cấp lại khung đệm, bớt ép bố cục)   // 5f: màu sơn, máy quay theo xe dẫn · 5e: 2 drone · 5d: tải mẫu drone khi bật · 5a: tin iPad drone có hồi chiêu · 4z: vùng nổ trúng cả 2 xe · 4y: tâm bóng mờ, bảng nhiều hiệp · 4x: icon 2D Neon viền · 4w: màu tâm, 1 tâm, tab mượt · 4v: NEAR/FAR dời drone, dấu điểm rơi, Auto target · 4u: nghiêng 4 hướng · 4t: nhỏ 10 %, đạn ra từ bụng, chỉnh cột + zoom · 4s: đạn nhỏ, phóng về trước, đuôi lửa · 4r: đạn drone · 4q: tâm ngắm lục giác HUD · 4p: 5 mẫu giữ + Quad quay · 4o: lưới chọn mẫu + sửa quạt · 4n: 8 mẫu + quạt quay + bay lượn · 4m: mẫu drone 3D thật · 4l: + iPad drone · 4k: DRONE
+import { createSpeedRun } from "./sr3d-5k.js";   // 5j: xe bay ROADSTER   // 5i: vạch lửa drone + Settings ▸ Boost   // 5h: tối ưu TOMKO (vẽ 1 lượt vật liệu trong suốt, cột drone không cấp lại khung đệm, bớt ép bố cục)   // 5f: màu sơn, máy quay theo xe dẫn · 5e: 2 drone · 5d: tải mẫu drone khi bật · 5a: tin iPad drone có hồi chiêu · 4z: vùng nổ trúng cả 2 xe · 4y: tâm bóng mờ, bảng nhiều hiệp · 4x: icon 2D Neon viền · 4w: màu tâm, 1 tâm, tab mượt · 4v: NEAR/FAR dời drone, dấu điểm rơi, Auto target · 4u: nghiêng 4 hướng · 4t: nhỏ 10 %, đạn ra từ bụng, chỉnh cột + zoom · 4s: đạn nhỏ, phóng về trước, đuôi lửa · 4r: đạn drone · 4q: tâm ngắm lục giác HUD · 4p: 5 mẫu giữ + Quad quay · 4o: lưới chọn mẫu + sửa quạt · 4n: 8 mẫu + quạt quay + bay lượn · 4m: mẫu drone 3D thật · 4l: + iPad drone · 4k: DRONE
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
-import { createIntro } from "./sr3d-intro-5j.js";   // 5j: Roadster trong xưởng   // 5f: drone trong xưởng
+import { createIntro } from "./sr3d-intro-5k.js";   // 5j: Roadster trong xưởng   // 5f: drone trong xưởng
 import { createSound } from "./sr3d-sound-3o.js";
 import { qrSvg } from "./mc3d-qr.js";
 

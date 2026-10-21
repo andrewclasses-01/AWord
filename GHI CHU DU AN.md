@@ -546,6 +546,15 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 571 (21/10/2026) — RACING WORDS THẬT lên myGame 5k + 5k-b: Roadster bám xe nhanh + tên lửa tự đuổi
+**Thầy:** Roadster đạt tốc cao hơn, luôn bám xe nhanh kể cả khi xe vượt dốc 150–200 km/h; ở tốc cao hết giật, khói 2 bên không lệch; bỏ tâm tên lửa — tự đuổi tới khi trúng, 1 chạm = xe xa, đúp = xe gần,
+trúng 100 %, trên đường cũng vậy · thêm: bấm 1 trong 3 nút loại đạn cũng bắn luôn; 1 drone bắn thoải mái không chờ. "commit + push cả myGame, cả AWord".
+**Làm ở myGame** (`e15a653` 5k · `be0eca6` 5k-b · `43b74cf` hồ sơ — chi tiết, số đo, bẫy: myGame `speed-run/HO SO BAN GIAO RACING WORDS.md` mục MẪU 5k). Trước khi làm đã soát Đợt 570 ⇄ myGame 5j-i khớp 100 %.
+**Ở AWord:** worktree `dot571` · `tools/chep-racing-words.py` GOC `rw-5k.js` (GOC_THEM / CSS giữ) ⇒ chép rw-5k, sr3d-5k, sr3d-intro-5k, sr3d-flycar-5k, sr3d-dammo-5k, xoá 5 file 5j tương ứng
+(padlink-5j / padui-5j / world-5j / traffic-5j vẫn dùng) · `racing-words.js` GAME `./3d/rw-5k.js` · `load-files.js` đổi 5 dòng sang 5k với byte trên đĩa (chưa đo lại lượt tải thật). 3 file CSS chỉ khác CRLF.
+**Kiểm:** 40 file 3d/ giống myGame trừ dòng import · bàn thử `scratch/dot571-rw.html` (engine thật): nạp đúng rw-5k / sr3d-5k / intro-5k / flycar-5k / dammo-5k, xưởng hiện, 0 lỗi. Lối chơi đã kiểm ở myGame (6/6 phát trúng đúng xe, 3/3 bắn liên tục, Heart + Boost liền nhau).
+⬜ Thầy thử TOMKO + iPad thật (thẻ đạn iPad còn ghi "40 % · 4 s" — 1 drone không còn áp dụng).
+
 ## Đợt 570 (21/10/2026) — RACING WORDS THẬT lên myGame 5j: XE BAY ROADSTER trong bộ Drone (thầy chốt sau Đợt 562–569 trang thử)
 - chep-racing-words: GOC `rw-5j.js`, GOC_THEM `sr3d-padui-5j.js` + `sr3d-padlink-5j.js`, DRONE_GLB + `flycar-F296.glb`. myGame `4f5cc79` (5j-i).
 - racing-words.js GAME = ./3d/rw-5j.js + padlink-5j · rw-pad-signal.js + pad.js ⇒ padlink-5j / padui-5j · load-files.js = bộ đo 558 đổi tên 5j + thêm padlink-5j / flycar-5j / world-5j (số byte trên đĩa).

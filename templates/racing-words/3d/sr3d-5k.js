@@ -1,3 +1,10 @@
+// RACING WORDS — LÕI MẪU 5k (21/10/2026) = sr3d-5j.js + ROADSTER (thầy: "đạt tốc độ cao hơn, luôn bám xe nhanh hơn kể cả khi xe đó vượt dốc 150–200 km/h · mượt mọi tốc độ ·
+//   bỏ tâm tên lửa, tên lửa tự đuổi tới khi trúng — bấm 1 cái = xe xa, đúp = xe gần, trúng 100 % · trên đường cũng vậy"):
+//   · tốc độ theo xe = TỐC ĐỘ THẬT trên đường vEff (xe đang bay khỏi dốc đi ×airK tới 1,5 ⇒ cũ Roadster bám theo t.v nên tụt hẳn) · trần Roadster VC_MAX 95 m/s (342 km/h)
+//     (cũ BOOST chỉ tới VBOOST 47 m/s = 169 km/h trong khi xe đua NITRO 57, qua dốc ×1,2) · gia tốc tới 24 m/s² · bám bằng lò xo (khoảng cách + chênh tốc) thay kẹp ±7 / ±14.
+//   · rung (shake) = nhiễu MƯỢT (sin) thay Math.random() mỗi khung · lực đẩy hông theo gia tốc ngang ĐÃ LỌC (C.swA) ⇒ không đổi bên phụt loạn.
+//   · BẮN (mọi lúc, cả 2 drone): không tâm ngắm; 1 chạm = xe XA, chạm đúp (≤ 0,3 s) = xe GẦN; đạn tự đuổi (dammo-5k home) ⇒ droneHit tính trúng chắc chắn xe đích (h.tgt).
+// ---- gốc 5j ----
 // RACING WORDS — LÕI MẪU 5j (21/10/2026) = sr3d-5i.js + XE BAY "ROADSTER" (Ferrari 296 GTS) là 1 MẪU TRONG BỘ DRONE (thiết kế speed-run/thiet-ke-5j-xe-bay-v2.html):
 //   · ⚙ Settings ▸ Drone ▸ lưới mẫu thêm nhóm FLYING CAR · mẫu + phần bay ở sr3d-flycar-5j.js (cỡ THẬT 4,57 m, 3 nòng: trái HEART · giữa BOOST · phải MISSILE).
 //   · 1 drone + Roadster: xe ĐỖ trên đường sau 2 xe đua lúc 5 đèn (bệ tên lửa thu chìm) ⇒ GO: chạy như xe thường (BOOST vô hạn · BRAKE · lái), bệ bật lên khi lăn bánh,
@@ -327,9 +334,9 @@ import { createTwists, createPickups, TWIST, twistAngle } from "./sr3d-stunt-4b.
 import { createTraffic, TRAFFIC_MODES } from "./sr3d-traffic-5j.js";   /* 5j-f: + nổ / lật / cháy */
 import { makeAutoRes } from "./sr3d-autores-3r.js";
 import { icon as ICON, iconize } from "./rw-icons-4x.js";   /* 4x: icon 2D Neon viền */
-import { createDroneAmmo, DA } from "./sr3d-dammo-5j.js";   /* 5j-e: đạn Roadster bay qua đầu xe */   /* 5e: + chủ đạn */   /* 4w: dấu hiện / ẩn nhoè */   /* 4v: dấu điểm rơi + seek */   /* 4t: ra từ bụng */   /* 4s */   // 4r: đạn drone
+import { createDroneAmmo, DA } from "./sr3d-dammo-5k.js";   /* 5j-e: đạn Roadster bay qua đầu xe */   /* 5e: + chủ đạn */   /* 4w: dấu hiện / ẩn nhoè */   /* 4v: dấu điểm rơi + seek */   /* 4t: ra từ bụng */   /* 4s */   // 4r: đạn drone
 import { DRONE_MODELS as DM0, DRONE_PICK as DP0, droneInfo as droneMeta0, loadDrone } from "./sr3d-drone3d-4p.js";
-import { createFlyCar, FLYCAR, PAINT as FC_PAINT } from "./sr3d-flycar-5j.js";   /* 5j: xe bay ROADSTER */
+import { createFlyCar, FLYCAR, PAINT as FC_PAINT } from "./sr3d-flycar-5k.js";   /* 5j: xe bay ROADSTER */
 const DRONE_MODELS = [...DM0, FLYCAR], DRONE_PICK = [...DP0, FLYCAR], droneMeta = id => id === FLYCAR.id ? FLYCAR : droneMeta0(id);   // 5j   /* 4p */   // 4o: trục quạt = trọng tâm + vòng mờ · 4n: 8 mẫu + quạt quay · 4m
 import { createMissiles, MS, missileGeos, buildMissile } from "./sr3d-missile-4i.js";
 import { createRamps, createTrails, RadialBlurShader, RAMP, RAMP_SLOPE } from "./sr3d-fx-3c.js";
@@ -1443,10 +1450,14 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     mount.classList.toggle("rw-d2", two());                                    // 5e: 2 drone ⇒ bảng tối giản
     DR.forEach(d => dv2[d.n].ic.forEach((c, k) => { c.classList.toggle("on", k === d.sel); c.classList.toggle("off", !dset.ammo[AMMO[k].k]); }));
   }
-  function droneSel(k, d = D) { if (AMMO[k] && dset.ammo[AMMO[k].k]) { d.sel = k; paintDv(); droneInfo(d); } }
+  function droneSel(k, d = D, fire = false) { if (AMMO[k] && dset.ammo[AMMO[k].k]) { d.sel = k; paintDv(); droneInfo(d); if (fire && G.phase === "race" && !G.paused) droneFire(d); } }   // 5k-b (thầy): bấm nút loại đạn (iPad / phím 1 2 3) = chọn + BẮN luôn
+  function fireFw(d) { const C = d.car, f = C.fw; if (!f) return; C.fw = null; const s0 = d.sel; d.sel = f.k ?? s0; droneFire(d, f.n); d.sel = s0; }   // 5k-b: bắn phát đang chờ đúng loại đạn lúc bấm
   // 4l: tin cho iPad drone (chỉ kênh thẳng) · 5e: drone 2 = chỗ t = 3; drone không bay ⇒ báo "tắt"
   function droneInfo(d = D) { if (remote && remote.send && d.padOn) remote.send(2 + d.n, `j:${d.bat.toFixed(2)},${d.sel},${d.lock},${G.phase},${AMMO.map(a => dset.ammo[a.k] ? 1 : 0).join("")},${dMode()},${dTeam(d)},${dUsed(d) ? 1 : 0},${AMMO.map(a => Math.max(0, d.cd[a.k] - G.t).toFixed(1)).join("/")},${dammo.activeOf(d.n) > 0 ? 1 : 0},${carSt(d)},${isCar(d) ? Math.round(d.car.v * 3.6) : 0}`); }   /* 5a: + chờ · đạn bay */   /* 5j: + xe bay */
   const isCar = d => dset.model === FLYCAR.id;                                       // 5j
+  const vEff = t => t.v * (t.air && !t.bad ? t.airK : 1);                            // 5k: tốc độ THẬT trên đường (xe bay khỏi dốc đi ×airK — xem dòng t.s += ds)
+  const VC_MAX = 95, VC_ACC = 24;                                                    // 5k: trần Roadster 95 m/s ≈ 342 km/h · gia tốc tối đa
+  const nz = (t, a) => Math.sin(t * 31 + a) * 0.6 + Math.sin(t * 47.3 + a * 2.1) * 0.4;   // 5k: rung MƯỢT (cũ Math.random() mỗi khung ⇒ giật ở tốc độ cao)
   const CAR_COLS = [[FC_PAINT, "Racing green"], ["#c8102e", "Rosso red"], ["#ff6a13", "Orange"], ["#f5c400", "Giallo yellow"], ["#9be22d", "Lime"], ["#1f5fd6", "Blue"],
     ["#4fb3ff", "Sky blue"], ["#7a3cff", "Purple"], ["#ff4fa3", "Pink"], ["#f2f2f2", "White"], ["#9aa3ad", "Silver"], ["#15171a", "Black"]];   // 5j-c: bảng màu Roadster
   const carRoad = d => isCar(d) && !two() && d.car.mode === "road";
@@ -1468,36 +1479,40 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   // 4r: BẮN — đang đua · đủ pin · hết thời gian chờ loại đó
   const mzP = new THREE.Vector3(), mzD = new THREE.Vector3();
   const carVel = new THREE.Vector3();   // 5j-e
-  function droneFire(d = D, road = 0) {   /* 5j: road = 1 (xe gần) | 2 (xe xa) khi xe chạy đường */
+  function droneFire(d = D, road = 0) {   /* 5j: road = 1 | 2 · 5k: 1 = xe XA (chạm đơn) · 2 = xe GẦN (chạm đúp) — mọi lúc (đường + bay) */
     if (d.sel < 0 || !dUsed(d)) return;
-    if (carRoad(d) && !road) { const C = d.car; if (C.fw && G.t - C.fw.t < 0.3) { C.fw.n = 2; return; } C.fw = { t: G.t, n: 1 }; return; }   // 5j: chờ xem có chạm đúp
+    if (isCar(d) && !road) { const C = d.car;   // 5j: chờ xem có chạm đúp · 5k: cả lúc bay
+      if (C.fw && G.t - C.fw.t < 0.3) { if (C.fw.n === 1 && C.fw.k === d.sel) { C.fw.n = 2; return; } fireFw(d); }   // 5k-b: chạm thứ 3 liền / đổi loại đạn ⇒ bắn ngay phát đang chờ rồi chờ phát mới (bắn liên tục không mất phát)
+      C.fw = { t: G.t, n: 1, k: d.sel }; return; }
     const a = AMMO[d.sel], k = a.k, o = d.o;
     if (G.phase !== "race" || G.paused) { dvMsg("WAIT FOR THE RACE", d); return; }
-    if (dammo.activeOf(d.n) > 0) { dvMsg("WAIT · SHOT IN THE AIR", d); onEvent("droneDeny", { kind: k, why: "busy", drone: d.n }); return; }   // 4w: 1 quả một lúc (5e: mỗi drone)
-    if (d.cd[k] > G.t) { dvMsg(`${a.t.toUpperCase()} · READY IN ${Math.ceil(d.cd[k] - G.t)} s`, d); onEvent("droneDeny", { kind: k, why: "wait", drone: d.n }); return; }
-    if (d.bat < DA.COST[k] - 1e-6) { dvMsg("LOW BATTERY", d); onEvent("droneDeny", { kind: k, why: "battery", drone: d.n }); return; }
-    d.bat -= DA.COST[k]; d.cd[k] = G.t + DA.CD[k];
+    const free = !two();   // 5k-b (thầy): 1 drone ⇒ bắn THOẢI MÁI — không chờ đạn bay, không hồi, không tốn pin · 2 drone giữ luật cũ
+    if (!free && dammo.activeOf(d.n) > 0) { dvMsg("WAIT · SHOT IN THE AIR", d); onEvent("droneDeny", { kind: k, why: "busy", drone: d.n }); return; }   // 4w: 1 quả một lúc (5e: mỗi drone)
+    if (!free && d.cd[k] > G.t) { dvMsg(`${a.t.toUpperCase()} · READY IN ${Math.ceil(d.cd[k] - G.t)} s`, d); onEvent("droneDeny", { kind: k, why: "wait", drone: d.n }); return; }
+    if (!free && d.bat < DA.COST[k] - 1e-6) { dvMsg("LOW BATTERY", d); onEvent("droneDeny", { kind: k, why: "battery", drone: d.n }); return; }
+    if (!free) { d.bat -= DA.COST[k]; d.cd[k] = G.t + DA.CD[k]; }
     // 4v: KHÔNG khoá — đạn rơi đúng chỗ tâm ngắm; Auto target bật ⇒ điểm rơi trượt về xe gần (theo luật chế độ)
     const tg = d.lock, R = autoR(dset.autoK);
     const seek = dset.auto ? (x, s, tl) => { let best = null, bd = R; T.forEach(t => { if (t.done || t.dead || !canTarget(t.i, k, d)) return; const ps = t.s + t.v * tl, dd = Math.hypot(t.x - x, ps - s); if (dd < bd) { bd = dd; best = { x: t.x, s: ps }; } }); return best; } : null;
     let L0 = { x: o.g.position.x, y: o.g.position.y - 0.35, z: o.g.position.z - 1.5, src: o.g.position }, tx = d.ax, ts = d.s + d.ad;   /* 4t: ra từ bụng, bám drone */
+    let home = null, tgt = null;   // 5k: đạn tự đuổi
     if (isCar(d) && o.model && o.model.fc) {                                         // 5j: ra từ ĐÚNG NÒNG của loại đạn
       o.model.fc.muzzle(d.sel, mzP, mzD); L0 = { x: mzP.x, y: mzP.y, z: mzP.z, src: null };
-      if (road) {                                                                  // trên đường: xe gần / xa (trước lẫn sau), không tâm
+      if (road) {                                                                  // 5k: không tâm — 1 = xe XA · 2 = xe GẦN (trước lẫn sau), đạn tự đuổi tới khi trúng
         const C = d.car, live = T.filter(t => !t.done && !t.dead), ok = live.filter(t => canTarget(t.i, k, d)), pool = (ok.length ? ok : live).sort((p, q) => Math.abs(p.s - C.s) - Math.abs(q.s - C.s));
-        const tt = pool[Math.min(road - 1, pool.length - 1)];
-        if (tt) { tx = tt.x; ts = tt.s + tt.v * DA.T; } else { tx = C.x; ts = C.s + 40; }
+        const tt = road === 2 ? pool[0] : pool[pool.length - 1];
+        if (tt) { tx = tt.x; ts = tt.s + vEff(tt) * DA.T; tgt = tt.i; home = () => (tt.done || tt.dead) ? null : { x: tt.x, s: tt.s, y: tt.y || 0, v: vEff(tt) }; } else { tx = C.x; ts = C.s + 40; }
       }
     }
     const car = isCar(d) && o.model && o.model.fc;
-    if (car) { const C = d.car; carVel.set(C.vx, C.mode === "road" ? 0 : 0, -C.v); o.model.fc.puffTube(d.sel); }   // 5j-e: khói còn vương miệng nòng
-    dammo.fire({ owner: d.n, kind: k, x: L0.x, y: L0.y, z: L0.z, src: L0.src, tx, ts, seek, drift: autoV(dset.autoK), dir: car ? mzD : null, vel: car ? carVel : null });   /* 4v · 5j-e: + dir / vel */
-    onEvent("droneShot", { kind: k, lock: tg, drone: d.n }); droneInfo(d);
+    if (car) { const C = d.car; if (two()) carVel.set(d.vx || 0, 0, -(d.vs || 0)); else carVel.set(C.vx, 0, -C.v); o.model.fc.puffTube(d.sel); }   // 5k: 2 Roadster (chỉ bay) ⇒ vận tốc của drone   // 5j-e: khói còn vương miệng nòng
+    dammo.fire({ owner: d.n, kind: k, x: L0.x, y: L0.y, z: L0.z, src: L0.src, tx, ts, seek: home ? null : seek, drift: autoV(dset.autoK), dir: car ? mzD : null, vel: car ? carVel : null, home, tgt });   /* 4v · 5j-e: + dir / vel · 5k: + home / tgt */
+    onEvent("droneShot", { kind: k, lock: tg, drone: d.n, tgt }); droneInfo(d);   // 5k: + tgt (xe đạn tự đuổi)
   }
   // 4r: ĐẠN CHẠM — xe trong vùng nổ + chế độ cho phép loại đạn ⇒ trúng xe; không ⇒ trúng đường
   function droneHit(h) {   // 4z: mọi xe trong vùng nổ (không chỉ xe gần nhất) · 5e: h.owner = drone bắn
     const d = DR[h.owner || 0], cars = [];
-    if (G.phase === "race") T.forEach(t => { if (t.done || t.dead || t.y > 1.6) return; if (Math.abs(t.x - h.x) < 1.9 && Math.abs(t.s - h.s) < 3.8 && canTarget(t.i, h.kind, d)) cars.push(t.i); });
+    if (G.phase === "race") T.forEach(t => { if (t.done || t.dead) return; if (t.i === h.tgt ? canTarget(t.i, h.kind, d) : t.y <= 1.6 && Math.abs(t.x - h.x) < 1.9 && Math.abs(t.s - h.s) < 3.8 && canTarget(t.i, h.kind, d)) cars.push(t.i); });   // 5k: đạn tự đuổi ⇒ chắc chắn trúng xe đích (kể cả đang bay khỏi dốc)
     if (h.kind === "missile") {
       traffic.list.filter(v => !(v.burn > 0) && Math.hypot(v.x - h.x, (v.s - h.s) * 0.75) < 6.5).forEach(   /* 5j-g: vùng nổ rộng ⇒ chỉ cần trong vùng tác động là cháy */v => { traffic.blast(v, Math.sign(v.x - h.x) || 1); missiles.boom(v.x, -v.s, "hit"); onEvent("trafficBoom", {}); });   // 5j-f: xe giao thông nổ, lật, cháy
       if (cars.length) { cars.forEach(c => { impact({ from: c, to: c, P: { s: T[c].s, x: T[c].x }, drone: true }); d.stats.hit[c]++; }); if (!two() && cars.length === 1) fireLine(cars[0]); }   // 5i
@@ -1752,7 +1767,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     const e10 = 1 - Math.exp(-dt * 10); C.y = 0; C.ap = lerp(C.ap, 0, e10); C.ar = lerp(C.ar, 0, e10);
   }
   function carLaunch(C, part) {
-    C.jump = true; C.low = false; C.airT = 0; C.v = Math.min(C.v * AIR.BOOST, PHYS.VNITRO * 1.15);
+    C.jump = true; C.low = false; C.airT = 0; C.v = Math.min(C.v * AIR.BOOST, Math.max(PHYS.VNITRO * 1.15, C.v));   // 5k: Roadster đã nhanh hơn trần cũ thì KHÔNG bị hãm lại lúc rời dốc
     C.vy = Math.min(8.2, AIR.VY0 + C.v * Math.sin(RAMP_SLOPE) * AIR.VYK + C.v * 0.035);
     C.y = Math.max(C.y, RAMP.H * 0.9); C.ap = Math.max(C.ap, RAMP_SLOPE * 0.8); C.ar = 0; C.flip = 0; C.flipGoal = null; C.forced = false;
     C.airK = 1 + 0.5 * smooth(LOW_V, PHYS.VBOOST, C.v / AIR.BOOST); C.shake = Math.max(C.shake, 0.55);
@@ -1850,17 +1865,21 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       jump: false, low: false, vy: 0, airT: 0, airK: 1, arW: 0, ap: 0, ar: 0, flip: 0, flipDir: 1, flipGoal: null, forced: false, rollW: 0, ramp: null, rampPart: 0, twist: null, hy: 0, hopV: 0,
       kAct: false, kickT: -1, kTw: false, kr: 0, kp: 0, kvy: 0, kW: 0, kE: 0, kw: 0, kr0: 0, blast: 0, swirl: 0, flameT: 0, bK: 0 }); d.bk = D_BACK; }   /* 5j-c: + nhảy dốc · 5j-d: + kick / lửa / boost */
     const race = G.phase === "race", run = !G.paused;
-    if (run && C.fw && G.t - C.fw.t >= 0.3) { const n = C.fw.n; C.fw = null; droneFire(d, n); }   // hết 0,3 s ⇒ bắn (1 = xe gần · 2 = xe xa)
+    if (run && C.fw && G.t - C.fw.t >= 0.3) fireFw(d);   // hết 0,3 s ⇒ bắn (5k: 1 = xe XA · 2 = xe GẦN)
     if (run) {
       if (C.mode === "road") {
         const st = race ? clamp((d.keys.has("r") ? 1 : 0) - (d.keys.has("l") ? 1 : 0) + (pd ? pd.steer : 0), -1, 1) : 0;
         C.steer += (st - C.steer) * Math.min(1, dt * 8);
         if (!C.jump) {
-          let a = !race || kBrake ? -PHYS.BRAKE : kBoost ? (C.v < PHYS.VBOOST ? PHYS.ACCB : -2) : 0;   // BOOST vô hạn
-          if (race && !kBrake && !kBoost) { const live = T.filter(t => !t.dead), tl = live.length ? live.reduce((p, q) => q.s < p.s ? q : p) : lead;   // 5j-f: không BOOST ⇒ tự lùi về SAU xe cuối ~14 m (thấy được cả 2 xe)
-            const vT = Math.max(PHYS.VMIN, tl.v + clamp((tl.s - 14 - C.s) * 0.55, -14, 7)); a = clamp((vT - C.v) * 2.4, -PHYS.BRAKE * 0.55, PHYS.ACC); }
-          if (race && C.flameT > 0 && !kBrake) a = Math.max(a, C.v < PHYS.VBOOST + 6 ? PHYS.ACCB * 1.5 : 0);   // 5j-d: vừa đáp từ trên trời ⇒ đuôi phụt lửa tăng tốc bắt nhịp
-          C.v = clamp(C.v + (a - (C.ramp && !kBoost ? 9.8 * Math.sin(RAMP_SLOPE) * 3.2 : 0)) * dt, 0, Math.max(PHYS.VNITRO, C.v - 6 * dt));   // leo dốc không BOOST ⇒ trọng lực hãm như xe thường
+          const live = T.filter(t => !t.dead), vF = live.length ? Math.max(...live.map(t => t.v)) : lead.v;   // 5k: xe NHANH nhất (tốc độ chạy đất)
+          // 5k: BOOST ⇒ luôn nhanh hơn xe nhanh nhất ≥ 14 m/s (tối thiểu VNITRO + 8) + đang tụt sau xe dẫn thì đẩy thêm tới +30 m/s (xe dẫn vừa bay dốc ×airK), lực kéo tới VC_ACC
+          //     — cũ dừng ở VBOOST 47 m/s (169 km/h) ⇒ không đuổi kịp xe NITRO 57 / qua dốc. (Không lấy vEff ở đây: xe dẫn đang bay ⇒ Roadster vọt 330 km/h vô lý.)
+          const vB = Math.min(VC_MAX, Math.max(PHYS.VNITRO + 8, vF + 14 + clamp((lead.s - C.s) * 0.25, 0, 30)));
+          let a = !race || kBrake ? -PHYS.BRAKE : kBoost ? clamp((vB - C.v) * 3, -4, VC_ACC) : 0;   // BOOST vô hạn
+          if (race && !kBrake && !kBoost) { const tl = live.length ? live.reduce((p, q) => q.s < p.s ? q : p) : lead;   // 5j-f: không BOOST ⇒ tự lùi về SAU xe cuối ~14 m (thấy được cả 2 xe)
+            const vT = Math.max(PHYS.VMIN, vEff(tl) + clamp((tl.s - 14 - C.s) * 0.8, -16, 16)); a = clamp((vT - C.v) * 3, -PHYS.BRAKE * 0.7, VC_ACC); }   // 5k: lò xo chặt hơn + tốc độ thật (cũ ±7 / gia tốc 10 ⇒ tụt khi xe cuối tăng tốc / bay dốc)
+          if (race && C.flameT > 0 && !kBrake) a = Math.max(a, C.v < vEff(lead) + 6 ? PHYS.ACCB * 1.5 : 0);   // 5j-d: vừa đáp từ trên trời ⇒ đuôi phụt lửa tăng tốc bắt nhịp
+          C.v = clamp(C.v + (a - (C.ramp && !kBoost ? 9.8 * Math.sin(RAMP_SLOPE) * 3.2 : 0)) * dt, 0, Math.max(VC_MAX, C.v - 6 * dt));   // leo dốc không BOOST ⇒ trọng lực hãm như xe thường · 5k: trần VC_MAX
           C.psi = clamp(C.psi + (C.steer * yawR(C.v) - C.v * kapV(C.s)) * dt, -0.7, 0.7);
           C.vx = C.v * Math.sin(C.psi);
         } else C.vx += st * 2.2 * dt;                                                  // đang bay khỏi dốc: lái = trôi ngang nhẹ
@@ -1871,16 +1890,18 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
         C.yaw += (-Math.atan2(C.vx + C.px * 0.5, Math.max(C.v, 5)) * 0.9 - C.yaw) * Math.min(1, dt * 8);
         if (C.jump) carAir(C, dt, race ? st : 0, race && kBrake); else carGround(C, s0, dt);   // 5j-c: cầu nhảy / dốc xoắn như xe thường
         C.hy += C.hopV * dt; C.hopV -= 14 * dt; if (C.hy <= 0) { C.hy = 0; C.hopV = 0; }   // nảy khi đáp (chỉ là hình)
-        C.flameT = Math.max(0, C.flameT - dt); C.bK = ex(C.bK, race && kBoost && !C.jump && C.v < PHYS.VBOOST + 2 ? 1 : 0, 5, dt);   // 5j-d
+        C.flameT = Math.max(0, C.flameT - dt); C.bK = ex(C.bK, race && kBoost && !C.jump ? 1 : 0, 3, dt);   // 5j-d · 5k: giữ suốt lúc BOOST (cũ tắt khi ≥ 49 m/s ⇒ máy quay + lửa giật), chuyển êm hơn
         C.lift = ex(C.lift, 0, 4, dt); C.pushT = Math.max(0, C.pushT - dt); C.brakeT = Math.max(0, C.brakeT - dt); C.shake *= Math.exp(-4 * dt);
         d.s = C.s; d.x = C.x; d.y = C.y; d.vx = C.vx; d.vs = C.v;
       } else {
         // bay: tiến / lùi theo cụm xe (BOOST / BRAKE dời bk ở steerDrone), ngang bám tâm như drone
         C.dF = ex(C.dF || 0, C.mode === "down" && race && kBoost ? 1 : 0, 6, dt);   // 5j-f: đang HẠ mà bấm BOOST ⇒ đuôi phụt lửa đẩy tới
-        const sT = lead.s - d.bk; let vT = lead.v + clamp((sT - C.s) * 0.9, -14, 14) + C.dF * 20;
-        vT = Math.max(vT, lead.v * 0.5, 5);                                          // 5j-h: LỖI cũ — đầu trận xe đua ~10 m/s, Roadster ở trước ⇒ vT = 10 − 14 < 0 ⇒ trôi LÙI / đứng im. Nay không bao giờ dưới ½ tốc xe dẫn (≥ 5 m/s)
-        if (race && kBoost && C.mode !== "down") vT = Math.max(vT, lead.v + 14);       // 5j-h: đang bay bấm BOOST ⇒ phóng tới thật (cũ chỉ dời chỗ đứng sau xe 14 m/s ⇒ như không ăn ga)
-        if (!(C.mode === "kick" && C.kickT < 0.4)) C.v += (vT - C.v) * Math.min(1, dt * (C.mode === "kick" ? 0.6 : 1.5 + C.dF * 1.5));
+        C.vL = ex(C.vL ?? vEff(lead), vEff(lead), 6, dt);                            // 5k: tốc độ THẬT của xe dẫn (lọc nhẹ — lúc xe rời dốc tốc nhảy ×1,2 · ×airK)
+        const sT = lead.s - d.bk; let vT = C.vL + clamp((sT - C.s) * 1.5, -24, 32) + C.dF * 20;   // 5k: lò xo chặt hơn, đuổi tới +32 m/s (cũ ±14 ⇒ tụt khi xe dẫn bay dốc 150–200 km/h)
+        vT = Math.max(vT, C.vL * 0.5, 5);                                            // 5j-h: LỖI cũ — đầu trận xe đua ~10 m/s, Roadster ở trước ⇒ vT = 10 − 14 < 0 ⇒ trôi LÙI / đứng im. Nay không bao giờ dưới ½ tốc xe dẫn (≥ 5 m/s)
+        if (race && kBoost && C.mode !== "down") vT = Math.max(vT, C.vL + 18);         // 5j-h: đang bay bấm BOOST ⇒ phóng tới thật (cũ chỉ dời chỗ đứng sau xe 14 m/s ⇒ như không ăn ga)
+        vT = Math.min(vT, Math.max(VC_MAX, C.vL + 20));
+        if (!(C.mode === "kick" && C.kickT < 0.4)) C.v += clamp((vT - C.v) * (C.mode === "kick" ? 0.6 : 3.2 + C.dF * 1.5), -36, 45) * dt;   // 5k: tối đa 45 m/s² (mượt, không nhảy tốc — đủ bắt xe dẫn vừa rời dốc ×1,2 · ×airK)
         C.s += C.v * dt; d.s = C.s;   // 5j-g: vừa bật thrust ⇒ giữ đà, bám cụm xe từ từ · 5j-h: LỖI 5j-g — dòng tiến tới bị nhét vào sau chú thích ⇒ bay là ĐỨNG IM
         flyBody(d, clamp(mx * 0.3 + d.ax * 0.45, -ROADX, ROADX), dt); C.x = d.x; C.vx = d.vx;
         if (C.mode === "kick") carKick(C, d, dt, alt);
@@ -1898,28 +1919,30 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     const air = C.mode !== "road" && C.y > 0.3, t3 = G.t, road = C.mode === "road";   // 5j-c: nhảy dốc KHÔNG phải bay
     const bob = air ? C.lift * (Math.sin(t3 * 1.6) * 0.1 + Math.sin(t3 * 2.7) * 0.04) : 0;
     const roll = air ? clamp(-(d.vx * 0.03 + d.axl * 0.02), -0.25, 0.25) + Math.sin(t3 * 1.3) * 0.012 + (C.kAct ? C.kr : 0) : -C.steer * 0.035 * clamp(C.v / 20, 0, 1) * (C.jump ? 0 : 1) + (road ? C.ar : 0);
-    const pitch = air ? clamp(-(C.v - lead.v) * 0.004, -0.06, 0.06) + (C.kAct ? C.kp : 0) : road ? C.ap : 0;
+    const vLd = C.vL ?? vEff(lead);   // 5k: tốc độ thật xe dẫn
+    const pitch = air ? clamp(-(C.v - vLd) * 0.004, -0.06, 0.06) + (C.kAct ? C.kp : 0) : road ? C.ap : 0;
     const sh = C.shake * 0.04;
-    o.g.rotation.order = "YXZ"; o.g.position.set(C.x + (Math.random() - 0.5) * sh, C.y + bob + (road ? C.hy : 0), -C.s); o.g.rotation.set(pitch, C.yaw + C.yk, roll); o.g.scale.setScalar(1);
+    o.g.rotation.order = "YXZ"; o.g.position.set(C.x + nz(t3, 0) * 0.5 * sh, C.y + bob + (road ? C.hy : 0), -C.s);   // 5k: rung mượt o.g.rotation.set(pitch, C.yaw + C.yk, roll); o.g.scale.setScalar(1);
     o.sh.visible = false; o.glow.visible = false;
     C.pod = ex(C.pod, air || (race && C.v > 0.3) ? 1 : 0, 4, dt);                 // bệ: lúc đếm chưa hiện · lăn bánh / bay ⇒ bật lên
     const vy = dt > 0 ? (C.y - (C.py ?? C.y)) / dt : 0; C.py = C.y;
     const gnd = C.mode === "road" ? 0 : C.lift * clamp(1 - C.y / 4, 0, 1);       // sát mặt đường + đang đẩy ⇒ khói tràn đường
     const kw = C.kAct && C.kickT >= 0, flame = road ? Math.max(C.bK * 0.4, Math.min(1, C.flameT)) : C.mode === "down" ? (C.dF || 0) : 0;   // 5j-d · 5j-f: hạ + BOOST
     const liftV = road ? (C.jump && !C.low ? 0.35 : C.lift) : C.mode === "kick" && C.kickT < 0 ? 1.5 : C.lift;   // nhảy dốc = gầm hé thrust · chờ bật = gầm phụt mạnh (khói xoáy theo thân lộn)
-    const rearV = road ? Math.max(C.bK * 0.3, C.flameT > 0 ? 0.9 : 0, C.jump && !C.low ? 0.3 : 0) : Math.max(clamp(0.2 + (C.v - lead.v) * 0.08, 0.15, 1), (C.dF || 0) * 0.9);
+    const rearV = road ? Math.max(C.bK * 0.3, C.flameT > 0 ? 0.9 : 0, C.jump && !C.low ? 0.3 : 0) : Math.max(clamp(0.2 + (C.v - vLd) * 0.08, 0.15, 1), (C.dF || 0) * 0.9);
+    C.swA = ex(C.swA || 0, clamp(d.axl / 3, -1, 1), 3, dt);   // 5k: gia tốc ngang ĐÃ LỌC ⇒ ống hông không đổi bên loạn xạ khi xe đua lạng ở tốc độ cao
     if (fc) fc.update(G.paused ? 0 : dt, { t: G.t, air: air ? 1 : 0, lift: liftV, rear: rearV, brake: race && kBrake ? 1 : 0,   /* 5j-f: đèn phanh */ ground: gnd, flame, blast: G.paused ? 0 : C.blast, swirl: C.swirl,
       still: !kw && Math.abs(d.vx) < 0.6 && Math.abs(d.axl) < 0.8,
-      side: { want: road ? 0 : kw && C.kickT < 3 ? clamp(-C.kr * 6, -1, 1) : clamp(d.axl / 3, -1, 1), yaw: d.vx }, carry: carV.set(C.vx, vy, -C.v), spin: road || C.y < 0.05 ? C.v * dt / 0.35 : 0.3 * dt, pod: C.pod, sel: d.sel });
+      side: { want: road ? 0 : kw && C.kickT < 3 ? clamp(-C.kr * 6, -1, 1) : C.swA, yaw: d.vx }, carry: carV.set(C.vx, vy, -C.v), spin: road || C.y < 0.05 ? C.v * dt / 0.35 : 0.3 * dt, pod: C.pod, sel: d.sel });
     if (!G.paused) { C.blast = 0; if (run) carSkid(d, C, race && kBrake, dt); }   // 5j-g: phanh ⇒ vệt bánh + khói
     // máy quay cột: trên đường = sau xe, thấp · bay = lùi xa + cao (xe cỡ thật không quá to)
     C.ck = ex(C.ck ?? 0, road ? 0 : clamp(C.y / alt, 0, 1), C.mode === "kick" || C.mode === "down" ? 0.9 : 2.2, dt);   // 5j-g: góc máy chuyển TỪ TỪ (cũ nhảy ngay khi đổi chế độ)
     const k = C.ck, kk = k * k * (3 - 2 * k), jy = C.y * 0.75 * (1 - kk);   // 5j-c: nhảy dốc ⇒ máy quay đường nâng theo
     const csh = C.shake * 0.06, bz = road ? C.bK * 1.1 + Math.min(1, C.flameT) * 1.4 : 0;   // 5j-d: BOOST / lửa ⇒ máy quay tụt lại sau một chút
-    dcam.position.set(lerp(C.x * 0.9, C.x * 0.85, kk) + (Math.random() - 0.5) * csh, lerp(3.1 + jy + bz * 0.15, C.y + 6.5 * zf, kk) + (Math.random() - 0.5) * csh, -(C.s - lerp(8.5 + bz, 9.5 * zf, kk)));
+    dcam.position.set(lerp(C.x * 0.9, C.x * 0.85, kk) + nz(t3, 1.7) * 0.5 * csh, lerp(3.1 + jy + bz * 0.15, C.y + 6.5 * zf, kk) + nz(t3, 4.1) * 0.5 * csh, -(C.s - lerp(8.5 + bz, 9.5 * zf, kk)));   // 5k: rung mượt
     dcam.lookAt(lerp(C.x, lerp(mx, d.ax, 0.5) * 0.6, kk), lerp(1.1 + jy, 0, kk), -(C.s + lerp(26, 24 + 10 * (zf - 1) + lookX, kk)));
     DV.S = C.s + lerp(14, d.bk * 0.5 + 10, kk);
-    return aimDrone(d, dt, vis && !road && C.y > 2);                                        // trên đường KHÔNG tâm ngắm
+    return aimDrone(d, dt, false);                                                          // 5k: Roadster KHÔNG tâm ngắm (cả lúc bay) — đạn tự đuổi
   }
   // 5. tâm ngắm của 1 drone — 4w: LUÔN 1 TÂM / drone (đạn của drone đó đang bay ⇒ ẩn) · hiện / ẩn nhoè · 4y: tâm bóng mờ trắng khi đạn bay · 5e: chấm thoi màu đội giữa tâm (2 drone)
   function aimDrone(d, dt, vis) {
@@ -1972,7 +1995,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       { const bs = `scaleX(${D.bat.toFixed(3)})`; if (bs !== D.batTx) { D.batTx = bs; dvBat.style.transform = bs; dvBat.classList.toggle("low", D.bat < 0.25); } }
       dvChips.forEach((c, k) => { const ak = AMMO[k].k, w = D.cd[ak] > G.t || D.bat < DA.COST[ak]; if (c.classList.contains("wait") !== w) c.classList.toggle("wait", w); });
       if (D.msgT > 0) D.msgT -= dt;
-      else { const tx = D.sel < 0 ? "NO AMMO" : carRoad(D) ? "ON ROAD · FIRE = NEAREST · 2× = FARTHER" : best >= 0 ? "IN SIGHT · " + TEAMS[best].name : "AIM ON THE ROAD";   /* 5j */
+      else { const tx = D.sel < 0 ? "NO AMMO" : isCar(D) ? "AUTO-HOMING · FIRE = FARTHER · 2× = NEAREST" : best >= 0 ? "IN SIGHT · " + TEAMS[best].name : "AIM ON THE ROAD";   /* 5j */
         if (tx !== dvLockTx) { dvLockTx = tx; dvLock.textContent = tx; dvLock.style.color = best >= 0 ? TEAMS[best].color : ""; } }
     } else {
       // 3. (5e — 2 drone) ĐỘI HÌNH: máy quay ở khoảng TRUNG BÌNH NEAR / FAR của 2 iPad; mỗi drone nhích ±3 m theo ý mình; drone 2 cao +1 m, lùi 0,7 m (trên màn ngang hàng)
@@ -1986,7 +2009,8 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
         const xT = clamp(F.x + side * 1.45 + lean, -ROADX, ROADX);
         if (!d.init) { d.ds = wantDs; d.s = F.s + d.ds; d.x = xT; d.vx = 0; d.sPrev = d.s; d.vs = 0; d.afs = 0; d.ax = side * 2.2; d.init = true; }   // 5e: tâm mới bật = nửa đường đội mình (2 tâm không chồng)
         d.ds += (wantDs - d.ds) * (1 - Math.exp(-dt * 2)); d.s = F.s + d.ds; d.y = alt + (d.n ? 1 : 0);   /* 5f: nâng theo khoảng cách */
-        flyBody(d, xT, dt); poseDrone(d, dt, d.n * 1.9); aimDrone(d, dt, vis);
+        flyBody(d, xT, dt); poseDrone(d, dt, d.n * 1.9); aimDrone(d, dt, vis && !isCar(d));   // 5k: Roadster không tâm
+        if (isCar(d) && !G.paused && d.car.fw && G.t - d.car.fw.t >= 0.3) fireFw(d);   // 5k: 2 Roadster cũng bắn kiểu 1 chạm = xa · đúp = gần
         if (!G.paused && G.phase === "race") d.bat = Math.min(1, d.bat + DA.RECHARGE * dt);
         // 7. bảng tối giản M1: icon đang chọn sáng · đang chờ = vòng chạy · thiếu pin = mờ · vạch pin màu đội (đỏ khi yếu)
         const u = dv2[d.n];
@@ -2218,12 +2242,12 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   const onKeyDown = e => {
     if (dset.on && (DKEYS[e.code] || /^Digit[123]$/.test(e.code) || e.code === "Space" || e.code === "KeyY") && !e.target.closest?.("input,textarea,button")) {   /* 4k: phím drone */
       e.preventDefault(); if (G.paused) return;
-      if (DKEYS[e.code]) D.keys.add(DKEYS[e.code]); else if (e.code === "Space") { if (!e.repeat) droneFire(); } else if (e.code === "KeyY") { if (!e.repeat) toggleFly(D); } else droneSel(+e.code.slice(5) - 1);   /* 5j: Y */
+      if (DKEYS[e.code]) D.keys.add(DKEYS[e.code]); else if (e.code === "Space") { if (!e.repeat) droneFire(); } else if (e.code === "KeyY") { if (!e.repeat) toggleFly(D); } else if (!e.repeat) droneSel(+e.code.slice(5) - 1, D, true);   /* 5j: Y */   /* 5k-b: phím 1 2 3 = chọn + bắn */
       return;
     }
     if (two() && (DKEYS2[e.code] || /^Numpad[0-3]$/.test(e.code)) && !e.target.closest?.("input,textarea")) {   /* 5e: drone 2 = bàn số */
       e.preventDefault(); if (G.paused) return; const d2 = DR[1];
-      if (DKEYS2[e.code]) d2.keys.add(DKEYS2[e.code]); else if (e.code === "Numpad0") { if (!e.repeat) droneFire(d2); } else droneSel(+e.code.slice(6) - 1, d2);
+      if (DKEYS2[e.code]) d2.keys.add(DKEYS2[e.code]); else if (e.code === "Numpad0") { if (!e.repeat) droneFire(d2); } else if (!e.repeat) droneSel(+e.code.slice(6) - 1, d2, true);   /* 5k-b */
       return;
     }
     const m = KEYMAP[e.code]; if (!m || e.target.closest?.("input,textarea")) return;
@@ -3112,7 +3136,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   raf = requestAnimationFrame(loop);
 
   if (remote) remote.attach({
-    press: (i, k) => { if (i >= 2) { const dr = DR[i - 2]; if (!dr) return; if (k === "fire") droneFire(dr); else if (k === "fly") toggleFly(dr); else if (/^d[0-2]$/.test(k)) droneSel(+k[1], dr); return; }   /* 5j: fly */ if (k === "fire") fire(i); },   /* 4l: iPad drone · 5e: t = 3 = drone 2 */
+    press: (i, k) => { if (i >= 2) { const dr = DR[i - 2]; if (!dr) return; if (k === "fire") droneFire(dr); else if (k === "fly") toggleFly(dr); else if (/^d[0-2]$/.test(k)) droneSel(+k[1], dr, true); return; }   /* 5k-b: nút loại đạn iPad = chọn + bắn */   /* 5j: fly */ if (k === "fire") fire(i); },   /* 4l: iPad drone · 5e: t = 3 = drone 2 */
     drive: (i, d) => { if (i >= 2) { const dr = DR[i - 2]; if (dr) { dr.pad = d; dr.padT = G.t; } return; } T[i].pad = d; T[i].padT = G.t; },
     status: (i, s) => { if (i >= 2) { const dr = DR[i - 2]; if (!dr) return; dr.padSt = s; dr.padOn = s === "on" || s === "relay"; onEvent("pad", { team: i, s }); droneInfo(dr); return; } T[i].padSt = s; T[i].padOn = s === "on" || s === "relay"; onEvent("pad", { team: i, s }); if (T[i].padOn) shareSteer(); },
     answer: (i, k, n) => { if (padMode === 1 && T[i].qn === n) answer(i, k); },

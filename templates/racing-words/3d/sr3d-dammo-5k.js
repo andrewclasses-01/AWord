@@ -1,3 +1,8 @@
+// RACING WORDS mẫu 5k (21/10/2026) = sr3d-dammo-5j.js + ĐẠN TỰ ĐUỔI (thầy: "bỏ tâm tên lửa, tên lửa tự đuổi đến khi trúng — tỷ lệ trúng 100 %"):
+//   fire({ …, home, tgt }) — home() ⇒ { x, s, y, v } của xe đích LÚC NÀY (null = xe đã về đích / chết ⇒ rơi chỗ cũ). Mỗi khung điểm rơi = chỗ xe SẼ tới khi đạn chạm
+//   (s + v · thời gian còn lại) ⇒ lúc chạm điểm rơi = ĐÚNG xe, kể cả xe đang bay khỏi dốc (theo cả độ cao y). Thời gian bay theo khoảng cách (m.T 1,2–3,2 s, xa ⇒ lâu hơn).
+//   Đạn tự đuổi KHÔNG có dấu điểm rơi trên đường. update() trả thêm tgt ⇒ lõi tính trúng chắc chắn xe đó.
+// ---- gốc 5j ----
 // RACING WORDS mẫu 5j (21/10/2026) = sr3d-dammo-5e.js + đạn bắn từ BỆ 3 NÒNG của Roadster (thầy: "bay vòng qua đầu xe rồi mới cuộn xuống — đang xuyên qua xe"):
 //   fire({ …, dir, vel }) — dir = hướng nòng (thế giới): đường cong rời nòng NGỬA LÊN theo nòng, vượt qua đầu xe rồi cuộn xuống điểm rơi;
 //   vel = vận tốc xe lúc bắn: đạn mang theo (giảm dần (1 − x)² tới 0 lúc chạm) ⇒ xe đang chạy 30–50 m/s không lao xuyên qua quả đạn vừa phóng.
@@ -86,20 +91,22 @@ export function createDroneAmmo({ scene, bend, U }) {
   return {
     get active() { return list.length; },
     activeOf(o) { let n = 0; for (const m of list) if ((m.owner || 0) === o) n++; return n; },   // 5e
-    fire({ kind, x, y, z, tx, ts, predict, src, seek, drift, owner = 0, dir = null, vel = null }) {   // 5j: + dir · vel   // 5e: + owner   // 4v: + seek / drift (Auto target) · predict giữ cho tương thích   // 4t: src = Vector3 SỐNG của drone (bám theo khi thả + đầu đường cong)
+    fire({ kind, x, y, z, tx, ts, predict, src, seek, drift, owner = 0, dir = null, vel = null, home = null, tgt = null }) {   // 5k: + home · tgt (tự đuổi)   // 5j: + dir · vel   // 5e: + owner   // 4v: + seek / drift (Auto target) · predict giữ cho tương thích   // 4t: src = Vector3 SỐNG của drone (bám theo khi thả + đầu đường cong)
       const L = LOOK[kind] || LOOK.missile, g = new THREE.Group();
       buildMissile(g, P, L.body, L.nose, L.fin); g.scale.setScalar(L.sc); g.position.set(x, y, z);
       g.traverse(o => { o.frustumCulled = false; }); scene.add(g);
       if (src) { x = src.x; y = src.y + DY0; z = src.z; g.position.set(x, y, z); g.scale.setScalar(L.sc * 0.5); }
-      const mk = makeMk(kind, tx, -ts);   // 4v: dấu điểm rơi · 4w: 2 lớp nét / nhoè
-      const m = { owner, kind, g, sc: L.sc, t: src ? -DROP : 0, src, lit: !src, seek, drift: drift || 0, mk, L0: new THREE.Vector3(x, y, z), P: new THREE.Vector3(tx, 0.4, -ts), predict, ph: Math.random() * 6.28, last: new THREE.Vector3(x, y, z), trailD: 0, dir: dir ? dir.clone().normalize() : null, vel: vel ? vel.clone() : null };
+      const mk = home ? null : makeMk(kind, tx, -ts);   // 4v: dấu điểm rơi · 4w: 2 lớp nét / nhoè · 5k: đạn tự đuổi KHÔNG có dấu
+      const T = home ? clamp(1.1 + Math.abs(ts + z) / 90, 1.2, 3.2) : DA.T;   // 5k: xa ⇒ bay lâu hơn (z = −s chỗ phóng)
+      const m = { owner, kind, g, sc: L.sc, t: src ? -DROP : 0, src, lit: !src, seek, drift: drift || 0, mk, L0: new THREE.Vector3(x, y, z), P: new THREE.Vector3(tx, 0.4, -ts), predict, ph: Math.random() * 6.28, last: new THREE.Vector3(x, y, z), trailD: 0, dir: dir ? dir.clone().normalize() : null, vel: vel ? vel.clone() : null, home, tgt, T };
       list.push(m);
       if (!src) for (let k = 0; k < 5; k++) puff.emit(x + (Math.random() - 0.5) * 0.4, y, z + (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 1.5, -0.5 - Math.random(), (Math.random() - 0.5) * 1.5, 0.5, 0.3, 0.35, 1.2, 1.8);   // 4s: khói phóng nhỏ
     },
     update(dt, t) {
       const hits = [];
       for (let i = list.length - 1; i >= 0; i--) {
-        const m = list[i]; m.t += dt; const tl = DA.T - m.t;
+        const m = list[i]; m.t += dt; const tl = m.T - m.t;
+        if (m.home) { const p = m.home(); if (p) m.P.set(p.x, (p.y || 0) + 0.4, -(p.s + p.v * Math.max(0, tl))); else m.home = null; }   // 5k: TỰ ĐUỔI — điểm rơi = chỗ xe sẽ tới lúc chạm (tl → 0 ⇒ đúng xe)
         if (m.src) {                                                                         // 4t: thả dưới bụng — bám drone, chưa lửa (thân drone che)
           const k = clamp(1 + m.t / DROP, 0, 1), kk = k * k;
           if (m.t < 0) { B.set(m.src.x, m.src.y + DY0 + (DY1 - DY0) * kk, m.src.z + DZ1 * k); m.g.position.copy(B); m.g.lookAt(tmp.set(B.x, B.y - 0.35 + 0.25 * k, B.z - 1)); m.g.scale.setScalar(m.sc * 0.5); m.last.copy(B); continue; }
@@ -109,11 +116,11 @@ export function createDroneAmmo({ scene, bend, U }) {
         }
         if (m.predict && tl > DA.LOCK) { const p = m.predict(tl); if (p) { const mx = DA.DRIFT * dt; m.P.x += clamp(p.x - m.P.x, -mx, mx); m.P.z = -p.s; } }   // định vị tương đối (4v: lõi không dùng nữa)
         if (m.seek && m.drift > 0 && tl > DA.LOCK && m.t >= 0) { const p = m.seek(m.P.x, -m.P.z, tl); if (p) { const mx = m.drift * dt; m.P.x += clamp(p.x - m.P.x, -mx, mx); m.P.z += clamp(-p.s - m.P.z, -mx, mx); } }   // 4v: Auto target
-        { const q = clamp((m.t + DROP) / (DA.T + DROP), 0, 1), r = 2 * (3.4 - 1.2 * q), bl = 0.82 + 0.18 * Math.sin((m.t + DROP) * (8 + 22 * q));   // 4v: dấu co dần, nháy nhanh dần
+        if (m.mk) { const q = clamp((m.t + DROP) / (m.T + DROP), 0, 1), r = 2 * (3.4 - 1.2 * q), bl = 0.82 + 0.18 * Math.sin((m.t + DROP) * (8 + 22 * q));   // 4v: dấu co dần, nháy nhanh dần
           const k = m.mk; k.v += (1 - k.v) * (1 - Math.exp(-dt * 7)); k.r = r * bl; k.rot = m.t * 1.2; k.a.position.set(m.P.x, 0.32, m.P.z); k.b.position.copy(k.a.position); paintMk(k); }   // 4w: hiện mượt
-        const x = clamp(m.t / DA.T, 0, 1), u = 0.3 * x + 0.7 * x * x;
+        const x = clamp(m.t / m.T, 0, 1), u = 0.3 * x + 0.7 * x * x;
         bez(m, u, B, Bt);
-        if (m.vel && m.t > 0) { const f = (1 - x) * (1 - x); B.addScaledVector(m.vel, m.t * f); Bt.multiplyScalar((0.3 + 1.4 * x) / DA.T).addScaledVector(m.vel, (1 - x) * (1 - 3 * x)); }   // 5j: mang vận tốc xe
+        if (m.vel && m.t > 0) { const f = (1 - x) * (1 - x); B.addScaledVector(m.vel, m.t * f); Bt.multiplyScalar((0.3 + 1.4 * x) / m.T).addScaledVector(m.vel, (1 - x) * (1 - 3 * x)); }   // 5j: mang vận tốc xe
         const w = Math.sin(Math.PI * x) * (1 - x * 0.6) * (m.dir ? Math.min(1, x * 3) : 1);   // 5j: rời nòng thẳng, chưa lạng ngay                                     // lạng lách: mạnh giữa đường bay, tắt dần lúc cắm xuống
         B.x += w * 0.75 * Math.sin(t * 11 + m.ph); B.y += w * 0.35 * Math.sin(t * 7.3 + m.ph * 1.7);
         m.g.position.copy(B); m.g.lookAt(tmp.copy(B).add(Bt)); m.g.rotateZ(t * 6);
@@ -129,7 +136,7 @@ export function createDroneAmmo({ scene, bend, U }) {
           gp.emit(tmp.x, tmp.y, tmp.z, (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.4, 0.35 + Math.random() * 0.25, 0.42, 0.75, 0.6, 0.4);
           puff.emit(tmp.x, tmp.y, tmp.z, 0, 0.2, 0, 0.8 + Math.random() * 0.5, 0.3, 0.22, 1.4, 0.6); }
         m.last.copy(B);
-        if (m.t >= DA.T) { hits.push({ kind: m.kind, x: m.P.x, s: -m.P.z, owner: m.owner }); kill(m, true); list.splice(i, 1); }   // 4w: dấu mờ dần
+        if (m.t >= m.T) { hits.push({ kind: m.kind, x: m.P.x, s: -m.P.z, owner: m.owner, tgt: m.home ? m.tgt : null }); kill(m, true); list.splice(i, 1); }   // 4w: dấu mờ dần · 5k: + tgt (đạn tự đuổi còn bám xe)
       }
       for (let i = rings.length - 1; i >= 0; i--) { const r = rings[i]; r.t += dt; const k = r.t / r.life;
         r.m.scale.setScalar(r.r0 + (r.r1 - r.r0) * Math.sqrt(Math.min(k, 1))); r.m.material.opacity = Math.max(0, 1 - k) * 0.95;

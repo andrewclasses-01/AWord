@@ -1,3 +1,8 @@
+// RACING WORDS mẫu 5k (21/10/2026) = sr3d-flycar-5j.js + KHÓI MƯỢT Ở TỐC ĐỘ CAO (thầy: "ở tốc độ cao khói xịt 2 bên bay lệch lung tung"):
+//   · LỖI cũ: hạt vừa phát được update() đẩy luôn carry·dt trong CÙNG khung ⇒ đầu dải khói hông vọt TRƯỚC miệng ống ~v·dt (≈ 0,9 m ở 200 km/h); khói nhịp hông dùng
+//     vận tốc xe LÚC PHÁT ⇒ xe tăng / giảm tốc là dải khói trôi lệch khỏi ống. Nay: update(dt, carry) chạy TRƯỚC khi phát; hạt nhịp hông (own ≥ 0) đi theo vận tốc xe HIỆN TẠI ⇒ dính ống.
+//   · khói gầm / đuôi / tràn đường: rải lùi ngẫu nhiên trong khoảng 1 khung dọc đường xe vừa đi (lui) ⇒ hết thành cục cách nhau v·dt khi chạy nhanh.
+// ---- gốc 5j ----
 // RACING WORDS mẫu 5j (21/10/2026) — XE BAY "ROADSTER" (Ferrari 296 GTS) = 1 MẪU TRONG BỘ DRONE.
 //   Thiết kế: speed-run/thiet-ke-5j-xe-bay-v2.html (thầy chốt) · gốc phần bay: xe-bay/mau-3.html + xe3.js (myGame).
 //   Mẫu: drone3d/flycar-F296.glb (Sketchfab "2023 Ferrari 296 GTS" — Ddiaz Design, CC BY-NC-SA 4.0; 4 bánh tách sẵn Wheel_LF/RF/LB/RB + kẹp phanh _cal).
@@ -58,12 +63,13 @@ function makeSmoke(U, n = 2400) {
       car[i * 3] = c ? c.x : 0; car[i * 3 + 1] = c ? c.y : 0; car[i * 3 + 2] = c ? c.z : 0;
       life[i] = max[i] = life0; sz[i] = size; a0[i] = alpha; a[i] = 0; grow[i] = gr; drag[i] = dr; own[i] = ownB; br[i] = bright;
     },
-    update(dt) {
+    update(dt, cv = null) {   // 5k: cv = vận tốc xe hiện tại — hạt nhịp hông (own ≥ 0) đi theo nó (dính ống)
       for (let b = 0; b < NB; b++) if (bLive[b]) { bT[b] += dt / bS[b]; const t = bT[b] - B_EMIT - B_HOLD; bEnv[b] = t <= 0 ? 1 : Math.max(0, 1 - t / B_FADE); if (bEnv[b] <= 0) bLive[b] = 0; }
       for (let i = 0; i < n; i++) {
         if (life[i] <= 0) { a[i] = 0; continue; }
         life[i] -= dt; const age = max[i] - life[i], kk = 1 - life[i] / max[i];
         const fd = (1 - Math.exp(-drag[i] * dt)) / drag[i], e = Math.exp(-drag[i] * dt);
+        if (cv && own[i] >= 0) { car[i * 3] = cv.x; car[i * 3 + 1] = cv.y; car[i * 3 + 2] = cv.z; }   // 5k
         for (let j = 0; j < 3; j++) { pos[i * 3 + j] += vel[i * 3 + j] * fd + car[i * 3 + j] * dt; vel[i * 3 + j] *= e; }
         if (pos[i * 3 + 1] < 0.12) { pos[i * 3 + 1] = 0.12;
           if (vel[i * 3 + 1] < -0.5) { const sp = Math.abs(vel[i * 3 + 1]) * 0.55, an = Math.random() * 6.283; vel[i * 3] += Math.cos(an) * sp; vel[i * 3 + 2] += Math.sin(an) * sp; car[i * 3 + 1] = 0; grow[i] = Math.max(grow[i], 1.6); }
@@ -244,6 +250,8 @@ export function createFlyCar({ bend, U }) {
       const P = new THREE.Vector3(), V = new THREE.Vector3(), C = new THREE.Vector3(), q = obj.getWorldQuaternion(new THREE.Quaternion());
       obj.updateMatrixWorld(true);
       const carry = st.carry || new THREE.Vector3();
+      smoke.update(dt, carry);   // 5k: cập nhật hạt CŨ trước, rồi mới phát hạt mới (cũ: phát xong mới update ⇒ hạt mới vọt trước ống v·dt)
+      const lui = f => P.addScaledVector(carry, -(1 - f) * dt * Math.random());   // 5k: rải lùi trong 1 khung dọc đường xe vừa đi (f = phần vận tốc xe hạt mang theo)
       // bánh
       parts.wheels.forEach(w => { w.rotateOnAxis(w.userData.ax, st.spin || 0); });   // 5j-c: quanh trục thật của bánh
       // bệ
@@ -259,7 +267,7 @@ export function createFlyCar({ bend, U }) {
         for (let k = 0; k < n; k++) {
           g.localToWorld(P.set((Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.02, 0.04));
           V.set((Math.random() - 0.5) * 0.8, -(10 + Math.random() * 4), (Math.random() - 0.5) * 0.8).applyQuaternion(q);
-          smoke.emit(P, V, C.copy(carry).multiplyScalar(0.9), 0.32 + Math.random() * 0.2, 0.22 + Math.random() * 0.15, 0.5, 2.4, 1.3, -1, 0);
+          lui(0.9); smoke.emit(P, V, C.copy(carry).multiplyScalar(0.9), 0.32 + Math.random() * 0.2, 0.22 + Math.random() * 0.15, 0.5, 2.4, 1.3, -1, 0);
         }
       }
       // khói tràn mặt đường dưới gầm: st.ground 0..1 (xe sát đất + đang đẩy) — bung ra vòng quanh xe, ở lại trên đường
@@ -268,7 +276,7 @@ export function createFlyCar({ bend, U }) {
         for (let k = 0; k < n; k++) {
           inn.localToWorld(P.set((Math.random() - 0.5) * 1.4, 0, (Math.random() - 0.5) * 3.2)); P.y = 0.18;
           const an = Math.random() * 6.283, sp = 3 + Math.random() * 6; V.set(Math.cos(an) * sp, 0.4 + Math.random() * 0.9, Math.sin(an) * sp);
-          smoke.emit(P, V, C.copy(carry).multiplyScalar(0.45).setY(0), 1.1 + Math.random() * 1.0, 0.4 + Math.random() * 0.35, 0.26, 1.5, 1.5, -1, 0);
+          lui(0.45); smoke.emit(P, V, C.copy(carry).multiplyScalar(0.45).setY(0), 1.1 + Math.random() * 1.0, 0.4 + Math.random() * 0.35, 0.26, 1.5, 1.5, -1, 0);
         } }
       // 5j-e: khói còn vương ở miệng nòng sau khi phóng (chùm đầu dày, sau mỏng dần, bám theo xe một chút rồi tụt lại)
       tubeSm.forEach((v, k) => { if (v <= 0) return; const t = parts.tubes[k]; if (!t) return; const n = Math.floor((v > 0.92 ? 260 : 26 * v) * dt + Math.random() * v);
@@ -300,7 +308,7 @@ export function createFlyCar({ bend, U }) {
         for (let k = 0; k < n; k++) {
           g.localToWorld(P.set(0, 0, 0.06));
           V.set((Math.random() - 0.5) * 0.5, (Math.random() - 0.2) * 0.35, 1.5 + rear * 9 + Math.random() * 2).applyQuaternion(q);   // +z cục bộ nhóm in = ra sau xe
-          smoke.emit(P, V, C.copy(carry).multiplyScalar(0.6), 0.6 + Math.random() * 0.5, 0.07 + rear * 0.08, 0.6, 0.9, 1.4, -1, 0.15);
+          lui(0.6); smoke.emit(P, V, C.copy(carry).multiplyScalar(0.6), 0.6 + Math.random() * 0.5, 0.07 + rear * 0.08, 0.6, 0.9, 1.4, -1, 0.15);
         }
       }
       // ống hông: bộ điều khiển chọn đúng 1 ống (giữ cân) hoặc dồn bên cần đẩy (đang dạt / lái)
@@ -330,7 +338,6 @@ export function createFlyCar({ bend, U }) {
           smoke.emit(P, V, carry, 9, kk < 1 ? 0.03 : 0.035, kk < 1 ? 0.26 : 0.42, (0.6 + Math.random() * 0.8) * 0.7, 13, active.b, 1);   // giữ cân ⇒ MỜ hơn   // 5j: nhỏ 30 %, mờ hơn · carry có cả vận tốc LÊN / XUỐNG ⇒ dải khói không méo
         }
       }
-      smoke.update(dt);
     },
     dispose() { mats.forEach(m => m.dispose()); smoke.dispose(); }
   };
