@@ -333,6 +333,12 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
     if (k === "droneShot") { S.play("mLaunch", { gain: 0.75, rate: v.kind === "missile" ? 1.05 : 1.35 }); return; }
     if (k === "droneHit") { if (v.kind === "missile") { if (v.team < 0) S.play("boom", { gain: 0.5, rate: 1.2 }); } else if (v.team >= 0) S.play(v.kind === "heart" ? "correct" : "boost", { pan: PAN[v.team], rate: v.kind === "heart" ? 1.25 : 1 }); else S.play("pop", { gain: 0.6 }); return; }
     if (k === "droneDeny") { S.play("wrong", { gain: 0.35, rate: 1.3 }); return; }
+    // 5j-d: tiếng Roadster — nhảy dốc · đáp · BẬT THRUST giữa trời (nổ) · cất / hạ cánh · chạm đất phụt lửa
+    if (k === "carKick") { S.play("boom", { gain: v.twist ? 1.15 : 0.9, rate: 0.78 }); S.play("boost", { gain: 1 }); S.play("hit", { gain: v.twist ? 0.8 : 0.55, delay: 0.05 }); return; }
+    if (k === "carJump") { S.play("flyby", { gain: 0.5, rate: 1.2 }); return; }
+    if (k === "carLand") { S.play("land", { gain: 0.8 }); return; }
+    if (k === "carFly") { if (v.up) S.play("boost", { gain: 0.55, rate: 0.8 }); return; }
+    if (k === "carTouch") { S.play("land", { gain: 0.9, rate: 0.9 }); S.play("screech", { gain: 0.35, rate: 1.1 }); S.play("boost", { gain: 0.95, delay: 0.2 }); return; }
     if (k === "correct") S.play("correct", { pan: PAN[v.team] });
     else if (k === "wrong") S.play("wrong", { pan: PAN[v.team] });
     else if (k === "fire") S.play("mLaunch", { pan: PAN[v.team] });

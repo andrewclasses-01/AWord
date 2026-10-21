@@ -546,6 +546,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 565 (21/10/2026) — TRANG THỬ ẨN RACING WORDS 5j-d: Roadster bật thrust giữa không trung (kick) + hạ cánh phụt lửa
+- Chép từ myGame 5j-d (commit 35f1c53): `3d/rw-5j.js · sr3d-5j.js · sr3d-flycar-5j.js · sr3d-intro-5j.js · sr3d-padui-5j.js`.
+- Đang bay khỏi dốc bấm TAKE OFF ⇒ nổ thrust + khói bung (đang lộn ⇒ lộn tới khi gầm song song đất mới nổ, khói xoáy) ⇒ hất lên trời, lắc rồi thrust hông cân bằng · LAND nhanh hơn, chạm đất văng đuôi nhẹ + đuôi phụt lửa tăng tốc · BOOST trên đường có lửa/khói đuôi · khói hông giữ cân ít/ngắn/mờ, 1/2 thời gian · tâm bắn vừa đủ trước xe · iPad: đang hạ bấm TAKE OFF được.
+- ⛔ Template `racing_words` THẬT vẫn KHÔNG ĐỔI (GOC rw-5i).
+
 ## Đợt 564 (21/10/2026) — TRANG THỬ ẨN RACING WORDS 5j-c: Roadster đứng sàn trong xưởng + bảng màu + bánh hết lắc + nhảy dốc
 - Chép từ myGame 5j-c (commit 6ddafaf): `3d/rw-5j.js · sr3d-5j.js · sr3d-flycar-5j.js · sr3d-intro-5j.js`.
 - Xưởng: Roadster đứng sàn, chéo phía sau 2 xe chính, giấu ống phụt + bệ, đèn trần riêng · Settings ▸ Drone ▸ Roadster ⇒ hàng "Roadster colour" (12 màu + custom, nhớ trên máy) · xanh mặc định tươi hơn #1e8f4e.

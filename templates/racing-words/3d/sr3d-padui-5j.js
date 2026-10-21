@@ -190,9 +190,9 @@ export function mountDroneApp(mount, { client, onBack }) {
     const on = car !== "-"; root.dataset.car = on ? "1" : "0";
     const nm = on ? "ROADSTER" : "DRONE"; const nb = $(".dq-name"), yn = root.querySelector(".dq-yn"); if (nb.textContent !== nm) nb.textContent = nm; if (yn && yn.textContent !== nm) yn.textContent = nm;
     if (!on) return;
-    const up = car === "r"; flyB.classList.toggle("dn", !up); flyLb.textContent = up ? "TAKE OFF" : car === "l" ? "LANDING" : "LAND";
+    const up = car === "r" || car === "l"; flyB.classList.toggle("dn", !up); flyLb.textContent = up ? "TAKE OFF" : "LAND";   /* 5j-d: đang hạ ⇒ nút = TAKE OFF (bấm = bay lại) */
     flyAr.setAttribute("d", up ? "M12 19V6M6 11.5 12 5.5l6 6" : "M12 5v13M6 12.5l6 6 6-6");
-    flyB.classList.toggle("off", car === "l" || (up && phase !== "race"));
+    flyB.classList.toggle("off", car === "r" && phase !== "race");
   }
   // nghiêng iPad (giữ nguyên 4u): tư thế vô lăng ô tô ~25° = 0 · xoay = ngang · ngả ra xa / kéo về = xa / gần
   const landscape = () => { const o = screen.orientation && screen.orientation.type; return o ? o.startsWith("landscape") : innerWidth > innerHeight; };

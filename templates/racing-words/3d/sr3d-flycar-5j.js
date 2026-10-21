@@ -47,10 +47,10 @@ function makeSmoke(U, n = 2400) {
   });
   const mesh = new THREE.Points(g, m); mesh.frustumCulled = false; mesh.renderOrder = 6;
   for (let i = 0; i < n; i++) pos[i * 3 + 1] = -999;
-  const NB = 32, bEnv = new Float32Array(NB), bT = new Float32Array(NB), bLive = new Uint8Array(NB); let bNext = 0, k = 0;
+  const NB = 32, bEnv = new Float32Array(NB), bT = new Float32Array(NB), bLive = new Uint8Array(NB), bS = new Float32Array(NB).fill(1);   /* 5j-d: bS = hệ số thời gian nhịp */ let bNext = 0, k = 0;
   return {
     mesh,
-    burst() { const b = bNext; bNext = (bNext + 1) % NB; bT[b] = 0; bEnv[b] = 1; bLive[b] = 1; return b; },
+    burst(k = 1) { const b = bNext; bNext = (bNext + 1) % NB; bT[b] = 0; bEnv[b] = 1; bLive[b] = 1; bS[b] = k; return b; },
     // p: điểm phát · v: vận tốc riêng (bị cản) · c: vận tốc mang theo (KHÔNG bị cản, vd = vận tốc xe) · ownB: số nhịp (-1 = tự do)
     emit(p, v, c, life0, size, alpha, gr, dr, ownB = -1, bright = 0) {
       const i = k = (k + 1) % n;
@@ -59,7 +59,7 @@ function makeSmoke(U, n = 2400) {
       life[i] = max[i] = life0; sz[i] = size; a0[i] = alpha; a[i] = 0; grow[i] = gr; drag[i] = dr; own[i] = ownB; br[i] = bright;
     },
     update(dt) {
-      for (let b = 0; b < NB; b++) if (bLive[b]) { bT[b] += dt; const t = bT[b] - B_EMIT - B_HOLD; bEnv[b] = t <= 0 ? 1 : Math.max(0, 1 - t / B_FADE); if (bEnv[b] <= 0) bLive[b] = 0; }
+      for (let b = 0; b < NB; b++) if (bLive[b]) { bT[b] += dt / bS[b]; const t = bT[b] - B_EMIT - B_HOLD; bEnv[b] = t <= 0 ? 1 : Math.max(0, 1 - t / B_FADE); if (bEnv[b] <= 0) bLive[b] = 0; }
       for (let i = 0; i < n; i++) {
         if (life[i] <= 0) { a[i] = 0; continue; }
         life[i] -= dt; const age = max[i] - life[i], kk = 1 - life[i] / max[i];
@@ -111,6 +111,11 @@ export function createFlyCar({ bend, U }) {
   // ---- ống + bệ (dựng ngay, không cần chờ mẫu)
   for (const [x, y, z] of UNDER) { const g = nozzle(0.026, 0.03, 0.04); g.position.set(x, y, z); g.quaternion.setFromUnitVectors(Z, new THREE.Vector3(0, -1, 0)); inn.add(g); parts.under.push(g); }
   for (const [x, y, z] of REAR) { const g = nozzle(0.033, 0.045, 0.08); g.position.set(x, y, z); g.quaternion.setFromUnitVectors(Z, new THREE.Vector3(0, 0, -1)); inn.add(g); parts.rear.push(g); }
+  // 5j-d: LỬA ống đuôi (thầy: "đuôi xe đẩy lửa tăng tốc") — nón cộng sáng, chỉ hiện khi st.flame > 0
+  const flM = MM(new THREE.MeshBasicMaterial({ color: 0xff7a2a, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false })),
+    flC = MM(new THREE.MeshBasicMaterial({ color: 0xffe2a8, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false })),
+    flG = new THREE.ConeGeometry(1, 1, 14, 1, true).rotateX(Math.PI / 2).translate(0, 0, 0.5);
+  parts.flames = parts.rear.map(g => { const o = new THREE.Mesh(flG, flM), c = new THREE.Mesh(flG, flC); o.position.z = c.position.z = 0.045; o.visible = c.visible = false; o.renderOrder = c.renderOrder = 7; g.add(o, c); return { o, c }; });
   for (const [x, y, z, s] of SIDE) { const g = nozzle(0.022, 0.03, 0.06); g.position.set(x, y, z); g.quaternion.setFromUnitVectors(Z, new THREE.Vector3(s, 0, 0)); inn.add(g); parts.side.push({ g, s, z, emit: 0, b: -1, next: Math.random() }); }
   // đèn đỏ gầm (mảnh)
   for (const sx of [-1, 1]) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.008, 2.2), M.under); m.position.set(sx * 0.62, 0.118, -0.15); inn.add(m); }
@@ -238,6 +243,23 @@ export function createFlyCar({ bend, U }) {
           const an = Math.random() * 6.283, sp = 3 + Math.random() * 6; V.set(Math.cos(an) * sp, 0.4 + Math.random() * 0.9, Math.sin(an) * sp);
           smoke.emit(P, V, C.copy(carry).multiplyScalar(0.45).setY(0), 1.1 + Math.random() * 1.0, 0.4 + Math.random() * 0.35, 0.26, 1.5, 1.5, -1, 0);
         } }
+      // 5j-d: lửa đuôi
+      const fl = st.flame || 0;
+      parts.flames.forEach(f => { const on = fl > 0.02; f.o.visible = f.c.visible = on; if (on) { const L = (0.22 + 0.6 * fl) * (0.82 + Math.random() * 0.36); f.o.scale.set(0.034, 0.034, L); f.c.scale.set(0.018, 0.018, L * 0.55); } });
+      // 5j-d: BẬT THRUST GIỮA KHÔNG TRUNG — 4 ống gầm nổ bung một lượt khói thật nhiều (st.blast) · st.swirl = khói XOÁY quanh trục dọc xe (đang lộn)
+      const bl = st.blast || 0;
+      if (bl > 0) {
+        const dn = new THREE.Vector3(0, -1, 0).applyQuaternion(q), fw = new THREE.Vector3(0, 0, -1).applyQuaternion(q), ctr = obj.getWorldPosition(new THREE.Vector3()), rad = new THREE.Vector3(), tg = new THREE.Vector3();
+        for (let k = 0, n = Math.round(300 * bl); k < n; k++) {
+          parts.under[k % parts.under.length].localToWorld(P.set((Math.random() - 0.5) * 0.04, (Math.random() - 0.5) * 0.04, 0.05));
+          const an = Math.random() * 6.283; rad.set(Math.cos(an), 0, Math.sin(an));
+          V.copy(dn).multiplyScalar(8 + Math.random() * 18).addScaledVector(rad, 2 + Math.random() * 8 * bl);
+          if (st.swirl) { tg.subVectors(P, ctr).cross(fw); if (tg.lengthSq() > 1e-6) V.addScaledVector(tg.normalize(), -st.swirl * (5 + Math.random() * 9)); }
+          smoke.emit(P, V, C.copy(carry).multiplyScalar(0.45), 1.3 + Math.random() * 1.5, 0.3 + Math.random() * 0.5, 0.5, 2.5, 1.7, -1, 0.35);
+        }
+        for (let k = 0, n = Math.round(80 * bl); k < n; k++) { const g = parts.rear[k % parts.rear.length]; g.localToWorld(P.set(0, 0, 0.06));
+          V.set((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, 6 + Math.random() * 10).applyQuaternion(q); smoke.emit(P, V, C.copy(carry).multiplyScalar(0.4), 0.9 + Math.random() * 0.8, 0.2 + Math.random() * 0.25, 0.55, 2, 1.6, -1, 0.3); }
+      }
       // ống đuôi
       const rear = st.rear || 0;
       if (rear > 0.03) for (const g of parts.rear) {
@@ -260,19 +282,19 @@ export function createFlyCar({ bend, U }) {
           const want = Math.abs(sd.want) > 0.05 ? Math.sign(sd.want) : (Math.random() < 0.5 ? -1 : 1);
           const cand = parts.side.filter(j => { const d = new THREE.Vector3(j.s, 0, 0).applyQuaternion(inn.getWorldQuaternion(new THREE.Quaternion())); return Math.sign(d.x) === -want; });
           const pick = cand.length ? cand[(sd.yaw || 0) > 0 ? 0 : cand.length - 1] : null;
-          if (pick) { pick.b = smoke.burst(); pick.emit = B_EMIT; active = pick; }
+          if (pick) { pick.k = strong ? 1 : 0.5; pick.b = smoke.burst(pick.k); pick.emit = B_EMIT * pick.k; active = pick; }   // 5j-d: giữ cân ⇒ nhịp chỉ 1/2 thời gian
           parts.side.forEach(j => { j.next = strong ? 0.08 + Math.random() * 0.1 : (st.still ? 0.9 + Math.random() * 1.8 : 0.35 + Math.random() * 1.0); });   // đứng yên ⇒ phụt THƯA
         }
       }
       if (active) {
-        const n = Math.floor(900 * dt + Math.random());
+        const kk = active.k || 1, n = Math.floor((kk < 1 ? 450 : 900) * dt + Math.random());   // 5j-d: giữ cân ⇒ ít hơn
         const qi = inn.getWorldQuaternion(new THREE.Quaternion());
         for (let k = 0; k < n; k++) {
           active.g.localToWorld(P.set(0, 0, 0.04));
-          V.set(active.s, 0, 0).multiplyScalar(2 + Math.random() * 26);
+          V.set(active.s, 0, 0).multiplyScalar(2 + Math.random() * (kk < 1 ? 12 : 26));   // giữ cân ⇒ dải NGẮN hơn
           const vv = V.length(), g1 = Math.random() + Math.random() + Math.random() - 1.5, g2 = Math.random() + Math.random() + Math.random() - 1.5;
           V.y += g1 * vv * 0.077 + vv * 0.025; V.z += g2 * vv * 0.077; V.applyQuaternion(qi);
-          smoke.emit(P, V, carry, 9, 0.035, 0.42, (0.6 + Math.random() * 0.8) * 0.7, 13, active.b, 1);   // 5j: nhỏ 30 %, mờ hơn · carry có cả vận tốc LÊN / XUỐNG ⇒ dải khói không méo
+          smoke.emit(P, V, carry, 9, kk < 1 ? 0.03 : 0.035, kk < 1 ? 0.26 : 0.42, (0.6 + Math.random() * 0.8) * 0.7, 13, active.b, 1);   // giữ cân ⇒ MỜ hơn   // 5j: nhỏ 30 %, mờ hơn · carry có cả vận tốc LÊN / XUỐNG ⇒ dải khói không méo
         }
       }
       smoke.update(dt);
