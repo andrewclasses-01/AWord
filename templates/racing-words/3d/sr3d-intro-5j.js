@@ -49,7 +49,7 @@ import { XE, prepXe } from "./sr3d-xe3d-3o.js";
 import { makeCar3d } from "./sr3d-car-4h.js";
 import { makeAutoRes } from "./sr3d-autores-3r.js";
 import { DRONE_PICK as DP0, SPAN as D_SPAN, loadDrone } from "./sr3d-drone3d-4p.js";   // 5f: drone trong xưởng
-import { createFlyCar, FLYCAR } from "./sr3d-flycar-5j.js";   // 5j: xe bay Roadster
+import { createFlyCar, FLYCAR, PAINT as FC_PAINT } from "./sr3d-flycar-5j.js";   // 5j: xe bay Roadster
 const DRONE_PICK = [...DP0, FLYCAR];
 const FC_U = { uBend: { value: new THREE.Vector2(0, 0) }, uBendZ: { value: 0 }, uBendT: { value: (() => { const t = new THREE.DataTexture(new Float32Array(4), 1, 1, THREE.RGBAFormat, THREE.FloatType); t.needsUpdate = true; return t; })() }, uBendD: { value: 0 } };   // 5j: đường thẳng ⇒ cong = 0
 
@@ -277,7 +277,7 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
   const dObjs = [0, 1].map(n => { const g = new THREE.Group(); g.visible = false; scene.add(g); return { n, g, model: null, id: "", tok: 0, ph: n * 2.1 }; });
   function paintD(o) {   // 2 drone ⇒ SƠN màu đội lên thân (như trận 5f); 1 drone ⇒ màu gốc
     if (!o.model) return; const want = DRN.n === 2 ? o.n : -1, seen = new Set();
-    if (o.model.fc) { o.model.fc.setTint(want >= 0 ? TEAMS[want].color : null); return; }   // 5j: Roadster
+    if (o.model.fc) { o.model.fc.setPaint(DRN.carCol || FC_PAINT); o.model.fc.setTint(want >= 0 ? TEAMS[want].color : null); return; }   // 5j: Roadster · 5j-c: màu tuỳ chọn
     o.model.obj.traverse(q => { if (!q.isMesh || !q.material) return; (Array.isArray(q.material) ? q.material : [q.material]).forEach(m => {
       if (seen.has(m) || !m.color || (m.transparent && m.opacity < 0.3)) return;   /* 5f: chỉ bỏ đĩa mờ cánh quạt (thân Mavic cũng "transparent") */ seen.add(m); const u = m.userData; if (!u.c0) u.c0 = m.color.clone();
       m.color.copy(u.c0); if (want >= 0) m.color.lerp(cTmp.copy(TCOL[want]).multiplyScalar(2.4), 0.85); }); });
@@ -285,14 +285,15 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
   function loadD(o) {
     const id = DRN.model; if (o.id === id) { paintD(o); return; } o.id = id; const tok = ++o.tok;
     (id === FLYCAR.id ? (() => { const fc = createFlyCar({ bend: m => m, U: FC_U }); scene.add(fc.smoke.mesh);
-        return fc.load().then(() => ({ fc, obj: fc.obj, props: [], dispose() { scene.remove(fc.smoke.mesh); fc.dispose(); } })); })() : loadDrone(id, m => m)).then(m => {
+        return fc.load().then(() => { fc.stealth(true); fc.obj.traverse(q => { if (q.isMesh) { q.castShadow = true; q.receiveShadow = true; } }); shadowDirty = true;
+          return { fc, obj: fc.obj, props: [], dispose() { scene.remove(fc.smoke.mesh); fc.dispose(); } }; }); })() : loadDrone(id, m => m)).then(m => {
       if (!m || tok !== o.tok || dead) { if (m) m.dispose(); return; }
       if (o.model) { o.g.remove(o.model.obj); o.model.dispose(); }
       o.model = m; o.g.add(m.obj); m.obj.traverse(q => { if (q.isMesh) q.frustumCulled = false; }); paintD(o); envDirty = true;
     }).catch(e => console.warn("intro drone", e));
   }
   const dUsed = o => DRN.on && (o.n === 0 || DRN.n === 2);
-  function applyDrone() { dObjs.forEach(o => { o.g.visible = dUsed(o) && !!o.model; if (dUsed(o)) loadD(o); }); paintDPick(); }
+  function applyDrone() { dObjs.forEach(o => { o.g.visible = dUsed(o) && !!o.model; if (dUsed(o)) loadD(o); }); if (!DRN.on || DRN.model !== FLYCAR.id) { fcSpot.intensity = 0; fcBeam.visible = false; } shadowDirty = true; paintDPick(); }
   const dpick = $(".ri-dpick");
   function paintDPick() {
     const n = DRN.on ? DRN.n : 0, x = DRONE_PICK.find(q => q.id === DRN.model) || DRONE_PICK[0];
@@ -310,7 +311,7 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
     dObjs.forEach(o => {
       o.g.visible = dUsed(o) && !!o.model; if (!o.g.visible) return;
       if (o.n === 0) dLight.position.z = state === "play" && T >= START_T.roll ? Math.min(CAR_Z + 1.0, carZ(T) + 1.0) : CAR_Z + 1.0;
-      if (o.n === 0) { const f = !!(o.model && o.model.fc); dLight.position.y = f ? 2.6 : 3.5; dLight.intensity = f ? 34 : 11; dLight.distance = f ? 7 : 4.5; }   // 5j: Roadster to hơn drone ⇒ đèn mạnh + xa hơn
+      if (o.n === 0) { const f = !!(o.model && o.model.fc); dLight.position.y = 3.5; dLight.intensity = f ? 0 : 11; dLight.distance = 4.5; if (!f) { fcSpot.intensity = 0; fcBeam.visible = false; } }   // 5j-c: Roadster dùng đèn trần riêng (fcSpot)
       const fc = o.model && o.model.fc;
       if (fc) { updFly(o, fc, dt, now, two); return; }   // 5j
       const sc = (two ? 1.6 : 1.9) / D_SPAN; o.g.scale.setScalar(sc);
@@ -324,18 +325,19 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
     });
   }
   // 5j: Roadster — cỡ thật, giữa 2 xe, nhô lên trước, lơ lửng; chiếc đội 2 (2 drone) cao phía sau · phim: theo xe ra cửa rồi bốc cao
+  // 5j-c (thầy): Roadster ĐỨNG SÀN như xe thường (chưa lộ chi tiết bay), đặt CHÉO phía SAU, 2 xe chính đứng trước · đèn trần rọi riêng
+  const FC_Z = CAR_Z + 3.6, FC_YAW = 0.55;
+  const fcSpot = new THREE.SpotLight("#fff3e2", 0, 18, 0.4, 0.55, 2); fcSpot.position.set(0, H - 1.2, FC_Z + 1.2); fcSpot.target.position.set(0, 0, FC_Z); scene.add(fcSpot, fcSpot.target);   // luôn có (cường độ 0) ⇒ không dịch lại shader
+  const fcBeam = new THREE.Mesh((() => { const g = new THREE.ConeGeometry(2.9, H - 1.2, 40, 1, true); g.translate(0, -(H - 1.2) / 2, 0); return g; })(), beamM); fcBeam.position.set(0, H - 1.2, FC_Z + 0.9); fcBeam.rotation.x = -0.08; fcBeam.visible = false; scene.add(fcBeam);
   const fcCarry = new THREE.Vector3();
   function updFly(o, fc, dt, now, two) {
     o.g.scale.setScalar(1);
-    const bx = 0, by = o.n ? 2.4 : 0.6, bz = o.n ? CAR_Z + 4.2 : CAR_Z - 1.2;
-    let z = bz, y = by, vz = 0, vy = 0;
-    if (state === "play" && T >= START_T.roll) { const s = T - START_T.roll; z = Math.min(bz, carZ(T) - 1.2) - s * 0.6; y = by + s * s * 0.6; vz = -(9.5 * s + 2.6); vy = 1.2 * s; }
-    const t = now + o.ph;
-    o.g.position.set(bx + 0.04 * Math.sin(t * 0.7), y + 0.06 * Math.sin(t * 1.3), z);
-    o.g.rotation.set(-0.035 + 0.012 * Math.sin(t * 1.1), 0.05 * Math.sin(t * 0.37), 0.02 * Math.sin(t * 0.9));
-    const gnd = Math.max(0, 1 - y / 3.2) * 0.1;   // xưởng: khói sàn nhẹ, không phủ mờ cả xưởng
-    fc.update(paused ? 0 : dt, { t: now, air: 1, lift: state === "play" && T >= START_T.roll ? 0.85 : 0.3, rear: state === "play" && T >= START_T.roll ? 0.8 : 0.12, ground: gnd, still: true, side: { want: 0, yaw: 0 },
-      carry: fcCarry.set(0, vy, vz), spin: 0.3 * dt, pod: 1, sel: 2 });
+    const bx = two ? (o.n ? -1.9 : 1.9) : 0, yaw0 = two ? (o.n ? -FC_YAW : FC_YAW) : FC_YAW;
+    let z = FC_Z, yaw = yaw0, v = 0;
+    if (state === "play" && T >= START_T.roll) { const s = T - START_T.roll; z = Math.min(FC_Z, carZ(T) + 3.6); v = 9.5 * s + 2; yaw = yaw0 * Math.max(0, 1 - s / 0.9); }   // lăn theo 2 xe ra cửa, thẳng lái dần
+    o.g.position.set(bx, 0, z); o.g.rotation.set(0, yaw, 0);
+    if (o.n === 0) { fcSpot.intensity = 130; fcSpot.angle = two ? 0.55 : 0.4; fcSpot.position.z = Math.min(FC_Z + 1.2, z + 1.2); fcSpot.target.position.z = z; fcBeam.visible = true; fcBeam.scale.x = fcBeam.scale.z = two ? 1.45 : 1; fcBeam.position.z = Math.min(FC_Z + 0.9, z + 0.9); }
+    fc.update(paused ? 0 : dt, { t: now, air: 0, lift: 0, rear: 0, ground: 0, still: true, side: { want: 0, yaw: 0 }, carry: fcCarry.set(0, 0, -v), spin: v * dt / 0.35, pod: 0, sel: 2 });
     fc.smoke.setScale(renderer.domElement.height / (2 * Math.tan(cam.fov * Math.PI / 360)));
   }
   applyDrone();
@@ -460,7 +462,7 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
   const ready = Promise.all(carIds.map((id, i) => prepXe(id).then(() => buildCar(i)))).then(r => { warmIntro(); return r; });   // 3r: làm nóng phim
   return {
     ready, setCar, get cars() { return carIds.slice(); }, get state() { return state; },
-    setDrone(o) { if (!o) return; Object.assign(DRN, { on: !!o.on, n: o.n === 2 ? 2 : 1, model: o.model || DRN.model }); applyDrone(); }, get drone() { return { ...DRN }; },   // 5f
+    setDrone(o) { if (!o) return; Object.assign(DRN, { on: !!o.on, n: o.n === 2 ? 2 : 1, model: o.model || DRN.model }, o.carCol ? { carCol: o.carCol } : {}); applyDrone(); },   // 5j-c: + màu Roadster get drone() { return { ...DRN }; },   // 5f
     show() { hidden = false; state = "idle"; resetScene(); root.style.display = ""; applyPR(); AR.pause(); },
     hide() { hidden = true; root.style.display = "none"; },
     pause(v) { paused = !!v; },                                        // 4e

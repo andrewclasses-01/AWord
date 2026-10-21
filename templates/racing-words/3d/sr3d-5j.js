@@ -329,7 +329,7 @@ import { makeAutoRes } from "./sr3d-autores-3r.js";
 import { icon as ICON, iconize } from "./rw-icons-4x.js";   /* 4x: icon 2D Neon viền */
 import { createDroneAmmo, DA } from "./sr3d-dammo-5e.js";   /* 5e: + chủ đạn */   /* 4w: dấu hiện / ẩn nhoè */   /* 4v: dấu điểm rơi + seek */   /* 4t: ra từ bụng */   /* 4s */   // 4r: đạn drone
 import { DRONE_MODELS as DM0, DRONE_PICK as DP0, droneInfo as droneMeta0, loadDrone } from "./sr3d-drone3d-4p.js";
-import { createFlyCar, FLYCAR } from "./sr3d-flycar-5j.js";   /* 5j: xe bay ROADSTER */
+import { createFlyCar, FLYCAR, PAINT as FC_PAINT } from "./sr3d-flycar-5j.js";   /* 5j: xe bay ROADSTER */
 const DRONE_MODELS = [...DM0, FLYCAR], DRONE_PICK = [...DP0, FLYCAR], droneMeta = id => id === FLYCAR.id ? FLYCAR : droneMeta0(id);   // 5j   /* 4p */   // 4o: trục quạt = trọng tâm + vòng mờ · 4n: 8 mẫu + quạt quay · 4m
 import { createMissiles, MS, missileGeos, buildMissile } from "./sr3d-missile-4i.js";
 import { createRamps, createTrails, RadialBlurShader, RAMP, RAMP_SLOPE } from "./sr3d-fx-3c.js";
@@ -1361,12 +1361,13 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   //   Mỗi drone giữ nửa đường của đội mình (không bay chéo qua nhau) · NEAR / FAR: máy quay ở khoảng TRUNG BÌNH 2 iPad, drone mỗi người nhích ±3 m theo ý mình.
   //   Chung 1 mẫu drone, PHA MÀU ĐỘI (thân + vòng sáng dưới bụng + chấm giữa tâm ngắm) — không có số 1 / 2. Bảng đạn tối giản M1 trên trời (3 icon + vạch pin màu đội).
   const dset = (() => {
-    const d = { on: false, n: 1, mode: "neutral", team: 0, model: "A1", ammo: { heart: true, boost: true, missile: true }, w: DRONE_W, zoom: 1, auto: false, autoK: 5 };   /* 5e: + n (1 | 2 drone) */   /* 4t: + w · zoom · 4v: + auto · autoK */   /* 4m: + model (mặc định Mavic) */
+    const d = { on: false, n: 1, mode: "neutral", team: 0, model: "A1", ammo: { heart: true, boost: true, missile: true }, w: DRONE_W, zoom: 1, auto: false, autoK: 5, carCol: FC_PAINT };   /* 5j-c: + carCol (màu Roadster) */   /* 5e: + n (1 | 2 drone) */   /* 4t: + w · zoom · 4v: + auto · autoK */   /* 4m: + model (mặc định Mavic) */
     try { const o = JSON.parse(localStorage.getItem(DRONE_KEY) || "{}");
       if (typeof o.on === "boolean") d.on = o.on; if (o.n === 1 || o.n === 2) d.n = o.n; if (D_MODES.some(m => m.k === o.mode)) d.mode = o.mode; if (o.team === 0 || o.team === 1) d.team = o.team;
       if (o.ammo) AMMO.forEach(a => { if (typeof o.ammo[a.k] === "boolean") d.ammo[a.k] = o.ammo[a.k]; }); if (DRONE_PICK.some(m => m.id === o.model)) d.model = o.model;
       if (typeof o.auto === "boolean") d.auto = o.auto; if (Number.isInteger(o.autoK) && o.autoK >= 1 && o.autoK <= 10) d.autoK = o.autoK;   // 4v
-      if (D_WS.includes(o.w)) d.w = o.w; if (D_ZS.some(z => z[0] === o.zoom)) d.zoom = o.zoom; } catch (e) { /* */ }
+      if (D_WS.includes(o.w)) d.w = o.w; if (D_ZS.some(z => z[0] === o.zoom)) d.zoom = o.zoom;
+      if (/^#[0-9a-f]{6}$/i.test(o.carCol || "")) d.carCol = o.carCol; } catch (e) { /* */ }   // 5j-c
     if (options.drone && typeof options.drone === "object") Object.assign(d, options.drone);
     return d;
   })();
@@ -1395,6 +1396,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     const was = two();
     Object.assign(dset, o); if (dW !== dset.w) { dW = dset.w; if (dK > 0.001) layoutDrone(true); }   /* 4t */
     if (was !== two()) { DR.forEach(d => { d.init = false; }); F.init = false; }   // 5e: đổi 1 ⇄ 2 drone ⇒ xếp lại đội hình
+    if (o.carCol) DR.forEach(d => { if (d.o) { d.o.tintDirty = true; paintTint(d.o); } });   // 5j-c: đổi màu Roadster ⇒ sơn lại ngay
     fixSel(); paintDv(); DR.forEach(d => droneInfo(d)); applyModel();   /* 4m */   /* 4l: báo iPad drone ngay */
     try { localStorage.setItem(DRONE_KEY, JSON.stringify(dset)); } catch (e) { /* */ }
     onEvent("drone", { ...dset, ammo: { ...dset.ammo } });
@@ -1419,11 +1421,13 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   // 4l: tin cho iPad drone (chỉ kênh thẳng) · 5e: drone 2 = chỗ t = 3; drone không bay ⇒ báo "tắt"
   function droneInfo(d = D) { if (remote && remote.send && d.padOn) remote.send(2 + d.n, `j:${d.bat.toFixed(2)},${d.sel},${d.lock},${G.phase},${AMMO.map(a => dset.ammo[a.k] ? 1 : 0).join("")},${dMode()},${dTeam(d)},${dUsed(d) ? 1 : 0},${AMMO.map(a => Math.max(0, d.cd[a.k] - G.t).toFixed(1)).join("/")},${dammo.activeOf(d.n) > 0 ? 1 : 0},${carSt(d)},${isCar(d) ? Math.round(d.car.v * 3.6) : 0}`); }   /* 5a: + chờ · đạn bay */   /* 5j: + xe bay */
   const isCar = d => dset.model === FLYCAR.id;                                       // 5j
+  const CAR_COLS = [[FC_PAINT, "Racing green"], ["#c8102e", "Rosso red"], ["#ff6a13", "Orange"], ["#f5c400", "Giallo yellow"], ["#9be22d", "Lime"], ["#1f5fd6", "Blue"],
+    ["#4fb3ff", "Sky blue"], ["#7a3cff", "Purple"], ["#ff4fa3", "Pink"], ["#f2f2f2", "White"], ["#9aa3ad", "Silver"], ["#15171a", "Black"]];   // 5j-c: bảng màu Roadster
   const carRoad = d => isCar(d) && !two() && d.car.mode === "road";
   const carSt = d => !isCar(d) ? "-" : two() ? "a" : ({ road: "r", up: "t", air: "a", down: "l" })[d.car.mode] || "r";
   function toggleFly(d = D) {                                                     // 5j: TAKE OFF ⇄ LAND
     if (!isCar(d) || two() || G.paused) return; const C = d.car;
-    if (C.mode === "road") { if (G.phase !== "race") return; C.mode = "up"; C.sp = 0; d.x = C.x; d.vx = C.vx; d.s = C.s; d.sPrev = C.s; d.vs = C.v; d.afs = 0; onEvent("carFly", { up: 1 }); }
+    if (C.mode === "road") { if (G.phase !== "race") return; C.mode = "up"; C.sp = 0; Object.assign(C, { jump: false, low: false, ap: 0, ar: 0, flip: 0, flipGoal: null, forced: false, ramp: null, twist: null, hy: 0, hopV: 0 }); d.x = C.x; d.vx = C.vx; d.s = C.s; d.sPrev = C.s; d.vs = C.v; d.afs = 0; onEvent("carFly", { up: 1 }); }
     else if (C.mode === "down") { C.mode = "up"; C.sp = 9; onEvent("carFly", { up: 1 }); }   // đang hạ ⇒ bay lên lại (không chờ khói)
     else { C.mode = "down"; onEvent("carFly", { up: 0 }); }                                     // đang lên / đang bay ⇒ hạ
     droneInfo(d);
@@ -1482,6 +1486,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       ${n2 ? "" : `<div class="sr-pm rw-dmode">${D_MODES.map(x => `<button type="button" class="sr-pm-o${x.k === dset.mode ? " on" : ""}" data-dm="${x.k}"><b>${x.t}</b><span>${x.d}</span></button>`).join("")}</div>`}
       <div class="sr-opt">${!n2 && dset.mode === "team" ? `<div class="sr-opt-row"><span>Drone team</span><div class="sr-seg">${TEAMS.map((tm, i) => `<button type="button" data-dt="${i}" class="${dset.team === i ? "on" : ""}">${tm.name}</button>`).join("")}</div></div>` : ""}
         <div class="rw-dmdl">${[["DRONES", ["quad", "bug"]], ["AIRCRAFT", ["jet", "tilt"]], ["SPACESHIPS", ["ship"]], ["FLYING CAR", ["car"]]].map(([gt, ks]) => `<b>${gt}</b><div>${DRONE_PICK.filter(m => ks.includes(m.kind)).map(m => `<button type="button" data-dmd="${m.id}" class="${dset.model === m.id ? "on" : ""}">${m.name}</button>`).join("")}</div>`).join("")}</div>   <!-- 4o: lưới thẻ theo nhóm -->
+        ${isCar() ? `<div class="sr-opt-row rw-ccol"><span>Roadster colour</span><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">${CAR_COLS.map(([c, t]) => `<button type="button" data-dcc="${c}" title="${t}" style="width:30px;height:30px;padding:0;border-radius:50%;cursor:pointer;background:${c};border:2px solid ${c.toLowerCase() === (dset.carCol || "").toLowerCase() ? "#fff" : "rgba(255,255,255,.18)"};box-shadow:${c.toLowerCase() === (dset.carCol || "").toLowerCase() ? "0 0 0 3px #b07cff" : "none"}"></button>`).join("")}<label title="Any colour" style="display:flex;align-items:center;gap:6px;cursor:pointer;opacity:.85"><input type="color" data-dcp value="${dset.carCol}" style="width:34px;height:30px;padding:0;border:0;background:none;cursor:pointer"><small>custom</small></label></div></div>` : ""}   <!-- 5j-c: bảng màu Roadster -->
         <div class="sr-opt-row"><span>Ammo</span><div class="sr-seg">${AMMO.map(a => `<button type="button" data-da="${a.k}" class="${dset.ammo[a.k] ? "on" : ""}">${a.t}</button>`).join("")}</div></div>
         <div class="sr-opt-row"><span>Auto target</span><div class="sr-seg"><button type="button" data-dau="0" class="${dset.auto ? "" : "on"}">Off</button><button type="button" data-dau="1" class="${dset.auto ? "on" : ""}">On</button></div></div>   <!-- 4v -->
         ${dset.auto ? `<div class="sr-opt-row"><span>Auto pull</span><div style="display:flex;align-items:center;gap:10px;flex:1;max-width:280px"><small style="opacity:.6">weak</small><input type="range" min="1" max="10" step="1" value="${dset.autoK}" data-dak style="flex:1;accent-color:#b07cff;cursor:pointer"><small style="opacity:.6">strong</small><b class="rw-dakv" style="min-width:1.6em;text-align:right">${dset.autoK}</b></div></div>
@@ -1493,6 +1498,8 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     box.querySelectorAll("[data-dt]").forEach(b => b.addEventListener("click", () => { setDrone({ team: +b.dataset.dt }); droneTab(box); }));
     box.querySelectorAll("[data-dmd]").forEach(b => b.addEventListener("click", () => { setDrone({ model: b.dataset.dmd }); droneTab(box); }));   // 4m
     box.querySelectorAll("[data-dau]").forEach(b => b.addEventListener("click", () => { setDrone({ auto: b.dataset.dau === "1" }); droneTab(box); }));   // 4v
+    box.querySelectorAll("[data-dcc]").forEach(b => b.addEventListener("click", () => { setDrone({ carCol: b.dataset.dcc }); droneTab(box); }));   // 5j-c: màu Roadster
+    box.querySelectorAll("[data-dcp]").forEach(r => { r.addEventListener("input", () => setDrone({ carCol: r.value })); r.addEventListener("change", () => droneTab(box)); });
     box.querySelectorAll("[data-dak]").forEach(r => { r.addEventListener("input", () => { const k = +r.value; setDrone({ autoK: k }); box.querySelector(".rw-dakv").textContent = k;
       box.querySelector(".rw-dakn").textContent = `Shots slide toward a car within ${Math.round(autoR(k))} m of the aim point (up to ${autoV(k).toFixed(1)} m/s). Off = the shot lands exactly where you aim.`; });
       r.addEventListener("wheel", e => { e.preventDefault(); r.blur(); }, { passive: false }); r.addEventListener("keydown", e => { if (e.key === "Enter") r.blur(); }); });   // cuộn chuột KHÔNG đổi số · Enter = nhận
@@ -1575,7 +1582,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     const want = two() ? o.n : -1; if (o.tint === want && !o.tintDirty) return; o.tint = want; o.tintDirty = false;
     o.ledM.color.set(want < 0 ? "#b07cff" : TEAMS[want].color); o.ledM.emissive.set(want < 0 ? "#b07cff" : "#000000");   // 5f: 2 drone ⇒ đèn tắt, chỉ màu sơn
     if (!o.model) return;
-    if (o.model.kind === "car") { o.model.fc.setTint(want < 0 ? null : TEAMS[want].color); return; }   // 5j: chỉ sơn thân xe
+    if (o.model.kind === "car") { o.model.fc.setPaint(dset.carCol); o.model.fc.setTint(want < 0 ? null : TEAMS[want].color); return; }   // 5j: chỉ sơn thân xe · 5j-c: màu tuỳ chọn
     const seen = new Set();
     o.model.obj.traverse(q => { if (!q.isMesh || !q.material) return; (Array.isArray(q.material) ? q.material : [q.material]).forEach(m => {
       if (seen.has(m) || !m.color || (m.transparent && m.opacity < 0.3)) return;   /* 5f: chỉ bỏ đĩa mờ cánh quạt (thân Mavic cũng "transparent") */ seen.add(m);
@@ -1668,27 +1675,106 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   const carV = new THREE.Vector3();
   const ex = (cur, to, k, dt) => cur + (to - cur) * (1 - Math.exp(-k * dt));
   // 5j: XE BAY (1 drone) — chạy đường / cất cánh / bay / đáp · máy quay cột theo xe
+  // 5j-c (thầy: "Roadster cũng vọt lên dốc và bay lên hoặc nhào lộn giống hệt xe bình thường") — chép luật cầu nhảy / dốc xoắn / bay / lộn / đáp của xe đua
+  //   (rampContact · takeOff · twistLaunch · flyStep · land) cho xe bay đang CHẠY ĐƯỜNG: ◀ ▶ trên không = nghiêng · BRAKE + lái = barrel roll · đáp lệch > 32° = BAD (mất đà).
+  const FC_AX = { f: 1.129, r: 1.468 };                                          // trục bánh Roadster (m, từ tâm xe)
+  function carRamp(C) {
+    const hw = FLYCAR.W / 2, k = RAMP.H / RAMP.LEN, wb = FC_AX.f + FC_AX.r;
+    for (const r of ramps.list) {
+      const uF = C.s + FC_AX.f - r.s, uR = C.s - FC_AX.r - r.s; if (uF < 0 || uR > RAMP.LEN) continue;
+      const lo = Math.max(C.x - hw, r.x - r.w / 2), hi = Math.min(C.x + hw, r.x + r.w / 2), cov = clamp((hi - lo) / (2 * hw), 0, 1);
+      if (cov < 0.12) continue;
+      const hF = uF * k, hR = clamp(uR, 0, RAMP.LEN) * k;
+      return { r, h: hR + (hF - hR) * FC_AX.r / wb, ap: Math.atan2(hF - hR, wb), cov, side: Math.sign(r.x - C.x) || 1 };
+    }
+    return null;
+  }
+  function carGround(C, s0, dt) {
+    const e14 = 1 - Math.exp(-dt * 14), tw = twists.find(C.x, C.s);
+    if (tw) { C.twist = tw.r; C.y = tw.w * Math.sin(tw.th); C.ar = lerp(C.ar, tw.r.side * tw.th, e14); C.ap = lerp(C.ap, 0.05, e14); return; }
+    if (C.twist) { const r = C.twist; C.twist = null;
+      if (C.s >= r.s + TWIST.LEN - 0.6 && C.v >= LOW_V) { const y0 = C.y, ar0 = r.side * twistAngle(TWIST.LEN); carLaunch(C, r.side); C.arW = 0; C.y = Math.max(y0, 0.5); C.ar = ar0; C.ap = 0.08; C.vy = 3.6 + C.v * 0.04; C.vx = -r.side * 1.6;
+        const airEst = (C.vy + Math.sqrt(C.vy * C.vy + 2 * AIR.G * C.y)) / AIR.G + 0.25; C.rollW = clamp((TAU - Math.abs(ar0)) / (airEst * 0.7), 4, 12); C.flipGoal = r.side * TAU + rollErr(); }
+      else { C.y = 0; C.ar = 0; C.ap = 0; }
+      return; }
+    const rp = carRamp(C);
+    if (rp) { C.ramp = rp.r; C.rampPart = rp.cov < 0.85 ? rp.side : 0;
+      if (C.rampPart) { C.y = rp.h * 0.5; C.ap = lerp(C.ap, rp.ap * 0.5, e14); C.ar = lerp(C.ar, rp.side * Math.atan2(rp.h, FLYCAR.W), e14); }
+      else { C.y = rp.h; C.ap = rp.ap; C.ar = lerp(C.ar, 0, e14); }
+      return; }
+    if (C.ramp) { const r = C.ramp; C.ramp = null;
+      if (s0 - FC_AX.r <= r.s + RAMP.LEN + 0.01 && C.s - FC_AX.r >= r.s + RAMP.LEN - 0.6) {
+        if (C.v < LOW_V) Object.assign(C, { jump: true, low: true, airT: AIR.LIFT_T, vy: 0, y: Math.max(C.y, RAMP.H), ar: 0, arW: 0, airK: 1, flip: 0, flipGoal: null, forced: false });   // chậm ⇒ chỉ rơi qua mép
+        else carLaunch(C, C.rampPart);
+      } else { C.y = 0; C.ap = 0; C.ar = 0; }
+      return; }
+    const e10 = 1 - Math.exp(-dt * 10); C.y = 0; C.ap = lerp(C.ap, 0, e10); C.ar = lerp(C.ar, 0, e10);
+  }
+  function carLaunch(C, part) {
+    C.jump = true; C.low = false; C.airT = 0; C.v = Math.min(C.v * AIR.BOOST, PHYS.VNITRO * 1.15);
+    C.vy = Math.min(8.2, AIR.VY0 + C.v * Math.sin(RAMP_SLOPE) * AIR.VYK + C.v * 0.035);
+    C.y = Math.max(C.y, RAMP.H * 0.9); C.ap = Math.max(C.ap, RAMP_SLOPE * 0.8); C.ar = 0; C.flip = 0; C.flipGoal = null; C.forced = false;
+    C.airK = 1 + 0.5 * smooth(LOW_V, PHYS.VBOOST, C.v / AIR.BOOST); C.shake = Math.max(C.shake, 0.55);
+    C.arW = (Math.random() < 0.5 ? -1 : 1) * (0.15 + Math.random() * 0.17);       // thân bị hất nghiêng ⇒ phải chỉnh mới đáp PERFECT
+    if (part) { const ar0 = part * Math.atan2(RAMP.H, FLYCAR.W);                    // 1 bên trên dốc ⇒ LỘN 1 vòng quanh trục dọc
+      C.y = Math.max(C.y, RAMP.H * 0.45); C.ap = RAMP_SLOPE * 0.5; C.ar = ar0; C.vy *= 0.7;
+      C.forced = true; C.flip = 2; C.flipDir = part; C.flipGoal = part * TAU + rollErr();
+      const airEst = (C.vy + Math.sqrt(C.vy * C.vy + 2 * AIR.G * C.y)) / AIR.G + 0.25; C.rollW = clamp((TAU - Math.abs(ar0)) / (airEst * 0.7), 4, 12); }
+    onEvent("carJump", { v: +C.v.toFixed(1) });
+  }
+  function carAir(C, dt, st, brake) {
+    C.airT += dt; C.vy -= (C.airT < AIR.LIFT_T ? AIR.GUP : AIR.G) * dt; C.y += C.vy * dt;
+    if (!C.flip && !C.low) C.ar += (C.arW - st * AIR.ROLL) * dt;
+    if (brake && !C.low && !C.flip && !C.forced && Math.abs(st) > 0.35) { C.flip = 2; C.flipDir = -Math.sign(st); C.flipGoal = null; }   // BRAKE + lái = barrel roll
+    if (C.flip) {
+      const w = (C.forced ? C.rollW : AIR.ROT) * C.flipDir * dt;
+      if (brake && !C.forced) C.flipGoal = null;
+      else if (C.flipGoal == null) C.flipGoal = (C.flipDir > 0 ? Math.ceil(C.ar / TAU - 0.02) : Math.floor(C.ar / TAU + 0.02)) * TAU;   // nhả ⇒ lộn NỐT tới vòng trọn
+      C.ar += w;
+      if (C.flipGoal != null && (C.flipGoal - C.ar) * C.flipDir <= 0) { C.ar = C.flipGoal; C.flip = 0; C.flipGoal = null; C.forced = false; }
+    } else if (!st && C.arW === 0) C.ar += (Math.round(C.ar / TAU) * TAU - C.ar) * (1 - Math.exp(-dt * 2.4)) * 0.6;
+    if (G.fin) { C.arW = 0; if (!C.flip) C.ar += (Math.round(C.ar / TAU) * TAU - C.ar) * (1 - Math.exp(-dt * 4.5)); }
+    C.ap = lerp(C.ap, Math.atan2(C.vy, Math.max(C.v, 8)) * 0.45, 1 - Math.exp(-dt * 3));
+    if (C.y <= 0 && C.vy < 0) carLand(C);
+  }
+  function carLand(C) {
+    const vyHit = C.vy, err = Math.max(Math.abs(C.ap), Math.abs(wrapPI(C.ar))), low = C.low;
+    Object.assign(C, { jump: false, low: false, y: 0, vy: 0, airT: 0, flip: 0, flipGoal: null, forced: false, arW: 0, airK: 1 });
+    C.psi = Math.asin(clamp(C.vx / Math.max(C.v, 2), -0.5, 0.5));
+    let k = 1;
+    if (low) C.shake = Math.max(C.shake, 0.95);
+    else if (err < AIR.OK) { if (err < AIR.PERFECT) { C.v += 8; C.shake = Math.max(C.shake, 0.55); } else C.shake = Math.max(C.shake, 0.45); }   // PERFECT ⇒ vọt
+    else { k = 0.6; C.v *= 0.45; C.shake = 1; C.yk = Math.random() < 0.5 ? -0.7 : 0.7; C.ykV = 0; missiles.boom(C.x, -C.s, "miss"); }        // đáp lệch ⇒ mất đà, văng đuôi
+    C.ap = 0; C.ar = 0; C.hopV = Math.max(C.hopV, clamp(-vyHit * 0.2, 0.7, 2.1) * k);
+    onEvent("carLand", { err: +(err * 180 / Math.PI).toFixed(1) });
+  }
   function carDrone(d, dt, vis, alt, mx, zf, lookX, lead) {
     const C = d.car, o = d.o, fc = o.model && o.model.kind === "car" ? o.model.fc : null;
     const pd = G.t - d.padT < 0.45 && d.pad ? d.pad : null;
     const kBoost = d.keys.has("f") || !!(pd && pd.boost), kBrake = d.keys.has("n") || !!(pd && pd.brake);
-    if (!C.init) { Object.assign(C, { init: true, mode: "road", s: lead.s - 16, x: 0, v: 0, vx: 0, px: 0, psi: 0, yaw: 0, yk: 0, ykV: 0, wk: 0, y: 0, steer: 0, lift: 0, pod: 0, fw: null }); d.bk = D_BACK; }
+    if (!C.init) { Object.assign(C, { init: true, mode: "road", s: lead.s - 16, x: 0, v: 0, vx: 0, px: 0, psi: 0, yaw: 0, yk: 0, ykV: 0, wk: 0, y: 0, steer: 0, lift: 0, pod: 0, fw: null,
+      jump: false, low: false, vy: 0, airT: 0, airK: 1, arW: 0, ap: 0, ar: 0, flip: 0, flipDir: 1, flipGoal: null, forced: false, rollW: 0, ramp: null, rampPart: 0, twist: null, hy: 0, hopV: 0 }); d.bk = D_BACK; }   /* 5j-c: + nhảy dốc */
     const race = G.phase === "race", run = !G.paused;
     if (run && C.fw && G.t - C.fw.t >= 0.3) { const n = C.fw.n; C.fw = null; droneFire(d, n); }   // hết 0,3 s ⇒ bắn (1 = xe gần · 2 = xe xa)
     if (run) {
       if (C.mode === "road") {
         const st = race ? clamp((d.keys.has("r") ? 1 : 0) - (d.keys.has("l") ? 1 : 0) + (pd ? pd.steer : 0), -1, 1) : 0;
         C.steer += (st - C.steer) * Math.min(1, dt * 8);
-        const a = !race || kBrake ? -PHYS.BRAKE : kBoost ? (C.v < PHYS.VBOOST ? PHYS.ACCB : -2) : (C.v > PHYS.VBASE + 1 ? -PHYS.DEC * 0.5 : PHYS.ACC * 0.6);   // BOOST vô hạn
-        C.v = clamp(C.v + a * dt, 0, PHYS.VNITRO);
-        C.psi = clamp(C.psi + (C.steer * yawR(C.v) - C.v * kapV(C.s)) * dt, -0.7, 0.7);
-        C.vx = C.v * Math.sin(C.psi);
-        C.s += C.v * dt; C.x += (C.vx + C.px) * dt; C.px *= Math.exp(-2.2 * dt);
+        if (!C.jump) {
+          const a = !race || kBrake ? -PHYS.BRAKE : kBoost ? (C.v < PHYS.VBOOST ? PHYS.ACCB : -2) : (C.v > PHYS.VBASE + 1 ? -PHYS.DEC * 0.5 : PHYS.ACC * 0.6);   // BOOST vô hạn
+          C.v = clamp(C.v + (a - (C.ramp && !kBoost ? 9.8 * Math.sin(RAMP_SLOPE) * 3.2 : 0)) * dt, 0, Math.max(PHYS.VNITRO, C.v - 6 * dt));   // leo dốc không BOOST ⇒ trọng lực hãm như xe thường
+          C.psi = clamp(C.psi + (C.steer * yawR(C.v) - C.v * kapV(C.s)) * dt, -0.7, 0.7);
+          C.vx = C.v * Math.sin(C.psi);
+        } else C.vx += st * 2.2 * dt;                                                  // đang bay khỏi dốc: lái = trôi ngang nhẹ
+        const s0 = C.s;
+        C.s += C.v * dt * (C.jump && !C.low ? C.airK : 1); C.x += (C.vx + C.px) * dt; C.px *= Math.exp(-2.2 * dt);
         if (Math.abs(C.x) > ROADX - 1.1) { C.x = Math.sign(C.x) * (ROADX - 1.1); C.psi *= 0.5; C.v *= 0.995; }
         C.ykV += (-C.yk * 30 - C.ykV * 6) * dt; C.yk += C.ykV * dt; C.wk *= Math.exp(-3 * dt);
         C.yaw += (-Math.atan2(C.vx + C.px * 0.5, Math.max(C.v, 5)) * 0.9 - C.yaw) * Math.min(1, dt * 8);
-        C.y = 0; C.lift = ex(C.lift, 0, 4, dt); C.pushT = Math.max(0, C.pushT - dt); C.brakeT = Math.max(0, C.brakeT - dt); C.shake *= Math.exp(-4 * dt);
-        d.s = C.s; d.x = C.x; d.y = 0; d.vx = C.vx; d.vs = C.v;
+        if (C.jump) carAir(C, dt, race ? st : 0, race && kBrake); else carGround(C, s0, dt);   // 5j-c: cầu nhảy / dốc xoắn như xe thường
+        C.hy += C.hopV * dt; C.hopV -= 14 * dt; if (C.hy <= 0) { C.hy = 0; C.hopV = 0; }   // nảy khi đáp (chỉ là hình)
+        C.lift = ex(C.lift, 0, 4, dt); C.pushT = Math.max(0, C.pushT - dt); C.brakeT = Math.max(0, C.brakeT - dt); C.shake *= Math.exp(-4 * dt);
+        d.s = C.s; d.x = C.x; d.y = C.y; d.vx = C.vx; d.vs = C.v;
       } else {
         // bay: tiến / lùi theo cụm xe (BOOST / BRAKE dời bk ở steerDrone), ngang bám tâm như drone
         const sT = lead.s - d.bk, vT = lead.v + clamp((sT - C.s) * 0.9, -14, 14);
@@ -1702,25 +1788,25 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       }
     }
     // dáng xe
-    const air = C.y > 0.3, t3 = G.t;
+    const air = C.mode !== "road" && C.y > 0.3, t3 = G.t, road = C.mode === "road";   // 5j-c: nhảy dốc KHÔNG phải bay
     const bob = air ? C.lift * (Math.sin(t3 * 1.6) * 0.1 + Math.sin(t3 * 2.7) * 0.04) : 0;
-    const roll = air ? clamp(-(d.vx * 0.03 + d.axl * 0.02), -0.25, 0.25) + Math.sin(t3 * 1.3) * 0.012 : -C.steer * 0.035 * clamp(C.v / 20, 0, 1);
-    const pitch = air ? clamp(-(C.v - lead.v) * 0.004, -0.06, 0.06) : 0;
+    const roll = air ? clamp(-(d.vx * 0.03 + d.axl * 0.02), -0.25, 0.25) + Math.sin(t3 * 1.3) * 0.012 : -C.steer * 0.035 * clamp(C.v / 20, 0, 1) * (C.jump ? 0 : 1) + (road ? C.ar : 0);
+    const pitch = air ? clamp(-(C.v - lead.v) * 0.004, -0.06, 0.06) : road ? C.ap : 0;
     const sh = C.shake * 0.04;
-    o.g.rotation.order = "YXZ"; o.g.position.set(C.x + (Math.random() - 0.5) * sh, C.y + bob, -C.s); o.g.rotation.set(pitch, C.yaw + C.yk, roll); o.g.scale.setScalar(1);
+    o.g.rotation.order = "YXZ"; o.g.position.set(C.x + (Math.random() - 0.5) * sh, C.y + bob + (road ? C.hy : 0), -C.s); o.g.rotation.set(pitch, C.yaw + C.yk, roll); o.g.scale.setScalar(1);
     o.sh.visible = false; o.glow.visible = false;
     C.pod = ex(C.pod, air || (race && C.v > 0.3) ? 1 : 0, 4, dt);                 // bệ: lúc đếm chưa hiện · lăn bánh / bay ⇒ bật lên
     const vy = dt > 0 ? (C.y - (C.py ?? C.y)) / dt : 0; C.py = C.y;
     const gnd = C.mode === "road" ? 0 : C.lift * clamp(1 - C.y / 4, 0, 1);       // sát mặt đường + đang đẩy ⇒ khói tràn đường
     if (fc) fc.update(G.paused ? 0 : dt, { t: G.t, air: air ? 1 : 0, lift: C.lift, rear: C.mode === "road" ? 0 : clamp(0.2 + (C.v - lead.v) * 0.08, 0.15, 1), ground: gnd,
       still: Math.abs(d.vx) < 0.6 && Math.abs(d.axl) < 0.8,
-      side: { want: C.mode === "road" ? 0 : clamp(d.axl / 3, -1, 1), yaw: d.vx }, carry: carV.set(C.vx, vy, -C.v), spin: C.y < 0.05 ? C.v * dt / 0.35 : 0.3 * dt, pod: C.pod, sel: d.sel });
+      side: { want: C.mode === "road" ? 0 : clamp(d.axl / 3, -1, 1), yaw: d.vx }, carry: carV.set(C.vx, vy, -C.v), spin: road || C.y < 0.05 ? C.v * dt / 0.35 : 0.3 * dt, pod: C.pod, sel: d.sel });
     // máy quay cột: trên đường = sau xe, thấp · bay = lùi xa + cao (xe cỡ thật không quá to)
-    const k = clamp(C.y / alt, 0, 1), kk = k * k * (3 - 2 * k);
-    dcam.position.set(lerp(C.x * 0.9, C.x * 0.85, kk), lerp(3.1, C.y + 6.5 * zf, kk), -(C.s - lerp(8.5, 9.5 * zf, kk)));
-    dcam.lookAt(lerp(C.x, lerp(mx, d.ax, 0.5) * 0.6, kk), lerp(1.1, 0, kk), -(C.s + lerp(26, 24 + 10 * (zf - 1) + lookX, kk)));
+    const k = road ? 0 : clamp(C.y / alt, 0, 1), kk = k * k * (3 - 2 * k), jy = road ? C.y * 0.75 : 0;   // 5j-c: nhảy dốc ⇒ máy quay đường nâng theo
+    dcam.position.set(lerp(C.x * 0.9, C.x * 0.85, kk), lerp(3.1 + jy, C.y + 6.5 * zf, kk), -(C.s - lerp(8.5, 9.5 * zf, kk)));
+    dcam.lookAt(lerp(C.x, lerp(mx, d.ax, 0.5) * 0.6, kk), lerp(1.1 + jy, 0, kk), -(C.s + lerp(26, 24 + 10 * (zf - 1) + lookX, kk)));
     DV.S = C.s + lerp(14, d.bk * 0.5 + 10, kk);
-    return aimDrone(d, dt, vis && C.y > 2);                                        // trên đường KHÔNG tâm ngắm
+    return aimDrone(d, dt, vis && !road && C.y > 2);                                        // trên đường KHÔNG tâm ngắm
   }
   // 5. tâm ngắm của 1 drone — 4w: LUÔN 1 TÂM / drone (đạn của drone đó đang bay ⇒ ẩn) · hiện / ẩn nhoè · 4y: tâm bóng mờ trắng khi đạn bay · 5e: chấm thoi màu đội giữa tâm (2 drone)
   function aimDrone(d, dt, vis) {
@@ -2954,7 +3040,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     fire, drive(i, d) { T[i].manual = d || null; },
     step(n = 1, dt = 1 / 60) { manual = true; for (let k = 0; k < n; k++) frame(dt); fit(true); renderer.info.reset(); composer.render(); drawCount(); },
     get draws() { return { ...DI }; },                                           // 4k: lệnh vẽ / tam giác mỗi khung (TB ~1 s)
-    drone: { get set() { return { ...dset, ammo: { ...dset.ammo } }; }, setDrone, get car() { const C = D.car; return { mode: C.mode, s: +C.s.toFixed(1), x: +C.x.toFixed(2), v: +C.v.toFixed(1), y: +C.y.toFixed(2), pod: +C.pod.toFixed(2), lift: +C.lift.toFixed(2), kind: D.o.model ? D.o.model.kind : null }; }, fly: () => toggleFly(D),   /* 5j: bàn thử */ get state() { return { s: +D.s.toFixed(1), x: +D.x.toFixed(2), ax: +D.ax.toFixed(2), ad: +D.ad.toFixed(1), sel: D.sel, lock: D.lock, k: +dK.toFixed(3) }; },
+    drone: { get set() { return { ...dset, ammo: { ...dset.ammo } }; }, setDrone, get car() { const C = D.car; return { mode: C.mode, s: +C.s.toFixed(1), x: +C.x.toFixed(2), v: +C.v.toFixed(1), y: +C.y.toFixed(2), pod: +C.pod.toFixed(2), lift: +C.lift.toFixed(2), kind: D.o.model ? D.o.model.kind : null, jump: !!C.jump, ap: +(C.ap || 0).toFixed(2), ar: +(C.ar || 0).toFixed(2), flip: C.flip || 0 }; }, fly: () => toggleFly(D), carPut(o) { Object.assign(D.car, o); },   /* 5j-c: bàn thử đặt xe trước dốc */   /* 5j: bàn thử */ get state() { return { s: +D.s.toFixed(1), x: +D.x.toFixed(2), ax: +D.ax.toFixed(2), ad: +D.ad.toFixed(1), sel: D.sel, lock: D.lock, k: +dK.toFixed(3) }; },
       aim(ax, ad, n = 0) { const d = DR[n]; if (ax != null) d.ax = clamp(ax, -ROADX, ROADX); if (ad != null) d.ad = clamp(ad, D_NEAR, D_FAR); }, sel: (k, n = 0) => droneSel(k, DR[n]), fire: (n = 0) => droneFire(DR[n]), canTarget, cam: dcam,   // 4k: bàn thử
       near(bk, n = 0) { DR[n].bk = clamp(bk, D_BK0, D_BK1); },   // 5e: bàn thử NEAR / FAR
       get drones() { return DR.map(d => ({ n: d.n, used: dUsed(d), s: +d.s.toFixed(1), x: +d.x.toFixed(2), y: +d.y.toFixed(2), ax: +d.ax.toFixed(2), ad: +d.ad.toFixed(1), bk: +d.bk.toFixed(1), sel: d.sel, lock: d.lock, bat: +d.bat.toFixed(2), padOn: d.padOn, stats: JSON.parse(JSON.stringify(d.stats)), model: !!d.o.model, gx: +d.o.g.position.x.toFixed(2) })); } },   // 5e

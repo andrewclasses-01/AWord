@@ -2,6 +2,8 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
+## Đợt 564 (21/10/2026) — TRANG THỬ ẨN myGame 5j-c — Roadster đứng sàn trong xưởng, bảng màu Roadster (dset.carCol), bánh quay quanh trục thật, nhảy dốc / dốc xoắn như xe thường. Template thật KHÔNG đổi.
+
 ## Đợt 563 (21/10/2026) — TRANG THỬ ẨN myGame 5j-b — Roadster trong xưởng (`3d/sr3d-intro-5j.js`, rw-5j nhập intro này) + sửa khói / nút cất-hạ cánh. Template thật KHÔNG đổi.
 
 ## Đợt 562 (21/10/2026) — TRANG THỬ ẨN myGame 5j (XE BAY ROADSTER) — template thật KHÔNG đổi

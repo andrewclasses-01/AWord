@@ -23,7 +23,7 @@ const UNDER = [[-0.6, 0.141, 0.7], [0.6, 0.14, 0.7], [-0.6, 0.126, -1.93], [0.6,
 const REAR = [[-0.4, 0.575, -2.175], [-0.135, 0.575, -2.234], [0.135, 0.575, -2.234], [0.4, 0.575, -2.175]];
 const SIDE = [[-0.919, 0.45, 1.75, -1], [-0.933, 0.45, -1.95, -1], [0.919, 0.45, 1.75, 1], [0.933, 0.45, -1.95, 1]];
 const POD = { y: 0.935, z: -1.15, w: 0.46, len: 0.46, h: 0.17, up: 0.03, down: -0.19, elev: 37 };
-const PAINT = "#0f5c34";                                           // 5j (thầy): Roadster sơn XANH LÁ CÂY ĐẬM
+export const PAINT = "#1e8f4e";   /* 5j-c: tươi hơn (thầy: "đậm quá") — cũ #0f5c34 */                                           // 5j (thầy): Roadster sơn XANH LÁ CÂY ĐẬM
 const AMMO_COL = ["#ff63c3", "#2ee6c9", "#ff2020"];             // heart · boost · missile (DA_COL)
 const B_EMIT = 0.11, B_HOLD = 0.07, B_FADE = 0.22;              // 1 nhịp hông
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
@@ -159,7 +159,7 @@ export function createFlyCar({ bend, U }) {
     pl.position.set(0, 0.4, -2.259); pl.rotation.y = Math.PI; inn.add(pl);
   }
   obj.traverse(o => { o.frustumCulled = false; });
-  let ready = false, base = null, loading = null;
+  let ready = false, base = null, loading = null, paint = PAINT, tintCol = null;
   return {
     obj, smoke, M: { L: FLYCAR.L, W: FLYCAR.W }, parts, get ready() { return ready; },
     load() {
@@ -170,22 +170,42 @@ export function createFlyCar({ bend, U }) {
       const own = new Map();
       base.traverse(o => {
         if (!o.isMesh) return; o.frustumCulled = false;
-        o.material = (Array.isArray(o.material) ? o.material : [o.material]).map(m => { if (!own.has(m)) { const c = m.clone(); if (/Window/i.test(c.name)) { c.transparent = true; c.depthWrite = false; } own.set(m, B(c)); mats.push(c); if (/Paint/i.test(c.name)) { if (c.map) c.map = null; c.color.set(PAINT); c.metalness = 0.45; c.roughness = 0.26; c.needsUpdate = true; parts.paint.push({ m: c, col: c.color.clone() }); } } return own.get(m); });
+        o.material = (Array.isArray(o.material) ? o.material : [o.material]).map(m => { if (!own.has(m)) { const c = m.clone(); if (/Window/i.test(c.name)) { c.transparent = true; c.depthWrite = false; } own.set(m, B(c)); mats.push(c); if (/Paint/i.test(c.name)) { if (c.map) c.map = null; c.color.set(paint); c.metalness = 0.45; c.roughness = 0.26; c.needsUpdate = true; parts.paint.push({ m: c, col: c.color.clone() }); } } return own.get(m); });
         if (o.material.length === 1) o.material = o.material[0];
       });
       // 4 bánh: trục quay đặt đúng tâm hộp bao
       const box = new THREE.Box3(), c = new THREE.Vector3();
+      // 5j-c (thầy: "bánh chạy lệch, lủng lẳng"): bánh mẫu có CAMBER 2–3° ⇒ quay quanh trục X thẳng làm vành đảo ±2 cm. Nay quay quanh TRỤC THẬT của
+      //   bánh (phương ít trải nhất của các đỉnh lốp) · tâm = đỉnh lốp − bán kính (đáy lốp mẫu bị ép phẳng ⇒ tâm hộp bao lệch xuống 4–6 mm)
       for (const key of ["LF", "RF", "LB", "RB"]) {
         const w = base.getObjectByName("Wheel_" + key); if (!w) continue;
-        box.setFromObject(w); box.getCenter(c); inn.worldToLocal(c);
-        const piv = new THREE.Group(); piv.position.copy(c); inn.add(piv); piv.attach(w); parts.wheels.push(piv);
+        let big = null; w.traverse(o => { if (o.isMesh && (!big || o.geometry.attributes.position.count > big.geometry.attributes.position.count)) big = o; }); if (!big) continue;
+        const pa = big.geometry.attributes.position, P = [], v = new THREE.Vector3(), mu = new THREE.Vector3(), cv = [0, 0, 0, 0, 0, 0];
+        for (let i = 0; i < pa.count; i++) { v.fromBufferAttribute(pa, i).applyMatrix4(big.matrixWorld); inn.worldToLocal(v); P.push(v.clone()); mu.add(v); }
+        mu.divideScalar(P.length);
+        for (const q of P) { const a = q.x - mu.x, b = q.y - mu.y, e = q.z - mu.z; cv[0] += a * a; cv[1] += a * b; cv[2] += a * e; cv[3] += b * b; cv[4] += b * e; cv[5] += e * e; }
+        const inv = new THREE.Matrix3().set(cv[0], cv[1], cv[2], cv[1], cv[3], cv[4], cv[2], cv[4], cv[5]).invert(), ax = new THREE.Vector3(1, 0, 0);
+        for (let k = 0; k < 40; k++) ax.applyMatrix3(inv).normalize();
+        if (ax.x < 0) ax.negate();
+        box.setFromPoints(P); const R = (box.max.z - box.min.z) / 2;
+        c.set((box.min.x + box.max.x) / 2, box.max.y - R, (box.min.z + box.max.z) / 2);
+        const piv = new THREE.Group(); piv.position.copy(c); piv.userData.ax = ax; inn.add(piv); piv.attach(w); parts.wheels.push(piv);
       }
       obj.traverse(o => { o.frustumCulled = false; });
       ready = true; return this;
       })();   // gọi 2 lần (xưởng + game) ⇒ chỉ nạp 1 lần
     },
     setTint(col) {   // 2 drone: sơn màu đội (null = màu gốc)
+      tintCol = col || null;
       parts.paint.forEach(p => { if (col) p.m.color.copy(p.col).lerp(new THREE.Color(col).multiplyScalar(2.2), 0.8); else p.m.color.copy(p.col); });
+    },
+    setPaint(col) {   // 5j-c: màu sơn gốc thầy chọn trong Settings (bảng màu)
+      paint = /^#[0-9a-f]{6}$/i.test(col || "") ? col : PAINT;
+      parts.paint.forEach(p => p.col.set(paint)); this.setTint(tintCol);
+    },
+    stealth(on) {     // 5j-c: XƯỞNG — xe đứng sàn như xe thường, giấu ống phụt + bệ tên lửa (chưa lộ là xe bay)
+      [...parts.under, ...parts.rear].forEach(g => { g.visible = !on; }); parts.side.forEach(j => { j.g.visible = !on; });
+      if (parts.pod) parts.pod.lift.visible = !on;
     },
     // điểm + hướng miệng nòng k (0 HEART · 1 BOOST · 2 MISSILE) trong hệ THẾ GIỚI
     muzzle(k, pos, dir) { const t = parts.tubes[k]; obj.updateMatrixWorld(true); t.localToWorld(pos.set(0, 0, 0.04)); dir.set(0, 0, 1).transformDirection(t.matrixWorld); return pos; },
@@ -194,7 +214,7 @@ export function createFlyCar({ bend, U }) {
       obj.updateMatrixWorld(true);
       const carry = st.carry || new THREE.Vector3();
       // bánh
-      parts.wheels.forEach(w => { w.rotation.x += st.spin || 0; });
+      parts.wheels.forEach(w => { w.rotateOnAxis(w.userData.ax, st.spin || 0); });   // 5j-c: quanh trục thật của bánh
       // bệ
       parts.pod.lift.position.y = POD.down + (POD.up - POD.down) * THREE.MathUtils.smoothstep(st.pod || 0, 0, 1);
       parts.pod.aM.emissiveIntensity = 0.15 + 0.5 * (st.pod || 0); M.slit.emissiveIntensity = 0.3 + 1.4 * (st.pod || 0);
