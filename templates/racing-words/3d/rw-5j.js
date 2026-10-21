@@ -335,6 +335,7 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
     if (k === "droneDeny") { S.play("wrong", { gain: 0.35, rate: 1.3 }); return; }
     // 5j-d: tiếng Roadster — nhảy dốc · đáp · BẬT THRUST giữa trời (nổ) · cất / hạ cánh · chạm đất phụt lửa
     if (k === "carKick") { S.play("boom", { gain: v.twist ? 1.15 : 0.9, rate: 0.78 }); S.play("boost", { gain: 1 }); S.play("hit", { gain: v.twist ? 0.8 : 0.55, delay: 0.05 }); return; }
+    if (k === "trafficBoom") { S.play("boom", { gain: 0.9 }); S.play("crash", { gain: 0.6, delay: 0.12 }); return; }   // 5j-f
     if (k === "carJump") { S.play("flyby", { gain: 0.5, rate: 1.2 }); return; }
     if (k === "carLand") { S.play("land", { gain: 0.8 }); return; }
     if (k === "carFly") { if (v.up) S.play("boost", { gain: 0.55, rate: 0.8 }); return; }

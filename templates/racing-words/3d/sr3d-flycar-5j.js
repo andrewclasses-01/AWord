@@ -179,6 +179,15 @@ export function createFlyCar({ bend, U }) {
         o.material = (Array.isArray(o.material) ? o.material : [o.material]).map(m => { if (!own.has(m)) { const c = m.clone(); if (/Window/i.test(c.name)) { c.transparent = true; c.depthWrite = false; } own.set(m, B(c)); mats.push(c); if (/Paint/i.test(c.name)) { if (c.map) c.map = null; c.color.set(paint); c.metalness = 0.45; c.roughness = 0.26; c.needsUpdate = true; parts.paint.push({ m: c, col: c.color.clone() }); } } return own.get(m); });
         if (o.material.length === 1) o.material = o.material[0];
       });
+      // 5j-f: ĐÈN HẬU — mẫu gộp đèn trước + sau 1 mảnh ⇒ tách tam giác phía đuôi ra mảnh riêng (vật liệu riêng) để PHANH sáng đỏ (hình mới, không sửa hình dùng chung)
+      base.traverse(o => { if (parts.tail || !o.isMesh || Array.isArray(o.material) || !/LightA/.test(o.material.name) || !o.geometry.index) return;
+        const g = o.geometry, pa = g.attributes.position, ix = g.index, keep = [], rear = [], v = new THREE.Vector3();
+        for (let t = 0; t < ix.count; t += 3) { let z = 0; for (let k = 0; k < 3; k++) { v.fromBufferAttribute(pa, ix.getX(t + k)).applyMatrix4(o.matrixWorld); inn.worldToLocal(v); z += v.z / 3; } (z < -1.7 ? rear : keep).push(ix.getX(t), ix.getX(t + 1), ix.getX(t + 2)); }
+        if (!rear.length) return;
+        const sub = arr => { const ng = new THREE.BufferGeometry(); for (const k in g.attributes) ng.setAttribute(k, g.attributes[k]); ng.setIndex(arr); return ng; };
+        o.geometry = sub(keep);
+        const tm = o.material.clone(); tm.emissive = new THREE.Color("#ff1a10"); tm.emissiveMap = tm.map; tm.emissiveIntensity = 0.35; B(tm); mats.push(tm);
+        const tl = new THREE.Mesh(sub(rear), tm); tl.frustumCulled = false; tl.position.copy(o.position); tl.quaternion.copy(o.quaternion); tl.scale.copy(o.scale); o.parent.add(tl); parts.tail = tm; });
       // 4 bánh: trục quay đặt đúng tâm hộp bao
       const box = new THREE.Box3(), c = new THREE.Vector3();
       // 5j-c (thầy: "bánh chạy lệch, lủng lẳng"): bánh mẫu có CAMBER 2–3° ⇒ quay quanh trục X thẳng làm vành đảo ±2 cm. Nay quay quanh TRỤC THẬT của
@@ -227,6 +236,7 @@ export function createFlyCar({ bend, U }) {
       parts.pod.aM.emissiveIntensity = 0.15 + 0.5 * (st.pod || 0); M.slit.emissiveIntensity = 0.3 + 1.4 * (st.pod || 0);
       parts.tubeLed.forEach((m, k) => { m.emissiveIntensity = (st.pod || 0) * (k === st.sel ? 2.4 : 0.15); });
       M.under.emissiveIntensity = (st.lift || 0) * 3;
+      if (parts.tail) parts.tail.emissiveIntensity = 0.35 + 3.4 * (st.brake || 0);   // 5j-f: đèn phanh
       // ống gầm: khói trắng mờ phụt xuống, đi theo xe 90 %, cột tan sau ~3 m
       const lift = st.lift || 0;
       if (lift > 0.05) for (const g of parts.under) {
