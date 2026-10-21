@@ -45,7 +45,8 @@ const LOAD_BG = new URL("./rw-loading.webp", import.meta.url).href;   // Đợt 
 const loader = () => { ensureCss(); return showLoader3d({ key: "racingwords", title: "RACING WORDS", theme: "race", bg: LOAD_BG, files: loadFiles, pace: { create: createLoadPace, key: "rw" } }); };
 preloadLoader3d("race", LOAD_BG);
 
-const GAME = "./3d/rw-5i.js";                     // ⭐ Đợt 558: myGame 5i — vạch lửa drone · Settings ▸ Boost · sửa tab Driver.
+const GAME = "./3d/rw-5j.js";                     // ⭐ Đợt 570: myGame 5j — XE BAY ROADSTER trong bộ Drone (Settings ▸ Drone ▸ FLYING CAR · Roadster).
+// Đợt 558 (cũ): const GAME = "./3d/rw-5i.js";                     // ⭐ Đợt 558: myGame 5i — vạch lửa drone · Settings ▸ Boost · sửa tab Driver.
 // Đợt 556 (cũ): const GAME = "./3d/rw-5h.js";                     // ⭐ Đợt 556: myGame 5h — tối ưu TOMKO (2 drone mượt, độ nét giữ 0,9–1,0).   // Đợt 554: ⭐ Đợt 554: myGame 5f — 2 DRONE (iPad thứ 4), drone trong xưởng, máy quay theo xe dẫn.
 // Đợt 553 (cũ): const GAME = "./3d/rw-5d.js";                     // ⭐ Đợt 553: myGame 4k→5d — DRONE iPad thứ 3 (Settings ▸ Drone; mặc định Off). Trước: "./3d/rw-4j.js"
 // const GAME_4J = "./3d/rw-4j.js";                     // ⭐ Đợt 551: myGame 4g→4j (kết trận slow motion · chờ câu mới 3 s · loading đều + hết đơ bóng xe · boost phát sáng · cửa sổ góc + tạm dừng chung + đèn 3-2-1 · Drive on iPad màn lớn lái cùng · tên lửa chỉ bắn phía trước / bay thấp / quầng đỏ · trúng đạn lệch + DAMAGE · mũi tên đối thủ dính mép · bảng đếm đầu vạch · nút bắn kiểu thẻ · giá tên lửa thấp) · Đợt 538: myGame mẫu 4f (cổng iPad ở xưởng: START khi 2 iPad nối thẳng + thử trái/phải · đường nối sống qua Apply / Start again / đổi xe · tự nối lại khi slow · mốc nghiêng tự lấy) · Đợt 537: myGame mẫu 4e (Settings mọi nơi + tạm dừng, mặc định mới, bay xa, nghiêng đúng chiều, BAD mất lái) · Đợt 535: myGame mẫu 4d (5 đợt sau 3y: chế độ đua, cong thật, lái tay, dốc xoắn, phần thưởng, xe khác, camera gộp) · Đợt 534: myGame mẫu 3y (lái nghiêng iPad) · Đợt 533: myGame mẫu 3r (mượt TOMKO) · Đợt 531: myGame mẫu 3q (Fight options, cảnh xa đúng vật lý, 35 km/h) · Đợt 529: 3p · Đợt 527: 3o
@@ -154,7 +155,7 @@ function rwPadLink() {
     try { L.remote && L.remote.close && L.remote.close(); } catch (e) { /* */ }
   }
   import("../../core/ipad-now.js").then(m => { N = m; sync(); }).catch(() => {});
-  L.ready = Promise.all([import("./rw-pad-signal.js"), import("./3d/sr3d-padlink-5e.js")]).then(([S, P]) => {   // ⭐ Đợt 554: 5e (4 chỗ: 2 đội + 2 drone)   // ⭐ Đợt 553: 5a (3 chỗ: 2 đội + drone)
+  L.ready = Promise.all([import("./rw-pad-signal.js"), import("./3d/sr3d-padlink-5j.js")]).then(([S, P]) => {   // ⭐ Đợt 554: 5e (4 chỗ: 2 đội + 2 drone)   // ⭐ Đợt 553: 5a (3 chỗ: 2 đội + drone)
     if (L.dead) return L;
     const r = P.createPadHost({ signal: S.rwPadSignal(), padUrl: S.padUrl });
     // mở phiên NGAY (chưa có game): game gắn sau sẽ nhận lại trạng thái từng đội

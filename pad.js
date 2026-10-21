@@ -130,9 +130,10 @@ async function showTR(team) {
 const rwCss = () => { if (document.querySelector("link[data-rw4j]")) return; const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "./templates/racing-words/3d/rw-4j-fb.css"; l.dataset.rw4j = "1"; document.head.append(l);
   const f = document.createElement("link"); f.rel = "stylesheet"; f.href = "https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&display=swap"; document.head.append(f); };   // Đợt 553: + font bảng lái drone
 // ⭐ Đợt 553 — myGame 5c: padlink-5a (3 chỗ: 2 đội + DRONE) · padui-5c (đội = màn 4j như cũ · DRONE = bảng lái AERO YOKE · màn chọn vai 3 nút)
+// ⭐ Đợt 570 — myGame 5j: padui-5j (bảng drone = ROADSTER khi chọn xe bay: TAKE OFF / LAND, bàn đạp BRAKE / BOOST) · padlink-5j (+ phím fly)
 // ⭐ Đợt 558 — myGame 5i: padui-5i (= 5g + bàn đạp BOOST hiện khúc boost mất: đỏ, xịt xuống, khói đen)
 // ⭐ Đợt 554 — myGame 5g: padlink-5e (4 chỗ: 2 đội + 2 drone) · padui-5g (màn chọn vai 4 thẻ ảnh thật · nút tên lửa hết bề ngang · vừa mọi tỉ lệ màn)
-const rwMods = () => { rwCss(); return Promise.all([import("./templates/racing-words/3d/sr3d-padlink-5e.js"), import("./templates/racing-words/3d/sr3d-padui-5i.js"), import("./templates/racing-words/rw-pad-signal.js")]); };   // Đợt 538: 4f (tự nối lại khi slow, mốc nghiêng tự lấy)
+const rwMods = () => { rwCss(); return Promise.all([import("./templates/racing-words/3d/sr3d-padlink-5j.js"), import("./templates/racing-words/3d/sr3d-padui-5j.js"), import("./templates/racing-words/rw-pad-signal.js")]); };   // Đợt 538: 4f (tự nối lại khi slow, mốc nghiêng tự lấy)
 async function showRW(team) {
   note.hidden = true;
   if (view === "rw" + team) return;

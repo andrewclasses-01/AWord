@@ -546,6 +546,14 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 570 (21/10/2026) — RACING WORDS THẬT lên myGame 5j: XE BAY ROADSTER trong bộ Drone (thầy chốt sau Đợt 562–569 trang thử)
+- chep-racing-words: GOC `rw-5j.js`, GOC_THEM `sr3d-padui-5j.js` + `sr3d-padlink-5j.js`, DRONE_GLB + `flycar-F296.glb`. myGame `4f5cc79` (5j-i).
+- racing-words.js GAME = ./3d/rw-5j.js + padlink-5j · rw-pad-signal.js + pad.js ⇒ padlink-5j / padui-5j · load-files.js = bộ đo 558 đổi tên 5j + thêm padlink-5j / flycar-5j / world-5j (số byte trên đĩa).
+- File mới trong 3d/: sr3d-flycar-5j, sr3d-intro-5j, sr3d-world-5j (cảnh quanh Roadster), sr3d-dammo-5j (đạn qua đầu xe), sr3d-traffic-5j (xe giao thông nổ / lật / cháy). Xoá: rw-5i, sr3d-5i, sr3d-intro-5f, sr3d-dammo-5e, sr3d-traffic-4c.
+- Tối ưu 5j-i (đo renderer.info, cả 3 khung): tắt drone 406 (5i: 404) · Mavic 673 · Roadster sau 2 xe 658 / trước 757 / bay 768 (trước tối ưu ~1.950).
+- GỠ trang thử ẩn: lab/racing-xebay.html, lab/racing-xebay-pad.html, templates/racing-words/rw-lab-signal.js.
+- VIỆC ĐANG CHỜ: ⬜ thầy thử TOMKO + 4 iPad thật với Roadster.
+
 ## Đợt 569 (21/10/2026) — TRANG THỬ ẨN RACING WORDS 5j-h: SỬA LỖI Roadster bay là đứng im (thầy báo: lộn vòng từ dốc, bấm TAKE OFF ⇒ xe kẹt, ga không đi)
 - Chép từ myGame 5j-h (commit c47fbbe). Lỗi từ Đợt 568: lệnh tiến tới của nhánh bay bị nằm sau chú thích ⇒ bay là đứng im. Thêm: tốc bay không âm, BOOST khi bay phóng tới.
 - ⛔ Template `racing_words` THẬT vẫn KHÔNG ĐỔI (GOC rw-5i).

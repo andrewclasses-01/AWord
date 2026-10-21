@@ -6,7 +6,7 @@
 // ⚠️ kind "racingwords-pad" PHẢI có trong APP_DATA_KINDS (core/store.js).
 // =============================================================
 import { db, fs, currentUser } from "../../core/firebase.js";
-import { localSignal } from "./3d/sr3d-padlink-5e.js";   // ⭐ Đợt 554: 5e (4 chỗ)   // ⭐ Đợt 553: 5a (3 chỗ) · Đợt 538: 4f · Đợt 534: 3y (khoá c/r mới)
+import { localSignal } from "./3d/sr3d-padlink-5j.js";   // ⭐ Đợt 570: 5j (+ phím fly)   // ⭐ Đợt 554: 5e (4 chỗ)   // ⭐ Đợt 553: 5a (3 chỗ) · Đợt 538: 4f · Đợt 534: 3y (khoá c/r mới)
 
 export const PAD_LOCAL = new URLSearchParams(location.search).get("padsig") === "local";   // bàn thử: kênh cục bộ 2 tab
 export const PAD_KIND = "racingwords-pad";

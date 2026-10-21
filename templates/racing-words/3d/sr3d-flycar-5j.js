@@ -117,6 +117,20 @@ export function createFlyCar({ bend, U }) {
     flG = new THREE.ConeGeometry(1, 1, 14, 1, true).rotateX(Math.PI / 2).translate(0, 0, 0.5);
   parts.flames = parts.rear.map(g => { const o = new THREE.Mesh(flG, flM), c = new THREE.Mesh(flG, flC); o.position.z = c.position.z = 0.045; o.visible = c.visible = false; o.renderOrder = c.renderOrder = 7; g.add(o, c); return { o, c }; });
   for (const [x, y, z, s] of SIDE) { const g = nozzle(0.022, 0.03, 0.06); g.position.set(x, y, z); g.quaternion.setFromUnitVectors(Z, new THREE.Vector3(s, 0, 0)); inn.add(g); parts.side.push({ g, s, z, emit: 0, b: -1, next: Math.random() }); }
+  // 5j-i: TỐI ƯU — 16 ống phụt (64 mảnh) gộp theo vật liệu ⇒ 3 mảnh (−61 lệnh vẽ mỗi khung có Roadster). Nhóm ống giữ lại làm điểm neo (khói, lửa đuôi).
+  parts.nozM = (() => {
+    inn.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(inn.matrixWorld).invert(), byM = new Map();
+    [...parts.under, ...parts.rear, ...parts.side.map(j => j.g)].forEach(g => g.children.slice().forEach(m => { if (!m.isMesh || m.material === flM || m.material === flC) return;
+      const geo = m.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld)); if (!byM.has(m.material)) byM.set(m.material, []); byM.get(m.material).push(geo); g.remove(m); }));
+    const out = [];
+    byM.forEach((list, mat) => { let nv = 0, ni = 0; list.forEach(q => { nv += q.attributes.position.count; ni += q.index ? q.index.count : q.attributes.position.count; });
+      const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), uv = new Float32Array(nv * 2), idx = new Uint32Array(ni); let ov = 0, oi = 0;
+      list.forEach(q => { const n = q.attributes.position.count; pos.set(q.attributes.position.array, ov * 3); nor.set(q.attributes.normal.array, ov * 3); if (q.attributes.uv) uv.set(q.attributes.uv.array, ov * 2);
+        if (q.index) { const A = q.index.array; for (let k = 0; k < A.length; k++) idx[oi + k] = A[k] + ov; oi += A.length; } else { for (let k = 0; k < n; k++) idx[oi + k] = ov + k; oi += n; } ov += n; q.dispose(); });
+      const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setAttribute("normal", new THREE.BufferAttribute(nor, 3)); g.setAttribute("uv", new THREE.BufferAttribute(uv, 2)); g.setIndex(new THREE.BufferAttribute(idx, 1));
+      const mesh = new THREE.Mesh(g, mat); inn.add(mesh); out.push(mesh); });
+    return out;
+  })();
   // đèn đỏ gầm (mảnh)
   for (const sx of [-1, 1]) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.008, 2.2), M.under); m.position.set(sx * 0.62, 0.118, -0.15); inn.add(m); }
   // bệ tên lửa dáng nêm
@@ -176,7 +190,8 @@ export function createFlyCar({ bend, U }) {
       base.traverse(o => {
         if (!o.isMesh) return; o.frustumCulled = false;
         if (/Plate/i.test(o.name)) { o.visible = false; return; }   // 5j-e: bỏ hẳn biển gốc của mẫu (chỉ còn biển ANDREW TEAM)
-        o.material = (Array.isArray(o.material) ? o.material : [o.material]).map(m => { if (!own.has(m)) { const c = m.clone(); if (/Window/i.test(c.name)) { c.transparent = true; c.depthWrite = false; } own.set(m, B(c)); mats.push(c); if (/Paint/i.test(c.name)) { if (c.map) c.map = null; c.color.set(paint); c.metalness = 0.45; c.roughness = 0.26; c.needsUpdate = true; parts.paint.push({ m: c, col: c.color.clone() }); } } return own.get(m); });
+        o.material = (Array.isArray(o.material) ? o.material : [o.material]).map(m => { if (!own.has(m)) { const c = m.clone(); if (/Window/i.test(c.name)) { c.transparent = true; c.depthWrite = false; }
+          if (c.transmission > 0) { c.transmission = 0; c.transparent = true; c.opacity = Math.min(c.opacity, 0.38); c.depthWrite = false; }   /* 5j-i: TỐI ƯU — kính 'transmission' bắt three vẽ lại CẢ CẢNH thêm 1 lượt mỗi khung ⇒ kính trong thường */ own.set(m, B(c)); mats.push(c); if (/Paint/i.test(c.name)) { if (c.map) c.map = null; c.color.set(paint); c.metalness = 0.45; c.roughness = 0.26; c.needsUpdate = true; parts.paint.push({ m: c, col: c.color.clone() }); } } return own.get(m); });
         if (o.material.length === 1) o.material = o.material[0];
       });
       // 5j-f: ĐÈN HẬU — mẫu gộp đèn trước + sau 1 mảnh ⇒ tách tam giác phía đuôi ra mảnh riêng (vật liệu riêng) để PHANH sáng đỏ (hình mới, không sửa hình dùng chung)
@@ -219,7 +234,7 @@ export function createFlyCar({ bend, U }) {
       parts.paint.forEach(p => p.col.set(paint)); this.setTint(tintCol);
     },
     stealth(on) {     // 5j-c: XƯỞNG — xe đứng sàn như xe thường, giấu ống phụt + bệ tên lửa (chưa lộ là xe bay)
-      [...parts.under, ...parts.rear].forEach(g => { g.visible = !on; }); parts.side.forEach(j => { j.g.visible = !on; });
+      [...parts.under, ...parts.rear].forEach(g => { g.visible = !on; }); parts.side.forEach(j => { j.g.visible = !on; }); parts.nozM.forEach(m => { m.visible = !on; });   /* 5j-i: ống đã gộp */
       if (parts.pod) parts.pod.lift.visible = !on;
     },
     // điểm + hướng miệng nòng k (0 HEART · 1 BOOST · 2 MISSILE) trong hệ THẾ GIỚI

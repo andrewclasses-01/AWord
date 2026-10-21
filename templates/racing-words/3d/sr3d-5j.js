@@ -569,18 +569,22 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   const ramps = createRamps({ scene, bend });
   const trails = createTrails({ scene, bend });
   const twists = createTwists({ scene, bend }), pickups = createPickups({ scene, bend });   // 4b
+  // 5j-i: TỐI ƯU — dốc / dốc xoắn SAU vạch đích (chỉ Roadster tới được) là bộ RIÊNG, chỉ dựng khi Roadster tới gần đích (cũ: dựng sẵn cả 4 km ⇒ +~70 lệnh vẽ / khung suốt trận)
+  const rampsX = createRamps({ scene, bend }), twistsX = createTwists({ scene, bend }); let rampsXOn = false, rampsXOut = [], twistsXOut = [];
+  function rampsBeyond() { if (rampsXOn || !rampsXOut.length && !twistsXOut.length) return; rampsXOn = true; rampsX.set(rampsXOut); twistsX.set(twistsXOut, ROADX); }
   const traffic = createTraffic({ scene, bend });            // 4c: luôn có trong cảnh (đếm 0 khi tắt) ⇒ shader dịch sẵn
   const pkKinds = () => [opt.pkBoost !== false ? "boost" : null, opt.pkLife !== false && opt.lives > 0 ? "life" : null, opt.pkMissile !== false && opt.msMax > 0 ? "missile" : null].filter(Boolean);
   // dốc: mỗi vòng 2 dốc (≈ 1/3 và 2/3 vòng), lệch về 2 nửa đường xen kẽ ⇒ phải lái sang mới lên được dốc, dễ tranh nhau
   function layRamps() {
     const out = [];
     const RMAX = OPEN ? MAXS : FIN + 4000;                                      // 5j-f: dốc tiếp QUA vạch đích (Roadster chạy xa trước 2 xe vẫn gặp dốc)
+    rampsXOut = []; twistsXOut = []; rampsXOn = false; rampsX.set([]); twistsX.set([], ROADX);   // 5j-i: bộ sau đích dựng muộn (rampsBeyond)
     if (opt.ramps) for (let k = 0; k * LAP < RMAX; k++) [[0.3, k % 2 ? 4.1 : -4.1], [0.7, k % 2 ? -4.1 : 4.1]].forEach(([f, x]) => {
-      const s = k * LAP + f * LAP; if (s > 90 && s < RMAX - 70 && (OPEN || Math.abs(s - FIN) > 70)) out.push({ s: Math.round(s), x, w: 7 });
+      const s = k * LAP + f * LAP; if (s > 90 && s < RMAX - 70 && (OPEN || Math.abs(s - FIN) > 70)) (OPEN || s < FIN ? out : rampsXOut).push({ s: Math.round(s), x, w: 7 });
     });
     ramps.set(out);
     // 4b: DỐC XOẮN — mỗi vòng 1 cái giữa 2 cầu nhảy, mép phải / trái xen kẽ
-    const tw = []; if (opt.ramps && opt.twists !== false) for (let k = 0; k * LAP < RMAX; k++) { const s = k * LAP + 0.5 * LAP; if (s > 120 && s < RMAX - 80 && (OPEN || Math.abs(s - FIN) > 80)) tw.push({ s: Math.round(s), side: k % 2 ? -1 : 1 }); }
+    const tw = []; if (opt.ramps && opt.twists !== false) for (let k = 0; k * LAP < RMAX; k++) { const s = k * LAP + 0.5 * LAP; if (s > 120 && s < RMAX - 80 && (OPEN || Math.abs(s - FIN) > 80)) (OPEN || s < FIN ? tw : twistsXOut).push({ s: Math.round(s), side: k % 2 ? -1 : 1 }); }
     twists.set(tw, ROADX);
     // 4c: làn x ở quãng s có cầu nhảy / dốc xoắn ⇒ xe khác né sang làn khác
     traffic.setBlocked((s, x) => out.some(q => s > q.s - 22 && s < q.s + RAMP.LEN + 6 && Math.abs(x - q.x) < q.w / 2 + 1.2) || tw.some(q => s > q.s - 22 && s < q.s + TWIST.LEN + 6 && (x - q.side * (ROADX - TWIST.W)) * q.side > -1.3));
@@ -1716,7 +1720,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   const FC_AX = { f: 1.129, r: 1.468 };                                          // trục bánh Roadster (m, từ tâm xe)
   function carRamp(C) {
     const hw = FLYCAR.W / 2, k = RAMP.H / RAMP.LEN, wb = FC_AX.f + FC_AX.r;
-    for (const r of ramps.list) {
+    for (const r of rampsXOn ? ramps.list.concat(rampsX.list) : ramps.list) {   // 5j-i: + bộ sau đích
       const uF = C.s + FC_AX.f - r.s, uR = C.s - FC_AX.r - r.s; if (uF < 0 || uR > RAMP.LEN) continue;
       const lo = Math.max(C.x - hw, r.x - r.w / 2), hi = Math.min(C.x + hw, r.x + r.w / 2), cov = clamp((hi - lo) / (2 * hw), 0, 1);
       if (cov < 0.12) continue;
@@ -1726,7 +1730,8 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     return null;
   }
   function carGround(C, s0, dt) {
-    const e14 = 1 - Math.exp(-dt * 14), tw = twists.find(C.x, C.s);
+    if (!OPEN && C.s > FIN - 500) rampsBeyond();                                   // 5j-i: Roadster tới gần đích ⇒ mới dựng dốc phía sau đích
+    const e14 = 1 - Math.exp(-dt * 14), tw = twists.find(C.x, C.s) || (rampsXOn ? twistsX.find(C.x, C.s) : null);
     if (tw) { C.twist = tw.r; C.y = tw.w * Math.sin(tw.th); C.ar = lerp(C.ar, tw.r.side * tw.th, e14); C.ap = lerp(C.ap, 0.05, e14); return; }
     if (C.twist) { const r = C.twist; C.twist = null;
       if (C.s >= r.s + TWIST.LEN - 0.6 && C.v >= LOW_V) { const y0 = C.y, ar0 = r.side * twistAngle(TWIST.LEN); carLaunch(C, r.side); C.arW = 0; C.y = Math.max(y0, 0.5); C.ar = ar0; C.ap = 0.08; C.vy = 3.6 + C.v * 0.04; C.vx = -r.side * 1.6;
@@ -2769,6 +2774,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   }
   function prepView(i, hPx) {
     const cam = i === 2 ? dcam : cams[i], sCam = -cam.position.z;   // 4b: hình THẬT của đường tính từ chỗ máy quay · 4k: [2] = drone
+    DR.forEach(d => { const fo = d.o && d.o.fc && d.o.fc.obj; if (fo) { const ds = d.s - sCam; fo.visible = i === 2 || (ds > -6 && ds < 340); } });   // 5j-i: TỐI ƯU — Roadster sau lưng máy quay buồng lái (thường chạy / bay SAU 2 xe) ⇒ khung đó không vẽ
     bendSlope[i] = bendProfile(i, sCam); bendBy[i] = bendFor(i)[1];
     U.uBendT.value = bendTex[i]; U.uBend.value.set(bendSlope[i], bendBy[i]); U.uBendZ.value = cam.position.z; U.uSkyYaw.value = phiAbs(sCam);
     world.update(cam.position, G.t, Math.min(T[0].s, T[1].s) - 30, Math.max(T[0].s, T[1].s), dUsed(D) && isCar(D) ? D.s : null);   // 5j-e: Roadster đi xa vẫn có cảnh
@@ -3168,7 +3174,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       window.removeEventListener("keydown", onKeyDown); window.removeEventListener("keyup", onKeyUp); window.removeEventListener("blur", onBlur); window.removeEventListener("keydown", onEsc);
       try { remote && remote.detach && remote.detach(); } catch (e) { /* */ }
       tools.dispose(); skids.dispose(); burnSk.dispose();
-      hoods.forEach(h => h.dispose()); scorch.dispose(); cars.forEach(c => c.dispose()); shadows.forEach(s => scene.remove(s)); world.dispose(); missiles.dispose(); dammo.dispose(); ramps.dispose(); trails.dispose(); twists.dispose(); pickups.dispose(); traffic.dispose(); DR.forEach(d => d.o.dispose()); DX.dispose();   /* 5e */ bendTex.forEach(t => t.dispose());   /* 4k */
+      hoods.forEach(h => h.dispose()); scorch.dispose(); cars.forEach(c => c.dispose()); shadows.forEach(s => scene.remove(s)); world.dispose(); missiles.dispose(); dammo.dispose(); ramps.dispose(); rampsX.dispose(); twistsX.dispose(); trails.dispose(); twists.dispose(); pickups.dispose(); traffic.dispose(); DR.forEach(d => d.o.dispose()); DX.dispose();   /* 5e */ bendTex.forEach(t => t.dispose());   /* 4k */
       composer.dispose(); rt.dispose(); pmrem.dispose(); scene.environment?.dispose();
       renderer.dispose(); renderer.forceContextLoss(); mount.innerHTML = ""; mount.classList.remove("sr-root", "sr2", "sr3", "is-menu", "is-count", "is-race", "is-end");
       if (window.__sr === api) delete window.__sr;
