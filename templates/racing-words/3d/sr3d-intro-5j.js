@@ -326,7 +326,7 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
   }
   // 5j: Roadster — cỡ thật, giữa 2 xe, nhô lên trước, lơ lửng; chiếc đội 2 (2 drone) cao phía sau · phim: theo xe ra cửa rồi bốc cao
   // 5j-c (thầy): Roadster ĐỨNG SÀN như xe thường (chưa lộ chi tiết bay), đặt CHÉO phía SAU, 2 xe chính đứng trước · đèn trần rọi riêng
-  const FC_Z = CAR_Z + 3.6, FC_YAW = 0.55;
+  const FC_Z = CAR_Z + 7.0, FC_YAW = 0.55;   // 5j-g: lùi sâu (cũ +3,6 ⇒ cảnh 2 máy quay đứng sau xe đội 1 đúng chỗ Roadster ⇒ bị che)
   const fcSpot = new THREE.SpotLight("#fff3e2", 0, 18, 0.4, 0.55, 2); fcSpot.position.set(0, H - 1.2, FC_Z + 1.2); fcSpot.target.position.set(0, 0, FC_Z); scene.add(fcSpot, fcSpot.target);   // luôn có (cường độ 0) ⇒ không dịch lại shader
   const fcBeam = new THREE.Mesh((() => { const g = new THREE.ConeGeometry(2.9, H - 1.2, 40, 1, true); g.translate(0, -(H - 1.2) / 2, 0); return g; })(), beamM); fcBeam.position.set(0, H - 1.2, FC_Z + 0.9); fcBeam.rotation.x = -0.08; fcBeam.visible = false; scene.add(fcBeam);
   const fcCarry = new THREE.Vector3();
@@ -334,7 +334,7 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
     o.g.scale.setScalar(1);
     const bx = two ? (o.n ? -1.9 : 1.9) : 0, yaw0 = two ? (o.n ? -FC_YAW : FC_YAW) : FC_YAW;
     let z = FC_Z, yaw = yaw0, v = 0;
-    if (state === "play" && T >= START_T.roll) { const s = T - START_T.roll; z = Math.min(FC_Z, carZ(T) + 3.6); v = 9.5 * s + 2; yaw = yaw0 * Math.max(0, 1 - s / 0.9); }   // lăn theo 2 xe ra cửa, thẳng lái dần
+    if (state === "play" && T >= START_T.roll) { const s = T - START_T.roll; z = Math.min(FC_Z, carZ(T) + (FC_Z - CAR_Z)); v = 9.5 * s + 2; yaw = yaw0 * Math.max(0, 1 - s / 0.9); }   // lăn theo 2 xe ra cửa, thẳng lái dần
     o.g.position.set(bx, 0, z); o.g.rotation.set(0, yaw, 0);
     if (o.n === 0) { fcSpot.intensity = 130; fcSpot.angle = two ? 0.55 : 0.4; fcSpot.position.z = Math.min(FC_Z + 1.2, z + 1.2); fcSpot.target.position.z = z; fcBeam.visible = true; fcBeam.scale.x = fcBeam.scale.z = two ? 1.45 : 1; fcBeam.position.z = Math.min(FC_Z + 0.9, z + 0.9); }
     fc.update(paused ? 0 : dt, { t: now, air: 0, lift: 0, rear: 0, ground: 0, still: true, side: { want: 0, yaw: 0 }, carry: fcCarry.set(0, 0, -v), spin: v * dt / 0.35, pod: 0, sel: 2 });

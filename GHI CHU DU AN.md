@@ -546,6 +546,10 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 568 (21/10/2026) — TRANG THỬ ẨN RACING WORDS 5j-g: Roadster phanh có vệt bánh + khói, xưởng không che cảnh quay, bật thrust theo quán tính + camera mượt, đâm xe giao thông
+- Chép từ myGame 5j-g (commit e385da6): các file 5j trong `templates/racing-words/3d/`.
+- Tên lửa trúng xe giao thông: vùng nổ rộng ~6,5 m. ⛔ Template `racing_words` THẬT vẫn KHÔNG ĐỔI (GOC rw-5i).
+
 ## Đợt 567 (21/10/2026) — TRANG THỬ ẨN RACING WORDS 5j-f: dốc qua vạch đích, Roadster tự lùi sau 2 xe, xe giao thông nổ lật cháy, đèn phanh
 - Chép từ myGame 5j-f (commit 2666d18): các file 5j + MỚI `3d/sr3d-traffic-5j.js` (xe giao thông trúng tên lửa: hất lên, lật nghiêng / ngửa, cháy).
 - Không BOOST ⇒ Roadster giữ ~14 m sau xe cuối · hạ cánh + BOOST phụt lửa · Roadster có chấm R trên bản đồ · vết cháy mờ loang · đèn phanh đỏ.

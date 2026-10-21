@@ -1453,7 +1453,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       // 5j-d: đang BAY KHỎI DỐC mà bấm TAKE OFF ⇒ màn "kick": (đang lộn ⇒ lộn tiếp, khói xoáy, tới lúc gầm song song mặt đất mới) NỔ thrust hất văng lên trời
       if (C.jump && !C.low && C.y > 0.5) { const rolling = !!C.flip || Math.abs(wrapPI(C.ar)) > 0.35;
         Object.assign(C, { mode: "kick", kAct: true, kickT: -1, kTw: rolling, kr: C.ar, kp: C.ap, kvy: C.vy, kW: C.flip ? (C.forced ? C.rollW : AIR.ROT) * C.flipDir : -Math.sign(wrapPI(C.ar) || 1) * 5, kE: wrapPI(C.ar) });
-        if (!rolling) carKickFire(C); }
+        C.kWt = 0; }   // 5j-g: KHÔNG nổ ngay — văng thêm theo quán tính (thân thẳng 0,4 s · đang lộn: tới khi gầm song song đất) rồi mới nổ
       else { C.mode = "up"; C.sp = 0; }
       Object.assign(C, { jump: false, low: false, ap: 0, ar: 0, flip: 0, flipGoal: null, forced: false, ramp: null, twist: null, hy: 0, hopV: 0, flameT: 0, bK: 0 }); d.x = C.x; d.vx = C.vx; d.s = C.s; d.sPrev = C.s; d.vs = C.v; d.afs = 0; onEvent("carFly", { up: 1 }); }
     else if (C.mode === "down") { C.mode = "up"; C.sp = 9; onEvent("carFly", { up: 1 }); }   // đang hạ ⇒ bay lên lại (không chờ khói)
@@ -1495,7 +1495,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     const d = DR[h.owner || 0], cars = [];
     if (G.phase === "race") T.forEach(t => { if (t.done || t.dead || t.y > 1.6) return; if (Math.abs(t.x - h.x) < 1.9 && Math.abs(t.s - h.s) < 3.8 && canTarget(t.i, h.kind, d)) cars.push(t.i); });
     if (h.kind === "missile") {
-      traffic.list.filter(v => !(v.burn > 0) && Math.abs(v.x - h.x) < 2.8 && Math.abs(v.s - h.s) < 4.8).forEach(v => { traffic.blast(v, Math.sign(v.x - h.x) || 1); missiles.boom(v.x, -v.s, "hit"); onEvent("trafficBoom", {}); });   // 5j-f: xe giao thông nổ, lật, cháy
+      traffic.list.filter(v => !(v.burn > 0) && Math.hypot(v.x - h.x, (v.s - h.s) * 0.75) < 6.5).forEach(   /* 5j-g: vùng nổ rộng ⇒ chỉ cần trong vùng tác động là cháy */v => { traffic.blast(v, Math.sign(v.x - h.x) || 1); missiles.boom(v.x, -v.s, "hit"); onEvent("trafficBoom", {}); });   // 5j-f: xe giao thông nổ, lật, cháy
       if (cars.length) { cars.forEach(c => { impact({ from: c, to: c, P: { s: T[c].s, x: T[c].x }, drone: true }); d.stats.hit[c]++; }); if (!two() && cars.length === 1) fireLine(cars[0]); }   // 5i
       else { missiles.boom(h.x, -h.s, "miss"); dammo.burst("missile", h.x, h.s, false); T.forEach(t => { if (Math.hypot(t.x - h.x, t.s - h.s) < 5) t.shake = Math.max(t.shake, 0.5); }); }
     } else if (!cars.length) dammo.burst(h.kind, h.x, h.s, false);
@@ -1788,6 +1788,30 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   //   · thân đang LỘN (barrel roll / dốc xoắn) ⇒ lộn tiếp, 4 ống gầm phụt mạnh (khói xoáy theo thân), tới lúc GẦM SONG SONG mặt đất ⇒ NỔ
   //   · thân thẳng ⇒ NỔ ngay. NỔ = khói bung thật nhiều + tiếng nổ + hất văng lên trời (xoắn: mạnh hơn, khói xoáy) ⇒ chông chênh (lắc dần tắt)
   //     ⇒ thrust 2 bên hông đẩy cân bằng dần ⇒ bay bình thường.
+  // 5j-g (thầy): Roadster PHANH trên đường ⇒ vệt bánh (2 bánh sau; nhanh ⇒ cả 4) + khói lốp ở đuôi như xe thường · đâm XE GIAO THÔNG như xe thường
+  const fcSkPrev = [null, null, null, null], FC_WH = [[-0.83, 1.47], [0.83, 1.47], [-0.85, -1.13], [0.85, -1.13]];
+  function carSkid(d, C, braking, dt) {
+    const on = C.mode === "road" && !C.jump && C.y < 0.06 && braking && C.v > 8, g = d.o.g; g.updateMatrixWorld(true);
+    FC_WH.forEach(([x, z], w) => { if (!on || (w >= 2 && C.v < 22)) { fcSkPrev[w] = null; return; }
+      const P = g.localToWorld(SK.set(x, 0, z)), prev = fcSkPrev[w];
+      if (prev && prev.distanceToSquared(P) > 0.01 && prev.distanceToSquared(P) < 9) skids.seg(prev, P, 0.5);
+      fcSkPrev[w] = (prev || new THREE.Vector3()).copy(P); });
+    if (!on) return;
+    C.bsA = (C.bsA || 0) + dt * 45 * clamp(C.v / 30, 0.35, 1);
+    while (C.bsA >= 1) { C.bsA -= 1; const P = g.localToWorld(SK.set((Math.random() < 0.5 ? -1 : 1) * 0.83, 0.15, 1.5));
+      missiles.smoke.emit(P.x, P.y, P.z, (Math.random() - 0.5) * 1.2, 0.4 + Math.random() * 0.8, 1 + Math.random() * 1.5, 0.9 + Math.random() * 0.6, 0.42, 0.42, 2.4, 1.2); }
+  }
+  function carTrafficHit(d) {
+    const C = d.car; if (C.mode !== "road" || C.jump || C.y > 0.5 || G.t < (C.thCd || 0)) return;
+    const v = traffic.hit(C.x, C.s, FLYCAR.W, FLYCAR.L); if (!v) return;
+    C.thCd = G.t + 0.8;
+    const head = v.dir < 0, side = Math.sign(C.x - v.x) || (Math.random() < 0.5 ? -1 : 1), k = head ? 1 : 0.6;
+    C.v *= head ? 0.3 : 0.62; C.px += side * (1.5 + 2 * k); C.psi = clamp(C.psi + side * 0.08 * k, -0.7, 0.7); C.ykV += side * 3 * k; C.shake = Math.max(C.shake, 0.6 + 0.4 * k);
+    traffic.knock(v, -side, k);
+    const X = (C.x + v.x) / 2, Z = -(C.s + v.s) / 2;
+    for (let n = 0; n < 14 + 20 * k; n++) missiles.sparks.emit(X, 0.6, Z, (Math.random() - 0.5) * 9, 1 + Math.random() * 4, (Math.random() - 0.5) * 9, 0.4, 0.14, 1, 0, 1);
+    onEvent("traffic", { team: 0, head });
+  }
   function carKickFire(C) {
     const tw = C.kTw;
     Object.assign(C, { kickT: 0, kvy: tw ? 17 : 14, kw: tw ? 0.55 : 0.32, kr0: wrapPI(C.kr), blast: tw ? 1.9 : 1.15, swirl: tw ? Math.sign(C.kW) : 0, lift: 1 });
@@ -1796,9 +1820,10 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   }
   function carKick(C, d, dt, alt) {
     if (C.kickT < 0) {                                                            // chờ thân lộn về thẳng
-      C.y = Math.max(0.8, C.y + C.kvy * dt); C.kvy = Math.max(-4, C.kvy - AIR.G * 0.55 * dt);
-      C.kr += C.kW * dt; C.kp = ex(C.kp, 0, 3, dt);
-      const e = wrapPI(C.kr); if ((C.kE * e <= 0 && Math.abs(e) < 0.7) || Math.abs(e) < 0.06) carKickFire(C); else C.kE = e;
+      C.kWt = (C.kWt || 0) + dt; C.y = Math.max(0.8, C.y + C.kvy * dt); C.kvy = Math.max(-6, C.kvy - AIR.G * 0.8 * dt);   // bay tiếp theo quán tính
+      if (C.kTw) { C.kr += C.kW * dt; C.kp = ex(C.kp, 0, 3, dt);
+        const e = wrapPI(C.kr); if ((C.kE * e <= 0 && Math.abs(e) < 0.7) || Math.abs(e) < 0.06) carKickFire(C); else C.kE = e; }
+      else { C.kp = ex(C.kp, Math.atan2(C.kvy, Math.max(C.v, 8)) * 0.45, 3, dt); if (C.kWt >= 0.4) carKickFire(C); }
       d.y = C.y; return;
     }
     C.y += C.kvy * dt; C.kvy -= 9.5 * dt;
@@ -1848,7 +1873,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
         // bay: tiến / lùi theo cụm xe (BOOST / BRAKE dời bk ở steerDrone), ngang bám tâm như drone
         C.dF = ex(C.dF || 0, C.mode === "down" && race && kBoost ? 1 : 0, 6, dt);   // 5j-f: đang HẠ mà bấm BOOST ⇒ đuôi phụt lửa đẩy tới
         const sT = lead.s - d.bk, vT = lead.v + clamp((sT - C.s) * 0.9, -14, 14) + C.dF * 20;
-        C.v += (vT - C.v) * Math.min(1, dt * (1.5 + C.dF * 1.5)); C.s += C.v * dt; d.s = C.s;
+        if (!(C.mode === "kick" && C.kickT < 0.4)) C.v += (vT - C.v) * Math.min(1, dt * (C.mode === "kick" ? 0.6 : 1.5 + C.dF * 1.5));   // 5j-g: vừa bật thrust ⇒ giữ đà, bám cụm xe từ từ C.s += C.v * dt; d.s = C.s;
         flyBody(d, clamp(mx * 0.3 + d.ax * 0.45, -ROADX, ROADX), dt); C.x = d.x; C.vx = d.vx;
         if (C.mode === "kick") carKick(C, d, dt, alt);
         else if (C.mode === "up") { C.sp = (C.sp || 0) + dt; C.lift = ex(C.lift, 1, 2.5, dt); if (C.sp > 0.9 && C.lift > 0.6) C.y = ex(C.y, alt, 0.9, dt); if (C.y > alt - 0.4) { C.mode = "air"; droneInfo(d); } }   // 0,9 s đầu: xả khói xuống mặt đường rồi mới nhấc
@@ -1878,9 +1903,10 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     if (fc) fc.update(G.paused ? 0 : dt, { t: G.t, air: air ? 1 : 0, lift: liftV, rear: rearV, brake: race && kBrake ? 1 : 0,   /* 5j-f: đèn phanh */ ground: gnd, flame, blast: G.paused ? 0 : C.blast, swirl: C.swirl,
       still: !kw && Math.abs(d.vx) < 0.6 && Math.abs(d.axl) < 0.8,
       side: { want: road ? 0 : kw && C.kickT < 3 ? clamp(-C.kr * 6, -1, 1) : clamp(d.axl / 3, -1, 1), yaw: d.vx }, carry: carV.set(C.vx, vy, -C.v), spin: road || C.y < 0.05 ? C.v * dt / 0.35 : 0.3 * dt, pod: C.pod, sel: d.sel });
-    if (!G.paused) C.blast = 0;
+    if (!G.paused) { C.blast = 0; if (run) carSkid(d, C, race && kBrake, dt); }   // 5j-g: phanh ⇒ vệt bánh + khói
     // máy quay cột: trên đường = sau xe, thấp · bay = lùi xa + cao (xe cỡ thật không quá to)
-    const k = road ? 0 : clamp(C.y / alt, 0, 1), kk = k * k * (3 - 2 * k), jy = road ? C.y * 0.75 : 0;   // 5j-c: nhảy dốc ⇒ máy quay đường nâng theo
+    C.ck = ex(C.ck ?? 0, road ? 0 : clamp(C.y / alt, 0, 1), C.mode === "kick" || C.mode === "down" ? 0.9 : 2.2, dt);   // 5j-g: góc máy chuyển TỪ TỪ (cũ nhảy ngay khi đổi chế độ)
+    const k = C.ck, kk = k * k * (3 - 2 * k), jy = C.y * 0.75 * (1 - kk);   // 5j-c: nhảy dốc ⇒ máy quay đường nâng theo
     const csh = C.shake * 0.06, bz = road ? C.bK * 1.1 + Math.min(1, C.flameT) * 1.4 : 0;   // 5j-d: BOOST / lửa ⇒ máy quay tụt lại sau một chút
     dcam.position.set(lerp(C.x * 0.9, C.x * 0.85, kk) + (Math.random() - 0.5) * csh, lerp(3.1 + jy + bz * 0.15, C.y + 6.5 * zf, kk) + (Math.random() - 0.5) * csh, -(C.s - lerp(8.5 + bz, 9.5 * zf, kk)));
     dcam.lookAt(lerp(C.x, lerp(mx, d.ax, 0.5) * 0.6, kk), lerp(1.1 + jy, 0, kk), -(C.s + lerp(26, 24 + 10 * (zf - 1) + lookX, kk)));
@@ -3017,7 +3043,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     dammo.update(dt, G.t).forEach(droneHit);                 // 4r
     fireTick(dt);                                            // 5i: vạch lửa
     if (G.phase === "race") T.forEach(t => { if (t.dead || t.air && t.y > 1.6) return; const it = pickups.take(t.x, t.s); if (it) grabPickup(t, it); });   // 4b
-    if (G.phase === "race" || G.phase === "end") { traffic.update(dt, Math.min(T[0].s, T[1].s), Math.max(T[0].s, T[1].s)); if (G.phase === "race") T.forEach(trafficHit); traffic.burning.forEach(v => burnTraffic(v, dt)); }   // 4c · 5j-f: xe cháy
+    if (G.phase === "race" || G.phase === "end") { traffic.update(dt, Math.min(T[0].s, T[1].s), Math.max(T[0].s, T[1].s)); if (G.phase === "race") { T.forEach(trafficHit); if (dUsed(D) && isCar(D) && !two() && D.car.init) carTrafficHit(D); } traffic.burning.forEach(v => burnTraffic(v, dt)); }   // 5j-g: Roadster đâm xe giao thông   // 4c · 5j-f: xe cháy
     T.forEach((t, i) => {
       const c = cars[i]; c.rig.position.set(t.x, t.y + t.hy, -t.s);
       const wob = t.wobT < 2.5 ? t.wobA * Math.exp(-2.6 * t.wobT) * Math.sin(12.5 * t.wobT) : 0;   // 3j: chông chênh tắt dần
