@@ -164,7 +164,7 @@ export function createFlyCar({ bend, U }) {
     pl.position.set(0, 0.4, -2.259); pl.rotation.y = Math.PI; inn.add(pl);
   }
   obj.traverse(o => { o.frustumCulled = false; });
-  let ready = false, base = null, loading = null, paint = PAINT, tintCol = null;
+  let ready = false, base = null, loading = null, paint = PAINT, tintCol = null; const tubeSm = [0, 0, 0];
   return {
     obj, smoke, M: { L: FLYCAR.L, W: FLYCAR.W }, parts, get ready() { return ready; },
     load() {
@@ -175,6 +175,7 @@ export function createFlyCar({ bend, U }) {
       const own = new Map();
       base.traverse(o => {
         if (!o.isMesh) return; o.frustumCulled = false;
+        if (/Plate/i.test(o.name)) { o.visible = false; return; }   // 5j-e: bỏ hẳn biển gốc của mẫu (chỉ còn biển ANDREW TEAM)
         o.material = (Array.isArray(o.material) ? o.material : [o.material]).map(m => { if (!own.has(m)) { const c = m.clone(); if (/Window/i.test(c.name)) { c.transparent = true; c.depthWrite = false; } own.set(m, B(c)); mats.push(c); if (/Paint/i.test(c.name)) { if (c.map) c.map = null; c.color.set(paint); c.metalness = 0.45; c.roughness = 0.26; c.needsUpdate = true; parts.paint.push({ m: c, col: c.color.clone() }); } } return own.get(m); });
         if (o.material.length === 1) o.material = o.material[0];
       });
@@ -213,6 +214,7 @@ export function createFlyCar({ bend, U }) {
       if (parts.pod) parts.pod.lift.visible = !on;
     },
     // điểm + hướng miệng nòng k (0 HEART · 1 BOOST · 2 MISSILE) trong hệ THẾ GIỚI
+    puffTube(k) { if (parts.tubes[k]) tubeSm[k] = 1; },   // 5j-e: vừa bắn ⇒ miệng nòng còn vương khói ~1,4 s
     muzzle(k, pos, dir) { const t = parts.tubes[k]; obj.updateMatrixWorld(true); t.localToWorld(pos.set(0, 0, 0.04)); dir.set(0, 0, 1).transformDirection(t.matrixWorld); return pos; },
     update(dt, st) {
       const P = new THREE.Vector3(), V = new THREE.Vector3(), C = new THREE.Vector3(), q = obj.getWorldQuaternion(new THREE.Quaternion());
@@ -243,6 +245,12 @@ export function createFlyCar({ bend, U }) {
           const an = Math.random() * 6.283, sp = 3 + Math.random() * 6; V.set(Math.cos(an) * sp, 0.4 + Math.random() * 0.9, Math.sin(an) * sp);
           smoke.emit(P, V, C.copy(carry).multiplyScalar(0.45).setY(0), 1.1 + Math.random() * 1.0, 0.4 + Math.random() * 0.35, 0.26, 1.5, 1.5, -1, 0);
         } }
+      // 5j-e: khói còn vương ở miệng nòng sau khi phóng (chùm đầu dày, sau mỏng dần, bám theo xe một chút rồi tụt lại)
+      tubeSm.forEach((v, k) => { if (v <= 0) return; const t = parts.tubes[k]; if (!t) return; const n = Math.floor((v > 0.92 ? 260 : 26 * v) * dt + Math.random() * v);
+        if (n) { t.localToWorld(P.set(0, 0, 0.03)); const dv = new THREE.Vector3(0, 0, 1).transformDirection(t.matrixWorld);
+          for (let q = 0; q < n; q++) { V.copy(dv).multiplyScalar(0.3 + Math.random() * (v > 0.92 ? 2.5 : 0.6)); V.x += (Math.random() - 0.5) * 0.4; V.y += Math.random() * 0.35; V.z += (Math.random() - 0.5) * 0.4;
+            smoke.emit(P, V, C.copy(carry).multiplyScalar(0.8), 0.7 + Math.random() * 0.6, 0.05 + Math.random() * 0.05, 0.4 * Math.min(1, v + 0.3), 0.7, 1.8, -1, 0.1); } }
+        tubeSm[k] = Math.max(0, v - dt / 1.4); });
       // 5j-d: lửa đuôi
       const fl = st.flame || 0;
       parts.flames.forEach(f => { const on = fl > 0.02; f.o.visible = f.c.visible = on; if (on) { const L = (0.22 + 0.6 * fl) * (0.82 + Math.random() * 0.36); f.o.scale.set(0.034, 0.034, L); f.c.scale.set(0.018, 0.018, L * 0.55); } });

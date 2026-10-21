@@ -322,12 +322,12 @@ import { OutputPass } from "../../rocket-race/vendor/three/addons/OutputPass.js"
 import { RoomEnvironment } from "../../rocket-race/vendor/three/addons/RoomEnvironment.js";
 import { makeCar3d } from "./sr3d-car-4h.js";
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
-import { createWorld, makeBend, HAZE, bendQ } from "./sr3d-world-4b.js";
+import { createWorld, makeBend, HAZE, bendQ } from "./sr3d-world-5j.js";   /* 5j-e: + vùng cảnh quanh xe bay */
 import { createTwists, createPickups, TWIST, twistAngle } from "./sr3d-stunt-4b.js";
 import { createTraffic, TRAFFIC_MODES } from "./sr3d-traffic-4c.js";
 import { makeAutoRes } from "./sr3d-autores-3r.js";
 import { icon as ICON, iconize } from "./rw-icons-4x.js";   /* 4x: icon 2D Neon viền */
-import { createDroneAmmo, DA } from "./sr3d-dammo-5e.js";   /* 5e: + chủ đạn */   /* 4w: dấu hiện / ẩn nhoè */   /* 4v: dấu điểm rơi + seek */   /* 4t: ra từ bụng */   /* 4s */   // 4r: đạn drone
+import { createDroneAmmo, DA } from "./sr3d-dammo-5j.js";   /* 5j-e: đạn Roadster bay qua đầu xe */   /* 5e: + chủ đạn */   /* 4w: dấu hiện / ẩn nhoè */   /* 4v: dấu điểm rơi + seek */   /* 4t: ra từ bụng */   /* 4s */   // 4r: đạn drone
 import { DRONE_MODELS as DM0, DRONE_PICK as DP0, droneInfo as droneMeta0, loadDrone } from "./sr3d-drone3d-4p.js";
 import { createFlyCar, FLYCAR, PAINT as FC_PAINT } from "./sr3d-flycar-5j.js";   /* 5j: xe bay ROADSTER */
 const DRONE_MODELS = [...DM0, FLYCAR], DRONE_PICK = [...DP0, FLYCAR], droneMeta = id => id === FLYCAR.id ? FLYCAR : droneMeta0(id);   // 5j   /* 4p */   // 4o: trục quạt = trọng tâm + vòng mờ · 4n: 8 mẫu + quạt quay · 4m
@@ -1098,13 +1098,20 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       lim = Math.min(t.s - 3.4, o.s + o.v * o.v / 70); s = Math.min(t.s - 2.4, Math.max(s, lim + 2.6)); }
     FIRE_L = { c, o: 1 - c, s, lim, t0: G.t, hold: true, rel: 0, slowT: 0, emA: 0, smA: 0 };
     o.shake = Math.max(o.shake || 0, 0.8); t.shake = Math.max(t.shake || 0, 1);           // rung chấn
-    for (let k = 0; k < 46; k++) { const x = (Math.random() * 2 - 1) * (ROADX + 0.4), a = Math.random() * TAU;
-      missiles.fire.emit(x, 0.3, -s + (Math.random() - 0.5) * 1.6, Math.cos(a) * 1.6, 3 + Math.random() * 5, Math.sin(a) * 1.6, 0.45 + Math.random() * 0.4, 1.3 + Math.random(), 0.9, 3, 2.4); }
-    for (let k = 0; k < 6; k++) { const z = -s + (k - 2.5) * 0.28; burnSk.seg({ x: -ROADX - 0.4, z }, { x: ROADX + 0.4, z: z + 0.01 }, 1.4); }   // vết cháy ngang đường
+    // 5j-e (thầy: "vệt cháy quá vuông vức, giả") — CHÁY LOANG LỔ: các đám to nhỏ khác nhau rải ngang đường, lệch trước / sau, mỗi đám một độ mạnh
+    const spots = []; for (let x = -ROADX - 0.3; x < ROADX + 0.3;) { const w = 0.35 + Math.random() * 1.2; spots.push({ x: x + w * 0.5, z: (Math.random() - 0.5) * 2.2, r: w * (0.55 + Math.random() * 0.7), k: 0.3 + Math.random() * 0.7 }); x += w * (0.6 + Math.random() * 1.0); }
+    FIRE_L.spots = spots; FIRE_L.tot = spots.reduce((a, p) => a + p.k * p.r, 0);
+    for (let k = 0; k < 56; k++) { const p = flSpot(), a = Math.random() * TAU, x = p.x + (Math.random() - 0.5) * p.r * 1.4, z = -s + p.z + (Math.random() - 0.5) * p.r;
+      missiles.fire.emit(x, 0.3, z, Math.cos(a) * 1.6, (2 + Math.random() * 5) * (0.5 + p.k), Math.sin(a) * 1.6, 0.4 + Math.random() * 0.45, (0.8 + Math.random()) * (0.6 + p.k * 0.7), 0.9, 3, 2.4); }
+    spots.forEach(p => { for (let n = 0, N = 2 + (Math.random() * 3 | 0); n < N; n++) { const a = Math.random() * Math.PI, L = p.r * (0.5 + Math.random()), cx = p.x + (Math.random() - 0.5) * p.r * 0.8, cz = -s + p.z + (Math.random() - 0.5) * p.r * 0.6;   // vết cháy: mỗi đám vài vệt chéo đè nhau
+      burnSk.seg({ x: cx - Math.cos(a) * L / 2, z: cz - Math.sin(a) * L / 2 }, { x: cx + Math.cos(a) * L / 2, z: cz + Math.sin(a) * L / 2 }, p.r * (0.45 + Math.random() * 0.6)); } });
+    for (let n = 0; n < 34; n++) { const a = Math.random() * Math.PI, L = 0.12 + Math.random() * 0.45, cx = (Math.random() * 2 - 1) * ROADX, cz = -s + (Math.random() - 0.5) * 3.4;   // lấm tấm muội văng ra
+      burnSk.seg({ x: cx - Math.cos(a) * L / 2, z: cz - Math.sin(a) * L / 2 }, { x: cx + Math.cos(a) * L / 2, z: cz + Math.sin(a) * L / 2 }, 0.08 + Math.random() * 0.26); }
     halves[FIRE_L.o].classList.add("rw-fl-on");
     toast(FIRE_L.o, "[warn] FIRE LINE — WAIT!", "bad");
     onEvent("fireline", { on: true, team: c, chaser: FIRE_L.o, s: Math.round(s) });
   }
+  function flSpot() { const L = FIRE_L; if (!L || !L.spots) return { x: (Math.random() * 2 - 1) * ROADX, z: 0, r: 0.8, k: 0.6 }; let q = Math.random() * L.tot; for (const p of L.spots) { q -= p.k * p.r; if (q <= 0) return p; } return L.spots[L.spots.length - 1]; }   // 5j-e: đám to / mạnh hay cháy hơn
   function fireRelease() {
     if (!FIRE_L || !FIRE_L.hold) return;
     FIRE_L.hold = false; FIRE_L.rel = G.t; FIRE_L.slowT = FL_FADE;
@@ -1123,11 +1130,11 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     const k = FIRE_L.hold ? 1 : Math.max(0, 1 - (G.t - FIRE_L.rel) / FL_FADE);
     if (k <= 0 && FIRE_L.slowT <= 0) { fireClear(); return; }
     FIRE_L.emA += dt * 150 * k;
-    while (FIRE_L.emA >= 1) { FIRE_L.emA -= 1; const x = (Math.random() * 2 - 1) * (ROADX + 0.5);
-      missiles.fire.emit(x, 0.1, -FIRE_L.s + (Math.random() - 0.5) * 0.7, (Math.random() - 0.5) * 0.6, 1.4 + Math.random() * 2, (Math.random() - 0.5) * 0.3, 0.3 + Math.random() * 0.3, 0.55 + Math.random() * 0.55, 0.8 * k + 0.1, 1.1, 1.6); }
+    while (FIRE_L.emA >= 1) { FIRE_L.emA -= 1; const p = flSpot(), x = p.x + (Math.random() - 0.5) * p.r * 1.3, z = -FIRE_L.s + p.z + (Math.random() - 0.5) * p.r * 0.9;   // 5j-e: lửa theo từng đám
+      missiles.fire.emit(x, 0.1, z, (Math.random() - 0.5) * 0.6, (1 + Math.random() * 2) * (0.5 + p.k), (Math.random() - 0.5) * 0.3, 0.25 + Math.random() * 0.35, (0.45 + Math.random() * 0.55) * (0.6 + p.k * 0.8), 0.8 * k + 0.1, 1.1, 1.6); }
     FIRE_L.smA += dt * 20 * k;
-    while (FIRE_L.smA >= 1) { FIRE_L.smA -= 1; const x = (Math.random() * 2 - 1) * ROADX;
-      missiles.dark.emit(x, 1.4 + Math.random(), -FIRE_L.s + (Math.random() - 0.5), (Math.random() - 0.5) * 0.8, 1.4 + Math.random(), 0.3, 1.6 + Math.random() * 0.8, 1.5 + Math.random() * 0.8, 0.42 * k, 2.2, 0.8); }
+    while (FIRE_L.smA >= 1) { FIRE_L.smA -= 1; const p = flSpot(), x = p.x + (Math.random() - 0.5) * p.r;
+      missiles.dark.emit(x, 1.4 + Math.random(), -FIRE_L.s + p.z + (Math.random() - 0.5), (Math.random() - 0.5) * 0.8, 1.4 + Math.random(), 0.3, 1.6 + Math.random() * 0.8, 1.5 + Math.random() * 0.8, 0.42 * k, 2.2, 0.8); }
   }
 
   function popExhaust(i) {
@@ -1441,6 +1448,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   const dvMsg = (tx, d = D) => { if (two() || d.n) return; D.msgT = 1.3; dvLock.textContent = tx; dvLock.style.color = "#f5c542"; dvLockTx = null; };   // 5e: 2 drone ⇒ không chữ (iPad báo)
   // 4r: BẮN — đang đua · đủ pin · hết thời gian chờ loại đó
   const mzP = new THREE.Vector3(), mzD = new THREE.Vector3();
+  const carVel = new THREE.Vector3();   // 5j-e
   function droneFire(d = D, road = 0) {   /* 5j: road = 1 (xe gần) | 2 (xe xa) khi xe chạy đường */
     if (d.sel < 0 || !dUsed(d)) return;
     if (carRoad(d) && !road) { const C = d.car; if (C.fw && G.t - C.fw.t < 0.3) { C.fw.n = 2; return; } C.fw = { t: G.t, n: 1 }; return; }   // 5j: chờ xem có chạm đúp
@@ -1462,7 +1470,9 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
         if (tt) { tx = tt.x; ts = tt.s + tt.v * DA.T; } else { tx = C.x; ts = C.s + 40; }
       }
     }
-    dammo.fire({ owner: d.n, kind: k, x: L0.x, y: L0.y, z: L0.z, src: L0.src, tx, ts, seek, drift: autoV(dset.autoK) });   /* 4v */
+    const car = isCar(d) && o.model && o.model.fc;
+    if (car) { const C = d.car; carVel.set(C.vx, C.mode === "road" ? 0 : 0, -C.v); o.model.fc.puffTube(d.sel); }   // 5j-e: khói còn vương miệng nòng
+    dammo.fire({ owner: d.n, kind: k, x: L0.x, y: L0.y, z: L0.z, src: L0.src, tx, ts, seek, drift: autoV(dset.autoK), dir: car ? mzD : null, vel: car ? carVel : null });   /* 4v · 5j-e: + dir / vel */
     onEvent("droneShot", { kind: k, lock: tg, drone: d.n }); droneInfo(d);
   }
   // 4r: ĐẠN CHẠM — xe trong vùng nổ + chế độ cho phép loại đạn ⇒ trúng xe; không ⇒ trúng đường
@@ -1831,7 +1841,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
         C.yaw = ex(C.yaw, clamp(-d.vx * 0.03, -0.3, 0.3), 2, dt); d.y = C.y;
       }
     }
-    if (run) carKickPose(C, dt);   // 5j-d
+    if (run) { carKickPose(C, dt); if (C.mode !== "road") C.shake *= Math.exp(-4 * dt); }   // 5j-d · 5j-e: rung (shake) tắt dần cả khi BAY (cũ: chỉ giảm trên đường ⇒ bay rồi vẫn rung mãi)
     // dáng xe
     const air = C.mode !== "road" && C.y > 0.3, t3 = G.t, road = C.mode === "road";   // 5j-c: nhảy dốc KHÔNG phải bay
     const bob = air ? C.lift * (Math.sin(t3 * 1.6) * 0.1 + Math.sin(t3 * 2.7) * 0.04) : 0;
@@ -2713,7 +2723,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     const cam = i === 2 ? dcam : cams[i], sCam = -cam.position.z;   // 4b: hình THẬT của đường tính từ chỗ máy quay · 4k: [2] = drone
     bendSlope[i] = bendProfile(i, sCam); bendBy[i] = bendFor(i)[1];
     U.uBendT.value = bendTex[i]; U.uBend.value.set(bendSlope[i], bendBy[i]); U.uBendZ.value = cam.position.z; U.uSkyYaw.value = phiAbs(sCam);
-    world.update(cam.position, G.t, Math.min(T[0].s, T[1].s) - 30, Math.max(T[0].s, T[1].s));
+    world.update(cam.position, G.t, Math.min(T[0].s, T[1].s) - 30, Math.max(T[0].s, T[1].s), dUsed(D) && isCar(D) ? D.s : null);   // 5j-e: Roadster đi xa vẫn có cảnh
     if (i === 0) pickups.update(G.t, Math.min(T[0].s, T[1].s), Math.max(T[0].s, T[1].s));   // 4b
     { const px = hPx * (i === 2 ? 1 : LENS.full) / (2 * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2))); missiles.setScale(px); dammo.setScale(px); DR.forEach(d => d.o && d.o.fc && d.o.fc.smoke.setScale(px)); }   // 4r · 5j: khói xe bay
   }

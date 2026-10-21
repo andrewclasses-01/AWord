@@ -546,6 +546,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 566 (21/10/2026) — TRANG THỬ ẨN RACING WORDS 5j-e: hết rung sau khi bật thrust, tên lửa Roadster bay qua đầu xe, vạch lửa loang lổ
+- Chép từ myGame 5j-e (commit ebd3d83): `3d/rw-5j.js · sr3d-5j.js · sr3d-flycar-5j.js · sr3d-intro-5j.js · sr3d-padui-5j.js` + MỚI `3d/sr3d-world-5j.js` (cảnh quanh Roadster khi đi xa) · `3d/sr3d-dammo-5j.js` (đạn theo nòng + vận tốc xe).
+- Rung (shake) tắt dần cả khi bay · khói vương miệng nòng · vạch lửa thành đám to nhỏ · bỏ biển gốc của mẫu.
+- ⛔ Template `racing_words` THẬT vẫn KHÔNG ĐỔI (GOC rw-5i; world-4b / dammo-5e giữ nguyên).
+
 ## Đợt 565 (21/10/2026) — TRANG THỬ ẨN RACING WORDS 5j-d: Roadster bật thrust giữa không trung (kick) + hạ cánh phụt lửa
 - Chép từ myGame 5j-d (commit 35f1c53): `3d/rw-5j.js · sr3d-5j.js · sr3d-flycar-5j.js · sr3d-intro-5j.js · sr3d-padui-5j.js`.
 - Đang bay khỏi dốc bấm TAKE OFF ⇒ nổ thrust + khói bung (đang lộn ⇒ lộn tới khi gầm song song đất mới nổ, khói xoáy) ⇒ hất lên trời, lắc rồi thrust hông cân bằng · LAND nhanh hơn, chạm đất văng đuôi nhẹ + đuôi phụt lửa tăng tốc · BOOST trên đường có lửa/khói đuôi · khói hông giữ cân ít/ngắn/mờ, 1/2 thời gian · tâm bắn vừa đủ trước xe · iPad: đang hạ bấm TAKE OFF được.
