@@ -3305,7 +3305,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // ⭐ Đợt 383 — `diemNay`: play.js hỏi "điểm tới lúc này" để NỘP lượt DỞ khi em tải lại trang /
       // đóng tab (pagehide không chờ engine được) và để ghi nháp mỗi phút. `total` = số câu của lượt
       // chơi — chỉ để hiện; myLesson KHÔNG lấy mẫu số của lượt dở (`doDang`).
-      const diemNay = () => ({ score: diemBoDo(), total: playItemCount(), timeMs: Math.round(performance.now() - startedAt) });
+      const diemNay = () => ({ score: diemBoDo(), total: tongBoDo(), timeMs: Math.round(performance.now() - startedAt) });
       // ⭐ Đợt 384 — `baiLamNay`: pagehide hỏi bài làm tới lúc này (engine không kịp leave()).
       try { session.playLog.start({ mode: hwMode, again: !!hwPreset, mistakes: !!activity._mistakes, diemNay, baiLamNay: () => (fight ? null : baiLamNay()),
                                     trangThaiNay }); } catch (e) {}   // Đợt 469 — pagehide / tab ẩn: chụp ván để làm tiếp
@@ -3869,6 +3869,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   //      means "no charge" — the safe direction to fail in.
   let timeCostTotal = 0;        // points the idle clock has taken so far, this play
   let scoreProvider = null;     // template's own scoreNow(), via ui.setScoreProvider
+  let totalProvider = null;     // ⭐ Đợt 561 — điểm TỐI ĐA của ván (ui.setTotalProvider), mẫu số lượt dở; không khai = số câu
   let reviewProvider = null;    // ⭐ Đợt 384 — template's own buildReview(), via ui.setReviewProvider (bài làm GIỮA ván)
   // ⭐⭐ Đợt 469 — GIỮ LƯỢT DỞ, MỞ LẠI LÀM TIẾP (core/lam-tiep.js). Template khai `ui.setLuuTrangThai(fn)`: fn() trả
   // trạng thái ván dạng JSON ({v, daLam, tong, …} — chỉ template đọc lại được) và báo `ui.daDoiBaiLam()` sau mỗi câu
@@ -6329,6 +6330,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     try { const v = scoreProvider ? scoreProvider() : lastShownScore; return (v == null || !isFinite(Number(v))) ? null : Math.max(0, Math.round(Number(v))); }
     catch (e) { return null; }
   }
+  // ⭐ Đợt 561 — mẫu số lượt dở: điểm tối đa template khai (Anagram bonus: số chữ × hệ số), không khai/lỗi ⇒ số câu như cũ.
+  function tongBoDo() {
+    try { const v = totalProvider ? Number(totalProvider()) : NaN; if (isFinite(v) && v > 0) return Math.round(v); }
+    catch (e) { /* rơi về số câu */ }
+    return playItemCount();
+  }
   // ⭐ Đợt 512 — CHẾ ĐỘ QUAY VIDEO: hộp hỏi lại trước khi bắt đầu lại (ván đứng yên trong lúc hỏi) + màn kết thúc riêng.
   let quayHoiEl = null;
   function hoiBatDauLaiQuay() {
@@ -6475,7 +6482,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // cleanup() bên dưới — template còn sống thì scoreNow() mới trả lời được.
       const sc = playLogDiemBoDo != null ? playLogDiemBoDo : (activity._mistakes || fight ? null : diemBoDo());
       const rv = fight ? null : (playLogBaiLamBoDo || baiLamNay());   // ⭐ Đợt 384 — bài làm tới lúc dừng (đọc TRƯỚC cleanup)
-      try { session.playLog.leave({ timeMs: Math.round(performance.now() - startedAt), score: sc, total: playItemCount(), review: rv }); } catch (e) {}
+      try { session.playLog.leave({ timeMs: Math.round(performance.now() - startedAt), score: sc, total: tongBoDo(), review: rv }); } catch (e) {}
     }
     stopWatchVanRoiTrang();        // ⭐ Đợt 295 — ván tự dọn rồi thì gỡ luôn lưới an toàn
     stopShowdownReview();          // ⭐ Đợt 196 — never leave the live listener behind
@@ -6787,6 +6794,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // Template nào không gọi thì y như trước (không có clip nào được miễn).
     setVoiceGuard(fn) { voiceGuard = typeof fn === "function" ? fn : null; },
     setScoreProvider(fn) { scoreProvider = typeof fn === "function" ? fn : null; },
+    // ⭐ Đợt 561 — fn() = điểm TỐI ĐA đạt được của ván (mẫu số lượt dở). Chỉ template có điểm > 1/câu cần khai (Anagram bonus).
+    setTotalProvider(fn) { totalProvider = typeof fn === "function" ? fn : null; },
     // ⭐ Đợt 384 — bài làm TỚI LÚC NÀY (cùng dạng `review` lúc kết thúc). Template nào có `buildReview()` gọi được bất cứ lúc
     // nào (vốn dùng cho Fight) thì khai ở đây ⇒ lượt DỞ (Start again / tải lại / đóng tab) mang theo bài làm cho dashboard myLesson.
     setReviewProvider(fn) { reviewProvider = typeof fn === "function" ? fn : null; },

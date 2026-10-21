@@ -545,7 +545,24 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
-
+
+## Đợt 561 (21/10/2026) — ANAGRAM: mặc định ON SUBMIT + TỔNG CHUẨN = ĐIỂM TỐI ĐA (thầy: K10 Khánh Diên báo "CHƯA GỬI ĐƯỢC — EM CẦN ĐĂNG NHẬP" ở Bước 3 BT2 bảng chữ cái)
+
+- **Gốc bệnh (đo dữ liệu thật):** bài giao `fgakf3` (act 147 "BT2. DANH VAN TU VUNG", chế độ **bonus**) — mẫu số = tổng số CHỮ (188) nhưng từ
+  làm đúng ngay được ×2 ⇒ em làm tốt ra 273/188, 337/188… Luật `scores/results` đòi `score <= total` ⇒ 403 ⇒ `guiBangVe` trả `canVe` ⇒ màn lỗi nói
+  NHẦM "cần đăng nhập" (vé vẫn tốt: cùng trang Bước 2 nộp 9 lần OK; practiceLog không có luật đó nên vẫn ghi được — chính nó lộ ra điểm vượt).
+- `templates/anagram/anagram.js` — `tongToiDa()`: bonus-family = tổng số chữ × hệ số (×2 "bonus", ×bonusMult "bonusMinus"; trừ điểm chỉ làm nhỏ đi),
+  submit = số từ. Dùng cho `finishTotal` + khai `ui.setTotalProvider` (mẫu số lượt DỞ).
+- `core/engine.js` — `ui.setTotalProvider(fn)` + `tongBoDo()`: mẫu số lượt dở/nhịp nhật ký = điểm tối đa template khai, không khai ⇒ số câu như cũ.
+- `core/assignments.js` — lưới an toàn `makeAttempt`: total = max(total, score) (template nào lỡ vượt vẫn không bị từ chối vĩnh viễn);
+  `guiMotLuot`: lượt CŨ trong outbox/nháp có score > total (dựng trước Đợt 561) ⇒ BỎ, không gửi (thầy đã xoá lượt Bước 3 của 2 em về 0).
+- Mặc định **On submit**: `sample-anagram.js` (act mới / đổi template sang Anagram) + `core/lesson-import.js` `OPT_ANA` (nhập act cho COURSES).
+  Act cũ KHÔNG có `anagramMode` vẫn rơi về bonus như trước (không đổi nghĩa act cũ).
+- Dữ liệu: sao lưu `E:\LAP TRINH APP\_SAO LUU FIRESTORE\TRUOC XOA BUOC 3 FGAKF3 2026-10-21.json` rồi xoá 6 practiceLog/fgakf3 + 2 lamTiep/{ma}/bai/fgakf3
+  (Khánh Diên, Khánh Duy); scores/results fgakf3 vốn 0. Bài giao fgakf3 thầy đã đổi sang submit lúc 12:12.
+- Thử (bàn thử tạm, bấm chuột thật): bonus 2 từ đúng ngay ⇒ màn kết thúc **12/12** (bản cũ 12/6); bonusMinus ×5 ⇒ tối đa 30; submit ⇒ 2;
+  `sendAttempt` lượt cũ 273/188 ⇒ {hard} + đã ra khỏi outbox, không gọi mạng; `queueAttempt` 30/25 ⇒ 30/30, 10/25 giữ nguyên.
+
 ## Đợt 560 (21/10/2026) — CHẾ ĐỘ QUAY VIDEO: nhãn sang GÓC TRÁI, slogan sang GÓC PHẢI (thầy: "CHẾ ĐỘ QUAY VIDEO đè lên slogan ANDREW CLASSES… các act khác tương tự")
 
 - engine.js: nhãn `.aw-quay-nhan` nay `topbar.prepend` (con ĐẦU hàng) thay vì `append` + tuyệt đối giữa hàng. app.css: bỏ `position:absolute`,
@@ -2112,7 +2129,7 @@ bản máy chủ bị xoá, practiceLog CÙNG mã lượt `…|mc>tiep` DONE; nh
 bấm START ngay khi kho máy rỗng (nhãn còn START) ⇒ vẫn làm tiếp đúng lượt (2/30).
 ✅ Mở 2 máy CÙNG LÚC: thầy chốt "đăng nhập máy 2 = máy 1 tự đăng xuất NGAY" ⇒ myLesson web v1.268.0 `801506f` (phienHs/{uid}, luật `tools/dang-luat-phien-hs.js`). Thầy "ok được rồi" 08/10. ⬜ Thử trên điện thoại thật.
 
-
+
 ## Đợt 494 (08/10/2026) — ⭐⭐ TIME LIMIT DÙNG CHUNG: Type the answer · Unjumble · Find the gap · Anagram + Quiz lên 30 s
 **Thầy:** "các template khác cũng có Time limit tương tự (ví dụ type the answer)". Đã rà cả 21 template (bảng phân loại ở cuối mục).
 Thầy chốt (AskUserQuestion): đợt này **TTA · Unjumble · Find the gap · Anagram**, **Quiz nâng 1..30 s** (nấc cuối vẫn ∞);

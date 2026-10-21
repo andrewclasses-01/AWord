@@ -615,14 +615,17 @@ function makeAttempt({ code, studentName, ma, score, total, timeMs, review, doDa
   // Đợt 367 — mã học sinh (myLesson `&ma=`); rỗng = không ghi trường này (tài liệu y hệt đời cũ).
   const maHs = String(ma || "").slice(0, 60);
   const createdAt = now();
+  // ⭐ Đợt 561 — LƯỚI AN TOÀN: luật máy chủ đòi score <= total; template nào lỡ ra điểm vượt mẫu số (Anagram bonus trước
+  // Đợt 561) thì lượt bị từ chối VĨNH VIỄN ⇒ nâng mẫu số lên bằng điểm để lượt vẫn lên (template đúng thì không bao giờ chạm).
+  const diem = Math.round(score) | 0;
   return {
     attemptId: attemptId || newAttemptId(),
     code: String(code),
     name,
     ...(maHs ? { ma: maHs } : {}),
     ...(doDang ? { doDang: true } : {}),
-    score: Math.round(score) | 0,
-    total: Math.round(total) | 0,
+    score: diem,
+    total: Math.max(diem, Math.round(total) | 0),
     timeMs: Math.min(TRAN_TIME_MS, Math.max(0, Math.round(timeMs) | 0)),
     review: reviewLotLuat(clean(review || [])),
     createdAt,
@@ -796,6 +799,9 @@ async function guiMotLuot(entry, { tries = 3, tryTimeoutMs = 6000 } = {}) {
   // ⛔ Đợt 504 — lượt CŨ nằm trong hộp thư đi (dựng trước khi makeAttempt biết luật) cũng phải lọt luật khi gửi lại;
   //    cùng `attemptId` nên lượt đã lên một nửa (scores) vẫn chỉ ghi nốt phần còn thiếu.
   lamSachLuot(entry);
+  // ⭐ Đợt 561 — lượt CŨ (dựng trước Đợt 561, chưa qua lưới makeAttempt) có điểm VƯỢT mẫu số: luật máy chủ từ chối mãi mãi
+  // (Anagram bonus 273/188 — BT2 K10 21/10, thầy đã xoá lượt đó về 0) ⇒ bỏ khỏi outbox, không gửi, không treo màn lỗi.
+  if (Number(entry.score) > Number(entry.total)) { dropOutboxEntry(entry); return { ok: false, hard: true }; }
   // ⭐ Đợt 410 — lượt MANG MÃ em chỉ đi bằng VÉ (xem khối VÉ ĐĂNG NHẬP ở trên).
   if (entry.ma) return guiBangVe(entry, { tries, tryTimeoutMs });
   let d, sdk;

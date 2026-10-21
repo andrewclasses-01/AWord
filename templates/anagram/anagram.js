@@ -842,6 +842,8 @@ const anagramTemplate = {
     //                    all — `busy` alone does not cover that stretch)
     //  • a clip still sounding — you cannot spell a word you are still hearing
     ui.setScoreProvider?.(scoreNow);
+    // ⭐ Đợt 561 — mẫu số "tối đa" của ván (xem tongToiDa) cho lượt DỞ, để điểm bonus không bao giờ vượt mẫu số.
+    ui.setTotalProvider?.(tongToiDa);
     // ⭐ Đợt 384 — bài làm TỚI LÚC NÀY cho lượt dở (dashboard myLesson xem từng câu); bọc hàm ⇒ lỗi chỉ rơi vào try của engine.
     ui.setReviewProvider?.(() => buildReview());
     // ⭐ Đợt 470 — trạng thái ván để LÀM TIẾP (chỉ engine bài giao học sinh đọc). thuTu = chỉ số trong danh sách từ gốc
@@ -884,6 +886,17 @@ const anagramTemplate = {
     // "have we finished the last word?", the review) has to agree on that or the
     // game would sit waiting for a word nobody can still play.
     function doneCheck(s) { return s.timedOut === true || (isBonusFamily ? s.correct === true : s.graded === true); }
+
+    // ⭐⭐ Đợt 561 (thầy chốt 21/10/2026) — TỔNG CHUẨN = ĐIỂM TỐI ĐA CÓ THỂ ĐẠT. Bonus-family chấm theo CHỮ, từ làm đúng ngay
+    // (không sai chữ nào) được nhân hệ số (×2 "bonus", ×bonusMult "bonusMinus" — bonusEarned) ⇒ tối đa = tổng số chữ × hệ số.
+    // Trước đây mẫu số chỉ là tổng số chữ ⇒ em làm tốt ra 273/188, luật máy chủ (score <= total) từ chối ⇒ bài KHÔNG lên
+    // (BT2 bảng chữ cái K10, Khánh Diên/Khánh Duy). Trừ điểm (Points off / đồng hồ) chỉ làm điểm NHỎ đi nên không ảnh hưởng.
+    // Submit: 1 điểm/từ ⇒ tối đa = số từ (như cũ).
+    function tongToiDa() {
+      if (!isBonusFamily) return total;
+      const heSo = Math.max(1, mode === "bonusMinus" ? bonusMult : 2);
+      return items.reduce((sum, it) => sum + it.letters.length, 0) * heSo;
+    }
 
     function scoreNow() {
       const base = isBonusFamily
@@ -2606,7 +2619,7 @@ const anagramTemplate = {
       let correct, finishTotal;
       if (isBonusFamily) {
         correct = state.reduce((sum, s) => sum + (s.points || 0), 0);
-        finishTotal = items.reduce((sum, it) => sum + it.letters.length, 0);
+        finishTotal = tongToiDa();   // Đợt 561 — tổng số chữ × hệ số thưởng (điểm tối đa), không còn chỉ tổng số chữ
       } else {
         correct = correctWords;
         finishTotal = total;

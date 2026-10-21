@@ -14,7 +14,7 @@ export const activity = {
   options: {
     timer: "countUp",
     shuffleQuestions: true,
-    anagramMode: "bonus",
+    anagramMode: "submit",   // Đợt 561 (thầy chốt 21/10/2026) — mặc định On submit
     allCaps: true,
     allowSkip: true,
     pointsOff: 0,
