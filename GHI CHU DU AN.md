@@ -546,6 +546,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 563 (21/10/2026) — TRANG THỬ ẨN RACING WORDS 5j-b: Roadster TRONG XƯỞNG + sửa khói (thầy góp ý sau Đợt 562)
+- Chép từ myGame 5j-b (commit 3a1b12f): `3d/rw-5j.js · sr3d-5j.js · sr3d-flycar-5j.js` + MỚI `3d/sr3d-intro-5j.js` (xưởng có Roadster cỡ thật, xanh lá đậm, lơ lửng giữa 2 xe).
+- Khói hông theo vận tốc lên/xuống (không méo), nhỏ 30 %, mờ hơn, thưa khi đứng yên · cất cánh xả khói mặt đường 0,9 s rồi mới nhấc · khói tràn đường khi hạ sát · TAKE OFF/LAND bấm giữa chừng = huỷ.
+- ⛔ Template `racing_words` THẬT vẫn KHÔNG ĐỔI (GOC rw-5i). Trang thử vẫn là `lab/racing-xebay.html` + `lab/racing-xebay-pad.html`.
+
 ## Đợt 562 (21/10/2026) — TRANG THỬ ẨN RACING WORDS 5j: XE BAY ROADSTER trong bộ Drone (thầy: "thử trên iPad thật")
 - `lab/racing-xebay.html` (máy lớn, đăng nhập AWord) + `lab/racing-xebay-pad.html` (iPad) · kênh riêng `templates/racing-words/rw-lab-signal.js` (tài liệu `rwlab_*`, như Đợt 552).
 - Chép từ myGame 5j (commit 1f7be13): `3d/rw-5j.js · sr3d-5j.js · sr3d-flycar-5j.js · sr3d-padlink-5j.js · sr3d-padui-5j.js` + `drone3d/flycar-F296.glb`.

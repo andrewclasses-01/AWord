@@ -1423,8 +1423,9 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   const carSt = d => !isCar(d) ? "-" : two() ? "a" : ({ road: "r", up: "t", air: "a", down: "l" })[d.car.mode] || "r";
   function toggleFly(d = D) {                                                     // 5j: TAKE OFF ⇄ LAND
     if (!isCar(d) || two() || G.paused) return; const C = d.car;
-    if (C.mode === "road") { if (G.phase !== "race") return; C.mode = "up"; d.x = C.x; d.vx = C.vx; d.s = C.s; d.sPrev = C.s; d.vs = C.v; d.afs = 0; onEvent("carFly", { up: 1 }); }
-    else { C.mode = "down"; onEvent("carFly", { up: 0 }); }
+    if (C.mode === "road") { if (G.phase !== "race") return; C.mode = "up"; C.sp = 0; d.x = C.x; d.vx = C.vx; d.s = C.s; d.sPrev = C.s; d.vs = C.v; d.afs = 0; onEvent("carFly", { up: 1 }); }
+    else if (C.mode === "down") { C.mode = "up"; C.sp = 9; onEvent("carFly", { up: 1 }); }   // đang hạ ⇒ bay lên lại (không chờ khói)
+    else { C.mode = "down"; onEvent("carFly", { up: 0 }); }                                     // đang lên / đang bay ⇒ hạ
     droneInfo(d);
   }
   const dvMsg = (tx, d = D) => { if (two() || d.n) return; D.msgT = 1.3; dvLock.textContent = tx; dvLock.style.color = "#f5c542"; dvLockTx = null; };   // 5e: 2 drone ⇒ không chữ (iPad báo)
@@ -1693,7 +1694,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
         const sT = lead.s - d.bk, vT = lead.v + clamp((sT - C.s) * 0.9, -14, 14);
         C.v += (vT - C.v) * Math.min(1, dt * 1.5); C.s += C.v * dt; d.s = C.s;
         flyBody(d, clamp(mx * 0.3 + d.ax * 0.45, -ROADX, ROADX), dt); C.x = d.x; C.vx = d.vx;
-        if (C.mode === "up") { C.lift = ex(C.lift, 1, 2.5, dt); if (C.lift > 0.6) C.y = ex(C.y, alt, 0.9, dt); if (C.y > alt - 0.4) { C.mode = "air"; droneInfo(d); } }
+        if (C.mode === "up") { C.sp = (C.sp || 0) + dt; C.lift = ex(C.lift, 1, 2.5, dt); if (C.sp > 0.9 && C.lift > 0.6) C.y = ex(C.y, alt, 0.9, dt); if (C.y > alt - 0.4) { C.mode = "air"; droneInfo(d); } }   // 0,9 s đầu: xả khói xuống mặt đường rồi mới nhấc
         else if (C.mode === "air") { C.y = ex(C.y, alt, 1.5, dt); C.lift = ex(C.lift, 0.85, 2, dt); }
         else { C.y = Math.max(0, C.y - dt * (1 + C.y * 0.35)); C.lift = C.y > 0.05 ? ex(C.lift, 0.85, 3, dt) : ex(C.lift, 0, 3, dt);
           if (C.y <= 0.02) { C.mode = "road"; C.y = 0; C.psi = 0; C.px = 0; C.steer = 0; droneInfo(d); } }
@@ -1709,8 +1710,11 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     o.g.rotation.order = "YXZ"; o.g.position.set(C.x + (Math.random() - 0.5) * sh, C.y + bob, -C.s); o.g.rotation.set(pitch, C.yaw + C.yk, roll); o.g.scale.setScalar(1);
     o.sh.visible = false; o.glow.visible = false;
     C.pod = ex(C.pod, air || (race && C.v > 0.3) ? 1 : 0, 4, dt);                 // bệ: lúc đếm chưa hiện · lăn bánh / bay ⇒ bật lên
-    if (fc) fc.update(G.paused ? 0 : dt, { t: G.t, air: air ? 1 : 0, lift: C.lift, rear: C.mode === "road" ? 0 : clamp(0.2 + (C.v - lead.v) * 0.08, 0.15, 1),
-      side: { want: C.mode === "road" ? 0 : clamp(d.axl / 3, -1, 1), yaw: d.vx }, carry: carV.set(C.vx, 0, -C.v), spin: C.y < 0.05 ? C.v * dt / 0.35 : 0.3 * dt, pod: C.pod, sel: d.sel });
+    const vy = dt > 0 ? (C.y - (C.py ?? C.y)) / dt : 0; C.py = C.y;
+    const gnd = C.mode === "road" ? 0 : C.lift * clamp(1 - C.y / 4, 0, 1);       // sát mặt đường + đang đẩy ⇒ khói tràn đường
+    if (fc) fc.update(G.paused ? 0 : dt, { t: G.t, air: air ? 1 : 0, lift: C.lift, rear: C.mode === "road" ? 0 : clamp(0.2 + (C.v - lead.v) * 0.08, 0.15, 1), ground: gnd,
+      still: Math.abs(d.vx) < 0.6 && Math.abs(d.axl) < 0.8,
+      side: { want: C.mode === "road" ? 0 : clamp(d.axl / 3, -1, 1), yaw: d.vx }, carry: carV.set(C.vx, vy, -C.v), spin: C.y < 0.05 ? C.v * dt / 0.35 : 0.3 * dt, pod: C.pod, sel: d.sel });
     // máy quay cột: trên đường = sau xe, thấp · bay = lùi xa + cao (xe cỡ thật không quá to)
     const k = clamp(C.y / alt, 0, 1), kk = k * k * (3 - 2 * k);
     dcam.position.set(lerp(C.x * 0.9, C.x * 0.85, kk), lerp(3.1, C.y + 6.5 * zf, kk), -(C.s - lerp(8.5, 9.5 * zf, kk)));

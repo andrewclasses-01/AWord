@@ -23,6 +23,7 @@ const UNDER = [[-0.6, 0.141, 0.7], [0.6, 0.14, 0.7], [-0.6, 0.126, -1.93], [0.6,
 const REAR = [[-0.4, 0.575, -2.175], [-0.135, 0.575, -2.234], [0.135, 0.575, -2.234], [0.4, 0.575, -2.175]];
 const SIDE = [[-0.919, 0.45, 1.75, -1], [-0.933, 0.45, -1.95, -1], [0.919, 0.45, 1.75, 1], [0.933, 0.45, -1.95, 1]];
 const POD = { y: 0.935, z: -1.15, w: 0.46, len: 0.46, h: 0.17, up: 0.03, down: -0.19, elev: 37 };
+const PAINT = "#0f5c34";                                           // 5j (thầy): Roadster sơn XANH LÁ CÂY ĐẬM
 const AMMO_COL = ["#ff63c3", "#2ee6c9", "#ff2020"];             // heart · boost · missile (DA_COL)
 const B_EMIT = 0.11, B_HOLD = 0.07, B_FADE = 0.22;              // 1 nhịp hông
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
@@ -64,7 +65,9 @@ function makeSmoke(U, n = 2400) {
         life[i] -= dt; const age = max[i] - life[i], kk = 1 - life[i] / max[i];
         const fd = (1 - Math.exp(-drag[i] * dt)) / drag[i], e = Math.exp(-drag[i] * dt);
         for (let j = 0; j < 3; j++) { pos[i * 3 + j] += vel[i * 3 + j] * fd + car[i * 3 + j] * dt; vel[i * 3 + j] *= e; }
-        if (pos[i * 3 + 1] < 0.12) { pos[i * 3 + 1] = 0.12; vel[i * 3 + 1] = Math.abs(vel[i * 3 + 1]) * 0.15; }
+        if (pos[i * 3 + 1] < 0.12) { pos[i * 3 + 1] = 0.12;
+          if (vel[i * 3 + 1] < -0.5) { const sp = Math.abs(vel[i * 3 + 1]) * 0.55, an = Math.random() * 6.283; vel[i * 3] += Math.cos(an) * sp; vel[i * 3 + 2] += Math.sin(an) * sp; car[i * 3 + 1] = 0; grow[i] = Math.max(grow[i], 1.6); }
+          vel[i * 3 + 1] = Math.abs(vel[i * 3 + 1]) * 0.08; }
         sz[i] += dt * grow[i];
         if (own[i] >= 0) { const b = own[i]; a[i] = Math.min(1, age * 40) * a0[i] * bEnv[b]; if (!bLive[b]) { life[i] = 0; a[i] = 0; } }
         else a[i] = a0[i] * Math.min(1, age * 25) * (1 - kk);
@@ -156,16 +159,18 @@ export function createFlyCar({ bend, U }) {
     pl.position.set(0, 0.4, -2.259); pl.rotation.y = Math.PI; inn.add(pl);
   }
   obj.traverse(o => { o.frustumCulled = false; });
-  let ready = false, base = null;
+  let ready = false, base = null, loading = null;
   return {
     obj, smoke, M: { L: FLYCAR.L, W: FLYCAR.W }, parts, get ready() { return ready; },
-    async load() {
+    load() {
+      if (loading) return loading;
+      return loading = (async () => {
       const gl = await prepFlyCar();
       base = gl.scene.clone(true); base.scale.setScalar(SC); inn.add(base); inn.updateMatrixWorld(true);
       const own = new Map();
       base.traverse(o => {
         if (!o.isMesh) return; o.frustumCulled = false;
-        o.material = (Array.isArray(o.material) ? o.material : [o.material]).map(m => { if (!own.has(m)) { const c = m.clone(); if (/Window/i.test(c.name)) { c.transparent = true; c.depthWrite = false; } own.set(m, B(c)); mats.push(c); if (/Paint/i.test(c.name)) parts.paint.push({ m: c, col: c.color.clone() }); } return own.get(m); });
+        o.material = (Array.isArray(o.material) ? o.material : [o.material]).map(m => { if (!own.has(m)) { const c = m.clone(); if (/Window/i.test(c.name)) { c.transparent = true; c.depthWrite = false; } own.set(m, B(c)); mats.push(c); if (/Paint/i.test(c.name)) { if (c.map) c.map = null; c.color.set(PAINT); c.metalness = 0.45; c.roughness = 0.26; c.needsUpdate = true; parts.paint.push({ m: c, col: c.color.clone() }); } } return own.get(m); });
         if (o.material.length === 1) o.material = o.material[0];
       });
       // 4 bánh: trục quay đặt đúng tâm hộp bao
@@ -177,6 +182,7 @@ export function createFlyCar({ bend, U }) {
       }
       obj.traverse(o => { o.frustumCulled = false; });
       ready = true; return this;
+      })();   // gọi 2 lần (xưởng + game) ⇒ chỉ nạp 1 lần
     },
     setTint(col) {   // 2 drone: sơn màu đội (null = màu gốc)
       parts.paint.forEach(p => { if (col) p.m.color.copy(p.col).lerp(new THREE.Color(col).multiplyScalar(2.2), 0.8); else p.m.color.copy(p.col); });
@@ -204,6 +210,14 @@ export function createFlyCar({ bend, U }) {
           smoke.emit(P, V, C.copy(carry).multiplyScalar(0.9), 0.32 + Math.random() * 0.2, 0.22 + Math.random() * 0.15, 0.5, 2.4, 1.3, -1, 0);
         }
       }
+      // khói tràn mặt đường dưới gầm: st.ground 0..1 (xe sát đất + đang đẩy) — bung ra vòng quanh xe, ở lại trên đường
+      const gr = st.ground || 0;
+      if (gr > 0.03) { const n = Math.floor(gr * 110 * dt + Math.random());
+        for (let k = 0; k < n; k++) {
+          inn.localToWorld(P.set((Math.random() - 0.5) * 1.4, 0, (Math.random() - 0.5) * 3.2)); P.y = 0.18;
+          const an = Math.random() * 6.283, sp = 3 + Math.random() * 6; V.set(Math.cos(an) * sp, 0.4 + Math.random() * 0.9, Math.sin(an) * sp);
+          smoke.emit(P, V, C.copy(carry).multiplyScalar(0.45).setY(0), 1.1 + Math.random() * 1.0, 0.4 + Math.random() * 0.35, 0.26, 1.5, 1.5, -1, 0);
+        } }
       // ống đuôi
       const rear = st.rear || 0;
       if (rear > 0.03) for (const g of parts.rear) {
@@ -227,7 +241,7 @@ export function createFlyCar({ bend, U }) {
           const cand = parts.side.filter(j => { const d = new THREE.Vector3(j.s, 0, 0).applyQuaternion(inn.getWorldQuaternion(new THREE.Quaternion())); return Math.sign(d.x) === -want; });
           const pick = cand.length ? cand[(sd.yaw || 0) > 0 ? 0 : cand.length - 1] : null;
           if (pick) { pick.b = smoke.burst(); pick.emit = B_EMIT; active = pick; }
-          parts.side.forEach(j => { j.next = strong ? 0.08 + Math.random() * 0.1 : 0.3 + Math.random() * 1.0; });
+          parts.side.forEach(j => { j.next = strong ? 0.08 + Math.random() * 0.1 : (st.still ? 0.9 + Math.random() * 1.8 : 0.35 + Math.random() * 1.0); });   // đứng yên ⇒ phụt THƯA
         }
       }
       if (active) {
@@ -238,7 +252,7 @@ export function createFlyCar({ bend, U }) {
           V.set(active.s, 0, 0).multiplyScalar(2 + Math.random() * 26);
           const vv = V.length(), g1 = Math.random() + Math.random() + Math.random() - 1.5, g2 = Math.random() + Math.random() + Math.random() - 1.5;
           V.y += g1 * vv * 0.077 + vv * 0.025; V.z += g2 * vv * 0.077; V.applyQuaternion(qi);
-          smoke.emit(P, V, carry, 9, 0.05, 0.66, 0.6 + Math.random() * 0.8, 13, active.b, 1);
+          smoke.emit(P, V, carry, 9, 0.035, 0.42, (0.6 + Math.random() * 0.8) * 0.7, 13, active.b, 1);   // 5j: nhỏ 30 %, mờ hơn · carry có cả vận tốc LÊN / XUỐNG ⇒ dải khói không méo
         }
       }
       smoke.update(dt);

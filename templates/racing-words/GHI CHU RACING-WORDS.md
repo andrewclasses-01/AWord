@@ -2,6 +2,8 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
+## Đợt 563 (21/10/2026) — TRANG THỬ ẨN myGame 5j-b — Roadster trong xưởng (`3d/sr3d-intro-5j.js`, rw-5j nhập intro này) + sửa khói / nút cất-hạ cánh. Template thật KHÔNG đổi.
+
 ## Đợt 562 (21/10/2026) — TRANG THỬ ẨN myGame 5j (XE BAY ROADSTER) — template thật KHÔNG đổi
 - `lab/racing-xebay.html` + `lab/racing-xebay-pad.html`, kênh `rw-lab-signal.js` (rwlab_*). File 5j chép vào `3d/` + `drone3d/flycar-F296.glb`. Hồ sơ: myGame `speed-run/HO SO BAN GIAO RACING WORDS.md` mục 5j.
 
