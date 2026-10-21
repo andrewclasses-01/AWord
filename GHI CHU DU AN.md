@@ -546,6 +546,12 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 562 (21/10/2026) — TRANG THỬ ẨN RACING WORDS 5j: XE BAY ROADSTER trong bộ Drone (thầy: "thử trên iPad thật")
+- `lab/racing-xebay.html` (máy lớn, đăng nhập AWord) + `lab/racing-xebay-pad.html` (iPad) · kênh riêng `templates/racing-words/rw-lab-signal.js` (tài liệu `rwlab_*`, như Đợt 552).
+- Chép từ myGame 5j (commit 1f7be13): `3d/rw-5j.js · sr3d-5j.js · sr3d-flycar-5j.js · sr3d-padlink-5j.js · sr3d-padui-5j.js` + `drone3d/flycar-F296.glb`.
+- ⛔ Template `racing_words` THẬT KHÔNG ĐỔI (racing-words.js vẫn GOC rw-5i). Lần chép thật sau (chep-racing-words.py) tự dọn các file lab này nếu GOC không dùng.
+- VIỆC ĐANG CHỜ: ⬜ thầy thử iPad thật · chốt ⇒ đưa 5j vào template thật (đổi GOC rw-5j, GOC_THEM padui-5j + padlink-5j, pad.js / rw-pad-signal.js đổi sang padlink-5j, load-files đo lại) rồi xoá lab.
+
 ## Đợt 561 (21/10/2026) — ANAGRAM: mặc định ON SUBMIT + TỔNG CHUẨN = ĐIỂM TỐI ĐA (thầy: K10 Khánh Diên báo "CHƯA GỬI ĐƯỢC — EM CẦN ĐĂNG NHẬP" ở Bước 3 BT2 bảng chữ cái)
 
 - **Gốc bệnh (đo dữ liệu thật):** bài giao `fgakf3` (act 147 "BT2. DANH VAN TU VUNG", chế độ **bonus**) — mẫu số = tổng số CHỮ (188) nhưng từ

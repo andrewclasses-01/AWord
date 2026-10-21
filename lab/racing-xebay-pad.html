@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="robots" content="noindex">
+<!-- Đợt 562 (21/10/2026) — iPad cho TRANG THỬ ẨN racing-xebay.html: TEAM 1 · TEAM 2 · DRONE · DRONE 2 (?t=0|1|2|3). DRONE = bảng ROADSTER gộp (myGame padui-5j). Kênh rw-lab-signal.js. -->
+<script src="../core/no-zoom.js"></script>
+<script src="../core/app-check.js" defer></script>
+<title>Racing words — flying car lab iPad</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Exo+2:ital,wght@0,600;0,700;0,800;0,900;1,800;1,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../templates/racing-words/3d/rw-4j-fb.css">
+<style>html, body { margin: 0; height: 100%; background: #0b0f15; overflow: hidden; color: #e2e8f0; font-family: "Exo 2", system-ui, sans-serif; }
+.lab-note { position: fixed; inset: 0; display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: center; text-align: center; font-weight: 700; font-size: 22px; padding: 24px; }
+.lab-note button { font: 800 20px "Exo 2"; padding: 12px 30px; border: 0; border-radius: 12px; background: #7c3aed; color: #fff; }</style>
+</head>
+<body>
+<div id="pad"></div>
+<script type="module">
+import { currentUser, signIn } from "../core/firebase.js";
+import { labSignal } from "../templates/racing-words/rw-lab-signal.js";
+import { createPadClient, watchTeams } from "../templates/racing-words/3d/sr3d-padlink-5j.js";
+import { mountPadApp, mountPadChooser, mountDroneApp } from "../templates/racing-words/3d/sr3d-padui-5j.js";
+const mount = document.getElementById("pad"), q = new URLSearchParams(location.search);
+async function go() {
+  if (!(await currentUser())) {
+    mount.innerHTML = '<div class="lab-note">Sign in to AWord on this iPad<small>Use the same Google account as the big screen.</small><button type="button">Sign in</button></div>';
+    mount.querySelector("button").onclick = async () => { try { await signIn(); location.reload(); } catch (e) { alert(e.message || e); } };
+    return;
+  }
+  const SIG = labSignal();
+  if (!q.has("t")) { const ch = mountPadChooser(mount, { onPick: t => { q.set("t", t); location.href = "?" + q; } }); watchTeams(SIG, b => ch.setBusy(b)); return; }
+  const team = q.get("t") === "3" ? 3 : q.get("t") === "2" ? 2 : q.get("t") === "1" ? 1 : 0;
+  let ui = null; const pend = {};
+  const call = (k, v) => ui ? ui[k] && ui[k](v) : (pend[k] = v);
+  const client = createPadClient({ signal: SIG, team,
+    onState: s => call("setState", s), onInfo: i => call("setInfo", i), onMode: m => call("setMode", m), onQ: x => call("setQ", x), onSteer: x => call("setSteer", x), onDrone: j => call("setDrone", j) });
+  const back = () => { client.destroy(); q.delete("t"); location.href = "?" + q; };
+  ui = team >= 2 ? mountDroneApp(mount, { client, onBack: back }) : mountPadApp(mount, { team, client, onBack: back });
+  ui.setState(client.state); Object.entries(pend).forEach(([k, v]) => ui[k] && ui[k](v));
+  window.__padc = client; window.__padui = ui;
+}
+go().catch(e => { mount.innerHTML = '<div class="lab-note">Could not start: ' + String(e.message || e) + '</div>'; });
+</script>
+</body>
+</html>

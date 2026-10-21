@@ -2,6 +2,9 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
+## Đợt 562 (21/10/2026) — TRANG THỬ ẨN myGame 5j (XE BAY ROADSTER) — template thật KHÔNG đổi
+- `lab/racing-xebay.html` + `lab/racing-xebay-pad.html`, kênh `rw-lab-signal.js` (rwlab_*). File 5j chép vào `3d/` + `drone3d/flycar-F296.glb`. Hồ sơ: myGame `speed-run/HO SO BAN GIAO RACING WORDS.md` mục 5j.
+
 ## Đợt 558 (20/10/2026) — myGame 5i: VẠCH LỬA DRONE + ⚙ Settings ▸ Boost + sửa tab Driver
 - GOC `rw-5i.js` · lõi `sr3d-5i.js` (+ `rw-bloss-5i.js` hiệu ứng boost mất, tự chèn CSS) · iPad `sr3d-padui-5i.js` (bọc padui-5g) + padlink-5e giữ nguyên · CSS thêm `rw-5i.css` sau rw-5h.css.
 - Cài đặt Boost theo MÁY (`racingwords.boost.v1`), không phải Options của act. Muốn theo act ⇒ chuyển thành khoá `sr*` trong RW_DEF / RW_FLAT.
