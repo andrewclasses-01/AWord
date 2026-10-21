@@ -1663,9 +1663,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   }
 
   inner.append(topbar, playArea, bottombar);
-  if (quay) {   // Đợt 512 — nhãn giữa hàng trên, bỏ chip điểm (không chấm điểm khi quay video)
+  if (quay) {   // Đợt 512 — nhãn hàng trên, bỏ chip điểm (không chấm điểm khi quay video)
     topbar.classList.add("aw-quay-top");
-    topbar.append(el("div", "aw-quay-nhan", "CHẾ ĐỘ QUAY VIDEO"));
+    // ⭐ Đợt 560 — nhãn ĐẦU hàng (góc trái), slogan template dạt phải (app.css) — trước đây nhãn tuyệt đối giữa hàng ĐÈ slogan Anagram.
+    topbar.prepend(el("div", "aw-quay-nhan", "CHẾ ĐỘ QUAY VIDEO"));
     scoreEl.style.display = "none";
   }
 

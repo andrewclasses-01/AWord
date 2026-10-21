@@ -546,6 +546,12 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 560 (21/10/2026) — CHẾ ĐỘ QUAY VIDEO: nhãn sang GÓC TRÁI, slogan sang GÓC PHẢI (thầy: "CHẾ ĐỘ QUAY VIDEO đè lên slogan ANDREW CLASSES… các act khác tương tự")
+
+- engine.js: nhãn `.aw-quay-nhan` nay `topbar.prepend` (con ĐẦU hàng) thay vì `append` + tuyệt đối giữa hàng. app.css: bỏ `position:absolute`,
+  `.aw-quay-top .aw-top-centre{justify-content:flex-end}` + slogan `text-align:right` ⇒ slogan của template (ô giữa — Anagram/Tournament/A Show Speed) dạt phải.
+- Thử (bàn thử tạm startGame + session.quay giả, không Firebase, timer none như play.js): Anagram (nhãn trái, "ANAGRAM IN ANDREW CLASSES" phải) · Quiz · Type the answer · Unjumble (nhãn trái).
+
 ## Đợt 559 (21/10/2026) — QUIZ: "SHOW TEXT AFTER ANSWER" cho câu chỉ có tiếng + vá Edit làm MẤT TIẾNG (thầy: BT1 bảng chữ cái K10 "sau khi chọn câu trả lời, letter đúng sẽ xuất hiện")
 
 - **Ô tích mới** trong Options của Quiz `options.showTextAfter` (key `showTextAfter`, cuối `checkOrder`). CHỈ dựng khi act có tiếng: options-panel truyền thêm

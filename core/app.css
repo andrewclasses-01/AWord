@@ -765,8 +765,13 @@ html.aw-nhung .aw-below { display: none; }
 .aw-iconbtn.aw-quay-lai:hover, .aw-quay-lai:hover { background: #FFF7ED; color: #C2410C; }
 .aw-nav-label.aw-quay-nav { font-weight: 900; color: #1E3A8A; letter-spacing: .04em; font-size: calc(2.2 * var(--aw-u)); min-width: calc(12 * var(--aw-u)); }
 .aw-topbar.aw-quay-top { position: relative; min-height: calc(3 * var(--aw-u)); }
+/* ⭐ Đợt 560 (thầy, 21/10/2026: "CHẾ ĐỘ QUAY VIDEO đè lên slogan ANDREW CLASSES… đưa sang góc trái, ANDREW CLASSES sang góc
+   phải cho cân đối, các act khác tương tự") — nhãn nay ĐỨNG TRONG HÀNG (con đầu của .aw-topbar, engine prepend), KHÔNG còn tuyệt
+   đối giữa hàng; slogan của template (ô giữa `.aw-top-centre`) dạt sang PHẢI. Act không có slogan: nhãn một mình góc trái. */
+.aw-quay-top .aw-top-centre { justify-content: flex-end; }
+.aw-quay-top .aw-top-slogan { flex: 0 1 auto; text-align: right; }
 .aw-quay-nhan {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none;
+  flex: 0 0 auto; pointer-events: none;
   display: flex; align-items: center; gap: calc(0.7 * var(--aw-u)); white-space: nowrap;
   font-weight: 800; font-size: calc(1.45 * var(--aw-u)); letter-spacing: .14em; color: #B91C1C;
 }
