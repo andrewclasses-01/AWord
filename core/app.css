@@ -3639,6 +3639,15 @@ body.aw-page-dragover::after {
 /* Đợt 287 — the two new trees get their own icon colour (Activities/Results keep amber) */
 .aw-root-card[data-root="courses"] .aw-root-icon { color: #3b82f6; }
 .aw-root-card[data-root="games"] .aw-root-icon { color: #8b5cf6; }
+/* Đợt 572 (thầy chốt 22/10/2026) — trang hẹp (khung AWord nhanh của myLesson ~680px, cửa sổ nhỏ): 4 ô vẫn CÙNG MỘT
+   HÀNG. Ô bớt khoảng trống bên phải (không đòi 200px), icon/chữ nhỏ lại một nấc, khe giữa ô hẹp lại. Hẹp hơn ~600px
+   (điện thoại) mới xuống 2 dòng như cũ. Trang rộng giữ nguyên Đợt 287. */
+@media (max-width: 900px) {
+  .aw-roots { gap: 12px; }
+  .aw-root-card { flex: 1 1 0; min-width: 136px; padding: 16px 14px; gap: 10px; border-radius: 16px; }
+  .aw-root-icon { width: 40px; height: 40px; }
+  .aw-root-name { font-size: 1.15rem; }
+}
 
 /* breadcrumb */
 .aw-fm-crumbs { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin: 4px 0 14px; font-weight: 600; }

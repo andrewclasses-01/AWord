@@ -546,6 +546,16 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 572 (22/10/2026) — Trang chủ: 4 ô thư mục CÙNG MỘT HÀNG khi trang hẹp (khung AWord nhanh của myLesson)
+- Thầy báo (ảnh): trong khung AWord nhanh của myLesson v2.183.0 (khung 576px, nội dung 80% ⇒ trang rộng ~718px, hàng ô
+  ~678px) 4 ô Activity · Result · Course · Game bị chia 2 dòng (3 + 1) vì mỗi ô đòi `min-width:200px` + khe 22px.
+- `core/app.css` thêm `@media (max-width: 900px)`: khe 12px · ô `flex:1 1 0; min-width:136px` · đệm 16/14px · icon 40px ·
+  chữ 1.15rem ⇒ bớt khoảng trống bên phải ô. Trang rộng giữ nguyên Đợt 287.
+- Bàn thử (python 8532, ghép 4 ô bằng đúng class): 718px ⇒ 4 ô một hàng, mỗi ô 161px · 1280px ⇒ như cũ 234px, đệm 26/18 ·
+  390px (điện thoại) ⇒ 2 + 2, không tràn ngang.
+
+---
+
 ## Đợt 571 (21/10/2026) — RACING WORDS THẬT lên myGame 5k + 5k-b: Roadster bám xe nhanh + tên lửa tự đuổi
 **Thầy:** Roadster đạt tốc cao hơn, luôn bám xe nhanh kể cả khi xe vượt dốc 150–200 km/h; ở tốc cao hết giật, khói 2 bên không lệch; bỏ tâm tên lửa — tự đuổi tới khi trúng, 1 chạm = xe xa, đúp = xe gần,
 trúng 100 %, trên đường cũng vậy · thêm: bấm 1 trong 3 nút loại đạn cũng bắn luôn; 1 drone bắn thoải mái không chờ. "commit + push cả myGame, cả AWord".
@@ -2186,7 +2196,7 @@ bản máy chủ bị xoá, practiceLog CÙNG mã lượt `…|mc>tiep` DONE; nh
 bấm START ngay khi kho máy rỗng (nhãn còn START) ⇒ vẫn làm tiếp đúng lượt (2/30).
 ✅ Mở 2 máy CÙNG LÚC: thầy chốt "đăng nhập máy 2 = máy 1 tự đăng xuất NGAY" ⇒ myLesson web v1.268.0 `801506f` (phienHs/{uid}, luật `tools/dang-luat-phien-hs.js`). Thầy "ok được rồi" 08/10. ⬜ Thử trên điện thoại thật.
 
-
+
 ## Đợt 494 (08/10/2026) — ⭐⭐ TIME LIMIT DÙNG CHUNG: Type the answer · Unjumble · Find the gap · Anagram + Quiz lên 30 s
 **Thầy:** "các template khác cũng có Time limit tương tự (ví dụ type the answer)". Đã rà cả 21 template (bảng phân loại ở cuối mục).
 Thầy chốt (AskUserQuestion): đợt này **TTA · Unjumble · Find the gap · Anagram**, **Quiz nâng 1..30 s** (nấc cuối vẫn ∞);
