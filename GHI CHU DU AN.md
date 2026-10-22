@@ -546,6 +546,29 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 573 (22/10/2026) — THẦY THẢ TIM + CHAT NHANH khi xem trực tiếp (bong bóng trong khung game) · myLesson web v1.404.0
+- Thầy yêu cầu: trong lúc XEM TRỰC TIẾP (Đợt 496), thầy thả tim + nhắn; em xem được, thả tim lại, trả lời nhanh. Thiết kế qua 6 vòng
+  mẫu, thầy CHỐT mẫu v6: `D:\OTHERS\CLAUDE\myLesson - thiet ke tim chat quan sat\mau-v6.html` + `THIET KE v1.md` (mục 6–10).
+- `quan-sat.js` thêm `taoTin(vien, code)` (+ CSS `CSS_TIN`, tiền tố `aw-qt-`), `ngheQuanSat` nghe thêm `AWORD:QS_TIN` (CHỈ khi viên
+  đang bật). Không đụng core/, không template nào phải biết.
+  - Tin thầy: viên trắng NGAY DƯỚI viên quan sát, CHÍNH GIỮA khung game, mũi tên tam giác (clip-path) giữa mép trên; TRÁI TIM TRẦN
+    có bóng (không nền) treo ngoài cạnh phải (absolute ⇒ tin vẫn đúng giữa). Dưới tin: viên thuốc "↩ Trả lời" (nền tối bán trong suốt).
+  - Bấm tim: MỖI lần 1 tim bay cong (Bezier bậc 2, 0,7 s, Web Animations) lên ảnh thầy, ảnh thầy nảy; dồn 1,5 s ⇒ báo 1 lượt `n`.
+  - Bấm viên thuốc ⇒ CHÍNH NÓ giãn (width .32 s) thành ô gõ trắng + nút ➤ (≤ 80 chữ, chặn link = khuôn chat lớp). Enter/➤ gửi,
+    Esc/bấm ra ngoài khi trống ⇒ thu lại. Phím trong ô `stopPropagation` (Anagram/TTA… nghe phím ở document không bị lọt).
+  - Gửi xong: lời em = viên thuốc XANH NGỌC #0E7C6E (màu tin "của mình" chat myNetwork), dấu ✓ trắng không nền ngoài cạnh phải.
+  - Tin thầy loại tim ⇒ ≤ 8 tim RƠI từ ảnh thầy. Không tiếng. 10 s không đụng ⇒ thu khối; rê/chạm ⇒ đứng; đang gõ ⇒ không thu.
+  - Hệ số co RIÊNG cho khối tin: `max(0.9, min(1.2, k viên))` — viên co tới 0,55 trên điện thoại, tin/nút phải đọc + bấm được.
+  - Em → trang mẹ: `{type:'AWORD:QS_TRA', code, loai:'tim'|'chu', n, chu, ve}` (postMessage "*" như mọi tin khác; trang mẹ kiểm origin
+    + nguồn là khung đúng act). Trang mẹ ghi Firestore `quanSat/{ma}/tra` (luật myLesson `tools/dang-luat-quan-sat-tin.js`).
+- Bàn thử: trang mẹ giả `localhost:8134` (cổng có trong VE_NGUON) nhúng `devserver.py 5510` act thật `y33d64` — bật cờ, thầy nhắn/
+  tin dài/thả tim ×5; bấm tim 3 lần ⇒ mẹ nhận ĐÚNG MỘT `QS_TRA {loai:'tim', n:3}`; gõ trả lời ⇒ `{loai:'chu', chu:'Da em cam on thay a',
+  ve:'t2'}`; trong ván quiz (giao diện sáng) bong bóng + tim rơi hiện đúng; khung 400px chữ đủ to. Console 0 lỗi.
+- ⛔ Bài học mẫu: class chung chung (`.thay`) trùng class khác có `overflow:hidden` ⇒ cắt mất nút treo ngoài ⇒ code thật dùng tiền tố `aw-qt-`.
+- ⛔ `backdrop-filter` trong khối đang transform/opacity ⇒ Chromium vẽ nút thành mảng trắng ⇒ nút dùng nền rgba đặc.
+
+---
+
 ## Đợt 572 (22/10/2026) — Trang chủ: 4 ô thư mục CÙNG MỘT HÀNG khi trang hẹp (khung AWord nhanh của myLesson)
 - Thầy báo (ảnh): trong khung AWord nhanh của myLesson v2.183.0 (khung 576px, nội dung 80% ⇒ trang rộng ~718px, hàng ô
   ~678px) 4 ô Activity · Result · Course · Game bị chia 2 dòng (3 + 1) vì mỗi ô đòi `min-width:200px` + khe 22px.
