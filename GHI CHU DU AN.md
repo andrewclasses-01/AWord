@@ -585,6 +585,9 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
   (2) lượt báo danh trả lời lần gõ cửa đầu tới TRƯỚC lần đọc đầu của máy chiếu ⇒ gõ cửa lần 2 sau 1,5 s, (3) tab nền = `hidden` ⇒
   bàn thử cần `?padkeep`, (4) Python ghi lại file thành LF ⇒ đã đưa về CRLF.
 
+- ✅ Code `e4dab0b` ĐÃ PUSH + LIVE: `tools/kiem-live.py` build.json sha e4dab0b, 12/12 file khớp nguồn; chạy thẳng module thu gọn của bản live
+  (`scratch/dot575-live.html`): vào thẳng setup, thanh dưới chỉ Mode/Set assignment/Print, 8 ô thông số, nút iPad ghi run_link + ipad_now, console 0 lỗi.
+
 VIỆC ĐANG CHỜ:
 - ⬜ Thầy thử trên lớp: TOMKO + 2 iPad thật (Running word) và 1 iPad (Running team) đăng nhập cùng tài khoản — chưa chạy Firestore thật,
   chỉ chạy kênh cục bộ.
