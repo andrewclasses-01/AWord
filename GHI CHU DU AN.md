@@ -566,6 +566,8 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
   RT ngang đúng mẫu, tab thứ 2 bị từ chối; khung dọc 768×1024 ⇒ khung ngang nằm giữa; console 0 lỗi. Act thử không có IPA nên chưa
   thấy dòng IPA trên thẻ.
 
+- ✅ Code `b52ae79` ĐÃ PUSH + LIVE: kiem-live build.json sha b52ae79, 3/3 file khớp nguồn; run.html live mở được (khung ngang, console 0 lỗi).
+
 VIỆC ĐANG CHỜ:
 - ⬜ Thầy thử iPad thật nằm ngang (cùng việc chờ của Đợt 575: chưa chạy Firestore thật) · xem IPA trên thẻ với act có cột IPA.
 
