@@ -96,6 +96,41 @@ function fmtClock(ms) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+// The match settings, normalised from `activity.options`. Every field name,
+// range and default is the one the old Options panel wrote, so a saved act
+// plays identically (Đợt 575 only moved the controls onto the setup screen).
+function readCfg(opt) {
+  const cfg = {
+    names: {
+      a: String(opt.teamAName || "TEAM A").trim().slice(0, 18) || "TEAM A",
+      b: String(opt.teamBName || "TEAM B").trim().slice(0, 18) || "TEAM B"
+    },
+    clockMs: clampInt(opt.clockSeconds, 10, 1800, 300) * 1000,
+    incrementMs: clampInt(opt.incrementSeconds, 0, 15, 0) * 1000,
+    warnSec: clampInt(opt.warnSeconds, 0, 60, 15),
+    passUses: clampInt(opt.passUses, 0, 5, 3),
+    passPenaltyMs: clampInt(opt.passPenaltySeconds, 0, 60, 10) * 1000,
+    andrewUses: clampInt(opt.andrewUses, 1, 5, 1)
+  };
+  // PASS is a limited resource now (0..5 per team). allowPass stays as the
+  // "any passes at all?" flag so makePass/doPass read the same as before.
+  cfg.allowPass = cfg.passUses > 0;
+  return cfg;
+}
+// The same settings as the raw option values the setup screen edits (its
+// draft) and APPLY writes back.
+function optsFromCfg(cfg) {
+  return {
+    teamAName: cfg.names.a, teamBName: cfg.names.b,
+    clockSeconds: Math.round(cfg.clockMs / 1000),
+    incrementSeconds: Math.round(cfg.incrementMs / 1000),
+    warnSeconds: cfg.warnSec,
+    andrewUses: cfg.andrewUses,
+    passUses: cfg.passUses,
+    passPenaltySeconds: Math.round(cfg.passPenaltyMs / 1000)
+  };
+}
+
 // Menu pause (Đợt 91, 8/8/2026) — bridges the CURRENT mount's pause/resume
 // pair out to the template-level `onPause` hook engine.js calls. Module-level
 // single, same pattern as `rwEndData` below: AWord only ever mounts one
@@ -144,6 +179,16 @@ const rwTemplate = {
   // comment in engine.js for the full trade-off. CSS for `.aw-zoomed` lives in
   // running-word.css (this template's own file, not core).
   useZoomFullscreen: true,
+  // ⭐ Đợt 575 (thầy, 23/10/2026) — mở game là vào THẲNG màn setup, mọi tuỳ chọn nằm NGAY trên màn đó (thanh kéo + APPLY) ⇒
+  // không còn nút Options (engine đọc cờ này) và màn READY của engine bị bỏ qua: startScreen bấm Play hộ ngay khi engine
+  // chuẩn bị xong (khuôn của Train rush / STAR LOOT). Mẫu thầy duyệt: D:\OTHERS\CLAUDE\AWord - thiet ke Running setup iPad\mau-1.html
+  noOptionsButton: true,
+  startScreen({ play, ready, preflight }) {
+    if (preflight) return { dispose() {} };   // màn chọn WORDS đang dựng NHẸ (Đợt 549) — chưa Play
+    let gone = false;
+    ready().then(() => { if (!gone) play(); });
+    return { dispose() { gone = true; } };
+  },
 
   sounds: {
     play: () => {},          // the 3-2-1 has its own sound; a jingle here would collide
@@ -264,7 +309,6 @@ const rwTemplate = {
 
   // =============================================================
   mount(root, activity, ui) {
-    const opt = activity.options || {};
     const pool = poolFrom(activity);
     // Word -> IPA lookup (11/8/2026), read once at mount — the pool doesn't
     // change mid-match. Used by the printed sheets and by the in-game reveal
@@ -282,22 +326,9 @@ const rwTemplate = {
     // for anything new. Printing and saving a set are teacher-only actions.
     const isTeacher = !!document.querySelector(".aw-below-right");
 
-    // ---------- settings, normalised once ----------
-    const cfg = {
-      names: {
-        a: String(opt.teamAName || "TEAM A").trim().slice(0, 18) || "TEAM A",
-        b: String(opt.teamBName || "TEAM B").trim().slice(0, 18) || "TEAM B"
-      },
-      clockMs: clampInt(opt.clockSeconds, 10, 1800, 300) * 1000,
-      incrementMs: clampInt(opt.incrementSeconds, 0, 15, 0) * 1000,
-      warnSec: clampInt(opt.warnSeconds, 0, 60, 15),
-      passUses: clampInt(opt.passUses, 0, 5, 3),
-      passPenaltyMs: clampInt(opt.passPenaltySeconds, 0, 60, 10) * 1000,
-      andrewUses: clampInt(opt.andrewUses, 1, 5, 1)
-    };
-    // PASS is a limited resource now (0..5 per team). allowPass stays as the
-    // "any passes at all?" flag so makePass/doPass read the same as before.
-    cfg.allowPass = cfg.passUses > 0;
+    // ---------- settings, normalised ----------
+    // ⭐ Đợt 575 — `let`, đọc lại sau mỗi APPLY trên màn setup (applyOptions bên dưới).
+    let cfg = readCfg(activity.options || {});
 
     // ---------- match state ----------
     let sets = readSets(activity);                 // saved splits (up to 3)
@@ -390,7 +421,13 @@ const rwTemplate = {
       passEls[t] = { btn, num, _n: cfg.passUses };
       return btn;
     }
-    clocks.append(makePass("a"), makeClock("a"), refereeBar(), makeClock("b"), makePass("b"));
+    // ⭐ Đợt 575 — dựng lại được: APPLY trên màn setup có thể bật/tắt PASS (passUses 0 ↔ n), mà ô PASS chỉ có khi được phép.
+    function buildStrip() {
+      clocks.innerHTML = "";
+      delete passEls.a; delete passEls.b;
+      clocks.append(makePass("a"), makeClock("a"), refereeBar(), makeClock("b"), makePass("b"));
+    }
+    buildStrip();
     match.append(clocks);
 
     // Each board is a fixed 3-ROW WINDOW (teacher's request, 5/8/2026): the
@@ -617,10 +654,169 @@ const rwTemplate = {
       setTimeout(() => document.addEventListener("pointerdown", onDeletePopOutside, true), 0);
     }
 
+    // ⭐⭐ Đợt 575 (thầy, 23/10/2026) — MÀN SETUP GỘP OPTIONS. Từ trên xuống, đúng mẫu thầy duyệt
+    // (D:\OTHERS\CLAUDE\AWord - thiet ke Running setup iPad\mau-1.html):
+    //   [✎]  RUNNING WORD  [● A ● B][iPad]  ·  ô SET  ·  2 tên đội  ·  6 thông số (2 cột)  ·  số liệu  ·  lý do khoá
+    //   ·  [APPLY] [START MATCH]
+    // Thông số là BẢN NHÁP (`draft`): kéo là APPLY sáng cam + START khoá; APPLY ghi vào act (ui.host.saveOptions — cùng đường
+    // Options ▸ Apply của engine, act chuyển đổi thì lưu vào templateOptions của act gốc) rồi đọc lại cfg.
+    // ⛔ Ô tích Shuffle / Show answers của Options cũ KHÔNG chuyển sang: bộ chia đã lưu cố định, màn kết thúc riêng
+    // (renderSummary) không có Show answers — hai ô đó chưa bao giờ làm gì ở game này.
+    let draft = optsFromCfg(cfg);
+    const optsDirty = () => JSON.stringify(optsFromCfg(normDraft())) !== JSON.stringify(optsFromCfg(cfg));
+    function normDraft() {
+      return readCfg({ ...draft, teamAName: String(draft.teamAName || "").trim(), teamBName: String(draft.teamBName || "").trim() });
+    }
+    function applyOptions() {
+      if (!optsDirty()) return;
+      ui.sound.click?.();
+      const patch = optsFromCfg(normDraft());
+      if (ui.host && ui.host.saveOptions) ui.host.saveOptions(patch);
+      else { activity.options = activity.options || {}; Object.assign(activity.options, patch); }
+      cfg = readCfg(activity.options || patch);
+      draft = optsFromCfg(cfg);
+      clock.a = clock.b = cfg.clockMs;
+      andrewLeft.a = andrewLeft.b = cfg.andrewUses;
+      passLeft.a = passLeft.b = cfg.passUses;
+      buildStrip();
+      ui.toast?.("Options applied.");
+      renderSetup();
+    }
+
+    // ----- iPad (Đợt 575): 2 iPad, mỗi đội một — màn của người GIẢI THÍCH -----
+    // Bật/tắt nhớ theo MÁY (máy chiếu của lớp), không theo act: là chuyện "lớp này có iPad không".
+    const IPAD_KEY = "aw.runIpad.rw";
+    let ipadOn = false;
+    try { ipadOn = isTeacher && localStorage.getItem(IPAD_KEY) === "1"; } catch (e) { /* chế độ riêng tư */ }
+    let pads = [false, false];
+    let link = null, ipadClaim = null, linkBusy = null, lastListKey = "", lastPubKey = "", disposed = false;
+    function startLink() {
+      if (link || linkBusy) return linkBusy;
+      linkBusy = (async () => {
+        try {
+          const [{ createRunHost }, { claimIpad }] = await Promise.all([import("../../core/run-link.js"), import("../../core/ipad-now.js")]);
+          if (!ipadOn || disposed || link) return;
+          link = createRunHost({ game: "runningword", slots: 2, onPads: p => { pads = p; paintSetupGate(); } });
+          ipadClaim = claimIpad({ game: "runningword", hold: true });
+          lastListKey = lastPubKey = "";
+          publishLink(true);
+        } catch (e) {
+          console.warn("AWord/running-word: iPad link", e);
+          ui.toast?.("Could not link an iPad — are you signed in?");
+        } finally { linkBusy = null; }
+      })();
+      return linkBusy;
+    }
+    function stopLink() {
+      if (link) { link.stop(); link = null; }
+      if (ipadClaim) { ipadClaim.release(); ipadClaim = null; }
+      pads = [false, false];
+    }
+    if (ipadOn) startLink();
+    // Trạng thái trận lên iPad. Danh sách từ chỉ gửi khi ĐỔI (bộ chia / swap); đồng hồ gửi kèm mỗi lượt + `ticking`,
+    // iPad tự đếm giữa hai lượt (không ghi mỗi giây).
+    function publishLink(force) {
+      if (!link) return;
+      const listKey = current.a.join("|") + "#" + current.b.join("|");
+      const st = {
+        phase, turn: turn || "", paused: !!paused,
+        idx: { a: idx.a, b: idx.b },
+        names: { a: cfg.names.a, b: cfg.names.b },
+        parts: { a: partLabel("a"), b: partLabel("b") },
+        total: { a: current.a.length, b: current.b.length }
+      };
+      const key = JSON.stringify(st);
+      if (!force && key === lastPubKey && listKey === lastListKey) return;
+      lastPubKey = key;
+      const patch = { ...st, clock: { a: Math.round(clock.a), b: Math.round(clock.b) }, ticking: phase === "play" && !paused };
+      if (force || listKey !== lastListKey) { patch.lists = { a: current.a.slice(), b: current.b.slice() }; lastListKey = listKey; }
+      link.publish(patch);
+    }
+
+    // ----- small builders for the option cells (sizes in --aw-u, see running-word.css) -----
+    function optLabel(label, sub) {
+      const l = el("div", "aw-rw-oc-lab", escapeHtml(label));
+      if (sub) l.append(el("small", null, escapeHtml(sub)));
+      return l;
+    }
+    function optSlider(label, sub, key, min, max, step, fmt, tone, offAt) {
+      const cell = el("div", "aw-rw-oc");
+      cell.append(optLabel(label, sub));
+      const wrap = el("div", "aw-rw-oc-sl");
+      wrap.style.setProperty("--tone", tone);
+      const r = el("input");
+      r.type = "range"; r.min = String(min); r.max = String(max); r.step = String(step);
+      r.value = String(clampInt(draft[key], min, max, min));
+      const out = el("output", "aw-rw-oc-val");
+      const show = () => {
+        const v = Number(r.value);
+        out.textContent = fmt(v);
+        out.classList.toggle("is-off", offAt !== undefined && v === offAt);
+        wrap.style.setProperty("--p", ((v - min) / (max - min) * 100).toFixed(2) + "%");
+      };
+      r.oninput = () => { draft[key] = Number(r.value); show(); paintSetupGate(); };
+      show();
+      wrap.append(r, out);
+      cell.append(wrap);
+      return cell;
+    }
+
+    let setupGate = null;    // { apply, start, why, ipad } — repainted without rebuilding the screen
+    function paintSetupGate() {
+      if (!setupGate) return;
+      const dirtyOpts = optsDirty();
+      setupGate.apply.classList.toggle("is-dirty", dirtyOpts);
+      setupGate.apply.disabled = !dirtyOpts;
+      setupGate.apply.innerHTML = dirtyOpts ? "APPLY" : `${icons.check}<span>APPLIED</span>`;
+      const missing = ipadOn ? TEAMS.filter((t, i) => !pads[i]).map(t => "iPad " + t.toUpperCase()) : [];
+      const reasons = [];
+      if (isTeacher && dirty) reasons.push("Save this SET first");
+      if (dirtyOpts) reasons.push("Apply the options first");
+      if (missing.length) reasons.push("Waiting for " + missing.join(" + ") + " — or switch iPad off");
+      setupGate.start.disabled = reasons.length > 0;
+      setupGate.why.textContent = reasons.join(" · ");
+      if (setupGate.ipad) {
+        setupGate.ipad.box.classList.toggle("is-on", ipadOn);
+        setupGate.ipad.btn.classList.toggle("is-on", ipadOn);
+        setupGate.ipad.dots.forEach((d, i) => { d.classList.toggle("is-ok", !!pads[i]); d.classList.toggle("is-wait", !pads[i]); });
+      }
+    }
+
     function renderSetup() {
       closeDeletePopover();   // a re-render replaces the anchor button under it
       setup.innerHTML = "";
-      setup.append(el("div", "aw-rw-setup-title", "RUNNING WORD"));
+
+      // -- header: [✎ edit] · title · [iPad] --
+      const head = el("div", "aw-rw-setup-head");
+      const left = el("div", "aw-rw-setup-left");
+      if (ui.host && ui.host.canEdit && ui.host.canEdit()) {
+        // Đợt 575 — không còn nút Options ⇒ mất cử chỉ nhấn giữ Options = Edit content (single mode) ⇒ nút sửa riêng.
+        const ed = el("button", "aw-rw-editbtn", SVG_EDIT);
+        ed.type = "button"; ed.title = "Edit content";
+        ed.onclick = () => { ui.sound.click?.(); ui.host.edit(); };
+        left.append(ed);
+      }
+      head.append(left, el("div", "aw-rw-setup-title", "RUNNING WORD"));
+      const ipadBox = el("div", "aw-rw-ipad");
+      let ipadUI = null;
+      if (isTeacher) {
+        const dots = el("div", "aw-rw-ipad-dots");
+        const dotEls = TEAMS.map(t => { const d = el("span", `aw-rw-ipad-dot is-${t}`, `<i></i>${t.toUpperCase()}`); dots.append(d); return d; });
+        const btn = el("button", "aw-rw-ipad-btn", `${SVG_IPAD}<span>iPad</span>`);
+        btn.type = "button";
+        btn.title = "Show each team's words on its own iPad";
+        btn.onclick = () => {
+          ui.sound.click?.();
+          ipadOn = !ipadOn;
+          try { localStorage.setItem(IPAD_KEY, ipadOn ? "1" : "0"); } catch (e) { /* */ }
+          if (ipadOn) startLink(); else stopLink();
+          paintSetupGate();
+        };
+        ipadBox.append(dots, btn);
+        ipadUI = { box: ipadBox, btn, dots: dotEls };
+      }
+      head.append(ipadBox);
+      setup.append(head);
 
       // -- saved set chooser --
       // ⭐ 11/8/2026 (teacher's redesign): Shuffle / Save / Print moved OFF the
@@ -708,7 +904,37 @@ const rwTemplate = {
       }
       setup.append(slots);
 
+      // -- the options, straight on the setup screen (Đợt 575) --
+      const opts = el("div", "aw-rw-opts");
+      TEAMS.forEach(t => {
+        const key = t === "a" ? "teamAName" : "teamBName";
+        const c = el("div", `aw-rw-oc is-${t}`);
+        c.append(optLabel(t === "a" ? "Team A" : "Team B", "name"));
+        const input = el("input", "aw-rw-oc-text");
+        input.type = "text"; input.maxLength = 18; input.value = draft[key]; input.spellcheck = false;
+        input.oninput = () => { draft[key] = input.value; paintSetupGate(); };
+        c.append(input);
+        opts.append(c);
+      });
+      // 10s..30:00, step 1s (Đợt 164) — the same stepper the old Options cell used.
+      const cClock = el("div", "aw-rw-oc");
+      cClock.append(optLabel("Time", "each team"));
+      const clockStep = makeHStepper(clampInt(draft.clockSeconds, 10, 1800, 300), 10, 1800,
+        v => { draft.clockSeconds = v; paintSetupGate(); },
+        { step: 1, holdMax: 15, dragPxPerStep: 3, format: v => fmtClock(v * 1000) });
+      cClock.append(clockStep.el);
+      opts.append(cClock);
+      opts.append(
+        optSlider("Bonus", "per correct word", "incrementSeconds", 0, 15, 1, v => (v ? `+${v}s` : "Off"), "#16a34a", 0),
+        optSlider("Hurry-up", "warning", "warnSeconds", 0, 60, 5, v => (v ? `${v}s` : "Off"), "#f59e0b", 0),
+        optSlider("Andrew help", "per team", "andrewUses", 1, 5, 1, v => `${v}×`, "#3b82f6"),
+        optSlider("Passes", "per team", "passUses", 0, 5, 1, v => (v ? `${v}×` : "Off"), "#3b82f6", 0),
+        optSlider("Pass penalty", "time off", "passPenaltySeconds", 0, 60, 5, v => (v ? `−${v}s` : "Free"), "#ef4444", 0)
+      );
+      setup.append(opts);
+
       // -- what the current split actually looks like, in numbers --
+      // ("each clock" left the row in Đợt 575 — the Time stepper right above says it.)
       const st = setStats(current, pool);
       const facts = el("div", "aw-rw-facts");
       const fact = (big, small) => {
@@ -720,24 +946,28 @@ const rwTemplate = {
         fact(String(st.poolSize), "words in pool"),
         fact(`${st.perTeam} + ${st.perTeam}`, "per team"),
         fact(String(st.overlap), "shared"),
-        fact(st.full ? "ALL" : `${st.covered}/${st.poolSize}`, "pool covered"),
-        fact(fmtClock(cfg.clockMs), "each clock")
+        fact(st.full ? "ALL" : `${st.covered}/${st.poolSize}`, "pool covered")
       );
       setup.append(facts);
 
-      // ⭐ 1 — START MATCH requires a SAVE first too (teacher's request,
-      // 11/8/2026), same reasoning as Print above. Teacher-only: a student
-      // opening this act via a session has no Save button to fix a `dirty`
-      // state with, so the gate never applies to them — see `isTeacher` above.
+      // ⭐ START MATCH stays locked until the SET is saved (11/8/2026), the
+      // options are APPLIED and — iPad on — both teams have an iPad (Đợt 575).
+      // The line above the buttons says which of those is still missing.
+      const why = el("div", "aw-rw-why");
+      const acts = el("div", "aw-rw-acts");
+      const apply = el("button", "aw-rw-apply");
+      apply.type = "button";
+      apply.onclick = applyOptions;
       const start = el("button", "aw-rw-start", "START MATCH");
       start.type = "button";
-      const locked = isTeacher && dirty;
-      start.disabled = locked;
-      start.title = locked ? "Save this SET first." : "";
-      start.onclick = () => { if (locked) return; ui.sound.click?.(); enterPrep(); };
-      setup.append(start);
+      start.onclick = () => { if (start.disabled) return; ui.sound.click?.(); enterPrep(); };
+      acts.append(apply, start);
+      setup.append(why, acts);
 
       setUI = { start };
+      setupGate = { apply, start, why, ipad: ipadUI };
+      paintSetupGate();
+      publishLink();
     }
 
     // Positional helper shared by save/delete: slots i.a/i.b line up 1:1 with
@@ -1096,6 +1326,7 @@ const rwTemplate = {
       paintClocks();
       paintNav();
       refreshKeys();
+      publishLink();   // Đợt 575 — iPad đi theo mọi đổi trạng thái (chỉ ghi khi thật sự khác)
     }
 
     // ===== CLOCK ===========================================================
@@ -1398,6 +1629,7 @@ const rwTemplate = {
       paintClocks();
       ui.setNav({ index: 0, total: 0, onPrev: null, onNext: null, label: SLOGAN });
       showResult(headline, detail, winner, wordsA, wordsB);
+      publishLink();
 
       // Let the result board be read for a beat, THEN hand off to the engine's
       // own GAME COMPLETE panel (Start again / Show answers / …). The result
@@ -1487,6 +1719,8 @@ const rwTemplate = {
     ui.setNav({ index: 0, total: 0, onPrev: null, onNext: null, label: SLOGAN });
 
     return function cleanup() {
+      disposed = true;
+      stopLink();
       rwPauseHandlers = null;
       rwEndData = null;   // Đợt 114 — module-level bridge, same rule as rwPauseHandlers:
                           // no summary of a discarded match may survive into the next mount
@@ -1516,6 +1750,9 @@ const rwTemplate = {
 // core stays untouched.
 const SVG_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg>';
 const SVG_PLAY  = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.2v13.6L19 12 8 5.2z"/></svg>';
+// Đợt 575 — the setup screen's iPad and Edit buttons.
+const SVG_IPAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>';
+const SVG_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
 // Two arrows for the pre-start SWAP job on the same centre button.
 const SVG_SWAP  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4 3 8l4 4"/><path d="M3 8h13"/><path d="m17 20 4-4-4-4"/><path d="M21 16H8"/></svg>';
 // Icons for the SET slot's own action row (11/8/2026) — local rather than

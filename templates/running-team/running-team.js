@@ -109,6 +109,19 @@ function normLives(v) {
 // activity at a time (the same reasoning Running word's rwEndData relies on).
 let rtEndData = null;
 
+// Đợt 575 — the three settings, normalised from `activity.options` (same
+// fields, ranges and defaults the old Options panel wrote) and back again.
+function readCfg(opt) {
+  return {
+    mainMs: Math.round(clampInt(opt.mainSeconds, 30, 600, 600) / 5) * 5 * 1000,
+    questionMs: clampInt(opt.questionSeconds, 0, 30, 15) * 1000,   // 0 = untimed
+    lives: normLives(opt.lives)               // null = unlimited
+  };
+}
+function optsFromCfg(cfg) {
+  return { mainSeconds: Math.round(cfg.mainMs / 1000), questionSeconds: Math.round(cfg.questionMs / 1000), lives: cfg.lives === null ? 0 : cfg.lives };
+}
+
 function clampInt(v, lo, hi, dflt) {
   const n = Math.round(Number(v));
   if (!Number.isFinite(n)) return dflt;
@@ -160,6 +173,15 @@ const rtTemplate = {
   // button to a CSS-only zoom (`.aw-zoomed` on root). CSS for it lives in
   // running-team.css — core has no shared rule for that class.
   useZoomFullscreen: true,
+  // ⭐ Đợt 575 (thầy, 23/10/2026) — mở game là vào THẲNG màn setup, 3 thanh tuỳ chọn + APPLY nằm ngay trên màn đó ⇒ không
+  // còn nút Options, màn READY của engine bị bỏ (startScreen bấm Play hộ). Cùng khuôn Running word — xem chú thích ở đó.
+  noOptionsButton: true,
+  startScreen({ play, ready, preflight }) {
+    if (preflight) return { dispose() {} };   // màn chọn WORDS đang dựng NHẸ (Đợt 549) — chưa Play
+    let gone = false;
+    ready().then(() => { if (!gone) play(); });
+    return { dispose() { gone = true; } };
+  },
 
   sounds: {
     play: () => {},          // the READY / 3-2-1 has its own sound; a jingle here would collide
@@ -246,7 +268,6 @@ const rtTemplate = {
 
   // =============================================================
   mount(root, activity, ui) {
-    const opt = activity.options || {};
     const pool = poolFrom(activity);
 
     root.innerHTML = "";
@@ -261,11 +282,8 @@ const rtTemplate = {
     // teacher-only actions.
     const isTeacher = !!document.querySelector(".aw-below-right");
 
-    const cfg = {
-      mainMs: clampInt(opt.mainSeconds, 30, 600, 600) * 1000,
-      questionMs: clampInt(opt.questionSeconds, 0, 30, 15) * 1000,   // 0 = untimed
-      lives: normLives(opt.lives)               // null = unlimited
-    };
+    // ⭐ Đợt 575 — `let`: APPLY trên màn setup đọc lại (applyOptions bên dưới).
+    let cfg = readCfg(activity.options || {});
 
     // ---------- setup state ----------
     let sets = readSets(activity);
@@ -292,6 +310,9 @@ const rtTemplate = {
     let locked = true;                          // tiles ignore taps between questions
     let finished = false;
     let lastQTick = null;                       // last whole second announced on the question bar
+    // ⭐ Đợt 575 (thầy: "dù có hết giờ vẫn phải nốt từ đang làm chứ không dừng ngay khi hết giờ") — đồng hồ tổng về 0
+    // ⇒ LAST WORD: từ đang làm (kể cả đang READY/3-2-1 — đã gọi tên là tính) chơi nốt, goReady() kế tiếp mới kết thúc.
+    let lastWord = false;
     const perQuestion = [];                     // [{q, correct}] for the engine's scoring
     const review = [];                          // [{question, answered, yourText, yourCorrect, correctText}]
     let tileColors = [];                        // 6 {c,d} entries, one per tile POSITION, set in startRunning()
@@ -317,12 +338,13 @@ const rtTemplate = {
     // question bar · score.
     const top = el("div", "aw-rt-top");
     const mainClockEl = el("div", "aw-rt-mainclock", fmtClock(cfg.mainMs));
+    const lastTagEl = el("div", "aw-rt-lasttag", "LAST WORD");   // Đợt 575
     const heartsEl = el("div", "aw-rt-hearts");
     const qbar = el("div", "aw-rt-qbar");
     const qfill = el("div", "aw-rt-qbar-fill");
     qbar.append(qfill);
     const scoreEl = el("div", "aw-rt-score", `${icons.check}<span>0</span>`);
-    top.append(mainClockEl, heartsEl, qbar, scoreEl);
+    top.append(mainClockEl, lastTagEl, heartsEl, qbar, scoreEl);
     match.append(top);
 
     const board = el("div", "aw-rt-board");
@@ -389,10 +411,146 @@ const rtTemplate = {
     }
 
     // ===== SETUP SCREEN =====================================================
+    // ⭐⭐ Đợt 575 (thầy, 23/10/2026) — MÀN SETUP GỘP OPTIONS, cùng khuôn Running word (mẫu thầy duyệt:
+    // D:\OTHERS\CLAUDE\AWord - thiet ke Running setup iPad\mau-1.html, tab ②):
+    //   [✎] RUNNING TEAM [● iPad][iPad] · ô SET · LỚP + chip tên · 3 thanh (một hàng) · số liệu · lý do khoá · [APPLY] [START RUNNING]
+    // Dải số liệu bỏ 3 ô lặp lại thanh kéo (round time / per question / lives).
+    let draft = optsFromCfg(cfg);
+    const optsDirty = () => JSON.stringify(optsFromCfg(readCfg(draft))) !== JSON.stringify(optsFromCfg(cfg));
+    function applyOptions() {
+      if (!optsDirty()) return;
+      ui.sound.click?.();
+      const patch = optsFromCfg(readCfg(draft));
+      if (ui.host && ui.host.saveOptions) ui.host.saveOptions(patch);
+      else { activity.options = activity.options || {}; Object.assign(activity.options, patch); }
+      cfg = readCfg(activity.options || patch);
+      draft = optsFromCfg(cfg);
+      mainClockEl.textContent = fmtClock(cfg.mainMs);
+      ui.toast?.("Options applied.");
+      renderSetup();
+    }
+
+    // ----- iPad (Đợt 575): MỘT iPad chuyền tay — tên em được gọi + từ em đọc to -----
+    const IPAD_KEY = "aw.runIpad.rt";
+    let ipadOn = false;
+    try { ipadOn = isTeacher && localStorage.getItem(IPAD_KEY) === "1"; } catch (e) { /* chế độ riêng tư */ }
+    let padLive = false;
+    let link = null, ipadClaim = null, linkBusy = null, disposed = false, qSeq = 0;
+    function startLink() {
+      if (link || linkBusy) return linkBusy;
+      linkBusy = (async () => {
+        try {
+          const [{ createRunHost }, { claimIpad }] = await Promise.all([import("../../core/run-link.js"), import("../../core/ipad-now.js")]);
+          if (!ipadOn || disposed || link) return;
+          link = createRunHost({ game: "runningteam", slots: 1, onPads: p => { padLive = !!p[0]; paintSetupGate(); } });
+          ipadClaim = claimIpad({ game: "runningteam", hold: true });
+          publishLink(phase === "setup" ? { phase: "setup" } : {});
+        } catch (e) {
+          console.warn("AWord/running-team: iPad link", e);
+          ui.toast?.("Could not link an iPad — are you signed in?");
+        } finally { linkBusy = null; }
+      })();
+      return linkBusy;
+    }
+    function stopLink() {
+      if (link) { link.stop(); link = null; }
+      if (ipadClaim) { ipadClaim.release(); ipadClaim = null; }
+      padLive = false;
+    }
+    if (ipadOn) startLink();
+    const nameAt = k => (roster.length ? roster[((k % roster.length) + roster.length) % roster.length].name || "" : "");
+    // Đồng hồ tổng gửi kèm mỗi lượt + `ticking`; iPad tự đếm giữa hai lượt và tự đếm READY/3-2-1 (readyMs/stepMs).
+    function publishLink(patch) {
+      if (!link) return;
+      link.publish({
+        mainLeft: Math.round(mainLeft), ticking: !!mainTimer, last: lastWord,
+        lives: livesLeft === null ? null : livesLeft, livesTotal: cfg.lives === null ? null : cfg.lives,
+        ...patch
+      });
+    }
+
+    function optSlider(label, sub, key, min, max, step, fmt, tone, offAt) {
+      const cell = el("div", "aw-rt-oc");
+      const lab = el("div", "aw-rt-oc-lab", escapeHtml(label));
+      if (sub) lab.append(el("small", null, escapeHtml(sub)));
+      cell.append(lab);
+      const wrap = el("div", "aw-rt-oc-sl");
+      wrap.style.setProperty("--tone", tone);
+      const r = el("input");
+      r.type = "range"; r.min = String(min); r.max = String(max); r.step = String(step);
+      r.value = String(clampInt(draft[key], min, max, min));
+      const out = el("output", "aw-rt-oc-val");
+      const show = () => {
+        const v = Number(r.value);
+        out.textContent = fmt(v);
+        out.classList.toggle("is-off", offAt !== undefined && v === offAt);
+        wrap.style.setProperty("--p", ((v - min) / (max - min) * 100).toFixed(2) + "%");
+      };
+      r.oninput = () => { draft[key] = Number(r.value); show(); paintSetupGate(); };
+      show();
+      wrap.append(r, out);
+      cell.append(wrap);
+      return cell;
+    }
+
+    let setupGate = null;    // { apply, start, why, ipad } — repainted without rebuilding the screen
+    function paintSetupGate() {
+      if (!setupGate) return;
+      const dirtyOpts = optsDirty();
+      setupGate.apply.classList.toggle("is-dirty", dirtyOpts);
+      setupGate.apply.disabled = !dirtyOpts;
+      setupGate.apply.innerHTML = dirtyOpts ? "APPLY" : `${icons.check}<span>APPLIED</span>`;
+      // ⭐ START RUNNING requires a picked class AND a saved SET (Đợt 117), the
+      // options APPLIED and — iPad on — the iPad connected (Đợt 575).
+      const reasons = [];
+      if (!readyToStart()) reasons.push("Pick a class and deal a numbering first");
+      else if (isTeacher && dirty) reasons.push("Save this SET first");
+      if (dirtyOpts) reasons.push("Apply the options first");
+      if (ipadOn && !padLive) reasons.push("Waiting for the iPad — or switch iPad off");
+      setupGate.start.disabled = reasons.length > 0;
+      setupGate.why.textContent = reasons.join(" · ");
+      if (setupGate.ipad) {
+        setupGate.ipad.box.classList.toggle("is-on", ipadOn);
+        setupGate.ipad.btn.classList.toggle("is-on", ipadOn);
+        setupGate.ipad.dot.classList.toggle("is-ok", padLive);
+        setupGate.ipad.dot.classList.toggle("is-wait", !padLive);
+      }
+    }
+
     function renderSetup() {
       closeDeletePopover();   // a re-render replaces the anchor button under it
       setup.innerHTML = "";
-      setup.append(el("div", "aw-rt-setup-title", "RUNNING TEAM"));
+
+      // -- header: [✎ edit] · title · [iPad] --
+      const head = el("div", "aw-rt-setup-head");
+      const left = el("div", "aw-rt-setup-left");
+      if (ui.host && ui.host.canEdit && ui.host.canEdit()) {
+        // Đợt 575 — không còn nút Options ⇒ mất cử chỉ nhấn giữ Options = Edit content (single mode) ⇒ nút sửa riêng.
+        const ed = el("button", "aw-rt-editbtn", SVG_EDIT);
+        ed.type = "button"; ed.title = "Edit content";
+        ed.onclick = () => { ui.sound.click?.(); ui.host.edit(); };
+        left.append(ed);
+      }
+      head.append(left, el("div", "aw-rt-setup-title", "RUNNING TEAM"));
+      const ipadBox = el("div", "aw-rt-ipad");
+      let ipadUI = null;
+      if (isTeacher) {
+        const dot = el("span", "aw-rt-ipad-dot", "<i></i>iPad");
+        const btn = el("button", "aw-rt-ipad-btn", `${SVG_IPAD}<span>iPad</span>`);
+        btn.type = "button";
+        btn.title = "Show the pupil's name and word on one iPad passed around the class";
+        btn.onclick = () => {
+          ui.sound.click?.();
+          ipadOn = !ipadOn;
+          try { localStorage.setItem(IPAD_KEY, ipadOn ? "1" : "0"); } catch (e) { /* */ }
+          if (ipadOn) startLink(); else stopLink();
+          paintSetupGate();
+        };
+        ipadBox.append(dot, btn);
+        ipadUI = { box: ipadBox, btn, dot };
+      }
+      head.append(ipadBox);
+      setup.append(head);
 
       // -- saved set slots --
       // Đợt 117: Shuffle / Save / Print moved OFF the shared row below the
@@ -504,32 +662,37 @@ const rtTemplate = {
       // -- class picker + roll review --
       if (isTeacher) setup.append(classBlock());
 
+      // -- the three options, one row (Đợt 575) --
+      const opts = el("div", "aw-rt-opts");
+      opts.append(
+        optSlider("Round time", "whole game", "mainSeconds", 30, 600, 5, v => fmtClock(v * 1000), "#3b82f6"),
+        optSlider("Question time", "each word", "questionSeconds", 0, 30, 1, v => (v === 0 ? "Off" : v + "s"), "#3b82f6", 0),
+        optSlider("Lives", "whole class", "lives", 0, MAX_LIVES, 1, v => (v === 0 ? "∞" : String(v)), "#16a34a", 0)
+      );
+      opts.children[1].title = "At Off a question never runs out on its own — a wrong tap still costs a life.";
+      opts.children[2].title = "At ∞ nobody is ever knocked out — a wrong tap just lets the class try again.";
+      setup.append(opts);
+
       // -- what is about to be played, in numbers --
       const present = rosterDraft.filter(s => s.present);
       const facts = el("div", "aw-rt-facts");
-      facts.append(
-        fact(String(pool.length), "words in pool"),
-        fact(String(present.length), "pupils playing"),
-        fact(fmtClock(cfg.mainMs), "round time"),
-        fact(cfg.questionMs <= 0 ? "Untimed" : `${Math.round(cfg.questionMs / 1000)}s`, "per question"),
-        fact(cfg.lives === null ? "∞" : String(cfg.lives), "lives")
-      );
+      facts.append(fact(String(pool.length), "words in pool"), fact(String(present.length), "pupils playing"));
       setup.append(facts);
 
-      // ⭐ START RUNNING requires a picked class AND a saved SET (teacher's
-      // request, Đợt 117): `readyToStart()` already implies a class was
-      // picked (nothing reaches `current` without one — see dealCurrent()),
-      // and the `dirty` check on top of it is the "saved" half. Students
-      // never hit this gate: `dirty` can't go true on their side of the app
-      // at all (classBlock, the only thing that sets it, is teacher-only).
-      const dataReady = readyToStart();
-      const locked = !dataReady || (isTeacher && dirty);
+      const why = el("div", "aw-rt-why");
+      const acts = el("div", "aw-rt-acts");
+      const apply = el("button", "aw-rt-apply");
+      apply.type = "button";
+      apply.onclick = applyOptions;
       const start = el("button", "aw-rt-start", "START RUNNING");
       start.type = "button";
-      start.disabled = locked;
-      start.title = !dataReady ? "Pick a class and deal a numbering first." : (locked ? "Save this SET first." : "");
-      start.onclick = () => { if (!locked) { ui.sound.click?.(); startRunning(); } };
-      setup.append(start);
+      start.onclick = () => { if (!start.disabled) { ui.sound.click?.(); startRunning(); } };
+      acts.append(apply, start);
+      setup.append(why, acts);
+
+      setupGate = { apply, start, why, ipad: ipadUI };
+      paintSetupGate();
+      publishLink({ phase: "setup" });
 
       function fact(big, small) {
         const f = el("div", "aw-rt-fact");
@@ -724,6 +887,9 @@ const rtTemplate = {
       perQuestion.length = 0; review.length = 0;
       tileColors = shuffle(PALETTE.slice()).slice(0, TILES);
       finished = false;
+      lastWord = false;
+      lastTagEl.classList.remove("is-on");
+      mainClockEl.classList.remove("is-last");
 
       setup.style.display = "none";
       match.style.display = "";
@@ -733,7 +899,7 @@ const rtTemplate = {
 
       phase = "ready";
       startMainClock();
-      goReady();
+      goReady();   // publishes the first READY (with ticking:true) to the iPad
     }
 
     // The main clock runs from START RUNNING to the final whistle — it does NOT
@@ -749,13 +915,24 @@ const rtTemplate = {
         if (mainLeft <= 0) {
           mainLeft = 0;
           paintMainClock();
-          endGame(true, "timeup");
+          onMainTimeUp();
           return;
         }
         paintMainClock();
       }, 200);
     }
     function stopMainClock() { if (mainTimer) { clearInterval(mainTimer); mainTimer = null; } }
+    // ⭐ Đợt 575 — đồng hồ tổng về 0: không kết thúc NGAY nữa. Đang ở giữa một từ (READY/3-2-1 hoặc 6 ô đang hiện) ⇒ từ đó
+    // chơi nốt; từ đã xong mà chưa sang em kế (khoảng nghỉ 0,9–1,4 s) ⇒ goReady() kế tiếp kết thúc luôn. Cả hai đường
+    // đều đi qua goReady(), nên chỉ cần dựng cờ ở đây.
+    function onMainTimeUp() {
+      stopMainClock();
+      if (lastWord || finished) return;
+      lastWord = true;
+      mainClockEl.classList.add("is-last");
+      lastTagEl.classList.add("is-on");
+      publishLink({});
+    }
 
     // READY -> 3 -> 2 -> 1 -> the tiles. Every step is a plain timeout, and the
     // whole chain is registered in `timers` so cleanup() can cancel it mid-flight.
@@ -766,6 +943,7 @@ const rtTemplate = {
     // is exactly who openQuestion() will call a moment later. No new state.
     function goReady() {
       if (finished) return;
+      if (lastWord) { endGame(true, "timeup"); return; }   // Đợt 575 — từ cuối đã chơi xong
       if (!queue.length) { endGame(true, "cleared"); return; }
       phase = "ready";
       locked = true;
@@ -774,6 +952,7 @@ const rtTemplate = {
       const who = roster.length ? roster[turnPtr % roster.length] : { name: "" };
       showOverlay(who.name || "", "READY", "is-ready");
       rtSound.ready();
+      publishLink({ phase: "ready", q: ++qSeq, name: who.name || "", next: nameAt(turnPtr + 1), readyMs: READY_HOLD_MS, stepMs: COUNT_STEP_MS, word: "", num: "", result: "" });
       later(() => step(3), READY_HOLD_MS);
 
       function step(n) {
@@ -829,6 +1008,7 @@ const rtTemplate = {
       void board.offsetWidth;
       board.classList.add("is-entering");
 
+      publishLink({ phase: "question", q: qSeq, name: who.name || "", next: nameAt(turnPtr + 1), num: String(qWordIndex + 1), word: String(word), result: "" });
       askedCount++;
       locked = false;
       lastQTick = null;
@@ -870,12 +1050,14 @@ const rtTemplate = {
       pausedQRunning = !!qTimer;
       stopMainClock();
       stopQuestionClock();
+      publishLink({});
     }
     function resumeGame() {
       if (finished) return;
       if (pausedMainRunning) startMainClock();
       if (pausedQRunning) startQuestionClock();
       pausedMainRunning = pausedQRunning = false;
+      publishLink({});
     }
     rtPauseHandlers = { pause: pauseGame, resume: resumeGame };
 
@@ -889,6 +1071,7 @@ const rtTemplate = {
         rtSound.correct();
         correctCount++;
         recordAnswer(true, picked, answer);
+        publishLink({ result: "ok" });
         turnPtr++;                                   // the paper moves on
         paintScore();
         later(() => goReady(), 900);
@@ -927,6 +1110,7 @@ const rtTemplate = {
         paintHearts();
         rtSound.lifeLost();
       }
+      publishLink({ result: "miss" });
       revealAnswer(answer);
       const dead = livesLeft === 0;
       later(() => {
@@ -974,6 +1158,7 @@ const rtTemplate = {
         className: current?.className || ""
       };
       if (won) rtSound.win(); else rtSound.lose();
+      publishLink({ phase: "over", won: !!won });
 
       // `total` is what was actually ASKED, not the length of the sheet: a class
       // that wins on the final whistle after 14 questions scored 12/14, not
@@ -1116,6 +1301,8 @@ const rtTemplate = {
     loadClasses();
 
     return function cleanup() {
+      disposed = true;
+      stopLink();
       rtPauseHandlers = null;
       rtEndData = null;   // Đợt 114 — see running-word.js; module-level bridge must not outlive the mount
       window.removeEventListener("keydown", onKey);
@@ -1151,6 +1338,9 @@ function escapeHtml(s) {
 // Copied — not imported — from running-word.js (Đợt 116's SET-slot redesign),
 // same self-contained-template convention rt-sound.js already documents for
 // copying rw-sound.js. Kept as raw SVG strings, exactly like core/icons.js.
+// Đợt 575 — the setup screen's iPad and Edit buttons (same glyphs as running-word.js).
+const SVG_IPAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>';
+const SVG_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
 const SVG_SHUFFLE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>';
 const SVG_SAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>';
 

@@ -1855,7 +1855,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // Đợt 511: sáng khi iPad đang dùng ở BẤT KỲ chế độ nào (Question screen hoặc Game controller — xem buildQScreenConfirmPanel)
   if (qScreenBtn && activity.options && (activity.options.fightScreen === true || activity.options.fightPad === true)) qScreenBtn.classList.add("is-active");
   // Đợt 192 — THREE buttons now, not four: Style folded into Template above.
-  if (qScreenBtn) belowCenter.append(optionsBtn, qScreenBtn, modeBtn);
+  // ⭐ Đợt 575 (thầy) — `tpl.noOptionsButton`: game tự đặt mọi tuỳ chọn trên màn setup của nó (Running word / team: thanh kéo +
+  // APPLY ngay trên màn) ⇒ không có nút Options. Mọi chỗ khác hỏi `optionsBtn.isConnected` trước khi mở bảng ⇒ tự im.
+  // ⚠️ Nhấn giữ Options = Edit content chỉ có ở SINGLE mode — hai game này chỉ vào qua MODE ▸ RUNNING nên không mất gì.
+  if (tpl.noOptionsButton) { if (qScreenBtn) belowCenter.append(qScreenBtn, modeBtn); else belowCenter.append(modeBtn); }
+  else if (qScreenBtn) belowCenter.append(optionsBtn, qScreenBtn, modeBtn);
   else belowCenter.append(optionsBtn, modeBtn);
   // ⭐ Đợt 389 (thầy, 25/9/2026, A Show Speed) — `tpl.toolsBelow`: the frame's own
   // bottom row (☰ Menu · ‹ › · 🔊 · ⛶) moves OUT of the frame, to the head of this
@@ -6678,6 +6682,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         }
       },
       home() { if (!torndown) goHome(); },
+      // ⭐ Đợt 575 — game không có nút Options (`tpl.noOptionsButton`) mất cử chỉ nhấn giữ Options = Edit content ⇒ tự vẽ nút sửa.
+      canEdit: () => canEditNow(),
+      edit() { if (!torndown && canEditNow()) openEditor(); },
       templates() { try { return switchList().map(t => ({ type: t.type, label: t.label })); } catch { return []; } },
       switchTemplate(type) { if (!torndown && type) doSwitchTemplate(type); },
       // ⭐ Đợt 450 — nút Mode ▸ Fight của game tự vẽ trọn màn (TRAIN RUSH Single 3D) = MODE ▸ Fight mode ▸ Start fight.

@@ -546,6 +546,52 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 575 (23/10/2026) — RUNNING WORD + RUNNING TEAM: vào thẳng màn setup, Options nằm trên màn đó, nối iPad, Running team chơi nốt từ cuối
+- Thầy: "Màn start của 2 game hơi thừa… khi mở game là vào luôn màn chờ thiết lập thông số · đưa hết options vào màn start running
+  và start match, bỏ nút Options, không cần STYLE nhưng vẫn có apply · thêm 1 nút kết nối ipad (Running team 1 iPad hiện từng người,
+  từng từ · Running word chờ 2 iPad cho 2 đội, show trước khoảng 5 từ, từ đang chơi sáng nổi bật) · Running team hết giờ vẫn phải
+  nốt từ đang làm". Hỏi 4 điểm (AskUserQuestion, thầy chọn cả 4 phương án đề xuất): iPad RW = từ đang chơi + 4 từ kế · phải APPLY
+  mới START · bật iPad mà chưa đủ ⇒ khoá START (tắt iPad = chơi giấy) · hết giờ lúc READY/3-2-1 vẫn chơi nốt từ đó.
+  Mẫu thầy duyệt: `D:\OTHERS\CLAUDE\AWord - thiet ke Running setup iPad\mau-1.html` ⇒ "build theo đúng mẫu 1".
+- **Bỏ màn READY**: `tpl.startScreen` tự bấm Play khi `ready()` xong (khuôn Train rush/STAR LOOT; `preflight` ⇒ không Play).
+  Start again cũng về thẳng màn setup.
+- **Không còn nút Options**: cờ mới `tpl.noOptionsButton` (core/engine.js, chỗ xếp `belowCenter`). Mọi lối mở bảng khác vốn hỏi
+  `optionsBtn.isConnected` ⇒ tự im. ⚠️ Nhấn giữ Options = Edit content (single mode, act gốc kiểu running) ⇒ bù bằng nút ✎ góc trái
+  màn setup qua hook mới `ui.host.canEdit()/edit()` (= `canEditNow()`/`openEditor()`). `buildExtraOptions` GIỮ NGUYÊN (bảng nhúng
+  của màn chọn WORDS vẫn dùng).
+- **Màn setup gộp Options** (cả 2 game, đúng mẫu): đầu [✎ · tên game · chấm iPad + nút iPad] · ô SET (không đổi) · RW: 2 tên đội
+  (vạch xanh/cam) + 6 thông số 2 cột (Time stepper 1 s · Bonus · Hurry-up · Andrew help · Passes · Pass penalty) · RT: LỚP + chip
+  tên + 3 thanh một hàng · dải số liệu bỏ ô lặp lại thông số · dòng chữ cam = LÝ DO START đang khoá · [APPLY] [START].
+  Thông số là BẢN NHÁP: đổi ⇒ APPLY cam, START khoá; APPLY = `ui.host.saveOptions(patch)` (cùng đường Options ▸ Apply: act chuyển
+  đổi ⇒ `templateOptions` của act gốc) rồi `readCfg()` lại; RW dựng lại dải đồng hồ (`buildStrip`, vì PASS có/không theo passUses).
+  Tên trường / thang / mặc định GIỮ NGUYÊN ⇒ act cũ chơi y hệt. Bỏ Shuffle/Show answers (chưa bao giờ có tác dụng ở 2 game này).
+- **iPad** — `core/run-link.js` (mới) + `run.html`/`run.js` (mới), một chiều qua Firestore như rr-link Rocket Race:
+  `run_link` (máy chiếu ghi trạng thái + `own` + `hp` gõ cửa) · `run_pad0/1` (iPad ghi nhịp 8 s). **Máy chiếu là trọng tài**:
+  iPad đến trước giữ chỗ tới khi im > 22 s; iPad thứ hai cùng chỗ đọc `own` ⇒ "iPad not needed"/"TEAM A already has an iPad",
+  iPad kia rời là tự vào. ⛔ Không so đồng hồ 2 máy (sống = máy chiếu THẤY nhịp đổi, đo bằng đồng hồ của nó). iPad ẩn trang/tắt màn ⇒
+  báo `gone` ngay. Nút iPad nhớ theo MÁY (`aw.runIpad.rw|rt` localStorage). Claim `ipad_now` game `runningword|runningteam` (hold) ⇒
+  `pad.js` chuyển sang `run.html`, `run.js` tự về `pad.html` khi đổi game. Kind mới `running-link`, `running-pad` vào APP_DATA_KINDS.
+  - RW iPad: chọn đội (nhớ `aw.ipadTeam` chung) · dải màu đội + đồng hồ (tự đếm giữa 2 lượt ghi) · từ đang chơi ô trắng to + 4 từ kế
+    mờ dần · không phải lượt ⇒ tối + WAITING · PAUSED · ‹ chọn lại đội. Danh sách từ chỉ gửi khi ĐỔI (bộ chia / swap).
+  - RT iPad: READY/3-2-1 đếm TẠI CHỖ (readyMs/stepMs) với tên em · câu hỏi ⇒ tên + № + TỪ to · "NEXT / Then pass the iPad to …" ·
+    LAST WORD · CLASS WINS/GAME OVER. ≈ 3 lượt ghi mỗi câu.
+- **Running team LAST WORD**: đồng hồ tổng về 0 ⇒ `onMainTimeUp()` chỉ dựng cờ `lastWord` (đồng hồ đỏ nháy + nhãn LAST WORD trên
+  màn chiếu và iPad); kết thúc nằm ở đầu `goReady()` ⇒ từ đang làm (kể cả READY/3-2-1) chơi nốt; mất mạng cuối ⇒ vẫn GAME OVER.
+- Thử (bàn thử `scratch/dot575-rw.html` + `dot575-rt.html`, act giả có SET lưu sẵn, `?padsig=local`; iPad = tab `run.html?padsig=local&padkeep`,
+  launch `aword-dot575` cổng 5575): READY bỏ · nút Options mất (Quiz vẫn còn) · APPLY passUses 0 ⇒ ô PASS biến mất · pad.html tự sang
+  run.html · iPad 2 thấy TEAM A đã có iPad · đủ 2 iPad mới mở START · gõ đúng ⇒ iPad A tối WAITING, B sáng và đồng hồ B tự đếm ·
+  RT: iPad thứ 2 bị từ chối, READY→từ đúng mẫu, Round time 30 s ⇒ 0:00 LAST WORD giữa câu, chọn đúng ⇒ CLASS WINS · Start again
+  về setup · console 0 lỗi. Bẫy đã gặp: (1) lần đọc đầu "chưa có tài liệu" không đặt mốc ⇒ nhịp đầu iPad bị bỏ (sửa: mốc ""),
+  (2) lượt báo danh trả lời lần gõ cửa đầu tới TRƯỚC lần đọc đầu của máy chiếu ⇒ gõ cửa lần 2 sau 1,5 s, (3) tab nền = `hidden` ⇒
+  bàn thử cần `?padkeep`, (4) Python ghi lại file thành LF ⇒ đã đưa về CRLF.
+
+VIỆC ĐANG CHỜ:
+- ⬜ Thầy thử trên lớp: TOMKO + 2 iPad thật (Running word) và 1 iPad (Running team) đăng nhập cùng tài khoản — chưa chạy Firestore thật,
+  chỉ chạy kênh cục bộ.
+- ⬜ Mất iPad GIỮA trận chưa báo gì trên màn chiếu (chỉ màn setup có chấm) — thầy xem có cần không.
+
+---
+
 ## Đợt 574 (23/10/2026) — MY BEAT: BỎ MÀN SOẠN BÀI, AWord chỉ còn CHƠI · soạn bài dời sang app myStudio v0.3.0 (thẻ myBeat)
 - Thầy: "đổi công đoạn chuẩn bị về app myStudio trên máy, thêm 1 tab chức năng là myBeat… còn việc chơi và sử dụng được làm ở
   trên AWord" ⇒ AskUserQuestion: chuyển TRỌN 4 bước, **bỏ hẳn màn soạn** ở AWord; mẫu v2 (bỏ giấy phép, "chỉ nhận link và tạo bài")

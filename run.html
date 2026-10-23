@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- Đợt 575 — màn iPad của RUNNING WORD (mỗi đội một iPad) và RUNNING TEAM (một iPad chuyền tay).
+       Logic: run.js · đường nối: core/run-link.js. `user-scalable=no` như source.html: màn này là đồ dùng lớp học. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <script src="core/no-zoom.js"></script>
+  <script src="core/app-check.js" defer></script>
+  <title>AWord — Running iPad</title>
+  <link rel="icon" href="core/assets/icons/favicon.ico?v=2" sizes="any" />
+  <link rel="apple-touch-icon" href="core/assets/icons/apple-touch-icon-180.png?v=2" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="AWord" />
+  <!-- app.css chỉ để lấy khối @font-face Baloo 2 (đừng chép tay — xem ghi chú trong source.html) -->
+  <link rel="stylesheet" href="core/app.css" />
+  <link rel="preconnect" href="https://firestore.googleapis.com" />
+  <style>
+    /* ⚠️ Mọi cỡ theo `--u` = 1% bề ngang CỘT (run.js đo bằng ResizeObserver) — dự án cấm `cqw` (Safari 15 iPad cũ bỏ cả luật). */
+    html, body { margin: 0; height: 100%; background: #0f172a; overflow: hidden; }
+    body { font-family: "Baloo 2", system-ui, sans-serif; color: #fff; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+    #run { position: fixed; inset: 0; display: flex; justify-content: center; }
+    .col { position: relative; height: 100%; width: 100%; display: flex; flex-direction: column; }
+    button { font: inherit; }
+
+    /* ---------- chung: ghi chú giữa màn ---------- */
+    .note { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 24px; background: #0f172a; z-index: 9; }
+    .note[hidden] { display: none; }
+    .note b { font-size: clamp(24px, 5vw, 44px); letter-spacing: .04em; }
+    .note p { margin: 0; max-width: 560px; font-size: clamp(15px, 2.6vw, 22px); font-weight: 600; opacity: .75; }
+    .note button { padding: 12px 28px; border-radius: 14px; border: 0; background: #fff; color: #0f172a; font-weight: 800; font-size: 18px; cursor: pointer; }
+    .note.is-bad b { color: #fca5a5; }
+    .back { position: absolute; left: calc(2.4 * var(--u)); top: calc(2.4 * var(--u)); z-index: 3; width: calc(8 * var(--u)); height: calc(8 * var(--u)); border-radius: 50%; border: 0; background: rgba(0,0,0,.25); color: #fff; font-size: calc(5 * var(--u)); line-height: 1; cursor: pointer; display: grid; place-items: center; }
+
+    /* ---------- màn chọn đội ---------- */
+    .pick { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(5 * var(--u)); padding: calc(6 * var(--u)); }
+    .pick h2 { margin: 0; font-size: calc(7 * var(--u)); letter-spacing: .06em; }
+    .pick p { margin: 0; opacity: .7; font-size: calc(4 * var(--u)); font-weight: 700; text-align: center; }
+    .pick button { width: 100%; padding: calc(6 * var(--u)); border-radius: calc(5 * var(--u)); border: 0; font-size: calc(8 * var(--u)); font-weight: 800; color: #fff; cursor: pointer; letter-spacing: .05em; line-height: 1.1; }
+    .pick button small { display: block; font-size: calc(3.6 * var(--u)); font-weight: 800; opacity: .9; letter-spacing: .1em; margin-top: calc(1 * var(--u)); }
+    .pick button.is-taken { opacity: .35; }
+    .pick .msg { min-height: calc(5 * var(--u)); color: #fcd34d; }
+
+    /* ---------- RUNNING WORD ---------- */
+    .rw { --tc: #3b82f6; --tcd: #1d4ed8; }
+    .rw.is-b { --tc: #f59e0b; --tcd: #b45309; }
+    .rw-top { padding: calc(4 * var(--u)) calc(5 * var(--u)) calc(3 * var(--u)) calc(13 * var(--u)); display: flex; align-items: center; justify-content: space-between; background: var(--tc); }
+    .rw-team { font-size: calc(6 * var(--u)); font-weight: 800; letter-spacing: .05em; line-height: 1; }
+    .rw-team small { display: block; font-size: calc(3.4 * var(--u)); opacity: .85; letter-spacing: .12em; margin-top: calc(1 * var(--u)); }
+    .rw-clock { font-size: calc(7.5 * var(--u)); font-weight: 800; font-variant-numeric: tabular-nums; background: rgba(0,0,0,.22); padding: calc(1 * var(--u)) calc(3 * var(--u)); border-radius: calc(3 * var(--u)); }
+    .rw-list { flex: 1; display: flex; flex-direction: column; padding: calc(4 * var(--u)) calc(5 * var(--u)); gap: calc(2.4 * var(--u)); overflow: hidden; }
+    .rw-word { display: flex; align-items: center; gap: calc(3 * var(--u)); border-radius: calc(3.5 * var(--u)); padding: calc(2.4 * var(--u)) calc(4 * var(--u)); background: rgba(255,255,255,.06); }
+    .rw-word .no { font-size: calc(4 * var(--u)); font-weight: 800; opacity: .55; min-width: calc(8 * var(--u)); }
+    .rw-word .w { font-size: calc(6 * var(--u) * var(--fit, 1)); font-weight: 800; letter-spacing: .03em; white-space: nowrap; }
+    .rw-word.is-cur { background: #fff; color: #17222f; padding: calc(5 * var(--u)) calc(4 * var(--u)); box-shadow: 0 0 0 calc(1.4 * var(--u)) var(--tc), 0 0 calc(8 * var(--u)) rgba(255,255,255,.25); }
+    .rw-word.is-cur .w { font-size: calc(10 * var(--u) * var(--fit, 1)); }
+    .rw-word.is-cur .no { color: var(--tcd); opacity: 1; font-size: calc(5 * var(--u)); }
+    .rw-word.n1 { opacity: .85; } .rw-word.n2 { opacity: .62; } .rw-word.n3 { opacity: .42; } .rw-word.n4 { opacity: .26; }
+    .rw-msg { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(2 * var(--u)); text-align: center; padding: 0 calc(6 * var(--u)); }
+    .rw-msg b { font-size: calc(9 * var(--u)); letter-spacing: .06em; line-height: 1.05; }
+    .rw-msg span { font-size: calc(4.4 * var(--u)); font-weight: 700; opacity: .75; }
+    .rw-foot { padding: calc(3 * var(--u)) calc(5 * var(--u)) calc(4 * var(--u)); display: flex; justify-content: space-between; font-size: calc(3.6 * var(--u)); font-weight: 800; opacity: .75; }
+    .rw.is-waiting .rw-list, .rw.is-waiting .rw-top { filter: grayscale(.85) brightness(.55); }
+    .wait-badge { display: none; position: absolute; left: 50%; top: 80%; transform: translate(-50%,-50%); background: rgba(15,23,42,.92); border: calc(.6 * var(--u)) solid rgba(255,255,255,.25); border-radius: calc(5 * var(--u)); padding: calc(4 * var(--u)) calc(7 * var(--u)); text-align: center; white-space: nowrap; }
+    .wait-badge b { display: block; font-size: calc(9 * var(--u)); letter-spacing: .1em; line-height: 1.1; }
+    .wait-badge span { font-size: calc(4 * var(--u)); font-weight: 800; opacity: .8; }
+    .rw.is-waiting .wait-badge { display: block; }
+    .paused { display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); background: #fbbf24; color: #17222f; font-size: calc(7 * var(--u)); font-weight: 800; letter-spacing: .12em; padding: calc(2 * var(--u)) calc(6 * var(--u)); border-radius: calc(4 * var(--u)); }
+    .is-paused .paused { display: block; }
+
+    /* ---------- RUNNING TEAM ---------- */
+    .rt-top { padding: calc(4 * var(--u)) calc(5 * var(--u)); display: flex; align-items: center; justify-content: space-between; gap: calc(3 * var(--u)); font-weight: 800; }
+    .rt-clock { font-size: calc(6.5 * var(--u)); font-variant-numeric: tabular-nums; background: rgba(255,255,255,.1); padding: calc(1 * var(--u)) calc(3 * var(--u)); border-radius: calc(3 * var(--u)); }
+    .rt-clock.is-last { background: #ef4444; animation: blink .8s infinite; }
+    @keyframes blink { 50% { opacity: .35; } }
+    .rt-hearts { font-size: calc(6 * var(--u)); color: #f87171; letter-spacing: calc(1 * var(--u)); white-space: nowrap; }
+    .lastword { display: none; font-size: calc(4.4 * var(--u)); letter-spacing: .14em; background: #ef4444; padding: calc(1.4 * var(--u)) calc(4 * var(--u)); border-radius: 99px; white-space: nowrap; }
+    .rt.is-last .lastword { display: inline-block; }
+    .rt-mid { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(4 * var(--u)); padding: 0 calc(5 * var(--u)); text-align: center; }
+    .rt-name { font-size: calc(11 * var(--u) * var(--fit, 1)); font-weight: 800; letter-spacing: .04em; line-height: 1.05; white-space: nowrap; }
+    .rt-sub { font-size: calc(5 * var(--u)); font-weight: 800; opacity: .7; letter-spacing: .14em; }
+    .rt-count { font-size: calc(30 * var(--u)); font-weight: 800; line-height: 1; color: #fbbf24; }
+    .rt-count.is-word { font-size: calc(16 * var(--u)); }
+    .rt-card { width: 100%; box-sizing: border-box; background: #fff; color: #17222f; border-radius: calc(6 * var(--u)); padding: calc(6 * var(--u)) calc(4 * var(--u)); box-shadow: 0 0 0 calc(1.6 * var(--u)) #22c55e, 0 0 calc(10 * var(--u)) rgba(34,197,94,.35); }
+    .rt-card .num { font-size: calc(5 * var(--u)); font-weight: 800; color: #16a34a; letter-spacing: .1em; }
+    .rt-card .w { font-size: calc(13 * var(--u) * var(--fit, 1)); font-weight: 800; letter-spacing: .03em; line-height: 1.1; margin-top: calc(1 * var(--u)); white-space: nowrap; }
+    .rt-card.is-ok { box-shadow: 0 0 0 calc(1.6 * var(--u)) #22c55e, 0 0 calc(14 * var(--u)) rgba(34,197,94,.7); }
+    .rt-card.is-miss { box-shadow: 0 0 0 calc(1.6 * var(--u)) #ef4444; }
+    .rt-small-name { font-size: calc(6.5 * var(--u) * var(--fit, 1)); font-weight: 800; white-space: nowrap; }
+    .rt-next { padding: calc(4 * var(--u)) calc(5 * var(--u)) calc(5 * var(--u)); text-align: center; font-size: calc(4.6 * var(--u)); font-weight: 800; background: rgba(255,255,255,.06); }
+    .rt-next b { color: #fbbf24; }
+  </style>
+</head>
+<body>
+  <div id="run"></div>
+  <div class="note" id="note"><b>Loading…</b><p></p><button hidden>Sign in</button></div>
+  <script type="module" src="run.js"></script>
+</body>
+</html>

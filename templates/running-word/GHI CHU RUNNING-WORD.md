@@ -1,5 +1,7 @@
 # GHI CHU RUNNING WORD (RUNNINGW)
 
+> **Đợt 575 dự án (23/10/2026) — VÀO THẲNG MÀN SETUP + OPTIONS TRÊN MÀN ĐÓ + iPAD.** Màn READY của engine bị bỏ (`startScreen` tự Play), nút Options bỏ (`noOptionsButton`), mọi thông số + APPLY nằm trên màn setup (phải APPLY mới START; `buildExtraOptions` vẫn giữ cho bảng nhúng màn chọn WORDS), nút ✎ = Edit content, nút iPad (`core/run-link.js`, màn iPad `run.html`/`run.js`). iPad mỗi đội: từ đang chơi + 4 từ kế, WAITING khi không phải lượt. Chi tiết: GHI CHU DU AN.md Đợt 575.
+
 > **Đợt 193 dự án (18/8/2026) — ⭐ VÁ LỖI IN CÓ SẴN: 3 TỜ IN RA 6 TRANG (xen kẽ 3 trang trắng).**
 > (Số 192 đã bị một phiên song song dùng — nhảy 193, đúng quy ước dự án.) **KHÔNG đụng core**, chỉ
 > `running-word.css` (@media print) + `rw-print.js`.

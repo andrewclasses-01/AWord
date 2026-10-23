@@ -115,7 +115,7 @@ export function claimIpad(info) {
 // ---------------------------------------------------------------- iPAD
 function norm(raw) {
   if (!raw) return null;
-  const g = raw.game === "starloot" || raw.game === "rocketrace" || raw.game === "trainrush" || raw.game === "racingwords" ? raw.game : "";   // Đợt 527: + racingwords   // Đợt 515: + trainrush (Fight 1 màn, iPad cảnh 2D)
+  const g = raw.game === "starloot" || raw.game === "rocketrace" || raw.game === "trainrush" || raw.game === "racingwords" || raw.game === "runningword" || raw.game === "runningteam" ? raw.game : "";   // Đợt 575: + Running word / team (run.html, core/run-link.js)   // Đợt 527: + racingwords   // Đợt 515: + trainrush (Fight 1 màn, iPad cảnh 2D)
   return { game: g, fight: !!raw.fight, ctl: !!raw.ctl, hold: !!raw.hold, src: String(raw.src || ""), at: Number(raw.at) || 0 };
 }
 

@@ -32,6 +32,8 @@
 // ⭐ Đợt 527 (thầy 15/10/2026) — RACING WORDS: máy chiếu mở Racing words, nút iPad của game ≠ Off ⇒ `ipad_now` {game:"racingwords"}
 //   ⇒ iPad này mở màn iPad của đội đã nhớ (templates/racing-words/3d/sr3d-padui-3m.js, chép myGame): trả lời câu hỏi (chế độ 2) hoặc vô lăng +
 //   bàn đạp + tên lửa (chế độ 3) — màn lớn quyết. Bắt tay: templates/racing-words/rw-pad-signal.js. Chưa chọn đội ⇒ màn chọn đội của RACING WORDS.
+// ⭐ Đợt 575 (thầy 23/10/2026) — RUNNING WORD / RUNNING TEAM: máy chiếu bật nút iPad trên màn setup ⇒ `ipad_now` {game:"runningword"|"runningteam"}
+//   ⇒ sang run.html (màn danh sách từ của đội / màn chuyền tay; trang đó tự quay về đây khi đổi game) — như source.html của Rocket Race.
 // ⭐ Đợt 518 — iPad hết giật (3d/tr-padui-1ar.js): thùng đẩy tiếp theo vận tốc, vị trí tính theo giờ game; chạm 3 lần góc phải dưới = bảng đo.
 // =============================================================
 
@@ -219,7 +221,7 @@ function showHub() {
   stopPad(); view = "hub";
   history.replaceState(null, "", urlWith("pad.html", null));
   padEl.innerHTML = `<div class="pad-hub"><b>iPad ready</b>
-    <p>Open <span>STAR LOOT</span>, <span>Train rush</span> Fight, <span>Racing words</span> (iPad button on) — or <span>Rocket race</span> with the iPad button on (Question screen or Game controller) — on the classroom screen.<br>This iPad switches by itself.</p>
+    <p>Open <span>STAR LOOT</span>, <span>Train rush</span> Fight, <span>Racing words</span>, <span>Running word / team</span> (iPad button on) — or <span>Rocket race</span> with the iPad button on (Question screen or Game controller) — on the classroom screen.<br>This iPad switches by itself.</p>
     <p class="pad-hub-x"><a href="#" data-k="team">Choose team</a> · <a href="${urlWith("source.html", null)}">Rocket Race question screen</a></p></div>`;
   padEl.querySelector('[data-k="team"]').addEventListener("click", e => { e.preventDefault(); manual = true; showChooser(); });
   keepAwake();
@@ -241,6 +243,7 @@ function apply(force) {
   if (now === undefined) return;
   const g = now ? now.game : "";
   if (g === "rocketrace" && !now.ctl) { location.replace(urlWith("source.html", null)); return; }
+  if (g === "runningword" || g === "runningteam") { location.replace(urlWith("run.html", null)); return; }   // Đợt 575: màn iPad Running (run.js)
   if (manual && !force) { if (view !== "chooser") showChooser(); return; }
   if (g === "rocketrace") {                              // Đợt 511: Game controller ⇒ bảng tên lửa của đội đã nhớ
     const t = savedTeam();

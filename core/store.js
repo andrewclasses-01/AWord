@@ -280,6 +280,7 @@ const APP_DATA_KINDS = new Set(["class", "showdown", "showdown-results", "showdo
                                 "rocketrace-pad",
                                 // Đợt 515 — TRAIN RUSH iPad (Fight 1 màn) handshake (templates/balloon-pop/tr-pad-signal.js): trpad_host/pad0/pad1
                                 "trainrush-pad",
+                                "running-link", "running-pad",   // Đợt 575 — iPad Running word / team (core/run-link.js): run_link · run_pad0/1
                                 "racingwords-pad",   // Đợt 527 — RACING WORDS iPad (templates/racing-words/rw-pad-signal.js)
                                 "myteam-doi",        // Đợt 542 — đội Podium gửi sang myTeam (core/podium-sao.js): myteam_doi
                                 // Đợt 484 — bảng "Hướng dẫn khi sai" tách khỏi act (gy_<actId>, xem napGoiY)

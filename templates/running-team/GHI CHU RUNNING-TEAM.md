@@ -1,5 +1,7 @@
 # GHI CHU RUNNING TEAM (RUNNINGT)
 
+> **Đợt 575 dự án (23/10/2026) — VÀO THẲNG MÀN SETUP + OPTIONS TRÊN MÀN ĐÓ + iPAD.** Màn READY của engine bị bỏ (`startScreen` tự Play), nút Options bỏ (`noOptionsButton`), mọi thông số + APPLY nằm trên màn setup (phải APPLY mới START; `buildExtraOptions` vẫn giữ cho bảng nhúng màn chọn WORDS), nút ✎ = Edit content, nút iPad (`core/run-link.js`, màn iPad `run.html`/`run.js`). RT: đồng hồ tổng về 0 ⇒ LAST WORD, chơi nốt từ đang làm (`lastWord`, kết thúc ở đầu `goReady`). Chi tiết: GHI CHU DU AN.md Đợt 575.
+
 > **Đợt 331 dự án (14/9/2026) — TỜ IN "WORD LIST" (85 từ) BỊ CẮT MẤT DÒNG CUỐI Ở 2/3 CỘT KHI THẦY IN
 > GIẤY A4 THẬT LẦN ĐẦU (mục 11 "VIỆC ĐANG CHỜ" cũ). ✅ THẦY IN LẠI XÁC NHẬN HẾT CẮT — ĐÃ COMMIT + PUSH.**
 > ⚠️ Commit git lỡ ghi "Dot 327" (đụng đúng số của "Group sort → Speed sorting" — 2 phiên làm việc cùng

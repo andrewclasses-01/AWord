@@ -413,6 +413,95 @@
 .aw-rw-start:disabled { opacity: .45; cursor: default; box-shadow: 0 calc(0.5 * var(--aw-u)) 0 rgba(11,143,104,.45); }
 
 /* =============================================================
+   Đợt 575 — SETUP SCREEN WITH THE OPTIONS ON IT (mẫu thầy duyệt:
+   D:\OTHERS\CLAUDE\AWord - thiet ke Running setup iPad\mau-1.html).
+   Header [✎ · title · iPad] · SET slots · option grid · facts · why · APPLY/START.
+   Everything in --aw-u (1% of the frame width) like the rest of this file.
+   ============================================================= */
+.aw-rw-setup { justify-content: flex-start; gap: calc(.9 * var(--aw-u)); padding: calc(1.4 * var(--aw-u)) calc(3.6 * var(--aw-u)) 0; }
+.aw-rw-setup-head { width: 100%; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+.aw-rw-setup-head .aw-rw-setup-title { grid-column: 2; font-size: calc(4.6 * var(--aw-u)); }
+.aw-rw-setup-left { justify-self: start; display: flex; }
+.aw-rw-editbtn {
+  font: inherit; cursor: pointer; display: grid; place-items: center;
+  width: calc(4.4 * var(--aw-u)); height: calc(4.4 * var(--aw-u));
+  border-radius: calc(1 * var(--aw-u)); border: calc(.22 * var(--aw-u)) solid rgba(23,34,47,.14);
+  background: #fff; color: #55657a;
+}
+.aw-rw-editbtn svg { width: 55%; height: 55%; }
+.aw-rw-ipad { justify-self: end; display: flex; align-items: center; gap: calc(.7 * var(--aw-u)); }
+.aw-rw-ipad-btn {
+  font: inherit; cursor: pointer; display: flex; align-items: center; gap: calc(.6 * var(--aw-u));
+  font-size: calc(1.45 * var(--aw-u)); font-weight: 800; letter-spacing: .06em;
+  padding: calc(.7 * var(--aw-u)) calc(1.2 * var(--aw-u)); border-radius: 99px;
+  border: calc(.22 * var(--aw-u)) solid rgba(23,34,47,.14); background: #fff; color: #6b7a8c;
+}
+.aw-rw-ipad-btn svg { width: calc(1.9 * var(--aw-u)); height: calc(1.9 * var(--aw-u)); }
+.aw-rw-ipad-btn.is-on { background: #166534; border-color: #166534; color: #fff; }
+.aw-rw-ipad-dots { display: none; gap: calc(.5 * var(--aw-u)); }
+.aw-rw-ipad.is-on .aw-rw-ipad-dots { display: flex; }
+.aw-rw-ipad-dot {
+  display: flex; align-items: center; gap: calc(.4 * var(--aw-u));
+  font-size: calc(1.2 * var(--aw-u)); font-weight: 800; color: #6b7a8c;
+  padding: calc(.45 * var(--aw-u)) calc(.8 * var(--aw-u)); border-radius: 99px;
+  background: #fff; border: calc(.18 * var(--aw-u)) solid rgba(23,34,47,.14);
+}
+.aw-rw-ipad-dot i { display: block; width: calc(1 * var(--aw-u)); height: calc(1 * var(--aw-u)); border-radius: 50%; background: #cbd5e1; }
+.aw-rw-ipad-dot.is-ok { color: var(--rw-ink); }
+.aw-rw-ipad-dot.is-ok i { background: var(--rw-ok); box-shadow: 0 0 0 calc(.3 * var(--aw-u)) rgba(16,185,129,.22); }
+.aw-rw-ipad-dot.is-wait i { background: var(--rw-b); animation: aw-rw-blink 1s infinite; }
+@keyframes aw-rw-blink { 50% { opacity: .25; } }
+
+.aw-rw-opts { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: calc(1 * var(--aw-u)) calc(1.6 * var(--aw-u)); text-align: left; }
+.aw-rw-oc {
+  background: #fff; border: calc(.18 * var(--aw-u)) solid rgba(23,34,47,.14); border-radius: calc(1 * var(--aw-u));
+  padding: calc(.55 * var(--aw-u)) calc(1.1 * var(--aw-u)); min-height: calc(4.6 * var(--aw-u));
+  display: grid; grid-template-columns: calc(13 * var(--aw-u)) 1fr; align-items: center; gap: calc(1 * var(--aw-u));
+}
+.aw-rw-oc.is-a { border-left: calc(.7 * var(--aw-u)) solid var(--rw-a); }
+.aw-rw-oc.is-b { border-left: calc(.7 * var(--aw-u)) solid var(--rw-b); }
+.aw-rw-oc-lab { font-size: calc(1.35 * var(--aw-u)); font-weight: 800; letter-spacing: .04em; text-transform: uppercase; line-height: 1.1; color: var(--rw-ink); }
+.aw-rw-oc-lab small { display: block; font-size: calc(1.02 * var(--aw-u)); font-weight: 700; color: #6b7a8c; text-transform: none; letter-spacing: 0; }
+.aw-rw-oc-text {
+  font: inherit; font-size: calc(1.8 * var(--aw-u)); font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+  width: 100%; min-width: 0; color: var(--rw-ink); background: #f8fafc;
+  border: calc(.18 * var(--aw-u)) solid rgba(23,34,47,.14); border-radius: calc(.7 * var(--aw-u));
+  padding: calc(.4 * var(--aw-u)) calc(.8 * var(--aw-u));
+}
+.aw-rw-oc-sl { display: flex; align-items: center; gap: calc(1 * var(--aw-u)); min-width: 0; }
+.aw-rw-oc-sl input[type=range] {
+  flex: 1; min-width: 0; margin: 0; -webkit-appearance: none; appearance: none; height: calc(1.1 * var(--aw-u)); border-radius: 99px;
+  background: linear-gradient(90deg, var(--tone) var(--p), #e2e8f0 var(--p)); outline: none; touch-action: none;
+}
+.aw-rw-oc-sl input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: calc(2.6 * var(--aw-u)); height: calc(2.6 * var(--aw-u)); border-radius: 50%;
+  background: #fff; border: calc(.35 * var(--aw-u)) solid var(--tone); box-shadow: 0 calc(.2 * var(--aw-u)) calc(.5 * var(--aw-u)) rgba(0,0,0,.15); cursor: pointer;
+}
+.aw-rw-oc-sl input[type=range]::-moz-range-thumb {
+  width: calc(2.6 * var(--aw-u)); height: calc(2.6 * var(--aw-u)); border-radius: 50%;
+  background: #fff; border: calc(.35 * var(--aw-u)) solid var(--tone); cursor: pointer;
+}
+.aw-rw-oc-val {
+  min-width: calc(6.2 * var(--aw-u)); text-align: center; font-size: calc(1.75 * var(--aw-u)); font-weight: 800;
+  padding: calc(.25 * var(--aw-u)) calc(.5 * var(--aw-u)); border-radius: calc(.6 * var(--aw-u)); background: #f1f5f9; color: var(--rw-ink);
+}
+.aw-rw-oc-val.is-off { color: #6b7a8c; }
+.aw-rw-oc .aw-hstep { justify-self: start; }
+.aw-rw-oc .aw-hstep-val { font-size: calc(2.1 * var(--aw-u)); font-weight: 800; min-width: calc(8 * var(--aw-u)); }
+
+.aw-rw-why { margin-top: auto; min-height: calc(1.6 * var(--aw-u)); font-size: calc(1.25 * var(--aw-u)); font-weight: 800; color: var(--rw-b-dark); }
+.aw-rw-acts { display: flex; align-items: center; gap: calc(2 * var(--aw-u)); margin-bottom: calc(1.4 * var(--aw-u)); }
+.aw-rw-apply {
+  font: inherit; cursor: pointer; display: flex; align-items: center; gap: calc(.6 * var(--aw-u));
+  font-size: calc(2 * var(--aw-u)); font-weight: 800; letter-spacing: .06em;
+  padding: calc(.9 * var(--aw-u)) calc(2.6 * var(--aw-u)); border-radius: calc(1 * var(--aw-u));
+  border: calc(.3 * var(--aw-u)) solid rgba(23,34,47,.14); background: #fff; color: #6b7a8c;
+}
+.aw-rw-apply svg { width: calc(2 * var(--aw-u)); height: calc(2 * var(--aw-u)); }
+.aw-rw-apply:disabled { cursor: default; }
+.aw-rw-apply.is-dirty { border-color: var(--rw-b); background: var(--rw-b); color: #fff; box-shadow: 0 calc(.45 * var(--aw-u)) 0 var(--rw-b-dark); }
+
+/* =============================================================
    MATCH SCREEN
    ============================================================= */
 .aw-rw-match {
