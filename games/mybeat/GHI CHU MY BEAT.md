@@ -2,6 +2,16 @@
 
 TRẠNG THÁI: ✅ **Đợt 385 (25/9/2026) — thầy "ok build" thiết kế v3**. ⬜ Thầy chưa bấm tay trang thật.
 
+> ### ⭐ ĐỢT 574 (23/10/2026) — SOẠN BÀI ĐÃ DỜI SANG APP myStudio, AWORD CHỈ CÒN CHƠI
+> Thầy chốt: soạn bài (dán link → máy nghe → soát & sửa → đăng) làm ở thẻ **myBeat** của app **myStudio** trên máy
+> (`E:\LAP TRINH APP\myStudio` v0.3.0, hồ sơ trong CLAUDE.md + GHI CHU DU AN.md của app đó). Không hỏi giấy phép nữa —
+> chỉ nhận link và tạo bài (`source:"own"`). myStudio ghi THẲNG `users/{uid}/items/mb_…` bằng khoá quản trị.
+> Trang này **bỏ hẳn**: nút New song, màn Editor, nút Edit song / Lists / Xoá ở trang bài, sửa/thêm/xoá danh sách ở trang chủ,
+> cầu nối `mybeat-watch` (Desktop\MyBeatQueue). Đã xoá `tools/mybeat-prepare.py`, `mybeat-watch.py`, `mybeat-watch.bat`.
+> ⛔ myStudio CHÉP `pickGaps / flatten / suggestLevel / retimeLine…` của `mb-core.js` sang `src/renderer/js/mybeat-luat.js`
+>    (để "xem chỗ trống theo cấp" khớp lúc chơi) — sửa luật ở đây TRƯỚC rồi chép sang đó.
+> Mục 5 dưới (công cụ My Beat Prep) chỉ còn là lịch sử.
+
 ## 1. Nó là gì
 Nghe một bài hát trên YouTube, điền những chữ còn thiếu trong lời. Chơi **trên lớp bằng tài khoản AWord của thầy**
 (màn chiếu / TOMKO), chưa có đường cho học sinh ở nhà. Lấy ý từ game LingoClip nhưng bỏ hết phần râu ria
@@ -30,10 +40,10 @@ Nghe một bài hát trên YouTube, điền những chữ còn thiếu trong l�
 | `games/mybeat/mb-core.js` | luật chơi thuần, không DOM: `flatten`, `pickGaps`, `Round`, `mergeBoard`, `fromPackage`, sửa câu. Thử được bằng Node. |
 | `games/mybeat/mb-player.js` | YouTube IFrame API + `createFakePlayer` (bài Demo) + `videoInfo` (oEmbed, không cần khoá API). |
 | `games/mybeat/mb-store.js` | Firestore (`firestoreStore`) + `makeMemoryStore` (trang thử). |
-| `games/mybeat/mybeat.js` | `mountMyBeat(root, ctx) → dispose()`: Home · Song · Play · Result · Editor. |
+| `games/mybeat/mybeat.js` | `mountMyBeat(root, ctx) → dispose()`: Home · Song · Play · Result (Đợt 574: hết Editor). |
 | `games/mybeat/mybeat.css` | mọi luật dưới `.mb`, keyframes `mb-`. |
 | `games/mybeat/test.html` | thử không đăng nhập: `http://localhost:5510/games/mybeat/test.html` (`?seed=<url .beat.json>` thêm 1 bài). |
-| `tools/mybeat-prepare.py` | **My Beat Prep** — file nhạc → `.beat.json`, chạy **hoàn toàn offline**. |
+| ~~`tools/mybeat-prepare.py`~~ | đã xoá Đợt 574 — nay là `src/main/py/mybeat_lam.py` của myStudio. |
 | `main.js` | thẻ game đọc `g.card`; chỉ Werewolf nạp `loadGameData()`. |
 | `core/store.js` | `mybeat`, `mybeat-song` trong `APP_DATA_KINDS`. |
 
@@ -47,7 +57,7 @@ Nghe một bài hát trên YouTube, điền những chữ còn thiếu trong l�
   ⛔ `board` chỉ ghi bằng `saveScore` (transaction). `saveSong` không bao giờ gửi `board` ⇒ sửa bài không mất điểm.
 - Không có `root` ⇒ không bao giờ hiện trong thư viện; có trong `APP_DATA_KINDS` ⇒ không ăn số link.
 
-## 5. Công cụ My Beat Prep (offline)
+## 5. Công cụ My Beat Prep (offline) — LỊCH SỬ, đã xoá Đợt 574 (thay bằng thẻ myBeat của myStudio)
 ```
 py tools\mybeat-prepare.py --audio "song.mp3" --link "https://youtu.be/XXXXXXXXXXX" --desc "song.txt" --lyrics "song-lyrics.txt"
 ```
@@ -70,6 +80,6 @@ py tools\mybeat-prepare.py --audio "song.mp3" --link "https://youtu.be/XXXXXXXXX
 - Trình duyệt chỉ cho phát tiếng sau một cú bấm của người dùng ⇒ luôn có nút ▶ to trước khi chơi.
 
 ## 8. Việc chờ
-- ⬜ Thầy bấm tay trang thật: New song với bài thật → Publish → chơi Choice + Type trên màn lớp → lưu điểm.
-- ⬜ Chạy `py tools\mybeat-prepare.py` trên máy thầy với 1 bài của thầy + lời.
+- ⬜ Thầy soạn 1 bài thật ở myStudio ▸ myBeat → Đăng → chơi Choice + Type trên màn lớp → lưu điểm.
+- (23/10) Bài thử "Lie 2 You" (`mb_mvkhkgn6ebdnk`) đang là NHÁP trên AWord — thầy đăng hoặc bỏ ở myStudio.
 - ⬜ (sau) Đường cho HS chơi ở nhà: link công khai + luật Firestore đọc bài / ghi điểm.

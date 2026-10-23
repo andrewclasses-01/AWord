@@ -4,9 +4,17 @@
 // Listen to a song on YouTube and fill the missing words of the lyrics,
 // played in class on the teacher's AWord account (thầy chốt v3):
 //   Home (song lists) → Song (mode Choice/Type × 4 levels + leaderboard)
-//   → Play → Result (save a score for a class + name/team) ; Song editor.
+//   → Play → Result (save a score for a class + name/team).
 // Rules live in mb-core.js, the player in mb-player.js, storage in
 // mb-store.js. Design: D:\OTHERS\CLAUDE\AWord - thiet ke My Beat\mybeat-v3.html
+//
+// Đợt 574 (23/10/2026, thầy chốt): NO song editor here any more — songs are made
+// in the myBeat tab of the myStudio app on the teacher's computer (paste a link →
+// the computer listens → check & fix → publish straight into users/{uid}/items).
+// This page only PLAYS: no New song, no Edit, no Lists editing, no Delete.
+// ⛔ myStudio writes the SAME song shape (see mb-core.js) and copies pickGaps /
+//    flatten / suggestLevel from mb-core.js — change the rules here first, then
+//    copy to myStudio src/renderer/js/mybeat-luat.js.
 //
 // mountMyBeat(root, ctx) -> dispose()
 //   ctx.store   (optional) songs/lists/scores API — default: Firestore
@@ -14,9 +22,8 @@
 //   ctx.onExit  (optional) back to the GAMES tree
 // =============================================================
 
-import { LEVELS, MODES, RULES, flatten, pickGaps, suggestLevel, youtubeId, fmtTime, fromPackage,
-         retimeLine, shiftLine, moveLineTo, Round, boardKey, norm } from "./mb-core.js";
-import { createPlayer, createFakePlayer, videoInfo, thumbUrl } from "./mb-player.js";
+import { LEVELS, MODES, RULES, flatten, pickGaps, Round, boardKey } from "./mb-core.js";
+import { createPlayer, createFakePlayer, thumbUrl } from "./mb-player.js";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const svg = (inner, cls = "i") => `<svg class="${cls}" viewBox="0 0 24 24">${inner}</svg>`;
@@ -44,7 +51,6 @@ const star = on => `<svg viewBox="0 0 24 24"><defs><linearGradient id="mbhalf"><
 const nSongs = n => `${n} song${n === 1 ? "" : "s"}`;
 const starsTxt = n => "★".repeat(Math.floor(n)) + (n % 1 ? "½" : "");
 const LV_COLOR = { Easy: "var(--good)", Medium: "var(--late)", Hard: "var(--bad)" };
-const LICENCES = ["CC BY 4.0", "CC BY 3.0", "CC BY-SA 4.0", "CC BY-SA 3.0", "Free with credit (channel terms)"];
 const NEW_DAYS = 14;
 
 // ---------------------------------------------------------------- demo song
@@ -85,7 +91,7 @@ export function mountMyBeat(root, ctx = {}) {
   const S = {
     view: "home", songs: [], lists: [], loading: true, error: "",
     q: "", lvFilter: "all", song: null, mode: "choice", level: "intermediate",
-    lbClass: "", listEdit: null, newList: false, pop: "", result: null
+    lbClass: "", pop: "", result: null
   };
   const cleanups = new Set();     // intervals / players / listeners of the current view
   function clearView() { cleanups.forEach(f => { try { f(); } catch { /* ignore */ } }); cleanups.clear(); }
@@ -127,7 +133,6 @@ export function mountMyBeat(root, ctx = {}) {
     else if (S.view === "song") viewEl.innerHTML = songHtml();
     else if (S.view === "result") viewEl.innerHTML = resultHtml();
     else if (S.view === "play") startPlay();
-    else if (S.view === "edit") startEditor();
   }
   function paintTop() {
     topEl.innerHTML = `
@@ -135,7 +140,6 @@ export function mountMyBeat(root, ctx = {}) {
       <div class="logo" data-a="home"><div class="mark">${I.logo}</div><div><b>My Beat</b><small>Andrew Classes songs</small></div></div>
       ${S.view === "home" ? `<label class="search">${I.search}<input data-r="q" placeholder="Search songs or words…" value="${esc(S.q)}"></label>` : ""}
       <span class="sp"></span>
-      ${S.view !== "edit" ? `<button class="btn btn-b" data-a="new">${I.plus} New song</button>` : ""}
       <span class="who" title="Played in class on the teacher's account"><span class="av">A</span>Andrew Classes <em>· in class</em></span>`;
   }
 
@@ -163,25 +167,18 @@ export function mountMyBeat(root, ctx = {}) {
     const byTitle = (a, b) => String(a.title).localeCompare(String(b.title));
     let h = `<div class="body">`;
     if (!S.songs.length) {
-      h += `<div class="empty"><h2>Add your first song</h2><ol>
-        <li>Run <b>My Beat Prep</b> on your computer with the song file (works offline).</li>
-        <li>Press <b>New song</b>, paste the YouTube link, drop in the <b>.beat.json</b> file.</li>
-        <li>Check the lyrics, then <b>Publish</b>.</li></ol>
-        <div class="chips"><button class="btn btn-b" data-a="new">${I.plus} New song</button><button class="btn btn-g" data-a="open" data-id="demo">Try the demo song</button></div></div>`;
+      h += `<div class="empty"><h2>No songs yet</h2><p class="muted">Songs are made in the <b>myBeat</b> tab of the <b>myStudio</b> app on the teacher's computer:
+        paste a YouTube link, check the lyrics, then publish — the song appears here.</p>
+        <div class="chips"><button class="btn btn-g" data-a="open" data-id="demo">Try the demo song</button></div></div>`;
     }
     const fresh = songs.filter(s => s.createdAt && Date.now() - s.createdAt < NEW_DAYS * 864e5).sort((a, b) => b.createdAt - a.createdAt).slice(0, 12);
     if (fresh.length) h += `<section><div class="row-h"><h2>New songs</h2><span class="n">added in the last ${NEW_DAYS} days</span></div><div class="strip">${fresh.map(cardHtml).join("")}</div></section>`;
     S.lists.forEach(l => {
       const items = songs.filter(s => (s.lists || []).includes(l.id)).sort(byTitle);
-      const editing = S.listEdit === l.id;
-      h += `<section><div class="row-h">${editing
-        ? `<input data-r="listname" value="${esc(l.name)}" aria-label="List name"><button class="lk" data-a="list-save" data-id="${l.id}">Save</button><button class="lk bad" data-a="list-del" data-id="${l.id}">Delete list</button><button class="lk" data-a="list-cancel">Cancel</button>`
-        : `<h2>${esc(l.name)}</h2><span class="n">${nSongs(items.length)}</span><button class="lk" data-a="list-edit" data-id="${l.id}">${I.edit} Edit</button>`}</div>
-        ${items.length ? `<div class="strip">${items.map(cardHtml).join("")}</div>` : `<p class="muted" style="margin:0">No songs yet — open a song and press <b>Lists</b> to add it here.</p>`}</section>`;
+      if (!items.length) return;
+      h += `<section><div class="row-h"><h2>${esc(l.name)}</h2><span class="n">${nSongs(items.length)}</span></div>
+        <div class="strip">${items.map(cardHtml).join("")}</div></section>`;
     });
-    h += S.newList
-      ? `<div class="row-h"><input data-r="newlist" placeholder="List name, e.g. Grammar songs" aria-label="New list name"><button class="btn btn-p btn-sm" data-a="list-add">Add list</button><button class="btn btn-g btn-sm" data-a="list-new-cancel">Cancel</button></div>`
-      : `<div><button class="btn btn-g" data-a="list-new">${I.plus} New list</button></div>`;
     if (S.songs.length) {
       const all = songs.filter(s => S.lvFilter === "all" || s.level === S.lvFilter).sort(byTitle);
       h += `<section><div class="row-h"><h2>All songs</h2><span class="n">${nSongs(all.length)}</span></div>
@@ -212,18 +209,11 @@ export function mountMyBeat(root, ctx = {}) {
     const credit = s.source === "own"
       ? `<div class="credit"><span class="ic own">AC</span><span><b>Andrew Classes original</b></span></div>`
       : s.credit ? `<div class="credit"><span class="ic">cc</span><span><b>Music credit</b><br>${esc(s.credit)}</span></div>` : "";
-    const listPop = S.pop === "lists" ? `<div class="popbox"><span class="pt" style="margin:0">Add to lists</span>
-        ${S.lists.length ? `<div class="chips">${S.lists.map(l => `<button class="chip${(s.lists || []).includes(l.id) ? " on" : ""}" data-a="toggle-list" data-id="${l.id}">${esc(l.name)}</button>`).join("")}</div>` : `<span class="muted">No lists yet — make one on the home page.</span>`}</div>` : "";
-    const delPop = S.pop === "delete" ? `<div class="popbox"><b>Delete “${esc(s.title)}”?</b><span class="muted">The song and all its scores are removed. The YouTube video is not touched.</span>
-        <div class="chips"><button class="btn btn-d btn-sm" data-a="delete-yes">Delete</button><button class="btn btn-g btn-sm" data-a="pop-close">Cancel</button></div></div>` : "";
     return `<div class="hero">${s.youtube ? `<div class="bgimg" style="background-image:url('${thumbUrl(s.youtube)}')"></div>` : ""}
       <button class="back" data-a="home" style="color:#fff">${I.back}Songs</button>
       ${s.youtube ? `<img class="art" src="${thumbUrl(s.youtube)}" alt="">` : `<div class="art"></div>`}
       <div><h2>${esc(s.title)}</h2><div class="by">${esc(s.artist || (s.source === "own" ? "Andrew Classes" : ""))}${s.channel ? ` · YouTube: ${esc(s.channel)}` : ""}</div>
         <div class="facts">${durTxt(s) ? `<span>${durTxt(s)}</span>` : ""}<span>${total} words</span><span>${esc(s.level || "")}</span>${s.draft ? "<span>DRAFT — only you see it</span>" : ""}</div></div>
-      ${s.demo ? "" : `<div class="act"><button class="btn" data-a="edit">${I.edit} Edit song</button>
-        <span class="pop"><button class="btn" data-a="pop" data-v="lists">${I.list} Lists</button>${listPop}</span>
-        <span class="pop"><button class="btn" data-a="pop" data-v="delete">${I.trash}</button>${delPop}</span></div>`}
     </div>
     ${credit}
     <div class="cols">
@@ -476,371 +466,6 @@ export function mountMyBeat(root, ctx = {}) {
     } catch (e) { btn.disabled = false; toast("Could not save — " + (e.message || "check the connection")); }
   }
 
-  // ---------------------------------------------------------------- watcher bridge (auto lyrics & timing)
-  // Talks to tools/mybeat-watch.py running on the teacher's own computer: My Beat writes a
-  // small .job file into <folder>/inbox, the script downloads the song and drops the finished
-  // .beat.json (or an .error message) into <folder>/outbox. The folder handle is remembered in
-  // IndexedDB so the teacher only has to pick it once (Chrome/Edge only — no server involved).
-  const watchSupported = () => typeof window.showDirectoryPicker === "function";
-  function idbOpen() {
-    return new Promise((res, rej) => {
-      const r = indexedDB.open("mybeat-watch", 1);
-      r.onupgradeneeded = () => r.result.createObjectStore("kv");
-      r.onsuccess = () => res(r.result);
-      r.onerror = () => rej(r.error);
-    });
-  }
-  async function idbGet(key) {
-    const db = await idbOpen();
-    return new Promise((res, rej) => {
-      const rq = db.transaction("kv", "readonly").objectStore("kv").get(key);
-      rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error);
-    });
-  }
-  async function idbSet(key, val) {
-    const db = await idbOpen();
-    return new Promise((res, rej) => {
-      const rq = db.transaction("kv", "readwrite").objectStore("kv").put(val, key);
-      rq.onsuccess = () => res(); rq.onerror = () => rej(rq.error);
-    });
-  }
-  async function getQueueRoot() {
-    let handle = await idbGet("queueDir").catch(() => null);
-    if (handle) {
-      const perm = await handle.queryPermission({ mode: "readwrite" });
-      if (perm === "granted" || (await handle.requestPermission({ mode: "readwrite" })) === "granted") return handle;
-    }
-    handle = await window.showDirectoryPicker({ id: "mybeat-queue", mode: "readwrite" });
-    await idbSet("queueDir", handle);
-    return handle;
-  }
-  async function readTextIfExists(dir, name) {
-    try { const fh = await dir.getFileHandle(name); return await (await fh.getFile()).text(); } catch { return null; }
-  }
-  async function writeText(dir, name, text) {
-    const fh = await dir.getFileHandle(name, { create: true });
-    const w = await fh.createWritable();
-    await w.write(text); await w.close();
-  }
-  async function submitWatchJob(root, link, title) {
-    const inbox = await root.getDirectoryHandle("inbox", { create: true });
-    const id = crypto.randomUUID ? crypto.randomUUID() : "j" + Date.now() + Math.random().toString(36).slice(2);
-    await writeText(inbox, id + ".job", JSON.stringify({ id, link, title }));
-    return id;
-  }
-  async function pollWatchJob(root, id, onProgress, cancelRef) {
-    const outbox = await root.getDirectoryHandle("outbox", { create: true });
-    const t0 = Date.now(), timeoutMs = 6 * 60 * 1000;
-    let hinted = false;
-    while (Date.now() - t0 < timeoutMs) {
-      if (cancelRef.cancelled) throw new Error("cancelled");
-      const err = await readTextIfExists(outbox, id + ".error");
-      if (err) throw new Error(err);
-      const pkgTxt = await readTextIfExists(outbox, id + ".beat.json");
-      if (pkgTxt && await readTextIfExists(outbox, id + ".done") != null) return JSON.parse(pkgTxt);
-      const prog = await readTextIfExists(outbox, id + ".progress");
-      if (prog) { hinted = false; if (onProgress) onProgress(prog); }
-      else if (!hinted && Date.now() - t0 > 15000) {
-        hinted = true;
-        if (onProgress) onProgress("Still waiting… check that mybeat-watch.bat is running, and that you picked the MyBeatQueue folder on the Desktop (not another folder).");
-      }
-      await new Promise(r => setTimeout(r, 1500));
-    }
-    throw new Error("No answer after 6 minutes — is mybeat-watch.bat running, and did you pick the MyBeatQueue folder on the Desktop?");
-  }
-
-  // ============================================================ editor
-  let ed = null;   // editor state while view === "edit"
-  function startEditor() {
-    const src = S.editId ? songById(S.editId) : null;
-    const draft = src ? JSON.parse(JSON.stringify(src)) : { title: "", artist: "", channel: "", youtube: "", link: "", source: "own", licence: "", credit: "",
-      level: "", lists: [], draft: true, duration: 0, sections: [], lines: [] };
-    delete draft.board;
-    if (draft.source !== "cc") draft.source = "own";   // all songs are Andrew Classes' own — no need to ask
-    ed = { d: draft, isNew: !src, sel: 0, info: null, msg: "", importMsg: "", player: null, playerId: "", stopAt: 0, tap: false, split: false, editLine: -1, dirty: false, watch: null, showManual: false };
-    viewEl.innerHTML = `<div class="ed">
-      <div class="ed-h"><button class="back" data-a="ed-cancel">${I.back}${src ? "Song" : "Songs"}</button><h2>${src ? "Edit song" : "New song"}</h2></div>
-      <div class="sec" data-r="s1"></div>
-      <div class="sec" data-r="s2"></div>
-      <div class="sec" data-r="s3"><h3><span class="n">STEP 3</span> Check &amp; fix</h3>
-        <div class="legend"><span><i style="background:#FFF7E0;border:1px solid #EEDFB0"></i>line to check</span><span><i style="background:#FFE6A8"></i>word heard differently twice</span><span><i style="border:1px solid var(--line)"></i>click a word = never hide it (names, “ooh”…)</span></div>
-        <div class="tl"><div class="tl-list" data-r="tl"></div>
-          <div class="tl-side"><div class="prev" data-r="prev"></div><div class="tools" data-r="tools"></div><p class="note" data-r="toolnote"></p></div></div></div>
-      <div class="savebar" data-r="save"></div></div>`;
-    ed.onKey = e => edKey(e);
-    document.addEventListener("keydown", ed.onKey);
-    const iv = setInterval(edTick, 100);
-    cleanups.add(() => { clearInterval(iv); document.removeEventListener("keydown", ed.onKey); if (ed && ed.player) ed.player.destroy(); ed = null; });
-    edPaintAll();
-    if (draft.youtube) edEnsurePlayer();
-  }
-  const edPaintAll = () => { edPaint1(); edPaint2(); edPaintTl(); edPaintSave(); };
-  function edPaint1() {
-    const d = ed.d, box = $('[data-r="s1"]'); if (!box) return;
-    const lic = ed.otherLic || (d.licence && !LICENCES.includes(d.licence)) ? "__other" : d.licence;
-    const nc = /\bNC\b/i.test(d.licence);
-    box.innerHTML = `<h3><span class="n">STEP 1</span> YouTube link ${d.youtube ? `<span class="ok">${I.check}</span>` : ""}</h3>
-      <div class="field"><input data-r="link" placeholder="Paste the YouTube link of the song" value="${esc(d.link || (d.youtube ? "https://youtu.be/" + d.youtube : ""))}"><button class="btn btn-p" data-a="ed-check">Check</button></div>
-      ${ed.info ? `<div class="vid"><img src="${thumbUrl(d.youtube)}" alt=""><div><b>${esc(ed.info.title)}</b><span class="muted">YouTube: ${esc(ed.info.channel)}</span></div></div>` : ""}
-      ${ed.msg ? `<div class="msg ${ed.msgKind || "bad"}">${ed.msg}</div>` : ""}
-      <div class="two">
-        <label class="lab">Song title<input data-f="title" value="${esc(d.title)}"></label>
-        <label class="lab">Artist<input data-f="artist" value="${esc(d.artist)}" placeholder="Andrew Classes"></label>
-      </div>
-      ${d.source === "cc" ? `<div class="two">
-        <label class="lab${!d.licence ? " bad" : ""}">Licence<select data-f="licpick"><option value=""${!d.licence ? " selected" : ""}>Choose…</option>${LICENCES.map(l => `<option${l === lic ? " selected" : ""}>${esc(l)}</option>`).join("")}<option value="__other"${lic === "__other" ? " selected" : ""}>Other…</option></select></label>
-        ${lic === "__other" ? `<label class="lab">Licence (as written by the channel)<input data-f="licence" value="${esc(d.licence)}"></label>` : "<span></span>"}
-      </div>
-        <label class="lab${!d.credit ? " bad" : ""}">Credit — shown on the song page and under the video<input data-f="credit" value="${esc(d.credit)}" placeholder="Copy the credit lines from the video description"></label>
-        ${nc ? `<div class="msg bad">“NC” means non-commercial use only. Paid classes may not be allowed — check with the artist first.</div>` : ""}` : ""}`;
-  }
-  function edPaint2() {
-    const d = ed.d, box = $('[data-r="s2"]'); if (!box) return;
-    const link = d.youtube ? `https://youtu.be/${d.youtube}` : "<YouTube link>";
-    const slug = (d.title || "song").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "song";
-    const cmd = `py tools\\mybeat-prepare.py --audio "${slug}.mp3" --link "${link}" --desc "${slug}.txt" --lyrics "${slug}-lyrics.txt"`;
-    const w = ed.watch;
-    const forgetLk = `<p class="note" style="margin:4px 0 0"><a href="#" data-a="ed-forgetfolder">Picked the wrong folder? Choose again</a></p>`;
-    const auto = !watchSupported() ? `<p class="note">Automatic mode needs Chrome or Edge on this computer.</p>`
-      : !w || w.status === "idle" ? `<button class="btn btn-b" data-a="ed-autofetch"${d.youtube ? "" : " disabled"}>${I.playI} Get lyrics &amp; timing automatically</button>
-          <p class="note" style="margin:6px 0 0">Double-click <b>mybeat-watch.bat</b> first, then press this button — it will ask you to pick the <b>MyBeatQueue</b> folder on your Desktop (once). Takes about a minute.</p>${forgetLk}`
-      : w.status === "running" ? `<div class="msg info"><span class="mb-spin">●</span> ${esc(w.msg || "Working…")}</div><button class="btn btn-g btn-sm" style="margin-top:6px" data-a="ed-cancelfetch">Cancel</button>${forgetLk}`
-      : `<div class="msg bad">${esc(w.msg)}</div><button class="btn btn-b btn-sm" style="margin-top:6px" data-a="ed-autofetch">Try again</button>${forgetLk}`;
-    box.innerHTML = `<h3><span class="n">STEP 2</span> Lyrics &amp; timing ${d.lines.length ? `<span class="ok">${I.check}</span>` : ""}</h3>
-      ${auto}
-      <p class="note" style="margin:10px 0 0"><a href="#" data-a="ed-togglemanual">${ed.showManual ? "Hide the by-hand way" : "…or do it by hand"}</a></p>
-      ${ed.showManual ? `<div class="two" style="margin-top:8px">
-        <label class="drop" data-r="drop"><span class="btn btn-g">${I.file} Choose .beat.json</span><span>${d.lines.length ? `<b>${d.lines.length} lines</b> · ${d.sections.length} sections · ${words(d)} words${ed.importMsg ? " · " + esc(ed.importMsg) : ""}` : "or drop the file from <b>My Beat Prep</b> here"}</span>
-          <input type="file" accept=".json,application/json" data-r="pkg" hidden></label>
-        <div><p class="note" style="margin:0 0 6px">No file yet? Run this in a command window on your computer (works offline, about 1 minute per song). <code>--desc</code> = the video description saved as .txt; <code>--lyrics</code> = the lyrics if you have them.</p>
-          <div class="cmd" data-r="cmd">${esc(cmd)}</div>
-          <button class="btn btn-g btn-sm" style="margin-top:6px" data-a="ed-copy">${I.copy} Copy command</button></div>
-      </div>` : ""}`;
-    if (!ed.showManual) return;
-    const drop = box.querySelector('[data-r="drop"]'), inp = box.querySelector('[data-r="pkg"]');
-    inp.onchange = () => inp.files[0] && edImport(inp.files[0]);
-    drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
-    drop.ondragleave = () => drop.classList.remove("over");
-    drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); const f = e.dataTransfer.files[0]; if (f) edImport(f); };
-  }
-  async function edAutoFetch() {
-    const d = ed.d;
-    if (!d.youtube) { toast("Add the YouTube link first (step 1)."); return; }
-    ed.watch = { status: "running", msg: "Asking for the My Beat Watcher folder…", cancelRef: { cancelled: false } };
-    edPaint2();
-    try {
-      const root = await getQueueRoot();
-      ed.watch.msg = "Sending the link…"; edPaint2();
-      const id = await submitWatchJob(root, d.link || `https://youtu.be/${d.youtube}`, d.title);
-      const pkg = await pollWatchJob(root, id, msg => { if (ed && ed.watch) { ed.watch.msg = msg; edPaint2(); } }, ed.watch.cancelRef);
-      if (!ed) return;
-      ed.watch = null;
-      await applyImportedPackage(pkg);
-    } catch (e) {
-      if (!ed) return;
-      if (e && e.name === "AbortError" || (e && e.message === "cancelled")) { ed.watch = null; edPaint2(); return; }
-      ed.watch = { status: "error", msg: e.message || "Could not reach the My Beat Watcher folder." };
-      edPaint2();
-    }
-  }
-  async function edForgetQueueFolder() {
-    if (ed && ed.watch && ed.watch.cancelRef) ed.watch.cancelRef.cancelled = true;
-    await idbSet("queueDir", null);
-    if (!ed) return;
-    ed.watch = null;
-    toast("Folder forgotten — next time it will ask you to pick it again.");
-    edPaint2();
-  }
-  async function edImport(file) {
-    try { await applyImportedPackage(JSON.parse(await file.text())); }
-    catch (e) { toast(e.message || "This file could not be read."); }
-  }
-  async function applyImportedPackage(pkg) {
-    const song = fromPackage(pkg), d = ed.d;
-    if (d.lines.length && !(await confirmInline("Replace the lyrics you have now with this file?"))) return;
-    d.lines = song.lines; d.sections = song.sections; d.duration = song.duration || d.duration;
-    ["title", "artist", "channel", "licence", "credit", "source"].forEach(k => { if (!d[k] && song[k]) d[k] = song[k]; });
-    if (!d.youtube && song.youtube) { d.youtube = song.youtube; d.link = song.link || ""; }
-    const checks = d.lines.reduce((n, l) => n + (l.c || []).length, 0);
-    ed.importMsg = checks ? `${checks} words to check` : "all words heard the same twice";
-    ed.sel = 0; ed.dirty = true;
-    edPaintAll(); edEnsurePlayer();
-    toast(`Imported ${d.lines.length} lines`);
-  }
-  // tiny in-page confirm (the page must not use window.confirm)
-  function confirmInline(text) {
-    return new Promise(resolve => {
-      const bar = $('[data-r="save"]');
-      const old = bar.innerHTML;
-      bar.innerHTML = `<b>${esc(text)}</b><span class="sp"></span><button class="btn btn-d" data-r="cy">Yes</button><button class="btn btn-g" data-r="cn">No</button>`;
-      bar.querySelector('[data-r="cy"]').onclick = () => { bar.innerHTML = old; resolve(true); edPaintSave(); };
-      bar.querySelector('[data-r="cn"]').onclick = () => { bar.innerHTML = old; resolve(false); edPaintSave(); };
-    });
-  }
-  function edEnsurePlayer() {
-    const d = ed.d, host = $('[data-r="prev"]');
-    if (!host || ed.playerId === d.youtube) return;
-    if (ed.player) { ed.player.destroy(); ed.player = null; }
-    ed.playerId = d.youtube;
-    host.innerHTML = "";
-    if (!d.youtube) { host.innerHTML = `<div class="mb-fakevid"><span>Add the YouTube link to listen</span></div>`; return; }
-    const want = d.youtube;
-    createPlayer(host, d.youtube, { onError: msg => { ed && (ed.msg = esc(msg), ed.msgKind = "bad", edPaint1()); } })
-      .then(p => { if (!ed || ed.playerId !== want) { p.destroy(); return; } ed.player = p; })
-      .catch(() => {});
-  }
-  function edPaintTl() {
-    const d = ed.d, box = $('[data-r="tl"]'); if (!box) return;
-    if (!d.lines.length) { box.innerHTML = `<p class="muted">Import the .beat.json file first (step 2).</p>`; edPaintTools(); return; }
-    const secAt = new Map(d.sections.map((s, i) => [s.from, i]));
-    let h = "";
-    d.lines.forEach((l, i) => {
-      if (secAt.has(i)) { const si = secAt.get(i), s = d.sections[si]; h += `<div class="tl-sec"><input data-sec="${si}" value="${esc(s.name)}" aria-label="Section name"><hr>${s.guess ? '<span class="guess">guessed — check the name</span>' : ""}</div>`; }
-      const toks = String(l.x).split(" "), chk = new Set(l.c || []), nev = new Set(l.n || []);
-      const weak = chk.size > 0;
-      h += `<div class="tl-line${i === ed.sel ? " sel" : ""}${weak ? " weak" : ""}" data-line="${i}">
-        <button class="pl" data-a="ed-playline" data-i="${i}" title="Play this line">${I.play}</button>
-        <span class="tc">${fmtTime(l.s[0])}</span>
-        ${ed.editLine === i ? `<input class="ed-in" data-r="lineedit" value="${esc(l.x)}" aria-label="Line text">`
-          : `<span class="ws">${toks.map((w, k) => `<button class="tok${nev.has(k) ? " never" : ""}${chk.has(k) ? " chk" : ""}${ed.split && i === ed.sel && k > 0 ? " splitmode" : ""}" data-a="ed-tok" data-i="${i}" data-k="${k}">${esc(w)}</button>`).join("")}</span>
-          <span class="rowact">${weak ? `<button data-a="ed-okline" data-i="${i}" title="Words are right">${I.check}</button>` : ""}<button data-a="ed-editline" data-i="${i}" title="Edit the words">${I.edit}</button></span>`}
-      </div>`;
-    });
-    box.innerHTML = h;
-    const inp = box.querySelector('[data-r="lineedit"]');
-    if (inp) {
-      inp.focus(); inp.select();
-      inp.onkeydown = e => {
-        if (e.key === "Enter") { e.preventDefault(); d.lines[ed.editLine] = retimeLine(d.lines[ed.editLine], inp.value); ed.editLine = -1; ed.dirty = true; edPaintTl(); edPaintSave(); }
-        if (e.key === "Escape") { e.preventDefault(); ed.editLine = -1; edPaintTl(); }
-        e.stopPropagation();
-      };
-    }
-    box.querySelectorAll("[data-sec]").forEach(inpS => inpS.onchange = () => { const s = d.sections[+inpS.dataset.sec]; s.name = inpS.value.trim() || "Verse"; s.guess = false; ed.dirty = true; edPaintTl(); });
-    edPaintTools();
-  }
-  function edPaintTools() {
-    const tb = $('[data-r="tools"]'), note = $('[data-r="toolnote"]'); if (!tb) return;
-    const has = ed.d.lines.length > 0, isSec = ed.d.sections.some(s => s.from === ed.sel);
-    tb.innerHTML = has ? `
-      <button class="btn btn-g btn-sm${ed.tap ? " tap-on" : ""}" data-a="ed-tap">${ed.tap ? "Stop tapping" : "Tap to sync"}</button>
-      <button class="btn btn-g btn-sm" data-a="ed-nudge" data-v="-0.1">−0.1 s</button><button class="btn btn-g btn-sm" data-a="ed-nudge" data-v="0.1">+0.1 s</button>
-      <button class="btn btn-g btn-sm${ed.split ? " tap-on" : ""}" data-a="ed-split">${ed.split ? "Click a word…" : "Split line"}</button>
-      <button class="btn btn-g btn-sm" data-a="ed-join">Join with next</button>
-      <button class="btn btn-g btn-sm" data-a="ed-section">${isSec && ed.sel > 0 ? "Remove section start" : "New section here"}</button>
-      <button class="btn btn-d btn-sm" data-a="ed-delline">Delete line</button>` : "";
-    note.innerHTML = !has ? "" : ed.tap
-      ? `<b>Tapping:</b> press <b>Space</b> the moment each line starts. <b>Esc</b> stops.`
-      : ed.split ? `Click the word the new line should start with.` : `Line ${ed.sel + 1} selected · ▶ plays one line · <b>Tap to sync</b> fixes a whole part that is early/late.`;
-  }
-  function edTick() {
-    if (!ed || !ed.player) return;
-    const t = ed.player.time();
-    if (ed.stopAt && t >= ed.stopAt) { ed.player.pause(); ed.stopAt = 0; }
-    const box = $('[data-r="tl"]'); if (!box) return;
-    const playing = ed.player.playing();
-    const i = playing ? ed.d.lines.findIndex(l => t >= l.s[0] - 0.05 && t < l.e + 0.2) : -1;
-    if (i !== ed.nowLine) {
-      box.querySelectorAll(".tl-line.now").forEach(x => x.classList.remove("now"));
-      if (i >= 0) box.querySelector(`[data-line="${i}"]`)?.classList.add("now");
-      ed.nowLine = i;
-    }
-  }
-  function edSelect(i) {
-    ed.sel = Math.max(0, Math.min(ed.d.lines.length - 1, i));
-    const box = $('[data-r="tl"]');
-    box.querySelectorAll(".tl-line.sel").forEach(x => x.classList.remove("sel"));
-    const row = box.querySelector(`[data-line="${ed.sel}"]`);
-    if (row) { row.classList.add("sel"); row.scrollIntoView({ block: "nearest" }); }
-    edPaintTools();
-  }
-  function edKey(e) {
-    if (!ed || S.view !== "edit") return;
-    if (e.target.closest?.("input,select,textarea")) return;
-    if (ed.tap && (e.code === "Space" || e.key === " ")) {
-      e.preventDefault();
-      if (!ed.player) return;
-      const t = Math.max(0, ed.player.time() - 0.12);   // ~reaction time
-      ed.d.lines[ed.sel] = moveLineTo(ed.d.lines[ed.sel], t);
-      ed.dirty = true;
-      const row = $(`[data-line="${ed.sel}"] .tc`); if (row) row.textContent = fmtTime(t);
-      if (ed.sel < ed.d.lines.length - 1) edSelect(ed.sel + 1); else edStopTap();
-      return;
-    }
-    if (e.key === "Escape" && (ed.tap || ed.split)) { e.preventDefault(); ed.split = false; edStopTap(); edPaintTl(); }
-  }
-  function edStopTap() { ed.tap = false; if (ed.player) ed.player.pause(); edPaintTools(); }
-  function edPaintSave() {
-    const d = ed.d, bar = $('[data-r="save"]'); if (!bar) return;
-    if (!d.level && d.lines.length) d.level = suggestLevel(d);
-    const problems = validate(d, true);
-    bar.innerHTML = `<div class="chips">${S.lists.map(l => `<button class="chip${(d.lists || []).includes(l.id) ? " on" : ""}" data-a="ed-list" data-id="${l.id}">${esc(l.name)}</button>`).join("")}</div>
-      <label class="lab" style="flex-direction:row;align-items:center;gap:6px">Level<select data-f="level">${["Easy", "Medium", "Hard"].map(v => `<option${d.level === v ? " selected" : ""}>${v}</option>`).join("")}</select></label>
-      <span class="sp"></span>
-      ${problems.length ? `<span class="muted" style="font-size:13px">To publish: ${problems.map(esc).join(" · ")}</span>` : ""}
-      <button class="btn btn-g" data-a="ed-cancel">Cancel</button>
-      <button class="btn btn-g" data-a="ed-save" data-v="draft">Save draft</button>
-      <button class="btn btn-b" data-a="ed-save" data-v="publish"${problems.length ? " disabled" : ""}>Publish</button>`;
-  }
-  function validate(d, forPublish) {
-    const p = [];
-    if (!d.title.trim()) p.push("song title");
-    if (!forPublish) return p;
-    if (!d.youtube) p.push("YouTube link");
-    if (d.source === "cc" && !d.licence.trim()) p.push("licence");
-    if (d.source === "cc" && !d.credit.trim()) p.push("credit");
-    if (!d.lines.length) p.push("lyrics (.beat.json)");
-    return p;
-  }
-  async function edSave(mode, btn) {
-    const d = ed.d, publish = mode === "publish";
-    const problems = validate(d, publish);
-    if (problems.length) { toast("Missing: " + problems.join(", ")); return; }
-    if (d.source === "own" && !d.artist) d.artist = "Andrew Classes";
-    d.draft = !publish;
-    if (!d.duration && d.lines.length) d.duration = d.lines[d.lines.length - 1].e + 2;
-    if (!d.level) d.level = suggestLevel(d);
-    btn.disabled = true;
-    try {
-      const id = await store.saveSong(d);
-      const old = songById(id);
-      const saved = { ...(old || {}), ...JSON.parse(JSON.stringify(d)), id, board: old?.board || {}, createdAt: old?.createdAt || Date.now(), updatedAt: Date.now() };
-      replaceSong(saved);
-      ed.dirty = false;
-      toast(publish ? "Published — students can play it now" : "Draft saved");
-      go("song", { song: saved });
-    } catch (e) { btn.disabled = false; toast("Could not save — " + (e.message || "check the connection")); }
-  }
-  async function edCheck() {
-    const d = ed.d, raw = $('[data-r="link"]').value.trim();
-    const id = youtubeId(raw);
-    ed.msg = ""; ed.info = null;
-    if (!id) { ed.msg = "That does not look like a YouTube link."; ed.msgKind = "bad"; edPaint1(); return; }
-    d.youtube = id; d.link = raw; ed.dirty = true;
-    edPaint1();
-    const info = await videoInfo(id);
-    if (!ed) return;
-    if (!info) { ed.msg = "Could not read this video (wrong link, private video, or no internet)."; ed.msgKind = "bad"; }
-    else {
-      ed.info = info; d.channel = info.channel;
-      if (!d.title) d.title = info.title.replace(/\s*[\(\[][^)\]]*(lyrics|official|no copyright|audio|video)[^)\]]*[\)\]]\s*/gi, " ").replace(/\s*[–-]\s*[^–-]+$/, "").trim() || info.title;
-      ed.msg = `Found: <b>${esc(info.title)}</b>`; ed.msgKind = "ok";
-    }
-    edPaint1(); edPaint2(); edPaintSave(); edEnsurePlayer();
-  }
-  // <select data-f> changes (text inputs are handled live by the "input" listener)
-  function edField(el) {
-    const d = ed.d, f = el.dataset.f;
-    if (f === "licpick") {
-      ed.otherLic = el.value === "__other";
-      if (ed.otherLic) { if (LICENCES.includes(d.licence)) d.licence = ""; }
-      else d.licence = el.value;
-    } else d[f] = el.value;
-    ed.dirty = true;
-    if (f === "source" || f === "licpick") edPaint1();
-    edPaintSave();
-  }
-
   // -------------------------------------------------------------- events
   root.addEventListener("click", e => {
     const b = e.target.closest("[data-a]"); if (!b || !root.contains(b)) return;
@@ -850,24 +475,11 @@ export function mountMyBeat(root, ctx = {}) {
       case "exit": if (ctx.onExit) ctx.onExit(); return;
       case "home": return go("home");
       case "reload": return load();
-      case "new": S.editId = null; return go("edit");
       case "open": { const s = songById(id); if (s) go("song", { song: s, lbClass: "" }); return; }
       case "lv": S.lvFilter = v; viewEl.innerHTML = homeHtml(); return;
-      case "list-new": S.newList = true; viewEl.innerHTML = homeHtml(); $('[data-r="newlist"]')?.focus(); return;
-      case "list-new-cancel": S.newList = false; viewEl.innerHTML = homeHtml(); return;
-      case "list-add": return addList();
-      case "list-edit": S.listEdit = id; viewEl.innerHTML = homeHtml(); $('[data-r="listname"]')?.focus(); return;
-      case "list-cancel": S.listEdit = null; viewEl.innerHTML = homeHtml(); return;
-      case "list-save": return renameList(id);
-      case "list-del": return deleteList(id);
       case "mode": S.mode = v; viewEl.innerHTML = songHtml(); return;
       case "level": S.level = v; viewEl.innerHTML = songHtml(); return;
       case "lbclass": S.lbClass = v; viewEl.innerHTML = songHtml(); return;
-      case "pop": S.pop = S.pop === v ? "" : v; viewEl.innerHTML = songHtml(); return;
-      case "pop-close": S.pop = ""; viewEl.innerHTML = songHtml(); return;
-      case "toggle-list": return toggleSongList(id);
-      case "delete-yes": return deleteSong();
-      case "edit": S.editId = S.song.id; return go("edit");
       case "start": return go("play", { result: null });
       case "song": return go("song");
       case "next-level": { const i = LEVELS.findIndex(l => l.id === (S.result?.level || S.level)); S.level = LEVELS[Math.min(3, i + 1)].id; return go("play", { result: null }); }
@@ -879,139 +491,19 @@ export function mountMyBeat(root, ctx = {}) {
       case "keep": if (g) { g.round.keepPractising(); overlay(""); g.running = true; g.userPaused = false; const c = g.round.current(); if (c != null) { g.player.seek(Math.max(0, g.round.lineOf(c).start - RULES.replayLead)); g.hold = performance.now() + 450; } g.player.play(); } return;
       case "save-score": return saveScore(b);
       case "quickname": { const inp = $('[data-r="savename"]'); if (inp) inp.value = v; return; }
-      // editor
-      case "ed-cancel": {
-        if (ed && ed.dirty) { confirmInline("Leave without saving your changes?").then(y => { if (y) { ed.dirty = false; S.editId ? go("song") : go("home"); } }); return; }
-        return S.editId ? go("song") : go("home");
-      }
-      case "ed-check": return edCheck();
-      case "ed-autofetch": return edAutoFetch();
-      case "ed-cancelfetch": if (ed && ed.watch) ed.watch.cancelRef.cancelled = true; return;
-      case "ed-forgetfolder": e.preventDefault(); return edForgetQueueFolder();
-      case "ed-togglemanual": e.preventDefault(); ed.showManual = !ed.showManual; edPaint2(); return;
-      case "ed-copy": {
-        const txt = $('[data-r="cmd"]').textContent;
-        (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast("Command copied")).catch(() => {
-          const r = document.createRange(); r.selectNodeContents($('[data-r="cmd"]')); getSelection().removeAllRanges(); getSelection().addRange(r); toast("Press Ctrl+C to copy");
-        });
-        return;
-      }
-      case "ed-playline": {
-        const i = +b.dataset.i; edSelect(i);
-        if (!ed.player) { toast("Add the YouTube link (step 1) to listen."); return; }
-        const l = ed.d.lines[i]; ed.player.seek(Math.max(0, l.s[0] - 0.3)); ed.player.play(); ed.stopAt = l.e + 0.35; return;
-      }
-      case "ed-tok": {
-        const i = +b.dataset.i, k = +b.dataset.k, l = ed.d.lines[i];
-        if (ed.split && i === ed.sel && k > 0) return edSplit(i, k);
-        if (i !== ed.sel) edSelect(i);
-        const n = new Set(l.n || []); n.has(k) ? n.delete(k) : n.add(k); l.n = [...n].sort((x, y) => x - y);
-        b.classList.toggle("never", n.has(k)); ed.dirty = true; return;
-      }
-      case "ed-okline": { const l = ed.d.lines[+b.dataset.i]; l.c = []; ed.dirty = true; edPaintTl(); return; }
-      case "ed-editline": ed.editLine = +b.dataset.i; ed.sel = ed.editLine; edPaintTl(); return;
-      case "ed-tap": {
-        if (ed.tap) return edStopTap();
-        if (!ed.player) { toast("Add the YouTube link (step 1) to tap along."); return; }
-        ed.tap = true; ed.split = false; ed.stopAt = 0;
-        const l = ed.d.lines[ed.sel]; ed.player.seek(Math.max(0, l.s[0] - 3)); ed.player.play(); edPaintTools(); return;
-      }
-      case "ed-nudge": { const dt = +v; ed.d.lines[ed.sel] = shiftLine(ed.d.lines[ed.sel], dt); ed.dirty = true; edPaintTl(); return; }
-      case "ed-split": ed.split = !ed.split; ed.tap = false; edPaintTl(); return;
-      case "ed-join": return edJoin();
-      case "ed-section": return edToggleSection();
-      case "ed-delline": return edDeleteLine();
-      case "ed-list": { const d = ed.d, set = new Set(d.lists || []); set.has(id) ? set.delete(id) : set.add(id); d.lists = [...set]; ed.dirty = true; edPaintSave(); return; }
-      case "ed-save": return edSave(v, b);
     }
     // a click on a line row (not on its buttons) selects it
   });
-  root.addEventListener("click", e => {
-    if (S.view !== "edit" || !ed) return;
-    const row = e.target.closest(".tl-line");
-    if (row && !e.target.closest("button,input")) edSelect(+row.dataset.line);
-  });
   root.addEventListener("input", e => {
     if (e.target.matches('[data-r="q"]')) { S.q = e.target.value; viewEl.innerHTML = homeHtml(); }
-    if (S.view === "edit" && ed && e.target.matches("[data-f]") && e.target.tagName === "INPUT") { ed.d[e.target.dataset.f] = e.target.value; ed.dirty = true; if (e.target.dataset.f === "title") { edPaint2(); } edPaintSave(); }
   });
   root.addEventListener("change", e => {
     if (e.target.matches('[data-r="savecls"]')) { S.saveCls = e.target.value; const name = $('[data-r="savename"]')?.value || ""; viewEl.innerHTML = resultHtml(); const n = $('[data-r="savename"]'); if (n) n.value = name; return; }
-    if (S.view === "edit" && ed && e.target.matches("select[data-f]")) edField(e.target);
   });
   root.addEventListener("keydown", e => {
-    if (e.key === "Enter" && e.target.matches('[data-r="newlist"]')) { e.preventDefault(); addList(); }
-    if (e.key === "Enter" && e.target.matches('[data-r="listname"]')) { e.preventDefault(); renameList(S.listEdit); }
     if (e.key === "Enter" && e.target.matches('[data-r="savename"]')) { e.preventDefault(); const b = root.querySelector('[data-a="save-score"]'); if (b) saveScore(b); }
-    if (e.key === "Enter" && e.target.matches('[data-r="link"]')) { e.preventDefault(); edCheck(); }
   });
 
-  // -------------------------------------------------------------- lists / songs
-  async function addList() {
-    const name = ($('[data-r="newlist"]')?.value || "").trim();
-    if (!name) return;
-    const lists = [...S.lists, { id: "l_" + Date.now().toString(36), name }];
-    try { await store.saveLists(lists); S.lists = lists; S.newList = false; viewEl.innerHTML = homeHtml(); toast(`List “${name}” added`); }
-    catch (e) { toast("Could not save — " + e.message); }
-  }
-  async function renameList(id) {
-    const name = ($('[data-r="listname"]')?.value || "").trim(); if (!name) return;
-    const lists = S.lists.map(l => l.id === id ? { ...l, name } : l);
-    try { await store.saveLists(lists); S.lists = lists; S.listEdit = null; viewEl.innerHTML = homeHtml(); }
-    catch (e) { toast("Could not save — " + e.message); }
-  }
-  async function deleteList(id) {
-    const lists = S.lists.filter(l => l.id !== id);
-    try {
-      await store.saveLists(lists);
-      // songs keep working; the stale list id is removed the next time each song is saved
-      S.lists = lists; S.listEdit = null; viewEl.innerHTML = homeHtml(); toast("List deleted (the songs are kept)");
-    } catch (e) { toast("Could not save — " + e.message); }
-  }
-  async function toggleSongList(listId) {
-    const s = S.song, set = new Set((s.lists || []).filter(id => S.lists.some(l => l.id === id)));
-    set.has(listId) ? set.delete(listId) : set.add(listId);
-    const lists = [...set];
-    try { await store.saveSong({ id: s.id, lists }); s.lists = lists; replaceSong(s); viewEl.innerHTML = songHtml(); }
-    catch (e) { toast("Could not save — " + e.message); }
-  }
-  async function deleteSong() {
-    const s = S.song;
-    try { await store.deleteSong(s.id); S.songs = S.songs.filter(x => x.id !== s.id); toast(`“${s.title}” deleted`); go("home"); }
-    catch (e) { toast("Could not delete — " + e.message); }
-  }
-
-  // -------------------------------------------------------------- editor line tools
-  function edSplit(i, k) {
-    const d = ed.d, l = d.lines[i], toks = l.x.split(" ");
-    const pick = (arr, lo, hi) => (arr || []).filter(x => x >= lo && x < hi).map(x => x - lo);
-    const a = { x: toks.slice(0, k).join(" "), s: l.s.slice(0, k), e: l.s[k], c: pick(l.c, 0, k), n: pick(l.n, 0, k) };
-    const b = { x: toks.slice(k).join(" "), s: l.s.slice(k), e: l.e, c: pick(l.c, k, toks.length), n: pick(l.n, k, toks.length) };
-    d.lines.splice(i, 1, a, b);
-    d.sections.forEach(s => { if (s.from > i) s.from++; });
-    ed.split = false; ed.dirty = true; edPaintTl(); edPaintSave();
-  }
-  function edJoin() {
-    const d = ed.d, i = ed.sel; if (i >= d.lines.length - 1) return;
-    const a = d.lines[i], b = d.lines[i + 1], off = a.x.split(" ").length;
-    d.lines.splice(i, 2, { x: a.x + " " + b.x, s: [...a.s, ...b.s], e: b.e, c: [...(a.c || []), ...(b.c || []).map(x => x + off)], n: [...(a.n || []), ...(b.n || []).map(x => x + off)] });
-    d.sections = d.sections.filter(s => s.from !== i + 1).map(s => s.from > i + 1 ? { ...s, from: s.from - 1 } : s);
-    ed.dirty = true; edPaintTl(); edPaintSave();
-  }
-  function edToggleSection() {
-    const d = ed.d, i = ed.sel; if (i === 0) return;
-    const at = d.sections.findIndex(s => s.from === i);
-    if (at >= 0) d.sections.splice(at, 1);
-    else { d.sections.push({ name: "Chorus", from: i, guess: false }); d.sections.sort((x, y) => x.from - y.from); }
-    ed.dirty = true; edPaintTl();
-  }
-  function edDeleteLine() {
-    const d = ed.d, i = ed.sel; if (!d.lines.length) return;
-    d.lines.splice(i, 1);
-    d.sections = d.sections.filter(s => s.from !== i || i === 0).map(s => s.from > i ? { ...s, from: s.from - 1 } : s).filter(s => s.from < d.lines.length);
-    if (d.lines.length && !d.sections.some(s => s.from === 0)) d.sections.unshift({ name: "Verse 1", from: 0, guess: true });
-    ed.sel = Math.min(i, d.lines.length - 1); ed.dirty = true; edPaintTl(); edPaintSave();
-  }
 
   load();
   return function dispose() {

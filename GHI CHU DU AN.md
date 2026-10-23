@@ -546,6 +546,27 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 574 (23/10/2026) — MY BEAT: BỎ MÀN SOẠN BÀI, AWord chỉ còn CHƠI · soạn bài dời sang app myStudio v0.3.0 (thẻ myBeat)
+- Thầy: "đổi công đoạn chuẩn bị về app myStudio trên máy, thêm 1 tab chức năng là myBeat… còn việc chơi và sử dụng được làm ở
+  trên AWord" ⇒ AskUserQuestion: chuyển TRỌN 4 bước, **bỏ hẳn màn soạn** ở AWord; mẫu v2 (bỏ giấy phép, "chỉ nhận link và tạo bài")
+  `D:\OTHERS\CLAUDE\myStudio - thiet ke\mybeat-v2.html` ⇒ "ok build".
+- Gốc: soạn bài cũ cần `mybeat-watch.bat` + trình duyệt chọn thư mục Desktop\MyBeatQueue — kẹt "Sending the link…" từ 25/9 (hàng
+  đợi trống trơn). AWord chưa có bài My Beat nào (đọc kho 23/10).
+- `games/mybeat/mybeat.js` 1025 → ~515 dòng: bỏ nút **New song**, màn **Editor** (+ cầu nối watcher, File System Access, IndexedDB
+  `mybeat-watch`), nút **Edit song / Lists / Xoá** ở trang bài, **sửa/thêm/xoá danh sách** ở trang chủ (danh sách rỗng thì ẩn).
+  Trang chủ trống ⇒ "Songs are made in the myBeat tab of the myStudio app…" + nút Demo. Luật chơi / bảng xếp hạng / lưu điểm
+  KHÔNG đổi. Xoá `tools/mybeat-prepare.py`, `mybeat-watch.py`, `mybeat-watch.bat` (thành `src/main/py/mybeat_lam.py` của myStudio).
+- myStudio ghi bài thẳng vào `users/{uid}/items/mb_…` (kind `mybeat-song`, đúng dạng mb-core.js, `source:"own"`, updateMask ⇒
+  KHÔNG đụng `board`) + `items/aw-mybeat` (danh sách). Không cần luật Firestore mới (khoá quản trị).
+- ⛔ myStudio CHÉP `pickGaps/flatten/suggestLevel/retimeLine/shiftLine/moveLineTo` của `mb-core.js` (`src/renderer/js/mybeat-luat.js`)
+  — đổi luật chỗ trống ở đây thì chép sang đó.
+- Thử: `test.html?seed=…lie2you.beat.json` (server 8974): trang chủ không còn New song/Edit/New list, trang bài không còn
+  Edit/Lists/Xoá, Start ⇒ màn chơi 106 chỗ, console 0 lỗi. Bài thật đăng từ myStudio (nháp `mb_mvkhkgn6ebdnk`) đọc lại qua REST:
+  chỗ trống 4 cấp mb-core.js = bản chép myStudio (53/106/195/354), `Round` Choice Beginner điền 53/53; đăng lại giữ nguyên `board`.
+- ⬜ Thầy: soạn 1 bài thật ở myStudio ▸ myBeat → Đăng → GAMES ▸ My Beat chơi trên lớp. Bài thử "Lie 2 You" đang là NHÁP.
+
+---
+
 ## Đợt 573 (22/10/2026) — THẦY THẢ TIM + CHAT NHANH khi xem trực tiếp (bong bóng trong khung game) · myLesson web v1.404.0
 - Thầy yêu cầu: trong lúc XEM TRỰC TIẾP (Đợt 496), thầy thả tim + nhắn; em xem được, thả tim lại, trả lời nhanh. Thiết kế qua 6 vòng
   mẫu, thầy CHỐT mẫu v6: `D:\OTHERS\CLAUDE\myLesson - thiet ke tim chat quan sat\mau-v6.html` + `THIET KE v1.md` (mục 6–10).

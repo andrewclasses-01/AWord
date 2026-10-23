@@ -136,7 +136,8 @@ export const fmtTime = t => {
 };
 
 // ---------------------------------------------------------------- import
-// A .beat.json from tools/mybeat-prepare.py -> the fields a song keeps.
+// A .beat.json package -> the fields a song keeps (now only used by test.html ?seed=;
+// Đợt 574: songs are made in myStudio ▸ myBeat, tools/mybeat-prepare.py is gone).
 export function fromPackage(pkg) {
   if (!pkg || typeof pkg !== "object") throw new Error("This file is not a My Beat package.");
   if (!Array.isArray(pkg.lines) || !pkg.lines.length) throw new Error("The package has no lyrics lines.");
