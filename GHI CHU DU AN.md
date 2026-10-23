@@ -546,6 +546,31 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 576 (23/10/2026) — iPad RUNNING: vẽ lại cho iPad NẰM NGANG + ôn từ sau trận + đội chờ sáng hơn + đầu bo tròn
+- Thầy: "Sau khi xong 1 ván … trên ipad sẽ hiện ra các từ đã chơi (xanh lá) và các từ chưa chơi (màu trắng) … in đậm, to, rõ ràng để
+  học sinh học cùng nhau. Bấm vào từ nào thì hiển thị chọn từ đó cho dễ nhìn · ô TEAM X, PART A và đồng hồ bo tròn các nút · ở đội chưa
+  chơi, từ đang chờ sắp đến lượt hiển thị sáng và nổi bật hơn". Mẫu 2 (dọc) ⇒ thầy chọn PASS màu VÀNG riêng + "tối ưu cho ipad nằm
+  ngang. Tôi luôn sử dụng ipad nằm ngang" ⇒ mẫu 3 `D:\OTHERS\CLAUDE\AWord - thiet ke Running setup iPad\mau-3-ipad-ngang.html` ⇒ duyệt.
+- `run.html` + `run.js` (chỉ màn iPad; logic nối không đổi): khung luôn NGANG 4:3, `--u` = 1% bề ngang khung; cầm dọc ⇒ khung ngang thu
+  nhỏ giữa màn. RW đang chơi = từ đang chơi to bên TRÁI (60%) + 4 từ kế bên PHẢI · đầu = thẻ bo tròn (‹ tròn, tên đội, viên PART,
+  "word n / N", viên đồng hồ) · đội chờ: từ sắp đến vẫn sáng (nền trắng xám, viền màu đội, nhãn NEXT UP), 4 từ sau mờ, viên
+  "⏳ TEAM A is playing" trên đầu (thay ô WAITING đè giữa màn) · PAUSED thành viên vàng trên đầu.
+- HẾT TRẬN (máy chiếu phase "over") ⇒ ÔN TỪ: lưới 4 cột chữ đậm (xanh lá đúng · vàng PASS · trắng chưa chơi · viền vàng = từ đang làm
+  dở), đầu ghi "time left" + viên ✓ đúng/tổng; chạm ⇒ thẻ to (№, từ, IPA, nhãn CORRECT/PASSED/NOT PLAYED), chạm ra ngoài để đóng.
+- RT ngang: READY = tên to trái + số đếm vàng phải + "next" · câu hỏi = trái "NOW READING" + tên + "then pass the iPad to …", phải thẻ TỪ.
+- Máy chiếu (`running-word.js` publishLink) gửi thêm `rows` (chuỗi o/p/- mỗi đội, đổi mỗi nước đi) và `ipa` (đi cùng danh sách, chỉ khi đổi).
+- Chữ tự vừa hộp (`.fit` + `--f`): ⛔ hộp CĂN GIỮA đo theo bề rộng ruột hộp (chữ tràn hai bên — bẫy Đợt 222/371 lặp lại ngay trong mẫu),
+  cột lưới phải `minmax(0, …fr)` (không thì chữ to nới cột, cột kia bị lẹm), đo lại sau `document.fonts.ready`.
+- Thử (`scratch/dot575-rw|rt.html?padsig=local` + 2 tab `run.html?padsig=local&padkeep` khung 1024×768): A đang chơi / B chờ đúng mẫu,
+  chơi đúng + PASS rồi Menu ▸ Submit ⇒ lưới ôn từ 3 xanh 1 vàng + viền vàng từ dở, chạm PLAGUE ⇒ thẻ NOT PLAYED; không chữ nào tràn hộp;
+  RT ngang đúng mẫu, tab thứ 2 bị từ chối; khung dọc 768×1024 ⇒ khung ngang nằm giữa; console 0 lỗi. Act thử không có IPA nên chưa
+  thấy dòng IPA trên thẻ.
+
+VIỆC ĐANG CHỜ:
+- ⬜ Thầy thử iPad thật nằm ngang (cùng việc chờ của Đợt 575: chưa chạy Firestore thật) · xem IPA trên thẻ với act có cột IPA.
+
+---
+
 ## Đợt 575 (23/10/2026) — RUNNING WORD + RUNNING TEAM: vào thẳng màn setup, Options nằm trên màn đó, nối iPad, Running team chơi nốt từ cuối
 - Thầy: "Màn start của 2 game hơi thừa… khi mở game là vào luôn màn chờ thiết lập thông số · đưa hết options vào màn start running
   và start match, bỏ nút Options, không cần STYLE nhưng vẫn có apply · thêm 1 nút kết nối ipad (Running team 1 iPad hiện từng người,

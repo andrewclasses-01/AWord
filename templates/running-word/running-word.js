@@ -723,15 +723,24 @@ const rwTemplate = {
         idx: { a: idx.a, b: idx.b },
         names: { a: cfg.names.a, b: cfg.names.b },
         parts: { a: partLabel("a"), b: partLabel("b") },
-        total: { a: current.a.length, b: current.b.length }
+        total: { a: current.a.length, b: current.b.length },
+        // Đợt 576 — từng ô: o = đúng · p = PASS · - = chưa (màn ôn từ sau trận trên iPad)
+        rows: { a: rows.a.map(rowCode).join(""), b: rows.b.map(rowCode).join("") }
       };
       const key = JSON.stringify(st);
       if (!force && key === lastPubKey && listKey === lastListKey) return;
       lastPubKey = key;
       const patch = { ...st, clock: { a: Math.round(clock.a), b: Math.round(clock.b) }, ticking: phase === "play" && !paused };
-      if (force || listKey !== lastListKey) { patch.lists = { a: current.a.slice(), b: current.b.slice() }; lastListKey = listKey; }
+      if (force || listKey !== lastListKey) {
+        patch.lists = { a: current.a.slice(), b: current.b.slice() };
+        // Đợt 576 — IPA đi kèm danh sách (thẻ phóng to trên màn ôn từ); từ không có IPA = ""
+        patch.ipa = { a: current.a.map(w => ipaMap.get(String(w).toUpperCase()) || ""), b: current.b.map(w => ipaMap.get(String(w).toUpperCase()) || "") };
+        lastListKey = listKey;
+      }
       link.publish(patch);
     }
+
+    function rowCode(st) { return st === "ok" ? "o" : st === "pass" ? "p" : "-"; }
 
     // ----- small builders for the option cells (sizes in --aw-u, see running-word.css) -----
     function optLabel(label, sub) {

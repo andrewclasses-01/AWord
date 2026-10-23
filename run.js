@@ -7,6 +7,12 @@
 //     màn tối + ô WAITING (vẫn thấy từ sắp tới để chuẩn bị).
 //   RUNNING TEAM — MỘT iPad chuyền tay: READY/3-2-1 = tên em to + số đếm (chưa hiện từ) · 6 ô hiện trên màn chiếu = tên em,
 //     số thứ tự và TỪ thật to · dải dưới "NEXT: <em kế tiếp>" · đồng hồ tổng về 0 ⇒ đỏ nháy + LAST WORD.
+// ⭐ Đợt 576 (thầy: "tôi luôn sử dụng ipad nằm ngang") — mọi màn vẽ lại cho iPad NẰM NGANG (khung 4:3; cầm dọc thì khung ngang
+//   thu nhỏ giữa màn), mẫu D:\OTHERS\CLAUDE\AWord - thiet ke Running setup iPad\mau-3-ipad-ngang.html:
+//   RW đang chơi = từ đang chơi to bên TRÁI (60%), 4 từ kế bên PHẢI · đầu là thẻ BO TRÒN (‹, tên đội, viên PART, viên đồng hồ) ·
+//   đội chờ: từ sắp đến vẫn SÁNG (nền trắng xám, viền màu đội, nhãn NEXT UP), viên "TEAM A is playing" trên đầu ·
+//   HẾT TRẬN = ÔN TỪ: lưới 4 cột chữ đậm (xanh lá đúng · vàng PASS · trắng chưa chơi · viền vàng = từ làm dở), chạm ⇒ thẻ to + IPA.
+//   RT: READY = tên to trái + số đếm phải · câu hỏi = tên + "pass the iPad to" trái, thẻ TỪ phải.
 // iPad chỉ VẼ (core/run-link.js): máy chiếu quyết mọi thứ, iPad báo danh để máy chiếu biết "đội A đã có iPad".
 // Vào trang: pad.html (cổng iPad chung) tự chuyển sang đây khi máy chiếu mở Running word / team với nút iPad bật,
 //   và trang này tự quay về pad.html khi máy chiếu mở game khác (giống source.html của Rocket Race).
@@ -27,29 +33,35 @@ const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").re
 const fmtClock = ms => { const t = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(t / 60) + ":" + String(t % 60).padStart(2, "0"); };
 const TEAMS = ["a", "b"];
 
-// ---- `--u` = 1% bề ngang của CỘT. Cột giữ tỉ lệ dọc 3:4 (iPad xoay ngang thì cột hẹp lại ở giữa màn). ----
+// ---- `--u` = 1% bề ngang KHUNG. Khung luôn NGANG 4:3 (Đợt 576); iPad cầm dọc thì khung nằm giữa màn. ----
 const col = document.createElement("div");
 col.className = "col";
 runEl.append(col);
 function setUnit() {
-  const w = Math.min(window.innerWidth, window.innerHeight * 0.78);
+  const w = Math.min(window.innerWidth, window.innerHeight * 4 / 3);
   col.style.width = w + "px";
+  col.style.height = (w * 3 / 4) + "px";
   col.style.setProperty("--u", (w / 100).toFixed(3) + "px");
   fitAll();
 }
 window.addEventListener("resize", setUnit);
 
-// Chữ không bao giờ tràn: đo một lần ở cỡ gốc rồi nhân --fit (cỡ chữ tỉ lệ thẳng với --fit).
-function fitAll() {
-  col.querySelectorAll("[data-fit]").forEach(w => {
-    w.style.setProperty("--fit", "1");
-    const box = w.parentElement, cs = getComputedStyle(box);
-    const right = box.getBoundingClientRect().right - parseFloat(cs.paddingRight || 0);
-    const r = w.getBoundingClientRect();
-    const avail = right - r.left - 2;
-    if (r.width > avail && avail > 0) w.style.setProperty("--fit", (avail / r.width).toFixed(3));
+// Chữ to nhất mà vẫn vừa hộp: đo ở cỡ gốc rồi nhân --f (cỡ chữ tỉ lệ thẳng với --f).
+// ⛔ Hộp CĂN GIỮA (cột flex / khối): chữ tràn ra CẢ HAI bên ⇒ đo theo bề rộng ruột hộp, không theo mép trái của chữ
+//    (cùng lời nói dối của scrollWidth trong hộp căn giữa — bẫy Đợt 222 / 371).
+function fitAll(root = col) {
+  root.querySelectorAll(".fit").forEach(t => {
+    t.style.setProperty("--f", "1");
+    const box = t.parentElement, cs = getComputedStyle(box);
+    const r = t.getBoundingClientRect();
+    if (!r.width) return;
+    const padL = parseFloat(cs.paddingLeft) || 0, padR = parseFloat(cs.paddingRight) || 0;
+    const centred = cs.flexDirection === "column" || cs.display === "block";
+    const avail = centred ? box.clientWidth - padL - padR - 1 : box.getBoundingClientRect().right - padR - r.left - 1;
+    if (r.width > avail && avail > 0) t.style.setProperty("--f", (avail / r.width).toFixed(3));
   });
 }
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitAll());
 
 // ---------------------------------------------------------------- trạng thái
 let link = null;           // tài liệu run_link mới nhất
@@ -94,15 +106,15 @@ function route() {
 }
 
 function showTaken(text, canChoose) {
-  view = "taken";
-  col.innerHTML = `<div class="rw-msg"><b>iPad not needed</b><span>${esc(text)}</span>${canChoose ? `<button class="pickother" style="margin-top:4vw;padding:2.4vw 6vw;border-radius:3vw;border:0;font-weight:800;font-size:4vw;cursor:pointer">Choose the other team</button>` : ""}</div>`;
+  view = "taken"; col.dataset.sig = ""; col.className = "col";
+  col.innerHTML = `<div class="msg"><b>iPad not needed</b><span>${esc(text)}</span>${canChoose ? `<button class="pickother">Choose the other team</button>` : ""}</div>`;
   const b = col.querySelector(".pickother");
   if (b) b.onclick = () => { stopSeat(); manualChoose = true; route(); };
 }
 
 function drawWait() {
-  view = "wait";
-  col.innerHTML = `<div class="rw-msg"><b>RUNNING</b><span>Waiting for the game on the classroom screen…</span></div>`;
+  view = "wait"; col.dataset.sig = ""; col.className = "col";
+  col.innerHTML = `<div class="msg"><b>RUNNING</b><span>Waiting for the game on the classroom screen…</span></div>`;
 }
 
 // ---------------------------------------------------------------- màn chọn đội (Running word)
@@ -111,13 +123,13 @@ function drawChooser() {
   const busy = TEAMS.map((t, i) => ownedByOther(link, i));
   const sig = "chooser|" + names.a + names.b + busy.join();
   if (view === "chooser" && col.dataset.sig === sig) return;
-  view = "chooser"; col.dataset.sig = sig;
+  view = "chooser"; col.dataset.sig = sig; col.className = "col";
   col.innerHTML = `<div class="pick"><h2>RUNNING WORD</h2><p>Which team holds this iPad?</p>
-    ${TEAMS.map((t, i) => `<button data-t="${i}" class="${busy[i] ? "is-taken" : ""}" style="background:${i ? "#f59e0b" : "#3b82f6"}">${esc(names[t])}<small>${busy[i] ? "✓ ALREADY HAS AN iPAD" : "PART " + t.toUpperCase()}</small></button>`).join("")}
-    <p class="msg"></p></div>`;
+    <div class="two">${TEAMS.map((t, i) => `<button data-t="${i}" class="tm${busy[i] ? " is-taken" : ""}" style="background:${i ? "#f59e0b" : "#3b82f6"}">${esc(names[t])}<small>${busy[i] ? "✓ ALREADY HAS AN iPAD" : "PART " + t.toUpperCase()}</small></button>`).join("")}</div>
+    <p class="warn"></p></div>`;
   col.querySelectorAll("button[data-t]").forEach(b => b.onclick = () => {
     const i = +b.dataset.t;
-    if (busy[i]) { col.querySelector(".msg").textContent = `${names[TEAMS[i]]} already has an iPad. Choose the other team.`; return; }
+    if (busy[i]) { col.querySelector(".warn").textContent = `${names[TEAMS[i]]} already has an iPad. Choose the other team.`; return; }
     saveTeam(i); manualChoose = false; col.dataset.sig = ""; route();
   });
 }
@@ -128,46 +140,85 @@ function rwClock(t) {
   if (l.ticking && l.turn === t) return Math.max(0, c - (performance.now() - linkAt));
   return c;
 }
+const fitSpan = (txt, cls = "t") => `<span class="${cls} fit">${esc(txt)}</span>`;
 function drawRW(t) {
   const l = link || {};
   const i = TEAMS.indexOf(t);
   const names = l.names || {}, parts = l.parts || {};
   const list = (l.lists && Array.isArray(l.lists[t])) ? l.lists[t] : [];
+  const ipa = (l.ipa && Array.isArray(l.ipa[t])) ? l.ipa[t] : [];
+  const rowStr = (l.rows && typeof l.rows[t] === "string") ? l.rows[t] : "";
   const idx = (l.idx && Number(l.idx[t])) || 0;
   const total = (l.total && Number(l.total[t])) || list.length;
   const phase = l.phase || "setup";
-  const waiting = (phase === "play" || phase === "prep") && !!l.turn && l.turn !== t;
   const other = TEAMS[1 - i];
+  const waiting = (phase === "play" || phase === "prep") && !!l.turn && l.turn !== t;
+  const paused = phase === "play" && !!l.paused;
+  const over = phase === "over" && list.length > 0;
 
-  let body;
-  if (phase === "setup" || phase === "off" || !list.length) {
-    body = `<div class="rw-msg"><b>GET READY</b><span>Waiting for START MATCH on the classroom screen…</span></div>`;
-  } else if (phase === "over") {
-    body = `<div class="rw-msg"><b>MATCH OVER</b><span>Look at the classroom screen.</span></div>`;
-  } else if (idx >= list.length) {
-    body = `<div class="rw-msg"><b>ALL DONE!</b><span>Your team finished its list.</span></div>`;
-  } else {
-    let rows = "";
-    for (let k = 0; k < 5; k++) {
-      const w = list[idx + k]; if (w == null) break;
-      rows += `<div class="rw-word ${k === 0 ? "is-cur" : "n" + k}"><span class="no">${idx + k + 1}</span><span class="w" data-fit>${esc(String(w).toUpperCase())}</span></div>`;
-    }
-    body = `<div class="rw-list">${rows}</div>`;
-  }
-  const sig = JSON.stringify([t, phase, waiting, l.paused, idx, list[idx], list.length, names[t], parts[t], names[other]]);
+  const sig = JSON.stringify([t, phase, waiting, paused, idx, list.length, list[idx], rowStr, names[t], parts[t], names[other]]);
   if (view === "rw" && col.dataset.sig === sig) { paintRWClock(t); return; }
   view = "rw"; col.dataset.sig = sig;
-  col.className = "col rw is-" + t + (waiting ? " is-waiting" : "") + (l.paused && phase === "play" ? " is-paused" : "");
-  col.innerHTML = `<button class="back" title="Choose team">‹</button>
-    <div class="rw-top"><div class="rw-team">${esc(names[t] || "TEAM " + t.toUpperCase())}<small>${esc(parts[t] || "PART " + t.toUpperCase())}</small></div><div class="rw-clock">${fmtClock(rwClock(t))}</div></div>
-    ${body}
-    <div class="rw-foot"><span>${list.length && idx < total ? `word ${idx + 1} / ${total}` : ""}</span><span>${list.length ? Math.max(0, total - idx) + " left" : ""}</span></div>
-    <div class="wait-badge"><b>WAITING</b><span>${esc(names[other] || "")} is playing</span></div>
-    <div class="paused">PAUSED</div>`;
+  col.className = "col rw is-" + t + (waiting ? " is-waiting" : "");
+
+  const teamName = esc(names[t] || "TEAM " + t.toUpperCase()), partName = esc(parts[t] || "PART " + t.toUpperCase());
+  const head = (mid, right, back = true) => `<div class="top">${back ? '<button class="back" title="Choose team">‹</button>' : ""}<span class="team">${teamName}</span><span class="part">${partName}</span><span class="sp"></span>${mid}${right}</div>`;
+
+  if (over) {
+    // ⭐ Đợt 576 — ÔN TỪ sau trận: cả danh sách của đội, chạm từ nào phóng to từ đó
+    const okN = [...rowStr].filter(c => c === "o").length;
+    const cells = list.map((w, k) => {
+      const c = rowStr[k];
+      const cls = c === "o" ? " ok" : c === "p" ? " pass" : "";
+      const cut = k === idx && c !== "o" && c !== "p" && idx < list.length ? " cut" : "";
+      return `<button class="rv${cls}${cut}" data-k="${k}"><span class="no">${k + 1}</span>${fitSpan(String(w).toUpperCase())}</button>`;
+    }).join("");
+    col.innerHTML = head(`<span class="prog">time left ${fmtClock(rwClock(t))}</span>`, `<span class="score">✓ ${okN} / ${total}</span>`, false) +
+      `<div class="legend"><span><i style="background:#22c55e"></i>correct</span><span><i style="background:#fde68a"></i>passed</span><span><i style="background:#fff"></i>not played</span><span style="opacity:.75">· tap a word to see it big</span></div>` +
+      `<div class="grid">${cells}</div>` +
+      `<div class="zoom"><div class="zcard"><div class="zn"></div><span class="zw fit"></span><div class="zi"></div><span class="zs"></span><div class="zx">tap anywhere to close</div></div></div>`;
+    const zoom = col.querySelector(".zoom");
+    col.querySelectorAll(".rv").forEach(b => b.onclick = () => {
+      const k = +b.dataset.k, c = rowStr[k];
+      zoom.querySelector(".zn").textContent = "№ " + (k + 1);
+      zoom.querySelector(".zw").textContent = String(list[k]).toUpperCase();
+      zoom.querySelector(".zi").textContent = ipa[k] || "";
+      const lab = c === "o" ? ["CORRECT", "#22c55e"] : c === "p" ? ["PASSED", "#f59e0b"] : ["NOT PLAYED", "#94a3b8"];
+      zoom.querySelector(".zs").textContent = lab[0];
+      zoom.querySelector(".zcard").style.setProperty("--zc", lab[1]);
+      zoom.classList.add("on");
+      fitAll(zoom);
+    });
+    zoom.onclick = () => zoom.classList.remove("on");
+    fitAll();
+    return;
+  }
+
+  let mid = list.length && idx < total ? `<span class="prog">word ${idx + 1} / ${total}</span>` : "";
+  if (waiting) mid = `<span class="waitpill">⏳ <b>${esc(names[other] || "")}</b> is playing</span>`;
+  if (paused) mid = `<span class="pausepill">PAUSED</span>`;
+  let body;
+  if (phase === "setup" || phase === "off" || !list.length) {
+    body = `<div class="msg"><b>GET READY</b><span>Waiting for START MATCH on the classroom screen…</span></div>`;
+  } else if (phase === "over") {
+    body = `<div class="msg"><b>MATCH OVER</b><span>Look at the classroom screen.</span></div>`;
+  } else if (idx >= list.length) {
+    body = `<div class="msg"><b>ALL DONE!</b><span>Your team finished its list.</span></div>`;
+  } else {
+    let nx = "";
+    for (let k = 1; k <= 4; k++) {
+      const w = list[idx + k];
+      nx += w == null ? `<div class="nx is-empty"></div>` : `<div class="nx n${k}"><span class="no">${idx + k + 1}</span>${fitSpan(String(w).toUpperCase())}</div>`;
+    }
+    body = `<div class="body"><div class="cur"><div class="no">№ ${idx + 1}</div>${fitSpan(String(list[idx]).toUpperCase())}</div><div class="nexts"><div class="lab">NEXT</div>${nx}</div></div>`;
+  }
+  col.innerHTML = head(mid, `<span class="clock">${fmtClock(rwClock(t))}</span>`) + body;
   col.querySelector(".back").onclick = () => { stopSeat(); manualChoose = true; col.dataset.sig = ""; route(); };
   fitAll();
 }
-function paintRWClock(t) { const c = col.querySelector(".rw-clock"); if (c) c.textContent = fmtClock(rwClock(t)); }
+function paintRWClock(t) {
+  const c = col.querySelector(".clock"); if (c) c.textContent = fmtClock(rwClock(t));
+}
 
 // ---------------------------------------------------------------- RUNNING TEAM
 function rtMain() {
@@ -180,7 +231,6 @@ function heartsHtml(l) {
   if (tot > 5) return `♥ ×${left}`;
   let h = ""; for (let k = 0; k < tot; k++) h += `<span style="opacity:${k < left ? 1 : .25}">♥</span>`; return h;
 }
-let rtCountT = 0;
 function drawRT() {
   const l = link || {};
   const phase = l.phase || "setup";
@@ -194,28 +244,27 @@ function drawRT() {
   if (view === "rt" && col.dataset.sig === sig) { paintRTClock(); return; }
   view = "rt"; col.dataset.sig = sig;
   col.className = "col rt" + (l.last ? " is-last" : "");
-  let mid, foot = "";
+  const top = `<div class="rt-top"><span class="rt-clock${l.last ? " is-last" : ""}">${fmtClock(rtMain())}</span><span class="last-tag">LAST WORD</span><span class="sp"></span><span class="hearts">${heartsHtml(l)}</span></div>`;
+  let body;
   if (phase === "ready") {
-    mid = `<div class="rt-sub">GET READY</div><div class="rt-name" data-fit>${esc(l.name || "")}</div><div class="rt-count${count === "READY" ? " is-word" : ""}">${count}</div>`;
-    foot = l.next ? `<div class="rt-next">NEXT: <b>${esc(l.next)}</b></div>` : "";
+    body = `<div class="rt-ready"><div class="rt-left"><div class="rt-k">GET READY</div><div class="rt-nm">${fitSpan(l.name || "", "x")}</div>${l.next ? `<div class="rt-nx">next: <b>${esc(l.next)}</b></div>` : ""}</div><div class="rt-cnt${count === "READY" ? " is-word" : ""}">${count}</div></div>`;
   } else if (phase === "question") {
     const cls = l.result === "ok" ? " is-ok" : l.result === "miss" ? " is-miss" : "";
-    mid = `<div class="rt-small-name" data-fit>${esc(l.name || "")}</div><div class="rt-card${cls}"><div class="num">№ ${esc(l.num || "")}</div><div class="w" data-fit>${esc(String(l.word || "").toUpperCase())}</div></div><div class="rt-sub">READ IT OUT LOUD</div>`;
-    foot = l.next ? `<div class="rt-next">Then pass the iPad to <b>${esc(l.next)}</b> ➜</div>` : "";
+    body = `<div class="rt-body"><div class="rt-left"><div class="rt-k">NOW READING</div><div class="rt-nm">${fitSpan(l.name || "", "x")}</div>${l.next ? `<div class="rt-pass">then pass the iPad to<b>${esc(l.next)} ➜</b></div>` : ""}</div>
+      <div class="rt-card${cls}"><div class="num">№ ${esc(l.num || "")}</div>${fitSpan(String(l.word || "").toUpperCase(), "w")}<div class="say">READ IT OUT LOUD</div></div></div>`;
   } else if (phase === "over") {
-    mid = `<div class="rt-name">${l.won ? "CLASS WINS" : "GAME OVER"}</div><div class="rt-sub">Look at the classroom screen</div>`;
+    body = `<div class="msg"><b>${l.won ? "CLASS WINS" : "GAME OVER"}</b><span>Look at the classroom screen.</span></div>`;
   } else {
-    mid = `<div class="rt-name">RUNNING TEAM</div><div class="rt-sub">Waiting for START RUNNING…</div>`;
+    body = `<div class="msg"><b>RUNNING TEAM</b><span>Waiting for START RUNNING…</span></div>`;
   }
-  col.innerHTML = `<div class="rt-top"><span class="rt-clock${l.last ? " is-last" : ""}">${fmtClock(rtMain())}</span><span class="lastword">LAST WORD</span><span class="rt-hearts">${heartsHtml(l)}</span></div>
-    <div class="rt-mid">${mid}</div>${foot}`;
+  col.innerHTML = top + body;
   fitAll();
 }
 function paintRTClock() { const c = col.querySelector(".rt-clock"); if (c && !(link && link.last)) c.textContent = fmtClock(rtMain()); }
 
 // nhịp vẽ: đồng hồ đếm tại chỗ + bước đếm READY/3-2-1
 setInterval(() => {
-  if (view === "rw" && slot >= 0) paintRWClock(TEAMS[slot]);
+  if (view === "rw" && slot >= 0 && !(link && link.phase === "over")) paintRWClock(TEAMS[slot]);
   else if (view === "rt") drawRT();
 }, 200);
 
