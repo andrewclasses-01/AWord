@@ -553,6 +553,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 - Gắn trước `</head>` 7 trang thật: index · play · pad · run · kiemtra · kiemtra2 · source (`core/chan-phim.js?v=1`). BỎ QUA các `test.html`,
   404, tools-voice-cleanup. Đã rà: chỉ có phím S TRƠN (speaking-cards xáo thẻ, racing-words KeyS lái) — không kèm Ctrl ⇒ không đụng.
 - Kiểm (devserver 5511): play.html F12 / Ctrl+U / Ctrl+Shift+I bị chặn, Ctrl+C và S trơn không; index.html có `__chanPhim`; console sạch.
+- ✅ Code `6fab380` LIVE (kiem-live 8/8 khớp byte, 24/10).
 - ⬜ VIỆC ĐANG CHỜ: không có (thầy F5 là có).
 
 ## Đợt 581 (24/10/2026) — ROCKET RACE Fight 3D: màn chờ MỀM + ô cũ đóng ở 30 % + THANH CÂU HỎI ĐẶC, LUÔN TRÊN CÙNG (myGame mẫu 12g)
