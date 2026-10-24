@@ -899,6 +899,30 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       setMode: (target) => queued(() => (current && current.setMode) ? current.setMode(target) : false),
       openOptions: () => queued(() => (current && current.openOptions) ? current.openOptions() : false),
       closeTool: () => (current && current.closeTool) ? current.closeTool() : false,
+      // ⭐⭐ Đợt 578 — NÚT CHIA BẢNG của myActivity (xem splitInfo()/takeTeamForBoard() trong
+      // core/showdown-setup.js). ⚠️ Bức tường chép tay ở trên: delegate có `takeShowdownTeam`
+      // thì ở đây phải có dòng chuyển tiếp, không thì tính năng không tồn tại mà không ai báo.
+      //   · sdSplitInfo() — chỉ gọi ở bảng 1: bảng đội gồm những đội nào.
+      //   · sdTakeTeam(teamId, st) — gọi ở TỪNG bảng. `st` = getState() của bảng 1: áp
+      //     Template / Options / Style của bảng 1 TRƯỚC (cột mới nạp có thể lệch), rồi mới
+      //     nhận đội ⇒ mọi bảng đứng ở màn READY với cùng một bộ Options.
+      sdSplitInfo: () => import("./showdown-setup.js").then(m => m.splitInfo())
+        .catch(e => ({ err: e?.code === "aw/signed-out" ? "signin" : "net" })),
+      sdTakeTeam: async (teamId, st) => {
+        const b = window.__awordBridge;
+        if (st && st.type) await b.switchTemplate(st.type);
+        if (st && st.options) {
+          // Chỉ áp khi KHÁC — applyOptions luôn dựng lại cả ván, và takeShowdownTeam sẽ
+          // dựng thêm lần nữa; hai cú dựng liên tiếp là phí trên máy lớp 5 cột.
+          const canon = v => Array.isArray(v) ? "[" + v.map(canon).join(",") + "]"
+            : (v && typeof v === "object") ? "{" + Object.keys(v).sort().map(k => JSON.stringify(k) + ":" + canon(v[k])).join(",") + "}"
+            : JSON.stringify(v);
+          const now = current ? current.getState() : null;
+          if (!now || canon(now.options || {}) !== canon(st.options)) await b.applyOptions(st.options);
+        }
+        if (st && st.theme) await b.setTheme(st.theme);
+        return queued(() => (current && current.takeShowdownTeam) ? current.takeShowdownTeam(teamId) : false);
+      },
       // ⭐⭐⭐ Đợt 269 (phần 2) — PHIÊN PHÁT NHIỀU THIẾT BỊ (myActivity + máy
       // tính rời + iPad). Hai method MỚI, cả hai đọc/ghi state qua một PLAIN
       // PROPERTY của chính singleton này (`__sessionPublishOn`/`__sessionUnsub`),
@@ -1113,6 +1137,16 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     closeTool() {
       closeToolPanel(false);
       return true;
+    },
+    // ⭐⭐ Đợt 578 — nút CHIA BẢNG của myActivity: bảng này nhận đúng đội `teamId` rồi
+    // dựng lại ván ⇒ đứng ở màn READY của đội đó (y như tự tích đội + READY trong panel).
+    // Trả false khi act không có Showdown, đang Fight / Running / IPA, hoặc không giữ được
+    // ghế (mất mạng, chưa đăng nhập) — myActivity thử lại rồi mới hiện dấu ✗.
+    takeShowdownTeam(teamId) {
+      if (!teamId || !canShowdown || fight || playMode) return false;
+      return import("./showdown-setup.js")
+        .then(m => m.takeTeamForBoard(teamId))
+        .then(() => { closeToolPanel(false); replayCurrent(); return true; }, () => false);
     },
     // ⭐ Đợt 247 — myLesson gọi qua singleton (xem ghi chú trên đó). Trả true =
     // form ĐÃ MỞ (thầy còn phải bấm START); mã bài giao về sau qua marker

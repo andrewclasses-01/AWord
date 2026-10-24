@@ -664,6 +664,66 @@ export async function wipeSetup({ keepRoster = null, rosterClass = "" } = {}) {
 }
 
 // ---------------------------------------------------------------
+// ⭐⭐ Đợt 578 (thầy, 24/10/2026) — NÚT "CHIA BẢNG" CỦA myActivity
+// ---------------------------------------------------------------
+// Thầy: *"chọn lớp, thiết đặt số đội, chia xong đội, bấm nút này để myActivity tự mở
+// ra từng ấy bảng đội và tự chọn lần lượt các bảng luôn"*. myActivity hỏi bảng 1 qua
+// `__awordBridge.sdSplitInfo()` (bảng đội gồm mấy đội), mở đủ số cột, rồi gọi
+// `__awordBridge.sdTakeTeam(teamId)` ở TỪNG cột ⇒ cột đó nhận đúng đội đó và đứng ở
+// màn READY (y như thầy tự tích đội rồi bấm READY trên cột ấy).
+//
+// ⚠️ Bảng đội chỉ lên Firestore lúc bấm READY (xem publishTable). Thầy chia xong là bấm
+// nút ngay, KHÔNG bấm READY ⇒ panel đang mở ở màn cột đội phải tự đẩy bảng của nó lên
+// trước (`__awSdPanelFlush`, panel tự đăng ký khi đang mở, tự gỡ khi đóng). Panel đang ở
+// màn chọn lớp (chưa NEXT) ⇒ trả "setup": đội chưa chia, đừng đem bảng cũ ra chia.
+
+/**
+ * Bảng đội để chia cột: `{ teams: [{id, name, size}], className }`, hoặc
+ * `{ err: "setup" | "empty" }`. Chỉ tính đội CÓ người (đội rỗng không ai ngồi).
+ */
+export async function splitInfo() {
+  const flush = window.__awSdPanelFlush;
+  if (typeof flush === "function") {
+    const r = await flush();
+    if (r === "setup") return { err: "setup" };
+  }
+  const s = await loadSetup({ fresh: true });
+  const teams = s.teams.filter(t => t.members.length)
+    .map(t => ({ id: t.id, name: t.name, size: t.members.length }));
+  if (!teams.length) return { err: "empty" };
+  return { teams, className: s.className || "" };
+}
+
+/**
+ * Bảng NÀY nhận đội `teamId`: ghi pick + giữ ghế (claim) trong MỘT giao dịch như cú
+ * READY của applyReady(), rồi đóng dấu pick bằng bảng của server. Trả pick, hoặc ném
+ * khi đội không còn trên bảng.
+ * ⚠️ GIÀNH GHẾ, không hỏi: ghế cũ của một cột khác (buổi trước, hoặc cột vừa đổi đội)
+ * bị đè — đúng ý "tự chọn lần lượt các bảng". publishTable() vẫn gộp ghế của mọi máy
+ * khác từ server nên năm cột chạy song song không xoá ghế của nhau.
+ */
+export async function takeTeamForBoard(teamId) {
+  const s = await loadSetup({ fresh: true });
+  const team = s.teams.find(t => t.id === teamId);
+  if (!team) throw new Error("team gone");
+  const labels = fullLabelMap(s.teams);
+  const pick = {
+    teamId: team.id, teamName: team.name,
+    classId: s.classId, className: s.className,
+    members: team.members.map(m => ({ id: m.id, name: m.name, shortLabel: labels.get(m.id) })),
+    maxTeam: Math.max(1, ...s.teams.map(t => t.members.length || 0)),
+    tableId: s.tableId || "",
+    resetAt: Number(s.resetAt) || 0
+  };
+  writePick(pick);
+  // `s` CHÍNH LÀ bản server vừa đọc ⇒ publishTable rơi vào ca 3 (bảng của ta = bảng server),
+  // chỉ thêm ghế; có máy sửa bảng giữa hai nhịp thì nó rơi ca 2 và bảng server thắng.
+  const { node } = await publishTable(s, { claimTeamId: team.id, baseAt: s.updatedAt || 0 });
+  stampPickFromTable(pick, node, team.id);
+  return pick;
+}
+
+// ---------------------------------------------------------------
 // THE SHARED RESULT BOARD (Đợt 177, 17/8/2026)
 // ---------------------------------------------------------------
 // Teacher: "khi hoàn thành game của 1 đội, kết quả đội đó tự đồng bộ vào kết quả
@@ -1791,7 +1851,22 @@ export function buildShowdownPanel(panel, ctx) {
   const stopWatch = () => {
     if (unsub) { unsub(); unsub = null; }
     if (gone) { gone.disconnect(); gone = null; }
+    if (window.__awSdPanelFlush === flushForSplit) delete window.__awSdPanelFlush;
   };
+  // ⭐ Đợt 578 — nút CHIA BẢNG của myActivity hỏi bảng đội qua splitInfo(); thầy vừa chia
+  // xong mà chưa bấm READY thì bảng chỉ nằm trong panel này ⇒ đẩy nó lên (kèm ghế đang
+  // tích, nếu có). Ở màn chọn lớp thì báo "setup": đội chưa chia.
+  async function flushForSplit() {
+    if (!alive()) return "gone";
+    if (current === renderSetup) return "setup";
+    if (current !== renderBuild || !setup.teams.some(t => t.members.length)) return "none";
+    const { node } = await publishTable(setup, { claimTeamId: claimedTeam, baseAt });
+    setup.claims = node.claims;
+    setup.teams = node.teams;
+    setup.tableId = node.tableId;
+    baseAt = node.updatedAt;
+    return "ok";
+  }
   function watchForClose() {
     if (gone) return;
     const host = body.closest(".aw-below-center") || body.parentElement || document.body;
@@ -4330,6 +4405,7 @@ export function buildShowdownPanel(panel, ctx) {
 
     // Watch for claims made on other screens while this panel is open.
     watchForClose();
+    window.__awSdPanelFlush = flushForSplit;   // Đợt 578 — xem flushForSplit(); stopWatch() gỡ
     unsub = subscribeSetup(next => {
       if (!alive()) { stopWatch(); return; }
       // ⭐⭐ Đợt 217 — TIẾNG VỌNG CỦA CHÍNH CÚ RESET VỪA RỒI: nhận `claims` (đúng là
