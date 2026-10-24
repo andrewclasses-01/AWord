@@ -573,6 +573,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
   đổi câu, đội 2 giữ nguyên 4 ô · 0 lỗi console. myGame `mau-12-tau-3d.html` chạy y vậy.
 
 **VIỆC ĐANG CHỜ (Đợt 581):**
+- ✅ Code `f97cb15` ĐÃ PUSH + LIVE (kiem-live 1/1; nạp module thu gọn trên trang live không lỗi, shader còn nguyên). myGame 12g = `7a16642` (Pages khớp).
 - ⬜ Thầy xem trên TOMKO: độ mềm/nhoè lớp chờ (đầu sóng `W = 0.3`, nhoè dọc 0,3 trong `qFillMat`), màu nền `Q_BG`, ô gập lúc 30 % có kịp nhìn không.
 - ⬜ Thanh câu hỏi nay không qua khử răng cưa MSAA của composer (vẽ thẳng ra màn, renderer `antialias:false`) — viền bo có răng cưa thì báo.
 
