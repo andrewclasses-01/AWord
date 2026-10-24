@@ -546,6 +546,36 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 581 (24/10/2026) — ROCKET RACE Fight 3D: màn chờ MỀM + ô cũ đóng ở 30 % + THANH CÂU HỎI ĐẶC, LUÔN TRÊN CÙNG (myGame mẫu 12g)
+- Thầy (sau khi xem Đợt 580): *"Phần load đó trông cứng và viền trông nét quá. Tôi muốn chúng mềm hơn, blur hơn cho đẹp. Khi load được
+  30% thanh câu hỏi thì câu trả lời cũ cũng đóng lại luôn. Thêm một phần nữa: Nền ở khung câu hỏi để opacity lên 100%, màu đặc và hoàn
+  toàn không bị ảnh hưởng bởi ánh sáng từ các nội dung khác gây mờ và khó đọc, để lớp của câu hỏi và nền câu hỏi lên trên cùng để đảm bảo
+  không bị đè"*.
+- Chỉ sửa `templates/rocket-race/rr3d-view.js` (sửa ở myGame `game11/`, chép bằng `tools/chep-rr-mau12-sang-aword.py`). `rocket-race.js`
+  và core KHÔNG đổi.
+- **Lớp chờ mềm:** bỏ tấm co giãn `scale.x` + kết cấu có vạch trắng sắc (12f). Nay mỗi nửa thanh là `ShaderMaterial` (`qFillMat`) phủ
+  cả nửa, uniform `uP` (0→1) / `uA` (mờ dần): đầu sóng mềm `smoothstep` rộng 30 % nửa thanh, quầng sáng nhoè (gauss theo tỉ lệ
+  chiều cao) ở đầu sóng, mép trên/dưới nhoè (`smoothstep 0–0,3`), mép ngoài nhoè (0,9–1), thân sáng dần từ giữa ra (0,5 → 0,95 màu
+  đội). Màu đội đưa sang sRGB (`convertLinearToSRGB`) vì shader ghi thẳng ra màn. Tan sau câu mới 0,45 s (cũ 0,35), chớp dịu hơn (×0,85).
+- **Ô cũ đóng ở 30 %** (`Q_SHUT = 0.3`): `qGapTick` gọi `closeTiles(k)` một lần mỗi khoảng chờ ⇒ từng ô (lệch nhau 0,06 s) gập về sau
+  (`rotation.x` tới π/2, nhanh dần) và thu cả chiều cao lẫn bề dày (×0,03) ⇒ biến hẳn, không còn vệt. `setAnswers` của câu mới: ô đang
+  đóng ⇒ `flip = 0.501` (chỉ chạy NỬA SAU vòng lật = mở ra, chữ mới được gán ngay khung đầu). Bàn Different chỉ đóng ô của đội đó.
+- **Thanh câu hỏi đặc + trên cùng:** gốc mờ là thanh nằm trong cảnh chính ⇒ bloom của mặt trời (thanh ở ngay dưới mặt trời), tone-mapping
+  ACES, lệch màu + vignette + hạt của lớp `grade` đều đè lên. Nay thanh ở `qScene` riêng (`qRoot` chép `camera.matrixWorld` mỗi khung ⇒
+  bám cả rung máy quay), vẽ bằng `drawQLayer()` NGAY SAU `composer.render` thẳng ra màn: `clearDepth`, mọi lưới `depthTest:false`,
+  `toneMapped:false`, `renderOrder` nền → viền → chữ → lớp chờ → chớp. Nền `Q_BG = #0b1430`, opacity 1. Chạm thanh để nghe lại voice
+  (raycast `questionPanel.tm`) vẫn chạy vì `matrixWorld` cập nhật mỗi khung.
+- ⚠️ **Lỗi tự gây đã gỡ trong đợt:** `buildUI()` (chạy lại khi đổi cỡ màn / autoRes) xoá sạch nhóm `ui` rồi `questionPanel = null` — xưa
+  thanh nằm trong `ui` nên bị xoá theo; dời sang `qRoot` thì thanh CŨ đứng lại ⇒ hai thanh chồng nhau (chữ nhoè đôi "WWhat … star??",
+  lớp chờ cũ đóng băng). Sửa: `buildUI` dọn `qRoot` trước. Bài học: dời một vật ra khỏi nhóm cha thì phải tìm mọi chỗ DỌN nhóm cha đó.
+- **Thử** (`scratch/dot413-rr.html`, lái `__rr3d.view.step`): Same — lớp chờ mềm xanh/cam từ giữa ra, ô hai bàn gập lần lượt quanh 30 %,
+  câu mới ra thì ô mở bằng nửa vòng lật, một thanh duy nhất kể cả khi bắn `resize` giữa lúc chờ · Different — chỉ bàn đội 1 đóng/mở và
+  đổi câu, đội 2 giữ nguyên 4 ô · 0 lỗi console. myGame `mau-12-tau-3d.html` chạy y vậy.
+
+**VIỆC ĐANG CHỜ (Đợt 581):**
+- ⬜ Thầy xem trên TOMKO: độ mềm/nhoè lớp chờ (đầu sóng `W = 0.3`, nhoè dọc 0,3 trong `qFillMat`), màu nền `Q_BG`, ô gập lúc 30 % có kịp nhìn không.
+- ⬜ Thanh câu hỏi nay không qua khử răng cưa MSAA của composer (vẽ thẳng ra màn, renderer `antialias:false`) — viền bo có răng cưa thì báo.
+
 ## Đợt 580 (24/10/2026) — ROCKET RACE Fight 3D: MÀN CHỜ CÂU MỚI kiểu RACING WORDS (myGame mẫu 12f)
 - Thầy: *"Đọc game Rocket Race trên AWord và myGame. Kiểm tra xem chúng đồng bộ chưa. Sửa như sau: trước khi sang một câu
   mới cũng sẽ có màn chạy load ở khung câu hỏi một vài giây tương tự cách chờ câu hỏi mới trong game RACING WORDS"*.

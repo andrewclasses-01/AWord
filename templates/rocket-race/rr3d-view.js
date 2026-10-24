@@ -666,6 +666,9 @@ export async function createView(cfg) {
   // =========================================================
   const ui = new THREE.Group();
   camera.add(ui);
+  // 12g: thanh câu hỏi ở cảnh RIÊNG vẽ sau hậu kỳ (drawQLayer); qRoot chép ma trận máy quay mỗi khung
+  const qScene = new THREE.Scene(), qRoot = new THREE.Group(); qRoot.matrixAutoUpdate = false; qScene.add(qRoot);
+  const Q_BG = "#0b1430", Q_SHUT = 0.3;   // nền thanh câu hỏi (đặc) · tới tỉ lệ này của khoảng chờ thì ô cũ đóng
   const uiLight = new THREE.PointLight(0xdfe8ff, 6, 14, 2);
   uiLight.position.set(0, 2.5, 1.5);
   camera.add(uiLight);
@@ -673,7 +676,7 @@ export async function createView(cfg) {
   const hitList = [];
   const consoles = [];
   let questionPanel = null, startBtn = null;
-  const QG = { t: [-1, -1], T: [3, 3], done: [null, null], fade: [0, 0], pop: 0 };   // 12f: khoảng chờ câu mới (qGap) — khai SỚM: buildQuestion đọc nó
+  const QG = { t: [-1, -1], T: [3, 3], done: [null, null], fade: [0, 0], pop: 0, shut: [false, false] };   // 12f: khoảng chờ câu mới (qGap) — khai SỚM: buildQuestion đọc nó
 
   function screenToLocal(sx, sy, depth = UID) {       // sx, sy: 0..1 (trái→phải, trên→dưới)
     const hh = depth * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), hw = hh * camera.aspect;
@@ -847,6 +850,7 @@ export async function createView(cfg) {
     // thanh câu hỏi — Đợt 393: bề ngang CO GIÃN theo độ dài câu (xem questionWidth / paintQuestion)
     qRect = L0.question;
     qMaxW = Math.max(qRect.w, Math.min(0.98, U.cw(cfg.questionMaxCm ?? 176)));
+    [...qRoot.children].forEach(c => qRoot.remove(c));   // 12g: thanh câu hỏi ở qRoot (không nằm trong ui) — dọn kẻo thanh cũ đứng lại chồng lên
     questionPanel = null;
     buildQuestion(questionWidth());
     paintQuestion();
@@ -1737,7 +1741,7 @@ export async function createView(cfg) {
   function buildQuestion(wFrac) {
     const keepVis = questionPanel ? questionPanel.g.visible : !(cfg.introTitles && G.phase === "intro");
     if (questionPanel) {
-      ui.remove(questionPanel.g);
+      qRoot.remove(questionPanel.g);
       questionPanel.g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
     }
     const r = qRect;
@@ -1745,7 +1749,8 @@ export async function createView(cfg) {
     const p = screenToLocal(x + wFrac / 2, r.y + r.h / 2, r.depth ?? UID);
     const s = screenSize(wFrac, r.h, r.depth ?? UID);
     const g = new THREE.Group();
-    const panel = glassPanel(s.w, s.h, new THREE.Color("#8fd3ff"), 0.95, true);   // Đợt 455: 0,8 kính → 0,95 đặc
+    const panel = glassPanel(s.w, s.h, new THREE.Color("#8fd3ff"), 1, true);   // Đợt 455: 0,8 kính → 0,95 đặc · 12g: 100 % đặc
+    panel.children[0].material.color.set(Q_BG);
     // canvas đúng TỈ LỆ mặt chữ (không kéo méo chữ khi thanh dãn), cao ~180 px, rộng tối đa 4096
     const aspect = (s.w * 0.96) / (s.h * 0.9);
     const cvH = Math.min(180, Math.floor(4096 / aspect));
@@ -1753,59 +1758,87 @@ export async function createView(cfg) {
     const tex = canvasTex(cv);
     const tm = new THREE.Mesh(new THREE.PlaneGeometry(s.w * 0.96, s.h * 0.9), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
     tm.position.z = 0.04;
-    // ⭐ 12f (thầy 24/10): lớp KHOẢNG CHỜ câu mới (qGap) — mỗi nửa thanh một tấm màu đội gốc ở GIỮA, dãn ra mép ngoài (scale.x), nằm TRÊN chữ
+    // ⭐ 12f (thầy 24/10): lớp KHOẢNG CHỜ câu mới (qGap) — mỗi nửa thanh một tấm màu đội gốc ở GIỮA, nằm TRÊN chữ
+    // 12g (thầy: "trông cứng, viền nét quá — mềm hơn, blur hơn"): tấm phủ cả nửa thanh, shader vẽ đầu sóng MỀM (smoothstep rộng) + quầng
+    //   sáng nhoè ở đầu sóng + mép trên/dưới/mép ngoài nhoè dần — thay cho tấm co giãn scale.x có vạch trắng sắc.
     const hw = s.w * 0.985 / 2, hh = s.h * 0.9;
     const fills = [0, 1].map(k => {
       const geo = new THREE.PlaneGeometry(hw, hh); geo.translate(k ? hw / 2 : -hw / 2, 0, 0);
-      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: qFillTex(k), transparent: true, depthWrite: false }));
+      const m = new THREE.Mesh(geo, qFillMat(k, hw / hh));
       m.position.z = 0.06; m.visible = false; return m;
     });
     const flash = new THREE.Mesh(new THREE.PlaneGeometry(s.w * 0.96, hh), new THREE.MeshBasicMaterial({ map: qFlashTex(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     flash.position.z = 0.07; flash.visible = false;
     g.add(panel, tm, ...fills, flash); g.position.copy(p);
+    // 12g (thầy: "nền 100 %, màu đặc, không bị ánh sáng nội dung khác làm mờ… lên trên cùng"): thanh câu hỏi KHÔNG còn ở cảnh chính
+    //   (bloom mặt trời / tone-mapping / lệch màu + hạt của hậu kỳ đè lên) — vẽ ở qScene SAU toàn bộ hậu kỳ (drawQLayer), không thử độ sâu,
+    //   thứ tự cố định nền → viền → chữ → lớp chờ → chớp ⇒ không gì đè được.
+    let ro = 0;
+    [panel.children[0], panel.children[1], tm, ...fills, flash].forEach(m => { m.renderOrder = ro++; m.material.depthTest = false; m.material.depthWrite = false; m.material.toneMapped = false; });
     g.visible = keepVis;
     if (r.rotX) g.rotation.x = r.rotX;
-    ui.add(g);
+    qRoot.add(g);
     questionPanel = { g, cv, tex, tm, fills, flash, text: "", wFrac };
     qGapPaint();
   }
   // ---- 12f (thầy 24/10): KHOẢNG CHỜ CÂU MỚI kiểu RACING WORDS (rw-4h.css .rw-qfill) ----
-  // Câu cũ + màu ô giữ nguyên; trên thanh câu hỏi lớp màu đội ĐẦY DẦN từ GIỮA ra mép ngoài (mép đầu trắng sáng), che câu cũ;
+  // Câu cũ + màu ô giữ nguyên; trên thanh câu hỏi lớp màu đội ĐẦY DẦN từ GIỮA ra mép ngoài (đầu sóng sáng), che câu cũ;
   // đầy ⇒ chớp sáng + câu mới bật ra (chữ phóng 0,8 → 1). Same: hai nửa cùng chạy (mỗi nửa màu một đội) · Different: nửa của đội đó.
+  // 12g: tới 30 % (Q_SHUT) thì ô đáp án cũ của đội đó ĐÓNG LẠI (gập về sau, lần lượt từng ô) — câu mới mở lại bằng nửa sau vòng lật của setAnswers.
   // Nhịp theo giờ CẢNH (tick dt — tạm dừng là dừng). Luật (khi nào chờ, chờ bao lâu) do rocket-race.js giữ.
-  function qFillTex(k) {                       // dải ngang: gốc (giữa màn) tối → mép đầu sáng + vạch trắng
-    const c = document.createElement("canvas"); c.width = 256; c.height = 4;
-    const g = c.getContext("2d"), tc = TEAMS[k].color;
-    const mix = (base, a) => "#" + new THREE.Color(base).lerp(tc, a).getHexString();
-    const gr = k ? g.createLinearGradient(0, 0, 256, 0) : g.createLinearGradient(256, 0, 0, 0);
-    gr.addColorStop(0, mix("#070b14", 0.3)); gr.addColorStop(0.7, mix("#0b1222", 0.62)); gr.addColorStop(0.95, mix("#ffffff", 0.85)); gr.addColorStop(1, "#ffffff");
-    g.fillStyle = gr; g.fillRect(0, 0, 256, 4);
-    return canvasTex(c);
+  function qFillMat(k, asp) {
+    const c = TEAMS[k].color.clone().convertLinearToSRGB();   // shader ghi thẳng ra màn (không qua hậu kỳ) ⇒ đưa màu sRGB
+    return new THREE.ShaderMaterial({
+      uniforms: { uP: { value: 0 }, uA: { value: 1 }, uSide: { value: k }, uAsp: { value: asp }, uC: { value: new THREE.Vector3(c.r, c.g, c.b) } },
+      transparent: true, depthWrite: false, depthTest: false,
+      vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
+      fragmentShader: `uniform float uP, uA, uSide, uAsp; uniform vec3 uC; varying vec2 vUv;
+        void main(){
+          float x = uSide > 0.5 ? vUv.x : 1.0 - vUv.x;             // 0 = giữa màn → 1 = mép ngoài
+          const float W = 0.3;                                     // bề rộng đầu sóng mềm (phần của nửa thanh)
+          float f = uP * (1.0 + W);                                // uP = 1 ⇒ phủ kín cả nửa
+          float body = 1.0 - smoothstep(f - W, f, x);
+          float d = (x - (f - W * 0.55)) * uAsp;                    // quầng tròn theo tỉ lệ chiều cao
+          float glow = exp(-d * d * 3.0) * smoothstep(0.0, 0.08, uP);
+          float v = smoothstep(0.0, 0.3, vUv.y) * smoothstep(1.0, 0.7, vUv.y);   // mép trên/dưới nhoè
+          float edge = 1.0 - smoothstep(0.9, 1.0, x);              // mép ngoài nhoè
+          float r = clamp(x / max(f, 0.05), 0.0, 1.0);
+          vec3 col = mix(uC * 0.5, uC * 0.95, r * r);
+          col = mix(col, mix(uC, vec3(1.0), 0.55), glow * 0.75);
+          float a = clamp(body * 0.94 + glow * 0.35, 0.0, 1.0) * mix(0.35, 1.0, v) * edge * uA;
+          gl_FragColor = vec4(col, a);
+        }`
+    });
   }
   function qFlashTex() {
     const c = document.createElement("canvas"); c.width = 256; c.height = 64;
     const g = c.getContext("2d"), gr = g.createRadialGradient(128, 32, 0, 128, 32, 128);
-    gr.addColorStop(0, "rgba(255,255,255,.9)"); gr.addColorStop(0.45, "rgba(170,225,255,.35)"); gr.addColorStop(1, "rgba(170,225,255,0)");
+    gr.addColorStop(0, "rgba(255,255,255,.75)"); gr.addColorStop(0.45, "rgba(170,225,255,.28)"); gr.addColorStop(1, "rgba(170,225,255,0)");
     g.fillStyle = gr; g.fillRect(0, 0, 256, 64);
     return canvasTex(c);
   }
   function qGap(sides, T, done) {
     const list = Array.isArray(sides) ? sides : [sides];
-    list.forEach(k => { QG.t[k] = 0; QG.T[k] = Math.max(0.2, +T || 3); QG.done[k] = typeof done === "function" ? done : null; QG.fade[k] = 0; });
+    list.forEach(k => { QG.t[k] = 0; QG.T[k] = Math.max(0.2, +T || 3); QG.done[k] = typeof done === "function" ? done : null; QG.fade[k] = 0; QG.shut[k] = false; });
     qSound("wait", QG.T[list[0]]);
     qGapPaint();
   }
-  function qGapClear() { QG.t = [-1, -1]; QG.done = [null, null]; QG.fade = [0, 0]; QG.pop = 0; qGapPaint(); }
+  function qGapClear() { QG.t = [-1, -1]; QG.done = [null, null]; QG.fade = [0, 0]; QG.pop = 0; QG.shut = [false, false]; qGapPaint(); }
+  function closeTiles(k) {                      // 12g: gập các ô của bàn k về sau, lệch nhau 0,06 s
+    const c = consoles[k]; if (!c) return;
+    c.tiles.forEach((t, i) => { if (!t.g.visible || t.closing) return; t.closing = true; t.cl = 0; t.closeAt = G.t + i * 0.06; });
+  }
   function qGapTick(dt) {
     let popped = false;
     [0, 1].forEach(k => {
       if (QG.t[k] >= 0) {
         QG.t[k] += dt;
+        if (!QG.shut[k] && QG.t[k] >= QG.T[k] * Q_SHUT) { QG.shut[k] = true; closeTiles(k); }
         if (QG.t[k] >= QG.T[k]) {
           const fn = QG.done[k]; QG.t[k] = -1; QG.done[k] = null; QG.fade[k] = 1; QG.pop = 1; popped = true;
           try { fn && fn(); } catch (e) { console.error(e); }
         }
-      } else if (QG.fade[k] > 0) QG.fade[k] = Math.max(0, QG.fade[k] - dt / 0.35);
+      } else if (QG.fade[k] > 0) QG.fade[k] = Math.max(0, QG.fade[k] - dt / 0.45);
     });
     if (popped) qSound("new"); else if (QG.pop > 0) QG.pop = Math.max(0, QG.pop - dt / 0.5);
     qGapPaint();
@@ -1815,14 +1848,22 @@ export async function createView(cfg) {
     P.fills.forEach((m, k) => {
       const run = QG.t[k] >= 0;
       m.visible = run || QG.fade[k] > 0;
-      m.scale.x = run ? Math.max(0.001, Math.min(1, QG.t[k] / QG.T[k])) : 1;
-      m.material.opacity = run ? 1 : QG.fade[k];
+      const u = m.material.uniforms;
+      u.uP.value = run ? Math.min(1, QG.t[k] / QG.T[k]) : 1;
+      u.uA.value = run ? 1 : QG.fade[k];
     });
     const p = QG.pop;
-    P.flash.visible = p > 0; P.flash.material.opacity = p; P.flash.scale.setScalar(1.3 - 0.6 * p);
+    P.flash.visible = p > 0; P.flash.material.opacity = p * 0.85; P.flash.scale.setScalar(1.3 - 0.6 * p);
     const u = 1 - Math.min(1, (1 - p) / 0.9), e = 1 - u;          // chữ câu mới: 0,8 → 1 trong ~0,45 s, nảy nhẹ (easeOutBack)
     const sc = p > 0 ? 0.8 + 0.2 * (1 + 2.2 * Math.pow(e - 1, 3) + 1.2 * Math.pow(e - 1, 2)) : 1;
     P.tm.scale.set(sc, sc, 1); P.tm.material.opacity = p > 0 ? Math.min(1, e * 2.2) : 1;
+  }
+  // 12g: lớp thanh câu hỏi vẽ SAU hậu kỳ, thẳng ra màn, bám máy quay (kể cả rung) — gọi ngay sau composer.render
+  function drawQLayer() {
+    qRoot.matrix.copy(camera.matrixWorld); qRoot.updateMatrixWorld(true);
+    const ac = renderer.autoClear; renderer.autoClear = false;
+    renderer.setRenderTarget(null); renderer.clearDepth(); renderer.render(qScene, camera);
+    renderer.autoClear = ac;
   }
   function paintQuestion() {
     if (!questionPanel) return;
@@ -2375,6 +2416,7 @@ export async function createView(cfg) {
 
     grade.uniforms.uTime.value = G.t;
     composer.render(dt);
+    drawQLayer();                                                      // 12g
   }
 
   const RED_EM = new THREE.Color("#ff3b4e");
@@ -2392,13 +2434,17 @@ export async function createView(cfg) {
       }
       rotX = (1 - t.flip) * Math.PI * 2 * 0.5;   // nửa vòng đầu: lật đi, nửa sau: lật về
       rotX = t.flip > 0.5 ? (1 - t.flip) * Math.PI : -t.flip * Math.PI;
+    } else if (t.closing && G.t >= t.closeAt) {      // 12g: ô cũ đóng lại (gập về sau, nhanh dần)
+      t.cl = Math.min(1, (t.cl || 0) + dt / 0.32);
+      rotX = t.cl * t.cl * Math.PI * 0.5;
     }
     t.g.rotation.x = rotX;
     t.g.position.copy(t.home);
     t.g.position.z += -t.press * 0.08;
     if (t.shake > 0) t.g.position.x += Math.sin(G.t * 60) * 0.04 * t.shake;
     const sc = 1 - t.press * 0.04 + t.pulse * 0.06 * Math.sin(G.t * 12);
-    t.g.scale.set(sc, sc * (t.sy || 1), sc);
+    const shut = t.closing && t.flip <= 0 ? 1 - 0.97 * (t.cl || 0) : 1;   // 12g: gập + thu cả bề dày => đóng hẳn, không còn vệt
+    t.g.scale.set(sc, sc * (t.sy || 1) * shut, sc * shut);
     const tc = t.team.color;
     let body = tc.clone().multiplyScalar(0.42), rim = tc.clone().multiplyScalar(1.5), emis = 0.3, txtOp = 1, border = 0.025, emisCol = tc;
     // ⭐ Đợt 413 (thầy): ĐÚNG ⇒ ô giữ màu đội nhưng SÁNG lên + viền xanh lá dày; ô còn lại "pale" = giữ màu, nhạt hơn ·
@@ -2488,7 +2534,7 @@ export async function createView(cfg) {
     setAnswers(side, texts) {
       const c = consoles[side]; if (!c) return;
       G.answers[side] = texts.slice(0, c.tiles.length);
-      c.tiles.forEach((t, k) => { t.pendingText = k < texts.length ? texts[k] : ""; t.flip = 1; t.state = "idle"; t.mark.material.opacity = 0; t.shake = 0; t.shook = false; });
+      c.tiles.forEach((t, k) => { t.pendingText = k < texts.length ? texts[k] : ""; t.flip = t.closing ? 0.501 : 1; t.closing = false; t.cl = 0; t.state = "idle";   /* 12g: ô đã đóng ⇒ chỉ nửa sau vòng lật (mở ra) */ t.mark.material.opacity = 0; t.shake = 0; t.shook = false; });
       relayout(c, G.answers[side].length);   // sau pendingText ⇒ cỡ/vị trí mới chờ nửa vòng lật
     },
     tileStates,

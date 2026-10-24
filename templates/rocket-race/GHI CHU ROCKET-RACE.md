@@ -1,5 +1,11 @@
 # GHI CHÚ — ROCKET RACE (đua tên lửa)
 
+## Đợt 581 (24/10/2026) — FIGHT 3D: màn chờ mềm, ô cũ đóng ở 30 %, thanh câu hỏi đặc + trên cùng
+
+Thanh câu hỏi KHÔNG còn ở cảnh chính: `qScene`/`qRoot` vẽ sau hậu kỳ (`drawQLayer` trong `tick`, ngay sau `composer.render`) ⇒ không bloom,
+không tone-mapping, không lệch màu/hạt; nền `Q_BG` đặc. Lớp chờ = shader `qFillMat` (mềm, nhoè). `Q_SHUT = 0.3` ⇒ `closeTiles` gập ô cũ;
+`setAnswers` mở lại bằng nửa sau vòng lật. Ai sửa `buildUI` nhớ: thanh câu hỏi nằm ở `qRoot`, không ở `ui`. Chi tiết `GHI CHU DU AN.md` Đợt 581.
+
 ## Đợt 580 (24/10/2026) — FIGHT 3D: MÀN CHỜ CÂU MỚI kiểu RACING WORDS
 
 Bàn Fight 3D nhận `goToIndex` (sau nhịp giữ 2,1 s của trọng tài) ⇒ nếu đã có câu trước: khoá ô, `view.qGap(fightSide, RR_QGAP_S = 3, …)`
