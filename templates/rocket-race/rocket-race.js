@@ -82,6 +82,10 @@ const STALL_MS = 1100;               // engine sputter after a wrong answer
 // class has not even read. Same idea as the engine's own START_GUARD_MS.
 const TAP_GUARD_MS = 400;
 const ANSWER_HOLD_MS = 800;          // pause on a resolved question before the next one
+// ⭐ Đợt 580 (thầy 24/10/2026, myGame mẫu 12f): Fight 3D — trước MỖI câu mới (trừ câu đầu trận) thanh câu hỏi chạy
+// màn chờ kiểu RACING WORDS: lớp màu đội đầy dần từ giữa ra mép (rr3d-view qGap) + tiếng gió hút, đầy ⇒ chớp + câu mới bật ra.
+// Câu cũ + màu ô giữ nguyên trong lúc chờ; ô khoá. Tính SAU nhịp giữ ROUND_HOLD_MS của core/fight.js (không đụng core).
+const RR_QGAP_S = 3;
 const TURBO_MS = 4500;               // afterburner window
 const TURBO_STREAK = 3;              // right answers in a row that light the afterburner
 const CRATE_EVERY = 4;               // a crate every N right answers (first one after 3)
@@ -735,7 +739,8 @@ function rr3dScene({ root, ctl, title, play }) {
       sfxCharge: (dur, v) => st.sfx && st.sfx.charge ? st.sfx.charge(dur, v) : null,   // Đợt 454: tiếng nạp năng lượng
       sfxServo: (dur, v) => st.sfx && st.sfx.servo && st.sfx.servo(dur, v),          // Đợt 455: servo robot xoay tên lửa
       loop: (n, on, v, f) => st.sfx && st.sfx.loop(n, on, v, f),
-      swell: (n, a, b, u, d) => st.sfx && st.sfx.swell(n, a, b, u, d) });
+      swell: (n, a, b, u, d) => st.sfx && st.sfx.swell(n, a, b, u, d),
+      sfxQGap: (k, T) => st.sfx && (k === "wait" ? st.sfx.qWait && st.sfx.qWait(T) : st.sfx.qNew && st.sfx.qNew()) });   // Đợt 580: chờ câu mới
   }).then(view => {
     if (!view) return;
     if (st.dead) { view.destroy(); return; }
@@ -1678,6 +1683,7 @@ const rocketRaceTemplate = {
     let tiles = [];
     let started = false;                   // GO has happened (fight: questions may be shown)
     let fightIndex = 0;                    // fight: the index the referee last asked for
+    let qGapTok = 0;                       // Đợt 580: lời hẹn "chờ xong thì hiện câu" mới nhất của bàn này
     // ⭐ Đợt 470 — làm tiếp: bài làm từng câu + tim + chuỗi đúng của lượt cũ. Điểm phạt TÍNH LẠI từ bài làm (đúng
     // công thức onWrong: mỗi lần sai −pointsOff) — một "−N" đang bay lúc chụp không bị mất. Shield / thùng / turbo
     // đang có KHÔNG giữ (thứ trang trí của một câu, không phải bài làm).
@@ -1834,7 +1840,19 @@ const rocketRaceTemplate = {
           // "answered" mark or the new tiles would come up as already done.
           if (info && info.replay && state[i]) { state[i].attempts = 0; state[i].answeredWith = null; }
           fightRepaint(false);
-          if (started) showQuestion(i);
+          if (!started) return;
+          // ⭐ Đợt 580 — màn chờ câu mới (xem RR_QGAP_S). Gọi lại giữa chừng (Next / câu khác) ⇒ qGap mới thay lời hẹn cũ.
+          const view = on3d && rr3d && rr3d.view;
+          if (view && view.qGap && curItem >= 0 && RR_QGAP_S > 0) {
+            locked = true; syncFightLock();
+            const tok = ++qGapTok;
+            view.qGap(fightSide, RR_QGAP_S, () => {
+              if (dead || finished || tok !== qGapTok || fightIndex !== i || (scene && scene.decided)) return;
+              showQuestion(i);
+            });
+            return;
+          }
+          showQuestion(i);
         },
         // Đợt 382 — the questions ran out (or a sudden-death round settled):
         // the rockets decide, not the points. See settleByPosition.
@@ -2850,6 +2868,7 @@ const rocketRaceTemplate = {
 
     return function cleanup() {
       dead = true;            // MUST come first — the only brake on bare callbacks
+      if (on3d && rr3d && rr3d.view && rr3d.view.qGapClear) rr3d.view.qGapClear();   // Đợt 580
       finished = true;
       rrPauseHandlers.delete(pauseHandler);
       // Đợt 368 — board 0 opened the link, board 0 closes it (and drops the

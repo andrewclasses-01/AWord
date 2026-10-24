@@ -177,6 +177,36 @@ export function createRr3dSound() {
     const ng = ctx.createGain(); ng.gain.setValueAtTime(0.0001, t1); ng.gain.linearRampToValueAtTime(0.12 * v, t1 + 0.005); ng.gain.exponentialRampToValueAtTime(0.0001, t1 + 0.07);
     n.connect(lp); lp.connect(ng); ng.connect(bus.fx); n.start(t1); n.stop(t1 + 0.1);
   }
+  // ⭐ 12f (thầy 24/10/2026): KHOẢNG CHỜ CÂU MỚI — tiếng y RACING WORDS (rw-5k qRiser / qBoom, thầy chọn ở thiet-ke-4h):
+  // qWait(T) = gió hút qua lọc dải 260 → 3600 Hz + sóng trầm 48 → 130 Hz dâng trong T giây · qNew() = bùm trầm nhẹ lúc câu mới bật ra.
+  function noise() {
+    if (!noiseBuf) { noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    return noiseBuf;
+  }
+  function qWait(T = 3) {
+    if (dead) return;
+    const t = ctx.currentTime + 0.02, o2 = ctx.createGain(); o2.gain.value = 0.8; o2.connect(bus.fx);
+    const n = ctx.createBufferSource(); n.buffer = noise(); n.loop = true;
+    const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 2.2;
+    bp.frequency.setValueAtTime(260, t); bp.frequency.exponentialRampToValueAtTime(3600, t + T);
+    const ng = ctx.createGain(); ng.gain.setValueAtTime(0.0001, t); ng.gain.exponentialRampToValueAtTime(0.32, t + T * 0.92); ng.gain.linearRampToValueAtTime(0, t + T);
+    n.connect(bp); bp.connect(ng); ng.connect(o2); n.start(t); n.stop(t + T + 0.05);
+    const o = ctx.createOscillator(), g = ctx.createGain(); o.type = "sine"; o.frequency.setValueAtTime(48, t); o.frequency.exponentialRampToValueAtTime(130, t + T);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + T * 0.9); g.gain.linearRampToValueAtTime(0, t + T);
+    o.connect(g); g.connect(o2); o.start(t); o.stop(t + T + 0.02);
+    setTimeout(() => { try { o2.disconnect(); } catch { /* ignore */ } }, (T + 0.5) * 1000);
+  }
+  function qNew() {
+    if (dead) return;
+    const t = ctx.currentTime + 0.005, o2 = ctx.createGain(); o2.gain.value = 0.85; o2.connect(bus.fx);
+    const o = ctx.createOscillator(), g = ctx.createGain(); o.type = "sine"; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.32);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.55, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+    o.connect(g); g.connect(o2); o.start(t); o.stop(t + 0.6);
+    const n = ctx.createBufferSource(); n.buffer = noise(); const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1400;
+    const ng = ctx.createGain(); ng.gain.setValueAtTime(0.25, t); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    n.connect(lp); lp.connect(ng); ng.connect(o2); n.start(t); n.stop(t + 0.15);
+    setTimeout(() => { try { o2.disconnect(); } catch { /* ignore */ } }, 900);
+  }
   let bgLocked = false;
   // ⭐ MẪU 7b (thầy 27/9/2026): act VOICE ⇒ MỌI tiếng hiệu ứng (động cơ, tăng tốc, báo động, nổ…) nhỏ lại CẢ TRẬN ở một mức
   // cố định để nghe rõ giọng đọc — không tăng giảm theo lúc voice phát. fxLevel 1 = bình thường; trận voice đặt ~0,35.
@@ -197,7 +227,7 @@ export function createRr3dSound() {
   function lockBg(on) { bgLocked = !!on; applyBus(0.3); }
   function setFxLevel(k) { fxLevel = Math.max(0, Math.min(1, +k || 0)); applyBus(0.3); }
   return {
-    play, loop, swell, charge, servo, setPrefs, lockBg, setFxLevel,
+    play, loop, swell, charge, servo, qWait, qNew, setPrefs, lockBg, setFxLevel,
     get fxLevel() { return fxLevel; },
     get prefs() { return { ...prefs, bg: prefs.bg && !bgLocked }; },
     get bgLocked() { return bgLocked; },
@@ -229,5 +259,5 @@ function bounds(buf) {
 
 function dummy() {
   const noop = () => {};
-  return { play: noop, loop: noop, swell: noop, charge: () => ({ stop: noop }), servo: noop, setPrefs: noop, lockBg: noop, setFxLevel: noop, fxLevel: 1, prefs: { fx: true, bg: true }, bgLocked: false, state: "none", pause: noop, stopAll: noop };
+  return { play: noop, loop: noop, swell: noop, charge: () => ({ stop: noop }), servo: noop, qWait: noop, qNew: noop, setPrefs: noop, lockBg: noop, setFxLevel: noop, fxLevel: 1, prefs: { fx: true, bg: true }, bgLocked: false, state: "none", pause: noop, stopAll: noop };
 }

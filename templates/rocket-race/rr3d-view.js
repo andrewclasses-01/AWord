@@ -673,6 +673,7 @@ export async function createView(cfg) {
   const hitList = [];
   const consoles = [];
   let questionPanel = null, startBtn = null;
+  const QG = { t: [-1, -1], T: [3, 3], done: [null, null], fade: [0, 0], pop: 0 };   // 12f: khoảng chờ câu mới (qGap) — khai SỚM: buildQuestion đọc nó
 
   function screenToLocal(sx, sy, depth = UID) {       // sx, sy: 0..1 (trái→phải, trên→dưới)
     const hh = depth * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), hw = hh * camera.aspect;
@@ -1711,6 +1712,7 @@ export async function createView(cfg) {
   // LỆNH TỪ rocket-race.js (view KHÔNG giữ luật chơi)
   // =========================================================
   const sfx = (name, vol) => { try { cfg.sfx && cfg.sfx(name, vol); } catch { /* ignore */ } };
+  const qSound = (kind, T) => { try { cfg.sfxQGap && cfg.sfxQGap(kind, T); } catch { /* ignore */ } };   // 12f: "wait" (T giây) · "new"
   const loop = (name, on, vol, fade) => { try { cfg.loop && cfg.loop(name, on, vol, fade); } catch { /* ignore */ } };
   const swell = (name, peak, back, up, down) => { try { cfg.swell && cfg.swell(name, peak, back, up, down); } catch { /* ignore */ } };
   // ---- Đợt 393 (thầy): "tăng chiều rộng ngang của phần text nếu câu hướng dẫn bị dài" ----
@@ -1751,11 +1753,76 @@ export async function createView(cfg) {
     const tex = canvasTex(cv);
     const tm = new THREE.Mesh(new THREE.PlaneGeometry(s.w * 0.96, s.h * 0.9), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
     tm.position.z = 0.04;
-    g.add(panel, tm); g.position.copy(p);
+    // ⭐ 12f (thầy 24/10): lớp KHOẢNG CHỜ câu mới (qGap) — mỗi nửa thanh một tấm màu đội gốc ở GIỮA, dãn ra mép ngoài (scale.x), nằm TRÊN chữ
+    const hw = s.w * 0.985 / 2, hh = s.h * 0.9;
+    const fills = [0, 1].map(k => {
+      const geo = new THREE.PlaneGeometry(hw, hh); geo.translate(k ? hw / 2 : -hw / 2, 0, 0);
+      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: qFillTex(k), transparent: true, depthWrite: false }));
+      m.position.z = 0.06; m.visible = false; return m;
+    });
+    const flash = new THREE.Mesh(new THREE.PlaneGeometry(s.w * 0.96, hh), new THREE.MeshBasicMaterial({ map: qFlashTex(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    flash.position.z = 0.07; flash.visible = false;
+    g.add(panel, tm, ...fills, flash); g.position.copy(p);
     g.visible = keepVis;
     if (r.rotX) g.rotation.x = r.rotX;
     ui.add(g);
-    questionPanel = { g, cv, tex, tm, text: "", wFrac };
+    questionPanel = { g, cv, tex, tm, fills, flash, text: "", wFrac };
+    qGapPaint();
+  }
+  // ---- 12f (thầy 24/10): KHOẢNG CHỜ CÂU MỚI kiểu RACING WORDS (rw-4h.css .rw-qfill) ----
+  // Câu cũ + màu ô giữ nguyên; trên thanh câu hỏi lớp màu đội ĐẦY DẦN từ GIỮA ra mép ngoài (mép đầu trắng sáng), che câu cũ;
+  // đầy ⇒ chớp sáng + câu mới bật ra (chữ phóng 0,8 → 1). Same: hai nửa cùng chạy (mỗi nửa màu một đội) · Different: nửa của đội đó.
+  // Nhịp theo giờ CẢNH (tick dt — tạm dừng là dừng). Luật (khi nào chờ, chờ bao lâu) do rocket-race.js giữ.
+  function qFillTex(k) {                       // dải ngang: gốc (giữa màn) tối → mép đầu sáng + vạch trắng
+    const c = document.createElement("canvas"); c.width = 256; c.height = 4;
+    const g = c.getContext("2d"), tc = TEAMS[k].color;
+    const mix = (base, a) => "#" + new THREE.Color(base).lerp(tc, a).getHexString();
+    const gr = k ? g.createLinearGradient(0, 0, 256, 0) : g.createLinearGradient(256, 0, 0, 0);
+    gr.addColorStop(0, mix("#070b14", 0.3)); gr.addColorStop(0.7, mix("#0b1222", 0.62)); gr.addColorStop(0.95, mix("#ffffff", 0.85)); gr.addColorStop(1, "#ffffff");
+    g.fillStyle = gr; g.fillRect(0, 0, 256, 4);
+    return canvasTex(c);
+  }
+  function qFlashTex() {
+    const c = document.createElement("canvas"); c.width = 256; c.height = 64;
+    const g = c.getContext("2d"), gr = g.createRadialGradient(128, 32, 0, 128, 32, 128);
+    gr.addColorStop(0, "rgba(255,255,255,.9)"); gr.addColorStop(0.45, "rgba(170,225,255,.35)"); gr.addColorStop(1, "rgba(170,225,255,0)");
+    g.fillStyle = gr; g.fillRect(0, 0, 256, 64);
+    return canvasTex(c);
+  }
+  function qGap(sides, T, done) {
+    const list = Array.isArray(sides) ? sides : [sides];
+    list.forEach(k => { QG.t[k] = 0; QG.T[k] = Math.max(0.2, +T || 3); QG.done[k] = typeof done === "function" ? done : null; QG.fade[k] = 0; });
+    qSound("wait", QG.T[list[0]]);
+    qGapPaint();
+  }
+  function qGapClear() { QG.t = [-1, -1]; QG.done = [null, null]; QG.fade = [0, 0]; QG.pop = 0; qGapPaint(); }
+  function qGapTick(dt) {
+    let popped = false;
+    [0, 1].forEach(k => {
+      if (QG.t[k] >= 0) {
+        QG.t[k] += dt;
+        if (QG.t[k] >= QG.T[k]) {
+          const fn = QG.done[k]; QG.t[k] = -1; QG.done[k] = null; QG.fade[k] = 1; QG.pop = 1; popped = true;
+          try { fn && fn(); } catch (e) { console.error(e); }
+        }
+      } else if (QG.fade[k] > 0) QG.fade[k] = Math.max(0, QG.fade[k] - dt / 0.35);
+    });
+    if (popped) qSound("new"); else if (QG.pop > 0) QG.pop = Math.max(0, QG.pop - dt / 0.5);
+    qGapPaint();
+  }
+  function qGapPaint() {
+    const P = questionPanel; if (!P || !P.fills) return;
+    P.fills.forEach((m, k) => {
+      const run = QG.t[k] >= 0;
+      m.visible = run || QG.fade[k] > 0;
+      m.scale.x = run ? Math.max(0.001, Math.min(1, QG.t[k] / QG.T[k])) : 1;
+      m.material.opacity = run ? 1 : QG.fade[k];
+    });
+    const p = QG.pop;
+    P.flash.visible = p > 0; P.flash.material.opacity = p; P.flash.scale.setScalar(1.3 - 0.6 * p);
+    const u = 1 - Math.min(1, (1 - p) / 0.9), e = 1 - u;          // chữ câu mới: 0,8 → 1 trong ~0,45 s, nảy nhẹ (easeOutBack)
+    const sc = p > 0 ? 0.8 + 0.2 * (1 + 2.2 * Math.pow(e - 1, 3) + 1.2 * Math.pow(e - 1, 2)) : 1;
+    P.tm.scale.set(sc, sc, 1); P.tm.material.opacity = p > 0 ? Math.min(1, e * 2.2) : 1;
   }
   function paintQuestion() {
     if (!questionPanel) return;
@@ -2010,6 +2077,7 @@ export async function createView(cfg) {
   }
   function win(side, opts = {}) {
     rockets.forEach(x => { x.nearWin = false; });   // Đợt 417: phân thắng thua ⇒ hết lửa xanh
+    qGapClear();                                     // 12f: phân thắng thua ⇒ bỏ khoảng chờ câu mới (không che chữ WINS!)
     if (G.phase === "over") return 0;
     G.phase = "over"; G.winner = side;
     const w = rockets[side], loser = rockets[1 - side];
@@ -2298,6 +2366,7 @@ export async function createView(cfg) {
     fire.update(dt); smoke.update(dt);
     updateBooms(dt);
     updateBanners(dt);
+    qGapTick(dt);                                                      // 12f
 
     // ô đáp án: nhấn, lật, rung, trạng thái
     consoles.forEach(c => c.tiles.forEach(t => updateTile(t, dt)));
@@ -2413,6 +2482,9 @@ export async function createView(cfg) {
     // --- câu hỏi / ô ---
     setQuestion(t0, t1) { G.qTexts = [t0 || "", t1 || ""]; G.qSame = !t1 || t1 === t0; paintQuestion(); },
     setQuestionHidden(on) { G.qHidden = !!on; },
+    // 12f: khoảng chờ câu mới — sides 0 | 1 | [0,1], T giây, done() lúc đầy (rồi câu mới bật ra) · qGapClear() huỷ (không gọi done)
+    qGap, qGapClear,
+    get qGapBusy() { return QG.t.map(t => t >= 0); },
     setAnswers(side, texts) {
       const c = consoles[side]; if (!c) return;
       G.answers[side] = texts.slice(0, c.tiles.length);

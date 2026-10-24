@@ -546,6 +546,41 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 580 (24/10/2026) — ROCKET RACE Fight 3D: MÀN CHỜ CÂU MỚI kiểu RACING WORDS (myGame mẫu 12f)
+- Thầy: *"Đọc game Rocket Race trên AWord và myGame. Kiểm tra xem chúng đồng bộ chưa. Sửa như sau: trước khi sang một câu
+  mới cũng sẽ có màn chạy load ở khung câu hỏi một vài giây tương tự cách chờ câu hỏi mới trong game RACING WORDS"*.
+- **Soát đồng bộ trước khi sửa** (fetch cả 2 kho, 0/0, cây sạch): `tools/chep-rr-mau12-sang-aword.py --thu` ⇒ 4 file
+  (view/launch/missile/ships) **0 dòng khác**; autores/intro-sound/misswait/sfx chỉ khác 2 dòng chú thích đầu file myGame;
+  `launch/layout.json` khác định dạng, cùng nội dung. ⇒ myGame `game11/` = AWord Đợt 557 (đã đồng bộ). Luật trận + ⚙ Settings
+  của AWord nằm trong `rocket-race.js` (không có ở myGame — trang mẫu 12 có luật thử riêng).
+- **Gốc RACING WORDS** (`templates/racing-words/3d/sr3d-5k.js` `qGap` + `rw-4h.css .rw-qfill` + `rw-5k.js` `qRiser/qBoom`):
+  câu cũ + kết quả ô giữ nguyên; lớp màu đội ĐẦY DẦN từ GIỮA màn ra mép ngoài, mép đầu trắng sáng, che câu cũ; đầy ⇒ chớp +
+  câu mới bật ra (0,8 → 1); tiếng gió hút + trầm dâng, bùm trầm nhẹ lúc câu mới ra; mặc định 3 s.
+- **`rr3d-view.js`** (sửa ở myGame `game11/` rồi chép bằng tool): `buildQuestion` thêm 2 tấm `fills` (mỗi nửa thanh một tấm
+  màu đội, gốc ở GIỮA — `geo.translate` ±hw/2, chạy bằng `scale.x`, z 0,06 nằm TRÊN chữ) + tấm `flash` (AdditiveBlending).
+  Kết cấu: dải canvas 256×4 tối (30 % màu đội) → sáng (85 %) → vạch trắng ở mép đầu. `QG` (t/T/done/fade/pop) khai SỚM
+  cạnh `questionPanel` (buildQuestion đọc nó lúc dựng ⇒ tránh TDZ). `qGapTick(dt)` trong `tick` (dt = 0 khi tạm dừng ⇒
+  chờ cũng dừng). API: `qGap(sides, T, done)` · `qGapClear()` · `qGapBusy`. `win()` gọi `qGapClear()` (không che chữ WINS!).
+  Tiếng qua hook mới `cfg.sfxQGap(kind, T)` ("wait" / "new").
+- **`rr3d-sfx.js`**: `qWait(T)` + `qNew()` = chép tiếng `qRiser/qBoom` của RACING WORDS (Web Audio tổng hợp, vào kênh fx
+  ⇒ tắt tiếng hiệu ứng / act voice hạ fx là theo luôn; ☰ Menu = ctx.suspend dừng đúng chỗ). `dummy()` có noop tương ứng.
+- **`rocket-race.js`**: hằng `RR_QGAP_S = 3`; cfg view thêm `sfxQGap`; `goToIndex` của bàn Fight: khi `on3d` + đã GO +
+  đã có câu trước (`curItem >= 0`) ⇒ `locked = true` + `syncFightLock()` rồi `view.qGap(fightSide, 3, …)`; hết chờ mới
+  `showQuestion(i)` (gác: `dead`/`finished`/`qGapTok`/`fightIndex !== i`/`scene.decided`). Câu ĐẦU trận vẫn ra ngay sau
+  cảnh phóng. `cleanup` gọi `qGapClear()`. Same: 2 bàn cùng nhận goToIndex ⇒ hai nửa cùng chạy (xanh trái, cam phải);
+  Different: chỉ nửa của đội vừa xong. **Không đụng `core/fight.js`**: 3 s tính SAU nhịp giữ `ROUND_HOLD_MS` 2,1 s của
+  trọng tài ⇒ từ lúc trả lời tới câu mới ≈ 5,1 s (RACING WORDS ≈ 3,5–4,3 s vì nhịp giữ của nó ngắn hơn).
+- **Thử** (dev server `aword-dot580` cổng 5680, `scratch/dot413-rr.html`, lái khung bằng `__rr3d.view.step` vì khung xem
+  trước bị kìm 3 khung/giây): Same — đội 1 đúng ⇒ 2,3 s sau `qGapBusy` [true,true], câu cũ còn nguyên; chạm đội 2 TRONG lúc
+  chờ ⇒ bị bỏ qua (tàu đội 2 vẫn nấc 0); hết chờ ⇒ câu mới, đội 2 trả lời đúng ⇒ tàu lên nấc 1 · Different — chỉ nửa
+  trái chạy, câu đội 2 giữ nguyên, hết chờ chỉ câu đội 1 đổi · 0 lỗi console. myGame `mau-12-tau-3d.html` (12f) chạy
+  y vậy (`?gap=0–5`).
+
+**VIỆC ĐANG CHỜ (Đợt 580):**
+- ⬜ Thầy chơi trên TOMKO: 3 s có dài quá không (cộng nhịp giữ 2,1 s của trọng tài) — đổi `RR_QGAP_S` hoặc thêm thanh
+  ⚙ Settings như RACING WORDS (Settings ▸ Boost ▸ Next question 1–5 s); màu lớp chờ có đủ rõ trên thanh câu hỏi không.
+- ⬜ Màn iPad "Question screen" (`source.html`) vẫn đổi câu theo `reportLink` lúc câu mới hiện — không có hiệu ứng chờ riêng.
+
 ## Đợt 579 (24/10/2026) — SHOWDOWN: hình ảnh mới màn READY + phòng chờ (bóng giữa nuốt avatar)
 - Thầy: *"đổi các hình ảnh của các màn ready và loading của showdown, hãy design lại cho tôi chọn"*. Bốn vòng mẫu ở
   `D:\OTHERS\CLAUDE\AWord - thiet ke Showdown Ready Loading\` (mau-v1 = 4 phong cách A/B/C/D · v2 trộn A+D · v3 nuốt ·
