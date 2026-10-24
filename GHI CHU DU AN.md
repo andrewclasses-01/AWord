@@ -586,6 +586,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 **VIỆC ĐANG CHỜ (Đợt 579):**
 - ⬜ Thầy xem trên TOMKO + myActivity 3–5 cột: ảnh avatar thật hiện đủ, bóng có to/rõ không, nổ trắng có chói quá không.
 - ⬜ Bàn thử `dot263-readyrow.html` cần sửa phép đo theo vị trí mới của hàng ô tích (dải trên, Đợt 267).
+- ✅ Code `ab3306c` ĐÃ PUSH + LIVE (kiem-live 2/2). Chốt phiên 24/10: cả Đợt 578 + 579 đã live, chờ thầy thử TOMKO.
 
 ---
 
