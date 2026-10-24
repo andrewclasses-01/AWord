@@ -546,6 +546,15 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 582 (24/10/2026) — CHẶN PHÍM TẮT XEM MÃ (`core/chan-phim.js`, đi cặp myLesson web v1.413.0)
+- Thầy: gắn chặn phím tắt (chỉ chặn phím, GIỮ copy) cho AWord, kiemtra, nentangtienganh, myDocument — trước đó chỉ andrewclasses.com có;
+  bấm phím khi khung AWord nhúng trong trang bài đang được chọn thì lọt qua.
+- Chặn: F12 · Ctrl/Cmd+U · Ctrl/Cmd+S · Ctrl+Shift+I/J/C/K · Mac Cmd+Opt+I/J/C/U (keydown pha capture, preventDefault). KHÔNG chặn bôi đen / copy / chuột phải. File là BẢN CHÉP của myLesson Web `js/chan-phim.js` (web v1.413.0) — sửa bản gốc rồi chép lại sang 4 kho (AWord/web core/ · kiemtra js/ · nentangtienganh / · myDocument _chung/). ⛔ Không phải bảo mật: `view-source:` gõ tay, menu trình duyệt, tắt JS, curl vẫn xem được.
+- Gắn trước `</head>` 7 trang thật: index · play · pad · run · kiemtra · kiemtra2 · source (`core/chan-phim.js?v=1`). BỎ QUA các `test.html`,
+  404, tools-voice-cleanup. Đã rà: chỉ có phím S TRƠN (speaking-cards xáo thẻ, racing-words KeyS lái) — không kèm Ctrl ⇒ không đụng.
+- Kiểm (devserver 5511): play.html F12 / Ctrl+U / Ctrl+Shift+I bị chặn, Ctrl+C và S trơn không; index.html có `__chanPhim`; console sạch.
+- ⬜ VIỆC ĐANG CHỜ: không có (thầy F5 là có).
+
 ## Đợt 581 (24/10/2026) — ROCKET RACE Fight 3D: màn chờ MỀM + ô cũ đóng ở 30 % + THANH CÂU HỎI ĐẶC, LUÔN TRÊN CÙNG (myGame mẫu 12g)
 - Thầy (sau khi xem Đợt 580): *"Phần load đó trông cứng và viền trông nét quá. Tôi muốn chúng mềm hơn, blur hơn cho đẹp. Khi load được
   30% thanh câu hỏi thì câu trả lời cũ cũng đóng lại luôn. Thêm một phần nữa: Nền ở khung câu hỏi để opacity lên 100%, màu đặc và hoàn
