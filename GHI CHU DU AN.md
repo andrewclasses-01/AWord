@@ -546,6 +546,35 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 578 (24/10/2026) — SHOWDOWN: cầu cho NÚT CHIA BẢNG của myActivity (v2.41.0)
+- Thầy: *"Khi mở myActivity, thêm một nút (only icon) chia bảng để khi tôi chọn lớp, thiết đặt xong số đội và chia xong số
+  đội, bấm nút này để myActivity tự mở ra từng ấy bảng đội và tự chọn lần lượt các bảng luôn … Act được load đầy đủ ở các
+  bảng, chọn sẵn mode showdown và chọn sẵn các đội, và ở màn START của act rồi, đồng bộ hết options, sẵn sàng chơi thôi."*
+- **`core/showdown-setup.js`** — hai hàm mới (cạnh `wipeSetup`):
+  - `splitInfo()` → `{teams:[{id,name,size}], className}` (chỉ đội CÓ người, đúng thứ tự bảng đội) hoặc `{err:"setup"|"empty"}`.
+  - `takeTeamForBoard(teamId)` → dựng pick y như `applyReady()` (nhãn `fullLabelMap`, `maxTeam`, `tableId`, `resetAt`),
+    `writePick`, rồi `publishTable(s, {claimTeamId})` với `s` = bản server vừa đọc (rơi ca 3: chỉ thêm ghế) +
+    `stampPickFromTable`. GIÀNH ghế, không hỏi — ghế cũ của cột khác trên đội đó bị đè; ghế các đội khác giữ nguyên.
+  - ⭐ Bảng đội chỉ lên Firestore lúc bấm READY ⇒ thầy chia xong bấm nút ngay thì bảng còn nằm trong panel. Panel đăng ký
+    `window.__awSdPanelFlush = flushForSplit` lúc boot (sau `watchForClose`), `stopWatch()` gỡ: màn cột đội ⇒ `publishTable`
+    bảng của panel (kèm ghế đang tích) trả "ok"; màn chọn lớp ⇒ "setup" (đội chưa chia — đừng đem bảng cũ ra chia).
+- **`core/engine.js`** — delegate thêm `takeShowdownTeam(teamId)` (false nếu act không Showdown / Fight / playMode; xong thì
+  `closeToolPanel(false)` + `replayCurrent()` ⇒ màn READY của đội đó). Singleton thêm **chép tay** (bẫy Đợt 229/260):
+  `sdSplitInfo()` và `sdTakeTeam(teamId, st)` — `st` = `getState()` của bảng 1: `switchTemplate` → `applyOptions` (chỉ khi
+  KHÁC, so bằng JSON chuẩn hoá khoá) → `setTheme` → `takeShowdownTeam`. Các cú áp đều muted ⇒ không dội marker sang cột khác.
+- Bàn thử `scratch/dot578-chia-bang.html?team=t2|t1` (Firestore giả): **12/12 ĐẠT** cả hai ca — 3 đội đúng thứ tự, pick đúng
+  đội + 5 shortLabel + tableId, ghế giành đúng, ghế đội khác (bw_cu) còn nguyên khi nhận t1, màn READY hiện đúng tên em,
+  Options bảng 1 (Count 6) áp sang ⇒ "30 QUESTIONS · 6 EACH", đội lạ ⇒ false. Thêm tay trên cùng trang: panel ở màn cột
+  đội ⇒ hook có, `sdSplitInfo` đẩy bảng lên (updatedAt tăng), đóng panel ⇒ hook gỡ; bảng rỗng + panel màn chọn lớp ⇒
+  `{err:"setup"}`, đóng panel ⇒ `{err:"empty"}`.
+
+**VIỆC ĐANG CHỜ (Đợt 578):**
+- ⬜ Thầy bấm nút chia bảng thật trên TOMKO (myActivity v2.41.0): 3–5 đội, xem mỗi cột đúng đội + cùng Options, rồi START cả lớp.
+- ⬜ Đang làm tiếp: thiết kế lại màn READY / LOADING Showdown — thầy chọn trộn mẫu A + D (bóng mặt các em xếp cột dọc,
+  START bay vào giữa, bóng xoay quanh rồi nổ vào game), mẫu `D:\OTHERS\CLAUDE\AWord - thiet ke Showdown Ready Loading\`.
+
+---
+
 ## Đợt 577 (24/10/2026) — TYPE THE ANSWER chấm nới 3 luật · CROSSWORD bỏ gõ lại chữ có sẵn + hết giờ tự chấm
 
 **Bối cảnh (thầy giao):**
@@ -567,6 +596,8 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 - Bàn thử `scratch/dot577-cw.html?s=<giây>` (sample crossword + count down; scratch bị gitignore), launch `aword-dot577` cổng 5577 (`D:\OTHERS\CLAUDE\.claude\launch.json`). Đo bằng bấm phím thật: NEAR có N, A sẵn ⇒ con trỏ đứng ở ô 2, gõ E nhảy qua A sang ô 4, gõ R xong; Backspace lùi nhảy qua A; PULL có L cuối sẵn ⇒ gõ 3 chữ là đủ, Submit +1; hết giờ 8 s lúc gõ đủ BEHIND chưa Submit ⇒ 1/20; gõ dở "BE" ⇒ 0/20; không còn phần tử `is-given-wait`/`is-shake` nào.
 
 **Lưu ý:** lúc commit có phiên Claude khác đang sửa dở `core/engine.js` + `core/showdown-setup.js` trong cùng thư mục — Đợt 577 KHÔNG đụng và KHÔNG commit hai file đó.
+
+**LIVE (24/10/2026):** code `c920625` đã push; `tools/kiem-live.py` build.json sha c920625, 3/3 file khớp nguồn. Chạy thẳng trang live: `templates/crossword/test.html` — BREAK có E sẵn ⇒ con trỏ nhảy qua, gõ 4 chữ, Submit +1, không còn nhấp nháy/rung; `templates/type-the-answer/test.html` — 6/6 câu gõ kèm đuôi rác ("Went ." · "cold!!" · "GREEN " · "gray?" · "seven." · "honey ,") đều ĐÚNG.
 
 **VIỆC ĐANG CHỜ (Đợt 577):**
 - ⬜ Thầy bấm tay TTA trên iPad thật (dấu ’ tự đổi) + Crossword trên TOMKO.
