@@ -8754,3 +8754,100 @@ body.aw-khung-mode .aw-giao-nen{display:none}
 .aw-fm-list .aw-ag-voice { left: auto; right: -6px; top: -6px; width: 18px; height: 18px; }
 .aw-fm-list .aw-ag-ten { flex: 1 1 auto; height: auto; border-top: none; justify-content: flex-start; text-align: left; font-size: .86rem; padding: 0 8px; line-height: 1.35; }
 .aw-fm-list .aw-act-gon .aw-newdot { top: 50%; right: 12px; transform: translateY(-50%); }
+
+/* ---- ⭐⭐ Đợt 579 (thầy, 24/10/2026) — HÌNH ẢNH MỚI CỦA MÀN READY + PHÒNG CHỜ SHOWDOWN ----
+   Mẫu v4 thầy duyệt: `D:\OTHERS\CLAUDE\AWord - thiet ke Showdown Ready Loading\mau-v4-xoay-va-nuot.html`.
+   READY: nền đèn rọi từ trên + vệt sáng sàn, MỘT cột bóng avatar (không tên), nút PLAY tròn có vòng sáng
+   chạy. Phòng chờ (`.aw-lobby.is-sdv`): bóng giữa + avatar xoay quanh rồi bị nuốt — toạ độ do JS đặt
+   (buildLobbyStage/sdlTick trong core/engine.js), CSS chỉ lo hình. ⚠️ Khối này PHẢI đứng SAU các luật
+   `.aw-lobby.is-* .aw-lobby-mark` gốc (Đợt 261): cùng độ ưu tiên, sau thì thắng.
+   Hào quang/khung viền dùng px hoặc var(--s)/var(--d) — không cqw trong @keyframes (bẫy Đợt 258/259). */
+.aw-play-overlay.is-sd {
+  background:
+    radial-gradient(ellipse 46% 80% at 50% -12%, rgba(96,165,250,.30), transparent 62%),
+    radial-gradient(ellipse 40% 9% at 50% 93%, rgba(96,165,250,.22), transparent 72%),
+    linear-gradient(#0e1420, #090c12);
+}
+.aw-sd-namecol.is-faces { align-items: center; gap: calc(1.6 * var(--aw-u)); }
+.aw-sd-faces { display: flex; flex-direction: column; align-items: center; gap: calc(1.3 * var(--aw-u)); }
+.aw-sd-face {
+  position: relative; flex: none; width: var(--sd-face); height: var(--sd-face); border-radius: 50%;
+  background: #1e293b;
+  box-shadow: 0 0 0 calc(var(--sd-face) * .055) var(--ring, #60a5fa), 0 calc(var(--sd-face) * .08) calc(var(--sd-face) * .2) rgba(0,0,0,.5);
+}
+.aw-sd-face .aw-av { position: absolute; inset: 0; width: 100%; height: 100%; font-size: calc(var(--sd-face) * .36); }
+
+/* Nút PLAY kiểu A: tròn xanh, tam giác trắng, vòng sáng chạy quanh */
+.aw-sd-contentcol .aw-bigplay {
+  position: relative; width: calc(17 * var(--aw-u)); border-radius: 50%;
+  display: grid; place-items: center; color: #fff;
+  background: radial-gradient(circle at 40% 35%, #60a5fa, #1d4ed8 70%);
+  box-shadow: 0 0 calc(5 * var(--aw-u)) rgba(59,130,246,.55), inset 0 calc(-.8 * var(--aw-u)) calc(2 * var(--aw-u)) rgba(0,0,0,.35);
+}
+.aw-sd-contentcol .aw-bigplay svg { width: 44%; height: 44%; margin-left: 6%; filter: none; }
+.aw-sd-contentcol .aw-bigplay::before,
+.aw-lobby.is-sdv .aw-sdl-ball::before {
+  content: ""; position: absolute; inset: -8%; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(from 0deg, transparent 0 60%, var(--sdl-ring, #93c5fd) 85%, transparent 100%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+  animation: aw-spin 2.4s linear infinite;
+}
+
+/* Phòng chờ */
+.aw-lobby.is-sdv { display: block; }
+.aw-sdl-stage { position: absolute; inset: 0; pointer-events: none; }
+.aw-lobby.is-sdv .aw-sdl-ball {
+  position: absolute; width: var(--s); height: var(--s); min-width: 0; min-height: 0;
+  margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
+  border: none; border-radius: 50%; display: grid; place-items: center; color: #fff;
+  background: radial-gradient(circle at 40% 35%, #60a5fa, #1d4ed8 70%);
+  box-shadow: 0 0 calc(var(--s) * .3) rgba(59,130,246,.55), inset 0 calc(var(--s) * -.05) calc(var(--s) * .12) rgba(0,0,0,.35);
+  transition: background .45s ease, box-shadow .45s ease;
+  animation: none;
+}
+.aw-lobby.is-sdv .aw-sdl-ball svg { animation: none; }
+.aw-sdl-ic { position: relative; width: 44%; height: 44%; display: grid; place-items: center; }
+.aw-sdl-ic svg { width: 100%; height: 100%; }
+.aw-lobby.is-sdv.is-ready .aw-sdl-ic svg { stroke-width: 3.4; }
+.aw-lobby.is-joining .aw-sdl-ic, .aw-lobby.is-loading .aw-sdl-ic { width: 54%; height: 54%; }
+.aw-lobby.is-joining .aw-sdl-ic svg, .aw-lobby.is-loading .aw-sdl-ic svg { margin-left: 12%; }
+.aw-sdl-go { font-family: "Rubik", "Baloo 2", sans-serif; font-weight: 800; font-size: calc(var(--s) * .26); line-height: 1; color: #fff; }
+.aw-lobby.is-sdv.is-ready .aw-sdl-ball {
+  --sdl-ring: #bbf7d0;
+  background: radial-gradient(circle at 40% 35%, #4ade80, #15803d 72%);
+  animation: aw-sdl-halo 1.6s ease-in-out infinite;
+}
+@keyframes aw-sdl-halo {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74,222,128,.45), 0 0 22px rgba(74,222,128,.3); }
+  50%      { box-shadow: 0 0 0 16px rgba(74,222,128,0), 0 0 56px rgba(74,222,128,.55); }
+}
+.aw-lobby.is-sdv.is-starting .aw-sdl-ball {
+  --sdl-ring: #fff;
+  background: radial-gradient(circle at 40% 35%, #fde68a, #d97706 72%);
+  box-shadow: 0 0 calc(var(--s) * .5) rgba(251,191,36,.7);
+}
+.aw-lobby.is-sdv.is-starting .aw-sdl-ball::before { animation-duration: .6s; }
+.aw-lobby.is-sdv.is-nomatch .aw-sdl-ball,
+.aw-lobby.is-sdv.is-offline .aw-sdl-ball {
+  --sdl-ring: #fcd34d;
+  background: radial-gradient(circle at 40% 35%, #a16207, #422006 75%);
+  box-shadow: 0 0 calc(var(--s) * .25) rgba(245,185,66,.45);
+  color: #fde68a;
+}
+.aw-sdl-face {
+  --sd-face: var(--d);
+  position: absolute; margin: calc(var(--d) / -2) 0 0 calc(var(--d) / -2);
+}
+.aw-sdl-spark { position: absolute; width: calc(.9 * var(--aw-u)); height: calc(.9 * var(--aw-u)); min-width: 5px; min-height: 5px; border-radius: 50%; pointer-events: none; }
+.aw-sdl-white { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 5; }
+.aw-lobby.is-sdv .aw-lobby-word {
+  position: absolute; left: 0; right: 0; top: var(--sdl-wy, 62%); text-align: center;
+  font-size: calc(3.8 * var(--aw-u)); letter-spacing: calc(.35 * var(--aw-u)); line-height: 1.1;
+}
+.aw-lobby.is-sdv.is-ready .aw-lobby-word { text-shadow: 0 0 calc(2.5 * var(--aw-u)) rgba(74,222,128,.5); }
+.aw-lobby.is-sdv .aw-lobby-sub {
+  position: absolute; left: 0; right: 0; margin: 0 auto; text-align: center;
+  top: calc(var(--sdl-wy, 62%) + 5.2 * var(--aw-u));
+  font-size: calc(1.55 * var(--aw-u)); color: #8ea6c3;
+}

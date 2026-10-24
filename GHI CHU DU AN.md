@@ -546,6 +546,49 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 579 (24/10/2026) — SHOWDOWN: hình ảnh mới màn READY + phòng chờ (bóng giữa nuốt avatar)
+- Thầy: *"đổi các hình ảnh của các màn ready và loading của showdown, hãy design lại cho tôi chọn"*. Bốn vòng mẫu ở
+  `D:\OTHERS\CLAUDE\AWord - thiet ke Showdown Ready Loading\` (mau-v1 = 4 phong cách A/B/C/D · v2 trộn A+D · v3 nuốt ·
+  **v4 duyệt**): màn + nút START kiểu A (đèn rọi), bóng MẶT học sinh không tên, MỘT cột dọc; bấm START ⇒ nút bay vào
+  giữa, bóng bay ra XOAY VÒNG quanh nó và bị NUỐT LẦN LƯỢT khi đang quay (mỗi lần nuốt bóng to lên một nấc + tia lấp
+  lánh); đủ lớp ⇒ bóng NỔ TRẮNG XOÁ màn hình rồi vào ván.
+- **`core/engine.js`**:
+  - Module: `SD_FACE_RING` (8 màu viền) + `sdAvatarFill(els, pick)` — nạp LƯỜI `core/avatar.js` (cùng nguồn ảnh bóng
+    Podium; em chưa có ảnh ⇒ chữ tắt trên nền màu), không bao giờ chạy ở trang học sinh.
+  - `sdNameCol` (READY): `.aw-sd-namecol.is-faces` = tên đội + `.aw-sd-faces` (mỗi em một `.aw-sd-face`, tên ở
+    title/aria). Cỡ bóng `--sd-face = min(11, (43 − (n−1)·1.3)/n)·u` ⇒ một cột vừa cả đội. Mảng `sdFaceEls` để phòng chờ chép.
+  - Phòng chờ: `let sdl` + `SDL_EAT_MS` khai cạnh `lobbyEl` (luật TDZ của nhánh vào-lại-đồng-bộ). `enterLobby()` gọi
+    `buildLobbyStage(lobbyTries > 0)` TRƯỚC khi ẩn readyCenter (đo nút PLAY + các bóng để bay ra từ đúng chỗ; vào lại sau
+    cú kéo chuẩn ⇒ đội coi như đã bị nuốt, bóng đứng giữa). Vòng `sdlTick` (rAF) lo quỹ đạo dẹt ngang (rx = 1,4R),
+    lịch nuốt (bắt đầu 1,1 s, cách nhau min(450, 2800/n) ms), `sdlGulp` (to một nấc `min(.12, .6/n)` + `sdlSparkle`).
+    `paintLobby()` KHÔNG dựng lại sân khấu nữa — chỉ đổi lớp `is-<state>`, biểu tượng trong bóng (▶ joining/loading ·
+    ✓ ready · GO starting · ⚠ nomatch/offline), chữ, nút ✕. Chữ đứng dưới quỹ đạo LỚN NHẤT (`--sdl-wy`) nên không nhảy.
+  - `takeOff()`: sau prep + 900 ms ⇒ `sdlFinishEating()` (bóng còn lại nuốt cách 130 ms, trần 1,6 s) ⇒ `sdlBoom()`
+    (bóng phình ×10 trong 650 ms + lấp lánh lớn + lớp `.aw-sdl-white` trong playOverlay mờ lên kín) ⇒ `enterGame()`
+    làm mờ overlay = trắng tan thành ván. `stopLobby()`/`cancelLobby()` gọi `sdlStop()` (tắt rAF).
+  - Vá lỗi CŨ: thanh "Getting this game ready…" chèn bằng `readyCenter.insertBefore(prep, playControl)` ném
+    NotFoundError ở Showdown (nút PLAY ở `aw-sd-contentcol` từ Đợt 280) ⇒ nay chèn vào cha thật của nút.
+- **`core/app.css`** — khối Đợt 579 ở CUỐI file (phải sau luật `.aw-lobby.is-* .aw-lobby-mark` Đợt 261): nền đèn rọi
+  `.aw-play-overlay.is-sd`, bóng `.aw-sd-face`, nút PLAY tròn + vòng sáng chạy (`::before` conic + mask), bóng giữa
+  `.aw-sdl-ball` theo trạng thái (xanh dương · xanh lá thở hào quang px · vàng GO · nâu-vàng cảnh báo), `.aw-sdl-face`
+  (`--sd-face: var(--d)`), `.aw-sdl-spark`, `.aw-sdl-white`, chữ/sub định vị tuyệt đối.
+- Thử (dev server, Firestore giả): `scratch/sd-ready-truoc-start.html?state=pre` (READY: 5 bóng một cột, PLAY tròn) ·
+  `dot261-visual.html?state=ready` (bóng bay ra, xoay, bị nuốt, READY xanh "1 / 3 teams"; bấm ✕ ⇒ READY nguyên vẹn,
+  5 bóng, PLAY bấm lại được, sân khấu dọn sạch) · `?state=loading` (JOINING… bóng xanh ▶) · MỚI `scratch/dot579-lobby.html
+  ?state=go&n=6` (chỉ đội mình có ghế ⇒ đủ đội): lấy mẫu 100 ms trên tab ĐANG HIỆN — STARTING 0,5 s → xoay → nuốt 6 bóng
+  2,0–2,7 s → trắng 1,00 lúc 3,3 s → overlay tan 3,4–3,6 s → gỡ 3,9 s, vào ván. Hồi quy: `dot261-lobby` 57/57 ·
+  `dot262-matchid` 33/33 · `dot263-applyready` 10/10 · `dot263-readyrow` 22/25 (3 phép về vị trí/cỡ hàng ô tích — lỗi
+  thời từ Đợt 267 dời hàng lên dải trên; Đợt 579 không đụng hàng này).
+- ⚠️ Bẫy đo gặp lại: lấy mẫu trên tab NỀN của khung trình duyệt ⇒ rAF + WAAPI đóng băng, trông như "không nuốt, trắng
+  không lên". Phải đưa tab lên trước (xem memory electron-test-throttle). Cũng nhờ vậy thấy đường an toàn chạy đúng:
+  rAF đứng thì `sdlFinishEating` hết 1,6 s vẫn vào ván.
+
+**VIỆC ĐANG CHỜ (Đợt 579):**
+- ⬜ Thầy xem trên TOMKO + myActivity 3–5 cột: ảnh avatar thật hiện đủ, bóng có to/rõ không, nổ trắng có chói quá không.
+- ⬜ Bàn thử `dot263-readyrow.html` cần sửa phép đo theo vị trí mới của hàng ô tích (dải trên, Đợt 267).
+
+---
+
 ## Đợt 578 (24/10/2026) — SHOWDOWN: cầu cho NÚT CHIA BẢNG của myActivity (v2.41.0)
 - Thầy: *"Khi mở myActivity, thêm một nút (only icon) chia bảng để khi tôi chọn lớp, thiết đặt xong số đội và chia xong số
   đội, bấm nút này để myActivity tự mở ra từng ấy bảng đội và tự chọn lần lượt các bảng luôn … Act được load đầy đủ ở các

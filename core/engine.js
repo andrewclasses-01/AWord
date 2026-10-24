@@ -208,6 +208,19 @@ let playModeOnMount = null;
 // chặn vòng lặp "kéo mãi mà không khớp". Cùng khuôn cờ-một-lần với openShowdownOnMount.
 let sdLobbyResume = 0;
 
+// ⭐⭐ Đợt 579 — bóng avatar của màn READY / phòng chờ Showdown (xem sdNameCol trong startGame()).
+// Viền mỗi em một màu, cùng bảng màu với mẫu v4 thầy duyệt.
+const SD_FACE_RING = ["#60a5fa", "#f472b6", "#34d399", "#fbbf24", "#a78bfa", "#fb923c", "#22d3ee", "#f87171"];
+/** Gắn ảnh avatar vào từng ô bóng `els[i]` ↔ `pick.members[i]`. avatar.js nạp LƯỜI (chỉ màn thầy). */
+function sdAvatarFill(els, pick) {
+  import("./avatar.js").then(({ avatarNode }) => {
+    els.forEach((f, i) => {
+      const m = pick.members[i];
+      if (m && !f.querySelector(".aw-av")) f.append(avatarNode(pick.className, m.name));
+    });
+  }).catch(() => { /* mất mạng: bóng vẫn là vòng màu trống */ });
+}
+
 // ⭐ Đợt 228 — the same one-shot handover, for picking a new game from INSIDE
 // the Options panel's inline Template picker. That switch tears the whole
 // mount down (doSwitchTemplate() ends in cleanupAll()+startGame()), so this is
@@ -2860,17 +2873,35 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // trước Đợt 291 (còn nằm trong sessionStorage từ trước khi cập nhật code, hoặc
   // rơi qua nhánh nào đó chưa kịp gắn shortLabel) thì lùi về `shortenTeamNames()`
   // — vẫn đúng TRONG một đội, chỉ không đảm bảo được xuyên đội như bản mới.
+  // ⭐⭐ Đợt 579 (thầy, 24/10/2026 — mẫu v4 `D:\OTHERS\CLAUDE\AWord - thiet ke Showdown Ready Loading\
+  // mau-v4-xoay-va-nuot.html`) — cột tên đổi thành MỘT CỘT BÓNG AVATAR, không tên ("các quả bóng là quả bóng
+  // mặt học sinh xếp theo cột dọc, to hơn để dễ nhìn và không cần tên nữa"). Tên vẫn nằm ở `title` + aria.
+  // Ảnh: core/avatar.js (cùng nguồn bóng Podium) nạp LƯỜI — trang học sinh không bao giờ tới đây.
+  // Cỡ bóng: một cột phải vừa cả đội ⇒ chia chiều cao khung (~43u) cho số em, trần 11u.
+  // Phòng chờ CHÉP lại các bóng này (sdFaceEls) để bay ra quỹ đạo — xem buildLobbyStage().
   let sdNameCol = null;
+  const sdFaceEls = [];
   if (showdownPick) {
-    sdNameCol = el("div", "aw-sd-namecol");
+    sdNameCol = el("div", "aw-sd-namecol is-faces");
     sdNameCol.append(el("div", "aw-sd-namecol-team", escapeText(showdownPick.teamName).toUpperCase()));
     const allLabeled = showdownPick.members.every(m => m.shortLabel);
     const names = allLabeled
       ? showdownPick.members.map(m => m.shortLabel)
       : shortenTeamNames(showdownPick.members.map(m => m.name));
-    names.forEach(n => {
-      sdNameCol.append(el("div", "aw-sd-namecol-stu", escapeText(n).toUpperCase()));
+    const n = Math.max(1, showdownPick.members.length);
+    const faceU = Math.min(11, (43 - (n - 1) * 1.3) / n);
+    const facesBox = el("div", "aw-sd-faces");
+    facesBox.style.setProperty("--sd-face", `calc(${faceU.toFixed(2)} * var(--aw-u))`);
+    showdownPick.members.forEach((m, i) => {
+      const f = el("div", "aw-sd-face");
+      f.style.setProperty("--ring", SD_FACE_RING[i % SD_FACE_RING.length]);
+      f.title = names[i] || m.name;
+      f.setAttribute("aria-label", names[i] || m.name);
+      facesBox.append(f);
+      sdFaceEls.push(f);
     });
+    sdNameCol.append(facesBox);
+    sdAvatarFill(sdFaceEls, showdownPick);
   }
 
   // ⭐⭐⭐ Đợt 260 — SỐ CÂU BẢNG NÀY SẼ CHƠI, ngay dưới đội hình, TRƯỚC KHI BẤM PLAY.
@@ -3251,7 +3282,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       prepBar.append(prepFill);
       prepText = el("div", "aw-ready-preptext", caption);
       prep.append(prepBar, prepText);
-      readyCenter.insertBefore(prep, playControl);
+      // Đợt 579 — Showdown dời nút PLAY vào `aw-sd-contentcol` (Đợt 280) ⇒ chèn vào CHA THẬT của nó;
+      // `readyCenter.insertBefore` ném NotFoundError và thanh % không bao giờ hiện ở Showdown.
+      (playControl.parentNode || readyCenter).insertBefore(prep, playControl);
       paint();
     }, PREP_BAR_DELAY_MS);
 
@@ -3483,6 +3516,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
 
   let lobbyEl = null, lobbyStop = null, lobbyMod = null;
   let lobbyPhase = "", lobbyRound = null;
+  // ⭐⭐ Đợt 579 — sân khấu phòng chờ (bóng giữa + bóng avatar xoay rồi bị nuốt), xem buildLobbyStage().
+  // ⚠️ Khai Ở ĐÂY, trên cú enterLobby() đồng bộ của nhánh "vào lại phòng chờ" — luật TDZ ngay trên.
+  let sdl = null;
+  const SDL_EAT_MS = 620;
   // ⭐⭐⭐ Đợt 262 — TÊN CỦA LƯỢT NÀY, thứ làm sổ trận gom đúng các bàn đã cùng bắt đầu.
   // Chốt Ở ĐÚNG LÚC CẤT CÁNH (`takeOff`), KHÔNG đọc `lobbyRound` lúc ván kết thúc: giữa
   // hai thời điểm đó là cả một ván chơi, và `lobbyRound` là biến mà một nhịp Firestore
@@ -3540,8 +3577,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     bigPlay.disabled = true;
     if (practiceBtn) practiceBtn.disabled = true;
     if (submitStartBtn) submitStartBtn.disabled = true;
-    lobbyEl = el("div", "aw-lobby");
+    lobbyEl = el("div", "aw-lobby is-sdv");
     playOverlay.append(lobbyEl);
+    // Đợt 579 — đo nút PLAY + các bóng avatar TRƯỚC khi ẩn màn READY (bóng giữa bay ra từ đúng chỗ nút).
+    // Vào lại sau cú kéo chuẩn (lobbyTries > 0) ⇒ đội đã "bị nuốt" hết từ lượt trước, đứng sẵn ở giữa.
+    try { buildLobbyStage(lobbyTries > 0); } catch (e) { console.warn("AWord: lobby stage", e); sdl = null; }
     readyCenter.style.display = "none";
     lobbyLeaveOnTeardown = true;
     paintLobby("joining");
@@ -3701,8 +3741,14 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // giọng đọc. Đây đúng là chỗ thầy nói "trong lúc đó load mọi dữ liệu đồng bộ".
     Promise.resolve(prepDoneP).catch(() => {})
       .then(() => new Promise(r => setTimeout(r, LOBBY_TAKEOFF_MS)))
+      // ⭐⭐ Đợt 579 — nuốt nốt bóng còn lại rồi NỔ TRẮNG XOÁ (thầy: "quả bóng trung tâm nổ tung màu trắng
+      // tinh màn hình và vào game như bình thường"). Lớp trắng nằm trong playOverlay ⇒ enterGame() làm
+      // mờ overlay là trắng tan ra thành ván.
+      .then(() => sdlFinishEating())
+      .then(() => sdlBoom())
       .then(() => {
         if (torndown || !lobbyEl) return;
+        sdlStop();
         lobbyEl.remove(); lobbyEl = null;
         enterGame();          // ⚠️ KHÔNG trả `readyCenter` về: lớp phủ sắp mờ đi hết
       });
@@ -3723,6 +3769,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       lobbyLeaveOnTeardown = false;
       sdMod().then(m => m.leaveRound()).catch(() => { /* mất mạng: hàng của mình sẽ hết hạn theo lượt */ });
     }
+    sdlStop();
     lobbyEl = null;
   }
 
@@ -3735,6 +3782,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     stopLobbyWatch();
     lobbyLeaveOnTeardown = false;
     sdMod().then(m => m.leaveRound()).catch(() => {});
+    sdlStop();
     if (lobbyEl) { lobbyEl.remove(); lobbyEl = null; }
     lobbyPhase = ""; lobbyRound = null; lobbyTries = 0;
     readyCenter.style.display = "";
@@ -3768,16 +3816,167 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     return bits.join(" · ");
   }
 
+  // =============================================================
+  // ⭐⭐ Đợt 579 (thầy, 24/10/2026) — HÌNH ẢNH PHÒNG CHỜ: BÓNG GIỮA NUỐT AVATAR (mẫu v4)
+  // =============================================================
+  // Thầy duyệt qua 4 vòng mẫu (`D:\OTHERS\CLAUDE\AWord - thiet ke Showdown Ready Loading\`): bấm START ⇒
+  // nút PLAY bay vào giữa thành QUẢ BÓNG, các bóng avatar từ cột trái bay ra XOAY VÒNG quanh nó, rồi bị
+  // NUỐT LẦN LƯỢT ngay khi đang quay — mỗi lần nuốt bóng to lên một nấc + tia lấp lánh bắn ra; đủ lớp
+  // (STARTING) ⇒ nuốt nốt, bóng NỔ TRẮNG XOÁ rồi vào ván.
+  // ⚠️ CHỈ LÀ HÌNH ẢNH: mọi quyết định (joining/loading/ready/starting, kéo chuẩn, đếm đội) vẫn y nguyên
+  // ở joinNow/onRound/takeOff. Nhịp nuốt chạy theo đồng hồ riêng (~2,8 s cho cả đội), không chờ mạng.
+  // ⚠️ Sân khấu dựng MỘT LẦN (enterLobby); paintLobby chỉ đổi chữ + biểu tượng trong bóng — dựng lại mỗi
+  // trạng thái là bóng nhảy về chỗ cũ giữa chừng.
+  // ⚠️ Toạ độ px đo theo playOverlay lúc vào; vòng rAF tự tắt khi lobbyEl/sdl mất (sdlStop) — không để
+  // vòng vẽ ma chạy sau khi ván bị dỡ (họ đồng hồ ma Đợt 131).
+  function buildLobbyStage(resumed) {
+    const box = playOverlay.getBoundingClientRect();
+    const W = box.width || 1, H = box.height || 1, u = W / 100;
+    const rel = r => ({ x: r.left - box.left + r.width / 2, y: r.top - box.top + r.height / 2, d: r.width });
+    const pr = bigPlay.getBoundingClientRect();
+    const cx = W / 2, cy = H * 0.43, base = 13 * u;
+    const from0 = pr.width ? rel(pr) : { x: cx, y: cy, d: base };
+    const stage = el("div", "aw-sdl-stage");
+    const ball = el("div", "aw-lobby-mark aw-sdl-ball");
+    const ic = el("div", "aw-sdl-ic");
+    ball.append(ic);
+    stage.append(ball);
+    const n = Math.max(1, sdFaceEls.length);
+    const gap = Math.min(450, 2800 / n);
+    const faces = sdFaceEls.map((src, i) => {
+      const r = src.getBoundingClientRect();
+      const f = src.cloneNode(true);
+      f.classList.add("aw-sdl-face");
+      f.removeAttribute("title");
+      if (!resumed) stage.append(f);
+      return { el: f, i, from: r.width ? rel(r) : { x: W * 0.17, y: H / 2, d: 8 * u }, plan: 1100 + i * gap, eatAt: 0, gone: !!resumed };
+    });
+    if (!resumed) sdAvatarFill(faces.map(f => f.el), showdownPick);   // ảnh chưa kịp về lúc chép thì gắn vào bản chép
+    lobbyEl.append(stage);
+    const od = Math.min(faces[0] ? faces[0].from.d : 8.6 * u, 8.6 * u);
+    const step = Math.min(0.12, 0.6 / n);
+    const eaten = resumed ? faces.length : 0;
+    sdl = {
+      W, H, u, cx, cy, base, od, step, n, stage, ball, ic, faces, eaten, t0: performance.now(),
+      px: resumed ? cx : from0.x, py: resumed ? cy : from0.y, ps: resumed ? base * (1 + step * eaten) : from0.d,
+      mix: resumed ? 1 : 0, ang: 0, last: 0, boomAt: 0, boom: 1, raf: 0
+    };
+    // chữ đứng dưới vòng quỹ đạo LỚN NHẤT ⇒ không nhảy theo mỗi lần bóng phình
+    const sMax = base * (1 + step * n), R = sMax / 2 + od / 2 + 3 * u;
+    const ry = Math.max(R * 0.74, sMax / 2 + od / 2 + u);
+    lobbyEl.style.setProperty("--sdl-wy", Math.round(cy + Math.max(ry * 0.86, sMax / 2) + od / 2 + 1.6 * u) + "px");
+    sdlPlace();
+    sdl.raf = requestAnimationFrame(sdlTick);
+  }
+  function sdlPlace() {
+    const s = sdl;
+    s.ball.style.left = s.px + "px"; s.ball.style.top = s.py + "px"; s.ball.style.setProperty("--s", s.ps + "px");
+  }
+  function sdlTick(t) {
+    const s = sdl;
+    if (!s || torndown || !lobbyEl) { if (s) s.raf = 0; return; }
+    const dt = Math.min(0.05, (t - (s.last || t)) / 1000); s.last = t;
+    const now = performance.now();
+    if (s.boomAt) { const k = Math.min(1, (now - s.boomAt) / 650); s.boom = 1 + 9 * k * k * k; }
+    const k = Math.min(1, dt * (s.boomAt ? 10 : 6.5));
+    s.px += (s.cx - s.px) * k; s.py += (s.cy - s.py) * k;
+    s.ps += (s.base * (1 + s.step * s.eaten) * s.boom - s.ps) * k;
+    sdlPlace();
+    s.mix += (1 - s.mix) * Math.min(1, dt * 4.5);
+    s.ang += 1.7 * dt;
+    const u = s.u, R = s.ps / 2 + s.od / 2 + 3 * u;
+    const rx = R * 1.4, ry = Math.max(R * 0.74, s.ps / 2 + s.od / 2 + u);
+    s.faces.forEach(f => {
+      if (f.gone) return;
+      if (!f.eatAt && now - s.t0 >= f.plan) f.eatAt = now;
+      const e = f.eatAt ? Math.min(1, (now - f.eatAt) / SDL_EAT_MS) : 0, ee = e * e;
+      const a = s.ang + f.i * 2 * Math.PI / s.n - Math.PI / 2;
+      const ox = s.px + Math.cos(a) * rx * (1 - ee), oy = s.py + Math.sin(a) * ry * (1 - ee);
+      const m = Math.max(0, Math.min(1, s.mix * 1.6 - f.i * 0.6 / s.n)), sm = m * m * (3 - 2 * m);
+      const d = (f.from.d + (s.od - f.from.d) * sm) * (1 - 0.85 * ee);
+      f.el.style.left = (f.from.x + (ox - f.from.x) * sm) + "px";
+      f.el.style.top = (f.from.y + (oy - f.from.y) * sm) + "px";
+      f.el.style.setProperty("--d", d + "px");
+      f.el.style.opacity = e > 0.85 ? String(1 - (e - 0.85) / 0.15) : "";
+      if (e >= 1) sdlGulp(f);
+    });
+    s.raf = requestAnimationFrame(sdlTick);
+  }
+  function sdlGulp(f) {
+    const s = sdl;
+    f.gone = true;
+    f.el.remove();
+    s.eaten++;
+    s.ball.animate([{ transform: "scale(1.16)" }, { transform: "scale(.96)" }, { transform: "scale(1)" }], { duration: 340, easing: "ease-out" });
+    sdlSparkle(s.px, s.py, 14, s.base * (1 + s.step * s.eaten) * 0.95, ["#fff", "#bfdbfe", "#60a5fa", SD_FACE_RING[f.i % SD_FACE_RING.length], "#fde68a"]);
+  }
+  function sdlSparkle(x, y, count, spread, colors) {
+    const s = sdl;
+    if (!s) return;
+    for (let i = 0; i < count; i++) {
+      const sp = el("div", "aw-sdl-spark");
+      sp.style.left = x + "px"; sp.style.top = y + "px";
+      sp.style.background = colors[i % colors.length];
+      s.stage.append(sp);
+      const a = Math.random() * Math.PI * 2, r = spread * (0.55 + Math.random() * 0.6);
+      const dur = 520 + Math.random() * 260;
+      sp.animate([
+        { transform: "translate(-50%,-50%) scale(1.3)", opacity: 1 },
+        { transform: `translate(calc(-50% + ${Math.cos(a) * r}px), calc(-50% + ${Math.sin(a) * r}px)) scale(.15)`, opacity: 0 }
+      ], { duration: dur, easing: "cubic-bezier(.1,.8,.3,1)", fill: "forwards" });
+      setTimeout(() => sp.remove(), dur + 60);   // ⚠️ setTimeout, không onfinish: tab ẩn không bắn sự kiện hoạt ảnh
+    }
+  }
+  /** STARTING: bóng nào chưa bị nuốt thì nuốt nhanh (cách nhau 130 ms). Xong (hoặc quá 1,6 s) mới nổ. */
+  function sdlFinishEating() {
+    const s = sdl;
+    if (!s || torndown) return Promise.resolve();
+    const now = performance.now();
+    let k = 0;
+    s.faces.forEach(f => { if (!f.gone && !f.eatAt) { f.plan = now - s.t0 + k * 130; k++; } });
+    const end = Date.now() + 1600;
+    return new Promise(res => {
+      (function wait() {
+        if (!sdl || torndown || sdl.faces.every(f => f.gone) || Date.now() > end) { res(); return; }
+        setTimeout(wait, 60);
+      })();
+    });
+  }
+  /** Bóng phình vọt + lấp lánh lớn, lớp TRẮNG phủ kín khung; trả về khi trắng đã kín. */
+  function sdlBoom() {
+    const s = sdl;
+    if (!s || torndown) return Promise.resolve();
+    s.boomAt = performance.now();
+    sdlSparkle(s.cx, s.cy, 30, 45 * s.u, ["#fff", "#fde68a", "#60a5fa", "#4ade80", "#f472b6"]);
+    const w = el("div", "aw-sdl-white");
+    playOverlay.append(w);   // NGOÀI lobbyEl: sống tới lúc enterGame() làm mờ cả overlay
+    w.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 380, delay: 250, easing: "ease-in", fill: "forwards" });
+    return new Promise(r => setTimeout(r, 660));
+  }
+  function sdlStop() {
+    if (!sdl) return;
+    if (sdl.raf) cancelAnimationFrame(sdl.raf);
+    sdl = null;
+  }
+
   function paintLobby(state, info) {
     if (!lobbyEl) return;
     lobbyPhase = state;
-    lobbyEl.className = "aw-lobby is-" + state;
-    lobbyEl.innerHTML = "";
-    // ✓ THẬT LỚN giữa màn, hào quang thở (thầy). Ở các trạng thái chưa sẵn sàng thì
-    // cùng ô đó đeo vòng quay — một chỗ, một cỡ, nên chuyển trạng thái không nhảy khung.
-    const mark = el("div", "aw-lobby-mark", state === "ready" ? icons.check : icons.spinner);
-    if (state === "nomatch" || state === "offline") mark.innerHTML = icons.alert;
-    lobbyEl.append(mark);
+    lobbyEl.className = "aw-lobby is-sdv is-" + state;
+    // Đợt 579 — sân khấu (bóng + avatar) GIỮ NGUYÊN; chỉ gỡ chữ + nút ✕ của trạng thái trước.
+    [...lobbyEl.children].forEach(c => { if (!c.classList.contains("aw-sdl-stage")) c.remove(); });
+    const ICON = state === "ready" ? icons.check
+      : (state === "nomatch" || state === "offline") ? icons.alert
+      : state === "starting" ? "" : icons.playBig;
+    if (sdl) {
+      sdl.ic.innerHTML = ICON;
+      if (state === "starting") sdl.ic.append(el("span", "aw-sdl-go", "GO"));
+    } else {
+      // dựng sân khấu hỏng (không lẽ xảy ra) ⇒ vẫn có một dấu giữa màn như bản cũ
+      const mark = el("div", "aw-lobby-mark", state === "ready" ? icons.check : icons.spinner);
+      if (state === "nomatch" || state === "offline") mark.innerHTML = icons.alert;
+      lobbyEl.append(mark);
+    }
     lobbyEl.append(el("div", "aw-lobby-word", LOBBY_WORD[state] || ""));
     const sub = el("div", "aw-lobby-sub");
     if (state === "ready") {
