@@ -577,6 +577,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
   y vậy (`?gap=0–5`).
 
 **VIỆC ĐANG CHỜ (Đợt 580):**
+- ✅ Code `4fe37ff` ĐÃ PUSH + LIVE (kiem-live 3/3; nạp 3 module thu gọn trên trang live không lỗi). myGame 12f = `8094dba` (Pages khớp 4/4).
 - ⬜ Thầy chơi trên TOMKO: 3 s có dài quá không (cộng nhịp giữ 2,1 s của trọng tài) — đổi `RR_QGAP_S` hoặc thêm thanh
   ⚙ Settings như RACING WORDS (Settings ▸ Boost ▸ Next question 1–5 s); màu lớp chờ có đủ rõ trên thanh câu hỏi không.
 - ⬜ Màn iPad "Question screen" (`source.html`) vẫn đổi câu theo `reportLink` lúc câu mới hiện — không có hiệu ứng chờ riêng.
