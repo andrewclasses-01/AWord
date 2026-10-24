@@ -51,6 +51,27 @@ function normalize(str) {
   return s.toLowerCase();                                                     // always ignore case
 }
 
+// ⭐ Đợt 577 (thầy 24/10/2026) — PHÉP CHẤM NỚI BA LUẬT, chỉ nới phía CHỮ EM GÕ:
+//   1. Thừa dấu (không phải chữ/số) ở CUỐI câu, kể cả dấu cách — bấm nhầm: "DOG ." = "DOG".
+//   2. THIẾU dấu cách giữa hai chữ: "ON MYOWN" = "ON MY OWN" (thừa dấu cách giữa một từ thì KHÔNG).
+//   3. THIẾU dấu ': "Im" = "I'm" (iPad hay tự đổi ' thành ’ — coi là một).
+// ⚠️ Chỉ nới chiều THIẾU/THỪA CUỐI, không nới ngược: đáp án "Yes, I do." mà em gõ "Yes, I do"
+// thì vẫn như cũ (thiếu dấu chấm của chính đáp án). Đáp án dựng thành regex nên luật đi theo
+// TỪNG đáp án — câu nhiều đáp án vẫn chấm `some()` như trước.
+const NHAY = /[‘’ʼ`´]/g;
+function khoChuan(s) { return normalize(s).replace(NHAY, "'"); }
+function dungDapAn(typed, acceptedAnswers) {
+  const t = khoChuan(typed);
+  if (!t) return false;
+  return (acceptedAnswers || []).some(a => {
+    const d = khoChuan(a);
+    if (!d) return false;
+    if (d === t) return true;
+    const mau = d.split("").map(c => c === " " ? " ?" : c === "'" ? "'?" : c.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&")).join("");
+    return new RegExp("^" + mau + "[^a-z0-9]*$").test(t);
+  });
+}
+
 const MAX_LIVES = 10;
 // Lives are opt-in (3/8/2026): 0, null or undefined -> unlimited. Every activity
 // saved before this feature has no `lives` field at all, so undefined must mean
@@ -169,7 +190,7 @@ function goiYTheoBang(activity, it, typed) {
   if (!t) return "";
   // Đợt 326 — gõ ĐÚNG (khớp một đáp án) thì im lặng tuyệt đối, kể cả khi bảng có dòng "chi-dau"/"mau"
   // (bàn thử gọi thẳng hàm này với câu đúng phải ra "" — xem skill chamloitypetheanswer PART 6).
-  if ((it && it.acceptedAnswers || []).some(a => normalize(a) === t)) return "";
+  if (dungDapAn(typed, it && it.acceptedAnswers)) return "";   // Đợt 577 — cùng phép chấm nới
   // ⭐ Đợt 309 — MỘT BẢNG CHO CẢ ACT (thầy 08/9): lỗi của học sinh phần lớn lặp lại qua
   // nhiều câu (foolball · lisiten · thiếu "to"…), soạn lẻ từng câu là gõ lại 30 lần.
   // ⚠️ Vẫn đọc `it.goiY` TRƯỚC — đó là bảng lẻ theo từng câu của Đợt 308; act nào lỡ lưu
@@ -968,7 +989,7 @@ const ttaTemplate = {
       if (!String(typed).trim()) return;   // can't submit an empty box
       st.typed = typed;
       st.graded = true;
-      st.correct = it.acceptedAnswers.some(a => normalize(a) === normalize(typed));
+      st.correct = dungDapAn(typed, it.acceptedAnswers);
       ui.daDoiBaiLam?.();   // Đợt 469 — cất lượt để làm tiếp nếu em tải lại trang
       // TIME EACH ROUND (Đợt 174): this pupil's turn ends here, so their clock
       // freezes at this reading — which is both what Show answers prints for the
@@ -1656,7 +1677,7 @@ const ttaTemplate = {
       if (!it || !st || st.graded || dead || fightLocked() || !String(typed).trim()) return;
       st.typed = typed;
       st.graded = true;
-      st.correct = it.acceptedAnswers.some(a => normalize(a) === normalize(typed));
+      st.correct = dungDapAn(typed, it.acceptedAnswers);
       ui.roundDone?.();
       input.disabled = true;
       syncSubmitEnabled();

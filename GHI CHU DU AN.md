@@ -546,6 +546,32 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 577 (24/10/2026) — TYPE THE ANSWER chấm nới 3 luật · CROSSWORD bỏ gõ lại chữ có sẵn + hết giờ tự chấm
+
+**Bối cảnh (thầy giao):**
+- Type the answer: (1) thừa dấu không phải chữ cái ở CUỐI câu (bấm nhầm), kể cả dấu cách, vẫn tính — "DOG ." = DOG; (2) thiếu dấu cách giữa 2 chữ vẫn tính — "ON MYOWN" = ON MY OWN; (3) thiếu dấu ' vẫn tính — "Im" = I'm.
+- Crossword: (1) chữ đã có sẵn (mở từ ô khác) không cần gõ nữa, hiện như có rồi, không nhấp nháy, không bị hiệu ứng gõ sai; (2) hết giờ thì tính đáp án đang hiển thị, không cần bấm SUBMIT.
+
+**Đã làm — `templates/type-the-answer/type-the-answer.js`:**
+- Hàm mới `dungDapAn(typed, acceptedAnswers)` cạnh `normalize()`: đáp án (đã normalize + đổi ’ ‘ ʼ ` ´ về ') dựng thành regex — mỗi dấu cách thành ` ?`, mỗi ' thành `'?`, đuôi cho phép `[^a-z0-9]*`. Ba chỗ chấm cũ (`submitAnswer`, `chotChuDangGo` của Đợt 546, dòng im lặng khi đúng trong `goiYTheoBang`) đều gọi hàm này.
+- ⚠️ CHỈ nới phía chữ em gõ (thiếu cách / thiếu ' / thừa đuôi). Không nới ngược: đáp án "Yes, I do." mà em gõ "Yes, I do" (thiếu dấu chấm của chính đáp án) vẫn SAI như cũ; thừa dấu cách GIỮA một từ ("DO G") vẫn sai; thừa SỐ ở cuối ("dog1", "10" cho đáp án "1") vẫn sai — số không coi là "dấu".
+- iPad hay tự đổi ' thành ’ (smart punctuation) ⇒ hai bên đều quy về ' trước khi so.
+- Không đụng `kiemtra-cham.js` (bài kiểm tra đầu vào có phép chấm riêng — thầy chỉ giao template).
+- Bàn thử: chạy chính đoạn mã của file bằng Node, 19/19 ca (DOG . · dog!! · ON MYOWN · onmyown · Im · I’m · do g ✗ · dogs ✗ · Yes, I do ✗ · Yes,I do ✓ · 10 ✗ · dog1 ✗ · What? …).
+
+**Đã làm — `templates/crossword/crossword.js` + `crossword.css`:**
+- Chữ có sẵn: thay hẳn luật Đợt 259 (phải gõ lại đúng chữ đó mới qua, chữ chờ nhấp nháy `is-given-wait`, gõ khác thì ô rung `is-shake` + tiếng "thunk"). Hai hàm mới `oCoSan(i)` / `oGoDuoc(from, buoc)`: mở từ là con trỏ đứng ở ô TRỐNG đầu tiên; `advanceCursor` nhảy qua mọi ô có sẵn; `backspace` lùi cũng nhảy qua; con trỏ không bao giờ vẽ trên ô có sẵn. Ô có sẵn vẫn giữ màu xanh/xám (`is-given-ok/-bad`). Từ toàn chữ có sẵn: phím chữ không làm gì, chỉ việc Submit. Gỡ `typedGivens`, `shakeCell()` và hai luật CSS chết (`crosswordSound.reject` để lại trong file âm thanh, không ai gọi).
+- Hết giờ MỖI LƯỢT (Time each round, `ui.setRoundTimeout`): từ đã đủ ô ⇒ đi thẳng `gradeWord()` như vừa Submit (đúng ⇒ +1, sai ⇒ lộ đáp án/trừ điểm); chưa đủ ô ⇒ sai như cũ.
+- Hết giờ CẢ VÁN (Timer count down, `ui.hetGioCaVan()` của Đợt 546): `finish()` gọi `chotTuDangGo()` trước khi chốt sổ — chấm im lặng từ đang mở nếu em đã gõ ít nhất 1 chữ (hoặc từ đủ ô vì toàn chữ có sẵn); đủ ô và khớp ⇒ đúng, còn lại ⇒ sai; mở ra chưa gõ gì ⇒ vẫn "chưa trả lời". Điểm do finish() tính lại từ `turnOutcome` nên không đụng `livePoints`. Menu ▸ Submit answers giữ như cũ.
+- FIGHT không đổi phần hết giờ (trọng tài giữ lượt, PICK TIME của Đợt 259); phần chữ có sẵn thì áp cả trong Fight.
+- Bàn thử `scratch/dot577-cw.html?s=<giây>` (sample crossword + count down; scratch bị gitignore), launch `aword-dot577` cổng 5577 (`D:\OTHERS\CLAUDE\.claude\launch.json`). Đo bằng bấm phím thật: NEAR có N, A sẵn ⇒ con trỏ đứng ở ô 2, gõ E nhảy qua A sang ô 4, gõ R xong; Backspace lùi nhảy qua A; PULL có L cuối sẵn ⇒ gõ 3 chữ là đủ, Submit +1; hết giờ 8 s lúc gõ đủ BEHIND chưa Submit ⇒ 1/20; gõ dở "BE" ⇒ 0/20; không còn phần tử `is-given-wait`/`is-shake` nào.
+
+**Lưu ý:** lúc commit có phiên Claude khác đang sửa dở `core/engine.js` + `core/showdown-setup.js` trong cùng thư mục — Đợt 577 KHÔNG đụng và KHÔNG commit hai file đó.
+
+**VIỆC ĐANG CHỜ (Đợt 577):**
+- ⬜ Thầy bấm tay TTA trên iPad thật (dấu ’ tự đổi) + Crossword trên TOMKO.
+- ⬜ Bài kiểm tra đầu vào (`kiemtra-cham.js`) có muốn nới cùng 3 luật không — chưa đụng.
+
 ## Đợt 576 (23/10/2026) — iPad RUNNING: vẽ lại cho iPad NẰM NGANG + ôn từ sau trận + đội chờ sáng hơn + đầu bo tròn
 - Thầy: "Sau khi xong 1 ván … trên ipad sẽ hiện ra các từ đã chơi (xanh lá) và các từ chưa chơi (màu trắng) … in đậm, to, rõ ràng để
   học sinh học cùng nhau. Bấm vào từ nào thì hiển thị chọn từ đó cho dễ nhìn · ô TEAM X, PART A và đồng hồ bo tròn các nút · ở đội chưa

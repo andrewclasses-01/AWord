@@ -31,8 +31,8 @@
 //    sparkle as the key) as a hint — you still type them yourself. The key goes
 //    dark once used.
 //
-//  • Crossing letters already filled by a solved word show WHITE with a faint
-//    dark outline (a "given"); once you type past them they turn normal black.
+//  • Crossing letters already filled by another word are GIVEN: the cursor skips
+//    them (no retyping, no blink, no wobble — Đợt 577); they keep their colour.
 //
 //  • Grading (each answer then returns to the board):
 //      Correct                       -> cells go accent + white, +1, "correct".
@@ -514,13 +514,25 @@ const crosswordTemplate = {
     let andrewGlowing = false;       // from the press until this word ends
 
     const bigCells = new Map();      // index-in-current-word -> big overlay cell
-    // ⭐ Đợt 259 — which "given" cells of the CURRENT word the player has actually
-    // typed through. `i >= curCell` alone cannot answer that for the LAST cell of a
-    // word: advanceCursor() deliberately stops at the final index, so a crossing
-    // letter sitting there would keep blinking for ever even after the pupil typed
-    // it — the exact confusion the blink exists to remove. Rebuilt per word in
-    // renderActive(); wound back by backspace().
-    const typedGivens = new Set();
+    // ⭐⭐ Đợt 577 (thầy 24/10/2026) — CHỮ CÓ SẴN KHÔNG PHẢI GÕ NỮA. Thầy: *"chữ đã có sẵn
+    // (mở từ ô khác) thì không cần gõ nữa và sẽ hiển thị như có rồi luôn, không nhấp nháy
+    // nữa, không bị hiệu ứng gõ sai chữ đó nữa"*. Thay hẳn luật Đợt 259 (gõ lại đúng chữ đó
+    // mới qua, chữ chờ thì nhấp nháy, gõ khác thì ô rung): con trỏ nay CHỈ đứng ở ô gõ được
+    // — mở từ là đứng ở ô trống đầu tiên, gõ xong nhảy qua mọi ô có sẵn, xoá lùi cũng nhảy qua.
+    // Ô có sẵn vẫn giữ màu xanh/xám (`is-given-ok/-bad`) để em biết chữ đó từ từ khác tới.
+    function oCoSan(i) {
+      const w = clues[curWord], p = w && w.cells[i];
+      if (!p) return false;
+      const cs = cellStatus.get(p[0] + "," + p[1]);
+      return cs === "solved" || cs === "revealed";
+    }
+    // Ô gõ được đầu tiên tính từ `from` theo chiều `buoc` (+1/−1); không còn ô nào ⇒ −1.
+    function oGoDuoc(from, buoc) {
+      const w = clues[curWord];
+      if (!w) return -1;
+      for (let k = from; k >= 0 && k < w.cells.length; k += buoc) if (!oCoSan(k)) return k;
+      return -1;
+    }
 
     // Single page (≤30 words — the vast majority of crosswords): the engine's
     // Prev/Next nav is fully hidden exactly as before, using visibility (NOT
@@ -888,7 +900,7 @@ const crosswordTemplate = {
       // total across every page, not this page's count (teacher 4/8/2026).
       const n = clues.length;
       curWord = ((i % n) + n) % n;
-      curCell = 0;   // typing always begins at the FIRST cell of the word
+      curCell = Math.max(0, oGoDuoc(0, 1));   // Đợt 577 — bắt đầu ở ô TRỐNG đầu tiên (bỏ qua chữ có sẵn)
       activate();
       ui.daDoiBaiLam?.();   // Đợt 470 — lượt mở ô mới (playOrder)
     }
@@ -941,10 +953,6 @@ const crosswordTemplate = {
       activeEl.className = "aw-cw-active " + (w.dir === "D" ? "is-down" : "is-across");
       activeEl.innerHTML = "";
       bigCells.clear();
-      // ⭐ Đợt 259 — indexes are per-WORD, so a new strip starts with none typed
-      // through. Forgetting this would carry "already typed" from a 6-letter word
-      // into the 3-letter one opened next and kill its blink outright.
-      typedGivens.clear();
       w.cells.forEach((_, i) => {
         const cell = el("div", "aw-cw-bigcell");
         cell.append(el("span", "aw-cw-biglet", ""));
@@ -977,23 +985,10 @@ const crosswordTemplate = {
         // an unfilled-hint cell -> same synchronous tick, no reflow in between
         // -> the browser treats it as no net change and the animation just
         // continues, or if it had already finished, the `both` fill's held end
-        // state is unaffected either way — see the shakeCell() reflow trick
-        // just below for why a FORCED reflow would restart it instead).
-        // ⭐⭐ Đợt 259 (thầy, 25/8/2026) — A GIVEN LETTER BLINKS UNTIL THE CURSOR HAS
-        // PASSED IT. Thầy: *"các chữ có sẵn … phải khác một chút so với các chữ đang
-        // được bấm … không nhận ra được mình bấm chữ đó hay chưa do không có dấu
-        // hiệu nhận biết rõ ràng"*. A crossing letter that another word already
-        // filled sits in the strip looking finished, so on a long word a pupil
-        // genuinely loses track of how far along they are. `is-given-wait` (added in
-        // the two `is-given` branches below, and ONLY while `i >= curCell`) pulses
-        // the letter; the moment the pupil types that same letter and the cursor
-        // steps past it, the class stops being re-applied and the cell settles.
-        // ⛔ THE CELL'S BACKGROUND IS DELIBERATELY UNTOUCHED — the teacher's own
-        // choice ("nền vẫn như cũ"); only the letter moves.
-        // ⚠️ Same wipe-and-restore contract as `is-hintin` right below: the class is
-        // removed and re-added inside ONE synchronous tick with no forced reflow in
-        // between, so the browser sees no net change and an infinite animation
-        // simply keeps running instead of snapping back to its first frame.
+        // state is unaffected either way — a FORCED reflow (the
+        // old shakeCell() trick) would restart it instead).
+        // ⚠️ Đợt 577 — chữ có sẵn KHÔNG còn nhấp nháy (`is-given-wait` của Đợt 259 đã gỡ):
+        // con trỏ không bao giờ dừng ở ô đó nữa nên không còn gì "đang chờ gõ qua".
         const wasHinting = cell.classList.contains("is-hintin");
         cell.className = "aw-cw-bigcell";
         const letEl = cell.querySelector(".aw-cw-biglet");
@@ -1009,12 +1004,10 @@ const crosswordTemplate = {
           // a crossing "given" from a CORRECT word -> blue letter
           text = userGrid.get(rc) || w.key[i];
           cell.classList.add("is-given", "is-given-ok");
-          if (i >= curCell && !typedGivens.has(i)) cell.classList.add("is-given-wait");
         } else if (cs === "revealed") {
           // a crossing "given" from a WRONG answer that was revealed -> grey letter
           text = userGrid.get(rc) || w.key[i];
           cell.classList.add("is-given", "is-given-bad");
-          if (i >= curCell && !typedGivens.has(i)) cell.classList.add("is-given-wait");
         } else if (andrewGlowing && !userGrid.get(rc)) {
           // Andrew hint: the answer letter, glowing gold (still type it yourself)
           text = w.key[i];
@@ -1023,7 +1016,7 @@ const crosswordTemplate = {
         } else {
           text = userGrid.get(rc) || "";
         }
-        if (!st.done && i === curCell) cell.classList.add("is-cursor");
+        if (!st.done && i === curCell && !oCoSan(i)) cell.classList.add("is-cursor");
         letEl.textContent = text;
       });
     }
@@ -1097,19 +1090,15 @@ const crosswordTemplate = {
       // only happens at Submit, so waiting for that would charge a class the
       // whole time they were spelling a long word out — which is the work.
       ui.noteActivity?.();
+      // Đợt 577 — con trỏ chỉ đứng ở ô gõ được; lỡ nằm trên ô có sẵn thì dời tới ô trống kế,
+      // từ không còn ô nào để gõ (toàn chữ có sẵn) thì phím chữ không làm gì — chỉ việc Submit.
+      if (oCoSan(curCell)) {
+        const k = oGoDuoc(curCell, 1);
+        if (k < 0) { kbd.refresh(); return; }
+        curCell = k;
+      }
       const [r, c] = w.cells[curCell] || w.cells[0];
       const rc = r + "," + c;
-      const cs = cellStatus.get(rc);
-      if (cs === "solved" || cs === "revealed") {
-        // a locked "given" from another word — you must type the SAME letter to
-        // move on. A different key is REJECTED: the cell shakes and the cursor
-        // stays, so you can't fill the rest until you match it.
-        const have = userGrid.get(rc) || "";
-        if (ch === have) { typedGivens.add(curCell); advanceCursor(); refreshActiveCells(); }
-        else { shakeCell(curCell); }   // no rebuild — that would clear the shake
-        kbd.refresh();
-        return;
-      }
       userGrid.set(rc, ch);
       setGridLetter(rc, ch);
       ui.daDoiBaiLam?.();   // Đợt 470
@@ -1118,20 +1107,10 @@ const crosswordTemplate = {
       kbd.refresh();
     }
 
-    // wobble a big cell to say "not accepted" (wrong letter on a given cell).
-    function shakeCell(i) {
-      const cell = bigCells.get(i);
-      if (!cell) return;
-      crosswordSound.reject();   // a dull "thunk" to go with the wobble
-      cell.classList.remove("is-shake");
-      void cell.offsetWidth;
-      cell.classList.add("is-shake");
-      setTimeout(() => cell.classList.remove("is-shake"), 420);
-    }
-
+    // Đợt 577 — nhảy qua mọi chữ có sẵn tới ô gõ được kế; hết ô thì đứng yên ở ô vừa gõ.
     function advanceCursor() {
-      const w = clues[curWord];
-      if (curCell < w.cells.length - 1) curCell++;
+      const k = oGoDuoc(curCell + 1, 1);
+      if (k >= 0) curCell = k;
     }
 
     function backspace() {
@@ -1145,16 +1124,12 @@ const crosswordTemplate = {
         userGrid.delete(rc); setGridLetter(rc, ""); refreshActiveCells(); ui.daDoiBaiLam?.(); return;   // Đợt 470
       }
       // …otherwise step back to the previous editable cell and clear it
-      for (let k = curCell - 1; k >= 0; k--) {
+      // (Đợt 577 — nhảy qua chữ có sẵn, không bao giờ dừng ở đó)
+      const k = oGoDuoc(curCell - 1, -1);
+      if (k >= 0) {
         [r, c] = w.cells[k]; rc = r + "," + c;
         curCell = k;
-        // ⭐ Đợt 259 — backing up UNDOES "I typed through this one": every given at
-        // or after the new cursor position has to blink again, or a pupil who
-        // rubbed a letter out would be looking at a strip that still claims they
-        // had reached the end.
-        typedGivens.forEach(i => { if (i >= k) typedGivens.delete(i); });
-        if (cellStatus.get(rc) == null && userGrid.get(rc)) { userGrid.delete(rc); setGridLetter(rc, ""); ui.daDoiBaiLam?.(); }   // Đợt 470
-        break;
+        if (userGrid.get(rc)) { userGrid.delete(rc); setGridLetter(rc, ""); ui.daDoiBaiLam?.(); }   // Đợt 470
       }
       refreshActiveCells();
     }
@@ -1593,6 +1568,9 @@ const crosswordTemplate = {
       if (finished || fightCtl || curWord < 0) return;
       const w = clues[curWord], st = wordState[curWord];
       if (!w || !st || st.done) return;
+      // ⭐ Đợt 577 (thầy) — hết giờ thì CHẤM CHỮ ĐANG HIỆN như vừa bấm Submit: từ đã đủ ô thì đi
+      // đúng đường gradeWord() (đúng ⇒ +1 · sai ⇒ lộ đáp án/trừ điểm). Chưa đủ ô mới là sai như cũ.
+      if (wordFilled(w)) { gradeWord(); return; }
       consumeAndrewGlow();
       st.done = true; st.wrong = true; st.correct = false;
       ui.daDoiBaiLam?.();   // Đợt 470
@@ -1679,12 +1657,37 @@ const crosswordTemplate = {
       if (/^[a-zA-Z]$/.test(k)) { e.preventDefault(); typeLetter(k.toUpperCase()); }
     }
 
+    // ⭐ Đợt 577 — chấm IM LẶNG từ đang mở lúc đồng hồ cả ván hết (ván kết luôn nên không chạy
+    // hoạt ảnh chấm). Chỉ chấm khi em ĐÃ GÕ ít nhất một chữ hoặc từ đã đủ ô (toàn chữ có sẵn);
+    // mở ra mà chưa gõ gì thì vẫn là "chưa trả lời". Không đủ ô ⇒ sai. Điểm do finish() tính lại
+    // từ `turnOutcome` nên không cần đụng livePoints.
+    function chotTuDangGo() {
+      if (fightCtl || curWord < 0) return;
+      const w = clues[curWord], st = wordState[curWord];
+      if (!w || !st || st.done) return;
+      const daGo = w.cells.some(([r, c]) => {
+        const rc = r + "," + c;
+        return userGrid.get(rc) && cellStatus.get(rc) == null;
+      });
+      if (!daGo && !wordFilled(w)) return;
+      const typed = w.cells.map(([r, c]) => userGrid.get(r + "," + c) || "·").join("");
+      const ok = typed === w.key;
+      st.done = true; st.correct = ok;
+      if (ok) w.cells.forEach(([r, c]) => cellStatus.set(r + "," + c, "solved"));
+      else st.wrong = true;
+      if (curTurn >= 0) turnOutcome[curTurn] = { correct: ok, typed };
+      ui.daDoiBaiLam?.();
+    }
+
     // -------------------------------------------------------------------
     function finish() {
       // ⚠️⚠️ Đợt 256 — CHỐT SỔ TRƯỚC KHI ĐỌC ĐIỂM. Một con số "−N" còn đang bay là một
       // phép trừ CHƯA áp vào `livePoints`, mà `score` dưới đây đọc thẳng ra từ đó.
       ui.flushPenalties?.();
       if (finished) return;
+      // ⭐ Đợt 577 (thầy) — ĐỒNG HỒ CẢ VÁN chạm 0 giữa lúc em đang gõ một từ: chữ đang hiện được
+      // chấm như đã Submit (cùng luật Type the answer Đợt 546). Menu ▸ Submit answers thì như cũ.
+      if (ui.hetGioCaVan?.()) chotTuDangGo();
       finished = true;
       consumeAndrewGlow();
       clearTimers();
