@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **25/10/2026 Đợt 585 — NOTE: chép `core/note-ink.js` từ myNote v0.3.1** (nét mượt hơn, dạ quang không đứt). Chi tiết GHI CHU Đợt 585.
 > ✏️ **25/10/2026 Đợt 584 — NOTE: chép `core/note-ink.js` từ myNote v0.3.0** (nét bút = đường viền tô một lần, mượt hơn). Chi tiết GHI CHU Đợt 584.
 > ✏️ **25/10/2026 Đợt 583 — NÚT NOTE** (trước nút iPad trên topbar): chiếu ghi chú viết tay từ iPad (app **myNote**, note.andrewclasses.com, kho `andrewclasses-01/myNote`). `core/note-screen.js` (nạp lười; 3 chế độ Follow iPad / Whole page / Fit width) · `core/note-link.js` + `core/note-ink.js` = BẢN CHÉP NGUYÊN VĂN từ myNote (sửa ở myNote rồi chép) · WebRTC bắt tay qua `users/{uid}/items` note_host/note_pad, kind `note-link` trong APP_DATA_KINDS · `?note=1` mở thẳng màn · `?padsig=local` bàn thử 2 tab. Chi tiết GHI CHU Đợt 583.
 > ✏️ **24/10/2026 Đợt 581 — ROCKET RACE Fight 3D: màn chờ MỀM + ô cũ đóng ở 30 % + thanh câu hỏi ĐẶC, LUÔN TRÊN CÙNG** (myGame mẫu 12g): `rr3d-view.js` — lớp chờ là shader `qFillMat` (đầu sóng mềm, quầng nhoè, mép nhoè), `closeTiles` gập ô cũ ở `Q_SHUT = 0.3`, thanh câu hỏi vẽ ở `qScene` riêng SAU hậu kỳ (`drawQLayer`: không bloom/tone-mapping/grade, depthTest off, nền `Q_BG` đặc 100 %). ⚠️ `buildUI` phải dọn `qRoot`. ✅ `f97cb15` LIVE. Chi tiết GHI CHU Đợt 581.

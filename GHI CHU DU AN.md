@@ -546,6 +546,10 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 585 (25/10/2026) — NOTE: chép `core/note-ink.js` từ myNote v0.3.1
+- Nét bút làm mượt lúc vẽ (lọc 1-2-1 vị trí, trung bình 5 điểm lực nhấn, dải độ dày hẹp hơn) + dạ quang vẽ qua canvas nháp ĐẶC rồi dán
+  36 % multiply (hết vệt khuyết hình lưỡi liềm trên Safari). Màn NOTE vẽ y hệt iPad. Không đổi gì khác.
+
 ## Đợt 584 (25/10/2026) — NOTE: nét bút vẽ kiểu ĐƯỜNG VIỀN (chép myNote v0.3.0)
 - Chỉ chép lại `core/note-ink.js` từ myNote `js/ink.js` v0.3.0: nét bút giờ dựng ĐƯỜNG VIỀN cả nét theo lực nhấn và tô một lần
   (`fillPen`; cũ: mỗi đoạn một stroke() đầu tròn chồng nhau ⇒ mép gợn, nặng). Màn NOTE vẽ y hệt iPad. Không đổi gì khác.
