@@ -546,6 +546,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 584 (25/10/2026) — NOTE: nét bút vẽ kiểu ĐƯỜNG VIỀN (chép myNote v0.3.0)
+- Chỉ chép lại `core/note-ink.js` từ myNote `js/ink.js` v0.3.0: nét bút giờ dựng ĐƯỜNG VIỀN cả nét theo lực nhấn và tô một lần
+  (`fillPen`; cũ: mỗi đoạn một stroke() đầu tròn chồng nhau ⇒ mép gợn, nặng). Màn NOTE vẽ y hệt iPad. Không đổi gì khác.
+- ⬜ VIỆC ĐANG CHỜ: như Đợt 583 (thầy thử iPad thật).
+
 ## Đợt 583 (25/10/2026) — NÚT NOTE: chiếu ghi chú viết tay từ iPad (app myNote, note.andrewclasses.com)
 - Thầy: *"Một nút note mới hoàn toàn, được thiết kế đẹp với nhiều tính năng (nâng cấp sau) đặt ở vị trí tương ứng với nút ipad, nút
   showdown"* · *"Hãy đưa luôn vào AWord đi. Còn app trên ipad thì gắn vào link note.andrewclasses.com"*. App iPad = myNote (kho
