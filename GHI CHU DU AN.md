@@ -546,6 +546,28 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 583 (25/10/2026) — NÚT NOTE: chiếu ghi chú viết tay từ iPad (app myNote, note.andrewclasses.com)
+- Thầy: *"Một nút note mới hoàn toàn, được thiết kế đẹp với nhiều tính năng (nâng cấp sau) đặt ở vị trí tương ứng với nút ipad, nút
+  showdown"* · *"Hãy đưa luôn vào AWord đi. Còn app trên ipad thì gắn vào link note.andrewclasses.com"*. App iPad = myNote (kho
+  `andrewclasses-01/myNote`, code `E:\LAP TRINH APP\myNote`, ghi chú viết tay kiểu Notability); mẫu màn chiếu thầy đã xem ở myNote v0.1.x.
+- **Nút** (`main.js` topbar, ngay TRƯỚC nút iPad): viên gradient cam-hồng `icons.note` + chữ NOTE; nhãn đỏ **LIVE** nhấp nháy khi iPad
+  đang phát (`watchNoteBadge` — chỉ nạp khi đã đăng nhập). `?note=1` (nút trong myNote) = trang chủ + mở luôn màn NOTE.
+- **Màn NOTE** `core/note-screen.js` (nạp LƯỜI khi bấm): nền tối, trang trắng đổ bóng, 3 chế độ **Follow iPad** (chiếu đúng khung thầy
+  đang nhìn trên iPad, camera trượt mềm) · **Whole page** · **Fit width**; toàn màn hình, Esc/× đóng; màn chờ hướng dẫn 3 bước; laser mờ dần.
+  Chữ tiếng Anh cho đồng bộ AWord (mẫu myNote viết tiếng Việt).
+- **Đường nối** `core/note-link.js` = BẢN CHÉP NGUYÊN VĂN myNote `js/note-link.js` (khuôn `rr-padlink.js`): WebRTC DataChannel nối thẳng,
+  bắt tay qua `users/{uid}/items` — `note_host` (máy chiếu ghi: sid, offer, h) · `note_pad` (iPad ghi: sid, nonce, live, answer, hc, b, fb).
+  Lời báo rơi ⇒ iPad nudge `hc` 4 s × 8. Tin dài (ảnh nền trang) cắt khúc 12 KB. Wi-Fi chặn nối thẳng ⇒ iPad ghi `fb` (bản trang, ≤ 1
+  lần/0,7 s) ⇒ màn vẫn vẽ, trạng thái "slow link", không ảnh nền. Kind **`note-link`** thêm vào `APP_DATA_KINDS` (core/store.js).
+- **Vẽ** `core/note-ink.js` = bản chép myNote `js/ink.js` (trang rộng 1000 đơn vị, nét có lực nhấn, dạ quang multiply, chữ) ⇒ vẽ vector, y hệt iPad.
+- CSS nút: khối Đợt 583 cuối `core/app.css`. CSS màn: chèn bằng JS, tiền tố `awn-` (đã grep, không trùng).
+- Lỗi gặp: TDZ — `let raf` khai SAU `host.start()` mà `onState` gọi `kick()` ngay lúc start ⇒ ReferenceError (đúng bẫy "lỗi im lặng
+  trong chuỗi promise / TDZ") ⇒ khai `raf` cùng `cam` phía trên.
+- Kiểm (2 tab cùng origin `localhost:9041`, `?padsig=local`): nối thẳng < 1 s, tiêu đề/trang/nét mới hiện ngay, nhãn LIVE trên nút,
+  iPad tắt LIVE ⇒ màn về chờ, bật lại nối 0,3 s, 3 vòng tải lại/đóng-mở máy chiếu đều nối lại. CHƯA thử: iPad thật + Firestore thật,
+  đường dự phòng `fb`.
+- ⬜ VIỆC ĐANG CHỜ: thầy thử iPad thật (myNote ▸ LIVE ⇄ AWord ▸ NOTE); đồng bộ ghi chú giữa máy (myNote) chưa làm.
+
 ## Đợt 582 (24/10/2026) — CHẶN PHÍM TẮT XEM MÃ (`core/chan-phim.js`, đi cặp myLesson web v1.413.0)
 - Thầy: gắn chặn phím tắt (chỉ chặn phím, GIỮ copy) cho AWord, kiemtra, nentangtienganh, myDocument — trước đó chỉ andrewclasses.com có;
   bấm phím khi khung AWord nhúng trong trang bài đang được chọn thì lọt qua.

@@ -635,6 +635,8 @@ async function routeFromLocation() {
     }
   }
   if (p.get("sd")) return openShowdownHome({ fromUrl: true, classId: p.get("c") || "" });
+  // ⭐ Đợt 583 — ?note=1 (nút trong app myNote): trang chủ + mở luôn màn NOTE
+  if (p.get("note") === "1") import("./core/note-screen.js").then(m => m.openNoteScreen()).catch(e => console.warn("NOTE", e));
   if (p.get("st")) return openStatsHome({ fromUrl: true, classId: p.get("c") || "" });   // ⭐ Đợt 374
   if (p.get("g")) return openFixedGame(p.get("g"), opts);   // ⭐ Đợt 373 — ?g=werewolf
   if (p.get("f")) {
@@ -3251,6 +3253,16 @@ function topbar(showNav) {
   // ⚠️ SAME TAB, not window.open(): on the iPad this page IS the job for the
   // rest of the lesson, and Safari is free to swallow a popup — a navigation
   // never fails the way a blocked popup does, silently.
+  // ⭐ Đợt 583 (thầy 25/10/2026) — NOTE: chiếu ghi chú viết tay từ iPad (app myNote, note.andrewclasses.com). Nút "mới hoàn
+  // toàn, thiết kế đẹp, nhiều tính năng (nâng cấp sau), đặt cùng chỗ nút iPad / Showdown". Màn chiếu + đường nối nằm ở
+  // core/note-screen.js — nạp LƯỜI: chỉ khi bấm, hoặc khi đã đăng nhập (để nút hiện nhãn LIVE lúc iPad đang phát).
+  const note = el("button", "aw-appbtn aw-note-btn", icons.note);
+  note.type = "button"; note.title = "NOTE — iPad handwriting (myNote)"; note.setAttribute("aria-label", "NOTE");
+  note.append(el("span", "aw-note-word", "NOTE"), el("span", "aw-note-live", "LIVE"));
+  note.onclick = () => import("./core/note-screen.js").then(m => m.openNoteScreen()).catch(e => { console.warn("NOTE", e); toast("Could not open NOTE — check the connection."); });
+  if (state.user || new URLSearchParams(location.search).get("padsig") === "local") import("./core/note-screen.js").then(m => m.watchNoteBadge(note)).catch(() => {});
+  right.append(note);
+
   const qscreen = el("button", "aw-appbtn aw-qscreen-btn", icons.follow);
   // ⭐ Đợt 480 (thầy 05/10/2026: "iPad bấm vào thì mở ra trang và chọn 1 trong 2 đội") — now opens pad.html's
   // TEAM chooser (STAR LOOT iPad D-pad); the Rocket Race question screen stays one tap away (link on that page).

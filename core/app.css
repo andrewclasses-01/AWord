@@ -8851,3 +8851,15 @@ body.aw-khung-mode .aw-giao-nen{display:none}
   top: calc(var(--sdl-wy, 62%) + 5.2 * var(--aw-u));
   font-size: calc(1.55 * var(--aw-u)); color: #8ea6c3;
 }
+
+/* ⭐ Đợt 583 — nút NOTE (core/note-screen.js): viên gradient cam-hồng có chữ NOTE, nhãn LIVE nhấp nháy khi iPad đang phát */
+.aw-appbtn.aw-note-btn { position: relative; width: auto; padding: 0 14px 0 11px; gap: 7px; border: 0;
+  background: linear-gradient(135deg, #ff8a4c, #e8506a); color: #fff; box-shadow: 0 6px 16px rgba(232, 80, 106, .32); }
+.aw-appbtn.aw-note-btn:hover { background: linear-gradient(135deg, #ff9a62, #f0607a); color: #fff; border: 0; transform: translateY(-1px); }
+.aw-appbtn.aw-note-btn svg { width: 22px; height: 22px; }
+.aw-note-word { font-weight: 800; font-size: 14px; letter-spacing: .08em; }
+.aw-note-live { position: absolute; top: -6px; right: -6px; height: 18px; padding: 0 6px; border-radius: 9px; background: #e11d48; color: #fff;
+  font-size: 10px; font-weight: 800; letter-spacing: .06em; display: none; align-items: center; gap: 4px; box-shadow: 0 0 0 2px #fff; }
+.aw-note-live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #fff; animation: aw-note-blink 1s infinite; }
+.aw-note-btn.is-live .aw-note-live { display: inline-flex; }
+@keyframes aw-note-blink { 50% { opacity: .25; } }
