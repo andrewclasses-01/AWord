@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **25/10/2026 Đợt 586 — NOTE: laser = nét bút + quầng sáng** (`drawLaser` trong note-ink.js chép myNote v0.3.2; note-screen.js dùng nó). Chi tiết GHI CHU Đợt 586.
 > ✏️ **25/10/2026 Đợt 585 — NOTE: chép `core/note-ink.js` từ myNote v0.3.1** (nét mượt hơn, dạ quang không đứt). Chi tiết GHI CHU Đợt 585.
 > ✏️ **25/10/2026 Đợt 584 — NOTE: chép `core/note-ink.js` từ myNote v0.3.0** (nét bút = đường viền tô một lần, mượt hơn). Chi tiết GHI CHU Đợt 584.
 > ✏️ **25/10/2026 Đợt 583 — NÚT NOTE** (trước nút iPad trên topbar): chiếu ghi chú viết tay từ iPad (app **myNote**, note.andrewclasses.com, kho `andrewclasses-01/myNote`). `core/note-screen.js` (nạp lười; 3 chế độ Follow iPad / Whole page / Fit width) · `core/note-link.js` + `core/note-ink.js` = BẢN CHÉP NGUYÊN VĂN từ myNote (sửa ở myNote rồi chép) · WebRTC bắt tay qua `users/{uid}/items` note_host/note_pad, kind `note-link` trong APP_DATA_KINDS · `?note=1` mở thẳng màn · `?padsig=local` bàn thử 2 tab. Chi tiết GHI CHU Đợt 583.

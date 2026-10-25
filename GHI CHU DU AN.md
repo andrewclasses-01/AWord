@@ -546,6 +546,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 586 (25/10/2026) — NOTE: bút laser kiểu nét bút + quầng sáng (myNote v0.3.2)
+- `core/note-ink.js` chép lại từ myNote v0.3.2 (thêm `fillVar` dùng chung + `drawLaser`). `core/note-screen.js`: laser vẽ bằng
+  `drawLaser` (nét mượt như bút, đuôi nhỏ dần theo tuổi `LASER_LIFE` 1,1 s, 2 lớp bóng mờ cùng màu), mỗi lần đặt bút là một nét
+  (`g`), màu theo iPad (`c`). Tin laser cũ (không `g`) vẫn vẽ được.
+
 ## Đợt 585 (25/10/2026) — NOTE: chép `core/note-ink.js` từ myNote v0.3.1
 - Nét bút làm mượt lúc vẽ (lọc 1-2-1 vị trí, trung bình 5 điểm lực nhấn, dải độ dày hẹp hơn) + dạ quang vẽ qua canvas nháp ĐẶC rồi dán
   36 % multiply (hết vệt khuyết hình lưỡi liềm trên Safari). Màn NOTE vẽ y hệt iPad. Không đổi gì khác.

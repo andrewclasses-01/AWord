@@ -15,7 +15,7 @@
 
 import { db, fs, currentUser } from "./firebase.js";
 import { createNoteHost, watchPadLive, localSignal } from "./note-link.js";
-import { PAGE_W, drawPaper, drawStroke } from "./note-ink.js";
+import { PAGE_W, LASER_LIFE, drawPaper, drawStroke, drawLaser } from "./note-ink.js";
 
 export const NOTE_LOCAL = new URLSearchParams(location.search).get("padsig") === "local";
 export const NOTE_KIND = "note-link";
@@ -158,7 +158,7 @@ export function openNoteScreen() {
       case "s0": S.pend.set(m.s.id, { ...m.s, p: [], pi: m.pi }); if (m.pi !== S.pi && S.pages.has(m.pi)) S.pi = m.pi; break;
       case "s+": { const s = S.pend.get(m.id); if (s) s.p.push(...m.p); break; }
       case "s1": { const s = S.pend.get(m.id); S.pend.delete(m.id); const pg = s && S.pages.get(s.pi); if (pg) pg.strokes.push(m.s); break; }
-      case "laser": S.laser.push({ pi: m.pi, x: m.x, y: m.y, t: performance.now() }); break;
+      case "laser": S.laser.push({ pi: m.pi, x: m.x, y: m.y, t: performance.now(), g: m.g || 0 }); if (m.c) S.laserC = m.c; break;
       case "view": S.view = m; break;
     }
     paintInfo(); kick();
@@ -229,18 +229,11 @@ export function openNoteScreen() {
     drawPaper(ctx, pg, k, im && im.complete && im.naturalWidth ? im : null);
     for (const s of pg.strokes) drawStroke(ctx, s, k);
     for (const s of S.pend.values()) if (s.pi === S.pi && s.p.length) drawStroke(ctx, s, k);
+    // ⭐ Đợt 586 — laser = nét như bút + quầng sáng mềm (note-ink.js drawLaser, chung với myNote v0.3.2)
     const now = performance.now();
-    while (S.laser.length && now - S.laser[0].t > 900) S.laser.shift();
-    ctx.lineCap = ctx.lineJoin = "round";
-    for (let i = 1; i < S.laser.length; i++) {
-      const a = S.laser[i - 1], b = S.laser[i];
-      if (a.pi !== S.pi || b.pi !== S.pi || b.t - a.t > 80) continue;
-      const al = Math.max(0, 1 - (now - b.t) / 900);
-      for (const [c, w, f] of [["#ff2d55", 18, 0.3], ["#ff2d55", 7, 1], ["#fff", 2, 0.9]]) {
-        ctx.globalAlpha = al * f; ctx.strokeStyle = c; ctx.lineWidth = w;
-        ctx.beginPath(); ctx.moveTo(a.x * k, a.y * k); ctx.lineTo(b.x * k, b.y * k); ctx.stroke();
-      }
-    }
+    while (S.laser.length && now - S.laser[0].t > LASER_LIFE) S.laser.shift();
+    const lz = S.laser.filter(q => q.pi === S.pi);
+    if (lz.length) drawLaser(ctx, lz, now, k, S.laserC || "#ff2d55", 9 * dpr);
     ctx.globalAlpha = 1;
     ctx.restore();
     if (moving || S.laser.length) kick();
