@@ -41,6 +41,9 @@
    ⚠️ Open the box bỏ nốt hiệu ứng nhạt của nó ở Đợt 259c (thầy: "cho đồng bộ").
    ============================================================= */
 .aw-cw-wrap.is-fightlost { opacity: .55; }
+/* ⭐ Đợt 587 — TIME DELAY: bàn xong TRƯỚC bị che trong lúc đội kia còn gõ (core/fight.js gắn
+   `.is-concealed`, chỉ từ 0,2s), kẻo đội chậm liếc sang chép nguyên chữ. Cùng kiểu Quiz/FTM. */
+.aw-fight-board.is-concealed .aw-cw-wrap { opacity: .12; filter: saturate(.1); }
 
 /* PAGE INDICATOR (teacher 4/8/2026): a crossword over 30 answers splits into
    pages (crossword.js) — the shared nav row under the stage shows only

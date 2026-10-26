@@ -546,6 +546,27 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 587 (26/10/2026) — CROSSWORD: thanh TIME DELAY trong Fight + gõ thừa không đè chữ cuối
+- Thầy: *"Thêm thanh time delay để đội trước xong rồi, đúng rồi thì đội sau vẫn có thêm một chút thời gian để hoàn thành"* ·
+  *"Chữ cuối đã gõ rồi thì gõ thêm không đổi chữ đó"*.
+- **Time delay cho game lượt-chọn** (`core/fight.js`): cờ template MỚI `tpl.fightPickDelay` (chỉ Crossword khai; Open the box KHÔNG —
+  thầy chốt Đợt 187 "open the box không cần"). Hằng `pickDelay` + `delayOn = (!pickMode || pickDelay) && !turnsMode` thay cho điều kiện
+  `!pickMode` ở 3 chỗ: `tieMs` (đọc `fightTieWindow` thay vì 0,1s cố định), `tieUnlimited` (∞), `waitBarMs` (thanh chờ + che bàn).
+  Luật vòng KHÔNG đổi một dòng: trong cửa sổ đội kia xong ĐÚNG ⇒ `finalizeTie` (cả hai có điểm, Speed bonus cho đội trước); hết cửa
+  sổ ⇒ `finalizeSingleWinner` khoá im lặng như luật "lock" cũ. Mặc định 0,1s ⇒ act cũ chơi y hệt.
+- Options của trận Crossword: Pick time thành ô riêng, cặp **Time delay + Speed bonus** chung cột như game thường; tooltip riêng
+  cho game lượt-chọn. Speed bonus vẫn KHÔNG bị khoá theo Time delay ở game lượt-chọn (luật Đợt 187 giữ nguyên).
+- ⚠️ `endPickRound`: HOÀ cũng để `roundWinner` null, mà nhánh đó từng trao lượt chọn cho `lastFinisher` bất kể đúng/sai ⇒ hoà thì đội
+  ĐÚNG SAU lại được chọn tiếp. Sửa: chỉ giữ lượt khi đội cuối SAI, hoà thì đảo lượt (đúng luật gốc "chỉ khi không ai sai mới đảo").
+- `crossword.css`: `.aw-fight-board.is-concealed .aw-cw-wrap` (opacity .12) — che bàn xong trước khi đội kia còn gõ (chỉ từ 0,2s),
+  kẻo đội chậm chép chữ.
+- **Gõ thừa** (`crossword.js` `typeLetter`): gõ xong ô cuối thì `advanceCursor()` đứng yên ⇒ phím kế từng đè chữ vừa gõ. Nay: ô cuối
+  đã có chữ + từ đủ ô ⇒ bỏ qua phím; Backspace xoá ô cuối rồi gõ lại được. Áp cho mọi mode.
+- Bàn thử `scratch/dot587-cw.html` **22/22 ĐẠT** (gõ thừa · hoà trong 2s · hết 1s bị khoá không điểm · đối chứng 0,1s · Options).
+  Launch `aword-dot587` cổng 5587. ⚠️ Bẫy bàn thử: chạm lặp cùng phím (TT) bị TAP_GUARD 400ms nuốt; pane ẩn đóng băng transition
+  opacity ⇒ đo che phải tắt transition.
+- ⬜ VIỆC ĐANG CHỜ: thầy bấm tay một trận Crossword Fight trên TOMKO, chọn nấc Time delay hợp lớp (gợi ý 3–5s).
+
 ## Đợt 586 (25/10/2026) — NOTE: bút laser kiểu nét bút + quầng sáng (myNote v0.3.2)
 - `core/note-ink.js` chép lại từ myNote v0.3.2 (thêm `fillVar` dùng chung + `drawLaser`). `core/note-screen.js`: laser vẽ bằng
   `drawLaser` (nét mượt như bút, đuôi nhỏ dần theo tuổi `LASER_LIFE` 1,1 s, 2 lớp bóng mờ cùng màu), mỗi lần đặt bút là một nét

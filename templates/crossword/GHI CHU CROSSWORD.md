@@ -1,5 +1,13 @@
 # GHI CHU — CROSSWORD
 
+## Đợt 587 (26/10/2026) — FIGHT: thanh TIME DELAY + gõ thừa không đè chữ cuối
+
+- `tpl.fightPickDelay: true` ⇒ Options của trận có **Time delay** (cùng cột Speed bonus, Pick time thành ô riêng). Đội xong ĐÚNG
+  trước ⇒ thanh chờ chạy, bàn đó bị che (`.is-concealed`, crossword.css), đội kia còn từng ấy giây: đúng trong cửa sổ = hoà (cả
+  hai có điểm), hết giờ = khoá im lặng như cũ. 0,1s (mặc định) = y nết cũ. Toàn bộ luật nằm ở `core/fight.js` (`pickDelay`/`delayOn`).
+- `typeLetter`: ô cuối đã có chữ + từ đủ ô ⇒ phím chữ bị bỏ qua (trước đây đè chữ cuối vì `advanceCursor()` đứng yên ở ô cuối).
+- Bàn thử `scratch/dot587-cw.html` 22/22. Chi tiết `../../GHI CHU DU AN.md` Đợt 587.
+
 ## Đợt 470 (05/10/2026) — LÀM TIẾP lượt dở bài giao (core/lam-tiep.js)
 
 `ui.setLuuTrangThai` + `ui.daDoiBaiLam` + đọc `ui.khoiPhuc` (hợp đồng ở `core/HUONG DAN CORE.md`, mục Đợt 469). ⛔ KHÔNG gọi lại `buildCrossword` khi làm tiếp (xếp ngẫu nhiên ⇒ lưới khác). Lưu `luoi` = mỗi trang đề một mảng `[chỉ số từ trong trang, hàng, cột, hướng]`; dựng lại bằng `dungLaiLuoi` → `chotLuoi` (phần đánh số/clues TÁCH NGUYÊN VĂN ra khỏi `buildCrosswordOnce`, không đổi phép tính). Kiểm: đúng tập từ (khử trùng key giữ từ ĐẦU như cũ), chữ ô giao khớp. Bài làm mỗi trang: `g` (userGrid), `s` (cellStatus), `w` (wordState dạng bit) + `po`/`to` (playOrder + kết quả từng lượt — finish/Show answers đi theo nó) + `an` (Andrew đã dùng). `napBaiLam` dựng lại kết cục hiệu ứng lộ đáp án (ô wrong / lật đáp án) nếu chụp giữa chừng; điểm tính lại = đúng − phạt×sai. Mở lại ở bàn cờ (không mở sẵn ô đang gõ dở; chữ đã gõ vẫn còn trên lưới) của trang còn ô chưa xong; xong hết ⇒ finish 700 ms.

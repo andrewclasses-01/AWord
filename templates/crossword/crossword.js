@@ -316,6 +316,10 @@ const crosswordTemplate = {
   // pickMode block in core/fight.js.
   fightMode: true,
   fightPick: "lock",
+  // ⭐⭐ Đợt 587 — thanh TIME DELAY trong Options của trận: đội xong đúng trước thì đội
+  // kia còn từng ấy giây để gõ nốt (đúng trong cửa sổ = hoà, cả hai có điểm). Xem
+  // `pickDelay` trong core/fight.js.
+  fightPickDelay: true,
   // ⭐⭐ Đợt 186 — SHOWDOWN. Left out in Đợt 178 for one honest reason: the class
   // chooses which clue to open, so `review` came out in GRID order and pupil `n`
   // would have been named against a clue they never touched. `playOrder` +
@@ -1099,6 +1103,10 @@ const crosswordTemplate = {
       }
       const [r, c] = w.cells[curCell] || w.cells[0];
       const rc = r + "," + c;
+      // ⭐ Đợt 587 (thầy) — GÕ THỪA KHÔNG ĐÈ CHỮ CUỐI. Gõ xong ô cuối thì `advanceCursor()`
+      // đứng yên ở đó, nên phím chữ kế tiếp từng ghi đè chính chữ vừa gõ. Ô cuối đã có chữ
+      // + đủ ô ⇒ bỏ qua phím; muốn sửa thì Backspace (xoá đúng ô đó) rồi gõ lại.
+      if (userGrid.get(rc) && oGoDuoc(curCell + 1, 1) < 0 && wordFilled(w)) { kbd.refresh(); return; }
       userGrid.set(rc, ch);
       setGridLetter(rc, ch);
       ui.daDoiBaiLam?.();   // Đợt 470

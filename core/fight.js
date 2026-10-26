@@ -608,6 +608,14 @@ export function startFight(root, activity, { onExit, base = null, keepIpad = fal
   // hỏi tiếp theo mà không đảo lượt"); only when nobody ended wrong does the turn
   // alternate. In a "lock" game the locked team IS the wrong one.
   const pickMode = (getTemplate(activity.type)?.fightPick) || null;
+  // ⭐⭐ Đợt 587 (thầy, 26/10/2026, Crossword) — TIME DELAY MỞ LẠI CHO GAME LƯỢT-CHỌN NÀO
+  // TỰ KHAI `tpl.fightPickDelay`. Thầy: *"đội trước xong rồi, đúng rồi thì đội sau vẫn có
+  // thêm một chút thời gian để hoàn thành"*. Gõ một TỪ cần vài giây, nên cửa sổ 0,1s cố
+  // định (Đợt 187 bịt pick-turn khỏi Time delay) làm đội chậm gần như không bao giờ hoà
+  // được. Cờ chỉ mở CỬA SỔ: trong cửa sổ đội kia xong ĐÚNG ⇒ hoà (cả hai có điểm, như mọi
+  // game thường); hết cửa sổ ⇒ khoá im lặng y luật "lock" cũ. Mặc định 0,1s ⇒ act cũ y hệt.
+  // ⚠️ Open the box KHÔNG khai (thầy chốt Đợt 187 "open the box không cần").
+  const pickDelay = !!pickMode && !!getTemplate(activity.type)?.fightPickDelay;
   // ⭐⭐ IN TURNS (Đợt 202) — ONE pool, DEALT OUT: each board plays its own half
   // and no question is ever on both boards at once. Three gates, all of which
   // must hold, and the last two are why this is a `const` and not just the
@@ -704,8 +712,10 @@ export function startFight(root, activity, { onExit, base = null, keepIpad = fal
   // declaring `fightScreen` + Fight content = Different.
   const soloBoards = soloTpl && !turnsMode && fo.fightContent === "different";
 
-  const tieMs = (pickMode || turnsMode) ? TIE_WINDOW_MS : tieWindowMsOf(fo);
-  const tieUnlimited = !pickMode && !turnsMode && !soloBoards && fo.fightTieWindow === 0;
+  // Đợt 587 — `delayOn`: trận này có đọc TIME DELAY không (game thường, hoặc lượt-chọn có `pickDelay`).
+  const delayOn = (!pickMode || pickDelay) && !turnsMode;
+  const tieMs = delayOn ? tieWindowMsOf(fo) : TIE_WINDOW_MS;
+  const tieUnlimited = delayOn && !soloBoards && fo.fightTieWindow === 0;
   // ⭐⭐ Đợt 276 — MISS WAIT, decoded ONCE for the whole match, same as every
   // other option above. Applies in EVERY round model (ordinary, pick-turn, In
   // turns) because the branch it governs — one side already wrong, nobody has
@@ -718,7 +728,7 @@ export function startFight(root, activity, { onExit, base = null, keepIpad = fal
   // crossword không cần … find the match có cần" — and Find the match is an
   // ordinary-round game (it has no `fightPick`), so `!pickMode` is the whole test.
   // Đợt 370 — independent boards have no shared round to wait out, so no bar.
-  const waitBarMs = (!pickMode && !turnsMode && !soloBoards && tieMs >= WAIT_BAR_MIN_MS) ? tieMs : 0;
+  const waitBarMs = (delayOn && !soloBoards && tieMs >= WAIT_BAR_MIN_MS) ? tieMs : 0;
   // The bonus is off entirely at 0.1s — see speedBonusApplies(). Resolved once
   // here so the two award sites can not disagree about it.
   // In a pick-turn game the bonus is untouched by all this — it keeps the plain
@@ -1491,7 +1501,9 @@ export function startFight(root, activity, { onExit, base = null, keepIpad = fal
     //  • otherwise                     -> the last finisher IF it was wrong, and
     //                                     only when both were right does the
     //                                     turn actually alternate
-    if (roundWinner === null) pickTurn = lastFinisher ? lastFinisher.side : (pickTurn === 0 ? 1 : 0);
+    // ⚠️ Đợt 587 — HOÀ (cả hai cùng đúng trong Time delay) cũng để roundWinner null, mà
+    // lastFinisher lúc đó là đội ĐÚNG sau ⇒ chỉ giữ lượt cho đội cuối khi nó SAI, hoà thì đảo lượt.
+    if (roundWinner === null) pickTurn = (lastFinisher && lastFinisher.correct === false) ? lastFinisher.side : (pickTurn === 0 ? 1 : 0);
     else if (pickMode === "lock") pickTurn = roundWinner === 0 ? 1 : 0;
     else if (lastFinisher && lastFinisher.correct === false) pickTurn = lastFinisher.side;
     else pickTurn = pickTurn === 0 ? 1 : 0;
@@ -2626,7 +2638,9 @@ export function startFight(root, activity, { onExit, base = null, keepIpad = fal
       fmt: pos => (pos >= UNLIM_POS ? "∞" : DELAY_STEPS[pos - 1].toFixed(1) + "s"),
       onInput: pos => { const w = valOf(pos); draft.fightTieWindow = w; syncDelay(w); }
     });
-    cDelay.cell.title = "How long a team that answered second still counts as level. At the minimum, the slower team is locked out at once; above it, they keep playing until they finish and always keep what they earn. ∞ waits for as long as it takes.";
+    cDelay.cell.title = pickDelay
+      ? "After one team gets the word right, how long the other team still has to finish it. Right within that time = both score; time runs out = locked out. ∞ waits for as long as it takes."
+      : "How long a team that answered second still counts as level. At the minimum, the slower team is locked out at once; above it, they keep playing until they finish and always keep what they earn. ∞ waits for as long as it takes.";
 
     // ⭐ Đợt 213 — AMBER: this awards up to +100 points, so by thầy's law
     // ("các thanh thưởng luôn có màu vàng") it is a reward, and the panel
@@ -2700,7 +2714,15 @@ export function startFight(root, activity, { onExit, base = null, keepIpad = fal
     // pick-turn game's counterpart to Time delay (both are "how long may this go
     // on"), so it takes the same shared column above Speed bonus, and the two
     // branches below end up the same shape as each other again.
-    if (pickMode) {
+    // ⭐ Đợt 587 — game lượt-chọn có `pickDelay` (Crossword): Pick time thành ô riêng, cặp
+    // Time delay + Speed bonus đứng chung cột y như game thường.
+    if (pickDelay) {
+      panel.append(cPickTime.cell);
+      const stack = el("div", "aw-optc-stack");
+      stack.append(cDelay.cell, cBonus.cell);
+      panel.append(stack);
+    }
+    else if (pickMode) {
       const stack = el("div", "aw-optc-stack");
       stack.append(cPickTime.cell, cBonus.cell);
       panel.append(stack);
