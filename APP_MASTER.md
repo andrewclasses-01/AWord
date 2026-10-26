@@ -8,7 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> ✏️ **26/10/2026 Đợt 587 — CROSSWORD Fight: thanh TIME DELAY + gõ thừa không đè chữ cuối** (cờ template mới `tpl.fightPickDelay` ⇒ `core/fight.js` `pickDelay`/`delayOn`: game lượt-chọn đọc `fightTieWindow`, có thanh chờ + che bàn; trong cửa sổ đúng = hoà, hết = khoá im lặng; hoà thì đảo lượt chọn · `crossword.js` `typeLetter` bỏ qua phím khi ô cuối đã có chữ). Chi tiết GHI CHU Đợt 587.
+> ✏️ **26/10/2026 Đợt 587 — CROSSWORD Fight: thanh TIME DELAY + gõ thừa không đè chữ cuối** (cờ template mới `tpl.fightPickDelay` ⇒ `core/fight.js` `pickDelay`/`delayOn`: game lượt-chọn đọc `fightTieWindow`, có thanh chờ + che bàn; trong cửa sổ đúng = hoà, hết = khoá im lặng; hoà thì đảo lượt chọn · `crossword.js` `typeLetter` bỏ qua phím khi ô cuối đã có chữ). ✅ `31fa95b` LIVE (kiem-live 3/3 + bàn thử live 22/22). Chi tiết GHI CHU Đợt 587.
 > ✏️ **25/10/2026 Đợt 586 — NOTE: laser = nét bút + quầng sáng** (`drawLaser` trong note-ink.js chép myNote v0.3.2; note-screen.js dùng nó). Chi tiết GHI CHU Đợt 586.
 > ✏️ **25/10/2026 Đợt 585 — NOTE: chép `core/note-ink.js` từ myNote v0.3.1** (nét mượt hơn, dạ quang không đứt). Chi tiết GHI CHU Đợt 585.
 > ✏️ **25/10/2026 Đợt 584 — NOTE: chép `core/note-ink.js` từ myNote v0.3.0** (nét bút = đường viền tô một lần, mượt hơn). Chi tiết GHI CHU Đợt 584.

@@ -565,6 +565,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 - Bàn thử `scratch/dot587-cw.html` **22/22 ĐẠT** (gõ thừa · hoà trong 2s · hết 1s bị khoá không điểm · đối chứng 0,1s · Options).
   Launch `aword-dot587` cổng 5587. ⚠️ Bẫy bàn thử: chạm lặp cùng phím (TT) bị TAP_GUARD 400ms nuốt; pane ẩn đóng băng transition
   opacity ⇒ đo che phải tắt transition.
+- ✅ Code `31fa95b` ĐÃ PUSH + LIVE: kiem-live 3/3 mã băm khớp + bàn thử `scratch/dot587-live.html` (import thẳng module bản live) 22/22.
 - ⬜ VIỆC ĐANG CHỜ: thầy bấm tay một trận Crossword Fight trên TOMKO, chọn nấc Time delay hợp lớp (gợi ý 3–5s).
 
 ## Đợt 586 (25/10/2026) — NOTE: bút laser kiểu nét bút + quầng sáng (myNote v0.3.2)

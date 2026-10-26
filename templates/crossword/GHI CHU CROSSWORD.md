@@ -6,7 +6,7 @@
   trước ⇒ thanh chờ chạy, bàn đó bị che (`.is-concealed`, crossword.css), đội kia còn từng ấy giây: đúng trong cửa sổ = hoà (cả
   hai có điểm), hết giờ = khoá im lặng như cũ. 0,1s (mặc định) = y nết cũ. Toàn bộ luật nằm ở `core/fight.js` (`pickDelay`/`delayOn`).
 - `typeLetter`: ô cuối đã có chữ + từ đủ ô ⇒ phím chữ bị bỏ qua (trước đây đè chữ cuối vì `advanceCursor()` đứng yên ở ô cuối).
-- Bàn thử `scratch/dot587-cw.html` 22/22. Chi tiết `../../GHI CHU DU AN.md` Đợt 587.
+- Bàn thử `scratch/dot587-cw.html` 22/22 · ✅ `31fa95b` LIVE (kiem-live 3/3, bàn thử live 22/22). Chi tiết `../../GHI CHU DU AN.md` Đợt 587.
 
 ## Đợt 470 (05/10/2026) — LÀM TIẾP lượt dở bài giao (core/lam-tiep.js)
 
