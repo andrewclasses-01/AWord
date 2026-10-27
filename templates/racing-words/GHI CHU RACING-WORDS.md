@@ -2,6 +2,11 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
+## Đợt 589 (27/10/2026) — THẬT: myGame 5l (đường đua thật 3,5 km cua gắt, cọ rào, bay chông chênh, xe traffic 3D) — GOC rw-5l, iPad giữ padui-5j / padlink-5j
+- Đường = đa giác bo cung cố định (`sr3d-track-5l.js`, LAP 3.530 m), shader uốn XOAY thật (bảng phải/tới/φ) + đất theo toạ độ thật (trường khoảng cách) — đường cũ chỉ xô ngang nên không vẽ được cua 90°.
+- Cọ rào: tia lửa + khói đen + hãm tăng dần; dốc 3,1 m; nửa xe trên dốc ⇒ nghiêng 38–48° phải lái ngược; trên không luôn lệch + gió, lộn vòng ⇒ BARREL ROLL +SPEED; dốc xoắn ×TWIST_K.
+- Xe traffic: 6 mẫu glb Quaternius CC0 ở `traffic3d/` (chép bằng chep-racing-words), gộp 1 lưới/mẫu, chỉ thân xe đổi màu. Chi tiết: myGame HO SO BAN GIAO mục MẪU 5l.
+
 ## Đợt 571 (21/10/2026) — THẬT: myGame 5k + 5k-b (Roadster bám xe nhanh + tên lửa tự đuổi) — GOC rw-5k, iPad giữ padui-5j / padlink-5j
 - Roadster bám theo tốc độ THẬT của xe (vEff = v × airK khi bay dốc), trần 342 km/h; khói hông dính ống, rung mượt; tên lửa tự đuổi (dammo-5k home/tgt), không tâm: 1 chạm = xe xa, đúp = xe gần.
 - 5k-b: nút loại đạn iPad (d0–2) / phím 1 2 3 = chọn + bắn; 1 drone bỏ chờ đạn bay / hồi / pin. Chi tiết: myGame HO SO BAN GIAO mục MẪU 5k.

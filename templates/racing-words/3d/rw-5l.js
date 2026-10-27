@@ -1,3 +1,4 @@
+// RACING WORDS mẫu 5l (27/10/2026) = rw-5k.js + lõi sr3d-5l.js (đường thật cua gắt, rào hãm, dốc hẹp, bay chông chênh, lộn vòng bằng vô lăng) · tiếng cọ rào / lộn vòng
 // RACING WORDS — GÓI NHÚNG mẫu 5k (21/10/2026) = rw-5j.js + lõi sr3d-5k.js (Roadster bám xe nhanh 150–200 km/h kể cả qua dốc, mượt, tên lửa TỰ ĐUỔI: 1 chạm = xe xa · đúp = xe gần) + intro sr3d-intro-5k.js (cùng mô-đun flycar-5k).
 // RACING WORDS — GÓI NHÚNG mẫu 5j (21/10/2026) = rw-5i.js + lõi sr3d-5j.js (XE BAY ROADSTER trong bộ Drone). remote = createPadHost của sr3d-padlink-5j.js.
 // RACING WORDS — GÓI NHÚNG mẫu 5i (20/10/2026) = rw-5h.js + lõi sr3d-5i.js (VẠCH LỬA khi tên lửa drone trúng xe dẫn · ⚙ Settings ▸ Boost 5 thanh kéo · sai ⇒ boost đỏ xịt + khói) + CSS rw-5i.css.
@@ -93,15 +94,16 @@
 //   onEvent   : (k, v) — "pad" (iPad nối / mất nối), "padMode", "end", …
 // ⇒ { setOptions(o) (true = áp ngay, false = AWord dựng lại), destroy(), game, intro }
 // =============================================================
-import { createSpeedRun } from "./sr3d-5k.js";   // 5j: xe bay ROADSTER   // 5i: vạch lửa drone + Settings ▸ Boost   // 5h: tối ưu TOMKO (vẽ 1 lượt vật liệu trong suốt, cột drone không cấp lại khung đệm, bớt ép bố cục)   // 5f: màu sơn, máy quay theo xe dẫn · 5e: 2 drone · 5d: tải mẫu drone khi bật · 5a: tin iPad drone có hồi chiêu · 4z: vùng nổ trúng cả 2 xe · 4y: tâm bóng mờ, bảng nhiều hiệp · 4x: icon 2D Neon viền · 4w: màu tâm, 1 tâm, tab mượt · 4v: NEAR/FAR dời drone, dấu điểm rơi, Auto target · 4u: nghiêng 4 hướng · 4t: nhỏ 10 %, đạn ra từ bụng, chỉnh cột + zoom · 4s: đạn nhỏ, phóng về trước, đuôi lửa · 4r: đạn drone · 4q: tâm ngắm lục giác HUD · 4p: 5 mẫu giữ + Quad quay · 4o: lưới chọn mẫu + sửa quạt · 4n: 8 mẫu + quạt quay + bay lượn · 4m: mẫu drone 3D thật · 4l: + iPad drone · 4k: DRONE
+import { createSpeedRun } from "./sr3d-5l.js";   // 5l: đường thật ~3 km cua gắt + rào hãm + dốc hẹp + bay chông chênh / lộn vòng bằng vô lăng + xe giao thông 3D   // 5j: xe bay ROADSTER   // 5i: vạch lửa drone + Settings ▸ Boost   // 5h: tối ưu TOMKO (vẽ 1 lượt vật liệu trong suốt, cột drone không cấp lại khung đệm, bớt ép bố cục)   // 5f: màu sơn, máy quay theo xe dẫn · 5e: 2 drone · 5d: tải mẫu drone khi bật · 5a: tin iPad drone có hồi chiêu · 4z: vùng nổ trúng cả 2 xe · 4y: tâm bóng mờ, bảng nhiều hiệp · 4x: icon 2D Neon viền · 4w: màu tâm, 1 tâm, tab mượt · 4v: NEAR/FAR dời drone, dấu điểm rơi, Auto target · 4u: nghiêng 4 hướng · 4t: nhỏ 10 %, đạn ra từ bụng, chỉnh cột + zoom · 4s: đạn nhỏ, phóng về trước, đuôi lửa · 4r: đạn drone · 4q: tâm ngắm lục giác HUD · 4p: 5 mẫu giữ + Quad quay · 4o: lưới chọn mẫu + sửa quạt · 4n: 8 mẫu + quạt quay + bay lượn · 4m: mẫu drone 3D thật · 4l: + iPad drone · 4k: DRONE
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
-import { createIntro } from "./sr3d-intro-5k.js";   // 5j: Roadster trong xưởng   // 5f: drone trong xưởng
+import { createIntro } from "./sr3d-intro-5l.js";   // 5j: Roadster trong xưởng   // 5f: drone trong xưởng
 import { createSound } from "./sr3d-sound-3o.js";
 import { qrSvg } from "./mc3d-qr.js";
 
 const CARS_KEY = "speedrun.cars";            // xe 2 đội nhớ THEO MÁY (thầy chọn ở màn chờ xưởng)
 const DEF_CARS = ["Y2", "H4"];
 
+const clamp01 = x => Math.max(0, Math.min(1, x));
 export async function createRacingWords({ mount, questions, title = "RACING WORDS", options = {}, host = null, remote = null, onEvent = () => {}, onProgress = () => {} }) {
   // 4h: onProgress(bước) cho thanh LOADING chia theo THỜI GIAN — "cars" (xe đã tải) · "race" (trận dựng xong) · "studio" (xưởng xong, sắp trả về) · "frame" (khung đầu đã vẽ) · "warm" (dịch sẵn hình xong)
   const prog = k => { try { onProgress(k); } catch (e) { /* */ } };
@@ -329,6 +331,8 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
       return;
     }
     if (k === "banner") { S.play("win"); S.play("crowd", { delay: 0.3 }); setTimeout(() => !dead && S.play("mResult"), 1400); return; }
+    if (k === "rail") { if (v.long) S.play("screech", { pan: PAN[v.team], gain: 0.45, rate: 1.35 }); else { S.play("crash", { pan: PAN[v.team], gain: clamp01(0.35 + v.hit / 14) }); S.play("screech", { pan: PAN[v.team], gain: 0.55, rate: 1.25 }); } return; }   // 5l: cọ rào
+    if (k === "roll") { S.play("boost", { pan: PAN[v.team], gain: 0.9, rate: 1.1 }); S.play("flyby", { pan: PAN[v.team], gain: 0.6, rate: 1.4 }); return; }   // 5l: lộn vòng bằng vô lăng
     if (k === "tumble") { S.play("crash", { pan: PAN[v.team], gain: 0.7 }); S.play("screech", { pan: PAN[v.team], gain: 0.6, rate: 0.75 }); return; }
     // 4r: tiếng ĐẠN DRONE — phóng (tiếng phóng tên lửa cao hơn) · trúng xe Heart (correct cao) / Boost (boost) · trúng đường (pop nhỏ) · bị từ chối (wrong nhỏ)
     if (k === "droneShot") { S.play("mLaunch", { gain: 0.75, rate: v.kind === "missile" ? 1.05 : 1.35 }); return; }

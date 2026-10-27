@@ -18,7 +18,7 @@
 import * as THREE from "../../rocket-race/vendor/three/three.module.min.js";
 import { GLTFLoader } from "../../rocket-race/vendor/three/addons/GLTFLoader.js";
 import { MeshoptDecoder } from "../../rocket-race/vendor/three/addons/meshopt_decoder.module.js";
-import { BEND_GLSL } from "./sr3d-world-4b.js";
+import { BEND_GLSL } from "./sr3d-world-5l.js";   // 5l: uốn XOAY thật
 
 const URL_GLB = new URL("../drone3d/flycar-F296.glb?v=5j", import.meta.url).href;
 export const FLYCAR = { id: "F296", name: "Roadster", L: 4.57, W: 1.95, kind: "car", by: "Ddiaz Design", lic: "CC BY-NC-SA 4.0" };

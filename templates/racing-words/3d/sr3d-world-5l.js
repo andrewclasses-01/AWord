@@ -1,3 +1,17 @@
+// RACING WORDS mẫu 5l (27/10/2026) = sr3d-world-5j.js + ĐƯỜNG CUA GẮT ~90° (thầy: "nhiều đoạn cua gấp hơn, gần như 90 độ và zigzag hơn"):
+//   · UỐN XOAY THẬT: cũ chỉ XÔ NGANG (x += X(d), trần tan φ = 2 ⇒ ≤ 63°, mặt đường bị xiên hẹp lại) — nay mỗi đỉnh (x lệch ngang, a mét phía trước)
+//     ⇒ tim đường C(a) + x·pháp tuyến(φ(a)) — bảng uBendT RGBA (phải, tới, φ) tính từ đường THẬT (sr3d-track-5l.js) mỗi máy quay.
+//     Vật thể đi theo hướng đường (xe phía trước đã ôm cua thì quay đúng góc); pháp tuyến xoay theo ⇒ ánh sáng đúng.
+//     Độ võng xa (uBend.y) tính theo khoảng cách TỚI THẬT sau khi xoay ⇒ đường / đất / biển cùng võng (không chui xuống đất sau khúc cua).
+//   · ĐẤT + BIỂN theo TOẠ ĐỘ THẾ GIỚI THẬT (không uốn): cũ gắn theo (x lệch đường, s) — núi bên trái / biển bên phải; với cua 90° mặt đất phía trong cua
+//     sẽ GẬP chồng lên nhau. Nay đỉnh lưới đất → toạ độ thật bằng 1 phép xoay + dời cứng (uTrk = tim đường + hướng tại máy quay), độ cao theo trường
+//     KHOẢNG CÁCH tới đường (ảnh 1 kênh, ô 4 m): sát đường phẳng, xa lên đồi, rất xa thành núi; phía Nam vòng đua là bãi cát + biển.
+//   · CÂY / BỤI / CỎ / DỪA / CỘT ĐÈN: rải theo (s, x) như cũ nhưng HAI BÊN đường, bỏ chỗ trong lòng cua gắt (κ·x > 0,55 — sẽ gập), bỏ chỗ sát một đoạn đường khác,
+//     độ cao lấy ở toạ độ thật; dừa chỉ ở bãi cát ven biển.
+// ---- gốc 5j ----
+// RACING WORDS mẫu 5j (21/10/2026) = sr3d-world-4b.js + VÙNG CẢNH THỨ 2 quanh Roadster (thầy: "roadster đi quá xa, núi trống, không có cây"):
+//   update(camPos, t, sMin, sMax, sAlt) — sAlt = chỗ xe bay; nằm ngoài cửa sổ cảnh của 2 xe ⇒ rải thêm cây / cột / bụi quanh nó (gần trước, xa sau; chung trần số cây).
+// ---- gốc 4b ----
 // RACING WORDS mẫu 4b (16/10/2026) = sr3d-world-4a.js + ĐƯỜNG CONG ĐÚNG VẬT LÝ (thầy: "xe đi thẳng nhưng đôi khi đoạn đường phía xa vắt sang trái,
 //   vắt sang phải rất nhanh … cần đường đua giống thực tế vật lý"): cũ = 1 hệ số cong chung (trung bình 30–150 m) cho CẢ đoạn xa ⇒ mỗi khúc S mới lọt vào
 //   tầm là cả đường xa quẹt ngang. Nay dịch ngang = HÌNH THẬT của đường phía trước: lõi tích phân độ cong bản đồ từ chỗ máy quay ra 1.400 m
@@ -45,11 +59,17 @@ float vnoise(vec2 p){ vec2 i = floor(p); vec2 f = fract(p); vec2 u = f*f*(3.0-2.
   return mix(mix(a,b,u.x), mix(c,d,u.x), u.y); }
 float fbm(vec2 p){ float s = 0.0, a = 0.5; for (int i = 0; i < 4; i++){ s += a*vnoise(p); p = p*2.03 + vec2(17.1, 9.2); a *= 0.5; } return s; }
 float shoreX(float z){ return 8.0*sin(z*0.013) + 5.0*sin(z*0.041 + 1.7); }
-float groundH(vec2 q){ float x = q.x;
-  if (x < 0.0) { float L = smoothstep(13.0, 60.0, -x);
-    return L*(fbm(q*0.011)*42.0 + 3.0) + smoothstep(110.0, 420.0, -x)*fbm(q*0.0042 + 3.7)*130.0 - 0.06*(1.0 - L); }
-  float R = smoothstep(15.0, 70.0, x + shoreX(q.y));
-  return -R*5.0 + smoothstep(11.0, 15.0, x)*(1.0 - smoothstep(15.0, 24.0, x))*0.35 - 0.06; }
+`;
+
+// 5l: ĐỊA HÌNH THEO TOẠ ĐỘ THẬT q = (Đông, Nam) mét — d = khoảng cách tới tim đường gần nhất (ảnh uDistT), sy = quá bờ biển bao nhiêu (dương = trong biển)
+const TERRAIN_GLSL = `uniform sampler2D uDistT; uniform vec4 uDistM; uniform float uShore; uniform vec4 uTrk;
+float trkD(vec2 q){ vec2 uv = (q - uDistM.xy) * uDistM.zw; if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) return 255.0; return texture2D(uDistT, uv).r * 255.0; }
+float shoreY(vec2 q){ return q.y - uShore - shoreX(q.x); }
+float groundH(vec2 q){ float d = trkD(q), sy = shoreY(q);
+  float L = smoothstep(16.0, 62.0, d), HF = 1.0 - smoothstep(-230.0, -90.0, sy), R = smoothstep(-12.0, 50.0, sy) * smoothstep(13.0, 22.0, d);
+  return HF * (L*(fbm(q*0.011)*42.0 + 3.0) + smoothstep(120.0, 420.0, d)*fbm(q*0.0042 + 3.7)*130.0) - R*5.0
+    + smoothstep(11.0, 15.0, d)*(1.0 - smoothstep(15.0, 24.0, d))*0.35*(1.0 - HF) - 0.06*(1.0 - L); }
+vec2 toW(vec3 b){ float f = uBendZ - b.z; return uTrk.xy + vec2(-uTrk.w, uTrk.z) * b.x + uTrk.zw * f; }   // điểm cảnh (đã ở khung máy quay) → toạ độ thật
 `;
 const f = Math.fround;
 const fract = x => f(x - Math.floor(x));
@@ -69,12 +89,14 @@ function vnoise(px, py) {
 }
 function fbm(px, py) { let s = 0, a = 0.5; px = f(px); py = f(py); for (let i = 0; i < 4; i++) { s += a * vnoise(px, py); px = f(f(px * f(2.03)) + f(17.1)); py = f(f(py * f(2.03)) + f(9.2)); a *= 0.5; } return s; }
 const shoreX = z => 8 * Math.sin(z * 0.013) + 5 * Math.sin(z * 0.041 + 1.7);
-export function groundH(x, z) {
-  if (x < 0) { const L = sstep(13, 60, -x);
-    return L * (fbm(f(x * f(0.011)), f(z * f(0.011))) * 42 + 3) + sstep(110, 420, -x) * fbm(f(f(x * f(0.0042)) + f(3.7)), f(f(z * f(0.0042)) + f(3.7))) * 130 - 0.06 * (1 - L); }
-  const R = sstep(15, 70, x + shoreX(z));
-  return -R * 5 + sstep(11, 15, x) * (1 - sstep(15, 24, x)) * 0.35 - 0.06;
+// 5l: bản JS của groundH (đặt cây) — trk = buildTrack() (distAt song tuyến như GPU, SHORE_Y)
+export function groundW(trk, X, Y) {
+  const d = trk.distAt(X, Y), sy = Y - trk.SHORE_Y - shoreX(X);
+  const L = sstep(16, 62, d), HF = 1 - sstep(-230, -90, sy), R = sstep(-12, 50, sy) * sstep(13, 22, d);
+  return HF * (L * (fbm(X * 0.011, Y * 0.011) * 42 + 3) + sstep(120, 420, d) * fbm(X * 0.0042 + 3.7, Y * 0.0042 + 3.7) * 130) - R * 5
+    + sstep(11, 15, d) * (1 - sstep(15, 24, d)) * 0.35 * (1 - HF) - 0.06 * (1 - L);
 }
+export const sandW = (trk, X, Y) => { const sy = Y - trk.SHORE_Y - shoreX(X); return sstep(-48, -26, sy) * sstep(12, 16, trk.distAt(X, Y)); };
 
 // ---------- cong thế giới ----------
 // 3q (thầy 15/10: "núi và cảnh phía xa thay đổi rất bất hợp lý … chóng mặt"): bản cũ lệch = b·d² ở MỌI khoảng cách ⇒ núi 1.000 m lệch
@@ -82,16 +104,24 @@ export function groundH(x, z) {
 //   TIẾP TUYẾN ⇒ cảnh xa chỉ XOAY một góc atan(2·b·D0) như khi xe quay đầu thật; bầu trời xoay cùng góc (skyRot). bendQ JS = cùng công thức.
 export const BEND_D0 = 150;
 export const bendQ = d => { const a = -Math.min(d, 0); return a <= BEND_D0 ? a * a : BEND_D0 * (2 * a - BEND_D0); };
+// 5l: bảng uBendT (RGBA float, 256 mẫu trên uBendD m phía trước máy quay): r = lệch PHẢI, g = TỚI của tim đường, b = φ (hướng đường so với tim tại máy quay)
+//   ⇒ đỉnh (x, a) = C(a) + x·(cos φ, −sin φ) [phải, tới]; xa hơn uBendD ⇒ theo tiếp tuyến cuối. Sau lưng máy quay (a ≤ 0) ⇒ không uốn.
+//   bPhi = φ của đỉnh vừa uốn (makeBend dùng để xoay pháp tuyến).
 export const BEND_GLSL = `uniform vec2 uBend; uniform float uBendZ; uniform sampler2D uBendT; uniform float uBendD;
+float bPhi;
 float bendQ(float d){ float a = -d; return a <= 150.0 ? a*a : 150.0*(2.0*a - 150.0); }
-float bendX(float a){ if (uBendD <= 0.0) return 0.0; float f = clamp(a / uBendD, 0.0, 1.0) * 255.0; float i0 = min(floor(f), 254.0);
-  float p = mix(texelFetch(uBendT, ivec2(int(i0), 0), 0).r, texelFetch(uBendT, ivec2(int(i0) + 1, 0), 0).r, f - i0); return p + uBend.x * max(a - uBendD, 0.0); }
-vec4 bendW(vec4 w){ float d = min(w.z - uBendZ, 0.0); float q = bendQ(d); w.x += bendX(-d); w.y -= uBend.y*q; return w; }`;
+vec4 bendW(vec4 w){ float a = uBendZ - w.z; bPhi = 0.0;
+  if (uBendD <= 0.0 || a <= 0.0) return w;
+  float f = clamp(a / uBendD, 0.0, 1.0) * 255.0; float i0 = min(floor(f), 254.0);
+  vec3 p = mix(texelFetch(uBendT, ivec2(int(i0), 0), 0).rgb, texelFetch(uBendT, ivec2(int(i0) + 1, 0), 0).rgb, f - i0);
+  float cs = cos(p.z), sn = sin(p.z); vec2 c = p.xy + max(a - uBendD, 0.0) * vec2(sn, cs);
+  float fw = c.y - w.x * sn; w.x = c.x + w.x * cs; w.z = uBendZ - fw; w.y -= uBend.y * bendQ(-fw); bPhi = p.z; return w; }`;
 export function makeBend(U) {
   return mat => {
     const prev = mat.onBeforeCompile;
     mat.onBeforeCompile = (sh, r) => {
       if (prev) prev(sh, r);
+      const hasN = sh.vertexShader.includes("#include <normal_vertex>");   // 5l
       sh.uniforms.uBend = U.uBend; sh.uniforms.uBendZ = U.uBendZ; sh.uniforms.uBendT = U.uBendT; sh.uniforms.uBendD = U.uBendD;   // 4b
       sh.vertexShader = BEND_GLSL + "\n" + sh.vertexShader.replace("#include <project_vertex>", `
         vec4 bw = vec4( transformed, 1.0 );
@@ -103,9 +133,13 @@ export function makeBend(U) {
         #endif
         bw = bendW(modelMatrix * bw);
         vec4 mvPosition = viewMatrix * bw;
-        gl_Position = projectionMatrix * mvPosition;`);
+        gl_Position = projectionMatrix * mvPosition;` + (hasN ? `
+        #ifndef FLAT_SHADED
+        if (bPhi != 0.0) { vec3 nw = transpose(mat3(viewMatrix)) * vNormal; float bc = cos(bPhi), bs = sin(bPhi);   // 5l: pháp tuyến xoay theo đường
+          vNormal = normalize(mat3(viewMatrix) * vec3(bc * nw.x - bs * nw.z, nw.y, bs * nw.x + bc * nw.z)); }
+        #endif` : ""));
     };
-    mat.customProgramCacheKey = () => "bend|" + (prev ? prev.toString().length : 0);
+    mat.customProgramCacheKey = () => "bend5l|" + (prev ? prev.toString().length : 0);
     return mat;
   };
 }
@@ -140,29 +174,31 @@ function makeSky() {
 
 // ---------- mặt đất + biển (shader tự viết, có cong + sương) ----------
 const FOGU = { uFogCol: { value: HAZE }, uFogNear: { value: 140 }, uFogFar: { value: 1150 } };
-function makeGround(U, KEY) {
+// 5l: đất / biển KHÔNG uốn — lưới bám máy quay, mỗi đỉnh tự đổi sang toạ độ thật (toW) để lấy độ cao; chỉ cộng độ võng xa (uBend.y) như đường
+function terrU(U, T) { return { uBend: U.uBend, uBendZ: U.uBendZ, uBendT: U.uBendT, uBendD: U.uBendD, uTrk: U.uTrk, uDistT: T.tex, uDistM: T.m, uShore: T.shore }; }
+function makeGround(U, KEY, T) {
   const g = new THREE.PlaneGeometry(1700, 1700, 170, 170).rotateX(-Math.PI / 2);
   const mat = new THREE.ShaderMaterial({
-    uniforms: { ...FOGU, uBend: U.uBend, uBendZ: U.uBendZ, uBendT: U.uBendT, uBendD: U.uBendD, uKey: { value: KEY } },
-    vertexShader: NOISE_GLSL + BEND_GLSL + `
+    uniforms: { ...FOGU, ...terrU(U, T), uKey: { value: KEY } },
+    vertexShader: NOISE_GLSL + BEND_GLSL + TERRAIN_GLSL + `
       varying vec3 vW; varying vec3 vN; varying float vFog;
-      void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vec2 q = w.xz;
-        float h = groundH(q); float e = 1.5; float hx = groundH(q + vec2(e, 0.0)), hz = groundH(q + vec2(0.0, e));
-        vN = normalize(vec3(h - hx, e, h - hz)); w.y = h; vW = w.xyz;
-        vec4 b = bendW(w); vec4 mv = viewMatrix * b; vFog = length(mv.xyz); gl_Position = projectionMatrix * mv; }`,
-    fragmentShader: NOISE_GLSL + `uniform vec3 uFogCol; uniform float uFogNear, uFogFar; uniform vec3 uKey;
+      void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vec2 q = toW(w.xyz), R = vec2(-uTrk.w, uTrk.z), F = uTrk.zw;
+        float h = groundH(q); float e = 1.5; float hx = groundH(q + R * e), hz = groundH(q - F * e);   // dốc theo trục khung máy quay (x phải, z lùi)
+        vN = normalize(vec3(h - hx, e, h - hz)); vW = vec3(q.x, h, q.y);
+        w.y = h - uBend.y * bendQ(min(w.z - uBendZ, 0.0)); vec4 mv = viewMatrix * w; vFog = length(mv.xyz); gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: NOISE_GLSL + TERRAIN_GLSL.replace("uniform vec4 uTrk;", "uniform vec4 uTrk; uniform float uBendZ;") + `uniform vec3 uFogCol; uniform float uFogNear, uFogFar; uniform vec3 uKey;
       varying vec3 vW; varying vec3 vN; varying float vFog;
-      void main(){ vec3 n = normalize(vN); float x = vW.x; float slope = 1.0 - n.y;
+      void main(){ vec3 n = normalize(vN); float slope = 1.0 - n.y; float d = trkD(vW.xz), sy = shoreY(vW.xz);
         float nz = fbm(vW.xz * 0.09), nz2 = fbm(vW.xz * 0.6);
         vec3 grass = mix(vec3(0.20,0.27,0.10), vec3(0.36,0.40,0.15), nz) * (0.85 + 0.3*nz2);
         vec3 rock = mix(vec3(0.38,0.33,0.28), vec3(0.52,0.46,0.39), nz2);
         vec3 c = mix(grass, rock, smoothstep(0.25, 0.55, slope));
         c = mix(c, vec3(0.42,0.36,0.30), smoothstep(60.0, 120.0, vW.y) * 0.6);                         // núi cao: đá trơ
-        float sand = smoothstep(11.5, 13.5, x);
+        float sand = smoothstep(-48.0, -26.0, sy) * smoothstep(11.5, 13.5, d);                          // 5l: bãi cát ven biển (phía Nam)
         vec3 sc = mix(vec3(0.86,0.73,0.52), vec3(0.93,0.82,0.62), nz2);
         sc = mix(sc, vec3(0.62,0.50,0.36), smoothstep(-0.6, -1.25, vW.y));                                 // cát ướt sát nước
         c = mix(c, sc, sand);
-        c = mix(c, vec3(0.40,0.35,0.28) * (0.9 + 0.2*nz2), (1.0 - step(13.0, abs(x))) * step(10.0, abs(x)) * (1.0 - sand*0.6));   // lề đất sát rào
+        c = mix(c, vec3(0.40,0.35,0.28) * (0.9 + 0.2*nz2), (1.0 - step(13.0, d)) * step(10.0, d) * (1.0 - sand*0.6));   // lề đất sát rào
         float dif = max(dot(n, normalize(uKey)), 0.0);
         vec3 lit = c * (vec3(0.52,0.46,0.50) + vec3(1.15,0.90,0.70) * dif);
         lit = mix(lit, uFogCol, smoothstep(uFogNear, uFogFar, vFog));
@@ -172,13 +208,14 @@ function makeGround(U, KEY) {
   const m = new THREE.Mesh(g, mat); m.frustumCulled = false; m.renderOrder = 2;   // 3r: sau đường / xe / cây (cũ −5)
   return m;
 }
-function makeSea(U) {
-  const g = new THREE.PlaneGeometry(1400, 1700, 70, 170).rotateX(-Math.PI / 2); g.translate(712, 0, 0);
+function makeSea(U, T) {
+  const g = new THREE.PlaneGeometry(1700, 1700, 85, 170).rotateX(-Math.PI / 2);   // 5l: phủ cả quanh máy quay (biển ở đâu là do toạ độ thật)
   const mat = new THREE.ShaderMaterial({
-    uniforms: { ...FOGU, uBend: U.uBend, uBendZ: U.uBendZ, uBendT: U.uBendT, uBendD: U.uBendD, uSun: { value: SUN_DIR }, uT: { value: 0 } },
-    vertexShader: BEND_GLSL + `varying vec3 vW; varying float vFog; varying vec3 vB;
-      void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vec4 b = bendW(w); vB = b.xyz; vec4 mv = viewMatrix * b; vFog = length(mv.xyz); gl_Position = projectionMatrix * mv; }`,
-    fragmentShader: NOISE_GLSL + `uniform vec3 uFogCol; uniform float uFogNear, uFogFar; uniform vec3 uSun; uniform float uT;
+    uniforms: { ...FOGU, ...terrU(U, T), uSun: { value: SUN_DIR }, uT: { value: 0 } },
+    vertexShader: NOISE_GLSL + BEND_GLSL + TERRAIN_GLSL + `varying vec3 vW; varying float vFog; varying vec3 vB;
+      void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vec2 q = toW(w.xyz); vW = vec3(q.x, w.y, q.y);
+        w.y -= uBend.y * bendQ(min(w.z - uBendZ, 0.0)); vB = w.xyz; vec4 mv = viewMatrix * w; vFog = length(mv.xyz); gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: NOISE_GLSL + TERRAIN_GLSL.replace("uniform vec4 uTrk;", "uniform vec4 uTrk; uniform float uBendZ;") + `uniform vec3 uFogCol; uniform float uFogNear, uFogFar; uniform vec3 uSun; uniform float uT;
       varying vec3 vW; varying float vFog; varying vec3 vB;
       void main(){ vec2 q = vW.xz;
         float n1 = vnoise(q*0.18 + vec2(uT*0.35, uT*0.2)), n2 = vnoise(q*0.47 - vec2(uT*0.5, -uT*0.3)), n3 = vnoise(q*1.3 + vec2(0.0, uT*0.9));
@@ -276,9 +313,9 @@ function bannerTexture(text = "FINISH", sub = "ANDREW STUDIO · SPEED RUN") {
 }
 
 /**
- * createWorld({ scene, U, bend, keyDir }) → { update(camPos, camS, t, minS, maxS), setTrack(L, SEG), groundH, dispose() }
+ * createWorld({ scene, U, bend, keyDir, trk }) → { update(camPos, camS, t, minS, maxS), setTrack(L, SEG), groundH, dispose() } — 5l: trk = buildTrack()
  */
-export function createWorld({ scene, U, bend, keyDir }) {
+export function createWorld({ scene, U, bend, keyDir, trk }) {
   const own = [], ownM = [], ownT = [];
   const keep = (o) => { o.traverse(x => { if (x.geometry) own.push(x.geometry); if (x.material) (Array.isArray(x.material) ? x.material : [x.material]).forEach(m => { ownM.push(m); ["map", "alphaMap"].forEach(k => m[k] && ownT.push(m[k])); }); }); return o; };
   const sky = keep(makeSky()); scene.add(sky);
@@ -287,8 +324,14 @@ export function createWorld({ scene, U, bend, keyDir }) {
   const SE = new THREE.Euler(0, 0, 0, "YXZ"), SM = new THREE.Matrix4();
   function skyRot(yaw, by) { SE.set(-Math.atan(2 * by * BEND_D0), -yaw, 0, "YXZ");   // 4b: yaw = hướng tuyệt đối của đường tại máy quay
     SM.makeRotationFromEuler(SE).transpose(); sky.material.uniforms.uRot.value.setFromMatrix4(SM); }
-  const ground = keep(makeGround(U, keyDir)); scene.add(ground);
-  const sea = keep(makeSea(U)); scene.add(sea);
+  // 5l: trường khoảng cách tới đường (byte = mét) ⇒ ảnh R8 lọc tuyến tính; uDistM = gốc lệch nửa ô + 1 / bề rộng (m) ⇒ uv tâm ô đúng như distAt JS
+  const DF = trk.dist, distTex = new THREE.DataTexture(DF.data, DF.w, DF.h, THREE.RedFormat, THREE.UnsignedByteType);
+  distTex.minFilter = distTex.magFilter = THREE.LinearFilter; distTex.generateMipmaps = false; distTex.needsUpdate = true; ownT.push(distTex);
+  if (!U.uTrk) U.uTrk = { value: new THREE.Vector4(0, 0, 1, 0) };
+  const TU = { tex: { value: distTex }, m: { value: new THREE.Vector4(DF.x0 - DF.cell / 2, DF.y0 - DF.cell / 2, 1 / (DF.w * DF.cell), 1 / (DF.h * DF.cell)) }, shore: { value: trk.SHORE_Y } };
+  const ground = keep(makeGround(U, keyDir, TU)); scene.add(ground);
+  const sea = keep(makeSea(U, TU)); scene.add(sea);
+  const groundH = (X, Y) => groundW(trk, X, Y), WP = [0, 0];
 
   // mặt đường + rào: dài 1440 m (30 ô ảnh), bám máy quay theo bội số 48 m ⇒ ảnh liền mạch
   const ROAD_LEN = TILE * 30;
@@ -357,35 +400,45 @@ export function createWorld({ scene, U, bend, keyDir }) {
   let avoid = () => false;                                       // lõi báo chỗ có cầu nhảy / cổng
   const M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3(), P = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0), C = new THREE.Color();
   let win = "";
-  function fillProps(s0, s1, sNear = s0) {                       // s = quãng đường (m) dương về phía trước; z = −s · 4a: sNear = xe chậm hơn (cỏ chỉ quanh xe)
+  function fillProps(s0, s1, sNear = s0, R = [[s0, s1]]) {   // 5j: R = các đoạn cần rải (theo thứ tự ưu tiên)                       // s = quãng đường (m) dương về phía trước; z = −s · 4a: sNear = xe chậm hơn (cỏ chỉ quanh xe)
     let nl = 0, np = 0, nr = 0, npa = 0, nb = 0, ng = 0;
-    for (let c = Math.floor(s0 / 24); c <= Math.ceil(s1 / 24) && nl < NL; c++) {
-      const side = (c & 1) ? 1 : -1; P.set(side * 11.0, 0, -c * 24); Q.setFromAxisAngle(UP, side > 0 ? Math.PI : 0); S.set(1, 1, 1);
+    // 5l: chỗ (s, x) dùng được? — không nằm trong lòng cua gắt (κ·x > 0,55 ⇒ đỉnh uốn sẽ gập) · không sát một đoạn đường KHÁC (dist < dMin)
+    const kapMax = new Map(), kapOf = c => { if (!kapMax.has(c)) { let r = 0, l = 0; for (let u = c * TILE - 36; u <= c * TILE + TILE + 36; u += 6) { const k = trk.kapAt(u); r = Math.max(r, k); l = Math.max(l, -k); } kapMax.set(c, [r, l]); } return kapMax.get(c); };
+    const okAt = (s, x, dMin) => { const [kr, kl] = kapOf(Math.floor(s / TILE)); if (x > 0 ? kr * x > 0.55 : kl * -x > 0.55) return false;
+      trk.worldAt(s, x, WP); return trk.distAt(WP[0], WP[1]) >= dMin; };
+    const hAt = () => groundH(WP[0], WP[1]), sandAt = () => sandW(trk, WP[0], WP[1]);
+    for (const [a0, a1] of R) for (let c = Math.floor(a0 / 24); c <= Math.ceil(a1 / 24) && nl < NL; c++) {
+      const side = (c & 1) ? 1 : -1; if (!okAt(c * 24, side * 11, 10.4)) continue;
+      P.set(side * 11.0, 0, -c * 24); Q.setFromAxisAngle(UP, side > 0 ? Math.PI : 0); S.set(1, 1, 1);
       M4.compose(P, Q, S); poles.setMatrixAt(nl, M4); heads.setMatrixAt(nl, M4); nl++;
     }
-    for (let c = Math.floor(s0 / TILE); c <= Math.ceil(s1 / TILE); c++) {
+    for (const [a0, a1] of R) for (let c = Math.floor(a0 / TILE); c <= Math.ceil(a1 / TILE); c++) {
       const r = mulberry(c * 7919 + 13);
-      for (let i = 0; i < 12; i++) {                              // trái: thông + cây tròn, dày dần ra xa đường — 4a: lên tới ~150 m trên sườn núi
-        const x = -(14.5 + Math.pow(r(), 1.7) * 135), z = -(c * TILE + r() * TILE), y = groundH(x, z) - 0.25, sc = 0.8 + r() * 0.7, kind = r() < 0.6;
-        P.set(x, y, z); Q.setFromAxisAngle(UP, r() * 6.28); S.set(sc, sc * (0.85 + r() * 0.4), sc); M4.compose(P, Q, S);
-        C.setHSL(kind ? 0.3 + r() * 0.05 : 0.22 + r() * 0.07, 0.45 + r() * 0.2, 0.2 + r() * 0.1);
+      for (let i = 0; i < 14; i++) {                              // 5l: thông + cây tròn HAI bên, dày dần ra xa đường (tới ~135 m), bỏ bãi cát / nước
+        const sd = r() < 0.5 ? -1 : 1, x = sd * (14.5 + Math.pow(r(), 1.7) * 120), sv = c * TILE + r() * TILE, sc = 0.8 + r() * 0.7, kind = r() < 0.6, rot = r() * 6.28, sy = 0.85 + r() * 0.4, hh = r(), ss = r(), ll = r();
+        if (!okAt(sv, x, 13.5)) continue; const y = hAt() - 0.25; if (y < -0.3 || sandAt() > 0.4) continue;
+        P.set(x, y, -sv); Q.setFromAxisAngle(UP, rot); S.set(sc, sc * sy, sc); M4.compose(P, Q, S);
+        C.setHSL(kind ? 0.3 + hh * 0.05 : 0.22 + hh * 0.07, 0.45 + ss * 0.2, 0.2 + ll * 0.1);
         if (kind && np < NP) { pines.setMatrixAt(np, M4); pines.setColorAt(np, C); np++; } else if (!kind && nr < NR) { rounds.setMatrixAt(nr, M4); rounds.setColorAt(nr, C); nr++; }
       }
-      for (let i = 0; i < 12 && nb < NB; i++) {                   // 4a: bụi cây trên sườn trái (gần đường dày hơn) + vài bụi ở bãi bên phải
-        const right = r() < 0.12, x = right ? 12.8 + r() * 3 : -(13 + Math.pow(r(), 1.4) * 60), z = -(c * TILE + r() * TILE), y = groundH(x, z) - 0.12; if (y < -0.6) continue;
-        const sc = 0.6 + r() * 0.9; P.set(x, y, z); Q.setFromAxisAngle(UP, r() * 6.28); S.set(sc, sc * (0.75 + r() * 0.5), sc); M4.compose(P, Q, S);
-        C.setHSL(right ? 0.2 + r() * 0.04 : 0.24 + r() * 0.08, 0.4 + r() * 0.2, 0.2 + r() * 0.1); bushes.setMatrixAt(nb, M4); bushes.setColorAt(nb, C); nb++;
+      for (let i = 0; i < 12 && nb < NB; i++) {                   // bụi 2 bên (gần đường dày hơn)
+        const sd = r() < 0.5 ? -1 : 1, x = sd * (13 + Math.pow(r(), 1.4) * 60), sv = c * TILE + r() * TILE, sc = 0.6 + r() * 0.9, rot = r() * 6.28, sy = 0.75 + r() * 0.5, hh = r(), ss = r(), ll = r();
+        if (!okAt(sv, x, 12.5)) continue; const y = hAt() - 0.12; if (y < -0.6) continue;
+        P.set(x, y, -sv); Q.setFromAxisAngle(UP, rot); S.set(sc, sc * sy, sc); M4.compose(P, Q, S);
+        C.setHSL(0.22 + hh * 0.08, 0.4 + ss * 0.2, 0.2 + ll * 0.1); bushes.setMatrixAt(nb, M4); bushes.setColorAt(nb, C); nb++;
       }
       const cs = c * TILE;
       if (cs + TILE > sNear - 40 && cs < sNear + 390) for (let i = 0; i < 125 && ng < NG; i++) {   // 4a: CỎ chỉ quanh xe (đứng gần mới thấy)
-        const left = r() < 0.86, x = left ? -(12.4 + Math.pow(r(), 1.3) * 26) : 12.2 + r() * 1.4, z = -(cs + r() * TILE), y = groundH(x, z) - 0.04;
-        const sc = 0.7 + r() * 0.9; P.set(x, y, z); Q.setFromAxisAngle(UP, r() * 6.28); S.set(sc, sc * (0.8 + r() * 0.6), sc); M4.compose(P, Q, S);
-        C.setHSL(0.17 + r() * 0.08, 0.45 + r() * 0.2, 0.26 + r() * 0.12); grass.setMatrixAt(ng, M4); grass.setColorAt(ng, C); ng++;
+        const sd = r() < 0.5 ? -1 : 1, x = sd * (12.4 + Math.pow(r(), 1.3) * 26), sv = cs + r() * TILE, sc = 0.7 + r() * 0.9, rot = r() * 6.28, sy = 0.8 + r() * 0.6, hh = r(), ss = r(), ll = r();
+        if (!okAt(sv, x, 12)) continue; const y = hAt() - 0.04; if (y < -0.4 || sandAt() > 0.5) continue;
+        P.set(x, y, -sv); Q.setFromAxisAngle(UP, rot); S.set(sc, sc * sy, sc); M4.compose(P, Q, S);
+        C.setHSL(0.17 + hh * 0.08, 0.45 + ss * 0.2, 0.26 + ll * 0.12); grass.setMatrixAt(ng, M4); grass.setColorAt(ng, C); ng++;
       }
-      for (let i = 0; i < 4 && npa < NPa; i++) {                   // phải: dừa trên cát (bỏ chỗ đã ngập nước)
-        const x = 13.6 + r() * 14, z = -(c * TILE + r() * TILE), y = groundH(x, z); if (y < -0.9) continue;
-        const sc = 0.9 + r() * 0.45; P.set(x, y - 0.1, z); Q.setFromAxisAngle(UP, Math.PI * 0.5 + (r() - 0.5) * 1.6); S.set(sc, sc, sc); M4.compose(P, Q, S);
-        C.setHSL(0.27 + r() * 0.05, 0.5, 0.26 + r() * 0.08); palms.setMatrixAt(npa, M4); palms.setColorAt(npa, C); npa++;
+      for (let i = 0; i < 6 && npa < NPa; i++) {                   // dừa: chỉ trên bãi cát ven biển (bỏ chỗ đã ngập nước)
+        const sd = r() < 0.5 ? -1 : 1, x = sd * (13.6 + r() * 30), sv = c * TILE + r() * TILE, sc = 0.9 + r() * 0.45, rot = Math.PI * 0.5 + (r() - 0.5) * 1.6, hh = r(), ll = r();
+        if (!okAt(sv, x, 13)) continue; if (sandAt() < 0.5) continue; const y = hAt(); if (y < -0.9) continue;
+        P.set(x, y - 0.1, -sv); Q.setFromAxisAngle(UP, rot); S.set(sc, sc, sc); M4.compose(P, Q, S);
+        C.setHSL(0.27 + hh * 0.05, 0.5, 0.26 + ll * 0.08); palms.setMatrixAt(npa, M4); palms.setColorAt(npa, C); npa++;
       }
     }
     let nlg = 0;                                                   // 4a: vạch ANDREW STUDIO
@@ -463,13 +516,19 @@ export function createWorld({ scene, U, bend, keyDir }) {
     /** camPos: vị trí máy quay (chưa cong) · t: giây · sMin/sMax: đoạn đường cần có cây/cột (m) */
     setFinish,
     setAvoid(fn) { avoid = fn || (() => false); win = ""; },      // 4a: (s, r) ⇒ true nếu cách cầu nhảy / cổng < r m
-    update(camPos, t, sMin, sMax) {
+    update(camPos, t, sMin, sMax, sAlt = null) {
       skyRot(U.uSkyYaw ? U.uSkyYaw.value : 0, U.uBend.value.y);   // 4b: trời xoay theo hướng tuyệt đối của đường
       sky.position.copy(camPos); sky.material.uniforms.uT.value = t; sea.material.uniforms.uT.value = t;
       const zc = Math.round(camPos.z / 10) * 10; ground.position.z = zc - 450; sea.position.z = zc - 450;
       const snap = Math.floor(camPos.z / TILE) * TILE; road.position.z = snap - ROAD_LEN / 2 + 200; rails.forEach(r => r.position.z = road.position.z);
-      const s0 = Math.floor((sMin - 220) / TILE) * TILE, s1 = Math.ceil((sMax + 1000) / TILE) * TILE, k = s0 + ":" + s1;
-      if (k !== win) { win = k; fillProps(s0, s1, sMin); }
+      const s0 = Math.floor((sMin - 220) / TILE) * TILE, s1 = Math.ceil((sMax + 1000) / TILE) * TILE;
+      let R = [[s0, s1]];
+      if (sAlt != null) { const a0 = Math.floor((sAlt - 200) / TILE) * TILE, a1 = Math.ceil((sAlt + 900) / TILE) * TILE;   // 5j: vùng quanh xe bay
+        if (a0 < s0 || a1 > s1) { if (a1 < s0 - TILE || a0 > s1 + TILE) { const sn = Math.min(s1, Math.ceil((sMax + 350) / TILE) * TILE), an = Math.min(a1, a0 + 6 * TILE);
+            R = [[s0, sn], [a0, an], [sn + TILE, s1], [an + TILE, a1]].filter(([p, q]) => q >= p); }                     // tách xa ⇒ phần GẦN của cả 2 trước, phần xa sau
+          else R = [[Math.min(s0, a0), Math.max(s1, a1)]]; } }
+      const k = R.map(r => r.join(":")).join("|");
+      if (k !== win) { win = k; fillProps(s0, s1, sMin, R); }
       placeMarkers(sMin);                                          // 4a: chỉ đổi khi 1 mốc ra khỏi cửa sổ
     },
     dispose() { [...new Set(own)].forEach(g => g.dispose()); [...new Set(ownM)].forEach(m => m.dispose()); [...new Set(ownT)].forEach(t => t.dispose());

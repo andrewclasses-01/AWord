@@ -30,7 +30,7 @@
 //   Không khoá ⇒ rơi đúng điểm tâm ngắm trên đường. Lõi (sr3d-4r.js) quyết trúng XE hay trúng ĐƯỜNG + tác dụng; mô-đun này chỉ VẼ: bay, vệt, nổ.
 //   fire({ kind, x, y, z, tx, ts, predict }) · update(dt, t) → [{ kind, x, s, team }] · burst(kind, x, s, onCar) · clear() · dispose()
 import * as THREE from "../../rocket-race/vendor/three/three.module.min.js";
-import { missileGeos, buildMissile, makeParticles } from "./sr3d-missile-4i.js";
+import { missileGeos, buildMissile, makeParticles } from "./sr3d-missile-5l.js";   /* 5l */
 
 export const DA = { T: 1.5, LOCK: 0.45, DRIFT: 3.0, RECHARGE: 0.06,
   COST: { heart: 0.40, boost: 0.25, missile: 0.35 }, CD: { heart: 4, boost: 3, missile: 3 } };

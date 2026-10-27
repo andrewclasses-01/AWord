@@ -8,6 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> ✏️ **27/10/2026 Đợt 589 — RACING WORDS: myGame 5l ĐƯỜNG ĐUA THẬT cua gắt** (myGame `56dc03a`, chep-racing-words GOC `rw-5l.js` + thư mục mới `traffic3d/`, iPad giữ padui-5j / padlink-5j): vòng đua thật 3,5 km (đa giác bo cung — zigzag ~82°, kẹp tóc 2×90°, chicane ven biển), shader uốn XOAY + đất theo toạ độ thật, cọ rào tia lửa + khói đen + hãm tăng dần, dốc hẹp 3,1 m (nửa xe trên dốc = nghiêng phải lái ngược), bay chông chênh + lộn vòng có boost, dốc xoắn nhanh hơn, 6 xe traffic 3D Quaternius CC0. load-files đổi 10 file 5k/cũ → 5l (byte trên đĩa).
 > ✏️ **26/10/2026 Đợt 587 — CROSSWORD Fight: thanh TIME DELAY + gõ thừa không đè chữ cuối** (cờ template mới `tpl.fightPickDelay` ⇒ `core/fight.js` `pickDelay`/`delayOn`: game lượt-chọn đọc `fightTieWindow`, có thanh chờ + che bàn; trong cửa sổ đúng = hoà, hết = khoá im lặng; hoà thì đảo lượt chọn · `crossword.js` `typeLetter` bỏ qua phím khi ô cuối đã có chữ). ✅ `31fa95b` LIVE (kiem-live 3/3 + bàn thử live 22/22). Chi tiết GHI CHU Đợt 587.
 > ✏️ **25/10/2026 Đợt 586 — NOTE: laser = nét bút + quầng sáng** (`drawLaser` trong note-ink.js chép myNote v0.3.2; note-screen.js dùng nó). Chi tiết GHI CHU Đợt 586.
 > ✏️ **25/10/2026 Đợt 585 — NOTE: chép `core/note-ink.js` từ myNote v0.3.1** (nét mượt hơn, dạ quang không đứt). Chi tiết GHI CHU Đợt 585.

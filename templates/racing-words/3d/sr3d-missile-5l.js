@@ -1,3 +1,4 @@
+// RACING WORDS mẫu 5l (27/10/2026) = sr3d-missile-4i.js, chỉ đổi shader uốn sang bản XOAY của sr3d-world-5l.js.
 // RACING WORDS mẫu 4i (18/10/2026) = sr3d-missile-4b.js + (thầy, trang thiet-ke-4i mục 3):
 //   · quỹ đạo THẤP: H 3,6–8,1 (đỉnh ~3–6,7 m) ⇒ H 4,6 cố định (đỉnh ~4 m) — tên lửa nằm trong tầm nhìn buồng lái suốt đường bay
 //   · điểm rơi = QUẦNG ĐỎ nhỏ (~2,4 m) mép mờ, nhấp nháy nhanh dần — thay vòng ngắm 5,4 m + CỘT SÁNG đỏ 26 m
@@ -26,15 +27,12 @@
 // Mọi vật liệu đi qua `bend` (cong thế giới). Hạt (khói, lửa, tia lửa) dùng chung `makeParticles`.
 // =============================================================
 import * as THREE from "../../rocket-race/vendor/three/three.module.min.js";
+import { BEND_GLSL } from "./sr3d-world-5l.js";
 
 export const MS = { T: 2.45, LOCK: 1.4, DRIFT: 2.5, H: 4.6 };   // 4i: khoá 1,4 s · trôi ngang ≤ 2,5 m/s · vồng H 4,6                // 3e: bay CHẬM hơn 3c (2,0 s) theo thầy · khoá điểm rơi khi còn LOCK giây
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
-const BEND_VS = `uniform vec2 uBend; uniform float uBendZ; uniform sampler2D uBendT; uniform float uBendD;
-float bendQ(float d){ float a = -d; return a <= 150.0 ? a*a : 150.0*(2.0*a - 150.0); }
-float bendX(float a){ if (uBendD <= 0.0) return 0.0; float f = clamp(a / uBendD, 0.0, 1.0) * 255.0; float i0 = min(floor(f), 254.0);
-  float p = mix(texelFetch(uBendT, ivec2(int(i0), 0), 0).r, texelFetch(uBendT, ivec2(int(i0) + 1, 0), 0).r, f - i0); return p + uBend.x * max(a - uBendD, 0.0); }
-vec4 bendW(vec4 w){ float d = min(w.z - uBendZ, 0.0); float q = bendQ(d); w.x += bendX(-d); w.y -= uBend.y*q; return w; }`;
+const BEND_VS = BEND_GLSL;   // 5l: uốn XOAY thật — dùng chung bản của sr3d-world-5l.js
 
 // ---------- hạt điểm có cong (khói xám / lửa cộng sáng) ----------
 export function makeParticles({ U, n = 400, additive = false, color = "#d2ccc6" }) {
@@ -46,7 +44,7 @@ export function makeParticles({ U, n = 400, additive = false, color = "#d2ccc6" 
     uniforms: { uBend: U.uBend, uBendZ: U.uBendZ, uBendT: U.uBendT, uBendD: U.uBendD, uScale: { value: 400 }, uCol: { value: new THREE.Color(color) } },
     vertexShader: BEND_VS + `uniform float uScale; attribute float aA; attribute float aS; varying float vA;
       void main(){ vec4 w = bendW(modelMatrix * vec4(position,1.0)); vec4 mv = viewMatrix * w; gl_Position = projectionMatrix * mv;
-        gl_PointSize = min(aS * uScale / max(-mv.z, 0.2), 900.0); vA = aA; }`,
+        gl_PointSize = min(aS * uScale / max(-mv.z, 0.2), 900.0); vA = aA${additive ? " * smoothstep(1.2, 3.5, -mv.z)" : ""}; }`,   // 5l: hạt sáng sát ống kính (tia lửa cọ rào bên buồng lái) ⇒ mờ đi, không thành đốm to
     fragmentShader: `uniform vec3 uCol; varying float vA; void main(){ vec2 p = gl_PointCoord - 0.5; float r = length(p); if (r > 0.5) discard;
       float a = smoothstep(0.5, ${additive ? "0.0" : "0.12"}, r) * vA; gl_FragColor = vec4(uCol * ${additive ? "2.2" : "1.0"}, a); }`
   });

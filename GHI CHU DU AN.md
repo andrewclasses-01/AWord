@@ -546,6 +546,18 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 589 (27/10/2026) — RACING WORDS THẬT lên myGame 5l: đường đua thật 3,5 km cua gắt + cọ rào + bay chông chênh + xe traffic 3D
+**Thầy:** đường thật dài hơn (không tăng vòng), nhiều cua gần 90° + zigzag, xe cua tốt hơn nhưng cần kỹ thuật; cọ lan can tóe lửa + khói đen + giảm tốc nặng khi cọ lâu; dốc chỉ rộng 1,5 xe;
+nửa xe trên dốc thẳng + boost ⇒ không xoay mà vọt lên nghiêng nhiều, phải nghiêng ngược để không BAD; dốc xoắn bay nhanh hơn dốc thẳng; dốc thẳng lái mạnh trên không ⇒ lộn vòng 360° (perfect được),
+lộn vòng cho tốc + quãng bay lớn hơn, hiện chữ báo; trên không luôn chông chênh, tay lái nhạy, khó perfect; thay xe traffic "máy vẽ" bằng model 3D vừa dung lượng (thầy chọn Quaternius 6 xe).
+Thầy thử ở myGame rồi bảo "đưa lên AWord".
+**Làm ở myGame** (`56dc03a` — chi tiết, số đo, bẫy: myGame `speed-run/HO SO BAN GIAO RACING WORDS.md` mục MẪU 5l). Trước khi làm đã soát Đợt 571 ⇄ myGame 5k khớp.
+**Ở AWord:** `tools/chep-racing-words.py` GOC `rw-5l.js` + chép thêm thư mục `traffic3d/` (6 .glb 165–273 KB + NGUON.md) ⇒ chép rw-5l, sr3d-5l, intro/flycar/dammo/car/missile/world/traffic-5l + sr3d-track-5l (mới),
+xoá rw-5k, sr3d-5k, intro/flycar/dammo-5k, car-4h, missile-4i, traffic-5j, world-4b, world-5j (padlink-5j / padui-5j vẫn dùng) · `racing-words.js` GAME `./3d/rw-5l.js` ·
+`load-files.js` bỏ 10 dòng cũ, thêm 10 file chuỗi rw-5l (byte trên đĩa, chưa đo lại lượt tải thật; 6 xe traffic nạp nền, không tính). 3 file CSS chỉ khác CRLF.
+**Kiểm:** bàn thử `scratch/dot589-rw.html` (engine thật, launch `aword-dot589` cổng 5589): nạp đúng 10 file 5l + 6 xe traffic3d, xưởng hiện, START ⇒ trận chạy trên đường mới (bản đồ dưới màn đúng hình vòng 5l), 0 lỗi console. Lối chơi đã kiểm ở myGame.
+⬜ Thầy thử TOMKO (fps) + iPad thật (nghiêng khi bay); chưa kiểm Sky view / drone / Roadster / vạch lửa trên đường mới, chế độ Time / Words.
+
 ## Đợt 588 (27/10/2026) — CHẶN GIỜ HOẠT ĐỘNG ẢO (play.js `taoDoHoatDong`) — code `fa4a70e` LIVE
 Thầy hỏi "treo máy có tăng tổng thời gian được không" (ca Minh Anh A1-B, bài `ue5ncm`: bảng act 81:30, tổng 58 phút — đọc dữ liệu thật: em LÀM THẬT, làm tiếp 12 lần, tường 81,5p / hoạt động 52,4p).
 - Phím ĐÈ GIỮ (`keydown` có `e.repeat`, và `input` bắn ra lúc đang giữ) KHÔNG tính; thêm `keyup` vào HD_SU_KIEN chỉ để nhả cờ `giuPhim`. Giả lập: đè Shift 10 phút 600 s → 31 s.

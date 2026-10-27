@@ -47,10 +47,10 @@ import { RenderPass } from "../../rocket-race/vendor/three/addons/RenderPass.js"
 import { UnrealBloomPass } from "../../rocket-race/vendor/three/addons/UnrealBloomPass.js";
 import { OutputPass } from "../../rocket-race/vendor/three/addons/OutputPass.js";
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
-import { makeCar3d } from "./sr3d-car-4h.js";
+import { makeCar3d } from "./sr3d-car-5l.js";   // 5l
 import { makeAutoRes } from "./sr3d-autores-3r.js";
 import { DRONE_PICK as DP0, SPAN as D_SPAN, loadDrone } from "./sr3d-drone3d-4p.js";   // 5f: drone trong xưởng
-import { createFlyCar, FLYCAR, PAINT as FC_PAINT } from "./sr3d-flycar-5k.js";   // 5j: xe bay Roadster
+import { createFlyCar, FLYCAR, PAINT as FC_PAINT } from "./sr3d-flycar-5l.js";   /* 5l */   // 5j: xe bay Roadster
 const DRONE_PICK = [...DP0, FLYCAR];
 const FC_U = { uBend: { value: new THREE.Vector2(0, 0) }, uBendZ: { value: 0 }, uBendT: { value: (() => { const t = new THREE.DataTexture(new Float32Array(4), 1, 1, THREE.RGBAFormat, THREE.FloatType); t.needsUpdate = true; return t; })() }, uBendD: { value: 0 } };   // 5j: đường thẳng ⇒ cong = 0
 

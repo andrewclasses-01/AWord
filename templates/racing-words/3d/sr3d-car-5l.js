@@ -1,3 +1,4 @@
+// RACING WORDS mẫu 5l (27/10/2026) = sr3d-car-4h.js, chỉ đổi lửa pô sang shader uốn XOAY của sr3d-world-5l.js (BEND_GLSL dùng chung).
 // RACING WORDS mẫu 4b (16/10/2026) = sr3d-car-3z.js, chỉ đổi công thức cong của lửa pô sang HÌNH THẬT của đường (bảng uBendT — xem sr3d-world-4b.js).
 // ---- gốc 3z ----
 // RACING WORDS mẫu 3z (16/10/2026) = sr3d-car-3r.js + thầy: "bánh xe đang hơi chìm xuống đường" + "bóng của xe trên mặt đường đang bị vuông vức":
@@ -63,6 +64,7 @@ import * as THREE from "../../rocket-race/vendor/three/three.module.min.js";
 import { DecalGeometry } from "../../rocket-race/vendor/three/addons/DecalGeometry.js";
 import { XE, buildXe, setPaint } from "./sr3d-xe3d-3o.js";
 import { CAR_META } from "./sr3d-carmeta-3p.js";
+import { BEND_GLSL } from "./sr3d-world-5l.js";   // 5l: uốn XOAY thật (cua gắt ~90°)
 // 3q: = sr3d-car-3p.js, lửa pô cong theo tiếp tuyến như sr3d-world-3q.js
 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
@@ -159,11 +161,7 @@ function shadowTex() {
   g.save(); g.scale(1, 2); g.fillStyle = r0; g.translate(0, -64); g.fillRect(0, 0, 128, 256); g.restore();
   return (SHADOW = new THREE.CanvasTexture(c));
 }
-const FLAME_VS = `uniform vec2 uBend; uniform float uBendZ; uniform sampler2D uBendT; uniform float uBendD;
-float bendQ(float d){ float a = -d; return a <= 150.0 ? a*a : 150.0*(2.0*a - 150.0); }
-float bendX(float a){ if (uBendD <= 0.0) return 0.0; float f = clamp(a / uBendD, 0.0, 1.0) * 255.0; float i0 = min(floor(f), 254.0);
-  float p = mix(texelFetch(uBendT, ivec2(int(i0), 0), 0).r, texelFetch(uBendT, ivec2(int(i0) + 1, 0), 0).r, f - i0); return p + uBend.x * max(a - uBendD, 0.0); }
-vec4 bendW(vec4 w){ float d = min(w.z - uBendZ, 0.0); float q = bendQ(d); w.x += bendX(-d); w.y -= uBend.y*q; return w; }
+const FLAME_VS = BEND_GLSL + `
 varying vec2 vUv;
 void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position,1.0); w = bendW(w); gl_Position = projectionMatrix * viewMatrix * w; }`;
 // 3l: lửa thật — uEnd 0 = tấm dọc (vUv.y = dọc luồng lửa từ miệng ống), 1 = đĩa nhìn từ sau (toạ độ cực)

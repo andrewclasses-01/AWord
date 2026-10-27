@@ -1,3 +1,9 @@
+// RACING WORDS mẫu 5l (27/10/2026) = sr3d-traffic-5j.js + XE GIAO THÔNG 3D THẬT (thầy: "các xe traffic hiện có do máy vẽ và quá xấu — dung lượng vừa phải"):
+//   6 mẫu Quaternius CC0 (speed-run/traffic3d/, ~170–270 KB, 3–6k tam giác — NGUON.md): sedan A/B · SUV · taxi · bán tải · xe thể thao.
+//   Nạp xong mỗi mẫu GỘP thành 1 lưới (màu vật liệu × màu ảnh atlas → màu đỉnh, aPaint = 1 ở vật liệu thân) ⇒ vẫn 1 vật liệu chung, 1 InstancedMesh / mẫu
+//   (6 lệnh vẽ / máy quay). Chỉ phần THÂN nhận màu ngẫu nhiên từng xe (kính / đèn / bánh giữ màu thật); taxi + bán tải giữ sơn gốc.
+//   Chưa nạp xong ⇒ dùng tạm hộp cũ (cùng thuộc tính ⇒ không dịch lại shader khi thay lưới). Mũi xe tự quay về −z (tìm theo vật liệu Headlights).
+// ---- gốc 5j ----
 // RACING WORDS mẫu 5j (21/10/2026) = sr3d-traffic-4c.js + XE GIAO THÔNG TRÚNG TÊN LỬA (thầy: "bị cháy và lật ngang hoặc lật ngửa như một vụ nổ"):
 //   blast(v, side) — hất lên, lộn quanh trục dọc tới nằm NGHIÊNG (½ vòng) hoặc NGỬA (1 vòng ½), nảy, cháy 5,5 s (lõi phát lửa / khói theo .burning), sơn cháy đen dần rồi biến mất.
 // ---- gốc 4c ----
@@ -8,6 +14,7 @@
 //   · vòng đệm 14 xe quanh 2 xe đua: ra khỏi cửa sổ thì sinh lại phía trước; gần cầu nhảy / dốc xoắn thì đổi sang làn trống
 //   · đâm vào: xe đua mất đà, xe kia văng ngang, xoay, đứng lại rồi biến mất
 import * as THREE from "../../rocket-race/vendor/three/three.module.min.js";
+import { GLTFLoader } from "../../rocket-race/vendor/three/addons/GLTFLoader.js";
 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const COLORS = ["#d9dde3", "#2a2f38", "#b3202a", "#2456a6", "#e8e2d0", "#6d7378", "#1f6b4a", "#c9a227", "#8a3ea8", "#f2f2ef"];
@@ -22,8 +29,8 @@ function wheelPart(x, z, r, col = "#111316") {
 }
 function merge(parts) {
   const out = new THREE.BufferGeometry();
-  ["position", "normal", "color"].forEach(nm => { const arr = new Float32Array(parts.reduce((a, g) => a + g.attributes[nm].array.length, 0)); let o = 0; parts.forEach(g => { arr.set(g.attributes[nm].array, o); o += g.attributes[nm].array.length; }); out.setAttribute(nm, new THREE.BufferAttribute(arr, 3)); });
-  parts.forEach(g => g.dispose()); return out;
+  ["position", "normal", "color", ...(parts.every(g => g.attributes.aPaint) ? ["aPaint"] : [])].forEach(nm => { const arr = new Float32Array(parts.reduce((a, g) => a + g.attributes[nm].array.length, 0)); let o = 0; parts.forEach(g => { arr.set(g.attributes[nm].array, o); o += g.attributes[nm].array.length; }); out.setAttribute(nm, new THREE.BufferAttribute(arr, 3)); });
+  parts.forEach(g => g.dispose()); if (!out.attributes.aPaint) out.setAttribute("aPaint", new THREE.BufferAttribute(new Float32Array(out.attributes.position.count).fill(1), 1)); return out;   // 5l
 }
 // mũi xe hướng −z (như xe đua). Thân trắng (nhân màu từng xe); kính / bánh / đèn màu riêng (vẫn bị nhân màu xe ⇒ để tối / rất sáng)
 function sedanGeo() {
@@ -50,12 +57,61 @@ function blobTex() {
 
 const BURNT = new THREE.Color("#1b1714"), EU = new THREE.Euler(0, 0, 0, "YXZ");   // 5j
 export const TRAFFIC_MODES = ["off", "same", "both"];
-export const TSIZE = { sedan: { W: 1.86, L: 4.5 }, van: { W: 2.1, L: 5.6 } };
+// 5l: cỡ đo lại sau khi nạp mẫu (bề ngang đích W, giữ tỉ lệ) — H = cao thân (nâng khi lật)
+const MODELS = [
+  { k: "sedanA", w: 0.2, W: 1.85, paint: /^LightBlue$/ }, { k: "sedanB", w: 0.2, W: 1.85, paint: /^Blue$/ }, { k: "suv", w: 0.2, W: 2.0, paint: /^White$/ },
+  { k: "taxi", w: 0.12, W: 1.85, paint: null }, { k: "pickup", w: 0.14, W: 2.0, paint: null }, { k: "sport", w: 0.14, W: 1.95, paint: /^White$/ }];
+export const TSIZE = Object.fromEntries(MODELS.map(m => [m.k, { W: m.W, L: m.W * 2.35, H: 1.5 }]));
+const BOX_OF = { sedanA: "sedan", sedanB: "sedan", taxi: "sedan", sport: "sedan", suv: "van", pickup: "van" };
+const loader = new GLTFLoader();
+// gộp 1 cảnh glTF thành 1 BufferGeometry (position / normal / color / aPaint), mũi xe về −z, chạm đất y = 0, tâm x/z = 0, bề ngang = W
+async function loadModel(M) {
+  const g = await loader.loadAsync(new URL(`../traffic3d/${M.k}.glb`, import.meta.url).href); g.scene.updateMatrixWorld(true);
+  const parts = [], pix = new Map(), ctx = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
+  const sampler = tex => { if (!tex || !tex.image) return null; if (pix.has(tex)) return pix.get(tex); const im = tex.image, w = im.width, h = im.height;
+    ctx.canvas.width = w; ctx.canvas.height = h; ctx.drawImage(im, 0, 0); const d = ctx.getImageData(0, 0, w, h).data;
+    const f = (u, v) => { u = ((u % 1) + 1) % 1; v = ((v % 1) + 1) % 1; const i = (Math.min(h - 1, Math.floor(v * h)) * w + Math.min(w - 1, Math.floor(u * w))) * 4;
+      return [Math.pow(d[i] / 255, 2.2), Math.pow(d[i + 1] / 255, 2.2), Math.pow(d[i + 2] / 255, 2.2)]; };   // ảnh sRGB → tuyến tính như màu vật liệu
+    pix.set(tex, f); return f; };
+  let headZ = 0, headN = 0;
+  g.scene.traverse(o => { if (!o.isMesh) return; (Array.isArray(o.material) ? o.material : [o.material]).forEach((mt, mi) => {
+    let geo = o.geometry.clone();
+    if (Array.isArray(o.material)) { const gr = o.geometry.groups[mi]; if (!gr) return; geo = geo.index ? geo : geo; const ix = geo.index; const sub = new THREE.BufferGeometry();
+      const idx = []; for (let q = gr.start; q < gr.start + gr.count; q++) idx.push(ix ? ix.getX(q) : q);
+      ["position", "normal", "uv"].forEach(nm => { const a = geo.attributes[nm]; if (!a) return; const arr = new Float32Array(idx.length * a.itemSize); idx.forEach((vi, q) => { for (let c = 0; c < a.itemSize; c++) arr[q * a.itemSize + c] = a.getComponent(vi, c); }); sub.setAttribute(nm, new THREE.BufferAttribute(arr, a.itemSize)); });
+      geo = sub; }
+    else if (geo.index) geo = geo.toNonIndexed();
+    geo.applyMatrix4(o.matrixWorld); if (!geo.attributes.normal) geo.computeVertexNormals();
+    const n = geo.attributes.position.count, col = new Float32Array(n * 3), pt = new Float32Array(n), base = mt.color ? mt.color : new THREE.Color(1, 1, 1), smp = sampler(mt.map), uv = geo.attributes.uv;
+    const isPaint = !!(M.paint && M.paint.test(mt.name || "")), lit = /light/i.test(mt.name || "");
+    for (let i = 0; i < n; i++) { let c = [base.r, base.g, base.b]; if (smp && uv) { const t = smp(uv.getX(i), uv.getY(i)); c = [c[0] * t[0], c[1] * t[1], c[2] * t[2]]; }
+      if (isPaint) c = [0.85, 0.85, 0.85]; if (lit) c = c.map(x => Math.min(1, x * 1.6 + 0.15));
+      col.set(c, i * 3); pt[i] = isPaint ? 1 : 0; }
+    if (/head/i.test(mt.name || "")) for (let i = 0; i < n; i++) { headZ += geo.attributes.position.getZ(i); headN++; }
+    const out = new THREE.BufferGeometry(); out.setAttribute("position", geo.attributes.position); out.setAttribute("normal", geo.attributes.normal);
+    out.setAttribute("color", new THREE.BufferAttribute(col, 3)); out.setAttribute("aPaint", new THREE.BufferAttribute(pt, 1)); parts.push(out); }); });
+  const geo = merge(parts);
+  geo.computeBoundingBox(); let bb = geo.boundingBox; const ctr = bb.getCenter(new THREE.Vector3());
+  geo.translate(-ctr.x, -bb.min.y, -ctr.z);
+  if (headN && headZ / headN > ctr.z) geo.rotateY(Math.PI);                 // đèn pha ở +z ⇒ quay mũi về −z
+  geo.computeBoundingBox(); bb = geo.boundingBox; const sz = bb.getSize(new THREE.Vector3());
+  const k = M.W / sz.x; geo.scale(k, k, k); geo.computeBoundingBox(); geo.boundingBox.getSize(sz);
+  Object.assign(TSIZE[M.k], { W: sz.x, L: sz.z, H: sz.y });
+  return geo;
+}
 
 export function createTraffic({ scene, bend }) {
   const N = 14;
-  const mat = bend(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0.35 }));
-  const meshes = { sedan: new THREE.InstancedMesh(sedanGeo(), mat, N), van: new THREE.InstancedMesh(vanGeo(), mat, N) };
+  const mat0 = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.42, metalness: 0.3 });
+  mat0.onBeforeCompile = sh => {                              // 5l: màu từng xe CHỈ nhân vào phần thân sơn (aPaint)
+    sh.vertexShader = "attribute float aPaint;\n" + sh.vertexShader.replace("#include <color_vertex>", `#include <color_vertex>
+      #ifdef USE_INSTANCING_COLOR
+        vColor.rgb = color.rgb * mix(vec3(1.0), instanceColor.rgb, aPaint);
+      #endif`); };
+  const mat = bend(mat0);
+  const boxG = { sedan: sedanGeo(), van: vanGeo() };
+  const meshes = Object.fromEntries(MODELS.map(M => [M.k, new THREE.InstancedMesh(boxG[BOX_OF[M.k]], mat, N)]));
+  MODELS.forEach(M => loadModel(M).then(g => { const m = meshes[M.k]; if (m) m.geometry = g; }).catch(e => console.warn("traffic 5l: không nạp được", M.k, e)));   // 5l
   Object.values(meshes).forEach(m => { m.frustumCulled = false; m.count = 0; m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(N * 3).fill(1), 3); scene.add(m); });
   const bt = blobTex(), shM = bend(new THREE.MeshBasicMaterial({ map: bt, transparent: true, depthWrite: false, color: 0x000000 }));
   const shadow = new THREE.InstancedMesh(new THREE.PlaneGeometry(2.6, 6.2).rotateX(-Math.PI / 2), shM, N * 2); shadow.frustumCulled = false; shadow.count = 0; shadow.renderOrder = -1; scene.add(shadow);
@@ -64,7 +120,8 @@ export function createTraffic({ scene, bend }) {
   const lanesFor = dir => mode === "both" ? (dir > 0 ? [-6, 6] : [-2.4, 2.4]) : [-6, -2.4, 2.4, 6];
   function spawn(v, sAt) {
     const dir = mode === "both" && rnd() < 0.5 ? -1 : 1, lanes = lanesFor(dir), x = lanes[Math.floor(rnd() * lanes.length)];
-    Object.assign(v, { kind: rnd() < 0.72 ? "sedan" : "van", s: sAt, x, tx: x, dir, v: dir > 0 ? 4.5 + rnd() * 2.5 : 7.5 + rnd() * 3.5, col: new THREE.Color(COLORS[Math.floor(rnd() * COLORS.length)]),
+    let q = rnd(), kind = MODELS[0].k; for (const M of MODELS) { if (q < M.w) { kind = M.k; break; } q -= M.w; }   // 5l: 6 mẫu theo tỉ lệ
+    Object.assign(v, { kind, s: sAt, x, tx: x, dir, v: dir > 0 ? 4.5 + rnd() * 2.5 : 7.5 + rnd() * 3.5, col: new THREE.Color(COLORS[Math.floor(rnd() * COLORS.length)]),
       hit: 0, vx: 0, yaw: 0, spin: 0, alive: true, fade: 1, burn: 0, y: 0, vy: 0, roll: 0, rollV: 0, rollG: 0, fa: 0, sa: 0 });   // 5j: + cháy / lật
     // không chồng lên xe khác cùng làn
     if (list.some(o => o !== v && o.alive && Math.abs(o.x - v.x) < 1.5 && Math.abs(o.s - v.s) < 14)) v.s += 18;
@@ -107,13 +164,13 @@ export function createTraffic({ scene, bend }) {
       api.draw();
     },
     draw() {
-      const cnt = { sedan: 0, van: 0 }; let ns = 0;
+      const cnt = Object.fromEntries(MODELS.map(M => [M.k, 0])); let ns = 0;
       for (const v of list) {
         if (!v.alive || mode === "off") continue;
         const m = meshes[v.kind], n = cnt[v.kind]++;
-        const rl = v.roll || 0, sz = TSIZE[v.kind], hh = v.kind === "van" ? 2.6 : 1.45;   // 5j: lật quanh trục dọc ⇒ nâng để thân nằm trên mặt đường
+        const rl = v.roll || 0, sz = TSIZE[v.kind], hh = sz.H;   // 5j: lật quanh trục dọc ⇒ nâng để thân nằm trên mặt đường
         Q.setFromEuler(EU.set(0, (v.dir < 0 ? Math.PI : 0) + v.yaw, rl)); P.set(v.x, (v.y || 0) + Math.abs(Math.sin(rl)) * sz.W / 2 + (1 - Math.cos(rl)) / 2 * hh, -v.s); S.set(1, 1, 1); M4.compose(P, Q, S); m.setMatrixAt(n, M4); m.setColorAt(n, v.col);
-        P.set(v.x, 0.03, -v.s); S.set(1, 1, v.kind === "van" ? 1.2 : 1); M4.compose(P, Q, S); shadow.setMatrixAt(ns++, M4);
+        P.set(v.x, 0.03, -v.s); S.set(sz.W / 2.1, 1, sz.L / 5.2); M4.compose(P, Q, S); shadow.setMatrixAt(ns++, M4);
       }
       Object.entries(meshes).forEach(([k, m]) => { m.count = cnt[k]; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
       shadow.count = ns; shadow.instanceMatrix.needsUpdate = true;
@@ -128,7 +185,7 @@ export function createTraffic({ scene, bend }) {
       v.rollV = v.rollG / (2 * v.vy / 15 * 0.85); },   // lộn xong ngay trước khi chạm đất
     get burning() { return list.filter(v => v.alive && v.burn > 0); },
     knock(v, side, k) { v.hit = 1.6; v.vx = side * (3 + 4 * k); v.spin = side * (3 + 5 * k) * (Math.random() < 0.5 ? 1 : -1); },
-    dispose() { Object.values(meshes).forEach(m => { scene.remove(m); m.geometry.dispose(); }); mat.dispose(); scene.remove(shadow); shadow.geometry.dispose(); shM.dispose(); bt.dispose(); }
+    dispose() { Object.values(meshes).forEach(m => { scene.remove(m); m.geometry.dispose(); }); Object.values(boxG).forEach(g => g.dispose()); mat.dispose(); scene.remove(shadow); shadow.geometry.dispose(); shM.dispose(); bt.dispose(); }
   };
   return api;
 }
