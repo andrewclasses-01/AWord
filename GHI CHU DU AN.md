@@ -546,6 +546,13 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 588 (27/10/2026) — CHẶN GIỜ HOẠT ĐỘNG ẢO (play.js `taoDoHoatDong`) — code `fa4a70e` LIVE
+Thầy hỏi "treo máy có tăng tổng thời gian được không" (ca Minh Anh A1-B, bài `ue5ncm`: bảng act 81:30, tổng 58 phút — đọc dữ liệu thật: em LÀM THẬT, làm tiếp 12 lần, tường 81,5p / hoạt động 52,4p).
+- Phím ĐÈ GIỮ (`keydown` có `e.repeat`, và `input` bắn ra lúc đang giữ) KHÔNG tính; thêm `keyup` vào HD_SU_KIEN chỉ để nhả cờ `giuPhim`. Giả lập: đè Shift 10 phút 600 s → 31 s.
+- `HD_CHO_MS` 60 s → 30 s (chạm mỗi phút: 600 → 310 s). Dạng đọc `HD_CHO_DOC_MS` giữ 180 s. Gõ đều / nghỉ 20 s giữa câu vẫn đủ giờ.
+- Hai tab / hai máy cùng lúc: cắt ở dashboard myLesson v1.432.0 (`hqHeSoChong`), không ở đây.
+- ⬜ Lỗ còn: chạm đều < 30 s; âm thanh đang phát vẫn tính. `scores` KHÔNG có activeMs ⇒ bảng xếp hạng phía HS (myLesson pop-up 🏆/lop/khoa) vẫn đồng hồ game — muốn đổi phải thêm khoá vào luật scores trước.
+
 ## Đợt 587 (26/10/2026) — CROSSWORD: thanh TIME DELAY trong Fight + gõ thừa không đè chữ cuối
 - Thầy: *"Thêm thanh time delay để đội trước xong rồi, đúng rồi thì đội sau vẫn có thêm một chút thời gian để hoàn thành"* ·
   *"Chữ cuối đã gõ rồi thì gõ thêm không đổi chữ đó"*.
