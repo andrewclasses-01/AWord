@@ -47,8 +47,12 @@ const REMEMBER_KEY = "aword-student-name";
 // đang phát (giọng đọc, băng nghe; nhạc nền `loop` không tính). Treo quá HD_TREO_MS thì nhịp 1
 // phút KHÔNG ghi nữa (đỡ lượt ghi) — em quay lại là nhịp kế ghi tiếp. `timeMs` giữ nguyên nghĩa
 // cũ (dashboard dùng làm "mở tab bao lâu"). ⛔ Chỉ ở trang học sinh — KHÔNG đụng core/.
-const HD_CHO_MS = 60000, HD_CHO_DOC_MS = 180000, HD_TREO_MS = 600000;
-const HD_SU_KIEN = ["pointerdown", "touchstart", "keydown", "wheel", "input"];
+// ⭐ Đợt 588 (thầy chốt 27/10/2026) — CHẶN GIỜ ẢO: (1) HD_CHO_MS 60 s → 30 s — chạm một lần mỗi phút không còn đủ giờ
+// cả phút (dạng đọc giữ 180 s); (2) ĐÈ GIỮ một phím (vật nặng trên Shift…) bắn `keydown` lặp (`e.repeat`) + `input` lặp
+// mãi ⇒ trước đây giờ hoạt động tăng không ngừng. Nay phím lặp tự động KHÔNG tính, `input` sinh ra lúc đang giữ phím cũng không.
+// (3) Hai tab / hai máy cùng lúc: dashboard myLesson v1.432.0 cắt phần chồng giờ — không làm ở đây.
+const HD_CHO_MS = 30000, HD_CHO_DOC_MS = 180000, HD_TREO_MS = 600000;
+const HD_SU_KIEN = ["pointerdown", "touchstart", "keydown", "keyup", "wheel", "input"];
 // Âm thanh đang phát: bắt mọi `play()` (kể cả `new Audio()` không nằm trong DOM), bỏ ra khi dừng.
 const AM_DANG_PHAT = new Set();
 (() => {
@@ -76,7 +80,14 @@ function laDangDoc(assignment, activity) {
 }
 function taoDoHoatDong(choMs, goc = 0) {   // Đợt 469 — `goc`: giờ hoạt động đã có của lượt đang LÀM TIẾP
   let activeMs = Math.max(0, Number(goc) || 0), lanCham = Date.now(), lucTick = Date.now(), timer = null;
-  const cham = () => { lanCham = Date.now(); };
+  let giuPhim = false;   // Đợt 588 — đang đè giữ một phím (keydown lặp) ⇒ không tính
+  const cham = (e) => {
+    const loai = e && e.type;
+    if (loai === "keyup") { giuPhim = false; return; }
+    if (loai === "keydown") { giuPhim = !!e.repeat; if (giuPhim) return; }
+    else if (loai === "input" && giuPhim) return;
+    lanCham = Date.now();
+  };
   const tick = () => {
     if (!timer) return;   // đã dừng: số chốt, không cộng thêm
     const t = Date.now(), d = t - lucTick; lucTick = t;
