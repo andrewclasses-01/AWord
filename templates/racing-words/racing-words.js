@@ -156,7 +156,7 @@ function rwPadLink() {
     try { L.remote && L.remote.close && L.remote.close(); } catch (e) { /* */ }
   }
   import("../../core/ipad-now.js").then(m => { N = m; sync(); }).catch(() => {});
-  L.ready = Promise.all([import("./rw-pad-signal.js"), import("./3d/sr3d-padlink-5j.js")]).then(([S, P]) => {   // ⭐ Đợt 554: 5e (4 chỗ: 2 đội + 2 drone)   // ⭐ Đợt 553: 5a (3 chỗ: 2 đội + drone)
+  L.ready = Promise.all([import("./rw-pad-signal.js"), import("./3d/sr3d-padlink-5m.js")]).then(([S, P]) => {   // ⭐ Đợt 590: 5m (TAKEN chỉ khi chỗ đang nối thật · chủ treo 6 s thì nhường)   // ⭐ Đợt 554: 5e (4 chỗ: 2 đội + 2 drone)   // ⭐ Đợt 553: 5a (3 chỗ: 2 đội + drone)
     if (L.dead) return L;
     const r = P.createPadHost({ signal: S.rwPadSignal(), padUrl: S.padUrl });
     // mở phiên NGAY (chưa có game): game gắn sau sẽ nhận lại trạng thái từng đội

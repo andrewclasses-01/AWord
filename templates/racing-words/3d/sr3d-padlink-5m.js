@@ -1,3 +1,4 @@
+// RACING WORDS mẫu 5m (28/10/2026) = padlink-5j + "TAKEN" chỉ khi chỗ đó đang nối thật (khoá "s<t>" trong "host") · chủ không nối được quá 6 s thì nhường · reset đủ 4 chỗ.
 // RACING WORDS mẫu 5j (21/10/2026) = padlink-5e + XE BAY: phím "fly" (TAKE OFF ⇄ LAND, iPad drone → game) · tin "j:" thêm car (- r t a l) + kmh.
 // RACING WORDS mẫu 5e (19/10/2026) = padlink-5a + chỗ thứ 4: t = 3 = iPad DRONE 2 (chế độ 2 drone) — tài liệu "pad3", khoá n3/o3/u3… trong "host". Tin "j:" như drone 1.
 // RACING WORDS mẫu 5a (19/10/2026) = padlink-4u + tin iPad drone "j:" thêm 2 trường: <chờ còn lại từng loại đạn "h/b/m" giây> · <đạn đang bay 0|1> ⇒ onDrone({ …, cd: [h, b, m], air }).
@@ -49,7 +50,7 @@ export function padDev() {
 /** 5: màn chọn đội nghe đội nào đã có iPad KHÁC ⇒ cb([bận0, bận1]) — trả hàm huỷ */
 export function watchTeams(signal, cb) {
   const me = padDev();
-  return signal.listen("host", d => { const on = !!(d && d.sid); cb(SLOTS.map(t => on && !!d["u" + t] && d["u" + t] !== me)); });
+  return signal.listen("host", d => { const on = !!(d && d.sid); cb(SLOTS.map(t => on && !!d["u" + t] && d["u" + t] !== me && liveOf(d, t))); });   /* 5m: + đang nối thật */
 }
 function gather(pc, ms) {
   return new Promise(res => {
@@ -73,6 +74,12 @@ export const TEAM_META = [{ name: "TEAM 1", color: "#3b8cff" }, { name: "TEAM 2"
 export const DRONE_META = { name: "DRONE", color: "#b07cff" };
 export const DRONE2_META = { name: "DRONE 2", color: "#ff7a00" };   // 5e   // 4l
 const SLOTS = [0, 1, 2, 3];   // 5e: + 3 = drone 2                                            // 4l: 0 · 1 = 2 đội · 2 = drone
+// 5m (28/10): "TAKEN" chỉ khi chỗ đó ĐANG NỐI THẬT. Máy chiếu ghi thêm "s<t>" = "1" khi chỗ t on/relay (chỉ ghi lúc đổi), "" khi rớt.
+//   Trước: "u<t>" (chủ chỗ) ghi ngay lúc iPad CHÀO, iPad nối hỏng cứ chào lại (nhắc 4 s, thử lại 5–20 s) ⇒ giữ chỗ mãi trong khi màn lớn vẫn hiện QR
+//   ⇒ iPad khác thấy TAKEN sai, phải tải lại màn lớn. Nay: màn chọn vai + iPad chỉ coi là TAKEN khi s<t> = "1"; chủ chưa nối được quá 6 s
+//   (CLAIM_GRACE, tính từ lúc nhận chủ / lúc rớt) thì iPad khác chào là giành được. Máy chiếu bản cũ không có s<t> ⇒ hiểu như cũ.
+const CLEAR = Object.fromEntries(SLOTS.flatMap(t => ["n", "o", "u", "s"].map(k => [k + t, ""])));   // 5m: xoá khoá bắt tay của cả 4 chỗ
+const liveOf = (d, t) => d["s" + t] === undefined ? !!d["u" + t] : d["s" + t] === "1";
 export function parseDrive(m) {                     // "s:-100,1,0" ⇒ { steer: −1, boost: 1, brake: 0 } · 4u: "s:-100,0,0,40,1" ⇒ + pitch 0,4 · tilt 1
   const [a, b, c, p, tl] = String(m).slice(2).split(",").map(Number);
   return { steer: Math.max(-1, Math.min(1, (a || 0) / 100)), boost: b ? 1 : 0, brake: c ? 1 : 0, pitch: Math.max(-1, Math.min(1, (p || 0) / 100)), tilt: tl ? 1 : 0 };
@@ -85,13 +92,17 @@ export function createPadHost({ signal, padUrl }) {
   const ctls = [];                                            // 4f: các bên đang gắn (mới nhất nhận iPad) — gỡ 1 bên thì bên trước nhận lại
   const cache = SLOTS.map(() => ({}));   /* 5e: 4 chỗ */                                     // chế độ + câu hỏi mới nhất mỗi đội (gửi lại khi iPad vừa nối)
   const st = SLOTS.map(() => ({ pc: null, dc: null, served: "", offered: "", hc: 0, last: 0, rs: 0, sn: 0, s: "",
-    tries: 0, kick: 0, mine: null, theirs: null, pair: "", rtt: 0, ice: "", steer: 0, at: 0, tl: 0, tr: 0, via: "", owner: "", lostAt: 0 }));
+    tries: 0, kick: 0, mine: null, theirs: null, pair: "", rtt: 0, ice: "", steer: 0, at: 0, tl: 0, tr: 0, via: "", owner: "", lostAt: 0, touch: 0 }));
   const OWN_GRACE = 8000;                                     // 5: chủ đội mất hẳn quá 8 s ⇒ nhả cho iPad khác
-  const setOwner = (t, dev) => { const x = st[t]; if (x.owner === dev) return; x.owner = dev; x.lostAt = 0; if (sid) signal.write("host", { sid, ["u" + t]: dev }).catch(() => {}); emit(t); };
+  const CLAIM_GRACE = 6000;                                   // 5m: chủ CHƯA nối được (hoặc vừa rớt) quá 6 s ⇒ iPad khác chào là giành được
+  const isLive = x => x.s === "on" || x.s === "relay";
+  const setOwner = (t, dev) => { const x = st[t]; x.touch = performance.now(); if (x.owner === dev) return; x.owner = dev; x.lostAt = 0; if (sid) signal.write("host", { sid, ["u" + t]: dev }).catch(() => {}); emit(t); };
   const subs = new Set();                                     // 4f: thẻ thử ở xưởng nghe đổi trạng thái
   const emit = t => subs.forEach(f => { try { f(t); } catch (e) { /* */ } });
   const setS = (t, s) => {
-    const x = st[t]; if (x.s === s) return; x.s = s;
+    const x = st[t]; if (x.s === s) return;
+    const was = isLive(x); x.s = s; const now = isLive(x);
+    if (was !== now) { if (!now) x.touch = performance.now(); if (sid) signal.write("host", { sid, ["s" + t]: now ? "1" : "" }).catch(() => {}); }   /* 5m */
     if (s !== "on" && s !== "relay") x.steer = 0;          // cờ đã thử TRÁI / PHẢI giữ nguyên khi iPad nối lại (cùng iPad — khỏi bắt thử lần nữa)
     ctl && ctl.status(t, s); paintPanel(); emit(t);
   };
@@ -160,7 +171,7 @@ export function createPadHost({ signal, padUrl }) {
     }
     if (!d.nonce) return;
     if (d.nonce !== x.served) {
-      if (x.owner && dev && dev !== x.owner) return;           // 5: đội đã có iPad khác ⇒ bỏ qua lời chào (không mời qua lại)
+      if (x.owner && dev && dev !== x.owner && (isLive(x) || performance.now() - x.touch < CLAIM_GRACE)) return;   // 5: đội đã có iPad khác ⇒ bỏ qua lời chào · 5m: trừ khi chủ đó không nối được quá 6 s
       if (dev) setOwner(t, dev);
       offerTo(t, d.nonce).catch(e => console.warn("iPad offer", e)); return;
     }
@@ -208,7 +219,7 @@ export function createPadHost({ signal, padUrl }) {
       const k = ctls.indexOf(c); if (k >= 0) ctls.splice(k, 1); ctls.push(c); ctl = c;
       if (sid) { SLOTS.forEach(t => { if (st[t].s) ctl.status(t, st[t].s); resend(t); }); return; }
       sid = rid();
-      signal.write("host", { sid, n0: "", o0: "", n1: "", o1: "", n2: "", o2: "", u0: "", u1: "", u2: "", m0: cache[0].m ?? "", m1: cache[1].m ?? "", m2: cache[2].m ?? "", q0: cache[0].q ?? "", q1: cache[1].q ?? "" }).catch(e => { failMsg = (e && e.message) || "iPad link unavailable"; paintPanel(); console.warn("iPad link", e); });
+      signal.write("host", { sid, ...CLEAR, m0: cache[0].m ?? "", m1: cache[1].m ?? "", m2: cache[2].m ?? "", m3: cache[3].m ?? "", q0: cache[0].q ?? "", q1: cache[1].q ?? "" })   /* 5m: CLEAR đủ 4 chỗ (trước sót n3/o3/u3 ⇒ DRONE 2 TAKEN treo từ phiên cũ) */.catch(e => { failMsg = (e && e.message) || "iPad link unavailable"; paintPanel(); console.warn("iPad link", e); });
       SLOTS.forEach(t => unsubs.push(signal.listen("pad" + t, d => onPad(t, d))));
       tick = setInterval(() => {                                    // im quá 4 s (iPad ngủ / rớt Wi-Fi) ⇒ "đang nối"
         st.forEach((x, t) => { if ((x.s === "on" || x.s === "relay") && performance.now() - x.last > 4000) setS(t, "wait"); });
@@ -232,7 +243,7 @@ export function createPadHost({ signal, padUrl }) {
       unsubs.splice(0).forEach(f => { try { f(); } catch (e) { /* */ } });
       SLOTS.forEach(closePc); subs.clear();
       const old = sid; sid = "";
-      if (old) signal.write("host", { sid: "", n0: "", o0: "", n1: "", o1: "", n2: "", o2: "", u0: "", u1: "", u2: "" }).catch(() => {});
+      if (old) signal.write("host", { sid: "", ...CLEAR }).catch(() => {});
     },
     get closed() { return closed; },
     /** 4f: màn lớn bảo iPad đội t bắt tay lại (nút Reconnect) */
@@ -348,7 +359,7 @@ export function createPadClient({ signal, team, onState, onInfo, onMode, onQ, on
     // 5: đội đã có chủ là máy KHÁC ⇒ đứng yên báo "taken" (không chào, không giành); chủ nhả ⇒ tự chào
     const u = d["u" + t] || "";
     owned = u === dev;
-    if (u && u !== dev) { if (!taken) { taken = true; sid = d.sid; nonce = ""; answered = false; closePc(); clearTimeout(retryT); clearTimeout(relayT); set("taken"); } return; }
+    if (u && u !== dev && liveOf(d, t)) { if (!taken) {   /* 5m: chủ kia chưa nối được ⇒ không đứng "taken", vẫn chào (máy chiếu quyết) */ taken = true; sid = d.sid; nonce = ""; answered = false; closePc(); clearTimeout(retryT); clearTimeout(relayT); set("taken"); } return; }
     if (taken) { taken = false; sid = d.sid; kick = k; retryN = 0; hello(); return; }
     if (d.sid !== sid) { sid = d.sid; kick = k; retryN = 0; hello(); return; }
     if (kick !== null && k && k !== kick) { kick = k; retryN = 0; hello(true); return; }   // 4f: màn lớn bấm Reconnect

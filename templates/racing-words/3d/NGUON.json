@@ -1,12 +1,12 @@
 {
  "nguon": "myGame/speed-run/core",
  "goc": "rw-5l.js",
- "commit": "56dc03a",
+ "commit": "f293c75",
  "con_sua_chua_commit": false,
  "js": [
   "rw-loadpace-4h.js",
-  "sr3d-padlink-5j.js",
-  "sr3d-padui-5j.js",
+  "sr3d-padlink-5m.js",
+  "sr3d-padui-5m.js",
   "rw-icons-4x.js",
   "sr3d-padui-5i.js",
   "rw-bloss-5i.js",

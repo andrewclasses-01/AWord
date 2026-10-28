@@ -546,6 +546,15 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 590 (28/10/2026) — RACING WORDS iPad: LUÔN có nút ◀ + hết "TAKEN" sai — myGame 5m
+**Thầy:** bấm nút iPad trên AWord ⇒ iPad dính chặt màn DRONE "The drone is OFF on the big screen", không có nút back; bật drone thì có ◀ nhưng về lại thấy xe bị TAKEN dù màn lớn còn QR, phải tải lại màn lớn vài lần. Yêu cầu: mọi tình huống có nút back về màn chọn vai; xe chưa nối không hiện TAKEN.
+**Gốc:** (1) iPad từng quét QR drone ⇒ nhớ `aw.rwDrone` ⇒ lần sau vào thẳng màn drone; lớp `.dq-off` (z-index 9, phủ kín) che nút ◀ ở thanh trên. (2) chủ chỗ `u<t>` ghi ngay lúc iPad CHÀO (chưa nối); iPad nối hỏng / đổi màn cứ chào lại (nhắc 4 s, thử lại 5–20 s) ⇒ giữ chỗ mãi, màn chọn vai chỉ xem `u<t>` ⇒ TAKEN sai. Thêm: attach/close không xoá n3/o3/u3 (DRONE 2 treo từ phiên cũ); pad.js đổi màn nhanh có thể tạo 2 đường nối (1 cái mồ côi giữ chỗ).
+**Sửa (myGame `f293c75`, mẫu 5m):** padui-5m — lớp drone OFF / DRONE TAKEN có nút to "◀ CHOOSE ANOTHER ROLE". padlink-5m — máy chiếu ghi `s<t>`="1" khi chỗ on/relay (chỉ lúc đổi); màn chọn vai + iPad chỉ coi TAKEN khi `s<t>`="1"; chủ chưa nối được quá 6 s (CLAIM_GRACE) thì iPad khác chào là giành được; attach/close xoá đủ 4 chỗ. Máy chiếu bản cũ (không có `s<t>`) ⇒ hiểu như cũ.
+**Ở AWord:** chep-racing-words GOC_THEM padui-5m + padlink-5m (xoá 5j) · racing-words.js / rw-pad-signal.js / pad.js ⇒ 5m · load-files padlink-5m 34876 · pad.js `rwTok` chặn lượt dựng cũ (showRW / showRWChooser).
+**Đã thử (máy nhà, kênh cục bộ):** nút ◀ bấm thật ⇒ màn chọn vai (myGame + AWord pad.html?padsig=local) · iPad K chào rồi treo ⇒ màn chọn vai KHÔNG TAKEN · iPad thứ 2 chọn xe đó ⇒ CONNECTED, s0=1 · iPad khác thấy TAKEN đúng khi đang nối · back ⇒ u0/s0 xoá. ⬜ thầy thử iPad thật.
+
+---
+
 ## Đợt 589 (27/10/2026) — RACING WORDS THẬT lên myGame 5l: đường đua thật 3,5 km cua gắt + cọ rào + bay chông chênh + xe traffic 3D — code `7eb5829` LIVE
 **Thầy:** đường thật dài hơn (không tăng vòng), nhiều cua gần 90° + zigzag, xe cua tốt hơn nhưng cần kỹ thuật; cọ lan can tóe lửa + khói đen + giảm tốc nặng khi cọ lâu; dốc chỉ rộng 1,5 xe;
 nửa xe trên dốc thẳng + boost ⇒ không xoay mà vọt lên nghiêng nhiều, phải nghiêng ngược để không BAD; dốc xoắn bay nhanh hơn dốc thẳng; dốc thẳng lái mạnh trên không ⇒ lộn vòng 360° (perfect được),

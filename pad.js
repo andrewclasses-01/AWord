@@ -70,7 +70,9 @@ let view = "", curTeam = -1, client = null, ui = null, manual = false;
 let tr = null;                                   // Đợt 515: cảnh 2D Train Rush
 let rw = null;                                   // Đợt 527: màn iPad RACING WORDS { client, ui }
 let rr = null, rrBusyOff = null;                 // Đợt 511: { client, ui } bảng tên lửa Rocket Race · huỷ nghe "đội đã có iPad"
+let rwTok = null;                                // ⭐ Đợt 590: lượt dựng màn RACING WORDS đang chờ nạp mô-đun — đổi màn ⇒ lượt cũ bỏ
 function stopPad() {
+  rwTok = null;
   if (client) { client.destroy(); client = null; }
   if (rr) { try { rr.client.destroy(); rr.ui.destroy(); } catch (e) { /* */ } rr = null; }
   if (rrBusyOff) { rrBusyOff(); rrBusyOff = null; }
@@ -132,19 +134,21 @@ async function showTR(team) {
 const rwCss = () => { if (document.querySelector("link[data-rw4j]")) return; const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "./templates/racing-words/3d/rw-4j-fb.css"; l.dataset.rw4j = "1"; document.head.append(l);
   const f = document.createElement("link"); f.rel = "stylesheet"; f.href = "https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&display=swap"; document.head.append(f); };   // Đợt 553: + font bảng lái drone
 // ⭐ Đợt 553 — myGame 5c: padlink-5a (3 chỗ: 2 đội + DRONE) · padui-5c (đội = màn 4j như cũ · DRONE = bảng lái AERO YOKE · màn chọn vai 3 nút)
+// ⭐ Đợt 590 — myGame 5m: padui-5m (nút ◀ trên lớp drone OFF / DRONE TAKEN — trước lớp này che nút back ⇒ iPad kẹt) · padlink-5m (TAKEN chỉ khi chỗ đang nối thật)
 // ⭐ Đợt 570 — myGame 5j: padui-5j (bảng drone = ROADSTER khi chọn xe bay: TAKE OFF / LAND, bàn đạp BRAKE / BOOST) · padlink-5j (+ phím fly)
 // ⭐ Đợt 558 — myGame 5i: padui-5i (= 5g + bàn đạp BOOST hiện khúc boost mất: đỏ, xịt xuống, khói đen)
 // ⭐ Đợt 554 — myGame 5g: padlink-5e (4 chỗ: 2 đội + 2 drone) · padui-5g (màn chọn vai 4 thẻ ảnh thật · nút tên lửa hết bề ngang · vừa mọi tỉ lệ màn)
-const rwMods = () => { rwCss(); return Promise.all([import("./templates/racing-words/3d/sr3d-padlink-5j.js"), import("./templates/racing-words/3d/sr3d-padui-5j.js"), import("./templates/racing-words/rw-pad-signal.js")]); };   // Đợt 538: 4f (tự nối lại khi slow, mốc nghiêng tự lấy)
+const rwMods = () => { rwCss(); return Promise.all([import("./templates/racing-words/3d/sr3d-padlink-5m.js"), import("./templates/racing-words/3d/sr3d-padui-5m.js"), import("./templates/racing-words/rw-pad-signal.js")]); };   // Đợt 538: 4f (tự nối lại khi slow, mốc nghiêng tự lấy)
 async function showRW(team) {
   note.hidden = true;
   if (view === "rw" + team) return;
   stopPad(); view = "rw" + team; curTeam = team;
+  const tok = rwTok = {};
   history.replaceState(null, "", urlWith("pad.html", null));
   padEl.innerHTML = "";
   let mods;
   try { mods = await rwMods(); } catch (e) { console.warn("Racing words pad", e); showNote("Could not load", "Check the network and reload this page.", { bad: true }); return; }
-  if (view !== "rw" + team) return;                    // đã đổi màn trong lúc nạp
+  if (view !== "rw" + team || rwTok !== tok) return;   // đã đổi màn trong lúc nạp · Đợt 590: rw0 → chọn vai → rw0 nhanh ⇒ 2 lượt cùng thấy "rw0" ⇒ trước tạo 2 đường nối, 1 cái mồ côi giữ chỗ
   const [L, U, S] = mods;
   let rui = null; const pend = {};
   const call = (k, v) => rui ? rui[k](v) : (pend[k] = v);
@@ -160,9 +164,10 @@ async function showRW(team) {
 async function showRWChooser() {
   note.hidden = true;
   stopPad(); view = "chooser";
+  const tok = rwTok = {};
   history.replaceState(null, "", urlWith("pad.html", null));
   let L, U, S; try { [L, U, S] = await rwMods(); } catch (e) { showNote("Could not load", "Check the network and reload this page.", { bad: true }); return; }
-  if (view !== "chooser") return;
+  if (view !== "chooser" || rwTok !== tok) return;     // Đợt 590: như showRW
   const ch = U.mountPadChooser(padEl, { onPick: t => { if (t >= 2) rwDrone.set(t); else { saveTeam(t); rwDrone.set(0); } manual = false; apply(true); } });   // Đợt 553: 3 vai · Đợt 554: 4 vai (+ DRONE 2)
   // Đợt 539 — đội đang có iPad KHÁC (host u0/u1) ⇒ mờ, chạm chỉ báo, không vào được (huỷ nghe: rrBusyOff trong stopPad)
   if (ch && ch.setBusy && L.watchTeams) rrBusyOff = L.watchTeams(S.rwPadSignal(), b => ch.setBusy(b));

@@ -1,10 +1,12 @@
+// RACING WORDS mẫu 5m (28/10/2026) = padui-5j + thầy: "luôn có nút back trong mọi tình huống". Lớp "drone OFF" (z-index 9) che mất nút ◀ ở thanh trên
+//   ⇒ iPad kẹt ở màn drone. Nay lớp đó có nút to "◀ CHOOSE ANOTHER ROLE", và cũng hiện khi DRONE TAKEN (đã có iPad khác). Đường nối = padlink-5m.
 // RACING WORDS mẫu 5j (21/10/2026) — iPad: màn ĐỘI + màn chọn vai = 5i · màn DRONE = BẢNG GỘP (thiết kế speed-run/thiet-ke-5j-xe-bay-v2.html, thầy chốt):
 //   · 2 mũi tên NEAR / FAR ⇒ 2 BÀN ĐẠP: BRAKE (trái, đỏ) · BOOST (phải, xanh ngọc) — chỉ mặt bàn đạp, bằng nhau. Drone: BOOST = tiến, BRAKE = lùi.
 //   · Mẫu XE BAY (tin j: car ≠ "-"): tên ROADSTER (đầu màn + trong vô lăng) · nút TAKE OFF / LAND dưới vô lăng (gửi "fly") ·
 //     trên đường: vô lăng = lái, BRAKE / BOOST = phanh / tăng tốc (boost vô hạn), không tâm ngắm — FIRE 1 chạm = xe gần, chạm đúp = xe xa.
 //   Logic lái / nghiêng / đạn / pin / hồi chiêu giữ nguyên 5g (mountDroneApp chép từ sr3d-padui-5g.js rồi sửa).
 import { mountPadApp, mountPadChooser } from "./sr3d-padui-5i.js";
-import { TEAM_META, DRONE_META } from "./sr3d-padlink-5j.js";
+import { TEAM_META, DRONE_META } from "./sr3d-padlink-5m.js";   /* 5m */
 import { icon as ICON } from "./rw-icons-4x.js";
 export { mountPadApp, mountPadChooser };
 const AMMO = [{ k: "heart", t: "HEART", c: "#ff63c3", cost: 0.40, cd: 4 }, { k: "boost", t: "BOOST", c: "#2ee6c9", cost: 0.25, cd: 3 }, { k: "missile", t: "MISSILE", c: "#ff2020", cost: 0.35, cd: 3 }];
@@ -103,8 +105,12 @@ const CSS = `
 .dq[data-car="1"] .dq-fly{display:flex}
 .dq[data-car="1"] .dq-mid2{justify-content:flex-start;padding-top:calc(.8 * var(--u))}
 .dq[data-car="1"] .dq-read{margin-top:calc(.8 * var(--u))}
-.dq-off{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,12,18,.94);font:italic 900 calc(3 * var(--t)) "Exo 2";color:#8e9bb0;text-align:center;padding:calc(4 * var(--u));z-index:9}
-.dq[data-on="0"] .dq-off{display:flex}
+.dq-off{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:calc(4 * var(--u));background:rgba(10,12,18,.94);font:italic 900 calc(3 * var(--t)) "Exo 2";color:#8e9bb0;text-align:center;padding:calc(4 * var(--u));z-index:9}
+.dq[data-on="0"] .dq-off,.dq[data-s="taken"] .dq-off{display:flex}
+.dq-off .tk,.dq[data-s="taken"] .dq-off .of{display:none}
+.dq[data-s="taken"] .dq-off .tk{display:block}
+.dq-offb{padding:calc(2 * var(--u)) calc(5 * var(--u));border-radius:99px;border:0;background:#e2e8f0;color:#0f172a;font:italic 900 calc(2.6 * var(--t)) "Exo 2";letter-spacing:.06em;cursor:pointer}
+.dq-offb:active{transform:scale(.96)}
 `;
 let styled = false;
 function style() { if (styled) return; styled = true; const st = document.createElement("style"); st.textContent = CSS; document.head.append(st); }
@@ -152,7 +158,9 @@ export function mountDroneApp(mount, { client, onBack }) {
       <div class="dq-mid2"><button type="button" class="dq-fly"><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="#101218" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path class="ar" d="M12 19V6M6 11.5 12 5.5l6 6"/></svg></span><span class="lb">TAKE OFF</span></button><div class="dq-read">STEER <b class="dq-rr">0°</b> &nbsp;·&nbsp; AIM <b class="dq-rp">0°</b><br><span class="dq-ttx">DRAG THE YOKE OR TILT THE iPAD</span></div>
         <div class="dq-brand"><i></i><b></b><span>ANDREW <em>STUDIO</em></span><b></b><i></i></div></div>
       <button type="button" class="dq-ped pd dq-bst dq-far" aria-label="Boost"><span class="plate"></span><b>BOOST</b></button></div>
-    <div class="dq-off">The drone is OFF on the big screen.<br>Turn it on in ⚙ Settings ▸ Drone.</div>
+    <div class="dq-off"><div class="of">The drone is OFF on the big screen.<br>Turn it on in ⚙ Settings ▸ Drone.</div>
+      <div class="tk">This drone already has an iPad.<br>Choose another role.</div>
+      <button type="button" class="dq-offb">◀ CHOOSE ANOTHER ROLE</button></div>
   </div></div>`;
   const root = mount.firstElementChild, $ = s => root.querySelector(s);
   const pad = $(".dq-pad"), fireB = $(".dq-fire"), cards = [...root.querySelectorAll(".dq-a")], lockEl = $(".dq-lock"), ttx = $(".dq-ttx");
@@ -253,7 +261,8 @@ export function mountDroneApp(mount, { client, onBack }) {
     const dim = (phase && phase !== "race") || air || CD[sel] > 0.05 || bat < (AMMO[sel] ? AMMO[sel].cost : 0) - 1e-6; if (fireB.classList.contains("dim") !== dim) fireB.classList.toggle("dim", dim);
   }
   raf = requestAnimationFrame(loop);
-  $(".dq-back").addEventListener("click", () => { cancelAnimationFrame(raf); window.removeEventListener("devicemotion", onMotion); onBack && onBack(); });
+  const goBack = () => { cancelAnimationFrame(raf); window.removeEventListener("devicemotion", onMotion); onBack && onBack(); };
+  $(".dq-back").addEventListener("click", goBack); $(".dq-offb").addEventListener("click", goBack);   /* 5m: nút ◀ trên lớp drone OFF / TAKEN */
   noGestures(root);
   let wl = null; const keep = async () => { if (wl || !("wakeLock" in navigator) || document.visibilityState !== "visible") return; try { wl = await navigator.wakeLock.request("screen"); wl.addEventListener("release", () => { wl = null; }); } catch (e) { /* */ } };
   keep(); document.addEventListener("visibilitychange", keep);
