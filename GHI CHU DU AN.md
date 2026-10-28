@@ -546,6 +546,14 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 591 (28/10/2026) — RACING WORDS lên myGame 5n: boost tối đa khi còn thanh + cân bằng theo mức dẫn · đường 7 km quanh HỒ · độ nhạy vô lăng · số xe traffic
+**Thầy:** boost nửa sau thanh tụt còn ~25 km/h ⇒ còn thanh là còn tối đa; giữ mục đích hạn chế chênh lệch bằng cách khác (dẫn > 100 m giảm êm; xe dẫn ghì rào / rung khi bay / dễ BAD / nạp ít trừ nhiều, xe sau ngược lại) · bản đồ dài gấp đôi, không đoạn thẳng tắp · trái núi, phải bãi cát + hồ ở giữa, thấy đối thủ phía xa · DRIVER: độ nhạy vô lăng · RACE: số xe traffic 0–100 % (100 % = ×10). Thầy thử ở myGame rồi bảo "đưa lên AWord".
+**Làm ở myGame** `829f563` (chi tiết, số đo, bẫy: myGame `speed-run/HO SO BAN GIAO RACING WORDS.md` mục MẪU 5n). Gốc lỗi boost: `VBOOST·(1 − 0,3·ahead)` + trần cứng GAP_MAX 150 m khoá xe dẫn bằng tốc độ xe sau.
+**Ở AWord:** `tools/chep-racing-words.py` GOC `rw-5n.js` (GOC_THEM giữ padui-5m / padlink-5m) ⇒ chép rw-5n, sr3d-5n, track-5n, traffic-5n, world-5n; xoá rw-5l, sr3d-5l, track-5l, traffic-5l (world-5l GIỮ: xe / tên lửa / Roadster lấy BEND_GLSL) · `racing-words.js` GAME `./3d/rw-5n.js` · `load-files.js` đổi 4 file 5l ⇒ 5n + thêm world-5n (số byte trên đĩa).
+**Đã thử (máy nhà):** bàn thử tạm `scratch/dot591-rw.html` (chép trang mẫu 5n, trỏ vào `templates/racing-words/3d/`) ⇒ mọi mô-đun nạp 200, đua tự lái 159 km/h, traffic 30 % = 42 xe, 284 lệnh vẽ, 0 lỗi game. ⬜ thầy thử TOMKO + iPad thật. Chưa có Option srTrafficAmt trong form Options (dùng ⚙ Settings ▸ Race trên màn chơi, nhớ theo máy).
+
+---
+
 ## Đợt 590 (28/10/2026) — RACING WORDS iPad: LUÔN có nút ◀ + hết "TAKEN" sai — myGame 5m
 **Thầy:** bấm nút iPad trên AWord ⇒ iPad dính chặt màn DRONE "The drone is OFF on the big screen", không có nút back; bật drone thì có ◀ nhưng về lại thấy xe bị TAKEN dù màn lớn còn QR, phải tải lại màn lớn vài lần. Yêu cầu: mọi tình huống có nút back về màn chọn vai; xe chưa nối không hiện TAKEN.
 **Gốc:** (1) iPad từng quét QR drone ⇒ nhớ `aw.rwDrone` ⇒ lần sau vào thẳng màn drone; lớp `.dq-off` (z-index 9, phủ kín) che nút ◀ ở thanh trên. (2) chủ chỗ `u<t>` ghi ngay lúc iPad CHÀO (chưa nối); iPad nối hỏng / đổi màn cứ chào lại (nhắc 4 s, thử lại 5–20 s) ⇒ giữ chỗ mãi, màn chọn vai chỉ xem `u<t>` ⇒ TAKEN sai. Thêm: attach/close không xoá n3/o3/u3 (DRONE 2 treo từ phiên cũ); pad.js đổi màn nhanh có thể tạo 2 đường nối (1 cái mồ côi giữ chỗ).

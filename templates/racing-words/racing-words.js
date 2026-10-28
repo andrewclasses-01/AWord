@@ -45,7 +45,8 @@ const LOAD_BG = new URL("./rw-loading.webp", import.meta.url).href;   // Đợt 
 const loader = () => { ensureCss(); return showLoader3d({ key: "racingwords", title: "RACING WORDS", theme: "race", bg: LOAD_BG, files: loadFiles, pace: { create: createLoadPace, key: "rw" } }); };
 preloadLoader3d("race", LOAD_BG);
 
-const GAME = "./3d/rw-5l.js";   // ⭐ Đợt 589: myGame 5l (đường thật 3,5 km cua gắt, cọ rào, bay chông chênh + lộn vòng, xe traffic 3D)
+const GAME = "./3d/rw-5n.js";   // ⭐ Đợt 591: myGame 5n (boost tối đa khi còn thanh + cân bằng theo mức dẫn, đường 7 km quanh HỒ, độ nhạy vô lăng, traffic 0–100 %)
+// Đợt 589 (cũ): const GAME = "./3d/rw-5l.js";   // ⭐ Đợt 589: myGame 5l (đường thật 3,5 km cua gắt, cọ rào, bay chông chênh + lộn vòng, xe traffic 3D)
 // Đợt 571 (cũ): const GAME = "./3d/rw-5k.js";   // ⭐ Đợt 571: myGame 5k (Roadster bám xe + tên lửa tự đuổi) ·                     // ⭐ Đợt 570: myGame 5j — XE BAY ROADSTER trong bộ Drone (Settings ▸ Drone ▸ FLYING CAR · Roadster).
 // Đợt 558 (cũ): const GAME = "./3d/rw-5i.js";                     // ⭐ Đợt 558: myGame 5i — vạch lửa drone · Settings ▸ Boost · sửa tab Driver.
 // Đợt 556 (cũ): const GAME = "./3d/rw-5h.js";                     // ⭐ Đợt 556: myGame 5h — tối ưu TOMKO (2 drone mượt, độ nét giữ 0,9–1,0).   // Đợt 554: ⭐ Đợt 554: myGame 5f — 2 DRONE (iPad thứ 4), drone trong xưởng, máy quay theo xe dẫn.
