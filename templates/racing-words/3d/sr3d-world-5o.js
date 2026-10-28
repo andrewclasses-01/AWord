@@ -1,3 +1,4 @@
+// RACING WORDS mẫu 5o (28/10/2026) = world-5n + bờ hồ như 4x (cát ngay sau rào, gờ bãi 0,32 m từ 16 m, nước ~30–55 m, hàng dừa 13,6–29,6 m, dừa 240) · 2 xe cách > 900 m ⇒ rải cây quanh từng xe trước.
 // RACING WORDS mẫu 5n (28/10/2026) = world-5l + HỒ trong vòng (phải xe) / núi ngoài vòng (trái xe) · ảnh uDistT 2 kênh · đường bờ xa vẽ lên đất · makeBend bỏ vật quá tầm uốn · bỏ gờ cát 0,35 m.
 // RACING WORDS mẫu 5l (27/10/2026) = sr3d-world-5j.js + ĐƯỜNG CUA GẮT ~90° (thầy: "nhiều đoạn cua gấp hơn, gần như 90 độ và zigzag hơn"):
 //   · UỐN XOAY THẬT: cũ chỉ XÔ NGANG (x += X(d), trần tan φ = 2 ⇒ ≤ 63°, mặt đường bị xiên hẹp lại) — nay mỗi đỉnh (x lệch ngang, a mét phía trước)
@@ -62,6 +63,8 @@ float fbm(vec2 p){ float s = 0.0, a = 0.5; for (int i = 0; i < 4; i++){ s += a*v
 float shoreX(float z){ return 8.0*sin(z*0.013) + 5.0*sin(z*0.041 + 1.7); }
 `;
 
+// 5o: BỜ HỒ NHƯ 4x (thầy 28/10: "bờ hồ dùng cây dừa và bãi cát như các bản 4x hoặc đầu 5x"): trong vòng độ sâu = 4b R = smoothstep(15, 70, d + bờ lượn) ⇒ nước từ ~30–40 m
+//   (5n ~60 m); cát = trong vòng × smoothstep(11,5, 13,5, d) ⇒ cát ngay sau rào; dừa 5 cây / ô 48 m ở 13,6–29,6 m bên phải; bụi chỉ lác đác sát rào bên phải.
 // 5n: HỒ TRONG VÒNG (thầy 28/10: "hồ / vịnh ở giữa, có bãi cát rồi đến nước, núi bao ngoài; hồ rộng, đẹp, nước xanh sóng sánh").
 //   Ảnh uDistT 2 kênh: r = khoảng cách tới tim đường, g = TRONG VÒNG (1 = phía phải xe). sy ("quá bờ bao nhiêu") không còn theo 1 đường bờ phía Nam:
 //   trong vòng sy = d − 55 (+ bờ lượn) ⇒ cát từ ~10 m, nước từ ~45–60 m · ngoài vòng sy = −(d + 300) ⇒ đồi núi như 5l. Cùng công thức ở JS (groundW / sandW).
@@ -71,9 +74,9 @@ float trkD(vec2 q){ vec2 uv = (q - uDistM.xy) * uDistM.zw; if (uv.x < 0.0 || uv.
 float trkI(vec2 q){ vec2 uv = (q - uDistM.xy) * uDistM.zw; if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) return 0.0; return texture2D(uDistT, uv).g; }
 float shoreY(vec2 q){ float d = trkD(q); return mix(-(d + 300.0), d - 55.0 + 0.8 * shoreX((q.x + q.y) * 0.7), trkI(q)); }   // 5n: bờ HỒ trong vòng
 float groundH(vec2 q){ float d = trkD(q), sy = shoreY(q);
-  float L = smoothstep(16.0, 62.0, d), HF = 1.0 - smoothstep(-230.0, -90.0, sy), R = smoothstep(-12.0, 50.0, sy) * smoothstep(13.0, 22.0, d);
+  float L = smoothstep(16.0, 62.0, d), HF = 1.0 - smoothstep(-230.0, -90.0, sy), R = trkI(q) * smoothstep(24.0, 80.0, d + shoreX((q.x + q.y) * 0.7)), BH = trkI(q) * smoothstep(16.0, 24.0, d) * 0.32;   // 5o: như 4b
   return HF * (L*(fbm(q*0.011)*42.0 + 3.0) + smoothstep(120.0, 420.0, d)*fbm(q*0.0042 + 3.7)*130.0) - R*5.0
-    - 0.15*(1.0 - L); }   // 5n: BỎ gờ cát 0,35 m sát mép (lưới đất ô 10 m kéo gờ lấn lên mặt đường ở khúc cua) · sát đường thấp −0,15 (cũ −0,06)
+    - 0.15*(1.0 - L) + BH*(1.0 - R); }   /* 5o: gờ bãi cát 0,32 m như 4b nhưng từ 16 m (cũ 11 m lấn mặt đường) · nước từ ~30–55 m */   // 5n: BỎ gờ cát 0,35 m sát mép (lưới đất ô 10 m kéo gờ lấn lên mặt đường ở khúc cua) · sát đường thấp −0,15 (cũ −0,06)
 vec2 toW(vec3 b){ float f = uBendZ - b.z; return uTrk.xy + vec2(-uTrk.w, uTrk.z) * b.x + uTrk.zw * f; }   // điểm cảnh (đã ở khung máy quay) → toạ độ thật
 `;
 const f = Math.fround;
@@ -98,11 +101,11 @@ const shoreX = z => 8 * Math.sin(z * 0.013) + 5 * Math.sin(z * 0.041 + 1.7);
 const shoreYW = (trk, X, Y, d) => { const I = trk.insideAt ? trk.insideAt(X, Y) : 0; return -(d + 300) * (1 - I) + (d - 55 + 0.8 * shoreX((X + Y) * 0.7)) * I; };   // 5n = shoreY GLSL
 export function groundW(trk, X, Y) {
   const d = trk.distAt(X, Y), sy = shoreYW(trk, X, Y, d);
-  const L = sstep(16, 62, d), HF = 1 - sstep(-230, -90, sy), R = sstep(-12, 50, sy) * sstep(13, 22, d);
+  const L = sstep(16, 62, d), HF = 1 - sstep(-230, -90, sy), I = trk.insideAt ? trk.insideAt(X, Y) : 0, R = I * sstep(24, 80, d + shoreX((X + Y) * 0.7)), BH = I * sstep(16, 24, d) * 0.32;   // 5o = GLSL
   return HF * (L * (fbm(X * 0.011, Y * 0.011) * 42 + 3) + sstep(120, 420, d) * fbm(X * 0.0042 + 3.7, Y * 0.0042 + 3.7) * 130) - R * 5
-    - 0.15 * (1 - L);   // 5n = GLSL
+    - 0.15 * (1 - L) + BH * (1 - R);   // 5n · 5o = GLSL
 }
-export const sandW = (trk, X, Y) => { const d = trk.distAt(X, Y), sy = shoreYW(trk, X, Y, d); return sstep(-48, -26, sy) * sstep(12, 16, d); };   // 5n
+export const sandW = (trk, X, Y) => { const d = trk.distAt(X, Y), I = trk.insideAt ? trk.insideAt(X, Y) : 0; return sstep(0.35, 0.65, I) * sstep(11.5, 13.5, d); };   // 5o: cát ngay sau rào bên phải
 
 // ---------- cong thế giới ----------
 // 3q (thầy 15/10: "núi và cảnh phía xa thay đổi rất bất hợp lý … chóng mặt"): bản cũ lệch = b·d² ở MỌI khoảng cách ⇒ núi 1.000 m lệch
@@ -201,7 +204,7 @@ function makeGround(U, KEY, T) {
         vec3 rock = mix(vec3(0.38,0.33,0.28), vec3(0.52,0.46,0.39), nz2);
         vec3 c = mix(grass, rock, smoothstep(0.25, 0.55, slope));
         c = mix(c, vec3(0.42,0.36,0.30), smoothstep(60.0, 120.0, vW.y) * 0.6);                         // núi cao: đá trơ
-        float sand = smoothstep(-48.0, -26.0, sy) * smoothstep(11.5, 13.5, d);                          // 5l: bãi cát ven biển (phía Nam)
+        float sand = smoothstep(0.35, 0.65, trkI(vW.xz)) * smoothstep(11.5, 13.5, d); // 5o: cát ngay sau rào bên phải (như 4x)
         vec3 sc = mix(vec3(0.86,0.73,0.52), vec3(0.93,0.82,0.62), nz2);
         sc = mix(sc, vec3(0.62,0.50,0.36), smoothstep(-0.6, -1.25, vW.y));                                 // cát ướt sát nước
         c = mix(c, sc, sand);
@@ -398,7 +401,7 @@ export function createWorld({ scene, U, bend, keyDir, trk }) {
       l.translate(0, 1.8, 0).rotateX(-1.15).rotateY(a).translate(x, y, 0); paint(l, "#ffffff"); parts.push(l); }
     const m = mergeGeos(parts); parts.forEach(q => q.dispose()); return m; })();
   const leafM = bend(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, side: THREE.DoubleSide }));
-  const NP = 300, NR = 170, NPa = 110, NB = 320, NG = 1100;                                       // 4a: + bụi + cỏ, cây dày hơn và lên cao hơn trên núi
+  const NP = 300, NR = 170, NPa = 240, NB = 320, NG = 1100;   /* 5o: dừa 110 ⇒ 240 (hàng dừa dày bờ hồ) */                                       // 4a: + bụi + cỏ, cây dày hơn và lên cao hơn trên núi
   const pines = new THREE.InstancedMesh(pineG, leafM, NP), rounds = new THREE.InstancedMesh(roundG, leafM, NR), palms = new THREE.InstancedMesh(palmG, leafM, NPa);
   const bushes = new THREE.InstancedMesh(bushG, leafM, NB), grass = new THREE.InstancedMesh(grassG, leafM, NG);
   [pines, rounds, palms, bushes, grass].forEach(m => { m.frustumCulled = false; m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(m.count * 3).fill(1), 3); keep(m); scene.add(m); });
@@ -435,7 +438,7 @@ export function createWorld({ scene, U, bend, keyDir, trk }) {
       }
       for (let i = 0; i < 12 && nb < NB; i++) {                   // bụi 2 bên (gần đường dày hơn)
         const sd = r() < 0.5 ? -1 : 1, x = sd * (13 + Math.pow(r(), 1.4) * 60), sv = c * TILE + r() * TILE, sc = 0.6 + r() * 0.9, rot = r() * 6.28, sy = 0.75 + r() * 0.5, hh = r(), ss = r(), ll = r();
-        if (!okAt(sv, x, 12.5)) continue; const y = hAt() - 0.12; if (y < -0.6) continue;
+        if (!okAt(sv, x, 12.5)) continue; const y = hAt() - 0.12; if (y < -0.6) continue; if (sandAt() > 0.5 && (Math.abs(x) > 16 || hh > 0.25)) continue;   // 5o: bãi cát chỉ lác đác bụi sát rào
         P.set(x, y, -sv); Q.setFromAxisAngle(UP, rot); S.set(sc, sc * sy, sc); M4.compose(P, Q, S);
         C.setHSL(0.22 + hh * 0.08, 0.4 + ss * 0.2, 0.2 + ll * 0.1); bushes.setMatrixAt(nb, M4); bushes.setColorAt(nb, C); nb++;
       }
@@ -446,8 +449,8 @@ export function createWorld({ scene, U, bend, keyDir, trk }) {
         P.set(x, y, -sv); Q.setFromAxisAngle(UP, rot); S.set(sc, sc * sy, sc); M4.compose(P, Q, S);
         C.setHSL(0.17 + hh * 0.08, 0.45 + ss * 0.2, 0.26 + ll * 0.12); grass.setMatrixAt(ng, M4); grass.setColorAt(ng, C); ng++;
       }
-      for (let i = 0; i < 6 && npa < NPa; i++) {                   // dừa: chỉ trên bãi cát ven biển (bỏ chỗ đã ngập nước)
-        const sd = r() < 0.5 ? -1 : 1, x = sd * (13.6 + r() * 30), sv = c * TILE + r() * TILE, sc = 0.9 + r() * 0.45, rot = Math.PI * 0.5 + (r() - 0.5) * 1.6, hh = r(), ll = r();
+      for (let i = 0; i < 5 && npa < NPa; i++) {                   // dừa: hàng dày trên bãi cát bên phải như 4x (bỏ chỗ đã ngập nước)
+        const sd = r() < 0 ? -1 : 1, x = sd * (13.6 + r() * 16),   /* 5o: luôn bên phải (bờ hồ), 13,6–29,6 m */ sv = c * TILE + r() * TILE, sc = 0.9 + r() * 0.45, rot = Math.PI * 0.5 + (r() - 0.5) * 1.6, hh = r(), ll = r();
         if (!okAt(sv, x, 13)) continue; if (sandAt() < 0.5) continue; const y = hAt(); if (y < -0.9) continue;
         P.set(x, y - 0.1, -sv); Q.setFromAxisAngle(UP, rot); S.set(sc, sc, sc); M4.compose(P, Q, S);
         C.setHSL(0.27 + hh * 0.05, 0.5, 0.26 + ll * 0.08); palms.setMatrixAt(npa, M4); palms.setColorAt(npa, C); npa++;
@@ -535,6 +538,8 @@ export function createWorld({ scene, U, bend, keyDir, trk }) {
       const snap = Math.floor(camPos.z / TILE) * TILE; road.position.z = snap - ROAD_LEN / 2 + 200; rails.forEach(r => r.position.z = road.position.z);
       const s0 = Math.floor((sMin - 220) / TILE) * TILE, s1 = Math.ceil((sMax + 1000) / TILE) * TILE;
       let R = [[s0, s1]];
+      if (sMax - sMin > 900) { const a1 = Math.ceil((sMin + 700) / TILE) * TILE, b0 = Math.floor((sMax - 220) / TILE) * TILE;   // 5o: 2 xe cách xa (5n bỏ trần 150 m) ⇒ rải quanh TỪNG xe trước, khúc giữa sau
+        R = [[s0, a1], [b0, s1], [a1 + TILE, b0 - TILE]].filter(([p, q]) => q >= p); }
       if (sAlt != null) { const a0 = Math.floor((sAlt - 200) / TILE) * TILE, a1 = Math.ceil((sAlt + 900) / TILE) * TILE;   // 5j: vùng quanh xe bay
         if (a0 < s0 || a1 > s1) { if (a1 < s0 - TILE || a0 > s1 + TILE) { const sn = Math.min(s1, Math.ceil((sMax + 350) / TILE) * TILE), an = Math.min(a1, a0 + 6 * TILE);
             R = [[s0, sn], [a0, an], [sn + TILE, s1], [an + TILE, a1]].filter(([p, q]) => q >= p); }                     // tách xa ⇒ phần GẦN của cả 2 trước, phần xa sau

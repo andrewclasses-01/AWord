@@ -546,6 +546,14 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 592 (28/10/2026) — RACING WORDS lên myGame 5o: dốc dày ngẫu nhiên đổi bên · dốc rộng 4,65 m · hông dốc = tường · bờ hồ cát + dừa như 4x
+**Thầy:** dốc thẳng + xoắn quá ít (chọn bay qua góc cua; thẳng / xoắn ngẫu nhiên mỗi trận, 2 dốc liền nhau không cùng bên) · dốc thẳng rộng thêm 50 % · phải lăn vào mép dốc mới bay, đâm hông nửa sau = tường · bờ hồ dừa + bãi cát như 4x. Thầy thử ở myGame rồi bảo "đưa lên AWord".
+**Làm ở myGame** `179c5cf` (chi tiết: myGame `speed-run/HO SO BAN GIAO RACING WORDS.md` mục MẪU 5o): 25 chỗ dốc / vòng (trận 1.920 m gặp 7, cũ 3), RAMP_W 4,65, rampWall, gờ bãi cát từ 16 m, dừa 240, rải cây quanh từng xe khi 2 xe cách > 900 m.
+**Ở AWord:** `tools/chep-racing-words.py` GOC `rw-5o.js` ⇒ chép rw/sr3d/track/world-5o, xoá rw/sr3d/track/world-5n (traffic-5n + world-5l giữ) · `racing-words.js` GAME `./3d/rw-5o.js` · `load-files.js` 4 file 5n ⇒ 5o.
+**Đã thử (máy nhà):** bàn thử tạm `scratch/dot592-rw.html` ⇒ mọi mô-đun 200, trận tự lái về đích 1.920 m, 7 dốc (bốc 2 thẳng + 5 xoắn), dốc 4,65 m, 298 lệnh vẽ. ⬜ thầy thử TOMKO + iPad thật.
+
+---
+
 ## Đợt 591 (28/10/2026) — RACING WORDS lên myGame 5n: boost tối đa khi còn thanh + cân bằng theo mức dẫn · đường 7 km quanh HỒ · độ nhạy vô lăng · số xe traffic
 **Thầy:** boost nửa sau thanh tụt còn ~25 km/h ⇒ còn thanh là còn tối đa; giữ mục đích hạn chế chênh lệch bằng cách khác (dẫn > 100 m giảm êm; xe dẫn ghì rào / rung khi bay / dễ BAD / nạp ít trừ nhiều, xe sau ngược lại) · bản đồ dài gấp đôi, không đoạn thẳng tắp · trái núi, phải bãi cát + hồ ở giữa, thấy đối thủ phía xa · DRIVER: độ nhạy vô lăng · RACE: số xe traffic 0–100 % (100 % = ×10). Thầy thử ở myGame rồi bảo "đưa lên AWord".
 **Làm ở myGame** `829f563` (chi tiết, số đo, bẫy: myGame `speed-run/HO SO BAN GIAO RACING WORDS.md` mục MẪU 5n). Gốc lỗi boost: `VBOOST·(1 − 0,3·ahead)` + trần cứng GAP_MAX 150 m khoá xe dẫn bằng tốc độ xe sau.

@@ -1,3 +1,5 @@
+// RACING WORDS — LÕI MẪU 5o (28/10/2026) = sr3d-5n.js + thầy 28/10: DỐC DÀY ~255 m / chỗ (TRK.featSites, bay được qua góc cua) · mỗi trận bốc ngẫu nhiên thẳng / xoắn,
+//   2 dốc liền nhau luôn khác bên (layRamps gọi lại ở start) · RAMP_W 3,1 ⇒ 4,65 m · chạm dốc lần đầu khi bánh trước đã quá nửa dốc ⇒ hông dốc là TƯỜNG (rampWall).
 // RACING WORDS — LÕI MẪU 5n (28/10/2026) = sr3d-5l.js + thầy 28/10 (5 việc, hồ sơ HO SO BAN GIAO mục MẪU 5n):
 //   · BOOST: bỏ 2 luật kéo gần cũ (×(1 − 0,3·ahead) từ 25 m + trần cứng 150 m khoá bằng tốc độ xe sau ⇒ đang boost mà tụt ~25 km/h). Còn thanh = chạy tối đa;
 //     hết boost ⇒ giảm dần (~3 s). Cân bằng mới theo MỨC DẪN (leadK: 30 m ⇒ 0, 250 m ⇒ đủ): dẫn > 100 m ⇒ trần tốc độ −10 % êm tới 400 m · cọ rào ghì ×(1+0,8L−0,4B) ·
@@ -335,8 +337,8 @@ import { OutputPass } from "../../rocket-race/vendor/three/addons/OutputPass.js"
 import { RoomEnvironment } from "../../rocket-race/vendor/three/addons/RoomEnvironment.js";
 import { makeCar3d } from "./sr3d-car-5l.js";   /* 5l */
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
-import { createWorld, makeBend, HAZE, bendQ } from "./sr3d-world-5n.js";   /* 5l: uốn XOAY thật + đất theo toạ độ thật */
-import { buildTrack } from "./sr3d-track-5n.js";   /* 5l: đường đua thật ~3 km, cua gắt ~90°, zigzag */   /* 5j-e: + vùng cảnh quanh xe bay */
+import { createWorld, makeBend, HAZE, bendQ } from "./sr3d-world-5o.js";   /* 5l: uốn XOAY thật + đất theo toạ độ thật */
+import { buildTrack } from "./sr3d-track-5o.js";   /* 5l: đường đua thật ~3 km, cua gắt ~90°, zigzag */   /* 5j-e: + vùng cảnh quanh xe bay */
 import { createTwists, createPickups, TWIST, twistAngle } from "./sr3d-stunt-4b.js";
 import { createTraffic, TRAFFIC_MODES } from "./sr3d-traffic-5n.js";   /* 5l: mẫu xe 3D thật */   /* 5j-f: + nổ / lật / cháy */
 import { makeAutoRes } from "./sr3d-autores-3r.js";
@@ -386,7 +388,7 @@ export const PHYS = { SEG: 80, VBASE: 9.72, BUSE: 0.55, VMIN: 6.5, DRIFT: 3.0, A
 // bay: GUP = trọng lực lúc mới cất cánh (nhẹ ⇒ "lơ lửng"), G = sau đó · ROT = tốc độ xoay khi giữ phanh trên không (rad/s)
 export const AIR = { BOOST: 1.2, VY0: 2.8, VYK: 0.55, GUP: 4.5, G: 10.5, LIFT_T: 0.45, ROT: 7.4, ROLL: 1.5, PERFECT: 10 * Math.PI / 180, OK: 30 * Math.PI / 180, NITRO_ROT: 0.34, NITRO_USE: 0.3,   // 5l: PERFECT 15° ⇒ 10°, OK 32° ⇒ 30°
   STEER: 10, DAMP: 0.45, RMAX: 8, GUST: 1.6, ROLL_V: 3.4, ROLL_A: 1.5, ROLL_K: 1.3, TWIST_K: 1.35 };   // 5l: vô lăng trên không = MÔ-MEN nghiêng (rad/s²) · tắt dần · trần · gió giật · ngưỡng LỘN VÒNG (rad/s, rad) · ×quãng bay khi lộn / dốc xoắn
-const RAMP_W = 3.1;                                        // 5l: cầu nhảy chỉ rộng ~1,5 bề ngang xe (cũ 7 m) ⇒ phải nhắm chuẩn mới lên trọn
+const RAMP_W = 4.65;                                       // 5o: rộng thêm 50 % (thầy: "đang quá bé") · 5l: 3,1 m (~1,5 bề ngang xe, cũ 7 m)
 export const DEFAULTS = { pkBoost: true, pkLife: true, pkMissile: true, twists: true, race: "len", lenK: 2, timeS: 180, steps: 12, laps: 0, cars: ["Y2", "H4"], bend: 0.75, streak: 3, msMax: 3, hitLoss: 1, ramps: true, sameQ: true,
   lives: 0, msDmg: 2, tieWait: 0.1, missWait: 20 };          // 3q: lives 0 = tắt · tieWait/missWait giây, Infinity = chờ mãi
 const LOW_V = 40 / 3.6;                                    // 3q: dưới 40 km/h lên cầu nhảy ⇒ không bay
@@ -592,12 +594,15 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     const out = [];
     const RMAX = OPEN ? MAXS : FIN + 4000;                                      // 5j-f: dốc tiếp QUA vạch đích (Roadster chạy xa trước 2 xe vẫn gặp dốc)
     rampsXOut = []; twistsXOut = []; rampsXOn = false; rampsX.set([]); twistsX.set([], ROADX);   // 5j-i: bộ sau đích dựng muộn (rampsBeyond)
-    if (opt.ramps) for (let k = 0; k * LAP < RMAX; k++) TRK.rampSites.forEach(q => {   // 5l: dốc ở các đoạn thẳng dài của vòng thật, vòng sau đổi bên
-      const s = k * LAP + q.s, x = q.v * (k % 2 ? -4.1 : 4.1); if (s > 90 && s < RMAX - 70 && (OPEN || Math.abs(s - FIN) > 70)) (OPEN || s < FIN ? out : rampsXOut).push({ s: Math.round(s), x, w: RAMP_W });
+    // 5o: dốc DÀY ~255 m / chỗ (TRK.featSites, bay được qua góc cua) · mỗi trận BỐC NGẪU NHIÊN thẳng / xoắn · 2 dốc liền nhau LUÔN khác bên đường (thầy: tránh bay liên tục)
+    const tw = []; let side = Math.random() < 0.5 ? 1 : -1;
+    if (opt.ramps) for (let k = 0; k * LAP < RMAX; k++) TRK.featSites.forEach(s0 => {
+      const s = k * LAP + s0; if (!(s > 90 && s < RMAX - 70 && (OPEN || Math.abs(s - FIN) > 80))) return;
+      side = -side; const near = OPEN || s < FIN;
+      if (opt.twists !== false && Math.random() < 0.5) (near ? tw : twistsXOut).push({ s, side });
+      else (near ? out : rampsXOut).push({ s, x: side * 4.1, w: RAMP_W });
     });
     ramps.set(out);
-    // 4b: DỐC XOẮN — mỗi vòng 1 cái giữa 2 cầu nhảy, mép phải / trái xen kẽ
-    const tw = []; if (opt.ramps && opt.twists !== false) for (let k = 0; k * LAP < RMAX; k++) TRK.twistSites.forEach(q => { const s = k * LAP + q.s; if (s > 120 && s < RMAX - 80 && (OPEN || Math.abs(s - FIN) > 80)) (OPEN || s < FIN ? tw : twistsXOut).push({ s: Math.round(s), side: q.v * (k % 2 ? -1 : 1) }); });   // 5l
     twists.set(tw, ROADX);
     // 4c: làn x ở quãng s có cầu nhảy / dốc xoắn ⇒ xe khác né sang làn khác
     traffic.setBlocked((s, x) => out.some(q => s > q.s - 22 && s < q.s + RAMP.LEN + 6 && Math.abs(x - q.x) < q.w / 2 + 1.2) || tw.some(q => s > q.s - 22 && s < q.s + TWIST.LEN + 6 && (x - q.side * (ROADX - TWIST.W)) * q.side > -1.3));
@@ -1233,6 +1238,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   function start(cont) {   // 4y: cont = true (PLAY AGAIN) ⇒ giữ chuỗi hiệp
     if (G.phase === "count" || G.phase === "race") return false;
     if (cont !== true) SER.rounds = [];
+    layRamps();                                               // 5o: mỗi trận bốc lại dốc thẳng / xoắn
     resetTeams(); G.phase = "count"; G.countT = 0; G.qList = []; G.round = null; paintLives(); waitBar(-1); G.fin = null; G.ts = 1; G.cineW = -1; G.mergeK = 0; mount.classList.remove("is-cine"); cdShow(-1);   // 4g
     G.decided = -1; G.timeLeft = TIME_S; setFin(OPEN ? null : FIN);                                    // 4a
     traffic.set(trafficMode, 0, 0, tN());                                                               // 4c · 5n: + số xe
@@ -2407,9 +2413,19 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       const lo = Math.max(t.x - hw, r.x - r.w / 2), hi = Math.min(t.x + hw, r.x + r.w / 2), cov = clamp((hi - lo) / (2 * hw), 0, 1);
       if (cov < 0.12) continue;
       const hF = uF * k, hR = clamp(uR, 0, RAMP.LEN) * k, h = hR + (hF - hR) * ax.r / wb;
-      return { r, h, hF, hR, ap: Math.atan2(hF - hR, wb), cov, side: Math.sign(r.x - t.x) || 1, uR };
+      // 5o: CHỈ lên được dốc khi lăn vào từ mép thấp — chạm lần đầu mà bánh trước đã quá nửa dốc (phần cao) ⇒ hông dốc là TƯỜNG
+      const wall = t.ramp !== r && uF > RAMP.LEN * 0.5;
+      return { r, h, hF, hR, ap: Math.atan2(hF - hR, wb), cov, side: Math.sign(r.x - t.x) || 1, uR, wall };
     }
     return null;
+  }
+  // 5o: HÔNG DỐC = TƯỜNG — xe bị đẩy ra sát hông dốc (hết chồng), mất vận tốc ngang, hướng quay về dọc đường, toé lửa / khói / tiếng như cọ rào (railScrape)
+  function rampWall(t, rp, dt) {
+    const r = rp.r, sd = Math.sign(r.x - t.x) || rp.side, hw = cars[t.i].M.W / 2, vIn = Math.abs(t.vx + t.px);
+    t.x = r.x - sd * (r.w / 2 + hw + 0.03);
+    if ((t.vx + t.px) * sd > 0) { t.px = -sd * Math.min(4, 0.5 + vIn * 0.4); t.vx = 0; }
+    t.psi = clamp(t.psi, sd > 0 ? -0.7 : -0.04, sd > 0 ? 0.04 : 0.7);
+    railScrape(t, sd, vIn, dt);
   }
   // 5n: MỨC DẪN (thầy 28/10) — xe dẫn khó hơn, xe sau dễ hơn, tăng dần theo khoảng cách (30 m ⇒ 0, 250 m ⇒ đủ)
   //   L = mức dẫn của t (0..1) · B = mức bị bỏ lại (0..1). Chỉ khi đang đua, xe kia còn chạy, chưa chốt thắng.
@@ -2498,7 +2514,8 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       else if (t.twist) { const r = t.twist; t.twist = null; if (t.s >= r.s + TWIST.LEN - 0.6) twistLaunch(t, r); else { t.y = 0; t.ar = 0; t.ap = 0; } }
     }
     if (!t.air && !t.twist) {
-      const rp = rampContact(t);
+      let rp = rampContact(t);
+      if (rp && rp.wall) { rampWall(t, rp, dt); rp = null; }   // 5o: đâm hông nửa sau dốc ⇒ dội ra như rào
       if (rp) {
         t.ramp = rp.r; t.rampPart = rp.cov < 0.85 ? rp.side : 0;
         // 4a: độ cao + góc ngóc theo 2 trục bánh (mượt từ lúc bánh trước chạm chân dốc); đổi giữa 1 bên / cả xe trên dốc thì trượt về dần (không bật)

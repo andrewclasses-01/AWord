@@ -1,3 +1,5 @@
+// RACING WORDS mẫu 5o (28/10/2026) = track-5n + featSites: chỗ đặt dốc DÀY (thầy: "tăng số lượng dốc thẳng và dốc xoắn, quá ít" — chọn "bay qua góc cua"):
+//   cứ ~255 m một chỗ, chỉ cần CHÂN dốc (+ 16 m) nằm trên khúc lượn; xe bay ~200–280 m có thể qua góc cua (trên không xe đi theo đường như khúc lượn). Lõi bốc thẳng / xoắn.
 // RACING WORDS mẫu 5n (28/10/2026) = track-5l + thầy: "tăng gấp đôi chiều dài thực tế của bản đồ, không có chỗ nào thẳng tắp — hoặc gần vuông góc,
 //   hoặc hơi lượn sóng" · "hồ ở giữa (bên phải đường), có bãi cát rồi đến nước; núi bao ngoài (bên trái)".
 //   · Vòng ~7 km chạy THEO chiều kim đồng hồ (θ tăng = cua phải) ⇒ phía PHẢI xe luôn là TRONG vòng = hồ; phía TRÁI = ngoài vòng = núi.
@@ -35,6 +37,7 @@ const POLY = POLY0.map(([x, y, R]) => [x * XK, y, R]);
 // chỗ đặt cầu nhảy / dốc xoắn: [chỉ số cạnh (từ đỉnh i), mét tính từ đầu phần cạnh sau cung, ±1]
 const RAMP_SITES = [[1, 40, 1], [3, 30, -1], [5, 40, 1], [7, 40, -1], [8, 40, 1], [11, 40, -1], [13, 60, 1], [15, 40, -1]];
 const TWIST_SITES = [[5, 380, -1], [7, 480, 1], [9, 60, -1], [13, 520, -1]];
+const FEAT = { PITCH: 255, FROM: 200, LEN: 16 };   // 5o: khoảng cách 2 dốc · dốc đầu sau vạch xuất phát · phần cần nằm trên khúc lượn (dốc xoắn 14 m + lề)
 const WAVE = { LEN: 230, TAPER: 90, RMIN: [150, 220] };     // bước sóng · cửa sổ đầu cạnh · bán kính lượn nhỏ nhất (ngẫu nhiên cố định theo cạnh)
 
 const TAU = Math.PI * 2;
@@ -140,7 +143,9 @@ export function buildTrack() {
 
   const site = ([si, d, v], need) => { const st = straights.find(q => q.i === si); return st && st.s0 + d < st.s1 - need ? { s: st.s0 + d, v, room: st.s1 - st.s0 - d } : null; };
   let minR = Infinity; for (let k = 0; k < N; k++) if (Math.abs(kapS[k]) > 1e-6) minR = Math.min(minR, 1 / Math.abs(kapS[k]));
-  return { LAP, N, DS, TURN, kapAt, thAt, posAt, worldAt, straights, mapPts, MAPN, minR,
+  const featSites = []; for (let s = FEAT.FROM; s < LAP - 100;) {   // 5o
+    if (straights.some(e => s >= e.s0 + 10 && s + FEAT.LEN <= e.s1)) { featSites.push(Math.round(s)); s += FEAT.PITCH; } else s += 5; }
+  return { LAP, N, DS, TURN, kapAt, thAt, posAt, worldAt, straights, mapPts, MAPN, minR, featSites,
     dist: { data: dist, ins, w: DW, h: DH, x0, y0, cell: CELL }, distAt, insideAt, SHORE_Y,
     rampSites: RAMP_SITES.map(q => site(q, 240)).filter(Boolean), twistSites: TWIST_SITES.map(q => site(q, 230)).filter(Boolean) };
 }
