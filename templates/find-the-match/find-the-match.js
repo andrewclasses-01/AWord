@@ -226,6 +226,7 @@ const ftmTemplate = {
     const timerTotal = opt.timerTotalSeconds ?? 120;
 
     const pairs = [...(activity.content?.pairs || [])].filter(p => p && p.keyword && p.definition);
+    const cungChu = (idx, target) => idx === target || chuKhoa(pairs[idx]) === chuKhoa(pairs[target]);   // Đợt 593
     const total = pairs.length;
     if (total < 2) {
       root.innerHTML = "";
@@ -1156,7 +1157,7 @@ const ftmTemplate = {
         ui.noteActivity?.();
         lockTiles();
         let fightHetMang = false;
-        const correct = idx === target;
+        const correct = cungChu(idx, target);
         fightPendingReveal = { idx, tile, correct };
         if (correct) {
           state[target].solved = true;
@@ -1198,7 +1199,7 @@ const ftmTemplate = {
       // while this one is still flying off / sliding out — startCycle re-arms
       // the 50%-in unlock for the incoming prompt (teacher 1/8, like True/false).
       lockTiles();
-      if (idx === target) {
+      if (cungChu(idx, target)) {
         queue.shift();
         state[target].solved = true;
         turnSolved[curRow] = true;   // Đợt 265b — LƯỢT này bắt đúng (xem `turnSolved`)
@@ -1467,6 +1468,11 @@ const ftmTemplate = {
 
 // ⭐ Đợt 470 — đọc trạng thái LÀM TIẾP (`ui.khoiPhuc`) và kiểm nó khớp ĐÚNG đề đang dựng (n cặp); sai một li ⇒ null.
 // Phép chia trang tính lại y như mount() từ bố cục đã lưu (`co`) để kiểm hàng chờ từng trang nằm gọn trong trang đó.
+// ⭐⭐ Đợt 593 (thầy, 28/10/2026) — ô bấm ĐÚNG khi CHỮ trên ô trùng chữ đáp án, không phải khi đúng mã ô.
+// Hai cặp cùng từ khoá ("cat" ↔ "a small furry pet", "cat" ↔ "it says meow") cho ra hai ô "cat" y hệt nhau;
+// em bấm ô "cat" kia mà bị chấm sai là chấm oan (cùng bệnh Unjumble từ lặp).
+function chuKhoa(p) { return String(p?.keyword ?? "").trim().replace(/\s+/g, " ").toLowerCase(); }
+
 function docKhoiPhuc(kp, n) {
   if (!kp || kp.v !== 1 || !thuTuHopLe(kp.ord, n) || !thuTuHopLe(kp.co, n)) return null;
   const laChiSo = i => Number.isInteger(i) && i >= 0 && i < n;

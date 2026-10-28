@@ -1261,8 +1261,11 @@ const wordshakeTemplate = {
       else if (!S && mode === "free" && found3.some(f => f.w === lw)) { kind = "dup"; sym = "Found"; }
       else if (lesson) {
         const p = mode === "free" ? points(Math.min(7, Math.max(3, w.length))) * 2 : 1;
-        if (i >= 0) { st[i].solved = true; st[i].typed = w; }
-        score++; pts += p;
+        // ⭐ Đợt 593 — hai mục cùng một từ ("BAT" con dơi / "BAT" cây gậy): ghép được từ đó là xong CẢ HAI;
+        // trước chỉ đánh dấu mục đầu, ghép lại thì báo "Found" ⇒ mục kia mãi chưa làm, bảng kết quả chấm sai oan.
+        let moi = 0;
+        if (i >= 0) items.forEach((it, j) => { if (it.up === w && !st[j].solved && !st[j].given) { st[j].solved = true; st[j].typed = w; moi++; } });
+        score += Math.max(1, moi); pts += p;
         const m = mode === "free" && i >= 0 && !voiceView(activity, items[i]).hideText ? items[i].clue : "";
         if (S) { S.found.set(w, side); if (mode === "free") S.log.unshift({ w: lw, side, m, p, ipa: i >= 0 ? items[i].ipa : "" }); }
         else if (mode === "free") found3.unshift({ w: lw, m, les: true, p });

@@ -388,3 +388,6 @@ hàng"*); chi tiết đo đạc + 5 luật mới nằm ở `../../GHI CHU DU AN.
 vi nào lúc chơi. Act cũ mở lên vẫn đúng y như trước.
 
 **Đo thật panel của template này (1280×720, cùng phép đo trước/sau)**: **603px → 392px**.
+
+## Đợt 593 (28/10/2026) — chấm theo chữ, không theo mã ô
+Phép chấm theo CHỮ: `slotOk(words, order, slot)` = chữ ở chỗ đó trùng chữ câu gốc; `greenPrefix(order, words)`, doSubmit, khôi phục làm tiếp, `prepareItem` (đếm đúng chỗ khi xáo) đều qua nó. Câu có từ lặp ("the … the") đổi chỗ hai mảnh trùng vẫn ĐÚNG. Bàn thử `scratch/unjumble593-test.html`. Chi tiết: GHI CHU DU AN.md Đợt 593.

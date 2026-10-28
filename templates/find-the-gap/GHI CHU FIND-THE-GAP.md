@@ -262,3 +262,6 @@ Ba việc, chỉ `templates/find-the-gap/` (+ `core/tpl-files.js` sinh lại vì
    test.html: đúng 3 → câu 1 có 3 ô, FIND 33 ô trang 1/2. `node --input-type=module --check` sạch 2 file; 0 lỗi console.
 - ⬜ Thầy bấm tay trang thật: Fight FIND (ảnh cũ) · Options GAPS bằng NGÓN trên TOMKO (chạm/kéo/hai nút trùng) · ván
   thường với 1–10 mặc định (có hiền không?). ⬜ Showdown: mỗi máy bốc số/vị trí riêng — chưa đồng bộ qua Firestore.
+
+## Đợt 593 (28/10/2026) — chấm theo chữ, không theo mã ô
+`isRightAnswer` so bằng `khoaCham` (normalize + bỏ mọi dấu câu trừ dấu nháy ') ⇒ gõ "yes, please" cho ô cụm, hay "home." khi dấu chấm in ngoài ô, đều đúng. Chi tiết: GHI CHU DU AN.md Đợt 593.

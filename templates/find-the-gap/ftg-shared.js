@@ -77,9 +77,17 @@ export function answersOf(item, gap) {
   return out;
 }
 
+// ⭐ Đợt 593 (thầy, 28/10/2026) — khoá chấm KHÔNG tính dấu câu. Ô trống cụm "yes, please" có đáp án lưu là
+// "yes please" (gapText chỉ lấy lõi từng chữ), em gõ đúng "yes, please" lại bị sai; dấu chấm/phẩy cuối đã in
+// sẵn ngoài ô mà em gõ thêm "home." cũng sai ⇒ chấm oan. Giữ dấu nháy ('): "its" ≠ "it's".
+function khoaCham(str) {
+  return normalize(String(str ?? "").replace(/[ʼ`´]/g, "'"))
+    .replace(/[^\p{L}\p{N}' ]+/gu, " ").replace(/\s+/g, " ").trim();
+}
+
 export function isRightAnswer(item, gap, typed) {
-  const t = normalize(typed);
-  return !!t && answersOf(item, gap).some(a => normalize(a) === t);
+  const t = khoaCham(typed);
+  return !!t && answersOf(item, gap).some(a => khoaCham(a) === t);
 }
 
 // Content -> playable items (tokens attached, gaps validated, order kept).

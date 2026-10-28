@@ -248,7 +248,11 @@ const flyingFruitTemplate = {
     // ---------- clue / item ----------
     function startItem(i) {
       current = items[i];
-      otherWords = items.filter((_, j) => j !== i).map(x => x.word).filter(Boolean);
+      // ⭐ Đợt 593 — mồi nhử loại theo CHỮ, không theo mã: hai mục cùng từ ("bat" con dơi / "bat" cây gậy)
+      // thì quả "bat" của mục kia bay ra mang nhãn SAI dù em bấm đúng chữ ⇒ chấm oan.
+      const chuDung = String(current.word ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+      otherWords = items.filter((_, j) => j !== i).map(x => x.word).filter(Boolean)
+        .filter(w => String(w).trim().replace(/\s+/g, " ").toLowerCase() !== chuDung);
       queue = [];
       if (fitter) { fitter.destroy(); fitter = null; }
       voicePlayer.stop();   // silence the PREVIOUS item's clip, if any

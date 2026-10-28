@@ -175,6 +175,22 @@ const gsTemplate = {
       return () => {};
     }
     const answerOf = it => groupIndexOf(groups, it.group);   // correct group index of an item
+    // ⭐⭐ Đợt 593 (thầy, 28/10/2026) — chấm theo CHỮ trên chip, không theo mã chip. Cùng một chữ ở HAI nhóm
+    // ("bat" → Animals, "bat" → Sports) cho ra hai chip y hệt nhau: em thả chip #1 vào Sports, chip #2 vào
+    // Animals thì bảng trông đúng hết mà so mã thì sai cả hai ⇒ chấm oan (cùng bệnh Unjumble từ lặp).
+    // `nhanCap(idx, gi, daDung)` = chỉ số MỤC có cùng chữ với chip idx, thuộc nhóm gi, chưa bị chip nào nhận
+    // (ưu tiên chính nó); −1 = sai. Mỗi mục chỉ nhận một lần ⇒ hai chip "bat" cùng vào Sports vẫn một chip sai.
+    const chuMuc = it => it.text.trim().replace(/\s+/g, " ").toLowerCase();
+    const nhanCap = (idx, gi, daDung) => {
+      if (gi == null || gi < 0) return -1;
+      if (!daDung.has(idx) && answerOf(items[idx]) === gi) return idx;
+      const t = chuMuc(items[idx]);
+      for (let j = 0; j < items.length; j++)
+        if (!daDung.has(j) && answerOf(items[j]) === gi && chuMuc(items[j]) === t) return j;
+      return -1;
+    };
+    const mucDaNhan = new Set();   // Đợt 593 — mục đã có chip nhận (chạm / băng chuyền / Instantly: đúng là chốt)
+    const nhanDung = (idx, gi) => { const j = nhanCap(idx, gi, mucDaNhan); if (j >= 0) mucDaNhan.add(j); return j >= 0; };
     const pointsOff = Math.max(0, Math.min(100, Number(opt.pointsOff) || 0));
     const timerMode = opt.timer ?? "countUp";
     const timerTotal = opt.timerTotalSeconds ?? 120;
@@ -344,6 +360,7 @@ const gsTemplate = {
         played.forEach(i => {
           const o = kp.st[i];
           state[i] = { answered: true, correct: o.k === true, chosen: o.c, timedOut: false };
+          if (o.k === true) nhanDung(i, o.c);   // Đợt 593 — dựng lại mục đã bị nhận
         });
         const sai = played.filter(i => !state[i].correct).length;
         if (livesLeft != null) livesLeft = Math.max(0, livesLeft - sai);
@@ -736,7 +753,7 @@ const gsTemplate = {
 
         const idx = chip.itemIdx;
         const pill = pillEls[gi];
-        const isRight = answerOf(items[idx]) === gi;
+        const isRight = nhanDung(idx, gi);   // Đợt 593 — theo chữ
         clone.remove();
         state[idx].answered = true;
         state[idx].chosen = gi;
@@ -844,7 +861,7 @@ const gsTemplate = {
         : (opt.shuffleQuestions === false ? items.map((_, i) => i) : shuffle(items.map((_, i) => i)));
       reviewOrder = items.map((_, i) => i);
       // Instantly: chỉ chip đã KHOÁ đúng mới nằm lại trong nhóm (chip sai đang bật về kho lúc chụp ⇒ về kho).
-      const locked = items.map((_, i) => !!(kp && instant && kp.locked[i] === true && kp.placed[i] === answerOf(items[i])));
+      const locked = items.map((_, i) => !!(kp && instant && kp.locked[i] === true && nhanDung(i, kp.placed[i])));   // Đợt 593 — theo chữ
       const placed = items.map((_, i) => (!kp ? null : instant ? (locked[i] ? kp.placed[i] : null) : kp.placed[i]));   // group index each chip sits in, null = pool
       let soSai = kp ? kp.sai : 0;            // Đợt 470 — Instantly: số lần thả sai (mỗi lần một tim + pointsOff)
       let graded = false;
@@ -961,7 +978,7 @@ const gsTemplate = {
         chip.classList.remove("is-wrong");
         ui.daDoiBaiLam?.();   // Đợt 470 — cất lượt để làm tiếp (engine gom 120 ms ⇒ locked/soSai bên dưới đã kịp ghi)
         if (instant) {
-          const ok = answerOf(items[idx]) === gi;
+          const ok = nhanDung(idx, gi);   // Đợt 593 — theo chữ
           state[idx].answered = true; state[idx].chosen = gi; state[idx].correct = ok;
           if (ok) {
             locked[idx] = true;
@@ -1011,11 +1028,18 @@ const gsTemplate = {
         graded = true;
         setSelected(null);
         let wrong = 0, right = 0;
+        const daDung = new Set();   // Đợt 593 — chấm theo chữ; lượt 1 ưu tiên chip nằm đúng nhóm của chính nó
+        const dung = items.map((_, idx) => {
+          const gi = placed[idx];
+          if (gi != null && answerOf(items[idx]) === gi) { daDung.add(idx); return true; }
+          return false;
+        });
+        items.forEach((_, idx) => { if (!dung[idx]) { const j = nhanCap(idx, placed[idx], daDung); if (j >= 0) { daDung.add(j); dung[idx] = true; } } });
         items.forEach((it, idx) => {
           const gi = placed[idx];
           const s = state[idx];
           s.chosen = gi; s.answered = gi != null;
-          s.correct = gi != null && answerOf(it) === gi;
+          s.correct = dung[idx];
           const chip = chips[idx];
           chip.classList.add(s.correct ? "is-correct" : "is-wrong");
           chip.append(badge(s.correct));

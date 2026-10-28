@@ -85,7 +85,9 @@ function prepareItem(sentence) {
   // Prefer a DERANGEMENT (no word left in its correct slot) so the puzzle
   // never starts half-solved; fall back to "any order != solved" if a clean
   // derangement isn't found (or n <= 1, where none exists).
-  const homeCount = ord => ord.reduce((c, id, i) => c + (id === i ? 1 : 0), 0);
+  // Đợt 593 — "đúng chỗ" so theo CHỮ (slotOk), không theo mã mảnh: câu có từ lặp ("the … the")
+  // mà xáo chỉ đổi chỗ hai mảnh trùng thì vẫn là câu đã giải.
+  const homeCount = ord => ord.reduce((c, id, i) => c + (slotOk(words, ord, i) ? 1 : 0), 0);
   let best = order, bestHome = homeCount(order);
   for (let tries = 0; tries < 40 && bestHome > 0; tries++) {
     const cand = shuffle(order);
@@ -295,7 +297,7 @@ const unjumbleTemplate = {
         st.order = o.o.slice();
         st.moveCount = Math.max(0, o.m | 0);
         st.timedOut = o.t === true;
-        const xong = greenPrefix(st.order) === n;
+        const xong = greenPrefix(st.order, items[i].words) === n;
         if (st.timedOut) {
           st.graded = true;
           if (mode === "submit") { st.correct = false; st.points = pointsOff ? -pointsOff : 0; }
@@ -303,7 +305,7 @@ const unjumbleTemplate = {
         } else if (mode === "submit") {
           if (o.g === true) {
             st.graded = true;
-            st.marks = st.order.map((id, slot) => (id === slot ? "correct" : "wrong"));
+            st.marks = st.order.map((_, slot) => (slotOk(items[i].words, st.order, slot) ? "correct" : "wrong"));
             st.correct = xong;
             st.points = xong ? 1 : (pointsOff ? -pointsOff : 0);
             if (!xong) matMang++;
@@ -524,7 +526,7 @@ const unjumbleTemplate = {
       submitBtnEl = null; revealEl = null;
       const it = items[index];
       const st = state[index];
-      st._green = greenPrefix(st.order);   // sync the "correct-run" marker for this sentence
+      st._green = greenPrefix(st.order, it.words);   // sync the "correct-run" marker for this sentence
 
       const card = el("div", "aw-unj-card");
       card.append(doodleLayer());
@@ -607,7 +609,7 @@ const unjumbleTemplate = {
       // of the sentence) is green — a word in its right spot but sitting after a
       // wrong one stays grey (teacher, Đợt 36). On a full solve prefix === n → all
       // green. Submit mode colours per-slot from the marks after Submit.
-      const green = mode === "submit" ? 0 : greenPrefix(st.order);
+      const green = mode === "submit" ? 0 : greenPrefix(st.order, it.words);
       st.order.forEach((wordId, slot) => {
         const tile = el("span", "aw-unj-wtile");
         tile.dataset.slot = String(slot);
@@ -817,7 +819,7 @@ const unjumbleTemplate = {
       if (mode === "submit") return;
       const st = state[index], it = items[index];
       const n = it.words.length;
-      const green = greenPrefix(st.order);
+      const green = greenPrefix(st.order, it.words);
       if (green > (st._green || 0)) unjumbleSound.correct();   // the leading correct run just grew
       st._green = green;
       if (green === n) finalizeLiveWord();                     // whole sentence solved
@@ -875,7 +877,7 @@ const unjumbleTemplate = {
       const tiles = [...boardEl.querySelectorAll(".aw-unj-wtile")];
       let allCorrect = true, cc = 0;
       for (let slot = 0; slot < n; slot++) {
-        const isRight = st.order[slot] === slot;
+        const isRight = slotOk(it.words, st.order, slot);
         if (isRight) cc++; else allCorrect = false;
         st.marks[slot] = isRight ? "correct" : "wrong";
         setTimeout(() => {
@@ -1307,12 +1309,20 @@ function docKhoiPhuc(kp, goc) {
   return ok ? kp : null;
 }
 
-// Length of the leading run of already-correctly-placed words (order[i] === i for
+// ⭐⭐ Đợt 593 (thầy, 28/10/2026) — ô `slot` ĐÚNG khi CHỮ đang đặt ở đó trùng chữ của câu gốc tại
+// đó, KHÔNG phải khi mã mảnh === slot. Câu có từ lặp ("the fish are swimming in the river") có hai
+// mảnh "the" trông y hệt nhau; em đặt mảnh "the" thứ hai lên đầu thì câu hiện ra đúng từng chữ mà
+// so mã thì báo sai ⇒ chấm oan (BT2 lớp NTK9, câu 23 + 27).
+function slotOk(words, order, slot) {
+  return words[order[slot]] === words[slot];
+}
+
+// Length of the leading run of already-correctly-placed words (slotOk for
 // i = 0,1,…). Everything up to the first out-of-place word is "green"; the rest
 // stays grey even if a later word happens to sit in its own slot (teacher, Đợt 36).
-function greenPrefix(order) {
+function greenPrefix(order, words) {
   let p = 0;
-  while (p < order.length && order[p] === p) p++;
+  while (p < order.length && slotOk(words, order, p)) p++;
   return p;
 }
 

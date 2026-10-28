@@ -245,3 +245,6 @@ FIGHT của template ĐÃ NỐI (core `shared-middle` + skin, xem mục FIGHT). 
 - Đã đo đổi template: Anagram (6 từ) → Wordshake giữ word/clue/voice; Wordshake → Quiz 8 câu; Wordshake có trong `switchTargets(anagram)`.
 - ⬜ Thầy chưa bấm tay: TOMKO, âm thanh, hết giờ giữa trận Fight; nút ‹ › trong bàn Fight hơi nhỏ.
 - Đợt 395 GAME: Options level EASY/MEDIUM/HARD + đếm điểm hết giờ từng nấc song song (chi tiết `GHI CHU DU AN.md`). ⬜ thầy chưa nghe/bấm tay.
+
+## Đợt 593 (28/10/2026) — chấm theo chữ, không theo mã ô
+Ghép được một từ ⇒ đánh dấu xong MỌI mục cùng từ (`up`) đó (list/free). Trước chỉ mục đầu ⇒ mục trùng mãi chưa làm. Chi tiết: GHI CHU DU AN.md Đợt 593.

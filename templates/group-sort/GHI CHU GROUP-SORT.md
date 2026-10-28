@@ -108,3 +108,6 @@ Lưu ra `{groups, items}`; item của nhóm không còn tồn tại bị bỏ kh
 - Fight mode, Showdown (`showdownMode`/`sdDeal`/`fightMode`) — chưa khai; game này ra đời cho bài giao khóa học.
 - Giọng đọc từng câu (`voice`), chuyển đổi template (`core/convert.js`) sang/từ Quiz — chưa làm.
 - Nhập từ file bài học Excel (`core/lesson-import.js`) — chưa có dạng sheet; hiện tạo bằng editor hoặc bundle JSON.
+
+## Đợt 593 (28/10/2026) — chấm theo chữ, không theo mã ô
+Chip chấm theo CHỮ: `nhanCap(idx, gi, daDung)` tìm mục cùng chữ thuộc nhóm gi chưa bị nhận (ưu tiên chính nó); `nhanDung` dùng tập `mucDaNhan` cho băng chuyền + Instantly + làm tiếp; On submit chấm hai lượt. Mỗi mục chỉ nhận một chip. Chi tiết: GHI CHU DU AN.md Đợt 593.

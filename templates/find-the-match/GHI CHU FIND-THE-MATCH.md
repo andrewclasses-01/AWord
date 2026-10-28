@@ -460,3 +460,6 @@ hàng"*); chi tiết đo đạc + 5 luật mới nằm ở `../../GHI CHU DU AN.
 vi nào lúc chơi. Act cũ mở lên vẫn đúng y như trước.
 
 **Đo thật panel của template này (1280×720, cùng phép đo trước/sau)**: **621px → 392px**.
+
+## Đợt 593 (28/10/2026) — chấm theo chữ, không theo mã ô
+Ô bấm đúng khi CHỮ trên ô trùng từ khoá đáp án (`cungChu`, bỏ hoa/thường + dấu cách thừa), không cần đúng mã ô. Hai cặp cùng từ khoá: bấm ô nào cũng đúng (thường + Fight). Chi tiết: GHI CHU DU AN.md Đợt 593.

@@ -546,6 +546,23 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 593 (28/10/2026) — CHẤM THEO CHỮ, KHÔNG THEO MÃ Ô: hết chấm oan khi đáp án trông y hệt đáp án đúng
+**Thầy:** bài BT2 Unjumble lớp NTK9 (em Hoàng Khánh, nộp 20:33 28/10): câu 23 "the fish are swimming in the river" và câu 27 "the cats are standing on the table" em xếp ra Y HỆT đáp án mà máy chấm sai. Thầy bảo sửa để không còn tình trạng này, rồi rà các act/template khác có lỗi oan kiểu đó.
+**Gốc (Unjumble):** câu tách thành mảnh có mã 0..n−1; phép chấm là "mảnh ở chỗ k có mã k". Câu có từ lặp ("the … the") có hai mảnh "the" trông như nhau — em đặt mảnh "the" thứ hai lên đầu thì câu đúng từng chữ mà so mã báo sai cả câu.
+**Sửa:**
+- **Unjumble** — hàm mới `slotOk` (chữ ở chỗ k trùng chữ câu gốc tại k); `greenPrefix(order, words)` dùng nó; nộp bài (doSubmit), khôi phục làm tiếp, tô xanh bonus đều qua đó. Xáo câu (`prepareItem`) cũng đếm "đúng chỗ" theo chữ ⇒ không bao giờ mở ra câu đã đúng sẵn.
+- **Find the match** — `cungChu(idx, target)`: ô bấm đúng khi chữ trên ô trùng từ khoá (bỏ hoa/thường, dấu cách thừa). Hai cặp cùng từ khoá ("cat") bấm ô "cat" nào cũng đúng; cả đường thường lẫn Fight.
+- **Group sort** — `nhanCap`/`nhanDung`: chip đúng khi có MỤC cùng chữ thuộc nhóm đó chưa bị chip nào nhận (ưu tiên chính nó). Cùng chữ ở hai nhóm ("bat" Animals / "bat" Sports) thả đảo vẫn đúng; thả cả hai vào một nhóm vẫn đúng một chip sai. Áp cho băng chuyền (chạm), kéo Instantly, kéo On submit (chấm hai lượt: chip đúng nhóm của chính nó trước), và khôi phục làm tiếp.
+- **Wordshake** (list/free) — ghép được một từ là đánh dấu xong MỌI mục cùng từ đó (trước chỉ mục đầu, ghép lại báo "Found" ⇒ mục kia mãi chưa làm).
+- **Flying fruit** — mồi nhử lọc bỏ chữ trùng với đáp án đang hỏi (trước quả "bat" của mục kia bay ra mang nhãn SAI).
+- **Find the gap** (gõ) — `isRightAnswer` so bằng khoá bỏ dấu câu (giữ dấu nháy '): ô cụm "yes, please" em gõ đủ dấu phẩy, hoặc gõ thừa "home." khi dấu chấm đã in ngoài ô, giờ đều đúng.
+**Rà cả bộ (agent đọc 22 template):** Anagram, Running team, Running word, Balloon pop, Crossword, True/false so theo chữ/boolean ⇒ không bị. Quiz, Gameshow, Open the box, Maze chase, Whack-a-mole, Rocket race, Racing words chấm theo cờ "correct" của từng lựa chọn ⇒ chỉ oan nếu ĐỀ có hai lựa chọn cùng chữ (lỗi soạn đề, không sửa code). Fight/Showdown nhận kết quả từ template nên sửa template là đủ.
+**CỐ Ý KHÔNG ĐỔI:** Type the answer — luật Đợt 577 thầy chốt: thiếu dấu câu của CHÍNH đáp án ("Yes, I do" so với "Yes, I do.") vẫn sai.
+**Kiểm (máy nhà, cổng 5510):** `scratch/unjumble593-test.html` 9/9 (đổi chỗ hai "the" ⇒ đúng ở nộp bài, làm tiếp, bonus; sai thật vẫn sai; 30 lần xáo không lần nào đúng sẵn) · `scratch/unjumble311-test.html` 15/15 (không vỡ cũ) · `scratch/dot593-cham-theo-chu.html` 12/12 (Find the match ×2, Group sort submit/instant/đối chứng, Wordshake, Flying fruit, Find the gap ×5). Chạy cùng bàn thử trên code CŨ ⇒ 7 ca hỏng (bàn thử bắt được lỗi thật). `ftm-fight-test.html` 17/18 — ca "hai bàn xếp ô giống hệt" hỏng CẢ trên code cũ (có từ trước, không liên quan đợt này).
+**Bài đã nộp KHÔNG tự chấm lại:** điểm cũ đã lưu; em Hoàng Khánh câu 23 + 27 đúng ⇒ 27/30 = 90 % nếu thầy sửa tay.
+
+---
+
 ## Đợt 592 (28/10/2026) — RACING WORDS lên myGame 5o: dốc dày ngẫu nhiên đổi bên · dốc rộng 4,65 m · hông dốc = tường · bờ hồ cát + dừa như 4x
 **Thầy:** dốc thẳng + xoắn quá ít (chọn bay qua góc cua; thẳng / xoắn ngẫu nhiên mỗi trận, 2 dốc liền nhau không cùng bên) · dốc thẳng rộng thêm 50 % · phải lăn vào mép dốc mới bay, đâm hông nửa sau = tường · bờ hồ dừa + bãi cát như 4x. Thầy thử ở myGame rồi bảo "đưa lên AWord".
 **Làm ở myGame** `179c5cf` (chi tiết: myGame `speed-run/HO SO BAN GIAO RACING WORDS.md` mục MẪU 5o): 25 chỗ dốc / vòng (trận 1.920 m gặp 7, cũ 3), RAMP_W 4,65, rampWall, gờ bãi cát từ 16 m, dừa 240, rải cây quanh từng xe khi 2 xe cách > 900 m.

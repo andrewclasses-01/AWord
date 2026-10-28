@@ -137,3 +137,6 @@ hàng"*); chi tiết đo đạc + 5 luật mới nằm ở `../../GHI CHU DU AN.
 vi nào lúc chơi. Act cũ mở lên vẫn đúng y như trước.
 
 **Đo thật panel của template này (1280×720, cùng phép đo trước/sau)**: **525px → 333px**.
+
+## Đợt 593 (28/10/2026) — chấm theo chữ, không theo mã ô
+Mồi nhử (`otherWords`) lọc bỏ chữ trùng đáp án đang hỏi — hai mục cùng từ không còn quả đúng chữ mà mang nhãn SAI. Chi tiết: GHI CHU DU AN.md Đợt 593.
