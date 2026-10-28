@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 593 (28/10/2026) — CHẤM THEO CHỮ, KHÔNG THEO MÃ Ô: hết chấm oan khi đáp án trông y hệt đáp án đúng
+## Đợt 593 (28/10/2026) — CHẤM THEO CHỮ, KHÔNG THEO MÃ Ô: hết chấm oan khi đáp án trông y hệt đáp án đúng — code `6b4161b` LIVE (kiem-live 6/6)
 **Thầy:** bài BT2 Unjumble lớp NTK9 (em Hoàng Khánh, nộp 20:33 28/10): câu 23 "the fish are swimming in the river" và câu 27 "the cats are standing on the table" em xếp ra Y HỆT đáp án mà máy chấm sai. Thầy bảo sửa để không còn tình trạng này, rồi rà các act/template khác có lỗi oan kiểu đó.
 **Gốc (Unjumble):** câu tách thành mảnh có mã 0..n−1; phép chấm là "mảnh ở chỗ k có mã k". Câu có từ lặp ("the … the") có hai mảnh "the" trông như nhau — em đặt mảnh "the" thứ hai lên đầu thì câu đúng từng chữ mà so mã báo sai cả câu.
 **Sửa:**
