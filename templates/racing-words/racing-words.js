@@ -45,7 +45,8 @@ const LOAD_BG = new URL("./rw-loading.webp", import.meta.url).href;   // Đợt 
 const loader = () => { ensureCss(); return showLoader3d({ key: "racingwords", title: "RACING WORDS", theme: "race", bg: LOAD_BG, files: loadFiles, pace: { create: createLoadPace, key: "rw" } }); };
 preloadLoader3d("race", LOAD_BG);
 
-const GAME = "./3d/rw-5o.js";   // ⭐ Đợt 592: myGame 5o (dốc dày ngẫu nhiên đổi bên, dốc rộng 4,65 m, hông dốc = tường, bờ hồ cát + dừa như 4x)
+const GAME = "./3d/rw-5p.js";   // ⭐ Đợt 595: myGame 5p (bay dễ cân, trần nghiêng 135°, tia lửa bánh khi đáp, nảy vài nhịp, lái gắt hơn, dốc rộng +30 %)
+// Đợt 592 (cũ): const GAME = "./3d/rw-5o.js";   // ⭐ Đợt 592: myGame 5o (dốc dày ngẫu nhiên đổi bên, dốc rộng 4,65 m, hông dốc = tường, bờ hồ cát + dừa như 4x)
 // Đợt 591 (cũ): const GAME = "./3d/rw-5n.js";   // ⭐ Đợt 591: myGame 5n (boost tối đa khi còn thanh + cân bằng theo mức dẫn, đường 7 km quanh HỒ, độ nhạy vô lăng, traffic 0–100 %)
 // Đợt 589 (cũ): const GAME = "./3d/rw-5l.js";   // ⭐ Đợt 589: myGame 5l (đường thật 3,5 km cua gắt, cọ rào, bay chông chênh + lộn vòng, xe traffic 3D)
 // Đợt 571 (cũ): const GAME = "./3d/rw-5k.js";   // ⭐ Đợt 571: myGame 5k (Roadster bám xe + tên lửa tự đuổi) ·                     // ⭐ Đợt 570: myGame 5j — XE BAY ROADSTER trong bộ Drone (Settings ▸ Drone ▸ FLYING CAR · Roadster).

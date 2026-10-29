@@ -6,7 +6,7 @@
 //     số thứ tự (như cây), ăn rồi thì biến mất cho cả 2 xe. 3 InstancedMesh + 1 vòng sáng chung ⇒ 4 lệnh vẽ / máy quay.
 import * as THREE from "../../rocket-race/vendor/three/three.module.min.js";
 
-export const TWIST = { LEN: 14, W: 3.8, ROLL: 0.66 };            // dài 14 m, rộng 3,8 m, mặt vặn tới ~38° ở cuối
+export const TWIST = { LEN: 14, W: 4.94, ROLL: 0.66 };           // 5p: rộng 3,8 ⇒ 4,94 m (+30 %, thầy 29/10) · dài 14 m, mặt vặn tới ~38° ở cuối
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const canvas = (w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; return [c, c.getContext("2d")]; };
 const hash = n => { let x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };

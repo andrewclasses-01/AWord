@@ -1,3 +1,7 @@
+// RACING WORDS — LÕI MẪU 5p (29/10/2026) = sr3d-5o.js + thầy 29/10: BAY DỄ CÂN — trên không vô lăng = TỐC ĐỘ NGHIÊNG (buông ⇒ giữ y góc, có quán tính nhẹ),
+//   bỏ gió lệch 1 phía + bỏ tự lộn vòng / phanh + lái lộn vòng (người lái không xoay 360° được nữa, trần nghiêng 135°; dốc xoắn vẫn tự lộn 1 vòng) ·
+//   đáp đất toé tia lửa ở 4 bánh + nảy vài nhịp (bnc 3, hệ số hồi 0,42) · vô lăng càng lệch càng bẻ gắt (×1 + 0,6·lái²) + trợ cua khi lái ĐÚNG chiều cua ở tốc độ cao ·
+//   dốc thẳng 4,65 ⇒ 6,05 m, dốc xoắn 3,8 ⇒ 4,94 m (+30 %).
 // RACING WORDS — LÕI MẪU 5o (28/10/2026) = sr3d-5n.js + thầy 28/10: DỐC DÀY ~255 m / chỗ (TRK.featSites, bay được qua góc cua) · mỗi trận bốc ngẫu nhiên thẳng / xoắn,
 //   2 dốc liền nhau luôn khác bên (layRamps gọi lại ở start) · RAMP_W 3,1 ⇒ 4,65 m · chạm dốc lần đầu khi bánh trước đã quá nửa dốc ⇒ hông dốc là TƯỜNG (rampWall).
 // RACING WORDS — LÕI MẪU 5n (28/10/2026) = sr3d-5l.js + thầy 28/10 (5 việc, hồ sơ HO SO BAN GIAO mục MẪU 5n):
@@ -339,7 +343,7 @@ import { makeCar3d } from "./sr3d-car-5l.js";   /* 5l */
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
 import { createWorld, makeBend, HAZE, bendQ } from "./sr3d-world-5o.js";   /* 5l: uốn XOAY thật + đất theo toạ độ thật */
 import { buildTrack } from "./sr3d-track-5o.js";   /* 5l: đường đua thật ~3 km, cua gắt ~90°, zigzag */   /* 5j-e: + vùng cảnh quanh xe bay */
-import { createTwists, createPickups, TWIST, twistAngle } from "./sr3d-stunt-4b.js";
+import { createTwists, createPickups, TWIST, twistAngle } from "./sr3d-stunt-5p.js";   /* 5p: dốc xoắn rộng +30 % */
 import { createTraffic, TRAFFIC_MODES } from "./sr3d-traffic-5n.js";   /* 5l: mẫu xe 3D thật */   /* 5j-f: + nổ / lật / cháy */
 import { makeAutoRes } from "./sr3d-autores-3r.js";
 import { icon as ICON, iconize } from "./rw-icons-4x.js";   /* 4x: icon 2D Neon viền */
@@ -387,8 +391,10 @@ export const PHYS = { SEG: 80, VBASE: 9.72, BUSE: 0.55, VMIN: 6.5, DRIFT: 3.0, A
   CATCH: 25, CATCH_K: 90, GAP_MAX: 150 };                  // kéo gần: bắt đầu bù khi cách > 25 m, đủ mức ở 115 m; trần cứng 150 m
 // bay: GUP = trọng lực lúc mới cất cánh (nhẹ ⇒ "lơ lửng"), G = sau đó · ROT = tốc độ xoay khi giữ phanh trên không (rad/s)
 export const AIR = { BOOST: 1.2, VY0: 2.8, VYK: 0.55, GUP: 4.5, G: 10.5, LIFT_T: 0.45, ROT: 7.4, ROLL: 1.5, PERFECT: 10 * Math.PI / 180, OK: 30 * Math.PI / 180, NITRO_ROT: 0.34, NITRO_USE: 0.3,   // 5l: PERFECT 15° ⇒ 10°, OK 32° ⇒ 30°
-  STEER: 10, DAMP: 0.45, RMAX: 8, GUST: 1.6, ROLL_V: 3.4, ROLL_A: 1.5, ROLL_K: 1.3, TWIST_K: 1.35 };   // 5l: vô lăng trên không = MÔ-MEN nghiêng (rad/s²) · tắt dần · trần · gió giật · ngưỡng LỘN VÒNG (rad/s, rad) · ×quãng bay khi lộn / dốc xoắn
-const RAMP_W = 4.65;                                       // 5o: rộng thêm 50 % (thầy: "đang quá bé") · 5l: 3,1 m (~1,5 bề ngang xe, cũ 7 m)
+  STEER: 10, DAMP: 0.45, RMAX: 8, GUST: 1.6, ROLL_V: 3.4, ROLL_A: 1.5, ROLL_K: 1.3, TWIST_K: 1.35,
+  TILT_W: 2.0, TILT_RESP: 5, TILT_MAX: 135 * Math.PI / 180, WOB: 0.9 };   // 5p: vô lăng hết cỡ = nghiêng 2 rad/s · đuổi theo trong ~0,2 s (quán tính) · trần 135° · rung nhẹ trung bình 0 (rad/s²)
+const STEER_X = 0.6, CORNER_HELP = 0.3;                   // 5p: vô lăng hết cỡ bẻ ×1,6 (×1 + 0,6·lái²) · lái ĐÚNG chiều cua ở tốc độ cao ⇒ đường cong "kéo" bớt 30 %   // 5l: vô lăng trên không = MÔ-MEN nghiêng (rad/s²) · tắt dần · trần · gió giật · ngưỡng LỘN VÒNG (rad/s, rad) · ×quãng bay khi lộn / dốc xoắn
+const RAMP_W = 6.05;                                       // 5p: +30 % (thầy 29/10) · 5o: 4,65 m, rộng thêm 50 % (thầy: "đang quá bé") · 5l: 3,1 m (~1,5 bề ngang xe, cũ 7 m)
 export const DEFAULTS = { pkBoost: true, pkLife: true, pkMissile: true, twists: true, race: "len", lenK: 2, timeS: 180, steps: 12, laps: 0, cars: ["Y2", "H4"], bend: 0.75, streak: 3, msMax: 3, hitLoss: 1, ramps: true, sameQ: true,
   lives: 0, msDmg: 2, tieWait: 0.1, missWait: 20 };          // 3q: lives 0 = tắt · tieWait/missWait giây, Infinity = chờ mãi
 const LOW_V = 40 / 3.6;                                    // 3q: dưới 40 km/h lên cầu nhảy ⇒ không bay
@@ -1843,8 +1849,9 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   }
   function carAir(C, dt, st, brake) {
     C.airT += dt; C.vy -= (C.airT < AIR.LIFT_T ? AIR.GUP : AIR.G) * dt; C.y += C.vy * dt;
-    if (!C.flip && !C.low) C.ar += (C.arW - st * AIR.ROLL) * dt;
-    if (brake && !C.low && !C.flip && !C.forced && Math.abs(st) > 0.35) { C.flip = 2; C.flipDir = -Math.sign(st); C.flipGoal = null; }   // BRAKE + lái = barrel roll
+    if (!C.flip && !C.low) { C.ar += (C.arW - st * AIR.ROLL) * dt;   // 5p: cú hất lúc cất cánh tắt dần (buông ⇒ giữ góc) + trần 135° · BỎ phanh + lái = barrel roll
+      C.arW *= Math.exp(-dt * 4); if (Math.abs(C.arW) < 0.005) C.arW = 0;
+      const base = Math.round(C.ar / TAU) * TAU, rel = C.ar - base; if (Math.abs(rel) > AIR.TILT_MAX) C.ar = base + Math.sign(rel) * AIR.TILT_MAX; }
     if (C.flip) {
       const w = (C.forced ? C.rollW : AIR.ROT) * C.flipDir * dt;
       if (brake && !C.forced) C.flipGoal = null;
@@ -2492,7 +2499,12 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
       // 4b: HƯỚNG XE so với đường (psi): vô lăng quay đầu xe (yawR), đường cong quay DƯỚI xe (v·κ) ⇒ không lái thì xe đi thẳng còn đường lượn đi
       //   ⇒ trôi ra mép, đâm rào. Không trợ lái, không tự cân. Trúng tên lửa / đứng máy ⇒ xe được dựng lại theo hướng đường.
       if (t.spinT > 0 || t.stallT > 0) t.psi *= Math.exp(-dt * 4);
-      else t.psi += (t.steer * yawR(t.v) * (t.src === "ai" ? 1 : steer.sens / 100) - (G.phase === "race" || G.phase === "end" ? t.v * kapV(t.s) : 0)) * dt;
+      else {   // 5p: vô lăng càng lệch càng bẻ gắt (người lái) + trợ cua khi lái đúng chiều cua ở tốc độ cao (AI tự bù đủ nên không cộng)
+        const ai = t.src === "ai", vk = G.phase === "race" || G.phase === "end" ? t.v * kapV(t.s) : 0;
+        const gain = ai ? 1 : steer.sens / 100 * (1 + STEER_X * t.steer * t.steer);
+        const help = !ai && t.steer * vk > 0 ? vk * CORNER_HELP * smooth(25, 55, t.v) * Math.min(1, Math.abs(t.steer) * 2.5) : 0;
+        t.psi += (t.steer * yawR(t.v) * gain - vk + help) * dt;
+      }
       t.psi = clamp(t.psi, -0.7, 0.7); t.vx = t.v * Math.sin(t.psi); t.cx = 0;
       t.yaw = lerp(t.yaw, -Math.atan2(t.vx + t.px * 0.5, Math.max(t.v, 5)) * 0.9, 1 - Math.exp(-dt * 8));
       t.brake = braking || t.spinT > 0 || t.dr ? 1 : a < -2 ? 0.35 : 0;
@@ -2552,7 +2564,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
         missiles.dark.emit(t.x + cx * 1.05, 0.12 + Math.random() * 0.2, -t.s + cz * 2.3, cx * (1 + Math.random() * 1.6), 0.5 + Math.random() * 1.3, cz * 1.2 + 1.5, 1.3 + Math.random() * 0.9, 1.1 + Math.random() * 0.7, 0.75, 2.4, 1.1); }
     }
     if (t.spinT > 0) { t.spinT = Math.max(0, t.spinT - dt); if (t.spinT === 0) { t.yk += wrapPI(t.spinTurns * TAU); t.ykV = 0; } }   // vòng lẻ còn dư ⇒ lò xo kéo về dần
-    t.hy += t.hopV * dt; t.hopV -= 14 * dt; if (t.hy <= 0) { if (t.bnc > 0 && t.hopV < -1.2) { t.bnc--; t.hopV = -t.hopV * 0.38; t.hy = 0.001; t.wobA *= 0.8; t.wobT = Math.min(t.wobT, 0.15); } else { t.hy = 0; t.hopV = 0; } } t.hitRoll *= Math.exp(-dt * 2.5);   // 4g: nảy lần 2
+    t.hy += t.hopV * dt; t.hopV -= 14 * dt; if (t.hy <= 0) { if (t.bnc > 0 && t.hopV < -0.5) { t.bnc--; wheelSparks(t, 2 + t.bnc); t.hopV = -t.hopV * 0.48; t.hy = 0.001; t.wobA *= 0.8; t.wobT = Math.min(t.wobT, 0.15); } else { t.hy = 0; t.hopV = 0; } }   /* 5p: hồi 0,38 ⇒ 0,48, ngưỡng 1,2 ⇒ 0,5 + tia lửa mỗi nhịp */ t.hitRoll *= Math.exp(-dt * 2.5);   // 4g: nảy lần 2
     t.shake = Math.max(0, t.shake - dt * 1.6); t.blurB = Math.max(0, t.blurB - dt * 1.8);
     if (G.winner < 0 && G.phase === "race" && G.finS != null && t.s >= G.finS && !t.dead && (G.decided < 0 || G.decided === t.i)) finish(t.i);   // 4a: đích dời được
     // qua mốc vòng
@@ -2588,7 +2600,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     //   chỉnh vô lăng ngược chiều nghiêng ⇒ PERFECT; giữ vô lăng quá tay ⇒ BAD (bàn thử 16/10: chỉnh 4/4 PERFECT · giữ hết lái 4/4 BAD)
     // 5l: KHÔNG BAO GIỜ bay thẳng tắp — rời mép đã nghiêng sẵn 4–9° và đang lật dần 0,25–0,55 rad/s (+ gió giật trong flyStep) ⇒ phải giữ vô lăng liên tục
     const rs = Math.random() < 0.5 ? -1 : 1; t.arW = 0; t.ar = rs * (0.07 + Math.random() * 0.09); t.arV = rs * (0.25 + Math.random() * 0.3);
-    t.gP = Math.random() * 100; t.gB = (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 0.7); t.ar0 = t.ar; t.rollOn = false;   // gB = gió lệch 1 phía cả lần bay (rad/s²)
+    t.gP = Math.random() * 100; t.gB = 0; t.ar0 = t.ar; t.rollOn = false;   // 5p: bỏ gió lệch 1 phía (gB) — buông vô lăng là giữ góc · 5l: gB = gió lệch 1 phía cả lần bay (rad/s²)
     if (part) {                                             // 5l: chỉ 1 bên xe trên dốc ⇒ KHÔNG còn tự lộn vòng: vọt lên NGHIÊNG MẠNH về phía bánh còn trên đường + tiếp tục lật
       const ar0 = part * Math.atan2(RAMP.H, cars[t.i].M.W) * (1.3 + Math.random() * 0.35);   //   ~38–48°, phải bẻ lái NGƯỢC lại trên không mới đáp cân
       t.y = Math.max(t.y, RAMP.H * 0.5); t.ap = RAMP_SLOPE * 0.5; t.ar = ar0; t.ar0 = ar0; t.arV = part * (0.55 + Math.random() * 0.45); t.vy *= 0.85;
@@ -2649,20 +2661,20 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     t.vx += inp.steer * 2.2 * dt;
     // 5l: vô lăng trên không = MÔ-MEN nghiêng (nhạy, có quán tính) + gió giật ⇒ xe luôn chông chênh, buông tay là lật dần; không tự cân
     //   Giữ hết lái ⇒ lật ngày càng nhanh = LỘN VÒNG (BARREL ROLL): +tốc, +quãng bay, +độ cao, chữ báo — đủ cao / đủ nhanh thì lộn trọn 360° rồi phải ghì lại để đáp
+    // 5p (thầy 29/10): vô lăng = TỐC ĐỘ NGHIÊNG, không còn mô-men tích luỹ — buông vô lăng ⇒ thân giữ y góc đang nghiêng (quán tính ~0,2 s rồi đứng),
+    //   bẻ ngược chiều nghiêng ⇒ kéo về cân dần · rung nhẹ trung bình 0 (~1–2°) cho cảm giác bay · trần 135° quanh vòng trọn gần nhất (không tự lộn 360° được nữa)
     if (!t.flip && !t.bad && !t.low) {
       const live = G.phase === "race" && !G.fin, gp = t.gP || 0;
       const lg = leadK(t), gk = 1 + LEAD.GUST_L * lg.L - LEAD.GUST_B * lg.B;   // 5n: xe dẫn rung lắc hơn, xe sau êm hơn
-      const gust = live ? ((Math.sin(G.t * 2.3 + gp) * 0.6 + Math.sin(G.t * 5.7 + gp * 1.7) * 0.4) * AIR.GUST + (t.gB || 0)) * gk : 0;
+      const wob = live ? (Math.sin(G.t * 4.1 + gp) * 0.6 + Math.sin(G.t * 7.3 + gp * 1.7) * 0.4) * AIR.WOB * gk : 0;
       if (t.arVk) { t.arV = (t.arV || 0) + t.arVk; t.arVk = 0; }
-      t.arV = clamp(((t.arV || 0) + (-inp.steer * AIR.STEER + gust) * dt) * Math.exp(-dt * AIR.DAMP), -AIR.RMAX, AIR.RMAX);
+      t.arV = (t.arV || 0) + (-inp.steer * AIR.TILT_W - (t.arV || 0)) * (1 - Math.exp(-dt * AIR.TILT_RESP)) + wob * dt;
       t.ar += t.arV * dt;
-      if (live && !t.rollOn && Math.abs(t.arV) > AIR.ROLL_V && Math.abs(t.ar - (t.ar0 || 0)) > AIR.ROLL_A) {
-        t.rollOn = true; t.rolled = true; t.airK *= AIR.ROLL_K; t.vy += 1.4; t.v = Math.min(t.v + 5, PHYS.VNITRO * 1.35);
-        t.boostK = 1; t.shake = Math.max(t.shake, 0.4); t.blurB = 1; toast(t.i, "BARREL ROLL! +SPEED", "ms"); onEvent("roll", { team: t.i });
-      }
+      const base = Math.round(t.ar / TAU) * TAU, rel = t.ar - base;
+      if (Math.abs(rel) > AIR.TILT_MAX) { const sg = Math.sign(rel); t.ar = base + sg * AIR.TILT_MAX; if (t.arV * sg > 0) t.arV = 0; }
     }
     // PHANH trên không = xoay tròn: phanh thẳng ⇒ Flat Spin (quanh trục đứng) · phanh + lái ⇒ Barrel Roll (quanh trục dọc)
-    if (inp.brake && !t.bad && !t.low && !t.flip && !t.forced && Math.abs(inp.steer) > 0.35) { t.rolled = true; t.flip = 2; t.flipDir = -Math.sign(inp.steer); t.flipGoal = null; }   // 4e: lộn về phía vô lăng · 3f: chỉ PHANH + LÁI = lộn trục dọc; phanh không thì không xoay
+    /* 5p: BỎ phanh + lái = barrel roll (thầy: không cho xoay 360°) — chỉ dốc xoắn còn tự lộn (t.forced) */   // 4e: lộn về phía vô lăng · 3f: chỉ PHANH + LÁI = lộn trục dọc; phanh không thì không xoay
     if (t.flip) {
       const w = (t.forced ? t.rollW : AIR.ROT) * t.flipDir * dt;
       if (inp.brake && !t.forced) t.flipGoal = null;
@@ -2675,8 +2687,8 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     // 4g: 0,45 s CUỐI trước khi chạm đất sau cú LỘN trục dọc ⇒ thân chông chênh (lắc + hất 1 phía) — người lái phải giữ, không tự cân
     if (t.rolled && !t.flip && !t.bad && !t.low && !G.fin) {
       const tg = t.vy < 0 || t.y < 2.5 ? (t.vy + Math.sqrt(Math.max(0, t.vy * t.vy + 2 * AIR.G * Math.max(t.y, 0)))) / AIR.G : 9;
-      if (tg < 0.45) { if (!t.nearOn) { t.nearOn = true; t.nearW = (Math.random() < 0.5 ? -1 : 1) * (0.35 + Math.random() * 0.3); }
-        const q = 1 - tg / 0.45; t.ar += (t.nearW * q + Math.sin(G.t * 13) * 1.6 * q) * dt; t.ap += Math.sin(G.t * 9 + 1) * 0.35 * q * dt; }
+      if (tg < 0.45) { if (!t.nearOn) { t.nearOn = true; t.nearW = (Math.random() < 0.5 ? -1 : 1) * (0.08 + Math.random() * 0.07); }   /* 5p: 0,35–0,65 ⇒ 0,08–0,15 */
+        const q = 1 - tg / 0.45; t.ar += (t.nearW * q + Math.sin(G.t * 13) * 0.4 * q) * dt;   /* 5p: rung 1,6 ⇒ 0,4 */ t.ap += Math.sin(G.t * 9 + 1) * 0.35 * q * dt; }
     }
     // 4g: MÀN KẾT — xe thắng đang bay tự cân thân về vòng trọn gần nhất (lộn dở thì lộn nốt) ⇒ đáp PERFECT
     if (G.fin && t.i === G.fin.w && !t.flip) { const k = 1 - Math.exp(-dt * 4.5); t.arW = 0; t.arV = 0; t.ar += (Math.round(t.ar / TAU) * TAU - t.ar) * k; t.ay += (Math.round(t.ay / TAU) * TAU - t.ay) * k; }
@@ -2685,9 +2697,17 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     if (t.y <= 0 && t.vy < 0) land(t);
   }
   // 4g: NẢY khi đáp — theo vận tốc rơi (hy/hopV: chỉ là hình, không đụng va chạm) + nảy lần 2 nhỏ hơn (bnc) + chúc mũi (nodA)
-  function bounce(t, vy, k = 1) { t.hopV = Math.max(t.hopV, clamp(-vy * 0.2, 0.7, 2.1) * k); t.bnc = 1; t.nodA = clamp(-vy * 0.012, 0.03, 0.08) * k; t.rolled = false; t.nearOn = false; }
+  function bounce(t, vy, k = 1) { t.hopV = Math.max(t.hopV, clamp(-vy * 0.32, 1.0, 3.0) * k); t.bnc = 3;   /* 5p: nảy cao hơn + 3 nhịp (cũ ×0,2 tới 2,1, 1 nhịp) */ t.nodA = clamp(-vy * 0.012, 0.03, 0.08) * k; t.rolled = false; t.nearOn = false; }
+  // 5p: ĐÁP ĐẤT ⇒ toé tia lửa ở 4 bánh (n hạt / bánh, văng ra ngoài + kéo về sau)
+  function wheelSparks(t, n) {
+    const c = cars[t.i], M = c.M, ax = c.ax || { f: M.L * 0.3, r: M.L * 0.3 }, hw = M.W / 2 * 0.86;
+    for (const [wx, wz] of [[-hw, -ax.f], [hw, -ax.f], [-hw, ax.r], [hw, ax.r]])
+      for (let k = 0; k < n; k++) missiles.sparks.emit(t.x + wx, 0.08 + Math.random() * 0.1, -t.s + wz + (Math.random() - 0.5) * 0.4,
+        Math.sign(wx) * (0.6 + Math.random() * 2.6), 0.8 + Math.random() * 2.8, 2 + Math.random() * 6, 0.25 + Math.random() * 0.3, 0.08 + Math.random() * 0.05, 1, 0, 1);
+  }
   function land(t) {
     const vyHit = t.vy;
+    wheelSparks(t, Math.round(clamp(-vyHit * 1.1, 4, 10)));
     const eP = Math.abs(t.ap), eR = Math.abs(wrapPI(t.ar)), eY = Math.abs(wrapPI(t.ay)), err = Math.max(eP, eR, eY);
     const rots = Math.max(0, Math.round(Math.abs(t.ay) / TAU - 0.15)) + Math.max(0, Math.round(Math.abs(t.ar) / TAU - 0.15));
     const wasBad = t.bad, name = spinName(t);

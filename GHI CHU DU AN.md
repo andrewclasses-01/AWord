@@ -546,6 +546,20 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 595 (29/10/2026) — RACING WORDS lên myGame 5p: bay dễ cân (buông vô lăng giữ góc, trần nghiêng 135°) · tia lửa 4 bánh khi đáp · nảy vài nhịp · lái gắt hơn ở tốc độ cao · dốc rộng +30 %
+**Soát đồng bộ trước khi làm:** AWord Đợt 592 = myGame 5o `179c5cf` — 31 file `3d/*.js` giống hệt sau khi đổi import (so bằng script, không cmp vì đường three khác).
+**Thầy (29/10):** xe trên không quá chòng chành, khó cân ⇒ toàn BAD LANDING. (1) bỏ xoay 360°, tối đa nghiêng 135° · (2) vô lăng giữa ⇒ xe giữ y góc đang nghiêng; bẻ ngược chiều nghiêng ⇒ kéo về cân dần; cân rồi trả vô lăng về giữa ⇒ giữ cân, chỉ rung nhẹ cho đã mắt · (3) chạm đất toé tia lửa ở bánh · (4) vô lăng càng lệch càng bẻ gắt + tốc độ cao lái đúng chiều cua thì xe tự ôm cua hơn chút · (5) đáp xong nảy vài nhịp · (6) dốc thẳng + dốc xoắn rộng thêm ~30 %. Hỏi thầy: dốc xoắn ⇒ thầy chọn **giữ dốc xoắn tự lộn 1 vòng** (người lái thì không tự lộn được nữa).
+**Làm ở myGame** `9cfba48` (chi tiết: myGame `speed-run/HO SO BAN GIAO RACING WORDS.md` mục MẪU 5p) — lõi `sr3d-5p.js`, `rw-5p.js`, `sr3d-stunt-5p.js`, trang `mau-5p-bay-de-can.html`:
+- Trên không vô lăng = TỐC ĐỘ NGHIÊNG (hết cỡ 2 rad/s, đuổi theo trong ~0,2 s = quán tính), không còn mô-men cộng dồn; bỏ gió lệch 1 phía; rung nhẹ trung bình 0 (~1–2°); kẹp ±135° quanh vòng trọn gần nhất.
+- Bỏ tự BARREL ROLL khi lật nhanh + bỏ PHANH + lái = lộn vòng (cả xe Roadster đi đường: cú hất cất cánh tắt dần + trần 135°). Dốc xoắn vẫn tự lộn; rung 0,45 s cuối sau lộn nhẹ đi ~4 lần.
+- Đáp đất: tia lửa ở 4 bánh (4–10 hạt / bánh theo tốc độ rơi, mỗi nhịp nảy thêm 2–4) · nảy cao hơn (×0,32 tới 3 m/s) + 3 nhịp, hồi 0,48.
+- Lái: người lái ×(1 + 0,6·lái²) (hết cỡ ×1,6) + lái ĐÚNG chiều cua thì độ cong đường kéo bớt 30 % từ 90 km/h, đủ ở ~200 km/h. AI giữ như cũ.
+- RAMP_W 4,65 ⇒ 6,05 m; TWIST.W 3,8 ⇒ 4,94 m.
+**Ở AWord:** `tools/chep-racing-words.py` GOC `rw-5p.js` ⇒ chép rw/sr3d-5p + sr3d-stunt-5p, xoá rw/sr3d-5o + stunt-4b · `racing-words.js` GAME `./3d/rw-5p.js` · `load-files.js` 3 file (byte theo LF như các đợt trước). Công cụ chép in tiếng Việt ⇒ chạy với `PYTHONIOENCODING=utf-8` (cp1252 làm sập ở dòng "xoá cũ").
+**Đã thử (máy nhà, bàn thử myGame `mau-5p` + AWord `scratch/dot589-rw.html`):** buông vô lăng sau dốc ⇒ góc giữ −6…−9° suốt 2,2 s, đáp PERFECT · bẻ ngược ⇒ về 1–2° rồi đứng, PERFECT · giữ hết lái ⇒ dừng đúng −135°, BAD · dốc 1 bên (−53°) buông tay ⇒ −66° BAD, bẻ ngược ⇒ cân trong ~1 s, PERFECT · dốc xoắn lộn 360° rồi lệch ~15° đứng yên · nảy 4 nhịp 35 / 10 / 4 / 2 cm · 40 tia lửa lúc chạm + 16 ở nhịp nảy · cua R 50 m ở 216–259 km/h: 5o chạm rào 1–7 khung, 5p 0 · 2 xe tự lái 90 s: 17 lần bay 17 PERFECT, 0 NaN · AWord nạp rw-5p/sr3d-5p/stunt-5p, 0 lỗi console. ⬜ thầy thử TOMKO + iPad (cảm giác nghiêng có quá nhanh/chậm — chỉnh `AIR.TILT_W` / `TILT_RESP`).
+
+---
+
 ## Đợt 594 (29/10/2026) — RUNNING WORD / RUNNING TEAM: thêm iPad GIÁO VIÊN + MÀN CHỌN THIẾT BỊ — code `56d26bb` LIVE (kiem-live 8/8)
 **Thầy:** Running team cả lớp 1 iPad — thêm 1 iPad cho giáo viên quan sát lớp đang đến từ gì, ai đang làm, có đủ nghĩa Anh + Việt. Running word 2 iPad 2 đội — thêm iPad thứ 3 cho giáo viên, màn chia 2 nửa thấy song song tiến trình 2 đội. Cần màn chọn thiết bị (học sinh / giáo viên). Thầy xem mẫu `D:\OTHERS\CLAUDE\AWord - thiet ke Running iPad Giao vien\mau-1.html` và chọn **RT-B + RW-B** (thẻ học sinh/đội to ở trên + dải TEACHER tím ở dưới).
 **Làm:**
