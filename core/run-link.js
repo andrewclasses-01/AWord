@@ -11,6 +11,8 @@
 //     run_link        — MÁY CHIẾU ghi: trận đang ở đâu + `own` (iPad nào đang giữ chỗ nào) + `hp` (gõ cửa: "iPad nào đang mở thì
 //                       báo danh ngay", để chấm nối hiện tức thì chứ không đợi nhịp 8 s)
 //     run_pad0/1      — iPAD ghi nhịp { dev, n } mỗi BEAT_MS (chỗ 0 = TEAM A / iPad duy nhất của Running Team, chỗ 1 = TEAM B)
+//     run_padt        — Đợt 594: iPad GIÁO VIÊN (chỉ XEM, không giữ chỗ — mở mấy máy cũng được; máy chiếu chỉ cần biết
+//                       "có ít nhất một iPad giáo viên" để vẽ chấm tím, không chặn START)
 //   ⚠️ Hai iPad cùng chọn một chỗ thì cùng ghi run_padN — không sao: tài liệu đó chỉ là NHỊP, MÁY CHIẾU là trọng tài duy nhất
 //   (`own`: iPad đến TRƯỚC giữ chỗ tới khi nó im quá STALE_MS), iPad đọc `own` để tự biết mình bị từ chối.
 // ⛔ KHÔNG so đồng hồ hai máy: "còn sống" = máy chiếu THẤY nhịp đổi trong STALE_MS gần nhất, đo bằng đồng hồ của chính nó.
@@ -93,12 +95,14 @@ const rid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(3
  * onPads([bool…]) — chỗ nào đang có iPad (gọi mỗi khi đổi).
  * Trả { publish(patch), pads(), stop() }. publish gộp các patch trong 80 ms thành MỘT lượt ghi.
  */
-export function createRunHost({ game, slots, onPads }) {
-  // mỗi chỗ: dev → { first, last } (performance.now của MÁY CHIẾU) — first giữ thứ tự đến, last nói còn sống
-  const seen = Array.from({ length: slots }, () => new Map());
-  const lastKey = Array.from({ length: slots }, () => null);
+export function createRunHost({ game, slots, onPads, onTeacher }) {
+  // mỗi chỗ: dev → { first, last } (performance.now của MÁY CHIẾU) — first giữ thứ tự đến, last nói còn sống.
+  // Đợt 594: phần tử CUỐI (chỉ số `slots`) là chỗ GIÁO VIÊN "t" — nghe như mọi chỗ nhưng không có `own`.
+  const seen = Array.from({ length: slots + 1 }, () => new Map());
+  const lastKey = Array.from({ length: slots + 1 }, () => null);
   const own = Array.from({ length: slots }, () => "");
   let live = own.map(() => false);
+  let liveT = false;
   // ⚠️ `own` luôn ghi ĐỦ mọi chỗ ("" = trống): setDoc merge trộn sâu map ⇒ ghi `{}` KHÔNG xoá được khoá cũ
   const ownMap = () => Object.fromEntries(own.map((d, i) => [String(i), d]));
   let pending = { game, mid: rid(), hp: rid(), phase: "setup", own: ownMap() };
@@ -121,6 +125,7 @@ export function createRunHost({ game, slots, onPads }) {
     let changed = false;
     seen.forEach((m, i) => {
       for (const [dev, x] of m) if (t - x.last > STALE_MS) m.delete(dev);
+      if (i >= slots) return;   // chỗ giáo viên: không ai giữ chỗ
       if (own[i] && !m.has(own[i])) { own[i] = ""; changed = true; }
       if (!own[i] && m.size) {                         // iPad đến TRƯỚC giữ chỗ
         let best = "", bt = Infinity;
@@ -131,10 +136,12 @@ export function createRunHost({ game, slots, onPads }) {
     if (changed) publish({ own: ownMap() });
     const now = own.map(Boolean);
     if (now.some((v, i) => v !== live[i])) { live = now; onPads && onPads(live.slice()); }
+    const nowT = seen[slots].size > 0;
+    if (nowT !== liveT) { liveT = nowT; onTeacher && onTeacher(liveT); }
   }
   const offs = [];
-  for (let i = 0; i < slots; i++) {
-    offs.push(watch(PAD(i), d => {
+  for (let i = 0; i <= slots; i++) {
+    offs.push(watch(PAD(i < slots ? i : "t"), d => {
       if (dead) return;
       // chưa có tài liệu = mốc "trống" (lastKey ""), để nhịp ĐẦU TIÊN của iPad đã được tính là đổi
       if (!d || !d.dev) { if (lastKey[i] === null) lastKey[i] = ""; return; }
@@ -159,6 +166,7 @@ export function createRunHost({ game, slots, onPads }) {
   return {
     publish,
     pads: () => live.slice(),
+    teacher: () => liveT,
     stop() {
       if (dead) return;
       dead = true;
@@ -185,7 +193,7 @@ export const myDev = devId();
 export function watchRunLink(cb, onError) { return watch(LINK, cb, onError); }
 
 /**
- * iPad giữ chỗ `slot`: báo danh mỗi BEAT_MS (và ngay khi máy chiếu gõ cửa `hp`), nghe trận.
+ * iPad giữ chỗ `slot` (0 | 1, hoặc "t" = iPad GIÁO VIÊN — Đợt 594, không ai giữ chỗ đó): báo danh mỗi BEAT_MS (và ngay khi máy chiếu gõ cửa `hp`), nghe trận.
  * onLink(link | null) mỗi lần trận đổi. Trả { stop() }.
  */
 export function joinRunSlot(slot, onLink, onError) {

@@ -269,6 +269,9 @@ const rtTemplate = {
   // =============================================================
   mount(root, activity, ui) {
     const pool = poolFrom(activity);
+    // Đợt 594 — nghĩa EN/VI (+ IPA) do core/convert.js mang theo khi mở từ act WORDS; act đứng riêng: rỗng
+    const defsMap = (activity.content && activity.content.defs && typeof activity.content.defs === "object") ? activity.content.defs : {};
+    const defOf = w => { const d = defsMap[String(w || "").toUpperCase()] || {}; return { en: String(d.en || ""), vi: String(d.vi || ""), ex: String(d.ex || ""), ipa: String(d.ipa || "") }; };
 
     root.innerHTML = "";
     if (pool.length < MIN_POOL) {
@@ -435,6 +438,8 @@ const rtTemplate = {
     let ipadOn = false;
     try { ipadOn = isTeacher && localStorage.getItem(IPAD_KEY) === "1"; } catch (e) { /* chế độ riêng tư */ }
     let padLive = false;
+    let padT = false;   // Đợt 594 — có iPad GIÁO VIÊN đang xem (chấm tím, không chặn START)
+    let hist = [];      // Đợt 594 — các từ đã chơi cho iPad giáo viên: { w, n (em), r: "o"|"x", vi }
     let link = null, ipadClaim = null, linkBusy = null, disposed = false, qSeq = 0;
     function startLink() {
       if (link || linkBusy) return linkBusy;
@@ -442,7 +447,7 @@ const rtTemplate = {
         try {
           const [{ createRunHost }, { claimIpad }] = await Promise.all([import("../../core/run-link.js"), import("../../core/ipad-now.js")]);
           if (!ipadOn || disposed || link) return;
-          link = createRunHost({ game: "runningteam", slots: 1, onPads: p => { padLive = !!p[0]; paintSetupGate(); } });
+          link = createRunHost({ game: "runningteam", slots: 1, onPads: p => { padLive = !!p[0]; paintSetupGate(); }, onTeacher: v => { padT = v; paintSetupGate(); } });
           ipadClaim = claimIpad({ game: "runningteam", hold: true });
           publishLink(phase === "setup" ? { phase: "setup" } : {});
         } catch (e) {
@@ -456,15 +461,22 @@ const rtTemplate = {
       if (link) { link.stop(); link = null; }
       if (ipadClaim) { ipadClaim.release(); ipadClaim = null; }
       padLive = false;
+      padT = false;
     }
     if (ipadOn) startLink();
     const nameAt = k => (roster.length ? roster[((k % roster.length) + roster.length) % roster.length].name || "" : "");
     // Đồng hồ tổng gửi kèm mỗi lượt + `ticking`; iPad tự đếm giữa hai lượt và tự đếm READY/3-2-1 (readyMs/stepMs).
     function publishLink(patch) {
       if (!link) return;
+      const done = review.length;
       link.publish({
         mainLeft: Math.round(mainLeft), ticking: !!mainTimer, last: lastWord,
         lives: livesLeft === null ? null : livesLeft, livesTotal: cfg.lives === null ? null : cfg.lives,
+        // Đợt 594 — cho iPad GIÁO VIÊN: điểm, bao nhiêu từ, 3 em kế tiếp, các từ đã chơi
+        okN: correctCount, missN: Math.max(0, done - correctCount), done, total: order ? order.length : 0,
+        nexts: roster.length ? [1, 2, 3].map(k => nameAt(turnPtr + k)) : [],
+        cls: (current && current.className) || "",
+        hist,
         ...patch
       });
     }
@@ -514,6 +526,7 @@ const rtTemplate = {
         setupGate.ipad.btn.classList.toggle("is-on", ipadOn);
         setupGate.ipad.dot.classList.toggle("is-ok", padLive);
         setupGate.ipad.dot.classList.toggle("is-wait", !padLive);
+        setupGate.ipad.dotT.classList.toggle("is-ok", padT);
       }
     }
 
@@ -546,8 +559,11 @@ const rtTemplate = {
           if (ipadOn) startLink(); else stopLink();
           paintSetupGate();
         };
-        ipadBox.append(dot, btn);
-        ipadUI = { box: ipadBox, btn, dot };
+        // Đợt 594 — chấm iPad GIÁO VIÊN: không bắt buộc ⇒ chưa có thì xám, không nhấp nháy
+        const dotT = el("span", "aw-rt-ipad-dot is-t", "<i></i>TEACHER");
+        dotT.title = "Teacher iPad (optional)";
+        ipadBox.append(dot, dotT, btn);
+        ipadUI = { box: ipadBox, btn, dot, dotT };
       }
       head.append(ipadBox);
       setup.append(head);
@@ -884,7 +900,7 @@ const rtTemplate = {
       livesLeft = cfg.lives;
       mainLeft = cfg.mainMs;
       correctCount = 0; askedCount = 0; turnPtr = 0;
-      perQuestion.length = 0; review.length = 0;
+      perQuestion.length = 0; review.length = 0; hist = [];
       tileColors = shuffle(PALETTE.slice()).slice(0, TILES);
       finished = false;
       lastWord = false;
@@ -952,7 +968,10 @@ const rtTemplate = {
       const who = roster.length ? roster[turnPtr % roster.length] : { name: "" };
       showOverlay(who.name || "", "READY", "is-ready");
       rtSound.ready();
-      publishLink({ phase: "ready", q: ++qSeq, name: who.name || "", next: nameAt(turnPtr + 1), readyMs: READY_HOLD_MS, stepMs: COUNT_STEP_MS, word: "", num: "", result: "" });
+      // Đợt 594 — `word`/`num`/`def` đã gửi từ lúc READY cho iPad GIÁO VIÊN thấy trước (từ kế = queue cuối, openQuestion pop ra);
+      // iPad học sinh không vẽ `word` ở màn READY.
+      const peekI = queue[queue.length - 1], peekW = order[peekI];
+      publishLink({ phase: "ready", q: ++qSeq, name: who.name || "", next: nameAt(turnPtr + 1), readyMs: READY_HOLD_MS, stepMs: COUNT_STEP_MS, word: String(peekW), num: String(peekI + 1), def: defOf(peekW), result: "" });
       later(() => step(3), READY_HOLD_MS);
 
       function step(n) {
@@ -1008,7 +1027,7 @@ const rtTemplate = {
       void board.offsetWidth;
       board.classList.add("is-entering");
 
-      publishLink({ phase: "question", q: qSeq, name: who.name || "", next: nameAt(turnPtr + 1), num: String(qWordIndex + 1), word: String(word), result: "" });
+      publishLink({ phase: "question", q: qSeq, name: who.name || "", next: nameAt(turnPtr + 1), num: String(qWordIndex + 1), word: String(word), def: defOf(word), result: "" });
       askedCount++;
       locked = false;
       lastQTick = null;
@@ -1130,6 +1149,7 @@ const rtTemplate = {
     function recordAnswer(correct, picked, answer) {
       perQuestion.push({ q: perQuestion.length, correct });
       const who = roster.length ? roster[turnPtr % roster.length].name : "";
+      hist = hist.concat([{ w: String(answer).toUpperCase(), n: who || "", r: correct ? "o" : "x", vi: defOf(answer).vi }]);
       review.push({
         question: `${who} — ${qWordIndex + 1}`,
         answered: picked != null,

@@ -450,6 +450,7 @@
 .aw-rw-ipad-dot.is-ok { color: var(--rw-ink); }
 .aw-rw-ipad-dot.is-ok i { background: var(--rw-ok); box-shadow: 0 0 0 calc(.3 * var(--aw-u)) rgba(16,185,129,.22); }
 .aw-rw-ipad-dot.is-wait i { background: var(--rw-b); animation: aw-rw-blink 1s infinite; }
+.aw-rw-ipad-dot.is-t.is-ok i { background: #8b5cf6; box-shadow: 0 0 0 calc(.3 * var(--aw-u)) rgba(139,92,246,.25); }   /* Đợt 594 */
 @keyframes aw-rw-blink { 50% { opacity: .25; } }
 
 .aw-rw-opts { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: calc(1 * var(--aw-u)) calc(1.6 * var(--aw-u)); text-align: left; }

@@ -260,6 +260,10 @@ export async function convertActivity(activity, targetType, { style = "" } = {})
   if ((targetType === "running_word" || targetType === "running_team") && Array.isArray(carried)) {
     content[targetType === "running_word" ? "printSets" : "gameSets"] = carried.slice();
   }
+  // ⭐ Đợt 594 — iPad GIÁO VIÊN của Running hiện nghĩa Anh + Việt của từng từ. Bản mượn chỉ giữ chữ + IPA, nên nghĩa
+  // đi kèm ở `content.defs` { "WORD": {en, vi, ex} } (chỉ đọc, game không dùng; act Running đứng riêng không có ⇒ màn GV
+  // chỉ hiện từ + IPA).
+  if (targetType === "running_word" || targetType === "running_team") content.defs = runDefs(activity);
 
   // Options: nếu act này TỪNG được đổi sang đúng template đích và thầy đã Apply
   // chỉnh options, dùng LẠI bộ options đã nhớ (activity.templateOptions[type]).
@@ -452,6 +456,33 @@ function buildContent(targetType, kind, records, style) {
     default:
       return {};
   }
+}
+
+// Đợt 594 — nghĩa cho iPad giáo viên của Running. Act WORDS có đủ bộ gợi ý (`items[i].clues`): EN = ENG1 (thiếu thì
+// ENG2), VI = VI1, EX = VI2. Act khác chỉ có MỘT gợi ý (bộ đang chọn, qua toRecords) ⇒ có dấu tiếng Việt thì là VI.
+// Kèm `ipa` nếu từ có phiên âm.
+const VN_MARK = /[ăâđêôơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/i;
+function runDefs(activity) {
+  const out = {};
+  const raw = activity && activity.content && activity.content.items;
+  if (Array.isArray(raw)) raw.forEach(r => {
+    const w = String((r && r.word) || "").trim().toUpperCase();
+    const c = r && r.clues;
+    if (!w || !c || typeof c !== "object" || out[w]) return;
+    const d = { en: String(c.eng1 || c.eng2 || "").trim(), vi: String(c.vi1 || "").trim(), ex: String(c.vi2 || "").trim() };
+    if (d.en || d.vi || d.ex) out[w] = d;
+  });
+  let recs = [];
+  try { recs = toRecords(activity).records; } catch (e) { recs = []; }
+  recs.forEach(r => {
+    const w = String(r.term || "").trim().toUpperCase();
+    if (!w) return;
+    const c = String(r.clue || "").trim();
+    if (!out[w] && c && c.toUpperCase() !== w) out[w] = VN_MARK.test(c) ? { en: "", vi: c, ex: "" } : { en: c, vi: "", ex: "" };
+    // IPA đi kèm cho Running TEAM (danh sách của nó chỉ là chữ trần)
+    if (r.ipa) (out[w] || (out[w] = { en: "", vi: "", ex: "" })).ipa = String(r.ipa);
+  });
+  return out;
 }
 
 // ---- Trích trường theo kind ---------------------------------------------

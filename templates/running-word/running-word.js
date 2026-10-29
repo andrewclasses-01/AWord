@@ -314,6 +314,8 @@ const rwTemplate = {
     // change mid-match. Used by the printed sheets and by the in-game reveal
     // once a row is settled (see paintBoard); a word with none is just skipped.
     const ipaMap = ipaFrom(activity);
+    // Đợt 594 — nghĩa EN/VI do core/convert.js mang theo khi mở từ act WORDS (act Running đứng riêng: rỗng)
+    const defsMap = (activity.content && activity.content.defs && typeof activity.content.defs === "object") ? activity.content.defs : {};
 
     root.innerHTML = "";
     if (pool.length < 2) {
@@ -689,6 +691,7 @@ const rwTemplate = {
     let ipadOn = false;
     try { ipadOn = isTeacher && localStorage.getItem(IPAD_KEY) === "1"; } catch (e) { /* chế độ riêng tư */ }
     let pads = [false, false];
+    let padT = false;   // Đợt 594 — có iPad GIÁO VIÊN đang xem (chỉ để vẽ chấm tím, không chặn START)
     let link = null, ipadClaim = null, linkBusy = null, lastListKey = "", lastPubKey = "", disposed = false;
     function startLink() {
       if (link || linkBusy) return linkBusy;
@@ -696,7 +699,7 @@ const rwTemplate = {
         try {
           const [{ createRunHost }, { claimIpad }] = await Promise.all([import("../../core/run-link.js"), import("../../core/ipad-now.js")]);
           if (!ipadOn || disposed || link) return;
-          link = createRunHost({ game: "runningword", slots: 2, onPads: p => { pads = p; paintSetupGate(); } });
+          link = createRunHost({ game: "runningword", slots: 2, onPads: p => { pads = p; paintSetupGate(); }, onTeacher: v => { padT = v; paintSetupGate(); } });
           ipadClaim = claimIpad({ game: "runningword", hold: true });
           lastListKey = lastPubKey = "";
           publishLink(true);
@@ -711,6 +714,7 @@ const rwTemplate = {
       if (link) { link.stop(); link = null; }
       if (ipadClaim) { ipadClaim.release(); ipadClaim = null; }
       pads = [false, false];
+      padT = false;
     }
     if (ipadOn) startLink();
     // Trạng thái trận lên iPad. Danh sách từ chỉ gửi khi ĐỔI (bộ chia / swap); đồng hồ gửi kèm mỗi lượt + `ticking`,
@@ -735,11 +739,17 @@ const rwTemplate = {
         patch.lists = { a: current.a.slice(), b: current.b.slice() };
         // Đợt 576 — IPA đi kèm danh sách (thẻ phóng to trên màn ôn từ); từ không có IPA = ""
         patch.ipa = { a: current.a.map(w => ipaMap.get(String(w).toUpperCase()) || ""), b: current.b.map(w => ipaMap.get(String(w).toUpperCase()) || "") };
+        // Đợt 594 — nghĩa cho iPad GIÁO VIÊN, xếp theo đúng danh sách (mảng object: Firestore cấm mảng lồng mảng)
+        patch.defs = { a: current.a.map(defOf), b: current.b.map(defOf) };
         lastListKey = listKey;
       }
       link.publish(patch);
     }
 
+    function defOf(w) {
+      const d = defsMap[String(w).toUpperCase()] || {};
+      return { en: String(d.en || ""), vi: String(d.vi || ""), ex: String(d.ex || "") };
+    }
     function rowCode(st) { return st === "ok" ? "o" : st === "pass" ? "p" : "-"; }
 
     // ----- small builders for the option cells (sizes in --aw-u, see running-word.css) -----
@@ -788,6 +798,7 @@ const rwTemplate = {
         setupGate.ipad.box.classList.toggle("is-on", ipadOn);
         setupGate.ipad.btn.classList.toggle("is-on", ipadOn);
         setupGate.ipad.dots.forEach((d, i) => { d.classList.toggle("is-ok", !!pads[i]); d.classList.toggle("is-wait", !pads[i]); });
+        setupGate.ipad.dotT.classList.toggle("is-ok", padT);
       }
     }
 
@@ -811,6 +822,10 @@ const rwTemplate = {
       if (isTeacher) {
         const dots = el("div", "aw-rw-ipad-dots");
         const dotEls = TEAMS.map(t => { const d = el("span", `aw-rw-ipad-dot is-${t}`, `<i></i>${t.toUpperCase()}`); dots.append(d); return d; });
+        // Đợt 594 — chấm iPad GIÁO VIÊN: không bắt buộc ⇒ chưa có thì xám, không nhấp nháy
+        const dotT = el("span", "aw-rw-ipad-dot is-t", "<i></i>TEACHER");
+        dotT.title = "Teacher iPad (optional)";
+        dots.append(dotT);
         const btn = el("button", "aw-rw-ipad-btn", `${SVG_IPAD}<span>iPad</span>`);
         btn.type = "button";
         btn.title = "Show each team's words on its own iPad";
@@ -822,7 +837,7 @@ const rwTemplate = {
           paintSetupGate();
         };
         ipadBox.append(dots, btn);
-        ipadUI = { box: ipadBox, btn, dots: dotEls };
+        ipadUI = { box: ipadBox, btn, dots: dotEls, dotT };
       }
       head.append(ipadBox);
       setup.append(head);

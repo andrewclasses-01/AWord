@@ -336,6 +336,7 @@
 .aw-rt-ipad-dot.is-ok { color: var(--aw-text); }
 .aw-rt-ipad-dot.is-ok i { background: #10b981; box-shadow: 0 0 0 calc(.3 * var(--aw-u)) rgba(16,185,129,.22); }
 .aw-rt-ipad-dot.is-wait i { background: #f59e0b; animation: aw-rt-blink 1s infinite; }
+.aw-rt-ipad-dot.is-t.is-ok i { background: #8b5cf6; box-shadow: 0 0 0 calc(.3 * var(--aw-u)) rgba(139,92,246,.25); }   /* Đợt 594 */
 @keyframes aw-rt-blink { 50% { opacity: .25; } }
 .aw-rt-setup .aw-rt-classblock { max-width: none; }
 

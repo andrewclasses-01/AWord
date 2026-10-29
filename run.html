@@ -132,6 +132,140 @@
     .rt-cnt.is-word { font-size: calc(8 * var(--u)); }
     .rt-nx { font-size: calc(2.6 * var(--u)); font-weight: 800; margin-top: calc(1.4 * var(--u)); opacity: .85; }
     .rt-nx b { color: #fbbf24; }
+    .rt-top .back { background: rgba(255,255,255,.12); }
+
+    /* ================= Đợt 594 — MÀN CHỌN THIẾT BỊ (mẫu B thầy chọn: thẻ to trên + dải GIÁO VIÊN dưới) =================
+       Mẫu: D:\OTHERS\CLAUDE\AWord - thiet ke Running iPad Giao vien\mau-1.html (① B · ② B) */
+    .pk { flex: 1; display: flex; flex-direction: column; padding: calc(3.6 * var(--u)) calc(4 * var(--u)) calc(2.4 * var(--u)); gap: calc(2.4 * var(--u)); min-height: 0; }
+    .pk-h { text-align: center; }
+    .pk-h .g { font-size: calc(2.2 * var(--u)); font-weight: 800; letter-spacing: .2em; opacity: .55; }
+    .pk-h b { display: block; font-size: calc(4.6 * var(--u)); line-height: 1.05; letter-spacing: .03em; }
+    .pk-row { flex: 1.7; display: flex; gap: calc(2.6 * var(--u)); min-height: 0; }
+    .card { flex: 1; border: 0; font: inherit; cursor: pointer; border-radius: calc(3.4 * var(--u)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(.8 * var(--u)); text-align: center; padding: calc(2 * var(--u)); position: relative; color: #fff; box-shadow: 0 calc(1 * var(--u)) calc(2.4 * var(--u)) rgba(0,0,0,.3), inset 0 calc(-.8 * var(--u)) 0 rgba(0,0,0,.15); min-width: 0; min-height: 0; }
+    .card .i { font-size: calc(8 * var(--u)); line-height: 1; }
+    .card .i svg { width: 1em; height: 1em; display: block; }
+    .card .n { font-size: calc(5 * var(--u)); font-weight: 800; letter-spacing: .05em; line-height: 1; }
+    .card .d { font-size: calc(2 * var(--u)); font-weight: 700; opacity: .9; line-height: 1.25; }
+    .card.st { background: linear-gradient(160deg, #10b981, #047857); }
+    .card.te { background: linear-gradient(160deg, #8b5cf6, #6d28d9); }
+    .card.ta { background: linear-gradient(160deg, #60a5fa, #1d4ed8); }
+    .card.tb { background: linear-gradient(160deg, #fbbf24, #b45309); }
+    .card .chip { position: absolute; top: calc(1.6 * var(--u)); right: calc(1.6 * var(--u)); font-size: calc(1.6 * var(--u)); font-weight: 800; letter-spacing: .08em; background: rgba(0,0,0,.28); padding: calc(.2 * var(--u)) calc(1.4 * var(--u)); border-radius: 99px; }
+    .card.taken { opacity: .4; }
+    .card.taken .chip { background: #fff; color: #047857; }
+    .card.slim { flex: 1 1 0; max-height: calc(14 * var(--u)); flex-direction: row; gap: calc(2.4 * var(--u)); padding: calc(1.6 * var(--u)) calc(3 * var(--u)); justify-content: flex-start; text-align: left; }
+    .card.slim .i { font-size: calc(5.4 * var(--u)); }
+    .card.slim .n { font-size: calc(3.6 * var(--u)); }
+    .pk .warn { margin: 0; min-height: calc(2.6 * var(--u)); text-align: center; color: #fcd34d; font-size: calc(2.1 * var(--u)); font-weight: 700; }
+
+    /* ================= Đợt 594 — MÀN GIÁO VIÊN (chung) ================= */
+    .tv { --tv: #8b5cf6; }
+    .tbar { display: flex; align-items: center; gap: calc(1.3 * var(--u)); padding: calc(1.2 * var(--u)) calc(1.8 * var(--u)); background: #1e1b4b; border-bottom: calc(.2 * var(--u)) solid rgba(139,92,246,.5); flex: 0 0 auto; }
+    .tbar .back { width: calc(4.4 * var(--u)); height: calc(4.4 * var(--u)); font-size: calc(3 * var(--u)); }
+    .tbar .who { font-size: calc(1.6 * var(--u)); font-weight: 800; letter-spacing: .14em; background: var(--tv); padding: calc(.15 * var(--u)) calc(1.3 * var(--u)); border-radius: 99px; }
+    .tbar .tt { font-size: calc(2.4 * var(--u)); font-weight: 800; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .tbar .sp { flex: 1; }
+    .pill { font-size: calc(2.2 * var(--u)); font-weight: 800; font-variant-numeric: tabular-nums; padding: calc(.1 * var(--u)) calc(1.6 * var(--u)); border-radius: 99px; background: rgba(255,255,255,.1); white-space: nowrap; }
+    .pill.clock { background: #fff; color: #1e1b4b; font-size: calc(2.8 * var(--u)); }
+    .pill.ok { color: #4ade80; } .pill.miss { color: #f87171; }
+    .pill.pause { background: #fbbf24; color: #17222f; letter-spacing: .1em; }
+    .tbar .hearts { font-size: calc(2.4 * var(--u)); letter-spacing: .1em; color: #f43f5e; }
+    .tv.is-last .pill.clock { background: #ef4444; color: #fff; animation: blink .8s infinite; }
+    .tv.is-last .last-tag { display: inline-block; font-size: calc(1.7 * var(--u)); padding: calc(.2 * var(--u)) calc(1.4 * var(--u)); }
+    .def { border-radius: calc(1.6 * var(--u)); padding: calc(1 * var(--u)) calc(1.4 * var(--u)); display: flex; gap: calc(1.2 * var(--u)); align-items: flex-start; text-align: left; }
+    .def .l { flex: 0 0 auto; font-size: calc(1.4 * var(--u)); font-weight: 800; letter-spacing: .1em; border-radius: calc(.8 * var(--u)); padding: calc(.1 * var(--u)) calc(.8 * var(--u)); color: #fff; margin-top: calc(.25 * var(--u)); }
+    .def .x { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: calc(1.95 * var(--u)); line-height: 1.35; font-weight: 600; }
+    .def.en { background: #eff6ff; } .def.en .l { background: #2563eb; }
+    .def.vi { background: #fef3c7; } .def.vi .l { background: #d97706; }
+    .def.ex { background: #f1f5f9; } .def.ex .l { background: #64748b; } .def.ex .x { font-style: italic; color: #334155; }
+    .nodef { font-size: calc(1.8 * var(--u)); font-weight: 700; color: #94a3b8; }
+    .tmsg { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(1.2 * var(--u)); text-align: center; }
+    .tmsg b { font-size: calc(5 * var(--u)); letter-spacing: .06em; line-height: 1.05; }
+    .tmsg span { font-size: calc(2.4 * var(--u)); font-weight: 700; opacity: .7; }
+
+    /* ---- GV RUNNING TEAM ---- */
+    .rtg { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 62fr) minmax(0, 38fr); gap: calc(1.8 * var(--u)); padding: calc(1.8 * var(--u)); }
+    .now { border-radius: calc(2.6 * var(--u)); background: #fff; color: #17222f; display: flex; flex-direction: column; justify-content: center; padding: calc(2 * var(--u)) calc(2.4 * var(--u)); gap: calc(1 * var(--u)); min-width: 0; min-height: 0; overflow: hidden; box-shadow: 0 0 0 calc(.6 * var(--u)) #10b981; }
+    .now.is-ready { box-shadow: 0 0 0 calc(.6 * var(--u)) #fbbf24; }
+    .now.is-ok { box-shadow: 0 0 0 calc(.6 * var(--u)) #22c55e, 0 0 calc(5 * var(--u)) rgba(34,197,94,.6); }
+    .now.is-miss { box-shadow: 0 0 0 calc(.6 * var(--u)) #ef4444, 0 0 calc(5 * var(--u)) rgba(239,68,68,.5); }
+    .now .who2 { display: flex; align-items: baseline; gap: calc(1.2 * var(--u)); min-width: 0; }
+    .now .who2 .k { font-size: calc(1.5 * var(--u)); font-weight: 800; letter-spacing: .14em; color: #059669; white-space: nowrap; }
+    .now.is-ready .who2 .k { color: #b45309; }
+    .now .who2 b { font-size: calc(3 * var(--u)); line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .now .who2 .num { margin-left: auto; font-size: calc(2 * var(--u)); font-weight: 800; color: #6b7a8c; white-space: nowrap; }
+    .now .w { font-size: calc(6.4 * var(--u) * var(--f, 1)); font-weight: 800; line-height: 1; letter-spacing: .02em; }
+    .now .ipa, .cw .ipa { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: calc(2.2 * var(--u)); color: #475569; font-weight: 500; }
+    .now .res { font-size: calc(2 * var(--u)); font-weight: 800; letter-spacing: .1em; }
+    .now.is-ok .res { color: #16a34a; } .now.is-miss .res { color: #dc2626; }
+    .side { display: flex; flex-direction: column; gap: calc(1.4 * var(--u)); min-height: 0; min-width: 0; }
+    .box { border-radius: calc(2 * var(--u)); background: rgba(255,255,255,.06); padding: calc(1.2 * var(--u)) calc(1.4 * var(--u)); display: flex; flex-direction: column; gap: calc(.6 * var(--u)); min-height: 0; overflow: hidden; }
+    .box .h { font-size: calc(1.5 * var(--u)); font-weight: 800; letter-spacing: .16em; opacity: .55; }
+    .q { display: flex; align-items: center; gap: calc(1 * var(--u)); font-size: calc(2.1 * var(--u)); font-weight: 700; white-space: nowrap; overflow: hidden; }
+    .q .o { width: calc(2.6 * var(--u)); height: calc(2.6 * var(--u)); border-radius: 50%; display: grid; place-items: center; font-size: calc(1.6 * var(--u)); font-weight: 800; flex: 0 0 auto; background: rgba(255,255,255,.12); }
+    .q.n1 .o { background: #10b981; } .q.n2 { opacity: .7; } .q.n3 { opacity: .45; }
+    .hi { display: flex; align-items: center; gap: calc(1 * var(--u)); font-size: calc(1.85 * var(--u)); font-weight: 700; white-space: nowrap; overflow: hidden; min-width: 0; }
+    .hi .r { flex: 0 0 auto; width: calc(2.4 * var(--u)); text-align: center; font-weight: 800; }
+    .hi.o .r { color: #4ade80; } .hi.x .r { color: #f87171; }
+    .hi .wd { font-weight: 800; flex: 0 0 auto; }
+    .hi .nm { opacity: .5; margin-left: auto; font-size: calc(1.6 * var(--u)); overflow: hidden; text-overflow: ellipsis; }
+    /* hết trận: lưới các từ đã chơi */
+    .tgrid { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: calc(1.6 * var(--u)) calc(1.8 * var(--u)); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(1 * var(--u)); align-content: start; }
+    .hv { border-radius: calc(1.6 * var(--u)); padding: calc(.8 * var(--u)) calc(1.2 * var(--u)); background: #fff; color: #17222f; min-width: 0; overflow: hidden; display: flex; flex-direction: column; }
+    .hv b { font-size: calc(2.3 * var(--u)); line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hv small { font-family: system-ui, -apple-system, sans-serif; font-size: calc(1.5 * var(--u)); font-weight: 600; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hv.o { background: #22c55e; color: #fff; } .hv.x { background: #fecaca; color: #7f1d1d; }
+    .tsum { display: flex; justify-content: center; align-items: baseline; gap: calc(2 * var(--u)); padding: calc(1.6 * var(--u)) 0 0; }
+    .tsum b { font-size: calc(4 * var(--u)); letter-spacing: .05em; }
+
+    /* ---- GV RUNNING WORD: hai nửa ---- */
+    .halves { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: calc(1.6 * var(--u)); padding: calc(1.6 * var(--u)); }
+    .hf { --tc: #3b82f6; --tcd: #1d4ed8; border-radius: calc(2.4 * var(--u)); background: rgba(255,255,255,.05); display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; position: relative; }
+    .hf.is-b { --tc: #f59e0b; --tcd: #b45309; }
+    .hf .hh { display: flex; align-items: center; gap: calc(1 * var(--u)); padding: calc(1 * var(--u)) calc(1.4 * var(--u)); background: var(--tc); }
+    .hf .hh .tn { font-size: calc(2.3 * var(--u)); font-weight: 800; letter-spacing: .04em; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .hf .hh .pt { font-size: calc(1.3 * var(--u)); font-weight: 800; letter-spacing: .1em; background: rgba(0,0,0,.2); padding: calc(.1 * var(--u)) calc(1 * var(--u)); border-radius: 99px; white-space: nowrap; }
+    .hf .hh .sp { flex: 1; }
+    .hf .hh .ck { font-size: calc(2.4 * var(--u)); font-weight: 800; font-variant-numeric: tabular-nums; background: #fff; color: var(--tcd); padding: 0 calc(1.3 * var(--u)); border-radius: 99px; line-height: 1.25; }
+    .hf .bar { height: calc(.8 * var(--u)); background: rgba(255,255,255,.1); position: relative; flex: 0 0 auto; }
+    .hf .bar i { position: absolute; top: 0; bottom: 0; left: 0; background: #22c55e; }
+    .hf .bar s { position: absolute; top: 0; bottom: 0; background: #fbbf24; text-decoration: none; }
+    .hf .meta { display: flex; gap: calc(1.4 * var(--u)); padding: calc(.7 * var(--u)) calc(1.4 * var(--u)) 0; font-size: calc(1.6 * var(--u)); font-weight: 800; opacity: .85; }
+    .hf .meta .g { color: #4ade80; } .hf .meta .p { color: #fbbf24; } .hf .meta .sp { flex: 1; }
+    .hf .cw { position: relative; margin: calc(2 * var(--u)) calc(1.2 * var(--u)) 0; border-radius: calc(2 * var(--u)); background: #fff; color: #17222f; padding: calc(1.6 * var(--u)) calc(1.4 * var(--u)) calc(1.2 * var(--u)); display: flex; flex-direction: column; gap: calc(.7 * var(--u)); box-shadow: 0 0 0 calc(.45 * var(--u)) var(--tc); }
+    .hf .cw .top2 { display: flex; align-items: baseline; gap: calc(1 * var(--u)); }
+    .hf .cw .no { font-size: calc(1.5 * var(--u)); font-weight: 800; color: var(--tcd); letter-spacing: .06em; }
+    .hf .cw .ipa { font-size: calc(1.6 * var(--u)); }
+    .hf .cw .w { font-size: calc(4.8 * var(--u) * var(--f, 1)); font-weight: 800; line-height: 1; letter-spacing: .02em; }
+    .hf .def { padding: calc(.7 * var(--u)) calc(1 * var(--u)); border-radius: calc(1.2 * var(--u)); gap: calc(.9 * var(--u)); }
+    .hf .def .l { font-size: calc(1.1 * var(--u)); padding: 0 calc(.6 * var(--u)); margin-top: calc(.2 * var(--u)); }
+    .hf .def .x { font-size: calc(1.75 * var(--u)); line-height: 1.3; }
+    .hf .nodef { font-size: calc(1.5 * var(--u)); }
+    .hf .flag { position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); font-size: calc(1.3 * var(--u)); font-weight: 800; letter-spacing: .14em; padding: calc(.1 * var(--u)) calc(1.1 * var(--u)); border-radius: 99px; white-space: nowrap; }
+    .hf.on { background: rgba(255,255,255,.09); box-shadow: inset 0 0 0 calc(.35 * var(--u)) var(--tc); }
+    .hf.on .flag { background: #22c55e; color: #052e16; }
+    .hf.on.paused .flag { background: #fbbf24; color: #17222f; }
+    .hf.off .flag { background: #475569; color: #fff; }
+    .hf.off .cw { background: #e8edf3; box-shadow: 0 0 0 calc(.3 * var(--u)) rgba(255,255,255,.25); opacity: .85; }
+    .hf.off .hh { filter: saturate(.55) brightness(.8); }
+    .hf.off .nx { opacity: .8; }
+    .hf .done { margin: calc(2 * var(--u)) calc(1.2 * var(--u)) 0; border-radius: calc(2 * var(--u)); background: rgba(255,255,255,.08); padding: calc(2 * var(--u)); text-align: center; font-size: calc(3 * var(--u)); font-weight: 800; }
+    .hf .tnx { padding: calc(1.4 * var(--u)) calc(1.4 * var(--u)) 0; display: flex; flex-direction: column; gap: calc(.9 * var(--u)); min-height: 0; }
+    .hf .tnx .h { font-size: calc(1.2 * var(--u)); font-weight: 800; letter-spacing: .16em; opacity: .5; }
+    .hf .tnx .it { display: flex; gap: calc(1 * var(--u)); align-items: baseline; font-size: calc(2.2 * var(--u)); font-weight: 800; white-space: nowrap; overflow: hidden; min-width: 0; }
+    .hf .tnx .it .k { opacity: .45; font-size: calc(1.4 * var(--u)); min-width: calc(2.4 * var(--u)); flex: 0 0 auto; }
+    .hf .tnx .it .vi { font-family: system-ui, -apple-system, sans-serif; font-weight: 600; font-size: calc(1.6 * var(--u)); opacity: .6; overflow: hidden; text-overflow: ellipsis; }
+    .hf .tnx .it.n2 { opacity: .75; } .hf .tnx .it.n3 { opacity: .55; } .hf .tnx .it.n4 { opacity: .38; }
+    .hf .lastx { margin: auto calc(1.4 * var(--u)) calc(1.2 * var(--u)); padding-top: calc(1 * var(--u)); font-size: calc(1.5 * var(--u)); font-weight: 700; display: flex; gap: calc(.6 * var(--u)); flex-wrap: wrap; opacity: .85; }
+    .hf .lastx span { background: rgba(255,255,255,.08); border-radius: 99px; padding: 0 calc(1 * var(--u)); white-space: nowrap; }
+    .hf .lastx .o { color: #4ade80; } .hf .lastx .p { color: #fbbf24; }
+    /* hết trận: mỗi nửa một lưới ôn từ, chạm phóng to (thẻ có nghĩa) */
+    .hgrid { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: calc(1.2 * var(--u)); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(.8 * var(--u)); align-content: start; }
+    .hgrid .rv { padding: calc(.6 * var(--u)) calc(1 * var(--u)); border-radius: calc(1.2 * var(--u)); flex-direction: column; align-items: flex-start; gap: 0; }
+    .hgrid .rv b { font-size: calc(2 * var(--u)); line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .hgrid .rv small { font-family: system-ui, -apple-system, sans-serif; font-size: calc(1.35 * var(--u)); font-weight: 600; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .zcard .zd { align-self: stretch; display: flex; flex-direction: column; gap: calc(1 * var(--u)); margin-top: calc(1.6 * var(--u)); }
+    .zcard .zd .def .x { font-size: calc(2.4 * var(--u)); }
   </style>
 <script src="core/chan-phim.js?v=1"></script>   <!-- 24/10/2026 chặn phím tắt xem mã (không phải bảo mật) -->
 </head>
