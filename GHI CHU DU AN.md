@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 595 (29/10/2026) — RACING WORDS lên myGame 5p: bay dễ cân (buông vô lăng giữ góc, trần nghiêng 135°) · tia lửa 4 bánh khi đáp · nảy vài nhịp · lái gắt hơn ở tốc độ cao · dốc rộng +30 %
+## Đợt 595 (29/10/2026) — RACING WORDS lên myGame 5p: bay dễ cân (buông vô lăng giữ góc, trần nghiêng 135°) · tia lửa 4 bánh khi đáp · nảy vài nhịp · lái gắt hơn ở tốc độ cao · dốc rộng +30 % — code `31ecb7f` LIVE (kiem-live 6/6)
 **Soát đồng bộ trước khi làm:** AWord Đợt 592 = myGame 5o `179c5cf` — 31 file `3d/*.js` giống hệt sau khi đổi import (so bằng script, không cmp vì đường three khác).
 **Thầy (29/10):** xe trên không quá chòng chành, khó cân ⇒ toàn BAD LANDING. (1) bỏ xoay 360°, tối đa nghiêng 135° · (2) vô lăng giữa ⇒ xe giữ y góc đang nghiêng; bẻ ngược chiều nghiêng ⇒ kéo về cân dần; cân rồi trả vô lăng về giữa ⇒ giữ cân, chỉ rung nhẹ cho đã mắt · (3) chạm đất toé tia lửa ở bánh · (4) vô lăng càng lệch càng bẻ gắt + tốc độ cao lái đúng chiều cua thì xe tự ôm cua hơn chút · (5) đáp xong nảy vài nhịp · (6) dốc thẳng + dốc xoắn rộng thêm ~30 %. Hỏi thầy: dốc xoắn ⇒ thầy chọn **giữ dốc xoắn tự lộn 1 vòng** (người lái thì không tự lộn được nữa).
 **Làm ở myGame** `9cfba48` (chi tiết: myGame `speed-run/HO SO BAN GIAO RACING WORDS.md` mục MẪU 5p) — lõi `sr3d-5p.js`, `rw-5p.js`, `sr3d-stunt-5p.js`, trang `mau-5p-bay-de-can.html`:
