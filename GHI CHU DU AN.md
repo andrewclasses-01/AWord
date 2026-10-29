@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 594 (29/10/2026) — RUNNING WORD / RUNNING TEAM: thêm iPad GIÁO VIÊN + MÀN CHỌN THIẾT BỊ
+## Đợt 594 (29/10/2026) — RUNNING WORD / RUNNING TEAM: thêm iPad GIÁO VIÊN + MÀN CHỌN THIẾT BỊ — code `56d26bb` LIVE (kiem-live 8/8)
 **Thầy:** Running team cả lớp 1 iPad — thêm 1 iPad cho giáo viên quan sát lớp đang đến từ gì, ai đang làm, có đủ nghĩa Anh + Việt. Running word 2 iPad 2 đội — thêm iPad thứ 3 cho giáo viên, màn chia 2 nửa thấy song song tiến trình 2 đội. Cần màn chọn thiết bị (học sinh / giáo viên). Thầy xem mẫu `D:\OTHERS\CLAUDE\AWord - thiet ke Running iPad Giao vien\mau-1.html` và chọn **RT-B + RW-B** (thẻ học sinh/đội to ở trên + dải TEACHER tím ở dưới).
 **Làm:**
 - **Nghĩa đi kèm (core/convert.js `runDefs`)** — Running mở từ act WORDS qua convertActivity, mà bản mượn chỉ giữ chữ + IPA. Nay `content.defs = { "WORD": {en, vi, ex, ipa} }`: act có bộ gợi ý (`items[i].clues`) ⇒ EN = ENG1 (thiếu thì ENG2), VI = VI1, EX = VI2; act khác chỉ có một gợi ý (qua toRecords) ⇒ có dấu tiếng Việt là VI, không thì EN. Act Running đứng riêng (trước Đợt 268) không có nghĩa ⇒ màn GV ghi "No meaning saved for this word."
@@ -557,6 +557,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
   - **GV RW**: hai nửa (đồng hồ riêng, thanh tiến độ xanh đúng/vàng PASS, ✓/PASS, word x/n) · thẻ từ đang chơi + IPA + EN/VI/EX, nhãn PLAYING (xanh) / WAITING (xám) / PAUSED · 4 từ kế kèm nghĩa VI · 3 từ vừa xong · hết trận = mỗi nửa một lưới ôn (nghĩa VI dưới từ), chạm ô ⇒ thẻ to có EN + VI.
 **Bẫy gặp:** lớp `.nx` của màn GV trùng tên lớp `.nx` của màn học sinh RW ⇒ khối NEXT bị căn giữa + nền — đổi thành `.tnx`. Bash heredoc vỡ với script Python dài có backtick/`'''` ⇒ ghi script ra file rồi chạy.
 **Kiểm (máy nhà, cổng 5594, launch `aword-dot594`):** bàn thử `scratch/dot594-bench.html?g=rw|rt&padsig=local&padkeep` (act dạng WORDS có ENG1/VI1/VI2 + IPA, chạy qua convertActivity thật) + 3 tab `run.html?padsig=local&padkeep`. RW: màn chọn ⇒ A, B, TEACHER; chấm máy chiếu A/B xanh + TEACHER tím; chơi SCRAPE ✓ ⇒ GV thấy A WAITING / B PLAYING, đồng hồ chạy; iPad đội A vẫn như cũ; hết trận lưới + thẻ phóng to có nghĩa. RT: màn chọn (STUDENTS đã giữ ⇒ mờ); READY GV thấy PUMICE trước, câu hỏi đúng PUMICE; 1 đúng 1 sai ⇒ ✓1 ✗1, mất 1 tim, lịch sử có tên em; iPad học sinh lúc READY không lộ từ; hết trận lưới; ‹ về màn chọn. Không lỗi console. ⚠️ Chưa thử Firestore thật (Claude không đăng nhập tài khoản thầy) và chưa thử iPad thật.
+**VIỆC ĐANG CHỜ:** ⬜ thầy thử trên lớp: máy chiếu + iPad học sinh/đội + iPad giáo viên (đăng nhập cùng tài khoản Google) — xem chấm TEACHER tím, nghĩa EN/VI có hiện đủ với act WORDS thật, cỡ chữ hai nửa trên iPad thật.
 
 ---
 
