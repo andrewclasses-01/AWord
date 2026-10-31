@@ -45,7 +45,8 @@ const LOAD_BG = new URL("./rw-loading.webp", import.meta.url).href;   // Đợt 
 const loader = () => { ensureCss(); return showLoader3d({ key: "racingwords", title: "RACING WORDS", theme: "race", bg: LOAD_BG, files: loadFiles, pace: { create: createLoadPace, key: "rw" } }); };
 preloadLoader3d("race", LOAD_BG);
 
-const GAME = "./3d/rw-5p.js";   // ⭐ Đợt 595: myGame 5p (bay dễ cân, trần nghiêng 135°, tia lửa bánh khi đáp, nảy vài nhịp, lái gắt hơn, dốc rộng +30 %)
+const GAME = "./3d/rw-5q.js";   // ⭐ Đợt 597: myGame 5q (tab Driver luôn có + TEST mode, trợ cua sát mép, bay không xuyên dốc)
+// Đợt 595 (cũ): const GAME = "./3d/rw-5p.js";   // ⭐ Đợt 595: myGame 5p (bay dễ cân, trần nghiêng 135°, tia lửa bánh khi đáp, nảy vài nhịp, lái gắt hơn, dốc rộng +30 %)
 // Đợt 592 (cũ): const GAME = "./3d/rw-5o.js";   // ⭐ Đợt 592: myGame 5o (dốc dày ngẫu nhiên đổi bên, dốc rộng 4,65 m, hông dốc = tường, bờ hồ cát + dừa như 4x)
 // Đợt 591 (cũ): const GAME = "./3d/rw-5n.js";   // ⭐ Đợt 591: myGame 5n (boost tối đa khi còn thanh + cân bằng theo mức dẫn, đường 7 km quanh HỒ, độ nhạy vô lăng, traffic 0–100 %)
 // Đợt 589 (cũ): const GAME = "./3d/rw-5l.js";   // ⭐ Đợt 589: myGame 5l (đường thật 3,5 km cua gắt, cọ rào, bay chông chênh + lộn vòng, xe traffic 3D)
@@ -54,7 +55,7 @@ const GAME = "./3d/rw-5p.js";   // ⭐ Đợt 595: myGame 5p (bay dễ cân, tr�
 // Đợt 556 (cũ): const GAME = "./3d/rw-5h.js";                     // ⭐ Đợt 556: myGame 5h — tối ưu TOMKO (2 drone mượt, độ nét giữ 0,9–1,0).   // Đợt 554: ⭐ Đợt 554: myGame 5f — 2 DRONE (iPad thứ 4), drone trong xưởng, máy quay theo xe dẫn.
 // Đợt 553 (cũ): const GAME = "./3d/rw-5d.js";                     // ⭐ Đợt 553: myGame 4k→5d — DRONE iPad thứ 3 (Settings ▸ Drone; mặc định Off). Trước: "./3d/rw-4j.js"
 // const GAME_4J = "./3d/rw-4j.js";                     // ⭐ Đợt 551: myGame 4g→4j (kết trận slow motion · chờ câu mới 3 s · loading đều + hết đơ bóng xe · boost phát sáng · cửa sổ góc + tạm dừng chung + đèn 3-2-1 · Drive on iPad màn lớn lái cùng · tên lửa chỉ bắn phía trước / bay thấp / quầng đỏ · trúng đạn lệch + DAMAGE · mũi tên đối thủ dính mép · bảng đếm đầu vạch · nút bắn kiểu thẻ · giá tên lửa thấp) · Đợt 538: myGame mẫu 4f (cổng iPad ở xưởng: START khi 2 iPad nối thẳng + thử trái/phải · đường nối sống qua Apply / Start again / đổi xe · tự nối lại khi slow · mốc nghiêng tự lấy) · Đợt 537: myGame mẫu 4e (Settings mọi nơi + tạm dừng, mặc định mới, bay xa, nghiêng đúng chiều, BAD mất lái) · Đợt 535: myGame mẫu 4d (5 đợt sau 3y: chế độ đua, cong thật, lái tay, dốc xoắn, phần thưởng, xe khác, camera gộp) · Đợt 534: myGame mẫu 3y (lái nghiêng iPad) · Đợt 533: myGame mẫu 3r (mượt TOMKO) · Đợt 531: myGame mẫu 3q (Fight options, cảnh xa đúng vật lý, 35 km/h) · Đợt 529: 3p · Đợt 527: 3o
-const CSS = ["sr3d-3g.css", "sr3d-3l.css", "sr3d-intro-3o.css", "rw-3r.css", "rw-3z.css", "rw-4a.css", "rw-4b.css", "rw-4c.css", "rw-4d.css", "rw-4e.css", "rw-4f.css", "rw-4g.css", "rw-4h.css", "rw-4i.css", "rw-4j-fb.css", "rw-4j.css", "rw-4k.css", "rw-4l.css", "rw-4o.css", "rw-4r.css", "rw-4w.css", "rw-4y.css", "rw-5e.css", "rw-5f.css", "rw-5h.css", "rw-5i.css"];   // ⭐ Đợt 558: + 5i (bảng FIRE LINE, tab Boost)   // ⭐ Đợt 556: + 5h (bỏ blur keyframes)   // ⭐ Đợt 554: + 5e (2 drone) · 5f (chọn drone ở xưởng)   // Đợt 551: + 4g…4j (đúng thứ tự) · Đợt 538: + rw-4f (cổng iPad) · Đợt 537: + rw-4e · Đợt 535: + 3z…4d (đúng thứ tự)
+const CSS = ["sr3d-3g.css", "sr3d-3l.css", "sr3d-intro-3o.css", "rw-3r.css", "rw-3z.css", "rw-4a.css", "rw-4b.css", "rw-4c.css", "rw-4d.css", "rw-4e.css", "rw-4f.css", "rw-4g.css", "rw-4h.css", "rw-4i.css", "rw-4j-fb.css", "rw-4j.css", "rw-4k.css", "rw-4l.css", "rw-4o.css", "rw-4r.css", "rw-4w.css", "rw-4y.css", "rw-5e.css", "rw-5f.css", "rw-5h.css", "rw-5i.css", "rw-5q.css"];   // ⭐ Đợt 597: + 5q (TEST, dòng chưa nối iPad)   // ⭐ Đợt 558: + 5i (bảng FIRE LINE, tab Boost)   // ⭐ Đợt 556: + 5h (bỏ blur keyframes)   // ⭐ Đợt 554: + 5e (2 drone) · 5f (chọn drone ở xưởng)   // Đợt 551: + 4g…4j (đúng thứ tự) · Đợt 538: + rw-4f (cổng iPad) · Đợt 537: + rw-4e · Đợt 535: + 3z…4d (đúng thứ tự)
 const FONTS = "https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,600;0,700;0,800;0,900;1,800;1,900&subset=vietnamese&display=swap";
 // khoá game <-> khoá PHẲNG (activity.options)
 // ⭐ Đợt 531 (thầy) — Options kiểu FIGHT của Rocket Race: Lives (srLives 0 = tắt) · Missile damages 1–5 (srMsDmg) · Time delay (srTie giây,
@@ -129,6 +130,20 @@ let live3d = 0;   // số ván đang mở (lớp html.aw-rw-on)
 const PADM_KEY = "racingwords.padMode.v2";
 const savedPadMode = () => { try { const v = localStorage.getItem(PADM_KEY); return v === "0" || v === "1" || v === "2" ? +v : 2; } catch (e) { return 2; } };
 let PADLINK = null;
+// ⭐ Đợt 597 (thầy 31/10: "nút cài đặt bị mất tab DRIVE, reload thì lại được"): file nối iPad tải HỤT (mạng chập chờn / trang đang lên bản mới) ⇒ L.remote = null ⇒
+//   game cũ (5p) bỏ hẳn tab Driver. Trình duyệt NHỚ lần tải hụt của một địa chỉ module tới khi tải lại trang ⇒ thử lại 3 lần, lần 2–3 thêm ?r= (địa chỉ mới = tải lại thật).
+//   Game 5q: tab Driver luôn có; chưa có đường nối ⇒ "iPad link not loaded" + Reconnect (onEvent "padRetry" ⇒ padRetry trong mount).
+let PAD_BUST = 0;
+const impR = (p, n) => import(n ? `${p}?r=${n}` : p);
+async function importRetry(paths) {
+  let e0 = null;
+  for (let k = 0; k < 3; k++) {
+    const n = PAD_BUST ? PAD_BUST * 10 + k : k;
+    try { return await Promise.all(paths.map(p => impR(p, n))); }
+    catch (e) { e0 = e; console.warn("Racing words iPad link: load failed, retry " + (k + 1), e); await new Promise(r => setTimeout(r, 700 * (k + 1))); }
+  }
+  throw e0;
+}
 function rwPadLink() {
   if (PADLINK && !PADLINK.dead) { PADLINK.use(); return PADLINK.ready; }
   let N = null, claim = null, mode = savedPadMode(), linked = [false, false, false, false],   /* Đợt 554: + [3] iPad DRONE 2 */ users = 1, dropT = 0;   // Đợt 553: + [2] iPad DRONE
@@ -139,6 +154,7 @@ function rwPadLink() {
       if (k === "pad" && v) { linked[v.team] = v.s === "on" || v.s === "relay"; sync(); }
     },
     use() { users++; clearTimeout(dropT); sync(); },
+    kill() { users = 0; clearTimeout(dropT); close(); },   // Đợt 597: bỏ đường nối hỏng (không có remote) để Reconnect dựng cái mới
     release() {                                   // một mount thôi dùng
       users = Math.max(0, users - 1); if (users) return;
       if (claim) { claim.release(); claim = null; }
@@ -158,8 +174,8 @@ function rwPadLink() {
     if (claim) { claim.release(); claim = null; }
     try { L.remote && L.remote.close && L.remote.close(); } catch (e) { /* */ }
   }
-  import("../../core/ipad-now.js").then(m => { N = m; sync(); }).catch(() => {});
-  L.ready = Promise.all([import("./rw-pad-signal.js"), import("./3d/sr3d-padlink-5m.js")]).then(([S, P]) => {   // ⭐ Đợt 590: 5m (TAKEN chỉ khi chỗ đang nối thật · chủ treo 6 s thì nhường)   // ⭐ Đợt 554: 5e (4 chỗ: 2 đội + 2 drone)   // ⭐ Đợt 553: 5a (3 chỗ: 2 đội + drone)
+  importRetry(["../../core/ipad-now.js"]).then(([m]) => { N = m; sync(); }).catch(() => {});   // Đợt 597: + thử lại
+  L.ready = importRetry(["./rw-pad-signal.js", "./3d/sr3d-padlink-5m.js"]).then(([S, P]) => {   // Đợt 597: + thử lại   // ⭐ Đợt 590: 5m (TAKEN chỉ khi chỗ đang nối thật · chủ treo 6 s thì nhường)   // ⭐ Đợt 554: 5e (4 chỗ: 2 đội + 2 drone)   // ⭐ Đợt 553: 5a (3 chỗ: 2 đội + drone)
     if (L.dead) return L;
     const r = P.createPadHost({ signal: S.rwPadSignal(), padUrl: S.padUrl });
     // mở phiên NGAY (chưa có game): game gắn sau sẽ nhận lại trạng thái từng đội
@@ -301,12 +317,30 @@ const racingWordsTemplate = {
       console.log("MYACT:3D:OFF");
     };
     let framed = () => {}; const frameP = new Promise(r => { framed = r; });   // Đợt 551: màn chờ đi khi KHUNG ĐẦU đã vẽ
+    const make = (m, L) => m.createRacingWords({ mount: box, questions, title: "RACING WORDS", options: rwGame(activity), host, remote: L.remote,
+      onEvent: (k, v) => { if (k === "padRetry") padRetry(m); else L.onEvent(k, v); }, onProgress: k => { try { ld.mark && ld.mark(k); } catch (e) { /* */ } if (k === "frame") framed(); } });   // Đợt 551
+    // ⭐ Đợt 597: Settings ▸ Driver ▸ Reconnect (chỉ hiện khi game không có đường nối iPad) ⇒ bỏ đường nối hỏng, tải lại file nối (địa chỉ mới), dựng lại game gắn đường nối mới;
+    //   vẫn hụt ⇒ tải lại trang (như thầy reload tay)
+    let retrying = false;
+    function padRetry(m) {
+      if (retrying || dead) return; retrying = true;
+      const old = link;
+      if (old && !old.remote) { link = null; old.kill(); PAD_BUST++; }
+      const p = old && old.remote ? Promise.resolve(old) : rwPadLink();
+      p.then(L => {
+        if (dead) { if (L !== old) L.release(); return null; }
+        if (!L.remote) { location.reload(); return null; }
+        link = L;
+        if (game) { try { game.destroy(); } catch (e) { console.warn("Racing words destroy", e); } game = null; }
+        return make(m, L);
+      }).then(g => { retrying = false; if (!g) return; if (dead) { g.destroy(); return; } game = g; })
+        .catch(e => { console.warn("Racing words reconnect", e); location.reload(); });
+    }
     Promise.all([import(GAME), rwPadLink(), preloadSounds()])
       .then(([m, L]) => {
         if (dead) { L.release(); return null; }
         link = L;   // Đợt 538: đường nối dùng chung cả trang (L.remote sống qua các lần dựng lại game)
-        return m.createRacingWords({ mount: box, questions, title: "RACING WORDS", options: rwGame(activity), host, remote: L.remote,
-          onEvent: (k, v) => L.onEvent(k, v), onProgress: k => { try { ld.mark && ld.mark(k); } catch (e) { /* */ } if (k === "frame") framed(); } });   // Đợt 551
+        return make(m, L);
       })
       .then(g => { if (!g) return; if (dead) { g.destroy(); return; } game = g; Promise.race([frameP, new Promise(r => setTimeout(r, 6000))]).then(() => ld.done()); })
       .catch(err => {

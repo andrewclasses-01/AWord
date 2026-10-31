@@ -1,0 +1,11 @@
+/* RACING WORDS 5q (31/10/2026) — nạp SAU rw-5i.css.
+   · TEST (Settings ▸ Driver ▸ TEST mode): giữ khung 2 nửa như trận thật, ẩn câu hỏi + mũi tên / gương / nhãn đối thủ + bảng đếm + đồng hồ
+   · Driver tab khi chưa có đường nối iPad: dòng báo + nút Reconnect */
+.is-test .sr-qbox0, .is-test .sr-qbox1 { visibility: hidden; }
+.is-test .rw-oa2, .is-test .sr-mirror, .is-test .sr-tag, .is-test .rw-cb, .is-test .sr-clock { display: none !important; }
+.sr-test .sr-opt-row > span { display: flex; flex-direction: column; gap: .3cqh; }
+.sr-test .sr-opt-row small { font: 600 1.2cqh system-ui, sans-serif; color: #94a3b8; letter-spacing: 0; }
+.sr-nolink { display: flex; align-items: center; justify-content: space-between; gap: 1cqh; margin-top: 1cqh; padding: .8cqh 1.2cqh; border-radius: 1cqh;
+  background: rgba(251, 191, 36, .12); border: 1px solid rgba(251, 191, 36, .35); font: 700 1.45cqh "Exo 2", sans-serif; color: #fde68a; }
+.sr-nolink button { border: 0; border-radius: .8cqh; padding: .6cqh 1.4cqh; font: 800 1.35cqh "Exo 2", sans-serif; color: #111; background: #fbbf24; cursor: pointer; }
+.sr-nolink button:disabled { opacity: .55; cursor: default; }

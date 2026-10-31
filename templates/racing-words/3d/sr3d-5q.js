@@ -1,3 +1,6 @@
+// RACING WORDS — LÕI MẪU 5q (31/10/2026) = sr3d-5p.js + thầy 31/10: (1) tab Driver LUÔN có (cũ cần remote) + dòng "iPad link not loaded" + Reconnect (onEvent "padRetry") ·
+//   (2) TRỢ CUA SÁT MÉP khi đánh lái ra xa rào (ASSIST) + cọ rào nhẹ khi đang lái đúng · (3) xe đang bay gặp mặt dốc / dốc xoắn ⇒ đáp lên dốc (airSurf), trượt khỏi mép giữa chừng ⇒ rơi (sideDrop)
+//   — cũ rơi xuyên thân dốc rồi bị coi là đâm hông, hất ngang ~4 m · (4) TEST mode (testOn): chỉ đội trái, không câu hỏi, boost đầy, không cân bằng, không đích, không mất mạng.
 // RACING WORDS — LÕI MẪU 5p (29/10/2026) = sr3d-5o.js + thầy 29/10: BAY DỄ CÂN — trên không vô lăng = TỐC ĐỘ NGHIÊNG (buông ⇒ giữ y góc, có quán tính nhẹ),
 //   bỏ gió lệch 1 phía + bỏ tự lộn vòng / phanh + lái lộn vòng (người lái không xoay 360° được nữa, trần nghiêng 135°; dốc xoắn vẫn tự lộn 1 vòng) ·
 //   đáp đất toé tia lửa ở 4 bánh + nảy vài nhịp (bnc 3, hệ số hồi 0,42) · vô lăng càng lệch càng bẻ gắt (×1 + 0,6·lái²) + trợ cua khi lái ĐÚNG chiều cua ở tốc độ cao ·
@@ -393,6 +396,7 @@ export const PHYS = { SEG: 80, VBASE: 9.72, BUSE: 0.55, VMIN: 6.5, DRIFT: 3.0, A
 export const AIR = { BOOST: 1.2, VY0: 2.8, VYK: 0.55, GUP: 4.5, G: 10.5, LIFT_T: 0.45, ROT: 7.4, ROLL: 1.5, PERFECT: 10 * Math.PI / 180, OK: 30 * Math.PI / 180, NITRO_ROT: 0.34, NITRO_USE: 0.3,   // 5l: PERFECT 15° ⇒ 10°, OK 32° ⇒ 30°
   STEER: 10, DAMP: 0.45, RMAX: 8, GUST: 1.6, ROLL_V: 3.4, ROLL_A: 1.5, ROLL_K: 1.3, TWIST_K: 1.35,
   TILT_W: 2.0, TILT_RESP: 5, TILT_MAX: 135 * Math.PI / 180, WOB: 0.9 };   // 5p: vô lăng hết cỡ = nghiêng 2 rad/s · đuổi theo trong ~0,2 s (quán tính) · trần 135° · rung nhẹ trung bình 0 (rad/s²)
+const ASSIST = { DIST: 1.3, YAW: 1.6, PUSH: 3, SOFT: 0.65, LEAD: 0.4 };   // 5q: trợ cua sát mép — trong 1,3 m · quay mũi ≤ 1,6 rad/s · đẩy vào 3 m/s² · cọ rào nhẹ còn 35 % · dẫn xa trợ còn 60 %
 const STEER_X = 0.6, CORNER_HELP = 0.3;                   // 5p: vô lăng hết cỡ bẻ ×1,6 (×1 + 0,6·lái²) · lái ĐÚNG chiều cua ở tốc độ cao ⇒ đường cong "kéo" bớt 30 %   // 5l: vô lăng trên không = MÔ-MEN nghiêng (rad/s²) · tắt dần · trần · gió giật · ngưỡng LỘN VÒNG (rad/s, rad) · ×quãng bay khi lộn / dốc xoắn
 const RAMP_W = 6.05;                                       // 5p: +30 % (thầy 29/10) · 5o: 4,65 m, rộng thêm 50 % (thầy: "đang quá bé") · 5l: 3,1 m (~1,5 bề ngang xe, cũ 7 m)
 export const DEFAULTS = { pkBoost: true, pkLife: true, pkMissile: true, twists: true, race: "len", lenK: 2, timeS: 180, steps: 12, laps: 0, cars: ["Y2", "H4"], bend: 0.75, streak: 3, msMax: 3, hitLoss: 1, ramps: true, sameQ: true,
@@ -634,11 +638,13 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   function farGlowTex() { if (farGlowTex.t) return farGlowTex.t; const cv = document.createElement("canvas"); cv.width = cv.height = 64; const x = cv.getContext("2d"), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
     gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.25, "rgba(255,255,255,.55)"); gr.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
     return (farGlowTex.t = new THREE.CanvasTexture(cv)); }
+  let testOn = false;   // 5q: chế độ TEST (Settings ▸ Driver) — chỉ đội trái, không câu hỏi, boost luôn đầy, không cân bằng mức dẫn, không vạch đích; không nhớ qua lần dựng lại game
   const farLog = [[null, null], [null, null], [null, null]];
   function farCars(i, cam) {
     farLog[i] = [null, null]; const sCam = -cam.position.z, v = trkV[i], th0 = TRK.thAt(sCam);
     for (let j = 0; j < 2; j++) {
       const t = T[j], c = cars[j], fp = farPx[j]; fp.visible = false; if (!c) continue;
+      if (testOn && j === 1) { c.rig.visible = false; if (shadows[j]) shadows[j].visible = false; continue; }   // 5q: TEST ⇒ nửa phải không có xe
       const ds = t.s - sCam, far = i !== 2 && (G.phase === "race" || G.phase === "end") && (ds > FAR_A || ds < -40);
       c.rig.visible = !far; if (shadows[j]) shadows[j].visible = !far;
       if (!far) continue;
@@ -980,7 +986,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     });
   }
   function loseLife(i, why) {
-    const t = T[i]; if (!opt.lives || t.done || G.phase !== "race" || t.lives <= 0) return;
+    const t = T[i]; if (!opt.lives || t.done || G.phase !== "race" || t.lives <= 0 || testOn) return;   // 5q: TEST không mất mạng
     t.lives--; paintLives();
     const el = halves[i].querySelector(".rw-lives"); if (el) { el.classList.remove("hit"); void el.offsetWidth; el.classList.add("hit"); }
     onEvent("life", { team: i, lives: t.lives, why });
@@ -1019,7 +1025,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     finish(w, why);
   }
   function modeTick(dt) {                                    // 4a: mỗi khung trong lúc đua
-    if (G.phase !== "race" || G.decided >= 0) return;
+    if (G.phase !== "race" || G.decided >= 0 || testOn) return;   // 5q: TEST ⇒ không hết giờ / hết từ
     if (MODE === "time") { G.timeLeft = Math.max(0, G.timeLeft - dt); if (G.timeLeft <= 0) decide(T[0].s >= T[1].s ? 0 : 1, "time"); }   // 4g: decide = chốt ngay
     else if (MODE === "words" && G.finS == null) {
       const N = questions.length, p = opt.sameQ ? G.rqi : Math.max(T[0].qc || 0, T[1].qc || 0), left = N - p;
@@ -1246,7 +1252,9 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     if (cont !== true) SER.rounds = [];
     layRamps();                                               // 5o: mỗi trận bốc lại dốc thẳng / xoắn
     resetTeams(); G.phase = "count"; G.countT = 0; G.qList = []; G.round = null; paintLives(); waitBar(-1); G.fin = null; G.ts = 1; G.cineW = -1; G.mergeK = 0; mount.classList.remove("is-cine"); cdShow(-1);   // 4g
-    G.decided = -1; G.timeLeft = TIME_S; setFin(OPEN ? null : FIN);                                    // 4a
+    G.decided = -1; G.timeLeft = TIME_S; setFin(OPEN || testOn ? null : FIN);                          // 4a · 5q: TEST ⇒ không vạch đích (chạy mãi)
+    if (testOn) { const o = T[1]; o.done = true; o.lock = true; }                                       // 5q: xe phải đứng yên ở vạch xuất phát, ẩn (farCars)
+    mount.classList.toggle("is-test", testOn);
     traffic.set(trafficMode, 0, 0, tN());                                                               // 4c · 5n: + số xe
     mount.classList.add("is-count"); mount.classList.remove("is-menu", "is-end");
     const lights = $$(".sr-lights i"); lights.forEach(l => l.classList.remove("on"));
@@ -1261,7 +1269,8 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     $$(".sr-lights i").forEach(l => l.classList.remove("on"));
     const g = $(".sr-go"); g.classList.remove("pop"); void g.offsetWidth; g.classList.add("pop");
     G.rqi = 0; G.round = null;
-    if (opt.sameQ) startRound(); else T.forEach(t => nextQ(t));                    // 3q: Same = theo lượt
+    if (testOn) { T[0].lock = true; T[0].E = PHYS.CAP * SEG; }                       // 5q: TEST ⇒ không câu hỏi, boost đầy
+    else if (opt.sameQ) startRound(); else T.forEach(t => nextQ(t));               // 3q: Same = theo lượt
     G.nextAuto = [G.t + 1 + Math.random() * 2, G.t + 1 + Math.random() * 2];
   }
   // 4g: KẾT TRẬN ĐIỆN ẢNH — G.fin = { w, why, rt (giây THẬT từ lúc chốt), stage: "lose" → "win", kind: "drift" | "air" }
@@ -2112,9 +2121,11 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     const hf = (1 - dW * dK) / 2; blurPass.uniforms.uE.value.set(hf, 1 - hf);
   }
   // 3z: nút ⚙ CÀI ĐẶT đa năng — bảng NHỎ giữa màn có TAB (trận vẫn chạy tiếp); nhớ tab đang mở
-  let setTab = remote ? "ipad" : "camera";
+  // 5q (thầy 31/10: "nút cài đặt bị mất tab DRIVE, reload thì lại được"): cũ chỉ có tab Driver khi có remote — AWord tải hụt file nối iPad ⇒ remote null ⇒ mất tab
+  //   (mất cả Drive on game + độ nhạy vô lăng). Nay tab Driver LUÔN có; chưa có đường nối iPad thì báo + nút Reconnect (onEvent "padRetry" ⇒ AWord dựng lại).
+  let setTab = "ipad";
   function openSettings(tab = setTab) {
-    const tabs = [...(remote ? [["ipad", "Driver"]] : []), ["camera", "Camera"], ["race", "Race"], ["boost", "Boost"], ["drone", "Drone"]];   /* 5i: + Boost */   /* 4k: + Drone */   // 4c: + Race · 4i: tab iPad ⇒ DRIVER
+    const tabs = [["ipad", "Driver"], ["camera", "Camera"], ["race", "Race"], ["boost", "Boost"], ["drone", "Drone"]];   /* 5i: + Boost */   /* 4k: + Drone */   // 4c: + Race · 4i: tab iPad ⇒ DRIVER
     if (!tabs.some(x => x[0] === tab)) tab = tabs[0][0];
     setTab = tab;
     winOpen("settings", () => { panel.hidden = false; panel.className = "sr-panel rw-win is-set is-c"; });   // 4i: góc dưới phải, tạm dừng chung
@@ -2148,14 +2159,25 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   function ipadTab(pBody) {                                 // bảng iPad (3y): chọn ⇒ hỏi xác nhận ⇒ OK là đóng (trận vẫn chạy tiếp)
     pBody.innerHTML = `<div class="sr-pm">${PM_ORDER.map((k, n) => `<button type="button" class="sr-pm-o${k === padMode ? " on" : ""}" data-m="${k}"><b>${n + 1}. ${PM[k].t}</b><span>${PM[k].d}</span></button>`).join("")}</div>
       <div class="sr-pm-st">${[0, 1].map(i => `<span data-t="${i}" data-s="${T[i].padOn ? "on" : ""}" style="--team:${TEAMS[i].color}"><i></i>${TEAMS[i].name} iPad</span>`).join("")}${dset.on ? `<span data-t="2" data-s="${D.padOn ? "on" : ""}" style="--team:${two() ? TEAMS[0].color : "#b07cff"}"><i></i>${two() ? "DRONE 1" : "DRONE"} iPad</span>` : ""}${two() ? `<span data-t="3" data-s="${DR[1].padOn ? "on" : ""}" style="--team:${TEAMS[1].color}"><i></i>DRONE 2 iPad</span>` : ""}</div>
+      ${remote ? "" : `<div class="sr-nolink"><span>iPad link not loaded</span><button type="button" class="sr-relink">Reconnect</button></div>`}
       ${steerHTML()}
+      <div class="sr-opt sr-test"><div class="sr-opt-row"><span>TEST mode<small>Drive alone · no questions · boost always full · no limits</small></span><div class="sr-seg"><button type="button" data-test="1" class="${testOn ? "on" : ""}">On</button><button type="button" data-test="0" class="${testOn ? "" : "on"}">Off</button></div></div></div>
       <div class="sr-cf" hidden><p></p><div><button type="button" class="sr-cf-no">Cancel</button><button type="button" class="sr-cf-ok">OK</button></div></div>`;
     wireSteer(pBody);
     const cf = pBody.querySelector(".sr-cf"); let pend = -1;
     pBody.querySelectorAll(".sr-pm-o").forEach(b => b.addEventListener("click", () => { pend = +b.dataset.m; cf.querySelector("p").innerHTML = `Switch to <b>${PM_ORDER.indexOf(pend) + 1}. ${PM[pend].t}</b>?`; cf.hidden = false; }));
+    // 5q: TEST — đang có trận ⇒ hỏi rồi về màn chờ START (như Menu ▸ START AGAIN); ở màn chờ ⇒ đổi ngay
+    pBody.querySelectorAll("[data-test]").forEach(b => b.addEventListener("click", () => {
+      const on = b.dataset.test === "1"; if (on === testOn) return;
+      if (G.phase === "menu") { setTest(on); pBody.querySelectorAll("[data-test]").forEach(x => x.classList.toggle("on", (x.dataset.test === "1") === testOn)); return; }
+      pend = on ? 11 : 10; cf.querySelector("p").innerHTML = `Turn TEST mode <b>${on ? "on" : "off"}</b>? The race restarts.`; cf.hidden = false; }));
+    const rl = pBody.querySelector(".sr-relink"); if (rl) rl.addEventListener("click", () => { rl.disabled = true; rl.textContent = "Reconnecting…"; onEvent("padRetry", {}); });
     cf.querySelector(".sr-cf-no").addEventListener("click", () => { cf.hidden = true; });
-    cf.querySelector(".sr-cf-ok").addEventListener("click", () => { if (pend >= 0) setPadMode(pend); closePanel(); });
+    cf.querySelector(".sr-cf-ok").addEventListener("click", () => {
+      if (pend >= 10) { setTest(pend === 11); winDrop(); toMenu(); return; }
+      if (pend >= 0) setPadMode(pend); closePanel(); });
   }
+  function setTest(on) { testOn = !!on; mount.classList.toggle("is-test", testOn); onEvent("test", testOn); }   // 5q
   // 3o: AWord — bảng Options THẬT của AWord gắn trên game (lớp chung chứa cả khung game + hàng nút), neo trên hàng nút; game dừng tới khi đóng
   let optTok = 0, optOv = null;
   function openHostOptions() {
@@ -2438,7 +2460,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   //   L = mức dẫn của t (0..1) · B = mức bị bỏ lại (0..1). Chỉ khi đang đua, xe kia còn chạy, chưa chốt thắng.
   function leadK(t) {
     const o = T[1 - t.i];
-    if (!(G.phase === "race" && !t.done && !o.done && G.decided < 0)) return { L: 0, B: 0, gap: 0 };
+    if (!(G.phase === "race" && !t.done && !o.done && G.decided < 0) || testOn) return { L: 0, B: 0, gap: 0 };   // 5q: TEST ⇒ không cân bằng
     const gap = t.s - o.s;
     return { L: smooth(30, 250, gap), B: smooth(30, 250, -gap), gap };
   }
@@ -2448,6 +2470,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   const lossK = t => { const k = leadK(t); return 1 + LEAD.LOSS_L * k.L - LEAD.LOSS_B * k.B; };   // trừ boost
   function drive(t, dt) {
     const racing = G.phase === "race" && !t.done, o = T[1 - t.i];
+    if (testOn && racing) t.E = PHYS.CAP * SEG;                // 5q: TEST ⇒ boost luôn đầy
     let inp = { steer: 0, boost: 0, brake: 0 };
     if (racing && t.spinT <= 0 && !(t.stallT > 0)) inp = input(t);
     else if (G.phase === "end" && G.fin) inp = finInput(t);                                                      // 4g: màn kết tự lái
@@ -2504,6 +2527,20 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
         const gain = ai ? 1 : steer.sens / 100 * (1 + STEER_X * t.steer * t.steer);
         const help = !ai && t.steer * vk > 0 ? vk * CORNER_HELP * smooth(25, 55, t.v) * Math.min(1, Math.abs(t.steer) * 2.5) : 0;
         t.psi += (t.steer * yawR(t.v) * gain - vk + help) * dt;
+        // 5q: TRỢ CUA SÁT MÉP (thầy 31/10) — đang đánh lái RA XA rào gần (≥ ~12–45 %) mà xe vẫn trôi ra mép ⇒ quay bớt mũi xe về dọc đường + đẩy nhẹ vào trong,
+        //   chạm rào thì chỉ cọ nhẹ (railScrape × asK). Không lái / lái sai chiều ⇒ không trợ, va rào như cũ. Đội dẫn xa trợ yếu hơn (ASSIST.LEAD).
+        t.asK = 0;
+        if (!ai && racing && t.v > 8) {
+          const sd = Math.sign(t.x) || 1, d = ROADX - Math.abs(t.x), out = Math.sin(t.psi) * sd;   // out > 0: mũi xe hướng ra rào gần
+          // đúng tay = đánh lái RA XA rào gần (rào ngoài cua) · HOẶC đang ôm cua (lái cùng chiều cua) mà rào gần là rào TRONG cua (bẻ hơi quá tay)
+          //   (vkF = độ cong vừa đi qua, nhớ ~0,5 s ⇒ ra khỏi cua mà vô lăng chưa kịp trả vẫn được trợ)
+          t.vkF = (t.vkF || 0) + (vk - (t.vkF || 0)) * (1 - Math.exp(-dt * 2)); const vkM = Math.abs(vk) > Math.abs(t.vkF) ? vk : t.vkF;
+          const away = smooth(0.12, 0.45, -t.steer * sd), inner = Math.sign(t.steer) === sd && t.steer * vkM > 0 ? smooth(0.12, 0.45, Math.abs(t.steer)) * smooth(0.15, 0.45, Math.abs(vkM)) : 0;
+          const m = smooth(ASSIST.DIST, 0.15, d) * Math.max(away, inner);
+          if (m > 0) { const k = m * (1 - ASSIST.LEAD * leadK(t).L); t.asK = k;
+            if (out > 0) t.psi -= sd * Math.min(out, ASSIST.YAW * k * dt);
+            t.px -= sd * ASSIST.PUSH * k * dt; }
+        }
       }
       t.psi = clamp(t.psi, -0.7, 0.7); t.vx = t.v * Math.sin(t.psi); t.cx = 0;
       t.yaw = lerp(t.yaw, -Math.atan2(t.vx + t.px * 0.5, Math.max(t.v, 5)) * 0.9, 1 - Math.exp(-dt * 8));
@@ -2523,23 +2560,27 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     if (!t.air) {
       const tw = twists.find(t.x, t.s), e14 = 1 - Math.exp(-dt * 14);
       if (tw) { t.twist = tw.r; t.y = tw.w * Math.sin(tw.th); t.ar = lerp(t.ar, tw.r.side * tw.th, e14); t.ap = lerp(t.ap, 0.05, e14); }
-      else if (t.twist) { const r = t.twist; t.twist = null; if (t.s >= r.s + TWIST.LEN - 0.6) twistLaunch(t, r); else { t.y = 0; t.ar = 0; t.ap = 0; } }
+      else if (t.twist) { const r = t.twist; t.twist = null; t.offR = r; if (t.s >= r.s + TWIST.LEN - 0.6) twistLaunch(t, r); else if (t.y > 0.15) sideDrop(t); else { t.y = 0; t.ar = 0; t.ap = 0; } }   // 5q: trượt khỏi mép dốc xoắn giữa chừng ⇒ RƠI theo trọng lực (cũ: tụt thẳng xuống đất = xuyên dốc)
     }
     if (!t.air && !t.twist) {
       let rp = rampContact(t);
       if (rp && rp.wall) { rampWall(t, rp, dt); rp = null; }   // 5o: đâm hông nửa sau dốc ⇒ dội ra như rào
       if (rp) {
+        const fresh0 = t.ramp !== rp.r;
         t.ramp = rp.r; t.rampPart = rp.cov < 0.85 ? rp.side : 0;
         // 4a: độ cao + góc ngóc theo 2 trục bánh (mượt từ lúc bánh trước chạm chân dốc); đổi giữa 1 bên / cả xe trên dốc thì trượt về dần (không bật)
         const ease8 = 1 - Math.exp(-dt * 14);
-        if (t.rampPart) { t.y = rp.h * 0.5; t.ap = lerp(t.ap, rp.ap * 0.5, ease8); t.ar = lerp(t.ar, rp.side * Math.atan2(rp.h, cars[t.i].M.W), ease8); }   // bánh 1 bên trên dốc ⇒ xe NGHIÊNG
-        else { t.y = rp.h; t.ap = rp.ap; t.ar = lerp(t.ar, 0, ease8); }
+        // 5q: hệ số độ cao rpK (1 bên = 0,5 · cả xe = 1) đổi MƯỢT — cũ đổi tức thì ⇒ tụt / bật ~0,5 m trong 1 khung (cú giật trên dốc)
+        const kT = t.rampPart ? 0.5 : 1; t.rpK = fresh0 || t.rpK == null ? kT : t.rpK + (kT - t.rpK) * (1 - Math.exp(-dt * 9));
+        if (t.rampPart) { t.y = rp.h * t.rpK; t.ap = lerp(t.ap, rp.ap * 0.5, ease8); t.ar = lerp(t.ar, rp.side * Math.atan2(rp.h, cars[t.i].M.W), ease8); }   // bánh 1 bên trên dốc ⇒ xe NGHIÊNG
+        else { t.y = rp.h * t.rpK; t.ap = rp.ap; t.ar = lerp(t.ar, 0, ease8); }
       }
       else if (t.ramp) {
-        const r = t.ramp; t.ramp = null;
+        const r = t.ramp; t.ramp = null; t.offR = r; t.rpK = null;                                           // 5q: dốc vừa rời — lúc bay không "đáp" lại vào chính nó
         const ar = cars[t.i].ax ? cars[t.i].ax.r : 1.4;
         if (s0 - ar <= r.s + RAMP.LEN + 0.01 && t.s - ar >= r.s + RAMP.LEN - 0.6) { if (t.v < LOW_V) lowDrop(t); else takeOff(t, t.rampPart); }   // 3q · 4a: bánh SAU rời mép
-        else { t.y = 0; t.ap = 0; t.ar = 0; }                                                   // lách ra khỏi dốc giữa chừng ⇒ rớt xuống
+        else if (t.y > 0.15) sideDrop(t);                                                       // 5q: lách ra khỏi dốc giữa chừng ⇒ RƠI theo trọng lực (cũ: tụt thẳng y = 0)
+        else { t.y = 0; t.ap = 0; t.ar = 0; }
       } else { t.y = 0; t.ap = lerp(t.ap, 0, 1 - Math.exp(-dt * 10)); }
     }
     // rào hộ lan 2 mép đường
@@ -2575,7 +2616,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   //   giữ cọ thì hãm tăng dần (e^−k·dt, k 1,6 ⇒ 7,5 sau ~1,2 s ≈ mất 99 % mỗi giây); lửa + khói đen phun đúng chỗ thân xe miết rào (nửa trước, mép phía rào)
   function railScrape(t, side, vIn, dt) {
     const first = !(t.railT > 0); t.railLast = G.t; t.railT = (t.railT || 0) + dt;
-    const lk = leadK(t), rk = 1 + LEAD.RAIL_L * lk.L - LEAD.RAIL_B * lk.B;   // 5n
+    const lk = leadK(t), rk = (1 + LEAD.RAIL_L * lk.L - LEAD.RAIL_B * lk.B) * (1 - ASSIST.SOFT * (t.asK || 0));   // 5n · 5q: đang lái đúng ⇒ cọ nhẹ
     if (first) { t.v *= 1 - clamp(vIn / 40 * rk, 0.03, 0.2 * rk); t.shake = Math.max(t.shake, 0.35 + clamp(vIn / 20, 0, 0.5)); onEvent("rail", { team: t.i, hit: +vIn.toFixed(1) }); }
     const k = (1.6 + 5.9 * smooth(0.12, 1.2, t.railT)) * rk; t.v *= Math.exp(-k * dt); t.shake = Math.max(t.shake, 0.18);
     // tia lửa bị thân xe KÉO THEO (vận tốc tới ~25–70 % xe) + văng ra lòng đường ⇒ chùm dài sau góc xe, xe sau nhìn rõ; điểm miết = góc trước phía rào
@@ -2627,6 +2668,25 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   function lowDrop(t) {
     t.airK = 1; t.arW = 0; t.arV = 0;
     t.air = true; t.low = true; t.airT = AIR.LIFT_T; t.vy = 0; t.y = Math.max(t.y, RAMP.H); t.ar = 0; t.ay = 0; t.flip = 0; t.flipGoal = null; t.bad = false; t.forced = false;
+  }
+  // 5q: trượt khỏi mép dốc / dốc xoắn GIỮA CHỪNG ⇒ rơi từ độ cao đang có (như lowDrop nhưng giữ y + góc nghiêng, góc về dần trong flyStep)
+  function sideDrop(t) {
+    t.airK = 1; t.arW = 0; t.arV = 0;
+    t.air = true; t.low = true; t.airT = AIR.LIFT_T; t.vy = 0; t.ay = 0; t.flip = 0; t.flipGoal = null; t.bad = false; t.forced = false;
+  }
+  // 5q: mặt dốc thẳng / dốc xoắn ngay dưới xe đang bay (cùng cách đo như rampContact / twists.find); bỏ qua dốc vừa rời (t.offR) ⇒ null = mặt đường
+  function airSurf(t) {
+    const c = cars[t.i], hw = c.M.W / 2, ax = c.ax || { f: c.M.L * 0.3, r: c.M.L * 0.3 }, k = RAMP.H / RAMP.LEN, wb = ax.f + ax.r;
+    for (const r of ramps.list) {
+      if (r === t.offR) continue;
+      const uF = t.s + ax.f - r.s, uR = t.s - ax.r - r.s; if (uF < 0 || uR > RAMP.LEN) continue;
+      const lo = Math.max(t.x - hw, r.x - r.w / 2), hi = Math.min(t.x + hw, r.x + r.w / 2), cov = clamp((hi - lo) / (2 * hw), 0, 1);
+      if (cov < 0.12) continue;
+      const hF = clamp(uF, 0, RAMP.LEN) * k, hR = clamp(uR, 0, RAMP.LEN) * k, h = hR + (hF - hR) * ax.r / wb;
+      return { r, h: cov < 0.85 ? h * 0.5 : h };
+    }
+    const tw = twists.find(t.x, t.s);
+    return tw && tw.r !== t.offR ? { tw, h: tw.w * Math.sin(tw.th) } : null;
   }
   // 4g: LẬT CHẬM — rời dốc xoắn không ga: thân xe lăn 1 vòng quanh trục dọc tì lên mép thân (tâm xoay = rig sát đất ⇒ nâng rig theo góc nghiêng
   //   để điểm thấp nhất của hộp xe chạm đường), trượt dần vào lòng đường, mất đà; xong ⇒ đáp 4 bánh chông chênh + mất lái ~1 s
@@ -2694,6 +2754,11 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     if (G.fin && t.i === G.fin.w && !t.flip) { const k = 1 - Math.exp(-dt * 4.5); t.arW = 0; t.arV = 0; t.ar += (Math.round(t.ar / TAU) * TAU - t.ar) * k; t.ay += (Math.round(t.ay / TAU) * TAU - t.ay) * k; }
     // chúc mũi theo quỹ đạo (đầu bay ngóc lên, cuối hơi chúc) — nhẹ để mặc định đáp được
     t.ap = lerp(t.ap, Math.atan2(t.vy, Math.max(t.v, 8)) * 0.45, 1 - Math.exp(-dt * 3));
+    if (t.low) t.ar *= Math.exp(-dt * 5);                     // 5q: rơi khỏi mép dốc ⇒ thân về thăng bằng dần
+    // 5q: XE ĐANG BAY GẶP MẶT DỐC (thầy 31/10: "lên dốc rồi giật 1 cái rồi đi xuyên qua dốc") — cũ: lúc bay không xét dốc ⇒ rơi xuyên vào thân dốc,
+    //   chạm y = 0 ở nửa sau dốc ⇒ bị coi là đâm HÔNG dốc, hất ngang ~4 m. Nay: mặt dốc / dốc xoắn dưới xe = mặt đất ⇒ không xuống thấp hơn, chạm thì đáp lên dốc.
+    const sf = airSurf(t);
+    if (sf && t.y <= sf.h + 0.02) { t.y = sf.h; if (t.vy <= 0) { land(t); if (!t.air && sf.r) { t.ramp = sf.r; t.rpK = null; } return; } }
     if (t.y <= 0 && t.vy < 0) land(t);
   }
   // 4g: NẢY khi đáp — theo vận tốc rơi (hy/hopV: chỉ là hình, không đụng va chạm) + nảy lần 2 nhỏ hơn (bnc) + chúc mũi (nodA)
@@ -2706,7 +2771,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
         Math.sign(wx) * (0.6 + Math.random() * 2.6), 0.8 + Math.random() * 2.8, 2 + Math.random() * 6, 0.25 + Math.random() * 0.3, 0.08 + Math.random() * 0.05, 1, 0, 1);
   }
   function land(t) {
-    const vyHit = t.vy;
+    const vyHit = t.vy; t.offR = null;   // 5q
     wheelSparks(t, Math.round(clamp(-vyHit * 1.1, 4, 10)));
     const eP = Math.abs(t.ap), eR = Math.abs(wrapPI(t.ar)), eY = Math.abs(wrapPI(t.ay)), err = Math.max(eP, eR, eY);
     const rots = Math.max(0, Math.round(Math.abs(t.ay) / TAU - 0.15)) + Math.max(0, Math.round(Math.abs(t.ar) / TAU - 0.15));
@@ -2807,7 +2872,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     const racing = G.phase === "race" && G.cineW < 0;
     const ms = racing && missiles.active.length > 0;
     if (G.msWas && !ms) G.msEndT = G.t; G.msWas = ms;
-    if (skyOn && racing && !dset.on) {                                    // 4k: có drone ⇒ không gộp
+    if (skyOn && racing && !dset.on && !testOn) {                         // 4k: có drone ⇒ không gộp · 5q: TEST ⇒ không gộp
       const gap = Math.abs(T[0].s - T[1].s), lead = Math.max(T[0].s, T[1].s);
       G.mGap = G.mGap ? gap > 42 && gap < 108 : gap >= 50 && gap <= 100;           // trễ 8 m 2 đầu ⇒ không nhấp nháy ở mép
       const fin = G.finS != null && G.finS - lead < 150 && G.finS - lead > -2;
