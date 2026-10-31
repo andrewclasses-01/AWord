@@ -2,7 +2,7 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
-## Đợt 598 (31/10/2026) — THẬT: myGame 5r (TEST chỉ cần 1 iPad ở xưởng, TEST giữ dốc + traffic suốt đường, xưởng đổi xe hết đứng hình) — GOC rw-5r, xưởng sr3d-intro-5r
+## Đợt 598 (31/10/2026) — `de8e3df` LIVE (kiem-live 6/6) — THẬT: myGame 5r (TEST chỉ cần 1 iPad ở xưởng, TEST giữ dốc + traffic suốt đường, xưởng đổi xe hết đứng hình) — GOC rw-5r, xưởng sr3d-intro-5r
 - Chỉ chép lại gói (chep-racing-words) + GAME `./3d/rw-5r.js` + load-files (rw/sr3d 5q ⇒ 5r, intro-5l ⇒ intro-5r). Chi tiết: myGame HO SO BAN GIAO mục MẪU 5r.
 
 ## Đợt 597 (31/10/2026) — `849b80c` LIVE (kiem-live 6/6) — THẬT: myGame 5q (tab Driver luôn có + TEST mode, trợ cua sát mép, bay không xuyên dốc) — GOC rw-5q, CSS + rw-5q.css
