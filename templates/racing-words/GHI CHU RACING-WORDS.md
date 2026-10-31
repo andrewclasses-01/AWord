@@ -2,7 +2,7 @@
 
 Đua siêu xe 3D 2 đội trên bộ câu hỏi kiểu Quiz. THIẾT KẾ ở kho myGame `speed-run/` (tên cũ SPEED RUN) — hồ sơ đầy đủ từng mẫu: `myGame/speed-run/NGHIEN CUU GAMEPLAY.md`.
 
-## Đợt 597 (31/10/2026) — THẬT: myGame 5q (tab Driver luôn có + TEST mode, trợ cua sát mép, bay không xuyên dốc) — GOC rw-5q, CSS + rw-5q.css
+## Đợt 597 (31/10/2026) — `849b80c` LIVE (kiem-live 6/6) — THẬT: myGame 5q (tab Driver luôn có + TEST mode, trợ cua sát mép, bay không xuyên dốc) — GOC rw-5q, CSS + rw-5q.css
 - MẤT TAB DRIVE (thầy 31/10, reload thì lại được): `rwPadLink` tải hụt `rw-pad-signal.js` / `sr3d-padlink-5m.js` ⇒ `L.remote = null` ⇒ game 5p bỏ tab Driver. Nay `importRetry` thử lại 3 lần (lần 2–3 thêm `?r=` vì trình duyệt nhớ lần tải hụt của 1 địa chỉ tới khi tải lại trang); game 5q luôn có tab Driver, chưa có đường nối ⇒ "iPad link not loaded" + Reconnect ⇒ `padRetry` (kill đường nối hỏng, `PAD_BUST++`, dựng lại game; vẫn hụt ⇒ `location.reload()`).
 - Bàn thử: `scratch/srv597.mjs` (cổng 5597, `/__fail?n=K` ⇒ K lần tới rw-pad-signal.js trả 503) + `scratch/dot597-tpl.html?fail=K&padsig=local` (gọi thẳng `mount` của template). Đã thử: hụt 1 ⇒ tự nối ở `?r=1`; hụt hết ⇒ tab Driver + Reconnect ⇒ bấm thật ⇒ `?r=10`, game dựng lại có QR, không tải lại trang.
 - Game: chi tiết myGame HO SO BAN GIAO mục MẪU 5q.
