@@ -1,3 +1,5 @@
+// RACING WORDS — LÕI MẪU 5r (31/10/2026) = sr3d-5q.js + thầy 31/10: TEST giữ dốc thẳng / xoắn + xe traffic + phần thưởng SUỐT ĐƯỜNG (layRamps nối tiếp, sLo) ·
+//   game.test / game.setTest cho gói nhúng (cổng xưởng chỉ cần iPad TEAM 1) · xưởng chọn xe mượt (xem sr3d-intro-5r.js).
 // RACING WORDS — LÕI MẪU 5q (31/10/2026) = sr3d-5p.js + thầy 31/10: (1) tab Driver LUÔN có (cũ cần remote) + dòng "iPad link not loaded" + Reconnect (onEvent "padRetry") ·
 //   (2) TRỢ CUA SÁT MÉP khi đánh lái ra xa rào (ASSIST) + cọ rào nhẹ khi đang lái đúng · (3) xe đang bay gặp mặt dốc / dốc xoắn ⇒ đáp lên dốc (airSurf), trượt khỏi mép giữa chừng ⇒ rơi (sideDrop)
 //   — cũ rơi xuyên thân dốc rồi bị coi là đâm hông, hất ngang ~4 m · (4) TEST mode (testOn): chỉ đội trái, không câu hỏi, boost đầy, không cân bằng, không đích, không mất mạng.
@@ -600,20 +602,28 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   const traffic = createTraffic({ scene, bend });            // 4c: luôn có trong cảnh (đếm 0 khi tắt) ⇒ shader dịch sẵn
   const pkKinds = () => [opt.pkBoost !== false ? "boost" : null, opt.pkLife !== false && opt.lives > 0 ? "life" : null, opt.pkMissile !== false && opt.msMax > 0 ? "missile" : null].filter(Boolean);
   // dốc: mỗi vòng 2 dốc (≈ 1/3 và 2/3 vòng), lệch về 2 nửa đường xen kẽ ⇒ phải lái sang mới lên được dốc, dễ tranh nhau
-  function layRamps() {
-    const out = [];
-    const RMAX = OPEN ? MAXS : FIN + 4000;                                      // 5j-f: dốc tiếp QUA vạch đích (Roadster chạy xa trước 2 xe vẫn gặp dốc)
-    rampsXOut = []; twistsXOut = []; rampsXOn = false; rampsX.set([]); twistsX.set([], ROADX);   // 5j-i: bộ sau đích dựng muộn (rampsBeyond)
+  let testOn = false;   // 5q: chế độ TEST (Settings ▸ Driver) — chỉ đội trái, không câu hỏi, boost luôn đầy, không cân bằng mức dẫn, không vạch đích; không nhớ qua lần dựng lại game
+  // 5r (thầy 31/10: "test chạy một chút là hết dốc"): cũ chỉ rải dốc tới đích + 4 km (Length) ⇒ TEST (không đích) chạy qua là hết. TEST ⇒ rải như chế độ mở (14 km)
+  //   rồi NỐI TIẾP 7 km mỗi khi xe trái còn cách cuối dải 2,5 km (ext = true: giữ dốc từ 400 m sau xe trở đi, chỉ thêm phía trước, 2 dốc liền vẫn khác bên)
+  let rampEnd = 0, rampSide = 1, rampOut = [], rampTw = [];
+  function layRamps(ext) {
+    const open = OPEN || testOn, RMAX = open ? MAXS : FIN + 4000;               // 5j-f: dốc tiếp QUA vạch đích (Roadster chạy xa trước 2 xe vẫn gặp dốc)
+    let out = [], tw = [], from = 0, to = testOn ? Math.max(RMAX, 14000) : RMAX;
+    if (ext) { const keep = T[0].s - 400; out = rampOut.filter(q => q.s > keep); tw = rampTw.filter(q => q.s > keep); from = rampEnd; to = rampEnd + 7000; }
+    else { rampsXOut = []; twistsXOut = []; rampsXOn = false; rampsX.set([]); twistsX.set([], ROADX); rampSide = Math.random() < 0.5 ? 1 : -1; }   // 5j-i: bộ sau đích dựng muộn (rampsBeyond)
     // 5o: dốc DÀY ~255 m / chỗ (TRK.featSites, bay được qua góc cua) · mỗi trận BỐC NGẪU NHIÊN thẳng / xoắn · 2 dốc liền nhau LUÔN khác bên đường (thầy: tránh bay liên tục)
-    const tw = []; let side = Math.random() < 0.5 ? 1 : -1;
-    if (opt.ramps) for (let k = 0; k * LAP < RMAX; k++) TRK.featSites.forEach(s0 => {
-      const s = k * LAP + s0; if (!(s > 90 && s < RMAX - 70 && (OPEN || Math.abs(s - FIN) > 80))) return;
-      side = -side; const near = OPEN || s < FIN;
+    if (opt.ramps) for (let k = Math.floor(Math.max(0, from - 100) / LAP); k * LAP < to; k++) TRK.featSites.forEach(s0 => {
+      const s = k * LAP + s0; if (!(s > 90 && s >= (ext ? from - 70 : 0) && s < to - 70 && (open || Math.abs(s - FIN) > 80))) return;
+      rampSide = -rampSide; const side = rampSide, near = open || s < FIN;
       if (opt.twists !== false && Math.random() < 0.5) (near ? tw : twistsXOut).push({ s, side });
       else (near ? out : rampsXOut).push({ s, x: side * 4.1, w: RAMP_W });
     });
+    rampOut = out; rampTw = tw; rampEnd = to;
     ramps.set(out);
     twists.set(tw, ROADX);
+    if (ext) T.forEach(t => {                                                    // 5r: set() chép lại từng dốc ⇒ gắn lại tham chiếu xe đang giữ
+      const re = q => q && (ramps.list.find(r => r.s === q.s && r.x === q.x) || twists.list && twists.list.find(r => r.s === q.s && r.side === q.side)) || null;
+      t.ramp = t.ramp && re(t.ramp); t.twist = t.twist && re(t.twist); t.offR = t.offR && re(t.offR); });
     // 4c: làn x ở quãng s có cầu nhảy / dốc xoắn ⇒ xe khác né sang làn khác
     traffic.setBlocked((s, x) => out.some(q => s > q.s - 22 && s < q.s + RAMP.LEN + 6 && Math.abs(x - q.x) < q.w / 2 + 1.2) || tw.some(q => s > q.s - 22 && s < q.s + TWIST.LEN + 6 && (x - q.side * (ROADX - TWIST.W)) * q.side > -1.3));
     const near = (s, r) => out.some(q => s > q.s - r - 4 && s < q.s + RAMP.LEN + r) || tw.some(q => s > q.s - r - 4 && s < q.s + TWIST.LEN + r);
@@ -638,7 +648,8 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   function farGlowTex() { if (farGlowTex.t) return farGlowTex.t; const cv = document.createElement("canvas"); cv.width = cv.height = 64; const x = cv.getContext("2d"), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
     gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.25, "rgba(255,255,255,.55)"); gr.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
     return (farGlowTex.t = new THREE.CanvasTexture(cv)); }
-  let testOn = false;   // 5q: chế độ TEST (Settings ▸ Driver) — chỉ đội trái, không câu hỏi, boost luôn đầy, không cân bằng mức dẫn, không vạch đích; không nhớ qua lần dựng lại game
+  // 5r: đầu dưới cửa sổ rải xe traffic / phần thưởng — cũ = xe đi sau; TEST xe phải đứng ở 0 m ⇒ cửa sổ giãn mãi, xe traffic + thưởng dồn hết về phía sau (cũng là "hết" với thầy)
+  const sLo = () => (testOn ? T[0].s : Math.min(T[0].s, T[1].s));
   const farLog = [[null, null], [null, null], [null, null]];
   function farCars(i, cam) {
     farLog[i] = [null, null]; const sCam = -cam.position.z, v = trkV[i], th0 = TRK.thAt(sCam);
@@ -1430,7 +1441,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     if (m === "off") trafficAmt = 0; else if (m === "same" || m === "both") { trafficDir = m; if (amt == null && !trafficAmt) trafficAmt = 10; }
     if (amt != null) trafficAmt = clamp(Math.round(amt), 0, 100);
     try { localStorage.setItem(TRAFFIC_KEY, trafficDir); localStorage.setItem(TAMT_KEY, String(trafficAmt)); } catch (e) { /* */ }
-    trafficMode = tMode(); traffic.set(trafficMode, Math.min(T[0].s, T[1].s), Math.max(T[0].s, T[1].s), tN()); onEvent("traffic-mode", trafficMode); }
+    trafficMode = tMode(); traffic.set(trafficMode, sLo(), Math.max(T[0].s, T[1].s), tN()); onEvent("traffic-mode", trafficMode); }
   const tLbl = () => trafficAmt + " % · " + (tN() ? tN() + (tN() === 1 ? " car" : " cars") : "no traffic");
   function raceTab(box) {
     box.innerHTML = `<div class="sr-opt"><div class="sr-opt-row"><span>Traffic</span><div class="sr-seg">${TRAFFIC.map(x => `<button type="button" data-tr="${x.v}" class="${x.v === trafficDir ? "on" : ""}">${x.t}</button>`).join("")}</div></div>
@@ -3006,7 +3017,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     U.uBendT.value = bendTex[i]; U.uBend.value.set(0, bendBy[i]); U.uBendZ.value = cam.position.z; U.uSkyYaw.value = phiAbs(sCam); U.uTrk.value.fromArray(trkV[i]);   // 5l
     farCars(i, cam);                                          // 5n: đối thủ quá tầm uốn ⇒ bản xa theo toạ độ thật
     world.update(cam.position, G.t, Math.min(T[0].s, T[1].s) - 30, Math.max(T[0].s, T[1].s), dUsed(D) && isCar(D) ? D.s : null);   // 5j-e: Roadster đi xa vẫn có cảnh
-    if (i === 0) pickups.update(G.t, Math.min(T[0].s, T[1].s), Math.max(T[0].s, T[1].s));   // 4b
+    if (i === 0) pickups.update(G.t, sLo(), Math.max(T[0].s, T[1].s));   // 4b · 5r: sLo
     { const px = hPx * (i === 2 ? 1 : LENS.full) / (2 * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2))); missiles.setScale(px); dammo.setScale(px); DR.forEach(d => d.o && d.o.fc && d.o.fc.smoke.setScale(px)); }   // 4r · 5j: khói xe bay
   }
   let mapFin = null;                                          // 4a: cờ đích trên bản đồ
@@ -3280,7 +3291,8 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
     dammo.update(dt, G.t).forEach(droneHit);                 // 4r
     fireTick(dt);                                            // 5i: vạch lửa
     if (G.phase === "race") T.forEach(t => { if (t.dead || t.air && t.y > 1.6) return; const it = pickups.take(t.x, t.s); if (it) grabPickup(t, it); });   // 4b
-    if (G.phase === "race" || G.phase === "end") { traffic.update(dt, Math.min(T[0].s, T[1].s), Math.max(T[0].s, T[1].s)); if (G.phase === "race") { T.forEach(trafficHit); if (dUsed(D) && isCar(D) && !two() && D.car.init) carTrafficHit(D); } traffic.burning.forEach(v => burnTraffic(v, dt)); }   // 5j-g: Roadster đâm xe giao thông   // 4c · 5j-f: xe cháy
+    if (testOn && G.phase === "race" && T[0].s > rampEnd - 2500 && !T[0].ramp && !T[0].twist && !T[0].air) layRamps(true);   // 5r: TEST ⇒ nối dải dốc phía trước
+    if (G.phase === "race" || G.phase === "end") { traffic.update(dt, sLo(), Math.max(T[0].s, T[1].s)); if (G.phase === "race") { T.forEach(trafficHit); if (dUsed(D) && isCar(D) && !two() && D.car.init) carTrafficHit(D); } traffic.burning.forEach(v => burnTraffic(v, dt)); }   // 5j-g: Roadster đâm xe giao thông   // 4c · 5j-f: xe cháy
     T.forEach((t, i) => {
       const c = cars[i]; c.rig.position.set(t.x, t.y + t.hy, -t.s);
       const wob = t.wobT < 2.5 ? t.wobA * Math.exp(-2.6 * t.wobT) * Math.sin(12.5 * t.wobT) : 0;   // 3j: chông chênh tắt dần
@@ -3348,7 +3360,7 @@ export function createSpeedRun({ mount, bar = null, questions, title = "RACING W
   setPadMode(padMode);
 
   const api = {
-    start, toMenu, setPadMode, get padMode() { return padMode; }, setSteer, get steer() { return { ...steer }; },   // 3y
+    start, toMenu, setPadMode, get padMode() { return padMode; }, get test() { return testOn; }, setTest,   // 5r: + test setSteer, get steer() { return { ...steer }; },   // 3y
     answer: (i, ok) => { const t = T[i]; if (!t.cur) return false; const k = t.cur.answers.findIndex(a => !!a.correct === !!ok); return answer(i, k < 0 ? 0 : k); },
     auto(on = true, a0, a1) { G.auto = on; if (a0 != null) G.acc[0] = a0; if (a1 != null) G.acc[1] = a1; },
     give(i, n = 1) { T[i].E = Math.min(PHYS.CAP * SEG, T[i].E + n * SEG); },

@@ -1,3 +1,6 @@
+// RACING WORDS mẫu 5r (31/10/2026) = sr3d-intro-5l.js + thầy 31/10: "màn chọn xe trong xưởng rất lag, đôi khi không bấm được" — đo: mỗi lần đổi xe ĐỨNG HÌNH 1,7–2,4 s.
+//   Gốc: dựng xe mới thẳng vào cảnh ⇒ khung vẽ kế tiếp (warmIntro) dịch shader của xe mới kiểu CHẶN (getProgramParameter ~0,55 s) + chụp môi trường 2 lần.
+//   Nay: bấm liên tiếp chỉ dựng xe CUỐI (chờ 220 ms) · xe mới dựng trong cảnh TẠM, renderer.compileAsync (dịch song song, không chặn) rồi mới đưa vào xưởng · chụp môi trường 1 lần.
 // RACING WORDS mẫu 5k (21/10/2026) = sr3d-intro-5j.js, chỉ đổi mô-đun xe bay sang sr3d-flycar-5k.js (lõi 5k và xưởng PHẢI cùng mô-đun — 1 lần nạp glb, 1 bộ shader).
 // RACING WORDS mẫu 5j (21/10/2026) = sr3d-intro-5f.js + XE BAY ROADSTER TRONG XƯỞNG (thầy: "Cho Roadster hiện trong xưởng luôn. 3 xe to bằng nhau, màu xanh lá cây đậm, ở vị trí ngầu nhất"):
 //   · mẫu FLYING CAR · Roadster có trong ◀ ▶ ô drone; xe CỠ THẬT (4,57 m, như 2 xe đua), sơn xanh lá đậm (sr3d-flycar-5j), lơ lửng GIỮA 2 xe, nhô lên trước nửa thân,
@@ -229,11 +232,11 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
     cubeCam.update(renderer, scene); envHide.forEach(o => { o.visible = true; }); envHide.length = 0; scene.environment = cubeRT.texture; envDirty = false; }
   // 3r: LÀM NÓNG phim intro ngay khi xe dựng xong (thầy còn ở xưởng): chụp môi trường khi đã có envMap + 1 khung có lửa pô / boost ⇒ dịch sẵn mọi
   //   shader phim sẽ dùng (đo TOMKO: START sinh 3 program mới ⇒ khung đầu phim 294 ms). Đồng bộ, chạy 1 lần lúc nạp / đổi xe.
-  function warmIntro() {
+  function warmIntro(swap) {   // 5r: swap = đổi xe (shader đã dịch sẵn) ⇒ KHÔNG chụp lại môi trường (lúc chụp xe vốn bị ẩn ⇒ ảnh môi trường không đổi khi đổi xe)
     if (dead || !cars[0] || !cars[1]) return;
     const tt = performance.now() / 1000;
     cars.forEach(c => c.update(1 / 60, { dist: 0, accel: 9.5, steer: 0, boost: 1, t: tt, pop: 1 }));
-    fit(); refreshEnv(); refreshEnv(); renderer.shadowMap.needsUpdate = true; composer.render();
+    fit(); if (!swap) { refreshEnv(); refreshEnv(); } renderer.shadowMap.needsUpdate = true; composer.render();
     cars.forEach(c => c.update(1 / 60, { dist: 0, accel: 0, steer: 0, boost: 0, t: tt, pop: 0 }));
     arFrom = performance.now() + 1500; AR.pause();
   }
@@ -241,20 +244,49 @@ export function createIntro({ mount, cars: ids = ["Y2", "H4"], title = "RACING W
   // ---------- xe ----------
   const U = { uBend: { value: new THREE.Vector2() }, uBendZ: { value: 0 }, uBendT: { value: null }, uBendD: { value: 0 } };   // 4b: lửa pô dùng bảng cong (xưởng không cong ⇒ uBendD 0)
   const cars = [null, null], carIds = ids.slice(0, 2), heads = [null, null];
-  function buildCar(i) {
-    if (cars[i]) { scene.remove(cars[i].rig); cars[i].dispose(); }
+  function buildCar(i) { placeCar(i, makeCar(i)); }   // 5r: tách dựng (makeCar) / đặt vào xưởng (placeCar)
+  function makeCar(i) {
     const c = makeCar3d({ id: carIds[i], color: TEAMS[i].color, num: i + 1, U });
     c.rig.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-    c.rig.position.set(CAR_X[i], 0, CAR_Z); scene.add(c.rig); cars[i] = c; shadowDirty = true;
+    c.rig.position.set(CAR_X[i], 0, CAR_Z); return c;
+  }
+  function placeCar(i, c) {
+    if (cars[i]) { scene.remove(cars[i].rig); cars[i].dispose(); }
+    scene.add(c.rig); cars[i] = c; shadowDirty = true;
     arFrom = performance.now() + 1500; AR.pause();   // 3r: (buildCar chỉ chạy sau khi hàm dựng xong) dựng xe = khung nặng một lần, không phải máy yếu
     // đèn pha: 2 đèn rọi phía trước (bật khi nổ máy)
     heads[i] = null;   // 3r: BỎ 2 đèn pha rọi (SpotLight) — đo TOMKO 8,6 ms/khung ở 4K; đèn pha trên mẫu xe vẫn sáng (vật phát sáng)
     envDirty = true; paintPick();
   }
+  const setTok = [0, 0], stage = new THREE.Scene();   // 5r: cảnh TẠM để dịch shader xe mới trước khi đưa vào xưởng
+  // 5r: dịch SONG SONG (không chặn) mọi shader xe mới. ⚠️ Vật liệu TRONG SUỐT 2 MẶT (kính) three vẽ 2 lượt — mặt sau (BackSide) rồi mặt trước (FrontSide), mỗi lượt
+  //   1 shader riêng mà compileAsync chỉ dịch bản DoubleSide ⇒ đo: 2 shader kính dịch CHẶN lúc vẽ, ~250 ms / bản. Nên dịch thêm 2 bản đó.
+  async function compileCar(c) {
+    if (!renderer.compileAsync) return;                     // máy không có ⇒ dịch lúc vẽ như cũ
+    const two = new Set();
+    c.rig.traverse(o => { if (!o.material) return; (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { if (m.transparent && m.side === THREE.DoubleSide && !m.forceSinglePass) two.add(m); }); });
+    stage.add(c.rig);
+    try {
+      await renderer.compileAsync(stage, cam, scene);
+      for (const sd of two.size ? [THREE.BackSide, THREE.FrontSide] : []) { two.forEach(m => { m.side = sd; }); await renderer.compileAsync(stage, cam, scene); }
+    } catch (e) { /* dịch lúc vẽ như cũ */ }
+    finally { two.forEach(m => { m.side = THREE.DoubleSide; }); stage.remove(c.rig); }
+  }
   async function setCar(i, id, notify = true) {
-    carIds[i] = id; paintPick();
-    await prepXe(id); if (carIds[i] !== id) return;
-    buildCar(i); warmIntro(); if (notify && onSetCar) onSetCar(i, id);
+    carIds[i] = id; paintPick(); const my = ++setTok[i], t0 = performance.now();
+    await new Promise(r => setTimeout(r, 220)); if (my !== setTok[i] || dead) return;   // 5r: bấm liên tiếp ⇒ chỉ xe cuối
+    await prepXe(id); if (carIds[i] !== id || my !== setTok[i] || dead) return;
+    const t1 = performance.now(), c = makeCar(i);
+    c.update(1 / 60, { dist: 0, accel: 9.5, steer: 0, boost: 1, t: performance.now() / 1000, pop: 1 });   // 5r: bật lửa pô / boost ⇒ dịch luôn shader của chúng
+    const t2 = performance.now();
+    await compileCar(c);
+    if (my !== setTok[i] || dead) { c.dispose(); return; }
+    c.update(1 / 60, { dist: 0, accel: 0, steer: 0, boost: 0, t: performance.now() / 1000, pop: 0 });
+    const t3 = performance.now();
+    placeCar(i, c); warmIntro(true);
+    const t4 = performance.now();
+    try { (window.__introT = window.__introT || []).push({ id, wait: Math.round(t1 - t0), make: Math.round(t2 - t1), compile: Math.round(t3 - t2), place: Math.round(t4 - t3) }); } catch (e) { /* */ }
+    if (notify && onSetCar) onSetCar(i, id);
   }
 
   // ---------- UI chọn xe ----------

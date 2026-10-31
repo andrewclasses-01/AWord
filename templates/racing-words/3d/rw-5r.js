@@ -1,3 +1,4 @@
+// RACING WORDS — GÓI NHÚNG mẫu 5r (31/10/2026) = rw-5q.js + lõi sr3d-5r.js · TEST ⇒ cổng START ở xưởng chỉ cần iPad TEAM 1 (thẻ TEAM 2 ẩn).
 // RACING WORDS — GÓI NHÚNG mẫu 5q (31/10/2026) = rw-5p.js + lõi sr3d-5q.js (Settings ▸ Driver luôn có + TEST mode, trợ cua sát mép, bay không xuyên dốc). CSS thêm rw-5q.css (sau rw-5i.css).
 // RACING WORDS — GÓI NHÚNG mẫu 5p (29/10/2026) = rw-5o.js + lõi sr3d-5p.js (bay dễ cân, trần nghiêng 135°, tia lửa bánh khi đáp, nảy vài nhịp, lái gắt hơn, dốc rộng +30 %).
 // RACING WORDS — GÓI NHÚNG mẫu 5o (28/10/2026) = rw-5n.js + lõi sr3d-5o.js (dốc dày ngẫu nhiên đổi bên · dốc rộng 4,65 m · hông dốc = tường · bờ hồ cát + dừa như 4x).
@@ -98,9 +99,9 @@
 //   onEvent   : (k, v) — "pad" (iPad nối / mất nối), "padMode", "end", …
 // ⇒ { setOptions(o) (true = áp ngay, false = AWord dựng lại), destroy(), game, intro }
 // =============================================================
-import { createSpeedRun } from "./sr3d-5q.js";   // 5q: chế độ TEST, trợ cua sát mép, dốc không xuyên, tab Driver luôn có   // 5p: bay dễ cân (vô lăng = tốc độ nghiêng, trần 135°), tia lửa bánh khi đáp, nảy vài nhịp, lái gắt hơn, dốc rộng +30 %   // 5l: đường thật ~3 km cua gắt + rào hãm + dốc hẹp + bay chông chênh / lộn vòng bằng vô lăng + xe giao thông 3D   // 5j: xe bay ROADSTER   // 5i: vạch lửa drone + Settings ▸ Boost   // 5h: tối ưu TOMKO (vẽ 1 lượt vật liệu trong suốt, cột drone không cấp lại khung đệm, bớt ép bố cục)   // 5f: màu sơn, máy quay theo xe dẫn · 5e: 2 drone · 5d: tải mẫu drone khi bật · 5a: tin iPad drone có hồi chiêu · 4z: vùng nổ trúng cả 2 xe · 4y: tâm bóng mờ, bảng nhiều hiệp · 4x: icon 2D Neon viền · 4w: màu tâm, 1 tâm, tab mượt · 4v: NEAR/FAR dời drone, dấu điểm rơi, Auto target · 4u: nghiêng 4 hướng · 4t: nhỏ 10 %, đạn ra từ bụng, chỉnh cột + zoom · 4s: đạn nhỏ, phóng về trước, đuôi lửa · 4r: đạn drone · 4q: tâm ngắm lục giác HUD · 4p: 5 mẫu giữ + Quad quay · 4o: lưới chọn mẫu + sửa quạt · 4n: 8 mẫu + quạt quay + bay lượn · 4m: mẫu drone 3D thật · 4l: + iPad drone · 4k: DRONE
+import { createSpeedRun } from "./sr3d-5r.js";   // 5r: TEST giữ dốc + traffic suốt đường, xưởng chọn xe mượt   //   // 5q: chế độ TEST, trợ cua sát mép, dốc không xuyên, tab Driver luôn có   // 5p: bay dễ cân (vô lăng = tốc độ nghiêng, trần 135°), tia lửa bánh khi đáp, nảy vài nhịp, lái gắt hơn, dốc rộng +30 %   // 5l: đường thật ~3 km cua gắt + rào hãm + dốc hẹp + bay chông chênh / lộn vòng bằng vô lăng + xe giao thông 3D   // 5j: xe bay ROADSTER   // 5i: vạch lửa drone + Settings ▸ Boost   // 5h: tối ưu TOMKO (vẽ 1 lượt vật liệu trong suốt, cột drone không cấp lại khung đệm, bớt ép bố cục)   // 5f: màu sơn, máy quay theo xe dẫn · 5e: 2 drone · 5d: tải mẫu drone khi bật · 5a: tin iPad drone có hồi chiêu · 4z: vùng nổ trúng cả 2 xe · 4y: tâm bóng mờ, bảng nhiều hiệp · 4x: icon 2D Neon viền · 4w: màu tâm, 1 tâm, tab mượt · 4v: NEAR/FAR dời drone, dấu điểm rơi, Auto target · 4u: nghiêng 4 hướng · 4t: nhỏ 10 %, đạn ra từ bụng, chỉnh cột + zoom · 4s: đạn nhỏ, phóng về trước, đuôi lửa · 4r: đạn drone · 4q: tâm ngắm lục giác HUD · 4p: 5 mẫu giữ + Quad quay · 4o: lưới chọn mẫu + sửa quạt · 4n: 8 mẫu + quạt quay + bay lượn · 4m: mẫu drone 3D thật · 4l: + iPad drone · 4k: DRONE
 import { XE, prepXe } from "./sr3d-xe3d-3o.js";
-import { createIntro } from "./sr3d-intro-5l.js";   // 5j: Roadster trong xưởng   // 5f: drone trong xưởng
+import { createIntro } from "./sr3d-intro-5r.js";   // 5r: đổi xe không đứng hình   //   // 5j: Roadster trong xưởng   // 5f: drone trong xưởng
 import { createSound } from "./sr3d-sound-3o.js";
 import { qrSvg } from "./mc3d-qr.js";
 
@@ -226,6 +227,7 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
   gate.querySelectorAll(".rw-grc").forEach(b => on(b, "click", e => { e.stopPropagation(); const t = +b.closest(".rw-gc").dataset.t; remote && remote.reconnect && remote.reconnect(t); }));
   const gateNeed = () => !!(remote && remote.live && game.padMode === 2);
   const teamOk = l => l.s === "on" && l.tl && l.tr;
+  const gTeams = () => (game.test ? [0] : [0, 1]);                     // 5r: TEST ⇒ chỉ cần iPad TEAM 1
   let gateOk = true;
   const gD = [2, 3].map(t => { const c = gate.querySelector(".rw-gc" + t); return { t, c, h: c.querySelector(".rw-gh b"), st: c.querySelector(".rw-gs span"), q: c.querySelector(".rw-gq"), tip: c.querySelector(".rw-gt small"), d: c.querySelector(".rw-gd"), key: "", qr: "" }; });
   const g2 = gD[0];
@@ -248,12 +250,12 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
     const show = (gateNeed() || !g2.c.hidden) && introOn && intro && intro.state === "idle";
     if (gate.hidden === show) gate.hidden = !show;
     const need = gateNeed();
-    gateOk = !need || [0, 1].every(i => teamOk(remote.live(i)));
+    gateOk = !need || gTeams().every(i => teamOk(remote.live(i)));
     root.classList.toggle("rw-padwait", !gateOk);
     if (startB) { const h = gateOk ? startHTML : "WAITING FOR iPADS…"; if (startB.innerHTML !== h) startB.innerHTML = h; }
-    gs.forEach(g => { g.c.hidden = !gateNeed(); });                    // 4l: cổng 2 đội chỉ khi Drive on iPad
+    gs.forEach((g, i) => { g.c.hidden = !gateNeed() || !gTeams().includes(i); });   // 5r: TEST ⇒ ẩn thẻ TEAM 2                    // 4l: cổng 2 đội chỉ khi Drive on iPad
     if (!show || !gateNeed()) return;
-    [0, 1].forEach(i => {
+    gTeams().forEach(i => {
       const l = remote.live(i), g = gs[i], ok = teamOk(l);
       const key = [l.s, l.tl, l.tr, l.diag, ok].join("|");
       if (key !== g.key) {
@@ -274,7 +276,7 @@ export async function createRacingWords({ mount, questions, title = "RACING WORD
   on(frame, "click", e => {
     if (gateOk || !e.target.closest(".ri-start")) return;
     e.stopImmediatePropagation(); e.preventDefault();
-    [0, 1].forEach(i => { if (!teamOk(remote.live(i))) { const c = gs[i].c; c.classList.remove("is-nudge"); void c.offsetWidth; c.classList.add("is-nudge"); } });
+    gTeams().forEach(i => { if (!teamOk(remote.live(i))) { const c = gs[i].c; c.classList.remove("is-nudge"); void c.offsetWidth; c.classList.add("is-nudge"); } });
   }, { capture: true });
 
   function introCue(n, t) {
