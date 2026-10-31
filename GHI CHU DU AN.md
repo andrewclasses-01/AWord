@@ -546,7 +546,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 596 (31/10/2026) — WHACK-A-MOLE MỞ FIGHT (Quiz + True/False, Same chuột trồi giống hệt hai bàn)
+## Đợt 596 (31/10/2026) — WHACK-A-MOLE MỞ FIGHT (Quiz + True/False, Same chuột trồi giống hệt hai bàn) — code `d4c8688` LIVE (kiem-live 3/3)
 **Thầy:** "mở Fight cho game Whack a mole, options của fight tương tự như mode Fight của các template khác (nhớ có phần chọn same hoặc different questions)". Hỏi thầy 3 câu, thầy chọn: **cả Quiz lẫn True/False** · **Quiz chạy vòng chung như Quiz** · **Same = chuột trồi giống hệt hai bàn** (cùng hố, cùng lúc, cùng đáp án).
 **Vì sao không chỉ thêm `fightMode: true`:** (1) game có HAI dạng nội dung chọn bằng `options.mode` (`questions` / `statements`) mà core/fight.js chỉ đọc một `itemsKey` cố định — game này còn KHÔNG khai `itemsKey` ⇒ Same/Different bấm được mà không đổi gì (công tắc chết); (2) game tự chạy đồng hồ riêng (`manualTimerStart`) nên engine không báo giờ lên dải trên; (3) chuột trồi ngẫu nhiên riêng từng bàn ⇒ Same không công bằng.
 **core/fight.js (cờ TUỲ CHỌN, template khác không khai ⇒ y hệt cũ):**

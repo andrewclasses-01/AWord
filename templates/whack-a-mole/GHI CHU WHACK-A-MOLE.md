@@ -1,6 +1,6 @@
 # GHI CHU — Template WHACK-A-MOLE
 
-## Đợt 596 (31/10/2026) — MỞ FIGHT (Quiz + True/False)
+## Đợt 596 (31/10/2026) — MỞ FIGHT (Quiz + True/False) — `d4c8688` LIVE
 
 Thầy chọn: cả hai dạng · Quiz = vòng chung như game Quiz · Same = chuột trồi giống hệt hai bàn.
 - Khai `fightMode` + `fightItemsKey(act)` (quiz ⇒ questions, trueFalse ⇒ statements) + `fightNoRace(act)` (trueFalse ⇒ Options trận khoá Time delay/Speed bonus/Miss wait).
