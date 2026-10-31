@@ -545,3 +545,10 @@
    thanh kéo do core/options-panel.js dựng với class .aw-optc-slider, nên các
    class ở đây không còn được JS nào gán; giữ lại chỉ khiến người sau sửa một
    luật không bao giờ có tác dụng. Kiểu dáng thật nằm ở core/app.css.) */
+
+/* ⭐ Đợt 596 — FIGHT: CHE DẤU VẾT CÚ ĐẬP (luật Đợt 217, core/fight.js gắn `.is-concealed` lên vỏ bàn đã
+   xong khi Time delay >= 0,2 s). Đội kia đang nhìn cả hai màn hình: dấu ✓, số "+N"/COMBO bay lên và bong
+   bóng của chuột vừa bị đập đều chỉ thẳng đáp án đúng. Gỡ ra là hiện lại ngay (trọng tài gỡ lúc chốt vòng). */
+.aw-fight-board.is-concealed .aw-wam-mark,
+.aw-fight-board.is-concealed .aw-wam-float,
+.aw-fight-board.is-concealed .aw-wam-hole.is-hit .aw-wam-bubble { visibility: hidden; }

@@ -660,7 +660,18 @@ Không khai ⇒ y hệt cũ.
 **AI ĐANG BẬT IN TURNS (Đợt 202)**: **Type the answer** — 1/17, thầy chốt thử một game trước.
 
 **AI ĐANG BẬT FIGHT (cập nhật Đợt 186)**: Anagram · Quiz · Type the answer · True/false · **Open the box**
-· **Find the match** · **Crossword** — 7/17; + **Find the gap** (Đợt 340) + **Rocket race** (Đợt 351, bố cục `fightLayout`).
+· **Find the match** · **Crossword** — 7/17; + **Find the gap** (Đợt 340) + **Rocket race** (Đợt 351, bố cục `fightLayout`). + **Whack-a-mole** (Đợt 596).
+
+⭐ **Đợt 596 (Whack-a-mole) — hai cờ TUỲ CHỌN của `core/fight.js`, không khai ⇒ y hệt cũ:**
+- `tpl.fightItemsKey(act)` ⇒ tên field chứa danh sách câu, tính theo act. Dành cho template có HAI dạng nội dung chọn bằng
+  option (WAM: `mode` quiz ⇒ `questions`, trueFalse ⇒ `statements`). Thiếu nó thì Same/Different xáo một mảng rỗng ⇒ công tắc chết.
+- `tpl.fightNoRace(act)` ⇒ trận KHÔNG có câu chung để đua (template không bao giờ gọi `wordDone`; hết giờ nhiều điểm thắng).
+  Bảng Options của trận khoá mờ Time delay · Speed bonus · Miss wait (biến `noRace`; `syncDelay`/`syncSolo` không được mở lại).
+  Template như vậy attach với `total: 1` và kết trận bằng `ui.finish` (⇒ `ctl.onFinish`).
+- Template tự chạy đồng hồ (`manualTimerStart`) thì phải tự báo `ctl.onTimer(side, giây)` — engine không báo hộ.
+- "Same = giống hệt hai bàn" cho game sinh nội dung NGẪU NHIÊN theo thời gian (WAM trồi chuột): một bộ phát chung cấp module
+  (Map theo ctl), chỉ bàn 0 chạy nhịp, mỗi bàn tự xét có nhận lượt phát không. Xem `wamDirectors` trong whack-a-mole.js.
+
 
 ⭐⭐ **HAI KIỂU VÒNG (Đợt 183) — `tpl.fightPick`.** Ngoài vòng thường (trọng tài đi 0,1,2…), `fight.js`
 có **vòng LƯỢT CHỌN** cho game mà chính lớp chọn câu kế tiếp:

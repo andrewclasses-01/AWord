@@ -344,7 +344,10 @@ export function startFight(root, activity, { onExit, base = null, keepIpad = fal
   // dealt out to two boards). `itemsKey` is the per-template field name that
   // holds the playable array — "items" for Anagram, "questions" for Quiz — the
   // same field core/mistakes.js reads.
-  const itemsKey = getTemplate(activity.type)?.itemsKey || "items";
+  // ⭐ Đợt 596 — `tpl.fightItemsKey(act)` (tuỳ chọn): template có HAI dạng nội dung chọn bằng option (Whack-a-mole:
+  // `mode` quiz ⇒ "questions", trueFalse ⇒ "statements") tự trả field theo act. Không khai ⇒ `itemsKey` như cũ.
+  const tplItemsKey = getTemplate(activity.type)?.fightItemsKey;
+  const itemsKey = (typeof tplItemsKey === "function" && tplItemsKey(playAct)) || getTemplate(activity.type)?.itemsKey || "items";
   const srcItems = (playAct.content && playAct.content[itemsKey]) || [];
   // ⭐ Đợt 351 (20/9/2026, Rocket race) — `tpl.fightLayout: "shared-top"`: the
   // match gets ONE full-width area ABOVE the two boards that the template owns
@@ -711,6 +714,11 @@ export function startFight(root, activity, { onExit, base = null, keepIpad = fal
   // on two different questions need no second device. Gates left: the template
   // declaring `fightScreen` + Fight content = Different.
   const soloBoards = soloTpl && !turnsMode && fo.fightContent === "different";
+  // ⭐ Đợt 596 — `tpl.fightNoRace(act)` (tuỳ chọn, Whack-a-mole True/False): trận KHÔNG có câu chung để đua (hai bàn cùng
+  // săn đến hết giờ, ai nhiều điểm thắng; template không bao giờ gọi wordDone) ⇒ Options của trận khoá mờ Time delay /
+  // Speed bonus / Miss wait. Chỉ ảnh hưởng bảng Options — trọng tài không đổi gì vì không có vòng nào được báo xong.
+  const noRaceFn = getTemplate(activity.type)?.fightNoRace;
+  const noRace = typeof noRaceFn === "function" && !!noRaceFn(playAct);
 
   // Đợt 587 — `delayOn`: trận này có đọc TIME DELAY không (game thường, hoặc lượt-chọn có `pickDelay`).
   const delayOn = (!pickMode || pickDelay) && !turnsMode;
@@ -2699,7 +2707,11 @@ export function startFight(root, activity, { onExit, base = null, keepIpad = fal
       fmt: v => (v >= WRONGWAIT_UNLIM ? "∞" : v + "s"),
       onInput: v => { draft.fightWrongWait = v >= WRONGWAIT_UNLIM ? -1 : v; }
     });
-    cWrongWait.cell.title = "How long the other team keeps its chance once one side has already answered wrong and nobody has won the round yet, before the referee gives up and moves the class on. ∞ waits for as long as it takes.";
+    if (noRace) {
+      const why = "No shared question in this game: both teams play the whole time and the higher score wins.";
+      cDelay.cell.title = cBonus.cell.title = why;
+    }
+    cWrongWait.cell.title = noRace ? "No shared question in this game: both teams play the whole time and the higher score wins." : "How long the other team keeps its chance once one side has already answered wrong and nobody has won the round yet, before the referee gives up and moves the class on. ∞ waits for as long as it takes.";
 
     // Đợt 441: đứng NGAY SAU vạch đứt (khung chưa có vạch ⇒ đầu bảng). Ô rộng = cả hàng, nên thuật xếp cột
     // (seatCellsByColumn — isFullRowCell) để yên nó; các ô còn lại chảy tiếp như cũ.
@@ -2773,7 +2785,7 @@ export function startFight(root, activity, { onExit, base = null, keepIpad = fal
     }
     function syncDelay(w) {
       const bonusOn = speedBonusApplies({ fightTieWindow: w });
-      setLocked(cBonus.cell, !bonusOn);
+      setLocked(cBonus.cell, noRace || !bonusOn);   // Đợt 596 — trận không đua thì không mở lại
       // ⚠️ Đợt 188 — the value is NEVER zeroed when the bonus goes dead. It is
       // `speedBonusApplies()` at run time that ignores it (that gate is the actual
       // rule), so the number the teacher set survives being greyed out and comes
@@ -2821,7 +2833,8 @@ export function startFight(root, activity, { onExit, base = null, keepIpad = fal
     // Đợt 378 — the Question screen is no longer a gate here (see `soloBoards`).
     function syncSolo(contentVal) {
       const turnsOn = (draft.fightTurns === undefined ? cur.fightTurns : draft.fightTurns) === true;
-      const on = soloTpl && !turnsOn && contentVal === "different";
+      // Đợt 596 — `noRace`: ba ô đua khoá vĩnh viễn, Same/Different vẫn đổi được (hàm này không được mở lại chúng).
+      const on = noRace || (soloTpl && !turnsOn && contentVal === "different");
       setLocked(cWrongWait.cell, on);
       if (on) { setLocked(cDelay.cell, true); setLocked(cBonus.cell, true); }
       else if (!pickMode && !turnsOn) {

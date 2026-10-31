@@ -140,10 +140,36 @@ function pickWeighted(list) {
 }
 
 // Menu pause (Đợt 91, 8/8/2026) — bridges the CURRENT mount's pause/resume
-// pair out to the template-level `onPause` hook engine.js calls. Module-level
-// single, same pattern as running-word's `rwEndData`: AWord only ever mounts
-// one activity at a time.
-let wamPauseHandlers = null;
+// pair out to the template-level `onPause` hook engine.js calls.
+// ⭐ Đợt 596 — a SET, not one slot: a Fight match mounts this module TWICE at
+// once (core/HUONG DAN CORE.md, "Bridge onPause … phải chịu được hai mount").
+// One slot meant the board mounted last stole it and Menu paused only that one.
+const wamPauseHandlers = new Set();
+
+// ⭐⭐ Đợt 596 — FIGHT "SAME": ONE spawn conductor for both boards (thầy: chuột trồi
+// GIỐNG HỆT hai bàn — cùng hố, cùng lúc, cùng đáp án). Board 0 alone runs the spawn
+// clock and hands every spawn to both boards; each board then decides for ITSELF
+// whether it can take it (frozen by a wrong hit, locked out of the round, hole still
+// busy) — so a punished team simply misses those moles, which is the punishment.
+// Keyed by the match's ctl; dropped when both boards have cleaned up.
+// True/False Same also SHARES the "still needed" set here: a TRUE hit by one team is
+// claimed for both (the other board's copy ducks) — the two teams race for the same
+// moles instead of each farming its own copy.
+const wamDirectors = new Map();
+function wamDirector(ctl) {
+  let d = wamDirectors.get(ctl);
+  if (!d) {
+    d = {
+      subs: new Map(),                               // side -> { apply(ev), taken(idx) }
+      busy: new Array(HOLE_LAYOUT.length).fill(0),   // performance.now() until which a hole is in use
+      busyText: new Array(HOLE_LAYOUT.length).fill(null),
+      bag: [], bagKey: null, tBag: [], dBag: [],
+      remaining: null                                // True/False: shared Set of still-needed target indices
+    };
+    wamDirectors.set(ctl, d);
+  }
+  return d;
+}
 
 const wamTemplate = {
   type: "whack_a_mole",
@@ -170,6 +196,17 @@ const wamTemplate = {
   hideTimerNone: true,
   manualTimerStart: true,  // we drive our OWN countdown (bonus time can extend it) — the engine
                            // timer must NOT run, or it would auto-submit at the original length
+
+  // ⭐⭐ Đợt 596 (thầy) — FIGHT. Two content modes, two match shapes:
+  //  • quiz      — the ordinary shared ROUND (like Quiz): both boards on the same question, the
+  //               first CORRECT whack wins it; a wrong whack ends that team's go (Miss wait for
+  //               the other). Time delay / Speed bonus / Miss wait all apply.
+  //  • trueFalse — no shared question: both teams hunt the whole time, higher score wins. This
+  //               board never calls wordDone, and `fightNoRace` greys the three race controls.
+  // Same = identical moles on both boards (see wamDirector); Different = each board its own.
+  fightMode: true,
+  fightItemsKey: act => ((act.options || {}).mode === "quiz" ? "questions" : "statements"),
+  fightNoRace: act => (act.options || {}).mode !== "quiz",
 
   edit: openWamEditor,
 
@@ -277,8 +314,33 @@ const wamTemplate = {
     const freezeMs = Math.round(1000 * ((typeof opt.punishSeconds === "number")
       ? Math.max(0, Math.min(MAX_PUNISH, opt.punishSeconds)) : PUNISH_DEFAULT));
 
+    // ⭐ Đợt 596 — FIGHT (xem phần đầu `wamTemplate`). `_fight` do core/fight.js đặt; vắng = chơi đơn như cũ.
+    const fight = activity._fight || null;
+    const fightSide = fight ? fight.side : 0;
+    const fightCtl = fight ? fight.ctl : null;
+    const fightOther = fightSide === 0 ? 1 : 0;
+    // "same" là giá trị cũ của act đời trước, coi như Same words (đúng như bảng Options trận đọc).
+    const fightSame = !!fightCtl && opt.fightContent !== "different";
+    const dir = fightSame ? (() => {
+      // Mount mới của CÙNG bàn mà nhạc trưởng còn giữ bàn cũ ⇒ trận đã dựng lại: bắt đầu sạch.
+      if (wamDirectors.get(fightCtl)?.subs.has(fightSide)) wamDirectors.delete(fightCtl);
+      return wamDirector(fightCtl);
+    })() : null;
+    const driver = fightSame && fightSide === 0;    // bàn 0 cầm nhịp trồi của cả trận
+    // Tiếng của sự kiện CHUNG (trồi, lặn, đổi câu, tích đồng hồ) chỉ bàn 0 phát — hai bàn cùng kêu là tiếng vọng.
+    // Tiếng của cú đập (đúng/sai/combo) vẫn mỗi bàn tự phát: đó là việc riêng của từng đội.
+    const sharedSnd = !fightCtl || fightSide === 0;
+    let fightBoardLock = false;                     // trọng tài khoá bàn này (thua vòng / hết trận)
+    let roundAnswered = false;                      // quiz: bàn này đã đập ĐÚNG câu đang mở, chờ câu sau
+    const hitQ = new Set();                         // quiz: chỉ số câu bàn này đã đập đúng (bảng xem lại)
+    const wrongQ = new Map();                       // quiz: câu ⇒ chữ đáp án sai đã đập
+    const hitT = new Set();                         // trueFalse: câu cần đập mà bàn này đã đập trúng
+    const blocked = () => fightBoardLock || roundAnswered || !!(fightCtl && fightCtl.isLocked(fightSide));
+
     // Đợt 213b — một loại thùng, một công tắc. "time" chỉ giúp khi đếm ngược.
-    const bonusTime = opt.bonusTime !== false && timerMode === "countDown";
+    // ⭐ Đợt 596 — KHÔNG thùng trong Fight: mỗi bàn một đồng hồ riêng, +5 s cho một bàn làm hai đồng hồ lệch nhau
+    // (dải trên chỉ đọc đồng hồ bàn 0, và bàn hết giờ trước là kết cả trận).
+    const bonusTime = !fightCtl && opt.bonusTime !== false && timerMode === "countDown";
     const enabledCrates = CRATE_TYPES.filter(c => c.key === "time" && bonusTime);
     const cratesOn = enabledCrates.length > 0;
 
@@ -328,7 +390,12 @@ const wamTemplate = {
     // several-moles-on-screen-at-once bubbles have no single "current
     // question" and are sized/timed for a fast reflex read, not a listen —
     // see templates/whack-a-mole/GHI CHU WHACK-A-MOLE.md for the reasoning.
-    const voicePlayer = createVoicePlayer();
+    // ⭐ Đợt 596 — hợp đồng "một giọng một trận" (core/HUONG DAN CORE.md, HỢP ĐỒNG VOICE): chỉ bàn 0 phát thật,
+    // chạm loa ở bàn kia thì nhờ trọng tài, hào quang được rọi sang qua syncVoice.
+    const voicePlayer = createVoicePlayer({
+      onGlow: on => { if (fightCtl && fightCtl.speaks(fightSide)) fightCtl.reportVoiceState(fightSide, { playing: on }); }
+    });
+    let curVoiceBtn = null;
     let firstQuestionSpoken = false;
 
     // ---------- OBJECTIVE model ----------
@@ -338,12 +405,17 @@ const wamTemplate = {
     // The round is COMPLETE once every needed answer has been hit.
     const targetItems = statements.filter(s => (s.answer === true) === target);   // needed
     const distractorItems = statements.filter(s => (s.answer === true) !== target); // avoid
-    const remainingTargets = new Set(targetItems.map((_, i) => i));   // indices not yet hit
+    // Đợt 596 — Fight Same: CHUNG một Set với bàn kia (nhạc trưởng giữ) ⇒ câu một đội đã đập thì đội kia hết phần.
+    const remainingTargets = (dir && mode !== "quiz")
+      ? (dir.remaining || (dir.remaining = new Set(targetItems.map((_, i) => i))))
+      : new Set(targetItems.map((_, i) => i));   // indices not yet hit
     let targetQueue = [];               // shuffled bag of still-needed target indices
     let distractorQueue = [];           // shuffled bag of distractor items
 
     // quiz mode level bookkeeping — one pass through all questions, then COMPLETE
-    let qOrder = mode === "quiz" ? shuffle(questions.map((_, i) => i)) : [];
+    // Đợt 596 — Fight: thứ tự câu do core/fight.js chốt sẵn cho hai bàn (Same: một thứ tự chung; Different: mỗi bàn
+    // một), chỉ số vòng của trọng tài = vị trí trong đúng mảng này ⇒ KHÔNG được xáo lại ở đây.
+    let qOrder = mode === "quiz" ? (fightCtl ? questions.map((_, i) => i) : shuffle(questions.map((_, i) => i))) : [];
     let qPos = 0;
     let levelIndex = mode === "quiz" ? qOrder[0] : -1;
     let answerQueue = [];               // shuffled cycling answers of the current question
@@ -534,10 +606,15 @@ const wamTemplate = {
           const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
           vBtn.type = "button";
           vBtn.setAttribute("aria-label", "Listen to pronunciation");
-          press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(q.voice, vBtn); });
+          press(vBtn, e => {
+            e.stopPropagation();
+            if (fightCtl && !fightCtl.speaks(fightSide)) { fightCtl.requestVoiceToggle(q.voice); return; }   // Đợt 596
+            voicePlayer.toggle(q.voice, vBtn);
+          });
           qEl.append(vBtn);
-          if (vv.autoPlay) voicePlayer.playDelayed(q.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
-        }
+          curVoiceBtn = vBtn;
+          if (vv.autoPlay && (!fightCtl || fightCtl.speaks(fightSide))) voicePlayer.playDelayed(q.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+        } else curVoiceBtn = null;
         firstQuestionSpoken = true;
         fitter = autoFit(plankFitBox(), board, s => board.style.setProperty("--fit", s), {
           slack: 2,
@@ -584,9 +661,17 @@ const wamTemplate = {
     let lastTickSlot = Math.ceil(totalSeconds);
     let clockStarted = false;   // Đợt 470 — startClock() đã chạy (trước đó còn intro: giờ chưa trôi)
     let introEndPerf = 0;       // Đợt 470 — performance.now() lúc intro xong (đồng hồ bắt đầu)
+    let startAt = 0;            // Đợt 596 — Fight đếm lên: mốc bắt đầu để báo số giây lên dải trên
     function tickClock() {
       if (ended) return;
+      // Đợt 596 — Fight: đồng hồ CHUNG của trận ở dải trên đọc bàn 0 (`ctl.onTimer` tự bỏ qua bàn 1). Game này không
+      // chạy đồng hồ engine (manualTimerStart) nên engine không báo hộ được.
+      if (timerMode === "countUp") {
+        if (fightCtl) fightCtl.onTimer(fightSide, Math.floor((performance.now() - startAt) / 1000));
+        return;
+      }
       const remaining = Math.max(0, (endAt - performance.now()) / 1000);
+      if (fightCtl) fightCtl.onTimer(fightSide, Math.ceil(remaining));
       if (clockEl) clockEl.textContent = formatTime(Math.ceil(remaining));
       if (fillEl) {
         fillEl.style.width = Math.max(0, Math.min(100, (remaining / totalSeconds) * 100)) + "%";
@@ -595,12 +680,13 @@ const wamTemplate = {
       }
       // tick sound: once/sec in the last 10s, twice/sec in the last 5s
       const slot = remaining > 5 ? Math.ceil(remaining) : Math.ceil(remaining * 2) / 2;
-      if (remaining <= 10 && slot < lastTickSlot && remaining > 0) { lastTickSlot = slot; wamSound.clockTick(); }
+      if (remaining <= 10 && slot < lastTickSlot && remaining > 0) { lastTickSlot = slot; if (sharedSnd) wamSound.clockTick(); }
       if (remaining <= 0) endGame("time");
     }
     function startClock(conLaiMs) {
       // Đợt 470 — `conLaiMs` (chỉ lượt làm tiếp): giờ còn lại theo đồng hồ thật; ván thường = trọn totalSeconds.
       endAt = performance.now() + (conLaiMs != null ? conLaiMs : totalSeconds * 1000);
+      startAt = performance.now();
       clockStarted = true;
       lastTickSlot = Math.ceil(totalSeconds);
       clockTimer = setInterval(tickClock, 200);
@@ -620,10 +706,15 @@ const wamTemplate = {
     }
     function resumeGame() {
       if (ended) return;
-      if (pausedClockAt) { endAt += performance.now() - pausedClockAt; pausedClockAt = 0; clockTimer = setInterval(tickClock, 200); }
+      if (pausedClockAt) {
+        const dp = performance.now() - pausedClockAt;
+        endAt += dp; startAt += dp;   // Đợt 596 — đếm lên của Fight cũng không tính giờ dừng
+        pausedClockAt = 0; clockTimer = setInterval(tickClock, 200);
+      }
       if (!spawnTimer) scheduleSpawn();
     }
-    wamPauseHandlers = { pause: pauseGame, resume: resumeGame };
+    const pauseHandle = { pause: pauseGame, resume: resumeGame };
+    wamPauseHandlers.add(pauseHandle);
     function addTime(sec) {
       endAt += sec * 1000;
       const remaining = Math.max(0, (endAt - performance.now()) / 1000);
@@ -702,10 +793,13 @@ const wamTemplate = {
 
     // ---------- spawning ----------
     function spawnInterval() { return spawnBase + randi(400) - 100; }
-    function scheduleSpawn() { spawnTimer = later(spawnTick, spawnInterval()); }
+    function scheduleSpawn() {
+      if (fightSame && !driver) return;   // Đợt 596 — Same: bàn 1 không tự trồi, chỉ nhận từ nhạc trưởng
+      spawnTimer = later(fightSame ? directorTick : spawnTick, spawnInterval());
+    }
     function spawnTick() {
       if (ended) return;
-      if (!rotating && !frozen) {
+      if (!rotating && !frozen && !blocked()) {
         const empty = holes.filter(h => h.status === "empty");
         const active = holes.length - empty.length;
         if (empty.length && active < maxConcurrent) {
@@ -717,19 +811,97 @@ const wamTemplate = {
       scheduleSpawn();
     }
 
-    function spawnMole(h) {
-      const item = pickItem();
+    // ---------- Đợt 596 — FIGHT SAME: nhạc trưởng (chỉ bàn 0 chạy) ----------
+    // Chọn hố + nội dung + dáng chuột MỘT lần rồi trao cho cả hai bàn. Hố "bận" tính theo sổ của nhạc trưởng (đúng
+    // nhịp trồi/lặn tự nhiên), không theo hố thật của từng bàn: một bàn đập sớm làm hố của nó trống sớm hơn, nhưng
+    // hai bàn vẫn phải nhận cùng một lượt trồi. Vẫn chạy khi CHÍNH bàn 0 đang bị phạt/khoá — bàn kia còn đang chơi.
+    function directorTick() {
+      if (ended) return;
+      const now = performance.now();
+      const free = [];
+      let active = 0;
+      dir.busy.forEach((t, i) => { if (t > now) active++; else free.push(i); });
+      if (free.length && active < maxConcurrent) {
+        const shown = new Set(dir.busy.map((t, i) => (t > now ? dir.busyText[i] : null)).filter(x => x != null));
+        const ev = {
+          hole: free[randi(free.length)],
+          variant: MOLE_VARIANTS[randi(MOLE_VARIANTS.length)],
+          bubbleB: Math.random() < 0.5
+        };
+        let key = null;
+        if (mode === "quiz") {
+          const n = (questions[levelIndex]?.answers || []).length;
+          if (dir.bagKey !== qPos) { dir.bagKey = qPos; dir.bag = []; }
+          for (let tries = 0; tries < 6 && n; tries++) {
+            if (!dir.bag.length) dir.bag = shuffle([...Array(n).keys()]);
+            const k = dir.bag.pop();
+            if (!shown.has("q" + k) || tries === 5) { ev.qPos = qPos; ev.k = k; key = "q" + k; break; }
+          }
+        } else {
+          for (let tries = 0; tries < 8 && key == null; tries++) {
+            const wantTarget = remainingTargets.size > 0 && (distractorItems.length === 0 || Math.random() < TARGET_RATIO);
+            if (wantTarget) {
+              if (!dir.tBag.length) dir.tBag = shuffle([...remainingTargets]);
+              while (dir.tBag.length) {
+                const idx = dir.tBag.pop();
+                if (remainingTargets.has(idx) && (!shown.has("t" + idx) || tries === 7)) { ev.kind = "t"; ev.idx = idx; key = "t" + idx; break; }
+              }
+            } else if (distractorItems.length) {
+              if (!dir.dBag.length) dir.dBag = shuffle([...distractorItems.keys()]);
+              const idx = dir.dBag.pop();
+              if (!shown.has("d" + idx) || tries === 7) { ev.kind = "d"; ev.idx = idx; key = "d" + idx; }
+            }
+          }
+        }
+        if (key != null) {
+          dir.busy[ev.hole] = now + upDuration + 350;   // trồi + đứng + lặn, như một hố thật
+          dir.busyText[ev.hole] = key;
+          dir.subs.forEach(s => { try { s.apply(ev); } catch { /* bàn đã tháo */ } });
+        }
+      }
+      scheduleSpawn();
+    }
+    // Một bàn nhận một lượt trồi: tự xét mình có nhận được không (bị phạt, thua vòng, đã đập đúng câu này, hố còn bận).
+    function applySpawn(ev) {
+      if (ended || dead || frozen || rotating || blocked()) return;
+      const h = holes[ev.hole];
+      if (!h || h.status !== "empty") return;
+      let item = null;
+      if (mode === "quiz") {
+        if (ev.qPos !== qPos) return;
+        const a = questions[levelIndex]?.answers?.[ev.k];
+        if (!a) return;
+        item = { text: a.text, isCorrect: !!a.correct };
+      } else if (ev.kind === "t") {
+        if (!remainingTargets.has(ev.idx)) return;
+        item = { text: targetItems[ev.idx].text, isCorrect: true, targetIdx: ev.idx };
+      } else {
+        const d = distractorItems[ev.idx];
+        if (!d) return;
+        item = { text: d.text, isCorrect: false, targetIdx: -1 };
+      }
+      spawnMole(h, item, ev);
+    }
+    // True/False Same: đội kia vừa đập trúng câu `idx` ⇒ bản sao của nó trên bàn này lặn (không tính là "lỡ").
+    function takenElsewhere(idx) {
+      holes.forEach(o => { if (o.targetIdx === idx && !o.isCrate && (o.status === "up" || o.status === "rising")) duck(o, false); });
+    }
+    if (dir) dir.subs.set(fightSide, { apply: applySpawn, taken: takenElsewhere });
+
+    // `given`/`ev` — Đợt 596: lượt trồi từ nhạc trưởng (Fight Same) mang sẵn nội dung + dáng chuột + phía bong bóng.
+    function spawnMole(h, given, ev) {
+      const item = given || pickItem();
       h.item = item; h.isCorrect = item.isCorrect; h.targetIdx = item.targetIdx; h.isCrate = false; h.crateType = null; h.status = "rising";
-      const variant = MOLE_VARIANTS[randi(MOLE_VARIANTS.length)];
+      const variant = ev ? ev.variant : MOLE_VARIANTS[randi(MOLE_VARIANTS.length)];
       h.mole.src = imgUrl(variant + "ready.webp");
       h.mole.dataset.variant = variant;
       h.crate.style.display = "none";
       h.mole.style.display = "";
-      h.bubble.className = "aw-wam-bubble" + (Math.random() < 0.5 ? " aw-wam-bubble-b" : "");
+      h.bubble.className = "aw-wam-bubble" + ((ev ? ev.bubbleB : Math.random() < 0.5) ? " aw-wam-bubble-b" : "");
       h.bubbleText.innerHTML = escapeHtml(item.text);
       h.hole.classList.remove("is-hit", "is-crate");
       h.hole.classList.add("is-up");
-      wamSound.mole();
+      if (!fightSame || sharedSnd) wamSound.mole();
       later(() => { if (h.status === "rising") h.status = "up"; }, 260);
       h.duckT = later(() => duck(h, true), upDuration);
     }
@@ -755,7 +927,7 @@ const wamTemplate = {
       clearTimer(h.duckT); h.duckT = null;
       h.status = "ducking";
       h.hole.classList.remove("is-up", "is-crate", "is-dizzy", "is-wrong");
-      if (wasMole && !h.isCrate) { wamSound.disappear(); combo = 0; }
+      if (wasMole && !h.isCrate) { if (!fightSame || sharedSnd) wamSound.disappear(); combo = 0; }
       h.freeT = later(() => freeHole(h), 300);
     }
     function freeHole(h) {
@@ -774,6 +946,11 @@ const wamTemplate = {
     // ---------- whacking ----------
     function onWhack(h) {
       if (ended || (h.status !== "up" && h.status !== "rising")) return;
+      // Đợt 596 — Fight: bàn bị trọng tài khoá (thua vòng, hết mạng, hết trận) hoặc đã đập đúng câu đang mở ⇒ cú đập
+      // không ăn. Chuột còn đứng thì trên bàn khoá đã được cho lặn hết (lock), đây là chốt cho cú chạm lọt khe.
+      if (fightCtl && blocked()) return;
+      // True/False Same: đội kia vừa giành câu này trong cùng nhịp ⇒ chuột lặn, không điểm, không phạt.
+      if (dir && mode !== "quiz" && h.isCorrect && !remainingTargets.has(h.targetIdx)) { duck(h, false); return; }
       // TIME COST (Đợt 143): swinging at a mole IS this game's progress, hit or
       // miss — a class reading the sign and picking wrong is not sitting idle.
       ui.noteActivity?.();
@@ -802,10 +979,23 @@ const wamTemplate = {
         ui.setScore(scoreNow());
         floatText(h, "+" + pts, "is-plus");
         ui.daDoiBaiLam?.();   // Đợt 470 — cất lượt (engine gom 120 ms: remainingTargets / onQuizCorrect ngay dưới vẫn kịp)
-        if (mode === "quiz") { onQuizCorrect(); }
+        if (mode === "quiz" && fightCtl) {
+          // Đợt 596 — FIGHT: bàn này XONG câu (đúng). Trọng tài quyết thắng vòng / hoà trong Time delay / sang câu —
+          // bàn chỉ đứng chờ `goToIndex`, không tự xoay bảng như chơi đơn.
+          roundAnswered = true;
+          hitQ.add(levelIndex);
+          holes.forEach(o => { if (o !== h && (o.status === "up" || o.status === "rising")) duck(o, false); });
+          fightCtl.wordDone(fightSide, { index: qPos, correct: true });
+        }
+        else if (mode === "quiz") { onQuizCorrect(); }
         else {
           // this needed answer is cleared (won't reappear this wave)
-          if (h.targetIdx >= 0) remainingTargets.delete(h.targetIdx);
+          if (h.targetIdx >= 0) {
+            remainingTargets.delete(h.targetIdx);
+            hitT.add(h.targetIdx);
+            // Đợt 596 — Same: Set dùng chung ⇒ bản sao trên bàn kia phải lặn ngay
+            if (dir) dir.subs.forEach((s, sd) => { if (sd !== fightSide) { try { s.taken(h.targetIdx); } catch { /* gone */ } } });
+          }
           if (remainingTargets.size === 0) {
             if (timerMode === "countUp") later(() => endGame("complete"), 650);   // objective mode -> WIN
             else { targetItems.forEach((_, i) => remainingTargets.add(i)); targetQueue = []; }  // countdown -> new wave, keep going till time's up
@@ -824,10 +1014,17 @@ const wamTemplate = {
         // very short punishment still flashes red. CSS: .is-wrong .aw-wam-bubble.
         h.hole.classList.add("is-wrong");
         if (penalty > 0) { score = Math.max(0, score - penalty); ui.setScore(scoreNow()); floatText(h, "–" + penalty, "is-minus"); }
+        // Đợt 596 — FIGHT quiz: một cú đập sai là hết lượt của đội này ở câu đó (đúng luật Quiz Fight) — vòng vẫn mở
+        // cho đội kia trong MISS WAIT. Báo TRƯỚC loseLife/boardOut: trọng tài cần biết câu này đã xong-sai.
+        if (mode === "quiz" && fightCtl) {
+          if (!wrongQ.has(levelIndex)) wrongQ.set(levelIndex, h.item ? h.item.text : "");
+          fightCtl.wordDone(fightSide, { index: qPos, correct: false });
+        }
         const outOfLives = loseLife();
         ui.daDoiBaiLam?.();   // Đợt 470
         if (outOfLives) {
-          later(() => endGame("gameover"), 600);
+          // Đợt 596 — FIGHT (luật Đợt 509): chỉ bàn này GAME OVER, đội kia chơi tiếp.
+          if (!fightBoardOut()) later(() => endGame("gameover"), 600);
           h.freeT = later(() => { h.hole.classList.remove("is-up"); later(() => freeHole(h), 300); }, 520);
         } else {
           // The freeze lasts as long as the "Punishment" option says (0 = none:
@@ -970,9 +1167,26 @@ const wamTemplate = {
       later(finishTally, DUR + 200);   // absolute fallback (rAF can stall in a hidden tab)
     }
 
+    // Đợt 596 — bảng "Show answers" cuối trận Fight đọc bàn này qua `review` của attach (gọi giữa trận, trước finish).
+    // Quiz: câu đã đập đúng / câu đã đập sai (chữ của chuột sai) / chưa tới. True/False: câu CẦN đập đã trúng hay chưa.
+    function buildFightReview() {
+      if (mode === "quiz") {
+        return questions.map((q, i) => {
+          const right = (q.answers.find(a => a.correct) || {}).text || "";
+          if (hitQ.has(i)) return { question: q.question, answered: true, yourText: right, yourCorrect: true, correctText: right };
+          if (wrongQ.has(i)) return { question: q.question, answered: true, yourText: wrongQ.get(i), yourCorrect: false, correctText: right };
+          return { question: q.question, answered: false, yourText: null, yourCorrect: false, correctText: right };
+        });
+      }
+      return targetItems.map((s, i) => ({
+        question: s.text, answered: hitT.has(i), yourText: hitT.has(i) ? (target ? "True" : "False") : null,
+        yourCorrect: hitT.has(i), correctText: target ? "True" : "False"
+      }));
+    }
+
     function reallyFinish() {
       if (dead) return;   // Đợt 114 — never hand in a play that was thrown away
-      const review = mode === "quiz"
+      const review = fightCtl ? buildFightReview() : mode === "quiz"
         ? questions.map(q => ({ question: q.question, answered: false, yourText: null, yourCorrect: false, correctText: (q.answers.find(a => a.correct) || {}).text || "" }))
         : statements.map(s => ({ question: s.text, answered: false, yourText: null, yourCorrect: false, correctText: s.answer ? "True" : "False" }));
       const total = score + wrongCount;
@@ -1024,21 +1238,82 @@ const wamTemplate = {
         scheduleSpawn();
       }, 300);
     } else {
-      wamSound.go();
+      if (sharedSnd) wamSound.go();
       world.classList.add("is-intro");
       void world.offsetWidth;                                    // lock the wide state as the starting frame
       later(() => world.classList.remove("is-intro"), INTRO_HOLD);
       introEndPerf = performance.now() + INTRO_HOLD + INTRO_ZOOM;   // Đợt 470
+      if (fightCtl) fightCtl.onTimer(fightSide, timerMode === "countDown" ? totalSeconds : 0);   // Đợt 596 — dải trên hiện số ngay từ intro
       later(() => {
         if (ended) return;
-        if (timerMode === "countDown") startClock();             // count up has no bar; ends on the objective
+        // count up has no bar; ends on the objective — but in a Fight the clock still runs, to feed the
+        // match strip above the boards (Đợt 596; tickClock only reports in count-up, never ends the game)
+        if (timerMode === "countDown" || fightCtl) startClock();
         scheduleSpawn();
       }, INTRO_HOLD + INTRO_ZOOM);
     }
 
+    // ---------- Đợt 596 — FIGHT: nối bàn này vào trọng tài ----------
+    // Hết mạng trong trận (luật Đợt 509): chỉ bàn này GAME OVER, bàn kia chơi tiếp. Đồng hồ bàn này VẪN chạy — bàn 0
+    // là nguồn đồng hồ của dải trên, và hết giờ của bất kỳ bàn nào vẫn là hết trận. Trọng tài trả false ⇒ đường cũ.
+    function fightBoardOut() {
+      if (!fightCtl || typeof fightCtl.boardOut !== "function") return false;
+      return !!fightCtl.boardOut(fightSide);
+    }
+    // Hết trận (trọng tài khoá CẢ HAI bàn): dừng im lặng — không đếm điểm lên bảng, không nộp lần hai.
+    function stopBoard() {
+      if (ended) return;
+      ended = true;
+      stopPunishBar();
+      if (spawnTimer) clearTimer(spawnTimer);
+      if (clockTimer) { clearInterval(clockTimer); clockTimer = null; }
+      holes.forEach(o => { if (o.status === "up" || o.status === "rising") duck(o, false); });
+    }
+    if (fightCtl) {
+      fightCtl.attach(fightSide, {
+        // True/False không có câu chung: một "vòng" duy nhất, không bao giờ báo xong (xem `fightNoRace`).
+        total: mode === "quiz" ? questions.length : 1,
+        // Đếm ngược mà hết câu thì quay lại chồng câu như chơi đơn, chơi tới hết giờ (core/fight.js Đợt 391/416).
+        recycleWhenOut: mode === "quiz" && timerMode === "countDown",
+        goToIndex(i) {
+          if (dead || ended || mode !== "quiz") return;
+          qPos = Math.max(0, Math.min(qOrder.length - 1, i));
+          levelIndex = qOrder[qPos];
+          answerQueue = [];
+          roundAnswered = false;
+          holes.forEach(o => { if (o.status === "up" || o.status === "rising") duck(o, false); });
+          if (sharedSnd) wamSound.tableRotation();
+          rotating = true;
+          updateSign(true);
+          later(() => { rotating = false; if (sharedSnd) wamSound.nextLevel(); }, 260);
+        },
+        lock(on) {
+          // ⚠️ Bẫy 5 của Fight: lock() KHÔNG được dựng lại gì — chỉ cho chuột đang đứng lặn xuống.
+          fightBoardLock = !!on;
+          if (!on || dead) return;
+          holes.forEach(o => { if (o.status === "up" || o.status === "rising") duck(o, false); });
+          if (fightCtl.isLocked(fightSide) && fightCtl.isLocked(fightOther)) stopBoard();
+        },
+        reveal() { /* không giấu gì riêng: dấu vết cú đập do CSS .is-concealed che (whack-a-mole.css) */ },
+        review: buildFightReview,
+        toggleVoiceRemote(clipId) {
+          if (!fightCtl.speaks(fightSide)) return;
+          voicePlayer.toggle(clipId, curVoiceBtn);
+        },
+        syncVoice(state) {
+          if (!state || state.playing === undefined) return;
+          curVoiceBtn?.classList.toggle("is-playing", !!state.playing);
+        }
+      });
+    }
+
     // ---------- cleanup ----------
     return function cleanup() {
-      wamPauseHandlers = null;
+      wamPauseHandlers.delete(pauseHandle);
+      if (dir) {   // Đợt 596 — rời nhạc trưởng; bàn cuối cùng rời thì xoá hẳn
+        if (dir.subs.get(fightSide)?.apply === applySpawn) dir.subs.delete(fightSide);
+        if (!dir.subs.size && wamDirectors.get(fightCtl) === dir) wamDirectors.delete(fightCtl);
+      }
       dead = true;      // Đợt 114 — stops the score-tally rAF loop + blocks reallyFinish()
       ended = true;
       if (spawnTimer) clearTimeout(spawnTimer);
@@ -1056,8 +1331,8 @@ const wamTemplate = {
   // Menu pause hook (Đợt 91) — engine.js calls this on ☰ Menu open(true)/
   // close(false). See `wamPauseHandlers` above for why it's a module bridge.
   onPause(paused) {
-    if (!wamPauseHandlers) return;
-    if (paused) wamPauseHandlers.pause(); else wamPauseHandlers.resume();
+    // Đợt 596 — mọi mount đang sống (Fight = hai bàn); pause/resume chịu được gọi hai lần.
+    wamPauseHandlers.forEach(h => { if (paused) h.pause(); else h.resume(); });
   }
 };
 
